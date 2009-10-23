@@ -59,6 +59,8 @@
 #define VMPARAM_XEN_KERNEL_PARAMS	"VMPARAM_Xen_Kernel_Params"
 #define VMPARAM_XEN_CDROM_DEVICE	"VMPARAM_Xen_CDROM_Device"
 #define VMPARAM_XEN_TRANSFER_FILES	"VMPARAM_Xen_Transfer_Files"
+#define VMPARAM_XEN_BOOTLOADER		"VMPARAM_Xen_Bootloader"
+#define VMPARAM_XEN_KERNEL_IMAGE	"VMPARAM_Xen_Kernel_Image"
 
 /* ClassAd Attributes for VMware */
 #define VMPARAM_VMWARE_TRANSFER		"VMPARAM_VMware_Transfer"

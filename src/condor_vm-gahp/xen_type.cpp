@@ -69,7 +69,30 @@ getScriptErrorString(const char* fname)
 VirshType::VirshType(const char* scriptname, const char* workingpath, 
 		ClassAd* ad) : VMType("", scriptname, workingpath, ad)
 {
-	m_vmtype = CONDOR_VM_UNIVERSE_XEN;
+	MyString vm_type;
+	if( ad->LookupString( ATTR_JOB_VM_TYPE, vm_type) != 1 ) {
+		EXCEPT("%s not found in job ad!", ATTR_JOB_VM_TYPE);
+	}
+
+	if( strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+		m_vmtype = CONDOR_VM_UNIVERSE_XEN;
+		priv_state priv = set_root_priv();
+		m_libvirt_connection = virConnectOpen("xen:///");
+		set_priv(priv);
+	} else if( strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0 ) {
+		m_vmtype = CONDOR_VM_UNIVERSE_KVM;
+		priv_state priv = set_root_priv();
+		m_libvirt_connection = virConnectOpen("qemu:///session");
+		set_priv(priv);
+	} else {
+		EXCEPT("Unsupported VM Type '%s'", vm_type.Value());
+	}
+	
+	if( !m_libvirt_connection ) {
+		virErrorPtr err = virGetLastError();
+		EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
+	}
+
 	m_cputime_before_suspend = 0;
 	m_xen_hw_vt = false;
 	m_allow_hw_vt_suspend = false;
@@ -145,21 +168,21 @@ VirshType::Start()
 		}
 	}
 	vmprintf(D_FULLDEBUG, "Trying XML: %s\n", m_xml.Value());
+	priv_state priv = set_root_priv();
 	virDomainPtr vm = virDomainCreateXML(m_libvirt_connection, m_xml.Value(), 0);
+	set_priv(priv);
 
 	if(vm == NULL)
 	  {
 	    // Error in creating the vm; let's find out what the error
 	    // was
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", err->message);
+	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", (err ? err->message : "No reason found"));
 	    //virFreeError(err);
 	    return false;
 	  }
 
-
 	virDomainFree(vm);
-
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
 	m_cpu_time = 0;
@@ -221,20 +244,30 @@ VirshType::Shutdown()
 	ResumeFromSoftSuspend();
 
 	if( getVMStatus() == VM_RUNNING ) {
+		priv_state priv = set_root_priv();
                 virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+		set_priv(priv);
 		if(dom == NULL)
 		  {
 		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
-		    return false;
+		    if (err && err->code != VIR_ERR_NO_DOMAIN)
+		      {
+			vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+			return false;
+		      }
 		  }
-		int result = virDomainShutdown(dom);
-		virDomainFree(dom);
-		if( result != 0 ) {
-			// system error happens
-			// killing VM by force
-			killVM();
-		}
+		else
+		  {
+		    priv = set_root_priv();
+		    int result = virDomainShutdown(dom);
+		    virDomainFree(dom);
+		    set_priv(priv);
+		    if( result != 0 ) {
+			    // system error happens
+			    // killing VM by force
+			    killVM();
+		    }
+		  }
 		// Now we don't need working files any more
 		m_delete_working_files = true;
 		m_is_checkpointed = false;
@@ -325,6 +358,21 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
   StringList input_strings, output_strings, error_strings;
   MyString classad_string;
   m_classAd.sPrint(classad_string);
+  classad_string += VMPARAM_XEN_BOOTLOADER;
+  classad_string += " = \"";
+  classad_string += m_xen_bootloader;
+  classad_string += "\"\n";
+  classad_string += VMPARAM_XEN_KERNEL_IMAGE;
+  classad_string += " = \"";
+  classad_string += m_xen_kernel_file;
+  classad_string += "\"\n";
+  if(classad_string.find(VMPARAM_XEN_INITRD) < 1)
+    {
+      classad_string += VMPARAM_XEN_INITRD;
+      classad_string += " = \"";
+      classad_string += m_xen_initrd_file;
+      classad_string += "\"\n";
+    }
   input_strings.append(classad_string.Value());
   int ret = systemCommand(args, true, &output_strings, &input_strings, &error_strings, false);
   error_strings.rewind();
@@ -341,10 +389,12 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
 	}
       return false;
     }
+  error_strings.rewind();
   while((tmp = error_strings.next()) != NULL)
     {
       vmprintf(D_ALWAYS, "Helper stderr output: %s\n", tmp);
     }
+  output_strings.rewind();
   while((tmp = output_strings.next()) != NULL)
     {
       m_xml += tmp;
@@ -369,16 +419,20 @@ VirshType::ResumeFromSoftSuspend(void)
 
 // 		int result = systemCommand(systemcmd, true);
 
+		priv_state priv = set_root_priv();
 		virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+		set_priv(priv);
 		if(dom == NULL)
 		  {
 		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 		    return false;
 		  }
 	
+		priv = set_root_priv();
 		int result = virDomainResume(dom);
 		virDomainFree(dom);
+		set_priv(priv);
 		if( result != 0 ) {
 			// unpause failed.
 			vmprintf(D_ALWAYS, "Unpausing VM failed in "
@@ -417,11 +471,13 @@ VirshType::SoftSuspend()
 
 // 	int result = systemCommand(systemcmd, true);
 
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
 	
@@ -483,16 +539,20 @@ VirshType::Suspend()
 
 // 	int result = systemCommand(systemcmd, true, &cmd_out);
 
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
 	
+	priv = set_root_priv();
 	int result = virDomainSave(dom, tmpfilename.Value());
 	virDomainFree(dom);
+	set_priv(priv);
 	if( result != 0 ) {
 		// Read error output
 // 		char *temp = cmd_out.print_to_delimed_string("/");
@@ -551,7 +611,9 @@ VirshType::Resume()
 
 // 	int result = systemCommand(systemcmd, true, &cmd_out);
 
+	priv_state priv = set_root_priv();
 	int result = virDomainRestore(m_libvirt_connection, m_suspendfile.Value());
+	set_priv(priv);
 
 	if( result != 0 ) {
 		// Read error output
@@ -642,22 +704,35 @@ VirshType::Status()
  	m_result_msg += VMGAHP_STATUS_COMMAND_STATUS;
  	m_result_msg += "=";
 
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
-	    return false;
+	    if (err && err->code == VIR_ERR_NO_DOMAIN)
+	      {
+		// The VM isn't there anymore, so signal shutdown
+		vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.Value());
+		m_self_shutdown = true;
+		m_result_msg += "Stopped";
+		return true;
+	      }
+	    else
+	      {
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+		return false;
+	      }
 	  }
 	virDomainInfo _info;
 	virDomainInfoPtr info = &_info;
 	if(virDomainGetInfo(dom, info) < 0)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    vmprintf(D_ALWAYS, "Error finding domain info %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
-	if(info->state == VIR_DOMAIN_RUNNING)
+	if(info->state == VIR_DOMAIN_RUNNING || info->state == VIR_DOMAIN_BLOCKED)
 	  {
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
@@ -721,7 +796,7 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
   m_xml += m_vm_name;
   m_xml += "</name>";
   m_xml += "<memory>";
-  m_xml += m_vm_mem;
+  m_xml += m_vm_mem * 1024;
   m_xml += "</memory>";
   m_xml += "<vcpu>";
   m_xml += m_vcpus;
@@ -812,7 +887,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 	m_xml += m_vm_name;
 	m_xml += "</name>";
 	m_xml += "<memory>";
-	m_xml += m_vm_mem;
+	m_xml += m_vm_mem * 1024;
 	m_xml += "</memory>";
 	m_xml += "<vcpu>";
 	m_xml += m_vcpus;
@@ -820,25 +895,11 @@ XenType::CreateVirshConfigFile(const char* filename)
 	m_xml += "<os><type>linux</type>";
 
 	if( m_xen_kernel_file.IsEmpty() == false ) {
-		MyString tmp_fullname;
 		m_xml += "<kernel>";
-		if( isTransferedFile(m_xen_kernel_file.Value(), 
-					tmp_fullname) ) {
-			// this file is transferred
-			// we need a full path
-			m_xen_kernel_file = tmp_fullname;
-		}
-
 		m_xml += m_xen_kernel_file;
 		m_xml += "</kernel>";
 		if( m_xen_initrd_file.IsEmpty() == false ) {
 		        m_xml += "<initrd>";
-			if( isTransferedFile(m_xen_initrd_file.Value(), 
-						tmp_fullname) ) {
-				// this file is transferred
-				// we need a full path
-				m_xen_initrd_file = tmp_fullname;
-			}
 			m_xml += m_xen_initrd_file;
 			m_xml += "</initrd>";
 		}
@@ -973,6 +1034,14 @@ VirshType::CreateConfigFile()
 			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
 			return false;
 		}
+
+		MyString tmp_fullname;
+		if( isTransferedFile(m_xen_kernel_submit_param.Value(), 
+					tmp_fullname) ) {
+			// this file is transferred
+			// we need a full path
+			m_xen_kernel_submit_param = tmp_fullname;
+		}
 		m_xen_kernel_file = m_xen_kernel_submit_param;
 
 		if( m_classAd.LookupString(VMPARAM_XEN_INITRD, m_xen_initrd_file) 
@@ -985,6 +1054,12 @@ VirshType::CreateConfigFile()
 						m_xen_initrd_file.Value());
 				m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND;
 				return false;
+			}
+			if( isTransferedFile(m_xen_initrd_file.Value(), 
+						tmp_fullname) ) {
+				// this file is transferred
+				// we need a full path
+				m_xen_initrd_file = tmp_fullname;
 			}
 		}
 	}
@@ -1689,16 +1764,27 @@ VirshType::killVM()
 	ResumeFromSoftSuspend();
 
 	//	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
-	    return false;
+	    if (err && err->code != VIR_ERR_NO_DOMAIN)
+	      {
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+		return false;
+	      }
+	    else
+	      {
+		return true;
+	      }
 	  }
 	
+	priv = set_root_priv();
 	bool ret = (virDomainDestroy(dom) == 0);
 	virDomainFree(dom);
+	set_priv(priv);
 	return ret;
 }
 
@@ -1774,23 +1860,12 @@ VirshType::createISO()
 XenType::XenType(const char * scriptname, const char * workingpath, ClassAd * ad)
   : VirshType(scriptname, workingpath, ad)
 {
-  m_libvirt_connection = virConnectOpen("xen:///");
-  if(m_libvirt_connection == NULL)
-    {
-      vmprintf(D_ALWAYS, "Failed to get libvirt connection.\n");
-      exit(-1);
-    }
+	// Nothing to do
 }
 
 KVMType::KVMType(const char * scriptname, const char * workingpath, ClassAd * ad)
   : VirshType(scriptname, workingpath, ad)
 {
-  m_libvirt_connection = virConnectOpen("qemu:///session");
-  if(m_libvirt_connection == NULL)
-    {
-      virErrorPtr err = virGetLastError();
-      vmprintf(D_ALWAYS, "Failed to get libvirt connection: %s\n", err->message);
-      exit(-1);
-    }
+	// Nothing to do
 }
 
