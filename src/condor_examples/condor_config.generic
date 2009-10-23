@@ -2157,7 +2157,7 @@ DBMSD_LOG = $(LOG)/DbmsdLog
 ##  VM Universe Parameters
 ##--------------------------------------------------------------------
 ## Where is the Condor VM-GAHP installed? (Required)
-#VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp
+VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp
 
 ## If the VM-GAHP is to have its own log, define 
 ## the location of log file.
@@ -2290,11 +2290,41 @@ VMWARE_NETWORKING_TYPE = nat
 #VMWARE_LOCAL_SETTINGS_FILE = /path/to/file
 
 ##--------------------------------------------------------------------
-##  VM Universe Parameters Specific to Xen
+##  VM Universe Parameters common to libvirt controlled vm's (xen & kvm)
 ##--------------------------------------------------------------------
 
-##  Where is the Condor script program to control Xen? (Required)
-XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
+##  Where is the Condor script program to control Xen & KVM? (Required)
+VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
+
+## Networking parameters for Xen & KVM
+##
+## This parameter is used only for virsh.
+##
+## A string specifying a script and its arguments that will be run to
+## setup a bridging network interface for guests. The interface should
+## provide direct access to the host system's LAN, i.e. not be NAT'd on the
+## host. 
+##
+## Example 
+##  VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
+#VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
+
+## This is the path to the XML helper command; the libvirt_simple_script.awk
+## script just reproduces what Condor already does for the kvm/xen VM
+## universe
+LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
+
+## This is the optional debugging output file for the xml helper
+## script.  Scripts that need to output debugging messages should
+## write them to the file specified by this argument, which will be
+## passed as the second command line argument when the script is
+## executed
+
+#LIBVRT_XML_SCRIPT_ARGS = /dev/stderr
+
+##--------------------------------------------------------------------
+##  VM Universe Parameters Specific to Xen
+##--------------------------------------------------------------------
 
 ##  Where is the default kernel image for Xen domainU? (Required)
 ##
@@ -2318,36 +2348,9 @@ XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
 ##  a disk image
 #XEN_BOOTLOADER = /usr/bin/pygrub
 
-## Networking parameters for Xen
-##
-## This parameter is used only for virsh.
-##
-## A string specifying a script and its arguments that will be run to
-## setup a bridging network interface for guests. The interface should
-## provide direct access to the host system's LAN, i.e. not be NAT'd on the
-## host. 
-##
-## Example 
-##  XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
-#XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
-
 ## The contents of this file will be added to the Xen virtual machine
 ## description that Condor writes.
 #XEN_LOCAL_SETTINGS_FILE = /path/to/file
-
-## This is the path to the XML helper command; the libvirt_simple_script.awk
-## script just reproduces what Condor already does for the kvm/xen VM
-## universe
-LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
-
-## This is the optional debugging output file for the xml helper
-## script.  Scripts that need to output debugging messages should
-## write them to the file specified by this argument, which will be
-## passed as the second command line argument when the script is
-## executed
-
-#LIBVRT_XML_SCRIPT_ARGS = /dev/stderr
-
 
 ##
 ##--------------------------------------------------------------------

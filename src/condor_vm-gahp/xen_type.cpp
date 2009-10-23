@@ -69,7 +69,6 @@ getScriptErrorString(const char* fname)
 VirshType::VirshType(const char* scriptname, const char* workingpath, 
 		ClassAd* ad) : VMType("", scriptname, workingpath, ad)
 {
-	m_vmtype = CONDOR_VM_UNIVERSE_XEN;
 	m_cputime_before_suspend = 0;
 	m_xen_hw_vt = false;
 	m_allow_hw_vt_suspend = false;
@@ -135,7 +134,7 @@ VirshType::Start()
 			m_suspendfile = "";
 			m_restart_with_ckpt = false;
 
-			if( CreateConfigFile() == false ) {
+			if( this->CreateConfigFile() == false ) {
 				vmprintf(D_ALWAYS, "Failed to create a new configuration files\n");
 				return false;
 			}
@@ -145,20 +144,24 @@ VirshType::Start()
 		}
 	}
 	vmprintf(D_FULLDEBUG, "Trying XML: %s\n", m_xml.Value());
+	priv_state priv = set_root_priv();
 	virDomainPtr vm = virDomainCreateXML(m_libvirt_connection, m_xml.Value(), 0);
+	set_priv(priv);
 
 	if(vm == NULL)
 	  {
 	    // Error in creating the vm; let's find out what the error
 	    // was
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", err->message);
+	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", (err ? err->message : "No reason found"));
 	    //virFreeError(err);
 	    return false;
 	  }
 
 
+	priv = set_root_priv();
 	virDomainFree(vm);
+	set_priv(priv);
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
@@ -221,20 +224,30 @@ VirshType::Shutdown()
 	ResumeFromSoftSuspend();
 
 	if( getVMStatus() == VM_RUNNING ) {
+		priv_state priv = set_root_priv();
                 virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+		set_priv(priv);
 		if(dom == NULL)
 		  {
 		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
-		    return false;
+		    if (err && err->code != VIR_ERR_NO_DOMAIN)
+		      {
+			vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+			return false;
+		      }
 		  }
-		int result = virDomainShutdown(dom);
-		virDomainFree(dom);
-		if( result != 0 ) {
-			// system error happens
-			// killing VM by force
-			killVM();
-		}
+		else
+		  {
+		    priv = set_root_priv();
+		    int result = virDomainShutdown(dom);
+		    virDomainFree(dom);
+		    set_priv(priv);
+		    if( result != 0 ) {
+			    // system error happens
+			    // killing VM by force
+			    killVM();
+		    }
+		  }
 		// Now we don't need working files any more
 		m_delete_working_files = true;
 		m_is_checkpointed = false;
@@ -301,8 +314,7 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
   char * tmp = param("LIBVIRT_XML_SCRIPT");
   if(tmp == NULL)
     {
-      vmprintf(D_ALWAYS, "Something went really bad, the xml helper command variable is not\
-                          configured (but it must be for this code to be reachable).\n");
+      vmprintf(D_ALWAYS, "LIBVIRT_XML_SCRIPT not defined\n");
       return false;
     }
   // This probably needs some work...
@@ -325,6 +337,21 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
   StringList input_strings, output_strings, error_strings;
   MyString classad_string;
   m_classAd.sPrint(classad_string);
+  classad_string += VMPARAM_XEN_BOOTLOADER;
+  classad_string += " = \"";
+  classad_string += m_xen_bootloader;
+  classad_string += "\"\n";
+  classad_string += VMPARAM_XEN_KERNEL_IMAGE;
+  classad_string += " = \"";
+  classad_string += m_xen_kernel_file;
+  classad_string += "\"\n";
+  if(classad_string.find(VMPARAM_XEN_INITRD) < 1)
+    {
+      classad_string += VMPARAM_XEN_INITRD;
+      classad_string += " = \"";
+      classad_string += m_xen_initrd_file;
+      classad_string += "\"\n";
+    }
   input_strings.append(classad_string.Value());
   int ret = systemCommand(args, true, &output_strings, &input_strings, &error_strings, false);
   error_strings.rewind();
@@ -341,10 +368,12 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
 	}
       return false;
     }
+  error_strings.rewind();
   while((tmp = error_strings.next()) != NULL)
     {
       vmprintf(D_ALWAYS, "Helper stderr output: %s\n", tmp);
     }
+  output_strings.rewind();
   while((tmp = output_strings.next()) != NULL)
     {
       m_xml += tmp;
@@ -369,16 +398,20 @@ VirshType::ResumeFromSoftSuspend(void)
 
 // 		int result = systemCommand(systemcmd, true);
 
+		priv_state priv = set_root_priv();
 		virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+		set_priv(priv);
 		if(dom == NULL)
 		  {
 		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 		    return false;
 		  }
 	
+		priv = set_root_priv();
 		int result = virDomainResume(dom);
 		virDomainFree(dom);
+		set_priv(priv);
 		if( result != 0 ) {
 			// unpause failed.
 			vmprintf(D_ALWAYS, "Unpausing VM failed in "
@@ -417,11 +450,13 @@ VirshType::SoftSuspend()
 
 // 	int result = systemCommand(systemcmd, true);
 
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
 	
@@ -483,16 +518,20 @@ VirshType::Suspend()
 
 // 	int result = systemCommand(systemcmd, true, &cmd_out);
 
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
 	
+	priv = set_root_priv();
 	int result = virDomainSave(dom, tmpfilename.Value());
 	virDomainFree(dom);
+	set_priv(priv);
 	if( result != 0 ) {
 		// Read error output
 // 		char *temp = cmd_out.print_to_delimed_string("/");
@@ -551,7 +590,9 @@ VirshType::Resume()
 
 // 	int result = systemCommand(systemcmd, true, &cmd_out);
 
+	priv_state priv = set_root_priv();
 	int result = virDomainRestore(m_libvirt_connection, m_suspendfile.Value());
+	set_priv(priv);
 
 	if( result != 0 ) {
 		// Read error output
@@ -642,22 +683,35 @@ VirshType::Status()
  	m_result_msg += VMGAHP_STATUS_COMMAND_STATUS;
  	m_result_msg += "=";
 
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
-	    return false;
+	    if (err && err->code == VIR_ERR_NO_DOMAIN)
+	      {
+		// The VM isn't there anymore, so signal shutdown
+		vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.Value());
+		m_self_shutdown = true;
+		m_result_msg += "Stopped";
+		return true;
+	      }
+	    else
+	      {
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+		return false;
+	      }
 	  }
 	virDomainInfo _info;
 	virDomainInfoPtr info = &_info;
 	if(virDomainGetInfo(dom, info) < 0)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    vmprintf(D_ALWAYS, "Error finding domain info %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
-	if(info->state == VIR_DOMAIN_RUNNING)
+	if(info->state == VIR_DOMAIN_RUNNING || info->state == VIR_DOMAIN_BLOCKED)
 	  {
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
@@ -707,73 +761,74 @@ void virshIOError(const char * filename, FILE * fp)
 
 bool KVMType::CreateVirshConfigFile(const char * filename)
 {
-  MyString disk_string;
-  char* config_value = NULL;
-  MyString bridge_script;  
-  if(!filename) return false;
+	MyString disk_string;
+	char* config_value = NULL;
+	MyString bridge_script;
+
+	if(!filename) return false;
   
   // The old way of doing things was to write the XML directly to a
   // file; the new way is to store it in m_xml.
 
-
-  m_xml += "<domain type='kvm'>";
-  m_xml += "<name>";
-  m_xml += m_vm_name;
-  m_xml += "</name>";
-  m_xml += "<memory>";
-  m_xml += m_vm_mem;
-  m_xml += "</memory>";
-  m_xml += "<vcpu>";
-  m_xml += m_vcpus;
-  m_xml += "</vcpu>";
-  m_xml += "<os><type>hvm</type></os>";
-  m_xml += "<devices>";
-  if( m_vm_networking ) 
-    {
-      vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
-      if( m_vm_networking_type.find("nat") >= 0 ) {
-	m_xml += "<interface type='network'><source network='default'/></interface>";
-      }
-      else 
+	if (!VirshType::CreateVirshConfigFile(filename))
 	{
-	  m_xml += "<interface type='bridge'><source bridge='virbr0'/>";
-	  config_value = param( "XEN_BRIDGE_SCRIPT" );
-	  if( !config_value ) {
-	    vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
-		     "vmgahp config file\n");
-	  }
-	  else
-	    {
-	      bridge_script = config_value;
-	      free(config_value); 
-	      config_value = NULL;
-	    }
-	  if (!bridge_script.IsEmpty()) {
-	    m_xml += "<script path='";
-	    m_xml += bridge_script;
-	    m_xml += "'/>";
-	  }
-	  if(!m_vm_job_mac.IsEmpty())
-	    {
-	      m_xml += "<mac address='";
-	      m_xml += m_vm_job_mac;
-	      m_xml += "'/>";
-	    }
-	  m_xml += "</interface>";
-	}
-    }
-  disk_string = makeVirshDiskString();
+		vmprintf(D_ALWAYS, "KVMType::CreateVirshConfigFile no XML found, generating defaults\n");
 
-  m_xml += disk_string;
-  m_xml += "</devices></domain>";
-  
-  // This should no longer be necessary
-//   if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
-//     virshIOError(filename, fp);
-//     return false;
-//   }
-  
-  return true;
+		m_xml += "<domain type='kvm'>";
+		m_xml += "<name>";
+		m_xml += m_vm_name;
+		m_xml += "</name>";
+		m_xml += "<memory>";
+		m_xml += m_vm_mem * 1024;
+		m_xml += "</memory>";
+		m_xml += "<vcpu>";
+		m_xml += m_vcpus;
+		m_xml += "</vcpu>";
+		m_xml += "<os><type>hvm</type></os>";
+		m_xml += "<devices>";
+		if( m_vm_networking )
+			{
+			vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
+			if( m_vm_networking_type.find("nat") >= 0 ) {
+			m_xml += "<interface type='network'><source network='default'/></interface>";
+			}
+			else
+			{
+			m_xml += "<interface type='bridge'><source bridge='virbr0'/>";
+			config_value = param( "VM_BRIDGE_SCRIPT" );
+			if( !config_value ) {
+				vmprintf(D_ALWAYS, "VM_BRIDGE_SCRIPT is not defined in the "
+					"vmgahp config file\n");
+			}
+			else
+				{
+				bridge_script = config_value;
+				free(config_value);
+				config_value = NULL;
+				}
+			if (!bridge_script.IsEmpty()) {
+				m_xml += "<script path='";
+				m_xml += bridge_script;
+				m_xml += "'/>";
+			}
+			if(!m_vm_job_mac.IsEmpty())
+				{
+				m_xml += "<mac address='";
+				m_xml += m_vm_job_mac;
+				m_xml += "'/>";
+				}
+			m_xml += "</interface>";
+			}
+			}
+		disk_string = makeVirshDiskString();
+
+		m_xml += disk_string;
+		m_xml += "</devices></domain>";
+		
+		
+	}
+
+	return true;
 }
 
 
@@ -784,109 +839,102 @@ XenType::CreateVirshConfigFile(const char* filename)
 	char* config_value = NULL;
 	MyString bridge_script;
 
-	if( !filename ) {
-		return false;
-	}
-	config_value = param( "XEN_BRIDGE_SCRIPT" );
-	if( !config_value ) {
-		vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
-				 "vmgahp config file\n");
+	if( !filename ) return false;
 
-			// I'm not so sure this should be required. The problem
-			// with it being missing/wrong is that a job expecting to
-			// have un-nat'd network access might not get it. There's
-			// no way for us to tell if the script given is correct
-			// though, so this error might just be better as a warning
-			// in the log. If this is turned into a warning an EXCEPT
-			// must be removed when 'bridge_script' is used below.
-			//  - matt 17 oct 2007
-			//return false;
-	} else {
-		bridge_script = config_value;
-		free(config_value); 
-		config_value = NULL;
-	}
+	if (!VirshType::CreateVirshConfigFile(filename))
+	{
+		vmprintf(D_ALWAYS, "XenType::CreateVirshConfigFile no XML found, generating defaults\n");
 
-	m_xml += "<domain type='xen'>";
-	m_xml += "<name>";
-	m_xml += m_vm_name;
-	m_xml += "</name>";
-	m_xml += "<memory>";
-	m_xml += m_vm_mem;
-	m_xml += "</memory>";
-	m_xml += "<vcpu>";
-	m_xml += m_vcpus;
-	m_xml += "</vcpu>";
-	m_xml += "<os><type>linux</type>";
+		if (!(config_value = param( "XEN_BRIDGE_SCRIPT" )))
+			config_value = param( "VM_BRIDGE_SCRIPT" );
 
-	if( m_xen_kernel_file.IsEmpty() == false ) {
-		MyString tmp_fullname;
-		m_xml += "<kernel>";
-		if( isTransferedFile(m_xen_kernel_file.Value(), 
-					tmp_fullname) ) {
-			// this file is transferred
-			// we need a full path
-			m_xen_kernel_file = tmp_fullname;
-		}
+		if( !config_value ) {
+			vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
+					"vmgahp config file\n");
 
-		m_xml += m_xen_kernel_file;
-		m_xml += "</kernel>";
-		if( m_xen_initrd_file.IsEmpty() == false ) {
-		        m_xml += "<initrd>";
-			if( isTransferedFile(m_xen_initrd_file.Value(), 
-						tmp_fullname) ) {
-				// this file is transferred
-				// we need a full path
-				m_xen_initrd_file = tmp_fullname;
-			}
-			m_xml += m_xen_initrd_file;
-			m_xml += "</initrd>";
-		}
-		if( m_xen_root.IsEmpty() == false ) {
-			m_xml += "<root>";
-			m_xml += m_xen_root;
-			m_xml += "</root>";
-		}
-
-		if( m_xen_kernel_params.IsEmpty() == false ) {
-			m_xml += "<cmdline>";
-			m_xml += m_xen_kernel_params;
-			m_xml += "</cmdline>";
-		}
-	}
-
-	m_xml += "</os>";
-	if( strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
-		m_xml += "<bootloader>";
-		m_xml += m_xen_bootloader;
-		m_xml += "</bootloader>";
-	}
-	m_xml += "<devices>";
-	if( m_vm_networking ) {
-		if( m_vm_networking_type.find("nat") >= 0 ) {
-			m_xml += "<interface type='network'><source network='default'/></interface>";
+				// I'm not so sure this should be required. The problem
+				// with it being missing/wrong is that a job expecting to
+				// have un-nat'd network access might not get it. There's
+				// no way for us to tell if the script given is correct
+				// though, so this error might just be better as a warning
+				// in the log. If this is turned into a warning an EXCEPT
+				// must be removed when 'bridge_script' is used below.
+				//  - matt 17 oct 2007
+				//return false;
 		} else {
-		        m_xml += "<interface type='bridge'>";
-			if (!bridge_script.IsEmpty()) {
-				m_xml += "<script path='";
-				m_xml += bridge_script;
-				m_xml += "'/>";
-			}
-			vmprintf(D_FULLDEBUG, "mac address is %s", m_vm_job_mac.Value());
-			if(!m_vm_job_mac.IsEmpty())
-			  {
-			    m_xml += "<mac address='";
-			    m_xml += m_vm_job_mac;
-			    m_xml += "'/>";
-			  }
-			m_xml += "</interface>";
+			bridge_script = config_value;
+			free(config_value);
+			config_value = NULL;
 		}
+
+		m_xml += "<domain type='xen'>";
+		m_xml += "<name>";
+		m_xml += m_vm_name;
+		m_xml += "</name>";
+		m_xml += "<memory>";
+		m_xml += m_vm_mem * 1024;
+		m_xml += "</memory>";
+		m_xml += "<vcpu>";
+		m_xml += m_vcpus;
+		m_xml += "</vcpu>";
+		m_xml += "<os><type>linux</type>";
+
+		if( m_xen_kernel_file.IsEmpty() == false ) {
+			m_xml += "<kernel>";
+			m_xml += m_xen_kernel_file;
+			m_xml += "</kernel>";
+			if( m_xen_initrd_file.IsEmpty() == false ) {
+				m_xml += "<initrd>";
+				m_xml += m_xen_initrd_file;
+				m_xml += "</initrd>";
+			}
+			if( m_xen_root.IsEmpty() == false ) {
+				m_xml += "<root>";
+				m_xml += m_xen_root;
+				m_xml += "</root>";
+			}
+
+			if( m_xen_kernel_params.IsEmpty() == false ) {
+				m_xml += "<cmdline>";
+				m_xml += m_xen_kernel_params;
+				m_xml += "</cmdline>";
+			}
+		}
+
+		m_xml += "</os>";
+		if( strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
+			m_xml += "<bootloader>";
+			m_xml += m_xen_bootloader;
+			m_xml += "</bootloader>";
+		}
+		m_xml += "<devices>";
+		if( m_vm_networking ) {
+			if( m_vm_networking_type.find("nat") >= 0 ) {
+				m_xml += "<interface type='network'><source network='default'/></interface>";
+			} else {
+					m_xml += "<interface type='bridge'>";
+				if (!bridge_script.IsEmpty()) {
+					m_xml += "<script path='";
+					m_xml += bridge_script;
+					m_xml += "'/>";
+				}
+				vmprintf(D_FULLDEBUG, "mac address is %s", m_vm_job_mac.Value());
+				if(!m_vm_job_mac.IsEmpty())
+				{
+					m_xml += "<mac address='";
+					m_xml += m_vm_job_mac;
+					m_xml += "'/>";
+				}
+				m_xml += "</interface>";
+			}
+		}
+
+		// Create disk parameter in Virsh config file
+		disk_string = makeVirshDiskString();
+		m_xml += disk_string;
+		m_xml += "</devices></domain>";
 	}
 
-	// Create disk parameter in Virsh config file
-	disk_string = makeVirshDiskString();
-	m_xml += disk_string;
-	m_xml += "</devices></domain>";
 	return true;
 }
 
@@ -900,207 +948,6 @@ VirshType::CreateXenVMConfigFile(const char* filename)
        	return CreateVirshConfigFile(filename);
 }
 
-bool
-VirshType::CreateConfigFile()
-{
-	char *config_value = NULL;
-	vmprintf(D_FULLDEBUG, "In VirshType::CreateConfigFile()\n");
-	// Read common parameters for VM
-	// and create the name of this VM
-	if( parseCommonParamFromClassAd(true) == false ) {
-		return false;
-	}
-
-	if( m_vm_mem < 32 ) {
-		// Allocating less than 32MBs is not recommended in Virsh.
-		m_vm_mem = 32;
-	}
-
-	// Read the parameter of Virsh kernel
-	if( m_classAd.LookupString( VMPARAM_XEN_KERNEL, m_xen_kernel_submit_param) != 1 ) {
-		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
-							VMPARAM_XEN_KERNEL);
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM;
-		return false;
-	}
-	m_xen_kernel_submit_param.trim();
-
-	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_ANY) == 0) {
-		vmprintf(D_ALWAYS, "VMGahp will use default xen kernel\n");
-		config_value = param( "XEN_DEFAULT_KERNEL" );
-		if( !config_value ) {
-			vmprintf(D_ALWAYS, "Default xen kernel is not defined "
-					"in vmgahp config file\n");
-			m_result_msg = VMGAHP_ERR_CRITICAL;
-			return false;
-		}else {
-			m_xen_kernel_file = delete_quotation_marks(config_value);
-			free(config_value);
-
-			config_value = param( "XEN_DEFAULT_INITRD" );
-			if( config_value ) {
-				m_xen_initrd_file = delete_quotation_marks(config_value);
-				free(config_value);
-			}
-		}
-	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
-		vmprintf(D_ALWAYS, "VMGahp will use xen bootloader\n");
-		config_value = param( "XEN_BOOTLOADER" );
-		if( !config_value ) {
-			vmprintf(D_ALWAYS, "xen bootloader is not defined "
-					"in vmgahp config file\n");
-			m_result_msg = VMGAHP_ERR_CRITICAL;
-			return false;
-		}else {
-			m_xen_bootloader = delete_quotation_marks(config_value);
-			free(config_value);
-		}
-	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_HW_VT) == 0) {
-		vmprintf(D_ALWAYS, "This VM requires hardware virtualization\n");
-		if( !m_vm_hardware_vt ) {
-			m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT;
-			return false;
-		}
-		m_xen_hw_vt = true;
-		m_allow_hw_vt_suspend = 
-			param_boolean("XEN_ALLOW_HARDWARE_VT_SUSPEND", false);
-	}else {
-		// A job user defined a customized kernel
-		// make sure that the file for xen kernel is readable
-		if( check_vm_read_access_file(m_xen_kernel_submit_param.Value(), false) == false) {
-			vmprintf(D_ALWAYS, "xen kernel file '%s' cannot be read\n", 
-					m_xen_kernel_submit_param.Value());
-			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
-			return false;
-		}
-		m_xen_kernel_file = m_xen_kernel_submit_param;
-
-		if( m_classAd.LookupString(VMPARAM_XEN_INITRD, m_xen_initrd_file) 
-					== 1 ) {
-			// A job user defined a customized ramdisk
-			m_xen_initrd_file.trim();
-			if( check_vm_read_access_file(m_xen_initrd_file.Value(), false) == false) {
-				// make sure that the file for xen ramdisk is readable
-				vmprintf(D_ALWAYS, "xen ramdisk file '%s' cannot be read\n", 
-						m_xen_initrd_file.Value());
-				m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND;
-				return false;
-			}
-		}
-	}
-
-	if( m_xen_kernel_file.IsEmpty() == false ) {
-		// Read the parameter of Virsh Root
-		if( m_classAd.LookupString(VMPARAM_XEN_ROOT, m_xen_root) != 1 ) {
-			vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
-					VMPARAM_XEN_ROOT);
-			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM;
-			return false;
-		}
-		m_xen_root.trim();
-	}
-
-	MyString xen_disk;
-	// Read the parameter of Virsh Disk
-	if( m_classAd.LookupString(VMPARAM_XEN_DISK, xen_disk) != 1 ) {
-		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
-				VMPARAM_XEN_DISK);
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
-		return false;
-	}
-	xen_disk.trim();
-	if( parseXenDiskParam(xen_disk.Value()) == false ) {
-		vmprintf(D_ALWAYS, "xen disk format(%s) is incorrect\n", 
-				xen_disk.Value());
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM;
-		return false;
-	}
-
-	// Read the parameter of Virsh Kernel Param
-	if( m_classAd.LookupString(VMPARAM_XEN_KERNEL_PARAMS, m_xen_kernel_params) == 1 ) {
-		m_xen_kernel_params.trim();
-	}
-
-	// Read the parameter of Virsh cdrom device
-	if( m_classAd.LookupString(VMPARAM_XEN_CDROM_DEVICE, m_xen_cdrom_device) == 1 ) {
-		m_xen_cdrom_device.trim();
-		m_xen_cdrom_device.lower_case();
-	}
-
-	if( (m_vm_cdrom_files.isEmpty() == false) && 
-			m_xen_cdrom_device.IsEmpty() ) {
-		vmprintf(D_ALWAYS, "A job user defined files for a CDROM, "
-				"but the job user didn't define CDROM device\n");
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_CDROM_DEVICE;
-		return false;
-	}
-
-	// Check whether this is re-starting after vacating checkpointing,
-	if( m_transfer_intermediate_files.isEmpty() == false ) {
-		// we have chckecpointed files
-		// Find vm config file and suspend file
-		MyString ckpt_config_file;
-		MyString ckpt_suspend_file;
-		if( findCkptConfigAndSuspendFile(ckpt_config_file, ckpt_suspend_file) 
-				== false ) {
-			vmprintf(D_ALWAYS, "Checkpoint files exist but "
-					"cannot find the correct config file and suspend file\n");
-			//Delete all non-transferred files from submit machine
-			deleteNonTransferredFiles();
-			m_restart_with_ckpt = false;
-		}else {
-			m_configfile = ckpt_config_file;
-			m_suspendfile = ckpt_suspend_file;
-			vmprintf(D_ALWAYS, "Found checkpointed files, "
-					"so we start using them\n");
-			m_restart_with_ckpt = true;
-			return true;
-		}
-	}
-
-	if( (m_vm_cdrom_files.isEmpty() == false) && !m_has_iso) {
-		// Create ISO file
-		if( createISO() == false ) {
-			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
-			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
-			return false;
-		}
-	}
-
-	// Here we check if this job actually can use checkpoint 
-	if( m_vm_checkpoint ) {
-		// For vm checkpoint in Virsh
-		// 1. all disk files should be in a shared file system
-		// 2. If a job uses CDROM files, it should be 
-		// 	  single ISO file and be in a shared file system
-		if( m_has_transferred_disk_file || m_local_iso ) {
-			// In this case, we cannot use vm checkpoint for Virsh
-			// To use vm checkpoint in Virsh, 
-			// all disk and iso files should be in a shared file system
-			vmprintf(D_ALWAYS, "To use vm checkpint in Virsh, "
-					"all disk and iso files should be "
-					"in a shared file system\n");
-			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT;
-			return false;
-		}
-	}
-
-
-	// create a vm config file
-	MyString tmp_config_name;
-	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
-			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
-	
-	if( CreateXenVMConfigFile(tmp_config_name.Value()) 
-			== false ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
-		return false;
-	}
-
-	// set vm config file
-	m_configfile = tmp_config_name.Value();
-	return true;
-}
 
 bool 
 VirshType::parseXenDiskParam(const char *format)
@@ -1368,10 +1215,10 @@ bool KVMType::checkXenParams(VMGahpConfig * config)
     return false;
   }
 // find script program for Virsh
-  config_value = param("XEN_SCRIPT");
+  config_value = param("VM_SCRIPT");
   if( !config_value ) {
     vmprintf(D_ALWAYS,
-	     "\nERROR: 'XEN_SCRIPT' not defined in configuration\n");
+	     "\nERROR: 'VM_SCRIPT' not defined in configuration\n");
     return false;
   }
   fixedvalue = delete_quotation_marks(config_value);
@@ -1438,10 +1285,15 @@ XenType::checkXenParams(VMGahpConfig* config)
 
 	// find script program for Virsh
 	config_value = param("XEN_SCRIPT");
-	if( !config_value ) {
-		vmprintf(D_ALWAYS,
-		         "\nERROR: 'XEN_SCRIPT' not defined in configuration\n");
-		return false;
+	if( !config_value )
+	{
+		if (!(config_value = param("VM_SCRIPT")))
+		{
+			vmprintf(D_ALWAYS,
+		         "\nERROR: Neither 'XEN_SCRIPT' or 'VM_SCRIPT' not defined in configuration\n");
+			return false;
+		}
+		
 	}
 	fixedvalue = delete_quotation_marks(config_value);
 	free(config_value);
@@ -1689,16 +1541,27 @@ VirshType::killVM()
 	ResumeFromSoftSuspend();
 
 	//	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
+	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
-	    return false;
+	    if (err && err->code != VIR_ERR_NO_DOMAIN)
+	      {
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+		return false;
+	      }
+	    else
+	      {
+		return true;
+	      }
 	  }
 	
+	priv = set_root_priv();
 	bool ret = (virDomainDestroy(dom) == 0);
 	virDomainFree(dom);
+	set_priv(priv);
 	return ret;
 }
 
@@ -1774,23 +1637,389 @@ VirshType::createISO()
 XenType::XenType(const char * scriptname, const char * workingpath, ClassAd * ad)
   : VirshType(scriptname, workingpath, ad)
 {
-  m_libvirt_connection = virConnectOpen("xen:///");
+
+    priv_state priv = set_root_priv();
+    m_libvirt_connection = virConnectOpen("xen:///");
+    set_priv(priv);
   if(m_libvirt_connection == NULL)
     {
-      vmprintf(D_ALWAYS, "Failed to get libvirt connection.\n");
-      exit(-1);
+      virErrorPtr err = virGetLastError();
+      EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
     }
+
+  m_vmtype = CONDOR_VM_UNIVERSE_XEN;
+
 }
+
+bool XenType::CreateConfigFile()
+{
+	char *config_value = NULL;
+	priv_state priv;
+
+	vmprintf(D_FULLDEBUG, "In XenType::CreateConfigFile()\n");
+	// Read common parameters for VM
+	// and create the name of this VM
+	if( parseCommonParamFromClassAd(true) == false ) {
+		return false;
+	}
+
+	if( m_vm_mem < 32 ) {
+		// Allocating less than 32MBs is not recommended in Virsh.
+		m_vm_mem = 32;
+	}
+
+	// Read the parameter of Virsh kernel
+	if( m_classAd.LookupString( VMPARAM_XEN_KERNEL, m_xen_kernel_submit_param) != 1 ) {
+		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
+							VMPARAM_XEN_KERNEL);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM;
+		return false;
+	}
+	m_xen_kernel_submit_param.trim();
+
+	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_ANY) == 0) {
+		vmprintf(D_ALWAYS, "VMGahp will use default xen kernel\n");
+		config_value = param( "XEN_DEFAULT_KERNEL" );
+		if( !config_value ) {
+			vmprintf(D_ALWAYS, "Default xen kernel is not defined "
+					"in vmgahp config file\n");
+			m_result_msg = VMGAHP_ERR_CRITICAL;
+			return false;
+		}else {
+			m_xen_kernel_file = delete_quotation_marks(config_value);
+			free(config_value);
+
+			config_value = param( "XEN_DEFAULT_INITRD" );
+			if( config_value ) {
+				m_xen_initrd_file = delete_quotation_marks(config_value);
+				free(config_value);
+			}
+		}
+	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0 )
+	{
+		//if (strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == 0){
+			vmprintf(D_ALWAYS, "VMGahp will use xen bootloader\n");
+			config_value = param( "XEN_BOOTLOADER" );
+			if( !config_value ) {
+				vmprintf(D_ALWAYS, "xen bootloader is not defined "
+						"in vmgahp config file\n");
+				m_result_msg = VMGAHP_ERR_CRITICAL;
+				return false;
+			}else {
+				m_xen_bootloader = delete_quotation_marks(config_value);
+				free(config_value);
+			}
+		//}
+	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_HW_VT) == 0) {
+		vmprintf(D_ALWAYS, "This VM requires hardware virtualization\n");
+		if( !m_vm_hardware_vt ) {
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT;
+			return false;
+		}
+		m_xen_hw_vt = true;
+		m_allow_hw_vt_suspend =
+			param_boolean("XEN_ALLOW_HARDWARE_VT_SUSPEND", false);
+	}else {
+		// A job user defined a customized kernel
+		// make sure that the file for xen kernel is readable
+		if( check_vm_read_access_file(m_xen_kernel_submit_param.Value(), false) == false) {
+			vmprintf(D_ALWAYS, "xen kernel file '%s' cannot be read\n",
+					m_xen_kernel_submit_param.Value());
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
+			return false;
+		}
+		MyString tmp_fullname;
+		if( isTransferedFile(m_xen_kernel_submit_param.Value(),
+					tmp_fullname) ) {
+			// this file is transferred
+			// we need a full path
+			m_xen_kernel_submit_param = tmp_fullname;
+		}
+
+		m_xen_kernel_file = m_xen_kernel_submit_param;
+
+		if( m_classAd.LookupString(VMPARAM_XEN_INITRD, m_xen_initrd_file)
+					== 1 ) {
+			// A job user defined a customized ramdisk
+			m_xen_initrd_file.trim();
+			if( check_vm_read_access_file(m_xen_initrd_file.Value(), false) == false) {
+				// make sure that the file for xen ramdisk is readable
+				vmprintf(D_ALWAYS, "xen ramdisk file '%s' cannot be read\n",
+						m_xen_initrd_file.Value());
+				m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND;
+				return false;
+			}
+			if( isTransferedFile(m_xen_initrd_file.Value(),
+						tmp_fullname) ) {
+				// this file is transferred
+				// we need a full path
+				m_xen_initrd_file = tmp_fullname;
+			}
+		}
+	}
+
+	if( m_xen_kernel_file.IsEmpty() == false ) {
+		// Read the parameter of Virsh Root
+		if( m_classAd.LookupString(VMPARAM_XEN_ROOT, m_xen_root) != 1 ) {
+			vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
+					VMPARAM_XEN_ROOT);
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM;
+			return false;
+		}
+		m_xen_root.trim();
+	}
+
+	MyString xen_disk;
+	// Read the parameter of Virsh Disk
+	if( m_classAd.LookupString(VMPARAM_XEN_DISK, xen_disk) != 1 ) {
+		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
+				VMPARAM_XEN_DISK);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
+		return false;
+	}
+	xen_disk.trim();
+
+	// from this point below we start to check the params
+	// and access data.
+	priv = set_root_priv();
+
+	if( parseXenDiskParam(xen_disk.Value()) == false ) {
+		vmprintf(D_ALWAYS, "xen disk format(%s) is incorrect\n",
+				xen_disk.Value());
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM;
+		set_priv(priv);
+		return false;
+	}
+	set_priv(priv);
+
+	// Read the parameter of Virsh Kernel Param
+	if( m_classAd.LookupString(VMPARAM_XEN_KERNEL_PARAMS, m_xen_kernel_params) == 1 ) {
+		m_xen_kernel_params.trim();
+	}
+
+	// Read the parameter of Virsh cdrom device
+	if( m_classAd.LookupString(VMPARAM_XEN_CDROM_DEVICE, m_xen_cdrom_device) == 1 ) {
+		m_xen_cdrom_device.trim();
+		m_xen_cdrom_device.lower_case();
+	}
+
+	if( (m_vm_cdrom_files.isEmpty() == false) &&
+			m_xen_cdrom_device.IsEmpty() ) {
+		vmprintf(D_ALWAYS, "A job user defined files for a CDROM, "
+				"but the job user didn't define CDROM device\n");
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_CDROM_DEVICE;
+		return false;
+	}
+
+	// Check whether this is re-starting after vacating checkpointing,
+	if( m_transfer_intermediate_files.isEmpty() == false ) {
+		// we have chckecpointed files
+		// Find vm config file and suspend file
+		MyString ckpt_config_file;
+		MyString ckpt_suspend_file;
+		if( findCkptConfigAndSuspendFile(ckpt_config_file, ckpt_suspend_file)
+				== false ) {
+			vmprintf(D_ALWAYS, "Checkpoint files exist but "
+					"cannot find the correct config file and suspend file\n");
+			//Delete all non-transferred files from submit machine
+			deleteNonTransferredFiles();
+			m_restart_with_ckpt = false;
+		}else {
+			m_configfile = ckpt_config_file;
+			m_suspendfile = ckpt_suspend_file;
+			vmprintf(D_ALWAYS, "Found checkpointed files, "
+					"so we start using them\n");
+			m_restart_with_ckpt = true;
+			return true;
+		}
+	}
+
+	if( (m_vm_cdrom_files.isEmpty() == false) && !m_has_iso) {
+		// Create ISO file
+		if( createISO() == false ) {
+			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
+			return false;
+		}
+	}
+
+	// Here we check if this job actually can use checkpoint
+	if( m_vm_checkpoint ) {
+		// For vm checkpoint in Virsh
+		// 1. all disk files should be in a shared file system
+		// 2. If a job uses CDROM files, it should be
+		// 	  single ISO file and be in a shared file system
+		if( m_has_transferred_disk_file || m_local_iso ) {
+			// In this case, we cannot use vm checkpoint for Virsh
+			// To use vm checkpoint in Virsh,
+			// all disk and iso files should be in a shared file system
+			vmprintf(D_ALWAYS, "To use vm checkpint in Virsh, "
+					"all disk and iso files should be "
+					"in a shared file system\n");
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT;
+			return false;
+		}
+	}
+
+
+	// create a vm config file
+	MyString tmp_config_name;
+	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(),
+			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
+
+	vmprintf(D_ALWAYS, "CreateXenVMConfigFile\n");
+
+	if( CreateXenVMConfigFile(tmp_config_name.Value())
+			== false ) {
+		m_result_msg = VMGAHP_ERR_CRITICAL;
+		return false;
+	}
+
+	// set vm config file
+	m_configfile = tmp_config_name.Value();
+	return true;
+}
+
 
 KVMType::KVMType(const char * scriptname, const char * workingpath, ClassAd * ad)
   : VirshType(scriptname, workingpath, ad)
 {
-  m_libvirt_connection = virConnectOpen("qemu:///session");
-  if(m_libvirt_connection == NULL)
+
+    priv_state priv = set_root_priv();
+    m_libvirt_connection = virConnectOpen("qemu:///session");
+    set_priv(priv);
+
+	if(m_libvirt_connection == NULL)
     {
-      virErrorPtr err = virGetLastError();
-      vmprintf(D_ALWAYS, "Failed to get libvirt connection: %s\n", err->message);
-      exit(-1);
+		virErrorPtr err = virGetLastError();
+		EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
     }
+
+  m_vmtype = CONDOR_VM_UNIVERSE_KVM;
+
+}
+
+bool
+KVMType::CreateConfigFile()
+{
+	char *config_value = NULL;
+	priv_state priv;
+
+	vmprintf(D_FULLDEBUG, "In KVMType::CreateConfigFile()\n");
+	// Read common parameters for VM
+	// and create the name of this VM
+	if( parseCommonParamFromClassAd(true) == false ) {
+		return false;
+	}
+
+	if( m_vm_mem < 32 ) {
+		// Allocating less than 32MBs is not recommended in Virsh.
+		m_vm_mem = 32;
+	}
+
+	MyString kvm_disk;
+	// Read the parameter of Virsh Disk
+	if( m_classAd.LookupString(VMPARAM_KVM_DISK, kvm_disk) != 1 ) {
+		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
+				VMPARAM_KVM_DISK);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
+		return false;
+	}
+	kvm_disk.trim();
+
+	// from this point below we start to check the params
+	// and access data.
+	priv = set_root_priv();
+
+	if( parseXenDiskParam(kvm_disk.Value()) == false ) {
+		vmprintf(D_ALWAYS, "kvm disk format(%s) is incorrect\n",
+				kvm_disk.Value());
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM;
+		set_priv(priv);
+		return false;
+	}
+	set_priv(priv);
+
+	// Read the parameter of Virsh cdrom device
+	if( m_classAd.LookupString(VMPARAM_KVM_CDROM_DEVICE, m_xen_cdrom_device) == 1 ) {
+		m_xen_cdrom_device.trim();
+		m_xen_cdrom_device.lower_case();
+	}
+
+	if( (m_vm_cdrom_files.isEmpty() == false) &&
+			m_xen_cdrom_device.IsEmpty() ) {
+		vmprintf(D_ALWAYS, "A job user defined files for a CDROM, "
+				"but the job user didn't define CDROM device\n");
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_NO_CDROM_DEVICE;
+		return false;
+	}
+
+	// Check whether this is re-starting after vacating checkpointing,
+	if( m_transfer_intermediate_files.isEmpty() == false ) {
+		// we have chckecpointed files
+		// Find vm config file and suspend file
+		MyString ckpt_config_file;
+		MyString ckpt_suspend_file;
+		if( findCkptConfigAndSuspendFile(ckpt_config_file, ckpt_suspend_file)
+				== false ) {
+			vmprintf(D_ALWAYS, "Checkpoint files exist but "
+					"cannot find the correct config file and suspend file\n");
+			//Delete all non-transferred files from submit machine
+			deleteNonTransferredFiles();
+			m_restart_with_ckpt = false;
+		}else {
+			m_configfile = ckpt_config_file;
+			m_suspendfile = ckpt_suspend_file;
+			vmprintf(D_ALWAYS, "Found checkpointed files, "
+					"so we start using them\n");
+			m_restart_with_ckpt = true;
+			return true;
+		}
+	}
+
+	if( (m_vm_cdrom_files.isEmpty() == false) && !m_has_iso) {
+		// Create ISO file
+		if( createISO() == false ) {
+			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
+			return false;
+		}
+	}
+
+	// Here we check if this job actually can use checkpoint
+	if( m_vm_checkpoint ) {
+		// For vm checkpoint in Virsh
+		// 1. all disk files should be in a shared file system
+		// 2. If a job uses CDROM files, it should be
+		// 	  single ISO file and be in a shared file system
+		if( m_has_transferred_disk_file || m_local_iso ) {
+			// In this case, we cannot use vm checkpoint for Virsh
+			// To use vm checkpoint in Virsh,
+			// all disk and iso files should be in a shared file system
+			vmprintf(D_ALWAYS, "To use vm checkpint in Virsh, "
+					"all disk and iso files should be "
+					"in a shared file system\n");
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT;
+			return false;
+		}
+	}
+
+
+	// create a vm config file
+	MyString tmp_config_name;
+	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(),
+			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
+
+	vmprintf(D_ALWAYS, "CreateKvmVMConfigFile\n");
+
+	if( CreateXenVMConfigFile(tmp_config_name.Value())
+			== false ) {
+		m_result_msg = VMGAHP_ERR_CRITICAL;
+		return false;
+	}
+
+	// set vm config file
+	m_configfile = tmp_config_name.Value();
+	return true;
 }
 

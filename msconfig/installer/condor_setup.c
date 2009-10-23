@@ -252,6 +252,9 @@ set_release_dir() {
 	if ( Opt.release_dir ) {
 		set_option("RELEASE_DIR", Opt.release_dir);
 		set_option("LOCAL_DIR", Opt.release_dir);
+		//Hack until I work out the AWK script.
+		set_option("HDFS", "$(SBIN)/condor_hdfs.exe");
+		set_option("ROOSTER", "$(SBIN)/condor_rooster.exe");
 	}
 }
 
