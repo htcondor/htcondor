@@ -102,9 +102,8 @@ split_sin( const char *addr, char **host, char **port, char **params )
 		}
 		if( params ) {
 			free( *params );
-			params = NULL;
+			*params = NULL;
 		}
-		*host = *port = *params = NULL;
 		return 0;
 	}
 	return 1;
