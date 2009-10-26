@@ -60,7 +60,7 @@ software.
 
 \begin{itemize}
 
-\item \Condor{q} \Arg{-analyze} and \Arg{-better-analyze} now provide
+\item \Condor{q} \Opt{-analyze} and \Opt{-better-analyze} now provide
   analysis for scheduler and local universe jobs.  Specifically, the
   \MacroNI{START\_SCHEDULER\_UNIVERSE} and
   \MacroNI{START\_LOCAL\_UNIVERSE} expressions are checked.
@@ -186,16 +186,16 @@ rescue DAG if it reads such an event.
 
 % gittrac #744
 \item Fixed a bug that could cause \Condor{dagman} to abort if it saw
-the combination of a terminated and an aborted event on a node with
+the combination of a terminated event and an aborted event on a node with
 retries.
 
 % commit 5039a08cf00b0d0fafcc3fd8241518d1854ec3a1
-\item Changed some log file warnings in \Condor{dagman} to not be
+\item Changed some logged warnings in \Condor{dagman} to not be
 printed at the default verbosity setting.
 
 % gittrac #825
 \item The version compatibility checking between a \File{.condor.sub}
-file and the \Condor{dagman} binary which is done at DAG startup,
+file and the \Condor{dagman} binary which is done at DAG startup
 is now much more permissive.
 Currently, \File{.condor.sub} files with
 Condor versions of 7.1.2 and later accepted by \Condor{dagman}.
@@ -233,7 +233,8 @@ if the job queue
 contained grid type gt2 jobs that had been previously submitted.
 
 % #724, #774
-\item Fixed two bugs related to VOMS, introduced in Condor version 7.3.2.
+\item Fixed two bugs introduced in Condor version 7.3.2,
+and related to VOMS. 
 The first bug
 prevented jobs with X.509 proxies from being submitted on platforms
 on which Condor does not support VOMS.
@@ -258,25 +259,14 @@ contained a comma.
 
 % #460
 \item File transfer for grid type gt4 jobs requires an empty directory
-in \Attr{/tmp}, which the \Condor{gridmanager} creates. If this directory
-is deleted, the \Condor{gridmanager} will now recreate it.
+within \File{/tmp}, which the \Condor{gridmanager} creates. 
+If this directory is deleted, the \Condor{gridmanager} will now recreate it.
 
 %gittrac #790
 \item Fixed a bug that could cause the user job log to become
-  corrupted on Windows.  This bug would manifest itself only if the
+  corrupted on Windows platforms.  This bug would manifest itself only if the
   same log file was specified with different paths.  For example, the
-  following submit file could trigger this:
-
-\item Fixed a memory leak in the \Condor{collector} daemon that was introduced
-in 7.3.2.
-
-\item Fixed a problem introduced in 7.1.4 that resulted in failure to force
-the execute bit to be set on the transferred job executable.
-
-% commit 1663b7e183e6bf1df8152af98d9387412c2ae146
-\item Fixed a bug from 7.3.2 that resulted in the \Condor{negotiator} daemon
-refusing to run if \MacroNI{GROUP\_QUOTA} for any group was set to 0.
-
+  following submit file could have triggered this bug:
 \begin{verbatim}
 ...
 initialdir = /data/job1
@@ -288,8 +278,22 @@ log = ../JobLog
 queue
 \end{verbatim}
 
+
+\item Fixed a memory leak introduced into Condor version 7.3.2.
+The leak was in the \Condor{collector} daemon.
+
+\item Fixed a problem introduced in Condor version 7.1.4 
+that resulted in the failure of forcing
+the execute bit to be set on the transferred job executable.
+
+% commit 1663b7e183e6bf1df8152af98d9387412c2ae146
+\item Fixed a bug introduced in Condor version 7.3.2
+that resulted in the \Condor{negotiator} daemon
+refusing to run, if the configuration variable \MacroNI{GROUP\_QUOTA}
+for any group was set to 0.
+
 % gittrac #731
-\item Fixed a bug that was causing the ctime in the ``event log'' header
+\item Fixed a bug that caused the \Code{ctime} in the event log header
   to always be zero.
 
 \end{itemize}
