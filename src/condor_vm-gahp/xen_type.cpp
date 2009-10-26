@@ -341,10 +341,6 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
   classad_string += " = \"";
   classad_string += m_xen_bootloader;
   classad_string += "\"\n";
-  classad_string += VMPARAM_XEN_KERNEL_IMAGE;
-  classad_string += " = \"";
-  classad_string += m_xen_kernel_file;
-  classad_string += "\"\n";
   if(classad_string.find(VMPARAM_XEN_INITRD) < 1)
     {
       classad_string += VMPARAM_XEN_INITRD;
@@ -1334,33 +1330,6 @@ XenType::checkXenParams(VMGahpConfig* config)
 	}
 	config->m_vm_script = fixedvalue;
 
-	// Read XEN_DEFAULT_KERNEL (required parameter)
-	config_value = param("XEN_DEFAULT_KERNEL");
-	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define the default "
-				"kernel for Xen\n");
-		return false;
-	}
-	fixedvalue = delete_quotation_marks(config_value);
-	free(config_value);
-
-	// Can read default xen kernel ?
-	if( check_vm_read_access_file(fixedvalue.Value(), true) == false ) {
-		return false;
-	}
-	
-	// Read XEN_DEFAULT_INITRD (optional parameter)
-	config_value = param("XEN_DEFAULT_INITRD");
-	if( config_value ) {
-		fixedvalue = delete_quotation_marks(config_value);
-		free(config_value);
-
-		// Can read default xen ramdisk ?
-		if( check_vm_read_access_file(fixedvalue.Value(), true) == false ) {
-			return false;
-		}
-	}
-
 	// Read XEN_BOOTLOADER (required parameter)
 	config_value = param("XEN_BOOTLOADER");
 	if( !config_value ) {
@@ -1677,25 +1646,7 @@ bool XenType::CreateConfigFile()
 	}
 	m_xen_kernel_submit_param.trim();
 
-	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_ANY) == 0) {
-		vmprintf(D_ALWAYS, "VMGahp will use default xen kernel\n");
-		config_value = param( "XEN_DEFAULT_KERNEL" );
-		if( !config_value ) {
-			vmprintf(D_ALWAYS, "Default xen kernel is not defined "
-					"in vmgahp config file\n");
-			m_result_msg = VMGAHP_ERR_CRITICAL;
-			return false;
-		}else {
-			m_xen_kernel_file = delete_quotation_marks(config_value);
-			free(config_value);
-
-			config_value = param( "XEN_DEFAULT_INITRD" );
-			if( config_value ) {
-				m_xen_initrd_file = delete_quotation_marks(config_value);
-				free(config_value);
-			}
-		}
-	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0 )
+	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0 )
 	{
 		//if (strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == 0){
 			vmprintf(D_ALWAYS, "VMGahp will use xen bootloader\n");

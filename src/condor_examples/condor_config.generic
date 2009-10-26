@@ -2326,22 +2326,6 @@ LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
 ##  VM Universe Parameters Specific to Xen
 ##--------------------------------------------------------------------
 
-##  Where is the default kernel image for Xen domainU? (Required)
-##
-##  This kernel image will be used when a job submission user doesn't
-##  define a kernel image explicitly. 
-##  If a job submission user defines its own kernel image in the submit
-##  description file, it will be used instead of this default kernel.
-##  (e.g.) XEN_DEFAULT_KERNEL = /boot/vmlinuz-2.6.16-xen
-#XEN_DEFAULT_KERNEL = /full/path/to/<kernel-image-file>
-
-##  Where is the default initrd image for Xen domainU? (Optional)
-##
-##  The complete path and image file name for the initrd image, if
-##  needed for the default kernel image. 
-##  (e.g.) XEN_DEFAULT_INITRD = /boot/initrd-2.6.16-xen0.img
-#XEN_DEFAULT_INITRD = /full/path/to/<initrd-image-file>
-
 ##  Where is bootloader for Xen domainU? (Required)
 ##
 ##  The bootloader will be used in the case that a kernel image includes

@@ -7734,19 +7734,14 @@ SetVMParams()
 						"Please specify 'xen_kernel' for the xen virtual machine "
 						"in your submit description file.\n"
 						"xen_kernel must be one of "
-						"\"%s\", \"%s\", \"%s\", <file-name>.\n", 
-						XEN_KERNEL_ANY, XEN_KERNEL_INCLUDED, XEN_KERNEL_HW_VT);
+						"\"%s\", \"%s\", <file-name>.\n", 
+						XEN_KERNEL_INCLUDED, XEN_KERNEL_HW_VT);
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}else {
 				MyString fixedname = delete_quotation_marks(xen_kernel);
 
-				if( stricmp(fixedname.Value(), XEN_KERNEL_ANY ) == 0 ) {
-					// Condor will use a default kernel defined 
-					// in a vmgahp config file on an execute machine
-					real_xen_kernel_file = false;
-					need_xen_root_device = true;
-				}else if ( stricmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
+				if ( stricmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
 					// kernel image is included in a disk image file
 					// so we will use bootloader(pygrub etc.) defined 
 					// in a vmgahp config file on an excute machine 
