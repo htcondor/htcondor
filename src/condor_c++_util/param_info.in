@@ -802,38 +802,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=8
 
-[XEN_DEFAULT_KERNEL]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Default Kernel
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=9
-
-[XEN_DEFAULT_INITRD]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Default Initrd
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=10
-
 [XEN_BOOTLOADER]
 aliases=
 default=
