@@ -47,7 +47,6 @@
 #define VMGAHP_STATUS_COMMAND_CPUTIME	"CPUTIME"
 
 /* Parameters for Xen kernel */
-#define XEN_KERNEL_ANY			"any"
 #define XEN_KERNEL_INCLUDED		"included"
 #define XEN_KERNEL_HW_VT		"vmx"
 
@@ -60,7 +59,6 @@
 #define VMPARAM_XEN_CDROM_DEVICE	"VMPARAM_Xen_CDROM_Device"
 #define VMPARAM_XEN_TRANSFER_FILES	"VMPARAM_Xen_Transfer_Files"
 #define VMPARAM_XEN_BOOTLOADER		"VMPARAM_Xen_Bootloader"
-#define VMPARAM_XEN_KERNEL_IMAGE	"VMPARAM_Xen_Kernel_Image"
 
 /* ClassAd Attributes for KVM */
 #define VMPARAM_KVM_DISK			"VMPARAM_Kvm_Disk"

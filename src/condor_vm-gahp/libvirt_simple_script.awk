@@ -44,14 +44,7 @@ END {
 	}
 	else
 	{
-	    if(index(attrs["VMPARAM_Xen_Kernel"],"any") != 0)
-	    {
-		kernel = attrs["VMPARAM_Xen_Kernel_Image"]
-	    }
-	    else
-	    {
-		kernel = attrs["VMPARAM_Xen_Kernel"]
-	    }
+	    kernel = attrs["VMPARAM_Xen_Kernel"]
 	    root = attrs["VMPARAM_Xen_Root"]
 	    initrd = attrs["VMPARAM_Xen_Initrd"]
             kern_params = attrs["VMPARAM_Xen_Kernel_Params"]
