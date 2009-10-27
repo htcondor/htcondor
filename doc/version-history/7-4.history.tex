@@ -309,6 +309,15 @@ for any group was set to 0.
 \item Fixed output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
 used.
 
+\item Fixed a problem in the \Condor{schedd} daemon introduced in
+  7.3.2.  For schedd's with lots of jobs having periodic release
+  expressions, this could result in the \Condor{schedd} taking a long
+  time while evaluating periodic expressions, causing it to become
+  unresponsive to queries and other tasks.  With a job queue of 30,000
+  jobs, a period of unresponsiveness of an hour was observed, whereas
+  the evaluation of periodic expressions in this same environment
+  normally takes less than 5 seconds.
+
 \end{itemize}
 
 \noindent Known Bugs:
