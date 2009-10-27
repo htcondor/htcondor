@@ -91,6 +91,14 @@ is now also understood by the \Condor{job\_router} and
 \item The submit command \SubmitCmd{run\_as\_owner} is now supported
 for Unix platforms. Previously, it was only supported on Windows platforms.
 
+% #795
+\item When setting \MacroNI{AMAZON\_HTTP\_PROXY}, a username and password
+can now be given as part of the proxy URL.
+
+% #795
+\item \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
+an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -232,7 +240,7 @@ Quill was also not able to see these attributes.
 if the job queue
 contained grid type gt2 jobs that had been previously submitted.
 
-% #724, #774
+% #724, #774, #786
 \item Fixed two bugs introduced in Condor version 7.3.2,
 and related to VOMS. 
 The first bug
@@ -241,6 +249,7 @@ on which Condor does not support VOMS.
 The second bug prevented submission
 of jobs with VOMS proxies, if the authenticity of the VOMS extensions
 could not be verified.
+Also improved memory usage when VOMS extensions aren't used.
 
 \item Fixed a bad default in the \Attr{batch\_gahp.config} file,
 that prevented
@@ -295,6 +304,10 @@ for any group was set to 0.
 % gittrac #731
 \item Fixed a bug that caused the \Code{ctime} in the event log header
   to always be zero.
+
+% #862
+\item Fixed output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
+used.
 
 \end{itemize}
 
