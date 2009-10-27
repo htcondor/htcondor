@@ -271,7 +271,10 @@ int SendSpoolFileBytes(char const *filename);
 */
 int SendSpoolFileIfNeeded(ClassAd& ad);
 
+/* This function is not reentrant!  Do not call it recursively. */
 void WalkJobQueue(scan_func);
+
+bool InWalkJobQueue();
 
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
