@@ -42,7 +42,7 @@ if( $datafile ) {
 
 my $domove = 0;
 if( !$outfile ) {
-	$outfile = "/tmp/btplots/tempdata";
+	$outfile = "/tmp/tempdata";
 	$domove=1;
 	#print "Temp results going to <<$outfile>>\n";
 }
@@ -79,7 +79,8 @@ while(<DATA>) {
 	$ratemarker = $ratemarker + 1;
 	chomp($_);
 	$line = $_;
-	if( $line =~ /^(\d+)\s+(\w+)\s(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+)\s*,\s*(V\d+_\d+-(trunk|branch)).*$/ ) {
+	#if( $line =~ /^(\d+)\s+(\w+)\s(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+)\s*,\s*(V\d+_\d+-(trunk|branch)).*$/ ) {
+	if( $line =~ /^(\d+)\s+(\w+)\s(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+)\s*,\s*([V]*\d*[_]*\d*[\-]*(trunk|branch)).*$/ ) {
 		#print "$line\n";
 		# check for weird data and toss
 		# how many branches this day?
@@ -95,32 +96,12 @@ while(<DATA>) {
 			#print "Second branch is $9 upping $branches to 2<<$branches>>\n";
 		}
 
-		#if(($type eq "tests") && ($8 != 0)) {
-			#$previousrate = readratehist();
-			#$previousratio = ($previousrate / $8);
-			#if(($previousrate != 0) && ($previousratio < .7)) {
-				##print "Ratio <<<$previousratio>>\n";
-				##throw out rates too extreme by normalizing downward.
-				##print "ADJUSTING <<$8>> ratio <<$previousratio>>\n";
-				#$t4 = $4 * $previousratio;
-				#$t5 = $5 * $previousratio;
-				#$t6 = $6 * $previousratio;
-				#$t7 = $7 * $previousratio;
-				#$t8 = $8 * $previousratio;
-			#} else {
-				#$t4 = $4;
-				#$t5 = $5;
-				#$t6 = $6;
-				#$t7 = $7;
-				#$t8 = $8;
-			#}
-		#} else {
-			$t4 = $4;
-			$t5 = $5;
-			$t6 = $6;
-			$t7 = $7;
-			$t8 = $8;
-		#}
+		$t4 = $4;
+		$t5 = $5;
+		$t6 = $6;
+		$t7 = $7;
+		$t8 = $8;
+		
 		feedratehist($t8);
 
 		if(($1 eq $curday) && ($2 eq $curmonth) && ($3 eq $curyear)) {
@@ -128,7 +109,7 @@ while(<DATA>) {
 			if($type eq "builds") {
 				# dump bad build data - total builds >0 and <10   kludge
 				if(($c5 != 0) && ($c5 < 10)) {
-					next;
+					#next;
 				}
 			}
 
@@ -158,11 +139,108 @@ while(<DATA>) {
 					#print "New day so print results prior\n";
 					#print "barnches is <<$branches>> Running total is <<$c5>> and non-zero is <<$nonzero>>\n";
 					#print "entries is <<$entries>>\n";
-					$c1 = (($c1 / $nonzero) * $branches);
-					$c2 = (($c2 / $nonzero) * $branches);
-					$c3 = (($c3 / $nonzero) * $branches);
-					$c4 = (($c4 / $nonzero) * $branches);
-					$c5 = (($c5 / $nonzero) * $branches);
+#					$c1 = (($c1 / $nonzero) * $branches);
+#					$c2 = (($c2 / $nonzero) * $branches);
+#					$c3 = (($c3 / $nonzero) * $branches);
+#					$c4 = (($c4 / $nonzero) * $branches);
+#					$c5 = (($c5 / $nonzero) * $branches);
+					$c1 = (($c1));
+					$c2 = (($c2));
+					$c3 = (($c3));
+					$c4 = (($c4));
+					$c5 = (($c5));
+					print OUTDATA "$curday $curmonth $curyear, $c1, $c2, $c3, $c4, $c5\n";
+					#print "$curday $curmonth $curyear, $c1, $c2, $c3, $c4, $c5\n";
+					$nonzero = 0;
+				}
+				# reset branch tracking variables
+				#print "Clear branch and count branches\n";
+				$branches = 1;
+				$branch = $9;
+				#print "New day and entry starting at 1\n";
+				$entries = 1;
+			}
+			#how many none zero entries
+			if( $t8 != 0 ) {
+				$nonzero = $nonzero + 1;
+				#print "Got non-zero Total <<$t8>>\n";
+			}
+
+			# start next day
+			#print "Collect new day's data\n";
+			$curday = $1;
+			$curmonth = $2;
+			$curyear = $3;
+			$c1 = $t4;
+			$c2 = $t5;
+			$c3 = $t6;
+			$c4 = $t7;
+			$c5 = $t8;
+		}
+	} elsif( $line =~ /^(\d+)\s+(\w+)\s(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+),\s+(\d+)\s*,\s*(Continuous\s*Build\s*-.*)$/ ) {
+		#print "$line\n";
+		# check for weird data and toss
+		# how many branches this day?
+		if($branch eq "") {
+			#first branch
+			$branch = $9;
+			#print "setting branch to $9\n";
+			#print "Number of branches is<<$branches>>\n";
+		} elsif($branch ne $9) {
+			#second branch
+			#print "Second branch is $9 upping $branches to 2<<$branches>>\n";
+			$branches = 2;
+			#print "Second branch is $9 upping $branches to 2<<$branches>>\n";
+		}
+
+		$t4 = $4;
+		$t5 = $5;
+		$t6 = $6;
+		$t7 = $7;
+		$t8 = $8;
+
+		feedratehist($t8);
+
+		if(($1 eq $curday) && ($2 eq $curmonth) && ($3 eq $curyear)) {
+			# roll in second days data
+			if($type eq "builds") {
+				# dump bad build data - total builds >0 and <10   kludge
+				if(($c5 != 0) && ($c5 < 10)) {
+					#next;
+				}
+			}
+
+			#print "repeat day up entry\n";
+			$entries = $entries + 1;
+			#how many none zero entries
+			if( $t8 != 0 ) {
+				$nonzero = $nonzero + 1;
+				#print "Got non-zero Total <<$t8>>\n";
+			}
+
+			$c1 = $c1 + $t4;
+			$c2 = $c2 + $t5;
+			$c3 = $c3 + $t6;
+			$c4 = $c4 + $t7;
+			$c5 = $c5 + $t8;
+		} else {
+			#print "new day\n";
+			#calculate an average - compromise
+			#only if current day not "";
+			if( $curday ne "") {
+				if($nonzero == 0) {
+					# well they were all zero so just print it.
+					print OUTDATA "$curday $curmonth $curyear, $c1, $c2, $c3, $c4, $c5\n";
+					$nonzero = 0;
+				} else {
+					#print "New day so print results prior\n";
+					#print "barnches is <<$branches>> Running total is <<$c5>> and non-zero is <<$nonzero>>\n";
+					#print "entries is <<$entries>>\n";
+					$c1 = (($c1));
+					$c2 = (($c2));
+					$c3 = (($c3));
+					$c4 = (($c4));
+					$c5 = (($c5));
 					print OUTDATA "$curday $curmonth $curyear, $c1, $c2, $c3, $c4, $c5\n";
 					#print "$curday $curmonth $curyear, $c1, $c2, $c3, $c4, $c5\n";
 					$nonzero = 0;

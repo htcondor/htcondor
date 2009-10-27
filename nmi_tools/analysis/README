@@ -27,11 +27,11 @@ Ther are run by cron on chopin.
 They run from /p/condor/home/tools/build-test-plots.
 
 These scripts all assume that this read only user can access the NMI DB
-and that nmi-build25 is an available mysql host.
+and that mysql.batlab.org is an available mysql host.
 
 sub DbConnect
 {
-    $db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-build25", "nmipublic", "nmi?????????"
+    $db = DBI->connect("DBI:mysql:database=nmi_history;host=mysql.batlab.org", "nmipublic", "nmi?????????"
 	) || die "Could not connect to database: $!\n";
 }
 bt 6/2007

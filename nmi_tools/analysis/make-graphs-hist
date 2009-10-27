@@ -56,7 +56,7 @@ my $BINSIZE = $BIN_MONTH;
 my $GNUPLOT = '/s/gnuplot-4.2.0/bin/gnuplot';
 
 # Path to ImageMagick's convert
-my $CONVERT = '/s/std/bin/convert';
+my $CONVERT = 'convert';
 
 # Path to mv
 my $MV = '/bin/cp';

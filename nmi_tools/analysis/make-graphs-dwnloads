@@ -56,7 +56,7 @@ my $BINSIZE = $BIN_MONTH;
 my $GNUPLOT = '/s/gnuplot-4.2.0/bin/gnuplot';
 
 # Path to ImageMagick's convert
-my $CONVERT = '/s/std/bin/convert';
+my $CONVERT = 'convert';
 
 # Path to mv
 my $MV = '/bin/cp';
@@ -177,7 +177,7 @@ sub main {
 
 	my $firstdate = parse_date($FIRST_DATE);
 
-	print "<<<<<<<<< Firstdate $firstdate >>>>>>>>>>>>>>>>>>\n";
+	#print "<<<<<<<<< Firstdate $firstdate >>>>>>>>>>>>>>>>>>\n";
 
 	$firstdate = bindate($BINSIZE, $firstdate);
 
@@ -242,7 +242,7 @@ sub main {
 		binsize => describe_binsize($BINSIZE),
 		);
 
-	print "FULL PLOT command:<<$cmds>>\n";
+	#print "FULL PLOT command:<<$cmds>>\n";
 
 	local *GP;
 	open GP, "|-", $GNUPLOT or fatal_error("unable to run $GNUPLOT because of $!");
