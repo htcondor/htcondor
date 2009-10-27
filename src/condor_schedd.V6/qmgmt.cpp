@@ -88,6 +88,7 @@ static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
 static int old_cluster_num = -1;	// next_cluster_num at start of transaction
 static bool JobQueueDirty = false;
+static int in_walk_job_queue = 0;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
 static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
@@ -3742,11 +3743,22 @@ int mark_idle(ClassAd *job)
 	return 1;
 }
 
+bool InWalkJobQueue() {
+	return in_walk_job_queue != 0;
+}
+
 void
 WalkJobQueue(scan_func func)
 {
 	ClassAd *ad;
 	int rval = 0;
+
+	if( in_walk_job_queue ) {
+		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
+		dprintf_dump_stack();
+	}
+
+	in_walk_job_queue++;
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
@@ -3758,6 +3770,8 @@ WalkJobQueue(scan_func func)
 	}
 	if (ad != NULL)
 		FreeJobAd(ad);
+
+	in_walk_job_queue--;
 }
 
 /*

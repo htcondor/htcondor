@@ -598,6 +598,7 @@ void
 Scheduler::timeout()
 {
 	static bool min_interval_timer_set = false;
+	static bool walk_job_queue_timer_set = false;
 
 		// If we are called too frequently, delay.
 	SchedDInterval.expediteNextRun();
@@ -613,6 +614,19 @@ Scheduler::timeout()
 		return;
 	}
 
+	if( InWalkJobQueue() ) {
+			// WalkJobQueue is not reentrant.  We must be getting called from
+			// inside something else that is iterating through the queue,
+			// such as PeriodicExprHandler().
+		if( !walk_job_queue_timer_set ) {
+			dprintf(D_ALWAYS,"Delaying next queue scan until current operation finishes.\n");
+			daemonCore->Reset_Timer(timeoutid,0,1);
+			walk_job_queue_timer_set = true;
+		}
+		return;
+	}
+
+	walk_job_queue_timer_set = false;
 	min_interval_timer_set = false;
 	SchedDInterval.setStartTimeNow();
 
