@@ -9370,10 +9370,11 @@ Configuration File Macros Affecting APIs}
 \label{param:SubsysSoapSSLPort}
 \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_PORT}]
   \index{SUBSYS\_SOAP\_SSL\_PORT macro@\texttt{<SUBSYS>\_SOAP\_SSL\_PORT} macro}
-  A required port number on which SOAP over SSL messages are
+  The port number on which SOAP over SSL messages are
   accepted, when SOAP over SSL is enabled.
   The \MacroNI{<SUBSYS>} must be specified, because multiple daemons
   running on a single machine may not share a port.
+  This parameter is required when SOAP over SSL is enabled.
   There is no default value.
 
   The macro is named by substituting \MacroNI{<SUBSYS>}
@@ -9382,10 +9383,11 @@ Configuration File Macros Affecting APIs}
 
 \label{param:SoapSSLServerKeyfile}
 \item[\Macro{SOAP\_SSL\_SERVER\_KEYFILE}]
-  A required complete path and file name to specify the daemon's
+  The complete path and file name to specify the daemon's
   identity, as used in authentication when SOAP over SSL is enabled.
   The file is to be  an OpenSSL PEM file containing a certificate
   and private key.
+  This parameter is required when SOAP over SSL is enabled.
   There is no default value.
 
 \label{param:SoapSSLServerKeyfilePassword}
@@ -9396,18 +9398,24 @@ Configuration File Macros Affecting APIs}
 
 \label{param:SoapSSLCaFile}
 \item[\Macro{SOAP\_SSL\_CA\_FILE}]
-  A required complete path and file name to specify 
+  The complete path and file name to specify 
   a file containing certificates of trusted Certificate Authorities (CAs).
   Only clients who present a certificate signed by a trusted
   CA will be authenticated.
+  When SOAP over SSL is enabled, this parameter or
+  \Macro{SOAP\_SSL\_CA\_DIR} must be set.
   There is no default value.
 
 \label{param:SoapSSLCaDir}
 \item[\Macro{SOAP\_SSL\_CA\_DIR}]
-  A required complete path to a directory
+  The complete path to a directory
   containing certificates of trusted Certificate Authorities (CAs).
   Only clients who present a certificate signed by a trusted
   CA will be authenticated.
+  When SOAP over SSL is enabled, this parameter or
+  \Macro{SOAP\_SSL\_CA\_FILE} must be set.
+  This parameter is also used when communicating with an Amazon EC2 server
+  (possibly through a proxy), though it's not required in that case.
   There is no default value.
 
 \label{param:SoapSSLDhFile}
