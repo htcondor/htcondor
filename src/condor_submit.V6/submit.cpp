@@ -7676,12 +7676,23 @@ SetVMParams()
 		bool need_xen_root_device = false;
 
 		// Read the parameter of xen_transfer_files 
-		char *xen_transfer_files = NULL;
-		xen_transfer_files = condor_param("xen_transfer_files");
-		if( xen_transfer_files ) {
+		char *transfer_files = NULL;
+		char *transf_attr_name;
+		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		{
+			transfer_files = condor_param("xen_transfer_files");
+			transf_attr_name = VMPARAM_XEN_TRANSFER_FILES;
+		}
+		else
+		{
+			transfer_files = condor_param("kvm_transfer_files");
+			transf_attr_name = VMPARAM_KVM_TRANSFER_FILES;
+		}
+
+		if( transfer_files ) {
 			MyString final_output;
 			StringList xen_file_list(NULL, ",");
-			xen_file_list.initializeFromString(xen_transfer_files);
+			xen_file_list.initializeFromString(transfer_files);
 
 			xen_file_list.rewind();
 
@@ -7707,165 +7718,191 @@ SetVMParams()
 				// basenames for files to be transferred.
 				final_output += condor_basename(one_file.Value());
 			}
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_TRANSFER_FILES, 
+			buffer.sprintf( "%s = \"%s\"", transf_attr_name, 
 					final_output.Value());
 			InsertJobExpr( buffer, false );
-			free(xen_transfer_files);
+			free(transfer_files);
 		}
-
-		// xen_kernel is a required parameter
-		char *xen_kernel = NULL;
-		xen_kernel = condor_param("xen_kernel");
-		if( !xen_kernel ) {
-			fprintf( stderr, "\nERROR: 'xen_kernel' cannot be found.\n"
-					"Please specify 'xen_kernel' for the xen virtual machine "
-					"in your submit description file.\n"
-					"xen_kernel must be one of "
-					"\"%s\", \"%s\", \"%s\", <file-name>.\n", 
-					XEN_KERNEL_ANY, XEN_KERNEL_INCLUDED, XEN_KERNEL_HW_VT);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}else {
-			MyString fixedname = delete_quotation_marks(xen_kernel);
-
-			if( stricmp(fixedname.Value(), XEN_KERNEL_ANY ) == 0 ) {
-				// Condor will use a default kernel defined 
-				// in a vmgahp config file on an execute machine
-				real_xen_kernel_file = false;
-				need_xen_root_device = true;
-			}else if ( stricmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
-				// kernel image is included in a disk image file
-				// so we will use bootloader(pygrub etc.) defined 
-				// in a vmgahp config file on an excute machine 
-				real_xen_kernel_file = false;
-				need_xen_root_device = false;
-			}else if ( stricmp(fixedname.Value(), XEN_KERNEL_HW_VT) == 0) {
-				// A job user want to use an unmodified OS in Xen.
-				// so we require hardware virtualization.
-				real_xen_kernel_file = false;
-				need_xen_root_device = false;
-				VMHardwareVT = true;
-				buffer.sprintf( "%s = TRUE", ATTR_JOB_VM_HARDWARE_VT);
-				InsertJobExpr( buffer, false );
+		
+		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		{
+			// xen_kernel is a required parameter
+			char *xen_kernel = NULL;
+			xen_kernel = condor_param("xen_kernel");
+			if( !xen_kernel ) {
+				fprintf( stderr, "\nERROR: 'xen_kernel' cannot be found.\n"
+						"Please specify 'xen_kernel' for the xen virtual machine "
+						"in your submit description file.\n"
+						"xen_kernel must be one of "
+						"\"%s\", \"%s\", <file-name>.\n", 
+						XEN_KERNEL_INCLUDED, XEN_KERNEL_HW_VT);
+				DoCleanup(0,0,NULL);
+				exit(1);
 			}else {
-				// real kernel file
-				if( make_vm_file_path(xen_kernel, fixedname) 
+				MyString fixedname = delete_quotation_marks(xen_kernel);
+
+				if ( stricmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
+					// kernel image is included in a disk image file
+					// so we will use bootloader(pygrub etc.) defined 
+					// in a vmgahp config file on an excute machine 
+					real_xen_kernel_file = false;
+					need_xen_root_device = false;
+				}else if ( stricmp(fixedname.Value(), XEN_KERNEL_HW_VT) == 0) {
+					// A job user want to use an unmodified OS in Xen.
+					// so we require hardware virtualization.
+					real_xen_kernel_file = false;
+					need_xen_root_device = false;
+					VMHardwareVT = true;
+					buffer.sprintf( "%s = TRUE", ATTR_JOB_VM_HARDWARE_VT);
+					InsertJobExpr( buffer, false );
+				}else {
+					// real kernel file
+					if( make_vm_file_path(xen_kernel, fixedname) 
+							== false ) {
+						DoCleanup(0,0,NULL);
+						exit(1);
+					}
+					real_xen_kernel_file = true;
+					need_xen_root_device = true;
+				}
+				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
+						fixedname.Value());
+				InsertJobExpr(buffer, false);
+				free(xen_kernel);
+			}
+
+			
+			// xen_initrd is an optional parameter
+			char *xen_initrd = NULL;
+			xen_initrd = condor_param("xen_initrd");
+			if( xen_initrd ) {
+				if( !real_xen_kernel_file ) {
+					fprintf( stderr, "\nERROR: To use xen_initrd, "
+							"xen_kernel should be a real kernel file.\n");
+					DoCleanup(0,0,NULL);
+					exit(1);
+				}
+				MyString fixedname;
+				if( make_vm_file_path(xen_initrd, fixedname) 
 						== false ) {
 					DoCleanup(0,0,NULL);
 					exit(1);
 				}
-				real_xen_kernel_file = true;
-				need_xen_root_device = true;
-			}
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
-					fixedname.Value());
-			InsertJobExpr(buffer, false);
-			free(xen_kernel);
-		}
-
-		// xen_initrd is an optional parameter
-		char *xen_initrd = NULL;
-		xen_initrd = condor_param("xen_initrd");
-		if( xen_initrd ) {
-			if( !real_xen_kernel_file ) {
-				fprintf( stderr, "\nERROR: To use xen_initrd, "
-						"xen_kernel should be a real kernel file.\n");
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}
-			MyString fixedname;
-			if( make_vm_file_path(xen_initrd, fixedname) 
-					== false ) {
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_INITRD, 
-					fixedname.Value());
-			InsertJobExpr(buffer, false);
-			free(xen_initrd);
-		}
-
-		if( need_xen_root_device ) {
-			char *xen_root = NULL;
-			xen_root = condor_param("xen_root");
-			if( !xen_root ) {
-				fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
-						"Please specify '%s' for the xen virtual machine "
-						"in your submit description file.\n", "xen_root", 
-						"xen_root");
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}else {
-				MyString fixedvalue = delete_quotation_marks(xen_root);
-				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_ROOT, 
-						fixedvalue.Value());
+				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_INITRD, 
+						fixedname.Value());
 				InsertJobExpr(buffer, false);
-				free(xen_root);
+				free(xen_initrd);
 			}
+
+			if( need_xen_root_device ) {
+				char *xen_root = NULL;
+				xen_root = condor_param("xen_root");
+				if( !xen_root ) {
+					fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+							"Please specify '%s' for the xen virtual machine "
+							"in your submit description file.\n", "xen_root", 
+							"xen_root");
+					DoCleanup(0,0,NULL);
+					exit(1);
+				}else {
+					MyString fixedvalue = delete_quotation_marks(xen_root);
+					buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_ROOT, 
+							fixedvalue.Value());
+					InsertJobExpr(buffer, false);
+					free(xen_root);
+				}
+			}
+		}// xen only params
+
+		// <x>_disk is a required parameter
+		char *disk = NULL;
+		char *disk_attr_name;
+		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		{
+			disk = condor_param("xen_disk");
+			disk_attr_name = VMPARAM_XEN_DISK;
+		}
+		else
+		{
+			disk = condor_param("kvm_disk");
+			disk_attr_name = VMPARAM_KVM_DISK;
 		}
 
-		// xen_disk is a required parameter
-		char *xen_disk = NULL;
-		xen_disk = condor_param("xen_disk");
-		if( !xen_disk ) {
+		if( !disk ) {
 			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
-					"Please specify '%s' for the xen virtual machine "
+					"Please specify '%s' for the virtual machine "
 					"in your submit description file.\n", 
-					"xen_disk", "xen_disk");
+					"<vm>_disk", "<vm>_disk");
 			DoCleanup(0,0,NULL);
 			exit(1);
 		}else {
-			MyString fixedvalue = delete_quotation_marks(xen_disk);
+			MyString fixedvalue = delete_quotation_marks(disk);
 			if( validate_xen_disk_parm(fixedvalue.Value(), fixedvalue) 
 					== false ) {
-				fprintf(stderr, "\nERROR: 'xen_disk' has incorrect format.\n"
+				fprintf(stderr, "\nERROR: '<vm>_disk' has incorrect format.\n"
 						"The format shoud be like "
 						"\"<filename>:<devicename>:<permission>\"\n"
-						"e.g.> For single disk: xen_disk = filename1:hda1:w\n"
-						"      For multiple disks: xen_disk = "
+						"e.g.> For single disk: <vm>_disk = filename1:hda1:w\n"
+						"      For multiple disks: <vm>_disk = "
 						"filename1:hda1:w,filename2:hda2:w\n");
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}
 
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_DISK, fixedvalue.Value());
+			buffer.sprintf( "%s = \"%s\"", disk_attr_name, fixedvalue.Value());
 			InsertJobExpr( buffer, false);
-			free(xen_disk);
+			free(disk);
 		}
 
-		// xen_kernel_params is a optional parameter
-		char *xen_kernel_params = NULL;
-		xen_kernel_params = condor_param("xen_kernel_params");
-		if( xen_kernel_params ) {
-			MyString fixedvalue = delete_quotation_marks(xen_kernel_params);
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
-					fixedvalue.Value());
-			InsertJobExpr( buffer, false);
-			free(xen_kernel_params);
+		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		{
+			// xen_kernel_params is a optional parameter
+			char *xen_kernel_params = NULL;
+			xen_kernel_params = condor_param("xen_kernel_params");
+			if( xen_kernel_params ) {
+				MyString fixedvalue = delete_quotation_marks(xen_kernel_params);
+				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
+						fixedvalue.Value());
+				InsertJobExpr( buffer, false);
+				free(xen_kernel_params);
+			}
 		}
 
-		if( has_vm_cdrom_files ) {
+		if( has_vm_cdrom_files )
+		{
 			MyString xen_cdrom_string;
-			char *xen_cdrom_device = NULL; 
-			xen_cdrom_device = condor_param("xen_cdrom_device");
-			if( !xen_cdrom_device ) {
+			char *cdrom_device = NULL;
+			char *cdrom_attr_name;
+
+			if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+			{
+				cdrom_device = condor_param("xen_cdrom_device");
+				cdrom_attr_name = VMPARAM_XEN_CDROM_DEVICE;
+			}
+			else
+			{
+				cdrom_device = condor_param("kvm_cdrom_device");
+				cdrom_attr_name = VMPARAM_KVM_CDROM_DEVICE;
+			}
+
+			if( !cdrom_device ) {
 				fprintf(stderr, "\nERROR: To use 'vm_cdrom_files', "
-						"you must also define 'xen_cdrom_device'.\n");
+						"you must also define '<vm>_cdrom_device'.\n");
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}
-			xen_cdrom_string = xen_cdrom_device;
-			free(xen_cdrom_device);
+			xen_cdrom_string = cdrom_device;
+			free(cdrom_device);
 
 			if( xen_cdrom_string.find(":", 0 ) >= 0 ) {
-				fprintf(stderr, "\nERROR: 'xen_cdrom_device' should include "
+				fprintf(stderr, "\nERROR: '<vm>_cdrom_device' should include "
 						"just device name.\n"
 						"e.g.) 'xen_cdrom_device = hdc'\n");
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}
 
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_CDROM_DEVICE, 
+			buffer.sprintf( "%s = \"%s\"", cdrom_attr_name,
 					xen_cdrom_string.Value());
 			InsertJobExpr( buffer, false );
 		}

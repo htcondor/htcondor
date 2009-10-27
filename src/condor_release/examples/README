@@ -305,13 +305,6 @@ sh_loop
     the message "Normal End-of-Job".
 
 **********************************************************************
-PVM jobs
-**********************************************************************
-
-    The PVM subdirectory contains an example PVM job.  You must have
-    Condor PVM support installed to run this example.
-
-**********************************************************************
 DAGMan jobs
 **********************************************************************
 
