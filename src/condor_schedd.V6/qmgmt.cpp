@@ -2663,18 +2663,19 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 }
 
 int
-GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
+GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **val)
 {
 	ClassAd		*ad;
 	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
 
+	*val = NULL;
+
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		strcpy(val, attr_val);
-		free( attr_val );
+		*val = attr_val;
 		return 1;
 	}
 
@@ -2688,9 +2689,9 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	}
 
 	val[0] = '\0';
-	tree->PrintToStr(val);
+	tree->RArg()->PrintToNewStr(val);
 
-	return 1;
+	return 0;
 }
 
 
