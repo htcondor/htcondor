@@ -1439,7 +1439,7 @@ parse_splice(
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),
 							dag->DefaultNodeLog(),
-							false);
+							true); /* we are a splice! */
 	
 	// initialize whatever the DIR line was, or defaults to, here.
 	splice_dag->SetDirectory(directory);

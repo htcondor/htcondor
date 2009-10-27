@@ -382,7 +382,7 @@ int main_init(int argc, char *argv[])
 	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		// Xen requires root priviledge 
 		if( !canSwitchUid() ) {
-			vmprintf(D_ALWAYS, "VMGahp server for Xen requires "
+			vmprintf(D_ALWAYS, "VMGahp server for Xen or KVM requires "
 					"root privilege\n");
 			DC_Exit(1);
 		}
