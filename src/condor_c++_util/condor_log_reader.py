@@ -240,6 +240,9 @@ class BaseRealEvent( BaseEvent ) :
         assert self._header
         return self.GetHostFromText( self._header.Text() )
 
+    def GetHeader( self ) :
+        return self._header
+
     # By default, keep reading 'til we get a "..."
     def ProcessEventLine( self, line ) :
         self._lines.append( line )
@@ -520,6 +523,8 @@ class EventParser( object ) :
     def __init__( self ) :
         self._verbose = 0
         self._quiet = False
+        self._year = time.localtime().tm_year
+        self._year_str = "%04d" % ( self._year )
         
         self.__lookup = (
             self.EventLookup( SubmitEvent ),
@@ -566,10 +571,10 @@ class EventParser( object ) :
         cluster    = int(re_match.group(2))
         proc       = int(re_match.group(3))
         subproc    = int(re_match.group(4))
-        time_str   = re_match.group(5)
+        time_str   = self._year_str+"/"+re_match.group(5)
         text       = re_match.group(6)
         try:
-            event_time = time.strptime( time_str, '%m/%d %H:%M:%S' )
+            event_time = time.strptime( time_str, '%Y/%m/%d %H:%M:%S' )
         except Exception, e:
             print >>sys.stderr, \
                   "header line time parse error '"+time_str+"':", e
