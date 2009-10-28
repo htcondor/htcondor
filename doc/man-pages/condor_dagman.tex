@@ -151,7 +151,12 @@ Level values and what they produce is described as
        by \Condor{submit\_dag} (or, in other words, between 
        \Condor{submit\_dag} and \Condor{dagman}).  WARNING!  This option
        should be used only if absolutely necessary.  Allowing version
-       mismatches can cause subtle problems when running DAGs.}
+       mismatches can cause subtle problems when running DAGs.
+       (Note that, starting with version 7.4.0, \Condor{dagman} no longer
+       requires an exact version match between itself and the
+       \File{.condor.sub} file.  Instead, a "minimum compatible version"
+       is defined, and any \File{.condor.sub} file of that version or
+       newer is accepted.)}
     \OptItem{\Opt{-DumpRescue}}{This optional argument causes
        \Condor{dagman} to immediately dump a rescue DAG and then exit,
        as opposed to actually running the DAG.  (This feature is mainly

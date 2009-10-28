@@ -54,17 +54,17 @@ VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
 VM_GAHP_LOG = $(LOG)/VMGahpLog
 \end{verbatim}
 
-You must also provide a version string for the Virtual Machine software
-you are using:
+%You must also provide a version string for the Virtual Machine software
+%you are using:
 
-\begin{verbatim}
-VM_VERSION = server1.0.4
-\end{verbatim}
+%\begin{verbatim}
+%VM_VERSION = server1.0.4
+%\end{verbatim}
 
-While required, this option does not alter the behavior of Condor.
-Instead, it is added to the ClassAd for the machine, so it 
-can be matched against.  This way, if future releases of VMware/Xen support
-new features that are desirable for your job, you can match on this string.
+%While required, this option does not alter the behavior of Condor.
+%Instead, it is added to the ClassAd for the machine, so it 
+%can be matched against.  This way, if future releases of VMware/Xen support
+%new features that are desirable for your job, you can match on this string.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

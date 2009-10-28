@@ -419,7 +419,7 @@ the library routine which parses the configuration files.
   \item \verb@SUBMIT@
   \item \verb@GRIDMANAGER@
   \item \verb@TOOL@
-  \item \verb@STORK@
+  %\item \verb@STORK@
   \item \verb@HAD@
   \item \verb@REPLICATION@
   \item \verb@TRANSFERER@
@@ -938,11 +938,14 @@ File System Configuration File Entries''.
 
 \label{param:ReservedSwap}
 \item[\Macro{RESERVED\_SWAP}]
-  Determines how much swap space you want to reserve for your own machine.
+  The amount of swap space in Mbytes to reserve for this machine.
   Condor will not start up more \Condor{shadow} processes if the
-  amount of free swap space on your machine falls below this level.
-  \MacroNI{RESERVED\_SWAP} is specified in megabytes.  The default value
-  of \MacroNI{RESERVED\_SWAP} is 5 megabytes.
+  amount of free swap space on this machine falls below this level.
+  The default value is 0, which disables this check.
+  It is anticipated that this configuration variable will no longer
+  be used in the near future.
+  If \MacroNI{RESERVED\_SWAP} is \emph{not} set to 0,
+  the value of \Macro{SHADOW\_SIZE\_ESTIMATE} is used.
 
 \label{param:ReservedDisk}
 \item[\Macro{RESERVED\_DISK}]
@@ -1845,14 +1848,14 @@ which use DaemonCore).
   file. Currently, this setting only works for the \Condor{schedd}
   (that is \Macro{SCHEDD\_DAEMON\_AD\_FILE}) and is required for Quill.
 
+\index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
+\index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
+\MacroIndex{STARTD\_ATTRS}
+\MacroIndex{STARTD\_EXPRS}
 \label{param:SubsysExprs}
 \item[\MacroB{<SUBSYS>\_ATTRS} or
 \label{param:SubsysAttrs}
 \MacroB{<SUBSYS>\_EXPRS}]
-  \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
-  \index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
-  \MacroIndex{STARTD\_ATTRS}
-  \MacroIndex{STARTD\_EXPRS}
   Allows any DaemonCore daemon to advertise arbitrary
   expressions from the configuration file in its ClassAd.  Give the
   comma-separated list of entries from the configuration file you want in the
@@ -2752,10 +2755,6 @@ for details on installing and running a checkpoint server.
   The default is 120 seconds.
   A setting of 0 disables this check.
 
-% This should be gotten rid of, that functionality is DEAD.
-%\label{param:CkptServerReplicationLevel}
-%\item[\Macro{CKPT\_SERVER\_REPLICATION\_LEVEL}]
-
 \label{param:CkptServerInterval}
 \item[\Macro{CKPT\_SERVER\_INTERVAL}]
   The maximum number of seconds the checkpoint server
@@ -2812,18 +2811,6 @@ for details on installing and running a checkpoint server.
   The number of seconds after which if a checkpoint file has not
   been accessed, it is considered stale.
   The default value is 5184000 seconds, which is sixty days.
-
-% This is currently not used in the codebase, it is part of the NETMAN feature.
-%\label{param:ManageBandwidth}
-%\item[\Macro{MANAGE\_BANDWIDTH}]
-
-% This is currently not used in the codebase, it is part of the NETMAN feature.
-%\label{param:NetworkHorizon}
-%\item[\Macro{NETWORK\_HORIZON}]
-
-% This may be part of the REPLICATION feature, which is DEAD in the ckpt server.
-%\label{param:CkptServerHosts}
-%\item[\Macro{CKPT\_SERVER\_HOSTS}]
 
 \end{description}
 
@@ -4569,15 +4556,15 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
 \begin{description}
 
 \label{param:SlotNJobHookKeyword}
-\item[\Macro{SLOTN\_JOB\_HOOK\_KEYWORD}]
+\item[\Macro{SLOT<N>\_JOB\_HOOK\_KEYWORD}]
   The keyword used to define which set of hooks a particular
   compute slot should invoke.
-  Note that the ``N'' in ``SLOTN'' should be replaced with the slot
-  identification number, for example, on slot1, this setting would be
+  The value of \verb@<N>@ is replaced by the slot
+  identification number. For example, on slot 1, th variable name will be
   called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
   There is no default keyword.
   Sites that wish to use these job hooks must explicitly define the
-  keyword (and the corresponding hook paths).
+  keyword and the corresponding hook paths.
 
 \label{param:StartdJobHookKeyword}
 \item[\Macro{STARTD\_JOB\_HOOK\_KEYWORD}]
@@ -4819,7 +4806,7 @@ These macros control the \Condor{schedd}.
   
 \label{param:StartLocalUniverse}
 \item[\Macro{START\_LOCAL\_UNIVERSE}]
-  A boolean value that defaults to \Expr{True}.
+  A boolean value that defaults to \Expr{TotalLocalJobsRunning < 200}.
   The \Condor{schedd} uses this macro to determine whether to start
   a \SubmitCmd{local} universe job. 
   At intervals determined by \MacroNI{SCHEDD\_INTERVAL}, 
@@ -4866,7 +4853,7 @@ These macros control the \Condor{schedd}.
 
 \label{param:StartSchedulerUniverse}
 \item[\Macro{START\_SCHEDULER\_UNIVERSE}]
-  A boolean value that defaults to \Expr{True}.
+  A boolean value that defaults to \Expr{TotalSchedulerJobsRunning < 200}.
   The \Condor{schedd} uses this macro to determine whether to start
   a \SubmitCmd{scheduler} universe job. 
   At intervals determined by \MacroNI{SCHEDD\_INTERVAL}, 
@@ -4890,15 +4877,62 @@ These macros control the \Condor{schedd}.
   
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  An integer representing a limit on the number of processes
+  An integer value representing a limit on the number of processes
   spawned by a given \Condor{schedd} daemon,
   for all job universes except the grid universe. 
-  This includes, but is not limited to \Condor{shadow} processes,
+  This includes, but is not limited to \Condor{shadow} processes
   and scheduler universe processes, including \Condor{dagman}.
-  The actual number of \Condor{shadow} daemons may be fewer,
+  Limiting the number of running scheduler and local universe
+  jobs below the upper limit set by \MacroNI{MAX\_JOBS\_RUNNING} is best
+  done using \MacroNI{START\_LOCAL\_UNIVERSE} and
+  \MacroNI{START\_SCHEDULER\_UNIVERSE}.
+  The actual number of \Condor{shadow} daemons may be reduced,
   if the amount of memory defined by \MacroNI{RESERVED\_SWAP} limits the
   number of \Condor{shadow} daemons.
-  This default value is 200.
+  The default value is an expression that depends on the total amount
+  of memory and the operating system. The default
+  expression requires 1MByte of RAM per running job on the submit machine.
+  In some environments and configurations, this is overly
+  generous and can be cut by as much as 50\%.
+  On Windows platforms, the number of running jobs is still capped at 200.
+  A 64-bit version of Windows  is recommended in order to raise the value
+  above the default.
+  Under Unix, the maximum default is now 10,000.  To scale higher, we
+  recommend that the system ephemeral port range is extended
+  such that there are at least 2.1 ports per running job.
+
+  Here are example configurations:
+
+\footnotesize
+\begin{verbatim}
+## Example 1:
+MAX_JOBS_RUNNING	= 10000
+
+## Example 2:
+## This is more complicated, but it produces the same limit as the default.
+## First define some expressions to use in our calculation.
+## Assume we can use up to 80% of memory and estimate shadow private data
+## size of 800k.
+MAX_SHADOWS_MEM	= ceiling($(DETECTED_MEMORY)*0.8*1024/800)
+## Assume we can use ~21,000 ephemeral ports (avg ~2.1 per shadow).
+## Under Linux, the range is set in /proc/sys/net/ipv4/ip_local_port_range.
+MAX_SHADOWS_PORTS	= 10000
+## Under windows, things are much less scalable, currently.
+## Note that this can probably be safely increased a bit under 64-bit windows.
+MAX_SHADOWS_OPSYS	= ifThenElse(regexp("WIN.*","$(OPSYS)"),200,100000)
+## Now build up the expression for MAX_JOBS_RUNNING.  This is complicated
+## due to lack of a min() function.
+MAX_JOBS_RUNNING	= $(MAX_SHADOWS_MEM)
+MAX_JOBS_RUNNING	= \
+  ifThenElse( $(MAX_SHADOWS_PORTS) < $(MAX_JOBS_RUNNING), \
+              $(MAX_SHADOWS_PORTS), \
+              $(MAX_JOBS_RUNNING) )
+MAX_JOBS_RUNNING	= \
+  ifThenElse( $(MAX_SHADOWS_OPSYS) < $(MAX_JOBS_RUNNING), \
+              $(MAX_SHADOWS_OPSYS), \
+              $(MAX_JOBS_RUNNING) )
+\end{verbatim}
+\normalsize
 
 \label{param:MaxJobsSubmitted}
 \item[\Macro{MAX\_JOBS\_SUBMITTED}]
@@ -5117,9 +5151,10 @@ These macros control the \Condor{schedd}.
 
 \label{param:ShadowSizeEstimate}
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}]
-  This macro sets the estimated virtual memory size of each
-  \Condor{shadow} process.  Specified in kilobytes.  The default
-  varies from platform to platform.
+  The estimated private virtual memory size of each
+  \Condor{shadow} process in Kbytes.
+  This value is only used if \MacroNI{RESERVED\_SWAP} is non-zero.
+  The default value is 800.
 
 \label{param:ShadowReniceIncrement}
 \item[\Macro{SHADOW\_RENICE\_INCREMENT}]
@@ -5540,6 +5575,12 @@ SYSTEM_PERIODIC_REMOVE = \
   server.
   The default is 1200.
 
+\label{param:ScheddJobQueueLogFlushDelay}
+\item[\Macro{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY}]
+  An integer which specifies an upper bound in seconds on how long it
+  takes for changes to the job ClassAd to be visible to the Condor Job Router
+  and to Quill.  The default is 5 seconds.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5684,7 +5725,8 @@ These settings affect the \Condor{starter}.
   Startd Policy Configuration for more details on setting up a
   policy for starting and stopping jobs on a given machine.
 
-  The integer value is
+  The ClassAd expression is evaluated in the context of the job ad
+  to an integer value, which is
   set by the \Condor{starter} daemon for each job just before the
   job runs.
   The range of allowable values are integers in the range of 0 to 19
@@ -5816,12 +5858,12 @@ These settings affect the \Condor{starter}.
   When \Expr{True}, Condor jobs and their descendants maintain their
   affinity to a CPU.
   When \Expr{True}, more fine grained affinities may be specified with
-  \MacroNI{SLOT<X>\_CPU\_AFFINITY}.
+  \MacroNI{SLOT<N>\_CPU\_AFFINITY}.
 
-\label{param:SlotXCpuAffinity} 
-\item[\Macro{SLOT<X>\_CPU\_AFFINITY}]
+\label{param:SlotNCpuAffinity} 
+\item[\Macro{SLOT<N>\_CPU\_AFFINITY}]
   A comma separated list of cores to which a Condor job running on
-  a specific slot given by the value of \MacroNI{<X>} show affinity.
+  a specific slot given by the value of \MacroNI{<N>} show affinity.
   Note that slots are numbered beginning with the value 1,
   while CPU cores are numbered beginning with the value 0.
   This affinity list only takes effect if
@@ -6358,8 +6400,8 @@ These macros affect the \Condor{negotiator}.
   
 \label{param:NegotiatorInterval}
 \item[\Macro{NEGOTIATOR\_INTERVAL}]
-  Sets how often the negotiator starts a negotiation cycle.  It is defined
-  in seconds and defaults to 300 (5 minutes).
+  Sets how often the \Condor{negotiator} starts a negotiation cycle.
+  It is defined in seconds and defaults to 60 (1 minute).
   
 \label{param:NegotiatorCycleDelay}
 \item[\Macro{NEGOTIATOR\_CYCLE\_DELAY}]
@@ -7000,19 +7042,19 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:GridmanagerMaxSubmittedJobsPerResource}
 \item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
-  Limits the number of jobs
+  An integer value that limits the number of jobs
   that a \Condor{gridmanager} daemon will submit to a resource.
   It is useful for controlling the number of \Prog{jobmanager}
   processes running on the front-end node of a cluster.
-  This number may be exceeded if it is reduced through the use
-  of \Condor{reconfig} while the \Condor{gridmanager} is running
+  This number may be exceeded, if it is reduced through the use
+  of \Condor{reconfig} while the \Condor{gridmanager} is running,
   or if the \Condor{gridmanager} receives new
   jobs from the \Condor{schedd} that were already submitted
   (that is, their \MacroNI{GridJobId} is not undefined).
   In these cases, submitted jobs will not be killed,
   but no new jobs can be submitted until the number of submitted
   jobs falls below the current limit.
-  Defaults to 100.
+  Defaults to 1000.
 
 \label{param:GridmanagerMaxJobmanagersPerResource}
 \item[\Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE}]
@@ -7312,9 +7354,14 @@ These macros affect the \Condor{job\_router} daemon.
 \label{JobRouterName}
 \item[\Macro{JOB\_ROUTER\_NAME}]
   A unique identifier utilized to name multiple instances of
-  the \Condor{job\_router} daemon within a single Condor pool.
+  the \Condor{job\_router} daemon on the same machine.
   Each instance must have a different name,
   or all but the first to start up will refuse to run.
+
+  Changing this value when routed jobs already exist is not currently
+  gracefully handled.  However, it can be done if one also uses
+  \Condor{qedit} to change the value of \Attr{ManagedManager} and
+  \Attr{RoutedBy} from the old name to the new name.
 
 \label{JobRouterReleaseOnHold}
 \item[\Macro{JOB\_ROUTER\_RELEASE\_ON\_HOLD}]
@@ -7449,7 +7496,7 @@ These macros affect the Grid Monitor.
   The Grid Monitor is used to reduce load on Globus gatekeepers.
   This parameter only affects grid jobs of type \SubmitCmd{gt2}.
   The variable \MacroNI{GRID\_MONITOR} must also be correctly configured.
-  Defaults to \Expr{False}.
+  Defaults to \Expr{True}.
   See section~\ref{sec:Condor-G-GridMonitor} on
   page~\pageref{sec:Condor-G-GridMonitor}
   for more information.
@@ -7460,10 +7507,7 @@ These macros affect the Grid Monitor.
   the load on Globus gatekeepers.
   This parameter only affects grid jobs of type \SubmitCmd{gt2}.
   This parameter is not referenced unless
-  \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True}. 
-  See section~\ref{sec:Condor-G-GridMonitor} on
-  page~\pageref{sec:Condor-G-GridMonitor}
-  for more information.
+  \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True} (the default value). 
 
 \label{param:GridMonitorHeartbeatTimeout}
 \item[\Macro{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT}]
@@ -7773,7 +7817,7 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManStorkSubmitExe}
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
   The executable that \Condor{dagman} will use to submit Stork jobs.
-  If not defined, \Condor{dagman} looks for \Stork{submit} in the path.
+  If not defined, \Condor{dagman} looks for \Prog{stork\_submit} in the path.
 
 \label{param:DAGManCondorRmExe}
 \item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
@@ -7783,7 +7827,7 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManStorkRmExe}
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
   The executable that \Condor{dagman} will use to remove Stork jobs.
-  If not defined, \Condor{dagman} looks for \Stork{rm} in the path.
+  If not defined, \Condor{dagman} looks for \Prog{stork\_rm} in the path.
 
 \label{param:DAGManProhibitMultiJobs}
 \item[\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS}]
@@ -8353,15 +8397,6 @@ They specify items related to the \Condor{vm-gahp}.
   Specifies the type of supported virtual machine software.
   It will be the value \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
-
-\label{param:VMVersion}
-\item[\Macro{VM\_VERSION}]
-  Specifies the version of supported virtual machine software
-  defined by \MacroNI{VM\_TYPE}.  
-  There is no default value for this required configuration variable.
-  This configuration variable does not currently alter the behavior of
-  the \Condor{vm-gahp}; instead, it is used in \Condor{status} when
-  printing VM-capable hosts and slots.
 
 \label{param:VMMaxMemory}
 \item[\Macro{VM\_MEMORY}]
@@ -9384,82 +9419,82 @@ Configuration File Macros Affecting APIs}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
-File Macros}
+%\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
+%File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
-\begin{description}
-
-\label{param:StorkMaxNumJobs}
-\item[\Macro{STORK\_MAX\_NUM\_JOBS}]
-  An integer limit on the number of concurrent data placement jobs
-  handled by Stork.  The default value when not defined is 10.
-
-\label{param:StorkMaxRetry}
-\item[\Macro{STORK\_MAX\_RETRY}]
-  An integer limit on the
-  number of attempts for a single data placement job.  For data transfers,
-  this includes transfer attempts on the primary protocol, all
-  alternate protocols, and all retries.
-  The default value when not defined is 10.
-
-\label{param:StorkMaxDelayInMinutes}
-\item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
-  An integer limit (in minutes) on the run time for a data placement job,
-  after which the job is considered failed.
-  The default value when not defined is 10,
-  and the minimum legal value is 1.
-
-\label{param:StorkTmpCredDir}
-\item[\Macro{STORK\_TMP\_CRED\_DIR}]
-  The full path to the temporary credential storage directory used by Stork.
-  The default value is \File{/tmp} when not defined. 
-
-\label{param:StorkModuleDir}
-\item[\Macro{STORK\_MODULE\_DIR}]
-  The full path to the directory containing Stork modules.
-  The default value when not defined is 
-  as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
-  both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
-
-\label{param:CreddSuperUsers}
-\item[\Macro{CRED\_SUPER\_USERS}]
-  Access to a stored credential is
-  restricted to the user who submitted the credential, and any user
-  names specified in this macro.  The format is a space or comma
-  separated list of user names which are valid on the \Stork{credd}
-  host.
-  The default value of this macro is \Expr{root} on Unix systems, and
-  \Expr{Administrator} on Windows systems.
-
-\label{param:CredStoreDir}
-\item[\Macro{CRED\_STORE\_DIR}]
-  Directory for storing credentials.  This
-  directory must exist prior to starting \Stork{credd}.  It is highly
-  recommended to restrict access permissions to \emph{only} the
-  directory owner.
-  The default value is \Expr{\$(SPOOL\_DIR)/cred}.
-
-\label{param:CredIndexFile}
-\item[\Macro{CRED\_INDEX\_FILE}]
-  Index file path of saved credentials.
-  This file will be automatically created if it does not exist.
-  The default value is \Expr{\$(CRED\_STORE\_DIR)/cred-index}.
-
-\label{param:DefaultCredExpireThreshold}
-\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
-  \Stork{credd} will attempt
-  to refresh credentials when their remaining lifespan is less than this
-  value.
-  Units = seconds.  Default value = 3600 seconds (1 hour).
-
-\label{param:CredCheckInterval}
-\item[\Macro{CRED\_CHECK\_INTERVAL}]
-  \Stork{credd} periodically checks
-  remaining lifespan of stored credentials, at this interval.
-  Units = seconds.  Default value = 60 seconds (1 minute).
-
-\end{description}
+%
+%\begin{description}
+%
+%\label{param:StorkMaxNumJobs}
+%\item[\Macro{STORK\_MAX\_NUM\_JOBS}]
+  %An integer limit on the number of concurrent data placement jobs
+  %handled by Stork.  The default value when not defined is 10.
+%
+%\label{param:StorkMaxRetry}
+%\item[\Macro{STORK\_MAX\_RETRY}]
+  %An integer limit on the
+  %number of attempts for a single data placement job.  For data transfers,
+  %this includes transfer attempts on the primary protocol, all
+  %alternate protocols, and all retries.
+  %The default value when not defined is 10.
+%
+%\label{param:StorkMaxDelayInMinutes}
+%\item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
+  %An integer limit (in minutes) on the run time for a data placement job,
+  %after which the job is considered failed.
+  %The default value when not defined is 10,
+  %and the minimum legal value is 1.
+%
+%\label{param:StorkTmpCredDir}
+%\item[\Macro{STORK\_TMP\_CRED\_DIR}]
+  %The full path to the temporary credential storage directory used by Stork.
+  %The default value is \File{/tmp} when not defined. 
+%
+%\label{param:StorkModuleDir}
+%\item[\Macro{STORK\_MODULE\_DIR}]
+  %The full path to the directory containing Stork modules.
+  %The default value when not defined is 
+  %as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
+  %both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
+%
+%\label{param:CreddSuperUsers}
+%\item[\Macro{CRED\_SUPER\_USERS}]
+  %Access to a stored credential is
+  %restricted to the user who submitted the credential, and any user
+  %names specified in this macro.  The format is a space or comma
+  %separated list of user names which are valid on the \Stork{credd}
+  %host.
+  %The default value of this macro is \Expr{root} on Unix systems, and
+  %\Expr{Administrator} on Windows systems.
+%
+%\label{param:CredStoreDir}
+%\item[\Macro{CRED\_STORE\_DIR}]
+  %Directory for storing credentials.  This
+  %directory must exist prior to starting \Stork{credd}.  It is highly
+  %recommended to restrict access permissions to \emph{only} the
+  %directory owner.
+  %The default value is \Expr{\$(SPOOL\_DIR)/cred}.
+%
+%\label{param:CredIndexFile}
+%\item[\Macro{CRED\_INDEX\_FILE}]
+  %Index file path of saved credentials.
+  %This file will be automatically created if it does not exist.
+  %The default value is \Expr{\$(CRED\_STORE\_DIR)/cred-index}.
+%
+%\label{param:DefaultCredExpireThreshold}
+%\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
+  %\Stork{credd} will attempt
+  %to refresh credentials when their remaining lifespan is less than this
+  %value.
+  %Units = seconds.  Default value = 3600 seconds (1 hour).
+%
+%\label{param:CredCheckInterval}
+%\item[\Macro{CRED\_CHECK\_INTERVAL}]
+  %\Stork{credd} periodically checks
+  %remaining lifespan of stored credentials, at this interval.
+  %Units = seconds.  Default value = 60 seconds (1 minute).
+%
+%\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-ssh-to-job}Configuration File Entries
