@@ -1347,11 +1347,13 @@ dprintf_dump_stack(void) {
 		close(fd);
 	}
 }
-#else
+#endif
+
+#endif
+
+#if !defined(HAVE_BACKTRACE)
 void
 dprintf_dump_stack(void) {
 		// this platform does not support backtrace()
 }
-#endif
-
 #endif
