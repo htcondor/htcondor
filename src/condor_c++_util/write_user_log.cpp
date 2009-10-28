@@ -137,7 +137,8 @@ WriteUserLog::WriteUserLog (const char *owner,
 // Destructor
 WriteUserLog::~WriteUserLog()
 {
-	FreeAllResources( );
+	FreeGlobalResources( true );
+	FreeLocalResources( );
 }
 
 
@@ -228,7 +229,7 @@ WriteUserLog::Configure( bool force )
 	if (  m_configured && ( !force )  ) {
 		return true;
 	}
-	FreeGlobalResources( );
+	FreeGlobalResources( false );
 	m_configured = true;
 
 	m_enable_fsync = param_boolean( "ENABLE_USERLOG_FSYNC", true );
@@ -345,34 +346,13 @@ WriteUserLog::Reset( void )
 	m_privsep_gid = 0;
 #endif
 
-	MyString	base;
-	base = "";
-	base += getuid();
-	base += '.';
-	base += getpid();
-	base += '.';
-
-	UtcTime	utc;
-	utc.getTime();
-	base += utc.seconds();
-	base += '.';
-	base += utc.microseconds();
-	base += '.';
-
-	m_global_uniq_base = strdup( base.Value( ) );
+	m_global_id_base = NULL;
+	(void) GetGlobalIdBase( );
 	m_global_sequence = 0;
 }
 
-// Free used resources
 void
-WriteUserLog::FreeAllResources( void )
-{
-	FreeGlobalResources( );
-	FreeLocalResources( );
-}
-
-void
-WriteUserLog::FreeGlobalResources( void )
+WriteUserLog::FreeGlobalResources( bool final )
 {
 
 	if (m_global_path) {
@@ -382,9 +362,9 @@ WriteUserLog::FreeGlobalResources( void )
 
 	closeGlobalLog();	// Close & release global file handle & lock
 
-	if (m_global_uniq_base != NULL) {
-		free( m_global_uniq_base );
-		m_global_uniq_base = NULL;
+	if ( final && (m_global_id_base != NULL) ) {
+		free( m_global_id_base );
+		m_global_id_base = NULL;
 	}
 	if (m_global_stat != NULL) {
 		delete m_global_stat;
@@ -1303,6 +1283,31 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	return true;
 }
 
+// Generate the uniq global ID "base"
+const char *
+WriteUserLog::GetGlobalIdBase( void )
+{
+	if ( m_global_id_base ) {
+		return m_global_id_base;
+	}
+	MyString	base;
+	base = "";
+	base += getuid();
+	base += '.';
+	base += getpid();
+	base += '.';
+
+	UtcTime	utc;
+	utc.getTime();
+	base += utc.seconds();
+	base += '.';
+	base += utc.microseconds();
+	base += '.';
+
+	m_global_id_base = strdup( base.Value( ) );
+	return m_global_id_base;
+}
+
 // Generates a uniq global file ID
 void
 WriteUserLog::GenerateGlobalId( MyString &id )
@@ -1310,7 +1315,16 @@ WriteUserLog::GenerateGlobalId( MyString &id )
 	UtcTime	utc;
 	utc.getTime();
 
-	id =  m_global_uniq_base;
+	id = "";
+
+	// Add in the creator name
+	if ( m_creator_name ) {
+		id += m_creator_name;
+		id += ".";
+	}
+
+	id += GetGlobalIdBase( );
+
 	// First pass -- initialize the sequence #
 	if ( m_global_sequence == 0 ) {
 		m_global_sequence = 1;
