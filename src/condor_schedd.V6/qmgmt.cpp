@@ -2555,37 +2555,6 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 	return -1;
 }
 
-int
-GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
-					char *val )
-{
-	ClassAd	*ad;
-	char	key[PROC_ID_STR_BUFLEN];
-	char	*attr_val;
-
-	IdToStr(cluster_id,proc_id,key);
-
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		int attr_len = strlen( attr_val );
-		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
-			free( attr_val );
-			return -1;
-		}
-		attr_val[attr_len - 1] = '\0';
-		strcpy(val, &attr_val[1]);
-		free( attr_val );
-		return 1;
-	}
-
-	if (!JobQueue->LookupClassAd(key, ad)) {
-		return -1;
-	}
-
-	if (ad->LookupString(attr_name, val) == 1) return 0;
-	return -1;
-}
-
-
 // I added this version of GetAttributeString. It is nearly identical 
 // to the other version, but it calls a different version of 
 // AttrList::LookupString() which allocates a new string. This is a good

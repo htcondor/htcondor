@@ -8122,14 +8122,13 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 		if( lastckptTime > 0 ) {
 			// There was a checkpoint.
 			// Update restart count from a checkpoint 
-			char vmtype[512];
+			MyString vmtype;
 			int num_restarts = 0;
 			GetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, &num_restarts);
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 
-			memset(vmtype, 0, sizeof(vmtype));
 			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( stricmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			if( stricmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 				// In vmware vm universe, vmware disk may be 
 				// a sparse disk or snapshot disk. So we can't estimate the disk space 
 				// in advanace because the sparse disk or snapshot disk will 
@@ -9903,11 +9902,12 @@ SetCkptServerHost(const char *)
 bool
 JobPreCkptServerScheddNameChange(int cluster, int proc)
 {
-	char job_version[150];
+	char *job_version = NULL;
 	job_version[0] = '\0';
 	
-	if (GetAttributeString(cluster, proc, ATTR_VERSION, job_version) == 0) {
+	if (GetAttributeStringNew(cluster, proc, ATTR_VERSION, &job_version) == 0) {
 		CondorVersionInfo ver(job_version, "JOB");
+		free(job_version);
 		if (ver.built_since_version(6,2,0) &&
 			ver.built_since_date(11,16,2000)) {
 			return false;

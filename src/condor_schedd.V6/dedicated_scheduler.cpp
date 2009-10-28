@@ -1903,7 +1903,7 @@ void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
 	int cluster, proc;
-	char owner_str[100];
+	MyString owner_str;
 
 	if( ! idle_clusters ) {
 		dprintf( debug_level, "DedicatedScheduler: No dedicated jobs\n" );
@@ -1915,10 +1915,10 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( i=0; i<=last; i++ ) {
 		cluster = (*idle_clusters)[i];
 		proc = 0;
-		owner_str[0] = '\0';
+		owner_str = "";
 		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
-				 proc, owner_str );
+				 proc, owner_str.Value() );
 	}
 }
 
