@@ -451,7 +451,7 @@ be run.
 This script ...
 <li>
 <pre>
-./control.pl --project=natehighres --preversion=v1 --newproject=DanLewisArabidopsis --version=v1 --kind=install
+./control.pl --preproject=natehighres --preversion=v1 --project=DanLewisArabidopsis --version=v1 --kind=install
 </pre>
 <li>
 The above will create a new project based on an existing projects and place the version
@@ -645,23 +645,29 @@ described above.
 	A new tool, soar_rm.pl removes a project run, removes the request for reports
 	and plots for this run and removes the file which says these jobs are still
 	running so the next --kind=new will restart them.
+<li>
+	Syntax for derived projects has changed to:
+		./control.pl --preproject=oldproject --preversion=oldversion --project=new name
+		--version=newversion --install
 </ul>
 
 <h2>Wanted Features</h2>
 <ul>
 <li>
 	Allow a project specific timeout after which time the still remaining
-	jobs could be restarted with a --kind=new. Most have storage location
-	and may wish to change extraction of date from RUNS file as the Day/Month/Year
-	is encoded in the runID while the time of day is a field by itself.
+	jobs could be restarted with a --kind=new. Most have storage location.
 <li>
 	Remove unused analysis node. This node can be included in the per
 	job portion of the dag if needed. This removes a file descriptor 
-	for each job.
+	for each job. Started with the splice work but halted waiting for
+	more then 100 dag splices.
 <li>
 	Use dag splicing to put the dag together thus allowing a simpler script to
 	make a jobs portion of the dag and remove the pre and post nodes used to tie it
-	together. Freeing up 2 more file descriptors per job.
+	together. Freeing up 2 more file descriptors per job. Started with the splice 
+	work but halted waiting for more then 100 dag splices.
+
+	see --splice changes to control and project jobs scripts.
 </ul>
 </body>
 </html>
