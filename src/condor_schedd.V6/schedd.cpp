@@ -2702,10 +2702,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
+		free( reason );
 	}
-		// GetAttributeStringNew always allocates memory, so we free
-		// regardless of the return value.
-	free( reason );
 
 	bool status =
 		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
@@ -2735,14 +2733,12 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_HOLD_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
+		free( reason );
 	} else {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
 				 job_id.cluster, job_id.proc );
 	}
-		// GetAttributeStringNew always allocates memory, so we free
-		// regardless of the return value.
-	free( reason );
 
 	int hold_reason_code;
 	if( GetAttributeInt(job_id.cluster, job_id.proc,
@@ -2785,10 +2781,8 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_RELEASE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
+		free( reason );
 	}
-		// GetAttributeStringNew always allocates memory, so we free
-		// regardless of the return value.
-	free( reason );
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -5789,7 +5783,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
 			// we've got big trouble, just give up.
-		free( owner );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				 ATTR_OWNER, cluster, proc );
 		mark_job_stopped( job );
@@ -5799,7 +5792,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			//
 			// No attribute. Clean up and return
 			//
-		free( claim_id );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				ATTR_CLAIM_ID, cluster, proc );
 		mark_job_stopped( job );
@@ -5810,7 +5802,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			//
 			// No attribute. Clean up and return
 			//
-		free( startd_name );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				ATTR_REMOTE_HOST, cluster, proc );
 		mark_job_stopped( job );
@@ -5833,7 +5824,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
 							  &pool) < 0 ) {
-		free( pool );
 		pool = NULL;
 	}
 
@@ -5841,7 +5831,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	                              proc,
 	                              ATTR_STARTD_PRINCIPAL,
 	                              &startd_principal)) {
-		free( startd_principal );
 		startd_principal = NULL;
 	}
 
@@ -9905,7 +9894,7 @@ JobPreCkptServerScheddNameChange(int cluster, int proc)
 	char *job_version = NULL;
 	job_version[0] = '\0';
 	
-	if (GetAttributeStringNew(cluster, proc, ATTR_VERSION, &job_version) == 0) {
+	if (GetAttributeStringNew(cluster, proc, ATTR_VERSION, &job_version) >= 0) {
 		CondorVersionInfo ver(job_version, "JOB");
 		free(job_version);
 		if (ver.built_since_version(6,2,0) &&
@@ -12139,8 +12128,6 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
 					 old_attr, job_id.cluster, job_id.proc );
 		}
-			// how evil, this allocates me a string, even if it failed...
-		free( value );
 		return false;
 	}
 	

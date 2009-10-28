@@ -3952,6 +3952,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
 		StringList hosts(remote_hosts);
+		free(remote_hosts);
 
 			// Foreach host in the stringlist, build up a query to find the machine
 			// ad from the collector
@@ -4145,6 +4146,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			free(sinful);
 			sinful = NULL;
 		}
+		free(remote_hosts);
+		free(claims);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any

@@ -2567,6 +2567,8 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
+	*val = NULL;
+
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
@@ -2582,14 +2584,12 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		*val = (char *) calloc(1, sizeof(char));
 		return -1;
 	}
 
 	if (ad->LookupString(attr_name, val) == 1) {
 		return 0;
 	}
-	*val = (char *) calloc(1, sizeof(char));
 	return -1;
 }
 
