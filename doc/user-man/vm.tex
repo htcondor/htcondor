@@ -33,7 +33,7 @@ as \Condor{q}.
 Other commands specific to the type of virtual machine software
 identify the disk image.
 
-Use of the \SubmitCmd{args} command creates a file named \File{condor.arg},
+Use of the \SubmitCmd{arguments} command creates a file named \File{condor.arg},
 which is added to the set of CD-ROM files.
 The contents of this file are the arguments specified.
 
@@ -64,9 +64,10 @@ with a comma-separated list of file names.
 \begin{verbatim}
   vm_cdrom_files = a.txt,b.txt,c.txt
 \end{verbatim}
-Condor must also be told to transfer these files from
-the submit machine to the machine that will run the
-\SubmitCmd{vm} universe job with 
+If these files aren't aren't on a shared filesystem visible to
+the machine that will run the \SubmitCmd{vm} universe job, then
+Condor must also be told to transfer them from
+the submit machine with 
 \begin{verbatim}
   vm_should_transfer_cdrom_files = YES
 \end{verbatim}
@@ -103,12 +104,11 @@ match the job with a machine that enables networking,
 and further, the choice of bridge or NAT networking
 is determined by the machine's configuration.
 
-A current limitation restricts the use of networking to
-\SubmitCmd{vm} universe jobs that do not create checkpoints
-such that the job may migrate to another machine.
-
-When both checkpoints and networking are enabled,
-the job further specifies
+Enabling both networking and checkpointing for a \SubmitCmd{vm}
+universe job can cause networking problems when the job restarts,
+particularly if the job migrates to a different machine.
+\Condor{submit} will normally reject such jobs.
+If you wish to enable both, then you must additionally specify
 \begin{verbatim}
   when_to_transfer_output = ON_EXIT_OR_EVICT
 \end{verbatim}

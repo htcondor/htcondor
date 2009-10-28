@@ -20,6 +20,11 @@ instructions.  We have successfully used both VMware Server and Xen. If you
 are considering running on a Windows system, you will also need to install
 a Perl distribution; for this we have used ActivePerl successfully. 
 
+If you are considering VMware, then you must have VMware Server 1 installed
+and running on the execute machine. Additionally, you need a reasonably
+recent version of the \Prog{mkisofs} utility on the execute machine, for
+creation of CD-ROM disk images.
+
 If you are considering Xen, then there are four things that must exist on 
 a system to fully support it. First, a Xen kernel must be running on the 
 execute machine. This running Xen kernel acts as Dom0, in Xen terminology, 
@@ -90,7 +95,7 @@ The final required option is the location of the VMware control script. It's
 located in Condor's sbin directory:
 
 \begin{verbatim}
-VMWARE_PERL = $(SBIN)/condor_vm_vmware.pl
+VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware.pl
 \end{verbatim}
 
 Finally, note that an execute machine's \Macro{EXECUTE} setting should not
