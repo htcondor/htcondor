@@ -8485,6 +8485,23 @@ They specify items related to the \Condor{vm-gahp}.
   Where multiple networking types are given in \MacroNI{VM\_NETWORKING\_TYPE},
   and this variable is \emph{not} defined, a default of \Expr{nat}
   is used.
+
+\label{param:VMScript}
+\item[\Macro{VM\_SCRIPT}]
+  The complete path and file name of the script that controls Xen and KVM.
+    There is no default value for this required variable.
+
+\label{param:VMBridgeScript}
+\item[\Macro{VM\_BRIDGE\_SCRIPT}]
+  A path, file name, and command-line arguments to specify a script
+  that will be run to set up a bridging network interface for guests.
+  The interface should provide direct access to the host system's LAN,
+  that is, not be NAT'd on the host. 
+  An example:
+  \begin{verbatim}
+  VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
+  \end{verbatim}
+
 \end{description}
 
 The following configuration variables are specific to the VMware
@@ -8535,163 +8552,16 @@ virtual machine software.
 
 \begin{description}
 
-% \label{param:VMHardwareVT}
-% \item[\Macro{VM\_HARDWARE\_VT}]
-% A boolean variable describing whether a machine supports
-% hardware virtualization such as Intel VT and AMD-V.
-% When not defined, the default value is \Expr{False}.
-
-\label{param:XenScript}
-\item[\Macro{XEN\_SCRIPT}]
-  The complete path and file name of the script that controls Xen.
-  There is no default value for this required variable.
-
-\label{param:XenDefaultKernel}
-\item[\Macro{XEN\_DEFAULT\_KERNEL}]
-  The complete path and executable name of a Xen kernel to be utilized
-  if the job's submission does not specify its own kernel image.
-
-\label{param:XenDefaultInitrd}
-\item[\Macro{XEN\_DEFAULT\_INITRD}]
-  The complete path and image file name for the initrd image,
-  if used with the default kernel image.
-
 \label{param:XenBootloader}
 \item[\Macro{XEN\_BOOTLOADER}]
   A required full path and executable for the Xen bootloader,
   if the kernel image includes a disk image.
-
-\label{param:XenBridgeScript}
-\item[\Macro{XEN\_BRIDGE\_SCRIPT}]
-  A path, file name, and command-line arguments to specify a script
-  that will be run to set up a bridging network interface for guests.
-  The interface should provide direct access to the host system's LAN,
-  that is, not be NAT'd on the host.
-  An example:
-  \begin{verbatim}
-  XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
-  \end{verbatim}
 
 \label{param:XenLocalSettingsFile}
 \item[\Macro{XEN\_LOCAL\_SETTINGS\_FILE}]
   A complete path and file name. The file's contents will be included in
   the Xen configuration file that Condor writes to run the virtual machine.
   This parameter is optional.
-
-% \label{param:XenVTKernel}
-% \item[\Macro{XEN\_VT\_KERNEL}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  kernel="/usr/lib/xen/boot/hvmloader"
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_KERNEL = "/usr/lib/xen/boot/hvmloader"
-%  \end{verbatim}
-
-%\label{param:XenVTBuilder}
-%\item[\Macro{XEN\_VT\_BUILDER}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  builder='hvm'
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_BUILDER = 'hvm'
-%  \end{verbatim}
-
-%\label{param:XenVTShadowMemory}
-%\item[\Macro{XEN\_VT\_SHADOW\_MEMORY}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  shadow_memory=8
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_SHADOW_MEMORY = 8
-%  \end{verbatim}
-
-%\label{param:XenVTDeviceModel}
-%\item[\Macro{XEN\_VT\_DEVICE\_MODEL}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  device_model=/usr/lib/xen/bin/qemu-dm
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
-%  \end{verbatim}
-
-%\label{param:XenVTSDL}
-%\item[\Macro{XEN\_VT\_SDL}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  sdl=0
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_SDL = 0
-%  \end{verbatim}
-
-%\label{param:XenVTVNC}
-%\item[\Macro{XEN\_VT\_VNC}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  vnc=1
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_VNC = 1
-%  \end{verbatim}
-
-%\label{param:XenVTSTDVGA}
-%\item[\Macro{XEN\_VT\_STDVGA}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  stdvga=0
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_STDVGA = 0
-%  \end{verbatim}
-
-%\label{param:XenVTSerial}
-%\item[\Macro{XEN\_VT\_SERIAL}]
-%  An optional string that the \Condor{vm-gahp}
-%  inserts into the Xen configuration file, relating to hardware virtualization.
-%  As an example, the string inserted is
-%  \begin{verbatim}
-%  serial='pty'
-%  \end{verbatim}
-%  for a configuration variable definition of
-%  \begin{verbatim}
-%  XEN_VT_SERIAL = 'pty'
-%  \end{verbatim}
-
-%\label{param:XenDeviceTypeForVT}
-%\item[\Macro{XEN\_DEVICE\_TYPE\_FOR\_VT}]
-%  Defaults to the string \verb@vbd:@ for paravirtualized guests.
-%  Use the string \verb@ioemu:@ for unmodified guest domains. 
-
-%\label{param:XenAllowHardwareVTSuspend}
-%\item[\Macro{XEN\_ALLOW\_HARDWARE\_VT\_SUSPEND}]
-%  A boolean value that defaults to \Expr{False}.
-%  In the future, as Xen hardware virtualization guests may be saved
-%  and restored, this configuration variable may be utilized.
 
 \end{description}
 

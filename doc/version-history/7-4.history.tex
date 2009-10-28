@@ -74,8 +74,8 @@ why local or scheduler universe jobs are idle when
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
 
 % #688
-\item The \Condor{vm-gahp} now links with libvirt, rather than calling
-virsh command-line tools.
+\item The \Condor{vm-gahp} now supports KVM and links with libvirt, rather 
+than calling virsh command-line tools.
 
 % #760
 \item Greatly improved the \Condor{gridmanager}'s scalability when handling
@@ -163,6 +163,17 @@ as has the machine ad attribute of the same name.
 When the virtual machine version information is needed in the machine ClassAd,
 the configuration variable \MacroNI{STARTD\_ATTRS} can be used to
 add it.
+ 
+% #861
+\item The default configuration now uses
+  \MacroNI{VM\_BRIDGE\_SCRIPT} and \MacroNI{VM\_SCRIPT} in place of
+  \MacroNI{XEN\_BRIDGE\_SCRIPT} and \MacroNI{XEN\_SCRIPT} due to KVM additions. 
+  Submission params have also been added, they include;
+  \MacroNI{kvm\_disk}, \MacroNI{kvm\_transfer\_files}, and \MacroNI{kvm\_cd\_rom\_device}.
+
+% #872
+\item Removal of \MacroNI{XEN\_DEFAULT\_KERNEL} and \MacroNI{XEN\_DEFAULT\_INITRD}, as 
+  well as \MacroNI{xen\_kerenal=any}.
 
 \end{itemize}
 

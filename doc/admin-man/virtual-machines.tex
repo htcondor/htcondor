@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Virtual-Machines}
-Running Jobs within VMware or Xen}
+Running Jobs within a Virtual Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{virtual machine!running Condor jobs under}
 
@@ -9,7 +9,7 @@ on specific platforms.
 This in turn restricts the machines within a Condor pool where
 a job may be executed.
 A Condor job may now be executed on a 
-virtual machine system running VMware or Xen.
+virtual machine system running VMware, Xen, or KVM.
 This allows Windows executables to run on a Linux machine,
 and Linux executables to run on a Windows machine.
 These virtual machine systems exist for the Intel x86 architecture.
@@ -29,7 +29,7 @@ Also, be careful not to confuse the virtual machines discussed here
 with the Java Virtual Machine (JVM) referenced in other parts of this
 manual.
 
-Under Xen or VMware, 
+Under a virtual machine, 
 Condor has the flexibility to run a job on either the host
 or the inner virtual machine, 
 hence two platforms appear to exist on a single machine.
