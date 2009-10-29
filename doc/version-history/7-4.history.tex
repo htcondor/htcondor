@@ -210,6 +210,11 @@ add it.
 
 \begin{itemize}
 
+% #706
+\item Fixed a race condition bug in the \Condor{startd} which allowed
+it to send UNIX signals, intended for \Condor{starter} processes, as
+root to non-Condor related processes.
+
 \item A Windows platform bug has been fixed.
 The bug caused a 20-second interval in which
 the \Condor{shadow}, \Condor{startd}, and \Condor{starter} daemons
