@@ -60,11 +60,13 @@ software.
 
 \begin{itemize}
 
+% commit af65de7ccc1a281c2b05b8f68ac70bcfa56b2dd1
 \item \Condor{q} \Opt{-analyze} and \Opt{-better-analyze} now provide
   analysis for scheduler and local universe jobs.  Specifically, the
   \MacroNI{START\_SCHEDULER\_UNIVERSE} and
   \MacroNI{START\_LOCAL\_UNIVERSE} expressions are checked.
 
+% #824
 \item Added \Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
 \Attr{TotalSchedulerRunningJobs}, and \Attr{TotalSchedulerIdleJobs}
 to the published ad for the \Condor{schedd}.  This means that
@@ -72,18 +74,21 @@ to the published ad for the \Condor{schedd}.  This means that
 why local or scheduler universe jobs are idle when
 \MacroNI{START\_LOCAL\_UNIVERSE} or
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
+These attributes were already present internally to the schedd, 
+just not published.
 
 % #688
 \item The \Condor{vm-gahp} now supports KVM and links with libvirt, rather 
 than calling virsh command-line tools.
 
-% #760
+% #760 #771 #769
 \item Greatly improved the \Condor{gridmanager}'s scalability when handling
 many grid type gt2 grid universe jobs.
 
 \item Latency in the submission and cleaning up of Condor-C jobs
 has been improved.
 
+% commit 8c2d88c695d6981be3bdab7e10c5d92e9f6bb55b
 \item The \Expr{eval()} ClassAd function added in Condor version 7.3.2
 is now also understood by the \Condor{job\_router} and
 \Condor{q} using the \Opt{-better-analyze} option.
@@ -116,11 +121,13 @@ an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
   buffered data to be flushed to disk, such that the effective upper bound was
   a function of how busy the job queue was.
 
+% commit 55525e0a338be8b2ba2d9173ce832e43d05413c3
 \item The default configuration file now uses
   \MacroNI{ALLOW}/\MacroNI{DENY} in place of
   \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}.  See the release notes above
   for more information.
 
+% commit 7199e217f9228082a8465b85aaee18c2ebb19787
 \item The default value for \Macro{MAX\_JOBS\_RUNNING} has changed.
   Previously, it was 200.  Now it is defined by an expression that depends 
   on the total amount of memory and the operating system.  The default
@@ -134,6 +141,7 @@ an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
   recommend that the system ephemeral port range is extended
   such that there are at least 2.1 ports per running job.
 
+% #767 commit 18296bfdfa92f16684a73d8d57a54d231b48dc33
 \item The default value of \MacroNI{RESERVED\_SWAP} has changed to
   the value 0, which
   disables the \Condor{schedd} daemon's check for sufficient swap space
@@ -147,18 +155,24 @@ an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
   Previously, it was 200 if not set,
   but it was set to 1800 in the example configuration file.
 
+% #767 commit c80e8a40e67ef4faa4e2b32b3671877eae1e1a19
 \item The default values of \Macro{START\_LOCAL\_UNIVERSE} and
   \Macro{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
   these were set to \Expr{True}.  Now, they are set using an expression
   that allows
   up to 200 local universe and 200 scheduler universe jobs to run.
 
+% #767 commit c4f4d911a808e1bdb18552e1cdeb0407b6344969
 \item The default value of
   \Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} has
   changed from 100 to 1000.
 
+% #767 commit 9e6dfa463c71c28c8dc2c0c0c215b51d6762e811
+% commit b4fd08ad1a8c69da24c371565796ef73522a61fc
 \item The default \Macro{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
 
+% #767 commit 8b91877ec8186810887402e1dd1df07b6341ade7
+% Probably at least one other commit
 \item The default value of \Macro{ENABLE\_GRID\_MONITOR} has been
   changed from \Expr{False} to \Expr{True}.  This variable
   was assigned to \Expr{True} in the example configuration file, so
@@ -181,7 +195,14 @@ add it.
 
 % #872
 \item Removal of \MacroNI{XEN\_DEFAULT\_KERNEL} and \MacroNI{XEN\_DEFAULT\_INITRD}, as 
-  well as \MacroNI{xen\_kerenal=any}.
+  well as \MacroNI{xen\_kernel=any}.
+
+% #775, cf02764d9d0fdd2b36ef3629f862f856ee41a717, and more
+\item Optimizations in core Condor systems should provide minor speed improvements throughout.
+
+\item Some log messages were rewritten for clarity.
+
+\item Some additional logging was added to aid debugging.
 
 \end{itemize}
 
@@ -299,6 +320,7 @@ queue
 \end{verbatim}
 
 
+% commit a26fcd9fe54cd3920fe777d5d8e0b2ffefbc3b1f
 \item Fixed a memory leak introduced into Condor version 7.3.2.
 The leak was in the \Condor{collector} daemon.
 
@@ -328,6 +350,10 @@ used.
   jobs, a period of unresponsiveness of an hour was observed, whereas
   the evaluation of periodic expressions in this same environment
   normally takes less than 5 seconds.
+
+\item A number of potential bugs and memory leaks were identified and 
+fixed throughout Condor.  The Condor team is not aware of anyone having 
+encountered these bugs.
 
 \end{itemize}
 
