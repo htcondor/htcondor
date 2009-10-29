@@ -355,6 +355,16 @@ used.
 fixed throughout Condor.  The Condor team is not aware of anyone having 
 encountered these bugs.
 
+% #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
+\item The \Condor{starter} cleans up working directories in more
+situations.  Previously during some error conditions the working
+directory in \MacroNI{EXECUTE} might be left behind.
+
+% #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
+\item If the user log cannot be accessed when a local universe
+job starts, the job would fail and immediately be retried.  Now
+the job is placed on hold.
+
 \end{itemize}
 
 \noindent Known Bugs:
