@@ -2657,7 +2657,6 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 		return -1;
 	}
 
-	val[0] = '\0';
 	tree->RArg()->PrintToNewStr(val);
 
 	return 0;
