@@ -370,6 +370,18 @@ directory in \MacroNI{EXECUTE} might be left behind.
 job starts, the job would fail and immediately be retried.  Now
 the job is placed on hold.
 
+% 826 
+\item Fixed a bug in the startd where vacating jobs would not 
+respect the \MacroNI{job\_lease\_duration}.
+
+% 823
+\item Updated the max log size to the max OS file size.  
+
+% 802
+\item Updated the detection of HasVM in the startd to publish an 
+update to the collector when \MacroNI{VM\_RECHECK\_INTERVAL} is 
+specified.
+
 \end{itemize}
 
 \noindent Known Bugs:
