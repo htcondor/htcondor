@@ -428,16 +428,26 @@ Resource::shutdownAllClaims( bool graceful )
 		// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
 
-	if( graceful ) {
-		void_retire_claim();
-	} else {
-		void_kill_claim();
-	}
+	if( Resource::DYNAMIC_SLOT == get_feature() ) {
+		if( graceful ) {
+			void_retire_claim();
+		} else {
+			void_kill_claim();
+		}
 
-		// Tell the negotiator not to match any new jobs to this slot,
-		// since they would just be rejected by the startd anyway.
-	r_reqexp->unavail();
-	update();
+		// We have deleted ourself and can't send any updates.
+	} else {
+		if( graceful ) {
+			void_retire_claim();
+		} else {
+			void_kill_claim();
+		}
+
+			// Tell the negotiator not to match any new jobs to this slot,
+			// since they would just be rejected by the startd anyway.
+		r_reqexp->unavail();
+		update();
+	}
 }
 
 bool
