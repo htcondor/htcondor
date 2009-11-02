@@ -369,9 +369,13 @@ Control.pl
 <li>
 	-b/--bail - Debug hook to stop just before submitting the dag which was built for the run
 <li>
-	--clean=s - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Onlt safe options are
+	--clean=s - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Onlt safe options are C and L which are also the defaults.
 <li>
 	--code=s - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
+<li>
+	--debug -  removes the L option and leaves the entire run directory intact
+<li>
+	--cache -  removes the C option and leaves the entire tar cache intact
 <li>
 	-d/--datasets=s - run all the jobs in a particular dataset folder
 <li>
