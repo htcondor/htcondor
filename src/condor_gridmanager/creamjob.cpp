@@ -192,6 +192,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	bool job_already_submitted = false;
 	MyString error_string = "";
 	char *gahp_path = NULL;
+	char *tmp = NULL;
 
 	creamAd = NULL;
 	remoteJobId = NULL;
@@ -337,6 +338,13 @@ CreamJob::CreamJob( ClassAd *classad )
 	if ( job_already_submitted ) {
 		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
 	}
+
+	tmp = param( "GRIDFTP_URL_BASE" );
+	if ( !tmp ) {
+		error_string = "GRIDFTP_URL_BASE is not set in the configuration file";
+		goto error_exit;
+	}
+	free( tmp );
 
 	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy );
 
