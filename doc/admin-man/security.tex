@@ -2681,7 +2681,7 @@ section~\ref{sec:Networking}, which explains network communication in
 Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:uids}User Accounts in Condor}
+\subsection{\label{sec:uids}User Accounts in Condor on Unix Platforms}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{UIDs in Condor|(}
@@ -2722,7 +2722,7 @@ If there is no \Login{condor} user and group on the system, an
 administrator can specify which UID and GID the Condor daemons should
 use when they do not need root privileges in two ways:
 either with the \Env{CONDOR\_IDS} environment variable or the
-\Macro{CONDOR\_IDS} configuration file setting.
+\Macro{CONDOR\_IDS} configuration variable.
 In either case, the value should be the UID integer, followed by a
 period, followed by the GID integer.
 For example, if a Condor administrator does not want to create a
@@ -2771,39 +2771,39 @@ then the job execution attempt will be aborted.
 
 While we strongly recommend starting up the Condor daemons as \Login{root},
 we understand that it is not always possible to do so.
-The main problems
+The main problems of not running Condor daemons as \Login{root}
 appear when one Condor installation is shared by many users on a
 single machine, or if machines are set up to only execute
 Condor jobs.  With a submit-only installation for a
 single user, there is no need for (or benefit from) running as
 \Login{root}.
 
-What follows are the effects on the various parts of Condor of running
-both with and without root access.
+The effects of Condor of running both with and without root access
+are classified by daemon:
 
 \begin{description}
 
-\item[\Condor{startd}] If you're setting up a machine to run Condor
-   jobs and don't start the \Condor{startd} as \Login{root}, you're basically
-   relying on the goodwill of your Condor users to agree to the policy
-   you configure the \Condor{startd} to enforce as far as starting, suspending,
-   vacating and killing Condor jobs under certain conditions.  If you
-   run as \Login{root}, however, you can enforce these policies regardless of
+\item[\Condor{startd}] A Condor machine set up to execute jobs where the
+   \Condor{startd} is not started as the \Login{root}
+   basically relies on the goodwill of the Condor users to agree to the policy
+   configured for the \Condor{startd} to enforce as far as starting, suspending,
+   vacating, and killing Condor jobs under certain conditions. 
+   As \Login{root}, however, these policies may be enforced regardless of
    malicious users.  By running as \Login{root}, the Condor daemons run with a
    different UID than the Condor job that gets started (since the
    user's job is started as either the UID of the user who submitted
    it, or as user \Login{nobody}, depending on the \Macro{UID\_DOMAIN}
    settings).  Therefore, the Condor job cannot do anything to the
-   Condor daemons.  If you don't start the daemons as \Login{root}, all
+   Condor daemons.  Without starting the daemons as \Login{root}, all
    processes started by Condor, including the end user's job, run with
-   the same UID (since you can't switch UIDs unless you're \Login{root}).
+   the same UID, since only \Login{root} can switch UIDs.
    Therefore, a user's job could just kill the \Condor{startd} and
    \Condor{starter} as soon as it starts up and by doing so, avoid
    getting suspended or vacated when a user comes back to the machine.
-   This is nice for the user, since they get unlimited access to the
-   machine, but awful for the machine owner or administrator.  If you
-   trust the users submitting jobs to Condor, this might not be a
-   concern.  To ensure, however, that the policy you choose is
+   This is nice for the job, since it gets unlimited access to the
+   machine, but awful for the machine owner or administrator.  If there is
+   trust of the users submitting jobs to Condor, this might not be a
+   concern.  To ensure, however, that the policy choosen is
    effectively enforced by Condor, the \Condor{startd} should be
    started as \Login{root}.
 

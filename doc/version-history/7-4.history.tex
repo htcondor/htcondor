@@ -118,11 +118,13 @@ software.
 
 \begin{itemize}
 
-\item \Condor{q} \Arg{-analyze} and \Arg{-better-analyze} now provide
+% commit af65de7ccc1a281c2b05b8f68ac70bcfa56b2dd1
+\item \Condor{q} \Opt{-analyze} and \Opt{-better-analyze} now provide
   analysis for scheduler and local universe jobs.  Specifically, the
   \MacroNI{START\_SCHEDULER\_UNIVERSE} and
   \MacroNI{START\_LOCAL\_UNIVERSE} expressions are checked.
 
+% #824
 \item Added \Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
 \Attr{TotalSchedulerRunningJobs}, and \Attr{TotalSchedulerIdleJobs}
 to the published ad for the \Condor{schedd}.  This means that
@@ -130,18 +132,21 @@ to the published ad for the \Condor{schedd}.  This means that
 why local or scheduler universe jobs are idle when
 \MacroNI{START\_LOCAL\_UNIVERSE} or
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
+These attributes were already present internally to the schedd, 
+just not published.
 
 % #688
-\item The \Condor{vm-gahp} now links with libvirt, rather than calling
-virsh command-line tools.
+\item The \Condor{vm-gahp} now supports KVM and links with libvirt, rather 
+than calling virsh command-line tools.
 
-% #760
+% #760 #771 #769
 \item Greatly improved the \Condor{gridmanager}'s scalability when handling
 many grid type gt2 grid universe jobs.
 
 \item Latency in the submission and cleaning up of Condor-C jobs
 has been improved.
 
+% commit 8c2d88c695d6981be3bdab7e10c5d92e9f6bb55b
 \item The \Expr{eval()} ClassAd function added in Condor version 7.3.2
 is now also understood by the \Condor{job\_router} and
 \Condor{q} using the \Opt{-better-analyze} option.
@@ -149,8 +154,13 @@ is now also understood by the \Condor{job\_router} and
 \item The submit command \SubmitCmd{run\_as\_owner} is now supported
 for Unix platforms. Previously, it was only supported on Windows platforms.
 
-\item The submit command \SubmitCmd{run\_as\_owner} is now supported
-in unix too. Previously, it was only supported in Windows.
+% #795
+\item When setting \MacroNI{AMAZON\_HTTP\_PROXY}, a username and password
+can now be given as part of the proxy URL.
+
+% #795
+\item \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
+an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
 
 \end{itemize}
 
@@ -158,6 +168,7 @@ in unix too. Previously, it was only supported in Windows.
 
 \begin{itemize}
 
+% #768
 \item The new configuration variable 
   \Macro{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY} sets an
   upper bound in seconds on how long it takes for changes to the job
@@ -168,11 +179,13 @@ in unix too. Previously, it was only supported in Windows.
   buffered data to be flushed to disk, such that the effective upper bound was
   a function of how busy the job queue was.
 
+% commit 55525e0a338be8b2ba2d9173ce832e43d05413c3
 \item The default configuration file now uses
   \MacroNI{ALLOW}/\MacroNI{DENY} in place of
   \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}.  See the release notes above
   for more information.
 
+% commit 7199e217f9228082a8465b85aaee18c2ebb19787
 \item The default value for \Macro{MAX\_JOBS\_RUNNING} has changed.
   Previously, it was 200.  Now it is defined by an expression that depends 
   on the total amount of memory and the operating system.  The default
@@ -186,6 +199,7 @@ in unix too. Previously, it was only supported in Windows.
   recommend that the system ephemeral port range is extended
   such that there are at least 2.1 ports per running job.
 
+% #767 commit 18296bfdfa92f16684a73d8d57a54d231b48dc33
 \item The default value of \MacroNI{RESERVED\_SWAP} has changed to
   the value 0, which
   disables the \Condor{schedd} daemon's check for sufficient swap space
@@ -199,18 +213,24 @@ in unix too. Previously, it was only supported in Windows.
   Previously, it was 200 if not set,
   but it was set to 1800 in the example configuration file.
 
+% #767 commit c80e8a40e67ef4faa4e2b32b3671877eae1e1a19
 \item The default values of \Macro{START\_LOCAL\_UNIVERSE} and
   \Macro{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
   these were set to \Expr{True}.  Now, they are set using an expression
   that allows
   up to 200 local universe and 200 scheduler universe jobs to run.
 
+% #767 commit c4f4d911a808e1bdb18552e1cdeb0407b6344969
 \item The default value of
   \Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} has
   changed from 100 to 1000.
 
+% #767 commit 9e6dfa463c71c28c8dc2c0c0c215b51d6762e811
+% commit b4fd08ad1a8c69da24c371565796ef73522a61fc
 \item The default \Macro{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
 
+% #767 commit 8b91877ec8186810887402e1dd1df07b6341ade7
+% Probably at least one other commit
 \item The default value of \Macro{ENABLE\_GRID\_MONITOR} has been
   changed from \Expr{False} to \Expr{True}.  This variable
   was assigned to \Expr{True} in the example configuration file, so
@@ -223,12 +243,35 @@ as has the machine ad attribute of the same name.
 When the virtual machine version information is needed in the machine ClassAd,
 the configuration variable \MacroNI{STARTD\_ATTRS} can be used to
 add it.
+ 
+% #861
+\item The default configuration now uses
+  \MacroNI{VM\_BRIDGE\_SCRIPT} and \MacroNI{VM\_SCRIPT} in place of
+  \MacroNI{XEN\_BRIDGE\_SCRIPT} and \MacroNI{XEN\_SCRIPT} due to KVM additions. 
+  Submission params have also been added, they include;
+  \MacroNI{kvm\_disk}, \MacroNI{kvm\_transfer\_files}, and \MacroNI{kvm\_cd\_rom\_device}.
+
+% #872
+\item Removal of \MacroNI{XEN\_DEFAULT\_KERNEL} and \MacroNI{XEN\_DEFAULT\_INITRD}, as 
+  well as \MacroNI{xen\_kernel=any}.
+
+% #775, cf02764d9d0fdd2b36ef3629f862f856ee41a717, and more
+\item Optimizations in core Condor systems should provide minor speed improvements throughout.
+
+\item Some log messages were rewritten for clarity.
+
+\item Some additional logging was added to aid debugging.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% #706
+\item Fixed a race condition bug in the \Condor{startd} which allowed
+it to send UNIX signals, intended for \Condor{starter} processes, as
+root to non-Condor related processes.
 
 \item A Windows platform bug has been fixed.
 The bug caused a 20-second interval in which
@@ -246,15 +289,16 @@ rescue DAG if it reads such an event.
 
 % gittrac #744
 \item Fixed a bug that could cause \Condor{dagman} to abort if it saw
-the combination of a terminated and an aborted event on a node with
+the combination of a terminated event and an aborted event on a node with
 retries.
 
-\item Changed some log file warnings in \Condor{dagman} to not be
+% commit 5039a08cf00b0d0fafcc3fd8241518d1854ec3a1
+\item Changed some logged warnings in \Condor{dagman} to not be
 printed at the default verbosity setting.
 
 % gittrac #825
 \item The version compatibility checking between a \File{.condor.sub}
-file and the \Condor{dagman} binary which is done at DAG startup,
+file and the \Condor{dagman} binary which is done at DAG startup
 is now much more permissive.
 Currently, \File{.condor.sub} files with
 Condor versions of 7.1.2 and later accepted by \Condor{dagman}.
@@ -271,11 +315,13 @@ Condor was running as root, and file transfer was specified in the job,
 Condor failed to automatically turn on execute permission after
 transferring the file.
 
+% commit 3bb847691bfda4f26d2f570bed1a412fb3afb439
 \item Fixed a bug that appeared in Condor version 7.3.2.
 The configuration variable
 \MacroNI{COUNT\_HYPERTHREAD\_CPUS} was ignored and was effectively
 treated as \Expr{False} in all cases.
 
+% #761
 \item Fixed a bug in which the Condor Job Router was not able
 to see matchmaking diagnostic attributes such as \Attr{LastRejMatchTime}.
 Therefore, when evaluating policy
@@ -289,14 +335,16 @@ Quill was also not able to see these attributes.
 if the job queue
 contained grid type gt2 jobs that had been previously submitted.
 
-% #724, #774
-\item Fixed two bugs related to VOMS, introduced in Condor version 7.3.2.
+% #724, #774, #786
+\item Fixed two bugs introduced in Condor version 7.3.2,
+and related to VOMS. 
 The first bug
 prevented jobs with X.509 proxies from being submitted on platforms
 on which Condor does not support VOMS.
 The second bug prevented submission
 of jobs with VOMS proxies, if the authenticity of the VOMS extensions
 could not be verified.
+Also improved memory usage when VOMS extensions aren't used.
 
 \item Fixed a bad default in the \Attr{batch\_gahp.config} file,
 that prevented
@@ -315,18 +363,14 @@ contained a comma.
 
 % #460
 \item File transfer for grid type gt4 jobs requires an empty directory
-in \Attr{/tmp}, which the \Condor{gridmanager} creates. If this directory
-is deleted, the \Condor{gridmanager} will now recreate it.
+within \File{/tmp}, which the \Condor{gridmanager} creates. 
+If this directory is deleted, the \Condor{gridmanager} will now recreate it.
 
 %gittrac #790
 \item Fixed a bug that could cause the user job log to become
-  corrupted on Windows.  This bug would manifest itself only if the
+  corrupted on Windows platforms.  This bug would manifest itself only if the
   same log file was specified with different paths.  For example, the
-  following submit file could trigger this:
-
-\item Fixed a memory leak in the \Condor{collector} daemon that was introduced
-in 7.3.2.
-
+  following submit file could have triggered this bug:
 \begin{verbatim}
 ...
 initialdir = /data/job1
@@ -338,9 +382,63 @@ log = ../JobLog
 queue
 \end{verbatim}
 
+
+% commit a26fcd9fe54cd3920fe777d5d8e0b2ffefbc3b1f
+\item Fixed a memory leak introduced into Condor version 7.3.2.
+The leak was in the \Condor{collector} daemon.
+
+\item Fixed a problem introduced in Condor version 7.1.4 
+that resulted in the failure of forcing
+the execute bit to be set on the transferred job executable.
+
+% commit 1663b7e183e6bf1df8152af98d9387412c2ae146
+\item Fixed a bug introduced in Condor version 7.3.2
+that resulted in the \Condor{negotiator} daemon
+refusing to run, if the configuration variable \MacroNI{GROUP\_QUOTA}
+for any group was set to 0.
+
 % gittrac #731
-\item Fixed a bug that was causing the ctime in the ``event log'' header
+\item Fixed a bug that caused the \Code{ctime} in the event log header
   to always be zero.
+
+% #862
+\item Fixed output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
+used.
+
+\item Fixed a problem in the \Condor{schedd} daemon introduced in
+  7.3.2.  For schedd's with lots of jobs having periodic release
+  expressions, this could result in the \Condor{schedd} taking a long
+  time while evaluating periodic expressions, causing it to become
+  unresponsive to queries and other tasks.  With a job queue of 30,000
+  jobs, a period of unresponsiveness of an hour was observed, whereas
+  the evaluation of periodic expressions in this same environment
+  normally takes less than 5 seconds.
+
+\item A number of potential bugs and memory leaks were identified and 
+fixed throughout Condor.  The Condor team is not aware of anyone having 
+encountered these bugs.
+
+% #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
+\item The \Condor{starter} cleans up working directories in more
+situations.  Previously during some error conditions the working
+directory in \MacroNI{EXECUTE} might be left behind.
+
+% #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
+\item If the user log cannot be accessed when a local universe
+job starts, the job would fail and immediately be retried.  Now
+the job is placed on hold.
+
+% 826 
+\item Fixed a bug in the startd where vacating jobs would not 
+respect the \MacroNI{job\_lease\_duration}.
+
+% 823
+\item Updated the max log size to the max OS file size.  
+
+% 802
+\item Updated the detection of HasVM in the startd to publish an 
+update to the collector when \MacroNI{VM\_RECHECK\_INTERVAL} is 
+specified.
 
 \end{itemize}
 

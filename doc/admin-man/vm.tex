@@ -20,15 +20,25 @@ instructions.  We have successfully used both VMware Server and Xen. If you
 are considering running on a Windows system, you will also need to install
 a Perl distribution; for this we have used ActivePerl successfully. 
 
+If you are considering VMware, then you must have VMware Server 1 installed
+and running on the execute machine. Additionally, you need a reasonably
+recent version of the \Prog{mkisofs} utility on the execute machine, for
+creation of CD-ROM disk images.
+
 If you are considering Xen, then there are four things that must exist on 
 a system to fully support it. First, a Xen kernel must be running on the 
 execute machine. This running Xen kernel acts as Dom0, in Xen terminology, 
 under which all VMs are started, called DomUs Xen terminology. Second, 
-the \Prog{virsh} utility must be available, and its
-companion \Prog{libvirtd} and \Prog{Xend} services must be running. Third, a 
-reasonably recent version of the \Prog{mkisofs} utility must be available, 
+the \Prog{libvirtd} daemon must be available, and \Prog{Xend} services must be running. 
+Third, a reasonably recent version of the \Prog{mkisofs} utility must be available, 
 for creation of CD-ROM disk images. Fourth, the \Prog{pygrub} program must be 
 available, for execution of VMs whose disks contain the kernel they will run.
+
+If you are considering KVM, then there are three things that must exist on a 
+system to fully support it.  First, the machine must have the kvm kernel 
+module installed and running.  Second, the \Prog{libvirtd} daemon must be 
+installed and running.  Third, a reasonably recent version of the \Prog{mkisofs} 
+utility must be available, for creation of CD-ROM disk images.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Configuration Parameters}
@@ -85,7 +95,7 @@ The final required option is the location of the VMware control script. It's
 located in Condor's sbin directory:
 
 \begin{verbatim}
-VMWARE_PERL = $(SBIN)/condor_vm_vmware.pl
+VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware.pl
 \end{verbatim}
 
 Finally, note that an execute machine's \Macro{EXECUTE} setting should not
@@ -93,34 +103,15 @@ contain any symlinks in its path if the machine is configured to run VMware
 jobs. See the FAQ entry in section~\ref{sec:vmware-symlink-bug} for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Xen-Specific Configuration}
+\subsubsection{Xen and KVM-Specific Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Xen configurations must set the location of the control script Condor
+Xen and KVM configurations must set the location of the control script Condor
 uses to interact with Xen:
 
 \begin{verbatim}
-XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
+VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
 \end{verbatim}
-
-The other required option not included in the default Xen configuration is
-\Macro{XEN\_DEFAULT\_KERNEL}: this is the kernel image that will be used
-in cases where the user does not specify one explicitly in their job
-submission.  In most cases, this is can be the default kernel from which
-the system was booted.  For instance, the following was used on a Fedora
-Core installation:
-
-\begin{verbatim}
-XEN_DEFAULT_KERNEL = /boot/vmlinuz-2.6.18-1.2798.fc6xen
-\end{verbatim}
-
-There is one final option worth mentioning: \Macro{XEN\_DEFAULT\_INITRD}.  
-It's not a required option, but if you do decide to use it, there are a 
-few things that you should be careful with.  Unlike the kernel image above,
-this image cannot be the stock one used to boot the system.  The reason
-for this is that Xen requires several device drivers in DomUs: \Prog{xennet} 
-and \Prog{xenblk}.  This can be easily fixed by creating a new \Prog{initrd}
-using \Prog{mkinitrd} and loading the drivers into it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsection{}
@@ -149,11 +140,10 @@ The exact cause of the problem depends on the details of the VM, the local
 installation, and a variety of other factors. We can offer only limited 
 advice on these matters:
 
-For Xen, the VM Universe is only available when root starts Condor.
+For Xen and KVM, the VM Universe is only available when root starts Condor.
 This is a restriction currently imposed because root privileges are 
 required to create a VM on top of a Xen kernel. Specifically, root is needed 
-to properly use the \Prog{virsh} utility that controls 
-creation and management of Xen guest virtual machines. This restriction 
+to properly use the \Prog{libvirt} utility that controls 
+creation and management of Xen and KVM guest virtual machines. This restriction 
 may be lifted in future versions depending on features provided by the 
-underlying tools, \Prog{virsh}, or upon Condor's direct 
-support of Qemu VMs that do not require network access.
+underlying tools, \Prog{libvirt}.
