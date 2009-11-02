@@ -49,7 +49,7 @@ $main_server = WEBSERVER;
   } else { # default to use the runid if both are present
     $query2 = "SELECT * FROM Run WHERE runid='$runid'";
   }
-  $db = mysql_connect(DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+  $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
   mysql_select_db(DB_NAME) or die("Could not select database");
   $result2 = mysql_query($query2) or die ("Query failed : " . mysql_error());
   while( $myrow = mysql_fetch_array($result2) ) {
@@ -106,7 +106,7 @@ $main_server = WEBSERVER;
  
  
   # get all rows for main page display 
-  $db = mysql_connect(DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+  $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
   mysql_select_db(DB_NAME) or die("Could not select database");
   $query1 = "SELECT * FROM Task WHERE runid='$runid' ORDER BY $column $order";
   $result1 = mysql_query($query1) or die ("Query failed : " . mysql_error());

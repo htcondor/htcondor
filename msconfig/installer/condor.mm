@@ -61,6 +61,7 @@
 <$Property "VMMAXNUMBER" VALUE="$(NUM_CPUS)">
 <$Property "VMNETWORKING" VALUE="N">
 <$Property "USEHDFS" VALUE="N">
+<$Property "HDFSMODE" VALUE="HDFS_NAMENODE">
 <$Property "HDFSPORT" VALUE="9000">
 <$Property "HDFSWEBPORT" VALUE="8000">
 
@@ -247,8 +248,8 @@
 		Control="RB">
 	#)
 	#data 'RadioButton_HDFSMODE'	         
-	         'N' 'N&ame Node' '' ''
-		 'D' '&Data Node (Requires Cygwin)' '' ''
+	         'HDFS_NAMENODE' 'N&ame Node' '' ''
+		 'HDFS_DATANODE' '&Data Node (Requires Cygwin)' '' ''
 	#data
 	#(
 	<$DialogEntry Property="HDFSMODE" Label="Select HDFS mode:" 
@@ -355,6 +356,19 @@
 	VALUE="[INSTALLDIR_NTS]\condor_config" 
 	MsiFormatted="VALUE" 
 	Name="CONDOR_CONFIG">
+#)
+
+
+;--- set CONDOR_KBDD registry key ----------------------------------------
+#(
+<$Component "CondorKBDD" Create="Y" Directory_="EXECUTEDIR" Condition=^(<$CONDITION_EXCEPT_UNINSTALL>) AND ((RUNJOBS = "A") OR (RUNJOBS = "I") OR (RUNJOBS = "C"))^>
+	<$Registry 
+		HKEY="LOCAL_MACHINE" 
+		KEY="software\Microsoft\Windows\CurrentVersion\Run" 
+		VALUE="[INSTALLDIR_NTS]\bin\condor_kbdd.exe"
+		MsiFormatted="VALUE" 
+		Name="CONDOR_KBDD">
+<$/Component>
 #)
 
 

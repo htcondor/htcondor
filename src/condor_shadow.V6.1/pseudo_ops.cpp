@@ -99,13 +99,20 @@ pseudo_get_job_info(ClassAd *&ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
+	// Only initialize the file transfer object if
+	// NeverCreateJobSandbox is not set
+	 int never_create_sandbox_expr;
+	 int has_nc_sandbox_expr = the_ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr );
+	 if( !(has_nc_sandbox_expr && never_create_sandbox_expr) ) {
+
 		// FileTransfer now makes sure we only do Init() once.
 		//
 		// New for WIN32: want_check_perms = false.
 		// Since the shadow runs as the submitting user, we
 		// let the OS enforce permissions instead of relying on
 		// the pesky perm object to get it right.
-	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, false );
+	  thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, false );
+	}
 
 	Shadow->publishShadowAttrs( the_ad );
 

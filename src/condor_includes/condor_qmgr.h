@@ -195,10 +195,6 @@ int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
 	@return -1 on failure; 0 on success
 */
 int GetAttributeBool(int cluster, int proc, const char *attr, int *value);
-/** Get value of attr for job with specified cluster and proc.
-	@return -1 on failure; 0 on success
-*/
-int GetAttributeString(int cluster, int proc, const char *attr, char *value);
 /** Get value of string attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success. Allocates new copy of the string.
 */
@@ -210,9 +206,10 @@ int GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
 						MyString &val );
 /** Get value of attr for job with specified cluster and proc.
+	Allocates new copy of the unparsed expression string.
 	@return -1 on failure; 0 on success
 */
-int GetAttributeExpr(int cluster, int proc, const char *attr, char *value);
+int GetAttributeExprNew(int cluster, int proc, const char *attr, char **value);
 /** Delete specified attribute for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
@@ -271,7 +268,10 @@ int SendSpoolFileBytes(char const *filename);
 */
 int SendSpoolFileIfNeeded(ClassAd& ad);
 
+/* This function is not reentrant!  Do not call it recursively. */
 void WalkJobQueue(scan_func);
+
+bool InWalkJobQueue();
 
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);

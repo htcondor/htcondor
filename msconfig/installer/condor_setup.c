@@ -252,6 +252,9 @@ set_release_dir() {
 	if ( Opt.release_dir ) {
 		set_option("RELEASE_DIR", Opt.release_dir);
 		set_option("LOCAL_DIR", Opt.release_dir);
+		//Hack until I work out the AWK script.
+		set_option("HDFS", "$(SBIN)/condor_hdfs.exe");
+		set_option("ROOSTER", "$(SBIN)/condor_rooster.exe");
 	}
 }
 
@@ -329,13 +332,13 @@ set_daemonlist() {
 void
 set_hostpermissions() {
 	if ( Opt.hostallowread != NULL ) {
-		set_option("HOSTALLOW_READ", Opt.hostallowread);
+		set_option("ALLOW_READ", Opt.hostallowread);
 	}
 	if ( Opt.hostallowwrite != NULL ) {
-		set_option("HOSTALLOW_WRITE", Opt.hostallowwrite);
+		set_option("ALLOW_WRITE", Opt.hostallowwrite);
 	}
 	if ( Opt.hostallowadministrator != NULL ) {
-		set_option("HOSTALLOW_ADMINISTRATOR", Opt.hostallowadministrator);
+		set_option("ALLOW_ADMINISTRATOR", Opt.hostallowadministrator);
 	}
 }
 

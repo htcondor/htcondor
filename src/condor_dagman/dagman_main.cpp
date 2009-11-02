@@ -491,6 +491,30 @@ int main_init (int argc, char ** const argv) {
 		// (otherwise it will be set to "-1.-1.-1")
 	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// Minimum legal version for a .condor.sub file to be compatible
+		// with this condor_dagman binary.
+
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// Be sure to change this if the arguments or environment
+		// passed to condor_dagman change in an incompatible way!!
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	typedef struct DagVersionData {
+		int majorVer;
+		int minorVer;
+		int subMinorVer;
+	};
+	const DagVersionData MIN_SUBMIT_FILE_VERSION = { 7, 1, 2 };
+
+		// Construct a string of the minimum submit file version.
+	MyString minSubmitVersionStr;
+	minSubmitVersionStr.sprintf( "%d.%d.%d",
+				MIN_SUBMIT_FILE_VERSION.majorVer,
+				MIN_SUBMIT_FILE_VERSION.minorVer,
+				MIN_SUBMIT_FILE_VERSION.subMinorVer );
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     //
     // Process command-line arguments
     //
@@ -640,19 +664,62 @@ int main_init (int argc, char ** const argv) {
     //
     // Check the arguments
     //
-	if( strcmp( CondorVersion(), csdVersion ) != 0 ) {
-		if ( allowVerMismatch ) {
-        	debug_printf( DEBUG_NORMAL, "Warning: version mismatch: "
-						"condor_submit_dag (%s) vs. condor_dagman (%s); "
-						"continuing because of -AllowVersionMismatch flag\n",
-						csdVersion, CondorVersion() );
-		} else {
-        	debug_printf( DEBUG_SILENT, "Version mismatch: condor_submit_dag "
-						"(%s) vs. condor_dagman (%s)\n", csdVersion,
-						CondorVersion() );
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Checking for version compatibility between the .condor.sub
+	// file and this condor_dagman binary...
+
+	// Note: if we're in recovery mode and the submit file version
+	// causes us to quit, we leave any existing node jobs still
+	// running -- may want to change that eventually.  wenger 2009-10-13.
+
+		// Version of the condor_submit_dag that created our submit file.
+	CondorVersionInfo submitFileVersion( csdVersion );
+
+		// Version of this condor_dagman binary.
+	CondorVersionInfo dagmanVersion;
+
+		// Just generate this message fragment in one place.
+	MyString versionMsg;
+	versionMsg.sprintf("the version (%s) of this DAG's Condor submit "
+				"file (created by condor_submit_dag)", csdVersion );
+
+		// Make sure version in submit file is valid.
+	if( !submitFileVersion.is_valid() ) {
+		if ( !allowVerMismatch ) {
+        	debug_printf( DEBUG_SILENT, "Error: %s is invalid!\n",
+						versionMsg.Value() );
 			DC_Exit( EXIT_ERROR );
+		} else {
+        	debug_printf( DEBUG_NORMAL, "Warning: %s is invalid; "
+						"continuing because of -AllowVersionMismatch flag\n",
+						versionMsg.Value() );
 		}
+
+		// Make sure .condor.sub file is recent enough.
+	} else if( !submitFileVersion.built_since_version(
+				MIN_SUBMIT_FILE_VERSION.majorVer,
+				MIN_SUBMIT_FILE_VERSION.minorVer,
+				MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
+		if ( !allowVerMismatch ) {
+        	debug_printf( DEBUG_SILENT, "Error: %s is older than "
+						"oldest permissible version (%s)\n",
+						versionMsg.Value(), minSubmitVersionStr.Value() );
+			DC_Exit( EXIT_ERROR );
+		} else {
+        	debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
+						"oldest permissible version (%s); continuing "
+						"because of -AllowVersionMismatch flag\n",
+						versionMsg.Value(), minSubmitVersionStr.Value() );
+		}
+
+		// Warn if .condor.sub file is a newer version than this binary.
+	} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
+        debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
+					"condor_dagman version (%s)\n", versionMsg.Value(),
+					CondorVersion() );
 	}
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     if( dagman.primaryDagFile == "" ) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
@@ -787,7 +854,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog );
+						  dagman._defaultNodeLog, false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");

@@ -27,7 +27,7 @@ use strict;
 
 # First date to graph.  Useful to filter out the occasional
 # insane message claiming to be from Midnight, Jan 1, 1970.
-my $FIRST_DATE = '7 Nov 2008 00:00:00';
+my $FIRST_DATE = '7 Jun 2009 00:00:00';
 
 # Width of output in pixels. Height is based on ratio
 my $WIDTH = 400;

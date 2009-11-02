@@ -1172,7 +1172,7 @@ sub SetupAnalysisCache
 
 sub DbConnect
 {
-    $db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-db", "nmipublic", "nmiReadOnly!") 	
+    $db = DBI->connect("DBI:mysql:database=nmi_history;host=mysql.batlab.org", "nmipublic", "nmiReadOnly!") 	
     #$db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-build25", "nmipublic", "nmiReadOnly!") 	
 		|| die "Could not connect to database: $!\n";
     #print "Connected to db!\n";

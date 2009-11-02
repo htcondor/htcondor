@@ -1,0 +1,15 @@
+# This node job will work the first time it's run, and fail subsequent
+# times, to make sure that it's not getting re-run when it shouldn't.
+Job nodeA job_dagman_rescue-A-nodeLA.cmd
+
+Job nodeB1 job_dagman_rescue-A-node.cmd
+Job nodeB2 job_dagman_rescue-A-node.cmd
+Job nodeC job_dagman_rescue-A-node.cmd
+
+# This node job will fail the first time its run, to generate a rescue
+# DAG; the next time it will work.
+Job nodeD job_dagman_rescue-A-nodeD.cmd
+
+Parent nodeA Child nodeB1 nodeB2
+Parent nodeB1 nodeB2 Child nodeC
+Parent nodeC Child nodeD

@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_classad_util.h"
 #include "condor_mkstemp.h"
 #include "startd.h"
 #include "vm_common.h"
@@ -597,7 +598,7 @@ command_query_ads( Service*, int, Stream* stream)
 	stream->encode();
 	ads.Open();
 	while( (ad = ads.Next()) ) {
-		if( (*ad) >= queryAd ) {
+		if( IsAHalfMatch( &queryAd, ad ) ) {
 			if( !stream->code(more) || !ad->put(*stream) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");

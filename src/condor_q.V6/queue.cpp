@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_accountant.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_q.h"
@@ -841,6 +842,14 @@ int main (int argc, char **argv)
 	exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 }
 
+// append all variable references made by expression to references list
+static void
+GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
+{
+	ClassAd ad;
+	ad.GetExprReferences(expression,references,references);
+}
+
 static void 
 processCommandLineArguments (int argc, char *argv[])
 {
@@ -1164,7 +1173,7 @@ processCommandLineArguments (int argc, char *argv[])
 				custom_attributes = true;
 				attrs.clearAll();
 			}
-			attrs.append(argv[i+2]);
+			GetAllReferencesFromClassAdExpr(argv[i+2],attrs);
 				
 			customFormat = true;
 			mask.registerFormat( argv[i+1], argv[i+2] );
@@ -2725,7 +2734,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
-		if( !( (*offer) >= (*request) ) ) {
+		if( !IsAHalfMatch( request, offer ) ) {
 			if( verbose ) sprintf( return_buff,
 				"%sFailed request constraint\n", return_buff );
 			fReqConstraint++;
@@ -2733,7 +2742,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		} 
 
 		// 2. Offer satisfied? 
-		if( !( (*offer) <= (*request) ) ) {
+		if ( !IsAHalfMatch( offer, request ) ) {
 			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
 			fOffConstraint++;
 			continue;

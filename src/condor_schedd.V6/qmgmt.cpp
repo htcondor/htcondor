@@ -88,6 +88,7 @@ static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
 static int old_cluster_num = -1;	// next_cluster_num at start of transaction
 static bool JobQueueDirty = false;
+static int in_walk_job_queue = 0;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
 static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
@@ -2554,37 +2555,6 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 	return -1;
 }
 
-int
-GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
-					char *val )
-{
-	ClassAd	*ad;
-	char	key[PROC_ID_STR_BUFLEN];
-	char	*attr_val;
-
-	IdToStr(cluster_id,proc_id,key);
-
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		int attr_len = strlen( attr_val );
-		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
-			free( attr_val );
-			return -1;
-		}
-		attr_val[attr_len - 1] = '\0';
-		strcpy(val, &attr_val[1]);
-		free( attr_val );
-		return 1;
-	}
-
-	if (!JobQueue->LookupClassAd(key, ad)) {
-		return -1;
-	}
-
-	if (ad->LookupString(attr_name, val) == 1) return 0;
-	return -1;
-}
-
-
 // I added this version of GetAttributeString. It is nearly identical 
 // to the other version, but it calls a different version of 
 // AttrList::LookupString() which allocates a new string. This is a good
@@ -2596,6 +2566,8 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	ClassAd	*ad;
 	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
+
+	*val = NULL;
 
 	IdToStr(cluster_id,proc_id,key);
 
@@ -2612,14 +2584,12 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		*val = (char *) calloc(1, sizeof(char));
 		return -1;
 	}
 
 	if (ad->LookupString(attr_name, val) == 1) {
 		return 0;
 	}
-	*val = (char *) calloc(1, sizeof(char));
 	return -1;
 }
 
@@ -2662,7 +2632,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 }
 
 int
-GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
+GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **val)
 {
 	ClassAd		*ad;
 	char		key[PROC_ID_STR_BUFLEN];
@@ -2670,11 +2640,12 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	char		*attr_val;
 	const char *tmp_val;
 
+	*val = NULL;
+
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		strcpy(val, attr_val);
-		free( attr_val );
+		*val = attr_val;
 		return 1;
 	}
 
@@ -2687,10 +2658,9 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 		return -1;
 	}
 
-	tmp_val = ExprTreeToString(tree);
-	strcpy(val, tmp_val);
+	*val = strdup(ExprTreeToString(tree));
 
-	return 1;
+	return 0;
 }
 
 
@@ -3736,11 +3706,22 @@ int mark_idle(ClassAd *job)
 	return 1;
 }
 
+bool InWalkJobQueue() {
+	return in_walk_job_queue != 0;
+}
+
 void
 WalkJobQueue(scan_func func)
 {
 	ClassAd *ad;
 	int rval = 0;
+
+	if( in_walk_job_queue ) {
+		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
+		dprintf_dump_stack();
+	}
+
+	in_walk_job_queue++;
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
@@ -3752,6 +3733,8 @@ WalkJobQueue(scan_func func)
 	}
 	if (ad != NULL)
 		FreeJobAd(ad);
+
+	in_walk_job_queue--;
 }
 
 /*
@@ -3888,7 +3871,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		ad = GetNextJob(1);
 		while (ad != NULL) {
 			if ( Runnable(ad) ) {
-				if ( *ad == ((ClassAd &)(*my_match_ad)) )
+				if ( IsAMatch( my_match_ad, ad ) )
 				{
 					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
@@ -3945,7 +3928,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 				continue;
 			}
 
-			if ( ! (*ad == (ClassAd &)(*my_match_ad)) )
+			if ( ! IsAMatch( my_match_ad, ad ) )
 				{
 						// Job and machine do not match.
 					PrioRecAutoClusterRejected->insert( PrioRec[i].auto_cluster_id, 1 );

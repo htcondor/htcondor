@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 #include "condor_parser.h"
 #include "condor_status.h"
 #include "condor_debug.h"
@@ -977,7 +978,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 
 int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
-    if ((*cad) >= (*__query__))
+	if (IsAHalfMatch( __query__, cad ))
     {
 		// Found a match 
         __numAds__++;
@@ -995,7 +996,7 @@ Otherwise, return 1.
 
 int CollectorDaemon::select_by_match( ClassAd *cad )
 {
-	if( query_any_request <= *cad ) {
+	if ( IsAHalfMatch( query_any_result, cad ) ) {
 		query_any_result = cad;
 		return 0;
 	}
@@ -1026,7 +1027,7 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 	
 	sprintf( buffer, "%s = 0", ATTR_LAST_HEARD_FROM );
 
-    if ((*cad) >= (*__query__))
+	if (IsAHalfMatch( __query__, cad ))
     {
 		cad->Insert( buffer );			
         __numAds__++;

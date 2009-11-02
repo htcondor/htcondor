@@ -21,6 +21,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_classad_util.h"
+#include "condor_adtypes.h"
 #include "MyString.h"
 
 bool EvalBool(AttrList* ad, ExprTree *tree)

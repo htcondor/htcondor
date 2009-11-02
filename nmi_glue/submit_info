@@ -71,11 +71,11 @@ prereqs_x86_rhas_3       = binutils-2.15, perl-5.8.5, gzip-1.3.3, autoconf-2.59,
 
 # I've removed x86_64_rhas_3 for now, as per git trac #482
 x_test_platforms_x86_rhas_3 =  x86_rhas_4, \
-						x86_suse_10.0, x86_sles_9, x86_ubuntu_5.10, \
+						x86_sles_9, x86_ubuntu_5.10, \
 						x86_64_rhas_4
 #x_test_platforms_x86_rhas_3 = , x86_slc_4, \
 						#x86_fc_5,  \
-						#x86_64_rhas_3, x86_64_rhas_4, x86_64_fc_4, \
+						#x86_64_rhas_3, x86_64_rhas_4, \
 						#x86_64_fc_5
 #x_test_platforms_sun4u_sol_5.9 = sun4u_sol_5.10(compiler mismatch)
 #x_test_platforms_ppc_aix_5.2-pl5 = ppc_aix_5.2, ppc_aix_5.3
@@ -211,7 +211,7 @@ x_test_platforms_x86_64_rhap_5 = x86_64_fedora_8, x86_64_fedora_9
 ]
 
 [
-testplatforms = x86_rhas_4, x86_slc_3, x86_suse_10.0, \
+testplatforms = x86_rhas_4, x86_slc_3, \
 				x86_sles_9, x86_ubuntu_5.10, sun4u_sol_5.10
 testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.4.2_05, perl-5.8.5
@@ -248,9 +248,15 @@ testonly_append_prereqs = java-1.5.0_08, perl-5.8.9
 ]
 
 [
-testplatforms = ia64_rhas_4, x86_64_rhas_4, x86_64_fc_4
+testplatforms = ia64_rhas_4
 testprereqs = tar-1.14, make-3.80, perl-5.8.5
 testonly_append_prereqs = java-1.4.2_05
+]
+
+[
+testplatforms = x86_64_rhas_4
+testprereqs = tar-1.14, make-3.80, perl-5.8.9
+testonly_append_prereqs = java-1.5.0_08
 ]
 
 [

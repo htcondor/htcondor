@@ -347,7 +347,10 @@ select($old_fh);
 
 print LOG "\n";
 print LOG "*****************************************\n";
-print LOG "** " . scalar localtime;
+print LOG "** " . scalar localtime . "\n";
+
+print LOG "** rm -f $trigger_dir/$package_name\n";
+system ("rm -f $trigger_dir/$package_name");
 
 print "Setting up $package_name ...\n";
 print "(see $log)\n";

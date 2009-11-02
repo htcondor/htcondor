@@ -26,6 +26,7 @@
 #include "list.h"
 #include "simplelist.h"
 #include "extArray.h"
+#include "condor_classad_util.h"
 
 #include <iostream>
 #include <sstream>
@@ -123,12 +124,12 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
   bool satisfied_preempt_rank = preempt_rank_condition->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
   bool satisfied_preempt_req = preemption_req->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
 
-  if (!((*offer) >= (*request))) {
+  if (!IsAHalfMatch(request, offer)) {
     result_add_explanation(classad_analysis::MACHINES_REJECTED_BY_JOB_REQS, offer);
     return;
   } 
 
-  if (!((*offer) <= (*request))) {
+  if (!IsAHalfMatch(offer, request)) {
     result_add_explanation(classad_analysis::MACHINES_REJECTING_JOB, offer);
     return;
   }

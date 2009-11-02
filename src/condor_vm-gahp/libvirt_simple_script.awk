@@ -25,6 +25,11 @@ BEGIN {
 {
     gsub(/\"/, "")
     attrs[$1] = $3
+    bootloader = ""
+    root = ""
+    initrd = ""
+    kernel = ""
+    kern_parms = ""
     print "Received attribute: " $1 "=" attrs[$1] >debug_file
 }
 
@@ -32,10 +37,23 @@ END {
     if(index(attrs["JobVMType"],"xen") != 0) 
     {
 	print "<domain type='xen'>";
+	os_type = "linux"
+	if(index(attrs["VMPARAM_Xen_Kernel"],"included") != 0)
+	{
+	    bootloader = attrs["VMPARAM_Xen_Bootloader"]
+	}
+	else
+	{
+	    kernel = attrs["VMPARAM_Xen_Kernel"]
+	    root = attrs["VMPARAM_Xen_Root"]
+	    initrd = attrs["VMPARAM_Xen_Initrd"]
+            kern_params = attrs["VMPARAM_Xen_Kernel_Params"]
+        }
     }
     else if(index(attrs["JobVMType"],"kvm") != 0)
     {
 	print "<domain type='kvm'>" ;
+        os_type = "hvm"
     }
     else
     {
@@ -43,9 +61,30 @@ END {
 	exit(-1);
     }
     print "<name>" attrs["VMPARAM_VM_NAME"] "</name>" ;
-    print "<memory>" attrs["JobVMMemory"] "</memory>" ;
-    print "<vcpu>" attrs["JobVM_VCPU"] "</vcpu>" ;
-    print "<os><type arch='i686'>hvm</type></os>" ;
+    print "<memory>" attrs["JobVMMemory"] * 1024 "</memory>" ;
+    print "<vcpu>" attrs["JobVM_VCPUS"] "</vcpu>" ;
+    print "<os><type>" os_type "</type>" ;
+    if(kernel != "")
+    {
+	print "<kernel>" kernel "</kernel>"
+    }
+    if(initrd != "")
+    {
+	print "<initrd>" initrd "</initrd>"
+    }
+    if(root != "")
+    {
+	print "<root>" root "</root>"
+    }
+    if(kern_params != "")
+    {
+	print "<cmdline>" kern_params "</cmdline>"
+    }
+    print "</os>" ;
+    if(bootloader != "")
+    {
+	print "<bootloader>" bootloader "</bootloader>"
+    }
     print "<devices>" ;
     if(attrs["JobVMNetworking"] == "TRUE")
     {
@@ -59,7 +98,14 @@ END {
 	}
     }
     print "<disk type='file'>" ;
-    split(attrs["VMPARAM_Xen_Disk"], disk_string, ":");
+	if(index(attrs["JobVMType"],"xen") != 0) 
+    {
+	 split(attrs["VMPARAM_Xen_Disk"], disk_string, ":");
+    }
+    else if(index(attrs["JobVMType"],"kvm") != 0)
+    {
+	split(attrs["VMPARAM_Kvm_Disk"], disk_string, ":");
+    }
     print "<source file='" disk_string[1] "'/>" ;
     print "<target dev='" disk_string[2] "'/>" ;
     print "</disk></devices></domain>" ;

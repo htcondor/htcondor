@@ -103,30 +103,22 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
 
-    ClassAd *temp = new ClassAd( *(getJobAd() ) );
-
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
-    if( !temp->Insert(buf) ) {
+    if( !job_ad->Insert(buf) ) {
         dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
         shutDown( JOB_NOT_STARTED );
     }
 
-	replaceNode( temp, 0 );
+	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
 	sprintf( buf, "%s = 0", ATTR_NODE );
-	temp->InsertOrUpdate( buf );
-    rr->setJobAd( temp );
+	job_ad->InsertOrUpdate( buf );
+    rr->setJobAd( job_ad );
 
-	rr->setStartdInfo( temp );
+	rr->setStartdInfo( job_ad );
 
-	temp->Assign( ATTR_JOB_STATUS, RUNNING );
+	job_ad->Assign( ATTR_JOB_STATUS, RUNNING );
     ResourceList[ResourceList.getlast()+1] = rr;
-
-		// now, we want to re-initialize the shadow_user_policy object
-		// with the ClassAd for our master node, since the one sitting
-		// in the Shadow object itself will never get updated with
-		// exit status, info about the run, etc, etc.
-	shadow_user_policy.init( temp, this );
 
 }
 
@@ -192,7 +184,6 @@ MPIShadow::getResources( void )
     int numProcs=0;    // the # of procs to come
     int numInProc=0;   // the # in a particular proc.
 	ClassAd *job_ad = NULL;
-	ClassAd *tmp_ad = NULL;
 	int nodenum = 1;
 	ReliSock* sock;
 
@@ -270,6 +261,7 @@ MPIShadow::getResources( void )
                 free( claim_id );
                 host = NULL;
                 claim_id = NULL;
+				delete job_ad;
                 continue;
             }
 
@@ -280,15 +272,14 @@ MPIShadow::getResources( void )
 				// hostname... 
 			rr->setMachineName( host );
 
-			tmp_ad = new ClassAd ( *job_ad );
-			replaceNode ( tmp_ad, nodenum );
+			replaceNode ( job_ad, nodenum );
 			rr->setNode( nodenum );
 			sprintf( buf, "%s = %d", ATTR_NODE, nodenum );
-			tmp_ad->InsertOrUpdate( buf );
+			job_ad->InsertOrUpdate( buf );
 			sprintf( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
 					 daemonCore->InfoCommandSinfulString() );
-			tmp_ad->InsertOrUpdate( buf );
-			rr->setJobAd( tmp_ad );
+			job_ad->InsertOrUpdate( buf );
+			rr->setJobAd( job_ad );
 			nodenum++;
 
             ResourceList[ResourceList.getlast()+1] = rr;
@@ -300,9 +291,6 @@ MPIShadow::getResources( void )
             claim_id = NULL;
 
         } // end of for loop for this proc
-        
-		delete job_ad;
-		job_ad = NULL;
 
     } // end of for loop on all procs...
 

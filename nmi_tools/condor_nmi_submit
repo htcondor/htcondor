@@ -902,7 +902,8 @@ sub createSubmitFiles
 	# from matching in the second attempt.
 	print CMDFILE "append_requirements = Disk =!= UNDEFINED && TotalDisk >= 18000000\n";
     } else {
-	 	print CMDFILE "+periodic_remove = (((JobStatus == 2)&&(JobUniverse == 5)&&((CurrentTime - JobCurrentStartDate) > (60 * 60 * 8))) =?= TRUE)\n";
+	 	#print CMDFILE "+periodic_remove = (((JobStatus == 2)&&(JobUniverse == 5)&&((CurrentTime - JobCurrentStartDate) > (60 * 60 * 8))) =?= TRUE)\n";
+	 	print CMDFILE "platform_job_timeout = 8h\n";
         print CMDFILE "run_type = test\n";
 		# allow tests on changing systems "unmanaged like unmanaged-x86_rhap_5.1"
 		print CMDFILE "++unmanaged = true \n";

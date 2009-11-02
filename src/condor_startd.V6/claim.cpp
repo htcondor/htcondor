@@ -1125,7 +1125,7 @@ Claim::alive()
 		// it is possible that c_lease_duration changed on activation
 		// of a claim, so our timer reset here will handle that case
 		// as well since alive() is called upon claim activation.
-	if ( c_sendalive_tid ) {
+	if ( c_sendalive_tid != -1 ) {
 		daemonCore->Reset_Timer(c_sendalive_tid, c_lease_duration / 3, 
 							c_lease_duration / 3);
 	}

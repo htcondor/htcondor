@@ -130,7 +130,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 
 	// Check that the job is still managed by the schedd
 	char * managed;
-	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) == 0) {
+	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) >= 0) {
 		bool ok = strcmp(managed, MANAGED_SCHEDD) == 0;
 		free(managed);
 		if( ! ok ) {
@@ -239,7 +239,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 	// Check that the job is still managed by us
 	bool is_managed = false;
 	char * managed;
-	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) == 0) {
+	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) >= 0) {
 		is_managed = strcmp(managed, MANAGED_EXTERNAL) == 0;
 		free(managed);
 	}
@@ -253,7 +253,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 
 	if(my_identity) {
 		char * manager;
-		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED_MANAGER, &manager) == 0) {
+		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED_MANAGER, &manager) >= 0) {
 			if(strcmp(manager, my_identity) != 0) {
 				if(error_details) {
 					error_details->sprintf("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);

@@ -598,6 +598,7 @@ void
 Scheduler::timeout()
 {
 	static bool min_interval_timer_set = false;
+	static bool walk_job_queue_timer_set = false;
 
 		// If we are called too frequently, delay.
 	SchedDInterval.expediteNextRun();
@@ -613,6 +614,19 @@ Scheduler::timeout()
 		return;
 	}
 
+	if( InWalkJobQueue() ) {
+			// WalkJobQueue is not reentrant.  We must be getting called from
+			// inside something else that is iterating through the queue,
+			// such as PeriodicExprHandler().
+		if( !walk_job_queue_timer_set ) {
+			dprintf(D_ALWAYS,"Delaying next queue scan until current operation finishes.\n");
+			daemonCore->Reset_Timer(timeoutid,0,1);
+			walk_job_queue_timer_set = true;
+		}
+		return;
+	}
+
+	walk_job_queue_timer_set = false;
 	min_interval_timer_set = false;
 	SchedDInterval.setStartTimeNow();
 
@@ -2076,9 +2090,31 @@ jobIsSandboxed( ClassAd * ad )
 {
 	ASSERT(ad);
 	int stage_in_start = 0;
+	int never_create_sandbox_expr = 0;
+	// In the past, we created sandboxes (or not) based on the
+	// universe in which a job is executing.  Now, we create a
+	// sandbox only if we are in a universe that ordinarily
+	// requires a sandbox AND if create_sandbox is true; note that
+	// create_sandbox may be set to false by other attributes in
+	// the job ad (see below).
+	bool create_sandbox = true;
+	
 	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
 	if( stage_in_start > 0 ) {
 		return true;
+	}
+
+	// 
+	if( ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr ) &&
+	    never_create_sandbox_expr == TRUE ) {
+	  // As this function stands now, we could return false here.
+	  // But if the sandbox logic becomes more complicated in the
+	  // future --- notably, if there might be a case in which
+	  // we'd want to always create a sandbox even if
+	  // ATTR_NEVER_CREATE_JOB_SANDBOX were set --- then we'd want
+	  // to be sure to ensure that we weren't in such a case.
+
+	  create_sandbox = false;
 	}
 
 	int univ = CONDOR_UNIVERSE_VANILLA;
@@ -2097,7 +2133,9 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_VM:
-		return true;
+	  // True by default for jobs in these universes, but false if
+	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad.
+		return create_sandbox;
 		break;
 
 	default:
@@ -2664,10 +2702,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
+		free( reason );
 	}
-		// GetAttributeStringNew always allocates memory, so we free
-		// regardless of the return value.
-	free( reason );
 
 	bool status =
 		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
@@ -2697,14 +2733,12 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_HOLD_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
+		free( reason );
 	} else {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
 				 job_id.cluster, job_id.proc );
 	}
-		// GetAttributeStringNew always allocates memory, so we free
-		// regardless of the return value.
-	free( reason );
 
 	int hold_reason_code;
 	if( GetAttributeInt(job_id.cluster, job_id.proc,
@@ -2747,10 +2781,8 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_RELEASE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
+		free( reason );
 	}
-		// GetAttributeStringNew always allocates memory, so we free
-		// regardless of the return value.
-	free( reason );
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -5746,7 +5778,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
 			// we've got big trouble, just give up.
-		free( owner );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				 ATTR_OWNER, cluster, proc );
 		mark_job_stopped( job );
@@ -5756,7 +5787,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			//
 			// No attribute. Clean up and return
 			//
-		free( claim_id );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				ATTR_CLAIM_ID, cluster, proc );
 		mark_job_stopped( job );
@@ -5767,7 +5797,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			//
 			// No attribute. Clean up and return
 			//
-		free( startd_name );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				ATTR_REMOTE_HOST, cluster, proc );
 		mark_job_stopped( job );
@@ -5790,7 +5819,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
 							  &pool) < 0 ) {
-		free( pool );
 		pool = NULL;
 	}
 
@@ -5798,7 +5826,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	                              proc,
 	                              ATTR_STARTD_PRINCIPAL,
 	                              &startd_principal)) {
-		free( startd_principal );
 		startd_principal = NULL;
 	}
 
@@ -8079,14 +8106,13 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 		if( lastckptTime > 0 ) {
 			// There was a checkpoint.
 			// Update restart count from a checkpoint 
-			char vmtype[512];
+			MyString vmtype;
 			int num_restarts = 0;
 			GetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, &num_restarts);
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 
-			memset(vmtype, 0, sizeof(vmtype));
 			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( stricmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			if( stricmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 				// In vmware vm universe, vmware disk may be 
 				// a sparse disk or snapshot disk. So we can't estimate the disk space 
 				// in advanace because the sparse disk or snapshot disk will 
@@ -9860,11 +9886,11 @@ SetCkptServerHost(const char *)
 bool
 JobPreCkptServerScheddNameChange(int cluster, int proc)
 {
-	char job_version[150];
-	job_version[0] = '\0';
+	char *job_version = NULL;
 	
-	if (GetAttributeString(cluster, proc, ATTR_VERSION, job_version) == 0) {
+	if (GetAttributeStringNew(cluster, proc, ATTR_VERSION, &job_version) >= 0) {
 		CondorVersionInfo ver(job_version, "JOB");
+		free(job_version);
 		if (ver.built_since_version(6,2,0) &&
 			ver.built_since_date(11,16,2000)) {
 			return false;
@@ -12098,8 +12124,6 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
 					 old_attr, job_id.cluster, job_id.proc );
 		}
-			// how evil, this allocates me a string, even if it failed...
-		free( value );
 		return false;
 	}
 	
@@ -12762,9 +12786,9 @@ Scheduler::claimLocalStartd()
 	}
 
 		// Check when we last had a negotiation cycle; if recent, return.
-	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",300);
+	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",60);
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-				negotiator_interval * 4);
+				negotiator_interval * 20);
 				//,	// default (20 min usually)
 				//10 * 60,	// minimum = 10 minutes
 				//120 * 60);	// maximum = 120 minutes
