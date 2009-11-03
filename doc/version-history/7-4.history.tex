@@ -67,14 +67,16 @@ software.
   \MacroNI{START\_LOCAL\_UNIVERSE} expressions are checked.
 
 % #824
-\item Added \Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
+\item Added the ClassAd attributes
+\Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
 \Attr{TotalSchedulerRunningJobs}, and \Attr{TotalSchedulerIdleJobs}
-to the published ad for the \Condor{schedd}.  This means that
+to the published ClassAd for the \Condor{schedd}.  This means that
 \Condor{q} \Opt{-analyze} can still give helpful information about
 why local or scheduler universe jobs are idle when
-\MacroNI{START\_LOCAL\_UNIVERSE} or
+the configuration variables \MacroNI{START\_LOCAL\_UNIVERSE} or
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
-These attributes were already present internally to the schedd, 
+These attributes were already present internally within 
+the \Condor{schedd} daemon, 
 just not published.
 
 % #688
@@ -99,10 +101,8 @@ for Unix platforms. Previously, it was only supported on Windows platforms.
 % #795
 \item When setting \MacroNI{AMAZON\_HTTP\_PROXY}, a username and password
 can now be given as part of the proxy URL.
-
-% #795
-\item \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
-an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
+The value of \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
+an https proxy for Amazon EC2, when \MacroNI{AMAZON\_HTTP\_PROXY} is defined.
 
 \end{itemize}
 
@@ -181,7 +181,7 @@ an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
 
 % #631
 \item The configuration variable \MacroNI{VM\_VERSION} has been removed,
-as has the machine ad attribute of the same name.
+as has the machine ClassAd attribute of the same name.
 When the virtual machine version information is needed in the machine ClassAd,
 the configuration variable \MacroNI{STARTD\_ATTRS} can be used to
 add it.
@@ -190,20 +190,22 @@ add it.
 \item The default configuration now uses
   \MacroNI{VM\_BRIDGE\_SCRIPT} and \MacroNI{VM\_SCRIPT} in place of
   \MacroNI{XEN\_BRIDGE\_SCRIPT} and \MacroNI{XEN\_SCRIPT} due to KVM additions. 
-  Submission params have also been added, they include;
-  \MacroNI{kvm\_disk}, \MacroNI{kvm\_transfer\_files}, and \MacroNI{kvm\_cd\_rom\_device}.
+  Submit description file commands have also been added, and they include:
+  \SubmitCmd{kvm\_disk}, \SubmitCmd{kvm\_transfer\_files},
+   and \SubmitCmd{kvm\_cd\_rom\_device}.
 
 % #872
-\item Removal of \MacroNI{XEN\_DEFAULT\_KERNEL} and \MacroNI{XEN\_DEFAULT\_INITRD}, as 
-  well as \MacroNI{xen\_kernel=any}.
+\item The configuration variables \MacroNI{XEN\_DEFAULT\_KERNEL}
+  and \MacroNI{XEN\_DEFAULT\_INITRD} have been removed.
+  Corresponding to this, the submit description file command
+  \Expr{xen\_kernel = any} is no longer valid.
 
 % #775, cf02764d9d0fdd2b36ef3629f862f856ee41a717, and more
-\item Optimizations in core Condor systems should provide minor speed improvements throughout.
+\item Optimizations in core Condor systems should provide minor speed 
+improvements.
 
-\item Some log messages were rewritten for clarity.
-
-\item Some additional logging was added to aid debugging.
-
+% 823
+\item Updated the maximum log size to the maximum operating system's file size.  
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -212,7 +214,7 @@ add it.
 
 % #706
 \item Fixed a race condition bug in the \Condor{startd} which allowed
-it to send UNIX signals, intended for \Condor{starter} processes, as
+it to send Unix signals, intended for \Condor{starter} processes, as
 root to non-Condor related processes.
 
 \item A Windows platform bug has been fixed.
@@ -286,12 +288,12 @@ on which Condor does not support VOMS.
 The second bug prevented submission
 of jobs with VOMS proxies, if the authenticity of the VOMS extensions
 could not be verified.
-Also improved memory usage when VOMS extensions aren't used.
+At the same time, improved memory usage when VOMS extensions are not used.
 
 \item Fixed a bad default in the \Attr{batch\_gahp.config} file,
 that prevented
-Condor from observing job state changes for grid type pbs and lsf grid
-universe jobs.
+Condor from observing job state changes for grid universe jobs
+with grid type pbs and lsf.
 
 % #748
 \item Fixed a bug that caused Condor-C jobs to fail if
@@ -344,26 +346,27 @@ for any group was set to 0.
   to always be zero.
 
 % #862
-\item Fixed output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
+\item Fixed the output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
 used.
 
 \item Fixed a problem in the \Condor{schedd} daemon introduced in
-  7.3.2.  For schedd's with lots of jobs having periodic release
-  expressions, this could result in the \Condor{schedd} taking a long
+  7.3.2.  For \Condor{schedd} daemons with lots of jobs having periodic release
+  expressions, this bug could result in the \Condor{schedd} taking a long
   time while evaluating periodic expressions, causing it to become
-  unresponsive to queries and other tasks.  With a job queue of 30,000
-  jobs, a period of unresponsiveness of an hour was observed, whereas
-  the evaluation of periodic expressions in this same environment
+  unresponsive to queries and other tasks.
+  With a job queue of 30,000 jobs,
+  a period of unresponsiveness of an hour was observed,
+  whereas the evaluation of periodic expressions in this same environment
   normally takes less than 5 seconds.
 
 \item A number of potential bugs and memory leaks were identified and 
-fixed throughout Condor.  The Condor team is not aware of anyone having 
+fixed throughout Condor.  The Condor Team is not aware of anyone having 
 encountered these bugs.
 
 % #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
 \item The \Condor{starter} cleans up working directories in more
-situations.  Previously during some error conditions the working
-directory in \MacroNI{EXECUTE} might be left behind.
+situations.  Previously during some error conditions, the working
+directory within \MacroUNI{EXECUTE} might be left behind.
 
 % #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
 \item If the user log cannot be accessed when a local universe
@@ -371,16 +374,13 @@ job starts, the job would fail and immediately be retried.  Now
 the job is placed on hold.
 
 % 826 
-\item Fixed a bug in the startd where vacating jobs would not 
-respect the \MacroNI{job\_lease\_duration}.
-
-% 823
-\item Updated the max log size to the max OS file size.  
+\item Fixed a bug in the \Condor{startd} in which vacating jobs would not 
+respect the value of \MacroNI{job\_lease\_duration}.
 
 % 802
-\item Updated the detection of HasVM in the startd to publish an 
-update to the collector when \MacroNI{VM\_RECHECK\_INTERVAL} is 
-specified.
+\item Updated the detection of \Attr{HasVM} within the \Condor{startd}
+ to publish an update to the \Condor{collector} when the configuration variable
+\MacroNI{VM\_RECHECK\_INTERVAL} is specified.
 
 \end{itemize}
 
