@@ -87,11 +87,16 @@ all platforms (including NT), this is measured in the number of
 integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \index{ClassAd machine attribute!FileSystemDomain}
-\item[\AdAttr{FileSystemDomain}:] A ``domain'' name configured by the
+\item[\AdAttr{FileSystemDomain}:] A domain name configured by the
 Condor administrator which describes a cluster of machines which all
 access the same, uniformly-mounted, networked file systems usually via
 NFS or AFS.  This is useful for Vanilla universe jobs which require
 remote file access.
+%
+\index{ClassAd machine attribute!HasVM}
+\item[\AdAttr{HasVM}:] A boolean value added to the machine ClassAd
+when the configuration triggers the detection of virtual machine
+software.
 %
 \index{ClassAd machine attribute!KeyboardIdle}
 \item[\AdAttr{KeyboardIdle}:] The number of seconds since activity on any
@@ -337,6 +342,9 @@ This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 
 (swap space) expressed in Kbytes.
 %
+\index{ClassAd machine attribute!VM\_Type}
+\item[\AdAttr{VM\_Type}:] 
+%
 \index{ClassAd machine attribute!WindowsBuildNumber}
 \item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the
 platform type, representing a build number 
@@ -438,7 +446,7 @@ on the submitting machine.
 \index{ClassAd machine attribute (when running)!JobStart}
 \item[\AdAttr{JobStart}:] The time stamp in integer seconds of when the job began
 executing, since the Unix epoch (00:00:00 UTC, Jan 1, 1970).  For idle
-machines, the value is UNDEFINED.
+machines, the value is \Expr{UNDEFINED}.
 
 \index{ClassAd machine attribute (when running)!LastPeriodicCheckpoint}
 \item[\AdAttr{LastPeriodicCheckpoint}:] If the job has performed a
@@ -451,7 +459,7 @@ not be defined.
 \end{description}
 
 There are a few attributes that are applicable to machines that
-are offline (i.e. hibernating).
+are offline, that is, hibernating.
 
 \begin{description}
 
