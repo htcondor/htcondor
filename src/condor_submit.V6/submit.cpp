@@ -5304,8 +5304,8 @@ SetGlobusParams()
 		if ( pos >= 0 && resource.FindChar( ' ', pos + 1 ) < 0 &&
 			 ( pos = resource.find( "/cream-" ) ) >= 0 ) {
 			// We found the shortened form
-			resource.replaceString( "/cream-", " ", pos );
 			resource.replaceString( "-", " ", pos );
+			resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
 
 			buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
 							resource.Value() );
