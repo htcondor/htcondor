@@ -68,6 +68,24 @@ implicit memory allocation limit of the \Condor{dagman} process.
 \item Fixed a bug introduced in 7.3.0 that can cause Condor daemons to
 crash when reading malformed network addresses.
 
+% gittrack #871
+\item Fixed a problem introduced in 7.3.2 that changed the behavior of
+  an undocumented method for selecting attributes to be displayed in
+  \Condor{q} \Opt{-xml}.  Prior to this bug, the following command
+  would produce xml output with the attributes \Attr{A} and \Attr{B}
+  (plus a few other attributes that were always shown).
+
+\begin{verbatim}
+condor_q -xml -format "%s" A+B
+\end{verbatim}
+
+In 7.3.2 and 7.4.0, this same command produced an empty xml ClassAd.
+The workaround was to use multiple \Opt{-format} options, each listing
+just one desired attribute, rather than a single one with an
+expression of all desired attributes.  Although this is now fixed, the
+more straightforward way to select attributes since 7.3.2 is to use the
+\Opt{-attributes} option.
+
 \end{itemize}
 
 \noindent Known Bugs:
