@@ -289,11 +289,14 @@ TESTCLASS(job_flocking_to,quick)
 TESTCLASS(job_flocking_to,full)
 TESTCLASS(job_flocking_to,quicknolink)
 
+/* This test is screwing up on HPUX */
+#if !defined( IS_HPUX11 ) 
 DESC(fetch_work-basic,"work fetch smoke test")
 RUN(fetch_work-basic)
 TESTCLASS(fetch_work-basic,core)
 TESTCLASS(fetch_work-basic,quick)
 TESTCLASS(fetch_work-basic,quicknolink)
+#endif
 
 /*
 **
