@@ -1081,6 +1081,18 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
+			// XXX: We need an ATTR_REQUEST_SWAP to provide a
+			// meaningful value here. Until then, and even then, it is
+			// difficult to dynamically adjust the swap space. So, by
+			// default each dynamic slot will have 29% of the
+			// partitionable slot's swap. 29% is arbitrary. This means
+			// VirtualMemory cannot be meaningfully used in policy
+			// expressions for partitionable or dynamic slots. The
+			// partitionable slot will eventually get a negative
+			// amount of swap, while all the dynamic slots will get
+			// 29% of the total swap.
+		type.sprintf_cat("swap=29%% ");
+
 		if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
 			cpus = 1; // reasonable default, for sure
 		}
