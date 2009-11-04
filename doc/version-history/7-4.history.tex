@@ -50,8 +50,8 @@ The details of each version are described below.
 
 % gittrac #870
 \item Fixed a bug that only allowed about 50 splices to be included into
-a dag description file. There is now no limit to the number of splices
-one may include into a dag description file except, of course, for the
+a DAG description file. There is now no limit to the number of splices
+one may include into a DAG description file except, of course, for the
 implicit memory allocation limit of the \Condor{dagman} process.
 
 % gittrack #899
@@ -65,15 +65,16 @@ implicit memory allocation limit of the \Condor{dagman} process.
   before 6.8.
 
 % gittrack #905
-\item Fixed a bug introduced in 7.3.0 that can cause Condor daemons to
+\item Fixed a bug introduced in Condor version 7.3.0 that can cause Condor daemons to
 crash when reading malformed network addresses.
 
 % gittrack #871
-\item Fixed a problem introduced in 7.3.2 that changed the behavior of
+\item Fixed a problem introduced in Condor version 7.3.2 that changed 
+  the behavior of
   an undocumented method for selecting attributes to be displayed in
   \Condor{q} \Opt{-xml}.  Prior to this bug, the following command
-  would produce xml output with the attributes \Attr{A} and \Attr{B}
-  (plus a few other attributes that were always shown).
+  would produce xml output with the attributes \Attr{A} and \Attr{B},
+  plus a few other attributes that were always shown.
 
 \begin{verbatim}
 condor_q -xml -format "%s" A+B
@@ -87,24 +88,25 @@ more straightforward way to select attributes since 7.3.2 is to use the
 \Opt{-attributes} option.
 
 % gittrack #907
-\item Fixed a bug introduced in 7.3.2 that resulted in messages such
+\item Fixed a bug introduced in Condor version 7.3.2 that resulted in 
+  messages such
   as the following even in cases where no problem in communicating
-  with the collector had been encountered:
+  with the \Condor{collector} had been encountered:
 
 \begin{verbatim}
 Collector <X> is still being avoided if an alternative succeeds.
 \end{verbatim}
 
 % gittrack #859
-\item Fixed a bug that has been in \Condor{startd} since before
-  version 6.8.  If the startd ever failed to send signals to the
+\item Fixed a bug that has been in the \Condor{startd} since before
+  Condor version 6.8.  If the \Condor{startd} ever failed to send signals to the
   \Condor{starter} process, it could fail to properly clean up the
   machine ClassAd, leaving attributes from
-  \MacroNI{STARTD\_JOB\_EXPRS} in the ad but not making them visible
+  \MacroNI{STARTD\_JOB\_EXPRS} in the ClassAd but not making them visible
   in \Condor{status} queries.  One possible problem resulting from
-  this could be matches being made by the negotiator that are then
-  rejected by the startd.  Repeated messages such as the following
-  would then result in the startd log:
+  this could be matches being made by the \Condor{negotiator} that are then
+  rejected by the \Condor{startd}.  Repeated messages such as the following
+  would then result in the \Condor{startd} log:
 
 \begin{verbatim}
 slot1: Request to claim resource refused.
@@ -112,7 +114,7 @@ slot1: Request to claim resource refused.
 
 %gittrack #908
 \item Fixed a problem that resulted in the following message in the
-  startd log:
+  \Condor{startd} log:
 
 \begin{verbatim}
 Timer -1 not found
