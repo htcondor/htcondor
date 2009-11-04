@@ -100,7 +100,7 @@ Collector <X> is still being avoided if an alternative succeeds.
   version 6.8.  If the startd ever failed to send signals to the
   \Condor{starter} process, it could fail to properly clean up the
   machine ClassAd, leaving attributes from
-  \MacroNI{STARTD\_JOB\_ATTRS} in the ad but not making them visible
+  \MacroNI{STARTD\_JOB\_EXPRS} in the ad but not making them visible
   in \Condor{status} queries.  One possible problem resulting from
   this could be matches being made by the negotiator that are then
   rejected by the startd.  Repeated messages such as the following
