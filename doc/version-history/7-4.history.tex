@@ -95,6 +95,21 @@ more straightforward way to select attributes since 7.3.2 is to use the
 Collector <X> is still being avoided if an alternative succeeds.
 \end{verbatim}
 
+% gittrack #859
+\item Fixed a bug that has been in \Condor{startd} since before
+  version 6.8.  If the startd ever failed to send signals to the
+  \Condor{starter} process, it could fail to properly clean up the
+  machine ClassAd, leaving attributes from
+  \MacroNI{STARTD\_JOB\_ATTRS} in the ad but not making them visible
+  in \Condor{status} queries.  One possible problem resulting from
+  this could be matches being made by the negotiator that are then
+  rejected by the startd.  Repeated messages such as the following
+  would then result in the startd log:
+
+\begin{verbatim}
+slot1: Request to claim resource refused.
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
