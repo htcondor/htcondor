@@ -738,17 +738,17 @@ BOOL RemoveTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 					// compare SIDs, if equal, then skip it (read:
 					// delete from the original ACL)
 					if (!EqualSid(psid, &pTempAceAllowed->SidStart))
-						continue;
-
-					// add the ACE to the new ACL
-					if (!AddAce(
-						pNewAcl,
-						ACL_REVISION,
-						MAXDWORD,
-						pTempAce,
-						((PACE_HEADER)pTempAce)->AceSize
-						))
-						__leave;
+					{
+						// add the ACE to the new ACL
+						if (!AddAce(
+							pNewAcl,
+							ACL_REVISION,
+							MAXDWORD,
+							pTempAce,
+							((PACE_HEADER)pTempAce)->AceSize
+							))
+							__leave;
+					}
 				}
 			}
 		}          
@@ -1155,17 +1155,17 @@ BOOL RemoveTheAceDesktop(HDESK hdesk, PSID psid)
 					// compare SIDs, if equal, then skip it (read:
 					// delete from the original ACL)
 					if (!EqualSid(psid, &pTempAceAllowed->SidStart))
-						continue;
-
-					// add the ACE to the new ACL
-					if (!AddAce(
-						pNewAcl,
-						ACL_REVISION,
-						MAXDWORD,
-						pTempAce,
-						((PACE_HEADER)pTempAce)->AceSize
-						))
-						__leave;
+					{
+						// add the ACE to the new ACL
+						if (!AddAce(
+							pNewAcl,
+							ACL_REVISION,
+							MAXDWORD,
+							pTempAce,
+							((PACE_HEADER)pTempAce)->AceSize
+							))
+							__leave;
+					}
 				}
 			}
 		}
