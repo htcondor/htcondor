@@ -38,8 +38,8 @@ which is added to the set of CD-ROM files.
 The contents of this file are the arguments specified.
 
 VMware, Xen, and KVM virtual machine software are supported.
-As the two differ from each other, the submit description file
-specifies either
+As these differ from each other, the submit description file
+specifies one of
 \begin{verbatim}
   vm_type = vmware
 \end{verbatim}
@@ -64,7 +64,7 @@ with a comma-separated list of file names.
 \begin{verbatim}
   vm_cdrom_files = a.txt,b.txt,c.txt
 \end{verbatim}
-If these files aren't aren't on a shared filesystem visible to
+If these files are not on a shared file system visible to
 the machine that will run the \SubmitCmd{vm} universe job, then
 Condor must also be told to transfer them from
 the submit machine with 
@@ -171,10 +171,11 @@ submit the job if both \SubmitCmd{vmware\_should\_transfer\_files}
 and \SubmitCmd{vmware\_snapshot\_disk} are \Expr{False}.
 
 Note that if snapshot disks are requested and file transfer is not
-being used, the \SubmitCmd{vmware\_dir} setting given in the submit
-file should not contain any symlink path components. This is to work
-around the issue discussed in the FAQ entry in section~
-\ref{sec:vmware-symlink-bug}.
+being used, the \SubmitCmd{vmware\_dir} setting given in 
+the submit description file
+should not contain any symbolic link path components.
+This is to work around the issue discussed
+in the FAQ entry in section~\ref{sec:vmware-symlink-bug}.
 
 Here is a sample submit description file for a VMware virtual machine:
 \begin{verbatim}
@@ -270,7 +271,7 @@ and the third field specifies permissions.
 Here is an example that identifies two files:
 \footnotesize
 \begin{verbatim}
-  kvm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
+  kvm_disk = /var/lib/libvirt/images/swap.img:sda2:w
 \end{verbatim}
 \normalsize
 
@@ -280,7 +281,7 @@ Condor must be explicitly told to do so with the
 \SubmitCmd{kvm\_transfer\_files} command:
 \footnotesize
 \begin{verbatim}
-  kvm_transfer_files = /myxen/diskfile.img,/myxen/swap.img
+  kvm_transfer_files = /var/lib/libvirt/images/swap.img
 \end{verbatim}
 \normalsize
 Any and all needed files on a system without a shared file
@@ -326,8 +327,12 @@ creates a VMware disk image.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-disk-image-details-xen}Xen and KVM}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The following instructions outline how to create a virtual guest image:
-\URL{http://fedoraproject.org/wiki/Virtualization\_Quick\_Start}.
+While the following web page contains instructions specific to
+Fedora on how to create a virtual guest image,
+it should provide a good starting point for 
+other platforms as well.
+
+\URL{http://fedoraproject.org/wiki/Virtualization\_Quick\_Start}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-job-completion-details}Job Completion in the vm Universe}
