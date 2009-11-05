@@ -1739,12 +1739,13 @@ char **read_command()
 	int ibuf = 0;
 	int iargv = 0;
 	int result = 0;
+	int argv_size = 500;
 	
 	if ( buf == NULL ) {
 		buf = (char *) malloc(1024 * 500);
 	}
 	
-	command_argv = (char **)calloc(500, sizeof(char*));
+	command_argv = (char **)malloc(argv_size * sizeof(char*));
 	
 	while(1) {
 		result = read(0, &(buf[ibuf]), 1 );
@@ -1773,6 +1774,11 @@ char **read_command()
 			strcpy(command_argv[iargv],buf);
 			ibuf = 0;
 			iargv++;
+			if ( iargv >= argv_size - 1 ) {
+				argv_size += 500;
+				command_argv = (char **)realloc( command_argv,
+												 argv_size * sizeof(char*) );
+			}
 			continue;
 		}
 		
@@ -1781,6 +1787,7 @@ char **read_command()
 			buf[ibuf] = '\0';
 			command_argv[iargv] = (char *)malloc(ibuf + 5);
 			strcpy(command_argv[iargv],buf);
+			command_argv[iargv + 1] = NULL;
 			
 			return command_argv;
 		}
