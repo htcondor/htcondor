@@ -785,6 +785,8 @@ GetTargetTypeName( )
 void ClassAd::
 ResetExpr()
 {
+	m_exprItr = begin();
+	m_exprItrInChain = false;
     //this'll originally be null
     m_dirtyItrInit = false;
 }
@@ -1091,6 +1093,25 @@ IsValidAttrValue(const char *value)
     }
 
     return true;
+}
+
+bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
+{
+	classad::ClassAd *chained_ad = GetChainedParentAd();
+	// After iterating through all the attributes in this ad,
+	// get all the attributes in our chained ad as well.
+	if ( m_exprItr == end() && chained_ad ) {
+		m_exprItr = chained_ad->begin();
+		m_exprItrInChain = true;
+	}
+	if ( m_exprItr == end() ||
+		 m_exprItrInChain && m_exprItr == chained_ad->end() ) {
+		return false;
+	}
+	name = m_exprItr->first.c_str();
+	value = m_exprItr->second;
+	m_exprItr++;
+	return true;
 }
 
 //provides a way to get the next dirty expression in the set of 

@@ -293,6 +293,8 @@ class ClassAd : public classad::ClassAd
      */
     bool IsValidAttrValue(const char *value);
 
+	bool NextExpr( const char *&name, ExprTree *&value );
+
     /** Gets the next dirty expression tree
      * @return The ExprTree associated with the next dirty attribute, or null if one does not exist.
      */
@@ -345,6 +347,9 @@ class ClassAd : public classad::ClassAd
 
 	classad::ClassAd::iterator m_nameItr;
 	bool m_nameItrInChain;
+
+	classad::ClassAd::iterator m_exprItr;
+	bool m_exprItrInChain;
 
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
