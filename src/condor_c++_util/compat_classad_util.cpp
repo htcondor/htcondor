@@ -97,21 +97,21 @@ const char *ExprTreeToString( classad::ExprTree *expr )
 
 /* TODO This function needs to be written.
  */
-bool EvalBool(CompatClassAd *ad, const char *constraint)
+bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 {
 	return false;
 }
 
 /* TODO This function needs to be written.
  */
-bool EvalBool(CompatClassAd *ad, classad::ExprTree *tree)
+bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
 	return false;
 }
 
 /* TODO This function needs to be written.
  */
-bool ClassAdsAreSame( CompatClassAd *ad1, CompatClassAd * ad2, StringList *ignored_attrs, bool verbose )
+bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList *ignored_attrs, bool verbose )
 {
 	return false;
 }

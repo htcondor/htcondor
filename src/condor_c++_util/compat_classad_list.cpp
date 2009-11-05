@@ -19,8 +19,9 @@
 
 #include "compat_classad_list.h"
 
+namespace compat_classad {
 
-CompatClassAdList::~CompatClassAdList()
+ClassAdList::~ClassAdList()
 {
 		// This is to avoid the size lookup each time
 	int imax = list.size();
@@ -34,7 +35,7 @@ CompatClassAdList::~CompatClassAdList()
 	}
 }
 
-CompatClassAd* CompatClassAdList::Next()
+ClassAd* ClassAdList::Next()
 {  // Return this element _and_then_ push pointer
 	if (index < 0 || index >= list.size())
 	{ // This also handles the empty list case.
@@ -44,7 +45,7 @@ CompatClassAd* CompatClassAdList::Next()
 	}
 }
 
-int CompatClassAdList::Delete(CompatClassAd* cad)
+int ClassAdList::Delete(ClassAd* cad)
 {
 	int ret = Remove( cad );
 	if ( ret == TRUE ) {
@@ -53,10 +54,10 @@ int CompatClassAdList::Delete(CompatClassAd* cad)
 	return ret;
 }
 
-int CompatClassAdList::Remove(CompatClassAd* cad)
+int ClassAdList::Remove(ClassAd* cad)
 {
 	int retval = FALSE;
-	std::vector<CompatClassAd*>::iterator it = list.begin();
+	std::vector<ClassAd*>::iterator it = list.begin();
 		// This is to avoid the size lookup each time
 	int imax = list.size();
 	for (int i = 0; i < imax; i++)
@@ -65,7 +66,7 @@ int CompatClassAdList::Remove(CompatClassAd* cad)
 			// or should I do *(*it) == *cad to
 			// do a deep comparison?
 		{
-			CompatClassAd* tmp = *it;
+			ClassAd* tmp = *it;
 			it = list.erase(it);
 			retval = TRUE;
 				// Now if this element that we deleted occurs
@@ -83,10 +84,10 @@ int CompatClassAdList::Remove(CompatClassAd* cad)
 	return retval;
 }
 
-void CompatClassAdList::Insert(CompatClassAd* cad)
+void ClassAdList::Insert(ClassAd* cad)
 {
 	bool is_in_list = false;
-	std::vector<CompatClassAd*>::iterator it = list.begin();
+	std::vector<ClassAd*>::iterator it = list.begin();
 	int imax = list.size(); // Performance optimization
 	for(int i = 0; i < imax; i++)
 	{
@@ -104,8 +105,11 @@ void CompatClassAdList::Insert(CompatClassAd* cad)
 	}
 }
 
-void CompatClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
+void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
 {
 	ClassAdComparator isSmallerThan(userInfo, smallerThan);
 	std::sort(list.begin(), list.end(), isSmallerThan);
 }
+
+
+} // namespace compat_classad

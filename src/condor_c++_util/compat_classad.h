@@ -28,20 +28,22 @@
 #include "classad/classad_distribution.h"
 #include "condor_io.h"
 
-class CompatClassAd : public classad::ClassAd
+namespace compat_classad {
+
+class ClassAd : public classad::ClassAd
 {
  public:
-	CompatClassAd();
+	ClassAd();
 
-	CompatClassAd( const CompatClassAd &ad );
+	ClassAd( const ClassAd &ad );
 
-	virtual ~CompatClassAd();
+	virtual ~ClassAd();
 
 		/**@name Deprecated functions (only for use within Condor) */
 		//@{
 
 		/** A constructor that reads old ClassAds from a FILE */
-	CompatClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
+	ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
 
 		/* This is a pass-through to ClassAd::Insert(). Because we define
 		 * our own Insert() below, our parent's Insert() won't be found
@@ -316,7 +318,7 @@ class CompatClassAd : public classad::ClassAd
     bool GetInternalReferences( const ExprTree *tree, classad::References &refs, bool fullNames);
 
 
-    bool _GetInternalReferences( const ExprTree *expr, CompatClassAd *ad,
+    bool _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
             classad::EvalState &state, classad::References& refs, bool fullNames);
 
     */
@@ -333,5 +335,7 @@ class CompatClassAd : public classad::ClassAd
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
 };
+
+} // namespace compat_classad
 
 #endif

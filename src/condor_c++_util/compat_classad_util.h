@@ -29,10 +29,10 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos = NULL);
 
 const char * ExprTreeToString( classad::ExprTree *expr );
 
-bool EvalBool(CompatClassAd *ad, const char *constraint);
+bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
 
-bool EvalBool(CompatClassAd *ad, classad::ExprTree *tree);
+bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
 
-bool ClassAdsAreSame( CompatClassAd *ad1, CompatClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
+bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 
 #endif

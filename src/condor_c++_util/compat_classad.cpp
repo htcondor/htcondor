@@ -27,7 +27,9 @@
 
 using namespace std;
 
-CompatClassAd::CompatClassAd()
+namespace compat_classad {
+
+ClassAd::ClassAd()
 {
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
@@ -39,7 +41,7 @@ CompatClassAd::CompatClassAd()
     ResetExpr();
 }
 
-CompatClassAd::CompatClassAd( const CompatClassAd &ad )
+ClassAd::ClassAd( const ClassAd &ad )
 {
 	CopyFrom( ad );
 
@@ -47,12 +49,12 @@ CompatClassAd::CompatClassAd( const CompatClassAd &ad )
     ResetExpr();
 }
 
-CompatClassAd::~CompatClassAd()
+ClassAd::~ClassAd()
 {
 }
 
-CompatClassAd::
-CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
+ClassAd::
+ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 {
 	nodeKind = CLASSAD_NODE;
 
@@ -109,7 +111,7 @@ CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
     ResetExpr();
 }
 
-bool CompatClassAd::
+bool ClassAd::
 ClassAdAttributeIsPrivate( char const *name )
 {
 	if( stricmp(name,ATTR_CLAIM_ID) == 0 ) {
@@ -131,20 +133,20 @@ ClassAdAttributeIsPrivate( char const *name )
 	return false;
 }
 
-bool CompatClassAd::
+bool ClassAd::
 Insert( const std::string &attrName, classad::ExprTree *expr )
 {
 	return ClassAd::Insert( attrName, expr );
 }
 
-int CompatClassAd::
+int ClassAd::
 Insert( const char *name, classad::ExprTree *expr )
 {
 	string str = name;
 	return Insert( str, expr ) ? TRUE : FALSE;
 }
 
-int CompatClassAd::
+int ClassAd::
 Insert( const char *str )
 {
 	classad::ClassAdParser parser;
@@ -183,7 +185,7 @@ Insert( const char *str )
 	return TRUE;
 }
 
-int CompatClassAd::
+int ClassAd::
 AssignExpr(char const *name,char const *value)
 {
 	classad::ClassAdParser par;
@@ -199,26 +201,26 @@ AssignExpr(char const *name,char const *value)
 	return TRUE;
 }
 
-//  void CompatClassAd::
+//  void ClassAd::
 //  ResetExpr() { this->ptrExpr = exprList; }
 
-//  ExprTree* CompatClassAd::
+//  ExprTree* ClassAd::
 //  NextExpr(){}
 
-//  void CompatClassAd::
+//  void ClassAd::
 //  ResetName() { this->ptrName = exprList; }
 
-//  const char* CompatClassAd::
+//  const char* ClassAd::
 //  NextNameOriginal(){}
 
 
-//  ExprTree* CompatClassAd::
+//  ExprTree* ClassAd::
 //  Lookup(char *) const{}
 
-//  ExprTree* CompatClassAd::
+//  ExprTree* ClassAd::
 //  Lookup(const char*) const{}
 
-int CompatClassAd::
+int ClassAd::
 LookupString( const char *name, char *value ) const 
 {
 	string strVal;
@@ -229,7 +231,7 @@ LookupString( const char *name, char *value ) const
 	return 1;
 } 
 
-int CompatClassAd::
+int ClassAd::
 LookupString(const char *name, char *value, int max_len) const
 {
 	string strVal;
@@ -240,7 +242,7 @@ LookupString(const char *name, char *value, int max_len) const
 	return 1;
 }
 
-int CompatClassAd::
+int ClassAd::
 LookupString (const char *name, char **value) const 
 {
 	string strVal;
@@ -257,7 +259,7 @@ LookupString (const char *name, char **value) const
 	return 0;
 }
 
-int CompatClassAd::
+int ClassAd::
 LookupString( const char *name, MyString &value ) const 
 {
 	string strVal;
@@ -268,7 +270,7 @@ LookupString( const char *name, MyString &value ) const
 	return 1;
 } 
 
-int CompatClassAd::
+int ClassAd::
 LookupInteger( const char *name, int &value ) const 
 {
 	bool    boolVal;
@@ -287,7 +289,7 @@ LookupInteger( const char *name, int &value ) const
 	return haveInteger;
 }
 
-int CompatClassAd::
+int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
@@ -306,7 +308,7 @@ LookupFloat( const char *name, float &value ) const
 	return haveFloat;
 }
 
-int CompatClassAd::
+int ClassAd::
 LookupBool( const char *name, int &value ) const
 {
 	int   intVal;
@@ -329,7 +331,7 @@ LookupBool( const char *name, int &value ) const
 	return haveBool;
 }
 
-int CompatClassAd::
+int ClassAd::
 LookupBool( const char *name, bool &value ) const
 {
 	int   intVal;
@@ -352,7 +354,7 @@ LookupBool( const char *name, bool &value ) const
 	return haveBool;
 }
 
-int CompatClassAd::
+int ClassAd::
 EvalString( const char *name, classad::ClassAd *target, char *value )
 {
 	int rc = 0;
@@ -386,7 +388,7 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 /*
  * Ensure that we allocate the value, so we have sufficient space
  */
-int CompatClassAd::
+int ClassAd::
 EvalString (const char *name, classad::ClassAd *target, char **value)
 {
     
@@ -436,7 +438,7 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 	return 0;
 }
 
-int CompatClassAd::
+int ClassAd::
 EvalString(const char *name, classad::ClassAd *target, MyString & value)
 {
     char * pvalue = NULL;
@@ -448,7 +450,7 @@ EvalString(const char *name, classad::ClassAd *target, MyString & value)
     return ret;
 }
 
-int CompatClassAd::
+int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
@@ -475,7 +477,7 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 	return rc;
 }
 
-int CompatClassAd::
+int ClassAd::
 EvalFloat (const char *name, classad::ClassAd *target, float &value)
 {
 	int rc = 0;
@@ -526,7 +528,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	return rc;
 }
 
-int CompatClassAd::
+int ClassAd::
 EvalBool  (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
@@ -592,7 +594,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 }
 
         // shipping functions
-int CompatClassAd::
+int ClassAd::
 put( Stream &s )
 {
 	if( !putOldClassAd( &s, *this ) ) {
@@ -601,7 +603,7 @@ put( Stream &s )
 	return TRUE;
 }
 
-int CompatClassAd::
+int ClassAd::
 initFromStream(Stream& s)
 {
 	classad::ClassAd *newAd;
@@ -615,7 +617,7 @@ initFromStream(Stream& s)
 }
 
 		// output functions
-int	CompatClassAd::
+int	ClassAd::
 fPrint( FILE *file )
 {
 	classad::ClassAdUnParser unp;
@@ -639,7 +641,7 @@ fPrint( FILE *file )
 	return TRUE;
 }
 
-void CompatClassAd::
+void ClassAd::
 dPrint( int level )
 {
 	ClassAd::iterator itr;
@@ -649,7 +651,7 @@ dPrint( int level )
 	string value;
 	MyString buffer;
 
-	ClassAd *parent = GetChainedParentAd();
+	classad::ClassAd *parent = GetChainedParentAd();
 
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
@@ -674,7 +676,7 @@ dPrint( int level )
 	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 }
 
-int CompatClassAd::
+int ClassAd::
 sPrint( MyString &output )
 {
 	classad::ClassAdUnParser unp;
@@ -700,7 +702,7 @@ sPrint( MyString &output )
 // If buffer is NULL, then space will be allocated with malloc(), and it needs
 // to be free-ed with free() by the user.
 ////////////////////////////////////////////////////////////////////////////////
-char* CompatClassAd::
+char* ClassAd::
 sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
 {
 
@@ -736,7 +738,7 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
 // ClassAd methods
 
 		// Type operations
-void CompatClassAd::
+void ClassAd::
 SetMyTypeName( const char *myType )
 {
 	if( myType ) {
@@ -746,7 +748,7 @@ SetMyTypeName( const char *myType )
 	return;
 }
 
-const char*	CompatClassAd::
+const char*	ClassAd::
 GetMyTypeName( )
 {
 	string myTypeStr;
@@ -756,7 +758,7 @@ GetMyTypeName( )
 	return myTypeStr.c_str( );
 }
 
-void CompatClassAd::
+void ClassAd::
 SetTargetTypeName( const char *targetType )
 {
 	if( targetType ) {
@@ -766,7 +768,7 @@ SetTargetTypeName( const char *targetType )
 	return;
 }
 
-const char*	CompatClassAd::
+const char*	ClassAd::
 GetTargetTypeName( )
 {
 	string targetTypeStr;
@@ -776,25 +778,25 @@ GetTargetTypeName( )
 	return targetTypeStr.c_str( );
 }
 
-void CompatClassAd::
+void ClassAd::
 ResetExpr()
 {
     //this'll originally be null
     m_dirtyItrInit = false;
 }
 
-void CompatClassAd::
+void ClassAd::
 ResetName()
 {
 	m_nameItr = begin();
 	m_nameItrInChain = false;
 }
 
-const char *CompatClassAd::
+const char *ClassAd::
 NextNameOriginal()
 {
 	const char *name = NULL;
-	ClassAd *chained_ad = GetChainedParentAd();
+	classad::ClassAd *chained_ad = GetChainedParentAd();
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
 	if ( m_nameItr == end() && chained_ad ) {
@@ -812,7 +814,7 @@ NextNameOriginal()
 
 // Back compatibility helper methods
 
-bool CompatClassAd::
+bool ClassAd::
 AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr )
 {
 	if( expr == NULL ) {
@@ -822,7 +824,7 @@ AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr )
 	return true;
 }
 
-classad::ClassAd *CompatClassAd::
+classad::ClassAd *ClassAd::
 AddExplicitTargetRefs( )
 {
 	string attr = "";
@@ -842,7 +844,7 @@ AddExplicitTargetRefs( )
 
 
 
-classad::ExprTree *CompatClassAd::
+classad::ExprTree *ClassAd::
 AddExplicitConditionals( classad::ExprTree *expr )
 {
 	if( expr == NULL ) {
@@ -1004,7 +1006,7 @@ AddExplicitConditionals( classad::ExprTree *expr )
 	return NULL;
 }
 
-classad::ExprTree *CompatClassAd::
+classad::ExprTree *ClassAd::
 AddExplicitTargetRefs( classad::ExprTree *tree, set<string,classad::CaseIgnLTStr> &definedAttrs )
 {
 	if( tree == NULL ) {
@@ -1064,7 +1066,7 @@ AddExplicitTargetRefs( classad::ExprTree *tree, set<string,classad::CaseIgnLTStr
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
 // the only invalid character is a '\n'.
-bool CompatClassAd::
+bool ClassAd::
 IsValidAttrValue(const char *value)
 {
     //NULL value is not invalid, may translate to UNDEFINED
@@ -1089,7 +1091,7 @@ IsValidAttrValue(const char *value)
 
 //provides a way to get the next dirty expression in the set of 
 //  dirty attributes.
-bool CompatClassAd::
+bool ClassAd::
 NextDirtyExpr(const char *&name, classad::ExprTree *&expr)
 {
     //this'll reset whenever ResetDirtyItr is called
@@ -1119,7 +1121,7 @@ NextDirtyExpr(const char *&name, classad::ExprTree *&expr)
 
 //////////////XML functions///////////
 
-int CompatClassAd::
+int ClassAd::
 fPrintAsXML(FILE *fp)
 {
     if(!fp)
@@ -1133,7 +1135,7 @@ fPrintAsXML(FILE *fp)
     return TRUE;
 }
 
-int CompatClassAd::
+int ClassAd::
 sPrintAsXML(MyString &output)
 {
     classad::ClassAdXMLUnParser     unparser;
@@ -1146,7 +1148,7 @@ sPrintAsXML(MyString &output)
 ///////////// end XML functions /////////
 
 char const *
-CompatClassAd::EscapeStringValue(char const *val)
+ClassAd::EscapeStringValue(char const *val)
 {
     if(val == NULL)
         return NULL;
@@ -1161,11 +1163,11 @@ CompatClassAd::EscapeStringValue(char const *val)
     return stringToAppeaseUnparse.c_str();
 }
 
-void CompatClassAd::ChainCollapse()
+void ClassAd::ChainCollapse()
 {
     classad::ExprTree *tmpExprTree;
 
-    ClassAd *parent = GetChainedParentAd();
+	classad::ClassAd *parent = GetChainedParentAd();
 
     if(!parent)
     {   
@@ -1198,3 +1200,4 @@ void CompatClassAd::ChainCollapse()
     }
 }
 
+} // namespace compat_classad

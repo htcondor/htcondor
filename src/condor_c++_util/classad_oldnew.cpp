@@ -243,7 +243,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
             itor.CurrentAttribute( buf, expr );
 
 
-            if(!CompatClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
+            if(!compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
             {
                 if(excludeTypes)
                 {
@@ -295,7 +295,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
 
             //yea, these two if-statements could be combined into one, 
             //but this is more readable.
-            if(CompatClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
+            if(compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
                 continue;
             }
 
@@ -315,7 +315,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
             strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
             ConvertDefaultIPToSocketIP(tmpAttrName.c_str(),&exprString,*sock);
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-                    CompatClassAd::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
+				compat_classad::ClassAd::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
                 sock->put(SECRET_MARKER);
 
                 sock->put_secret(exprString);

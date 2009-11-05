@@ -26,15 +26,17 @@
 #include <vector>
 #include <algorithm>
 
+namespace compat_classad {
+
 // The SortFunction returns a 1 if the first classad is
 // "smaller than" the second classad. Do not assume
 // about other return values.
 typedef int (*SortFunctionType)(classad::ClassAd*,classad::ClassAd*,void*);
 
-class CompatClassAdList
+class ClassAdList
 {
 private:
-	std::vector<CompatClassAd*> list;
+	std::vector<ClassAd*> list;
 	int index;
 
 		/* The following private class applies the user supplied
@@ -68,19 +70,19 @@ private:
 	};
 
 public:
-	CompatClassAdList()           { index = 0; }
-	~CompatClassAdList();
-	CompatClassAd* Next();
+	ClassAdList()           { index = 0; }
+	~ClassAdList();
+	ClassAd* Next();
 	void Open()             { index = 0; }
 		/*This Close() function is no longer really needed*/
 	void Close()            { index = 0; /*Just a safety measure*/ }
 	void Rewind()           { /*same as Open()*/ index = 0; }
 	int MyLength()          { /*Same as Length()*/ return list.size(); }
 		/* Removes ad from list and deletes it */
-	int Delete(CompatClassAd* cad);
+	int Delete(ClassAd* cad);
 		/* Removes ad from list, but does not delete it */
-	int Remove(CompatClassAd* cad);
-	void Insert(CompatClassAd* cad);
+	int Remove(ClassAd* cad);
+	void Insert(ClassAd* cad);
 	int Length()            { /*Same as MyLength()*/ return list.size(); }
 		/* Note on behaviour. The Sort function does not touch the
 		 * index, nor invalidate it. index will be within defined limits
@@ -88,5 +90,7 @@ public:
 		 */
 	void Sort(SortFunctionType smallerThan, void* userInfo = NULL);
 };
+
+} // namespace compat_classad
 
 #endif
