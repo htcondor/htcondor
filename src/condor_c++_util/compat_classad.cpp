@@ -39,6 +39,8 @@ ClassAd::ClassAd()
 
 	ResetName();
     ResetExpr();
+
+	EnableDirtyTracking();
 }
 
 ClassAd::ClassAd( const ClassAd &ad )
@@ -47,6 +49,8 @@ ClassAd::ClassAd( const ClassAd &ad )
 
 	ResetName();
     ResetExpr();
+
+	EnableDirtyTracking();
 }
 
 ClassAd::~ClassAd()
@@ -1117,6 +1121,27 @@ NextDirtyExpr(const char *&name, classad::ExprTree *&expr)
 
     return true;
 
+}
+
+void ClassAd::
+SetDirtyFlag(const char *name, bool dirty)
+{
+	if ( dirty ) {
+		MarkAttributeDirty( name );
+	} else {
+		MarkAttributeClean( name );
+	}
+}
+
+void ClassAd::
+GetDirtyFlag(const char *name, bool *exists, bool *dirty)
+{
+	if ( Lookup( name ) == NULL ) {
+		*exists = false;
+		return;
+	}
+	*exists = true;
+	*dirty = IsAttributeDirty( name );
 }
 
 //////////////XML functions///////////

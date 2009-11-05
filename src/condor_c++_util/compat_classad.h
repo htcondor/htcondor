@@ -298,6 +298,9 @@ class ClassAd : public classad::ClassAd
      */
     bool NextDirtyExpr(const char *&name, classad::ExprTree *&expr);
 
+	// Set or clear the dirty flag for each expression.
+	void SetDirtyFlag(const char *name, bool dirty);
+	void GetDirtyFlag(const char *name, bool *exists, bool *dirty);
 
     /** Basically just calls an Unparser so we can escape strings
      *  @param val The string we're escaping stuff in. 
