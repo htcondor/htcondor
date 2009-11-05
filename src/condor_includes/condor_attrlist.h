@@ -129,7 +129,6 @@ class AttrList : public AttrListAbstract
 		AttrList();							// No associated AttrList list
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE*,char*,int&,int&,int&);// Constructor, read from file.
-        AttrList(const char *, char);		// Constructor, from string.
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
 

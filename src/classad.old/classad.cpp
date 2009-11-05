@@ -107,14 +107,6 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
 	updateBoundVariables();
 }
 
-ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
-{
-	myType = NULL;
-	targetType = NULL;
-
-	updateBoundVariables();
-}
-
 void
 ClassAd::updateBoundVariables() {
     ExprTree *tree;
