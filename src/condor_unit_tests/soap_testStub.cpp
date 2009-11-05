@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_version.h"
 #include "condorTest.nsmap"
 
 #include "soap_daemon_core.cpp"

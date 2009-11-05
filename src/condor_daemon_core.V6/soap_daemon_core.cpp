@@ -1,3 +1,4 @@
+
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,9 +18,8 @@
  *
  ***************************************************************/
 
-#include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_version.h"
+#include "soap_daemon_core.h"
+
 
 int
 condor__getPlatformString(struct soap *soap,

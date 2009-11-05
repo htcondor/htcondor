@@ -1,3 +1,4 @@
+
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -16,8 +17,14 @@
  * limitations under the License.
  *
  ***************************************************************/
-#include "soap_daemon_core.h"
 
-#include "condor.nsmap"
+#ifndef __CONDOR_SOAP_DEAMON_CORE_H__
+#define __CONDOR_SOAP_DEAMON_CORE_H__
 
-#include "soap_daemon_core.cpp"
+// provides a standard include for soap stubs so we no longer
+// need to patch soap for inclusion issues
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_version.h"
+
+#endif

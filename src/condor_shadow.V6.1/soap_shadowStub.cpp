@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#include "soap_daemon_core.h"
+
 #include "condorShadow.nsmap"
    
 #include "soap_daemon_core.cpp"

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "condor_common.h"
 #include "stdsoap2.h"
 
 #include <iostream>
