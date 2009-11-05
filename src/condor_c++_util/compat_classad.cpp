@@ -1144,6 +1144,31 @@ GetDirtyFlag(const char *name, bool *exists, bool *dirty)
 	*dirty = IsAttributeDirty( name );
 }
 
+void ClassAd::
+CopyAttribute( char const *target_attr, classad::ClassAd *source_ad )
+{
+	CopyAttribute( target_attr, target_attr, source_ad );
+}
+
+
+void ClassAd::
+CopyAttribute( char const *target_attr, char const *source_attr,
+			   classad::ClassAd *source_ad )
+{
+	ASSERT( target_attr );
+	ASSERT( source_attr );
+	if( !source_ad ) {
+		source_ad = this;
+	}
+
+	classad::ExprTree *e = source_ad->Lookup( source_attr );
+	if ( e ) {
+		Insert( target_attr, e->Copy() );
+	} else {
+		Delete( target_attr );
+	}
+}
+
 //////////////XML functions///////////
 
 int ClassAd::

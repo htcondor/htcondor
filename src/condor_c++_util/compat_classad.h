@@ -302,6 +302,17 @@ class ClassAd : public classad::ClassAd
 	void SetDirtyFlag(const char *name, bool dirty);
 	void GetDirtyFlag(const char *name, bool *exists, bool *dirty);
 
+	// Copy value of source_attr in source_ad to target_attr
+	// in this ad.  If source_ad is NULL, it defaults to this ad.
+	// If source_attr is undefined, target_attr is deleted, if
+	// it exists.
+	void CopyAttribute(char const *target_attr, char const *source_attr, classad::ClassAd *source_ad=NULL );
+
+	// Copy value of source_attr in source_ad to an attribute
+	// of the same name in this ad.  Shortcut for
+	// CopyAttribute(target_attr,target_attr,source_ad).
+	void CopyAttribute(char const *target_attr, classad::ClassAd *source_ad );
+
     /** Basically just calls an Unparser so we can escape strings
      *  @param val The string we're escaping stuff in. 
      *  @return The escaped string.
