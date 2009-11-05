@@ -83,12 +83,17 @@ just not published.
 \item The \Condor{vm-gahp} now supports KVM and links with libvirt, rather 
 than calling virsh command-line tools.
 
-% #760 #771 #769
+% #760 #771 #769 #772 #773 #775
 \item Greatly improved the \Condor{gridmanager}'s scalability when handling
-many grid type gt2 grid universe jobs.
+many grid type gt2 grid universe jobs.  Improvements include more quickly
+processing updated x509 certificates, not checking jobs for status updates if 
+they have not been submitted to the remote site, and eliminating unnecessary 
+updates to the \Condor{schedd}.
 
+% commit 75f6b2fe920b88717712a0d41765d16665ad7fe6
 \item Latency in the submission and cleaning up of Condor-C jobs
-has been improved.
+has been improved by changing the default value of
+\Macro{C\_GAHP\_CONTACT\_SCHEDD\_DELAY} from 20 to 5.
 
 % commit 8c2d88c695d6981be3bdab7e10c5d92e9f6bb55b
 \item The \Expr{eval()} ClassAd function added in Condor version 7.3.2
@@ -103,6 +108,10 @@ for Unix platforms. Previously, it was only supported on Windows platforms.
 can now be given as part of the proxy URL.
 The value of \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
 an https proxy for Amazon EC2, when \MacroNI{AMAZON\_HTTP\_PROXY} is defined.
+
+% commit 0e8800c201f81eac54cba925b3d7f6d81a83aeca
+\item The deprecated setting \Macro{TOOLS\_PROVIDE\_OLD\_MESSAGES} is no longer
+recognized.
 
 \end{itemize}
 
@@ -217,6 +226,7 @@ improvements.
 it to send Unix signals, intended for \Condor{starter} processes, as
 root to non-Condor related processes.
 
+% 735
 \item A Windows platform bug has been fixed.
 The bug caused a 20-second interval in which
 the \Condor{shadow}, \Condor{startd}, and \Condor{starter} daemons
@@ -331,6 +341,7 @@ queue
 \item Fixed a memory leak introduced into Condor version 7.3.2.
 The leak was in the \Condor{collector} daemon.
 
+% #211 commit d6c0144739000523e94205a192be3cf9afe9ca9f
 \item Fixed a problem introduced in Condor version 7.1.4 
 that resulted in the failure of forcing
 the execute bit to be set on the transferred job executable.
@@ -345,7 +356,7 @@ for any group was set to 0.
 \item Fixed a bug that caused the \Code{ctime} in the event log header
   to always be zero.
 
-% #862
+% #862 commit 9a432e2f3497e5dce120db5c733e79212257f6a5
 \item Fixed the output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
 used.
 
@@ -381,6 +392,16 @@ respect the value of \MacroNI{job\_lease\_duration}.
 \item Updated the detection of \Attr{HasVM} within the \Condor{startd}
  to publish an update to the \Condor{collector} when the configuration variable
 \MacroNI{VM\_RECHECK\_INTERVAL} is specified.
+
+% commit 68f06088fa36eb0eb332a4f72a5c48ccd48b1d5a
+\item Fixed a bug where the \Condor{gridmanager} could, in rare cases, waste a
+small amount of memory and processor time checking for proxy files no longer
+being used by any active jobs.
+
+% commit bc66aa432e1f4e69d88a5b769204a4fce0648bfc
+\item The setting \Macro{CREAM\_GAHP} was added to the default configuration 
+file with a value of \$(SBIN)/cream\_gahp. Existing installations desiring to 
+submit jobs to CREAM should add this setting.
 
 \end{itemize}
 
