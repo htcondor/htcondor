@@ -16,7 +16,6 @@
  * limitations under the License.
  *
  ***************************************************************/
-#include "soap_daemon_core.h"
 
 #include "condorNegotiator.nsmap"
   
