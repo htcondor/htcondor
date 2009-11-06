@@ -1098,8 +1098,7 @@ VMGahp::killAllProcess()
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
 			MyString vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
-				VirshType::killVMFast(m_gahp_config->m_vm_script.Value(), 
-						vmname.Value());
+				XenType::killVMFast(vmname.Value());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
@@ -1110,8 +1109,7 @@ VMGahp::killAllProcess()
 		if( m_jobAd && KVMType::checkXenParams(m_gahp_config) ) {
 			MyString vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
-				VirshType::killVMFast(m_gahp_config->m_vm_script.Value(), 
-						vmname.Value());
+				KVMType::killVMFast(vmname.Value());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
