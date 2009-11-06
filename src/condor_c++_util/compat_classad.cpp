@@ -140,7 +140,7 @@ ClassAdAttributeIsPrivate( char const *name )
 bool ClassAd::
 Insert( const std::string &attrName, classad::ExprTree *expr )
 {
-	return ClassAd::Insert( attrName, expr );
+	return classad::ClassAd::Insert( attrName, expr );
 }
 
 int ClassAd::
@@ -181,7 +181,7 @@ Insert( const char *str )
 	}
 	
 	iterator itr = newAd->begin();
-	if ( !ClassAd::Insert( itr->first, itr->second->Copy() ) ) {
+	if ( !classad::ClassAd::Insert( itr->first, itr->second->Copy() ) ) {
 		delete newAd;
 		return FALSE;
 	}
@@ -648,7 +648,7 @@ fPrint( FILE *file )
 void ClassAd::
 dPrint( int level )
 {
-	ClassAd::iterator itr;
+	classad::ClassAd::iterator itr;
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
