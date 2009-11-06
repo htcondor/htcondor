@@ -1674,7 +1674,7 @@ obtainAdsFromCollector (
 						// Expression is valid, now evaluate it
 						// old ad is "my", new one is "target"
 					EvalResult er;
-					int evalRet = expr->EvalTree(oldAd, ad, &er);
+					int evalRet = EvalExprTree(expr, oldAd, ad, &er);
 
 					if( !evalRet || (er.type != LX_BOOL && er.type != LX_INTEGER)) {
 							// Something went wrong
@@ -2230,7 +2230,7 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 	EvalResult result;
 	float rank = -(FLT_MAX);
 
-	if(expr && expr->EvalTree(resource,&request,&result)) {
+	if(expr && EvalExprTree(expr,resource,&request,&result)) {
 		if( result.type == LX_FLOAT ) {
 			rank = result.f;
 		} else if( result.type == LX_INTEGER ) {
@@ -2474,7 +2474,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// So try the next offer...
 				continue;
 			}
-			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
+			if ( !(EvalExprTree(rankCondStd, candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
@@ -2492,7 +2492,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		//       tested above for the only condition we care about.
 		if ( (remoteUser[0] != '\0') &&
 			 (!only_for_startdrank) ) {
-			if( rankCondStd->EvalTree(candidate, &request, &result) && 
+			if( EvalExprTree(rankCondStd, candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
@@ -2506,7 +2506,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
+					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) {
 					rejPreemptForPolicy++;
 					continue;
@@ -2514,7 +2514,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
+				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,&result)&&
 						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
@@ -3346,7 +3346,7 @@ cache_still_valid(ClassAd &request, ExprTree *preemption_req, ExprTree *preempti
 		if ( next_entry->PreemptStateValue == PRIO_PREEMPTION ) {
 			EvalResult result;
 			if (preemption_req && 
-				!(preemption_req->EvalTree(next_entry->ad,&request,&result) &&
+				!(EvalExprTree(preemption_req,next_entry->ad,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) 
 			{
 				dprintf(D_FULLDEBUG,

@@ -2671,8 +2671,8 @@ DedicatedScheduler::computeSchedule( void )
 
 						// See if this machine has a true
 						// SCHEDD_PREEMPTION_REQUIREMENT
-					requirement = preemption_req->EvalTree( machine, job,
-															&result );
+					requirement = EvalExprTree( preemption_req, machine, job,
+												&result );
 					if (requirement) {
 						if (result.type == LX_INTEGER) {
 							requirement = result.i;
@@ -2686,8 +2686,8 @@ DedicatedScheduler::computeSchedule( void )
 							// Evaluate its SCHEDD_PREEMPTION_RANK in
 							// the context of this job
 						int rval;
-						rval = preemption_rank->EvalTree( machine, job,
-														  &result );
+						rval = EvalExprTree( preemption_rank, machine, job,
+											 &result );
 						if( !rval || result.type != LX_FLOAT) {
 								// The result better be a float
 							const char *s = ExprTreeToString( preemption_rank );

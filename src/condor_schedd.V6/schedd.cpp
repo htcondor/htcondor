@@ -184,7 +184,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 	ExprTree *tree = (ExprTree *) scheduler.getGridParsedSelectionExpr();
 	EvalResult val;
 	if ( ad && tree && 
-		 tree->EvalTree(ad,&val) && val.type==LX_STRING && val.s )
+		 EvalExprTree(tree,ad,NULL,&val) && val.type==LX_STRING && val.s )
 	{
 		m_auxid = val.s;
 	}

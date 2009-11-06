@@ -1219,7 +1219,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 			if ( (tree=param_jobad->LookupExpr(curr)) ) {
 				// found the attribute.  now evaluate it before
 				// we put it into the eventAd.
-				if ( tree->EvalTree(param_jobad,&result) ) {
+				if ( EvalExprTree(tree,param_jobad,NULL,&result) ) {
 					// now inserted evaluated expr
 					switch (result.type) {
 					case LX_BOOL:

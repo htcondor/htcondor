@@ -2756,7 +2756,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-			if( stdRankCondition->EvalTree( offer, request, &eval_result ) &&
+			if( EvalExprTree( stdRankCondition, offer, request, &eval_result ) &&
 					eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
 				// both sides satisfied and no remote user
 				if( verbose ) sprintf( return_buff, "%sAvailable\n",
@@ -2776,11 +2776,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		}
 
 		// 4. Satisfies preemption priority condition?
-		if( preemptPrioCondition->EvalTree( offer, request, &eval_result ) &&
+		if( EvalExprTree( preemptPrioCondition, offer, request, &eval_result ) &&
 			eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
 
 			// 5. Satisfies standard rank condition?
-			if( stdRankCondition->EvalTree( offer , request , &eval_result ) &&
+			if( EvalExprTree( stdRankCondition, offer , request , &eval_result ) &&
 				eval_result.type == LX_INTEGER && eval_result.i == TRUE )  
 			{
 				if( verbose )
@@ -2789,11 +2789,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-				if( preemptRankCondition->EvalTree( offer, request, &eval_result ) &&
+				if( EvalExprTree( preemptRankCondition, offer, request, &eval_result ) &&
 					eval_result.type == LX_INTEGER && eval_result.i == TRUE )
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if( preemptionReq->EvalTree( offer , request , &eval_result ) &&
+					if( EvalExprTree( preemptionReq, offer , request , &eval_result ) &&
 						eval_result.type == LX_INTEGER && eval_result.i == FALSE ) 
 					{
 						fPreemptReqTest++;

@@ -215,7 +215,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
-						if( tree->EvalTree (al, target, &result) &&
+						if( EvalExprTree(tree, al, target, &result) &&
 							result.type == LX_STRING && result.s ) {
 							retval.sprintf_cat(fmt->printfFmt, result.s);
 						} else {
@@ -245,7 +245,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 
 				case PFT_INT:
 				case PFT_FLOAT:
-					if( tree->EvalTree (al, target, &result) ) {
+					if( EvalExprTree(tree, al, target, &result) ) {
 						switch( result.type ) {
 						case LX_FLOAT:
 							if( fmt_type == PFT_INT ) {
