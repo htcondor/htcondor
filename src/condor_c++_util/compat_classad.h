@@ -30,6 +30,86 @@
 
 namespace compat_classad {
 
+// This enum is lifted directly from old ClassAds.
+typedef enum
+{
+  // Literals
+  LX_VARIABLE,
+  LX_INTEGER,
+  LX_FLOAT,
+  LX_STRING,
+  LX_BOOL,
+  LX_NULL,
+  LX_UNDEFINED,
+  LX_ERROR,
+
+  // Operators
+  LX_ASSIGN,
+  LX_AGGADD,
+  LX_AGGEQ,
+  LX_AND,
+  LX_OR,
+  LX_LPAREN,
+  LX_RPAREN,
+  LX_MACRO,
+  LX_META_EQ,
+  LX_META_NEQ,
+  LX_EQ,
+  LX_NEQ,
+  LX_LT,
+  LX_LE,
+  LX_GT,
+  LX_GE,
+  LX_ADD,
+  LX_SUB,
+  LX_MULT,
+  LX_DIV,
+  LX_EOF,
+
+  LX_EXPR,
+
+  LX_TIME,
+
+  LX_FUNCTION,
+  LX_SEMICOLON,
+  LX_COMMA,
+
+  NOT_KEYWORD
+} LexemeType;
+
+// This class is lifted directly from old ClassAds for EvalExprTree()
+class EvalResult
+{
+    public :
+
+    EvalResult();
+  	~EvalResult();
+
+		/// copy constructor
+	EvalResult(const EvalResult & copyfrom);
+		/// assignment operator
+	EvalResult & operator=(const EvalResult & rhs);
+
+	void fPrintResult(FILE *); // for debugging
+
+		/// convert to LX_STRING
+		/// if value is ERROR or UNDEFINED, do not convert unless force=true
+	void toString(bool force=false);
+
+   	union
+    	{
+   	    int i;
+   	    float f;
+   	    char* s;
+        };
+  	LexemeType type;
+
+	bool debug;
+
+	private :
+	void deepcopy(const EvalResult & copyfrom);
+};
+
 class ClassAd : public classad::ClassAd
 {
  public:

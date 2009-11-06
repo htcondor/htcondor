@@ -65,6 +65,15 @@
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
+class ClassAd;
+
+/* This helper function calls expr->EvalTree( source, target, result )
+ * This function is meant to ease the transition to new ClassAds,
+ * whose ExprTree doesn't have EvalTree().
+ */
+int EvalExprTree( ExprTree *expr, const AttrList *source, const AttrList *target,
+				  EvalResult *result );
+
 /* This helper function unparses the given ExprTree and returns a
  * pointer to the resulting string. The string is valid until the next
  * call of this function.

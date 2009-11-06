@@ -29,6 +29,153 @@ using namespace std;
 
 namespace compat_classad {
 
+// EvalResult ctor
+EvalResult::EvalResult()
+{
+	type = LX_UNDEFINED;
+	debug = false;
+}
+
+// EvalResult dtor
+EvalResult::~EvalResult()
+{
+	if ((type == LX_STRING || type == LX_TIME) && (s)) {
+		delete [] s;
+	}
+}
+
+void
+EvalResult::deepcopy(const EvalResult & rhs)
+{
+	type = rhs.type;
+	debug = rhs.debug;
+	switch ( type ) {
+		case LX_INTEGER:
+		case LX_BOOL:
+			i = rhs.i;
+			break;
+		case LX_FLOAT:
+			f = rhs.f;
+			break;
+		case LX_STRING:
+				// need to make a deep copy of the string
+			s = strnewp( rhs.s );
+			break;
+		default:
+			break;
+	}
+}
+
+// EvalResult copy ctor
+EvalResult::EvalResult(const EvalResult & rhs)
+{
+	deepcopy(rhs);
+}
+
+// EvalResult assignment op
+EvalResult & EvalResult::operator=(const EvalResult & rhs)
+{
+	if ( this == &rhs )	{	// object assigned to itself
+		return *this;		// all done.
+	}
+
+		// deallocate any state in this object by invoking dtor
+	this->~EvalResult();
+
+		// call copy ctor to make a deep copy of data
+	deepcopy(rhs);
+
+		// return reference to invoking object
+	return *this;
+}
+
+
+void EvalResult::fPrintResult(FILE *fi)
+{
+    switch(type)
+    {
+	case LX_INTEGER :
+
+	     fprintf(fi, "%d", this->i);
+	     break;
+
+	case LX_FLOAT :
+
+	     fprintf(fi, "%f", this->f);
+	     break;
+
+	case LX_STRING :
+
+	     fprintf(fi, "%s", this->s);
+	     break;
+
+	case LX_NULL :
+
+	     fprintf(fi, "NULL");
+	     break;
+
+	case LX_UNDEFINED :
+
+	     fprintf(fi, "UNDEFINED");
+	     break;
+
+	case LX_ERROR :
+
+	     fprintf(fi, "ERROR");
+	     break;
+
+	default :
+
+	     fprintf(fi, "type unknown");
+	     break;
+    }
+    fprintf(fi, "\n");
+}
+
+void EvalResult::toString(bool force)
+{
+	switch(type) {
+		case LX_STRING:
+			break;
+		case LX_FLOAT: {
+			MyString buf;
+			buf.sprintf("%lf",f);
+			s = strnewp(buf.Value());
+			type = LX_STRING;
+			break;
+		}
+		case LX_BOOL:	
+			type = LX_STRING;
+			if (i) {
+				s = strnewp("TRUE");
+			} else {
+				s = strnewp("FALSE");
+			}	
+			break;
+		case LX_INTEGER: {
+			MyString buf;
+			buf.sprintf("%d",i);
+			s = strnewp(buf.Value());
+			type = LX_STRING;
+			break;
+		}
+		case LX_UNDEFINED:
+			if( force ) {
+				s = strnewp("UNDEFINED");
+				type = LX_STRING;
+			}
+			break;
+		case LX_ERROR:
+			if( force ) {
+				s = strnewp("ERROR");
+				type = LX_STRING;
+			}
+			break;
+		default:
+			ASSERT("Unknown classad result type");
+	}
+}
+
 ClassAd::ClassAd()
 {
 		// Compatibility ads are born with this to emulate the special

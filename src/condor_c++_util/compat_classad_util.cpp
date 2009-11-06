@@ -115,3 +115,69 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 {
 	return false;
 }
+
+int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
+				  compat_classad::ClassAd *target, compat_classad::EvalResult *result )
+{
+	int rc = TRUE;
+	if ( !expr || !source || !result ) {
+		return FALSE;
+	}
+
+	classad::Value val;
+	const classad::ClassAd *old_scope = expr->GetParentScope();
+	classad::MatchClassAd *mad = NULL;
+
+	expr->SetParentScope( source );
+	if ( target && target != source ) {
+		mad = new classad::MatchClassAd( source, target );
+	}
+	if ( source->EvaluateExpr( expr, val ) ) {
+		switch ( val.GetType() ) {
+		case classad::Value::ERROR_VALUE:
+			result->type = compat_classad::LX_ERROR;
+			break;
+		case classad::Value::UNDEFINED_VALUE:
+			result->type = compat_classad::LX_UNDEFINED;
+			break;
+		case classad::Value::BOOLEAN_VALUE: {
+			result->type = compat_classad::LX_BOOL;
+			bool v;
+			val.IsBooleanValue( v );
+			result->i = v ? 1 : 0;
+			break;
+		}
+		case classad::Value::INTEGER_VALUE:
+			result->type = compat_classad::LX_INTEGER;
+			val.IsIntegerValue( result->i );
+			break;
+		case classad::Value::REAL_VALUE: {
+			result->type = compat_classad::LX_FLOAT;
+			double d;
+			val.IsRealValue( d );
+			result->f = d;
+			break;
+		}
+		case classad::Value::STRING_VALUE: {
+			result->type = compat_classad::LX_STRING;
+			std::string s;
+			val.IsStringValue( s );
+			result->s = strnewp( s.c_str() );
+			break;
+		}
+		default:
+			rc = FALSE;
+		}
+	} else {
+		rc = FALSE;
+	}
+
+	if ( mad ) {
+		mad->RemoveLeftAd();
+		mad->RemoveRightAd();
+		delete mad;
+	}
+	expr->SetParentScope( old_scope );
+
+	return rc;
+}

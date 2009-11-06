@@ -44,6 +44,12 @@ bool classad_debug_function_run = 0;
 
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
+int EvalExprTree( ExprTree *expr, const AttrList *source, const AttrList *target,
+				  EvalResult *result )
+{
+	return expr->EvalTree( source, target, result );
+}
+
 const char *ExprTreeToString( ExprTree *expr ) {
 	static MyString value;
 	if ( expr == NULL ) {
