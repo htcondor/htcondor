@@ -1220,18 +1220,12 @@ bool KVMType::checkXenParams(VMGahpConfig * config)
   fixedvalue = delete_quotation_marks(config_value);
   free(config_value);
 
+ 
   struct stat sbuf;
   if( stat(fixedvalue.Value(), &sbuf ) < 0 ) {
     vmprintf(D_ALWAYS, "\nERROR: Failed to access the script "
 	     "program for Virsh:(%s:%s)\n", fixedvalue.Value(),
 	     strerror(errno));
-    return false;
-  }
-
-  // owner must be root
-  if( sbuf.st_uid != ROOT_UID ) {
-    vmprintf(D_ALWAYS, "\nFile Permission Error: "
-	     "owner of \"%s\" must be root\n", fixedvalue.Value());
     return false;
   }
 
@@ -1249,6 +1243,7 @@ bool KVMType::checkXenParams(VMGahpConfig * config)
 	     "User executable bit is not set for \"%s\"\n", fixedvalue.Value());
     return false;
   }
+  
 
   // Can read script program?
   if( check_vm_read_access_file(fixedvalue.Value(), true) == false ) {
@@ -1299,13 +1294,6 @@ XenType::checkXenParams(VMGahpConfig* config)
 		vmprintf(D_ALWAYS, "\nERROR: Failed to access the script "
 				"program for Virsh:(%s:%s)\n", fixedvalue.Value(),
 			   	strerror(errno));
-		return false;
-	}
-
-	// owner must be root
-	if( sbuf.st_uid != ROOT_UID ) {
-		vmprintf(D_ALWAYS, "\nFile Permission Error: "
-				"owner of \"%s\" must be root\n", fixedvalue.Value());
 		return false;
 	}
 
