@@ -200,6 +200,16 @@ ClassAd::ClassAd( const ClassAd &ad )
 	EnableDirtyTracking();
 }
 
+ClassAd::ClassAd( const classad::ClassAd &ad )
+{
+	CopyFrom( ad );
+
+	ResetName();
+    ResetExpr();
+
+	EnableDirtyTracking();
+}
+
 ClassAd::~ClassAd()
 {
 }

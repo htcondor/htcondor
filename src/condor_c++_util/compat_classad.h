@@ -117,6 +117,8 @@ class ClassAd : public classad::ClassAd
 
 	ClassAd( const ClassAd &ad );
 
+	ClassAd( const classad::ClassAd &ad );
+
 	virtual ~ClassAd();
 
 		/**@name Deprecated functions (only for use within Condor) */
