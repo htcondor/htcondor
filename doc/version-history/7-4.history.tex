@@ -23,7 +23,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack #918
+\item The default value of \MacroNI{JOB\_ROUTER\_NAME} has changed
+  from an empty string to \verb|jobrouter| in order to address
+  problems caused by the previous default.  Without special handling,
+  this means that jobs being managed by \Condor{job\_router} before
+  upgrading will not be adopted by the new version of
+  \Condor{job\_router} if the default \MacroNI{JOB\_ROUTER\_NAME} was
+  being used.  To correct this, follow the instructions given in the
+  description of \MacroNI{JOB\_ROUTER\_NAME} on
+  page~\pageref{JobRouterName}.
 
 \end{itemize}
 
@@ -40,7 +49,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The default for \MacroNI{JOB\_ROUTER\_NAME} has changed from an
+  empty string to \verb|jobrouter|.  See the release notes for more
+  information about upgrading from an old version.
 
 \end{itemize}
 

@@ -7359,11 +7359,21 @@ These macros affect the \Condor{job\_router} daemon.
   the \Condor{job\_router} daemon on the same machine.
   Each instance must have a different name,
   or all but the first to start up will refuse to run.
+  The default is "jobrouter".
 
   Changing this value when routed jobs already exist is not currently
   gracefully handled.  However, it can be done if one also uses
   \Condor{qedit} to change the value of \Attr{ManagedManager} and
-  \Attr{RoutedBy} from the old name to the new name.
+  \Attr{RoutedBy} from the old name to the new name.  The following commands
+  may be helpful:
+
+\begin{verbatim}
+condor_qedit -constraint 'RoutedToJobId =!= undefined && \
+  ManagedManager == "insert_old_name"' \
+  ManagedManager '"insert_new_name"'
+condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
+  RoutedBy '"insert_new_name"'
+\end{verbatim}
 
 \label{JobRouterReleaseOnHold}
 \item[\Macro{JOB\_ROUTER\_RELEASE\_ON\_HOLD}]
