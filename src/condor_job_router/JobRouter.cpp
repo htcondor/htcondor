@@ -377,6 +377,12 @@ JobRouter::config() {
 		m_job_router_name = name;
 		free(name);
 	}
+		// In order not to get confused by jobs belonging to
+		// gridmanager in AdoptOphans(), the job router name must not
+		// be empty.
+	if( m_job_router_name.size() == 0 ) {
+		m_job_router_name = "jobrouter";
+	}
 
 	InitPublicAd();
 
@@ -402,18 +408,12 @@ JobRouter::config() {
 void
 JobRouter::InitPublicAd()
 {
-	if (m_job_router_name.size() > 0) {
-		char *valid_name = build_valid_daemon_name(m_job_router_name.c_str());
-		daemonName = valid_name;
-		delete [] valid_name;
-	}
-	else {
-		char *default_name = build_valid_daemon_name("jobrouter");
-		if(default_name) {
-			daemonName = default_name;
-			delete [] default_name;
-		}
-	}
+	ASSERT (m_job_router_name.size() > 0);
+
+	char *valid_name = build_valid_daemon_name(m_job_router_name.c_str());
+	ASSERT( valid_name );
+	daemonName = valid_name;
+	delete [] valid_name;
 
 	m_public_ad = ClassAd();
 
