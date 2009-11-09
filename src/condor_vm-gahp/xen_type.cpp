@@ -74,6 +74,7 @@ VirshType::VirshType(const char* scriptname, const char* workingpath,
 	m_allow_hw_vt_suspend = false;
 	m_restart_with_ckpt = false;
 	m_has_transferred_disk_file = false;
+	m_libvirt_connection = NULL;
 }
 
 VirshType::~VirshType()
@@ -1264,6 +1265,16 @@ bool KVMType::checkXenParams(VMGahpConfig * config)
 
 }
 
+bool
+KVMType::killVMFast(const char* vmname)
+{
+	vmprintf(D_FULLDEBUG, "Inside KVMType::killVMFast\n");
+	priv_state priv = set_root_priv();
+	virConnectPtr libvirt_connection = virConnectOpen("qemu:///session");
+	set_priv(priv);
+	return VirshType::killVMFast(vmname, libvirt_connection);
+}
+
 bool 
 XenType::checkXenParams(VMGahpConfig* config)
 {
@@ -1334,6 +1345,16 @@ XenType::checkXenParams(VMGahpConfig* config)
 		return false;
 	}
 	return true;
+}
+
+bool
+XenType::killVMFast(const char* vmname)
+{
+	vmprintf(D_FULLDEBUG, "Inside XenType::killVMFast\n");
+	priv_state priv = set_root_priv();
+	virConnectPtr libvirt_connection = virConnectOpen("xen:///");
+	set_priv(priv);
+	return VirshType::killVMFast(vmname, libvirt_connection);
 }
 
 bool 
@@ -1497,16 +1518,27 @@ VirshType::killVM()
 	// If a VM is soft suspended, resume it first.
 	ResumeFromSoftSuspend();
 
-	//	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
+	return killVMFast(m_vm_name.Value(), m_libvirt_connection);
+}
+
+bool
+VirshType::killVMFast(const char* vmname, virConnectPtr libvirt_con)
+{
+	vmprintf(D_FULLDEBUG, "Inside VirshType::killVMFast\n");
+	
+	if( !vmname || (vmname[0] == '\0') ) {
+		return false;
+	}
+
 	priv_state priv = set_root_priv();
-	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	virDomainPtr dom = virDomainLookupByName(libvirt_con, vmname);
 	set_priv(priv);
 	if(dom == NULL)
 	  {
-	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+	    virErrorPtr err = virConnGetLastError(libvirt_con);
 	    if (err && err->code != VIR_ERR_NO_DOMAIN)
 	      {
-		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", vmname, (err ? err->message : "No reason found"));
 		return false;
 	      }
 	    else
@@ -1520,28 +1552,6 @@ VirshType::killVM()
 	virDomainFree(dom);
 	set_priv(priv);
 	return ret;
-}
-
-bool
-VirshType::killVMFast(const char* script, const char* vmname)
-{
-	vmprintf(D_FULLDEBUG, "Inside VirshType::killVMFast\n");
-	
-	if( !script || (script[0] == '\0') || 
-			!vmname || (vmname[0] == '\0') ) {
-		return false;
-	}
-	/*
-	ArgList systemcmd;
-	systemcmd.AppendArg(script);
-	systemcmd.AppendArg("killvm");
-	systemcmd.AppendArg(vmname);
-
-	int result = systemCommand(systemcmd, true);
-	if( result != 0 ) {
-		return false;
-		}*/
-	return true;
 }
 
 bool
