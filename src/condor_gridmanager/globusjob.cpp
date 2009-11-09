@@ -1108,18 +1108,11 @@ int GlobusJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			// Test for authorization error here because someone else's
-			// jobmanager could now be running on our old port.
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
-				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+			if ( rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 				gmState = GM_RESTART;
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
-				gmState = GM_RESTART;
-				break;
-			} 
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
 				// the job completed or failed while we were not around -- now
 				// the jobmanager is sitting in a state where all it will permit
@@ -1131,8 +1124,16 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_SUBMITTED;
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_PROTOCOL_FAILED ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ) {
 				// The jobmanager appears to not be running.
+				// The port appears to be in use as follows:
+				// CONTACTING_JOB_MANAGER: port not in use
+				// PROTOCOL_FAILED: port in use by another protocol
+				// AUTHORIZATION: port in use by another user's jobmanager
+				// JOB_CONTACT_NOT_FOUND: port in use for another job
 				gmState = GM_JOBMANAGER_ASLEEP;
 				break;
 			}

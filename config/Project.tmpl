@@ -62,6 +62,8 @@ CCB_INCLUDE = ../ccb
 #define PlatformGppFlags
 #endif
 
+LinkHook = perl $(SRC_TREE)/condor_scripts/link_hook.pl
+
 #ifdef HAVE_RPM
 MakeRPMs = perl condor_scripts/make_public_rpms $(RPM_CMD)
 #else
