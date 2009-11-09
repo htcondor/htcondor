@@ -2501,9 +2501,12 @@ jobIsFinished( int cluster, int proc, void* )
 	MyString iwd;
 	MyString owner;
 	BOOLEAN is_nfs;
+	int want_flush = 1;
 
+	job_ad->EvalBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, NULL, want_flush );
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) &&
 		 job_ad->LookupString( ATTR_JOB_IWD, iwd ) &&
+		 want_flush &&
 		 fs_detect_nfs( iwd.Value(), &is_nfs ) == 0 && is_nfs ) {
 
 		priv_state priv;

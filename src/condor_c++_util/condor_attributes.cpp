@@ -303,6 +303,7 @@ const char * const ATTR_JOB_ID					 = "JobId";
 const char * const ATTR_JOB_FINISHED_HOOK_DONE   = "JobFinishedHookDone";
 const char * const ATTR_JOB_INPUT				 = "In";
 const char * const ATTR_JOB_IWD					 = "Iwd";
+const char * const ATTR_JOB_IWD_FLUSH_NFS_CACHE	 = "IwdFlushNFSCache";
 const char * const ATTR_JOB_JAVA_VM_ARGS1        = "JavaVMArgs";
 const char * const ATTR_JOB_JAVA_VM_ARGS2        = "JavaVMArguments";
 const char * const ATTR_ORIG_JOB_IWD				 = "OrigIwd";
