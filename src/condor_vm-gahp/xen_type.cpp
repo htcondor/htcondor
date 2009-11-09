@@ -1554,14 +1554,6 @@ VirshType::killVMFast(const char* vmname, virConnectPtr libvirt_con)
 	return ret;
 }
 
-/*
-bool
-VirshType::killVMFast(const char* script, const char* vmname)
-{
-	return VirshType::killVMFast(vmname);
-}
-*/
-
 bool
 VirshType::createISO()
 {
