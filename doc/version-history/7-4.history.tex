@@ -225,6 +225,11 @@ improvements.
 
 \begin{itemize}
 
+\item
+
+Fixed a bug that prevented parallel universe jobs from running on startds
+with dynamic slots enabled.
+
 % #706
 \item Fixed a race condition bug in the \Condor{startd} which allowed
 it to send Unix signals, intended for \Condor{starter} processes, as
