@@ -89,9 +89,9 @@
 %   {6:parameter list} {7:synopsys} {8:Method/Function}
 \newcommand{\BaseFunctionDef}[8]
  { {\tt{#4}{#2}} {\tt{#1}({#6})} {#5}
-  \\ {\textbf Synopsis: {#7}}
-  \\ {\textbf Returns: {#2}{#3}}
-  \\ {\textbf {#8} parameters:} }
+  \\ {\textbf{Synopsis:} {#7}}
+  \\ {\textbf{Returns:} {#2}{#3}}
+  \\ {\textbf{#8} parameters:} }
 % \MethodDef {1:class} {2:method} {3:return type} {4:return description}
 %   {5:parameter list} {6:synopsys}
 \newcommand{\MethodDef}[6]
@@ -106,22 +106,30 @@
  { \BaseFunctionDef{#1} {#2} {; #3} {#4} {#5} {} {#6} {Function} }
 \newcommand{\MethodRef}[2]   {{\tt{{#1}::{#2}}}}
 \newcommand{\FunctionRef}[1] {{\tt{#1}}}
-\newcommand{\Constructor}[3]	% {class} {param list} {synopsis}
+
+% \Constructor {class} {param list} {synopsis}
+\newcommand{\Constructor}[3]
  { \BaseFunctionDef {{#1}::{#1}}     {} {None} {} {} {#2}
     {{#1} Constructor -- {#3}} {Constructor} }
+% \Destructor {class}
 \newcommand{\Destructor}[1]
  { \BaseFunctionDef {{#1}::{\~{}#1}} {} {None} {} {} {void}
     {{#1} Destructor} {Destructor}
     \begin{itemize}\item None. \end{itemize} }
 
-% Function parameters
-\newcommand{\ParamDefOpt}[3]				% Optional param
+% ==== Function parameters ====
+
+% Optional param
+\newcommand{\ParamDefOpt}[3]
  { \texttt{#2} {#1} -- \textit{Optional;} default = {#3} \\ }
-\newcommand{\ParamDef}[2]				% Required parameter
- { \texttt{#2} {#1} \\ }
-\newcommand{\Param}[1]       {\mbox{\textit{#1}}}	% Parameter reference
-\newcommand{\Const}[1]       {\texttt{#1}}		% Constant expression
-\newcommand{\Type}[1]        {\texttt{#1}}		% Custom type
+% Required parameter
+\newcommand{\ParamDef}[2]    { \texttt{#2} {#1} \\ }
+% Parameter reference
+\newcommand{\Param}[1]       {\mbox{\textit{#1}}}
+% Constant expression
+\newcommand{\Const}[1]       {\texttt{#1}}
+% Custom type
+\newcommand{\Type}[1]        {\texttt{#1}}
 
 
 % A program code snippet
