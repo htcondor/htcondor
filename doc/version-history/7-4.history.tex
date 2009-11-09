@@ -83,12 +83,17 @@ just not published.
 \item The \Condor{vm-gahp} now supports KVM and links with libvirt, rather 
 than calling virsh command-line tools.
 
-% #760 #771 #769
+% #760 #771 #769 #772 #773 #775
 \item Greatly improved the \Condor{gridmanager}'s scalability when handling
-many grid type gt2 grid universe jobs.
+many grid type gt2 grid universe jobs.  Improvements include more quickly
+processing updated x509 certificates, not checking jobs for status updates if 
+they have not been submitted to the remote site, and eliminating unnecessary 
+updates to the \Condor{schedd}.
 
+% commit 75f6b2fe920b88717712a0d41765d16665ad7fe6
 \item Latency in the submission and cleaning up of Condor-C jobs
-has been improved.
+has been improved by changing the default value of
+\Macro{C\_GAHP\_CONTACT\_SCHEDD\_DELAY} from 20 to 5.
 
 % commit 8c2d88c695d6981be3bdab7e10c5d92e9f6bb55b
 \item The \Expr{eval()} ClassAd function added in Condor version 7.3.2
@@ -103,6 +108,14 @@ for Unix platforms. Previously, it was only supported on Windows platforms.
 can now be given as part of the proxy URL.
 The value of \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
 an https proxy for Amazon EC2, when \MacroNI{AMAZON\_HTTP\_PROXY} is defined.
+
+% #694
+\item The \Condor{collector} daemon now advertises to itself, and will appear
+in the output of \Condor{status} -collector.
+
+% commit 0e8800c201f81eac54cba925b3d7f6d81a83aeca
+\item The deprecated setting \Macro{TOOLS\_PROVIDE\_OLD\_MESSAGES} is no longer
+recognized.
 
 \end{itemize}
 
@@ -212,11 +225,17 @@ improvements.
 
 \begin{itemize}
 
+\item
+
+Fixed a bug that prevented parallel universe jobs from running on startds
+with dynamic slots enabled.
+
 % #706
 \item Fixed a race condition bug in the \Condor{startd} which allowed
 it to send Unix signals, intended for \Condor{starter} processes, as
 root to non-Condor related processes.
 
+% 735
 \item A Windows platform bug has been fixed.
 The bug caused a 20-second interval in which
 the \Condor{shadow}, \Condor{startd}, and \Condor{starter} daemons
@@ -331,6 +350,7 @@ queue
 \item Fixed a memory leak introduced into Condor version 7.3.2.
 The leak was in the \Condor{collector} daemon.
 
+% #211 commit d6c0144739000523e94205a192be3cf9afe9ca9f
 \item Fixed a problem introduced in Condor version 7.1.4 
 that resulted in the failure of forcing
 the execute bit to be set on the transferred job executable.
@@ -345,7 +365,7 @@ for any group was set to 0.
 \item Fixed a bug that caused the \Code{ctime} in the event log header
   to always be zero.
 
-% #862
+% #862 commit 9a432e2f3497e5dce120db5c733e79212257f6a5
 \item Fixed the output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
 used.
 
@@ -382,13 +402,50 @@ respect the value of \MacroNI{job\_lease\_duration}.
  to publish an update to the \Condor{collector} when the configuration variable
 \MacroNI{VM\_RECHECK\_INTERVAL} is specified.
 
+% commit 68f06088fa36eb0eb332a4f72a5c48ccd48b1d5a
+\item Fixed a bug where the \Condor{gridmanager} could, in rare cases, waste a
+small amount of memory and processor time checking for proxy files no longer
+being used by any active jobs.
+
+% commit bc66aa432e1f4e69d88a5b769204a4fce0648bfc
+\item The setting \Macro{CREAM\_GAHP} was added to the default configuration 
+file with a value of \$(SBIN)/cream\_gahp. Existing installations desiring to 
+submit jobs to CREAM should add this setting.
+
+% #702
+\item Fixed a bug where \Condor{restart} would fail on a \Condor{collector}
+configured for high availability with multiple \Condor{collector}s.
+
+% commit f44a68fb351e528ea5b251dd2c3cf9767b0c1fba
+\item Fixed a bug where multiple entries of output from 
+\Condor{status} -negotiator
+would be on a single line.  They are now listed one per line.
+
+% #778
+\item Fixed a bug where \Condor{submit} -dump would crash if multiple
+jobs were queued in a single submit file.
+
+% #742
+\item Fixed a bug where a slot whose associated job disappeared
+could remain Claimed/Idle until the claim lease expired.
+The slot should now promptly return to Unclaimed/Idle.
+
+% commit 0d5e3ad8fc85f0cd0dc58f73b503c76c0ad49bc4
+\item Fixed a bug where a \Condor{startd} using dynamic slots could
+crash on shutdown or reconfiguration.
+
+
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item \Macro{USE\_VISIBLE\_DESKTOP}, when set to to \Expr{TRUE} will corrupt 
+the visible desktop.  This bug is present back through 7.2.4.
+(\MacroNI{USE\_VISIBLE\_DESKTOP} didn't work at all in earlier 7.2 releases.)
+This bug will be fixed in 7.4.1.
 
 \end{itemize}
 
