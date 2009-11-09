@@ -25,19 +25,27 @@
 #define OBJECT_MODE		0644
 #define TEXT_MODE		OBJECT_MODE
 
-.SUFFIXES: .C .cpp .f .f90
+.SUFFIXES: .c .C .cpp .f .f90
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+	$(LinkHook) --pwd=$(shell pwd) --arch=$(ARCHITECTURE) --platform=$(PLATFORM) --distro=$(DISTRIBUTION) --source-file=$< --obj-file=$@
 
 .cpp.o:
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $< -o $@
+	$(LinkHook) --pwd=$(shell pwd) --arch=$(ARCHITECTURE) --platform=$(PLATFORM) --distro=$(DISTRIBUTION) --source-file=$< --obj-file=$@
 
 .C.o:
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $< -o $@
+	$(LinkHook) --pwd=$(shell pwd) --arch=$(ARCHITECTURE) --platform=$(PLATFORM) --distro=$(DISTRIBUTION) --source-file=$< --obj-file=$@
 
 .f.o:
 	$(Fortran) $(FFLAGS) -c $< -o $@
+	$(LinkHook) --pwd=$(shell pwd) --arch=$(ARCHITECTURE) --platform=$(PLATFORM) --distro=$(DISTRIBUTION) --source-file=$< --obj-file=$@
 
 .f90.o:
 	$(Fortran) $(FFLAGS) -c $< -o $@
+	$(LinkHook) --pwd=$(shell pwd) --arch=$(ARCHITECTURE) --platform=$(PLATFORM) --distro=$(DISTRIBUTION) --source-file=$< --obj-file=$@
 
 #if HAVE_CC_PIC_FLAG
 /* These rules are a bit scary, basically when we build a shared library of
@@ -50,9 +58,11 @@
 
 %-pic.o: %.cpp
 	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
+	$(LinkHook) --pwd=$(shell pwd) --arch=$(ARCHITECTURE) --platform=$(PLATFORM) --distro=$(DISTRIBUTION) --source-file=$< --obj-file=$@
 
 %-pic.o: %.C
 	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
+	$(LinkHook) --pwd=$(shell pwd) --arch=$(ARCHITECTURE) --platform=$(PLATFORM) --distro=$(DISTRIBUTION) --source-file=$< --obj-file=$@
 
 /* make functions to help produce pic versions of things... */
 picobjs = $(patsubst %.o,%-pic.o,$(1))
