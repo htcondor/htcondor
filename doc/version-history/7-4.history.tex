@@ -61,9 +61,9 @@ software.
 \begin{itemize}
 
 % commit af65de7ccc1a281c2b05b8f68ac70bcfa56b2dd1
-\item \Condor{q} \Opt{-analyze} and \Opt{-better-analyze} now provide
-  analysis for scheduler and local universe jobs.  Specifically, the
-  \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+\item \Condor{q} using the options \Opt{-analyze} and \Opt{-better-analyze}
+  now provide analysis for scheduler and local universe jobs.
+  Specifically, the \MacroNI{START\_SCHEDULER\_UNIVERSE} and
   \MacroNI{START\_LOCAL\_UNIVERSE} expressions are checked.
 
 % #824
@@ -86,9 +86,9 @@ than calling virsh command-line tools.
 % #760 #771 #769 #772 #773 #775
 \item Greatly improved the \Condor{gridmanager}'s scalability when handling
 many grid type gt2 grid universe jobs.  Improvements include more quickly
-processing updated x509 certificates, not checking jobs for status updates if 
+processing updated X.509 certificates, not checking jobs for status updates if 
 they have not been submitted to the remote site, and eliminating unnecessary 
-updates to the \Condor{schedd}.
+updates to the \Condor{schedd} daemon.
 
 % commit 75f6b2fe920b88717712a0d41765d16665ad7fe6
 \item Latency in the submission and cleaning up of Condor-C jobs
@@ -111,17 +111,24 @@ an https proxy for Amazon EC2, when \MacroNI{AMAZON\_HTTP\_PROXY} is defined.
 
 % #694
 \item The \Condor{collector} daemon now advertises to itself, and will appear
-in the output of \Condor{status} -collector.
+in the output of \Condor{status} \Opt{-collector}.
 
-% commit 0e8800c201f81eac54cba925b3d7f6d81a83aeca
-\item The deprecated setting \Macro{TOOLS\_PROVIDE\_OLD\_MESSAGES} is no longer
-recognized.
+% #775, cf02764d9d0fdd2b36ef3629f862f856ee41a717, and more
+\item Optimizations in core Condor systems should provide minor speed 
+improvements.
+
+% 823
+\item Updated the maximum log size to the maximum operating system's file size.
 
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+% commit 0e8800c201f81eac54cba925b3d7f6d81a83aeca
+\item The undocumented configuration variable 
+  \Macro{TOOLS\_PROVIDE\_OLD\_MESSAGES} is no longer recognized by Condor.
 
 % #768
 \item The new configuration variable 
@@ -182,7 +189,8 @@ recognized.
 
 % #767 commit 9e6dfa463c71c28c8dc2c0c0c215b51d6762e811
 % commit b4fd08ad1a8c69da24c371565796ef73522a61fc
-\item The default \Macro{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
+\item The default value of \Macro{NEGOTIATOR\_INTERVAL}
+   has changed from 300 to 60.
 
 % #767 commit 8b91877ec8186810887402e1dd1df07b6341ade7
 % Probably at least one other commit
@@ -202,7 +210,8 @@ add it.
 % #861
 \item The default configuration now uses
   \MacroNI{VM\_BRIDGE\_SCRIPT} and \MacroNI{VM\_SCRIPT} in place of
-  \MacroNI{XEN\_BRIDGE\_SCRIPT} and \MacroNI{XEN\_SCRIPT} due to KVM additions. 
+  \MacroNI{XEN\_BRIDGE\_SCRIPT} and \MacroNI{XEN\_SCRIPT} due to the
+  support of KVM. 
   Submit description file commands have also been added, and they include:
   \SubmitCmd{kvm\_disk}, \SubmitCmd{kvm\_transfer\_files},
    and \SubmitCmd{kvm\_cd\_rom\_device}.
@@ -213,22 +222,14 @@ add it.
   Corresponding to this, the submit description file command
   \Expr{xen\_kernel = any} is no longer valid.
 
-% #775, cf02764d9d0fdd2b36ef3629f862f856ee41a717, and more
-\item Optimizations in core Condor systems should provide minor speed 
-improvements.
-
-% 823
-\item Updated the maximum log size to the maximum operating system's file size.  
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item
-
-Fixed a bug that prevented parallel universe jobs from running on startds
-with dynamic slots enabled.
+\item Fixed a bug that prevented parallel universe jobs from running 
+  on \Condor{startd} daemons with dynamic slots enabled.
 
 % #706
 \item Fixed a race condition bug in the \Condor{startd} which allowed
@@ -271,6 +272,7 @@ Condor versions of 7.1.2 and later accepted by \Condor{dagman}.
 evaluation code in Condor version 7.3.2.
 The bug sometimes caused failure when running rescue DAGs.
 
+% #211 commit d6c0144739000523e94205a192be3cf9afe9ca9f
 \item Fixed a bug originating in Condor version 7.1.4.
 When a user submitted a job
 with an executable that did not have execute permission enabled,
@@ -309,10 +311,10 @@ of jobs with VOMS proxies, if the authenticity of the VOMS extensions
 could not be verified.
 At the same time, improved memory usage when VOMS extensions are not used.
 
-\item Fixed a bad default in the \Attr{batch\_gahp.config} file,
+\item Fixed a bad default in the file \File{batch\_gahp.config},
 that prevented
 Condor from observing job state changes for grid universe jobs
-with grid type pbs and lsf.
+with a grid type of pbs or lsf.
 
 % #748
 \item Fixed a bug that caused Condor-C jobs to fail if
@@ -350,11 +352,6 @@ queue
 \item Fixed a memory leak introduced into Condor version 7.3.2.
 The leak was in the \Condor{collector} daemon.
 
-% #211 commit d6c0144739000523e94205a192be3cf9afe9ca9f
-\item Fixed a problem introduced in Condor version 7.1.4 
-that resulted in the failure of forcing
-the execute bit to be set on the transferred job executable.
-
 % commit 1663b7e183e6bf1df8152af98d9387412c2ae146
 \item Fixed a bug introduced in Condor version 7.3.2
 that resulted in the \Condor{negotiator} daemon
@@ -366,8 +363,8 @@ for any group was set to 0.
   to always be zero.
 
 % #862 commit 9a432e2f3497e5dce120db5c733e79212257f6a5
-\item Fixed the output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
-used.
+\item Fixed the output of \Condor{status} when used with the command-line
+  options \Opt{-java} or \Opt{-vm}.
 
 \item Fixed a problem in the \Condor{schedd} daemon introduced in
   7.3.2.  For \Condor{schedd} daemons with lots of jobs having periodic release
@@ -379,7 +376,7 @@ used.
   whereas the evaluation of periodic expressions in this same environment
   normally takes less than 5 seconds.
 
-\item A number of potential bugs and memory leaks were identified and 
+\item Potential bugs and memory leaks were identified and 
 fixed throughout Condor.  The Condor Team is not aware of anyone having 
 encountered these bugs.
 
@@ -395,43 +392,48 @@ the job is placed on hold.
 
 % 826 
 \item Fixed a bug in the \Condor{startd} in which vacating jobs would not 
-respect the value of \MacroNI{job\_lease\_duration}.
+respect the value of \Attr{JobLeaseDuration}.
 
 % 802
 \item Updated the detection of \Attr{HasVM} within the \Condor{startd}
- to publish an update to the \Condor{collector} when the configuration variable
-\MacroNI{VM\_RECHECK\_INTERVAL} is specified.
+ to publish an update to the \Condor{collector},
+ when the configuration variable \MacroNI{VM\_RECHECK\_INTERVAL} is specified.
 
 % commit 68f06088fa36eb0eb332a4f72a5c48ccd48b1d5a
-\item Fixed a bug where the \Condor{gridmanager} could, in rare cases, waste a
+\item Fixed a bug in which the \Condor{gridmanager} could, in rare cases,
+waste a
 small amount of memory and processor time checking for proxy files no longer
 being used by any active jobs.
 
 % commit bc66aa432e1f4e69d88a5b769204a4fce0648bfc
 \item The setting \Macro{CREAM\_GAHP} was added to the default configuration 
-file with a value of \$(SBIN)/cream\_gahp. Existing installations desiring to 
+file with a value of \File{\$(SBIN)/cream\_gahp}.
+Existing installations desiring to 
 submit jobs to CREAM should add this setting.
 
 % #702
 \item Fixed a bug where \Condor{restart} would fail on a \Condor{collector}
-configured for high availability with multiple \Condor{collector}s.
+daemon configured for high availability with multiple \Condor{collector}
+daemons.
 
 % commit f44a68fb351e528ea5b251dd2c3cf9767b0c1fba
-\item Fixed a bug where multiple entries of output from 
-\Condor{status} -negotiator
+\item Fixed a bug in which multiple entries of output from 
+the command
+\Condor{status} \Opt{-negotiator}
 would be on a single line.  They are now listed one per line.
 
 % #778
-\item Fixed a bug where \Condor{submit} -dump would crash if multiple
-jobs were queued in a single submit file.
+\item Fixed a bug in which the command
+\Condor{submit} \Opt{-dump} would crash if multiple
+jobs were queued from within a single submit file.
 
 % #742
-\item Fixed a bug where a slot whose associated job disappeared
-could remain Claimed/Idle until the claim lease expired.
-The slot should now promptly return to Unclaimed/Idle.
+\item Fixed a bug in which a slot whose associated job disappeared
+could remain in the Claimed/Idle state until the claim lease expired.
+The slot should now promptly return to the Unclaimed/Idle state.
 
 % commit 0d5e3ad8fc85f0cd0dc58f73b503c76c0ad49bc4
-\item Fixed a bug where a \Condor{startd} using dynamic slots could
+\item Fixed a bug in which a \Condor{startd} using dynamic slots could
 crash on shutdown or reconfiguration.
 
 
@@ -442,10 +444,11 @@ crash on shutdown or reconfiguration.
 
 \begin{itemize}
 
-\item \Macro{USE\_VISIBLE\_DESKTOP}, when set to to \Expr{TRUE} will corrupt 
-the visible desktop.  This bug is present back through 7.2.4.
-(\MacroNI{USE\_VISIBLE\_DESKTOP} didn't work at all in earlier 7.2 releases.)
-This bug will be fixed in 7.4.1.
+\item A configuration variable of  \Macro{USE\_VISIBLE\_DESKTOP} set 
+to \Expr{True} will corrupt the visible desktop.
+  This bug is present back through Condor version 7.2.4.
+This configuration variable did not work at all in 7.2 releases
+prior to 7.2.4.  This bug will be fixed in Condor version 7.4.1.
 
 \end{itemize}
 
