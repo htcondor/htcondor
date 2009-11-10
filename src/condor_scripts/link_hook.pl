@@ -63,6 +63,10 @@ my @poisoned_syms = (
 			# Comes out of the gsoap external and doesn't depend upon any
 			# condor codes.
 			'condor_amazon/wsseapi.o',
+
+			# This is a test program which presumably doesn't need the poison
+			# policy protection.
+			'condor_lease_manager/lease_manager_tester.o',
 		],
 
 		# These are wholesale exempt since they represent code we know to be
