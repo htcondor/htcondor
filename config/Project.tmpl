@@ -62,7 +62,13 @@ CCB_INCLUDE = ../ccb
 #define PlatformGppFlags
 #endif
 
-LinkHook = perl ../condor_scripts/link_hook.pl
+/*
+	This is run for *every single* compilation of a file into an object file.
+	This means it runs in all kinds of directories. The relative path supplied
+	works in the usual condor_* directories, but not in any subdirectories of
+	them.  This should be fixed better, later.
+*/
+LinkHook = if ! test -x ../condor_scripts/link_hook.pl ; then echo "WARNING: Skipping hook as workaround..."; exit 0; fi ; perl ../condor_scripts/link_hook.pl
 
 #ifdef HAVE_RPM
 MakeRPMs = perl condor_scripts/make_public_rpms $(RPM_CMD)

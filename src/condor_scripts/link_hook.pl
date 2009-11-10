@@ -143,10 +143,9 @@ sub parse_options
 	}
 
 	if (!defined($args{'nm'})) {
-		if (! -x "/usr/bin/nm") {
-			usage("Please supply an 'nm' style program to use!");
+		if (-x "/usr/bin/nm") {
+			$args{'nm'} = "/usr/bin/nm";
 		}
-		$args{'nm'} = "/usr/bin/nm";
 	}
 }
 
@@ -178,6 +177,13 @@ sub get_unreferenced_symbols_from_objfile
 	my ($args) = @_;
 	my @unref;
 
+	# if we don't have any means of checking, then simply bail.
+	if (!defined($args->{'nm'})) {
+		print "WARNING: No 'nm' like program means poison policy can't " .
+			"be enforced. Skipping.\n";
+		return @unref;
+	}
+
 	# For now, this only works and has been tested on linux.
 	if ($args->{'distro'} =~ /LINUX/) {
 		# get the unreferenced symbols and where they were referenced.
@@ -186,6 +192,8 @@ sub get_unreferenced_symbols_from_objfile
 		# get rid of whitespace and the U,
 		# XXX hope your file paths don't have whitespace in them. :)
 		map { s/^\s+//g; s/\s+$//g; s/\s+/,/g; s/^U,//} @unref;
+	} else {
+		print "WARNING: Poison policy not in effect on this platform.\n";
 	}
 
 	return @unref;
