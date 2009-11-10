@@ -1,34 +1,24 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:job-log-reader}
-Condor's user/job log reader API}
+\subsection{\label{sec:job-log-reader}The Condor User and Job Log Reader API}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\label{sec:readuserlogref}
+\index{API!ReadUserLog class}
+\index{User Log Reader API}
+\index{Event Log Reader API}
+\index{ReadUserLog class@\texttt{ReadUserLog} class}
+\index{Job Log Reader API}
 
-\index{API!ReadUserLog}
-\index{User Log Reader}
-\index{Event Log Reader}
-\index{ReadUserLog}
-\index{Job Log Reader}
+Condor has the ability to log a job's significant events during its lifetime as
+a Condor job.  
+This is enabled in the job's submit description file with the
+\SubmitCmd{Log} command.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-log-reader-overview}
-Overview of Job Log Reader}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job Log Reader!overview} 
-Condor has the ability log significant events during it's lifetime as
-a Condor job.  This is enabled in the job submission file via the
-``Log = $<$file$>$'' directive.
+This section describes the API defined by the C++ \Code{ReadUserLog} class,
+which provides a programming interface for applications
+to read and parse events,
+polling for events, and saving and restoring reader state.
 
-These logs can easily be read and parsed via the C++ ReadUserLog
-class.  This class provides mechanisms to read and parse events,
-polling for events, and saving / restoring reader state.
-
-\index{ReadUserLog class}
-``ReadUserLog'' is a C$++$ class which provides an programming
-interface for applications to read from job (``user'') logs as well as
-system wide event logs.
-
-\subsection{Constants / Enumerated Types}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Constants / Enumerated Types}
 \begin{itemize}
 
 \item ULogEventOutcome (defined in ``condor\_event.h''):
@@ -51,7 +41,8 @@ system wide event logs.
 \end{itemize}
 
 
-\subsection{Constructors and Destructors}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Constructors and Destructors}
 All ReadUserLog constructors invoke one of the initialize() methods,
 below.  Since C++ constructors cannot return errors, however, an
 application using any but the default constructor should call
@@ -131,7 +122,8 @@ The application will need to call the appropriate initialize() method.
 \end{itemize}
 
 
-\subsection{Initializers}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Initializers}
 These methods are used to perform the initialization of the
 ReadUserLog objects.  These initializers are used by all contractors
 that do real work.  As noted above, applications should never use
@@ -218,7 +210,8 @@ All of these functions will return \Const{false} if unable to open the
 
 \end{itemize}
 
-\subsection{Primary Methods}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Primary Methods}
 \begin{itemize}
 
 \item \MethodDef{ReadUserLog}{readEvent}
@@ -248,7 +241,8 @@ All of these functions will return \Const{false} if unable to open the
 
 \end{itemize}
 
-\subsection{Accessors}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Accessors}
 \begin{itemize}
 
 \item \MethodDef{ReadUserLog}{CheckFileStatus}
@@ -269,8 +263,9 @@ All of these functions will return \Const{false} if unable to open the
 \end{itemize}
 
 
-\subsection{Methods for saving / restoring persistent reader state}
-\subsubsection{Overview}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Methods for saving / restoring persistent reader state}
+
 The \Type{ReadUserLog::FileState} structure is used to save and
 restore the state of the ReadUserLog state for persistence.  The
 application should always use InitFileState() to initialize this
@@ -281,6 +276,7 @@ as their only parameter.
 
 All of these methods return true upon success.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Save state to persistent storage}
 To save the state, do something like this:
 \begin{verbatim}
@@ -299,6 +295,7 @@ To save the state, do something like this:
   status = UninitFileState( statebuf );
 \end{verbatim}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Restore state from persistent storage}
 To restore the state, do something like this:
 \begin{verbatim}
@@ -314,6 +311,7 @@ To restore the state, do something like this:
   ....
 \end{verbatim}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{API Reference}
 \begin{itemize}
 
@@ -358,6 +356,7 @@ To restore the state, do something like this:
 
 \end{itemize}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Access to the persistent state data}
 If the application needs access to the data elements in a persistent
 state, it should instantiate a \Type{ReadUserLogStateAccess} object.
@@ -525,6 +524,7 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
 
 \end{itemize}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Future persistence API}
 The \Type{ReadUserLog::FileState} will likely be replaced with a new
 C++ \Type{ReadUserLog::NewFileState} (or similarly named) class that
