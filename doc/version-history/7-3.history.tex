@@ -505,7 +505,12 @@ damaged, causing \SubmitCmd{gt4} grid type jobs to fail. This has been fixed.
 
 \begin{itemize}
 
-\item None.
+%gittrac #851
+\item The version 7.3.2 \Condor{dagman} binary sometimes has problems running
+rescue DAGs.  Probably the best work around for this problem is to use
+version 7.3.1 rather than 7.3.2 \Condor{dagman} and \Condor{submit\_dag}
+binaries, even if using version 7.3.2 for the rest of the Condor
+installation.
 
 \end{itemize}
 

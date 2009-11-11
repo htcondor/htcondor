@@ -33,19 +33,23 @@ as \Condor{q}.
 Other commands specific to the type of virtual machine software
 identify the disk image.
 
-Use of the \SubmitCmd{args} command creates a file named \File{condor.arg},
+Use of the \SubmitCmd{arguments} command creates a file named \File{condor.arg},
 which is added to the set of CD-ROM files.
 The contents of this file are the arguments specified.
 
-VMware and Xen virtual machine software are supported.
-As the two differ from each other, the submit description file
-specifies either
+VMware, Xen, and KVM virtual machine software are supported.
+As these differ from each other, the submit description file
+specifies one of
 \begin{verbatim}
   vm_type = vmware
 \end{verbatim}
 or
 \begin{verbatim}
   vm_type = xen
+\end{verbatim}
+or
+\begin{verbatim}
+  vm_type = kvm
 \end{verbatim}
 
 The job specifies its memory needs 
@@ -60,9 +64,10 @@ with a comma-separated list of file names.
 \begin{verbatim}
   vm_cdrom_files = a.txt,b.txt,c.txt
 \end{verbatim}
-Condor must also be told to transfer these files from
-the submit machine to the machine that will run the
-\SubmitCmd{vm} universe job with 
+If these files are not on a shared file system visible to
+the machine that will run the \SubmitCmd{vm} universe job, then
+Condor must also be told to transfer them from
+the submit machine with 
 \begin{verbatim}
   vm_should_transfer_cdrom_files = YES
 \end{verbatim}
@@ -99,12 +104,11 @@ match the job with a machine that enables networking,
 and further, the choice of bridge or NAT networking
 is determined by the machine's configuration.
 
-A current limitation restricts the use of networking to
-\SubmitCmd{vm} universe jobs that do not create checkpoints
-such that the job may migrate to another machine.
-
-When both checkpoints and networking are enabled,
-the job further specifies
+Enabling both networking and checkpointing for a \SubmitCmd{vm}
+universe job can cause networking problems when the job restarts,
+particularly if the job migrates to a different machine.
+\Condor{submit} will normally reject such jobs.
+If you wish to enable both, then you must additionally specify
 \begin{verbatim}
   when_to_transfer_output = ON_EXIT_OR_EVICT
 \end{verbatim}
@@ -167,10 +171,11 @@ submit the job if both \SubmitCmd{vmware\_should\_transfer\_files}
 and \SubmitCmd{vmware\_snapshot\_disk} are \Expr{False}.
 
 Note that if snapshot disks are requested and file transfer is not
-being used, the \SubmitCmd{vmware\_dir} setting given in the submit
-file should not contain any symlink path components. This is to work
-around the issue discussed in the FAQ entry in section~
-\ref{sec:vmware-symlink-bug}.
+being used, the \SubmitCmd{vmware\_dir} setting given in 
+the submit description file
+should not contain any symbolic link path components.
+This is to work around the issue discussed
+in the FAQ entry in section~\ref{sec:vmware-symlink-bug}.
 
 Here is a sample submit description file for a VMware virtual machine:
 \begin{verbatim}
@@ -191,7 +196,7 @@ to execute the Condor job.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-Xensubmitfile}Xen-Specific Submit Commands}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{vm universe!submit commands specific to VMware}
+\index{vm universe!submit commands specific to Xen}
 
 The required disk image must be identified for a Xen virtual machine.
 This \SubmitCmd{xen\_disk} command specifies a list of comma-separated files.
@@ -225,22 +230,9 @@ guest kernel.
 The \SubmitCmd{xen\_kernel} command accomplishes this, 
 utilizing one of the following definitions.
 \begin{enumerate}
-\item \SubmitCmd{xen\_kernel = any}
-  tells Condor that the kernel is pre-staged, and its location is
-  specified by configuration of the \Condor{vm-gahp}.
-
 \item \SubmitCmd{xen\_kernel = included} implies that the kernel
   is to be found in disk image given by the definition of the single file
   specified in \SubmitCmd{xen\_disk}. 
-
-% \item \SubmitCmd{xen\_kernel = vmx} implies that the kernel
-%  is to be found in disk image given by the definition of the single file
-%  specified in \SubmitCmd{xen\_disk}.  This is the same assumption
-%  as in \SubmitCmd{xen\_kernel = included}.
-
-%  \SubmitCmd{xen\_kernel = vmx} further implies that the job must be
-%  matched with a machine that supports hardware virtualization. 
-%  Such a machine would be configured with \Expr{VM\_HARDWARE\_VT = True}.
 
 \item \SubmitCmd{xen\_kernel = path-to-kernel} gives a full path and
   file name of the required kernel.  If this kernel must be transferred
@@ -265,10 +257,47 @@ The submit description file contains
 \end{verbatim}
 where the last line of this example defines the device.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:vm-KVMsubmitfile}KVM-Specific Submit Commands}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{vm universe!submit commands specific to KVM}
 
-% xen_ram_disk description
+The required disk image must be identified for a KVM virtual machine.
+This \SubmitCmd{kvm\_disk} command specifies a list of comma-separated files.
+Each disk file is specified by 3 colon separated fields.
+The first field is the path and file name of the disk file.
+The second field specifies the device,
+and the third field specifies permissions.
+Here is an example that identifies two files:
+\footnotesize
+\begin{verbatim}
+  kvm_disk = /var/lib/libvirt/images/swap.img:sda2:w
+\end{verbatim}
+\normalsize
 
-% xen_extra description
+If any files need to be transferred from the submit machine
+to the machine where the \SubmitCmd{vm} universe job will execute,
+Condor must be explicitly told to do so with the
+\SubmitCmd{kvm\_transfer\_files} command:
+\footnotesize
+\begin{verbatim}
+  kvm_transfer_files = /var/lib/libvirt/images/swap.img
+\end{verbatim}
+\normalsize
+Any and all needed files on a system without a shared file
+system (between the submit machine and the machine where the
+job will execute) must be listed.
+
+Transfer of CD-ROM files under KVM requires the definition of
+the associated device in addition to the specification of the
+files.
+The submit description file contains
+\begin{verbatim}
+  vm_cdrom_files = a.txt,b.txt,c.txt
+  vm_should_transfer_cdrom_files = YES
+  kvm_cdrom_device = device-name
+\end{verbatim}
+where the last line of this example defines the device.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-checkpoints}Checkpoints}
@@ -296,9 +325,14 @@ guest OS installation instructions found at
 creates a VMware disk image.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:vm-disk-image-details-xen}Xen}
+\subsubsection{\label{sec:vm-disk-image-details-xen}Xen and KVM}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
+While the following web page contains instructions specific to
+Fedora on how to create a virtual guest image,
+it should provide a good starting point for 
+other platforms as well.
+
+\URL{http://fedoraproject.org/wiki/Virtualization\_Quick\_Start}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-job-completion-details}Job Completion in the vm Universe}
