@@ -1990,6 +1990,16 @@ TESTCLASS(job_rsc_binary-io_std,quicknolink)
 **TESTCLASS(job_core_coredump_van,quick)
 */
 
+#if HAVE_SHARED_PORT
+DESC(lib_shared_port_van,"Test of shared port feature.")
+DEPS(lib_shared_port_van,x_sleep.pl)
+RUN(lib_shared_port_van)
+TESTCLASS(lib_shared_port_van,core)
+TESTCLASS(lib_shared_port_van,quick)
+TESTCLASS(lib_shared_port_van,full)
+TESTCLASS(lib_shared_port_van,quicknolink)
+#endif
+
 lib_eventlog_build.exe : lib_eventlog_base.cpp
 	$(CPlusPlus) $< -ggdb -DLIBAPI_ONLY \
 	-I ../release_dir/include ../release_dir/lib/libcondorapi.a \
