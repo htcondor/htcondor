@@ -4,12 +4,34 @@
 
 The Condor keyboard daemon (\Condor{kbdd}) monitors X events on
 machines where the operating system does not provide a way of
-monitoring the idle time of the keyboard or mouse.
-It is not needed for most platforms, as Condor has other ways
-of detecting keyboard and mouse activity.
+monitoring the idle time of the keyboard or mouse.  On UNIX platforms,
+it is needed to detect USB keyboard activity but otherwise is not
+needed.  On Windows the \Condor{kbdd} is the primary method of
+monitoring both keyboard and mouse idleness.
 
-Although great measures have been taken to make this daemon as robust
-as possible, the X window system was not designed to facilitate such a
+With the move of user sessions out of session 0 on Windows Vista, the
+\Condor{startd} service is no longer able to listen to keyboard and
+mouse events as all services run in session 0. As such, any execute
+node will require \Condor{kbdd} to accurately monitor and report system
+idle time. This is achieved by auto-starting the \Condor{kbdd} whenever
+a user logs into the system. The daemon will run in an invisible
+window and should not be noticeable by the user except for a listing
+in the task manager. When the user logs out, the program is terminated
+by Windows. This change has been made even to pre-Vista Windows
+versions because it adds the capability of monitoring keyboard activity
+from multiple users.
+
+To achieve the auto-start with user login, the Condor installer adds a
+\Condor{kbdd} entry to the registry key at
+\verb|HKLM\Software\Microsoft\Windows\CurrentVersion\Run|. On 64bit versions
+of Vista and higher, the entry is actually placed in
+\verb|HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run|.  In
+instances where the \Condor{kbdd} is unable to connect to the
+\Condor{startd} on Windows XP SP2 or higher, it is likely because an
+exception was not properly added to the Windows firewall.
+
+On UNIX, great measures have been taken to make this daemon as robust
+as possible, but the X window system was not designed to facilitate such a
 need, and thus is less then optimal on machines where many users log
 in and out on the console frequently.
 

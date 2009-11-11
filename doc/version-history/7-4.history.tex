@@ -196,32 +196,39 @@ software.
 \begin{itemize}
 
 % commit af65de7ccc1a281c2b05b8f68ac70bcfa56b2dd1
-\item \Condor{q} \Opt{-analyze} and \Opt{-better-analyze} now provide
-  analysis for scheduler and local universe jobs.  Specifically, the
-  \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+\item \Condor{q} using the options \Opt{-analyze} and \Opt{-better-analyze}
+  now provide analysis for scheduler and local universe jobs.
+  Specifically, the \MacroNI{START\_SCHEDULER\_UNIVERSE} and
   \MacroNI{START\_LOCAL\_UNIVERSE} expressions are checked.
 
 % #824
-\item Added \Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
+\item Added the ClassAd attributes
+\Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
 \Attr{TotalSchedulerRunningJobs}, and \Attr{TotalSchedulerIdleJobs}
-to the published ad for the \Condor{schedd}.  This means that
+to the published ClassAd for the \Condor{schedd}.  This means that
 \Condor{q} \Opt{-analyze} can still give helpful information about
 why local or scheduler universe jobs are idle when
-\MacroNI{START\_LOCAL\_UNIVERSE} or
+the configuration variables \MacroNI{START\_LOCAL\_UNIVERSE} or
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
-These attributes were already present internally to the schedd, 
+These attributes were already present internally within 
+the \Condor{schedd} daemon, 
 just not published.
 
 % #688
 \item The \Condor{vm-gahp} now supports KVM and links with libvirt, rather 
 than calling virsh command-line tools.
 
-% #760 #771 #769
+% #760 #771 #769 #772 #773 #775
 \item Greatly improved the \Condor{gridmanager}'s scalability when handling
-many grid type gt2 grid universe jobs.
+many grid type gt2 grid universe jobs.  Improvements include more quickly
+processing updated X.509 certificates, not checking jobs for status updates if 
+they have not been submitted to the remote site, and eliminating unnecessary 
+updates to the \Condor{schedd} daemon.
 
+% commit 75f6b2fe920b88717712a0d41765d16665ad7fe6
 \item Latency in the submission and cleaning up of Condor-C jobs
-has been improved.
+has been improved by changing the default value of
+\Macro{C\_GAHP\_CONTACT\_SCHEDD\_DELAY} from 20 to 5.
 
 % commit 8c2d88c695d6981be3bdab7e10c5d92e9f6bb55b
 \item The \Expr{eval()} ClassAd function added in Condor version 7.3.2
@@ -234,16 +241,29 @@ for Unix platforms. Previously, it was only supported on Windows platforms.
 % #795
 \item When setting \MacroNI{AMAZON\_HTTP\_PROXY}, a username and password
 can now be given as part of the proxy URL.
+The value of \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
+an https proxy for Amazon EC2, when \MacroNI{AMAZON\_HTTP\_PROXY} is defined.
 
-% #795
-\item \MacroNI{SOAP\_SSL\_CA\_DIR} is now consulted when authenticating
-an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
+% #694
+\item The \Condor{collector} daemon now advertises to itself, and will appear
+in the output of \Condor{status} \Opt{-collector}.
+
+% #775, cf02764d9d0fdd2b36ef3629f862f856ee41a717, and more
+\item Optimizations in core Condor systems should provide minor speed 
+improvements.
+
+% 823
+\item Updated the maximum log size to the maximum operating system's file size.
 
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+% commit 0e8800c201f81eac54cba925b3d7f6d81a83aeca
+\item The undocumented configuration variable 
+  \Macro{TOOLS\_PROVIDE\_OLD\_MESSAGES} is no longer recognized by Condor.
 
 % #768
 \item The new configuration variable 
@@ -304,7 +324,8 @@ an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
 
 % #767 commit 9e6dfa463c71c28c8dc2c0c0c215b51d6762e811
 % commit b4fd08ad1a8c69da24c371565796ef73522a61fc
-\item The default \Macro{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
+\item The default value of \Macro{NEGOTIATOR\_INTERVAL}
+   has changed from 300 to 60.
 
 % #767 commit 8b91877ec8186810887402e1dd1df07b6341ade7
 % Probably at least one other commit
@@ -316,7 +337,7 @@ an https proxy for Amazon EC2 (when \MacroNI{AMAZON\_HTTP\_PROXY} is set).
 
 % #631
 \item The configuration variable \MacroNI{VM\_VERSION} has been removed,
-as has the machine ad attribute of the same name.
+as has the machine ClassAd attribute of the same name.
 When the virtual machine version information is needed in the machine ClassAd,
 the configuration variable \MacroNI{STARTD\_ATTRS} can be used to
 add it.
@@ -324,20 +345,17 @@ add it.
 % #861
 \item The default configuration now uses
   \MacroNI{VM\_BRIDGE\_SCRIPT} and \MacroNI{VM\_SCRIPT} in place of
-  \MacroNI{XEN\_BRIDGE\_SCRIPT} and \MacroNI{XEN\_SCRIPT} due to KVM additions. 
-  Submission params have also been added, they include;
-  \MacroNI{kvm\_disk}, \MacroNI{kvm\_transfer\_files}, and \MacroNI{kvm\_cd\_rom\_device}.
+  \MacroNI{XEN\_BRIDGE\_SCRIPT} and \MacroNI{XEN\_SCRIPT} due to the
+  support of KVM. 
+  Submit description file commands have also been added, and they include:
+  \SubmitCmd{kvm\_disk}, \SubmitCmd{kvm\_transfer\_files},
+   and \SubmitCmd{kvm\_cd\_rom\_device}.
 
 % #872
-\item Removal of \MacroNI{XEN\_DEFAULT\_KERNEL} and \MacroNI{XEN\_DEFAULT\_INITRD}, as 
-  well as \MacroNI{xen\_kernel=any}.
-
-% #775, cf02764d9d0fdd2b36ef3629f862f856ee41a717, and more
-\item Optimizations in core Condor systems should provide minor speed improvements throughout.
-
-\item Some log messages were rewritten for clarity.
-
-\item Some additional logging was added to aid debugging.
+\item The configuration variables \MacroNI{XEN\_DEFAULT\_KERNEL}
+  and \MacroNI{XEN\_DEFAULT\_INITRD} have been removed.
+  Corresponding to this, the submit description file command
+  \Expr{xen\_kernel = any} is no longer valid.
 
 \end{itemize}
 
@@ -345,11 +363,15 @@ add it.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented parallel universe jobs from running 
+  on \Condor{startd} daemons with dynamic slots enabled.
+
 % #706
 \item Fixed a race condition bug in the \Condor{startd} which allowed
-it to send UNIX signals, intended for \Condor{starter} processes, as
+it to send Unix signals, intended for \Condor{starter} processes, as
 root to non-Condor related processes.
 
+% 735
 \item A Windows platform bug has been fixed.
 The bug caused a 20-second interval in which
 the \Condor{shadow}, \Condor{startd}, and \Condor{starter} daemons
@@ -385,6 +407,7 @@ Condor versions of 7.1.2 and later accepted by \Condor{dagman}.
 evaluation code in Condor version 7.3.2.
 The bug sometimes caused failure when running rescue DAGs.
 
+% #211 commit d6c0144739000523e94205a192be3cf9afe9ca9f
 \item Fixed a bug originating in Condor version 7.1.4.
 When a user submitted a job
 with an executable that did not have execute permission enabled,
@@ -421,12 +444,12 @@ on which Condor does not support VOMS.
 The second bug prevented submission
 of jobs with VOMS proxies, if the authenticity of the VOMS extensions
 could not be verified.
-Also improved memory usage when VOMS extensions aren't used.
+At the same time, improved memory usage when VOMS extensions are not used.
 
-\item Fixed a bad default in the \Attr{batch\_gahp.config} file,
+\item Fixed a bad default in the file \File{batch\_gahp.config},
 that prevented
-Condor from observing job state changes for grid type pbs and lsf grid
-universe jobs.
+Condor from observing job state changes for grid universe jobs
+with a grid type of pbs or lsf.
 
 % #748
 \item Fixed a bug that caused Condor-C jobs to fail if
@@ -464,10 +487,6 @@ queue
 \item Fixed a memory leak introduced into Condor version 7.3.2.
 The leak was in the \Condor{collector} daemon.
 
-\item Fixed a problem introduced in Condor version 7.1.4 
-that resulted in the failure of forcing
-the execute bit to be set on the transferred job executable.
-
 % commit 1663b7e183e6bf1df8152af98d9387412c2ae146
 \item Fixed a bug introduced in Condor version 7.3.2
 that resulted in the \Condor{negotiator} daemon
@@ -478,27 +497,28 @@ for any group was set to 0.
 \item Fixed a bug that caused the \Code{ctime} in the event log header
   to always be zero.
 
-% #862
-\item Fixed output of \Condor{status} when \Opt{-java} or \Opt{-vm} is
-used.
+% #862 commit 9a432e2f3497e5dce120db5c733e79212257f6a5
+\item Fixed the output of \Condor{status} when used with the command-line
+  options \Opt{-java} or \Opt{-vm}.
 
 \item Fixed a problem in the \Condor{schedd} daemon introduced in
-  7.3.2.  For schedd's with lots of jobs having periodic release
-  expressions, this could result in the \Condor{schedd} taking a long
+  7.3.2.  For \Condor{schedd} daemons with lots of jobs having periodic release
+  expressions, this bug could result in the \Condor{schedd} taking a long
   time while evaluating periodic expressions, causing it to become
-  unresponsive to queries and other tasks.  With a job queue of 30,000
-  jobs, a period of unresponsiveness of an hour was observed, whereas
-  the evaluation of periodic expressions in this same environment
+  unresponsive to queries and other tasks.
+  With a job queue of 30,000 jobs,
+  a period of unresponsiveness of an hour was observed,
+  whereas the evaluation of periodic expressions in this same environment
   normally takes less than 5 seconds.
 
-\item A number of potential bugs and memory leaks were identified and 
-fixed throughout Condor.  The Condor team is not aware of anyone having 
+\item Potential bugs and memory leaks were identified and 
+fixed throughout Condor.  The Condor Team is not aware of anyone having 
 encountered these bugs.
 
 % #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
 \item The \Condor{starter} cleans up working directories in more
-situations.  Previously during some error conditions the working
-directory in \MacroNI{EXECUTE} might be left behind.
+situations.  Previously during some error conditions, the working
+directory within \MacroUNI{EXECUTE} might be left behind.
 
 % #692 commit 8bc6bb4e06f11b2fdca28214d98c68c34c0ab9a4
 \item If the user log cannot be accessed when a local universe
@@ -506,16 +526,52 @@ job starts, the job would fail and immediately be retried.  Now
 the job is placed on hold.
 
 % 826 
-\item Fixed a bug in the startd where vacating jobs would not 
-respect the \MacroNI{job\_lease\_duration}.
-
-% 823
-\item Updated the max log size to the max OS file size.  
+\item Fixed a bug in the \Condor{startd} in which vacating jobs would not 
+respect the value of \Attr{JobLeaseDuration}.
 
 % 802
-\item Updated the detection of HasVM in the startd to publish an 
-update to the collector when \MacroNI{VM\_RECHECK\_INTERVAL} is 
-specified.
+\item Updated the detection of \Attr{HasVM} within the \Condor{startd}
+ to publish an update to the \Condor{collector},
+ when the configuration variable \MacroNI{VM\_RECHECK\_INTERVAL} is specified.
+
+% commit 68f06088fa36eb0eb332a4f72a5c48ccd48b1d5a
+\item Fixed a bug in which the \Condor{gridmanager} could, in rare cases,
+waste a
+small amount of memory and processor time checking for proxy files no longer
+being used by any active jobs.
+
+% commit bc66aa432e1f4e69d88a5b769204a4fce0648bfc
+\item The setting \Macro{CREAM\_GAHP} was added to the default configuration 
+file with a value of \File{\$(SBIN)/cream\_gahp}.
+Existing installations desiring to 
+submit jobs to CREAM should add this setting.
+
+% #702
+\item Fixed a bug where \Condor{restart} would fail on a \Condor{collector}
+daemon configured for high availability with multiple \Condor{collector}
+daemons.
+
+% commit f44a68fb351e528ea5b251dd2c3cf9767b0c1fba
+\item Fixed a bug in which multiple entries of output from 
+the command
+\Condor{status} \Opt{-negotiator}
+would be on a single line.  They are now listed one per line.
+
+% #778
+\item Fixed a bug in which the command
+\Condor{submit} \Opt{-dump} would crash if multiple
+jobs were queued from within a single submit file.
+
+% #742
+\item Fixed a bug in which a slot whose associated job disappeared
+could remain in the Claimed/Idle state until the claim lease expired.
+The slot should now promptly return to the Unclaimed/Idle state.
+
+% commit 0d5e3ad8fc85f0cd0dc58f73b503c76c0ad49bc4
+\item Fixed a bug in which a \Condor{startd} using dynamic slots could
+crash on shutdown or reconfiguration.
+
+
 
 \end{itemize}
 
@@ -523,7 +579,11 @@ specified.
 
 \begin{itemize}
 
-\item None.
+\item A configuration variable of  \Macro{USE\_VISIBLE\_DESKTOP} set 
+to \Expr{True} will corrupt the visible desktop.
+  This bug is present back through Condor version 7.2.4.
+This configuration variable did not work at all in 7.2 releases
+prior to 7.2.4.  This bug will be fixed in Condor version 7.4.1.
 
 \end{itemize}
 

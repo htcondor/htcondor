@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Virtual-Machines}
-Running Jobs within a Virtual Machine}
+Running Condor Jobs within a Virtual Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{virtual machine!running Condor jobs under}
 
@@ -12,10 +12,9 @@ A Condor job may now be executed on a
 virtual machine system running VMware, Xen, or KVM.
 This allows Windows executables to run on a Linux machine,
 and Linux executables to run on a Windows machine.
-These virtual machine systems exist for the Intel x86 architecture.
 
 In older versions of Condor, other parts of the system were also
-refered to as \Term{virtual machines}, but in all cases, those are now
+referred to as \Term{virtual machines}, but in all cases, those are now
 known as \Term{slots}.
 A virtual machine here describes the environment in which
 the outside operating system (called the host) emulates an inner operating
@@ -29,7 +28,6 @@ Also, be careful not to confuse the virtual machines discussed here
 with the Java Virtual Machine (JVM) referenced in other parts of this
 manual.
 
-Under a virtual machine, 
 Condor has the flexibility to run a job on either the host
 or the inner virtual machine, 
 hence two platforms appear to exist on a single machine.

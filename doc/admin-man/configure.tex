@@ -1944,7 +1944,10 @@ which use DaemonCore).
   call is used. \Expr{clone} provides scalability improvements for daemons
   using a large amount of memory (e.g. a \Condor{schedd} with a lot of
   jobs in the queue). Currently, the use of \Expr{clone} is available on
-  Linux systems other than IA-64, but not when GCB is enabled.
+  Linux systems other than IA-64, but not when GCB is enabled.  If
+  Condor detects that it is running under the valgrind analysis tools,
+  this setting is ignored and treated as \Expr{False} to work around
+  incompatibilities.
 
 \label{param:NotRespondingTimeout}
 \item[\Macro{NOT\_RESPONDING\_TIMEOUT}]
@@ -7164,6 +7167,14 @@ These macros affect the \Condor{gridmanager}.
   The expected location as defined in the example configuration is
   \File{/temp/CGAHPWorkerLog.\MacroUNI{USERNAME}}.
 
+\label{param:CGAHPContactScheddDelay}
+\item[\Macro{C\_GAHP\_CONTACT\_SCHEDD\_DELAY}]
+  The number of seconds that the \Condor{C-gahp} daemon waits between
+  consecutive connections to the remote \Condor{schedd} in order to
+  send batched sets of commands to be executed on that remote \Condor{schedd}
+  daemon.
+  The default value is 5.
+
 \label{param:GLITELocation}
 \item[\Macro{GLITE\_LOCATION}]
   The complete path to the directory containing the Glite software.
@@ -7234,6 +7245,13 @@ These macros affect the \Condor{gridmanager}.
   wrapper script that invokes the NorduGrid GAHP executable.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/nordugrid\_gahp}.
+
+\label{param:CREAMGAHP}
+\item[\Macro{CREAM\_GAHP}]
+  The complete path and file name of the CREAM GAHP executable.
+  There is no default value.
+  The expected location as given in the example configuration is
+  \File{\MacroUNI{SBIN}/cream\_gahp}.
 
 \end{description}
 
@@ -8407,7 +8425,7 @@ They specify items related to the \Condor{vm-gahp}.
 \label{param:VMType}
 \item[\Macro{VM\_TYPE}]
   Specifies the type of supported virtual machine software.
-  It will be the value \verb@xen@ or \verb@vmware@.
+  It will be the value \verb@kvm@, \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
 
 \label{param:VMMaxMemory}
