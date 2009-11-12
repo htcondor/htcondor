@@ -16,6 +16,11 @@ how it helps us solve problems
 SOAR is a framework which automates the execution of groups of jobs.
 These jobs form a DAG (directed acyclic graph), are run under Condor,
 and SOAR assembles the results within single directory.
+<i>
+For information on Condor visit: http://www.cs.wisc.edu/condor
+</i>
+</p>
+<p>
 The system is flexible, 
 such that it can run all data sets at once,
 or it can keep track of completions,
@@ -35,6 +40,30 @@ primary location(the tie to soar) is a set of scripts which fetch the data sourc
 to the location needed for each job within the DAG and scrapes the expected
 results to the results location.
 </p>
+<h3>Operational Usage</h3>
+<p>
+SOAR is currently intended and written to be managed by one person
+or possible several through a shared account. The product is young
+but reliable and the focus has been on tools to easily automate
+research. In time work will be done to explore making the various systems
+of software play nicely in the area of multiple users and groups.
+</p>
+<p>
+Most projects once adapted to SOAR sit in a mode where additional
+jobs are automatically run as additional datasets are placed in that projects
+data area. Multiple people can run the same research by simply having
+a derived project thus establishing their own data and result locations
+via their own portion of the web interface. SOAR uses Condor's ability
+to run jobs on any sort of periodic basis needed. If the project needs
+a sweep for new data every 4 hours, it is trivial.
+</p>
+<p>
+SOAR is generally managed by a single person who watches over disk
+consumption, adapts new research to SOAR projects, assist with
+special runs and expediting software changes for projects that
+rapidly change the science they are doing on the data.
+</p>
+
 <h3>Web Interface</h3>
 <p>
 No matter how one starts the runs, the web interface allows four things:
@@ -61,10 +90,10 @@ file. The following are provided by SOAR only:
 </p>
 <ul>
 <li>
-Since SOAR uses DAGs and condor_dagman, a SOAR run can be adjusted 
+Since SOAR uses DAGs and Condor_dagman, a SOAR run can be adjusted 
 to have a minimal impact on your network and submit machine while
 making runs easier. An example is that you can submit 1000s, but throttle
-it back to a reasonable number and make the submit node's performane
+it back to a reasonable number and make the submit node's performance
 be good for all.
 <li>
 There is a process which every 5 minutes produces a profile of the current 
@@ -129,8 +158,19 @@ step by step
 -->
 <p>
 The first part to installing SOAR is deciding where to place things.
+SOAR requires a minimum of 2 installation locations and one URL up to
+four loactions and three URLS. This is a combination of limiting
+what the web interface can access combined with allowing for
+large amounts of disk to be consumed between initial datasets for
+projects and copious resulting data from a system allowing
+for an ease of doing research not easily reachable before.
 See <b>Configurable locations</b> below. 
 </p>
+<p><b>
+NOTE: SOAR is designed to leverage Condor_dagman within
+a Condor environment. The run location must be on local disk
+to avoid file locking issues with most shared file systems.
+</b></p>
 
 <ul>
 <li>
@@ -143,6 +183,8 @@ See SOAR.conf for an example in the top level of the SOAR tar ball.
 <li>
 Optionally configure a RUN url if you plan on locating the condorruns,
 tarcache and results folders other then in the installation directory.
+<li>
+Optionally configure a location for the results and a matching URL
 <li>
 Untar the tar ball and run ./soar_configure.pl --help to see current
 install options.
@@ -166,7 +208,7 @@ Perl
 <li>
 PHP enabled for the web browser.
 <li>
-date/Manip.pm perl module
+date/Manip.pm Perl module
 <li>
 Gnuplot 4.2 or newer ( for profiling )
 <li>
@@ -369,7 +411,7 @@ Control.pl
 <li>
 	-b/--bail - Debug hook to stop just before submitting the dag which was built for the run
 <li>
-	--clean=s - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Onlt safe options are C and L which are also the defaults.
+	--clean=s - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. The only safe options are C and L which are also the defaults.
 <li>
 	--code=s - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
 <li>
@@ -389,7 +431,7 @@ Control.pl
 <li>
 	--maxpre=N - Throttle the prescripts to minimize submit node IO(default 10)
 <li>
-	--maxsubmits=N - By default dagman submits 5 nodes per scan interval which
+	--maxsubmits=N - By default Condor_dagman submits 5 nodes per scan interval which
 	defaults to 5 seconds. We don't have a knob for the scan interval but you can rev
 	up how many it will process each time through a cycle.
 <li>
@@ -524,10 +566,10 @@ Its command line options are
 <br>summary(report), profile(plot), whitelist, imagesz
 <li>
 <tt>-l</tt> or <tt>--last</tt>
-<br>find mosr recent environment file to find run
+<br>find most recent environment file to find run
 <li>
 <tt>-m</tt> or <tt>--match</tt>
-<br>use this patttern to extract the whitelist
+<br>use this pattern to extract the whitelist
 <li>
 <tt>-p</tt> or <tt>--period</tt>
 <br>sample interval
@@ -604,7 +646,7 @@ go to "sources/positioning" and enter this command: <b>cp -r v1 surfaces</b>.
 Now simply place new binaries in "sources/positioning/surfaces/code".
 </p>
 <p>
-<i>NOTE if you change the behaiour and files needed or created you'll likely need
+<i>NOTE if you change the behavior and files needed or created you'll likely need
 need to change the scripts "prejob.pl, postjob.pl and pushdata.pl".</i>
 </p>
 
