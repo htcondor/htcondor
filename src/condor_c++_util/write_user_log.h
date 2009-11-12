@@ -145,8 +145,27 @@ class WriteUserLog
 
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
-	void setWriteUserLog(bool b){ m_userlog_enable = b; }
-	void setWriteGlobalLog(bool b){ m_global_disable = !b; }
+	/** Enable / disable writing of user or global logs
+	 */
+	bool setEnableUserLog( bool enable ) {
+		bool tmp = m_userlog_enable;
+		m_userlog_enable = enable;
+		return tmp;
+	};
+	bool setEnableGlobalLog( bool enable ) {
+		bool tmp = !m_global_disable;
+		m_global_disable = !enable;
+		return tmp;
+	};
+	/** These two are for backward compatibility
+	 */
+	void setWriteUserLog(bool enable) {
+		setEnableUserLog( enable );
+	};
+	void setWriteGlobalLog(bool enable) {
+		setEnableGlobalLog(enable);
+	};
+
 	void setCreatorName(const char *);
 
 	/** Verify that the event log is initialized
