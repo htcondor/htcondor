@@ -38,4 +38,8 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 				  compat_classad::ClassAd *target, compat_classad::EvalResult *result );
 
+bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );
+
+bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target );
+
 #endif

@@ -216,3 +216,44 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	return rc;
 }
+
+bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
+{
+	return IsAHalfMatch(ad1, ad2) && IsAHalfMatch(ad2, ad1);
+}
+
+bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
+{
+	static classad::ExprTree *reqsTree = NULL;
+	compat_classad::EvalResult *val;	
+	
+	if( stricmp(target->GetMyTypeName(),my->GetTargetTypeName()) &&
+	    stricmp(my->GetTargetTypeName(),ANY_ADTYPE) )
+	{
+		return false;
+	}
+
+	if ((val = new compat_classad::EvalResult) == NULL)
+	{
+		EXCEPT("Out of memory -- quitting");
+	}
+
+	if ( reqsTree == NULL ) {
+		ParseClassAdRvalExpr ("MY.Requirements", reqsTree);
+	}
+	EvalExprTree( reqsTree, my, target, val );
+	if (!val || val->type != compat_classad::LX_INTEGER)
+	{
+		delete val;
+		return false;
+	}
+	else
+	if (!val->i)
+	{
+		delete val;
+		return false;
+	}
+
+	delete val;
+	return true;
+}

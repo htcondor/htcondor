@@ -3852,7 +3852,7 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
  * my_match_ad (which is a startd ad).  If user is NULL, get a job for
  * any user; o.w. only get jobs for specified user.
  */
-void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
 					 char * user)
 {
 	ClassAd				*ad;

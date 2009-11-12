@@ -304,11 +304,11 @@ class ClassAd : public classad::ClassAd
 		/** Set the MyType attribute */
 	void		SetMyTypeName(const char *);
 		/** Get the value of the MyType attribute */
-	const char*	GetMyTypeName();
+	const char*	GetMyTypeName() const ;
 		/** Set the value of the TargetType attribute */
 	void 		SetTargetTypeName(const char *);
 		/** Get the value of the TargetType attribtute */
-	const char*	GetTargetTypeName();
+	const char*	GetTargetTypeName() const;
 
 		/** Print the ClassAd as an old ClassAd to the stream
 		 * @param s the stream

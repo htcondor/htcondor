@@ -744,12 +744,12 @@ ClassAd* ClassAd::FindNext()
 
 ExprTree *reqsTree = 0;
 
-bool IsAMatch(const ClassAd *ad1, const ClassAd *ad2)
+bool IsAMatch(ClassAd *ad1, ClassAd *ad2)
 {
 	return IsAHalfMatch(ad1, ad2) && IsAHalfMatch(ad2, ad1);
 }
 
-bool IsAHalfMatch(const ClassAd *my, const ClassAd *target)
+bool IsAHalfMatch(ClassAd *my, ClassAd *target)
 {
 	EvalResult *val;	
 	

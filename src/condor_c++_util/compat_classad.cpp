@@ -924,7 +924,7 @@ SetMyTypeName( const char *myType )
 }
 
 const char*	ClassAd::
-GetMyTypeName( )
+GetMyTypeName( ) const
 {
 	string myTypeStr;
 	if( !EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
@@ -944,7 +944,7 @@ SetTargetTypeName( const char *targetType )
 }
 
 const char*	ClassAd::
-GetTargetTypeName( )
+GetTargetTypeName( ) const
 {
 	string targetTypeStr;
 	if( !EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
