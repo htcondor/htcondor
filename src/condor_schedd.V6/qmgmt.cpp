@@ -2442,7 +2442,7 @@ CloseConnection()
 			write_submit_events = true;
 				// don't write to the user log here, since
 				// hopefully condor_submit already did.
-			usr_log.setWriteUserLog(false);
+			usr_log.setEnableUserLog(false);
 			usr_log.initialize(0,0,0,NULL);
 			free(eventlog);
 		}
