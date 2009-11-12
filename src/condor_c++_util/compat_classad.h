@@ -320,6 +320,17 @@ class ClassAd : public classad::ClassAd
 		 */
 	int initFromStream(Stream& s);
 
+		/** Print the ClassAd as an old AttrList to the stream
+		 * @param s the stream
+		 */
+	int putAttrList(Stream& s);
+
+		/** Read the old ClassAd as an old AttrList from the stream,
+		 * and fill in this ClassAd.
+		 * @param s the stream
+		 */
+	int initAttrListFromStream(Stream& s);
+
 		/** Print the ClassAd as an old ClassAd to the FILE
 			@param file The file handle to print to.
 			@return TRUE

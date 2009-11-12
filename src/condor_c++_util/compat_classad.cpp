@@ -767,11 +767,25 @@ put( Stream &s )
 int ClassAd::
 initFromStream(Stream& s)
 {
-	classad::ClassAd *newAd;
-	if( !( newAd = getOldClassAd( &s ) ) ) {
+	if( !getOldClassAd( &s, *this ) ) {
 		return FALSE;
 	}
-	if( ! CopyFrom( *newAd ) ) {
+	return TRUE;
+}
+
+int ClassAd::
+putAttrList( Stream &s )
+{
+	if( !putOldClassAdNoTypes( &s, *this ) ) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int ClassAd::
+initAttrListFromStream(Stream& s)
+{
+	if( !getOldClassAdNoTypes( &s, *this ) ) {
 		return FALSE;
 	}
 	return TRUE;
