@@ -437,6 +437,8 @@ class ClassAd : public classad::ClassAd
     bool m_dirtyItrInit;
 };
 
+typedef ClassAd AttrList;
+
 } // namespace compat_classad
 
 #endif
