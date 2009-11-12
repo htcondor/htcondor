@@ -109,11 +109,46 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 	return false;
 }
 
-/* TODO This function needs to be written.
- */
 bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList *ignored_attrs, bool verbose )
 {
-	return false;
+	classad::ExprTree *ad1_expr, *ad2_expr;
+	const char* attr_name;
+	ad2->ResetExpr();
+	bool found_diff = false;
+	while( ad2->NextExpr(attr_name, ad2_expr) && ! found_diff ) {
+		if( ignored_attrs && ignored_attrs->contains_anycase(attr_name) ) {
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): skipping \"%s\"\n",
+						 attr_name );
+			}
+			continue;
+		}
+		ad1_expr = ad1->LookupExpr( attr_name );
+		if( ! ad1_expr ) {
+				// no value for this in ad1, the ad2 value is
+				// certainly different
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): "
+						 "ad2 contains %s and ad1 does not\n", attr_name );
+			}
+			found_diff = true;
+			break;
+		}
+		if( ad1_expr->SameAs( ad2_expr ) ) {
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): value of %s in "
+						 "ad1 matches value in ad2\n", attr_name );
+			}
+		} else {
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): value of %s in "
+						 "ad1 is different than in ad2\n", attr_name );
+			}
+			found_diff = true;
+			break;
+		}
+	}
+	return ! found_diff;
 }
 
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
