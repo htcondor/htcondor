@@ -1498,7 +1498,12 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// core dumps if node has POST script and all submit attempts fail).
 		bool useXml = readLog.isInitialized() ? readLog.getIsXMLLog() : false;
 
-		UserLog ulog;
+		WriteUserLog ulog;
+			// Disabling the global log (EventLog) fixes the main problem
+			// in gittrac #934 (if you can't write to the global log the
+			// write to the user log also fails, and DAGMan hangs
+			// waiting for the event that wasn't written).
+		ulog.setEnableGlobalLog( false );
 		ulog.setUseXML( useXml );
 		ulog.initialize( job->_logFile, job->_CondorID._cluster,
 					 	0, 0, NULL );
@@ -1506,6 +1511,10 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,
 					  	"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
+			  // Exit here, because otherwise we'll wait forever to see
+			  // the event that we just failed to write (see gittrac #934).
+			  // wenger 2009-11-12.
+			main_shutdown_rescue( EXIT_ERROR );
 		}
 	}
 	return true;
