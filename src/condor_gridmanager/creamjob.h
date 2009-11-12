@@ -68,6 +68,8 @@ class CreamJob : public BaseJob
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
+	int ProxyCallback();
+
 	// New variables
 	int gmState;
 	MyString remoteState;

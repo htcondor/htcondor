@@ -540,10 +540,10 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_de
 					 next_deleg->deleg_uri != NULL ) {
 					if ( strcmp( next_job->delegatedCredentialURI,
 								 next_deleg->deleg_uri ) == 0 ) {
-						next_job->SetEvaluateState();
+						next_job->ProxyCallback();
 					}
 				} else if ( next_job->jobProxy == next_deleg->proxy ) {
-					next_job->SetEvaluateState();
+					next_job->ProxyCallback();
 				}
 			}
 		}
