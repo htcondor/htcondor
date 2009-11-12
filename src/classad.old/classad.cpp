@@ -497,7 +497,7 @@ int ClassAd::put(Stream& s)
 {
 
 	// first send over all the attributes
-	if ( !AttrList::put(s) ) {
+	if ( !AttrList::putAttrList(s) ) {
 		return 0;
 	}
 
@@ -565,7 +565,7 @@ ClassAd::initFromStream(Stream& s)
 
 		// First, initialize ourselves from the stream.  This will
 		// delete any existing attributes in the list...
-	if ( !AttrList::initFromStream(s) ) {
+	if ( !AttrList::initAttrListFromStream(s) ) {
 		return 0;
 	}
 

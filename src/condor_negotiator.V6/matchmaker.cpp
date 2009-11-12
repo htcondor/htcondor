@@ -641,7 +641,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	AttrList* ad=accountant.ReportState();
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
-	if (!ad->put(*strm) ||
+	if (!ad->putAttrList(*strm) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send priority information\n");
@@ -677,7 +677,7 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 	AttrList* ad=accountant.ReportState(scheddName);
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
-	if (!ad->put(*strm) ||
+	if (!ad->putAttrList(*strm) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send resource list\n");

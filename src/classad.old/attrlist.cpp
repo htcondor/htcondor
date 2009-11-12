@@ -1938,7 +1938,7 @@ void AttrListList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_wh
 }
 
 // shipping functions for AttrList -- added by Lei Cao
-int AttrList::put(Stream& s)
+int AttrList::putAttrList(Stream& s)
 {
     AttrListElem*   elem;
     int             numExprs = 0;
@@ -2155,7 +2155,7 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 }
 
 int
-AttrList::initFromStream(Stream& s)
+AttrList::initAttrListFromStream(Stream& s)
 {
 	char const *line;
     int numExprs;

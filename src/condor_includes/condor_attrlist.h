@@ -274,8 +274,8 @@ class AttrList : public AttrListAbstract
 		void		dPrint( int );				// dprintf to given dprintf level
 
         // shipping functions
-        int put(Stream& s);
-		int initFromStream(Stream& s);
+        int putAttrList(Stream& s);
+		int initAttrListFromStream(Stream& s);
 
 		/*
 		 * @param str The newline-delimited string of attribute assignments
