@@ -1,0 +1,4 @@
+# test ALLOW_CONFIG=*, since config, unlike other auth levels denies all
+# by default
+
+ALLOW_CONFIG = *

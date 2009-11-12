@@ -2555,37 +2555,6 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 	return -1;
 }
 
-int
-GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
-					char *val )
-{
-	ClassAd	*ad;
-	char	key[PROC_ID_STR_BUFLEN];
-	char	*attr_val;
-
-	IdToStr(cluster_id,proc_id,key);
-
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		int attr_len = strlen( attr_val );
-		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
-			free( attr_val );
-			return -1;
-		}
-		attr_val[attr_len - 1] = '\0';
-		strcpy(val, &attr_val[1]);
-		free( attr_val );
-		return 1;
-	}
-
-	if (!JobQueue->LookupClassAd(key, ad)) {
-		return -1;
-	}
-
-	if (ad->LookupString(attr_name, val) == 1) return 0;
-	return -1;
-}
-
-
 // I added this version of GetAttributeString. It is nearly identical 
 // to the other version, but it calls a different version of 
 // AttrList::LookupString() which allocates a new string. This is a good
@@ -2597,6 +2566,8 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	ClassAd	*ad;
 	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
+
+	*val = NULL;
 
 	IdToStr(cluster_id,proc_id,key);
 
@@ -2613,14 +2584,12 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		*val = (char *) calloc(1, sizeof(char));
 		return -1;
 	}
 
 	if (ad->LookupString(attr_name, val) == 1) {
 		return 0;
 	}
-	*val = (char *) calloc(1, sizeof(char));
 	return -1;
 }
 
@@ -2663,18 +2632,19 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 }
 
 int
-GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
+GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **val)
 {
 	ClassAd		*ad;
 	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
 
+	*val = NULL;
+
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		strcpy(val, attr_val);
-		free( attr_val );
+		*val = attr_val;
 		return 1;
 	}
 
@@ -2687,10 +2657,9 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 		return -1;
 	}
 
-	val[0] = '\0';
-	tree->PrintToStr(val);
+	tree->RArg()->PrintToNewStr(val);
 
-	return 1;
+	return 0;
 }
 
 

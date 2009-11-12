@@ -260,10 +260,12 @@ int SafeSock::connect(
 	/* might be in <x.x.x.x:x> notation, i.e. sinfull string */
 	if (host[0] == '<') {
 		string_to_sin(host, &_who);
+		set_connect_addr(host);
 	}
 	/* try to get a decimal notation first 			*/
 	else if( (inaddr=inet_addr(host)) != (unsigned long)(-1L) ) {
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
+		set_connect_addr(sin_to_string(&_who));
 	} else {
 		/* if dotted notation fails, try host database	*/
 		hostp = condor_gethostbyname(host);
@@ -272,6 +274,7 @@ int SafeSock::connect(
 		} else {
 			memcpy(&_who.sin_addr, hostp->h_addr, sizeof(hostp->h_addr));
 		}
+		set_connect_addr(sin_to_string(&_who));
 	}
 
     addr_changed();

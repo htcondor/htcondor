@@ -430,38 +430,11 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value 
 
 
 int
-GetAttributeString( int cluster_id, int proc_id, char *attr_name, char *value )
-{
-	int	rval = -1;
-
-		CurrentSysCall = CONDOR_GetAttributeString;
-
-		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->code(attr_name) );
-		assert( qmgmt_sock->end_of_message() );
-
-		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
-			errno = terrno;
-			return rval;
-		}
-		assert( qmgmt_sock->code(value) );
-		assert( qmgmt_sock->end_of_message() );
-
-	return rval;
-}
-
-
-int
 GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char **val )
 {
 	int	rval = -1;
+
+	*val = NULL;
 
 	CurrentSysCall = CONDOR_GetAttributeString;
 
@@ -475,13 +448,11 @@ GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char 
 	qmgmt_sock->decode();
 	assert( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		*val = (char *) calloc(1, sizeof(char));
 		assert( qmgmt_sock->code(terrno) );
 		assert( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
 	}
-	*val = NULL;
 	assert( qmgmt_sock->code(*val) );
 	assert( qmgmt_sock->end_of_message() );
 
@@ -490,29 +461,31 @@ GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char 
 
 
 int
-GetAttributeExpr( int cluster_id, int proc_id, char const *attr_name, char *value )
+GetAttributeExprNew( int cluster_id, int proc_id, char const *attr_name, char **value )
 {
 	int	rval = -1;
 
-		CurrentSysCall = CONDOR_GetAttributeExpr;
+	CurrentSysCall = CONDOR_GetAttributeExpr;
 
-		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->put(attr_name) );
-		assert( qmgmt_sock->end_of_message() );
+	*value = NULL;
 
-		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
-			errno = terrno;
-			return rval;
-		}
-		assert( qmgmt_sock->code(value) );
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->code(cluster_id) );
+	assert( qmgmt_sock->code(proc_id) );
+	assert( qmgmt_sock->put(attr_name) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
 		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	assert( qmgmt_sock->code(*value) );
+	assert( qmgmt_sock->end_of_message() );
 
 	return rval;
 }

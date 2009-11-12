@@ -1903,7 +1903,7 @@ void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
 	int cluster, proc;
-	char owner_str[100];
+	MyString owner_str;
 
 	if( ! idle_clusters ) {
 		dprintf( debug_level, "DedicatedScheduler: No dedicated jobs\n" );
@@ -1915,10 +1915,10 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( i=0; i<=last; i++ ) {
 		cluster = (*idle_clusters)[i];
 		proc = 0;
-		owner_str[0] = '\0';
+		owner_str = "";
 		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
-				 proc, owner_str );
+				 proc, owner_str.Value() );
 	}
 }
 
@@ -3952,6 +3952,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
 		StringList hosts(remote_hosts);
+		free(remote_hosts);
 
 			// Foreach host in the stringlist, build up a query to find the machine
 			// ad from the collector
@@ -4145,6 +4146,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			free(sinful);
 			sinful = NULL;
 		}
+		free(remote_hosts);
+		free(claims);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any

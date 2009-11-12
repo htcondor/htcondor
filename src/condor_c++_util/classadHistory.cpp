@@ -85,7 +85,7 @@ void InitJobHistoryFile(const char *history_param) {
                 NumberBackupHistoryFiles);
     } else {
         dprintf(D_ALWAYS, "WARNING: History file rotation is disabled and it "
-                "may grownq very large.\n");
+                "may grow very large.\n");
     }
 
     if (PerJobHistoryDir != NULL) free(PerJobHistoryDir);

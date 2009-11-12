@@ -243,6 +243,7 @@ extern const char * const  ATTR_JOB_ID;
 extern const char * const  ATTR_JOB_FINISHED_HOOK_DONE;
 extern const char * const  ATTR_JOB_INPUT;
 extern const char * const  ATTR_JOB_IWD;
+extern const char * const  ATTR_JOB_IWD_FLUSH_NFS_CACHE;
 extern const char * const  ATTR_JOB_JAVA_VM_ARGS1;
 extern const char * const  ATTR_JOB_JAVA_VM_ARGS2;
 extern const char * const  ATTR_ORIG_JOB_IWD;
