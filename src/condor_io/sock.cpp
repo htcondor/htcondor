@@ -60,6 +60,7 @@ Sock::Sock() : Stream() {
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
+	m_connect_addr = NULL;
     addr_changed();
 }
 
@@ -77,6 +78,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
+	m_connect_addr = NULL;
     addr_changed();
 
 	// now duplicate the underlying network socket
@@ -131,6 +133,8 @@ Sock::~Sock()
 		free(_fqu_domain_part);
 		_fqu_domain_part = NULL;
 	}
+	free( m_connect_addr );
+	m_connect_addr = NULL;
 }
 
 #if defined(WIN32)
@@ -700,15 +704,18 @@ int Sock::do_connect(
 	/* might be in <x.x.x.x:x> notation				*/
 	if (host[0] == '<') {
 		string_to_sin(host, &_who);
+		set_connect_addr(host);
 	}
 	/* try to get a decimal notation 	 			*/
 	else if ((inaddr = inet_addr(host)) != (unsigned int)-1){
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
+		set_connect_addr(sin_to_string(&_who));
 	}
 	/* if dotted notation fails, try host database	*/
 	else{
 		if ((hostp = condor_gethostbyname(host)) == (hostent *)0) return FALSE;
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
+		set_connect_addr(sin_to_string(&_who));
 	}
 
     addr_changed();
@@ -2134,4 +2141,20 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 	rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
 #endif /* HAVE_EXT_GCB */
 	return rval;
+}
+
+void
+Sock::set_connect_addr(char const *addr)
+{
+	free( m_connect_addr );
+	m_connect_addr = NULL;
+	if( addr ) {
+		m_connect_addr = strdup(addr);
+	}
+}
+
+char const *
+Sock::get_connect_addr()
+{
+	return m_connect_addr;
 }

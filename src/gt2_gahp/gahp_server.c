@@ -127,7 +127,7 @@ ptr_ref_count * current_cred = NULL;
    to be escaped or the gahp server gets confused. :(
    !!! BEWARE !!!
 */ 
-static char *VersionString ="$GahpVersion: 1.1.0 " __DATE__ " UW\\ Gahp $";
+static char *VersionString ="$GahpVersion: 1.1.1 " __DATE__ " UW\\ Gahp $";
 
 volatile int ResultsPending;
 volatile int AsyncResults;
@@ -377,29 +377,26 @@ char *
 escape_spaces( const char *input_line) 
 {
 	int i;
-	char *temp;
+	const char *temp;
 	char *output_line;
 
 	// first, count up the spaces
-	temp = (char *)input_line;
+	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
-		if( *temp == ' ' || *temp == '\r' || *temp =='\n')  i++;
+		if( *temp == ' ' || *temp == '\r' || *temp =='\n' || *temp == '\\' ) {
+			i++;
+		}
 	}
 
 	// get enough space to store it.  	
 	output_line = globus_libc_malloc(strlen(input_line) + i + 200);
 
 	// now, blast across it
-	temp = (char *)input_line;
+	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
-		if( *temp == ' ') {
+		if( *temp == ' ' || *temp == '\r' || *temp =='\n' || *temp == '\\' ) {
 			output_line[i] = '\\'; 
 			i++;
-		}
-		if( *temp == '\r' || *temp == '\n') {
-			output_line[i] = '\\'; 
-			i++;
-			*temp = ' ';
 		}
 		output_line[i] = *temp;
 		i++;

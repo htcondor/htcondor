@@ -242,29 +242,26 @@ int count_args( char **input_line )
 char *escape_spaces( const char *input_line) 
 {
 	int i;
-	char *temp;
+	const char *temp;
 	char *output_line;
 
 	// first, count up the spaces
-	temp = (char *)input_line;
+	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
-		if( *temp == ' ' || *temp == '\r' || *temp =='\n')  i++;
+		if( *temp == ' ' || *temp == '\r' || *temp =='\n' || *temp == '\\' ) {
+			i++;
+		}
 	}
 
 	// get enough space to store it.  	
 	output_line = (char *)malloc(strlen(input_line) + i + 200);
 
 	// now, blast across it
-	temp = (char *)input_line;
+	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
-		if( *temp == ' ') {
+		if( *temp == ' ' || *temp == '\r' || *temp =='\n' || *temp == '\\' ) {
 			output_line[i] = '\\'; 
 			i++;
-		}
-		if( *temp == '\r' || *temp == '\n') {
-			output_line[i] = '\\'; 
-			i++;
-			*temp = ' ';
 		}
 		output_line[i] = *temp;
 		i++;

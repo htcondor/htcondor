@@ -21,11 +21,8 @@ public class IOUtils {
         StringBuffer result = new StringBuffer();
         for (int i=0; i<word.length(); i++) {
             char c = word.charAt(i);
-            if (c == ' ') { 
+            if (c == ' ' || c == '\\' || c == '\r' || c == '\n') {
                 result.append ('\\');
-            } else if (c == '\r' || c == '\n') {
-                result.append ('\\');
-                c=' ';
             }
             result.append (c);
         }
