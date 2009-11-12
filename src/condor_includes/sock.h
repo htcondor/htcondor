@@ -223,6 +223,12 @@ public:
 	/// sinful address of peer in form of "<a.b.c.d:pppp>"
 	char * get_sinful_peer();
 
+		// Address that was passed to connect().  This is useful in cases
+		// such as CCB or shared port where our peer address is not the
+		// address one would use to actually connect to the peer.
+		// Returns NULL if connect was never called.
+	char const *get_connect_addr();
+
 	/// sinful address of peer, suitable for passing to dprintf() (never NULL)
 	virtual char const *default_peer_description();
 
@@ -325,6 +331,8 @@ protected:
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking) = 0;
 	virtual void cancel_reverse_connect() = 0;
 
+	void set_connect_addr(char const *addr);
+
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);
 	static void close_serialized_socket(char const *buf);
@@ -373,6 +381,7 @@ protected:
 	sock_state		_state;
 	int				_timeout;
 	struct sockaddr_in _who;	// endpoint of "connection"
+	char *			m_connect_addr;
 	char *          _fqu;
 	char *          _fqu_user_part;
 	char *          _fqu_domain_part;
