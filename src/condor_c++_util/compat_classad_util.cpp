@@ -95,10 +95,56 @@ const char *ExprTreeToString( classad::ExprTree *expr )
 	return buffer.c_str();
 }
 
+static compat_classad::ClassAd *empty_ad = NULL;
+
 /* TODO This function needs to be written.
  */
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 {
+	static classad::ExprTree *tree = NULL;
+	static char * saved_constraint = NULL;
+	compat_classad::EvalResult result;
+	bool constraint_changed = true;
+
+	if ( empty_ad == NULL ) {
+		empty_ad = new compat_classad::ClassAd;
+	}
+
+	if ( saved_constraint ) {
+		if ( strcmp(saved_constraint,constraint) == 0 ) {
+			constraint_changed = false;
+		}
+	}
+
+	if ( constraint_changed ) {
+		// constraint has changed, or saved_constraint is NULL
+		if ( saved_constraint ) {
+			free(saved_constraint);
+			saved_constraint = NULL;
+		}
+		if ( tree ) {
+			delete tree;
+			tree = NULL;
+		}
+		if ( ParseClassAdRvalExpr( constraint, tree ) != 0 ) {
+			dprintf( D_ALWAYS,
+				"can't parse constraint: %s\n", constraint );
+			return false;
+		}
+		saved_constraint = strdup( constraint );
+	}
+
+	// Evaluate constraint with ad in the target scope so that constraints
+	// have the same semantics as the collector queries.  --RR
+	if ( !EvalExprTree( tree, empty_ad, ad, &result ) ) {
+		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
+		return false;
+	}
+	if ( result.type == compat_classad::LX_INTEGER ) {
+		return (bool)result.i;
+	}
+	dprintf( D_ALWAYS, "constraint (%s) does not evaluate to bool\n",
+		constraint );
 	return false;
 }
 
@@ -106,6 +152,22 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
  */
 bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
+	compat_classad::EvalResult result;
+
+	if ( empty_ad == NULL ) {
+		empty_ad = new compat_classad::ClassAd;
+	}
+
+	// Evaluate constraint with ad in the target scope so that constraints
+	// have the same semantics as the collector queries.  --RR
+	if ( !EvalExprTree( tree, empty_ad, ad, &result ) ) {        
+		return false;
+	}
+
+	if ( result.type == compat_classad::LX_INTEGER ) {
+		return (bool)result.i;
+	}
+
 	return false;
 }
 
