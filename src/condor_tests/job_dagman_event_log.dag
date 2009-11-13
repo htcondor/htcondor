@@ -1,0 +1,18 @@
+Job NodeA job_dagman_event_log-nodeA.cmd
+Script Pre NodeA job_dagman_event_log-node-pre.pl
+Script Post NodeA job_dagman_event_log-node-post.pl
+
+Job NodeB job_dagman_event_log-node.cmd
+Script Pre NodeB job_dagman_event_log-node-pre.pl
+Script Post NodeB job_dagman_event_log-node-post.pl
+
+Job NodeC job_dagman_event_log-node.cmd
+Script Pre NodeC job_dagman_event_log-node-pre.pl
+Script Post NodeC job_dagman_event_log-node-post.pl
+
+Job NodeD job_dagman_event_log-node.cmd
+Script Pre NodeD job_dagman_event_log-node-pre.pl
+Script Post NodeD job_dagman_event_log-node-post.pl
+
+Parent NodeA Child NodeB NodeC
+Parent NodeB NodeC Child NodeD
