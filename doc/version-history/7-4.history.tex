@@ -131,6 +131,11 @@ slot1: Request to claim resource refused.
 Timer -1 not found
 \end{verbatim}
 
+%gittrack #937
+\item Fixed a problem in which security sessions were not cached
+  correctly when using CCB.  This resulted in re-authentication in
+  some cases where a cached security session could have been used.
+
 % gittrac #934
 \item Fixed a bug that caused \Condor{dagman} to hang when running a
 DAG with POST scripts, if the global event log (see
