@@ -131,6 +131,11 @@ slot1: Request to claim resource refused.
 Timer -1 not found
 \end{verbatim}
 
+% gittrac #934
+\item Fixed a bug that caused \Condor{dagman} to hang when running a
+DAG with POST scripts, if the global event log (see
+section~\ref{param:EventLog}) is turned on.
+
 \end{itemize}
 
 \noindent Known Bugs:
