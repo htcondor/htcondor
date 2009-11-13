@@ -28,7 +28,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added \Condor{shared\_port} under Linux and Mac OS X.  This
+  allows Condor daemons other than \Condor{collector} to share a
+  single network port.  This makes opening access to Condor through a
+  firewall easier and safer.  It also increases scalability of the
+  submit node by decreasing port usage. See
+  section~\ref{sec:Config-shared-port} for more information.
 
 \end{itemize}
 
@@ -36,7 +41,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \MacroNI{USE\_SHARED\_PORT} is a boolean value that specifies
+  whether a Condor process should rely on \Condor{shared\_port} for
+  receiving incoming connections.  Write access to
+  \Macro{DAEMON\_SOCKET\_DIR} is required for this to take effect.
+  The default is false.  If this is set to true, \MacroNI{SHARED\_PORT}
+  should be added to \MacroNI{DAEMON\_LIST}.  See
+  section~\ref{sec:Config-shared-port} for more information.
+
 
 \end{itemize}
 

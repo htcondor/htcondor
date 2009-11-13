@@ -24,10 +24,10 @@ that is outside of that private network,
 because bi-directional connectivity between the submit node and the
 execute node is normally required.  
 However, 
-if both execute and submit machine can connect to that the CCB server,
+if both execute and submit machine can connect to the CCB server,
 if both are authorized by the CCB server,
 and if it is possible for the execute node within the private network
-to connect to the submit node in a one-directional connectivity,
+to connect to the submit node,
 then it is possible for the submit node to run jobs on the
 execute node.
 
@@ -49,6 +49,15 @@ the submit node within the private network registers itself with a CCB server,
 such that when a job is running and the execute node needs to connect back to
 the submit node (for example, to transfer output files), 
 the execute node can connect by going through CCB to request a connection.
+
+If both A and B are in separate private networks, then CCB alone
+cannot provide connectivity.  However, if an incoming port or port
+range can be opened in one of the private networks, then the situation
+becomes equivalent to one of the scenarios described above and CCB can
+provide bi-directional communication given only one-directional
+connectivity.  See section~\label{sec:Port-Details} for information on
+opening port ranges.  Also note that CCB works nicely with
+\Condor{shared\_port}.
 
 Unfortunately at this time, CCB does not support standard universe jobs.
 
