@@ -482,7 +482,7 @@ void CreamJob::Reconfig()
 
 int CreamJob::ProxyCallback()
 {
-	if ( gmState == GM_PROXY_EXPIRED ) {
+	if ( gmState == GM_DELEGATE_PROXY || gmState == GM_PROXY_EXPIRED ) {
 		SetEvaluateState();
 	}
 	return 0;
