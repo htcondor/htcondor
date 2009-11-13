@@ -2046,8 +2046,9 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   access to \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
   effect.  The default is false.  If this is set to true,
   \MacroNI{SHARED\_PORT} should be added to \MacroNI{DAEMON\_LIST}.
-  For more information about using a shared port, see
-  page~\pageref{sec:Config-shared-port}.
+  The \Condor{collector} daemon ignores this setting, because it must
+  always have its own network port.  For more information about using
+  a shared port, see page~\pageref{sec:Config-shared-port}.
 
 \label{param:SubsysMaxFileDescriptors}
 \item[\MacroB{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}]
@@ -9653,6 +9654,13 @@ Condor's authentication and authorization steps are unchanged by the
  \Condor{shared\_port}.  They are simply passed to the requested daemon,
  which is then responsible for enforcing the security policy.
 
+When \Condor{master} is configured to use the shared port
+ (\Expr{USE\_SHARED\_PORT=True}), \Condor{shared\_port} is treated
+ specially.  A command such as \Condor{off} which shuts down all
+ daemons except for the master will also leave \Condor{shared\_port}
+ running.  This prevents \Condor{master} from getting into a state
+ where it can no longer receive commands.
+
 Shared ports currently do not work with SOAP.  Standard universe is also
 not supported.
 
@@ -9675,22 +9683,26 @@ not supported.
 \item[\Macro{DAEMON\_SOCKET\_DIR}] This specifies the directory where
  Condor daemons will create named sockets so that incomming
  connections can be forwarded to them by \Condor{shared\_port}.  If
- this directory does not exist, it will be created.  Write access to
- this directory grants permission to receive connections through the
- shared port.  By default, the directory is created to be owned by
- Condor and is made to be only writable by Condor.  One possible
- reason to broaden access to this directory is if execute nodes are
- accessed via CCB and the submit node is behind a firewall with one
- open port for \Condor{shared\_port}.  In this case, commands that
- interact with the execute node such as \Condor{ssh\_to\_job} will not
- be able to operate unless run by a user with write access to
+ this directory does not exist, it will be created. The maximum length
+ of named socket paths plus names is restricted by the operating system,
+ so it is important that this path not exceed 90 characters.
+
+Write access to this directory grants permission to receive
+ connections through the shared port.  By default, the directory is
+ created to be owned by Condor and is made to be only writable by
+ Condor.  One possible reason to broaden access to this directory is
+ if execute nodes are accessed via CCB and the submit node is behind a
+ firewall with only one open port (the port assigned to
+ \Condor{shared\_port}).  In this case, commands that interact with
+ the execute node such as \Condor{ssh\_to\_job} will not be able to
+ operate unless run by a user with write access to
  \MacroNI{DAEMON\_SOCKET\_DIR}.  In this case, one could grant
  tmp-like permissions to this directory so that all users can receive
  CCB connections back through the firewall.  (But consider the wisdom
  of having a firewall in the first place if you are going to
- circumvent it in this way.)  The default \MacroNI{DAEMON\_SOCKET\_DIR} is
- \verb|$(LOCK)/daemon_sock|.  This directory must be on a local filesystem
- that supports named sockets.
+ circumvent it in this way.)  The default
+ \MacroNI{DAEMON\_SOCKET\_DIR} is \verb|$(LOCK)/daemon_sock|.  This
+ directory must be on a local filesystem that supports named sockets.
 
 \label{param:SharedPortArgs}
 \item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by
