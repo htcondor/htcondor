@@ -27,7 +27,7 @@
 #include "basename.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
-#include <sys/un.h>
+#include "shared_port_scm_rights.h"
 #endif
 
 // Check once that a method for passing fds has been enabled if we

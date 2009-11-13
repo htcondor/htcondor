@@ -3137,7 +3137,7 @@ fi
 
 AC_MSG_CHECKING([if we support passing fds via SCM_RIGHTS on this platform])
 # use a negative list so that we try SCM_RIGHTS on new platforms
-if test "$_cv_opsys" != "AIX" -a "$_cv_opsys" != "HPUX" -a "$_cv_opsys" != "SOLARIS"; then
+if test "$_cv_opsys" != "HPUX"; then
   _cv_has_scm_rights_passfd=yes
   AC_MSG_RESULT([yes])
 else

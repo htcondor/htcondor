@@ -1997,7 +1997,10 @@ TESTCLASS(job_rsc_binary-io_std,quicknolink)
 **TESTCLASS(job_core_coredump_van,quick)
 */
 
-#if HAVE_SHARED_PORT
+/* Would like to make the following conditional on HAVE_SHARED_PORT
+   but then it never happens in the nightly tests.  Until a better
+   solution is found, explicitly exclude HPUX. */
+#if !defined( IS_HPUX11 ) 
 DESC(lib_shared_port_van,"Test of shared port feature.")
 DEPS(lib_shared_port_van,x_sleep.pl)
 RUN(lib_shared_port_van)
