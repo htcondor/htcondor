@@ -157,7 +157,8 @@ SharedPortEndpoint::CreateListener()
 	strncpy(named_sock_addr.sun_path,m_full_name.Value(),sizeof(named_sock_addr.sun_path)-1);
 	if( strcmp(named_sock_addr.sun_path,m_full_name.Value()) ) {
 		dprintf(D_ALWAYS,
-			"ERROR: SharedPortEndpoint: full listener socket name is too long:"
+			"ERROR: SharedPortEndpoint: full listener socket name is too long."
+			" Consider changing DAEMON_SOCKET_DIR to avoid this:"
 			" %s\n",m_full_name.Value());
 		return false;
 	}
