@@ -450,6 +450,11 @@ to \Expr{True} will corrupt the visible desktop.
 This configuration variable did not work at all in 7.2 releases
 prior to 7.2.4.  This bug will be fixed in Condor version 7.4.1.
 
+% gittrac #934
+\item If the global event log (see section~\ref{param:EventLog}) is
+turned on, \Condor{dagman} will hang when running any DAG that has
+POST scripts.
+
 \end{itemize}
 
 \noindent Additions and Changes to the Manual:
