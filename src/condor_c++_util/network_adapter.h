@@ -115,11 +115,6 @@ public:
 	 */
 	MyString& wakeSupportedString ( MyString &s ) const;
 
-	/** Returns a string list of the supported types WOL types
-		@return comma separated list
-	 */
-	const char* wakeSupportedString () const;
-
     /** Ensures that the adapter "waking" is enabled.
 		@return true if the adapter waking is enabled; otherwise, false.
 	*/
@@ -134,11 +129,6 @@ public:
 		@return comma separated list
 	 */
 	MyString& wakeEnabledString ( MyString &s ) const;;
-
-	/** Returns a string list of the supported types WOL types
-		@return comma separated list
-	 */
-	const char* wakeEnabledString () const;
 
 	/** Returns the adapter's logical name
 		@return a string with the logical name
