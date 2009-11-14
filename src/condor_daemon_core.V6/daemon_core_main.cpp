@@ -1381,6 +1381,13 @@ handle_dc_sighup( Service*, int )
 }
 
 
+void
+TimerHandler_main_shutdown_fast()
+{
+	main_shutdown_fast();
+}
+
+
 int
 handle_dc_sigterm( Service*, int )
 {
@@ -1413,7 +1420,7 @@ handle_dc_sigterm( Service*, int )
 			free( tmp );
 		}
 		daemonCore->Register_Timer( timeout, 0, 
-									(TimerHandler)main_shutdown_fast,
+									TimerHandler_main_shutdown_fast,
 									"main_shutdown_fast" );
 		dprintf( D_FULLDEBUG, 
 				 "Started timer to call main_shutdown_fast in %d seconds\n", 
