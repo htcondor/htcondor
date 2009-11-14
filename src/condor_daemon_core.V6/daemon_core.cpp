@@ -824,21 +824,21 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-				const char *event_descrip, Service* s)
+				const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, event, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-							   Release release, const char *event_descrip, Service* s)
+							   Release release, const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, event, release, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Event event, const char *event_descrip, Service* s)
+				Event event, const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
+	return( t.NewTimer(deltawhen, event, event_descrip, period) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp,

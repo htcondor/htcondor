@@ -75,9 +75,9 @@ class Service {
 /** @name Typedefs for Service
  */
 //@{
-/** Function, which given a pointer to Service object.
+/** Function
 */
-typedef void     (*Event)(Service*);
+typedef void     (*Event)();
 
 /// Service Method.
 typedef void     (Service::*Eventcpp)();

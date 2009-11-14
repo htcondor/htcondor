@@ -46,9 +46,9 @@ const   int     STAR = -1;
 /** @name Typedefs for Service
  */
 //@{
-/** Function, given a pointer to Service object
+/** Function
 */
-typedef void     (*Event)(Service*);
+typedef void     (*Event)();
 
 /// Service Method
 typedef void     (Service::*Eventcpp)();
@@ -109,19 +109,6 @@ class TimerManager
     TimerManager();
     ///
     ~TimerManager();
-    
-    /** Not_Yet_Documented.
-        @param s               Not_Yet_Documented.
-        @param deltawhen       Not_Yet_Documented.
-        @param event           Not_Yet_Documented.
-        @param event_descrip   Not_Yet_Documented.
-        @return The ID of the new timer, or -1 on failure
-    */
-    int NewTimer(Service*     s,
-                 unsigned     deltawhen,
-                 Event        event,
-                 const char * event_descrip,
-                 unsigned     period          =  0);
 
     /** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
@@ -129,11 +116,9 @@ class TimerManager
 		@param release        Not_Yet_Documented.
         @param event_descrip  Not_Yet_Documented.
         @param period         Not_Yet_Documented.
-        @param id             Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
-    int NewTimer(Service*     s,
-                 unsigned     deltawhen,
+    int NewTimer(unsigned     deltawhen,
                  Event        event,
                  Release      release,
                  const char * event_descrip, 
@@ -144,7 +129,6 @@ class TimerManager
         @param event          Not_Yet_Documented.
         @param event_descrip  Not_Yet_Documented.
         @param period         Not_Yet_Documented.
-        @param id             Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer(unsigned     deltawhen,

@@ -62,17 +62,11 @@ TimerManager::~TimerManager()
 	CancelAllTimers();
 }
 
-int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, const char* event_descrip,
-						   unsigned period)
-{
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
-}
-
-int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, 
+int TimerManager::NewTimer(unsigned deltawhen, Event event, 
 						   Release release, const char* event_descrip,
 						   unsigned period)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return( NewTimer(NULL,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL) );
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, Event event, const char* event_descrip,
@@ -361,8 +355,8 @@ TimerManager::Timeout()
 			// typedef int (*Eventcpp)()
 			((in_timeout->service)->*(in_timeout->handlercpp))();
 		} else {
-			// typedef int (*Event)(Service*)
-			(*(in_timeout->handler))(in_timeout->service);
+			// typedef int (*Event)()
+			(*(in_timeout->handler))();
 		}
 
 		if( in_timeout->timeslice ) {

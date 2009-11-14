@@ -819,40 +819,34 @@ class DaemonCore : public Service
         @param deltawhen       Not_Yet_Documented
         @param event           Not_Yet_Documented
         @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
                         Event        event,
-                        const char * event_descrip, 
-                        Service*     s = NULL);
+                        const char * event_descrip);
 
 	/** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param event           Not_Yet_Documented
         @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
                         Event        event,
 						Release      release,
-                        const char * event_descrip, 
-                        Service*     s = NULL);
+                        const char * event_descrip);
     
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param period          Not_Yet_Documented
         @param event           Not_Yet_Documented
         @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
                         unsigned     period,
                         Event        event,
-                        const char * event_descrip,
-                        Service*     s = NULL);
+                        const char * event_descrip);
 
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
