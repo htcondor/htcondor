@@ -583,7 +583,7 @@ DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMs
 	daemonCoreSockAdapter.Register_DataPtr( qc );
 }
 
-int DCMessenger::startCommandAfterDelay_alarm()
+void DCMessenger::startCommandAfterDelay_alarm()
 {
 	QueuedCommand *qc = (QueuedCommand *)daemonCoreSockAdapter.GetDataPtr();
 	ASSERT(qc);
@@ -592,8 +592,6 @@ int DCMessenger::startCommandAfterDelay_alarm()
 
 	delete qc;
 	decRefCount();
-
-	return TRUE;
 }
 
 DCCommandOnlyMsg::DCCommandOnlyMsg( int cmd ): DCMsg( cmd )

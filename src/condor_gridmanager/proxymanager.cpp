@@ -39,6 +39,8 @@
 #include "gridmanager.h"
 #include "condor_string.h"
 
+#include "dc_service.h"
+
 #define HASH_TABLE_SIZE			500
 
 
@@ -62,7 +64,7 @@ int myproxyGetDelegationReaperId = 0;
 
 static int next_proxy_id = 1;
 
-int CheckProxies();
+void CheckProxies(Service *);
 
 static bool
 SetMasterProxy( Proxy *master, const Proxy *copy_src )
@@ -104,7 +106,7 @@ bool InitializeProxyManager( const char *proxy_dir )
 	}
 
 	CheckProxies_tid = daemonCore->Register_Timer( 1, CheckProxies_interval,
-												   (TimerHandler)&CheckProxies,
+												   CheckProxies,
 												   "CheckProxies", NULL );
 
 	masterProxyDirectory = strdup( proxy_dir );
@@ -585,7 +587,7 @@ void doCheckProxies()
 // This function is called
 // periodically to check for updated proxies. It can be called earlier
 // if a proxy is about to expire.
-int CheckProxies()
+void CheckProxies(Service *)
 {
 	int now = time(NULL);
 	int next_check = CheckProxies_interval + now;
@@ -670,8 +672,6 @@ int CheckProxies()
 	// next_check is the absolute time of the next check, convert it to
 	// a relative time (from now)
 	daemonCore->Reset_Timer( CheckProxies_tid, next_check - now );
-
-	return TRUE;
 }
 
 int RefreshProxyThruMyProxy(Proxy * proxy)

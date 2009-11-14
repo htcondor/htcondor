@@ -27,6 +27,7 @@
 #include "write_user_log.h"
 #include "dap_constants.h"
 #include "sock.h"
+#include "dc_service.h"
 
 // Timers
 
@@ -53,10 +54,10 @@ typedef enum {
 int initializations(void);
 int terminate(terminate_t);
 int read_config_file(void);
-int call_main(void);
+void call_main(Service *);
 void startup_check_for_requests_in_process(void);
-void regular_check_for_requests_in_process(void);
-void regular_check_for_rescheduled_requests(void);
+void regular_check_for_requests_in_process(Service *);
+void regular_check_for_rescheduled_requests(Service *);
 
 int handle_stork_submit(Service *, int command, Stream *s);
 int handle_stork_remove(Service *, int command, Stream *s);
@@ -79,7 +80,7 @@ int get_cred_from_credd (const char * request, void *& buff, int & size);
 
 // SC2005 Hackery
 #if SC2005_DEMO
-void low_water_timer(void);
+void low_water_timer(Service *);
 int low_water_reaper(Service *,int pid,int exit_status);
 #endif
 

@@ -166,12 +166,12 @@ public:
 		// Timer functions
 	void start_match_timer();
 	void cancel_match_timer();
-	int  match_timed_out();		// We were matched, but not claimed in time
+	void  match_timed_out();		// We were matched, but not claimed in time
 	void startLeaseTimer();
 	void cancelLeaseTimer();
-	int  leaseExpired();		// We were claimed, but didn't get a
+	void  leaseExpired();		// We were claimed, but didn't get a
 								// keep alive in time from the schedd
-	int sendAlive();
+	void sendAlive();
 	int sendAliveConnectHandler(Stream *sock);
 	int sendAliveResponseHandler( Stream *sock );
 

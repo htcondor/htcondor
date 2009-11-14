@@ -24,6 +24,7 @@
 #include "condor_io.h"
 #include "proc.h"
 #include "../condor_c++_util/CondorError.h"
+#include "../condor_c++_util/dc_service.h"
 class ClassAd;
 class ClassAdList;
 
@@ -275,7 +276,7 @@ bool InWalkJobQueue();
 
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
-void CleanJobQueue();
+void CleanJobQueue(Service *);
 bool setQSock( ReliSock* rsock );
 void unsetQSock();
 

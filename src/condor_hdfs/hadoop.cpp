@@ -344,15 +344,13 @@ int Hadoop::reaperResponse(int exit_pid, int exit_status) {
         return 0;
 }
 
-int Hadoop::killTimer() {        
+void Hadoop::killTimer() {        
         dprintf(D_FULLDEBUG, "Hadoop::KillTimer()\n");
         daemonCore->Cancel_Timer(m_timer);                
 
         //send sigkill now!
         if (m_state != STATE_NULL)
             stop(true);
-
-		return 0;
 }
 
 void Hadoop::startServices() {

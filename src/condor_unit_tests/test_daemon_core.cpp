@@ -29,13 +29,13 @@ class Foo : public Service
 	public:
 
 		Foo();
-		int timer5();
-		int timerone();
+		void timer5();
+		void timerone();
 		int com1(int, Stream*);
 
 };
 
-int
+void
 Foo::timer5()
 {
 	static int times = 0;
@@ -46,10 +46,9 @@ Foo::timer5()
 	if ( times == 3 )
 		if (daemonCore->Cancel_Signal(9) == FALSE)
 			printf("*** CANCEL_SIGNAL 9 FAILED!!!!\n");
-	return TRUE;
 }
 
-int
+void
 Foo::timerone()
 {
 	int port;
@@ -58,7 +57,7 @@ Foo::timerone()
 
 	if ( (port=daemonCore->InfoCommandPort()) == -1 ) {
 		printf("OneTimer(): InfoCommandPort FAILED\n");
-		return FALSE;
+		return;
 	}
 
 	printf("*** going to port %d\n",port);
@@ -71,8 +70,6 @@ Foo::timerone()
 	rsock->code(buf);
 	rsock->end_of_message();
 	delete rsock;
-
-	return TRUE;
 }
 
 int

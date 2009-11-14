@@ -100,7 +100,7 @@ EventDaemon::Config()
 	return 0;
 }
 
-int
+void
 EventDaemon::Timeout()
 {
 	int TimeToNearestEvent = -1;
@@ -141,8 +141,6 @@ EventDaemon::Timeout()
 								TimeToNearestEvent-MaxEventPreparation,
 								EventInterval);
 	}
-
-	return 0;
 }
 
 ScheduledEvent *

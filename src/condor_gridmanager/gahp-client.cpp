@@ -1043,13 +1043,13 @@ GahpServer::ProxyCallback()
 	return 0;
 }
 
-int
+void
 GahpServer::doProxyCheck()
 {
 	proxy_check_tid = TIMER_UNSET;
 
 	if ( m_gahp_pid == -1 ) {
-		return 0;
+		return;
 	}
 
 	GahpProxyInfo *next_proxy;
@@ -1093,8 +1093,6 @@ GahpServer::doProxyCheck()
 
 		master_proxy->cached_expiration = master_proxy->proxy->expiration_time;
 	}
-
-	return 0;
 }
 
 GahpProxyInfo *
@@ -2068,10 +2066,10 @@ GahpClient::clear_pending()
 	}
 }
 
-int
+void
 GahpClient::reset_user_timer_alarm()
 {
-	return reset_user_timer(pending_timeout_tid);
+	reset_user_timer(pending_timeout_tid);
 }
 
 int
@@ -2191,7 +2189,7 @@ GahpClient::get_pending_result(const char *,const char *)
 	return r;
 }
 
-int
+void
 GahpServer::poll()
 {
 	Gahp_Args* result = NULL;
@@ -2219,7 +2217,7 @@ GahpServer::poll()
 		dprintf(D_ALWAYS,"GAHP command 'RESULTS' failed\n");
 		delete result;
 		m_in_results = false;
-		return 0;
+		return;
 	}
 	num_results = atoi(result->argv[1]);
 
@@ -2360,9 +2358,6 @@ GahpServer::poll()
 			requestTable->remove(result_reqid);
 		}
 	}
-
-
-	return num_results;
 }
 
 bool

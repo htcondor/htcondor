@@ -61,7 +61,7 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	bool SendMsgToCCB(ClassAd &msg,bool blocking);
 	bool WriteMsgToCCB(ClassAd &msg);
 	static void CCBConnectCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data);
-	int ReconnectTime();
+	void ReconnectTime();
 	void Connected();
 	void Disconnected();
 	int HandleCCBMsg(Stream *sock);

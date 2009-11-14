@@ -48,6 +48,7 @@
 #include "globusjob.h"
 #include "condor_config.h"
 
+#include "dc_service.h"
 
 // GridManager job states
 #define GM_INIT					0
@@ -194,8 +195,8 @@ globusJobId( const char *contact )
 	return buff;
 }
 
-int
-orphanCallbackHandler()
+void
+orphanCallbackHandler(Service *)
 {
 	int rc;
 	GlobusJob *this_job;
@@ -205,7 +206,7 @@ orphanCallbackHandler()
 	OrphanCallbackList.Rewind();
 	if ( OrphanCallbackList.Next( orphan ) == false ) {
 		// Empty list
-		return TRUE;
+		return;
 	}
 	OrphanCallbackList.DeleteCurrent();
 
@@ -220,7 +221,7 @@ orphanCallbackHandler()
 
 		free( orphan->job_contact );
 		delete orphan;
-		return TRUE;
+		return;
 	}
 
 	GlobusResource *next_resource;
@@ -233,7 +234,7 @@ orphanCallbackHandler()
 
 			free( orphan->job_contact );
 			delete orphan;
-			return TRUE;
+			return;
 		}
 	}
 
@@ -243,7 +244,6 @@ orphanCallbackHandler()
 			 orphan->job_contact, orphan->state, orphan->errorcode );
 	free( orphan->job_contact );
 	delete orphan;
-	return TRUE;
 }
 
 void
@@ -283,7 +283,7 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 	new_orphan->state = state;
 	new_orphan->errorcode = errorcode;
 	OrphanCallbackList.Append( new_orphan );
-	daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
+	daemonCore->Register_Timer( 1, orphanCallbackHandler,
 								"orphanCallbackHandler", NULL );
 }
 
@@ -938,7 +938,7 @@ int GlobusJob::ProxyCallback()
 	return 0;
 }
 
-int GlobusJob::doEvaluateState()
+void GlobusJob::doEvaluateState()
 {
 	bool connect_failure_jobmanager = false;
 	bool connect_failure_gatekeeper = false;
@@ -2600,11 +2600,9 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			RequestPing();
 		}
 	}
-
-	return TRUE;
 }
 
-int GlobusJob::CommunicationTimeout()
+void GlobusJob::CommunicationTimeout()
 {
 	// This function is called by a daemonCore timer if the resource
 	// object has been waiting too long for a gatekeeper ping to 
@@ -2614,7 +2612,6 @@ int GlobusJob::CommunicationTimeout()
 	globusStateErrorCode = GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED;
 	gmState = GM_HOLD;
 	communicationTimeoutTid = -1;
-	return TRUE;
 }
 
 void GlobusJob::NotifyResourceDown()

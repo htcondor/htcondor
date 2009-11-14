@@ -44,6 +44,7 @@
 #include "schedd_api.h"
 
 #include "../condor_c++_util/soap_helpers.cpp"
+#include "../condor_c++_util/dc_service.cpp"
 
 #include "qmgmt.h"
 
@@ -176,8 +177,8 @@ extendTransaction(const struct condor__Transaction *transaction)
 	return 0;
 }
 
-static int
-transtimeout()
+static void
+transtimeout(Service *)
 {
 	struct condor__abortTransactionResponse result;
 
@@ -193,7 +194,6 @@ transtimeout()
 	info = NULL;
 
 	condor__abortTransaction(NULL, transaction, result);
-	return TRUE;
 }
 
 static void

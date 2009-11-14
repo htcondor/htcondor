@@ -30,6 +30,8 @@
 
 #include "scheduled_event.h"
 
+#include "dc_service.h"
+
 ScheduledEvent::ScheduledEvent(const char name[], const char record[], int &i)
 	: id(NULL), daymask(0), timeofday(-1), active(false), DeactivateTid(-1)
 {
@@ -197,7 +199,7 @@ int ScheduledShutdownEvent::SimulateShutdowns = 0;
 
 static int CleanupShutdownModeConfig(const char startd_machine[],
 									 const char startd_addr[]);
-static int CleanupShutdownModeConfigs();
+static void CleanupShutdownModeConfigs(Service *);
 static int CleanupTid = -1;
 static int StartdValidWindow = 600;
 static int RescheduleInterval = 60;
@@ -333,7 +335,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 		int firstCleanup = (CleanupInterval < 600) ? CleanupInterval : 600;
 		CleanupTid =
 			daemonCore->Register_Timer(firstCleanup, CleanupInterval,
-									   (Event)&CleanupShutdownModeConfigs,
+									   CleanupShutdownModeConfigs,
 									   "CleanupShutdownModeConfigs");
 	}
 
@@ -470,12 +472,12 @@ ScheduledShutdownEvent::ActivateEvent()
 	return 0;
 }
 
-int
+void
 ScheduledShutdownEvent::Timeout()
 {
 	if (!active || !valid) {
 		TimeoutTid = -1;
-		return -1;
+		return;
 	}
 	
 	time_t current_time = time(0);
@@ -524,13 +526,13 @@ ScheduledShutdownEvent::Timeout()
 		dprintf(D_ALWAYS, "Failed to reset timer for SHUTDOWN event %s!\n",
 				id);
 		TimeoutTid = -1;
-		return -1;
+		return;
 	}
 
 	// Make sure that all startds are in shutdown mode.
 	if (StartdList == NULL) {
 		if (GetStartdList() < 0) {
-			return -1;			// Oh well, try again next time...
+			return;			// Oh well, try again next time...
 		}
 	}
 
@@ -566,8 +568,6 @@ ScheduledShutdownEvent::Timeout()
 	// make sure to get an updated StartdList next time
 	delete StartdList;
 	StartdList = NULL;
-
-	return 0;
 }
 
 int

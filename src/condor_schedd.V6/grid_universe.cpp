@@ -170,7 +170,7 @@ GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
 	return;
 }
 
-int
+void
 GridUniverseLogic::SendAddSignal(Service *)
 {
 	// This method is called via a DC Timer set in JobAdded method
@@ -186,11 +186,9 @@ GridUniverseLogic::SendAddSignal(Service *)
 	if ( node->pid ) {
 		daemonCore->Send_Signal(node->pid,GRIDMAN_ADD_JOBS);
 	}
-
-	return 0;
 }
 
-int
+void
 GridUniverseLogic::SendRemoveSignal(Service *)
 {
 	// This method is called via a DC Timer set in JobRemoved method
@@ -206,8 +204,6 @@ GridUniverseLogic::SendRemoveSignal(Service *)
 	if ( node->pid ) {
 		daemonCore->Send_Signal(node->pid,GRIDMAN_REMOVE_JOBS);
 	}
-
-	return 0;
 }
 
 void

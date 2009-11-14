@@ -168,14 +168,12 @@ CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack
 	self->decRefCount(); // remove ref count from when we started the connect
 }
 
-int
+void
 CCBListener::ReconnectTime()
 {
 	m_reconnect_timer = -1;
 
 	RegisterWithCCBServer();
-
-	return 0;
 }
 
 void

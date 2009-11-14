@@ -341,7 +341,7 @@ void CondorJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int CondorJob::JobLeaseSentExpired()
+void CondorJob::JobLeaseSentExpired()
 {
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	BaseJob::JobLeaseSentExpired();
@@ -351,10 +351,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	if ( gmState != GM_INIT ) {
 		gmState = GM_CLEAR_REQUEST;
 	}
-	return 0;
 }
 
-int CondorJob::doEvaluateState()
+void CondorJob::doEvaluateState()
 {
 	bool connect_failure = false;
 	int old_gm_state;
@@ -1174,8 +1173,6 @@ int CondorJob::doEvaluateState()
 			RequestPing();
 		}
 	}
-
-	return TRUE;
 }
 
 void CondorJob::SetRemoteJobId( const char *job_id )

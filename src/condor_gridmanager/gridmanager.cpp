@@ -50,6 +50,8 @@
 #  include "creamjob.h"
 #endif
 
+#include "dc_service.h"
+
 #define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
@@ -115,12 +117,12 @@ int scheddFailureCount = 0;
 int maxScheddFailures = 10;	// Years of careful research...
 
 void RequestContactSchedd();
-int doContactSchedd();
+void doContactSchedd(Service *);
 
 // handlers
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
-int CHECK_LEASES_signalHandler( int );
+void CHECK_LEASES_signalHandler(Service *);
 
 
 static bool jobExternallyManaged(ClassAd * ad)
@@ -276,7 +278,7 @@ RequestContactSchedd()
 			delay = (lastContactSchedd + contactScheddDelay) - now;
 		}
 		contactScheddTid = daemonCore->Register_Timer( delay,
-												(TimerHandler)&doContactSchedd,
+												doContactSchedd,
 												"doContactSchedd", NULL );
 	}
 }
@@ -419,7 +421,7 @@ Register()
 								 (SignalHandler)&CHECK_LEASES_signalHandler,
 								 "CHECK_LEASES_signalHandler", NULL );
 */
-	daemonCore->Register_Timer( 60, 60, (TimerHandler)&CHECK_LEASES_signalHandler,
+	daemonCore->Register_Timer( 60, 60, CHECK_LEASES_signalHandler,
 								"CHECK_LEASES_signalHandler", NULL );
 
 	Reconfig();
@@ -535,8 +537,8 @@ initJobExprs()
 	done = true;
 }
 
-int
-CHECK_LEASES_signalHandler( int )
+void
+CHECK_LEASES_signalHandler(Service *)
 {
 	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
 
@@ -544,12 +546,10 @@ CHECK_LEASES_signalHandler( int )
 		RequestContactSchedd();
 		checkLeasesSignaled = true;
 	}
-
-	return TRUE;
 }
 
-int
-doContactSchedd()
+void
+doContactSchedd(Service *)
 {
 	int rc;
 	Qmgr_connection *schedd;
@@ -1144,7 +1144,7 @@ contact_schedd_next_add_job:
 	scheddFailureCount = 0;
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
-	return TRUE;
+	return;
 
  contact_schedd_failure:
 	scheddFailureCount++;
@@ -1158,7 +1158,7 @@ dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	dprintf( D_ALWAYS, "%s Will retry\n", error_str.Value() );
 	lastContactSchedd = time(NULL);
 	RequestContactSchedd();
-	return TRUE;
+	return;
 }
 
 

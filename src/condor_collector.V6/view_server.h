@@ -90,7 +90,7 @@ public:
 	static int SendListReply(Stream*,const MyString& FileName, int FromDate, int ToDatei, Set<MyString>& Names);
 	static int SendDataReply(Stream*,const MyString& FileName, int FromDate, int ToDate, int Options, const MyString& Arg);
 
-	static void WriteHistory();
+	static void WriteHistory(Service *);
 	static int SubmittorScanFunc(ClassAd* ad);
 	static int SubmittorTotalFunc(void);
 	static int StartdScanFunc(ClassAd* ad);

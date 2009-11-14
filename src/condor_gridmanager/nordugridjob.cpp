@@ -302,7 +302,7 @@ void NordugridJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int NordugridJob::doEvaluateState()
+void NordugridJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -869,8 +869,6 @@ int NordugridJob::doEvaluateState()
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 BaseResource *NordugridJob::GetResource()

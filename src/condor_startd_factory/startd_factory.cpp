@@ -170,7 +170,7 @@ StartdFactory::register_timers(void)
 	there are too many partitions available for the workload already being
 	done).
 */
-int
+void
 StartdFactory::adjust_partitions(void)
 {
 	dprintf(D_ALWAYS, "=================================\n");
@@ -209,8 +209,6 @@ StartdFactory::adjust_partitions(void)
 	dprintf(D_ALWAYS, "-------------------\n");
 	dprintf(D_ALWAYS, "Finished adjustment\n");
 	dprintf(D_ALWAYS, "-------------------\n");
-
-	return TRUE;
 }
 
 

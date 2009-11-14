@@ -605,8 +605,8 @@ LoadCredentialList () {
   return TRUE;
 }
 
-int
-CheckCredentials () {
+void
+CheckCredentials (Service *) {
   CredentialWrapper * pCred;
   credentials.Rewind();  
   dprintf (D_FULLDEBUG, "In CheckCredentials()\n");
@@ -641,8 +641,6 @@ CheckCredentials () {
     
     set_priv (priv); // restore old priv
   }
-  
-  return TRUE;
 }
 
 

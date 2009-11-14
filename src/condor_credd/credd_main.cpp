@@ -110,7 +110,7 @@ Register() {
 
   CheckCredentials_tid = daemonCore->Register_Timer( 1, 
 						     CheckCredentials_interval,
-                                                     (TimerHandler)&CheckCredentials,
+                                                     CheckCredentials,
                                                       "CheckCredentials", 
 						     NULL );
 

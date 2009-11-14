@@ -282,11 +282,11 @@ SharedPortEndpoint::TouchSocketInterval()
 	return 900;
 }
 
-int
+void
 SharedPortEndpoint::SocketCheck()
 {
 	if( !m_listening || m_full_name.IsEmpty() ) {
-		return 0;
+		return;
 	}
 
 	if( utime(m_full_name.Value(), NULL) < 0 ) {
@@ -301,7 +301,6 @@ SharedPortEndpoint::SocketCheck()
 			}
 		}
 	}
-	return 0;
 }
 
 bool
@@ -361,7 +360,7 @@ SharedPortEndpoint::InitRemoteAddress()
 	return true;
 }
 
-int
+void
 SharedPortEndpoint::RetryInitRemoteAddress()
 {
 	const int remote_addr_retry_time = 60;
@@ -377,7 +376,7 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 			// we don't have our listener (named) socket registered,
 			// so don't bother registering timers for keeping our
 			// address up to date either
-		return inited;
+		return;
 	}
 
 	if( inited ) {
@@ -405,7 +404,7 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 			}
 		}
 
-		return 1;
+		return;
 	}
 
 	if( daemonCoreSockAdapter.isEnabled() ) {
@@ -423,8 +422,6 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 		dprintf(D_ALWAYS,
 			"SharedPortEndpoint: did not successfully find SharedPortServer address.");
 	}
-
-	return 0;
 }
 
 void

@@ -30,6 +30,8 @@
 #include "io_loop.h"
 #include "PipeBuffer.h"
 
+#include "dc_service.h"
+
 DECL_SUBSYSTEM( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
 
 char * myUserName = NULL;
@@ -57,7 +59,7 @@ usage()
 	DC_Exit( 1 );
 }
 
-int init_pipes();
+void init_pipes(Service *);
 
 int
 main_init( int argc, char ** const argv )
@@ -115,14 +117,14 @@ main_init( int argc, char ** const argv )
 
 
 	daemonCore->Register_Timer(0, 
-		  (TimerHandler)&init_pipes,
+		  init_pipes,
 		  "init_pipes", NULL );
 
 
     // Just set up timers....
     contactScheddTid = daemonCore->Register_Timer( 
 		   contact_schedd_interval,
-		  (TimerHandler)&doContactSchedd,
+		   doContactSchedd,
 		  "doContactSchedD", NULL );
 
 
@@ -130,8 +132,8 @@ main_init( int argc, char ** const argv )
 	return TRUE;
 }
 
-int 
-init_pipes() {
+void 
+init_pipes(Service *) {
 	dprintf (D_FULLDEBUG, "PRE Request pipe initialized\n");
 
 	(void)daemonCore->Register_Pipe (
@@ -142,7 +144,6 @@ init_pipes() {
 
 
 	dprintf (D_FULLDEBUG, "Request pipe initialized\n");
-	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////

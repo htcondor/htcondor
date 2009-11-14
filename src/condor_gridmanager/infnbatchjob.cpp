@@ -247,7 +247,7 @@ void INFNBatchJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int INFNBatchJob::doEvaluateState()
+void INFNBatchJob::doEvaluateState()
 {
 	int old_gm_state;
 	int old_remote_state;
@@ -664,8 +664,6 @@ int INFNBatchJob::doEvaluateState()
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 void INFNBatchJob::SetRemoteJobId( const char *job_id )

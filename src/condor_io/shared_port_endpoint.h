@@ -116,9 +116,8 @@ class SharedPortEndpoint: Service {
 	void ReceiveSocket( ReliSock *local_sock, ReliSock *return_remote_sock );
 
 	bool InitRemoteAddress();
-	int RetryInitRemoteAddress();
-		// the return value is junk to match TimerHandlercpp
-	int SocketCheck();
+	void RetryInitRemoteAddress();
+	void SocketCheck();
 
 	bool MakeDaemonSocketDir();
 };

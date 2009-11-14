@@ -1254,7 +1254,7 @@ CollectorEngine::updateAd ( ClassAd *ad ) {
 }
 #endif
 
-int
+void
 CollectorEngine::
 housekeeper()
 {
@@ -1265,7 +1265,7 @@ housekeeper()
 	{
 		dprintf (D_ALWAYS,
 				 "Housekeeper:  Error in reading system time --- aborting\n");
-		return FALSE;
+		return;
 	}
 
 	dprintf (D_ALWAYS, "Housekeeper:  Ready to clean old ads\n");
@@ -1328,7 +1328,6 @@ housekeeper()
 	event_mgr();
 
 	dprintf (D_ALWAYS, "Housekeeper:  Done cleaning\n");
-	return TRUE;
 }
 
 void CollectorEngine::

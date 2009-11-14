@@ -162,11 +162,10 @@ void BaseJob::SetEvaluateState()
 	daemonCore->Reset_Timer( evaluateStateTid, 0 );
 }
 
-int BaseJob::doEvaluateState()
+void BaseJob::doEvaluateState()
 {
 	JobHeld( "the gridmanager can't handle this job type" );
 	DoneWithJob();
-	return TRUE;
 }
 
 BaseResource *BaseJob::GetResource()
@@ -596,7 +595,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID
 	}
 }
 
-int BaseJob::JobLeaseSentExpired()
+void BaseJob::JobLeaseSentExpired()
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
@@ -604,10 +603,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,pr
 		jobLeaseSentExpiredTid = TIMER_UNSET;
 	}
 	SetEvaluateState();
-	return 0;
 }
 
-int BaseJob::JobLeaseReceivedExpired()
+void BaseJob::JobLeaseReceivedExpired()
 {
 dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluster,procID.proc);
 	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
@@ -626,7 +624,6 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluste
 	requestScheddUpdate( this, false );
 
 	SetEvaluateState();
-	return 0;
 }
 
 void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
@@ -716,7 +713,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 
 }
 
-int BaseJob::EvalAllPeriodicJobExprs(Service *)
+void BaseJob::EvalAllPeriodicJobExprs(Service *)
 {
 	BaseJob *curr_job;
 
@@ -726,8 +723,6 @@ int BaseJob::EvalAllPeriodicJobExprs(Service *)
 	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
 		curr_job->EvalPeriodicJobExpr();
 	}
-
-	return 0;
 }
 
 int BaseJob::EvalPeriodicJobExpr()
@@ -841,7 +836,7 @@ int BaseJob::EvalOnExitJobExpr()
 	return 0;
 }
 
-int BaseJob::CheckAllRemoteStatus( Service * )
+void BaseJob::CheckAllRemoteStatus( Service * )
 {
 	BaseJob *curr_job;
 
@@ -853,8 +848,6 @@ int BaseJob::CheckAllRemoteStatus( Service * )
 	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
 		curr_job->CheckRemoteStatus();
 	}
-
-	return 0;
 }
 
 void BaseJob::CheckRemoteStatus()

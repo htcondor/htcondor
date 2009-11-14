@@ -378,7 +378,7 @@ int GT4Resource::ProxyCallback()
 	return 0;
 }
 
-int GT4Resource::checkDelegation()
+void GT4Resource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
@@ -388,13 +388,13 @@ dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	if ( deleg_gahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying checkDelegation\n" );
 		daemonCore->Reset_Timer( delegationTimerId, 5 );
-		return 0;
+		return;
 	}
 
 	daemonCore->Reset_Timer( delegationTimerId, CHECK_DELEGATION_INTERVAL );
 
 	if ( resourceDown || !firstPingDone ) {
-		return 0;
+		return;
 	}
 
 	delegatedProxies.Rewind();
@@ -416,7 +416,7 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 														&delegation_uri );
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
-				return 0;
+				return;
 			}
 			if ( rc != 0 ) {
 					// Failure, what to do?
@@ -461,7 +461,7 @@ dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 													next_deleg->deleg_uri );
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
-				return 0;
+				return;
 			}
 			next_deleg->last_proxy_refresh = now;
 			if ( rc != 0 ) {
@@ -491,7 +491,7 @@ dprintf(D_FULLDEBUG,"    extending %s\n",next_deleg->deleg_uri);
 													   new_lifetime );
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
-				return 0;
+				return;
 			}
 			next_deleg->last_lifetime_extend = now;
 			if ( rc != 0 ) {
@@ -527,7 +527,6 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_de
 			}
 		}
 	}
-	return 0;
 }
 
 bool GT4Resource::RequestDestroy( GT4Job *job )

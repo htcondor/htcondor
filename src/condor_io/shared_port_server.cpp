@@ -96,7 +96,7 @@ SharedPortServer::RemoveDeadAddressFile()
 	}
 }
 
-int
+void
 SharedPortServer::PublishAddress()
 {
 	if( !param(m_shared_port_server_ad_file,"SHARED_PORT_DAEMON_AD_FILE") ) {
@@ -107,7 +107,6 @@ SharedPortServer::PublishAddress()
 	ad.Assign(ATTR_PUBLIC_NETWORK_IP_ADDR,daemonCore->publicNetworkIpAddr());
 
 	daemonCore->UpdateLocalAd(&ad,m_shared_port_server_ad_file.Value());
-	return 0;
 }
 
 int

@@ -59,7 +59,7 @@ extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern int		run_preen(Service*);
+extern void		run_preen(Service*);
 
 extern FILESQL *FILEObj;
 extern int condor_main_argc;
@@ -958,11 +958,10 @@ daemon::StopPeaceful()
 	Kill( SIGTERM );
 }
 
-int
+void
 daemon::StopFastTimer()
 {
 	StopFast(false);
-	return TRUE;
 }
 
 void
@@ -1778,12 +1777,11 @@ Daemons::CancelRetryStartAllDaemons()
 	}
 }
 
-int
+void
 Daemons::RetryStartAllDaemons()
 {
 	m_retry_start_all_daemons_tid = -1;
 	StartAllDaemons();
-	return 0;
 }
 
 void
@@ -2312,7 +2310,7 @@ Daemons::StartTimers()
 	if( new_preen && FS_Preen ) {
 		preen_tid = daemonCore->
 			Register_Timer( first_preen, preen_interval,
-							(TimerHandler)run_preen,
+							run_preen,
 							"run_preen()" );
 	}
 	old_preen_int = preen_interval;

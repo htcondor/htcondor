@@ -246,7 +246,7 @@ main_init( int argc, char ** const argv )
 	flush_request_tid = 
 		daemonCore->Register_Timer (1,
 									1,
-									(TimerHandler)&flush_pending_requests,
+									flush_pending_requests,
 									"flush_pending_requests",
 									NULL);
 									
@@ -688,7 +688,7 @@ flush_request (int worker_id, const char * request) {
 }
 
 
-int flush_pending_requests() {
+void flush_pending_requests(Service *) {
 	for (int i=0; i<NUMBER_WORKERS; i++) {
 		workers[i].request_buffer.Write();
 
@@ -697,8 +697,6 @@ int flush_pending_requests() {
 			DC_Exit (1);
 		}
 	}
-
-	return TRUE;
 }
 void
 gahp_output_return (const char ** results, const int count) {

@@ -536,7 +536,7 @@ int GT4Job::ProxyCallback()
 	return 0;
 }
 
-int GT4Job::doEvaluateState()
+void GT4Job::doEvaluateState()
 {
 	int old_gm_state;
 	MyString old_globus_state;
@@ -1341,8 +1341,6 @@ int GT4Job::doEvaluateState()
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 bool GT4Job::AllowTransition( const MyString &new_state,

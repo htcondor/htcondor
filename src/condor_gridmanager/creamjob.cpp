@@ -480,7 +480,7 @@ void CreamJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int CreamJob::doEvaluateState()
+void CreamJob::doEvaluateState()
 {
 	int old_gm_state;
 	MyString old_remote_state;
@@ -1266,8 +1266,6 @@ int CreamJob::doEvaluateState()
 	} while ( reevaluate_state );
 
 		//end of evaluateState loop
-		
-	return TRUE;
 }
 
 BaseResource *CreamJob::GetResource()

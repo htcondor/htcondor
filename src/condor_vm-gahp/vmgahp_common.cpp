@@ -36,6 +36,7 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "sig_install.h"
 #include "../condor_privsep/privsep_fork_exec.h"
+#include "dc_service.h"
 
 // FreeBSD 6, OS X 10.4, Solaris 5.9 don't automatically give you environ to work with
 extern DLL_IMPORT_MAGIC char **environ;
@@ -361,11 +362,11 @@ write_to_daemoncore_pipe(const char* fmt, ... )
 	va_end(args);
 }
 
-int
-write_stderr_to_pipe()
+void
+write_stderr_to_pipe(Service *)
 {
 	if( vmgahp_stderr_pipe == -1 ) {
-		return TRUE;
+		return;
 	}
 
 	vmgahp_stderr_buffer.Write();
@@ -377,7 +378,7 @@ write_stderr_to_pipe()
 			vmgahp_stderr_pipe = -1;
 		}
 	} 
-	return TRUE;
+	return;
 }
 
 void vmprintf( int flags, const char *fmt, ... ) 

@@ -828,7 +828,7 @@ getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage
 
 
 
-int Matchmaker::
+void Matchmaker::
 negotiationTime ()
 {
 	ClassAdList startdAds;
@@ -855,7 +855,7 @@ negotiationTime ()
 		dprintf(D_FULLDEBUG,
 			"New cycle requested but just finished one -- delaying %u secs\n",
 			cycle_delay - elapsed);
-		return FALSE;
+		return;
 	}
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
@@ -874,7 +874,7 @@ negotiationTime ()
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
-		return FALSE;
+		return;
 	}
 
 	// Save this for future use.
@@ -1114,8 +1114,6 @@ negotiationTime ()
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
 
 	completedLastCycleTime = time(NULL);
-
-	return TRUE;
 }
 
 Matchmaker::SimpleGroupEntry::

@@ -115,7 +115,7 @@ void ViewServer::Init()
 
 	// Register timer for logging information to history files
 	HistoryTimer = daemonCore->Register_Timer(InitialDelay,HistoryInterval,
-		(Event)WriteHistory,"WriteHistory");
+		WriteHistory,"WriteHistory");
 
 	// Initialize hash tables
 
@@ -689,7 +689,7 @@ int ViewServer::ReadTimeChkName(char* Line, const MyString& Name)
 // Scan function for submittor data
 //---------------------------------------------------------------------
 
-void ViewServer::WriteHistory()
+void ViewServer::WriteHistory(Service *)
 {
 	MyString Key;
 	GeneralRecord* GenRec;

@@ -81,7 +81,7 @@ void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-int		run_preen(Service*);
+void	run_preen(Service*);
 void	usage(const char* );
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
@@ -1068,7 +1068,7 @@ NewExecutable(char* file, time_t *tsp)
 	return( cts != *tsp );
 }
 
-int
+void
 run_preen(Service*)
 {
 	int		child_pid;
@@ -1080,7 +1080,7 @@ run_preen(Service*)
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 
 	if( FS_Preen == NULL ) {
-		return 0;
+		return;
 	}
 	preen_base = condor_basename( FS_Preen );
 	arglist.AppendArg(preen_base);
@@ -1098,8 +1098,6 @@ run_preen(Service*)
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
-
-	return child_pid;
 }
 
 
@@ -1171,7 +1169,7 @@ gcbBrokerDownCallback()
 		// DaemonCore is blocked on a select() or CEDAR is blocked on a
 		// network operation. So we register a daemoncore timer to do
 		// the real work.
-	daemonCore->Register_Timer( 0, (TimerHandler)gcb_broker_down_handler,
+	daemonCore->Register_Timer( 0, gcb_broker_down_handler,
 								"gcb_broker_down_handler" );
 }
 
@@ -1190,7 +1188,7 @@ gcbRecoveryFailedCallback()
 		// DaemonCore is blocked on a select() or CEDAR is blocked on a
 		// network operation. So we register a daemoncore timer to do
 		// the real work.
-	daemonCore->Register_Timer( 0, (TimerHandler)gcb_recovery_failed_handler,
+	daemonCore->Register_Timer( 0, gcb_recovery_failed_handler,
 								"gcb_recovery_failed_handler" );
 }
 #endif

@@ -941,7 +941,7 @@ Resource::update( void )
 	}
 }
 
-int
+void
 Resource::do_update( void )
 {
 	int rval;
@@ -967,8 +967,6 @@ Resource::do_update( void )
 	// We _must_ reset update_tid to -1 before we return so
 	// the class knows there is no pending update.
 	update_tid = -1;
-
-	return rval;
 }
 
 void
@@ -2384,19 +2382,19 @@ Resource::evalNextFetchWorkDelay(void)
 }
 
 
-bool
+void
 Resource::tryFetchWork(void)
 {
 		// First, make sure we're configured for fetching at all.
 	if (!getHookKeyword()) {
 			// No hook keyword for ths slot, bail out.
-		return false;
+		return;
 	}
 
 		// Then, make sure we're not currently fetching.
 	if (m_currently_fetching) {
 			// No need to log a message about this, it's not an error.
-		return false;
+		return;
 	}
 
 		// Now, make sure we  haven't fetched too recently.
@@ -2410,7 +2408,7 @@ Resource::tryFetchWork(void)
 				// our timer to go off again when we think we'd be
 				// ready, and bail out.
 			resetFetchWorkTimer(m_next_fetch_work_delay - delta);
-			return false;
+			return;
 		}
 	}
 
@@ -2421,13 +2419,13 @@ Resource::tryFetchWork(void)
 			// fetching delay was already reached, so we should reset
 			// our timer for another full delay.
 		resetFetchWorkTimer();
-		return false;
+		return;
 	}
 
 		// We're ready to invoke the hook. The timer to re-fetch will
 		// be reset once the hook completes.
 	resmgr->m_hook_mgr->invokeHookFetchWork(this);
-	return true;
+	return;
 }
 
 
