@@ -326,11 +326,6 @@ CondorLockImpl::DoPoll( void )
 		// If it succeeded, notify the application
 	if ( 0 == status ) {
 		LockAcquired( LOCK_SRC_POLL );
-		return;
-	} else if ( 1 == status ) {
-		return;
-	} else {
-		return;
 	}
 }
 
