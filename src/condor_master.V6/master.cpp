@@ -1174,7 +1174,7 @@ gcbBrokerDownCallback()
 }
 
 void
-gcb_recovery_failed_handler( Service * )
+gcb_recovery_failed_handler()
 {
 	dprintf(D_ALWAYS, "GCB failed to recover from a failure with the "
 			"Broker. Restarting all daemons\n");
