@@ -823,39 +823,39 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 							handler_descrip, s, TRUE) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 				const char *event_descrip)
 {
-	return( t.NewTimer(deltawhen, event, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 							   Release release, const char *event_descrip)
 {
-	return( t.NewTimer(deltawhen, event, release, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, handler, release, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Event event, const char *event_descrip)
+				TimerHandler handler, const char *event_descrip)
 {
-	return( t.NewTimer(deltawhen, event, event_descrip, period) );
+	return( t.NewTimer(deltawhen, handler, event_descrip, period) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp,
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandlercpp handlercpp,
 				const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0) );
+	return( t.NewTimer(s, deltawhen, handlercpp, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Eventcpp event, const char *event_descrip, Service* s )
+				TimerHandlercpp handler, const char *event_descrip, Service* s )
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
+	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
 }
 
-int DaemonCore::Register_Timer (const Timeslice &timeslice,Eventcpp event,const char * event_descrip,Service* s)
+int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip,Service* s)
 {
-	return t.NewTimer(s, timeslice, event, event_descrip );
+	return t.NewTimer(s, timeslice, handler, event_descrip );
 }
 
 int	DaemonCore::Cancel_Timer( int id )

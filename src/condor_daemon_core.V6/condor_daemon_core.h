@@ -822,7 +822,7 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
-                        Event        event,
+                        TimerHandler handler,
                         const char * event_descrip);
 
 	/** Not_Yet_Documented
@@ -832,7 +832,7 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
-                        Event        event,
+                        TimerHandler handler,
 						Release      release,
                         const char * event_descrip);
     
@@ -845,7 +845,7 @@ class DaemonCore : public Service
     */
     int Register_Timer (unsigned     deltawhen,
                         unsigned     period,
-                        Event        event,
+                        TimerHandler handler,
                         const char * event_descrip);
 
     /** Not_Yet_Documented
@@ -856,7 +856,7 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
 
@@ -870,7 +870,7 @@ class DaemonCore : public Service
     */
     int Register_Timer (unsigned     deltawhen,
                         unsigned     period,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip,
                         Service *    s);
 
@@ -882,7 +882,7 @@ class DaemonCore : public Service
         @return                Timer id or -1 on error
     */
     int Register_Timer (const Timeslice &timeslice,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
 

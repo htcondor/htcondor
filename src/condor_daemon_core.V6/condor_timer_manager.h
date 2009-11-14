@@ -48,10 +48,10 @@ const   int     STAR = -1;
 //@{
 /** Function
 */
-typedef void     (*Event)();
+typedef void     (*TimerHandler)();
 
 /// Service Method
-typedef void     (Service::*Eventcpp)();
+typedef void     (Service::*TimerHandlercpp)();
 
 /** Function, which given a pointer to a void* releases its 
 	memory (C Version).
@@ -63,10 +63,6 @@ typedef void    (*Release)(void*);
 	*/
 typedef void    (Service::*Releasecpp)(void*);
 //@}
-
-// to make the timer handler stuff similar to the rest of Daemon Core...
-#define TimerHandler Event
-#define TimerHandlercpp Eventcpp
 
 // to make the timer release stuff similar to the rest of Daemon Core...
 #define TimerRelease Release
@@ -84,8 +80,8 @@ struct tagTimer {
     /** Not_Yet_Documented */ time_t            when;
     /** Not_Yet_Documented */ unsigned          period;
     /** Not_Yet_Documented */ int               id;
-    /** Not_Yet_Documented */ Event             handler;
-    /** Not_Yet_Documented */ Eventcpp          handlercpp;
+    /** Not_Yet_Documented */ TimerHandler             handler;
+    /** Not_Yet_Documented */ TimerHandlercpp          handlercpp;
     /** Not_Yet_Documented */ class Service*    service; 
     /** Not_Yet_Documented */ struct tagTimer*  next;
     /** Not_Yet_Documented */ char*             event_descrip;
@@ -112,53 +108,53 @@ class TimerManager
 
     /** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
-        @param event          Not_Yet_Documented.
+        @param handler        Not_Yet_Documented.
 		@param release        Not_Yet_Documented.
         @param event_descrip  Not_Yet_Documented.
         @param period         Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer(unsigned     deltawhen,
-                 Event        event,
+                 TimerHandler handler,
                  Release      release,
                  const char * event_descrip, 
                  unsigned     period          =  0);
 
 	/** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
-        @param event          Not_Yet_Documented.
+        @param handler        Not_Yet_Documented.
         @param event_descrip  Not_Yet_Documented.
         @param period         Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer(unsigned     deltawhen,
-                 Event        event,
+                 TimerHandler handler,
                  const char * event_descrip, 
                  unsigned     period          =  0);
 
     /** Not_Yet_Documented.
         @param s              Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
-        @param event          Not_Yet_Documented.
+        @param handler        Not_Yet_Documented.
         @param event_descrip  Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer (Service*     s,
                   unsigned     deltawhen,
-                  Eventcpp     event,
+                  TimerHandlercpp handler,
                   const char * event_descrip,
                   unsigned     period          =  0);
 
     /** Create a timer using a timeslice object to control interval.
         @param s              Service object of which function is a member.
         @param timeslice      Timeslice object specifying interval parameters
-        @param event          Function to call when timer fires.
+        @param handler        Function to call when timer fires.
         @param event_descrip  String describing the function.
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer (Service*     s,
                   const Timeslice &timeslice,
-                  Eventcpp     event,
+                  TimerHandlercpp handler,
                   const char * event_descrip);
 
     /** Not_Yet_Documented.
@@ -194,8 +190,8 @@ class TimerManager
     
     int NewTimer (Service*   s,
                   unsigned   deltawhen,
-                  Event      event,
-                  Eventcpp   eventcpp,
+                  TimerHandler handler,
+                  TimerHandlercpp handlercpp,
 				  Release	 release,
 				  Releasecpp releasecpp,
                   const char *event_descrip,

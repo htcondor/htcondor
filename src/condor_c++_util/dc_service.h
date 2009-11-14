@@ -77,15 +77,11 @@ class Service {
 //@{
 /** Function
 */
-typedef void     (*Event)();
+typedef void     (*TimerHandler)();
 
 /// Service Method.
-typedef void     (Service::*Eventcpp)();
+typedef void     (Service::*TimerHandlercpp)();
 //@}
-
-// to make the timer handler stuff similar to the rest of Daemon Core...
-#define TimerHandler Event
-#define TimerHandlercpp Eventcpp
 
 
 /**
