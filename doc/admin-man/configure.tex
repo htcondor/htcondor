@@ -9603,12 +9603,12 @@ machine that can read from the pool's \Condor{collector} daemon.
 \index{configuration!condor\_shared\_port configuration variables}
  \Condor{shared\_port} is an optional daemon that may be added to the
  \Condor{master} daemon's \MacroNI{DAEMON\_LIST} on platforms that
- support it (currently Linux and Mac OS X).  It is responsible for
- creating a TCP listener port shared by all of the Condor daemons for
- which \Macro{USE\_SHARED\_PORT} is true (except for the
- \Condor{collector}, which always uses its own command port, and the
- \Condor{schedd}, which creates a command port for local use by the
- shadows).
+ support it (currently all unix systems except for HPUX).  It is
+ responsible for creating a TCP listener port shared by all of the
+ Condor daemons for which \Macro{USE\_SHARED\_PORT} is true (except
+ for the \Condor{collector}, which always uses its own command port,
+ and the \Condor{schedd}, which creates a command port for local use
+ by the shadows).
 
 The main purpose of \Condor{shared\_port} is to reduce the
  number of ports that must be opened when condor needs to be

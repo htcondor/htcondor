@@ -29,7 +29,7 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrack #892
-\item Added \Condor{shared\_port} under Linux and Mac OS X.  This
+\item Added \Condor{shared\_port} under unix (except for HPUX).  This
   allows Condor daemons other than \Condor{collector} to share a
   single network port.  This makes opening access to Condor through a
   firewall easier and safer.  It also increases scalability of the
