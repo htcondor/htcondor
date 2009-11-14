@@ -2754,7 +2754,7 @@ DaemonCore::reconfig(void) {
 }
 
 void
-DaemonCore::InitSharedPort()
+DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 {
 	MyString why_not;
 	bool already_open = m_shared_port_endpoint != NULL;
@@ -2773,6 +2773,12 @@ DaemonCore::InitSharedPort()
 				"Turning off shared port endpoint because %s\n",why_not.Value());
 		delete m_shared_port_endpoint;
 		m_shared_port_endpoint = NULL;
+
+			// if we have no non-shared port open, we better open one now
+			// or we will have cut ourselves off from the world
+		if( !in_init_dc_command_socket ) {
+			InitDCCommandSocket(1);
+		}
 	}
 	else if( DebugFlags & D_FULLDEBUG ) {
 		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.Value());
@@ -8340,6 +8346,12 @@ DaemonCore::Inherit( void )
 	char *inheritbuf = NULL;
 	int numInheritedSocks = 0;
 	char *ptmp;
+	static bool already_inherited = false;
+
+	if( already_inherited ) {
+		return;
+	}
+	already_inherited = true;
 
     /* Here we handle inheritance of sockets, file descriptors, and/or
 	   handles from our parent.  This is done via an environment variable
@@ -8513,7 +8525,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 	Inherit();
 
 		// If we are using a shared listener port, set that up.
-	InitSharedPort();
+	InitSharedPort(true);
 
 		// If dc_rsock/dc_ssock are still NULL, we need to create our
 		// own udp and tcp sockets, bind them, etc.
@@ -8584,8 +8596,22 @@ DaemonCore::InitDCCommandSocket( int command_port )
 	if (dc_ssock) {
 		Register_Command_Socket( (Stream*)dc_ssock );
 	}
-	dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
-			 InfoCommandSinfulString() );
+	char const *addr = publicNetworkIpAddr();
+	if( addr ) {
+		dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
+	}
+	else {
+		addr = privateNetworkIpAddr();
+		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", addr );
+	}
+
+	if( dc_rsock && m_shared_port_endpoint ) {
+			// SOAP-enabled daemons may have both a shared port and
+			// a fixed TCP port for receiving SOAP commands
+		dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
+				 dc_rsock->get_sinful() );
+	}
+
 	if (!dc_ssock) {
 		dprintf( D_FULLDEBUG, "DaemonCore: UDP Command socket not created.\n");
 	}
@@ -8613,17 +8639,22 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		// now register any DaemonCore "default" handlers
 
-		// register the command handler to take care of signals
-	daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
-				(CommandHandlercpp)&DaemonCore::HandleSigCommand,
-				"HandleSigCommand()", daemonCore, DAEMON );
+	static int already_registered = false;
+	if( !already_registered ) {
+		already_registered = true;
 
-		// this handler receives keepalive pings from our children, so
-		// we can detect if any of our kids are hung.
-	daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
-				(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-				"HandleChildAliveCommand", daemonCore, DAEMON,
-				D_FULLDEBUG );
+			// register the command handler to take care of signals
+		daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
+			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
+			"HandleSigCommand()", daemonCore, DAEMON );
+
+			// this handler receives keepalive pings from our children, so
+			// we can detect if any of our kids are hung.
+		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
+			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
+			"HandleChildAliveCommand", daemonCore, DAEMON,
+			D_FULLDEBUG );
+	}
 }
 
 

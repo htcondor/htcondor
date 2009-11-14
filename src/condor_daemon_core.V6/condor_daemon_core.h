@@ -1799,7 +1799,7 @@ class DaemonCore : public Service
 
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 
-	void InitSharedPort();
+	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE
