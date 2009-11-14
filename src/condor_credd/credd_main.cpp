@@ -111,8 +111,7 @@ Register() {
   CheckCredentials_tid = daemonCore->Register_Timer( 1, 
 						     CheckCredentials_interval,
                                                      CheckCredentials,
-                                                      "CheckCredentials", 
-						     NULL );
+                                                      "CheckCredentials" );
 
   myproxyGetDelegationReaperId = daemonCore->Register_Reaper(
 					   "GetDelegationReaper",

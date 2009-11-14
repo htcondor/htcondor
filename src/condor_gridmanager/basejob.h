@@ -67,11 +67,11 @@ class BaseJob : public Service
 
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad );
 
-	static void EvalAllPeriodicJobExprs(Service *ignore);
+	static void EvalAllPeriodicJobExprs();
 	int EvalPeriodicJobExpr();
 	int EvalOnExitJobExpr();
 
-	static void CheckAllRemoteStatus( Service * );
+	static void CheckAllRemoteStatus();
 	static int m_checkRemoteStatusTid;
 	void CheckRemoteStatus();
 

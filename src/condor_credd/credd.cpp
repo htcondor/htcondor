@@ -606,7 +606,7 @@ LoadCredentialList () {
 }
 
 void
-CheckCredentials (Service *) {
+CheckCredentials () {
   CredentialWrapper * pCred;
   credentials.Rewind();  
   dprintf (D_FULLDEBUG, "In CheckCredentials()\n");

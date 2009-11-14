@@ -27,7 +27,6 @@
 #include "write_user_log.h"
 #include "dap_constants.h"
 #include "sock.h"
-#include "dc_service.h"
 
 // Timers
 
@@ -56,8 +55,8 @@ int terminate(terminate_t);
 int read_config_file(void);
 void call_main(Service *);
 void startup_check_for_requests_in_process(void);
-void regular_check_for_requests_in_process(Service *);
-void regular_check_for_rescheduled_requests(Service *);
+void regular_check_for_requests_in_process();
+void regular_check_for_rescheduled_requests();
 
 int handle_stork_submit(Service *, int command, Stream *s);
 int handle_stork_remove(Service *, int command, Stream *s);

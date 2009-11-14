@@ -1383,7 +1383,7 @@ void CollectorDaemon::Shutdown()
 	return;
 }
 
-void CollectorDaemon::sendCollectorAd(Service *)
+void CollectorDaemon::sendCollectorAd()
 {
     // compute submitted jobs information
     submittorRunningJobs = 0;

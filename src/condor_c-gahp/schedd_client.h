@@ -30,8 +30,6 @@
 #include "dc_schedd.h"
 #include "gahp_common.h"
 
-#include "dc_service.h"
-
 //#include "basejob.h"
 
 // Special value for a daemon-core timer id which indicates that there
@@ -72,7 +70,7 @@ int get_class_ad (const char *, ClassAd **);
 int enqueue_command (SchedDRequest *);
 char * escape_string (const char *);
 
-void doContactSchedd(Service *);
+void doContactSchedd();
 int request_pipe_handler(Service*, int);
 
 int handle_gahp_command(char ** argv, int argc);

@@ -247,8 +247,7 @@ main_init( int argc, char ** const argv )
 		daemonCore->Register_Timer (1,
 									1,
 									flush_pending_requests,
-									"flush_pending_requests",
-									NULL);
+									"flush_pending_requests");
 									
 									  
 
@@ -688,7 +687,7 @@ flush_request (int worker_id, const char * request) {
 }
 
 
-void flush_pending_requests(Service *) {
+void flush_pending_requests() {
 	for (int i=0; i<NUMBER_WORKERS; i++) {
 		workers[i].request_buffer.Write();
 

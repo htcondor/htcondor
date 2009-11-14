@@ -389,7 +389,7 @@ BOINC_BackfillMgr::reaper( int pid, int status )
 	}
 
 	if( resmgr->isShuttingDown() ) {
-		startd_check_free(NULL);
+		startd_check_free();
 	}
 
 	if( m_delete_boinc_mgr ) {

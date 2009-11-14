@@ -112,7 +112,7 @@ request_pipe_handler(Service*, int) {
 
 
 void
-doContactSchedd(Service *)
+doContactSchedd()
 {
 	if (command_queue.IsEmpty()) {
 		daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval ); // Come back in a min

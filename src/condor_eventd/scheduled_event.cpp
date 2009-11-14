@@ -30,8 +30,6 @@
 
 #include "scheduled_event.h"
 
-#include "dc_service.h"
-
 ScheduledEvent::ScheduledEvent(const char name[], const char record[], int &i)
 	: id(NULL), daymask(0), timeofday(-1), active(false), DeactivateTid(-1)
 {
@@ -199,7 +197,7 @@ int ScheduledShutdownEvent::SimulateShutdowns = 0;
 
 static int CleanupShutdownModeConfig(const char startd_machine[],
 									 const char startd_addr[]);
-static void CleanupShutdownModeConfigs(Service *);
+static void CleanupShutdownModeConfigs();
 static int CleanupTid = -1;
 static int StartdValidWindow = 600;
 static int RescheduleInterval = 60;

@@ -56,14 +56,14 @@ void BaseJob::BaseJobReconfig()
 	tmp_int = param_integer( "PERIODIC_EXPR_INTERVAL", 300 );
 	if ( tmp_int != 0 ) {
 		periodicPolicyEvalTid = daemonCore->Register_Timer( tmp_int, tmp_int,
-							(TimerHandler)&BaseJob::EvalAllPeriodicJobExprs,
-							"EvalAllPeriodicJobExprs", (Service*)NULL );
+							BaseJob::EvalAllPeriodicJobExprs,
+							"EvalAllPeriodicJobExprs" );
 	}
 
 	if ( m_checkRemoteStatusTid == TIMER_UNSET ) {
 		m_checkRemoteStatusTid = daemonCore->Register_Timer( 5, 60,
-							(TimerHandler)&BaseJob::CheckAllRemoteStatus,
-							"BaseJob::CheckAllRemoteStatus", (Service*)NULL );
+							BaseJob::CheckAllRemoteStatus,
+							"BaseJob::CheckAllRemoteStatus" );
 	}
 }
 
@@ -713,7 +713,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 
 }
 
-void BaseJob::EvalAllPeriodicJobExprs(Service *)
+void BaseJob::EvalAllPeriodicJobExprs()
 {
 	BaseJob *curr_job;
 
@@ -836,7 +836,7 @@ int BaseJob::EvalOnExitJobExpr()
 	return 0;
 }
 
-void BaseJob::CheckAllRemoteStatus( Service * )
+void BaseJob::CheckAllRemoteStatus()
 {
 	BaseJob *curr_job;
 

@@ -379,8 +379,8 @@ bool GridftpServer::ScanSchedd()
 
 	if ( m_updateLeasesTid == TIMER_UNSET ) {
 		m_updateLeasesTid = daemonCore->Register_Timer( 0,
-							(TimerHandler)&GridftpServer::UpdateLeases,
-							"GridftpServer::UpdateLeases", NULL );
+							GridftpServer::UpdateLeases,
+							"GridftpServer::UpdateLeases" );
 	}
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );

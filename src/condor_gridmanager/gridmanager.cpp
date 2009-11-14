@@ -50,8 +50,6 @@
 #  include "creamjob.h"
 #endif
 
-#include "dc_service.h"
-
 #define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
@@ -117,12 +115,12 @@ int scheddFailureCount = 0;
 int maxScheddFailures = 10;	// Years of careful research...
 
 void RequestContactSchedd();
-void doContactSchedd(Service *);
+void doContactSchedd();
 
 // handlers
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
-void CHECK_LEASES_signalHandler(Service *);
+void CHECK_LEASES_signalHandler();
 
 
 static bool jobExternallyManaged(ClassAd * ad)
@@ -279,7 +277,7 @@ RequestContactSchedd()
 		}
 		contactScheddTid = daemonCore->Register_Timer( delay,
 												doContactSchedd,
-												"doContactSchedd", NULL );
+												"doContactSchedd" );
 	}
 }
 
@@ -422,7 +420,7 @@ Register()
 								 "CHECK_LEASES_signalHandler", NULL );
 */
 	daemonCore->Register_Timer( 60, 60, CHECK_LEASES_signalHandler,
-								"CHECK_LEASES_signalHandler", NULL );
+								"CHECK_LEASES_signalHandler" );
 
 	Reconfig();
 }
@@ -538,7 +536,7 @@ initJobExprs()
 }
 
 void
-CHECK_LEASES_signalHandler(Service *)
+CHECK_LEASES_signalHandler()
 {
 	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
 
@@ -549,7 +547,7 @@ CHECK_LEASES_signalHandler(Service *)
 }
 
 void
-doContactSchedd(Service *)
+doContactSchedd()
 {
 	int rc;
 	Qmgr_connection *schedd;

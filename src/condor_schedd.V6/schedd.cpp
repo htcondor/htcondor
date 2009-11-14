@@ -8303,7 +8303,7 @@ Scheduler::RecomputeAliveInterval(int cluster, int proc)
 
 
 void
-CkptWallClock(Service *)
+CkptWallClock()
 {
 	int first_time = 1;
 	int current_time = (int)time(0); // bad cast, but ClassAds only know ints
@@ -11058,7 +11058,7 @@ Scheduler::schedd_exit()
 
 		// write a clean job queue on graceful shutdown so we can
 		// quickly recover on restart
-	CleanJobQueue(NULL);
+	CleanJobQueue();
 
 		// Deallocate the memory in the job queue so we don't think
 		// we're leaking anything. 

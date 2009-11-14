@@ -124,7 +124,7 @@ static bool doAuthInit = true;
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
 void
-check_parent(Service *)
+check_parent( )
 {
 	if ( daemonCore->Is_Pid_Alive( daemonCore->getppid() ) == FALSE ) {
 		// our parent is gone!
@@ -138,7 +138,7 @@ check_parent(Service *)
 
 // This function clears expired sessions from the cache
 void
-check_session_cache(Service *)
+check_session_cache( )
 {
 	daemonCore->getSecMan()->invalidateExpiredCache();
 }
@@ -160,7 +160,7 @@ bool global_dc_get_cookie(int &len, unsigned char* &data) {
 }
 
 void
-handle_cookie_refresh(Service *)
+handle_cookie_refresh( )
 {
 	unsigned char randomjunk[256];
 	char symbols[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
@@ -524,7 +524,7 @@ handle_log_append( char* append_str )
 
 
 void
-dc_touch_log_file( Service* )
+dc_touch_log_file( )
 {
 	dprintf_touch_log();
 
@@ -533,7 +533,7 @@ dc_touch_log_file( Service* )
 }
 
 void
-dc_touch_lock_files(Service *)
+dc_touch_lock_files( )
 {
 	priv_state p;
 
@@ -1441,7 +1441,7 @@ handle_dc_sigquit( Service*, int )
 }
 
 void
-handle_gcb_recovery_failed( Service * /*ignore*/ )
+handle_gcb_recovery_failed( )
 {
 	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
 			 "Broker. Performing fast shutdown.\n" );

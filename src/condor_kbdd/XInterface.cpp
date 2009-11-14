@@ -40,9 +40,7 @@
 
 #include <setjmp.h>
 
-#include "dc_service.h"
-
-extern void PollActivity(Service *);
+extern void PollActivity();
 
 bool		g_connected;
 jmp_buf	 jmp;

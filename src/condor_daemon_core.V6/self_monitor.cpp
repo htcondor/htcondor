@@ -22,9 +22,8 @@
 #include "self_monitor.h"
 #include "condor_daemon_core.h"
 #include "../condor_procapi/procapi.h"
-#include "dc_service.h"
 
-static void self_monitor(Service *)
+static void self_monitor()
 {
     daemonCore->monitor_data.CollectData();
 }

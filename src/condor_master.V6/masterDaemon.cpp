@@ -59,7 +59,7 @@ extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern void		run_preen(Service*);
+extern void		run_preen();
 
 extern FILESQL *FILEObj;
 extern int condor_main_argc;

@@ -81,7 +81,7 @@ void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-void	run_preen(Service*);
+void	run_preen();
 void	usage(const char* );
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
@@ -1069,7 +1069,7 @@ NewExecutable(char* file, time_t *tsp)
 }
 
 void
-run_preen(Service*)
+run_preen()
 {
 	int		child_pid;
 	char *args=NULL;

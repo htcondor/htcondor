@@ -689,7 +689,7 @@ int ViewServer::ReadTimeChkName(char* Line, const MyString& Name)
 // Scan function for submittor data
 //---------------------------------------------------------------------
 
-void ViewServer::WriteHistory(Service *)
+void ViewServer::WriteHistory()
 {
 	MyString Key;
 	GeneralRecord* GenRec;

@@ -125,7 +125,7 @@ static int TotalJobsCount = 0;
 
 static int flush_job_queue_log_timer_id = -1;
 static int flush_job_queue_log_delay = 0;
-static void HandleFlushJobQueueLogTimer(Service *);
+static void HandleFlushJobQueueLogTimer();
 static void ScheduleJobQueueLogFlush();
 
 static bool qmgmt_all_users_trusted = false;
@@ -909,12 +909,12 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	}
 		// Some of the conversions done in ConvertOldJobAdAttrs need to be
 		// persisted to disk. Particularly, GlobusContactString/RemoteJobId.
-	CleanJobQueue(NULL);
+	CleanJobQueue();
 }
 
 
 void
-CleanJobQueue(Service *)
+CleanJobQueue()
 {
 	if (JobQueueDirty) {
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
@@ -939,7 +939,7 @@ DestroyJobQueue( void )
 
 	if (JobQueueDirty) {
 			// We can't destroy it until it's clean.
-		CleanJobQueue(NULL);
+		CleanJobQueue();
 	}
 	ASSERT( JobQueueDirty == false );
 	delete JobQueue;
@@ -2142,7 +2142,7 @@ ScheduleJobQueueLogFlush()
 }
 
 void
-HandleFlushJobQueueLogTimer(Service *)
+HandleFlushJobQueueLogTimer()
 {
 	flush_job_queue_log_timer_id = -1;
 	JobQueue->FlushLog();

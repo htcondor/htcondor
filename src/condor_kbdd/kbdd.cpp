@@ -44,8 +44,6 @@
 XInterface *xinter;
 #endif
 
-#include "dc_service.h"
-
 DECL_SUBSYSTEM( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 
 bool
@@ -78,7 +76,7 @@ update_startd()
 
 
 void 
-PollActivity(Service *)
+PollActivity()
 {
 #ifdef WIN32
 	LASTINPUTINFO lii;

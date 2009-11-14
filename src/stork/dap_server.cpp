@@ -39,7 +39,6 @@
 #include "dap_error.h"
 #include "dap_scheduler.h"
 #include "stork-lm.h"
-#include "dc_service.h"
 
 #ifndef WANT_CLASSAD_NAMESPACE
 #define WANT_CLASSAD_NAMESPACE
@@ -93,7 +92,7 @@ typedef int module_stdio_t[3];
 #define MODULE_STDERR_INDEX		2
 
 // Prototypes
-void clean_job_queue(Service *);
+void clean_job_queue();
 void remove_job(const char *dap_id);
 
 
@@ -1295,7 +1294,7 @@ low_water_timer(Service *)
  * not completed yet
  * ==========================================================================*/
 void
-regular_check_for_requests_in_process(Service *)
+regular_check_for_requests_in_process()
 {
 	classad::LocalCollectionQuery query;
 	classad::ClassAd       *job_ad;
@@ -1565,7 +1564,7 @@ startup_check_for_requests_in_process(void)
  * check for requests which are rescheduled for execution
  * ==========================================================================*/
 void
-regular_check_for_rescheduled_requests(Service *)
+regular_check_for_rescheduled_requests()
 {
 	classad::LocalCollectionQuery query;
 	classad::ClassAd       *job_ad;
@@ -1731,7 +1730,7 @@ initializations(void)
  * Clean (compress) the job queue.
  * ==========================================================================*/
 void
-clean_job_queue(Service *)
+clean_job_queue()
 {
 	dprintf(D_ALWAYS, "Compressing job log %s\n", logfilename);
 	dapcollection->TruncateLog();
@@ -1823,7 +1822,7 @@ terminate(terminate_t terminate_type)
 	if (terminate_type != TERMINATE_FAST) {
 		// Compress the job queue upon exit.  This will enable a faster startup
 		// using the same job queue.
-		clean_job_queue(NULL);
+		clean_job_queue();
 	}
 
 	if ( dapcollection ) {
@@ -1839,7 +1838,7 @@ terminate(terminate_t terminate_type)
  * main body of the condor_srb_reqex
  * ==========================================================================*/
 void
-call_main(Service *)
+call_main()
 {
 
 	classad::ClassAd       *job_ad;

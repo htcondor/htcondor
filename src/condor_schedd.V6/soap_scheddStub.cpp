@@ -178,7 +178,7 @@ extendTransaction(const struct condor__Transaction *transaction)
 }
 
 static void
-transtimeout(Service *)
+transtimeout()
 {
 	struct condor__abortTransactionResponse result;
 
@@ -484,7 +484,7 @@ condor__beginTransaction(struct soap *soap,
 
 	trans_timer_id =
 		daemonCore->Register_Timer(duration,
-								   (TimerHandler)&transtimeout,
+								   transtimeout,
 								   (TimerRelease)&release_data,
 								   "condor_transtimeout");
 	intPtr = (void*) malloc(sizeof(struct condor__Transaction));	

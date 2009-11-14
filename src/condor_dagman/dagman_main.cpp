@@ -436,7 +436,7 @@ void ExitSuccess() {
 	DC_Exit( EXIT_OKAY );
 }
 
-void condor_event_timer(Service *);
+void condor_event_timer();
 
 /****** FOR TESTING *******
 int main_testing_stub( Service *, int ) {
@@ -996,7 +996,7 @@ print_status() {
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
 }
 
-void condor_event_timer (Service *) {
+void condor_event_timer () {
 
 	ASSERT( dagman.dag != NULL );
 

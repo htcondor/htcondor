@@ -136,7 +136,7 @@ GridUniverseLogic::JobAdded(const char* owner, const char* domain,
 	// start timer to signal gridmanager if we haven't already
 	if ( node->add_timer_id == -1 ) {  // == -1 means no timer set
 		node->add_timer_id = daemonCore->Register_Timer(job_added_delay,
-			(TimerHandler) &GridUniverseLogic::SendAddSignal,
+			GridUniverseLogic::SendAddSignal,
 			"GridUniverseLogic::SendAddSignal");
 		daemonCore->Register_DataPtr(node);
 	}
@@ -162,7 +162,7 @@ GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
 	// start timer to signal gridmanager if we haven't already
 	if ( node->add_timer_id == -1 ) {  // == -1 means no timer set
 		node->remove_timer_id = daemonCore->Register_Timer(job_removed_delay,
-			(TimerHandler) &GridUniverseLogic::SendRemoveSignal,
+			GridUniverseLogic::SendRemoveSignal,
 			"GridUniverseLogic::SendRemoveSignal");
 		daemonCore->Register_DataPtr(node);
 	}
@@ -171,7 +171,7 @@ GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
 }
 
 void
-GridUniverseLogic::SendAddSignal(Service *)
+GridUniverseLogic::SendAddSignal()
 {
 	// This method is called via a DC Timer set in JobAdded method
 
@@ -189,7 +189,7 @@ GridUniverseLogic::SendAddSignal(Service *)
 }
 
 void
-GridUniverseLogic::SendRemoveSignal(Service *)
+GridUniverseLogic::SendRemoveSignal()
 {
 	// This method is called via a DC Timer set in JobRemoved method
 
@@ -603,7 +603,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	// start timer to signal gridmanager if we haven't already
 	if ( gman_node->add_timer_id == -1 ) {  // == -1 means no timer set
 		gman_node->add_timer_id = daemonCore->Register_Timer(job_added_delay,
-			(TimerHandler) &GridUniverseLogic::SendAddSignal,
+			GridUniverseLogic::SendAddSignal,
 			"GridUniverseLogic::SendAddSignal");
 		daemonCore->Register_DataPtr(gman_node);
 	}

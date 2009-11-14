@@ -288,8 +288,7 @@ int main_init(int argc, char *argv[])
 
 		vmgahp_stderr_tid = daemonCore->Register_Timer(2, 2,
 				write_stderr_to_pipe,
-				"write_stderr_to_pipe",
-				NULL);
+				"write_stderr_to_pipe");
 		if( vmgahp_stderr_tid == -1 ) {
 			vmprintf(D_ALWAYS,"Can't register stderr timer");
 			DC_Exit(1);

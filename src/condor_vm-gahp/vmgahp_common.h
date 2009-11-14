@@ -25,7 +25,6 @@
 #include "gahp_common.h"
 #include "vm_univ_utils.h"
 #include "vmgahp.h"
-#include "dc_service.h"
 
 #define CONDOR_VMGAHP_VERSION	"0.0.1"
 
@@ -58,7 +57,7 @@ bool validate_vmgahp_result_string(const char *result_string);
 void vmprintf( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 void write_to_daemoncore_pipe(int pipefd, const char* str, int len);
 void write_to_daemoncore_pipe(const char* fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
-void write_stderr_to_pipe(Service *);
+void write_stderr_to_pipe();
 int systemCommand( ArgList &args, bool is_root, StringList *cmd_out = NULL, StringList * cmd_in = NULL,
 		   StringList * cmd_err = NULL, bool merge_stderr_with_stdout = true);
 MyString makeErrorMessage(const char* err_string);

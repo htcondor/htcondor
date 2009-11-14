@@ -48,8 +48,6 @@
 #include "globusjob.h"
 #include "condor_config.h"
 
-#include "dc_service.h"
-
 // GridManager job states
 #define GM_INIT					0
 #define GM_REGISTER				1
@@ -196,7 +194,7 @@ globusJobId( const char *contact )
 }
 
 void
-orphanCallbackHandler(Service *)
+orphanCallbackHandler()
 {
 	int rc;
 	GlobusJob *this_job;
@@ -284,7 +282,7 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 	new_orphan->errorcode = errorcode;
 	OrphanCallbackList.Append( new_orphan );
 	daemonCore->Register_Timer( 1, orphanCallbackHandler,
-								"orphanCallbackHandler", NULL );
+								"orphanCallbackHandler" );
 }
 
 /////////////////////////interface functions to gridmanager.C

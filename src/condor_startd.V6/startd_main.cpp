@@ -658,7 +658,7 @@ main_shutdown_fast()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free(NULL);
+	startd_check_free();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -689,7 +689,7 @@ main_shutdown_graceful()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free(NULL);
+	startd_check_free();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -737,7 +737,7 @@ int
 shutdown_reaper(Service *, int pid, int status)
 {
 	reaper(NULL,pid,status);
-	startd_check_free(NULL);
+	startd_check_free();
 	return TRUE;
 }
 
@@ -750,7 +750,7 @@ do_cleanup(int,int,char*)
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
 			// If the machine is already free, we can exit right away.
-		startd_check_free(NULL);		
+		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
 		resmgr->walk( &Resource::void_kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
@@ -761,7 +761,7 @@ do_cleanup(int,int,char*)
 
 
 void
-startd_check_free(Service *)
+startd_check_free()
 {	
 	if ( Cronmgr && ( ! Cronmgr->ShutdownOk() ) ) {
 		return;

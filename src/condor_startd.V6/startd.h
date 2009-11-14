@@ -45,7 +45,6 @@
 #include "enum_utils.h"
 #include "condor_version.h"
 #include "classad_command_util.h"
-#include "dc_service.h"
 
 
 #if !defined(WIN32)
@@ -140,7 +139,7 @@ extern StartdCronMgr* Cronmgr;
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
-// Check to see ifn we're all free
-void	startd_check_free(Service *);
+// Check to see if we're all free
+void	startd_check_free();
 
 #endif /* _CONDOR_STARTD_H */
