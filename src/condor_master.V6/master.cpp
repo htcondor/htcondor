@@ -1110,7 +1110,7 @@ RestartMaster()
 
 #if HAVE_EXT_GCB
 void
-gcb_broker_down_handler( Service * )
+gcb_broker_down_handler()
 {
 	int num_slots;
 	const char *our_broker = GetEnv( "GCB_INAGENT" );
