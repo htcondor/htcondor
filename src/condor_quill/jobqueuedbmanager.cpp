@@ -2552,19 +2552,19 @@ JobQueueDBManager::registerTimers()
 	pollingTimeId = daemonCore->Register_Timer(
 								  0, 
 								  pollingPeriod,
-								  (Eventcpp)&JobQueueDBManager::pollingTime, 
+								  (TimerHandlercpp)&JobQueueDBManager::pollingTime, 
 								  "JobQueueDBManager::pollingTime", this);
 		//historyCleaningInterval is specified in units of hours so
 		//we multiply it by 3600 to get the # of seconds 
 	purgeHistoryTimeId = daemonCore->Register_Timer(
 						   5, 
 						   historyCleaningInterval *3600,
-						   (Eventcpp)&JobQueueDBManager::purgeOldHistoryRows, 
+						   (TimerHandlercpp)&JobQueueDBManager::purgeOldHistoryRows, 
 						   "JobQueueDBManager::purgeOldHistoryRows", 
 						   this);
 	reindexTimeId = daemonCore->Register_Timer(
 						   10,
-								  (Eventcpp)&JobQueueDBManager::reindexTables, 
+								  (TimerHandlercpp)&JobQueueDBManager::reindexTables, 
 								  "JobQueueDBManager::reindexTables", this);
 }
 

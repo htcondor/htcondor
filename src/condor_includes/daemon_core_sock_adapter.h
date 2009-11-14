@@ -40,8 +40,8 @@ class DaemonCoreSockAdapterClass {
 	typedef void (DaemonCore::*HandleReqAsync_fnptr)(Stream *stream);
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
-	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,const char * event_descrip,Service* s);
-	typedef int (DaemonCore::*Register_PeriodicTimer_fnptr)(unsigned deltawhen,unsigned period,Eventcpp event,const char * event_descrip,Service* s);
+	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,TimerHandlercpp handler,const char * event_descrip,Service* s);
+	typedef int (DaemonCore::*Register_PeriodicTimer_fnptr)(unsigned deltawhen,unsigned period,TimerHandlercpp handler,const char * event_descrip,Service* s);
 	typedef int (DaemonCore::*Cancel_Timer_fnptr)(int id);
 	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg,int num_fds);
 	typedef void (DaemonCore::*incrementPendingSockets_fnptr)();
@@ -166,20 +166,20 @@ class DaemonCoreSockAdapterClass {
 		return (m_daemonCore->*m_GetDataPtr_fnptr)();
 	}
     int Register_Timer (unsigned     deltawhen,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip, 
                         Service*     s = NULL)
 	{
 		ASSERT(m_daemonCore);
 		return (m_daemonCore->*m_Register_Timer_fnptr)(
 			deltawhen,
-			event,
+			handler,
 			event_descrip,
 			s);
 	}
     int Register_Timer (unsigned     deltawhen,
 						unsigned     period,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip, 
                         Service*     s = NULL)
 	{
@@ -187,7 +187,7 @@ class DaemonCoreSockAdapterClass {
 		return (m_daemonCore->*m_Register_PeriodicTimer_fnptr)(
 			deltawhen,
 			period,
-			event,
+			handler,
 			event_descrip,
 			s);
 	}

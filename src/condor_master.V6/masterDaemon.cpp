@@ -1761,7 +1761,7 @@ Daemons::ScheduleRetryStartAllDaemons()
 	if( m_retry_start_all_daemons_tid == -1 ) {
 		m_retry_start_all_daemons_tid = daemonCore->Register_Timer(
 			1,
-			(Eventcpp)&Daemons::RetryStartAllDaemons,
+			(TimerHandlercpp)&Daemons::RetryStartAllDaemons,
 			"Daemons::RetryStartAllDaemons",
 			this);
 		ASSERT( m_retry_start_all_daemons_tid != -1 );

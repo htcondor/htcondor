@@ -231,7 +231,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 	
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&BaseJob::SetEvaluateState, this );
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -460,7 +460,7 @@ CreamJob::~CreamJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( gahp != NULL ) {
 		delete gahp;

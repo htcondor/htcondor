@@ -316,7 +316,7 @@ void Hadoop::stop(bool fast) {
                 if (!fast) {
                         dprintf(D_ALWAYS, "Created timer on daemon kill signal\n");
                         m_timer = daemonCore->Register_Timer(5, 
-                                     (Eventcpp) &Hadoop::killTimer, 
+                                     (TimerHandlercpp) &Hadoop::killTimer, 
                                      "hadoop kill timer", this);
                 }
         }

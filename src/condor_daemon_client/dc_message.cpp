@@ -576,7 +576,7 @@ DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMs
 	incRefCount();
 	qc->timer_handle = daemonCoreSockAdapter.Register_Timer(
 		delay,
-		(Eventcpp)&DCMessenger::startCommandAfterDelay_alarm,
+		(TimerHandlercpp)&DCMessenger::startCommandAfterDelay_alarm,
 		"DCMessenger::startCommandAfterDelay",
 		this );
 	ASSERT(qc->timer_handle != -1);

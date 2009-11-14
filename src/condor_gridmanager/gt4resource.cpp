@@ -125,7 +125,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 		delegatedProxies.DeleteCurrent();
 		free( next_deleg->deleg_uri );
 		ReleaseProxy( next_deleg->proxy,
-					  (Eventcpp)&GT4Resource::ProxyCallback, this );
+					  (TimerHandlercpp)&GT4Resource::ProxyCallback, this );
 		delete next_deleg;
 	}
 	if ( delegationServiceUri != NULL ) {
@@ -277,7 +277,7 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 					}
 					free( next_deleg->deleg_uri );
 					ReleaseProxy( next_deleg->proxy,
-								  (Eventcpp)&GT4Resource::ProxyCallback, this );
+								  (TimerHandlercpp)&GT4Resource::ProxyCallback, this );
 					delete next_deleg;
 				}
 			}
@@ -311,7 +311,7 @@ dprintf(D_FULLDEBUG,"    creating new GT4ProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-	AcquireProxy( job_proxy, (Eventcpp)&GT4Resource::ProxyCallback, this );
+	AcquireProxy( job_proxy, (TimerHandlercpp)&GT4Resource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds
@@ -342,7 +342,7 @@ dprintf(D_FULLDEBUG,"    creating new GT4ProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-	AcquireProxy( job_proxy, (Eventcpp)&GT4Resource::ProxyCallback, this );
+	AcquireProxy( job_proxy, (TimerHandlercpp)&GT4Resource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds

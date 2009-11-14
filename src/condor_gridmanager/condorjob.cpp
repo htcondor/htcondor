@@ -196,7 +196,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&BaseJob::SetEvaluateState, this );
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
 	}
@@ -310,7 +310,7 @@ CondorJob::CondorJob( ClassAd *classad )
 CondorJob::~CondorJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( submitterId != NULL ) {
 		free( submitterId );

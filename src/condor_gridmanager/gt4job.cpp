@@ -304,7 +304,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&GT4Job::ProxyCallback, this );
+							 (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -505,7 +505,7 @@ GT4Job::~GT4Job()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&GT4Job::ProxyCallback, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	}
 	if ( gramCallbackContact ) {
 		free( gramCallbackContact );

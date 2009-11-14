@@ -896,7 +896,7 @@ class DaemonCore : public Service
         @param id The timer's ID
         @param when   Not_Yet_Documented
         @param period Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return 0 if successful, -1 on failure (timer not found)
     */
     int Reset_Timer ( int id, unsigned when, unsigned period = 0 );
 	//@}

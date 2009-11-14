@@ -696,7 +696,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&GlobusJob::ProxyCallback, this );
+							 (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -906,7 +906,7 @@ GlobusJob::~GlobusJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&GlobusJob::ProxyCallback, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	}
 	if ( gassServerUrl ) {
 		free( gassServerUrl );

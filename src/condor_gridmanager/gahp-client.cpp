@@ -190,7 +190,7 @@ GahpServer::~GahpServer()
 		daemonCore->Cancel_Timer( poll_tid );
 	}
 	if ( master_proxy != NULL ) {
-		ReleaseProxy( master_proxy->proxy, (Eventcpp)&GahpServer::ProxyCallback,
+		ReleaseProxy( master_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
 					  this );
 		delete master_proxy;
 	}
@@ -203,7 +203,7 @@ GahpServer::~GahpServer()
 		ProxiesByFilename->startIterations();
 		while ( ProxiesByFilename->iterate( gahp_proxy ) != 0 ) {
 			ReleaseProxy( gahp_proxy->proxy,
-						  (Eventcpp)&GahpServer::ProxyCallback, this );
+						  (TimerHandlercpp)&GahpServer::ProxyCallback, this );
 			delete gahp_proxy;
 		}
 
@@ -843,7 +843,7 @@ GahpServer::Initialize( Proxy *proxy )
 
 	master_proxy = new GahpProxyInfo;
 	master_proxy->proxy = proxy->subject->master_proxy;
-	AcquireProxy( master_proxy->proxy, (Eventcpp)&GahpServer::ProxyCallback,
+	AcquireProxy( master_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
 				  this );
 	master_proxy->cached_expiration = 0;
 
@@ -1119,7 +1119,7 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		gahp_proxy = new GahpProxyInfo;
 		ASSERT(gahp_proxy);
 		gahp_proxy->proxy = AcquireProxy( proxy,
-										  (Eventcpp)&GahpServer::ProxyCallback,
+										  (TimerHandlercpp)&GahpServer::ProxyCallback,
 										  this );
 		gahp_proxy->cached_expiration = 0;
 		gahp_proxy->num_references = 1;
@@ -1167,7 +1167,7 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 	if ( gahp_proxy->num_references == 0 ) {
 		ProxiesByFilename->remove( HashKey( gahp_proxy->proxy->proxy_filename ) );
 		uncacheProxy( gahp_proxy );
-		ReleaseProxy( gahp_proxy->proxy, (Eventcpp)&GahpServer::ProxyCallback,
+		ReleaseProxy( gahp_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
 					  this );
 		delete gahp_proxy;
 	}

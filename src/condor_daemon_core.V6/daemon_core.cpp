@@ -2564,7 +2564,7 @@ DaemonCore::reconfig(void) {
 		if( m_refresh_dns_timer < 0 ) {
 			m_refresh_dns_timer =
 				Register_Timer( dns_interval, dns_interval,
-								(Eventcpp)&DaemonCore::refreshDNS,
+								(TimerHandlercpp)&DaemonCore::refreshDNS,
 								"DaemonCore::refreshDNS()", daemonCore );
 		} else {
 			Reset_Timer( m_refresh_dns_timer, dns_interval, dns_interval );
@@ -3779,7 +3779,7 @@ DaemonCore::RegisterSocketForHandleReq(Stream *stream)
 		// some love.
 	int tid = daemonCore->Register_Timer(
 		200,		
-		(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
+		(TimerHandlercpp) &DaemonCore::HandleReqSocketTimerHandler,
 		"DaemonCore::HandleReqSocketTimerHandler",
 		this);
 		// stash the socket with the timer 
@@ -8053,7 +8053,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 		// register a timer that will call the reaper.
 	m_tid = daemonCore->Register_Timer(
 		0,
-		(Eventcpp)&FakeCreateThreadReaperCaller::CallReaper,
+		(TimerHandlercpp)&FakeCreateThreadReaperCaller::CallReaper,
 		"FakeCreateThreadReaperCaller::CallReaper()",
 		this );
 
@@ -9257,7 +9257,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	} else {
 		pidentry->hung_tid =
 			Register_Timer(timeout_secs,
-							(Eventcpp) &DaemonCore::HungChildTimeout,
+							(TimerHandlercpp) &DaemonCore::HungChildTimeout,
 							"DaemonCore::HungChildTimeout", this);
 		ASSERT( pidentry->hung_tid != -1 );
 

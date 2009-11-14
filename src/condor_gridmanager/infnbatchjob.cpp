@@ -205,7 +205,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&BaseJob::SetEvaluateState, this );
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
 	}
@@ -225,7 +225,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 INFNBatchJob::~INFNBatchJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( batchType != NULL ) {
 		free( batchType );
