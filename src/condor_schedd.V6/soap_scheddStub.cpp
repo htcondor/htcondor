@@ -485,7 +485,7 @@ condor__beginTransaction(struct soap *soap,
 	trans_timer_id =
 		daemonCore->Register_Timer(duration,
 								   transtimeout,
-								   (TimerRelease)&release_data,
+								   release_data,
 								   "condor_transtimeout");
 	intPtr = (void*) malloc(sizeof(struct condor__Transaction));	
 	memcpy(intPtr,transaction,sizeof(condor__Transaction));
