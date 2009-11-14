@@ -72,17 +72,6 @@ class Service {
 };
 
 //-----------------------------------------------------------------------------
-/** @name Typedefs for Service
- */
-//@{
-/** Function
-*/
-typedef void     (*TimerHandler)();
-
-/// Service Method.
-typedef void     (Service::*TimerHandlercpp)();
-//@}
-
 
 /**
    This class is an abstract base class used by some generic data
