@@ -2047,9 +2047,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   effect.  The default is false.  If this is set to true,
   \MacroNI{SHARED\_PORT} should be added to \MacroNI{DAEMON\_LIST}.
   The \Condor{collector} daemon ignores this setting, because it must
-  always have its own network port.  All other daemons that are configured
-  to use a fixed port (e.g. via \verb|<SUBSYS>\_ARGS = -p <portnum>|) also
-  will not use a shared port.  For more information about using
+  always have its own network port.  For more information about using
   a shared port, see page~\pageref{sec:Config-shared-port}.
 
 \label{param:SubsysMaxFileDescriptors}
@@ -9663,10 +9661,11 @@ When \Condor{master} is configured to use the shared port
  running.  This prevents \Condor{master} from getting into a state
  where it can no longer receive commands.
 
-Shared ports do not work with SOAP.  To use a shared port for all
- daemons except for the SOAP-enabled daemon, simply set
- \Expr{USE\_SHARED\_PORT=True} and specify a fixed port for each
- SOAP-enabled daemon, using \verb|<SUBSYS>\_ARGS = -p <portnum>|.
+SOAP commands connot be sent over a shared port.  However, a daemon
+ may be configured to open a fixed non-shared port in addition to
+ using a shared port.  This is done by setting both
+ \Expr{USE\_SHARED\_PORT=True} and specifying a fixed port for the daemon
+ using \verb|<SUBSYS>_ARGS = -p <portnum>|.
 
 The TCP connections required to manage standard universe jobs do not
  make use of shared ports.
