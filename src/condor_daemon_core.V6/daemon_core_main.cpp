@@ -1423,6 +1423,12 @@ handle_dc_sigterm( Service*, int )
 	return TRUE;
 }
 
+void
+TimerHandler_dc_sigterm()
+{
+	handle_dc_sigterm(NULL, SIGTERM);
+}
+
 
 int
 handle_dc_sigquit( Service*, int )
@@ -2094,7 +2100,7 @@ int main( int argc, char** argv )
 	if ( runfor ) {
 		daemon_stop_time = time(NULL)+runfor*60;
 		daemonCore->Register_Timer( runfor * 60, 0, 
-				(TimerHandler)handle_dc_sigterm, "handle_dc_sigterm" );
+				TimerHandler_dc_sigterm, "handle_dc_sigterm" );
 		dprintf(D_ALWAYS,"Registered Timer for graceful shutdown in %d minutes\n",
 				runfor );
 	}
