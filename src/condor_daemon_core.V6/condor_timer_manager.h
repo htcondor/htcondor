@@ -46,13 +46,12 @@ const   int     STAR = -1;
 /** @name Typedefs for Service
  */
 //@{
-/** Function, which given a pointer to Service object,
-    returns an int (C Version).
+/** Function, given a pointer to Service object
 */
-typedef int     (*Event)(Service*);
+typedef void     (*Event)(Service*);
 
-/// Service Method that returns an int (C++ Version).
-typedef int     (Service::*Eventcpp)();
+/// Service Method
+typedef void     (Service::*Eventcpp)();
 
 /** Function, which given a pointer to a void* releases its 
 	memory (C Version).
