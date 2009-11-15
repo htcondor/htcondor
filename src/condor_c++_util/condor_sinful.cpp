@@ -251,6 +251,18 @@ Sinful::getCCBContact() const
 }
 
 void
+Sinful::setSharedPortID(char const *contact)
+{
+	setParam(ATTR_SOCK,contact);
+}
+
+char const *
+Sinful::getSharedPortID() const
+{
+	return getParam(ATTR_SOCK);
+}
+
+void
 Sinful::setPrivateAddr(char const *addr)
 {
 	setParam("PrivAddr",addr);

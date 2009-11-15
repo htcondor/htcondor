@@ -46,7 +46,7 @@ class UnicoreJob : public BaseJob
 	~UnicoreJob();
 
 	void Reconfig();
-	int doEvaluateState();
+	void doEvaluateState();
 	BaseResource *GetResource();
 
 	static int probeInterval;

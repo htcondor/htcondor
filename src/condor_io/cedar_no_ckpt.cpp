@@ -39,6 +39,8 @@
 #include "condor_config.h"
 #include "ccb_client.h"
 #include "condor_sinful.h"
+#include "shared_port_client.h"
+#include "daemon_core_sock_adapter.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -718,7 +720,7 @@ Stream::restore_crypto_after_secret()
 	}
 }
 
-int Sock::reverse_connect(char const *host,int /*port*/,bool nonblocking)
+int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 {
 	if( !host || *host != '<' ) {
 		return CEDAR_ENOCCB;
@@ -728,6 +730,68 @@ int Sock::reverse_connect(char const *host,int /*port*/,bool nonblocking)
 	if( !sinful.valid() ) {
 		return CEDAR_ENOCCB;
 	}
+
+	char const *shared_port_id = sinful.getSharedPortID();
+	if( shared_port_id ) {
+			// If the port of the SharedPortServer is 0, that means
+			// we do not know the address of the SharedPortServer.
+			// This happens, for example when Create_Process passes
+			// the parent's address to a child or the child's address
+			// to the parent and the SharedPortServer does not exist yet.
+			// So do a local connection bypassing SharedPortServer,
+			// if we are on the same machine.
+
+			// Another case where we want to bypass connecting to
+			// SharedPortServer is if we are the shared port server,
+			// because this causes us to hang.
+
+			// We could additionally bypass using the shared port
+			// server if we use the same shared port server as the
+			// target daemon and we are on the same machine.  However,
+			// this causes us to use an additional ephemeral port than
+			// if we connect to the shared port, so in case that is
+			// important, use the shared port server instead.
+
+		bool no_shared_port_server =
+			sinful.getPort() && strcmp(sinful.getPort(),"0")==0;
+
+		bool same_host = false;
+		char const *my_ip = my_ip_string();
+		if( my_ip && strcmp(my_ip,sinful.getHost())==0 ) {
+			same_host = true;
+		}
+
+		bool i_am_shared_port_server = false;
+		if( daemonCoreSockAdapter.isEnabled() ) {
+			char const *daemon_addr = daemonCoreSockAdapter.publicNetworkIpAddr();
+			if( daemon_addr ) {
+				Sinful my_sinful(daemon_addr);
+				if( my_sinful.getHost() && sinful.getHost() &&
+					strcmp(my_sinful.getHost(),sinful.getHost())==0 &&
+					my_sinful.getPort() && sinful.getPort() &&
+					strcmp(my_sinful.getPort(),sinful.getPort())==0 &&
+					(!my_sinful.getSharedPortID() ||
+					 strcmp(my_sinful.getSharedPortID(),shared_port_id)==0) )
+				{
+					i_am_shared_port_server = true;
+					dprintf(D_FULLDEBUG,"Bypassing connection to shared port server %s, because that is me.\n",daemon_addr);
+				}
+			}
+		}
+		if( (no_shared_port_server && same_host) || i_am_shared_port_server ) {
+
+			if( no_shared_port_server && same_host ) {
+				dprintf(D_FULLDEBUG,"Bypassing connection to shared port server, because its address is not yet established; passing socket directly to %s.\n",host);
+			}
+
+			return do_shared_port_local_connect( shared_port_id,nonblocking );
+		}
+	}
+
+		// Set shared port id even if it is null so we clear whatever may
+		// already be there.  If it is not null, then this information
+		// is saved here and used later after we have connected.
+	setTargetSharedPortID( shared_port_id );
 
 	char const *ccb_contact = sinful.getCCBContact();
 	if( !ccb_contact || !*ccb_contact ) {
@@ -768,8 +832,70 @@ ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
 	return 1;
 }
 
+int
+SafeSock::do_shared_port_local_connect( char const *, bool )
+{
+	dprintf(D_ALWAYS,
+			"SharedPortClient: WARNING: UDP not supported."
+			"  Failing to connect to %s.\n",
+			peer_description());
+
+	return 0;
+}
+
+int
+ReliSock::do_shared_port_local_connect( char const *shared_port_id, bool nonblocking )
+{
+		// Without going through SharedPortServer, we want to connect
+		// to a daemon that is local to this machine and which is set up
+		// to use the local SharedPortServer.  We do this by creating
+		// a connected socket pair and then passing one of those sockets
+		// to the target daemon over its named socket (or whatever mechanism
+		// this OS supports).
+
+	SharedPortClient shared_port_client;
+	ReliSock sock_to_pass;
+		// do not use loopback interface for socketpair unless this happens
+		// to be the standard network interface, because localhost
+		// typically does not happen to be allowed in the authorization policy
+	const bool use_standard_interface = true;
+	if( !connect_socketpair(sock_to_pass,use_standard_interface) ) {
+		dprintf(D_ALWAYS,
+				"Failed to connect to loopback socket, so failing to connect via local shared port access to %s.\n",
+				peer_description());
+		return 0;
+	}
+
+	char const *request_by = "";
+	if( !shared_port_client.PassSocket(&sock_to_pass,shared_port_id,request_by) ) {
+		return 0;
+	}
+
+	if( nonblocking ) {
+			// We must pretend that we are not yet connected so that callers
+			// who want a non-blocking connect will get the expected behavior
+			// from Register_Socket() (register for write rather than read).
+		_state = sock_connect_pending;
+		return CEDAR_EWOULDBLOCK;
+	}
+
+	enter_connected_state();
+	return 1;
+}
+
 void
 ReliSock::cancel_reverse_connect() {
 	ASSERT( m_ccb_client.get() );
 	m_ccb_client->CancelReverseConnect();
+}
+
+bool
+ReliSock::sendTargetSharedPortID()
+{
+	char const *shared_port_id = getTargetSharedPortID();
+	if( !shared_port_id ) {
+		return true;
+	}
+	SharedPortClient shared_port;
+	return shared_port.sendSharedPortID(shared_port_id,this);
 }

@@ -361,11 +361,11 @@ write_to_daemoncore_pipe(const char* fmt, ... )
 	va_end(args);
 }
 
-int
+void
 write_stderr_to_pipe()
 {
 	if( vmgahp_stderr_pipe == -1 ) {
-		return TRUE;
+		return;
 	}
 
 	vmgahp_stderr_buffer.Write();
@@ -376,8 +376,7 @@ write_stderr_to_pipe()
 			vmgahp_stderr_tid = -1;
 			vmgahp_stderr_pipe = -1;
 		}
-	} 
-	return TRUE;
+	}
 }
 
 void vmprintf( int flags, const char *fmt, ... ) 

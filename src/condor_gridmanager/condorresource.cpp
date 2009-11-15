@@ -247,7 +247,7 @@ void CondorResource::UnregisterJob( CondorJob *job )
 	BaseResource::UnregisterJob( job );
 }
 
-int CondorResource::DoScheddPoll()
+void CondorResource::DoScheddPoll()
 {
 	int rc;
 	ScheddPollInfo *poll_info = NULL;
@@ -257,7 +257,7 @@ int CondorResource::DoScheddPoll()
 			// No jobs or we can't talk to the schedd, so no point
 			// in polling
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
-		return 0;
+		return;
 	}
 
 	if ( gahp->isStarted() == false ) {
@@ -266,7 +266,7 @@ int CondorResource::DoScheddPoll()
 				// about it. The job objects will also fail on this call
 				// and should go on hold as a result.
 			daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
-			return 0;
+			return;
 		}
 	}
 
@@ -292,7 +292,7 @@ int CondorResource::DoScheddPoll()
 		if ( poll_info->m_pollActive == true ||
 			 poll_info->m_lastPoll + scheddPollInterval > time(NULL) ) {
 			daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
-			return 0;
+			return;
 		}
 
 			// start schedd status command
@@ -356,7 +356,7 @@ int CondorResource::DoScheddPoll()
 												  &status_ads );
 
 		if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
-			return 0;
+			return;
 		} else if ( rc != 0 ) {
 			dprintf( D_ALWAYS,
 					 "gahp->condor_job_status_constrained returned %d for remote schedd %s\n",
@@ -423,8 +423,6 @@ int CondorResource::DoScheddPoll()
 
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
 	}
-
-	return 0;
 }
 
 void CondorResource::DoPing( time_t& ping_delay, bool& ping_complete,

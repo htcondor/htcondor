@@ -90,7 +90,7 @@ public:
 	static void unixsigint_handler();
 	
 	static void init_classad(int interval);
-	static int sendCollectorAd();
+	static void sendCollectorAd();
 
 	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
 

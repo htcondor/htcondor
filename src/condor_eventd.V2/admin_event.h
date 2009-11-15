@@ -98,16 +98,16 @@ class AdminEvent : public Service
 	// Command handlers
 	// Timer handlers
 	
-	int 		th_DoShutdown( void );
+	void 		th_DoShutdown( void );
 	int 		m_timeridDoShutdown;
 	unsigned 	m_intervalDoShutdown;
 
-	int			th_maintainCheckpoints( void );
+	void		th_maintainCheckpoints( void );
 	int 		m_timerid_maintainCheckpoints;
 	unsigned 	m_intervalCheck_maintainCheckpoints;
 	unsigned 	m_intervalPeriod_maintainCheckpoints;
 
-	int 		th_DoShutdown_States( void );
+	void 		th_DoShutdown_States( void );
 	int 		m_timerid_DoShutdown_States;
 	unsigned 	m_intervalCheck_DoShutdown_States;
 	unsigned 	m_intervalPeriod_DoShutdown_States;

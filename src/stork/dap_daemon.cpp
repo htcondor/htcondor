@@ -176,7 +176,7 @@ int main_init(int argc, char **argv)
 		daemonCore->Register_Timer(
 			1,							// deltawhen
 			IdleJobMonitorInterval,		// period
-			(TimerHandler)call_main,	// event
+			call_main,	// event
 			"call_main");				// description
 
 	daemonCore->Register_Command(STORK_SUBMIT, "STORK_SUBMIT",
@@ -205,7 +205,7 @@ int main_init(int argc, char **argv)
 		daemonCore->Register_Timer(
 			4,							// deltawhen
 			HungJobMonitorInterval,		// period
-			(TimerHandler)regular_check_for_requests_in_process,
+			regular_check_for_requests_in_process,
 			"check_for_requests_in_process");
 
 	// SC05 Hackery
@@ -214,7 +214,7 @@ int main_init(int argc, char **argv)
 		daemonCore->Register_Timer(
 			1,							// deltawhen
 			60,		// period
-			(TimerHandler) low_water_timer,
+			low_water_timer,
 			"low_water_timer");
 #endif
 
@@ -227,7 +227,7 @@ int main_init(int argc, char **argv)
 		daemonCore->Register_Timer(
 			7,							// deltawhen
 			RescheduledJobMonitorInterval,	// period
-			(TimerHandler)regular_check_for_rescheduled_requests,
+			regular_check_for_rescheduled_requests,
 			"regular_check_for_rescheduled_requests");
 
 	//register reaper functions

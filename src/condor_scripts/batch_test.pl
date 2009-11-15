@@ -868,7 +868,8 @@ sub WhereIsInstallDir
 	CondorTest::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
-		if($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) {
+		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
+		    ($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
 			$installdir = $1;
 			print "Testing This Install Directory: \"$installdir\"\n";
 		}

@@ -115,7 +115,7 @@ void ViewServer::Init()
 
 	// Register timer for logging information to history files
 	HistoryTimer = daemonCore->Register_Timer(InitialDelay,HistoryInterval,
-		(Event)WriteHistory,"WriteHistory");
+		WriteHistory,"WriteHistory");
 
 	// Initialize hash tables
 

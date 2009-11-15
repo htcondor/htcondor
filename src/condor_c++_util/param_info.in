@@ -7735,22 +7735,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=447
 
-[NEGOTIATOR_SIMPLE_MATCHING]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Simple Matching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=negotiator,matchmaker
-id=448
-
 [NEGOTIATOR_MATCHLIST_CACHING]
 aliases=
 default=true
@@ -9831,3 +9815,67 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
 id=555
+
+[DAEMON_SOCKET_DIR]
+aliases=
+default=$(LOCK)/daemon_sock
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Daemon Socket Dir
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
+[SHARED_PORT_DAEMON_AD_FILE]
+aliases=
+default=$(LOCK)/shared_port_ad
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shared Port Daemon Ad File
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
+[USE_SHARED_PORT]
+aliases=
+default=false
+version=7.5.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Use Shared Port
+usage=True if Condor daemons should share a single network port
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
+[SHARED_PORT_LOG]
+aliases=
+default=$(LOG)/SharedPortLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shared Port Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=shared_port
+id=550

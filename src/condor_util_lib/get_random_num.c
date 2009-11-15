@@ -74,6 +74,20 @@ float get_random_float( void )
 #endif
 }
 
+double get_random_double( void )
+{
+    if (!initialized) {
+        set_seed(getpid());
+    }
+
+#if defined(WIN32)
+    return (((double)rand())*(((unsigned int)1)<<15) + (double)rand()) /
+	       (((double)RAND_MAX)*(((unsigned int)1)<<15) + (double)RAND_MAX + 1);
+#else
+    return drand48();
+#endif
+}
+
 /* returns a random unsigned integer, trying to use best random number
    generator available on each platform */
 unsigned int get_random_uint( void )
@@ -82,14 +96,29 @@ unsigned int get_random_uint( void )
 		set_seed(getpid());
 	}
 
-	/* since get_random_float returns [0.0, 1.0), add one to UINT_MAX
+	/*  get_random_float() doesn't have enough precision to use here.
+	    Since get_random_double returns [0.0, 1.0), add one to UINT_MAX
 		to ensure the probability fencepost error doesn't
 		happen and I actually can get ALL the numbers from 0 up to and
 		including UINT_MAX */
-	return get_random_float() * (((double)UINT_MAX)+1);
+	return get_random_double() * (((double)UINT_MAX)+1);
 }
 
+/* returns a fuzz factor to be added to a timer period to decrease
+   chance of many daemons being synchronized */
+int timer_fuzz(int period)
+{
+	int fuzz = period/10;
+	if( fuzz <= 0 ) {
+		if( period <= 0 ) {
+			return 0;
+		}
+		fuzz = period - 1;
+	}
+	fuzz = ( get_random_float() * ((float)fuzz+1) ) - fuzz/2;
 
-
-
-
+	if( period + fuzz <= 0 ) { // sanity check
+		fuzz = 0;
+	}
+	return fuzz;
+}

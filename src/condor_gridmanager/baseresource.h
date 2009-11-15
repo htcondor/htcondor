@@ -63,18 +63,18 @@ class BaseResource : public Service
 		{ probeDelay = new_delay; }
 
  protected:
-	int DeleteMe();
+	void DeleteMe();
 
-	int Ping();
+	void Ping();
 	virtual void DoPing( time_t& ping_delay, bool& ping_complete,
 						 bool& ping_succeeded );
 
-	int UpdateLeases();
+	void UpdateLeases();
 	virtual void DoUpdateLeases( time_t& update_delay, bool& update_complete,
 								 SimpleList<PROC_ID>& update_succeeded );
 	bool Invalidate ();
     bool SendUpdate ();	
-	int UpdateCollector ();
+	void UpdateCollector ();
 
 	char *resourceName;
 	int deleteMeTid;

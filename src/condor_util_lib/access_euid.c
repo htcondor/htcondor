@@ -21,7 +21,86 @@
 #define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_debug.h"
+#include <dirent.h>
 
+
+static int access_euid_dir(char const *path,int mode,struct stat *statbuf)
+{
+	errno = 0;
+
+	if ((R_OK == 0) || (mode & R_OK)) {
+		DIR *d = opendir(path);
+		if (d == NULL) {
+			if( ! errno ) {
+				dprintf( D_ALWAYS, "WARNING: opendir() failed, but "
+						 "errno is still 0!  Beware of misleading "
+						 "error messages\n" );
+			}
+			return -1;
+		}
+		closedir(d);
+	}
+
+	if ((W_OK == 0) || (mode & W_OK)) {
+		int success = 0;
+		int try;
+		char *pathbuf = (char *)malloc(strlen(path) + 100);
+		ASSERT( pathbuf );
+		for(try=0;try<100;try++) {
+			sprintf(pathbuf,"%s%caccess-test-%d-%d-%d",path,DIR_DELIM_CHAR,getpid(),(int)time(NULL),try);
+			if( mkdir(pathbuf,0700) == 0 ) {
+				rmdir( pathbuf );
+				success = 1;
+				break;
+			}
+			if( errno == EEXIST ) {
+				continue;
+			}
+			break;
+		}
+		free( pathbuf );
+
+		if( !success ) {
+			if( errno == EEXIST ) {
+				dprintf(D_ALWAYS, "Failed to test write access to %s, because too many access-test sub-directories exist.\n", path);
+				return -1;
+			}
+			return -1;
+		}
+	}
+
+	if ((X_OK == 0) || (mode & X_OK)) {
+		struct stat st;
+		if (!statbuf) {
+			/* stats are expensive, so only do it if I have to */
+			if (stat(path, &st) < 0) {
+				if( ! errno ) {
+					dprintf( D_ALWAYS, "WARNING: stat() failed, but "
+							 "errno is still 0!  Beware of misleading "
+							 "error messages\n" );
+				}
+				return -1;
+			}
+			statbuf = &st;
+		}
+		int bit = 0;
+		if( statbuf->st_uid == geteuid() ) {
+			bit |= S_IXUSR;
+		}
+		else if( statbuf->st_gid == getegid() ) {
+			bit |= S_IXGRP;
+		}
+		else {
+			bit |= S_IXOTH;
+		}
+		if (!(statbuf->st_mode & bit)) {
+			errno = EACCES;
+			return -1;
+		}
+	}
+
+	return 0;
+}
 
 /* This function access a file with the access() interface, but with stat()
 	semantics so that the access doesn't occur with the real uid, but the
@@ -62,11 +141,18 @@ access_euid(const char *path, int mode)
 			return -1;
 		}
 		already_stated = 1;
+
+		if( buf.st_mode & S_IFDIR ) {
+			return access_euid_dir(path,mode,&buf);
+		}
 	}
 
 	if ((R_OK == 0) || (mode & R_OK)) {
 		f = safe_fopen_wrapper(path, "r", 0644);
 		if (f == NULL) {
+			if( errno == EISDIR ) {
+				return access_euid_dir(path,mode,NULL);
+			}
 			if( ! errno ) {
 				dprintf( D_ALWAYS, "WARNING: safe_fopen_wrapper() failed, but "
 						 "errno is still 0!  Beware of misleading "
@@ -80,6 +166,9 @@ access_euid(const char *path, int mode)
 	if ((W_OK == 0) || (mode & W_OK)) {
 		f = safe_fopen_wrapper(path, "a", 0644); /* don't truncate the file! */
 		if (f == NULL) {
+			if( errno == EISDIR ) {
+				return access_euid_dir(path,mode,NULL);
+			}
 			if( ! errno ) {
 				dprintf( D_ALWAYS, "WARNING: safe_fopen_wrapper() failed, but "
 						 "errno is still 0!  Beware of misleading "
@@ -101,6 +190,9 @@ access_euid(const char *path, int mode)
 				}
 				return -1;
 			}
+			if( buf.st_mode & S_IFDIR ) {
+				return access_euid_dir(path,mode,&buf);
+			}
 		}
 		if (!(buf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {
 				/* since() stat worked, errno will still be 0.  that's
@@ -113,6 +205,5 @@ access_euid(const char *path, int mode)
 
 	return 0;
 }
-
 
 

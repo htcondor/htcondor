@@ -224,13 +224,6 @@ NetworkAdapterBase::wakeSupportedString ( MyString &s ) const
 	return getWolString ( m_wol_support_bits, s );
 }
 
-const char* 
-NetworkAdapterBase::wakeSupportedString () const
-{
-	static char buf[1024];
-	return getWolString( m_wol_support_bits, buf, sizeof(buf) );
-}
-
 bool 
 NetworkAdapterBase::isWakeEnabled () const
 {
@@ -247,13 +240,6 @@ MyString&
 NetworkAdapterBase::wakeEnabledString ( MyString &s ) const
 {
 	return getWolString ( m_wol_enable_bits, s );
-}
-
-const char* 
-NetworkAdapterBase::wakeEnabledString () const
-{
-	static char buf[1024];
-	return getWolString ( m_wol_enable_bits, buf, sizeof(buf) );
 }
 
 bool 

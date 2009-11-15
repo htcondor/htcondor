@@ -92,7 +92,7 @@ typedef int module_stdio_t[3];
 #define MODULE_STDERR_INDEX		2
 
 // Prototypes
-void clean_job_queue(void);
+void clean_job_queue();
 void remove_job(const char *dap_id);
 
 
@@ -178,7 +178,7 @@ read_config_file(void)
 			daemonCore->Register_Timer(
 					job_q_clean_interval,	// deltawhen
 					job_q_clean_interval,	// period
-					(Event)clean_job_queue,	// event
+					clean_job_queue,	// event
 					"clean_job_queue"		// description
 			);
 
@@ -1221,7 +1221,7 @@ total_job_count(void)
 }
 
 void
-low_water_timer(void)
+low_water_timer(Service *)
 {
 	int low_water = param_integer("STORK_LOW_WATER_VALUE", 0, 0);
 
@@ -1294,7 +1294,7 @@ low_water_timer(void)
  * not completed yet
  * ==========================================================================*/
 void
-regular_check_for_requests_in_process(void)
+regular_check_for_requests_in_process()
 {
 	classad::LocalCollectionQuery query;
 	classad::ClassAd       *job_ad;
@@ -1511,7 +1511,7 @@ regular_check_for_requests_in_process(void)
 		daemonCore->Register_Timer(
 			HungJobMonitorInterval,		// deltawhen
 			HungJobMonitorInterval,		// period
-			(TimerHandler)regular_check_for_requests_in_process,
+			regular_check_for_requests_in_process,
 			"check_for_requests_in_process");
 
 	return;
@@ -1564,7 +1564,7 @@ startup_check_for_requests_in_process(void)
  * check for requests which are rescheduled for execution
  * ==========================================================================*/
 void
-regular_check_for_rescheduled_requests(void)
+regular_check_for_rescheduled_requests()
 {
 	classad::LocalCollectionQuery query;
 	classad::ClassAd       *job_ad;
@@ -1624,7 +1624,7 @@ regular_check_for_rescheduled_requests(void)
 		daemonCore->Register_Timer(
 			RescheduledJobMonitorInterval,		// deltawhen
 			RescheduledJobMonitorInterval,		// period
-			(TimerHandler)regular_check_for_rescheduled_requests,
+			regular_check_for_rescheduled_requests,
 			"regular_check_for_rescheduled_requests");
 
 	return;
@@ -1730,7 +1730,7 @@ initializations(void)
  * Clean (compress) the job queue.
  * ==========================================================================*/
 void
-clean_job_queue(void)
+clean_job_queue()
 {
 	dprintf(D_ALWAYS, "Compressing job log %s\n", logfilename);
 	dapcollection->TruncateLog();
@@ -1837,8 +1837,8 @@ terminate(terminate_t terminate_type)
 /* ============================================================================
  * main body of the condor_srb_reqex
  * ==========================================================================*/
-int
-call_main(void)
+void
+call_main()
 {
 
 	classad::ClassAd       *job_ad;
@@ -1894,7 +1894,7 @@ call_main(void)
 	if ( period == IdleJobMonitorInterval && IdleJobMonitorTid != -1 ) {
         // we are already done, since we already
         // have a timer set with the desired interval
-        return TRUE;
+        return;
     }
 
 	if (IdleJobMonitorTid != -1) {
@@ -1906,10 +1906,10 @@ call_main(void)
 		daemonCore->Register_Timer(
 			IdleJobMonitorInterval,		// deltawhen
 			IdleJobMonitorInterval,		// period
-			(TimerHandler)call_main,	// event
+			call_main,	// event
 			"call_main");				// description
 
-	return TRUE;
+	return;
 }
 
 

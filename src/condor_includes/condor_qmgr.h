@@ -24,6 +24,7 @@
 #include "condor_io.h"
 #include "proc.h"
 #include "../condor_c++_util/CondorError.h"
+
 class ClassAd;
 class ClassAdList;
 

@@ -2501,9 +2501,12 @@ jobIsFinished( int cluster, int proc, void* )
 	MyString iwd;
 	MyString owner;
 	BOOLEAN is_nfs;
+	int want_flush = 1;
 
+	job_ad->EvalBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, NULL, want_flush );
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) &&
 		 job_ad->LookupString( ATTR_JOB_IWD, iwd ) &&
+		 want_flush &&
 		 fs_detect_nfs( iwd.Value(), &is_nfs ) == 0 && is_nfs ) {
 
 		priv_state priv;
@@ -6960,7 +6963,7 @@ Scheduler::tryNextJob()
 		// Queue the next job start via the daemoncore timer.  jobThrottle()
 		// implements job bursting, and returns the proper delay for the timer.
 			Register_Timer( jobThrottle(),
-							(Eventcpp)&Scheduler::StartJobHandler,
+							(TimerHandlercpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
 	} else {
 		StartJobs();
@@ -7466,7 +7469,7 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 		// proper delay for the timer.
 		StartJobTimer = daemonCore->
 			Register_Timer( jobThrottle(), 
-							(Eventcpp)&Scheduler::StartJobHandler,
+							(TimerHandlercpp)&Scheduler::StartJobHandler,
 							"StartJobHandler", this );
 	}
 }
@@ -10796,11 +10799,11 @@ Scheduler::RegisterTimers()
 
 	 // timer handlers
 	timeoutid = daemonCore->Register_Timer(10,
-		(Eventcpp)&Scheduler::timeout,"timeout",this);
+		(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
 	startjobsid = daemonCore->Register_Timer(10,
-		(Eventcpp)&Scheduler::StartJobs,"StartJobs",this);
+		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
-		(Eventcpp)&Scheduler::sendAlives,"sendAlives", this);
+		(TimerHandlercpp)&Scheduler::sendAlives,"sendAlives", this);
     // Preset the job queue clean timer only upon cold start, or if the timer
     // value has been changed.  If the timer period has not changed, leave the
     // timer alone.  This will avoid undesirable behavior whereby timer is
@@ -10811,14 +10814,14 @@ Scheduler::RegisterTimers()
         }
         cleanid =
             daemonCore->Register_Timer(QueueCleanInterval,QueueCleanInterval,
-            (Event)&CleanJobQueue,"CleanJobQueue");
+            CleanJobQueue,"CleanJobQueue");
     }
     oldQueueCleanInterval = QueueCleanInterval;
 
 	if (WallClockCkptInterval) {
 		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
 												  WallClockCkptInterval,
-												  (Event)&CkptWallClock,
+												  CkptWallClock,
 												  "CkptWallClock");
 	} else {
 		wallclocktid = -1;
@@ -10836,7 +10839,7 @@ Scheduler::RegisterTimers()
 		periodicid = daemonCore->Register_Timer(
 			time_to_next_run,
 			time_to_next_run,
-			(Eventcpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
+			(TimerHandlercpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
 		dprintf( D_FULLDEBUG, "Registering PeriodicExprHandler(), next "
 				 "callback in %u seconds\n", time_to_next_run );
 	} else {

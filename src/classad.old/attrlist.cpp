@@ -2256,7 +2256,7 @@ AttrList::initFromString(char const *str,MyString *err_msg)
 		}
 	}
 
-	delete exprbuf;
+	delete [] exprbuf;
 	return succeeded;
 }
 

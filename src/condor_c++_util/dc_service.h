@@ -72,22 +72,6 @@ class Service {
 };
 
 //-----------------------------------------------------------------------------
-/** @name Typedefs for Service
- */
-//@{
-/** Function, which given a pointer to Service object,
-    returns an int (C Version).
-*/
-typedef int     (*Event)(Service*);
-
-/// Service Method that returns an int (C++ Version).
-typedef int     (Service::*Eventcpp)();
-//@}
-
-// to make the timer handler stuff similar to the rest of Daemon Core...
-#define TimerHandler Event
-#define TimerHandlercpp Eventcpp
-
 
 /**
    This class is an abstract base class used by some generic data

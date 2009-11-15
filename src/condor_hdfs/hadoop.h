@@ -52,7 +52,7 @@ class Hadoop : public Service {
 
         int reaperResponse(int exit_pid, int exit_status);
 
-        int killTimer();
+        void killTimer();
 
         //figures out all the parameters required ro launch a hadoop process.
         void initialize();

@@ -148,7 +148,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 		delegatedProxies.DeleteCurrent();
 		free( next_deleg->deleg_uri );
 		ReleaseProxy( next_deleg->proxy,
-					  (Eventcpp)&CreamResource::ProxyCallback, this );
+					  (TimerHandlercpp)&CreamResource::ProxyCallback, this );
 		delete next_deleg;
 	}
 	if ( delegationServiceUri != NULL ) {
@@ -271,7 +271,7 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 					}
 					free( next_deleg->deleg_uri );
 					ReleaseProxy( next_deleg->proxy,
-								  (Eventcpp)&CreamResource::ProxyCallback,
+								  (TimerHandlercpp)&CreamResource::ProxyCallback,
 								  this );
 					delete next_deleg;
 				}
@@ -317,7 +317,7 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-	AcquireProxy( job_proxy, (Eventcpp)&CreamResource::ProxyCallback, this );
+	AcquireProxy( job_proxy, (TimerHandlercpp)&CreamResource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds
@@ -348,7 +348,7 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-	AcquireProxy( job_proxy, (Eventcpp)&CreamResource::ProxyCallback, this );
+	AcquireProxy( job_proxy, (TimerHandlercpp)&CreamResource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds
@@ -384,7 +384,7 @@ int CreamResource::ProxyCallback()
 	return 0;
 }
 
-int CreamResource::checkDelegation()
+void CreamResource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
@@ -394,7 +394,7 @@ dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	if ( deleg_gahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying checkDelegation\n" );
 		daemonCore->Reset_Timer( delegationTimerId, 5 );
-		return 0;
+		return;
 	}
 
 	daemonCore->Reset_Timer( delegationTimerId, CHECK_DELEGATION_INTERVAL );
@@ -425,7 +425,7 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 			
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
-				return 0;
+				return;
 			}
 			if ( rc != 0 ) {
 					// Failure, what to do?
@@ -480,7 +480,7 @@ dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
-				return 0;
+				return;
 			}
 			next_deleg->last_proxy_refresh = now;
 			if ( rc != 0 ) {
@@ -548,7 +548,6 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_de
 			}
 		}
 	}
-	return 0;
 }
 
 void CreamResource::DoPing( time_t& ping_delay, bool& ping_complete,

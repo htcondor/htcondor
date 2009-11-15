@@ -127,7 +127,7 @@ DBMSManager::config() {
 		m_public_ad_update_timer = daemonCore->Register_Timer(
 			0,
 			m_public_ad_update_interval,
-			(Eventcpp)&DBMSManager::TimerHandler_UpdateCollector,
+			(TimerHandlercpp)&DBMSManager::TimerHandler_UpdateCollector,
 			"DBMSManager::TimerHandler_UpdateCollector",
 			this);
 	}
@@ -152,7 +152,7 @@ DBMSManager::config() {
 		m_database_purge_timer = daemonCore->Register_Timer(
 			0,
 			m_database_purge_interval,
-			(Eventcpp)&DBMSManager::TimerHandler_PurgeDatabase,
+			(TimerHandlercpp)&DBMSManager::TimerHandler_PurgeDatabase,
 			"DBMSManager::TimerHandler_PurgeDatabase",
 			this);
 	}
@@ -177,7 +177,7 @@ DBMSManager::config() {
 		m_database_reindex_timer = daemonCore->Register_Timer(
 			0,
 			m_database_reindex_interval,
-			(Eventcpp)&DBMSManager::TimerHandler_ReindexDatabase,
+			(TimerHandlercpp)&DBMSManager::TimerHandler_ReindexDatabase,
 			"DBMSManager::TimerHandler_ReindexDatabase",
 			this);
 	}

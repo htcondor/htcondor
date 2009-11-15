@@ -475,8 +475,8 @@ public:
 		/**
 		 * returns true if target daemon has a UDP command port.
 		 * Currently, we assume the answer is "yes" unless the target
-		 * daemon is being accessed via CCB.  Eventually, we could
-		 * be smarter.
+		 * daemon is being accessed via CCB or a shared port.
+		 * Eventually, we could be smarter.
 		 */
 	bool hasUDPCommandPort();
 

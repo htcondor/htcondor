@@ -540,7 +540,7 @@ Claim::cancel_match_timer()
 }
 
 
-int
+void
 Claim::match_timed_out()
 {
 	char* my_id = id();
@@ -551,14 +551,14 @@ Claim::match_timed_out()
 			// up, too, and we don't want to seg fault.
 		::dprintf( D_FAILURE|D_ALWAYS,
 				   "ERROR: Match timed out but there's no ClaimId\n" );
-		return FALSE;
+		return;
 	}
 		
 	Resource* res_ip = resmgr->get_by_any_id( my_id );
 	if( !res_ip ) {
 		::dprintf( D_FAILURE|D_ALWAYS,
 				   "ERROR: Can't find resource of expired match\n" );
-		return FALSE;
+		return;
 	}
 
 	if( res_ip->r_cur->idMatches( id() ) ) {
@@ -581,7 +581,7 @@ Claim::match_timed_out()
 					 "backfill jobs can evict themselves.\n", 
 					 state_to_string(res_ip->state()), match_timeout );
 			res_ip->set_destination_state( owner_state );
-			return FALSE;
+			return;
 		}
 #endif /* HAVE_BACKFILL */
 		if( res_ip->state() != matched_state ) {
@@ -601,7 +601,7 @@ Claim::match_timed_out()
 			dprintf( D_FAILURE|D_FULLDEBUG, 
 					 "WARNING: Current match timed out but in %s state.\n",
 					 state_to_string(res_ip->state()) );
-			return FALSE;
+			return;
 		}
 		delete res_ip->r_cur;
 			// once we've done this delete, the this pointer is now in
@@ -628,7 +628,7 @@ Claim::match_timed_out()
 		res_ip->r_reqexp->restore();
 		res_ip->update();
 	}		
-	return TRUE;
+	return;
 }
 
 
@@ -865,7 +865,7 @@ Claim::cancelLeaseTimer()
 
 }
 
-int
+void
 Claim::sendAlive()
 {
 	const char* c_addr = NULL;
@@ -876,12 +876,12 @@ Claim::sendAlive()
 
 	if( !c_addr ) {
 			// Client not really set, nothing to do.
-		return FALSE;
+		return;
 	}
 
 	if ( c_alive_inprogress_sock ) {
 			// already did it
-		return FALSE;
+		return;
 	}
 
 	DCSchedd matched_schedd ( c_addr, NULL );
@@ -895,7 +895,7 @@ Claim::sendAlive()
 		dprintf( D_FAILURE|D_ALWAYS, 
 				"Alive failed - couldn't initiate connection to %s\n",
 		         c_addr );
-		return FALSE;
+		return;
 	}
 
 	char to_schedd[256];
@@ -912,12 +912,10 @@ Claim::sendAlive()
 		         "Register_Socket returned %d.\n",
 		         c_addr,reg_rc);
 		delete sock;
-		return FALSE;
+		return;
 	}
 
 	c_alive_inprogress_sock = sock;
-
-	return TRUE;
 }
 
 /* ALIVE_BAILOUT def:
@@ -1053,7 +1051,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 }
 
 
-int
+void
 Claim::leaseExpired()
 {
 	c_lease_tid = -1;
@@ -1068,7 +1066,7 @@ Claim::leaseExpired()
 			if (pCODMgr)
 				pCODMgr->removeClaim(this);
 		}
-		return TRUE;
+		return;
 	}
 
 	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
@@ -1076,7 +1074,7 @@ Claim::leaseExpired()
 
 		// Kill the claim.
 	finishKillClaim();
-	return TRUE;
+	return;
 }
 
 int
@@ -2110,11 +2108,13 @@ newIdString( char** id_str_ptr )
 	MyString id;
 	// Keeping with tradition, we insert the startd's address in
 	// the claim id.  As of condor 7.2, nothing relies on this.
-	// Using privateNetworkIpAddr() because public sinful string
-	// may contain CCB stuff and other junk that might contain
-	// special characters such as '#'.
+	// Strip out CCB and other special info so we don't get any
+	// '#' characters in the address.
 
-	char const *my_addr = daemonCore->privateNetworkIpAddr();
+	Sinful my_sin( daemonCore->publicNetworkIpAddr() );
+	my_sin.clearParams();
+	char const *my_addr = my_sin.getSinful();
+
 	ASSERT( my_addr && !strchr(my_addr,'#') );
 
 	id += my_addr;

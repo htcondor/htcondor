@@ -148,19 +148,6 @@ IpVerify::Init()
 		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,
 										  get_mySubSystem()->getName() );
 
-        // Treat a "*", "*/*" for USERALLOW_XXX as if it's just
-        // undefined. 
-		if( pNewAllow && (!strcmp(pNewAllow, "*") 
-                          || !strcmp(pNewAllow, "*/*") ) ) {
-			free( pNewAllow );
-			pNewAllow = NULL;
-		}
-        
-        if (pOldAllow && (!strcmp(pOldAllow, "*"))) {
-            free( pOldAllow );
-            pOldAllow = NULL;
-        }
-        
 		// concat the two
 		pAllow = merge(pNewAllow, pOldAllow);
 
@@ -174,20 +161,35 @@ IpVerify::Init()
 		pDeny = merge(pNewDeny, pOldDeny);
 
 		if( pAllow ) {
-			dprintf ( D_SECURITY, "IPVERIFY: allow %s : %s (from config value %s)\n", PermString(perm),pAllow,allow_param.Value());
+			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.Value());
 		}
 		if( pDeny ) {
 			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.Value());
 		}
 
+        // Treat a "*", "*/*" for ALLOW_XXX as if it's just undefined,
+        // because that's the optimized default, except for
+        // CONFIG_PERM which has a different default (see below).
+		if( perm != CONFIG_PERM ) {
+			if(pAllow && (!strcmp(pAllow, "*") || !strcmp(pAllow, "*/*") ) )
+			{
+				free( pAllow );
+				pAllow = NULL;
+			}
+		}
+
 		if ( !pAllow && !pDeny ) {
 			if (perm == CONFIG_PERM) { 	  // deny all CONFIG requests 
 				pentry->behavior = USERVERIFY_DENY; // by default
+				dprintf( D_SECURITY, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
 			} else {
 				pentry->behavior = USERVERIFY_ALLOW;
+				if( perm != ALLOW ) {
+					dprintf( D_SECURITY, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
+				}
 			}
 		} else {
-			if ( pDeny && !pAllow ) {
+			if ( pDeny && !pAllow && perm != CONFIG_PERM ) {
 				pentry->behavior = USERVERIFY_ONLY_DENIES;
 			} else {
 				pentry->behavior = USERVERIFY_USE_TABLE;

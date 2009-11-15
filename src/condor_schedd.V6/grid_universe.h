@@ -69,8 +69,8 @@ class GridUniverseLogic : public Service
 				int cluster, int proc);
 
 		// SendAddSignal and SendRemoveSignal are DC Timer Event handlers
-		static int SendAddSignal(Service *);
-		static int SendRemoveSignal(Service *);
+		static void SendAddSignal();
+		static void SendRemoveSignal();
 
 		// given a pointer to a gman_node_t, return path to a scratch
 		// directory -- note: caller must call delete [] on returned pointer

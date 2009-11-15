@@ -243,6 +243,7 @@ extern const char * const  ATTR_JOB_ID;
 extern const char * const  ATTR_JOB_FINISHED_HOOK_DONE;
 extern const char * const  ATTR_JOB_INPUT;
 extern const char * const  ATTR_JOB_IWD;
+extern const char * const  ATTR_JOB_IWD_FLUSH_NFS_CACHE;
 extern const char * const  ATTR_JOB_JAVA_VM_ARGS1;
 extern const char * const  ATTR_JOB_JAVA_VM_ARGS2;
 extern const char * const  ATTR_ORIG_JOB_IWD;
@@ -765,6 +766,7 @@ extern const char * const ATTR_SSH_PRIVATE_CLIENT_KEY;
 extern const char * const ATTR_SHELL;
 extern const char * const ATTR_RETRY;
 extern const char * const ATTR_SSH_KEYGEN_ARGS;
+extern const char * const ATTR_SOCK;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

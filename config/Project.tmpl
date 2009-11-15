@@ -57,6 +57,7 @@ DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 DAEMONCORE_INCLUDE =	../condor_daemon_core.V6
 CLASSAD_INCLUDE =       $(CLASSAD_DIRS)
 CCB_INCLUDE = ../ccb
+CEDAR_INCLUDE = ../condor_io
 
 
 #if !defined( CLinker )
@@ -74,6 +75,14 @@ CCB_INCLUDE = ../ccb
 #if !defined(PlatformGppFlags)
 #define PlatformGppFlags
 #endif
+
+/*
+	This is run for *every single* compilation of a file into an object file.
+	This means it runs in all kinds of directories. The relative path supplied
+	works in the usual condor_* directories, but not in any subdirectories of
+	them.  This should be fixed better, later.
+*/
+PostCompileHook = if ! test -x ../condor_scripts/post_compile_hook.pl ; then echo "WARNING: Skipping PostCompileHook as workaround..."; exit 0; fi ; perl ../condor_scripts/post_compile_hook.pl
 
 #ifdef HAVE_RPM
 MakeRPMs = perl condor_scripts/make_public_rpms $(RPM_CMD)
@@ -342,7 +351,8 @@ ALL_INCLUDES = \
 	$(DAEMONCLIENT_INCLUDE) 	\
 	$(DAEMONCORE_INCLUDE)		\
 	$(CLASSAD_INCLUDE)		\
-	$(CCB_INCLUDE)
+	$(CCB_INCLUDE)			\
+	$(CEDAR_INCLUDE)
 VENDOR_C_FLAGS = \
 	$(addprefix -I, $(ALL_INCLUDES) )	\
 	$(CONFIGURE_DEFS)			\

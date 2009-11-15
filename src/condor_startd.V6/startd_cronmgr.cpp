@@ -130,7 +130,7 @@ StartdCronMgr::JobEvent( CronJobBase *Job, CondorCronEvent Event )
 	if ( CONDOR_CRON_JOB_DIED == Event ) {
 		if ( ShuttingDown ) {
 			if ( IsAllIdle( ) ) {
-				startd_check_free( );
+				startd_check_free();
 			}
 		}
 	}

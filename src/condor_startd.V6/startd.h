@@ -139,7 +139,7 @@ extern StartdCronMgr* Cronmgr;
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
-// Check to see ifn we're all free
-int	startd_check_free();
+// Check to see if we're all free
+void	startd_check_free();
 
 #endif /* _CONDOR_STARTD_H */

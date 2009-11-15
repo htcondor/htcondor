@@ -29,7 +29,8 @@ CONDOR_TYPE_OBJ = sig_num.o open_flags.o fcntl_cmd.o errno_num.o
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		$(CONDOR_AUTH_OBJ) $(CONDOR_TYPE_OBJ) condor_rw.o \
 		SafeMsg.o condor_crypt.o $(CONDOR_CRYPT_OBJ) CryptKey.o \
-		condor_secman.o cedar_no_ckpt.o 
+		condor_secman.o cedar_no_ckpt.o \
+		shared_port_server.o shared_port_endpoint.o shared_port_client.o
 /*		autoTest.o manTest.o */
 
 library_target(libcedar.a,$(OBJ))

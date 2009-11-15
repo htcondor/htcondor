@@ -27,7 +27,7 @@
 #include "simplelist.h"
 
 struct Callback {
-	Eventcpp m_func_ptr;
+	TimerHandlercpp m_func_ptr;
 	Service *m_data;
 	bool operator==(const Callback &rhs) const {
 		if ( this->m_func_ptr == rhs.m_func_ptr && this->m_data == rhs.m_data ) {
@@ -95,9 +95,9 @@ bool InitializeProxyManager( const char *proxy_dir );
 void ReconfigProxyManager();
 
 Proxy *AcquireProxy( const ClassAd *job_ad, MyString &error,
-					 Eventcpp func_ptr = NULL, Service *data = NULL );
-Proxy *AcquireProxy( Proxy *proxy, Eventcpp func_ptr = NULL, Service *data = NULL );
-void ReleaseProxy( Proxy *proxy, Eventcpp func_ptr = NULL, Service *data = NULL );
+					 TimerHandlercpp func_ptr = NULL, Service *data = NULL );
+Proxy *AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
+void ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
 void DeleteProxy (Proxy *& proxy);
 void DeleteMyProxyEntry (MyProxyEntry *& proxy);
 

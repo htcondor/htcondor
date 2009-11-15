@@ -47,7 +47,7 @@ public:
 	~AmazonJob();
 
 	void Reconfig();
-	int doEvaluateState();
+	void doEvaluateState();
 	BaseResource *GetResource();
 	void SetKeypairId( const char *keypair_id );
 	void SetInstanceId( const char *instance_id );

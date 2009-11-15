@@ -60,6 +60,7 @@ Sock::Sock() : Stream() {
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
+	m_connect_addr = NULL;
     addr_changed();
 }
 
@@ -77,6 +78,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
+	m_connect_addr = NULL;
     addr_changed();
 
 	// now duplicate the underlying network socket
@@ -131,6 +133,8 @@ Sock::~Sock()
 		free(_fqu_domain_part);
 		_fqu_domain_part = NULL;
 	}
+	free( m_connect_addr );
+	m_connect_addr = NULL;
 }
 
 #if defined(WIN32)
@@ -349,6 +353,10 @@ int Sock::assign(SOCKET sockd)
 	if (sockd != INVALID_SOCKET){
 		_sock = sockd;		/* Could we check for correct protocol ? */
 		_state = sock_assigned;
+
+		memset(&_who, 0, sizeof(struct sockaddr_in));
+		SOCKET_LENGTH_TYPE addrlen = sizeof(_who);
+		getpeername(_sock,(struct sockaddr *)&_who,&addrlen);
 
 		if ( _timeout > 0 ) {
 			timeout_no_timeout_multiplier( _timeout );
@@ -700,23 +708,29 @@ int Sock::do_connect(
 	/* might be in <x.x.x.x:x> notation				*/
 	if (host[0] == '<') {
 		string_to_sin(host, &_who);
+		set_connect_addr(host);
 	}
 	/* try to get a decimal notation 	 			*/
 	else if ((inaddr = inet_addr(host)) != (unsigned int)-1){
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
+		set_connect_addr(sin_to_string(&_who));
 	}
 	/* if dotted notation fails, try host database	*/
 	else{
 		if ((hostp = condor_gethostbyname(host)) == (hostent *)0) return FALSE;
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
+		set_connect_addr(sin_to_string(&_who));
 	}
 
     addr_changed();
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
-	// instead of a forward connect
-	int retval=reverse_connect(host,port,non_blocking_flag);
+	// instead of a forward connect.  Also see if we are connecting
+	// to a shared port (SharedPortServer) that needs further information
+	// to route us to the final destination.
+
+	int retval=special_connect(host,port,non_blocking_flag);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}
@@ -791,7 +805,6 @@ Sock::do_connect_finish()
 
 		if( _state == sock_bound ) {
 			if ( do_connect_tryit() ) {
-				_state = sock_connect;
 				return TRUE;
 			}
 
@@ -883,16 +896,11 @@ Sock::do_connect_finish()
 				break; // done with select() loop
 			}
 			else {
-				_state = sock_connect;
-				if( DebugFlags & D_NETWORK ) {
-					dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
-							 get_sinful(), _sock, get_sinful_peer() );
-				}
 				if ( connect_state.old_timeout_value != _timeout ) {
 						// Restore old timeout
 					timeout_no_timeout_multiplier(connect_state.old_timeout_value);			
 				}
-				return true;
+				return enter_connected_state();
 			}
 		}
 
@@ -955,6 +963,23 @@ Sock::do_connect_finish()
 	return FALSE;
 }
 
+bool
+Sock::enter_connected_state(char const *op)
+{
+	_state = sock_connect;
+	if( DebugFlags & D_NETWORK ) {
+		dprintf( D_NETWORK, "%s bound to %s fd=%d peer=%s\n",
+				 op, get_sinful(), _sock, get_sinful_peer() );
+	}
+		// if we are connecting to a shared port, send the id of
+		// the daemon we want to be routed to
+	if( !sendTargetSharedPortID() ) {
+		connect_state.connect_refused = true;
+		setConnectFailureReason("Failed to send shared port id.");
+		return false;
+	}
+	return true;
+}
 
 void
 Sock::setConnectFailureReason(char const *reason)
@@ -1080,12 +1105,7 @@ bool Sock::do_connect_tryit()
 			return false;
 		}
 
-		_state = sock_connect;
-		if( DebugFlags & D_NETWORK ) {
-			dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
-					 get_sinful(), _sock, get_sinful_peer() );
-		}
-		return true;
+		return enter_connected_state();
 	}
 
 #if defined(WIN32)
@@ -1253,7 +1273,7 @@ int Sock::close()
 
 	if (_state == sock_virgin) return FALSE;
 
-	if (type() == Stream::reli_sock) {
+	if (type() == Stream::reli_sock && (DebugFlags & D_NETWORK)) {
 		dprintf( D_NETWORK, "CLOSE %s fd=%d\n", 
 						sock_to_string(_sock), _sock );
 	}
@@ -2134,4 +2154,20 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 	rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
 #endif /* HAVE_EXT_GCB */
 	return rval;
+}
+
+void
+Sock::set_connect_addr(char const *addr)
+{
+	free( m_connect_addr );
+	m_connect_addr = NULL;
+	if( addr ) {
+		m_connect_addr = strdup(addr);
+	}
+}
+
+char const *
+Sock::get_connect_addr()
+{
+	return m_connect_addr;
 }

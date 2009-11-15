@@ -311,15 +311,14 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 	char const *tmp = global_dc_sinful( );
 	if ( tmp ) {
 		MyString existing;
+			// Overwrite MyAddress even if it is already there,
+			// because some of the information in MyAddress may
+			// change over time.
 		if ( ad1 ) {
-			if ( !ad1->LookupString( ATTR_MY_ADDRESS, existing ) ) {
-				ad1->Assign(ATTR_MY_ADDRESS,tmp);
-			}
+			ad1->Assign(ATTR_MY_ADDRESS,tmp);
 		}
 		if ( ad2 ) {
-			if ( !ad2->LookupString( ATTR_MY_ADDRESS, existing ) ) {
-				ad2->Assign(ATTR_MY_ADDRESS,tmp);
-			}
+			ad2->Assign(ATTR_MY_ADDRESS,tmp);
 		}
 	}
 	

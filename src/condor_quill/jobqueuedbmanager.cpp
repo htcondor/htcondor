@@ -517,7 +517,7 @@ JobQueueDBManager::tuneupJobQueueTables()
  *  the duration of QUILL_HISTORY_DURATION, in order for purging to occur
  *  on a timely basis.
  */
-int
+void
 JobQueueDBManager::purgeOldHistoryRows()
 {
 	const int		sqlNum = 4;
@@ -549,7 +549,7 @@ JobQueueDBManager::purgeOldHistoryRows()
 		//the vertical and vice versa
 	if(connectDB(BEGIN_XACT) == QUILL_FAILURE) {
 		displayDBErrorMsg("Purge History Rows unable to connect--- ERROR");
-		return QUILL_FAILURE; 
+		return; 
 	}
 
 		//ending at 2 since only the first 2 can be wrapped inside xact
@@ -557,7 +557,7 @@ JobQueueDBManager::purgeOldHistoryRows()
 		if (DBObj->execCommand(sql_str[i]) == QUILL_FAILURE) {
 			displayDBErrorMsg("Purge History Rows --- ERROR");
 			disconnectDB(ABORT_XACT);
-			return QUILL_FAILURE; 
+			return; 
 		}
 	}
 	disconnectDB(COMMIT_XACT);
@@ -566,14 +566,14 @@ JobQueueDBManager::purgeOldHistoryRows()
 		//vacuuming cannot be bound inside a transaction
 		if(connectDB(NOT_IN_XACT) == QUILL_FAILURE) {
 			displayDBErrorMsg("Vacuum History Rows unable to connect--- ERROR");
-			return QUILL_FAILURE; 
+			return; 
 		}
 		//statements 2 and 3 should not wrapped inside xact
 		for (i = 2; i < 4; i++) {
 			if (DBObj->execCommand(sql_str[i]) == QUILL_FAILURE) {
 				displayDBErrorMsg("Vacuum History Rows --- ERROR");
 				disconnectDB(NOT_IN_XACT);
-				return QUILL_FAILURE; 
+				return; 
 			}
 		}
 		disconnectDB(NOT_IN_XACT);
@@ -582,7 +582,6 @@ JobQueueDBManager::purgeOldHistoryRows()
 	dprintf(D_ALWAYS, "Finished purge of old History rows\n");
 
 	daemonCore->Reset_Timer(reindexTimeId, 5);
-	return QUILL_SUCCESS;
 }
 
 /*! After we purge history, and optionally vacuum, postgres
@@ -590,7 +589,7 @@ JobQueueDBManager::purgeOldHistoryRows()
  *  This can take some time, so do it in a separate handler from
  *  the above deletion, so quill is more responsive
  */
-int
+void
 JobQueueDBManager::reindexTables()
 {
 	const int		sqlNum = 5;
@@ -599,7 +598,7 @@ JobQueueDBManager::reindexTables()
 
 	// Skip reindexing iff QUILL_SHOULD_REINDEX is false
 	if (param_boolean("QUILL_SHOULD_REINDEX",true) == false) {
-		return QUILL_SUCCESS;
+		return;
 	}
 
 	sql_str[0] = "REINDEX table history_horizontal;";
@@ -616,14 +615,14 @@ JobQueueDBManager::reindexTables()
 
 	if(connectDB(NOT_IN_XACT) == QUILL_FAILURE) {
 		displayDBErrorMsg("Reindex tables unable to connect--- ERROR");
-		return QUILL_FAILURE;
+		return;
 	}
 
 	for (i = 0; i < sqlNum; i++) {
 		if (jqDatabase->execCommand(sql_str[i]) == QUILL_FAILURE) {
 			displayDBErrorMsg("Reindex tables --- ERROR");
 			disconnectDB(NOT_IN_XACT);
-			return QUILL_FAILURE; 
+			return; 
 		}
 	}
 
@@ -632,7 +631,6 @@ JobQueueDBManager::reindexTables()
 
 	// Need to reset the timer to keep it alive
 	daemonCore->Reset_Timer(reindexTimeId, 3600 * historyCleaningInterval); 
-	return QUILL_SUCCESS;
 }
 
 /*! connect to DBMS
@@ -2554,19 +2552,19 @@ JobQueueDBManager::registerTimers()
 	pollingTimeId = daemonCore->Register_Timer(
 								  0, 
 								  pollingPeriod,
-								  (Eventcpp)&JobQueueDBManager::pollingTime, 
+								  (TimerHandlercpp)&JobQueueDBManager::pollingTime, 
 								  "JobQueueDBManager::pollingTime", this);
 		//historyCleaningInterval is specified in units of hours so
 		//we multiply it by 3600 to get the # of seconds 
 	purgeHistoryTimeId = daemonCore->Register_Timer(
 						   5, 
 						   historyCleaningInterval *3600,
-						   (Eventcpp)&JobQueueDBManager::purgeOldHistoryRows, 
+						   (TimerHandlercpp)&JobQueueDBManager::purgeOldHistoryRows, 
 						   "JobQueueDBManager::purgeOldHistoryRows", 
 						   this);
 	reindexTimeId = daemonCore->Register_Timer(
 						   10,
-								  (Eventcpp)&JobQueueDBManager::reindexTables, 
+								  (TimerHandlercpp)&JobQueueDBManager::reindexTables, 
 								  "JobQueueDBManager::reindexTables", this);
 }
 

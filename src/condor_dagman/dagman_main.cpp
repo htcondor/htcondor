@@ -966,7 +966,7 @@ int main_init (int argc, char ** const argv) {
 
     dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
     daemonCore->Register_Timer( 1, dagman.m_user_log_scan_interval, 
-				(TimerHandler)condor_event_timer, "condor_event_timer" );
+				condor_event_timer, "condor_event_timer" );
 
 	dagman.dag->SetPendingNodeReportInterval(
 				dagman.pendingReportInterval );

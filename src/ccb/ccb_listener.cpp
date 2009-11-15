@@ -168,14 +168,12 @@ CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack
 	self->decRefCount(); // remove ref count from when we started the connect
 }
 
-int
+void
 CCBListener::ReconnectTime()
 {
 	m_reconnect_timer = -1;
 
 	RegisterWithCCBServer();
-
-	return 0;
 }
 
 void
@@ -535,13 +533,18 @@ CCBListeners::Configure(char const *addresses)
 
 			Daemon daemon(DT_COLLECTOR,address);
 			char const *addr = daemon.addr();
+			char const *public_addr = daemonCore->publicNetworkIpAddr();
+			char const *private_addr = daemonCore->privateNetworkIpAddr();
+			if( !public_addr ) public_addr = "null";
+			if( !private_addr ) private_addr = "null";
 
-			if( addr && ( !strcmp(addr,daemonCore->privateNetworkIpAddr()) ||
-						  !strcmp(addr,daemonCore->publicNetworkIpAddr()) ) )
+			if( addr && ( !strcmp(addr,private_addr) ||
+						  !strcmp(addr,public_addr) ) )
 			{
 				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address);
 				continue;
 			}
+			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s is not equal to my address (%s, %s)\n",addr?addr:"null",public_addr,private_addr);
 
 			listener = new CCBListener(address);
 		}

@@ -63,6 +63,9 @@ class Sinful {
 	// private network name (may be NULL)
 	char const *getPrivateNetworkName() const;
 	void setPrivateNetworkName(char const *name);
+	// id of SharedPortEndpoint (i.e. basename of named socket)
+	char const *getSharedPortID() const;
+	void setSharedPortID(char const *contact);
 
 	// generic param interface
 

@@ -355,7 +355,7 @@ void AmazonJob::Reconfig()
 }
 
 
-int AmazonJob::doEvaluateState()
+void AmazonJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -1128,8 +1128,6 @@ int AmazonJob::doEvaluateState()
 		
 	} // end of do_while
 	while ( reevaluate_state );	
-
-	return TRUE;
 }
 
 

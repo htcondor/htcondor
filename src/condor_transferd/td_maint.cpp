@@ -73,7 +73,7 @@ TransferD::dump_state_handler(int cmd, Stream *sock)
 
 // inspect the transfer request data structures and exit if they have been
 // empty for too long.
-int
+void
 TransferD::exit_due_to_inactivity_timer(void)
 {
 	time_t now;
@@ -83,7 +83,7 @@ TransferD::exit_due_to_inactivity_timer(void)
 		// which signifies that we are not in a timeout possible
 		// state.
 		
-		return TRUE;
+		return;
 	}
 
 	// When the last transfer request is processed,
@@ -98,8 +98,6 @@ TransferD::exit_due_to_inactivity_timer(void)
 		// nothing to clean up, so exit;
 		DC_Exit(TD_EXIT_TIMEOUT);
 	}
-
-	return TRUE;
 }
 
 int

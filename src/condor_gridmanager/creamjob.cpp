@@ -192,6 +192,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	bool job_already_submitted = false;
 	MyString error_string = "";
 	char *gahp_path = NULL;
+	char *tmp = NULL;
 
 	creamAd = NULL;
 	remoteJobId = NULL;
@@ -230,7 +231,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 	
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&BaseJob::SetEvaluateState, this );
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -337,6 +338,13 @@ CreamJob::CreamJob( ClassAd *classad )
 	if ( job_already_submitted ) {
 		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
 	}
+
+	tmp = param( "GRIDFTP_URL_BASE" );
+	if ( !tmp ) {
+		error_string = "GRIDFTP_URL_BASE is not set in the configuration file";
+		goto error_exit;
+	}
+	free( tmp );
 
 	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy );
 
@@ -452,7 +460,7 @@ CreamJob::~CreamJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -472,7 +480,7 @@ void CreamJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int CreamJob::doEvaluateState()
+void CreamJob::doEvaluateState()
 {
 	int old_gm_state;
 	MyString old_remote_state;
@@ -1260,8 +1268,6 @@ int CreamJob::doEvaluateState()
 	} while ( reevaluate_state );
 
 		//end of evaluateState loop
-		
-	return TRUE;
 }
 
 BaseResource *CreamJob::GetResource()

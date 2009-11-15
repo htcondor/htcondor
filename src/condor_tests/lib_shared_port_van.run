@@ -1,0 +1,100 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+
+$testdesc =  'lib_shared_port_van.run - Simple personal condor wrapped test';
+$testname = "lib_shared_port_van";
+$corename = "lib_shared_port_van";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+chomp($currenthost);
+$primarycollector = $currenthost;
+
+CondorTest::fullchomp($currenthost);
+
+print scalar localtime() . "\n";
+
+$mypid = $$;
+if($$ != $mypid) {
+	die "Need to access right pid\n";
+}
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+
+my $version = "local";
+# get a local scheduler running (side a)
+my $configloc = CondorTest::StartPersonal( "lib_shared_port_van", "x_param.lib_shared_port_van" ,$version);
+my @local = split /\+/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
+
+my $holdone = CondorTest::verbose_system("./lib_shared_port_van.pl");
+if($holdone != 0) {
+	CondorTest::debug("Bailing because running job failed to submit\n",1);
+	$bail = 1;
+}
+
+system("cp *lib_shared_port_van* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+CondorTest::KillPersonal($locconfig);
+
+print scalar localtime() . "\n";
+
+if( $bail != 0 )
+{
+	# actual test failed but we allowed cleanup
+	exit(1);
+}
+
+CondorTest::debug("lib_shared_port_van SUCCESS\n",1);
+exit(0);

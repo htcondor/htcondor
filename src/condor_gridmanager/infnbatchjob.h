@@ -47,7 +47,7 @@ class INFNBatchJob : public BaseJob
 	~INFNBatchJob();
 
 	void Reconfig();
-	int doEvaluateState();
+	void doEvaluateState();
 	BaseResource *GetResource();
 
 	static int pollInterval;

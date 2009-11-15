@@ -1297,7 +1297,7 @@ Starter::cancelKillTimer( void )
 }
 
 
-bool
+void
 Starter::sigkillStarter( void )
 {
 		// In case the kill fails for some reason, we are on a periodic
@@ -1313,9 +1313,8 @@ Starter::sigkillStarter( void )
 		killkids( SIGKILL );
 
 			// Kill the starter's entire process group.
-		return killpg( SIGKILL );
+		killpg( SIGKILL );
 	}
-	return true;
 }
 
 bool

@@ -581,6 +581,9 @@ JOB_ROUTER_DEBUG        =
 MAX_ROOSTER_LOG         = 1000000
 ROOSTER_DEBUG           =
 
+MAX_SHARED_PORT_LOG     = 1000000
+SHARED_PORT_DEBUG       =
+
 MAX_HDFS_LOG            = 1000000
 HDFS_DEBUG              =
 
@@ -931,6 +934,7 @@ STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
 ROOSTER_LOG     = $(LOG)/RoosterLog
+SHARED_PORT_LOG = $(LOG)/SharedPortLog
 # High Availability Logs
 HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
@@ -1056,7 +1060,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS
+#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT
 
 
 ##  Where are the binaries for these daemons?
@@ -1070,6 +1074,7 @@ STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
 HDFS				= $(LIBEXEC)/condor_hdfs
+SHARED_PORT			= $(LIBEXEC)/condor_shared_port
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't

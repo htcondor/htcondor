@@ -286,9 +286,12 @@ main (int argc, char *argv[])
 		projList.AppendArg("EnteredCurrentActivity");
 	}
 
+	
+	
 	// Calculate the projected arguments, and insert into
 	// the projection query attribute
 
+	
 	MyString quotedProjStr;
 	MyString projStrError;
 
@@ -318,6 +321,7 @@ main (int argc, char *argv[])
 		fprintf (stderr, "Result of making query ad was:  %d\n", q);
 		exit (1);
 	}
+
 
 	char* addr = pool ? pool->addr() : NULL;
 	if( direct ) {
@@ -404,9 +408,11 @@ main (int argc, char *argv[])
 		result.Sort ((SortFunctionType)lessThanFunc);
 	}
 
+	
 	// output result
 	prettyPrint (result, &totals);
 	
+
 	// be nice ...
 	{
 		int last = sortLessThanExprs.getlast();
@@ -464,6 +470,7 @@ usage ()
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n"
 		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
+		"\t-attributes X,Y,...\tAttributes to show in -xml or -long \n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
@@ -586,6 +593,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i],"-xml", 2)){
 			setPPstyle (PP_XML, i, argv[i]);
 		} else
+		if (matchPrefix (argv[i],"-attributes", 3)){
+			// we don't do anything right here ... see prefix check in secondPass
+		} else	
 		if (matchPrefix (argv[i], "-run", 2) || matchPrefix(argv[i], "-claimed", 3)) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
 		} else
@@ -780,6 +790,19 @@ secondPass (int argc, char *argv[])
 			query->addANDConstraint( buffer );
 			continue;
 		}
+		
+		if (matchPrefix (argv[i], "-attributes", 3) ) {
+			// parse attributes to be selected and split them along ","
+			StringList more_attrs(argv[i+1],",");
+			char const *s;
+			more_attrs.rewind();
+			while( (s=more_attrs.next()) ) {
+				projList.AppendArg(s);
+			}
+			i += 2;
+			continue;
+		}
+		
 
 
 		// figure out what the other parameters should do
