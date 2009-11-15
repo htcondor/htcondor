@@ -344,6 +344,7 @@ class AttrListList
 
       	void 	  	Insert(AttrList*);	// insert at the tail of the list
       	int			Delete(AttrList*); 	// delete a AttrList
+		int Remove(AttrList* at) { return Delete(at); }
 
       	void  	  	fPrintAttrListList(FILE *, bool use_xml = false, StringList *attr_white_list=NULL );// print out the list
       	int 	  	MyLength() { return length; } 	// length of this list

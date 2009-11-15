@@ -121,6 +121,7 @@ class ClassAdList : public AttrListList
 	int			Length() { return AttrListList::MyLength(); }
 	void		Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
 	int			Delete(ClassAd* ca){return AttrListList::Delete((AttrList*)ca);}
+	int			Remove(ClassAd* ca){return AttrListList::Remove((AttrList*)ca);}
 	ClassAd*	Lookup(const char* name);
 
 	// User supplied function should define the "<" relation and the list

@@ -878,6 +878,17 @@ negotiationTime ()
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
+		ClassAd *tmp;
+		startdAds.Open();
+		while ( (tmp = startdAds.Next()) ) {
+			startdAds.Remove( tmp );
+		}
+		startdAds.Close();
+		scheddAds.Open();
+		while ( (tmp = scheddAds.Next()) ) {
+			scheddAds.Remove( tmp );
+		}
+		scheddAds.Close();
 		return FALSE;
 	}
 
@@ -1045,7 +1056,7 @@ negotiationTime ()
 			for (i=0; i<groupArrayLen; i++) {
 				if ( strcasecmp(scheddName,groupArray[i].groupName)==0 ) {
 					groupArray[i].submitterAds.Insert(ad);
-					scheddAds.Delete(ad);
+					scheddAds.Remove(ad);
 					break;
 				}
 			}
@@ -1096,7 +1107,13 @@ negotiationTime ()
 
 				groupArray[i].submitterAds.Open();
 				while( (ad=groupArray[i].submitterAds.Next()) ) {
-					scheddAds.Insert(ad);				
+					groupArray[i].submitterAds.Remove( ad );
+					scheddAds.Insert(ad);
+				}
+			} else {
+				groupArray[i].submitterAds.Open();
+				while ( (ad = groupArray[i].submitterAds.Next()) ) {
+					groupArray[i].submitterAds.Remove( ad );
 				}
 			}
 		}
@@ -1118,6 +1135,18 @@ negotiationTime ()
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
 
 	completedLastCycleTime = time(NULL);
+
+	ClassAd *tmp;
+	startdAds.Open();
+	while ( (tmp = startdAds.Next()) ) {
+		startdAds.Remove( tmp );
+	}
+	startdAds.Close();
+	scheddAds.Open();
+	while ( (tmp = scheddAds.Next()) ) {
+		scheddAds.Remove( tmp );
+	}
+	scheddAds.Close();
 
 	return TRUE;
 }
@@ -1230,7 +1259,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				dprintf (D_ALWAYS,"  Error!  Could not get %s and %s from ad\n",
 							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
 				dprintf( D_ALWAYS, "  Ignoring this schedd and continuing\n" );
-				scheddAds.Delete( schedd );
+				scheddAds.Remove( schedd );
 				continue;
 			}	
 			num_idle_jobs = 0;
@@ -1386,14 +1415,14 @@ negotiateWithGroup ( int untrimmed_num_startds,
 							// wanted. delete this schedd ad.
 						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; "
 								"removing it.\n", scheddName.Value() );
-						scheddAds.Delete( schedd);
+						scheddAds.Remove( schedd);
 					}
 					break;
 				case MM_ERROR:
 				default:
 					dprintf(D_ALWAYS,"  Error: Ignoring submitter for this cycle\n" );
 					sockCache->invalidateSock( scheddAddr.Value() );
-					scheddAds.Delete( schedd );
+					scheddAds.Remove( schedd );
 			}
 		}
 		scheddAds.Close();
@@ -1485,7 +1514,7 @@ trimStartdAds(ClassAdList &startdAds)
 			if ( strcmp(curState,claimed_state_str)==0
 			     || strcmp(curState,preempting_state_str)==0)
 			{
-				startdAds.Delete(ad);
+				startdAds.Remove(ad);
 				removed++;
 			}
 		}
@@ -2059,7 +2088,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				{
 						// this startd is offline, so skip over it
 					RegisterAttemptedOfflineMatch( &request, offer );
-					startdAds.Delete( offer );
+					startdAds.Remove( offer );
 				}
 				else {
 						// this startd is online, so go ahead and use it
@@ -2159,7 +2188,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
 			if (result == MM_BAD_MATCH)
-				startdAds.Delete (offer);
+				startdAds.Remove (offer);
 
 			// 2e(iv).  if the matchmaking protocol failed to talk to the 
 			//			schedd, invalidate the connection and return
@@ -2186,10 +2215,10 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			// Shuffle this resource to the end of the list.  This way, if
 			// two resources with the same RANK match, we'll hand them out
 			// in a round-robin way
-			startdAds.Delete (offer);
+			startdAds.Remove (offer);
 			startdAds.Insert (offer);
 		} else  {
-			startdAds.Delete (offer);
+			startdAds.Remove (offer);
 		}	
 
 		double SlotWeight = accountant.GetSlotWeight(offer);
