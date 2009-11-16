@@ -34,7 +34,8 @@ all_target(libclassad_support.a)
 library_target(libclassad_support.a,$(OBJ))
 
 release:: all
-
+stripped:: all
+static:: all
 testbin:: all
 
 /* template instantiations go in here */

@@ -69,7 +69,8 @@ all_target(libclassad_ns.a classad_functional_tester classad_unit_tester classad
 library_target(libclassad_ns.a,$(OBJ))
 
 release:: all
-
+stripped:: all
+static:: all
 testbin:: all
 
 /* template instantiations go in here */
