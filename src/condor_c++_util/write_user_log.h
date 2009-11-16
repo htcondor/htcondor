@@ -157,14 +157,6 @@ class WriteUserLog
 		m_global_disable = !enable;
 		return tmp;
 	};
-	/** These two are for backward compatibility
-	 */
-	void setWriteUserLog(bool enable) {
-		setEnableUserLog( enable );
-	};
-	void setWriteGlobalLog(bool enable) {
-		setEnableGlobalLog(enable);
-	};
 
 	void setCreatorName(const char *);
 
