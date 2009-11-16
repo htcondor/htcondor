@@ -2521,10 +2521,28 @@ AC_CHECK_FUNCS([strsignal				\
 		execl					\
 		access					\
 		vasprintf				\
+		localtime_r				\
 		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))
+
+# On HPUX11, localtime_r() and gmtime_r() are not defined unless
+# _REENTRANT is defined.  Test for that case here.
+
+AC_MSG_CHECKING([if localtime_r() needs _REENTRANT])
+AC_LANG_PUSH([C++])
+AC_COMPILE_IFELSE([#include <time.h>
+		   void testfunc() {localtime_r(NULL,NULL);}],[
+		   AC_MSG_RESULT([no])],[
+		   AC_COMPILE_IFELSE([
+		     #define _REENTRANT
+		     #include <time.h>
+		     void testfunc() {localtime_r(NULL,NULL);}],[
+		     AC_MSG_RESULT([yes])
+		     AC_DEFINE([_REENTRANT],[1],[needed for localtime_r() and gmtime_r()])],[
+		   AC_MSG_RESULT([test failed])])])
+AC_LANG_POP([C++])
 
 AC_CHECK_FUNCS(backtrace)
 #########
