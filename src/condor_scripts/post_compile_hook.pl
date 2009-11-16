@@ -172,6 +172,12 @@ EOF
 	exit 1;
 }
 
+# The output of this function should be an array of "SYM,REF" lines where SYM
+# is the symbol name with no whitespace around it, and REF is the source code
+# location for the symbol, if any, with no whitespace around it (but there may
+# be spaces in side it!). If no source location is determined then
+# "SYM,unknown" is what is returned. If no symbols are found of this function
+# isn't implemented, then return an empty array.
 sub get_unreferenced_symbols_from_objfile
 {
 	my ($args) = @_;
@@ -189,14 +195,49 @@ sub get_unreferenced_symbols_from_objfile
 		# get the unreferenced symbols and where they were referenced.
 		# nm is quite nice for this
 		@unref = `$args->{'nm'} -u -l $args->{'obj-file'}`;
-		# get rid of whitespace and the U,
-		# XXX hope your file paths don't have whitespace in them. :)
-		map { s/^\s+//g; s/\s+$//g; s/\s+/,/g; s/^U,//} @unref;
+		canonicalize_nm_urefs(\@unref);
 	} else {
 		print "WARNING: Poison policy not in effect on this platform.\n";
 	}
 
 	return @unref;
+}
+
+# This destructively modifies the array pointed to be the array reference
+# passed in. This is suited for the style of references as denoted by
+# a unix style 'nm' program.
+sub canonicalize_nm_urefs
+{
+	my ($aref) = @_;
+
+	# Convert each line from "\s*U\s+SYM\s+REF" to "SYM,REF" or "SYM,unknown"
+	# if there isn't a source line reference for the symbol.  This takes into
+	# account there may not be a \s+REF and if the REF portion has whitespace
+	# embedded in the name.
+	map {
+		my $line = $_;
+		my ($sym, $ref);
+
+		# get rid of leading/ending whitespace and the ^U\s+
+		$line =~ s/^\s+//g;
+		$line =~ s/^U\s+//g;
+		$line =~ s/\s+$//g;
+
+		# There might or might not be a source reference for the symbol 
+		$line =~ m/(^\w+)(\s+(.*$))?/;
+		$sym = $1;
+		$ref = $2;
+		if (!defined($ref)) {
+			$ref = "unknown";
+		}
+		# remove leading/ending whitespace
+		$ref =~ s/^\s+//g;
+		$ref =~ s/\s+$//g;
+
+		# destructively update the line I'm working on to hold the right
+		# value.
+		$_ = "$sym,$ref";
+	} @{$aref};
 }
 
 sub apply_poison_policy
@@ -238,7 +279,6 @@ sub apply_poison_policy
 		# Check each unreferenced symbol against the policy
 		foreach $s (@usym) {
 			($sym, $ref) = split(/,/, $s);
-			$ref = "unknown" if (!defined($ref));
 
 			# Is the symbol a member of the poison set?
 			if (is_member($sym, \@poison)) {
