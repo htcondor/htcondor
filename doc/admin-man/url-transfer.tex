@@ -1,0 +1,114 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:URL-transfer}
+Enabling the Transfer of Files Specified by a URL}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{file transfer mechanism!input file specified by URL}
+\index{URL file transfer}
+
+A vanilla universe's job input files may be specified by a URL,
+causing the execute machine to retrieve the files.
+This differs from the normal file transfer mechanism,
+in which transfers are from the machine where the job is submitted
+to the machine where the job is executed.
+
+The transfers are accomplished a \Term{plug-in},
+an executable or shell script that handles the task of file transfer.
+More than one plug-in may be specified.
+The plug-ins must be installed and available on every execute machine 
+that may run a job specifying an input file with a URL.
+
+URL transfers are enabled by default in the configuration 
+of execute machines.
+Disabling URL transfers is accomplished by setting
+\footnotesize
+\begin{verbatim}
+ENABLE_URL_TRANSFERS = FALSE
+\end{verbatim}
+\normalsize
+
+In addition, a comma separated list giving the absolute path and name
+of all available plug-ins is specified as in the example:
+\footnotesize
+\begin{verbatim}
+FILETRANSFER_PLUGINS = /opt/condor/plugins/wget-plugin, \
+                       /opt/condor/plugins/hdfs-plugin, \
+                       /opt/condor/plugins/custom-plugin
+\end{verbatim}
+\normalsize
+
+The \Condor{starter} invokes all listed plug-ins to determine their 
+capabilities. Each may handle one or more protocols (scheme names).
+The plug-in's response to invocation identifies which protocols
+it can handle.
+When a URL transfer is specified by a job,
+the \Condor{starter} invokes the proper one to do the transfer.
+If more than one plugin is capable of handling a particular protocol,
+then the last one within the list given by \MacroNI{FILETRANSFER\_PLUGINS}
+is used.
+
+Condor assumes that all plug-ins will respond in specific
+ways.
+To determine the capabilities of the plug-ins as to which protocols
+they handle,
+the \Condor{starter} daemon invokes each plug-in giving it the
+command line argument \Opt{-classad}.
+In response to invocation with this command line argument,
+the plug-in must respond with an output of three ClassAd attributes. 
+The first two are fixed:
+\footnotesize
+\begin{verbatim}
+PluginVersion = "0.1"
+PluginType = "FileTransfer"
+\end{verbatim}
+\normalsize
+
+The third ClassAd attribute is \Attr{SupportedMethods}. 
+This attribute is a string containing a comma separated list of the
+protocols that the plug-in handles.
+So, for example:
+\footnotesize
+\begin{verbatim}
+SupportedMethods = "http,ftp,file"
+\end{verbatim}
+\normalsize
+would identify that the three protocols described by \verb@http@,
+\verb@ftp@, and \verb@ftp@ are supported.
+These strings will match the protocol specification as given
+within a URL in a \SubmitCmd{transfer\_input\_files} command 
+in a submit description file for a job.
+
+When a job specifies a URL transfer,
+the plug-in is invoked, without the command line argument \Opt{-classad}.
+It will instead be given two other command line arguments.
+The first will be the URL of the file to retrieve.
+The second will be the absolute path identifying where to place the
+transferred file.
+The plug-in is expected to do the transfer,
+exiting with status 0 if the transfer was successful, 
+and a non-zero status if the transfer was \emph{not} successful.
+
+Note that this functionality is not limited to a predefined set
+of protocols.
+New ones can be invented.
+As an invented example,
+the \verb@zkm@ transfer type writes random bytes to a file.
+The plug-in that handles \verb@zkm@ transfers would respond to 
+invocation with the \Opt{-classad} command line argument with:
+\footnotesize
+\begin{verbatim}
+PluginVersion = "0.1"
+PluginType = "FileTransfer"
+SupportedMethods = "zkm"
+\end{verbatim}
+\normalsize
+And, then when a job requested that this plug-in be invoked,
+for the invented example:
+\footnotesize
+\begin{verbatim}
+transfer_intput_files = zkm://128/r-data
+\end{verbatim}
+\normalsize
+the plug-in will be invoked with a first command line argument
+of \verb@zkm://128/r-data@ and a second command line argument giving
+the full path along with the file name \File{r-data} as the location
+for the plug-in to write 128 bytes of random data.

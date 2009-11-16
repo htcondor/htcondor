@@ -1579,6 +1579,36 @@ Queue
 
 \end{description}
 
+%%%%%%%%%%%%
+\subsubsection{Input File Transfer Using a URL}
+%%%%%%%%%%%%
+\index{file transfer mechanism!input file specified by URL}
+\index{URL file transfer}
+For vanilla universe jobs only,
+Condor has the ability to allow a job's input file to be 
+obtained by the machine allocated to execute the job
+with the specification of a URL.
+This capability requires administrative set up, 
+as described in section~\ref{sec:URL-transfer}.
+
+To use this feature, Condor's file transfer mechanism must be enabled.
+Therefore, the submit description file for the job will define both
+\SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}.
+In addition, the URL for the any files specified this way are
+given in the \SubmitCmd{transfer\_input\_files} command.
+An example portion of the submit description file for a job
+that has a single file specified with a URL:
+
+\footnotesize
+\begin{verbatim}
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = http://www.full.url/path/to/filename
+\end{verbatim}
+\normalsize
+
+The destination file is given by the file name in the URL. 
+
 %%%%%%%%%%%% 
 \subsubsection{Requirements and Rank for File Transfer}
 %%%%%%%%%%%%

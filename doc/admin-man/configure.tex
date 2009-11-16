@@ -5874,6 +5874,24 @@ These settings affect the \Condor{starter}.
   This affinity list only takes effect if
   \Expr{ENFORCE\_CPU\_AFFINITY = True}.
 
+\label{param:EnableURLTransfers} 
+\item[\Macro{ENABLE\_URL\_TRANSFERS}]
+  A boolean value that when \Expr{True} causes the \Condor{starter} for
+  a job to invoke all plug-ins defined by \MacroNI{FILETRANSFER\_PLUGINS}
+  to determine their capabilities for handling protocols to be
+  used in file transfer specified with a URL.
+  When \Expr{False}, a URL transfer specified in a job's submit description
+  file will cause an error issued by \Condor{submit}.
+  The default value is \Expr{True}.
+
+\label{param:FiletransferPlugins} 
+\item[\Macro{FILETRANSFER\_PLUGINS}]
+  A comma separated list of full and absolute path and executable names
+  for plug-ins that will accomplish the task of doing file transfer
+  when a job requests the tranfer of an input file by specifying a URL. 
+  See section~\ref{sec:URL-transfer} for a description of the functionality
+  required of a plug-in.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
