@@ -36,6 +36,9 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	CCBListener(char const *ccb_address);
 	~CCBListener();
 
+		// This is called at initial creation time and on reconfig.
+	void InitAndReconfig();
+
 		// must call this after creating CCBListener, or it doesn't do anything
 		// returns true if blocking and registration succeeded
 		// otherwise, keeps trying periodically
@@ -57,6 +60,11 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	bool m_waiting_for_registration;
 	bool m_registered;
 	int m_reconnect_timer;
+	int m_heartbeat_timer;
+	int m_heartbeat_interval;
+	int m_last_contact_from_peer;
+	bool m_heartbeat_disabled;
+	bool m_heartbeat_initialized;
 
 	bool SendMsgToCCB(ClassAd &msg,bool blocking);
 	bool WriteMsgToCCB(ClassAd &msg);
@@ -71,6 +79,10 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	bool DoReversedCCBConnect( char const *address, char const *connect_id, char const *request_id,char const *peer_description);
 	int ReverseConnected(Stream *stream);
 	void ReportReverseConnectResult(ClassAd *connect_msg,bool success,char const *error_msg=NULL);
+
+	void HeartbeatTime();
+	void RescheduleHeartbeat();
+	void StopHeartbeat();
 };
 
 class CCBListeners {
