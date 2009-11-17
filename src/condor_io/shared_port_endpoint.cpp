@@ -346,10 +346,10 @@ SharedPortEndpoint::InitRemoteAddress()
 	}
 
 	MyString public_addr;
-	if( !ad->LookupString(ATTR_PUBLIC_NETWORK_IP_ADDR,public_addr) ) {
+	if( !ad->LookupString(ATTR_MY_ADDRESS,public_addr) ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to find %s in ad from %s.\n",
-				ATTR_PUBLIC_NETWORK_IP_ADDR, shared_port_server_ad_file.Value());
+				ATTR_MY_ADDRESS, shared_port_server_ad_file.Value());
 		return false;
 	}
 

@@ -10248,14 +10248,16 @@ DaemonCore::publish(ClassAd *ad) {
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();
 	if (tmp) {
+			// The private network name is published in the contact
+			// string, so we don't really need to advertise it in
+			// a separate attribute.  However, it may be useful for
+			// other purposes.
 		ad->Assign(ATTR_PRIVATE_NETWORK_NAME, tmp);
-		tmp = privateNetworkIpAddr();
-		ASSERT(tmp);
-		ad->Assign(ATTR_PRIVATE_NETWORK_IP_ADDR, tmp);
 	}
+
 	tmp = publicNetworkIpAddr();
 	if( tmp ) {
-		ad->Assign(ATTR_PUBLIC_NETWORK_IP_ADDR, tmp);
+		ad->Assign(ATTR_MY_ADDRESS, tmp);
 	}
 }
 

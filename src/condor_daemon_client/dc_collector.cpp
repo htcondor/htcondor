@@ -307,21 +307,12 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
 	}
 
-	// Insert "my address"
-	char const *tmp = global_dc_sinful( );
-	if ( tmp ) {
-		MyString existing;
-			// Overwrite MyAddress even if it is already there,
-			// because some of the information in MyAddress may
-			// change over time.
-		if ( ad1 ) {
-			ad1->Assign(ATTR_MY_ADDRESS,tmp);
-		}
-		if ( ad2 ) {
-			ad2->Assign(ATTR_MY_ADDRESS,tmp);
-		}
+		// Prior to 7.2.0, the negotiator depended on the startd
+		// supplying matching MyAddress in public and private ads.
+	if ( ad1 && ad2 ) {
+		ad2->CopyAttribute(ATTR_MY_ADDRESS,ad1);
 	}
-	
+
 		// We never want to try sending an update to port 0.  If we're
 		// about to try that, and we're trying to talk to a local
 		// collector, we should try re-reading the address file and
