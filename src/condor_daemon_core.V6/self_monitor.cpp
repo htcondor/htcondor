@@ -23,12 +23,9 @@
 #include "condor_daemon_core.h"
 #include "../condor_procapi/procapi.h"
 
-static void self_monitor(void);
-
-static void self_monitor(void)
+static void self_monitor()
 {
     daemonCore->monitor_data.CollectData();
-    return;
 }
 
 SelfMonitorData::SelfMonitorData()
@@ -55,7 +52,7 @@ void SelfMonitorData::EnableMonitoring(void)
     if (!_monitoring_is_on) {
         _monitoring_is_on = true;
         _timer_id = daemonCore->Register_Timer( 0, 240,
-                                (TimerHandler) self_monitor, "self_monitor" );
+                                self_monitor, "self_monitor" );
     }
     return;
 }

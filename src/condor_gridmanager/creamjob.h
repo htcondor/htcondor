@@ -51,7 +51,7 @@ class CreamJob : public BaseJob
 	~CreamJob();
 
 	void Reconfig();
-	int doEvaluateState();
+	void doEvaluateState();
 	void NewCreamState( const char *new_state, int exit_code,
 						const char *failure_reason );
 	BaseResource *GetResource();

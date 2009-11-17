@@ -47,7 +47,7 @@ class NordugridJob : public BaseJob
 	~NordugridJob();
 
 	void Reconfig();
-	int doEvaluateState();
+	void doEvaluateState();
 	BaseResource *GetResource();
 	void SetRemoteJobId( const char *job_id );
 

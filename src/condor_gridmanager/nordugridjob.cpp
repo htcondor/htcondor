@@ -192,7 +192,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&BaseJob::SetEvaluateState, this );
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -274,7 +274,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 NordugridJob::~NordugridJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
@@ -302,7 +302,7 @@ void NordugridJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int NordugridJob::doEvaluateState()
+void NordugridJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -869,8 +869,6 @@ int NordugridJob::doEvaluateState()
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 BaseResource *NordugridJob::GetResource()

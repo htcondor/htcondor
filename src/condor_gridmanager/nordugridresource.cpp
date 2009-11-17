@@ -167,14 +167,14 @@ void NordugridResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	}
 }
 
-int NordugridResource::DoJobStatus()
+void NordugridResource::DoJobStatus()
 {
 	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
 		 m_jobStatusActive == false ) {
 			// No jobs or we can't talk to the resource, so no point
 			// in polling
 		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
-		return 0;
+		return;
 	}
 
 	if ( m_statusGahp->isStarted() == false ) {
@@ -184,7 +184,7 @@ int NordugridResource::DoJobStatus()
 				// and should go on hold as a result.
 			daemonCore->Reset_Timer( m_jobStatusTid,
 									 NordugridJob::probeInterval );
-			return 0;
+			return;
 		}
 	}
 
@@ -215,7 +215,7 @@ int NordugridResource::DoJobStatus()
 		int rc = m_statusGahp->nordugrid_ldap_query( NULL, NULL, NULL, NULL, results );
 
 		if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
-			return 0;
+			return;
 		} else if ( rc != 0 ) {
 			dprintf( D_ALWAYS,
 					 "gahp->nordugrid_ldap_query returned %d for resource %s: %s\n",
@@ -257,6 +257,4 @@ int NordugridResource::DoJobStatus()
 
 		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
 	}
-
-	return TRUE;
 }

@@ -245,7 +245,7 @@ KillFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 	} while ( (*old_pids)[i].pid );
 }
 
-int
+void
 KillFamily::takesnapshot()
 {
 	ExtArray<a_pid> *new_pids;
@@ -475,8 +475,6 @@ KillFamily::takesnapshot()
 
 	// set our priv state back to what it originally was
 	set_priv(priv);
-
-	return 0;
 }
 
 

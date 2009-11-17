@@ -260,10 +260,12 @@ int SafeSock::connect(
 	/* might be in <x.x.x.x:x> notation, i.e. sinfull string */
 	if (host[0] == '<') {
 		string_to_sin(host, &_who);
+		set_connect_addr(host);
 	}
 	/* try to get a decimal notation first 			*/
 	else if( (inaddr=inet_addr(host)) != (unsigned long)(-1L) ) {
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
+		set_connect_addr(sin_to_string(&_who));
 	} else {
 		/* if dotted notation fails, try host database	*/
 		hostp = condor_gethostbyname(host);
@@ -272,6 +274,7 @@ int SafeSock::connect(
 		} else {
 			memcpy(&_who.sin_addr, hostp->h_addr, sizeof(hostp->h_addr));
 		}
+		set_connect_addr(sin_to_string(&_who));
 	}
 
     addr_changed();
@@ -279,7 +282,7 @@ int SafeSock::connect(
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
 	// instead of a forward connect
-	int retval=reverse_connect(host,port,true);
+	int retval=special_connect(host,port,true);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}
@@ -886,4 +889,22 @@ void SafeSock::dumpSock()
 
 void
 SafeSock::cancel_reverse_connect() {
+}
+
+void
+SafeSock::setTargetSharedPortID( char const *id)
+{
+	if( id ) {
+		dprintf(D_ALWAYS,
+			"WARNING: UDP does not support connecting to a shared port! "
+			"(requested address is %s with SharedPortID=%s)\n",
+			peer_description(), id);
+	}
+}
+
+bool
+SafeSock::sendTargetSharedPortID()
+{
+		// do nothing; shared ports are not currently supported by UDP
+	return true;
 }

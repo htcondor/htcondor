@@ -1230,7 +1230,7 @@ void CollectorDaemon::Config()
 	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
 	if( UpdateTimerId < 0 ) {
 		UpdateTimerId = daemonCore->
-			Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
+			Register_Timer( 1, i, sendCollectorAd,
 							"sendCollectorAd" );
 	}
 
@@ -1344,7 +1344,7 @@ void CollectorDaemon::Config()
 		m_ccb_server = NULL;
 	}
 
-    return;
+	return;
 }
 
 void CollectorDaemon::Exit()
@@ -1383,7 +1383,7 @@ void CollectorDaemon::Shutdown()
 	return;
 }
 
-int CollectorDaemon::sendCollectorAd()
+void CollectorDaemon::sendCollectorAd()
 {
     // compute submitted jobs information
     submittorRunningJobs = 0;
@@ -1405,7 +1405,7 @@ int CollectorDaemon::sendCollectorAd()
     // If we don't have any machines, then bail out. You oftentimes
     // see people run a collector on each macnine in their pool. Duh.
     if(machinesTotal == 0) {
-		return 1;
+		return;
 	}
     // insert values into the ad
     char line[100];
@@ -1445,10 +1445,9 @@ int CollectorDaemon::sendCollectorAd()
 			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 					 "(%s): %s\n", update_addr,
 					 updateRemoteCollector->error() );
-			return 0;
+			return;
 		}
 	}
-	return 1;
 }
 
 void CollectorDaemon::init_classad(int interval)

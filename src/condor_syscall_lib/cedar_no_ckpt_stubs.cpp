@@ -131,19 +131,19 @@ Stream::prepare_crypto_for_secret_is_noop()
 	return true;
 }
 
-int Sock::reverse_connect(char const *,int,bool)
+int Sock::special_connect(char const *,int,bool)
 {
 	return CEDAR_ENOCCB;
 }
 
 int
-SafeSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
+SafeSock::do_reverse_connect(char const *,bool)
 {
 	return CEDAR_ENOCCB;
 }
 
 int
-ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
+ReliSock::do_reverse_connect(char const *,bool)
 {
 	return CEDAR_ENOCCB;
 }
@@ -152,4 +152,22 @@ void
 ReliSock::cancel_reverse_connect() {
 	EXCEPT( "ReliSock::cancel_reverse_connect() should never be "
 			"called within the Condor syscall library" );
+}
+
+int
+SafeSock::do_shared_port_local_connect( char const *,bool )
+{
+	return 0;
+}
+
+int
+ReliSock::do_shared_port_local_connect( char const *,bool )
+{
+	return 0;
+}
+
+bool
+ReliSock::sendTargetSharedPortID()
+{
+	return true;
 }

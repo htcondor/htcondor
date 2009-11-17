@@ -231,7 +231,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 	
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&CreamJob::ProxyCallback, this );
+							 (TimerHandlercpp)&CreamJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -460,7 +460,7 @@ CreamJob::~CreamJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&CreamJob::ProxyCallback, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&CreamJob::ProxyCallback, this );
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -488,7 +488,7 @@ int CreamJob::ProxyCallback()
 	return 0;
 }
 
-int CreamJob::doEvaluateState()
+void CreamJob::doEvaluateState()
 {
 	int old_gm_state;
 	MyString old_remote_state;
@@ -1274,8 +1274,6 @@ int CreamJob::doEvaluateState()
 	} while ( reevaluate_state );
 
 		//end of evaluateState loop
-		
-	return TRUE;
 }
 
 BaseResource *CreamJob::GetResource()
@@ -1342,6 +1340,12 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 		remoteState = new_state_str;
 		enteredCurrentRemoteState = time(NULL);
 		SetRemoteJobStatus( remoteState.Value() );
+
+		if ( failure_reason ) {
+			remoteStateFaultString = failure_reason;
+		} else {
+			remoteStateFaultString = "";
+		}
 
 		// TODO handle jobs that exit via a signal
 		if ( remoteState == CREAM_JOB_STATE_DONE_OK ) {

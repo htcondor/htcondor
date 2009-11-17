@@ -215,7 +215,7 @@ class TransferD : public Service
 
 		// a periodic timer to calculate whether or not the transferd should
 		// exit due to having an empty queue for too long.
-		int exit_due_to_inactivity_timer(void);
+		void exit_due_to_inactivity_timer(void);
 
 		// handler for any exiting process.
 		int reaper_handler(int pid, int exit_status);

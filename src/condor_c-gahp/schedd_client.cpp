@@ -111,12 +111,12 @@ request_pipe_handler(Service*, int) {
 }
 
 
-int
+void
 doContactSchedd()
 {
 	if (command_queue.IsEmpty()) {
 		daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval ); // Come back in a min
-		return TRUE;
+		return;
 	}
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd\n");
@@ -1161,8 +1161,6 @@ submit_report_result:
 	// Come back soon..
 	// QUESTION: Should this always be a fixed time period?
 	daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval );
-	return TRUE;
-
 }
 
 

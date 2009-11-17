@@ -1261,7 +1261,7 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 	}
 	hdjt_tid = daemonCore->
 		Register_Timer( seconds, 0,
-				(Eventcpp)&DedicatedScheduler::callHandleDedicatedJobs,
+				(TimerHandlercpp)&DedicatedScheduler::callHandleDedicatedJobs,
 						"callHandleDedicatedJobs", this );
 	if( hdjt_tid == -1 ) {
 		EXCEPT( "Can't register DC timer!" );
@@ -3676,7 +3676,7 @@ DedicatedScheduler::checkSanity( void )
 				// checkSanity(), so we actually have to register a
 				// timer, instead of just resetting it.
 			sanity_tid = daemonCore->Register_Timer( tmp, 0,
-  				         (Eventcpp)&DedicatedScheduler::checkSanity,
+  				         (TimerHandlercpp)&DedicatedScheduler::checkSanity,
 						 "checkSanity", this );
 			if( sanity_tid == -1 ) {
 				EXCEPT( "Can't register DC timer!" );

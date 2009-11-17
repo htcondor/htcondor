@@ -1790,7 +1790,7 @@ CStarter::removeDeferredJobs() {
  * 
  * return true if no errors occured
  **/
-int
+void
 CStarter::SpawnPreScript( void )
 {
 		//
@@ -1829,18 +1829,21 @@ CStarter::SpawnPreScript( void )
 				// if it's running, all we can do is return to
 				// DaemonCore and wait for the it to exit.  the
 				// reaper will then do the right thing
-			return TRUE;
+			return;
 		} else {
 			dprintf( D_ALWAYS, "Failed to start prescript, exiting\n" );
 				// TODO notify the JIC somehow?
 			main_shutdown_fast();
-			return FALSE;
+			return;
 		}
 	}
 
 		// if there's no pre-script, we can go directly to trying to
-		// spawn the main job
-	return SpawnJob();
+		// spawn the main job. if we fail to spawn the job we exit
+	if( ! SpawnJob() ) {
+		dprintf( D_ALWAYS, "Failed to start main job, exiting.\n" );
+		main_shutdown_fast();
+	}
 }
 
 void CStarter::getJobOwnerFQUOrDummy(MyString &result)

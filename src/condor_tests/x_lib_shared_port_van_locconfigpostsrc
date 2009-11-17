@@ -1,0 +1,7 @@
+
+USE_SHARED_PORT = True
+DAEMON_LIST = SHARED_PORT $(DAEMON_LIST)
+
+# named sockets cannot have very long paths (~100 chars), so put them
+# in /tmp to avoid problems
+DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock

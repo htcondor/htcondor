@@ -44,6 +44,7 @@ C_PLUS_INCLUDE =	../condor_c++_util
 DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 DAEMONCORE_INCLUDE =	../condor_daemon_core.V6
 CCB_INCLUDE = ../ccb
+CEDAR_INCLUDE = ../condor_io
 
 
 #if !defined( CLinker )
@@ -331,7 +332,7 @@ PTHREAD_FLAG = -pthread
 
 VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
-		 -I$(DAEMONCORE_INCLUDE) -I$(CCB_INCLUDE) \
+		 -I$(DAEMONCORE_INCLUDE) -I$(CCB_INCLUDE) -I$(CEDAR_INCLUDE) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) \

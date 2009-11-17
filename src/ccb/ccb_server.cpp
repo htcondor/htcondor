@@ -414,6 +414,12 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 		return;
 	}
 
+	int command = 0;
+	if( msg.LookupInteger( ATTR_COMMAND, command ) && command == ALIVE ) {
+		SendHeartbeatResponse( target );
+		return;
+	}
+
 	target->decPendingRequestResults();
 
 	bool success = false;
@@ -501,6 +507,28 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 	}
 
 	RequestFinished( request, success, error_msg.Value() );
+}
+
+void
+CCBServer::SendHeartbeatResponse( CCBTarget *target )
+{
+	Sock *sock = target->getSock();
+
+	ClassAd msg;
+	msg.Assign( ATTR_COMMAND, ALIVE );
+	sock->encode();
+	if( !msg.put( *sock ) || !sock->end_of_message() ) {
+		dprintf(D_ALWAYS,
+				"CCB: failed to send heartbeat to target "
+				"daemon %s with ccbid %lu\n",
+				target->getSock()->peer_description(),
+				target->getCCBID());
+
+		RemoveTarget( target );
+		return;
+	}
+	dprintf(D_FULLDEBUG,"CCB: sent heartbeat to target %s\n",
+			sock->peer_description());
 }
 
 void

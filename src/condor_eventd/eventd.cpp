@@ -94,13 +94,13 @@ EventDaemon::Config()
 	}
 
 	TimeoutTid = daemonCore->Register_Timer(0, EventInterval,
-											(Eventcpp)&EventDaemon::Timeout,
+											(TimerHandlercpp)&EventDaemon::Timeout,
 											"Timeout", this);
 
 	return 0;
 }
 
-int
+void
 EventDaemon::Timeout()
 {
 	int TimeToNearestEvent = -1;
@@ -141,8 +141,6 @@ EventDaemon::Timeout()
 								TimeToNearestEvent-MaxEventPreparation,
 								EventInterval);
 	}
-
-	return 0;
 }
 
 ScheduledEvent *

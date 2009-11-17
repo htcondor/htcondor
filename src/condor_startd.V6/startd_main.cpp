@@ -672,7 +672,7 @@ main_shutdown_fast()
 	resmgr->walk( &Resource::killAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)startd_check_free,
+								startd_check_free,
 								 "startd_check_free" );
 	return TRUE;
 }
@@ -703,7 +703,7 @@ main_shutdown_graceful()
 	resmgr->walk( &Resource::releaseAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)startd_check_free,
+								startd_check_free,
 								 "startd_check_free" );
 	return TRUE;
 }
@@ -760,11 +760,11 @@ do_cleanup(int,int,char*)
 }
 
 
-int
+void
 startd_check_free()
 {	
 	if ( Cronmgr && ( ! Cronmgr->ShutdownOk() ) ) {
-		return FALSE;
+		return;
 	}
 	if ( ! resmgr ) {
 		startd_exit();
@@ -772,7 +772,7 @@ startd_check_free()
 	if( ! resmgr->hasAnyClaim() ) {
 		startd_exit();
 	}
-	return TRUE;
+	return;
 }
 
 

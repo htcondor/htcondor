@@ -468,7 +468,7 @@ CronJobBase::RunJob( void )
 }
 
 // Handle the kill timer
-int
+void
 CronJobBase::KillHandler( void )
 {
 
@@ -479,11 +479,11 @@ CronJobBase::KillHandler( void )
 	if ( CRON_IDLE == state ) {
 		dprintf( D_ALWAYS, "Cron: Job '%s' already idle (%s)!\n", 
 			GetName(), GetPath() );
-		return -1;
+		return;
 	}
 
 	// Kill it.
-	return KillJob( false );
+	KillJob( false );
 }
 
 // Start a job

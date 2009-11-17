@@ -211,7 +211,7 @@ JobRouter::config() {
 			daemonCore->Register_Timer(
 				m_job_router_entries_refresh,
 				m_job_router_entries_refresh,
-				(Eventcpp)&JobRouter::config,
+				(TimerHandlercpp)&JobRouter::config,
 				"JobRouter::config", this);
 	}
 
@@ -354,12 +354,12 @@ JobRouter::config() {
 	m_job_router_polling_timer = daemonCore->Register_Timer(
 								  0, 
 								  m_job_router_polling_period,
-								  (Eventcpp)&JobRouter::Poll, 
+								  (TimerHandlercpp)&JobRouter::Poll, 
 								  "JobRouter::Poll", this);
 
 	if (periodic_interval.getMinInterval() > 0) {
 		m_periodic_timer_id = daemonCore->Register_Timer(periodic_interval, 
-								(Eventcpp)&JobRouter::EvalAllSrcJobPeriodicExprs,
+								(TimerHandlercpp)&JobRouter::EvalAllSrcJobPeriodicExprs,
 								"JobRouter::EvalAllSrcJobPeriodicExprs",
 								this);
 		dprintf(D_FULLDEBUG, "JobRouter: Registered EvalAllSrcJobPeriodicExprs() to evaluate periodic expressions.\n");
@@ -399,7 +399,7 @@ JobRouter::config() {
 		m_public_ad_update_timer = daemonCore->Register_Timer(
 			0,
 			m_public_ad_update_interval,
-			(Eventcpp)&JobRouter::TimerHandler_UpdateCollector,
+			(TimerHandlercpp)&JobRouter::TimerHandler_UpdateCollector,
 			"JobRouter::TimerHandler_UpdateCollector",
 			this);
 	}

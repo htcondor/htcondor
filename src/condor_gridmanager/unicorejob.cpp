@@ -280,7 +280,7 @@ void UnicoreJob::Reconfig()
 	}
 }
 
-int UnicoreJob::doEvaluateState()
+void UnicoreJob::doEvaluateState()
 {
 	int old_gm_state;
 	int old_unicore_state;
@@ -728,8 +728,6 @@ if ( unicoreState != COMPLETED ) {
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 BaseResource *UnicoreJob::GetResource()

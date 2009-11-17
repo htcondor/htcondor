@@ -75,7 +75,7 @@ update_startd()
 }
 
 
-int 
+void 
 PollActivity()
 {
 #ifdef WIN32
@@ -100,7 +100,7 @@ PollActivity()
 			update_startd();
 		}
 
-		return TRUE;
+		return;
 	}
 
 	//If no change to keyboard input, check if mouse has been moved.
@@ -125,7 +125,7 @@ PollActivity()
 		}
 	}
 
-	return TRUE;
+	return;
 
 #else
     if(xinter != NULL)
@@ -135,7 +135,6 @@ PollActivity()
 	    update_startd();
 	}
     }
-    return TRUE;
 #endif
 }
 
@@ -171,7 +170,7 @@ main_init(int, char *[])
 	xinter = new XInterface(id);
 #endif
     //Poll for X activity every second.
-    id = daemonCore->Register_Timer(5, 5, (Event)PollActivity, "PollActivity");
+    id = daemonCore->Register_Timer(5, 5, PollActivity, "PollActivity");
 
     return TRUE;
 }

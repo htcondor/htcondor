@@ -180,7 +180,7 @@ TTManager::registerTimers()
 		// register timer handlers
 	pollingTimeId = daemonCore->Register_Timer(0, 
 											   pollingPeriod,
-											   (Eventcpp)&TTManager::pollingTime, 
+											   (TimerHandlercpp)&TTManager::pollingTime, 
 											   "pollingTime", this);
 }
 

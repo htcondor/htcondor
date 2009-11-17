@@ -106,6 +106,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "subsystem_info.h"
 #include "basename.h"
 #include "condor_threads.h"
+#include "shared_port_endpoint.h"
 
 #include "valgrind.h"
 
@@ -261,15 +262,18 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		&DaemonCore::Cancel_Socket,
 		&DaemonCore::CallSocketHandler,
 		&DaemonCore::CallCommandHandler,
+		&DaemonCore::HandleReqAsync,
 		&DaemonCore::Register_DataPtr,
 		&DaemonCore::GetDataPtr,
 		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
+		(DaemonCoreSockAdapterClass::Register_PeriodicTimer_fnptr)&DaemonCore::Register_Timer,
 		&DaemonCore::Cancel_Timer,
 		&DaemonCore::TooManyRegisteredSockets,
 		&DaemonCore::incrementPendingSockets,
 		&DaemonCore::decrementPendingSockets,
 		&DaemonCore::publicNetworkIpAddr,
-		&DaemonCore::Register_Command);
+		&DaemonCore::Register_Command,
+		&DaemonCore::daemonContactInfoChanged);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
@@ -463,7 +467,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	m_refresh_dns_timer = -1;
 
-	m_ccb_listeners = 0;
+	m_ccb_listeners = NULL;
+	m_shared_port_endpoint = NULL;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -475,6 +480,11 @@ DaemonCore::~DaemonCore()
 	if( m_ccb_listeners ) {
 		delete m_ccb_listeners;
 		m_ccb_listeners = NULL;
+	}
+
+	if( m_shared_port_endpoint ) {
+		delete m_shared_port_endpoint;
+		m_shared_port_endpoint = NULL;
 	}
 
 #ifndef WIN32
@@ -813,39 +823,39 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 							handler_descrip, s, TRUE) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-				const char *event_descrip, Service* s)
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
+				const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-							   Release release, const char *event_descrip, Service* s)
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
+							   Release release, const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0) );
-}
-
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Event event, const char *event_descrip, Service* s)
-{
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
-}
-
-int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp,
-				const char *event_descrip, Service* s)
-{
-	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, handler, release, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Eventcpp event, const char *event_descrip, Service* s )
+				TimerHandler handler, const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
+	return( t.NewTimer(deltawhen, handler, event_descrip, period) );
 }
 
-int DaemonCore::Register_Timer (const Timeslice &timeslice,Eventcpp event,const char * event_descrip,Service* s)
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandlercpp handlercpp,
+				const char *event_descrip, Service* s)
 {
-	return t.NewTimer(s, timeslice, event, event_descrip );
+	return( t.NewTimer(s, deltawhen, handlercpp, event_descrip, 0) );
+}
+
+int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
+				TimerHandlercpp handler, const char *event_descrip, Service* s )
+{
+	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
+}
+
+int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip,Service* s)
+{
+	return t.NewTimer(s, timeslice, handler, event_descrip );
 }
 
 int	DaemonCore::Cancel_Timer( int id )
@@ -959,8 +969,6 @@ int DaemonCore::InfoCommandPort()
 // change on you.  Plus, realize static buffers aren't exactly thread safe!
 char const * DaemonCore::InfoCommandSinfulString(int pid)
 {
-	static char somepid_sinful_string[28];
-
 	// if pid is -1, we want info on our own process, else we want info
 	// on a process created with Create_Process().
 	if ( pid == -1 ) {
@@ -975,10 +983,7 @@ char const * DaemonCore::InfoCommandSinfulString(int pid)
 			// this pid is apparently not a daemon core process
 			return NULL;
 		}
-		strncpy(somepid_sinful_string,pidinfo->sinful_string,
-			sizeof(somepid_sinful_string) );
-		somepid_sinful_string[sizeof(somepid_sinful_string)-1] = 0; // Stupid strncpy
-		return somepid_sinful_string;
+		return pidinfo->sinful_string.Value();
 	}
 }
 
@@ -992,6 +997,23 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	static char * sinful_public = NULL;
 	static char * sinful_private = NULL;
 	static bool initialized_sinful_private = false;
+
+	if( m_shared_port_endpoint ) {
+			// We do not advertise (or probably even have) our own network
+			// port.  Instead, we advertise SharedPortServer's port along
+			// with our local id so connections can be forwarded to us.
+		char const *addr = m_shared_port_endpoint->GetMyRemoteAddress();
+		if( !addr && usePrivateAddress ) {
+				// If SharedPortServer is not running yet, and an address
+				// that is local to this machine is good enough, then just
+				// get enough information to connect directly without going
+				// through SharedPortServer.
+			addr = m_shared_port_endpoint->GetMyLocalAddress();
+		}
+		if( addr ) {
+			return addr;
+		}
+	}
 
 	if ( initial_command_sock == -1 ) {
 		// there is no command sock!
@@ -1093,6 +1115,8 @@ void
 DaemonCore::daemonContactInfoChanged()
 {
 	m_dirty_sinful = true;
+
+	drop_addr_file();
 }
 
 const char*
@@ -1450,7 +1474,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 
 	// If this is the first command sock, set initial_command_sock
-	if ( initial_command_sock == -1 && handler == 0 && handlercpp == 0 )
+	if ( initial_command_sock == -1 && handler == 0 && handlercpp == 0 && m_shared_port_endpoint == NULL )
 		initial_command_sock = i;
 
 	// Update curr_regdataptr for SetDataPtr()
@@ -1481,6 +1505,11 @@ DaemonCore::Cancel_And_Close_All_Sockets(void)
 	if( m_ccb_listeners ) {
 		delete m_ccb_listeners;
 		m_ccb_listeners = NULL;
+	}
+
+	if( m_shared_port_endpoint ) {
+		delete m_shared_port_endpoint;
+		m_shared_port_endpoint = NULL;
 	}
 
 	for (j=0; j < nSock; j++) {
@@ -2535,7 +2564,7 @@ DaemonCore::reconfig(void) {
 		if( m_refresh_dns_timer < 0 ) {
 			m_refresh_dns_timer =
 				Register_Timer( dns_interval, dns_interval,
-								(Eventcpp)&DaemonCore::refreshDNS,
+								(TimerHandlercpp)&DaemonCore::refreshDNS,
 								"DaemonCore::refreshDNS()", daemonCore );
 		} else {
 			Reset_Timer( m_refresh_dns_timer, dns_interval, dns_interval );
@@ -2689,6 +2718,8 @@ DaemonCore::reconfig(void) {
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
+	InitSharedPort();
+
 	bool never_use_ccb =
 		get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
 		get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN);
@@ -2699,6 +2730,12 @@ DaemonCore::reconfig(void) {
 		}
 
 		char *ccb_addresses = param("CCB_ADDRESS");
+		if( m_shared_port_endpoint ) {
+				// if we are using a shared port, then we don't need our
+				// own ccb listener; SharedPortServer will have its own
+			free( ccb_addresses );
+			ccb_addresses = NULL;
+		}
 		m_ccb_listeners->Configure( ccb_addresses );
 		free( ccb_addresses );
 
@@ -2716,6 +2753,45 @@ DaemonCore::reconfig(void) {
 	CondorThreads::set_switch_callback( thread_switch_callback );
 }
 
+void
+DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
+{
+	MyString why_not;
+	bool already_open = m_shared_port_endpoint != NULL;
+
+	if( SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
+		if( !m_shared_port_endpoint ) {
+			m_shared_port_endpoint = new SharedPortEndpoint();
+		}
+		m_shared_port_endpoint->InitAndReconfig();
+		if( !m_shared_port_endpoint->StartListener() ) {
+			EXCEPT("Failed to start local listener (USE_SHARED_PORT=true)");
+		}
+	}
+	else if( m_shared_port_endpoint ) {
+		dprintf(D_ALWAYS,
+				"Turning off shared port endpoint because %s\n",why_not.Value());
+		delete m_shared_port_endpoint;
+		m_shared_port_endpoint = NULL;
+
+			// if we have no non-shared port open, we better open one now
+			// or we will have cut ourselves off from the world
+		if( !in_init_dc_command_socket ) {
+			InitDCCommandSocket(1);
+		}
+	}
+	else if( DebugFlags & D_FULLDEBUG ) {
+		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.Value());
+	}
+}
+
+void
+DaemonCore::ReloadSharedPortServerAddr()
+{
+	if( m_shared_port_endpoint ) {
+		m_shared_port_endpoint->ReloadSharedPortServerAddr();
+	}
+}
 
 int
 DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
@@ -3703,7 +3779,7 @@ DaemonCore::RegisterSocketForHandleReq(Stream *stream)
 		// some love.
 	int tid = daemonCore->Register_Timer(
 		200,		
-		(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
+		(TimerHandlercpp) &DaemonCore::HandleReqSocketTimerHandler,
 		"DaemonCore::HandleReqSocketTimerHandler",
 		this);
 		// stash the socket with the timer 
@@ -5324,7 +5400,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		}
 
 		is_local = pidinfo->is_local;
-		destination = pidinfo->sinful_string;
+		destination = pidinfo->sinful_string.Value();
 	}
 
 	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
@@ -6720,6 +6796,7 @@ int DaemonCore::Create_Process(
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
+	SharedPortEndpoint shared_port_endpoint;
 	SafeSock ssock;
 	PidEntry *pidtmp;
 
@@ -6830,8 +6907,32 @@ int DaemonCore::Create_Process(
 
 	// if we want a command port for this child process, create
 	// an inheritable tcp and a udp socket to listen on, and place
-	// the info into the inheritbuf.
-	if ( want_command_port != FALSE ) {
+	// the info into the inheritbuf.  If we want a shared command port,
+	// do that instead.  Currently, we only want that if we are not
+	// given a pre-assigned port and if we have permission to write
+	// to the daemon socket directory.
+	if ( want_command_port != FALSE && want_command_port <= 1 &&
+		 !HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(job_opt_mask) &&
+		 SharedPortEndpoint::UseSharedPort() )
+	{
+		shared_port_endpoint.InitAndReconfig();
+		if( !shared_port_endpoint.CreateListener() ) {
+			goto wrapup;
+		}
+
+		if( !shared_port_endpoint.ChownSocket(priv) ) {
+				// The child process will probably not be able to remove the
+				// named socket.  That's ok.  We'll try to clean up for
+				// it.
+		}
+
+		dprintf(D_FULLDEBUG|D_NETWORK,"Created shared port endpoint for child process (%s)\n",shared_port_endpoint.GetSharedPortID());
+		inheritbuf += " SharedPort:";
+		int fd = -1;
+		shared_port_endpoint.serialize(inheritbuf,fd);
+        inheritFds[numInheritFds++] = fd;
+	}
+	else if ( want_command_port != FALSE ) {
 		inherit_handles = TRUE;
 		SafeSock* ssock_ptr = m_wants_dc_udp ? &ssock : NULL;
 		if (!InitCommandSockets(want_command_port, &rsock, ssock_ptr, false)) {
@@ -7759,10 +7860,23 @@ int DaemonCore::Create_Process(
 	pidtmp = new PidEntry;
 	pidtmp->pid = newpid;
 	pidtmp->new_process_group = (family_info != NULL);
-	if ( want_command_port != FALSE )
-		strcpy(pidtmp->sinful_string,sock_to_string(rsock._sock));
-	else
-		pidtmp->sinful_string[0] = '\0';
+
+	{
+		char const *shared_port_addr = shared_port_endpoint.GetMyRemoteAddress();
+		if( !shared_port_addr ) {
+			shared_port_addr = shared_port_endpoint.GetMyLocalAddress();
+		}
+
+		if( shared_port_addr ) {
+			pidtmp->sinful_string = shared_port_addr;
+				// we will clean up the socket if the child doesn't
+			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
+		}
+		else if ( want_command_port != FALSE ) {
+			pidtmp->sinful_string = sock_to_string(rsock._sock);
+		}
+	}
+
 	pidtmp->is_local = TRUE;
 	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
@@ -7777,6 +7891,10 @@ int DaemonCore::Create_Process(
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
 #endif 
+
+		// Leave named socket in place so child can continue to use it.
+	shared_port_endpoint.Detach();
+
 		// Now, handle the DC-managed std pipes, if any.
 	for (i=0; i<=2; i++) {
 		if (dc_pipe_fds[i][0] != -1) {
@@ -7854,7 +7972,7 @@ int DaemonCore::Create_Process(
 
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s\n",
-		(unsigned long)newpid,pidtmp->sinful_string);
+		(unsigned long)newpid,pidtmp->sinful_string.Value());
 #ifdef WIN32
 	WatchPid(pidtmp);
 #endif
@@ -7935,7 +8053,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 		// register a timer that will call the reaper.
 	m_tid = daemonCore->Register_Timer(
 		0,
-		(Eventcpp)&FakeCreateThreadReaperCaller::CallReaper,
+		(TimerHandlercpp)&FakeCreateThreadReaperCaller::CallReaper,
 		"FakeCreateThreadReaperCaller::CallReaper()",
 		this );
 
@@ -8125,7 +8243,6 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	//	  hProcess.  If hProcess is NULL, it is a thread, else a process.
 	PidEntry *pidtmp = new PidEntry;
 	pidtmp->new_process_group = FALSE;
-	pidtmp->sinful_string[0] = '\0';
 	pidtmp->is_local = TRUE;
 	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
@@ -8229,6 +8346,12 @@ DaemonCore::Inherit( void )
 	char *inheritbuf = NULL;
 	int numInheritedSocks = 0;
 	char *ptmp;
+	static bool already_inherited = false;
+
+	if( already_inherited ) {
+		return;
+	}
+	already_inherited = true;
 
     /* Here we handle inheritance of sockets, file descriptors, and/or
 	   handles from our parent.  This is done via an environment variable
@@ -8268,7 +8391,7 @@ DaemonCore::Inherit( void )
 		pidtmp->pid = ppid;
 		ptmp=inherit_list.next();
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
-		strcpy(pidtmp->sinful_string,ptmp);
+		pidtmp->sinful_string = ptmp;
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;
@@ -8355,6 +8478,13 @@ DaemonCore::Inherit( void )
 		dc_rsock = NULL;
 		dc_ssock = NULL;
 		ptmp=inherit_list.next();
+		if( ptmp && strncmp(ptmp,"SharedPort:",11)==0 ) {
+			ptmp += 11;
+			delete m_shared_port_endpoint;
+			m_shared_port_endpoint = new SharedPortEndpoint();
+			m_shared_port_endpoint->deserialize(ptmp);
+			ptmp=inherit_list.next();
+		}
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
 			dc_rsock = new ReliSock();
@@ -8394,9 +8524,12 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// First, try to inherit the sockets from our parent.
 	Inherit();
 
+		// If we are using a shared listener port, set that up.
+	InitSharedPort(true);
+
 		// If dc_rsock/dc_ssock are still NULL, we need to create our
 		// own udp and tcp sockets, bind them, etc.
-	if( dc_rsock == NULL || (m_wants_dc_udp_self && dc_ssock == NULL) ) {
+	if( !m_shared_port_endpoint && (dc_rsock == NULL || (m_wants_dc_udp_self && dc_ssock == NULL)) ) {
 		if( !dc_rsock ) {
 			dc_rsock = new ReliSock;
 		}
@@ -8425,7 +8558,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		int desired_size;
 
 			// Dynamically construct the log message.
-		MyString msg = "Reset OS socket buffer size to ";
+		MyString msg;
 
 		if (dc_ssock) {
 				// set the UDP (ssock) read size to be large, so we do
@@ -8439,25 +8572,46 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 			// and also set the outgoing TCP write size to be large so the
 			// collector is not blocked on the network when answering queries
-		desired_size = param_integer("COLLECTOR_TCP_SOCKET_BUFSIZE",
-									 128 * 1024, 1024 );
-		int final_tcp = dc_rsock->set_os_buffers( desired_size, true );
+		if( dc_rsock ) {
+			desired_size = param_integer("COLLECTOR_TCP_SOCKET_BUFSIZE",
+										 128 * 1024, 1024 );
+			int final_tcp = dc_rsock->set_os_buffers( desired_size, true );
 
-		msg += (int)(final_tcp / 1024);
-		msg += "k (TCP)";
-		dprintf(D_FULLDEBUG, "%s\n", msg.Value());
+			msg += (int)(final_tcp / 1024);
+			msg += "k (TCP)";
+		}
+		if( !msg.IsEmpty() ) {
+			dprintf(D_FULLDEBUG,
+					"Reset OS socket buffer size to %s\n", msg.Value());
+		}
 	}
 
 		// now register these new command sockets.
 		// Note: In other parts of the code, we assume that the
 		// first command socket registered is TCP, so we must
 		// register the rsock socket first.
-	Register_Command_Socket( (Stream*)dc_rsock );
+	if( dc_rsock ) {
+		Register_Command_Socket( (Stream*)dc_rsock );
+	}
 	if (dc_ssock) {
 		Register_Command_Socket( (Stream*)dc_ssock );
 	}
-	dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
-			 InfoCommandSinfulString() );
+	char const *addr = publicNetworkIpAddr();
+	if( addr ) {
+		dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
+	}
+	else {
+		addr = privateNetworkIpAddr();
+		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", addr );
+	}
+
+	if( dc_rsock && m_shared_port_endpoint ) {
+			// SOAP-enabled daemons may have both a shared port and
+			// a fixed TCP port for receiving SOAP commands
+		dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
+				 dc_rsock->get_sinful() );
+	}
+
 	if (!dc_ssock) {
 		dprintf( D_FULLDEBUG, "DaemonCore: UDP Command socket not created.\n");
 	}
@@ -8466,15 +8620,17 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// warning if it is, since it probably means that /etc/hosts
 		// is misconfigured [to preempt RUST like rust-admin #2915]
 
-	const unsigned int my_ip = dc_rsock->get_ip_int();
-	const unsigned int loopback_ip = ntohl( inet_addr( "127.0.0.1" ) );
+	if( dc_rsock ) {
+		const unsigned int my_ip = dc_rsock->get_ip_int();
+		const unsigned int loopback_ip = ntohl( inet_addr( "127.0.0.1" ) );
 
-	if( my_ip == loopback_ip ) {
-		dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
-		dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
-		dprintf( D_ALWAYS, "         This may be due to a misconfigured /etc/hosts file.\n" );
-		dprintf( D_ALWAYS, "         Please make sure your hostname is not listed on the\n" );
-		dprintf( D_ALWAYS, "         same line as localhost in /etc/hosts.\n" );
+		if( my_ip == loopback_ip ) {
+			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
+			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
+			dprintf( D_ALWAYS, "         This may be due to a misconfigured /etc/hosts file.\n" );
+			dprintf( D_ALWAYS, "         Please make sure your hostname is not listed on the\n" );
+			dprintf( D_ALWAYS, "         same line as localhost in /etc/hosts.\n" );
+		}
 	}
 
 		// Now, drop this sinful string into a file, if
@@ -8483,17 +8639,22 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		// now register any DaemonCore "default" handlers
 
-		// register the command handler to take care of signals
-	daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
-				(CommandHandlercpp)&DaemonCore::HandleSigCommand,
-				"HandleSigCommand()", daemonCore, DAEMON );
+	static int already_registered = false;
+	if( !already_registered ) {
+		already_registered = true;
 
-		// this handler receives keepalive pings from our children, so
-		// we can detect if any of our kids are hung.
-	daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
-				(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-				"HandleChildAliveCommand", daemonCore, DAEMON,
-				D_FULLDEBUG );
+			// register the command handler to take care of signals
+		daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
+			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
+			"HandleSigCommand()", daemonCore, DAEMON );
+
+			// this handler receives keepalive pings from our children, so
+			// we can detect if any of our kids are hung.
+		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
+			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
+			"HandleChildAliveCommand", daemonCore, DAEMON,
+			D_FULLDEBUG );
+	}
 }
 
 
@@ -9096,7 +9257,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	} else {
 		pidentry->hung_tid =
 			Register_Timer(timeout_secs,
-							(Eventcpp) &DaemonCore::HungChildTimeout,
+							(TimerHandlercpp) &DaemonCore::HungChildTimeout,
 							"DaemonCore::HungChildTimeout", this);
 		ASSERT( pidentry->hung_tid != -1 );
 
@@ -9252,31 +9413,29 @@ int DaemonCore::SendAliveToParent()
 		number_of_tries = 1;
 	}
 
+	Daemon d(DT_ANY,parent_sinful_string);
 	for (;;) {
-		Sock* sock;
-		SafeSock ssock;
-		ReliSock rsock;
-		if (m_wants_dc_udp) {
-			sock = &ssock;
+		Sock* sock = NULL;
+		if (m_wants_dc_udp && d.hasUDPCommandPort()) {
+			sock = d.safeSock();
 		}
 		else {
-			sock = &rsock;
 			if (first_time) {
 				dprintf(D_FULLDEBUG, "DaemonCore::SendAliveToParent(): "
 						"Using TCP to connect to parent %s.\n",
 						parent_sinful_string);
 			}
+			sock = d.reliSock();
 		}
 		ret_val = TRUE;
 
-		if (!sock->connect(parent_sinful_string)) {
+		if (!sock) {
 			dprintf(D_ALWAYS,"DaemonCore: Could not connect to parent %s. "
 				"SendAliveToParent() failed.\n",parent_sinful_string);
 			ret_val = FALSE;
 		}
 
 		if( ret_val == TRUE ) {
-			Daemon d( DT_ANY, parent_sinful_string );
 			if (!d.startCommand(DC_CHILDALIVE, sock, 0)) {
 				dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
 				        "SendAliveToParent() failed.\n",parent_sinful_string);
@@ -9294,6 +9453,9 @@ int DaemonCore::SendAliveToParent()
 				ret_val = FALSE;
 			}
 		}
+
+		delete sock;
+		sock = NULL;
 
 		number_of_tries--;
 		if ( number_of_tries == 0 || ret_val == TRUE ) {
@@ -9844,7 +10006,7 @@ void DaemonCore :: clearSession(pid_t pid)
 
     if ( pidTable->lookup(pid,pidentry) != -1 ) {
         if (sec_man && pidentry) {
-            sec_man->invalidateHost(pidentry->sinful_string);
+            sec_man->invalidateHost(pidentry->sinful_string.Value());
         }
     }
 }
@@ -10019,26 +10181,30 @@ DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 
 
 void
-DaemonCore::UpdateLocalAd(ClassAd *daemonAd) 
+DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname) 
 {
     FILE    *AD_FILE;
-    char    localAd_path[100];
 
-    sprintf( localAd_path, "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
+	if( !fname ) {
+		char    localAd_path[100];
+		sprintf( localAd_path, "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
 
-	//localAdFile is a global from daemon_core_main.C
-    if( localAdFile ) {
-        free( localAdFile );
-    }
-    localAdFile = param( localAd_path );
+			// localAdFile is saved here so that daemon_core_main can clean
+			// it up on exit.
+		if( localAdFile ) {
+			free( localAdFile );
+		}
+		localAdFile = param( localAd_path );
+		fname = localAdFile;
+	}
 
-    if( localAdFile ) {
+    if( fname ) {
 		MyString newLocalAdFile;
-		newLocalAdFile.sprintf("%s.new",localAdFile);
+		newLocalAdFile.sprintf("%s.new",fname);
         if( (AD_FILE = safe_fopen_wrapper(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
-			if( rotate_file(newLocalAdFile.Value(),localAdFile)!=0 ) {
+			if( rotate_file(newLocalAdFile.Value(),fname)!=0 ) {
 					// Under windows, rotate_file() sometimes failes with
 					// system error 5 (access denied).  This is believed
 					// to be expected in the case where some other process
@@ -10048,12 +10214,12 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
 				dprintf( D_ALWAYS,
 						 "DaemonCore: WARNING: failed to rotate %s to %s\n",
 						 newLocalAdFile.Value(),
-						 localAdFile);
+						 fname);
 #else
 				dprintf( D_ALWAYS,
 						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
 						 newLocalAdFile.Value(),
-						 localAdFile);
+						 fname);
 #endif
 			}
         } else {
@@ -10088,8 +10254,9 @@ DaemonCore::publish(ClassAd *ad) {
 		ad->Assign(ATTR_PRIVATE_NETWORK_IP_ADDR, tmp);
 	}
 	tmp = publicNetworkIpAddr();
-	ASSERT(tmp);
-	ad->Assign(ATTR_PUBLIC_NETWORK_IP_ADDR, tmp);
+	if( tmp ) {
+		ad->Assign(ATTR_PUBLIC_NETWORK_IP_ADDR, tmp);
+	}
 }
 
 
@@ -10196,6 +10363,12 @@ DaemonCore::PidEntry::~PidEntry() {
 		if (std_pipes[i] != DC_STD_FD_NOPIPE) {
 			daemonCore->Close_Pipe(std_pipes[i]);
 		}
+	}
+
+	if( !shared_port_fname.IsEmpty() ) {
+			// Clean up the named socket for this process if the child
+			// didn't already do so.
+		SharedPortEndpoint::RemoveSocket( shared_port_fname.Value() );
 	}
 }
 

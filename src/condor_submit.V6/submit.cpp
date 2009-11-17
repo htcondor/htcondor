@@ -1305,7 +1305,8 @@ void
 reschedule()
 {
 	if ( param_boolean("SUBMIT_SEND_RESCHEDULE",true) ) {
-		if ( ! MySchedd->sendCommand(RESCHEDULE, Stream::safe_sock, 0) ) {
+		Stream::stream_type st = MySchedd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+		if ( ! MySchedd->sendCommand(RESCHEDULE, st, 0) ) {
 			fprintf( stderr,
 					 "Can't send RESCHEDULE command to condor scheduler\n" );
 			DoCleanup(0,0,NULL);

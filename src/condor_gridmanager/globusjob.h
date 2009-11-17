@@ -57,8 +57,8 @@ class GlobusJob : public BaseJob
 	~GlobusJob();
 
 	void Reconfig();
-	int doEvaluateState();
-	int CommunicationTimeout();
+	void doEvaluateState();
+	void CommunicationTimeout();
 	void NotifyResourceDown();
 	void NotifyResourceUp();
 	void UpdateGlobusState( int new_state, int new_error_code );

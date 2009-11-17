@@ -37,6 +37,8 @@
 #include "condor_netdb.h"
 #include "file_sql.h"
 #include "file_lock.h"
+#include "stat_info.h"
+#include "shared_port_endpoint.h"
 
 #if HAVE_DLOPEN
 #include "MasterPlugin.h"
@@ -57,7 +59,7 @@ extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern int		run_preen(Service*);
+extern void		run_preen();
 
 extern FILESQL *FILEObj;
 extern int condor_main_argc;
@@ -125,6 +127,11 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_h )
 
 	// Default to not on hold (will be set to true if controlled (i.e by HAD))
 	on_hold = FALSE;
+
+	m_waiting_for_startup = false;
+	m_reload_shared_port_addr_after_startup = false;
+	m_never_use_shared_port = false;
+	m_only_stop_when_master_stops = false;
 
 	// Handle configuration
 	DoConfig( true );
@@ -434,6 +441,32 @@ daemon::DoConfig( bool init )
 		*(daemon_name - 2) = '_';
 	} 
 
+	if( strcmp(name_in_config_file,"SHARED_PORT") == 0 ) {
+			// It doesn't make sense for the shared port server to
+			// itself try to exist behind a shared port.  It needs
+			// its own port.
+		m_never_use_shared_port = true;
+
+			// It is not essential to wait for the shared port server
+			// to be ready for other daemons to start, but it makes
+			// for a cleaner start, avoiding a minute or so during
+			// which some daemons advertise themselves without an
+			// address.
+
+		ASSERT( param(m_after_startup_wait_for_file,"SHARED_PORT_DAEMON_AD_FILE") );
+		m_reload_shared_port_addr_after_startup = true;
+
+		if( SharedPortEndpoint::UseSharedPort() ) {
+				// If the master is using the shared port server, stopping
+				// the shared port server would make the master inaccessible,
+				// so never stop it unless the master itself is stopping.
+				// Also, even if the master is shutting down, do not stop
+				// shared port server until all other daemons have exited,
+				// because they may be depending on it.
+
+			m_only_stop_when_master_stops = true;
+		}
+	}
 }
 
 void
@@ -709,6 +742,11 @@ int daemon::RealStart( )
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 60);
 
+	int jobopts = 0;
+	if( m_never_use_shared_port ) {
+		jobopts |= DCJOBOPT_NEVER_USE_SHARED_PORT;
+	}
+
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
 				args,			// args
@@ -717,7 +755,13 @@ int daemon::RealStart( )
 				command_port,	// port to use for command port; TRUE=choose one dynamically
 				&env,			// environment
 				NULL,			// current working directory
-				&fi);			// we want a new process family
+				&fi,
+				NULL,
+				NULL,
+				NULL,
+				0,
+				NULL,
+				jobopts);			// we want a new process family
 
 	if ( pid == FALSE ) {
 		// Create_Process failed!
@@ -729,6 +773,8 @@ int daemon::RealStart( )
 		Restart();
 		return 0;
 	}
+
+	m_waiting_for_startup = true;
 
 	// if this is a restart, start recover timer
 	if (restarts > 0) {
@@ -788,6 +834,43 @@ int daemon::RealStart( )
 	return pid;	
 }
 
+bool
+daemon::WaitBeforeStartingOtherDaemons(bool first_time)
+{
+
+	if( !m_waiting_for_startup ) {
+		return false;
+	}
+
+	bool wait = false;
+	if( !m_after_startup_wait_for_file.IsEmpty() ) {
+		StatInfo si( m_after_startup_wait_for_file.Value() );
+		if( si.Error() != 0 ) {
+			wait = true;
+			dprintf(D_ALWAYS,"Waiting for %s to appear.\n",
+					m_after_startup_wait_for_file.Value() );
+		}
+		else if( !first_time ) {
+			dprintf(D_ALWAYS,"Found %s.\n",
+					m_after_startup_wait_for_file.Value() );
+		}
+	}
+
+	if( !wait && m_waiting_for_startup ) {
+		m_waiting_for_startup = false;
+		DoActionAfterStartup();
+	}
+
+	return wait;
+}
+
+void
+daemon::DoActionAfterStartup()
+{
+	if( m_reload_shared_port_addr_after_startup ) {
+		daemonCore->ReloadSharedPortServerAddr();
+	}
+}
 
 void
 daemon::Stop( bool never_forward )
@@ -875,11 +958,10 @@ daemon::StopPeaceful()
 	Kill( SIGTERM );
 }
 
-int
+void
 daemon::StopFastTimer()
 {
 	StopFast(false);
-	return TRUE;
 }
 
 void
@@ -1432,6 +1514,7 @@ Daemons::Daemons()
 	immediate_restart = FALSE;
 	immediate_restart_master = FALSE;
 	prevLHF = 0;
+	m_retry_start_all_daemons_tid = -1;
 }
 
 
@@ -1593,7 +1676,9 @@ Daemons::CheckForNewExecutable()
 
     for( int i=0; i < no_daemons; i++ ) {
 		if( daemon_ptr[i]->runs_here && !daemon_ptr[i]->newExec 
-			&& ! daemon_ptr[i]->OnHold() ) {
+			&& ! daemon_ptr[i]->OnHold()
+			&& !daemon_ptr[i]->OnlyStopWhenMasterStops())
+		{
 			if( NewExecutable( daemon_ptr[i]->watch_name,
 							   &daemon_ptr[i]->timeStamp ) ) {
 				found_new = TRUE;
@@ -1670,18 +1755,56 @@ Daemons::DaemonsOffPeaceful( )
 	StopPeacefulAllDaemons();
 }
 
+void
+Daemons::ScheduleRetryStartAllDaemons()
+{
+	if( m_retry_start_all_daemons_tid == -1 ) {
+		m_retry_start_all_daemons_tid = daemonCore->Register_Timer(
+			1,
+			(TimerHandlercpp)&Daemons::RetryStartAllDaemons,
+			"Daemons::RetryStartAllDaemons",
+			this);
+		ASSERT( m_retry_start_all_daemons_tid != -1 );
+	}
+}
+
+void
+Daemons::CancelRetryStartAllDaemons()
+{
+	if( m_retry_start_all_daemons_tid != -1 ) {
+		daemonCore->Cancel_Timer(m_retry_start_all_daemons_tid);
+		m_retry_start_all_daemons_tid = -1;
+	}
+}
+
+void
+Daemons::RetryStartAllDaemons()
+{
+	m_retry_start_all_daemons_tid = -1;
+	StartAllDaemons();
+}
 
 void
 Daemons::StartAllDaemons()
 {
 	for( int i=0; i < no_daemons; i++ ) {
 		if( daemon_ptr[i]->pid > 0 ) {
+			if( daemon_ptr[i]->WaitBeforeStartingOtherDaemons(false) ) {
+				ScheduleRetryStartAllDaemons();
+				return;
+			}
+
 				// the daemon is already started
 			continue;
 		} 
 		if( ! daemon_ptr[i]->runs_here ) continue;
 		daemon_ptr[i]->Hold( FALSE );
 		daemon_ptr[i]->Start();
+
+		if( daemon_ptr[i]->WaitBeforeStartingOtherDaemons(true) ) {
+			ScheduleRetryStartAllDaemons();
+			return;
+		}
 	}
 }
 
@@ -1689,13 +1812,16 @@ Daemons::StartAllDaemons()
 void
 Daemons::StopAllDaemons() 
 {
+	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
 			// Need to stop HA daemons from trying to start during
 			// shutdown
 		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->runs_here &&
+			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+		{
 			daemon_ptr[i]->Stop();
 			running++;
 		}
@@ -1709,13 +1835,16 @@ Daemons::StopAllDaemons()
 void
 Daemons::StopFastAllDaemons()
 {
+	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
 			// Need to stop HA daemons from trying to start during
 			// shutdown
 		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->runs_here &&
+			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+		{
 			daemon_ptr[i]->StopFast();
 			running++;
 		}
@@ -1728,13 +1857,16 @@ Daemons::StopFastAllDaemons()
 void
 Daemons::StopPeacefulAllDaemons()
 {
+	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
 			// Need to stop HA daemons from trying to start during
 			// shutdown
 		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->runs_here &&
+			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+		{
 			daemon_ptr[i]->StopPeaceful();
 			running++;
 		}
@@ -1748,13 +1880,16 @@ Daemons::StopPeacefulAllDaemons()
 void
 Daemons::HardKillAllDaemons()
 {
+	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
 			// Need to stop HA daemons from trying to start during
 			// shutdown
 		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->runs_here &&
+			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+		{
 			daemon_ptr[i]->HardKill();
 			running++;
 		}
@@ -1795,9 +1930,6 @@ void
 Daemons::RestartMaster()
 {
 	immediate_restart_master = immediate_restart;
-	if( NumberOfChildren() == 0 ) {
-		FinishRestartMaster();
-	}
 	all_daemons_gone_action = MASTER_RESTART;
 	StartDaemons = FALSE;
 	StopAllDaemons();
@@ -1807,9 +1939,6 @@ void
 Daemons::RestartMasterPeaceful()
 {
 	immediate_restart_master = immediate_restart;
-	if( NumberOfChildren() == 0 ) {
-		FinishRestartMaster();
-	}
 	all_daemons_gone_action = MASTER_RESTART;
 	StartDaemons = FALSE;
 	StopPeacefulAllDaemons();
@@ -2023,7 +2152,8 @@ int Daemons::NumberOfChildren()
 {
 	int result = 0;
 	for( int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here && daemon_ptr[i]->pid ) {
+		if( daemon_ptr[i]->runs_here && daemon_ptr[i]->pid
+			&& !daemon_ptr[i]->OnlyStopWhenMasterStops() ) {
 			result++;
 		}
 	}
@@ -2106,6 +2236,22 @@ Daemons::SetDefaultReaper()
 	reaper = DEFAULT_R;
 }
 
+bool
+Daemons::StopDaemonsBeforeMasterStops()
+{
+		// now shut down all the daemons that should only stop right
+		// before the master stops
+	int running = 0;
+	for( int i=no_daemons; i--; ) {
+		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() )
+			&& daemon_ptr[i]->runs_here )
+		{
+			daemon_ptr[i]->Stop();
+			running++;
+		}
+	}
+	return !running;
+}
 
 void
 Daemons::AllDaemonsGone()
@@ -2116,10 +2262,16 @@ Daemons::AllDaemonsGone()
 		SetDefaultReaper();
 		break;
 	case MASTER_RESTART:
+		if( !StopDaemonsBeforeMasterStops() ) {
+			return;
+		}
 		dprintf( D_ALWAYS, "All daemons are gone.  Restarting.\n" );
 		FinishRestartMaster();
 		break;
 	case MASTER_EXIT:
+		if( !StopDaemonsBeforeMasterStops() ) {
+			return;
+		}
 		dprintf( D_ALWAYS, "All daemons are gone.  Exiting.\n" );
 		master_exit(0);
 		break;
@@ -2158,7 +2310,7 @@ Daemons::StartTimers()
 	if( new_preen && FS_Preen ) {
 		preen_tid = daemonCore->
 			Register_Timer( first_preen, preen_interval,
-							(TimerHandler)run_preen,
+							run_preen,
 							"run_preen()" );
 	}
 	old_preen_int = preen_interval;
@@ -2234,6 +2386,12 @@ Daemons::Update( ClassAd* ca )
 			}
 		}
 	}
+
+		// CRUFT
+	ad->Assign(ATTR_MASTER_IP_ADDR, daemonCore->InfoCommandSinfulString());
+
+		// Initialize all the DaemonCore-provided attributes
+	daemonCore->publish( ad ); 	
 }
 
 

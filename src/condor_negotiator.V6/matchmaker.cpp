@@ -60,8 +60,6 @@ enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
 typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
-static bool want_simple_matching = false;
-
 MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
 //added by ameet - dirty hack - needs to be removed soon!!!
@@ -117,7 +115,6 @@ Matchmaker ()
 	cachedName = NULL;
 	cachedAddr = NULL;
 
-	want_simple_matching = false;
 	want_matchlist_caching = false;
 	ConsiderPreemption = true;
 	want_nonblocking_startd_contact = true;
@@ -382,7 +379,6 @@ reinitialize ()
 		free( preferred_collector );
 	}
 
-	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
@@ -832,7 +828,7 @@ getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage
 
 
 
-int Matchmaker::
+void Matchmaker::
 negotiationTime ()
 {
 	ClassAdList startdAds;
@@ -859,7 +855,7 @@ negotiationTime ()
 		dprintf(D_FULLDEBUG,
 			"New cycle requested but just finished one -- delaying %u secs\n",
 			cycle_delay - elapsed);
-		return FALSE;
+		return;
 	}
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
@@ -878,7 +874,7 @@ negotiationTime ()
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
-		return FALSE;
+		return;
 	}
 
 	// Save this for future use.
@@ -1118,8 +1114,6 @@ negotiationTime ()
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
 
 	completedLastCycleTime = time(NULL);
-
-	return TRUE;
 }
 
 Matchmaker::SimpleGroupEntry::
@@ -1531,40 +1525,6 @@ obtainAdsFromCollector (
 	char    *remoteHost = NULL;
 	MyString buffer;
 	CollectorList* collects = daemonCore->getCollectorList();
-
-	if ( want_simple_matching ) {
-		CondorQuery publicQuery(STARTD_AD);
-		CondorQuery submittorQuery(SUBMITTOR_AD);
-
-		dprintf(D_ALWAYS, "  Getting all startd ads ...\n");
-		result = collects->query(publicQuery,startdAds);
-		if( result!=Q_OK ) {
-			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-			return false;
-		}
-
-		dprintf(D_ALWAYS, "  Getting all submittor ads ...\n");
-		result = collects->query(submittorQuery,scheddAds);
-		if( result!=Q_OK ) {
-			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-			return false;
-		}
-
-		dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-		ClassAdList startdPvtAdList;
-		result = collects->query(privateQuery,startdPvtAdList);
-		if( result!=Q_OK ) {
-			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-			return false;
-		}
-		MakeClaimIdHash(startdPvtAdList,claimIds);
-
-		dprintf(D_ALWAYS, 
-			"Got ads (simple matching): %d startd, %d submittor, %d private\n",
-	        startdAds.MyLength(),scheddAds.MyLength(),claimIds.getNumElements());
-
-		return true;
-	}
 
 	CondorQuery publicQuery(ANY_AD);
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");

@@ -74,6 +74,8 @@ class CCBServer: Service {
 	void RemoveRequest( CCBServerRequest *request );
 	CCBServerRequest *GetRequest( CCBID request_id );
 
+	void SendHeartbeatResponse( CCBTarget *target );
+
 	void ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target );
 	void RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid );
 

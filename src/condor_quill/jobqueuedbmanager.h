@@ -203,11 +203,11 @@ class JobQueueDBManager : public Service
 		//! up for at least the duration of 
 		//! QUILL_HISTORY_DURATION, in order for purging to occur 
 		//! on a timely basis
-	int             purgeOldHistoryRows();
+	void             purgeOldHistoryRows();
 
 		//! After the history purge, we need to reindex all the
 		//! tables.
-	int             reindexTables();
+	void             reindexTables();
 
 		//! split key into cid and pid
 	JobIdType	    getProcClusterIds(const char* key, 

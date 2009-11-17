@@ -83,6 +83,7 @@ public:
 	friend class Daemon;
 	friend class SecMan;
 	friend class SecManStartCommand;
+	friend class SharedPortListener;
 
 	/*
 	**	Methods
@@ -223,6 +224,12 @@ public:
 	/// sinful address of peer in form of "<a.b.c.d:pppp>"
 	char * get_sinful_peer();
 
+		// Address that was passed to connect().  This is useful in cases
+		// such as CCB or shared port where our peer address is not the
+		// address one would use to actually connect to the peer.
+		// Returns NULL if connect was never called.
+	char const *get_connect_addr();
+
 	/// sinful address of peer, suitable for passing to dprintf() (never NULL)
 	virtual char const *default_peer_description();
 
@@ -318,12 +325,17 @@ protected:
 	   Called internally by do_connect() to examine the address and
 	   see if we should try a reversed connection (CCB) instead of a
 	   normal forward connection.  If so, initiates the reversed
-	   connection.  If not, returns CEDAR_ENOCCB.
+	   connection.  If not, returns CEDAR_ENOCCB.  Also checks to
+	   see if we are connecting to a shared port (SharedPortServer)
+       requiring further directions to route us to our final destination.
 	*/
-	int reverse_connect(char const *host,int port,bool nonblocking);
+	int special_connect(char const *host,int port,bool nonblocking);
 
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking) = 0;
 	virtual void cancel_reverse_connect() = 0;
+	virtual int do_shared_port_local_connect( char const *shared_port_id,bool nonblocking ) = 0;
+
+	void set_connect_addr(char const *addr);
 
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);
@@ -365,6 +377,11 @@ protected:
     /// called whenever the bound or connected state changes
     void addr_changed();
 
+	virtual void setTargetSharedPortID( char const *id ) = 0;
+	virtual bool sendTargetSharedPortID() = 0;
+
+	bool enter_connected_state(char const *op="CONNECT");
+
 	/*
 	**	Data structures
 	*/
@@ -373,6 +390,7 @@ protected:
 	sock_state		_state;
 	int				_timeout;
 	struct sockaddr_in _who;	// endpoint of "connection"
+	char *			m_connect_addr;
 	char *          _fqu;
 	char *          _fqu_user_part;
 	char *          _fqu_domain_part;
@@ -471,7 +489,6 @@ private:
 	*/
 	int _bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 		SOCKET_LENGTH_TYPE len, bool outbound, bool loopback);
-
 };
 
 #endif /* SOCK_H */

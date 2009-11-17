@@ -103,7 +103,7 @@ StorkMatchTest::config( bool /*init*/ )
 	return 0;
 }
 
-int
+void
 StorkMatchTest::timerHandler ( void )
 {
 	time_t	now = time( NULL );
@@ -165,7 +165,7 @@ StorkMatchTest::timerHandler ( void )
 	//lm->Dump();
 
 	dprintf( D_FULLDEBUG, "Timer handler done\n" );
-	return 0;
+	return;
 }
 
 int

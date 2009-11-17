@@ -40,7 +40,7 @@
 
 #include <setjmp.h>
 
-extern int PollActivity();
+extern void PollActivity();
 
 bool		g_connected;
 jmp_buf	 jmp;

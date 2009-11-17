@@ -44,6 +44,7 @@
 #include "schedd_api.h"
 
 #include "../condor_c++_util/soap_helpers.cpp"
+#include "../condor_c++_util/dc_service.cpp"
 
 #include "qmgmt.h"
 
@@ -176,7 +177,7 @@ extendTransaction(const struct condor__Transaction *transaction)
 	return 0;
 }
 
-static int
+static void
 transtimeout()
 {
 	struct condor__abortTransactionResponse result;
@@ -193,7 +194,6 @@ transtimeout()
 	info = NULL;
 
 	condor__abortTransaction(NULL, transaction, result);
-	return TRUE;
 }
 
 static void
@@ -484,8 +484,8 @@ condor__beginTransaction(struct soap *soap,
 
 	trans_timer_id =
 		daemonCore->Register_Timer(duration,
-								   (TimerHandler)&transtimeout,
-								   (TimerRelease)&release_data,
+								   transtimeout,
+								   release_data,
 								   "condor_transtimeout");
 	intPtr = (void*) malloc(sizeof(struct condor__Transaction));	
 	memcpy(intPtr,transaction,sizeof(condor__Transaction));

@@ -1814,7 +1814,7 @@ TESTCLASS(job_dagman_depth_first,quick)
 TESTCLASS(job_dagman_depth_first,full)
 TESTCLASS(job_dagman_depth_first,quicknolink)
 
-DESC(job_dagman_,"Test DAG tricky log file paths")
+DESC(job_dagman_log_path,"Test DAG tricky log file paths")
 RUN(job_dagman_log_path)
 TESTCLASS(job_dagman_log_path,dagman)
 TESTCLASS(job_dagman_log_path,quick)
@@ -1893,12 +1893,19 @@ TESTCLASS(job_dagman_rescue-A,quick)
 TESTCLASS(job_dagman_rescue-A,full)
 TESTCLASS(job_dagman_rescue-A,quicknolink)
 
-DESC(job_dagman,"Test DAGMan with rescue DAG/recovery mode combination")
+DESC(job_dagman_rescue_recov,"Test DAGMan with rescue DAG/recovery mode combination")
 RUN(job_dagman_rescue_recov)
 TESTCLASS(job_dagman_rescue_recov,dagman)
 TESTCLASS(job_dagman_rescue_recov,quick)
 TESTCLASS(job_dagman_rescue_recov,full)
 TESTCLASS(job_dagman_rescue_recov,quicknolink)
+
+DESC(job_dagman_event_log,"Test DAGMan with event log/POST script combination")
+RUN(job_dagman_event_log)
+TESTCLASS(job_dagman_event_log,dagman)
+TESTCLASS(job_dagman_event_log,quick)
+TESTCLASS(job_dagman_event_log,full)
+TESTCLASS(job_dagman_event_log,quicknolink)
 
 /* Sample performance tests */
 
@@ -1989,6 +1996,19 @@ TESTCLASS(job_rsc_binary-io_std,quicknolink)
 **TESTCLASS(job_core_coredump_van,framework)
 **TESTCLASS(job_core_coredump_van,quick)
 */
+
+/* Would like to make the following conditional on HAVE_SHARED_PORT
+   but then it never happens in the nightly tests.  Until a better
+   solution is found, explicitly exclude HPUX. */
+#if !defined( IS_HPUX11 ) 
+DESC(lib_shared_port_van,"Test of shared port feature.")
+DEPS(lib_shared_port_van,x_sleep.pl)
+RUN(lib_shared_port_van)
+TESTCLASS(lib_shared_port_van,core)
+TESTCLASS(lib_shared_port_van,quick)
+TESTCLASS(lib_shared_port_van,full)
+TESTCLASS(lib_shared_port_van,quicknolink)
+#endif
 
 lib_eventlog_build.exe : lib_eventlog_base.cpp
 	$(CPlusPlus) $< -ggdb -DLIBAPI_ONLY \

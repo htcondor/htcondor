@@ -3132,6 +3132,37 @@ if test $SSH_TO_JOB != no; then
     AC_MSG_ERROR( [condor_ssh_to_job requires openssl (for base64)] )
   fi
   AC_DEFINE([HAVE_SSH_TO_JOB], [1], [Define to 1 to support condor_ssh_to_job])
+  AC_MSG_NOTICE([enabling condor_ssh_to_job feature])
+fi
+
+AC_MSG_CHECKING([if we support passing fds via SCM_RIGHTS on this platform])
+# use a negative list so that we try SCM_RIGHTS on new platforms
+if test "$_cv_opsys" != "HPUX"; then
+  _cv_has_scm_rights_passfd=yes
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT([no])
+fi
+AC_MSG_CHECKING([if shared port feature is enabled])
+AC_ARG_ENABLE(shared-port,
+  [AS_HELP_STRING([--enable-shared-port],
+     [Support for USE_SHARED_PORT])],
+  [SHARED_PORT=$enableval],
+  [if test "x$_cv_has_scm_rights_passfd" = "xyes"; then SHARED_PORT=yes; else SHARED_PORT=no; fi])
+if test $SHARED_PORT != no; then
+  # one method for passing fds must be defined if HAVE_SHARED_PORT is defined
+  if test "x$_cv_has_scm_rights_passfd" != xyes; then
+    AC_MSG_ERROR( [shared-port requires SCM_RIGHTS for passing fds (not known to work on this OS)] )
+  fi
+
+  if test "x$_cv_has_scm_rights_passfd" = xyes; then
+    AC_DEFINE([HAVE_SCM_RIGHTS_PASSFD], [1], [Define to 1 to pass fd via SCM_RIGHTS])
+  fi
+
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_SHARED_PORT], [1], [Define to 1 to support USE_SHARED_PORT])
+else
+  AC_MSG_RESULT([no])
 fi
 
 # Look for the curl external library, used by the file transfer object

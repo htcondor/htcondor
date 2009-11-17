@@ -48,7 +48,6 @@
 #include "globusjob.h"
 #include "condor_config.h"
 
-
 // GridManager job states
 #define GM_INIT					0
 #define GM_REGISTER				1
@@ -194,7 +193,7 @@ globusJobId( const char *contact )
 	return buff;
 }
 
-int
+void
 orphanCallbackHandler()
 {
 	int rc;
@@ -205,7 +204,7 @@ orphanCallbackHandler()
 	OrphanCallbackList.Rewind();
 	if ( OrphanCallbackList.Next( orphan ) == false ) {
 		// Empty list
-		return TRUE;
+		return;
 	}
 	OrphanCallbackList.DeleteCurrent();
 
@@ -220,7 +219,7 @@ orphanCallbackHandler()
 
 		free( orphan->job_contact );
 		delete orphan;
-		return TRUE;
+		return;
 	}
 
 	GlobusResource *next_resource;
@@ -233,7 +232,7 @@ orphanCallbackHandler()
 
 			free( orphan->job_contact );
 			delete orphan;
-			return TRUE;
+			return;
 		}
 	}
 
@@ -243,7 +242,6 @@ orphanCallbackHandler()
 			 orphan->job_contact, orphan->state, orphan->errorcode );
 	free( orphan->job_contact );
 	delete orphan;
-	return TRUE;
 }
 
 void
@@ -283,8 +281,8 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 	new_orphan->state = state;
 	new_orphan->errorcode = errorcode;
 	OrphanCallbackList.Append( new_orphan );
-	daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
-								"orphanCallbackHandler", NULL );
+	daemonCore->Register_Timer( 1, orphanCallbackHandler,
+								"orphanCallbackHandler" );
 }
 
 /////////////////////////interface functions to gridmanager.C
@@ -698,7 +696,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&GlobusJob::ProxyCallback, this );
+							 (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -908,7 +906,7 @@ GlobusJob::~GlobusJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&GlobusJob::ProxyCallback, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	}
 	if ( gassServerUrl ) {
 		free( gassServerUrl );
@@ -938,7 +936,7 @@ int GlobusJob::ProxyCallback()
 	return 0;
 }
 
-int GlobusJob::doEvaluateState()
+void GlobusJob::doEvaluateState()
 {
 	bool connect_failure_jobmanager = false;
 	bool connect_failure_gatekeeper = false;
@@ -2600,11 +2598,9 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			RequestPing();
 		}
 	}
-
-	return TRUE;
 }
 
-int GlobusJob::CommunicationTimeout()
+void GlobusJob::CommunicationTimeout()
 {
 	// This function is called by a daemonCore timer if the resource
 	// object has been waiting too long for a gatekeeper ping to 
@@ -2614,7 +2610,6 @@ int GlobusJob::CommunicationTimeout()
 	globusStateErrorCode = GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED;
 	gmState = GM_HOLD;
 	communicationTimeoutTid = -1;
-	return TRUE;
 }
 
 void GlobusJob::NotifyResourceDown()

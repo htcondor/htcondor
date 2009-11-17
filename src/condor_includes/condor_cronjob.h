@@ -178,7 +178,7 @@ class CronJobBase : public Service
 	virtual int Schedule( void );
 	virtual int RunJob( void );
 	virtual int StartJob( void );
-	virtual int KillHandler( void );
+	virtual void KillHandler( void );
 	virtual int StdoutHandler( int pipe );
 	virtual int StderrHandler( int pipe );
 	virtual int Reaper( int exitPid, int exitStatus );

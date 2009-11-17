@@ -304,7 +304,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	}
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&GT4Job::ProxyCallback, this );
+							 (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -505,7 +505,7 @@ GT4Job::~GT4Job()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&GT4Job::ProxyCallback, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	}
 	if ( gramCallbackContact ) {
 		free( gramCallbackContact );
@@ -536,7 +536,7 @@ int GT4Job::ProxyCallback()
 	return 0;
 }
 
-int GT4Job::doEvaluateState()
+void GT4Job::doEvaluateState()
 {
 	int old_gm_state;
 	MyString old_globus_state;
@@ -1341,8 +1341,6 @@ int GT4Job::doEvaluateState()
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 bool GT4Job::AllowTransition( const MyString &new_state,
