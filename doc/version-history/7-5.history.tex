@@ -29,10 +29,11 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrack #892
-\item Added \Condor{shared\_port} under unix (except for HPUX).  This
-  allows Condor daemons other than \Condor{collector} to share a
+\item Added the new daemon \Condor{shared\_port} for Unix platforms 
+  (except for HPUX).
+  It allows Condor daemons other than the \Condor{collector} to share a
   single network port.  This makes opening access to Condor through a
-  firewall easier and safer.  It also increases scalability of the
+  firewall easier and safer.  It also increases the scalability of a
   submit node by decreasing port usage. See
   section~\ref{sec:Config-shared-port} for more information.
 
@@ -47,19 +48,23 @@ TCP connections.
 \begin{itemize}
 
 % gittrack #892
-\item \MacroNI{USE\_SHARED\_PORT} is a boolean value that specifies
-  whether a Condor process should rely on \Condor{shared\_port} for
+\item The new configuration variable \MacroNI{USE\_SHARED\_PORT} 
+  is a boolean value that specifies
+  whether a Condor process should rely on the \Condor{shared\_port} daemon for
   receiving incoming connections.  Write access to
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take effect.
-  The default is false.  If this is set to true, \MacroNI{SHARED\_PORT}
+  The default is \Expr{False}.  If set to \Expr{True}, \MacroNI{SHARED\_PORT}
   should be added to \MacroNI{DAEMON\_LIST}.  See
   section~\ref{sec:Config-shared-port} for more information.
 
 % gittrack #960
-\item Added \MacroNI{CCB\_HEARTBEAT\_INTERVAL}.  This is the maximum
+\item Added the new configuration variable \MacroNI{CCB\_HEARTBEAT\_INTERVAL}.
+  It is the maximum
   number of seconds of silence on a daemon's connection to the CCB server
   after which it will ping the server to verify that the connection still
-  works.  The default is 20 minutes.  This feature serves to both speed
+  works.  
+  The default value is 1200 (20 minutes).
+  This feature serves to both speed
   up detection of dead connections and to generate a guaranteed minimum
   frequency of activity to attempt to prevent the connection from being
   dropped.
