@@ -1367,8 +1367,9 @@ int handle_cream_proxy_renew( char **input_line )
 	int arg_cnt = count_args( input_line );
 	int jobnum;
 
-	if ( arg_cnt < 6 || !process_int_arg( input_line[5], &jobnum ) ||
-		 jobnum <= 0 || jobnum + 6 != arg_cnt ) {
+	if ( arg_cnt != 4 && ( arg_cnt < 6 ||
+						   !process_int_arg( input_line[5], &jobnum ) ||
+						   jobnum <= 0 || jobnum + 6 != arg_cnt ) ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 
@@ -1381,21 +1382,26 @@ int handle_cream_proxy_renew( char **input_line )
 
 int thread_cream_proxy_renew( Request *req )
 {
-	// FIXME: In the new API, the CREAM URL is no longer needed -
-	// only the URL to the delegation service. Also, a list of
-	// job IDs is no longer needed. The renewal simply happens
-	// for the given delegation ID.
+	// CRUFT: CREAM_PROXY_RENEW now comes in two flavors.
+	// Classic: <req id> <cream url> <delg url> <delg id> <#jobs> <job id>...
+	// New:     <req id> <delg url> <delg id>
+	// The latter was introduced in Condor 7.5.0. The former is
+	// deprecated and could be removed at a future date.
 
-	int jobnum;
-	char *reqid, *service, *delgservice, *delgid, *jobid;
+	int arg_cnt = count_args( req->input_line );
+	char *reqid, *delgservice, *delgid;
 	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
-	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &delgservice );
-	process_string_arg( req->input_line[4], &delgid );
-	process_int_arg( req->input_line[5], &jobnum );
-	
+
+	if ( arg_cnt == 4 ) {
+		process_string_arg( req->input_line[2], &delgservice );
+		process_string_arg( req->input_line[3], &delgid );
+	} else {
+		process_string_arg( req->input_line[3], &delgservice );
+		process_string_arg( req->input_line[4], &delgid );
+	}	
+
 	try {
 		AbsCreamProxy* cp =
 			CreamProxyFactory::make_CreamProxy_ProxyRenew(delgid,
