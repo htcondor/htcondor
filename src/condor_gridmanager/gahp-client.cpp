@@ -5449,7 +5449,8 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+		// Just start one job
+	bool x = reqline.sprintf("%s 1 %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x == true );

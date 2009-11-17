@@ -503,7 +503,25 @@ int thread_cream_job_register( Request *req )
 
 int handle_cream_job_start( char **input_line )
 {
-	if ( count_args( input_line ) != 4 ) {
+	int arg_cnt = count_args( input_line );
+	char *jobnum = NULL;
+
+	// CRUFT: CREAM_JOB_START now comes in two flavors.
+	// Classic: <req id> <cream url> <job id>
+	// New:     <req id> <cream url> <#jobs> <job id>...
+	// The latter was introduced in Condor 7.5.0. The former is
+	// deprecated and could be removed at a future date.
+
+	// Convert the old syntax to the new.
+	if ( arg_cnt == 4 ) {
+		input_line[5] = input_line[4];
+		input_line[4] = input_line[3];
+		input_line[3] = strdup( "1" );
+		arg_cnt = 5;
+	}
+
+	process_string_arg( input_line[3], &jobnum );
+	if ( jobnum && ( atoi( jobnum ) + 4 != arg_cnt ) ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 
@@ -516,17 +534,30 @@ int handle_cream_job_start( char **input_line )
 
 int thread_cream_job_start( Request *req )
 {
-	char *reqid, *service, *jobid;
+	// FIXME: It doesn't appear that the new API supports
+	// operating on all jobs. It also doesn't look like the
+	// GridManager uses this capability. We should disable
+	// the syntax for asking for operating on all jobs
+
+	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &jobid );
+	process_string_arg( req->input_line[3], &jobnum_str );
 	
 	try {
-		JobIdWrapper jiw(jobid, service, vector<JobPropertyWrapper>());
+		if (jobnum_str == NULL) {
+			throw runtime_error("start of all jobs not supported");
+		}
 		vector<JobIdWrapper> jv;
-		jv.push_back(jiw);
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
 		vector<string> sv;
 		JobFilterWrapper jfw(jv,
 		                     sv,  // status contraint: none 
