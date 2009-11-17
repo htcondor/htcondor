@@ -4885,14 +4885,14 @@ These macros control the \Condor{schedd}.
   An integer representing a limit on the number of processes
   spawned by a given \Condor{schedd} daemon,
   for all job universes except the grid universe. 
-  This includes, \Condor{shadow} processes,
+  The number of processes limit includes \Condor{shadow} processes,
   scheduler universe processes, including \Condor{dagman}, and
   local universe \Condor{starter} processes.
   Limiting the number of running scheduler and local universe
   jobs below the upper limit set by \MacroNI{MAX\_JOBS\_RUNNING} is best
   done using \MacroNI{START\_LOCAL\_UNIVERSE} and
   \MacroNI{START\_SCHEDULER\_UNIVERSE}.
-  The actual number of alowed \Condor{shadow} daemons may be reduced,
+  The actual number of allowed \Condor{shadow} daemons may be reduced,
   if the amount of memory defined by \MacroNI{RESERVED\_SWAP} limits the
   number of \Condor{shadow} daemons.
   A value for \MacroNI{MAX\_JOBS\_RUNNING} that is less than or equal to 0
@@ -4901,7 +4901,7 @@ These macros control the \Condor{schedd}.
   be aborted until the number running is within the limit.
 
   Like all integer configuration variables, \MacroNI{MAX\_JOBS\_RUNNING}
-  may be a ClassAd expression that evaluates to an integer and which
+  may be a ClassAd expression that evaluates to an integer, and which
   refers to constants either directly or via macro substitution.
   The default value is an expression that depends on the total amount
   of memory and the operating system.  The default
@@ -5897,7 +5897,7 @@ These settings affect the \Condor{starter}.
 \item[\Macro{FILETRANSFER\_PLUGINS}]
   A comma separated list of full and absolute path and executable names
   for plug-ins that will accomplish the task of doing file transfer
-  when a job requests the tranfer of an input file by specifying a URL. 
+  when a job requests the transfer of an input file by specifying a URL. 
   See section~\ref{sec:URL-transfer} for a description of the functionality
   required of a plug-in.
 
