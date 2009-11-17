@@ -36,6 +36,10 @@ The details of each version are described below.
   submit node by decreasing port usage. See
   section~\ref{sec:Config-shared-port} for more information.
 
+% gittrack #960
+\item Improved CCB's handling of rude NAT/firewalls that silently drop
+TCP connections.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -51,6 +55,14 @@ The details of each version are described below.
   should be added to \MacroNI{DAEMON\_LIST}.  See
   section~\ref{sec:Config-shared-port} for more information.
 
+% gittrack #960
+\item Added \MacroNI{CCB\_HEARTBEAT\_INTERVAL}.  This is the maximum
+  number of seconds of silence on a daemon's connection to the CCB server
+  after which it will ping the server to verify that the connection still
+  works.  The default is 20 minutes.  This feature serves to both speed
+  up detection of dead connections and to generate a guaranteed minimum
+  frequency of activity to attempt to prevent the connection from being
+  dropped.
 
 \end{itemize}
 
