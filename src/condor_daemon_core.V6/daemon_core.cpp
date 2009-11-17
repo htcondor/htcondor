@@ -1057,6 +1057,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			free(tmp);
 			sinful_private = strdup(private_sinful_string.Value());
 		}
+
+		free(m_private_network_name);
+		m_private_network_name = NULL;
+		if ((tmp = param("PRIVATE_NETWORK_NAME"))) {
+			m_private_network_name = tmp;
+		}
+
 #if HAVE_EXT_GCB
 		if (sinful_private == NULL
 			&& (param_boolean("NET_REMAP_ENABLE", false, false))) {
@@ -2578,12 +2585,6 @@ DaemonCore::reconfig(void) {
 	// Maximum number of bytes read from a stdout/stderr pipes.
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
-
-		// Grab a copy of our private network name (if any).
-	if (m_private_network_name) {
-		free(m_private_network_name);
-	}
-	m_private_network_name = param("PRIVATE_NETWORK_NAME");
 
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
@@ -10248,14 +10249,16 @@ DaemonCore::publish(ClassAd *ad) {
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();
 	if (tmp) {
+			// The private network name is published in the contact
+			// string, so we don't really need to advertise it in
+			// a separate attribute.  However, it may be useful for
+			// other purposes.
 		ad->Assign(ATTR_PRIVATE_NETWORK_NAME, tmp);
-		tmp = privateNetworkIpAddr();
-		ASSERT(tmp);
-		ad->Assign(ATTR_PRIVATE_NETWORK_IP_ADDR, tmp);
 	}
+
 	tmp = publicNetworkIpAddr();
 	if( tmp ) {
-		ad->Assign(ATTR_PUBLIC_NETWORK_IP_ADDR, tmp);
+		ad->Assign(ATTR_MY_ADDRESS, tmp);
 	}
 }
 

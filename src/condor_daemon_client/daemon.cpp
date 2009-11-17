@@ -1789,56 +1789,24 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 		// TODO Which attributes should trigger a failure if we don't find
 		// them in the ad? Just _addr?
 	bool ret_val = true;
-	bool found_addr = false;
 	char const *notes = "";
+	bool found_addr = false;
 
 		// We look for _name first because we use it, if available, for
 		// error messages if we fail  to find the other attributes.
 	initStringFromAd( ad, ATTR_NAME, &_name );
 
-		// Search for the daemon's address. This can be in one of
-		// several attributes in the classad. Search through the possible
-		// attributes until we find a match.
-		// In the future, _addr may become a list of addresses. In that
-		// case, we'd want to include all possible matches in the list.
-	if ( ad->LookupString( ATTR_PRIVATE_NETWORK_IP_ADDR, buf ) &&
-		 ad->LookupString( ATTR_PRIVATE_NETWORK_NAME, buf2 ) &&
-		 ( our_network_name = param( "PRIVATE_NETWORK_NAME" ) ) ) {
-
-		StringList addr_list( buf.Value(), ", " );
-		StringList network_list( buf2.Value(), "," );
-
-		addr_list.rewind();
-		network_list.rewind();
-		if ( !addr_list.isEmpty() && !network_list.isEmpty() &&
-			 strcmp( network_list.next(), our_network_name ) == 0 ) {
-
-			New_addr( strnewp( addr_list.next() ) );
-			found_addr = true;
-			addr_attr_name = ATTR_PRIVATE_NETWORK_IP_ADDR;
-		}
-	}
-	free( our_network_name );
-
-	if ( !found_addr && ad->LookupString( ATTR_PUBLIC_NETWORK_IP_ADDR, buf ) ) {
-		StringList addr_list( buf.Value(), ", " );
-
-		addr_list.rewind();
-		if ( !addr_list.isEmpty() ) {
-			New_addr( strnewp( addr_list.next() ) );
-			found_addr = true;
-			addr_attr_name = ATTR_PUBLIC_NETWORK_IP_ADDR;
-		}
-	}
-
-	if ( !found_addr ) {
 		// construct the IP_ADDR attribute
-		buf.sprintf( "%sIpAddr", _subsys );
-		if ( ad->LookupString( buf.Value(), buf2 ) ) {
-			New_addr( strnewp( buf2.Value() ) );
-			found_addr = true;
-			addr_attr_name = buf;
-		}
+	buf.sprintf( "%sIpAddr", _subsys );
+	if ( ad->LookupString( buf.Value(), buf2 ) ) {
+		New_addr( strnewp( buf2.Value() ) );
+		found_addr = true;
+		addr_attr_name = buf;
+	}
+	else if ( ad->LookupString( ATTR_MY_ADDRESS, buf2 ) ) {
+		New_addr( strnewp( buf2.Value() ) );
+		found_addr = true;
+		addr_attr_name = ATTR_MY_ADDRESS;
 	}
 
 	if( _addr ) {

@@ -772,7 +772,7 @@ void CreamJob::doEvaluateState()
 		case GM_SUBMIT_SAVE: {
 			// Save the jobmanager's contact for a new cream submission.
 			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
+				gmState = GM_CLEANUP;
 			} else {
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
@@ -805,6 +805,7 @@ void CreamJob::doEvaluateState()
 						// make us do a probe immediately after submitting
 						// the job, so set it to now
 					lastProbeTime = time(NULL);
+					NewCreamState( CREAM_JOB_STATE_UNSET, 0, NULL );
 					gmState = GM_SUBMITTED;
 				}
 			}
@@ -818,7 +819,13 @@ void CreamJob::doEvaluateState()
 			} else if ( remoteState == CREAM_JOB_STATE_DONE_FAILED || remoteState == CREAM_JOB_STATE_ABORTED ) {
 				gmState = GM_PURGE;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
+				if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
+					gmState = GM_CLEANUP;
+				} else {
+					gmState = GM_CANCEL;
+				}
+			} else if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
+				gmState = GM_SUBMIT_COMMIT;
 			} else {
 					// Check that our gridftp server is healthy
 				if ( gridftpServer->GetErrorMessage() ) {
