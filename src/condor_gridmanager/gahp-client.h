@@ -595,7 +595,7 @@ class GahpClient : public Service {
 		int cream_job_status(const char *service, const char *job_id, 
 							 char **job_status, int *exit_code, char **failure_reason);
 		
-		int cream_proxy_renew(const char *service, const char *delg_service, const char *delg_id, StringList &job_ids);
+		int cream_proxy_renew(const char *delg_service, const char *delg_id);
 		
 		int cream_ping(const char * service);
 		

@@ -452,31 +452,10 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri.Value());
 			 now >= next_deleg->last_proxy_refresh + PROXY_REFRESH_INTERVAL ) {
 dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			int rc;
-			CreamJob *next_job;
 			deleg_gahp->setDelegProxy( next_deleg->proxy );
 			
-				//create a list of jobIds using the proxy
-			StringList job_ids;
-			registeredJobs.Rewind();
-			while ( (next_job = (CreamJob *)registeredJobs.Next()) != NULL) {
-				if(next_job->remoteJobId != NULL) {
-						//Make sure deleg URI matches w/ job's before adding to list
-						//And make sure the job has been started and is not in terminal state.
-					if ( strcmp( next_job->delegatedCredentialURI, next_deleg->deleg_uri ) == 0 &&
-						 next_job->remoteState != CREAM_JOB_STATE_REGISTERED &&
-						 next_job->remoteState != CREAM_JOB_STATE_CANCELLED &&
-						 next_job->remoteState != CREAM_JOB_STATE_DONE_OK &&
-						 next_job->remoteState != CREAM_JOB_STATE_DONE_FAILED &&
-						 next_job->remoteState != CREAM_JOB_STATE_ABORTED) {
-						job_ids.append(next_job->remoteJobId);
-					}
-				}
-			}
-			
-			rc = deleg_gahp->cream_proxy_renew(serviceUri,
-											   delegationServiceUri,
-											   next_deleg->deleg_uri,
-											   job_ids);
+			rc = deleg_gahp->cream_proxy_renew(delegationServiceUri,
+											   next_deleg->deleg_uri);
 			
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
@@ -484,9 +463,6 @@ dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			}
 			next_deleg->last_proxy_refresh = now;
 			if ( rc != 0 ) {
-					/* CREAM will return an error if a single job in the list fails to be
-					   renewed. However, the rest of the jobs will be renewed successfully.
-					*/
 					// Failure, what to do?
 				dprintf( D_ALWAYS, "refresh_credentials(%s) failed!\n",
 						 next_deleg->deleg_uri );

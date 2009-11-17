@@ -5846,7 +5846,7 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 }
 
 int
-GahpClient::cream_proxy_renew(const char *service, const char *delg_service, const char *delg_id, StringList &job_ids)
+GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 {
 	static const char* command = "CREAM_PROXY_RENEW";
 
@@ -5855,32 +5855,16 @@ GahpClient::cream_proxy_renew(const char *service, const char *delg_service, con
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
-	if (job_ids.number() == 0) {
-		return 0;
-	}
-
 		// Generate request line
-	if (!service) service=NULLSTRING;
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
 	MyString reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(delg_service) );
-	char *esc3 = strdup( escapeGahpString(delg_id) );
-	bool x = reqline.sprintf("%s %s %s %d", esc1, esc2, esc3,  job_ids.number());
+	char *esc1 = strdup( escapeGahpString(delg_service) );
+	char *esc2 = strdup( escapeGahpString(delg_id) );
+	bool x = reqline.sprintf("%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	free( esc3 );
 	ASSERT( x == true );
-		// Add variable arguments
-	const char *temp;
-	job_ids.rewind();
-
-	while((temp = job_ids.next()) != NULL) {
-		x = reqline.sprintf_cat(" %s",temp);
-		
-		ASSERT(x == true);
-	}
 	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
