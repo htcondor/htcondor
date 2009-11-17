@@ -144,6 +144,14 @@ Timer -1 not found
 DAG with POST scripts, if the global event log (see
 section~\ref{param:EventLog}) is turned on.
 
+% gittrack #973
+\item Improved how the private network address is published when using
+  \MacroNI{PRIVATE\_NETWORK\_NAME} and
+  \MacroNI{PRIVATE\_NETWORK\_INTERFACE}.  In some cases, this
+  information was not being used and therefore connections were made
+  to the public address when they could have been made to the private
+  address.
+
 \end{itemize}
 
 \noindent Known Bugs:
