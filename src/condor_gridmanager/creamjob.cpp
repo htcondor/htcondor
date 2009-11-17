@@ -1333,6 +1333,12 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 		enteredCurrentRemoteState = time(NULL);
 		SetRemoteJobStatus( remoteState.Value() );
 
+		if ( failure_reason ) {
+			remoteStateFaultString = failure_reason;
+		} else {
+			remoteStateFaultString = "";
+		}
+
 		// TODO handle jobs that exit via a signal
 		if ( remoteState == CREAM_JOB_STATE_DONE_OK ) {
 			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
