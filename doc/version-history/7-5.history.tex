@@ -40,6 +40,13 @@ The details of each version are described below.
 \item Improved CCB's handling of rude NAT/firewalls that silently drop
 TCP connections.
 
+% gittrack #968
+\item Simplified the publication of daemon addresses.
+  \Attr{PublicNetworkIpAddr} and \Attr{PrivateNetworkIpAddr} have been removed.
+  \Attr{MyAddress} contains both public and private addresses.  For now,
+  \Attr{<Subsys>IpAddr} contains the same information.  In a future release,
+  the latter may be removed.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:

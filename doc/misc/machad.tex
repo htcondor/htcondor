@@ -136,6 +136,12 @@ average.
 \item[\AdAttr{Mips}:] Relative integer performance as determined via a Dhrystone
 benchmark.
 %
+\index{ClassAd machine attribute!MyAddress}
+\item[\AdAttr{MyAddress}:] String with the IP and port address of the
+\Condor{startd} daemon which is publishing this machine ClassAd.
+When using CCB, \Condor{shared\_port}, and/or an additional private
+network interface, that information will be included here as well.
+%
 \index{ClassAd machine attribute!MyType}
 \item[\AdAttr{MyType}:] The ClassAd type; always set to the literal string \AdStr{Machine}.
 %
@@ -212,6 +218,9 @@ For older versions of Condor, see \AdAttr{VirtualMachineID} below.
 \index{ClassAd machine attribute!StartdIpAddr}
 \item[\AdAttr{StartdIpAddr}:] String with the IP and port address of the
 \Condor{startd} daemon which is publishing this machine ClassAd.
+When using CCB, \Condor{shared\_port}, and/or an additional private
+network interface, that information will be included here as well.
+
 %
 \index{ClassAd machine attribute!State}
 \item[\AdAttr{State}:] String which publishes the machine's Condor state.
