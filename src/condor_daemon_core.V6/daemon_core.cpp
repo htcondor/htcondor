@@ -1035,6 +1035,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			free(tmp);
 			sinful_private = strdup(private_sinful_string.Value());
 		}
+
+		free(m_private_network_name);
+		m_private_network_name = NULL;
+		if ((tmp = param("PRIVATE_NETWORK_NAME"))) {
+			m_private_network_name = tmp;
+		}
+
 #if HAVE_EXT_GCB
 		if (sinful_private == NULL
 			&& (param_boolean("NET_REMAP_ENABLE", false, false))) {
@@ -2549,12 +2556,6 @@ DaemonCore::reconfig(void) {
 	// Maximum number of bytes read from a stdout/stderr pipes.
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
-
-		// Grab a copy of our private network name (if any).
-	if (m_private_network_name) {
-		free(m_private_network_name);
-	}
-	m_private_network_name = param("PRIVATE_NETWORK_NAME");
 
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
