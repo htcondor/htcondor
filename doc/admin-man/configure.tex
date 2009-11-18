@@ -2131,6 +2131,21 @@ limit above the hard limit (on maximum open files) that it inherits.
   % Default definition in config file: N/A
   % Result if not defined or RHS is empty: No change in behavior.
 
+\label{param:TcpForwardingHost}
+\item[\Macro{TCP\_FORWARDING\_HOST}]
+  This specifies the host or IP address that should be used as the
+  public address of this daemon.  This is useful if Condor on this
+  host may be reached through a NAT or firewall by connecting to a
+  different IP address that forwards connections to this host.  It
+  is assumed that the port number on the \MacroNI{TCP\_FORWARDING\_HOST}
+  that forwards to this host is the same port number assigned to
+  Condor on this host.  This option could also be used when ssh port
+  forwarding is being used.  In this case, the incoming addresses
+  of connections to this daemon will appear as though they are coming
+  from this host rather than from the real remote host, so any
+  authorization settings that rely on host addresses should be
+  considered accordingly.
+
 \label{param:HighPort}
 \item[\Macro{HIGHPORT}]
   Specifies an upper limit of given port numbers for Condor to use,

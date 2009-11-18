@@ -56,6 +56,20 @@ The details of each version are described below.
   empty string to \verb|jobrouter|.  See the release notes for more
   information about upgrading from an old version.
 
+\item \MacroNI{TCP\_FORWARDING\_HOST} has existed in Condor since
+  7.0.0, but was not documented.  This configuration variable
+  specifies the host or IP address that should be used as the public
+  address of this daemon.  This is useful if Condor on this host may
+  be reached through a NAT or firewall by connecting to a different IP
+  address that forwards connections to this host.  It is assumed that
+  the port number on the \MacroNI{TCP\_FORWARDING\_HOST} that forwards
+  to this host is the same port number assigned to Condor on this
+  host.  This option could also be used when ssh port forwarding is
+  being used.  In this case, the incoming addresses of connections to
+  this daemon will appear as though they are coming from this host
+  rather than from the real remote host, so any authorization settings
+  that rely on host addresses should be considered accordingly.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
