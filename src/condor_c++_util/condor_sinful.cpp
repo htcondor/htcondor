@@ -310,3 +310,18 @@ Sinful::regenerateSinful()
 	}
 	m_sinful += ">";
 }
+
+bool
+Sinful::addressPointsToMe( Sinful &addr )
+{
+	if( getHost() && addr.getHost() && !strcmp(getHost(),addr.getHost()) &&
+		getPort() && addr.getPort() && !strcmp(getPort(),addr.getPort()) )
+	{
+		return true;
+	}
+	if( getPrivateAddr() ) {
+		Sinful private_addr( getPrivateAddr() );
+		return private_addr.addressPointsToMe( addr );
+	}
+	return false;
+}

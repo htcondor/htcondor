@@ -75,6 +75,9 @@ class Sinful {
 	// returns number of params
 	int numParams() const;
 
+	// returns true if addr points to this address
+	bool addressPointsToMe( Sinful &addr );
+
  private:
 	std::string m_sinful; // the sinful string "<host:port?params>"
 	std::string m_host;

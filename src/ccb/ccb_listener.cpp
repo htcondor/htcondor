@@ -534,11 +534,10 @@ CCBListeners::Configure(char const *addresses)
 		if( !listener ) {
 
 			Daemon daemon(DT_COLLECTOR,address);
-			char const *addr = daemon.addr();
+			Sinful ccb_addr( daemon.addr() );
+			Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 
-			if( addr && ( !strcmp(addr,daemonCore->privateNetworkIpAddr()) ||
-						  !strcmp(addr,daemonCore->publicNetworkIpAddr()) ) )
-			{
+			if( my_addr.addressPointsToMe( ccb_addr ) ) {
 				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address);
 				continue;
 			}

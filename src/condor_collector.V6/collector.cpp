@@ -1269,10 +1269,10 @@ void CollectorDaemon::Config()
     tmp = param("CONDOR_VIEW_HOST");
     if(tmp) {
        View_Collector = new DCCollector( tmp );
-       char const *addr = View_Collector->addr();
+       Sinful view_addr( View_Collector->addr() );
+	   Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 
-       if( addr && ( !strcmp(addr,daemonCore->privateNetworkIpAddr()) ||
-                     !strcmp(addr,daemonCore->publicNetworkIpAddr()) ) )
+       if( my_addr.addressPointsToMe( view_addr ) )
        {
        	     // Do not forward to myself.
           dprintf(D_ALWAYS, "Not forwarding to View Server %s, because that's me!\n", tmp);

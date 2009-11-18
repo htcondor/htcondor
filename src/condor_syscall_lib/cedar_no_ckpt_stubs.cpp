@@ -153,3 +153,9 @@ ReliSock::cancel_reverse_connect() {
 	EXCEPT( "ReliSock::cancel_reverse_connect() should never be "
 			"called within the Condor syscall library" );
 }
+
+char const *
+Sock::get_sinful_public()
+{
+	return get_sinful();
+}

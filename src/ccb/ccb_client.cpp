@@ -150,7 +150,8 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		msg.Assign(ATTR_CLAIM_ID,m_connect_id);
 		// purely for debugging purposes: identify ourselves
 		msg.Assign(ATTR_NAME, myName());
-		msg.Assign(ATTR_MY_ADDRESS, m_listen_sock->get_sinful());
+		char const *listener_addr = m_listen_sock->get_sinful_public();
+		msg.Assign(ATTR_MY_ADDRESS, listener_addr);
 
 		dprintf(D_NETWORK|D_FULLDEBUG,
 				"CCBClient: requesting reverse connection to %s "
@@ -158,7 +159,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 				m_target_peer_description.Value(),
 				ccb_address.Value(),
 				ccbid.Value(),
-				m_listen_sock->get_sinful());
+				listener_addr);
 
 		Daemon ccb(DT_COLLECTOR,ccb_address.Value(),NULL);
 		if( m_ccb_sock ) {
