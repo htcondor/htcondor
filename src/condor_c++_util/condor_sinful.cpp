@@ -322,3 +322,24 @@ Sinful::regenerateSinful()
 	}
 	m_sinful += ">";
 }
+
+bool
+Sinful::addressPointsToMe( Sinful &addr )
+{
+	if( getHost() && addr.getHost() && !strcmp(getHost(),addr.getHost()) &&
+		getPort() && addr.getPort() && !strcmp(getPort(),addr.getPort()) )
+	{
+		char const *spid = getSharedPortID();
+		char const *addr_spid = addr.getSharedPortID();
+		if( spid == NULL && addr_spid == NULL ||
+			spid && addr_spid && !strcmp(spid,addr_spid) )
+		{
+			return true;
+		}
+	}
+	if( getPrivateAddr() ) {
+		Sinful private_addr( getPrivateAddr() );
+		return private_addr.addressPointsToMe( addr );
+	}
+	return false;
+}

@@ -171,3 +171,9 @@ ReliSock::sendTargetSharedPortID()
 {
 	return true;
 }
+
+char const *
+Sock::get_sinful_public()
+{
+	return get_sinful();
+}

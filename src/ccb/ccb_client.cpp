@@ -156,7 +156,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 
 			return false;
 		}
-		listener_addr = listen_sock->get_sinful();
+		listener_addr = listen_sock->get_sinful_public();
 	}
 	ASSERT( listener_addr );
 

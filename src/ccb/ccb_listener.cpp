@@ -647,19 +647,18 @@ CCBListeners::Configure(char const *addresses)
 		if( !listener ) {
 
 			Daemon daemon(DT_COLLECTOR,address);
-			char const *addr = daemon.addr();
-			char const *public_addr = daemonCore->publicNetworkIpAddr();
-			char const *private_addr = daemonCore->privateNetworkIpAddr();
-			if( !public_addr ) public_addr = "null";
-			if( !private_addr ) private_addr = "null";
+			char const *ccb_addr_str = daemon.addr();
+			char const *my_addr_str = daemonCore->publicNetworkIpAddr();
+			Sinful ccb_addr( ccb_addr_str );
+			Sinful my_addr( my_addr_str );
 
-			if( addr && ( !strcmp(addr,private_addr) ||
-						  !strcmp(addr,public_addr) ) )
-			{
+			if( my_addr.addressPointsToMe( ccb_addr ) ) {
 				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address);
 				continue;
 			}
-			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s is not equal to my address (%s, %s)\n",addr?addr:"null",public_addr,private_addr);
+			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s does not point to my address %s\n",
+					ccb_addr_str?ccb_addr_str:"null",
+					my_addr_str?my_addr_str:"null");
 
 			listener = new CCBListener(address);
 		}
