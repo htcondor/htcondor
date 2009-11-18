@@ -2114,17 +2114,18 @@ limit above the hard limit (on maximum open files) that it inherits.
   particular private network.
   If another Condor daemon or tool is configured with the same
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
-  daemon using the \Attr{PrivateIpAddr} attribute from the classified
-  ad.
+  daemon using its private network address.
   Even for sites using CCB or GCB, this is an important optimization, since
   it means that two daemons on the same network can communicate
   directly, without having to go through the broker.
   If CCB/GCB is enabled, and the \MacroNI{PRIVATE\_NETWORK\_NAME} is
-  defined, the \Attr{PrivateIpAddr} will be defined automatically.
+  defined, the daemon's private address will be defined automatically.
   Otherwise, you can specify a particular private IP address to use by
   defining the \MacroNI{PRIVATE\_NETWORK\_INTERFACE} setting
   (described below).
   There is no default for this setting.
+  After changing this setting and running \Condor{reconfig}, it may
+  take up to one collector update interval before the change becomes visible.
   % DWW
   % Described in default config file: NO
   % Defined in the default config file: NO
@@ -2147,6 +2148,8 @@ limit above the hard limit (on maximum open files) that it inherits.
   the \MacroNI{PRIVATE\_NETWORK\_NAME}, and the 
   \MacroNI{PRIVATE\_NETWORK\_INTERFACE} will be defined automatically.
   Unless CCB/GCB is enabled, there is no default for this setting.
+  After changing this setting and running \Condor{reconfig}, it may
+  take up to one collector update interval before the change becomes visible.
   % DWW
   % Described in default config file: NO
   % Defined in the default config file: NO
