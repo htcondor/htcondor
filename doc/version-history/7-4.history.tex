@@ -41,17 +41,34 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac #929, #943
+\item The new \Opt{-attributes} option to \Condor{status}
+  explicitly specifies the attributes to be listed when using the
+  \Opt{-xml} or \Opt{-long} options.
 
 \end{itemize}
 
-\noindent Configuration Variable Additions and Changes:
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
 \item The default for \MacroNI{JOB\_ROUTER\_NAME} has changed from an
   empty string to \verb|jobrouter|.  See the release notes for more
   information about upgrading from an old version.
+
+\item \MacroNI{TCP\_FORWARDING\_HOST} has existed in Condor since
+  7.0.0, but was not documented.  This configuration variable
+  specifies the host or IP address that should be used as the public
+  address of this daemon.  This is useful if Condor on this host may
+  be reached through a NAT or firewall by connecting to a different IP
+  address that forwards connections to this host.  It is assumed that
+  the port number on the \MacroNI{TCP\_FORWARDING\_HOST} that forwards
+  to this host is the same port number assigned to Condor on this
+  host.  This option could also be used when ssh port forwarding is
+  being used.  In this case, the incoming addresses of connections to
+  this daemon will appear as though they are coming from this host
+  rather than from the real remote host, so any authorization settings
+  that rely on host addresses should be considered accordingly.
 
 \end{itemize}
 
@@ -130,6 +147,29 @@ slot1: Request to claim resource refused.
 \begin{verbatim}
 Timer -1 not found
 \end{verbatim}
+
+%gittrack #937
+\item Fixed a problem in which security sessions were not cached
+  correctly when using CCB.  This resulted in re-authentication in
+  some cases where a cached security session could have been used.
+
+% gittrac #934
+\item Fixed a bug that caused \Condor{dagman} to hang when running a
+DAG with POST scripts, if the global event log (see
+section~\ref{param:EventLog}) is turned on.
+
+% gittrack #973
+\item Improved how the private network address is published when using
+  \MacroNI{PRIVATE\_NETWORK\_NAME} and
+  \MacroNI{PRIVATE\_NETWORK\_INTERFACE}.  In some cases, this
+  information was not being used and therefore connections were made
+  to the public address when they could have been made to the private
+  address.
+
+% gittrack #713
+\item CCB now works with \MacroNI{TCP\_FORWARDING\_HOST}.  Previously,
+  it the reversed connection was made to the private address rather than
+  to \MacroNI{TCP\_FORWARDING\_HOST}.
 
 \end{itemize}
 
@@ -257,7 +297,7 @@ improvements.
 
 \end{itemize}
 
-\noindent Configuration Variable Additions and Changes:
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
@@ -584,6 +624,11 @@ to \Expr{True} will corrupt the visible desktop.
   This bug is present back through Condor version 7.2.4.
 This configuration variable did not work at all in 7.2 releases
 prior to 7.2.4.  This bug will be fixed in Condor version 7.4.1.
+
+% gittrac #934
+\item If the global event log (see section~\ref{param:EventLog}) is
+turned on, \Condor{dagman} will hang when running any DAG that has
+POST scripts.
 
 \end{itemize}
 

@@ -2156,6 +2156,21 @@ limit above the hard limit (on maximum open files) that it inherits.
   % Default definition in config file: N/A
   % Result if not defined or RHS is empty: No change in behavior.
 
+\label{param:TcpForwardingHost}
+\item[\Macro{TCP\_FORWARDING\_HOST}]
+  This specifies the host or IP address that should be used as the
+  public address of this daemon.  This is useful if Condor on this
+  host may be reached through a NAT or firewall by connecting to a
+  different IP address that forwards connections to this host.  It
+  is assumed that the port number on the \MacroNI{TCP\_FORWARDING\_HOST}
+  that forwards to this host is the same port number assigned to
+  Condor on this host.  This option could also be used when ssh port
+  forwarding is being used.  In this case, the incoming addresses
+  of connections to this daemon will appear as though they are coming
+  from this host rather than from the real remote host, so any
+  authorization settings that rely on host addresses should be
+  considered accordingly.
+
 \label{param:HighPort}
 \item[\Macro{HIGHPORT}]
   Specifies an upper limit of given port numbers for Condor to use,
@@ -4907,20 +4922,29 @@ These macros control the \Condor{schedd}.
   
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  An integer value representing a limit on the number of processes
+  An integer representing a limit on the number of processes
   spawned by a given \Condor{schedd} daemon,
   for all job universes except the grid universe. 
-  This includes, but is not limited to \Condor{shadow} processes
-  and scheduler universe processes, including \Condor{dagman}.
+  The number of processes limit includes \Condor{shadow} processes,
+  scheduler universe processes, including \Condor{dagman}, and
+  local universe \Condor{starter} processes.
   Limiting the number of running scheduler and local universe
   jobs below the upper limit set by \MacroNI{MAX\_JOBS\_RUNNING} is best
   done using \MacroNI{START\_LOCAL\_UNIVERSE} and
   \MacroNI{START\_SCHEDULER\_UNIVERSE}.
-  The actual number of \Condor{shadow} daemons may be reduced,
+  The actual number of allowed \Condor{shadow} daemons may be reduced,
   if the amount of memory defined by \MacroNI{RESERVED\_SWAP} limits the
   number of \Condor{shadow} daemons.
+  A value for \MacroNI{MAX\_JOBS\_RUNNING} that is less than or equal to 0
+  prevents any new job from starting.  Changing this setting to be below
+  the current number of jobs that are running will cause running jobs to
+  be aborted until the number running is within the limit.
+
+  Like all integer configuration variables, \MacroNI{MAX\_JOBS\_RUNNING}
+  may be a ClassAd expression that evaluates to an integer, and which
+  refers to constants either directly or via macro substitution.
   The default value is an expression that depends on the total amount
-  of memory and the operating system. The default
+  of memory and the operating system.  The default
   expression requires 1MByte of RAM per running job on the submit machine.
   In some environments and configurations, this is overly
   generous and can be cut by as much as 50\%.
@@ -5898,6 +5922,24 @@ These settings affect the \Condor{starter}.
   while CPU cores are numbered beginning with the value 0.
   This affinity list only takes effect if
   \Expr{ENFORCE\_CPU\_AFFINITY = True}.
+
+\label{param:EnableURLTransfers} 
+\item[\Macro{ENABLE\_URL\_TRANSFERS}]
+  A boolean value that when \Expr{True} causes the \Condor{starter} for
+  a job to invoke all plug-ins defined by \MacroNI{FILETRANSFER\_PLUGINS}
+  to determine their capabilities for handling protocols to be
+  used in file transfer specified with a URL.
+  When \Expr{False}, a URL transfer specified in a job's submit description
+  file will cause an error issued by \Condor{submit}.
+  The default value is \Expr{True}.
+
+\label{param:FiletransferPlugins} 
+\item[\Macro{FILETRANSFER\_PLUGINS}]
+  A comma separated list of full and absolute path and executable names
+  for plug-ins that will accomplish the task of doing file transfer
+  when a job requests the transfer of an input file by specifying a URL. 
+  See section~\ref{sec:URL-transfer} for a description of the functionality
+  required of a plug-in.
 
 \end{description}
 
