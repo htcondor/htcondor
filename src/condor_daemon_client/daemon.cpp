@@ -1785,7 +1785,6 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	MyString buf = "";
 	MyString buf2 = "";
 	MyString addr_attr_name = "";
-	char *our_network_name = NULL;
 		// TODO Which attributes should trigger a failure if we don't find
 		// them in the ad? Just _addr?
 	bool ret_val = true;
@@ -1841,55 +1840,9 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 		}
 	}
 
-	if( _addr ) {
-		// See if there is a matching private network address packed
-		// into the sinful string (starting in 7.3.0 this replaces the
-		// old method of putting it in a separate attribute).
-
-		Sinful sinful(_addr);
-		char const *priv_net = sinful.getPrivateNetworkName();
-		if( priv_net ) {
-			bool using_private = false;
-			our_network_name = param( "PRIVATE_NETWORK_NAME" );
-			if( our_network_name ) {
-				if( strcmp( our_network_name, priv_net ) == 0 ) {
-					char const *priv_addr = sinful.getPrivateAddr();
-					notes = " (private network name matched)";
-					using_private = true;
-					if( priv_addr ) {
-						// replace address with private address
-						if( *priv_addr != '<' ) {
-							MyString buf;
-							buf.sprintf("<%s>",priv_addr);
-							New_addr( strnewp( buf.Value() ) );
-						}
-						else {
-							New_addr( strnewp( priv_addr ) );
-						}
-					}
-					else {
-						// no private address was specified, so use public
-						// address with CCB disabled
-						sinful.setCCBContact(NULL);
-						New_addr( strnewp( sinful.getSinful() ) );
-					}
-				}
-				free( our_network_name );
-			}
-			if( !using_private ) {
-				// Remove junk from address that we don't care about so
-				// it is not so noisy in logs and such.
-				sinful.setPrivateAddr(NULL);
-				sinful.setPrivateNetworkName(NULL);
-				New_addr( strnewp( sinful.getSinful() ) );
-				notes = " (private network name not matched)";
-			}
-		}
-	}
-
 	if ( found_addr ) {
-		dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"%s\n",
-				 addr_attr_name.Value(), _addr, notes );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"\n",
+				 addr_attr_name.Value(), _addr);
 		_tried_locate = true;
 	} else {
 		dprintf( D_ALWAYS, "Can't find address in classad for %s %s\n",
@@ -1994,8 +1947,49 @@ Daemon::New_addr( char* str )
 	_addr = str;
 
 	if( _addr ) {
-		Sinful addr(_addr);
-		if( addr.getCCBContact() ) {
+		Sinful sinful(_addr);
+		char const *priv_net = sinful.getPrivateNetworkName();
+		if( priv_net ) {
+			bool using_private = false;
+			char *our_network_name = param( "PRIVATE_NETWORK_NAME" );
+			if( our_network_name ) {
+				if( strcmp( our_network_name, priv_net ) == 0 ) {
+					char const *priv_addr = sinful.getPrivateAddr();
+					dprintf( D_HOSTNAME, "Private network name matched.\n");
+					using_private = true;
+					if( priv_addr ) {
+						// replace address with private address
+						MyString buf;
+						if( *priv_addr != '<' ) {
+							buf.sprintf("<%s>",priv_addr);
+							priv_addr = buf.Value();
+						}
+						delete [] _addr;
+						_addr = strnewp( priv_addr );
+						sinful = Sinful( _addr );
+					}
+					else {
+						// no private address was specified, so use public
+						// address with CCB disabled
+						sinful.setCCBContact(NULL);
+						delete [] _addr;
+						_addr = strnewp( sinful.getSinful() );
+					}
+				}
+				free( our_network_name );
+			}
+			if( !using_private ) {
+				// Remove junk from address that we don't care about so
+				// it is not so noisy in logs and such.
+				sinful.setPrivateAddr(NULL);
+				sinful.setPrivateNetworkName(NULL);
+				delete [] _addr;
+				_addr = strnewp( sinful.getSinful() );
+				dprintf( D_HOSTNAME, "Private network name not matched.\n");
+			}
+		}
+
+		if( sinful.getCCBContact() ) {
 			// CCB cannot handle UDP, so pretend this daemon has no
 			// UDP port.
 			m_has_udp_command_port = false;
