@@ -297,7 +297,7 @@ improvements.
 
 \end{itemize}
 
-\noindent Configuration Variable Additions and Changes:
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
@@ -624,6 +624,11 @@ to \Expr{True} will corrupt the visible desktop.
   This bug is present back through Condor version 7.2.4.
 This configuration variable did not work at all in 7.2 releases
 prior to 7.2.4.  This bug will be fixed in Condor version 7.4.1.
+
+% gittrac #934
+\item If the global event log (see section~\ref{param:EventLog}) is
+turned on, \Condor{dagman} will hang when running any DAG that has
+POST scripts.
 
 \end{itemize}
 
