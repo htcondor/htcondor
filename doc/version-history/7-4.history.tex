@@ -152,6 +152,11 @@ section~\ref{param:EventLog}) is turned on.
   to the public address when they could have been made to the private
   address.
 
+% gittrack #713
+\item CCB now works with \MacroNI{TCP\_FORWARDING\_HOST}.  Previously,
+  it the reversed connection was made to the private address rather than
+  to \MacroNI{TCP\_FORWARDING\_HOST}.
+
 \end{itemize}
 
 \noindent Known Bugs:
