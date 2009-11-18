@@ -146,6 +146,9 @@ void CreamJobReconfig()
 	CreamJob::setGahpCallTimeout( tmp_int );
 	CreamResource::setGahpCallTimeout( tmp_int );
 
+	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
+	CreamJob::setConnectFailureRetry( tmp_int );
+
 	// Tell all the resource objects to deal with their new config values
 	CreamResource *next_resource;
 
@@ -177,6 +180,7 @@ BaseJob *CreamJobCreate( ClassAd *jobad )
 int CreamJob::probeInterval = 300;			// default value
 int CreamJob::submitInterval = 300;			// default value
 int CreamJob::gahpCallTimeout = 300;		// default value
+int CreamJob::maxConnectFailures = 3;		// default value
 
 CreamJob::CreamJob( ClassAd *classad )
 	: BaseJob( classad )
@@ -221,6 +225,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	delegatedCredentialURI = NULL;
 	gridftpServer = NULL;
 	leaseId = NULL;
+	connectFailureCount = 0;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -490,6 +495,7 @@ int CreamJob::ProxyCallback()
 
 void CreamJob::doEvaluateState()
 {
+	bool connect_failure = false;
 	int old_gm_state;
 	MyString old_remote_state;
 	bool reevaluate_state = true;
@@ -674,6 +680,10 @@ void CreamJob::doEvaluateState()
 			}
 
 			if ( rc != GLOBUS_SUCCESS ) {
+				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+					connect_failure = true;
+					break;
+				}
 				// Unhandled error
 				LOG_CREAM_ERROR( "cream_set_lease()", rc );
 				gahpErrorString = gahp->getErrorString();
@@ -750,6 +760,10 @@ void CreamJob::doEvaluateState()
 					UpdateJobLeaseSent(jmLifetime);
 					
 				} else {
+					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+						connect_failure = true;
+						break;
+					}
 					// unhandled error
 					LOG_CREAM_ERROR( "cream_job_register()", rc );
 //					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
@@ -795,6 +809,10 @@ void CreamJob::doEvaluateState()
 					break;
 				}
 				if ( rc != GLOBUS_SUCCESS ) {
+					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+						connect_failure = true;
+						break;
+					}
 					// unhandled error
 					LOG_CREAM_ERROR( "cream_job_start()", rc );
 					gahpErrorString = gahp->getErrorString();
@@ -882,6 +900,10 @@ void CreamJob::doEvaluateState()
 					break;
 				}
 				if ( rc != GLOBUS_SUCCESS ) {
+					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+						connect_failure = true;
+						break;
+					}
 					// unhandled error
 					LOG_CREAM_ERROR("cream_set_lease()",rc);
 					gahpErrorString = gahp->getErrorString();
@@ -911,6 +933,10 @@ void CreamJob::doEvaluateState()
 					break;
 				}
 				if ( rc != GLOBUS_SUCCESS ) {
+					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+						connect_failure = true;
+						break;
+					}
 					// unhandled error
 					LOG_CREAM_ERROR( "cream_job_status()", rc );
 					gahpErrorString = gahp->getErrorString();
@@ -970,6 +996,10 @@ void CreamJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
+				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+					connect_failure = true;
+					break;
+				}
 				// unhandled error
 				LOG_CREAM_ERROR( "cream_job_purge()", rc );
 				gahpErrorString = gahp->getErrorString();
@@ -1008,6 +1038,10 @@ void CreamJob::doEvaluateState()
 					break;
 				}
 				if ( rc != GLOBUS_SUCCESS ) {
+					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+						connect_failure = true;
+						break;
+					}
 						// unhandled error
 					LOG_CREAM_ERROR( "cream_job_cancel()", rc );
 					gahpErrorString = gahp->getErrorString();
@@ -1033,6 +1067,10 @@ void CreamJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
+				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+					connect_failure = true;
+					break;
+				}
 					// unhandled error
 				LOG_CREAM_ERROR( "cream_job_purge", rc );
 				gahpErrorString = gahp->getErrorString();
@@ -1063,6 +1101,10 @@ void CreamJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
+				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+					connect_failure = true;
+					break;
+				}
 					// unhandled error
 				LOG_CREAM_ERROR( "cream_job_purge", rc );
 				gahpErrorString = gahp->getErrorString();
@@ -1277,10 +1319,28 @@ void CreamJob::doEvaluateState()
 				free( creamAd );
 				creamAd = NULL;
 			}
+			connectFailureCount = 0;
+			resourcePingComplete = false;
 		}
 	} while ( reevaluate_state );
-
 		//end of evaluateState loop
+
+	if ( connect_failure && !resourceDown ) {
+		if ( connectFailureCount < maxConnectFailures ) {
+			connectFailureCount++;
+			int retry_secs = param_integer(
+				"GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL",5);
+			dprintf(D_FULLDEBUG,
+				"(%d.%d) Connection failure (try #%d), retrying in %d secs\n",
+				procID.cluster,procID.proc,connectFailureCount,retry_secs);
+			daemonCore->Reset_Timer( evaluateStateTid, retry_secs );
+		} else {
+			dprintf(D_FULLDEBUG,
+				"(%d.%d) Connection failure, requesting a ping of the resource\n",
+				procID.cluster,procID.proc);
+			RequestPing();
+		}
+	}
 }
 
 BaseResource *CreamJob::GetResource()
@@ -1688,4 +1748,15 @@ char *CreamJob::buildSubmitAd()
 	dprintf(D_FULLDEBUG, "SUBMITAD:\n%s\n",ad_string.Value()); 
 */
 	return strdup( ad_string.Value() );
+}
+
+bool CreamJob::IsConnectionError( const char *msg )
+{
+	if ( strstr( msg, "[Connection timed out]" ) ||
+		 strstr( msg, "[Connection refused]" ) ||
+		 strstr( msg, "[Unknown host]" ) ) {
+		return true;
+	} else {
+		return false;
+	}
 }
