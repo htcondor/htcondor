@@ -1785,6 +1785,7 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	MyString buf = "";
 	MyString buf2 = "";
 	MyString addr_attr_name = "";
+	char *our_network_name = NULL;
 		// TODO Which attributes should trigger a failure if we don't find
 		// them in the ad? Just _addr?
 	bool ret_val = true;
