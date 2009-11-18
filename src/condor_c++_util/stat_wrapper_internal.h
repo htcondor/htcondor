@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -21,6 +21,7 @@
 #define STAT_WRAPPER_INTERNAL_H
 
 #include "stat_struct.h"
+#include "stat_access.h"
 
 // StatWrapper internal -- base class
 class StatWrapperIntBase
@@ -44,9 +45,13 @@ public:
 	int GetErrno( void ) const
 		{ return m_errno; };
 	const StatStructType *GetBuf( void ) const
-		{ if (! m_valid) { return NULL; } return &m_buf; };
+		{ if (! m_valid) { return NULL; } return &(m_access.getStatBuf()); };
 	bool GetBuf( StatStructType &buf ) const
-		{ buf = m_buf; return m_valid; };
+		{ buf = m_access.getStatBuf(); return m_valid; };
+	const StatAccess & GetAccess( void ) const
+		{ return m_access; };
+	bool GetAccess( StatAccess & abuf ) const
+		{ abuf = m_access; return m_valid; };
 	const char *GetFnName( void ) const
 		{ return m_name; };
 	virtual bool IsValid( void ) const
@@ -57,12 +62,12 @@ protected:
 	int SetRc( int rc )
 		{ return m_rc = rc; };
 
-	StatStructType	m_buf;			// Stat buffer
-	bool			m_buf_valid;	// Is the above valid?
-	bool			m_valid;		// Is path/fd valid?
+	StatAccess		 m_access;		// Stat buffer access
+	bool			 m_buf_valid;	// Is the above valid?
+	bool			 m_valid;		// Is path/fd valid?
 	const char		*m_name;		// Name of the function used
-	int				m_rc;			// return code
-	int				m_errno;		// errno
+	int				 m_rc;			// return code
+	int				 m_errno;		// errno
 };
 
 // StatWrapper internal -- Path Version

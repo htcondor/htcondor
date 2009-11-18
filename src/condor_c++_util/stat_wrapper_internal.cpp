@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,7 +25,7 @@
 
 StatWrapperIntBase::StatWrapperIntBase( const StatWrapperIntBase &other )
 {
-	other.GetBuf( m_buf );
+	other.GetAccess( m_access );
 	m_name = other.GetFnName( );
 	m_valid = other.IsValid( );
 	m_rc = other.GetRc( );
@@ -116,7 +116,7 @@ StatWrapperIntPath::Stat( bool force )
 	if ( m_valid && !force ) {
 		return GetRc( );
 	}
-	m_rc = m_fn( m_path, &m_buf );
+	m_rc = m_fn( m_path, &m_access.getStatBufRw() );
 	return CheckResult( );
 }
 
@@ -175,7 +175,7 @@ StatWrapperIntFd::Stat( bool force )
 	if ( m_valid && !force ) {
 		return GetRc( );
 	}
-	m_rc = m_fn( m_fd, &m_buf );
+	m_rc = m_fn( m_fd, &m_access.getStatBufRw() );
 	return CheckResult( );
 }
 

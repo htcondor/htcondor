@@ -20,18 +20,43 @@
 #ifndef STAT_STRUCT_H
 #define STAT_STRUCT_H
 
-#include "condor_common.h"
+#include "config.h"
 
-	// Define a "standard" StatBuf type
+	// Define a common "struct stat" type
 #if HAVE_STAT64
 typedef struct stat64 StatStructType;
-typedef ino_t StatStructInode;
-#elif HAVE__STATI64
+#elif HAVE__STATI64	/* Win32 */
 typedef struct _stati64 StatStructType;
-typedef _ino_t StatStructInode;
 #else
 typedef struct stat StatStructType;
+#endif
+
+	// Types of individual elements in the "struct stat" elements
+#if HAVE__STATI64	/* Win32 */
+typedef _ino_t StatStructInode;
+typedef _dev_t StatStructDev;
+typedef unsigned short StatStuctMode;
+typedef short StatStuctNlink;
+typedef short StatStuctUID;
+typedef short StatStuctGID;
+typedef _off_t StatStructOff;
+#undef STAT_STRUCT_HAVE_BLOCK_SIZE
+#undef STAT_STRUCT_HAVE_BLOCK_COUNT
+typedef time_t StatStructTime;
+
+#else	/* UNIX & variants */
 typedef ino_t StatStructInode;
+typedef dev_t StatStructDev;
+typedef mode_t StatStructMode;
+typedef nlink_t StatStructNlink;
+typedef uid_t StatStructUID;
+typedef gid_t StatStructGID;
+typedef off_t StatStructOff;
+#define STAT_STRUCT_HAVE_BLOCK_SIZE		1
+typedef blksize_t StatStructBlockSize;
+#define STAT_STRUCT_HAVE_BLOCK_COUNT	0
+typedef blkcnt_t StatStructBlockCount;
+typedef time_t StatStructTime;
 #endif
 
 #endif

@@ -22,6 +22,7 @@
 
 #include "MyString.h"
 #include "stat_struct.h"
+#include "stat_access.h"
 #include "stat_wrapper_internal.h"
 
 // Pre-declare internal class
@@ -98,10 +99,19 @@ public:
 		{ return GetErrno(GetStat(which) ); };
 	const char *GetStatFn( StatOpType which = STATOP_LAST ) const
 		{ return GetStatFn(GetStat(which) ); };
+
+	// Get access to the stat buffer
 	const StatStructType *GetBuf( StatOpType which = STATOP_LAST ) const
 		{ return GetBuf(GetStat(which) ); };
 	bool GetBuf( StatStructType &buf, StatOpType which = STATOP_LAST ) const
 		{ return GetBuf(GetStat(which), buf); };
+
+	// Similar, but via the new StatAccess class
+	const StatAccess & GetAccess( StatOpType which = STATOP_LAST ) const
+		{ return GetAccess(GetStat(which) ); };
+	bool GetAccess( StatAccess &abuf, StatOpType which = STATOP_LAST ) const
+		{ return GetAccess(GetStat(which), abuf); };
+		
 
 private:
 	// Initialize the object
@@ -117,6 +127,8 @@ private:
 	bool IsValid( const StatWrapperIntBase * ) const;
 	const StatStructType *GetBuf( const StatWrapperIntBase * ) const;
 	bool GetBuf( const StatWrapperIntBase *, StatStructType & ) const;
+	const StatAccess &GetAccess( const StatWrapperIntBase * ) const;
+	bool GetAccess( const StatWrapperIntBase *, StatAccess & ) const;
 	const char *GetStatFn( const StatWrapperIntBase * ) const;
 
 	// Given a "which", should we do these operations?

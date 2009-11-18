@@ -25,6 +25,7 @@ struct StatOp {
 	StatWrapper::StatOpType	 type;
 };
 
+static void Help( const char *argv0 );
 static const StatOp *get_op( const char *name );
 static const char *get_op_name( StatWrapper::StatOpType which );
 static void dump_status( StatWrapper &stat, const char *label );
@@ -47,7 +48,7 @@ main( int argc, const char *argv[] )
 	const char		*path;
 	StatWrapper		*wrapper = NULL;
 	const char	*usage =
-		"test <file> [operations]";
+		"test [-h|--help] <file> [operations]";
 
 	if ( argc < 2 ) {
 		fprintf( stderr, "no file specified\n" );
@@ -58,6 +59,7 @@ main( int argc, const char *argv[] )
 	if ( *path == '-' ) {
 		fprintf( stderr, "no file specified\n" );
 		fprintf( stderr, "%s\n", usage );
+		Help( argv[0] );
 		exit( 1 );
 	}
 	fd = safe_open_wrapper( path, O_RDONLY );
@@ -85,27 +87,7 @@ main( int argc, const char *argv[] )
 		}
 
 		if ( (!strcmp( arg, "--help" )) || (!strcmp( arg, "-h")) ) {
-			printf( "usage: %s <file> [-command <flags>] [..]\n"
-					"  commands:\n"
-					"  --create|-c <op> <which>         "
-					"Create a StatWrapper object\n"
-					"  --set|-c <op>                    "
-					"Setup a StatWrapper object\n"
-					"  --stat|-s <op> <which> [f[orce]|no]"
-					"Do the actual stat (optional force) \n"
-					"  --retry                          "
-					"Retry last operation\n"
-					"  --query                          "
-					"Query status of object\n"
-					"  <op>: Type of operation:         "
-					"NONE,STAT,LSTAT,BOTH,FSTAT,ALL,LAST\n"
-					"  <which>: Which for operation:    "
-					"NONE,STAT,LSTAT,BOTH,FSTAT,ALL,LAST\n"
-					"  --path <path>                    "
-					"  <path> specify a new path\n"
-					"",
-					argv[0]
-					);
+			Help( argv[0] );
 			exit( 0 );
 		}
 
@@ -357,6 +339,32 @@ main( int argc, const char *argv[] )
 
 	return 0;
 }
+
+static void
+Help( const char *argv0 )
+{
+	printf( "usage: %s <file> [-command <flags>] [..]\n"
+			"  commands:\n"
+			"  --create|-c <op> <which>         "
+			"Create a StatWrapper object\n"
+			"  --set|-c <op>                    "
+			"Setup a StatWrapper object\n"
+			"  --stat|-s <op> <which> [f[orce]|no]"
+			"Do the actual stat (optional force) \n"
+			"  --retry                          "
+			"Retry last operation\n"
+			"  --query                          "
+			"Query status of object\n"
+			"  <op>: Type of operation:         "
+			"NONE,STAT,LSTAT,BOTH,FSTAT,ALL,LAST\n"
+			"  <which>: Which for operation:    "
+			"NONE,STAT,LSTAT,BOTH,FSTAT,ALL,LAST\n"
+			"  --path <path>                    "
+			"  <path> specify a new path\n"
+			"",
+			argv0
+			);
+};
 
 static void
 dump_status( StatWrapper &stat, const char *label )
