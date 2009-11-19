@@ -287,13 +287,13 @@ private:
 		// Note: these should be changed to STL maps, and should
 		// also index on a combination of st_ino and st_dev (see gittrac
 		// #328). wenger 2009-07-16.
-	HashTable<StatStructInode, LogFileMonitor *>	allLogFiles;
+	HashTable<MyString, LogFileMonitor *>	allLogFiles;
 
-	HashTable<StatStructInode, LogFileMonitor *>	activeLogFiles;
+	HashTable<MyString, LogFileMonitor *>	activeLogFiles;
 
 	// For instantiation in programs that use this class.
 #define MULTI_LOG_HASH_INSTANCE template class \
-		HashTable<StatStructInode, ReadMultipleUserLogs::LogFileMonitor *>
+		HashTable<MyString, ReadMultipleUserLogs::LogFileMonitor *>
 
 		/** Returns true iff the given log grew since the last time
 		    we called this method on it.
@@ -313,7 +313,7 @@ private:
 	ULogEventOutcome readEventFromLog( LogFileMonitor *monitor );
 
 	void printLogMonitors(FILE *stream,
-				HashTable<StatStructInode, LogFileMonitor *> logTable) const;
+				HashTable<MyString, LogFileMonitor *> logTable) const;
 
 };
 
