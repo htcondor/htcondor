@@ -179,20 +179,20 @@ int thread_cream_get_CEMon_url( Request *req );
 
 int gahp_printf(const char *format, ...)
 {
-	int ret_val;
+	int ret_val = 0;
 	va_list ap;
-	char buf[10000];
-  
-	va_start(ap, format);
-	vsprintf(buf, format, ap);
-	va_end(ap);
   
 	pthread_mutex_lock( &outputLock );
 
-	if (response_prefix)
-		ret_val = printf("%s%s", response_prefix, buf);
-	else
-		ret_val = printf("%s",buf);
+	if (response_prefix) {
+		ret_val = printf("%s", response_prefix);
+	}
+
+	if(ret_val >= 0) {
+		va_start(ap, format);
+		vprintf(format, ap);
+		va_end(ap);
+	}
 	
 	fflush(stdout);
 
