@@ -705,6 +705,7 @@ void CreamJob::doEvaluateState()
 			// Start a new cream submission for this job.
 			char *job_id = NULL;
 			char *upload_url = NULL;
+			char *download_url = NULL;
 			if ( condorState == REMOVED || condorState == HELD ) {
 				myResource->CancelSubmit(this);
 				gmState = GM_UNSUBMITTED;
@@ -740,7 +741,7 @@ void CreamJob::doEvaluateState()
 										myResource->getDelegationService(),
 										delegatedCredentialURI,
 										creamAd, leaseId,
-										&job_id, &upload_url );
+										&job_id, &upload_url, &download_url );
 				
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -754,6 +755,7 @@ void CreamJob::doEvaluateState()
 					SetRemoteJobId( job_id );
 					free( job_id );
 					uploadUrl = upload_url;
+					free( download_url );
 					jobAd->Assign( ATTR_CREAM_UPLOAD_URL, uploadUrl );
 					gmState = GM_SUBMIT_SAVE;				
 					

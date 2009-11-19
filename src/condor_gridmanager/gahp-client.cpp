@@ -5346,7 +5346,7 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 
 int 
 GahpClient::cream_job_register(const char *service, const char *delg_service, const char *delg_id, 
-							   const char *jdl, const char *lease_id, char **job_id, char **upload_url)
+							   const char *jdl, const char *lease_id, char **job_id, char **upload_url, char **download_url)
 {
 	static const char* command = "CREAM_JOB_REGISTER";
 
@@ -5402,7 +5402,7 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 			}
 			error_string = result->argv[1];
 			rc = 1;
-		} else if ( result->argc == 4 ) {
+		} else if ( result->argc == 5 ) {
 			if ( strcmp( result->argv[1], NULLSTRING ) ) {
 				EXCEPT( "Bad %s result", command );
 			}
@@ -5412,6 +5412,9 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 			}
 			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
 				*upload_url = strdup(result->argv[3]);
+			}
+			if ( strcasecmp(result->argv[4], NULLSTRING) ) {
+				*download_url = strdup(result->argv[4]);
 			}
 			rc = 0;
 		} else {
