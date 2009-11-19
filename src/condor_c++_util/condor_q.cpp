@@ -29,11 +29,6 @@
 #include "condor_classad_util.h"
 #include "quill_enums.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
-
 #ifdef WANT_QUILL
 #include "pgsqldatabase.h"
 #include "jobqueuesnapshot.h"
@@ -487,11 +482,7 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 
 	switch (dt) {				
 	case T_ORACLE:
-#if HAVE_ORACLE
-		DBObj = new ORACLEDatabase(dbconn);
-#else
 		EXCEPT("Oracle database requested, but no Oracle support compiled in this version of Condor!");
-#endif
 		break;
 	case T_PGSQL:
 		DBObj = new PGSQLDatabase(dbconn);

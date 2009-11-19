@@ -27,11 +27,6 @@
 #include "condor_config.h"
 #include "quill_enums.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
-
 //! constructor
 JobQueueSnapshot::JobQueueSnapshot(const char* dbcon_str)
 {
@@ -49,11 +44,7 @@ JobQueueSnapshot::JobQueueSnapshot(const char* dbcon_str)
 
 	switch (dt) {				
 	case T_ORACLE:
-#if HAVE_ORACLE
-		jqDB = new ORACLEDatabase(dbcon_str);
-#else
 		EXCEPT("ORACLE database requested, but this version of Condor does not have Oracle support compiled in!\n");
-#endif
 		break;
 	case T_PGSQL:
 		jqDB = new PGSQLDatabase(dbcon_str);

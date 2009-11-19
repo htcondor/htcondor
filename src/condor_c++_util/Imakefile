@@ -95,11 +95,7 @@ SETEGID_OBJ =
 #endif
 
 #ifdef WANT_QUILL
-#if HAVE_ORACLE
-ORACLE_OBJS = oracledatabase.o
-#else
 ORACLE_OBJS = 
-#endif
 
 QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o $(ORACLE_OBJS) dbms_utils.o
 #else

@@ -41,11 +41,6 @@
 #include "pgsqldatabase.h"
 #include "jobqueuecollection.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
-
 #include "condor_ttdb.h"
 #include "dbms_utils.h"
 
@@ -168,11 +163,7 @@ JobQueueDBManager::config(bool reconfig)
 
 		switch (dt) {				
 		case T_ORACLE:
-#if HAVE_ORACLE
-			DBObj = new ORACLEDatabase(jobQueueDBConn);
-#else
 			EXCEPT("Oracle database requested, but this version of Condor is compiled without Oracle!\n");
-#endif
 			break;
 		case T_PGSQL:
 			DBObj = new PGSQLDatabase(jobQueueDBConn);

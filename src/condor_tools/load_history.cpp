@@ -46,11 +46,6 @@
 #include "dbms_utils.h"
 #include "subsystem_info.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
-
 #define NUM_PARAMETERS 3
 
 DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
@@ -300,11 +295,7 @@ static void doDBconfig() {
 
 	switch (dt) {				
 		case T_ORACLE:
-#if HAVE_ORACLE
-			DBObj = new ORACLEDatabase(DBConn.Value());
-#else
 			EXCEPT("Oracle database requested, but this version of Condor was compiled without Oracle support!\n");
-#endif
 			break;
 		case T_PGSQL:
 			DBObj = new PGSQLDatabase(DBConn.Value());

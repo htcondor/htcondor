@@ -25,9 +25,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "MyString.h"
-#if HAVE_ORACLE
-#include "oracledatabase.h"
-#endif
 
 MyString condor_ttdb_buildts(time_t *tv, dbtype dt)
 {
@@ -47,13 +44,6 @@ MyString condor_ttdb_buildts(time_t *tv, dbtype dt)
 			 my_timezone(tm->tm_isdst));	
 
 	switch(dt) {
-#if HAVE_ORACLE
-	case T_ORACLE:
-		rv.sprintf("TO_TIMESTAMP_TZ('%s', '%s')", tsv, 
-				   QUILL_ORACLE_TIMESTAMP_FORAMT);
-		break;
-#endif
-
 	case T_PGSQL:
 		rv.sprintf("'%s'", tsv);		
 		break;
