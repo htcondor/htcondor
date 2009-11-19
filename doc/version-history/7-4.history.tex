@@ -455,6 +455,10 @@ prior to 7.2.4.  This bug will be fixed in Condor version 7.4.1.
 turned on, \Condor{dagman} will hang when running any DAG that has
 POST scripts.
 
+% gittrac #979
+\item \Condor{dagman} will hang on Windows when running any DAG that
+uses more than one log file for the node jobs.
+
 \end{itemize}
 
 \noindent Additions and Changes to the Manual:
