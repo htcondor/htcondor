@@ -1,0 +1,9 @@
+
+this file can be removed once gsoap is rev'd past 2.7.10.
+
+when gsoap-2.7.10-p3 was rev'd to -p4, i stripped the patch level suffix from
+the tar file itself to make the process simpler.  if you want details, please
+ask me or jaime.
+
+-zmiller 11/18/09
+
