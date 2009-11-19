@@ -2305,8 +2305,6 @@ AC_ARG_ENABLE([quill],
     [enable Quill functionality (default: yes)]),
   [],
   [enable_quill=yes])
-AS_IF([test "x$enable_quill" = xyes],
-  [AC_DEFINE([WANT_QUILL], [1], [Define if enabling Quill])])
 
 AC_PATH_XTRA
 X_LDFLAGS="$X_LIBS"

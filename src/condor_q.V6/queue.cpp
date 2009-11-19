@@ -57,9 +57,9 @@
 #include "../classad_analysis/analysis.h"
 #endif
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 /* Since this enum can have conditional compilation applied to it, I'm
 	specifying the values for it to keep their actual integral values
@@ -71,7 +71,7 @@ enum {
 	DIRECT_UNKNOWN = 0,
 	/* start at the rdbms and fail over like normal */
 	DIRECT_ALL = 1,
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	/* talk directly to the rdbms system */
 	DIRECT_RDBMS = 2,
 	/* talk directly to the quill daemon */
@@ -108,7 +108,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads);
 /* convert the -direct aqrgument prameter into an enum */
 unsigned int process_direct_argument(char *arg);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 /* execute a database query directly */ 
 static void exec_db_query(const char *quill_name, const char *db_ipAddr, const char *db_name,const char *query_password);
 
@@ -146,7 +146,7 @@ static  char *machineads_file = NULL;
 static	CondorQ 	Q;
 static	QueryResult result;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 static  QueryResult result2;
 #endif
 
@@ -262,7 +262,7 @@ static void freeConnectionStrings() {
 	}
 }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 /* this function for checking whether database can be used for querying in local machine */
 static bool checkDBconfig() {
 	char *tmp;
@@ -297,7 +297,7 @@ static bool checkDBconfig() {
 
 	return true;
 }
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 extern 	"C"	int		Termlog;
 
@@ -320,12 +320,12 @@ int main (int argc, char **argv)
 	myDistro->Init( argc, argv );
 	config();
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		/* by default check the configuration for local database */
 	useDB = checkDBconfig();
 #else 
 	useDB = FALSE;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
@@ -379,7 +379,7 @@ int main (int argc, char **argv)
 			
 			if ( directDBquery ) {				
 				/* perform direct DB query if indicated and exit */
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 					/* check if database is available */
 				if (!useDB) {
@@ -390,7 +390,7 @@ int main (int argc, char **argv)
 				exec_db_query(NULL, NULL, NULL, NULL);
 				freeConnectionStrings();
 				exit(EXIT_SUCCESS);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 			} 
 
 			/* .. not a direct db query, so just happily continue ... */
@@ -419,7 +419,7 @@ int main (int argc, char **argv)
 
 					/* FALL THROUGH */
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 				case DIRECT_RDBMS:
 					if (useDB) {
 
@@ -516,7 +516,7 @@ int main (int argc, char **argv)
 						}
 					}
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 				case DIRECT_SCHEDD:
 					retval = sqfp(scheddAddr, scheddName, scheddMachine, 
 								  scheddVersion.Value(), FALSE);
@@ -631,7 +631,7 @@ int main (int argc, char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		int flag=1;
 #endif
 
@@ -646,7 +646,7 @@ int main (int argc, char **argv)
 			continue;
 		}
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 			// get the address of the database
 		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
 			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
@@ -671,7 +671,7 @@ int main (int argc, char **argv)
 
 			/* check if direct DB query is indicated */
 		if ( directDBquery ) {				
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 			if (!useDB) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 				fprintf(stderr, "Database query not supported on schedd: %s\n",
@@ -684,7 +684,7 @@ int main (int argc, char **argv)
 			/* done processing the ad, so get the next one */
 			continue;
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		}
 
         // When we use the new analysis code, it can be really
@@ -706,7 +706,7 @@ int main (int argc, char **argv)
 		{
 			case DIRECT_ALL:
 				/* FALL THROUGH */
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 			case DIRECT_RDBMS:
 				if (useDB) {
 					if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE ))
@@ -806,7 +806,7 @@ int main (int argc, char **argv)
 
 				/* FALL THROUGH */
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 			case DIRECT_SCHEDD:
 				/* database not configured or could not be reached,
@@ -1289,13 +1289,13 @@ processCommandLineArguments (int argc, char *argv[])
                 machineads_file = strdup(argv[i]);
             }
         }
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		else if (match_prefix(arg, "avgqueuetime")) {
 				/* if user want average wait time, we will perform direct DB query */
 			avgqueuetime = true;
 			directDBquery =  true;
 		}
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
         else if (match_prefix(arg, "version")) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
@@ -1355,7 +1355,7 @@ job_time(float cpu_time,ClassAd *ad)
 
 unsigned int process_direct_argument(char *arg)
 {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	if (strcasecmp(arg, "rdbms") == MATCH) {
 		return DIRECT_RDBMS;
 	}
@@ -1370,7 +1370,7 @@ unsigned int process_direct_argument(char *arg)
 		return DIRECT_SCHEDD;
 	}
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	fprintf( stderr, 
 		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" ); 
 /*		"Error: Argument -direct requires [rdbms | schedd]\n" ); */
@@ -1876,7 +1876,7 @@ usage (char *myName)
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-jobads <file>\t\tFile of job ads to display\n"
 		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		"\t\t-direct <rdbms | schedd>\n"
 		"\t\t\tPerform a direct query to the rdbms\n"
 		"\t\t\tor to the schedd without falling back to the queue\n"
@@ -2045,7 +2045,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 
 		/* get the job ads from database if database can be queried */
 	if (useDB) {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 		dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
@@ -2068,7 +2068,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			}
 			return false;
 		}
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 	} else {
 			// fetch queue from schedd and stash it in output_buffer.
 		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
@@ -2322,7 +2322,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 			/* get the job ads from a database if available */
 		if (useDB) {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 			dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
@@ -2340,7 +2340,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				return false;
 			}
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		} else {
 				// fetch queue from schedd	
 			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddress, scheddVersion, &errstack) != Q_OK ) {
@@ -3107,7 +3107,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     return success;
 }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 /* get the quill address for the quillName specified */
 static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr) {
@@ -3232,7 +3232,7 @@ static void exec_db_query(const char *quill_name, const char *db_ipAddr, const c
 
 }
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 	if( !schedd ) {

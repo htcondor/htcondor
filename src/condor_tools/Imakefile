@@ -1,4 +1,4 @@
-#if WANT_QUILL
+#if HAVE_EXT_POSTGRESQL
 #define QuillProgs condor_convert_history condor_dump_history condor_load_history
 #else
 #define QuillProgs 
@@ -64,7 +64,7 @@ public_c_plus_target(condor_version,bin,version.o,$(LIB))
 public_c_plus_target(condor_wait,bin,wait.o,$(LIB))
 
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 /* Notice that this tool has a different link line for QUILL */
 c_plus_target_complex(condor_load_history,$(LH_OBJ),$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
 release_target(condor_load_history,bin,EXECUTABLE_MODE)

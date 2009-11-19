@@ -29,7 +29,6 @@
 #define HAVE_EXT_GSOAP 1
 #define HAVE_EXT_OPENSSL 1
 #define WITH_OPENSSL 1
-#define WANT_QUILL 1
 #define HAVE_EXT_KRB5 1
 #define HAVE_SNPRINTF 1
 #define HAVE_EXT_CLASSADS 1

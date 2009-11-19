@@ -700,7 +700,7 @@ private:
 	Timeslice m_negotiate_timeslice;
 
 	// some stuff about Quill that should go into the ad
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	int quill_enabled;
 	int quill_is_remotely_queryable;
 	char *quill_name;

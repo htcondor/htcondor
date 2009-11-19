@@ -94,13 +94,13 @@ SETEGID_OBJ = ../condor_util_lib/setegid.o
 SETEGID_OBJ = 
 #endif
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o dbms_utils.o
 #else
 QUILL_OBJS =
 #endif
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 TT_OBJS = pgsqldatabase.o file_sql.o file_transfer_db.o 
 #else
 TT_OBJS = file_sql.o

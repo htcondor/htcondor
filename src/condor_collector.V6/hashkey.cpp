@@ -217,7 +217,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 	return true;
 }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 bool
 makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 {
@@ -239,7 +239,7 @@ makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 
 	return true;
 }
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 bool
 makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )

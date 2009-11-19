@@ -67,9 +67,9 @@ class CollectorEngine : public Service
 	enum {GREATER_TABLE_SIZE = 1024};
 	CollectorHashTable StartdAds;
 	CollectorHashTable StartdPrivateAds;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	CollectorHashTable QuillAds;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 	CollectorHashTable ScheddAds;
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;
