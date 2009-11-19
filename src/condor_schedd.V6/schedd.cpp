@@ -3188,8 +3188,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// null file -- no need to modify it
 				continue;
 			}
-			if ( AttrXferBool[i] &&
-				 job_ad->LookupBool( AttrXferBool[i], xfer_it ) && !xfer_it ) {
+			if ( AttrXferBool[index] &&
+				 job_ad->LookupBool( AttrXferBool[index], xfer_it ) && !xfer_it ) {
 					// ad says not to transfer this file, so no need
 					// to modify it
 				continue;
@@ -3198,7 +3198,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// some of these attributes contain a list of pathnames
 			StringList old_paths(NULL,",");
 			StringList new_paths(NULL,",");
-			if ( AttrIsList[i] ) {
+			if ( AttrIsList[index] ) {
 				old_paths.initializeFromString(buf);
 			} else {
 				old_paths.insert(buf);
