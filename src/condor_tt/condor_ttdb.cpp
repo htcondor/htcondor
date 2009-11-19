@@ -72,9 +72,6 @@ MyString condor_ttdb_buildtsval(time_t *tv, dbtype dt)
 			 my_timezone(tm->tm_isdst));	
 
 	switch(dt) {
-	case T_ORACLE:
-		rv = tsv;
-		break;
 	default:
 		break;
 	}
@@ -87,9 +84,6 @@ MyString condor_ttdb_buildseq(dbtype dt, char *seqName)
 	MyString rv;
 
 	switch(dt) {
-	case T_ORACLE:
-		rv.sprintf("%s.nextval", seqName);
-		break;
 	case T_PGSQL:
 		rv.sprintf("nextval('%s')", seqName);		
 		break;
@@ -105,9 +99,6 @@ MyString condor_ttdb_onerow_clause(dbtype dt)
 	MyString rv;
 
 	switch(dt) {
-	case T_ORACLE:
-		rv.sprintf(" and ROWNUM <= 1");
-		break;
 	case T_PGSQL:
 		rv.sprintf(" LIMIT 1");
 		break;
@@ -132,14 +123,10 @@ MyString condor_ttdb_fillEscapeCharacters(const char * str, dbtype dt) {
 					/* postgres need to escape backslash */
 				newstr += '\\';
 				newstr += '\\';
-			} else {
-					/* other database only include oracle, which doesn't
-					   need to escape backslash */
-				newstr += str[i];
 			}
             break;
         case '\'':
-				/* both oracle and postgres can escape a single quote with 
+				/* postgres can escape a single quote with 
 				   another single quote */
             newstr += '\'';
             newstr += '\'';
@@ -158,9 +145,6 @@ MyString condor_ttdb_compare_clob_to_lit(dbtype dt, const char* col_nam, const c
 	MyString rv;
 
 	switch(dt) {
-	case T_ORACLE:
-		rv.sprintf("dbms_lob.compare(%s, '%s') != 0", col_nam, literal);
-		break;
 	case T_PGSQL:
 		rv.sprintf("%s != '%s'", col_nam, literal);
 		break;

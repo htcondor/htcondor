@@ -141,8 +141,7 @@ JobQueueDBManager::config(bool reconfig)
 								  
 	dprintf(D_ALWAYS, "Using Job Queue File %s\n", jobQueueLogFile);
 
-	dprintf(D_ALWAYS, "Using Database Type = %s\n",
-			(dt == T_ORACLE)?"ORACLE":"Postgres");
+	dprintf(D_ALWAYS, "Using Database Type = Postgres\n");
 	dprintf(D_ALWAYS, "Using Database IpAddress = %s\n", 
 			jobQueueDBIpAddress?jobQueueDBIpAddress:"");
 	dprintf(D_ALWAYS, "Using Database Name = %s\n", 
@@ -162,9 +161,6 @@ JobQueueDBManager::config(bool reconfig)
 		caLogParser = new ClassAdLogParser();
 
 		switch (dt) {				
-		case T_ORACLE:
-			EXCEPT("Oracle database requested, but this version of Condor is compiled without Oracle!\n");
-			break;
 		case T_PGSQL:
 			DBObj = new PGSQLDatabase(jobQueueDBConn);
 			break;
@@ -198,29 +194,7 @@ JobQueueDBManager::config(bool reconfig)
 			dprintf(D_FULLDEBUG, "scheddname built from default daemon name: %s\n", scheddname);
 		}
 
-		if (dt == T_ORACLE) {
-			data_arr[0] = scheddname;
-			data_typ[0] = CONDOR_TT_TYPE_STRING;
-
-			data_arr[1] = scheddname;
-			data_typ[1] = CONDOR_TT_TYPE_STRING;
-		
-			bndcnt = 2;
-
-				/* create an entry in jobqueuepollinginfo if this schedd is the 
-				 * first time being logged to database
-				 */
-			sql_str.sprintf("INSERT INTO jobqueuepollinginfo (scheddname, last_file_mtime, last_file_size) SELECT :1, 0, 0 FROM dummy_single_row_table WHERE NOT EXISTS (SELECT * FROM jobqueuepollinginfo WHERE scheddname = :2)");
-		
-			ret_st = DBObj->execCommandWithBind(sql_str.Value(),
-												bndcnt,
-												data_arr,
-												data_typ);
-			if (ret_st == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Insert JobQueuePollInfo --- ERROR [SQL] %s\n", 
-						sql_str.Value());
-			}
-		} else {
+		{
 				/* create an entry in jobqueuepollinginfo if this schedd is the 
 				 * first time being logged to database
 				 */
@@ -233,28 +207,7 @@ JobQueueDBManager::config(bool reconfig)
 			}			
 		}
 
-		if (dt == T_ORACLE) {
-			data_arr[0] = scheddname;
-			data_typ[0] = CONDOR_TT_TYPE_STRING;
-
-			data_arr[1] = scheddname;
-			data_typ[1] = CONDOR_TT_TYPE_STRING;
-		
-			bndcnt = 2;
-
-				/* create an entry in currency table if this schedd is the first
-				 * time being logged to database 
-				 */
-			sql_str.sprintf("INSERT INTO currencies (datasource) SELECT :1 FROM dummy_single_row_table WHERE NOT EXISTS (SELECT * FROM currencies WHERE datasource = :2)");
-
-			ret_st = DBObj->execCommandWithBind(sql_str.Value(),
-												bndcnt,
-												data_arr,
-												data_typ);
-			if (ret_st == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Insert Currency --- ERROR [SQL] %s\n", sql_str.Value());
-			}
-		} else {
+		{
 				/* create an entry in currency table if this schedd is the first
 				 * time being logged to database 
 				 */
@@ -945,43 +898,10 @@ JobQueueDBManager::processNewClassAd(char* key,
 
 	switch(job_id_type) {
 	case IS_CLUSTER_ID:
-		if (dt == T_ORACLE) {
-			data_arr[0] = scheddname;
-			data_typ[0] = CONDOR_TT_TYPE_STRING;
-			
-			data_arr[1] = cid;
-			data_typ[1] = CONDOR_TT_TYPE_STRING;
-
-			bndcnt = 2;
-
-			sql_str.sprintf(
-							"INSERT INTO ClusterAds_Horizontal (scheddname, cluster_id) VALUES (:1, :2)");			
-		} else {
-			sql_str.sprintf(
-							"INSERT INTO ClusterAds_Horizontal (scheddname, cluster_id) VALUES ('%s', '%s')", scheddname, cid);
-		}
-
+		sql_str.sprintf("INSERT INTO ClusterAds_Horizontal (scheddname, cluster_id) VALUES ('%s', '%s')", scheddname, cid);
 		break;
 	case IS_PROC_ID:
-		if (dt == T_ORACLE) {
-			data_arr[0] = scheddname;
-			data_typ[0] = CONDOR_TT_TYPE_STRING;
-			
-			data_arr[1] = cid;
-			data_typ[1] = CONDOR_TT_TYPE_STRING;
-
-			data_arr[2] = pid;
-			data_typ[2] = CONDOR_TT_TYPE_STRING;
-
-			bndcnt = 3;
-
-			sql_str.sprintf(
-							"INSERT INTO ProcAds_Horizontal (scheddname, cluster_id, proc_id) VALUES (:1, :2, :3)");			
-		} else {
-			sql_str.sprintf(
-							"INSERT INTO ProcAds_Horizontal (scheddname, cluster_id, proc_id) VALUES ('%s', '%s', '%s')", scheddname, cid, pid);
-		}
-
+		sql_str.sprintf("INSERT INTO ProcAds_Horizontal (scheddname, cluster_id, proc_id) VALUES ('%s', '%s', '%s')", scheddname, cid, pid);
 		break;
 	case IS_UNKNOWN_ID:
 		dprintf(D_ALWAYS, "New ClassAd Processing --- ERROR\n");
@@ -1051,57 +971,16 @@ JobQueueDBManager::processDestroyClassAd(char* key)
   
 	switch(job_id_type) {
 	case IS_CLUSTER_ID:	// ClusterAds
-
-		if (dt == T_ORACLE) {
-			data_arr[0] = scheddname;
-			data_typ[0] = CONDOR_TT_TYPE_STRING;
-			
-			data_arr[1] = cid;
-			data_typ[1] = CONDOR_TT_TYPE_STRING;
-
-			bndcnt = 2;
-			
-			sql_str1.sprintf(
-							 "DELETE FROM ClusterAds_Horizontal WHERE scheddname = :1 and cluster_id = :2");
+		sql_str1.sprintf("DELETE FROM ClusterAds_Horizontal WHERE scheddname = '%s' and cluster_id = %s", scheddname, cid);
     
-			sql_str2.sprintf(
-							 "DELETE FROM ClusterAds_Vertical WHERE scheddname = :1 and cluster_id = :2");
-		} else {
-			sql_str1.sprintf(
-							 "DELETE FROM ClusterAds_Horizontal WHERE scheddname = '%s' and cluster_id = %s", scheddname, cid);
-    
-			sql_str2.sprintf(
-							 "DELETE FROM ClusterAds_Vertical WHERE scheddname = '%s' and cluster_id = %s", scheddname, cid);
-		}
+		sql_str2.sprintf("DELETE FROM ClusterAds_Vertical WHERE scheddname = '%s' and cluster_id = %s", scheddname, cid);
 		break;
 	case IS_PROC_ID:
-
-		if (dt == T_ORACLE) {
-			data_arr[0] = scheddname;
-			data_typ[0] = CONDOR_TT_TYPE_STRING;
-			
-			data_arr[1] = cid;
-			data_typ[1] = CONDOR_TT_TYPE_STRING;
-
-			data_arr[2] = pid;
-			data_typ[2] = CONDOR_TT_TYPE_STRING;
-
-			bndcnt = 3;
-
 				/* generate SQL to remove the job from job tables */
-			sql_str1.sprintf("DELETE FROM ProcAds_horizontal WHERE scheddname = :1 and cluster_id = :2 AND proc_id = :3");
-		
-			sql_str2.sprintf("DELETE FROM ProcAds_vertical WHERE scheddname = :1 and cluster_id = :2 AND proc_id = :3");
-		} else {
-				/* generate SQL to remove the job from job tables */
-			sql_str1.sprintf(
-							 "DELETE FROM ProcAds_horizontal WHERE scheddname = '%s' and cluster_id = %s AND proc_id = %s", 
-							 scheddname, cid, pid);
-		
-			sql_str2.sprintf(
-							 "DELETE FROM ProcAds_vertical WHERE scheddname = '%s' and cluster_id = %s AND proc_id = %s", 
-							 scheddname, cid, pid);
-		}
+		sql_str1.sprintf("DELETE FROM ProcAds_horizontal WHERE scheddname = '%s' and cluster_id = %s AND proc_id = %s", 
+						 scheddname, cid, pid);
+		sql_str2.sprintf("DELETE FROM ProcAds_vertical WHERE scheddname = '%s' and cluster_id = %s AND proc_id = %s", 
+						 scheddname, cid, pid);
 		break;
 	case IS_UNKNOWN_ID:
 		dprintf(D_ALWAYS, "[QUILL++] Destroy ClassAd --- ERROR\n");
@@ -1190,28 +1069,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 				time_t clock;				
 				clock = atoi(value);				
 
-				if (dt == T_ORACLE) {
-					ts_expr_val = condor_ttdb_buildtsval(&clock, dt);
-
-					if (ts_expr_val.IsEmpty()) {
-						dprintf(D_ALWAYS, "ERROR: Timestamp expression not built in JobQueueDBManager::processSetAttribute\n");
-						return QUILL_FAILURE;
-					}
-
-					data_arr1[0] = ts_expr_val.Value();
-					data_typ1[0] = CONDOR_TT_TYPE_TIMESTAMP;
-
-					data_arr1[1] = scheddname;
-					data_typ1[1] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[2] = cid;
-					data_typ1[2] = CONDOR_TT_TYPE_STRING;
-
-					bndcnt1 = 3;
-
-					sql_str_del_in.sprintf(
-										   "UPDATE ClusterAds_Horizontal SET %s = (:1) WHERE scheddname = :2 and cluster_id = :3", name);
-				} else {
+				{
 					MyString ts_expr;
 
 					ts_expr = condor_ttdb_buildts(&clock, dt);
@@ -1234,10 +1092,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 				newvalue = condor_ttdb_fillEscapeCharacters(value, dt);
 					// escape single quote within the value
 
-				if (dt != T_ORACLE) {
-					sql_str_del_in.sprintf(
-										   "UPDATE ClusterAds_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = '%s'", name, newvalue.Value(), scheddname, cid);
-				} else {
+				{
 					data_arr1[0] = newvalue.Value();
 					data_typ1[0] = CONDOR_TT_TYPE_STRING;
 
@@ -1256,30 +1111,11 @@ JobQueueDBManager::processSetAttribute(char* key,
 		} else {
 			newvalue = condor_ttdb_fillEscapeCharacters(value, dt);
 
-			if (dt == T_ORACLE) {
-				data_arr1[0] = scheddname;
-				data_typ1[0] = CONDOR_TT_TYPE_STRING;
-				
-				data_arr1[1] = cid;
-				data_typ1[1] = CONDOR_TT_TYPE_STRING;
-
-				data_arr1[2] = name;
-				data_typ1[2] = CONDOR_TT_TYPE_STRING;
-
-				bndcnt1 = 3;
-				
-				sql_str_del_in.sprintf(
-									   "DELETE FROM ClusterAds_Vertical WHERE scheddname = :1 and cluster_id = :2 AND attr = :3");				
-			} else {
-
-				sql_str_del_in.sprintf(
-									   "DELETE FROM ClusterAds_Vertical WHERE scheddname = '%s' and cluster_id = '%s' AND attr = '%s'", scheddname, cid, name);
+			{
+				sql_str_del_in.sprintf("DELETE FROM ClusterAds_Vertical WHERE scheddname = '%s' and cluster_id = '%s' AND attr = '%s'", scheddname, cid, name);
 			}
 
-			if (dt != T_ORACLE) {
-				sql_str2.sprintf(
-								 "INSERT INTO ClusterAds_Vertical (scheddname, cluster_id, attr, val) VALUES ('%s', '%s', '%s', '%s')", scheddname, cid, name, newvalue.Value());
-			} else {
+			{
 				data_arr2[0] = scheddname;
 				data_typ2[0] = CONDOR_TT_TYPE_STRING;
 				
@@ -1307,31 +1143,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 				time_t clock;
 				clock = atoi(value);
 
-				if (dt == T_ORACLE) {
-					ts_expr_val = condor_ttdb_buildtsval(&clock, dt);
-
-					if (ts_expr_val.IsEmpty()) {
-						dprintf(D_ALWAYS, "ERROR: Timestamp expression not built in JobQueueDBManager::processSetAttribute\n");
-						return QUILL_FAILURE;
-					}
-
-					data_arr1[0] = ts_expr_val.Value();
-					data_typ1[0] = CONDOR_TT_TYPE_TIMESTAMP;
-
-					data_arr1[1] = scheddname;
-					data_typ1[1] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[2] = cid;
-					data_typ1[2] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[3] = pid;
-					data_typ1[3] = CONDOR_TT_TYPE_STRING;
-
-					bndcnt1 = 4;
-
-					sql_str_del_in.sprintf(
-									   "UPDATE ProcAds_Horizontal SET %s = (:1) WHERE scheddname = :2 and cluster_id = :3 and proc_id = :4", name);
-				} else {
+				{
 					MyString ts_expr;				
 					ts_expr = condor_ttdb_buildts(&clock, dt);
 
@@ -1353,10 +1165,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 				
 				newvalue = condor_ttdb_fillEscapeCharacters(value, dt);
 
-				if (dt != T_ORACLE) {
-					sql_str_del_in.sprintf(
-										   "UPDATE ProcAds_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = '%s' and proc_id = '%s'", name, newvalue.Value(), scheddname, cid, pid);
-				} else {
+				{
 					data_arr1[0] = newvalue.Value();
 					data_typ1[0] = CONDOR_TT_TYPE_STRING;
 
@@ -1378,32 +1187,11 @@ JobQueueDBManager::processSetAttribute(char* key,
 		} else {
 			newvalue = condor_ttdb_fillEscapeCharacters(value, dt);
 
-			if (dt == T_ORACLE) {
-				data_arr1[0] = scheddname;
-				data_typ1[0] = CONDOR_TT_TYPE_STRING;
-				
-				data_arr1[1] = cid;
-				data_typ1[1] = CONDOR_TT_TYPE_STRING;
-
-				data_arr1[2] = pid;
-				data_typ1[2] = CONDOR_TT_TYPE_STRING;
-
-				data_arr1[3] = name;
-				data_typ1[3] = CONDOR_TT_TYPE_STRING;
-
-				bndcnt1 = 4;
-				
-				sql_str_del_in.sprintf(
-									   "DELETE FROM ProcAds_Vertical WHERE scheddname = :1 and cluster_id = :2 AND proc_id = :3 AND attr = :4");				
-			} else {
-				sql_str_del_in.sprintf(
-									   "DELETE FROM ProcAds_Vertical WHERE scheddname = '%s' and cluster_id = '%s' AND proc_id = '%s' AND attr = '%s'", scheddname, cid, pid, name);
+			{
+				sql_str_del_in.sprintf("DELETE FROM ProcAds_Vertical WHERE scheddname = '%s' and cluster_id = '%s' AND proc_id = '%s' AND attr = '%s'", scheddname, cid, pid, name);
 			}
 
-			if (dt != T_ORACLE) {
-				sql_str2.sprintf(
-								 "INSERT INTO ProcAds_Vertical (scheddname, cluster_id, proc_id, attr, val) VALUES ('%s', '%s', '%s', '%s', '%s')", scheddname, cid, pid, name, newvalue.Value());	
-			} else {
+			{
 				data_arr2[0] = scheddname;
 				data_typ2[0] = CONDOR_TT_TYPE_STRING;
 				

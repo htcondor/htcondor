@@ -523,10 +523,7 @@ JobQueueCollection::loadAd(char* cid,
 					}
 
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					if (dt != T_ORACLE || 
-						newvalue.Length() < QUILL_ORACLE_STRINGLIT_LIMIT) {
-						tmpVal.sprintf("'%s'", newvalue.Value());
-					} else {
+					{
 							/* we need to use binded update for this col */
 						hor_bndcnt ++;
 						tmpVal.sprintf(":%d", hor_bndcnt);
@@ -581,14 +578,7 @@ JobQueueCollection::loadAd(char* cid,
 				len = 1024 + strlen(name) + strlen(scheddname) +
 					newvalue.Length() + strlen(cid) + strlen(pid);
 
-				if (dt != T_ORACLE) {
-					sql_str.sprintf("INSERT INTO ProcAds_Vertical VALUES('%s', %s, %s, '%s', '%s')", scheddname,cid, pid, name, newvalue.Value());
-
-					if (DBObj->execCommand(sql_str.Value()) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
-						return QUILL_FAILURE;
-					}
-				}  else {
+				{
 					const char* data_arr[6];
 					QuillAttrDataType data_typ[6];
 					int bndcnt = 0;
@@ -636,10 +626,7 @@ JobQueueCollection::loadAd(char* cid,
 					}
 					
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					if (dt != T_ORACLE || 
-						newvalue.Length() < QUILL_ORACLE_STRINGLIT_LIMIT) {
-						tmpVal.sprintf("'%s'", newvalue.Value());
-					} else {
+					{
 							/* we need to use binded update for this col */
 						hor_bndcnt ++;
 						tmpVal.sprintf(":%d", hor_bndcnt);
@@ -693,13 +680,7 @@ JobQueueCollection::loadAd(char* cid,
 				len = 1024 + strlen(name) + strlen(scheddname) +
 					newvalue.Length() + strlen(cid);
 
-				if (dt != T_ORACLE) {
-					sql_str.sprintf("INSERT INTO ClusterAds_Vertical VALUES('%s', %s, '%s', '%s')", scheddname,cid, name, newvalue.Value());
-					if (DBObj->execCommand(sql_str.Value()) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
-						return QUILL_FAILURE;
-					}
-				} else {
+				{
 					const char *data_arr[5];
 					QuillAttrDataType data_typ[5];
 					int   bndcnt = 0;

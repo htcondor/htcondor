@@ -469,9 +469,7 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
-		if (strcasecmp(tmp, "ORACLE") == 0) {
-			dt = T_ORACLE;
-		} else if (strcasecmp(tmp, "PGSQL") == 0) {
+		if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
 	} else {
@@ -481,9 +479,6 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 	free(tmp);
 
 	switch (dt) {				
-	case T_ORACLE:
-		EXCEPT("Oracle database requested, but no Oracle support compiled in this version of Condor!");
-		break;
 	case T_PGSQL:
 		DBObj = new PGSQLDatabase(dbconn);
 		break;
@@ -513,8 +508,7 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 		
 		rowvalue = DBObj -> getValue(0, 0);
 
-		if(strcmp(rowvalue,"") == 0 ||  // result from empty job queue in pgsql
-		   strcmp(rowvalue, " ::") == 0) //result from empty jobqueue in oracle
+		if(strcmp(rowvalue,"") == 0) // result from empty job queue in pgsql
 			{ 
 			printf("\nJob queue is curently empty\n");
 		} else {

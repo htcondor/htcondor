@@ -210,9 +210,7 @@ static void doDBconfig() {
   
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
-		if (strcasecmp(tmp, "ORACLE") == 0) {
-			dt = T_ORACLE;
-		} else if (strcasecmp(tmp, "PGSQL") == 0) {
+		if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
 		free(tmp);
@@ -269,8 +267,7 @@ static void doDBconfig() {
 				   writePassword.Value(), 
 				   DBName?DBName:"");
   	
-	fprintf(stdout, "Using Database Type = %s\n",
-			(dt == T_ORACLE)?"ORACLE":"Postgres");
+	fprintf(stdout, "Using Database Type = Postgres\n");
 	fprintf(stdout, "Using Database IpAddress = %s\n", 
 			DBIpAddress?DBIpAddress:"");
 	fprintf(stdout, "Using Database Name = %s\n", 
@@ -294,9 +291,6 @@ static void doDBconfig() {
 	}
 
 	switch (dt) {				
-		case T_ORACLE:
-			EXCEPT("Oracle database requested, but this version of Condor was compiled without Oracle support!\n");
-			break;
 		case T_PGSQL:
 			DBObj = new PGSQLDatabase(DBConn.Value());
 			break;

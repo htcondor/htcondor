@@ -42,8 +42,6 @@ extern const bool proc_ver_clob_field [];
 extern const bool cluster_hor_clob_field [];
 extern const bool cluster_ver_clob_field [];
 
-#define QUILL_ORACLE_STRINGLIT_LIMIT 4000
-
 //! JobQueueDatabase
 /*! It provides interfaces to talk to DBMS
  */
