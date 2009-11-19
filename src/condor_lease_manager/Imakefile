@@ -39,6 +39,10 @@ html:
 
 tests: $(TESTS)
 
+release::
+static::
+stripped::
+
 testbin:: all
 testbin_target(condor_lease_manager_tester,755)
 

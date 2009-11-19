@@ -1426,22 +1426,21 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 #  2. C++ exception handling in stdc++ assumes that the glibc is compiled
 #     with TLS, but ours isn't and doesn't compile out of the box with
 #     TLS.
-	
-AC_MSG_CHECKING([for clipped port default])
-case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_cv_libc_minor" in
-  *-AIX5-* | \
-  *-DUX5-* | \
-  DARWIN-* | \
-  CONDOR_FREEBSD-* | \
-  *-HPUX11-* | \
-  LINUX-*-ALPHA-* | \
-  LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-IA64-* | \
-  SOLARIS-* | \
-  LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
-  * ) _cv_clipped_default=no ;;
-esac
-AC_MSG_RESULT([$_cv_clipped_default])
+
+_cv_clipped_default=yes
+if test "x$CLIPPED" = "xdefault"; then
+  AC_MSG_CHECKING([for clipped port default])
+  case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_cv_libc_minor" in
+	LINUX-*-I386-RHEL3-* | \
+	LINUX-*-X86_64-RHEL3-* | \
+	LINUX-*-I386-RHEL5-* | \
+	LINUX-*-X86_64-RHEL5-* | \
+	LINUX-*-I386-DEBIAN50-* | \
+	LINUX-*-X86_64-DEBIAN50-* ) _cv_clipped_default=no ;;
+    * ) _cv_clipped_default=yes ;;
+  esac
+  AC_MSG_RESULT([$_cv_clipped_default])
+fi
 
 AC_MSG_CHECKING([for clipped port])
 if test "x$CLIPPED" = "xdefault"; then
