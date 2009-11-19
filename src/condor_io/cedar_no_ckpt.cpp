@@ -42,6 +42,7 @@
 #include "shared_port_client.h"
 #include "daemon_core_sock_adapter.h"
 #include "condor_netdb.h"
+#include "internet.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
