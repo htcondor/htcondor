@@ -74,11 +74,10 @@ int main(int argc, char **argv)
 
 	if ( result == 0 ) {
 		printf("\nTest succeeded\n");
-		fflush(stdout);
 	} else {
-		fprintf(stderr, "\nTest FAILED !!!!!!!!!!!!!!!!!!!!!!!!\n");
-		fflush(stdout);
+		printf("\nTest FAILED !!!!!!!!!!!!!!!!!!!!!!!!\n");
 	}
+	fflush(stdout);
 
 	return result;
 }
@@ -171,16 +170,20 @@ ReadEventsLazy()
 	ReadMultipleUserLogs lazyReader;
 	int totalLogCount;
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 0 ) {
-		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "lazyReader.totalLogFileCount() was %d; should "
 					"have been 0\n", totalLogCount );
 		isOkay = false;
 	}
 
 	if ( !monitorLogFile( lazyReader, file1, true ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error monitoring log file %s\n", file1 );
 		isOkay = false;
 	}
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 1 ) {
-		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "lazyReader.totalLogFileCount() was %d; should "
 					"have been 1\n", totalLogCount );
 		isOkay = false;
 	}
@@ -193,8 +196,7 @@ ReadEventsLazy()
 		printf("...succeeded\n");
 		fflush(stdout);
 	} else {
-		printf("...failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		printf( "...FAILURE at %s, %d\n", __FILE__, __LINE__ );
 		fflush(stdout);
 		isOkay = false;
 	}
@@ -202,8 +204,7 @@ ReadEventsLazy()
 	ULogEvent	*event;
 	printf("Testing readEvent() on empty files...\n");
 	if ( lazyReader.readEvent(event) != ULOG_NO_EVENT ) {
-		printf("...failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		printf( "...FAILURE at %s, %d\n", __FILE__, __LINE__ );
 		fflush(stdout);
 		isOkay = false;
 	} else {
@@ -222,16 +223,16 @@ ReadEventsLazy()
 	SubmitEvent	subE;
 	strcpy(subE.submitHost, "<128.105.165.12:32779>");
 	if ( !log1.writeEvent(&subE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	if ( !lazyReader.detectLogGrowth() ) {
-		printf("Error: should have gotten log growth");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "should have gotten log growth" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -241,9 +242,9 @@ ReadEventsLazy()
 	}
 
 	if ( lazyReader.detectLogGrowth() ) {
-		printf("Error: should NOT have gotten log growth");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "should NOT have gotten log growth" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -251,9 +252,9 @@ ReadEventsLazy()
 	termE.normal = true;
 	termE.returnValue = 0;
 	if ( !log1.writeEvent(&termE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -266,9 +267,9 @@ ReadEventsLazy()
 		// Make sure truncating works.
 		//
 	if ( !log2.writeEvent(&subE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -284,7 +285,9 @@ ReadEventsLazy()
 		// Unmonitoring a file we haven't monitored yet should fail.
 		//
 	if ( unmonitorLogFile( lazyReader, file3 ) ) {
-		fprintf( stderr, "Unmonitoring file3 should have failed\n" );
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "Unmonitoring file %s should have failed\n", file3 );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -304,32 +307,34 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
-		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "lazyReader.totalLogFileCount() was %d; should "
 					"have been 3\n", totalLogCount );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	lazyReader.printAllLogMonitors( stdout );
 
 	if ( !log2.writeEvent(&subE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 		// Sleep to make event order deterministic, to simplify the test.
 	sleep(2);
 	if ( !log3.writeEvent(&subE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	if ( !lazyReader.detectLogGrowth() ) {
-		printf("Error: should have gotten log growth");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "should have gotten log growth" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -348,17 +353,17 @@ ReadEventsLazy()
 	}
 
 	if ( !log2.writeEvent(&termE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 		// Sleep to make event order deterministic, to simplify the test.
 	sleep(2);
 	if ( !log3.writeEvent(&termE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -389,8 +394,10 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
-		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "lazyReader.totalLogFileCount() was %d; should "
 					"have been 3\n", totalLogCount );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -400,9 +407,9 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 	if ( !log4.writeEvent(&subE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -416,9 +423,9 @@ ReadEventsLazy()
 	}
 
 	if ( !log4.writeEvent(&termE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -438,25 +445,31 @@ ReadEventsLazy()
 	unlink( file5 );
 	UserLog		log5("test", file5, 5, -1, -1, false);
 	if (!monitorLogFile( lazyReader, file5, false ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error unmonitoring log file %s\n", file5 );
+		fflush( stdout );
 		isOkay = false;
 	}
 	if (!monitorLogFile( lazyReader, file5a, false ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error monitoring log file %s\n", file5a );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	if ( !log5.writeEvent(&subE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	ExecuteEvent	execE;
 	strcpy(execE.executeHost, "<128.105.666.99:12345>");
 	if ( !log5.writeEvent(&execE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -473,9 +486,9 @@ ReadEventsLazy()
 	GenericEvent	genE;
 	strcpy(genE.info, "job type: transfer");
 	if ( !log5.writeEvent(&genE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 	if ( !ReadAndTestEvent(lazyReader, &genE) ) {
@@ -484,9 +497,9 @@ ReadEventsLazy()
 
 	strcpy(genE.info, "src_url: file:/dev/null");
 	if ( !log5.writeEvent(&genE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 	if ( !ReadAndTestEvent(lazyReader, &genE) ) {
@@ -495,9 +508,9 @@ ReadEventsLazy()
 
 	strcpy(genE.info, "dest_url: file:/dev/null");
 	if ( !log5.writeEvent(&genE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 	if ( !ReadAndTestEvent(lazyReader, &genE) ) {
@@ -505,9 +518,9 @@ ReadEventsLazy()
 	}
 
 	if ( !log5.writeEvent(&termE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
@@ -523,33 +536,38 @@ ReadEventsLazy()
 	}
 		//TEMP -- what if we *don't* unmonitor and remonitor file5a here?  that's even a harder case...
 	if (!unmonitorLogFile( lazyReader, file5a ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error unmonitoring file %s\n", file5a );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	if ( !log5.initialize( 6, 0, 0, NULL )) {
-		fprintf( stderr, "Error re-initializing log5\n" );
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error re-initializing log5\n" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	if ( !log5.writeEvent(&subE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	strcpy(execE.executeHost, "<128.105.777.99:12345>");
 	if ( !log5.writeEvent(&execE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	if ( !log5.writeEvent(&termE) ) {
-		printf("Error: writeEvent() failed");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "writeEvent() failed" );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -559,6 +577,9 @@ ReadEventsLazy()
 
 		// Note: monitoring the "secondary" path to this log.
 	if (!monitorLogFile( lazyReader, file5a, true ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error monitoring file %s\n", file5a );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -567,27 +588,54 @@ ReadEventsLazy()
 	}
 
 		// Test links to log files.
-	symlink( file5, file5b );
+	if ( symlink( file5, file5b ) != 0 ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error (%d, %s) creating symlink %s %s\n", errno,
+					strerror( errno ), file5, file5b );
+		isOkay = false;
+	} else {
+		printf( "Created link %s to %s\n", file5b, file5 );
+	}
 		// Note: monitoring the sym link to this log.
 	if (!monitorLogFile( lazyReader, file5b, true ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error monitoring file %s\n", file5b );
+		fflush( stdout );
 		isOkay = false;
 	}
 
-	symlink( file5, file5c );
+	if ( symlink( file5, file5c ) != 0 ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error (%d, %s) creating symlink %s %s\n", errno,
+					strerror( errno ), file5, file5c );
+		isOkay = false;
+	} else {
+		printf( "Created link %s to %s\n", file5c, file5 );
+	}
 		// Note: monitoring the sym link to this log.
 	if (!monitorLogFile( lazyReader, file5c, true ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error monitoring file %s\n", file5c );
+		fflush( stdout );
 		isOkay = false;
 	}
 
+		// Note: this test will fail on Windows (see the function
+		// GetFileID() in read_multiple_logs.cpp).
 	link( file5, file5d );
 		// Note: monitoring the hard link to this log.
 	if (!monitorLogFile( lazyReader, file5d, true ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error monitoring file %s\n", file5d );
+		fflush( stdout );
 		isOkay = false;
 	}
 
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 4 ) {
-		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "lazyReader.totalLogFileCount() was %d; should "
 					"have been 4\n", totalLogCount );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -609,9 +657,15 @@ ReadEventsLazy()
 	unlink( file6 );
 
 	if (!monitorLogFile( lazyReader, file6, true ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error monitoring file %s\n", file6 );
+		fflush( stdout );
 		isOkay = false;
 	}
 	if (!unmonitorLogFile( lazyReader, file6 ) ) {
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+		printf( "error unmonitoring file %s\n", file6 );
+		fflush( stdout );
 		isOkay = false;
 	}
 
@@ -637,7 +691,7 @@ monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
 {
 	CondorError errstack;
 	if ( !reader.monitorLogFile( logfile, truncateIfFirst, errstack ) ) {
-		fprintf( stderr, "Error monitoring log file %s: %s\n", logfile,
+		printf( "Error monitoring log file %s: %s\n", logfile,
 					errstack.getFullText() );
 		return false;
 	}
@@ -651,7 +705,7 @@ unmonitorLogFile( ReadMultipleUserLogs &reader, const char *logfile )
 {
 	CondorError errstack;
 	if ( !reader.unmonitorLogFile( logfile, errstack ) ) {
-		fprintf( stderr, "Error unmonitoring log file %s: %s\n", logfile,
+		printf( "Error unmonitoring log file %s: %s\n", logfile,
 					errstack.getFullText() );
 		return false;
 	}
@@ -668,7 +722,8 @@ ReadAndTestEvent(ReadMultipleUserLogs &reader, ULogEvent *expectedEvent)
 	ULogEvent	*event = NULL;
 	if ( reader.readEvent(event) != ULOG_OK ) {
 		if ( expectedEvent ) {
-			printf("Error reading event");
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+			printf("FAIL: error reading event");
 			printf(" (at %s: %d)\n", __FILE__, __LINE__);
 			fflush(stdout);
 			isOkay = false;
@@ -681,7 +736,8 @@ ReadAndTestEvent(ReadMultipleUserLogs &reader, ULogEvent *expectedEvent)
 					expectedEvent->cluster != event->cluster ||
 					expectedEvent->proc != event->proc ||
 					expectedEvent->subproc != event->subproc ) {
-				printf("Event read does not match expected event");
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+				printf("FAIL: event read does not match expected event");
 				printf(" (at %s: %d)\n", __FILE__, __LINE__);
 				printf("  Expected event: ");
 				PrintEvent(expectedEvent);
@@ -691,7 +747,8 @@ ReadAndTestEvent(ReadMultipleUserLogs &reader, ULogEvent *expectedEvent)
 				isOkay = false;
 			}
 		} else {
-			printf("Error: should NOT have gotten an event");
+		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
+			printf("FAIL: should NOT have gotten an event");
 			printf(" (at %s: %d)\n", __FILE__, __LINE__);
 			fflush(stdout);
 			isOkay = false;
