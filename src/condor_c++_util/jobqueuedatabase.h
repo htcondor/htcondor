@@ -78,11 +78,6 @@ public:
 	virtual QuillErrCode		execQuery(const char* sql) = 0;
 	virtual QuillErrCode        execQuery(const char* sql,
 										  int &num_result) = 0;
-	virtual QuillErrCode		execQueryWithBind(const char* sql,
-												  int bnd_cnt,
-												  const char **val_arr,
-												  QuillAttrDataType *typ_arr,
-												  int &num_result) = 0;
 
 	//! get a result for the executed SQL
 	// virtual QuillErrCode 		fetchNext() = 0;
