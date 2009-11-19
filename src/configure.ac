@@ -3084,11 +3084,6 @@ if test x$_cv_ld_is_gnu = xyes; then
   CHECK_EXTERNAL([gcb], [1.5.6], [soft])
 fi
 
-AX_LIB_ORACLE_OCI("10.0.0")
-if test $HAVE_ORACLE_OCI = yes; then
-  AC_DEFINE(HAVE_ORACLE,1,[Do we have Oracle support])
-fi
-
 # Figure out which postgresql we need.
 
 if test "$_cv_opsys" = "AIX" ; then
