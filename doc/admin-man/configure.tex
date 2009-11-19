@@ -428,6 +428,7 @@ the library routine which parses the configuration files.
   \item \verb@JOB_ROUTER@
   \item \verb@LEASEMANAGER@
   \item \verb@ROOSTER@
+  \item \verb@HDFS@
     \label{list:subsystem names}
   \end{itemize}
 
@@ -7525,6 +7526,84 @@ This allows multiple instances of the
   It is used to further constrain the types
   of ClassAds from the \Condor{collector}.
   There is no default value, resulting in no constraints being placed on query.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:HDFS-Config-File-Entries}\condor{hdfs}
+Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$
+
+\index{configuration!condor\_hdfs configuration variables}
+These macros affect the \Condor{hdfs} daemon.
+
+\begin{description}
+
+\label{param:HDFSHome}
+\item[\Macro{HDFS\_HOME}]
+  The directory path for the Hadoop file system installation directory.
+  Defaults to \File{\MacroUNI{RELEASE\_DIR}/libexec}.
+  This directory is required to contain 
+
+  \begin{itemize}
+  \item{directory \File{lib}},
+  containing all necessary jar files for the execution of Name-nodes
+  and Data-nodes.
+  \item{directory \File{conf}},
+  containing default Hadoop file system configuration files with names that
+  conform to \Expr{*-site.xml}.
+  \item{directory \File{webapps}},
+  containing JavaServer pages (jsp) files for the Hadoop file 
+  system's embedded server.
+  \end{itemize}
+
+\label{param:HDFSNamenode}
+\item[\Macro{HDFS\_NAMENODE}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSNamenodeWeb}
+\item[\Macro{HDFS\_NAMENODE\_WEB}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSNamenodeDir}
+\item[\Macro{HDFS\_NAMENODE\_DIR}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSDatanodeDir}
+\item[\Macro{HDFS\_DATANODE\_DIR}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSDatanodeAddress}
+\item[\Macro{HDFS\_DATANODE\_ADDRESS}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSServices}
+\item[\Macro{HDFS\_SERVICES}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSLog4j}
+\item[\Macro{HDFS\_LOG4J}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSAllow}
+\item[\Macro{HDFS\_ALLOW}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSDeny}
+\item[\Macro{HDFS\_DENY}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSNamenodeClass}
+\item[\Macro{HDFS\_NAMENODE\_CLASS}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSDatanodeClass}
+\item[\Macro{HDFS\_DATANODE\_CLASS}]
+  \emph{Definition not written yet.}
+
+\label{param:HDFSSiteFile}
+\item[\Macro{HDFS\_SITE\_FILE}]
+  \emph{Definition not written yet.}
 
 \end{description}
 
