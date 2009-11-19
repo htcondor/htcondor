@@ -1,9 +1,9 @@
 #!/bin/sh
-############# build_gsoap-2.7.10-p1
+############# build_gsoap-2.7.10
 
 . $EXTERNALS_CONFIG
 
-cd $PACKAGE_NAME && echo Changed directory to `pwd`
+cd $PACKAGE_SRC_NAME && echo Changed directory to `pwd`
 
 # This version of gSOAP does something funny. It will add -DWITH_DOM
 # when compiling its libraries but never compile dom.cpp so any
@@ -93,4 +93,4 @@ fi
 
 exit 0;
 
-############# end of build_gsoap-2.7.10-p1
+############# end of build_gsoap-2.7.10

@@ -40,6 +40,7 @@
 #include "ccb_client.h"
 #include "condor_sinful.h"
 #include "condor_netdb.h"
+#include "internet.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()

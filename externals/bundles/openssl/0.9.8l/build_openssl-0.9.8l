@@ -1,5 +1,5 @@
 #!/bin/sh
-############# build_openssl-0.9.8h
+############# build_openssl-0.9.8l
 
 cd $PACKAGE_SRC_NAME
 
@@ -46,4 +46,4 @@ fi
 
 exit 0
 
-############# end of build_openssl-0.9.8h
+############# end of build_openssl-0.9.8l
