@@ -1,6 +1,18 @@
 #!/bin/sh
 ############# build_openssl-0.9.8l
 
+# Somewhere between 0.9.8h and 0.9.8l, openssl removed -fno-common from
+# the compile flags for OS X. On OS X 10.4, this causes the Globus build
+# to fail with this error:
+#   ld: common symbols not allowed with MH_DYLIB output format with the -multi_module option
+#   /scratch/externals/install/openssl-0.9.8l/lib/libcrypto.a(set_key.o) definition of common __shadow_DES_check_key (size 16)
+if [ `uname` = "Darwin" ] ; then
+  uname -v | grep -q 'Version 8'
+  if [ $? -eq 0 ] ; then
+      patch -p0 -i osx104.patch
+  fi
+fi
+
 cd $PACKAGE_SRC_NAME
 
 # Omitting the frame pointer makes debugging very difficult.
