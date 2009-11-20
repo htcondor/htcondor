@@ -221,6 +221,10 @@ public:
     /// sinful address of mypoint() in the form of "<a.b.c.d:pppp>"
     char * get_sinful();
 
+	/// Sinful address for access from outside of our private network.
+	/// This takes into account TCP_FORWARDING_HOST.
+	char const *get_sinful_public();
+
 	/// sinful address of peer in form of "<a.b.c.d:pppp>"
 	char * get_sinful_peer();
 
@@ -418,6 +422,9 @@ private:
 
 	// Buffer to hold the sinful address of ourself
 	char _sinful_self_buf[SINFUL_STRING_BUF_SIZE];
+
+	// Buffer to hold the public sinful address of ourself
+	char _sinful_public_buf[SINFUL_STRING_BUF_SIZE];
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {

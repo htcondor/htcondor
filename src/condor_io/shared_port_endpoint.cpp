@@ -355,6 +355,15 @@ SharedPortEndpoint::InitRemoteAddress()
 
 	Sinful sinful(public_addr.Value());
 	sinful.setSharedPortID( m_local_id.Value() );
+
+		// if there is a private address, set the shared port id on that too
+	char const *private_addr = sinful.getPrivateAddr();
+	if( private_addr ) {
+		Sinful private_sinful( private_addr );
+		private_sinful.setSharedPortID( m_local_id.Value() );
+		sinful.setPrivateAddr( private_sinful.getSinful() );
+	}
+
 	m_remote_addr = sinful.getSinful();
 
 	return true;

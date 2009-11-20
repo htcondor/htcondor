@@ -1021,34 +1021,22 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	}
 
 		// If we haven't initialized our address(es), do so now.
-	if (sinful_public == NULL) {
-		char* tmp = param("TCP_FORWARDING_HOST");
-			// If TCP_FORWARDING_HOST is defined, we will advertize
-			// our local IP address for daemons that have the same
-			// PRIVATE_NETWORK_NAME as us.  For everyone else, we
-			// advertize the address of the TCP forwarder.
-		if (tmp != NULL) {
-			MyString tcp_forwarding_host = tmp;
-			free(tmp);
-			struct sockaddr_in sin;
-			if (!is_ipaddr(tcp_forwarding_host.Value(), &sin.sin_addr)) {
-				struct hostent *he = condor_gethostbyname(tcp_forwarding_host.Value());
-				if (he == NULL) {
-					EXCEPT("failed to resolve address of SSH_BROKER");
-				}
-				sin.sin_addr = *(in_addr*)(he->h_addr_list[0]);;
-			}
-			sin.sin_port = htons(((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port());
-			sinful_public = strdup(sin_to_string(&sin));
+	if (sinful_public == NULL || m_dirty_sinful) {
+		free( sinful_public );
+		sinful_public = NULL;
+
+		char const *addr = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_sinful_public();
+		if( !addr ) {
+			EXCEPT("Failed to get public address of command socket!");
 		}
-		else {
-			sinful_public = strdup(
-			    sock_to_string( (*sockTable)[initial_command_sock].iosock->get_file_desc() ) );
-		}
+		sinful_public = strdup( addr );
 		m_dirty_sinful = true;
 	}
 
-	if (!initialized_sinful_private) {
+	if (!initialized_sinful_private || m_dirty_sinful) {
+		free( sinful_private);
+		sinful_private = NULL;
+
 		MyString private_sinful_string;
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
@@ -1080,15 +1068,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		m_dirty_sinful = true;
 	}
 
-	if( usePrivateAddress ) {
-		if( sinful_private ) {
-			return sinful_private;
-		}
-		else {
-			return sinful_public;
-		}
-	}
-
 	if( m_dirty_sinful ) { // need to rebuild full sinful string
 		m_dirty_sinful = false;
 
@@ -1112,6 +1091,15 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			if( !ccb_contact.IsEmpty() ) {
 				m_sinful.setCCBContact(ccb_contact.Value());
 			}
+		}
+	}
+
+	if( usePrivateAddress ) {
+		if( sinful_private ) {
+			return sinful_private;
+		}
+		else {
+			return sinful_public;
 		}
 	}
 
@@ -2561,6 +2549,8 @@ DaemonCore::reconfig(void) {
 	// by the time we get here, because it needs to be called early
 	// in the process.
 
+	m_dirty_sinful = true; // refresh our address in case config changes it
+
 	SecMan *secman = getSecMan();
 	secman->reconfig();
 
@@ -2752,6 +2742,9 @@ DaemonCore::reconfig(void) {
 							   CondorThreads::stop_thread_safe_block);
 	// Supply a callback to daemonCore upon thread context switch.
 	CondorThreads::set_switch_callback( thread_switch_callback );
+
+		// in case our address changed, do whatever needs to be done
+	daemonContactInfoChanged();
 }
 
 void

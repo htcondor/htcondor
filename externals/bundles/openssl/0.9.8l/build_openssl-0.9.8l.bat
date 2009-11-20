@@ -33,11 +33,11 @@ rem We do this because all warnings are treated as errors in this build.
 if /i A%NEED_MANIFESTS_IN_EXTERNALS%==Atrue ( 
     pushd util
     touch zerolength
-    call :patch %PACKAGE_BUILD_DIR%\mk1mf.pl-0.9.8h-patch
+    call :patch %PACKAGE_BUILD_DIR%\mk1mf.pl-0.9.8l.patch
     if not %ERRORLEVEL%A == 0A goto failure
     pushd pl
     touch zerolength
-    call :patch %PACKAGE_BUILD_DIR%\VC-32.pl-0.9.8h-patch
+    call :patch %PACKAGE_BUILD_DIR%\VC-32.pl-0.9.8l.patch
     if not %ERRORLEVEL%A == 0A goto failure
     popd && popd
 )
