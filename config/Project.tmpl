@@ -294,8 +294,8 @@ PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
 /* These variables should be coalesced into something more meaningful */
 POSTGRESQL_INC = -I$(POSTGRESQL_INC) 
 POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a 
-TT_LIB = $(POSTGRESQL_LIBS) $(ORACLE_LIB)
-TT_INC = -I$(POSTGRESQL_INC) $(ORACLE_INC)
+TT_LIB = $(POSTGRESQL_LIBS)
+TT_INC = -I$(POSTGRESQL_INC)
 #endif
 
 #ifdef WANT_LEASE_MANAGER
