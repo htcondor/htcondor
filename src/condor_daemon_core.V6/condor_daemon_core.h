@@ -1026,7 +1026,8 @@ class DaemonCore : public Service
         sigset_t      *sigmask             = NULL,
         int           job_opt_mask         = 0,
         size_t        *core_hard_limit     = NULL,
-		int			  *affinity_mask	   = NULL
+		int			  *affinity_mask	   = NULL,
+		char const    *daemon_sock         = NULL
         );
 
     //@}
@@ -1371,6 +1372,7 @@ class DaemonCore : public Service
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()
+	void SetDaemonSockName( char const *sock_name );
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki, Stream* accepted_sock=NULL);
@@ -1788,6 +1790,7 @@ class DaemonCore : public Service
 
 	class CCBListeners *m_ccb_listeners;
 	class SharedPortEndpoint *m_shared_port_endpoint;
+	MyString m_daemon_sock_name;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 

@@ -189,6 +189,7 @@ DCCollector::reconfig( void )
 		use_tcp = false;
 		break;
 	case CONFIG:
+		use_tcp = false;
 		tmp = param( "TCP_UPDATE_COLLECTORS" );
 		if( tmp ) {
 			tcp_collectors.initializeFromString( tmp );
@@ -200,17 +201,9 @@ DCCollector::reconfig( void )
 				break;
 			}
 		}
-		tmp = param( "UPDATE_COLLECTOR_WITH_TCP" );
-		if( ! tmp ) {
-			tmp = param( "UPDATE_COLLECTORS_WITH_TCP" );
-		}		
-		if( tmp ) {
-			if( tmp[0] == 't' || tmp[0] == 'T' || 
-				tmp[0] == 'y' || tmp[0] == 'Y' )
-			{ 
-				use_tcp = true;
-			}
-			free( tmp );
+		use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", use_tcp );
+		if( !hasUDPCommandPort() ) {
+			use_tcp = true;
 		}
 		break;
 	}

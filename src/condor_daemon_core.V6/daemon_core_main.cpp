@@ -1484,6 +1484,7 @@ int main( int argc, char** argv )
 {
 	char**	ptr;
 	int		command_port = -1;
+	char const *daemon_sock_name = NULL;
 	int 	http_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
@@ -1763,6 +1764,25 @@ int main( int argc, char** argv )
 				exit( 1 );
 			}
 			//call Register_Timer below after intialized...
+			break;
+		case 's':
+			if( strncmp("-sock",*ptr,strlen(*ptr)) ) {
+				done = true;
+				break;
+			}
+			else {
+				ptr++;
+				if( *ptr ) {
+					daemon_sock_name = *ptr;
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -sock needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify a socket name.\n" );
+					exit( 1 );
+				}
+			}
 			break;
 		case 't':		// log to Terminal (stderr)
 			Termlog = 1;
@@ -2079,6 +2099,7 @@ int main( int argc, char** argv )
 	main_pre_command_sock_init();
 
 		// SETUP COMMAND SOCKET
+	daemonCore->SetDaemonSockName( daemon_sock_name );
 	daemonCore->InitDCCommandSocket( command_port );
 
 		// Install DaemonCore signal handlers common to all daemons.

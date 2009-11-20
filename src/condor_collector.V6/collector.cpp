@@ -1289,11 +1289,7 @@ void CollectorDaemon::Config()
        }
     }
 
-		// the upper bound here is because a TCP port can't be any
-		// bigger than 64K (65536).  however, b/c of reserved ports
-		// and some other things, we leave it at 64000, just to be
-		// safe...
-	int size = param_integer( "COLLECTOR_SOCKET_CACHE_SIZE",-1,0,64000 );
+	int size = param_integer( "COLLECTOR_SOCKET_CACHE_SIZE", -1, 0 );
 	if( size == -1 ) {
 		delete sock_cache;
 		sock_cache = NULL;

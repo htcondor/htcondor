@@ -48,6 +48,9 @@ class Sinful {
 	// returns the port portion of the sinful string
 	char const *getPort() { return m_port.c_str(); }
 
+		// returns -1 if port not set; o.w. port number
+	int getPortNum();
+
 	void setHost(char const *host);
 	void setPort(char const *port);
 	void setPort(int port);

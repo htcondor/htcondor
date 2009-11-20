@@ -1373,9 +1373,21 @@ Daemon::getCmInfo( const char* subsys )
 
 	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", host ); 
 
+	Sinful sinful( host );
+
+	if( !sinful.valid() || !sinful.getHost() ) {
+		dprintf( D_ALWAYS, "Invalid address: %s\n", host );
+		buf.sprintf( "%s address or hostname not specified in config file",
+				 subsys ); 
+		newError( CA_LOCATE_FAILED, buf.Value() );
+		_is_configured = false;
+		free( host );
+		return false;
+	}
+
 		// See if it's already got a port specified in it, or if we
 		// should use the default port for this kind of daemon.
-	_port = getPortFromAddr( host );
+	_port = sinful.getPortNum();
 	if( _port < 0 ) {
 		_port = getDefaultPort();
 		dprintf( D_HOSTNAME, "Port not specified, using default (%d)\n",
@@ -1407,10 +1419,11 @@ Daemon::getCmInfo( const char* subsys )
 		// (which we've already got stashed in _name if we need it),
 		// and finally reset host to point to the host for the rest of
 		// this function.
-	tmp = getHostFromAddr( host );
 	free( host );
-	host = tmp;
-	tmp = NULL;
+	host = NULL;
+	if( sinful.getHost() ) {
+		host = strdup( sinful.getHost() );
+	}
 
 
 
@@ -1424,8 +1437,7 @@ Daemon::getCmInfo( const char* subsys )
 
 
 	if( is_ipaddr(host, &sin_addr) ) {
-		buf.sprintf( "<%s:%d>", host, _port );
-		New_addr( strnewp(buf.Value() ) );
+		New_addr( strnewp( sinful.getSinful() ) );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1445,9 +1457,9 @@ Daemon::getCmInfo( const char* subsys )
 
 			return false;
 		}
-		buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
-		New_addr( strnewp(buf.Value() ) );
+		sinful.setHost( inet_ntoa(sin_addr) );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n", sinful.getSinful() );
+		New_addr( strnewp( sinful.getSinful() ) );
 		New_full_hostname( tmp );
 	}
 
