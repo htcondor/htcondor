@@ -5823,7 +5823,11 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		if ( rc == 0 ) {
 			*job_status = strdup(result->argv[4]);
 			*exit_code = atoi(result->argv[5]);
-			*failure_reason = strdup(result->argv[6]);
+			if ( strcasecmp(result->argv[6], NULLSTRING) ) {
+				*failure_reason = strdup(result->argv[6]);
+			} else {
+				*failure_reason = NULL;
+			}
 		}
 		delete result;
 		return rc;

@@ -57,6 +57,7 @@
 #define GM_DELEGATE_PROXY		17
 #define GM_CLEANUP				18
 #define GM_SET_LEASE			19
+#define GM_RECOVER_POLL			20
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -79,6 +80,7 @@ static const char *GMStateNames[] = {
 	"GM_DELEGATE_PROXY",
 	"GM_CLEANUP",
 	"GM_SET_LEASE",
+	"GM_RECOVER_POLL",
 };
 
 #define CREAM_JOB_STATE_UNSET			""
@@ -365,6 +367,8 @@ CreamJob::CreamJob( ClassAd *classad )
 		jobAd->LookupString( ATTR_CREAM_LEASE_ID, &leaseId );
 	}
 
+	jobAd->LookupString( ATTR_GRID_JOB_STATUS, remoteState );
+
 	gahpErrorString = "";
 
 	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
@@ -560,11 +564,62 @@ void CreamJob::doEvaluateState()
 					executeLogged = true;
 				}
 				
-				probeNow = true;
-
-				gmState = GM_SUBMITTED;
+				if ( remoteState == CREAM_JOB_STATE_UNSET ||
+					 remoteState == CREAM_JOB_STATE_REGISTERED ) {
+					gmState = GM_RECOVER_POLL;
+				} else {
+					probeNow = true;
+					gmState = GM_SUBMITTED;
+				}
 			}
 			} break;
+		case GM_RECOVER_POLL: {
+			char *status = NULL;
+			char *fault = NULL;
+			int exit_code = -1;
+			CHECK_PROXY;
+
+			rc = gahp->cream_job_status( resourceManagerString,
+										 remoteJobId, &status,
+										 &exit_code, &fault );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+					connect_failure = true;
+					break;
+				}
+				// unhandled error
+				LOG_CREAM_ERROR( "cream_job_status()", rc );
+				gahpErrorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
+				if ( status ) {
+					free( status );
+				}
+				if ( fault ) {
+					free (fault);
+				}
+				break;
+			}
+
+			NewCreamState( status, exit_code, fault );
+			if ( status ) {
+				free( status );
+			}
+			if ( fault ) {
+				free( fault );
+			}
+			lastProbeTime = time(NULL);
+
+			if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
+				probeNow = true;
+				gmState = GM_SUBMIT_COMMIT;
+			} else {
+				gmState = GM_SUBMITTED;
+			}
+		} break;
  		case GM_UNSUBMITTED: {
 			// There are no outstanding submissions for this job (if
 			// there is one, we've given up on it).
@@ -797,7 +852,6 @@ void CreamJob::doEvaluateState()
 						// make us do a probe immediately after submitting
 						// the job, so set it to now
 					lastProbeTime = time(NULL);
-					NewCreamState( CREAM_JOB_STATE_UNSET, 0, NULL );
 					gmState = GM_SUBMITTED;
 				}
 			}
@@ -811,13 +865,7 @@ void CreamJob::doEvaluateState()
 			} else if ( remoteState == CREAM_JOB_STATE_DONE_FAILED || remoteState == CREAM_JOB_STATE_ABORTED ) {
 				gmState = GM_PURGE;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
-				if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
-					gmState = GM_CLEANUP;
-				} else {
-					gmState = GM_CANCEL;
-				}
-			} else if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
-				gmState = GM_SUBMIT_COMMIT;
+				gmState = GM_CANCEL;
 			} else {
 					// Check that our gridftp server is healthy
 				if ( gridftpServer->GetErrorMessage() ) {
