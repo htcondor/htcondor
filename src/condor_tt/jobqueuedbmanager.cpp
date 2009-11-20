@@ -1093,19 +1093,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 					// escape single quote within the value
 
 				{
-					data_arr1[0] = newvalue.Value();
-					data_typ1[0] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[1] = scheddname;
-					data_typ1[1] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[2] = cid;
-					data_typ1[2] = CONDOR_TT_TYPE_STRING;
-
-					bndcnt1 = 3;
-
-					sql_str_del_in.sprintf(
-										   "UPDATE ClusterAds_Horizontal SET %s = :1 WHERE scheddname = :2 and cluster_id = :3", name);
+					sql_str_del_in.sprintf("UPDATE ClusterAds_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = '%s'", name, newvalue.Value(), scheddname, cid);
 				}
 			}
 		} else {
@@ -1116,22 +1104,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 			}
 
 			{
-				data_arr2[0] = scheddname;
-				data_typ2[0] = CONDOR_TT_TYPE_STRING;
-				
-				data_arr2[1] = cid;
-				data_typ2[1] = CONDOR_TT_TYPE_STRING;
-
-				data_arr2[2] = name;
-				data_typ2[2] = CONDOR_TT_TYPE_STRING;
-
-				data_arr2[3] = newvalue.Value();
-				data_typ2[3] = CONDOR_TT_TYPE_STRING;
-				
-				bndcnt2 = 4;				
-				
-				sql_str2.sprintf(
-								 "INSERT INTO ClusterAds_Vertical (scheddname, cluster_id, attr, val) VALUES (:1, :2, :3, :4)");
+				sql_str2.sprintf("INSERT INTO ClusterAds_Vertical (scheddname, cluster_id, attr, val) VALUES ('%s', '%s', '%s', '%s')", scheddname, cid, name, newvalue.Value());
 			}
 		}
 
@@ -1166,22 +1139,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 				newvalue = condor_ttdb_fillEscapeCharacters(value, dt);
 
 				{
-					data_arr1[0] = newvalue.Value();
-					data_typ1[0] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[1] = scheddname;
-					data_typ1[1] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[2] = cid;
-					data_typ1[2] = CONDOR_TT_TYPE_STRING;
-
-					data_arr1[3] = pid;
-					data_typ1[3] = CONDOR_TT_TYPE_STRING;
-
-					bndcnt1 = 4;
-
-					sql_str_del_in.sprintf(
-										   "UPDATE ProcAds_Horizontal SET %s = :1 WHERE scheddname = :2 and cluster_id = :3 and proc_id = :4", name);
+					sql_str_del_in.sprintf("UPDATE ProcAds_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = '%s' and proc_id = '%s'", name, newvalue.Value(), scheddname, cid, pid);
 				}
 			}
 		} else {
@@ -1192,25 +1150,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 			}
 
 			{
-				data_arr2[0] = scheddname;
-				data_typ2[0] = CONDOR_TT_TYPE_STRING;
-				
-				data_arr2[1] = cid;
-				data_typ2[1] = CONDOR_TT_TYPE_STRING;
-
-				data_arr2[2] = pid;
-				data_typ2[2] = CONDOR_TT_TYPE_STRING;
-
-				data_arr2[3] = name;
-				data_typ2[3] = CONDOR_TT_TYPE_STRING;
-
-				data_arr2[4] = newvalue.Value();
-				data_typ2[4] = CONDOR_TT_TYPE_STRING;
-				
-				bndcnt2 = 5;		
-				
-				sql_str2.sprintf(
-								 "INSERT INTO ProcAds_Vertical (scheddname, cluster_id, proc_id, attr, val) VALUES (:1, :2, :3, :4, :5)");	
+				sql_str2.sprintf("INSERT INTO ProcAds_Vertical (scheddname, cluster_id, proc_id, attr, val) VALUES ('%s', '%s', '%s', '%s', '%s')", scheddname, cid, pid, name, newvalue.Value());	
 			}
 		}
 		
