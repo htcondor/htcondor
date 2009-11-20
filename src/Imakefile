@@ -19,7 +19,7 @@
 #define CreddProgs
 #endif
 
-#if HAVE_EXT_CLASSADS && HAVE_EXT_POSTGRESQL
+#if HAVE_EXT_CLASSADS
 #define JobRouterProgs job_router
 #else
 #define JobRouterProgs
