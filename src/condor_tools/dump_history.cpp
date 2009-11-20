@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifdef HAVE_EXT_POSTGRESQL
 #include "condor_common.h"
+#ifdef HAVE_EXT_POSTGRESQL
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
