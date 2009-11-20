@@ -11,6 +11,63 @@
 #    - Checkout the nmi_glue/submit_info input file and parse it
 #    - Generate the appropriate NMI submit and fetch files
 #    - run nmi_submit
+#
+###########################################################################
+# Overview and syntax of the submit_info file:
+#
+# The branch-specific input file that defines platforms, prereqs and a
+# few other settings lives in the "nmi_glue" directory (which is
+# branched and merged) in a file called "submit_info".
+#
+# Each section enclosed in []'s (which I'll call a "block") defines a
+# group of platforms with some shared settings.  Each block must
+# define the platform(s) which the settings in that block apply to.
+# There's a special case for the "global" platform, and settings in
+# there are used to define the global NMI submit file attributes
+# ("prereqs").  Otherwise, all settings in platform-specific blocks
+# are used to define the platform specific NMI submit file attributes
+# (e.g. "prereqs_x86_rh_9").  
+#
+# Within each block, global settings (e.g. "prereqs") are shared
+# across all platforms listed in the block, while platform-specific
+# settings (e.g. "prereqs_x86_rh_9") are appended to the block-wide
+# setting (if any) only for that particular platform.
+#
+# This script parses all the blocks in the input file, and comes up
+# with the complete list of all platforms mentioned in the file, which
+# it uses to construct the "platforms" NMI submit attribute.  Then,
+# when writing out the necessary prereq-related attributes, the union
+# of all prereqs defined for that platform within any blocks are used.
+#
+# The point of this (somewhat complicated) setup is so that we can
+# express the prereqs for all our platforms with the least possible
+# duplication and most sharing of common traits.  
+#
+# Valid directives in the submit_info file:
+# "platforms"           defines the platforms in a given block
+# "prereqs"             shared prereqs across entire block
+# "test_append_prereqs" prereqs to append to the other defined prereqs
+#                       for use when submitting test runs
+# "testargs"            defines the value of remote_declare_args to
+#                       use when submitting test runs
+# "x_test_platforms"    other platforms that should be tested for this
+#                       platform (cross-platform testing)
+# (other than platforms, all of the above directives also support a
+# platform-specific version where you append "_<platform>" to the
+# attribute name, e.g. "prereqs_x86_rh_9", or "testargs_x86_rh_9")
+#
+###########################################################################
+
+###########################################################################
+#
+# Update 1/24/08: We need a way to have test only platforms
+# and prereqs. This is caused first by java needs while doing
+# cross testing. So we will add as additonal directives:
+# "testplatforms"		defines platforms only being tested
+# "testprereqs" 		shared prereqs across entire block
+# "testonly_append_prereqs" prereqs to append to the other defined prereqs
+#
+###########################################################################
 
 ######################################################################
 # Modules used by this script
@@ -23,7 +80,6 @@ use Getopt::Long;
 use File::Basename;
 use File::Spec;
 use IO::File;
-use FindBin;
 use lib $ENV{'NMI_LIB'} || "/nmi/lib";
 
 BEGIN { eval "use NmiConf;" }
@@ -41,7 +97,7 @@ use vars qw/ $opt_build $opt_test
     $opt_clear_externals_cache_weekly
     $opt_externals_only $opt_release_only $opt_version_buildid
 	$opt_skip_doc $opt_sha1
-    $opt_buildid $opt_test_src $opt_test_timeout $opt_test_class
+    $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     $opt_input_platform $opt_tests_at_once
     /;
 
@@ -83,7 +139,7 @@ my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
 my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
 
 # name of the submit_info file
-my $submit_info_basename = "SubmitInfo.pm";
+my $submit_info_basename = "submit_info";
 
 # Location of the submit_info file
 my $submit_info = "nmi_glue/$submit_info_basename";
@@ -189,9 +245,6 @@ my $condor_bin;
 # Actual work of the script
 ######################################################################
 
-FindBin::again();
-print "Location of invoked $FindBin::RealScript: " .
-	"$FindBin::RealBin/$FindBin::RealScript\n";
 
 my $tag;
 parseOptions();
@@ -222,17 +275,9 @@ foreach $tag (sort keys %tags ) {
         $tag = undef;
     }
 
-	if (1) {
-		# the new way with SubmitInfo.pm
-    	getSubmitInfoNew( $tag, $opt_src_tag );
-    	$cmdfile = createSubmitFilesNew( $tag, $opt_src_tag, $opt_other_tag );
-    	submitRun( $cmdfile, $tag );
-	} else {
-		# the old way with submit_info
-    	getSubmitInfo( $tag, $opt_src_tag );
-    	$cmdfile = createSubmitFiles( $tag, $opt_src_tag, $opt_other_tag );
-    	submitRun( $cmdfile, $tag );
-	}
+    getSubmitInfo( $tag, $opt_src_tag );
+    $cmdfile = createSubmitFiles( $tag, $opt_src_tag, $opt_other_tag );
+    submitRun( $cmdfile, $tag );
 }
 
 print "All steps completed successfully\n";
@@ -347,10 +392,6 @@ sub parseOptions
            'desc=s'        => \$opt_desc,
            'append=s'      => \$opt_append,
            'submit-xtests!' => \$opt_submit_xtests,
-		   # This next option is poorly used and should be removed/redone.
-		   # It is used in build/platform_post to pass stuff to the test
-		   # glue. It should really be renamed to testglue-configure-append
-		   # or something like that. I need to think about it more.
 		   'configure=s' => \$opt_configure,
 		   'src-tag=s' => \$opt_src_tag,
 		   'other-tag=s' => \$opt_other_tag,
@@ -373,7 +414,7 @@ sub parseOptions
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
            'test-timeout=i' => \$opt_test_timeout,
-           'test-class=s'   => \$opt_test_class,
+           'test-args=s'   => \$opt_test_args,
            'input-platform=s' => \$opt_input_platform,
 		   'tests-at-once=i' => \$opt_tests_at_once,
     );
@@ -635,7 +676,7 @@ Where [build-options] can be any of:
 Where [test-options] can be any of:
 --buildid=string   <Build RunId to test>
 --test-src=string  <Custom source tarball for building tests with>
---test-class=string <Arguments to select what tests to declare>
+--test-args=string <Arguments to select what tests to declare>
 --test-timeout=int <timeout in minutes for each test task (default is 20)>
 --input-platform=string <Fetch binaries from this platform from given buildid>
 --tests-at-once=count <run count tests concurrently>
@@ -674,178 +715,6 @@ sub getNightlyTags
     close(TAGS);
 }
 
-sub getSubmitInfoNew
-{
-    my( $tag, $src_tag ) = @_;
-    my $submit_info_path;
-	my $ret;
-	our $slaved_module = 1; # needed for loading the SubmitInfo.pm module 
-	my $p;
-
-    if( defined $opt_nmi_glue ) {
-        $submit_info_path = "$opt_nmi_glue/$submit_info_basename";
-    }
-    elsif( defined $src_workspace ) {
-        $submit_info_path = "$src_workspace/$submit_info";
-        # in this case $tag is worthless, so trying to
-        # check it out is hopeless.
-    }
-    else {
-		if(defined $src_tag) {
-			my $realtag = "origin\/" . $src_tag;
-        	checkoutSubmitInfo( $realtag ) ||
-	    		die "$tag does not contain $submit_info!\n";
-		} else {
-        	checkoutSubmitInfo( $tag ) ||
-	    		die "$tag does not contain $submit_info!\n";
-		}
-        $submit_info_path = $submit_info;
-    }
-
-    -f $submit_info_path || die "$submit_info_path doesn't exist!\n";
-
-	loadModule($submit_info_path, "SubmitInfo");
-
-	# Figure out what platforms upon which I need to build.
-	# I'm going to get it from the command line only, from the
-	# build and test set in SubmitInfo, or a combination of the two.
-	# If testing, then dig around in the DB with the runid for the platform
-	# to get which platforms the build was for.
-    if( %opt_platforms ) {
-        if( grep(/all/, sort keys %opt_platforms) ) {
-            # we already verified the command-line, so we know we've
-            # got opt_buildid and we're in test mode... 
-            if( ! defined $opt_buildid ) {
-                die "IMPOSSIBLE: saw --platforms=all without --builddid\n";
-            }
-            @platforms = ();
-            print "Saw --platforms=all, getting platforms from build runid: "
-                . "$opt_buildid\n";
-            @platforms = getPlatformsFromRunid( $opt_buildid );
-        } else {
-			# We're in build mode so pick through the supplied platforms and
-			# either add the build and build and test set specified, or the
-			# specific platform mentioned.
-
-			foreach $p (sort keys %opt_platforms) {
-				if (!exists($SubmitInfo::build_and_test_sets{$p})) {
-					push @platforms, $p;
-				} else {
-					push @platforms, @{$SubmitInfo::build_and_test_sets{$p}};
-				}
-			}
-		}
-    } else {
-		# we default to the 'official_ports' key in the build and test set
-        @platforms = @{$SubmitInfo::build_and_test_sets{'official_ports'}};
-    }
-
-	@platforms = sort(removeDuplicates(@platforms));
-    print "Found platforms: " . join( ', ', @platforms ) . "\n"; 
-
-}
-
-sub loadModule
-{
-	my ($module_path, $module_name) =  @_;
-
-	# I need this to happen with runtime information, not compile time, so this
-	# is why I'm messing about with @INC here.
-	print "About to load module: $module_path\n";
-	push @INC, dirname($module_path);
-	eval "use $module_name;";
-	die $@ if $@;
-	print "Loaded $module_name.pm!\n";
-}
-
-# takes an array, returns an array with duplicates elements removed.
-sub removeDuplicates
-{
-	my @array = @_;
-	my %hash;
-	my $k;
-	my @new;
-
-	foreach $k (@array) {
-		$hash{$k} = 1;
-	}
-	@new = keys %hash;
-
-	return @new;
-}
-
-sub createSubmitFilesNew
-{
-    my ( $tag, $srctag, $othertag ) = @_;
-    my $module;
-    my @fetch_files;
-    my $cmdfile = "cmdfile";
-
-	print "createSubmitFiles: $tag, $srctag, $othertag\n";
-
-    if( defined $tag ) {
-        $cmdfile .= "-$tag";
-	$cmdfile =~ s,/,,g;
-    } else {
-        $cmdfile .= "-workspace";
-    }
-
-    if( defined $tag ) {
-        $module = $tags{$tag};
-    }
-    
-    # Generate the cmdfile
-    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
-
-    writeCommonInfo( *CMDFILE, $tag, $module );
-
-    # define inputs
-    if( $runtype eq "build" ) {
-        @fetch_files = generateBuildFetchFiles( $tag, $module, $opt_src_tag, $opt_other_tag );
-    } else {
-        @fetch_files = generateTestFetchFiles( $tag, $module, $opt_src_tag, $opt_other_tag );
-    }
-    print CMDFILE "inputs = " . join(', ', @fetch_files) . "\n";
-
-
-    if( $runtype eq "build" ) {
-        print CMDFILE "run_type = build\n";
-        writeBuildPrereqsNew( *CMDFILE );
-        writeBuildGlueNew( *CMDFILE, $tag, $module );
-		writeBuildXTestSpecsNew( *CMDFILE );
-
-		# This disk requirement is intended to override the default
-		# requirement inserted by condor_submit.  This is a temporary
-		# workaround for the problem of interrupted jobs failing to
-		# rerun because the slot Disk advertised by a number of platforms
-		# is not actually big enough for Condor builds.  The automatic
-		# requirements fail because the job's DiskUsage gets updated
-		# in the first attempt to run the job and then prevent the job
-		# from matching in the second attempt.
-		print CMDFILE 
-		"append_requirements = Disk =!= UNDEFINED && TotalDisk >= 18000000\n";
-
-    } else {
-
-        print CMDFILE "run_type = test\n";
-	 	print CMDFILE "platform_job_timeout = 8h\n";
-		# allow tests on changing systems like unmanaged-x86_rhap_5.1"
-		print CMDFILE "++unmanaged = true \n";
-
-        writeTestPrereqsNew( *CMDFILE );
-		writeTestGlueNew( *CMDFILE );
-    }
-
-	# Sometimes builds and tests get backed up.  If so, we would 
-	# like to eventually run all the jobs, but we'd like to see results from
-	# newer ones first.  Setting the user job prio to the Qdate should
-	# help with this.
-
-	print CMDFILE "+priority = ", time, "\n";
-
-	close CMDFILE;
-    return $cmdfile;
-}
 
 sub getSubmitInfo
 {
@@ -1076,40 +945,6 @@ sub writeTestPrereqs
     }
 }
 
-sub writeTestPrereqsNew
-{
-    my $fh = shift;
-    my $platform;
-
-	print $fh <<EOF;
-###############################################################################
-# Test Pre-requisites
-###############################################################################
-
-# Global test prerequesites:
-#	This is hard coded to none, since each platform now
-#	provides their own specific prereqs.
-prereqs =
-
-EOF
-
-	# emit the test prereqs, if any, for each platform
-    foreach $platform ( @platforms ) {
-		print $fh "# Test Prereqs for Platform $platform\n";
-		if (defined($SubmitInfo::submit_info{$platform}{'test'}{'prereqs'})) {
-			
-            print $fh "prereqs_$platform = " .
-				join(', ', @{$SubmitInfo::submit_info{$platform}{'test'}{'prereqs'}}) .
-				"\n";
-		} else {
-			print $fh "# None.\n";
-		}
-
-		print $fh "\n";
-	}
-
-}
-
 
 sub writeBuildPrereqs
 {
@@ -1126,41 +961,6 @@ sub writeBuildPrereqs
     }
 }
 
-sub writeBuildPrereqsNew
-{
-    my $fh = shift;
-    my $platform;
-	my $bref;
-
-	print $fh <<EOF;
-###############################################################################
-# Build Pre-requisites
-###############################################################################
-
-# Global build prerequesites:
-#	This is hard coded to none, since each platform now
-#	provides their own specific prereqs.
-prereqs =
-
-EOF
-
-	# Now, for each platform, write out the prereqs associated with that
-	# platform.
-
-    foreach $platform ( @platforms ) {
-		print $fh "# Build prereq for: $platform\n";
-        if (defined($SubmitInfo::submit_info{$platform}{'build'}{'prereqs'})) 
-		{
-            print $fh "prereqs_$platform = " .
-				join (', ', @{$SubmitInfo::submit_info{$platform}{'build'}{'prereqs'}}) .
-				"\n";
-        } else {
-			print $fh "# None.\n";
-		}
-		print $fh "\n";
-    }
-}
-
 sub writeBuildXTestSpecs
 {
     my $fh = shift;
@@ -1172,39 +972,6 @@ sub writeBuildXTestSpecs
             my $code = "x_test_platforms_" . $key . " =";
             print $fh "$code $platform_x_test_platforms{$key}\n";
         }
-    }
-}
-
-sub writeBuildXTestSpecsNew
-{
-    my $fh = shift;
-	my $platform;
-
-	print $fh <<EOF;
-###############################################################################
-# Per Platform Cross Test Specifications
-###############################################################################
-
-EOF
-
-    # Drop the info on desired cross testing into environment
-    # via entries in the command file.
-    if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
-
-		foreach $platform (sort @platforms) {
-			print $fh "# Cross test platforms for $platform\n";
-			if (defined($SubmitInfo::submit_info{$platform}{'build'}{'xtests'}))
-			{
-				print $fh "x_test_platforms_$platform = " .
-					join(', ', @{$SubmitInfo::submit_info{$platform}{'build'}{'xtests'}}) .
-					"\n";
-
-			} else {
-				print $fh "# None.\n";
-			}
-
-			print $fh "\n";
-		}
     }
 }
 
@@ -1382,118 +1149,6 @@ sub writeBuildGlue
     }
 }
 
-sub writeBuildGlueNew
-{
-    my ( $fh, $tag, $module ) = @_;
-    my $post_args = '';
-    my $common_pre_args = '';
-    # tag and module may be null (if $src_workspace is defined)
-	my $platform;
-
-	print $fh <<EOF;
-###############################################################################
-# Build glue specification.
-###############################################################################
-
-EOF
-
-    # define the glue scripts we want
-    print $fh "pre_all = nmi_glue/build/pre_all\n";
-	my $pre_all_args = "";
-	if (defined($opt_skip_doc)) {
-		$pre_all_args = $pre_all_args . " --skip-doc";
-	}
-    if (defined($opt_version_buildid)) {
-      $pre_all_args = $pre_all_args . "--version-buildid=$opt_version_buildid";
-    }
-    print $fh "pre_all_args = $pre_all_args\n";
-    print $fh "remote_declare = nmi_glue/build/remote_declare\n";
-    print $fh "remote_declare_args =";
-    print $fh " --externals-only" if defined($opt_externals_only);
-    print $fh " --release-only" if defined($opt_release_only);
-    print $fh "\n";
-    print $fh "remote_pre = nmi_glue/build/remote_pre\n";
-    print $fh "remote_task = nmi_glue/build/remote_task\n";
-    print $fh "remote_post = nmi_glue/build/remote_post\n";
-    print $fh "platform_post = nmi_glue/build/platform_post\n";
-    print $fh "post_all = nmi_glue/build/post_all\n";
-
-    # Pass common arguments to <platform>_remote_pre script
-    if( defined($opt_use_externals_cache) ) {
-		$common_pre_args .= ' --use_externals_cache';
-    }
-    if( defined($opt_clear_externals_cache) ) {
-		$common_pre_args .= ' --clear_externals_cache';
-    }
-    if( defined($opt_clear_externals_cache_weekly) ) {
-		$common_pre_args .= ' --clear-externals-cache-weekly';
-    }
-	print $fh "\n";
-
-	print $fh <<EOF;
-###############################################################################
-# Arguments for remote_pre, per platform.
-###############################################################################
-EOF
-
-	# emit the remote_pre args per platform and mix in the common remote pre
-	# args if any.
-	for $platform (sort @platforms) {
-		my $href = $SubmitInfo::submit_info{$platform}{'build'}{'configure_args'};
-		my $str = "";
-		# Add in arguments remote_pre natively understands
-		if ($common_pre_args) {
-			$str = "$common_pre_args ";
-		}
-
-		# everything else will be configure arguments.
-		$str .= "-- ";
-		if (defined($href)) {
-			$str .= join(' ', SubmitInfo::args_to_array($href));
-		}
-
-		print $fh "# Remote Pre Arguments for Platform: $platform\n";
-		print $fh "${platform}_remote_pre_args = $str\n";
-		print $fh "\n";
-	}
-
-	print $fh <<EOF;
-###############################################################################
-# Arguments for every platform_post invocation
-###############################################################################
-EOF
-
-    if( defined($opt_without_tests) ) {
-        $post_args = '--without-tests';
-    } else {
-        # If a build is submitted using --submit-xtests, all we have
-        # to do is propagate it to platform_post via arguments...
-        if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
-            $post_args = "--submit-xtests";
-        } else {
-            $post_args = "--nosubmit-xtests";
-        }
-		# If tests are desired to be run concurrently pass it on
-		if( defined $opt_tests_at_once ) {
-			$post_args .= " --tests-at-once=$opt_tests_at_once";
-		}
-        # If a build is submitted using --git pass it on,
-        # platform_post checks out the test_glue from some VCS
-        if( defined($opt_git) ) {
-            $post_args .= " --git";
-        }       
-        if( defined($src_workspace) ) {
-            $post_args .= " --test-args=--workspace='$src_workspace'";
-        }
-    }
-    if( $post_args ) {
-        print $fh "platform_post_args = $post_args\n";
-    } else {
-        print $fh "# None\n";
-	}
-	print $fh "\n";
-}
-
 
 sub writeTestGlue
 {
@@ -1503,9 +1158,9 @@ sub writeTestGlue
     my $args;
 
 
-    if( defined $opt_test_class ) {
+    if( defined $opt_test_args ) {
         # command-line takes precedent
-        $args = $opt_test_class;
+        $args = $opt_test_args;
     } elsif( $#platforms == 0 && defined $platform_testargs{$platforms[0]} ) {
         # if we've only got 1 platform (the last element of @platforms
         # is at offset 0), we should use a platform-specific value for
@@ -1519,6 +1174,7 @@ sub writeTestGlue
         # if not specified at all, use a default test class
         $args = "quick";
     }
+
 
     # define the glue scripts we want for test jobs
     print $fh "pre_all = nmi_glue/test/pre_all\n";
@@ -1545,86 +1201,6 @@ sub writeTestGlue
     	print $fh "max_concurrent_subtasks = $opt_tests_at_once\n";
 	}
     print $fh "\n";
-}
-
-sub writeTestGlueNew
-{
-    my ( $fh ) = @_;
-    # select scope of testsuite run
-    my $args;
-	my $platform;
-
-	print $fh <<EOF;
-###############################################################################
-# Test glue specification.
-###############################################################################
-
-EOF
-
-    # define the glue scripts we want for test jobs
-    print $fh "pre_all = nmi_glue/test/pre_all\n";
-    if( defined $opt_test_src) {
-        print CMDFILE "pre_all_args = --src=$opt_test_src\n";
-    }
-    print $fh "platform_pre = nmi_glue/test/platform_pre\n";
-    print $fh "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
-    print $fh "remote_declare = nmi_glue/test/remote_declare\n";
-    print $fh "remote_pre = nmi_glue/test/remote_pre\n";
-    print $fh "remote_task = nmi_glue/test/remote_task\n";
-    print $fh "remote_task_timeout = $test_timeout\n";
-    print $fh "remote_post = nmi_glue/test/remote_post\n";
-    print $fh "platform_post = nmi_glue/test/platform_post\n";
-    print $fh "post_all = nmi_glue/test/post_all\n";
-	# turn on testing concurrency
-	if( defined $opt_tests_at_once) {
-    	print $fh "max_concurrent_subtasks = $opt_tests_at_once\n";
-	}
-	print $fh "\n";
-
-	print $fh <<EOF;
-###############################################################################
-# Test Class and Configure Args Specification, per platform.
-###############################################################################
-
-EOF
-	foreach $platform (sort @platforms) {
-		$args = "--test-class "; # clear out the value for each platform.
-
-		print $fh "# Testclass/Configure args for platform $platform\n";
-
-		# assemble the test classes from the platform or the command line.
-
-    	if( defined $opt_test_class ) {
-			# XXX can only specify a single test class on the command line
-			# need to fix GetOpt to handle multiple ones.
-			$args .= "$opt_test_class ";
-
-		} else {
-			# grab the test classes out of the SubmitInfo file;
-			if (defined($SubmitInfo::submit_info{$platform}{'test'}{'testclass'}))
-			{
-				$args .= join(',', @{$SubmitInfo::submit_info{$platform}{'test'}{'testclass'}}) . " ";
-
-			} else {
-				print $fh "# No test class for $platform. Default to quick.\n";
-   				$args .= "quick ";
-			}
-		}
-
-		$args .= "-- ";
-
-		# now, add in the configure args for the test suite.
-
-		if (defined($SubmitInfo::submit_info{$platform}{'test'}{'configure_args'}))
-		{
-			$args .= join(' ', 
-				SubmitInfo::args_to_array(
-					$SubmitInfo::submit_info{$platform}{'test'}{'configure_args'}));
-		}
-
-		# finally print out the mess which is all passed to remote_declare.
-		print $fh "${platform}_remote_declare_args = $args\n";
-	}
 }
 
 
@@ -1769,11 +1345,8 @@ sub generateBuildFetchFiles
         push( @fetch_files, "$ext_file" );
     }
 
-	# If the $srctag is available, then use it for where to get the nmi tools.
-	# In general, we'd like to match the branch of the glue to the branch we're
-	# building.
     my $nmi_tools_file = "nmi_tools.src";
-    makeFetchFileVCS( $nmi_tools_file, FALSE, SRC, $cvs_condor_nmi_submit, $srctag );
+    makeFetchFileVCS( $nmi_tools_file, FALSE, SRC, $cvs_condor_nmi_submit );
     push( @fetch_files, $nmi_tools_file );
 
     return @fetch_files;
@@ -1808,8 +1381,6 @@ sub makeFetchFileVCS
     # repository. $repo is used to target our checkout to either a
     # source repository or externals repository.
     my ( $file, $is_module, $repo, $module, $tag ) = @_;
-
-	print "makeFetchFileVCS: $file, $is_module, $repo, $module, $tag\n";
 
     open( FILE, ">$file" ) || die "Can't open $file for writing: $!\n";
     if (defined($opt_git)) {

@@ -18,10 +18,6 @@
 ##
 ##**************************************************************
 
-use Getopt::Long;
-use vars qw/ @opt_testclasses $opt_help /;
-
-parseOptions();
 
 ######################################################################
 # generate list of all tests to run
@@ -72,16 +68,13 @@ my $ShortWinTestList = "$SrcDir/condor_tests/Windows_shortlist";
 # Figure out what testclasses we should declare based on our
 # command-line arguments.  If none are given, we declare the testclass
 # "all", which is *all* the tests in the test suite.
-my @classlist = @opt_testclasses;
+my @classlist = @ARGV;
 if( ! @classlist ) {
     push( @classlist, "all" );
 }
 
-# The rest of argv, after the -- are any additional configure arguments.
-my $configure_args = join(' ', @ARGV);
-
 print "****************************************************\n";
-print "**** Preparing to declare tests for these classes:\n";
+print "**** Prepairing to declare tests for these classes:\n";
 foreach $class (@classlist) {
     print "****   $class\n";
 }
@@ -99,11 +92,11 @@ open( USERTASKFILE, ">$UserdirTaskFile" ) || die "Can't open $UserdirTaskFile: $
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
 {
 	chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
+	$opt_configure = $ENV{NMI_configure};
 	print "****************************************************\n";
 	print "**** running CONFIGURE ...\n"; 
 	print "****************************************************\n";
-	print "./configure $configure_args\n";
-	open( TESTCONFIG, "./configure $configure_args 2>&1 |") ||
+	open( TESTCONFIG, "./configure --without-externals --with-vmware=/prereq/VMware-server-1.0.7/bin $opt_configure 2>&1 |") ||
     	die "Can't open configure as a pipe: $!\n";
 	while ( <TESTCONFIG> ) {
     	print $_;
@@ -111,28 +104,24 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
 	close (TESTCONFIG);
 	$configstat = $?;
 	print "CONFIGURE returned a code of $configstat\n"; 
-
+	print "Lets try without gcc version check!\n";
 	if($configstat != 0) {
-		print "Let's try without gcc version check and disabling the full " .
-			"port!\n";
-
 		print "****************************************************\n";
-		print "**** running CONFIGURE (again)...\n"; 
+		print "**** running CONFIGURE ...\n"; 
 		print "****************************************************\n";
 		$extra_try_args =  " --disable-gcc-version_check --disable-full-port ";
-		print "./configure $extra_try_args $configure_args\n";
-		open( TESTCONFIG, "./configure $extra_try_args $configure_args 2>&1 |") ||
+		open( TESTCONFIG, "./configure --without-externals  $extra_try_args $opt_configure 2>&1 |") ||
     		die "Can't open configure as a pipe: $!\n";
 		while ( <TESTCONFIG> ) {
     		print $_;
 		}
-		close (TESTCONFIG);
-		$configstat = $?;
-		print "CONFIGURE returned a code of $configstat\n"; 
 	}
-
+	close (TESTCONFIG);
+	$configstat = $?;
+	print "CONFIGURE returned a code of $configstat\n"; 
 	($configstat == 0) || die "CONFIGURE failed, aborting testsuite run.\n";  
 }
+
 
 ######################################################################
 # generate compiler_list and each Makefile we'll need
@@ -313,46 +302,4 @@ sub doMake () {
 		die("\"make $target\" failed!\n");
     }
 }
-
-sub usage
-{
-print <<EOF;
---help          This help.
---test-class    Which test class to run, comma separated or multiple ocurrance.
-EOF
-	
-	exit 0;
-}
-
-# We use -- to delineate the boundary between args to this script and args to
-# the configure in this script.
-sub parseOptions
-{
-	my $rc;
-
-	print "Script called with ARGV: " . join(' ', @ARGV) . "\n";
-
-	$rc = GetOptions(
-		'test-class=s'		=> \@opt_testclasses,
-		'help'				=> \$opt_help,
-	);
-
-	if( !$rc ) {
-		usage();
-	}
-
-	if (defined($opt_help)) {
-		usage();
-	}
-
-	# allow comma separated list in addition to multiple occurrances.
-	@opt_testclasses = split(/,/, join(',', @opt_testclasses));
-
-	if (!defined(@opt_testclasses)) {
-		die "Please supply a test class!\n";
-	}
-}
-
-
-
 
