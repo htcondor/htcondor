@@ -41,7 +41,7 @@ testbin_target(libcondorapi.so,755)
 C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
 		New_classads_includes \
-		$(POSTGRESQL_INC) \
+		$(POSTGRESQL_CFLAGS) \
 		$(CONFIGURE_PCRE_CFLAGS) \
 		$(TT_INC) -I../condor_tt
 
