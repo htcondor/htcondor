@@ -262,7 +262,6 @@ TTManager::maintain()
 		time_t clock;
 		const char *scheddname;
 		MyString ts_expr;
-		int bndcnt = 0;
 		const char *data_arr[3];
 		QuillAttrDataType   data_typ[3];
 		
@@ -873,7 +872,6 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 
 	MyString ts_expr;
 
-	int bndcnt = 0;
 	const char *data_arr[7];
 	QuillAttrDataType   data_typ[7];
 
@@ -1110,20 +1108,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 		sql_stmt.sprintf("INSERT INTO Machines_Horizontal_History (machine_id, opsys, arch, state, activity, keyboardidle, consoleidle, loadavg, condorloadavg, totalloadavg, virtualmemory, memory, totalvirtualmemory, cpubusytime, cpuisbusy, currentrank , clockmin, clockday, lastreportedtime, enteredcurrentactivity, enteredcurrentstate, updatesequencenumber, updatestotal, updatessequenced, updateslost, globaljobid) SELECT machine_id, opsys, arch, state, activity, keyboardidle, consoleidle, loadavg, condorloadavg, totalloadavg, virtualmemory, memory, totalvirtualmemory, cpubusytime, cpuisbusy, currentrank, clockmin, clockday, lastreportedtime, enteredcurrentactivity, enteredcurrentstate, updatesequencenumber, updatestotal, updatessequenced, updateslost, globaljobid FROM Machines_Horizontal WHERE machine_id = '%s'", machine_id.Value());
 	}
 	
-	if (bndcnt > 0) {
-		if (DBObj->execCommandWithBind(sql_stmt.Value(),
-									   bndcnt,
-									   data_arr,
-									   data_typ) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Executing Statement --- Error\n");
-			dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
-			errorSqlStmt = sql_stmt;
-			return QUILL_FAILURE;
-		}
-		
-			// clean up bndcnt
-		bndcnt = 0;
-	} else {
+	{
 		if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Executing Statement --- Error\n");
 			dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
@@ -1635,7 +1620,6 @@ QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
 	MyString ts_expr;
 	MyString clob_comp_expr;
 
-	int bndcnt = 0;
 	const char *data_arr[7];
 	QuillAttrDataType   data_typ[7];
 
@@ -1788,19 +1772,7 @@ QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
 		sql_stmt.sprintf("INSERT INTO Daemons_Horizontal_History (MyType, Name, lastReportedTime, MonitorSelfTime, MonitorSelfCPUUsage, MonitorSelfImageSize, MonitorSelfResidentSetSize, MonitorSelfAge, UpdateSequenceNumber, UpdatesTotal, UpdatesSequenced, UpdatesLost, UpdatesHistory) SELECT MyType, Name, lastReportedTime, MonitorSelfTime, MonitorSelfCPUUsage, MonitorSelfImageSize, MonitorSelfResidentSetSize, MonitorSelfAge, UpdateSequenceNumber, UpdatesTotal, UpdatesSequenced, UpdatesLost, UpdatesHistory FROM Daemons_Horizontal WHERE MyType = 'Master' AND Name = '%s'", daemonName.Value());
 	}
 	
-	if (bndcnt > 0) {
-		if (DBObj->execCommandWithBind(sql_stmt.Value(),
-									   bndcnt,
-									   data_arr,
-									   data_typ) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Executing Statement --- Error\n");
-			dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
-			errorSqlStmt = sql_stmt;
-			return QUILL_FAILURE;
-		}
-
-		bndcnt = 0;
-	} else {
+	{
 		if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Executing Statement --- Error\n");
 			dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());

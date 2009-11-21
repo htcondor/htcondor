@@ -477,11 +477,9 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
   MyString name = "";
   MyString newvalue;
   char *tmp = NULL;
-  int bndcnt1 = 0;
   const char* data_arr1[7];
   QuillAttrDataType data_typ1[7];
 
-  int bndcnt2 = 0;
   const char* data_arr2[7];
   QuillAttrDataType data_typ2[7];
 
@@ -563,11 +561,6 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 		  flag3 = true;
 	  }
 
-		  // initialize variables for detecting and inserting long clob 
-		  // columns
-	  bndcnt1 = 0;
-	  bndcnt2 = 0;
-
 	  if(isHorizontalHistoryAttribute(name.Value(), attr_type)) {
 			  /* change the names for the following attributes
 				 because they conflict with keywords of some
@@ -634,7 +627,7 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 		  }
 	  }
 
-	  if (bndcnt1 == 0) {
+	  {
 		  if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
 			  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
 			  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
@@ -643,23 +636,11 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 
 			  return QUILL_FAILURE;
 		  }
-	  } else {
-		  if (DBObj->execCommandWithBind(sql_stmt.Value(), 
-										 bndcnt1,
-										 data_arr1,
-										 data_typ1) == QUILL_FAILURE) {
-			  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
-			  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
-		  
-			  errorSqlStmt = sql_stmt;
-
-			  return QUILL_FAILURE;
-		  }		  
 	  }
 
 	  if (!sql_stmt2.IsEmpty()) {
 		  
-		if (bndcnt2 == 0) {		  
+		{		  
 			if ((DBObj->execCommand(sql_stmt2.Value()) == QUILL_FAILURE)) {
 				dprintf(D_ALWAYS, "Executing Statement --- Error\n");
 				dprintf(D_ALWAYS, "sql = %s\n", sql_stmt2.Value());
@@ -668,18 +649,6 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 
 				return QUILL_FAILURE;			  
 			}
-		} else {
-			if ((DBObj->execCommandWithBind(sql_stmt2.Value(),
-											bndcnt2,
-											data_arr2,
-											data_typ2) == QUILL_FAILURE)) {
-				dprintf(D_ALWAYS, "Executing Statement --- Error\n");
-				dprintf(D_ALWAYS, "sql = %s\n", sql_stmt2.Value());
-		  
-				errorSqlStmt = sql_stmt2;
-
-				return QUILL_FAILURE;			  
-			}			
 		}
 	  }
 	  

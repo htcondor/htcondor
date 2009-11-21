@@ -888,7 +888,6 @@ JobQueueDBManager::processNewClassAd(char* key,
 	char  cid[512];
 	char  pid[512];
 	int   job_id_type;
-	int   bndcnt = 0;
 	const char *data_arr[4];
 	QuillAttrDataType  data_typ[4];
 
@@ -909,15 +908,7 @@ JobQueueDBManager::processNewClassAd(char* key,
 		break;
 	}
 
-	if (bndcnt > 0) {
-		if (DBObj->execCommandWithBind(sql_str.Value(),
-									   bndcnt,
-									   data_arr,
-									   data_typ) == QUILL_FAILURE) {
-			displayErrorMsg("New ClassAd Processing --- ERROR");
-			return QUILL_FAILURE;
-		}		
-	} else {
+	{
 		if (DBObj->execCommand(sql_str.Value()) == QUILL_FAILURE) {
 			displayErrorMsg("New ClassAd Processing --- ERROR");
 			return QUILL_FAILURE;
@@ -961,7 +952,6 @@ JobQueueDBManager::processDestroyClassAd(char* key)
 	char cid[100];
 	char pid[100];
 	int  job_id_type;
-	int   bndcnt = 0;
 	const char *data_arr[4];
 	QuillAttrDataType  data_typ[4];
 
@@ -988,23 +978,7 @@ JobQueueDBManager::processDestroyClassAd(char* key)
 		break;
 	}
   
-	if (bndcnt > 0 ) {
-		if (DBObj->execCommandWithBind(sql_str1.Value(),
-									   bndcnt,
-									   data_arr,
-									   data_typ) == QUILL_FAILURE) {
-			displayErrorMsg("Destroy ClassAd Processing --- ERROR");
-			return QUILL_FAILURE; // return a error code, 0
-		}
-
-		if (DBObj->execCommandWithBind(sql_str2.Value(),
-									   bndcnt,
-									   data_arr,
-									   data_typ) == QUILL_FAILURE) {
-			displayErrorMsg("Destroy ClassAd Processing --- ERROR");
-			return QUILL_FAILURE; // return a error code, 0
-		}
-	} else {
+	{
 		if (DBObj->execCommand(sql_str1.Value()) == QUILL_FAILURE) {
 			displayErrorMsg("Destroy ClassAd Processing --- ERROR");
 			return QUILL_FAILURE; // return a error code, 0
@@ -1045,11 +1019,9 @@ JobQueueDBManager::processSetAttribute(char* key,
 		//int		ret_st;
 	MyString newvalue;
 
-	int   bndcnt1 = 0;
 	const char *data_arr1[6];
 	QuillAttrDataType  data_typ1[6];
 
-	int   bndcnt2 = 0;
 	const char *data_arr2[6];
 	QuillAttrDataType  data_typ2[6];
 
@@ -1163,13 +1135,8 @@ JobQueueDBManager::processSetAttribute(char* key,
   
 	QuillErrCode ret_st;
 
-	if (bndcnt1 == 0) {
+	{
 		ret_st = DBObj->execCommand(sql_str_del_in.Value());
-	} else {
-		ret_st = DBObj->execCommandWithBind(sql_str_del_in.Value(),
-											bndcnt1,
-											data_arr1,
-											data_typ1);
 	}
 
 	if (ret_st == QUILL_FAILURE) {
@@ -1182,13 +1149,8 @@ JobQueueDBManager::processSetAttribute(char* key,
 
 	if (!sql_str2.IsEmpty()) {
 		
-		if (bndcnt2 == 0) {
+		{
 			ret_st = DBObj->execCommand(sql_str2.Value());
-		} else {
-			ret_st = DBObj->execCommandWithBind(sql_str2.Value(), 
-												bndcnt2,
-												data_arr2,
-												data_typ2);
 		}
 		
 		if (ret_st == QUILL_FAILURE) {
