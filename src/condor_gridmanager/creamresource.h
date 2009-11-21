@@ -84,8 +84,17 @@ class CreamResource : public BaseResource
 	List<CreamProxyDelegation> delegatedProxies;
 	static int gahpCallTimeout;
 	MyString delegation_uri;
-	GahpClient *gahp;
+	GahpClient *gahp; // For pings.
 	GahpClient *deleg_gahp;
+	GahpClient *status_gahp;
+
+protected:
+
+	int BatchStatusInterval() const;
+	BatchStatusResult StartBatchStatus();
+	BatchStatusResult FinishBatchStatus();
+	GahpClient * BatchGahp();
+
 };
 
 #endif

@@ -27,6 +27,9 @@
 #include "creamjob.h"
 #include "gridmanager.h"
 
+// Enable more expensive debugging and testing code
+#define DEBUG_CREAM 1
+
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
 
@@ -108,6 +111,7 @@ CreamResource::CreamResource( const char *resource_name,
 	delegationServiceUri = NULL;
 	gahp = NULL;
 	deleg_gahp = NULL;
+	status_gahp = NULL;
 
 	const char delegservice_name[] = "/ce-cream/services/gridsite-delegation";
 	const char *name_ptr;
@@ -168,6 +172,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 	if ( deleg_gahp != NULL ) {
 		delete deleg_gahp;
 	}
+	delete status_gahp;
 	if ( proxySubject ) {
 		free( proxySubject );
 	}
@@ -196,6 +201,14 @@ bool CreamResource::Init()
 	deleg_gahp->setMode( GahpClient::normal );
 	deleg_gahp->setTimeout( gahpCallTimeout );
 
+	status_gahp = new GahpClient( gahp_name.Value() );
+
+	StartBatchStatusTimer();
+
+	status_gahp->setNotificationTimerId( BatchPollTid() );
+	status_gahp->setMode( GahpClient::normal );
+	status_gahp->setTimeout( gahpCallTimeout );
+
 	initialized = true;
 
 	Reconfig();
@@ -208,6 +221,8 @@ void CreamResource::Reconfig()
 	BaseResource::Reconfig();
 
 	gahp->setTimeout( gahpCallTimeout );
+	deleg_gahp->setTimeout( gahpCallTimeout );
+	status_gahp->setTimeout( gahpCallTimeout );
 }
 
 const char *CreamResource::ResourceType()
@@ -415,7 +430,7 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 			if ( delegation_uri == "" ) {
 				struct timeval tv;
 				gettimeofday( &tv, NULL );
-				delegation_uri.sprintf( "%d.%d", tv.tv_sec, tv.tv_usec );
+				delegation_uri.sprintf( "%d.%d", (int)tv.tv_sec, (int)tv.tv_usec );
 			}
 
 			deleg_gahp->setDelegProxy( next_deleg->proxy );
@@ -557,3 +572,77 @@ void CreamResource::DoPing( time_t& ping_delay, bool& ping_complete,
 		ping_succeeded = true;
 	}
 }
+
+
+
+int CreamResource::BatchStatusInterval() const
+{
+	return CreamJob::probeInterval;
+}
+
+CreamResource::BatchStatusResult CreamResource::StartBatchStatus()
+{
+	ASSERT(status_gahp);
+
+	GahpClient::CreamJobStatusMap results;
+	int rc = status_gahp->cream_job_status_all(ResourceName(), results);
+	if(rc == GAHPCLIENT_COMMAND_PENDING) { 
+		return BSR_PENDING;
+	}
+	if(rc != 0) {
+		dprintf(D_ALWAYS, "Error attempting a Cream batch status query: %d\n", rc);
+		return BSR_ERROR;
+	}
+	for(GahpClient::CreamJobStatusMap::const_iterator it = results.begin();
+		it != results.end(); it++) {
+
+		const GahpClient::CreamJobStatus & status = it->second;
+
+		MyString full_job_id = CreamJob::getFullJobId(ResourceName(), status.job_id.Value());
+		BaseJob * bjob;
+		int rc2 = BaseJob::JobsByRemoteId.lookup( 
+			HashKey( full_job_id.Value()), bjob);
+		if(rc2 != 0) {
+			// Job not found. Probably okay; we might see jobs
+			// submitted via other means, or jobs we've abandoned.
+			dprintf(D_FULLDEBUG, "Job %s on remote host is unknown. Skipping.\n", status.job_id.Value());
+			continue;
+		}
+		CreamJob * job = dynamic_cast<CreamJob *>(bjob);
+		ASSERT(job);
+		job->NewCreamState(status.job_status.Value(), status.exit_code, 
+			status.failure_reason.Value());
+		dprintf(D_FULLDEBUG, "%d.%d %s new status: %s, %d, %s\n", 
+			job->procID.cluster, job->procID.proc,
+			status.job_id.Value(),
+			status.job_status.Value(), 
+			status.exit_code, 
+			status.failure_reason.Value());
+	}
+
+#if DEBUG_CREAM
+	{
+		CreamJob *job;
+		registeredJobs.Rewind();
+		while ( (job = dynamic_cast<CreamJob*>(registeredJobs.Next())) != NULL ) {
+			if(job->remoteJobId == NULL) { continue; }
+			if(results.find(job->remoteJobId) == results.end()) {
+				dprintf(D_FULLDEBUG, "%d.%d %s NOT updated\n",
+					job->procID.cluster, job->procID.proc,
+					job->remoteJobId);
+			}
+		}
+	}
+#endif
+	return BSR_DONE;
+}
+
+CreamResource::BatchStatusResult CreamResource::FinishBatchStatus()
+{
+	// As it happens, we can use the same code path
+	// for starting and finishing a batch status for
+	// CREAM jobs.  Indeed, doing so is simpler.
+	return StartBatchStatus();
+}
+
+GahpClient * CreamResource::BatchGahp() { return status_gahp; }

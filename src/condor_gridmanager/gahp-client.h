@@ -29,6 +29,7 @@
 #include "globus_utils.h"
 #include "proxymanager.h"
 #include "condor_arglist.h"
+#include <map>
 
 
 struct GahpProxyInfo
@@ -592,6 +593,15 @@ class GahpClient : public Service {
 
 		int cream_job_status(const char *service, const char *job_id, 
 							 char **job_status, int *exit_code, char **failure_reason);
+
+		struct CreamJobStatus {
+			MyString job_id;
+			MyString job_status;
+			int exit_code;
+			MyString failure_reason;
+		};
+		typedef std::map<MyString, CreamJobStatus> CreamJobStatusMap;
+		int cream_job_status_all(const char *service, CreamJobStatusMap & job_ids);
 		
 		int cream_proxy_renew(const char *delg_service, const char *delg_id);
 		

@@ -2142,7 +2142,7 @@ GahpClient::now_pending(const char *command,const char *buf,
 	server->read_argv(return_line);
 	if ( return_line.argc == 0 || return_line.argv[0][0] != 'S' ) {
 		// Badness !
-		EXCEPT("Bad %s Request",pending_command);
+		EXCEPT("Bad %s Request: %s",pending_command, return_line.argc?return_line.argv[0]:"Empty response");
 	}
 
 	pending_submitted_to_gahp = true;
@@ -2619,7 +2619,7 @@ GahpClient::gt4_gram_client_job_create(
 							 _jobmanager_type,
 							 _callback_contact,
 							 _rsl,
-							 termination_time);
+							 (int)termination_time);
 
 
 	free (_submit_id);
@@ -5848,6 +5848,92 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+int 
+GahpClient::cream_job_status_all(const char *service, 
+	GahpClient::CreamJobStatusMap & results)
+{
+	static const char* command = "CREAM_JOB_STATUS";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	MyString reqline;
+
+	char *esc1 = strdup( escapeGahpString(service) );
+	int job_number = 0; // "all"
+	bool x = reqline.sprintf("%s %d", esc1, job_number);
+	ASSERT( x == true );
+	free( esc1 );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,normal_proxy);
+	}
+
+		// If we made it here, command is pending.
+	const int FIRST_RESULT = 3; // Field 3 (0 indexed) is the first
+	                            // record result.
+	const int RECORD_FIELDS = 4; // How many fields in a record?
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		int num_results = 0;
+		if (result->argc > 2) {
+			num_results = atoi(result->argv[2]);
+			if( result->argc != FIRST_RESULT + num_results * RECORD_FIELDS) {
+				EXCEPT("Bad %s Result",command);
+			}
+		}
+		else if (result->argc != 2) {
+			EXCEPT("Bad %s Result",command);
+		}
+		
+		int rc;
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+		
+		if ( rc == 0 ) {
+			for(int i = 0; i < num_results; i++) {
+				CreamJobStatus status;
+				int offset = FIRST_RESULT + i * RECORD_FIELDS;
+				status.job_id = result->argv[offset + 0];
+				status.job_status = result->argv[offset + 1];
+				status.exit_code = atoi(result->argv[offset + 2]);
+				status.failure_reason = result->argv[offset + 3];
+
+				results[status.job_id] = status;
+			}
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
 int
 GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 {
@@ -5994,8 +6080,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(lease_id) );
-	int jobnum = 1;
-	bool x = reqline.sprintf("%s %s %d", esc1, esc2, lease_expiry);
+	bool x = reqline.sprintf("%s %s %ld", esc1, esc2, (long)lease_expiry);
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x == true );

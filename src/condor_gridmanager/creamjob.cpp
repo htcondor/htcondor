@@ -211,7 +211,6 @@ CreamJob::CreamJob( ClassAd *classad )
 	stageError = false;
 	remoteStateFaultString = 0;
 	gmState = GM_INIT;
-	lastProbeTime = 0;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentRemoteState = time(NULL);
@@ -228,6 +227,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	gridftpServer = NULL;
 	leaseId = NULL;
 	connectFailureCount = 0;
+	doActivePoll = false;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -625,7 +625,6 @@ void CreamJob::doEvaluateState()
 			if ( fault ) {
 				free( fault );
 			}
-			lastProbeTime = time(NULL);
 
 			if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
 				probeNow = true;
@@ -749,8 +748,8 @@ void CreamJob::doEvaluateState()
 
 			if ( server_lease != jmLifetime ) {
 				dprintf( D_ALWAYS, "(%d.%d) Server changed lease time from %d to %d\n",
-						 procID.cluster, procID.proc, jmLifetime,
-						 server_lease );
+						 procID.cluster, procID.proc, (int)jmLifetime,
+						 (int)server_lease );
 				jmLifetime = server_lease;
 			}
 
@@ -876,10 +875,6 @@ void CreamJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 						//gmState = GM_CANCEL;
 				} else {
-						// We don't want an old or zeroed lastProbeTime
-						// make us do a probe immediately after submitting
-						// the job, so set it to now
-					lastProbeTime = time(NULL);
 					gmState = GM_SUBMITTED;
 				}
 			}
@@ -919,20 +914,14 @@ void CreamJob::doEvaluateState()
 				}
 
 				if ( probeNow || remoteState == CREAM_JOB_STATE_UNSET ) {
-					lastProbeTime = 0;
+					doActivePoll = true;
 					probeNow = false;
 				}
 
-				if ( now >= lastProbeTime + probeInterval ) {
+				if(doActivePoll) {
 					gmState = GM_POLL_JOB_STATE;
 					break;
 				}
-
-				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
-				}				
-				daemonCore->Reset_Timer( evaluateStateTid, delay );
 				
 			}
 			} break;
@@ -967,6 +956,7 @@ void CreamJob::doEvaluateState()
 			}
 			} break;
 		case GM_POLL_JOB_STATE: {
+			doActivePoll = false;
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
@@ -1007,7 +997,6 @@ void CreamJob::doEvaluateState()
 				if ( fault ) {
 					free( fault );
 				}
-				lastProbeTime = time(NULL);
 
 				if ( remoteState != CREAM_JOB_STATE_DONE_OK && 
 					 remoteState != CREAM_JOB_STATE_DONE_FAILED && 
@@ -1202,6 +1191,23 @@ void CreamJob::doEvaluateState()
 				     && condorState != REMOVED 
 					 && wantResubmit == 0 
 					 && doResubmit == 0 ) {
+				if(remoteJobId == NULL) {
+					dprintf(D_FULLDEBUG,
+							"(%d.%d) Putting on HOLD: lacks remote job ID\n",
+							procID.cluster, procID.proc);
+				} else if(remoteState == CREAM_JOB_STATE_ABORTED) {
+					dprintf(D_FULLDEBUG,
+							"(%d.%d) Putting on HOLD: CREAM_JOB_STATE_ABORTED\n",
+							procID.cluster, procID.proc);
+				} else if(remoteState == CREAM_JOB_STATE_DONE_FAILED) {
+					dprintf(D_FULLDEBUG,
+							"(%d.%d) Putting on HOLD: CREAM_JOB_STATE_DONE_FAILED\n",
+							procID.cluster, procID.proc);
+				} else {
+					dprintf(D_FULLDEBUG,
+							"(%d.%d) Putting on HOLD: Unknown reason\n",
+							procID.cluster, procID.proc);
+				}
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1409,7 +1415,7 @@ void CreamJob::SetRemoteJobId( const char *job_id )
 
 	MyString full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "cream %s %s", resourceManagerString, job_id );
+		full_job_id = CreamJob::getFullJobId(resourceManagerString, job_id);
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
@@ -1809,4 +1815,13 @@ bool CreamJob::IsConnectionError( const char *msg )
 	} else {
 		return false;
 	}
+}
+
+MyString CreamJob::getFullJobId(const char * resourceManager, const char * job_id) 
+{
+	ASSERT(resourceManager);
+	ASSERT(job_id);
+	MyString full_job_id;
+	full_job_id.sprintf( "cream %s %s", resourceManager, job_id );
+	return full_job_id;
 }

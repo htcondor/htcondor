@@ -75,6 +75,8 @@ class CreamJob : public BaseJob
 
 	bool IsConnectionError( const char *msg );
 
+	static MyString getFullJobId(const char * resourceManager, const char * job_id);
+
 	// New variables
 	int gmState;
 	MyString remoteState;
@@ -117,6 +119,11 @@ class CreamJob : public BaseJob
 
 	char * delegatedCredentialURI;
 	char *leaseId;
+
+private:
+	// If true, we should poll for status ourselves, _once_
+	// instead of relying on CreamResource to handle it.
+	bool doActivePoll;
 };
 
 #endif
