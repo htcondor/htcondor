@@ -2264,7 +2264,7 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:UpdateCollectorWithTcp}
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
   If your site needs to use TCP connections to send ClassAd updates to
-  your collector (which it almost certainly does NOT), set to \Expr{True}
+  your collector, set to \Expr{True}
   to enable this feature.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
@@ -2272,10 +2272,7 @@ limit above the hard limit (on maximum open files) that it inherits.
   functionality is needed. 
   At this time, this setting only affects the main \Condor{collector}
   for the site, not any sites that a \Condor{schedd} might flock to. 
-  If enabled, also define
-  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE} at the central manager, so
-  that the collector will accept TCP connections for updates, and will
-  keep them open for reuse.  For large pools, it is also necessary to
+  For large pools, it is also necessary to
   ensure that the collector has a high enough file descriptor limit
   (e.g. using \Macro{MAX\_FILE\_DESCRIPTORS}.
   Defaults to \Expr{False}.
@@ -6305,22 +6302,6 @@ These macros affect the \Condor{collector}.
 
   \Note See the note for \Macro{COLLECTOR\_SOCKET\_BUFSIZE}.
 
-\label{param:CollectorSocketCacheSize} 
-\item[\Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] 
-  If your site wants to use TCP connections to send ClassAd updates to
-  the collector, you must use this setting to enable a cache of TCP
-  sockets (in addition to enabling
-  \Macro{UPDATE\_COLLECTOR\_WITH\_TCP}). 
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when you would need this
-  functionality. 
-  If you do not enable a socket cache, TCP updates will be refused by
-  the collector.
-  The default value for this setting is 0, with no cache enabled.   
-  If you lower this number, you must run \Condor{restart} and not just
-  \Condor{reconfig} for the change to take effect.
-
 \label{param:KeepPoolHistory}
 \item[\Macro{KEEP\_POOL\_HISTORY}]
   This boolean macro is used to decide if the collector will write
@@ -9737,16 +9718,8 @@ COLLECTOR_ARGS = -sock collector
 When the collector address is a shared port, TCP updates will be
  automatically used instead of UDP.  Under unix, this means that the
  \Condor{collector} daemon should be configured to have enough file
- descriptors.  Typical unix systems have a default of only 1024 file
- descriptors per process.  Each daemon that publishes itself to the
- collector requires a file descriptor.  When using CCB, each registered
- CCB connection also requires a file descriptor.  When the condor is
- started as root, the number of file descriptors can be adjusted as in
- the following configuration:
-
-\begin{verbatim}
-COLLECTOR.MAX_FILE_DESCRIPTORS = 16000
-\end{verbatim}
+ descriptors.  See section~\ref{sec:tcp-collector-update} for more
+ information.
 
 SOAP commands connot be sent over a shared port.  However, a daemon
  may be configured to open a fixed non-shared port in addition to

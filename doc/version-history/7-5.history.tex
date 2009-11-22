@@ -55,6 +55,15 @@ TCP connections.
   full restart.  It may take up to one \Condor{collector} update interval 
   for the changes to become visible.
 
+% gittrack #997
+\item Removed \MacroNI{COLLECTOR\_SOCKET\_CACHE\_SIZE}.  Configuration
+  of this parameter used to be mandatory to enable TCP updates to the
+  \Condor{collector}.  Now no special configuration of the
+  \Condor{collector} is required to allow TCP updates, but it is
+  important to ensure that there are sufficient file descriptors for
+  efficient operation.  See section~\ref{sec:tcp-collector-update} for
+  more information.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
