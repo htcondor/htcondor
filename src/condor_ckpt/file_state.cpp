@@ -475,12 +475,6 @@ CondorFile * CondorFileTable::create_url_chain( char const *url, char *method, c
 		return new CondorFileSpecial;
 	} else if( !strcmp( method, "remote" ) ) {
 		return new CondorFileRemote;
-
-#ifdef ENABLE_NEST
-	} else if( !strcmp( method, "nest" ) ) {
-		return new CondorFileNest;
-#endif
-
 	} else if( !strcmp( method, "buffer" ) ) {
 		f = create_url_chain( next );
 		if(f) return new CondorFileBuffer( f, buffer_size, buffer_block_size );
