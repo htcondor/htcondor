@@ -14,9 +14,7 @@ OBJ = tt_main.o ttmanager.o jobqueuecollection.o jobqueuedbmanager.o condor_ttdb
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 public_copy_target(common_createddl.sql,sql,common_createddl.sql,TEXT_MODE)
-public_copy_target(oracle_createddl.sql,sql,oracle_createddl.sql,TEXT_MODE)
 public_copy_target(pgsql_createddl.sql,sql,pgsql_createddl.sql,TEXT_MODE)
-public_copy_target(oracle_dropddl.sql,sql,oracle_dropddl.sql,TEXT_MODE)
 public_copy_target(pgsql_dropddl.sql,sql,pgsql_dropddl.sql,TEXT_MODE)
 
 html:

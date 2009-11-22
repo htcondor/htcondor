@@ -2305,8 +2305,6 @@ AC_ARG_ENABLE([quill],
     [enable Quill functionality (default: yes)]),
   [],
   [enable_quill=yes])
-AS_IF([test "x$enable_quill" = xyes],
-  [AC_DEFINE([WANT_QUILL], [1], [Define if enabling Quill])])
 
 AC_PATH_XTRA
 X_LDFLAGS="$X_LIBS"
@@ -3084,13 +3082,9 @@ if test x$_cv_ld_is_gnu = xyes; then
   CHECK_EXTERNAL([gcb], [1.5.6], [soft])
 fi
 
-AX_LIB_ORACLE_OCI("10.0.0")
-if test $HAVE_ORACLE_OCI = yes; then
-  AC_DEFINE(HAVE_ORACLE,1,[Do we have Oracle support])
-fi
-
 # Figure out which postgresql we need.
 
+if test "x$enable_quill" = xyes; then
 if test "$_cv_opsys" = "AIX" ; then
   CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
                  [use PostgreSQL (provides Quill and other support)],
@@ -3099,6 +3093,7 @@ else
   CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
                  [use PostgreSQL (provides Quill and other support)],
                  MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
+fi
 fi
 AC_MSG_CHECKING([postgresql])
 AC_MSG_RESULT([$_cv_ext_postgresql_version])

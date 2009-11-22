@@ -23,6 +23,8 @@
 #include "quill_enums.h"
 #include "condor_config.h"
 
+/* Some Oracle code preserved for posterity */
+
 /*
 The macroc below contains expressions for extracting unix time from a 
 timestamp value in Oracle.
@@ -224,9 +226,7 @@ createQueryString(query_types qtype, void **parameters) {
 
   tmp = param("QUILL_DB_TYPE");
   if (tmp) {
-	  if (strcasecmp(tmp, "ORACLE") == 0) {
-		  dt = T_ORACLE;
-	  } else if (strcasecmp(tmp, "PGSQL") == 0) {
+	  if (strcasecmp(tmp, "PGSQL") == 0) {
 		  dt = T_PGSQL;
 	  }
   free(tmp);
@@ -265,10 +265,6 @@ createQueryString(query_types qtype, void **parameters) {
 				"FETCH FORWARD 100 FROM HISTORY_ALL_HOR_CUR");
 			sprintf(close_cursor_str,
 				"CLOSE HISTORY_ALL_HOR_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str, 
-				  "SELECT %s FROM quillwriter.Jobs_Horizontal_History %s ORDER BY scheddname, cluster_id, proc_id", 
-				  quill_oracle_history_hor_select_list, schedd_predicate_full.Value());
 	  }
     
     break;
@@ -281,10 +277,6 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 5000 FROM HISTORY_ALL_VER_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_ALL_VER_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str, 
-				  "SELECT %s FROM quillwriter.Jobs_Vertical_History %s ORDER BY scheddname, cluster_id, proc_id", 
-				  quill_history_ver_select_list, schedd_predicate_full.Value());
 	  }
 
     break;
@@ -298,11 +290,6 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 100 FROM HISTORY_CLUSTER_HOR_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_CLUSTER_HOR_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str, 
-				  "SELECT %s FROM quillwriter.Jobs_Horizontal_History WHERE cluster_id=%d %s ORDER BY scheddname, cluster_id, proc_id",
-				  quill_oracle_history_hor_select_list, 
-				  *((int *)parameters[0]), schedd_predicate_part.Value() );
 	  }
 
     break;
@@ -316,12 +303,8 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 5000 FROM HISTORY_CLUSTER_VER_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_CLUSTER_VER_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str, 
-				  "SELECT %s FROM quillwriter.Jobs_Vertical_History WHERE cluster_id=%d %s ORDER BY scheddname, cluster_id, proc_id",
-				  quill_history_ver_select_list, 
-				  *((int *)parameters[0]), schedd_predicate_part.Value() );
 	  }
+
     break;
   case HISTORY_CLUSTER_PROC_HOR:
 	  if (dt == T_PGSQL) {
@@ -333,11 +316,6 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 100 FROM HISTORY_CLUSTER_PROC_HOR_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_CLUSTER_PROC_HOR_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str, 
-				  "SELECT %s FROM quillwriter.Jobs_Horizontal_History WHERE cluster_id=%d and proc_id=%d %s ORDER BY scheddname, cluster_id, proc_id",
-				  quill_oracle_history_hor_select_list, 
-				  *((int *)parameters[0]), *((int *)parameters[1]), schedd_predicate_part.Value() );
 	  }
 
     break;  
@@ -352,12 +330,6 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 5000 FROM HISTORY_CLUSTER_PROC_VER_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_CLUSTER_PROC_VER_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str, 
-				  "SELECT %s FROM quillwriter.Jobs_Vertical_History WHERE cluster_id=%d and proc_id=%d %s "
-				  "ORDER BY scheddname, cluster_id, proc_id",
-				  quill_history_ver_select_list, 
-				  *((int *)parameters[0]), *((int *)parameters[1]), schedd_predicate_part.Value() );
 	  }
 
     break;  
@@ -372,12 +344,6 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 100 FROM HISTORY_OWNER_HOR_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_OWNER_HOR_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str,
-				  "SELECT %s FROM quillwriter.Jobs_Horizontal_History WHERE owner='%s' %s "
-				  "ORDER BY scheddname, cluster_id,proc_id",
-				  quill_oracle_history_hor_select_list,
-				  ((char *)parameters[0]), schedd_predicate_part.Value() );
 	  }
 
 	  break;
@@ -393,13 +359,6 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 5000 FROM HISTORY_OWNER_VER_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_OWNER_VER_CUR");
-	  } else if (dt == T_ORACLE) {
-		  sprintf(query_str,
-				  "SELECT hv.cluster_id,hv.proc_id,hv.attr,hv.val FROM "
-				  "quillwriter.Jobs_Horizontal_History hh, quillwriter.Jobs_Vertical_History hv "
-				  "WHERE hh.cluster_id=hv.cluster_id AND hh.proc_id=hv.proc_id AND hh.owner='%s' %s "
-				  " ORDER BY scheddname, cluster_id,proc_id",
-				  ((char *)parameters[0]), schedd_predicate_hh.Value() );
 	  }
 
 	  break;
@@ -416,14 +375,7 @@ createQueryString(query_types qtype, void **parameters) {
 			"FETCH FORWARD 100 FROM HISTORY_COMPLETEDSINCE_HOR_CUR");
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_COMPLETEDSINCE_HOR_CUR");
-	  } else if (dt == T_ORACLE)
-		  sprintf(query_str,
-				  "SELECT %s FROM quillwriter.Jobs_Horizontal_History "
-				  "WHERE completiondate > "
-				  "to_timestamp_tz('%s', 'MM/DD/YYYY HH24:MI:SS TZD') %s "
-				  "ORDER BY scheddname, cluster_id,proc_id",
-				  quill_oracle_history_hor_select_list,
-				  ((char *)parameters[0]), schedd_predicate_part.Value() );
+	  }
 		  
 	  break;
   case HISTORY_COMPLETEDSINCE_VER:
@@ -442,21 +394,11 @@ createQueryString(query_types qtype, void **parameters) {
 		sprintf(close_cursor_str,
 			"CLOSE HISTORY_COMPLETEDSINCE_VER_CUR");
 	}
-	  else if (dt == T_ORACLE)
-		  sprintf(query_str,
-				  "SELECT hv.cluster_id,hv.proc_id,hv.attr,hv.val FROM "
-				  "quillwriter.Jobs_Horizontal_History hh, quillwriter.Jobs_Vertical_History hv "
-				  "WHERE hh.cluster_id=hv.cluster_id AND hh.proc_id=hv.proc_id AND "
-				  "completiondate > "
-				  "to_timestamp_tz('%s', 'MM/DD/YYYY HH24:MI:SS TZD') %s "
-				  "ORDER BY hh.scheddname, hh.cluster_id,hh.proc_id",
-				  ((char *)parameters[0]), schedd_predicate_hh.Value() );
+
 	  break;
   case QUEUE_AVG_TIME:
 	  if (dt == T_PGSQL) 
 		  sprintf(query_str, quill_avg_time_template_pgsql);
-	  else if (dt == T_ORACLE) 
-		  sprintf(query_str, quill_avg_time_template_oracle);
 	  break;
 	  
   default:

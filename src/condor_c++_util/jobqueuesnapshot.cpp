@@ -27,11 +27,6 @@
 #include "condor_config.h"
 #include "quill_enums.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
-
 //! constructor
 JobQueueSnapshot::JobQueueSnapshot(const char* dbcon_str)
 {
@@ -40,21 +35,12 @@ JobQueueSnapshot::JobQueueSnapshot(const char* dbcon_str)
 	dt = T_PGSQL; // assume PGSQL by default
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
-		if (strcasecmp(tmp, "ORACLE") == 0) {
-			dt = T_ORACLE;
-		} else if (strcasecmp(tmp, "PGSQL") == 0) {
+		if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
 	}
 
 	switch (dt) {				
-	case T_ORACLE:
-#if HAVE_ORACLE
-		jqDB = new ORACLEDatabase(dbcon_str);
-#else
-		EXCEPT("ORACLE database requested, but this version of Condor does not have Oracle support compiled in!\n");
-#endif
-		break;
 	case T_PGSQL:
 		jqDB = new PGSQLDatabase(dbcon_str);
 		break;
@@ -118,12 +104,7 @@ JobQueueSnapshot::startIterateAllClassAds(int *clusterarray,
 		return QUILL_FAILURE;
 	}
 
-	if (dt == T_ORACLE) {
-		if(jqDB->execCommand("SET TRANSACTION READ ONLY") == QUILL_FAILURE) {
-			printf("Error while setting xact to be read only\n");
-			return QUILL_FAILURE;
-		}		
-	} else {
+	{
 		if(jqDB->execCommand("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE") 
 		   == QUILL_FAILURE) {
 			printf("Error while setting xact isolation level to serializable\n");

@@ -66,11 +66,6 @@ public:
 								   int &num_result);
 	QuillErrCode         execQuery(const char* sql,
 								   int &num_result);
-	QuillErrCode		 execQueryWithBind(const char* sql,
-										   int bnd_cnt,
-										   const char **val_arr,
-										   QuillAttrDataType *typ_arr,
-										   int &num_result);
 
 		// result set accessors 
 	const char*	         getValue(int row, int col);

@@ -38,9 +38,9 @@ static int stashed_now = 0;
 void printStartdNormal 	(ClassAd *);
 void printScheddNormal 	(ClassAd *);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 void printQuillNormal 	(ClassAd *);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
@@ -104,11 +104,11 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				printState( ad );
 				break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 			  case PP_QUILL_NORMAL:
 				printQuillNormal (ad);
 				break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 			  case PP_SCHEDD_NORMAL:
 				printScheddNormal (ad);
@@ -480,7 +480,7 @@ printCOD (ClassAd *ad)
 	}
 }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 void
 printQuillNormal (ClassAd *ad) {
 	static bool first = true;
@@ -509,7 +509,7 @@ printQuillNormal (ClassAd *ad) {
 		alpm.display (stdout, ad);
 	}
 }
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 void
 printScheddNormal (ClassAd *ad)

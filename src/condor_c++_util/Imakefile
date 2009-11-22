@@ -41,7 +41,7 @@ testbin_target(libcondorapi.so,755)
 C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
 		New_classads_includes \
-		$(QUILL_INC) \
+		$(POSTGRESQL_CFLAGS) \
 		$(CONFIGURE_PCRE_CFLAGS) \
 		$(TT_INC) -I../condor_tt
 
@@ -94,19 +94,13 @@ SETEGID_OBJ = ../condor_util_lib/setegid.o
 SETEGID_OBJ = 
 #endif
 
-#ifdef WANT_QUILL
-#if HAVE_ORACLE
-ORACLE_OBJS = oracledatabase.o
-#else
-ORACLE_OBJS = 
-#endif
-
-QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o $(ORACLE_OBJS) dbms_utils.o
+#ifdef HAVE_EXT_POSTGRESQL
+QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o dbms_utils.o
 #else
 QUILL_OBJS =
 #endif
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 TT_OBJS = pgsqldatabase.o file_sql.o file_transfer_db.o 
 #else
 TT_OBJS = file_sql.o

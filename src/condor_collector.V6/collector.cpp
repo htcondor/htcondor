@@ -143,10 +143,10 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	daemonCore->Register_Command(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
@@ -187,10 +187,10 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_STARTD_PERM);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	daemonCore->Register_Command(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
@@ -238,10 +238,10 @@ void CollectorDaemon::Init()
 
 	// install command handlers for updates
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	daemonCore->Register_Command(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
@@ -440,12 +440,12 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = SCHEDD_AD;
 		break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case QUERY_QUILL_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_QUILL_ADS\n");
 		whichAds = QUILL_AD;
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		
 	  case QUERY_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
@@ -560,12 +560,12 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 		whichAds = SCHEDD_AD;
 		break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case INVALIDATE_QUILL_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_QUILL_ADS\n");
 		whichAds = QUILL_AD;
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		
 	  case INVALIDATE_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_SUBMITTOR_ADS\n");
@@ -918,9 +918,9 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	}
 
 	switch( cmd ) {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	case UPDATE_QUILL_AD:
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 	case UPDATE_STARTD_AD:
 	case UPDATE_SCHEDD_AD:
 	case UPDATE_MASTER_AD:
@@ -942,9 +942,9 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
     case UPDATE_STARTD_AD_WITH_ACK:
         return receive_update_expect_ack ( NULL, cmd, sock );
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	case INVALIDATE_QUILL_ADS:
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 	case INVALIDATE_STARTD_ADS:
 	case INVALIDATE_SCHEDD_ADS:
 	case INVALIDATE_MASTER_ADS:

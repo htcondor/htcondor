@@ -441,7 +441,7 @@ Scheduler::Scheduler() :
 	startjobsid = -1;
 	periodicid = -1;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	quill_enabled = FALSE;
 	quill_is_remotely_queryable = 0; //false
 	quill_name = NULL;
@@ -475,7 +475,7 @@ Scheduler::Scheduler() :
 	CronMgr = NULL;
 
 	jobThrottleNextJobDelay = 0;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	prevLHF = 0;
 #endif
 }
@@ -911,7 +911,7 @@ Scheduler::count_jobs()
 	daemonCore->UpdateLocalAd(m_ad);
 
 		// log classad into sql log so that it can be updated to DB
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
 #endif
 
@@ -10452,7 +10452,7 @@ Scheduler::Init()
 
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 	/* See if QUILL is configured for this schedd */
 	if (param_boolean("QUILL_ENABLED", false) == false) {
@@ -10561,7 +10561,7 @@ Scheduler::Init()
 	// fixed in count_job() -Erik 12/18/2006
 	m_ad->Assign(ATTR_NUM_USERS, 0);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
 		m_ad->Assign( ATTR_QUILL_ENABLED, true ); 

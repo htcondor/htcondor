@@ -99,9 +99,9 @@ displayTotals (FILE *file, int keyLength)
 		case PP_STARTD_STATE:
     	case PP_STARTD_COD:
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
     	case PP_QUILL_NORMAL:
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
     	case PP_SCHEDD_NORMAL:
     	case PP_SCHEDD_SUBMITTORS:   
@@ -672,9 +672,9 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case PP_QUILL_NORMAL:		ct = new QuillNormalTotal; break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		case PP_SCHEDD_SUBMITTORS:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
@@ -722,9 +722,9 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 
 		//here we might want a separate case for QUILL_NORMAL 
 		//but we keep it here for now
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case PP_QUILL_NORMAL:
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		case PP_SCHEDD_NORMAL:
 			key = " ";
