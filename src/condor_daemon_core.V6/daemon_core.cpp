@@ -3388,6 +3388,13 @@ void DaemonCore::Driver()
 	}	// end of infinite for loop
 }
 
+bool
+DaemonCore::SocketIsRegistered( Stream *sock )
+{
+	int i = GetRegisteredSocketIndex( sock );
+	return i != -1;
+}
+
 int
 DaemonCore::GetRegisteredSocketIndex( Stream *sock )
 {
@@ -4816,7 +4823,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// get the handler function
 		reqFound = CommandNumToTableIndex(req,&index);
 
-		if (reqFound) {
+			// There are two cases where we get here:
+			//  1. receiving unauthenticated command
+			//  2. receiving command on previously authenticated socket
+
+		if (reqFound && !((Sock *)stream)->getFullyQualifiedUser()) {
 			// need to check our security policy to see if this is allowed.
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", req, comTable[index].command_descrip);

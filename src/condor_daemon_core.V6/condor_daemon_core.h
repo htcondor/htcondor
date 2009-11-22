@@ -650,6 +650,9 @@ class DaemonCore : public Service
     */
     int Cancel_Socket ( Stream * insock );
 
+		// Returns true if the given socket is already registered.
+	bool SocketIsRegistered( Stream *sock );
+
 		// Call the registered socket handler for this socket
 		// sock - previously registered socket
 		// default_to_HandleCommand - true if HandleCommand() should be called
