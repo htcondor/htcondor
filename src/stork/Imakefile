@@ -15,11 +15,6 @@
 #define WANT_STORK_SRM_CASTOR	YES
 #define WANT_STORK_SRM_DCACHE	YES
 
-/* Do not release NeST support publicly until NeST migrates from GPL to CPL
- * license.
- */
-#define WANT_STORK_NEST			NO
-
 /* Note the IBP data transfer protocol still has several issues.  First,
  * a this protocol relies upon a private copy of the IBP API.  Instead a new
  * Condor IBP external should be created.  Second, this protocol builds, but
@@ -227,59 +222,6 @@ stork_contrib_module_target($(SRB_COPY),$(SRB_OBJS),$(SRB_LIBS))
 stork_contrib_module_link_target($(SRB_COPY),$(MODULE)transfer.file-srb)
 stork_contrib_module_link_target($(SRB_COPY),$(MODULE)transfer.srb-file)
 #endif /* WANT_STORK_SRB */
-
-#if WANT_STORK_NEST
-NEST_ROOT  = /unsup/nest 
-NEST_LIB   = $(NEST_ROOT)/lib
-NEST_INC = -I$(NEST_ROOT)/include $(STORK_NEST_DEFS) 
-XCOMM FIXME: Per Nick this list of defines is still necessary when using the
-XCOMM NeST API.  Someday, this constraint should be eliminated.
-NEST_DEFS =	\
-	-D_REENTRANT \
-	-DDEBUG \
-	-DHAS_LIBM \
-	-DHAS_LIBNSL \
-	-DHAS_LIBREADLINE \
-	-DHAS_LIBTERMCAP \
-	-DHAS_LIBNCURSES \
-	-DHAS_SYS_QUOTA_H \
-	-DHAS_FSTAB_H \
-	-DHAS_SYS_STAT_H \
-	-DHAS_SYS_STATVFS_H \
-	-DHAS_SYS_STATFS_H \
-	-DHAS_NANOSLEEP \
-	-DHAS_SCM_RIGHTS \
-	-march=i486
-XCOMM FIXME:  Still need to add a relative include path to find classad header
-XCOMM files.  When NeST can use the condor_classad.h on the trunk, the
-XCOMM following line can be deleted.
-/*
-NEST_INC += -I../condor_classad.V6
-*/
-NEST_CFLAGS = $(NEST_DEFS) $(NEST_INC)
-NEST_LIBS = \
-	$(NEST_LIB)/libnest-client.a \
-	$(STD_LIBS)
-NEST_COPY = $(MODULE)transfer.nest
-dap_transfer_nest.o: dap_transfer_nest.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) $(NEST_CFLAGS) -c $<
-NEST_COPY_OBJS = \
-	dap_transfer_nest.o \
-	$(STORK_UTIL)
-stork_contrib_module_target($(NEST_COPY),$(NEST_COPY_OBJS),$(NEST_LIBS))
-NEST_RESERVE = reserve.nest
-dap_reserve_nest.o: dap_reserve_nest.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) $(NEST_CFLAGS) -c $<
-NEST_RESERVE_OBJS = \
-	dap_reserve_nest.o 
-stork_contrib_module_target($(NEST_RESERVE),$(NEST_RESERVE_OBJS),$(NEST_LIBS))
-NEST_RELEASE = release.nest
-dap_release_nest.o: dap_release_nest.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) $(NEST_CFLAGS) -c $<
-NEST_RELEASE_OBJS = \
-	dap_release_nest.o
-stork_contrib_module_target($(NEST_RELEASE),$(NEST_RELEASE_OBJS),$(NEST_LIBS))
-#endif /* WANT_STORK_NEST */
 
 #if WANT_STORK_IBP
 IBP_COPY = $(MODULE)transfer.ibp
