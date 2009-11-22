@@ -2292,14 +2292,6 @@ AC_ARG_ENABLE([malloc-debug],
 AS_IF([test "x$enable_malloc_debug" = xyes],
   [CPPFLAGS="$CPPFLAGS -DMALLOC_DEBUG"])
 
-AC_ARG_ENABLE([nest],
-  AC_HELP_STRING([--enable-nest],
-    [enable NeST functionality (default: no)]),
-  [],
-  [enable_nest=no])
-AS_IF([test "x$enable_nest" = xyes],
-  [AC_DEFINE([WANT_NEST], [1], [Define if enabling NeST])])
-
 AC_ARG_ENABLE([quill],
   AC_HELP_STRING([--enable-quill],
     [enable Quill functionality (default: yes)]),
