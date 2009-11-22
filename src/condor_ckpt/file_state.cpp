@@ -38,7 +38,6 @@
 #include "condor_file_buffer.h"
 #include "condor_file_compress.h"
 #include "condor_file_append.h"
-#include "condor_file_nest.h"
 #include "condor_error.h"
 
 #include <stdarg.h>
