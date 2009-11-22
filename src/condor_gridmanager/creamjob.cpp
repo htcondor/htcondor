@@ -587,10 +587,6 @@ void CreamJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
-				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
-					connect_failure = true;
-					break;
-				}
 				// unhandled error
 				LOG_CREAM_ERROR( "cream_job_status()", rc );
 				gahpErrorString = gahp->getErrorString();
