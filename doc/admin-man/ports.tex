@@ -174,7 +174,7 @@ if a dynamically assigned port is desired for the
 \Condor{collector} daemon.
 
 On platforms that support it, all of the Condor daemons on a machine
-except for \Condor{collector} may be configured to share a single
+may be configured to share a single
 port.  See section~\ref{sec:Config-shared-port} for more information.
 
 The configuration variables
@@ -229,7 +229,7 @@ and the number of jobs that may execute at one time.
 Here we discuss how many ports are used by each
 participant in the system.  This assumes that \Condor{shared\_port}
 is not being used.  If it \emph{is} being used, then all daemons
-except for \Condor{collector} can share a single incoming port.
+can share a single incoming port.
 
 The central manager of the pool needs
 \Expr{5 + \MacroNI{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}}

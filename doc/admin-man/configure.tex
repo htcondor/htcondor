@@ -9660,10 +9660,7 @@ machine that can read from the pool's \Condor{collector} daemon.
  \Condor{master} daemon's \MacroNI{DAEMON\_LIST} on platforms that
  support it (currently all unix systems except for HPUX).  It is
  responsible for creating a TCP listener port shared by all of the
- Condor daemons for which \Macro{USE\_SHARED\_PORT} is true (except
- for the \Condor{collector}, which always uses its own command port,
- and the \Condor{schedd}, which creates a command port for local use
- by the shadows).
+ Condor daemons for which \Macro{USE\_SHARED\_PORT} is true.
 
 The main purpose of \Condor{shared\_port} is to reduce the
  number of ports that must be opened when condor needs to be
@@ -9715,6 +9712,41 @@ When \Condor{master} is configured to use the shared port
  daemons except for the master will also leave \Condor{shared\_port}
  running.  This prevents \Condor{master} from getting into a state
  where it can no longer receive commands.
+
+The \Condor{collector} daemon typically has its own port (9618 by default).
+However, it can be configured to use a shared port.  Since the address of
+the collector must be set in the coniguration file, it is necessary to
+specify the shared port socket name of the collector so that connections
+to the shared port that are intended for the collector can be forwarded
+to it.  If the shared port number is 11000, a collector address using this
+shared port could be configured as follows:
+
+\begin{verbatim}
+COLLECTOR_HOST = collector.host.name:11000?sock=collector
+\end{verbatim}
+
+This assumes that the socket name used by \Condor{collector} is `collector'.
+The collector that runs on `collector.host.name' will automatically choose
+this socket name.  If multiple collectors are being started on the same
+machine, the socket name can be explicitly set in the daemon arguments:
+
+\begin{verbatim}
+COLLECTOR_ARGS = -sock collector
+\end{verbatim}
+
+When the collector address is a shared port, TCP updates will be
+ automatically used instead of UDP.  Under unix, this means that the
+ \Condor{collector} daemon should be configured to have enough file
+ descriptors.  Typical unix systems have a default of only 1024 file
+ descriptors per process.  Each daemon that publishes itself to the
+ collector requires a file descriptor.  When using CCB, each registered
+ CCB connection also requires a file descriptor.  When the condor is
+ started as root, the number of file descriptors can be adjusted as in
+ the following configuration:
+
+\begin{verbatim}
+COLLECTOR.MAX_FILE_DESCRIPTORS = 16000
+\end{verbatim}
 
 SOAP commands connot be sent over a shared port.  However, a daemon
  may be configured to open a fixed non-shared port in addition to
