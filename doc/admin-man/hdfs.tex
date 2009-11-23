@@ -1,4 +1,19 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Condor-HDFS}Using Condor with the Hadoop File System}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
+\index{Hadoop Distributed File System (HDFS)!integrated with Condor}
+
+The Hadoop Distributed File System (HDFS) enables the efficient distribution
+of potentially very large sets of data across Data-nodes.
+The mapping of data locations is maintained by an HDFS Name-node.
+The invocation, configuration, and use of an HDFS is integrated with Condor
+\index{Hadoop Distributed File System (HDFS)!condor\_hdfs daemon}
+through the use of the \Condor{hdfs} daemon.
+
+The \Condor{hdfs} daemon uses the Condor configuration to generate
+an HDFS XML configuration and invoke the file system. 
+The file system is both deployed and maintained by Condor, 
+reducing the number of separately administered systems by one.
+
+\MoreTodo
+

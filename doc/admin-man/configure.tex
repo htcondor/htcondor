@@ -7559,19 +7559,28 @@ These macros affect the \Condor{hdfs} daemon.
 
 \label{param:HDFSNamenode}
 \item[\Macro{HDFS\_NAMENODE}]
-  \emph{Definition not written yet.}
+  The host and port number for the HDFS Name-node.
+  There is no default value for this required variable.
 
 \label{param:HDFSNamenodeWeb}
 \item[\Macro{HDFS\_NAMENODE\_WEB}]
-  \emph{Definition not written yet.}
+  The IP address and port number for the HDFS embedded web server within the
+  Name-node.
+  There is no default value for this required variable.
 
 \label{param:HDFSNamenodeDir}
 \item[\Macro{HDFS\_NAMENODE\_DIR}]
-  \emph{Definition not written yet.}
+  The path to the directory on a local file system where the Name-node will
+  store its meta-data for file blocks.
+  There is no default value for this variable; it is required to be defined
+  for the Name-node machine.
 
 \label{param:HDFSDatanodeDir}
 \item[\Macro{HDFS\_DATANODE\_DIR}]
-  \emph{Definition not written yet.}
+  The path to the directory on a local file system where the Data-node will
+  store file blocks.
+  There is no default value for this variable; it is required to be defined
+  for a Data-node machine.
 
 \label{param:HDFSDatanodeAddress}
 \item[\Macro{HDFS\_DATANODE\_ADDRESS}]
@@ -7596,14 +7605,17 @@ These macros affect the \Condor{hdfs} daemon.
 \label{param:HDFSNamenodeClass}
 \item[\Macro{HDFS\_NAMENODE\_CLASS}]
   \emph{Definition not written yet.}
+  The default value is \verb@org.apache.hadoop.hdfs.server.namenode.NameNode@.
 
 \label{param:HDFSDatanodeClass}
 \item[\Macro{HDFS\_DATANODE\_CLASS}]
   \emph{Definition not written yet.}
+  The default value is \verb@org.apache.hadoop.hdfs.server.datanode.DataNode@.
 
 \label{param:HDFSSiteFile}
 \item[\Macro{HDFS\_SITE\_FILE}]
   \emph{Definition not written yet.}
+  The default value is \File{hdfs-site.xml}.
 
 \end{description}
 
