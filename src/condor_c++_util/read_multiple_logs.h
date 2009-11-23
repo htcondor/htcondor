@@ -102,14 +102,17 @@ public:
 	static bool InitializeFile(const char *filename, bool truncate,
 				CondorError &errstack);
 
-		/** Determines whether the given log file is on NFS.
+		/** Determines whether the given log file is on NFS and that
+			is an error (if the log file is on NFS, but nfsIsError is
+			false, this method prints a warning (at the FULLDEBUG level)
+			but returns false).
 			@param The log file name
 			@param Whether having a log file on NFS is a fatal error (as
 				opposed to a warning)
 			@return true iff at least the log file is on NFS and nfsIsError
 				is true
 		*/
-	static bool logFileOnNFS(const char *fileName, bool nfsIsError);
+	static bool logFileNFSError(const char *fileName, bool nfsIsError);
 
 		/** Reads in the specified file, breaks it into lines, and
 			combines the lines into "logical" lines (joins continued
