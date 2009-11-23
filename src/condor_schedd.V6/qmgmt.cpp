@@ -95,6 +95,8 @@ static int cluster_increment_val = 1;	// increment for cluster numbers of succes
 
 static void AddOwnerHistory(const MyString &user);
 
+static bool per_job_history_dir_size_limit = false; // (de)activate size control of per-job history dir
+
 class Service;
 
 bool        PrioRecArrayIsDirty = true;
@@ -1595,7 +1597,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	AppendHistory(ad);
 
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
-	WritePerJobHistoryFile(ad, false);
+	WritePerJobHistoryFile(ad, false, per_job_history_dir_size_limit);
 
 #if HAVE_DLOPEN
   ScheddPluginManager::Archive(ad);
@@ -1707,7 +1709,7 @@ int DestroyCluster(int cluster_id, const char* reason)
   // save job ad to the log
 
 				// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
-				WritePerJobHistoryFile(ad, false);
+				WritePerJobHistoryFile(ad, false, per_job_history_dir_size_limit);
 
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);

@@ -44,6 +44,8 @@
 extern dynuser *myDynuser;
 #endif
 
+static bool per_job_history_dir_size_limit = false; // (de)activate size control of per-job history dir
+
 Starter::Starter()
 {
 	s_ad = NULL;
@@ -647,7 +649,7 @@ Starter::exited(int status)
 	}
 	jobAd->Assign(ATTR_JOB_STATUS, jobStatus);
 	AppendHistory(jobAd);
-	WritePerJobHistoryFile(jobAd, true /* use gjid for filename*/);
+	WritePerJobHistoryFile(jobAd, true /* use gjid for filename*/, per_job_history_dir_size_limit );
 
 	if (jobAdNeedsFree) {
 		delete jobAd;
