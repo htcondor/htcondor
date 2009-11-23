@@ -821,7 +821,7 @@ ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
+MultiLogFiles::logFileNFSError(const char *logFilename, bool nfsIsError)
 {
 
 	BOOLEAN isNfs;
