@@ -560,7 +560,7 @@ void RotatePerJobHistoryDir(){
 		// maximum directory size (in MB) of the per-file history for Gratia 
 	int max_size = param_integer("PER_JOB_HISTORY_MAX_SIZE", 10);
 	long max_size_bytes = (long)max_size*1024*1024;
-	max_size_bytes = 50 * 1024;
+
 		// determining the dir size for every function call is suboptimal. But otherwise
 		// a sync with Gratia will be necessary
 	PerJobHistorySize = (long)dir.GetDirectorySize();
