@@ -8,12 +8,21 @@ of potentially very large sets of data across Data-nodes.
 The mapping of data locations is maintained by an HDFS Name-node.
 The invocation, configuration, and use of an HDFS is integrated with Condor
 \index{Hadoop Distributed File System (HDFS)!condor\_hdfs daemon}
-through the use of the \Condor{hdfs} daemon.
+through the \Condor{hdfs} daemon.
+Condor currently handles the deployment and management of an HDFS.
 
 The \Condor{hdfs} daemon uses the Condor configuration to generate
 an HDFS XML configuration and invoke the file system. 
 The file system is both deployed and maintained by Condor, 
 reducing the number of separately administered systems by one.
+Condor configuration variables related to the HDFS are
+in section~\ref{sec:HDFS-Config-File-Entries}. 
 
-\MoreTodo
+Once an HDFS is deployed, input files for a vanilla universe job 
+may be transfered from the HDFS by specifying a URL within the
+job's \SubmitCmd{transfer\_input\_files} command. 
+See section~\ref{sec:URL-transfer} for the administrative details
+to set up transfers specified by a URL.
+It requires that a plug-in is accessible and defined to handle
+\Expr{hdfs} protocol transfers. 
 

@@ -7536,6 +7536,8 @@ Configuration File Entries}
 
 \index{configuration!condor\_hdfs configuration variables}
 These macros affect the \Condor{hdfs} daemon.
+Many of these variables determine how the \Condor{hdfs} daemon sets
+the HDFS XML configuration.
 
 \begin{description}
 
@@ -7561,12 +7563,14 @@ These macros affect the \Condor{hdfs} daemon.
 \item[\Macro{HDFS\_NAMENODE}]
   The host and port number for the HDFS Name-node.
   There is no default value for this required variable.
+  Defines the value of \Expr{fs.default.name} in the HDFS XML configuration.
 
 \label{param:HDFSNamenodeWeb}
 \item[\Macro{HDFS\_NAMENODE\_WEB}]
   The IP address and port number for the HDFS embedded web server within the
   Name-node.
   There is no default value for this required variable.
+%  Defines the value of \Expr{dfs.datanode.dir} in the HDFS XML configuration.
 
 \label{param:HDFSNamenodeDir}
 \item[\Macro{HDFS\_NAMENODE\_DIR}]
@@ -7574,6 +7578,7 @@ These macros affect the \Condor{hdfs} daemon.
   store its meta-data for file blocks.
   There is no default value for this variable; it is required to be defined
   for the Name-node machine.
+  Defines the value of \Expr{dfs.name.dir} in the HDFS XML configuration.
 
 \label{param:HDFSDatanodeDir}
 \item[\Macro{HDFS\_DATANODE\_DIR}]
@@ -7581,18 +7586,27 @@ These macros affect the \Condor{hdfs} daemon.
   store file blocks.
   There is no default value for this variable; it is required to be defined
   for a Data-node machine.
+  Defines the value of \Expr{dfs.data.dir} in the HDFS XML configuration.
 
 \label{param:HDFSDatanodeAddress}
 \item[\Macro{HDFS\_DATANODE\_ADDRESS}]
-  \emph{Definition not written yet.}
+  The IP address and port number of this machine's Data-node.
+  There is no default value for this variable; it is required to be defined
+  for a Data-node machine, and may be given the value \Expr{0.0.0.0:0}
+  as a Data-node need not be running on a known port.
+  Defines the value of \Expr{dfs.datanode.address} in the HDFS XML
+ configuration.
 
 \label{param:HDFSServices}
 \item[\Macro{HDFS\_SERVICES}]
-  \emph{Definition not written yet.}
+  A host name, to identify the machine acting as the Name-node.
 
 \label{param:HDFSLog4j}
 \item[\Macro{HDFS\_LOG4J}]
-  \emph{Definition not written yet.}
+  Used to set the configuration for the HDFS debugging level.
+  Currently one of  \Expr{OFF}, \Expr{FATAL}, \Expr{ERROR}, \Expr{WARN},
+  \Expr{INFODEBUG} or \Expr{ALL}.
+  Debugging output is written to \File{\MacroUNI{LOG}/hdfs.log}.
 
 \label{param:HDFSAllow}
 \item[\Macro{HDFS\_ALLOW}]
@@ -7604,17 +7618,17 @@ These macros affect the \Condor{hdfs} daemon.
 
 \label{param:HDFSNamenodeClass}
 \item[\Macro{HDFS\_NAMENODE\_CLASS}]
-  \emph{Definition not written yet.}
+  An optional value that specifies the class to invoke.
   The default value is \verb@org.apache.hadoop.hdfs.server.namenode.NameNode@.
 
 \label{param:HDFSDatanodeClass}
 \item[\Macro{HDFS\_DATANODE\_CLASS}]
-  \emph{Definition not written yet.}
+  An optional value that specifies the class to invoke.
   The default value is \verb@org.apache.hadoop.hdfs.server.datanode.DataNode@.
 
 \label{param:HDFSSiteFile}
 \item[\Macro{HDFS\_SITE\_FILE}]
-  \emph{Definition not written yet.}
+  The optional value that specifies the HDFS XML configuration file to generate.
   The default value is \File{hdfs-site.xml}.
 
 \end{description}
