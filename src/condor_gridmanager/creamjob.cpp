@@ -792,7 +792,6 @@ void CreamJob::doEvaluateState()
 				
 				rc = gahp->cream_job_register( 
 										resourceManagerString,
-										myResource->getDelegationService(),
 										delegatedCredentialURI,
 										creamAd, leaseId,
 										&job_id, &upload_url, &download_url );

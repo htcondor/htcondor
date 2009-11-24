@@ -421,7 +421,7 @@ int thread_cream_delegate( Request *req )
 
 int handle_cream_job_register( char **input_line )
 {
-	if ( count_args( input_line ) != 7 ) {
+	if ( count_args( input_line ) != 6 ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 	
@@ -445,15 +445,14 @@ int thread_cream_job_register( Request *req )
 	// the job than just its ID and upload URL. Should we make
 	// more of this available via our GAHP protocol?
 
-	char *reqid, *service, *delgservice, *delgid, *jdl, *lease_id;
+	char *reqid, *service, *delgid, *jdl, *lease_id;
 	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &delgservice );
-	process_string_arg( req->input_line[4], &delgid );
-	process_string_arg( req->input_line[5], &jdl );
-	process_string_arg( req->input_line[6], &lease_id );
+	process_string_arg( req->input_line[3], &delgid );
+	process_string_arg( req->input_line[4], &jdl );
+	process_string_arg( req->input_line[5], &lease_id );
 	
 	AbsCreamProxy::RegisterArrayResult resp;
 	try {

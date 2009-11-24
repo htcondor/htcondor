@@ -5345,7 +5345,7 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 }
 
 int 
-GahpClient::cream_job_register(const char *service, const char *delg_service, const char *delg_id, 
+GahpClient::cream_job_register(const char *service, const char *delg_id, 
 							   const char *jdl, const char *lease_id, char **job_id, char **upload_url, char **download_url)
 {
 	static const char* command = "CREAM_JOB_REGISTER";
@@ -5357,23 +5357,20 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 
 		// Generate request line
 	if (!service) service=NULLSTRING;
-	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
 	if (!jdl) jdl = NULLSTRING;
 	if (!lease_id) lease_id = "";
 
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(delg_service) );
-	char *esc3 = strdup( escapeGahpString(delg_id) );
-	char *esc4 = strdup( escapeGahpString(jdl) );
-	char *esc5 = strdup( escapeGahpString(lease_id) );
-	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5 );
+	char *esc2 = strdup( escapeGahpString(delg_id) );
+	char *esc3 = strdup( escapeGahpString(jdl) );
+	char *esc4 = strdup( escapeGahpString(lease_id) );
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	free( esc5 );
 	ASSERT( x == true );
 	const char *buf = reqline.Value();
 	
