@@ -45,7 +45,7 @@ filesize_t	MaxHistoryFileSize = 20 * 1024 * 1024; // 20MB;
 int         NumberBackupHistoryFiles = 2;
 char*       PerJobHistoryDir = NULL;
 long		PerJobHistorySize = 0;
-int			NumberOfFileDeletions = 10; // the number of history files that should be deleted during one cleanup
+int			NumberOfFileDeletions = 20; // the number of history files that should be deleted during one cleanup
 
 static void MaybeRotateHistory(int size_to_append);
 static void RemoveExtraHistoryFiles(void);
@@ -558,7 +558,7 @@ void RotatePerJobHistoryDir(){
 		// a set of all files in the directory: contents are pairs of <timestamp, full filename>.
 	std::set<std::pair<long, std::string> > collect;
 		// maximum directory size (in MB) of the per-file history for Gratia 
-	int max_size = param_integer("PER_JOB_HISTORY_MAX_SIZE", 10);
+	int max_size = param_integer("PER_JOB_HISTORY_MAX_SIZE", 20);
 	long max_size_bytes = (long)max_size*1024*1024;
 
 		// determining the dir size for every function call is suboptimal. But otherwise
