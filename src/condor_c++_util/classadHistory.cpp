@@ -593,7 +593,7 @@ void RotatePerJobHistoryDir(){
 			break;
 	}
 	
-	char *logfileName = dircat(dir.GetDirectoryPath(), "lostdata.log");	
+	/*char *logfileName = dircat(dir.GetDirectoryPath(), "lostdata.log");	
 	FILE *logfile = fopen(logfileName, "a");
 	
 	if (!logfile) {
@@ -608,7 +608,7 @@ void RotatePerJobHistoryDir(){
 		logfile = NULL;
 	}
 	delete []logfileName;
-								   
+	*/							   
 }
 
 void WritePerJobHistoryFile(ClassAd* ad, bool useGjid, bool withSizeControl = true ) // as a default: use dir size control
