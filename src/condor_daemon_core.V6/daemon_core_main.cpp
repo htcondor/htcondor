@@ -1766,7 +1766,9 @@ int main( int argc, char** argv )
 			//call Register_Timer below after intialized...
 			break;
 		case 's':
-			if( strncmp("-sock",*ptr,strlen(*ptr)) ) {
+				// the c-gahp uses -s, so for backward compatibility,
+				// do not allow abbreviations of -sock
+			if( strcmp("-sock",*ptr) ) {
 				done = true;
 				break;
 			}

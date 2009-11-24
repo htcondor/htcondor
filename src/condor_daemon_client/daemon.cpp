@@ -1390,6 +1390,7 @@ Daemon::getCmInfo( const char* subsys )
 	_port = sinful.getPortNum();
 	if( _port < 0 ) {
 		_port = getDefaultPort();
+		sinful.setPort( _port );
 		dprintf( D_HOSTNAME, "Port not specified, using default (%d)\n",
 				 _port ); 
 	} else {
