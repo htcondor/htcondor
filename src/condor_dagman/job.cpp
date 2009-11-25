@@ -788,7 +788,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					_cmdFile, GetJobName(), logFileStr.Value() );
 	}
 
-	if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
+		// This function returns true if the log file is on NFS and
+		// that is an error.  If the log file is on NFS, but nfsIsError
+		// is false, it prints a warning but returns false.
+	if ( MultiLogFiles::logFileNFSError( logFileStr.Value(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
 					logFileStr.Value() );
