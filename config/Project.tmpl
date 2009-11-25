@@ -290,7 +290,7 @@ PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
 #endif
 #endif
 
-#ifdef HAVE_EXT_POSTGRESQL
+#if HAVE_EXT_POSTGRESQL && HAS_EXTERNALS
 /* These variables should be coalesced into something more meaningful */
 POSTGRESQL_CFLAGS = -I$(POSTGRESQL_INC)
 POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a 

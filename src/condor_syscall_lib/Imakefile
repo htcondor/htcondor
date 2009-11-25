@@ -28,13 +28,8 @@ HAS_64BIT_STRUCTS = -DHAS_64BIT_STRUCTS
 #       endif
 #endif
 
-#ifdef WANT_NEST
-NEST_CC_FLAGS = -DENABLE_NEST -I$(NEST_INC)
-NEST_OBJ = nest_client_pool.o nest_consistency_manager.o nest_speak.o nest_common.o nest_filetransfer.o nest_statistics.o
-#endif
-
-FILE_TABLE = -DFILE_TABLE -I$(ZLIB_INC) $(NEST_CC_FLAGS)
-FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_basic.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o condor_file_append.o condor_file_nest.o file_table_interf.o
+FILE_TABLE = -DFILE_TABLE -I$(ZLIB_INC)
+FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_basic.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o condor_file_append.o file_table_interf.o
 
 OS = OperatingSystem
 ARCH = Architecture
@@ -219,7 +214,7 @@ SPECIAL_OBJ = special_stubs.o cedar_no_ckpt_stubs.o
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ) $(SPECIAL_IO_OBJ) \
-	$(CPP_UTIL_OBJ) $(SPECIAL_OBJ) $(NEST_OBJ)
+	$(CPP_UTIL_OBJ) $(SPECIAL_OBJ)
 
 SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
@@ -566,13 +561,6 @@ $(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
 clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
 #endif
-
-#ifdef WANT_NEST
-$(NEST_OBJ)::
-	ar xv $(NEST_LIB)/libnest-client.a $@
-clean::
-	rm -rf $(NEST_OBJ)
-#endif /* WANT_NEST */
 
 html:
 

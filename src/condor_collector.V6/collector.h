@@ -132,9 +132,7 @@ protected:
 
 	static ForkWork forkQuery;
 
-	static SocketCache* sock_cache;
-	static int sockCacheHandler( Service*, Stream* sock );
-	static int stashSocket( Stream* sock );
+	static int stashSocket( ReliSock* sock );
 
 	static class CCBServer *m_ccb_server;
 

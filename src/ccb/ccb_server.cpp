@@ -115,9 +115,16 @@ CCBServer::RegisterHandlers()
 void
 CCBServer::InitAndReconfig()
 {
+		// construct the CCB address to be advertised by CCB listeners
 	Sinful sinful(daemonCore->publicNetworkIpAddr());
-	ASSERT( sinful.getHost() && sinful.getPort() );
-	m_address.sprintf("%s:%s",sinful.getHost(),sinful.getPort());
+		// strip out <>'s, private address, and CCB listener info
+	sinful.setPrivateAddr(NULL);
+	sinful.setCCBContact(NULL);
+	ASSERT( sinful.getSinful() && sinful.getSinful()[0] == '<' );
+	m_address.sprintf("%s",sinful.getSinful()+1);
+	if( m_address[m_address.Length()-1] == '>' ) {
+		m_address.setChar(m_address.Length()-1,'\0');
+	}
 
 	m_read_buffer_size = param_integer("CCB_SERVER_READ_BUFFER",2*1024);
 	m_write_buffer_size = param_integer("CCB_SERVER_WRITE_BUFFER",2*1024);

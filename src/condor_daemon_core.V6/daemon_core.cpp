@@ -2755,7 +2755,9 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 
 	if( SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
 		if( !m_shared_port_endpoint ) {
-			m_shared_port_endpoint = new SharedPortEndpoint();
+			char const *sock_name = m_daemon_sock_name.Value();
+			if( !*sock_name ) sock_name = NULL;
+			m_shared_port_endpoint = new SharedPortEndpoint(sock_name);
 		}
 		m_shared_port_endpoint->InitAndReconfig();
 		if( !m_shared_port_endpoint->StartListener() ) {
@@ -3384,6 +3386,13 @@ void DaemonCore::Driver()
 		}	// if rv > 0
 
 	}	// end of infinite for loop
+}
+
+bool
+DaemonCore::SocketIsRegistered( Stream *sock )
+{
+	int i = GetRegisteredSocketIndex( sock );
+	return i != -1;
 }
 
 int
@@ -4814,7 +4823,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// get the handler function
 		reqFound = CommandNumToTableIndex(req,&index);
 
-		if (reqFound) {
+			// There are two cases where we get here:
+			//  1. receiving unauthenticated command
+			//  2. receiving command on previously authenticated socket
+
+		if (reqFound && !((Sock *)stream)->getFullyQualifiedUser()) {
 			// need to check our security policy to see if this is allowed.
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", req, comTable[index].command_descrip);
@@ -6767,7 +6780,8 @@ int DaemonCore::Create_Process(
 			sigset_t      *sigmask,
 			int           job_opt_mask,
 			size_t        *core_hard_limit,
-			int			  *affinity_mask
+			int			  *affinity_mask,
+			char const    *daemon_sock
             )
 {
 	int i, j;
@@ -6790,7 +6804,7 @@ int DaemonCore::Create_Process(
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
-	SharedPortEndpoint shared_port_endpoint;
+	SharedPortEndpoint shared_port_endpoint( daemon_sock );
 	SafeSock ssock;
 	PidEntry *pidtmp;
 
@@ -8503,6 +8517,11 @@ DaemonCore::Inherit( void )
 	}	// end of if we read out CONDOR_INHERIT ok
 }
 
+void
+DaemonCore::SetDaemonSockName( char const *sock_name )
+{
+	m_daemon_sock_name = sock_name;
+}
 
 void
 DaemonCore::InitDCCommandSocket( int command_port )
