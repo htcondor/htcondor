@@ -64,6 +64,13 @@ TCP connections.
   efficient operation.  See section~\ref{sec:tcp-collector-update} for
   more information.
 
+% gittrack #1002
+\item Network compatibility with Condor prior to 6.3.3 is no longer
+  supported unless \MacroNI{SEC\_CLIENT\_NEGOTIATION} is set to
+  \Expr{NEVER}.  This change removes the risk of communication errors
+  causing performance problems resulting from automatic fall-back to the
+  old protocol.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
