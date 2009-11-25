@@ -1606,52 +1606,22 @@ SecManStartCommand::receiveAuthInfo_inner()
 				!m_sock->end_of_message() ) {
 
 				// if we get here, it means the serve accepted our connection
-				// but dropped it after we sent the DC_AUTHENTICATE.  it probably
-				// doesn't understand that command, so let's attempt to send it
-				// the old way, IF negotiation wasn't REQUIRED.
+				// but dropped it after we sent the DC_AUTHENTICATE.
 
-				// set this input/output parameter to reflect
-				m_peer_can_negotiate = false;
+				// We used to conclude from this that our peer must be
+				// too old to understand DC_AUTHENTICATE, so we would
+				// reconnect and try sending a raw command (unless our
+				// config required negotiation).  However, this is no
+				// longer considered worth doing, because the most
+				// likely case is not that our peer doesn't understand
+				// but that something else caused us to fail to get a
+				// response. Trying to reconnect can just make things
+				// worse in this case.
 
-				if (m_negotiation == SecMan::SEC_REQ_REQUIRED ||
-					m_cmd == DC_AUTHENTICATE )
-				{
-					dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
-					m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+				dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
+				m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to end classad message." );
-					return StartCommandFailed;
-				}
-
-				// we'll try to send it the old way.
-				dprintf (D_SECURITY, "SECMAN: negotiation failed.  trying the old way...\n");
-
-				// this is kind of ugly:  close and reconnect the socket.
-				// seems to work though! :)
-
-				MyString tcp_addr = m_sock->get_connect_addr();
-				m_sock->close();
-
-				if (!m_sock->connect(tcp_addr.Value())) {
-					dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
-					m_errstack->pushf( "SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						"TCP connection to %s failed.", tcp_addr.Value());
-					return StartCommandFailed;
-				}
-
-				dprintf( D_ALWAYS, "SECMAN: reconnected to %s from port %d to send unauthenticated command %d %s\n",
-						 m_sock->peer_description(),
-						 m_sock->get_port(),
-						 m_cmd,
-						 m_cmd_description.Value());
-
-				m_sock->encode();
-				if( !m_sock->code(m_cmd) ) {
-					m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-									   "Failed to send raw command after reconnecting to %s.",
-									   m_sock->peer_description());
-					return StartCommandFailed;
-				}
-				return StartCommandSucceeded;
+				return StartCommandFailed;
 			}
 
 
