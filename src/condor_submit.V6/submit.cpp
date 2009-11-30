@@ -5302,15 +5302,22 @@ SetGlobusParams()
 		free( tmp );
 
 		int pos = resource.FindChar( ' ', 0 );
-		if ( pos >= 0 && resource.FindChar( ' ', pos + 1 ) < 0 &&
-			 ( pos = resource.find( "/cream-" ) ) >= 0 ) {
-			// We found the shortened form
-			resource.replaceString( "-", " ", pos );
-			resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
+		if ( pos >= 0 && resource.FindChar( ' ', pos + 1 ) < 0 ) {
+			int pos2 = resource.find( "://", pos + 1 );
+			if ( pos2 < 0 ) {
+				pos2 = pos + 1;
+			} else {
+				pos2 = pos2 + 3;
+			}
+			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
+				// We found the shortened form
+				resource.replaceString( "-", " ", pos );
+				resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
 
-			buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
-							resource.Value() );
-			InsertJobExpr( buffer );
+				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
+								resource.Value() );
+				InsertJobExpr( buffer );
+			}
 		}
 	}
 }

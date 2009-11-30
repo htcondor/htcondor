@@ -823,39 +823,39 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 							handler_descrip, s, TRUE) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-				const char *event_descrip, Service* s)
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
+				const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-							   Release release, const char *event_descrip, Service* s)
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
+							   Release release, const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0) );
-}
-
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Event event, const char *event_descrip, Service* s)
-{
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
-}
-
-int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp,
-				const char *event_descrip, Service* s)
-{
-	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0) );
+	return( t.NewTimer(deltawhen, handler, release, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Eventcpp event, const char *event_descrip, Service* s )
+				TimerHandler handler, const char *event_descrip)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
+	return( t.NewTimer(deltawhen, handler, event_descrip, period) );
 }
 
-int DaemonCore::Register_Timer (const Timeslice &timeslice,Eventcpp event,const char * event_descrip,Service* s)
+int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandlercpp handlercpp,
+				const char *event_descrip, Service* s)
 {
-	return t.NewTimer(s, timeslice, event, event_descrip );
+	return( t.NewTimer(s, deltawhen, handlercpp, event_descrip, 0) );
+}
+
+int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
+				TimerHandlercpp handler, const char *event_descrip, Service* s )
+{
+	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
+}
+
+int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip,Service* s)
+{
+	return t.NewTimer(s, timeslice, handler, event_descrip );
 }
 
 int	DaemonCore::Cancel_Timer( int id )
@@ -1021,34 +1021,22 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	}
 
 		// If we haven't initialized our address(es), do so now.
-	if (sinful_public == NULL) {
-		char* tmp = param("TCP_FORWARDING_HOST");
-			// If TCP_FORWARDING_HOST is defined, we will advertize
-			// our local IP address for daemons that have the same
-			// PRIVATE_NETWORK_NAME as us.  For everyone else, we
-			// advertize the address of the TCP forwarder.
-		if (tmp != NULL) {
-			MyString tcp_forwarding_host = tmp;
-			free(tmp);
-			struct sockaddr_in sin;
-			if (!is_ipaddr(tcp_forwarding_host.Value(), &sin.sin_addr)) {
-				struct hostent *he = condor_gethostbyname(tcp_forwarding_host.Value());
-				if (he == NULL) {
-					EXCEPT("failed to resolve address of SSH_BROKER");
-				}
-				sin.sin_addr = *(in_addr*)(he->h_addr_list[0]);;
-			}
-			sin.sin_port = htons(((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port());
-			sinful_public = strdup(sin_to_string(&sin));
+	if (sinful_public == NULL || m_dirty_sinful) {
+		free( sinful_public );
+		sinful_public = NULL;
+
+		char const *addr = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_sinful_public();
+		if( !addr ) {
+			EXCEPT("Failed to get public address of command socket!");
 		}
-		else {
-			sinful_public = strdup(
-			    sock_to_string( (*sockTable)[initial_command_sock].iosock->get_file_desc() ) );
-		}
+		sinful_public = strdup( addr );
 		m_dirty_sinful = true;
 	}
 
-	if (!initialized_sinful_private) {
+	if (!initialized_sinful_private || m_dirty_sinful) {
+		free( sinful_private);
+		sinful_private = NULL;
+
 		MyString private_sinful_string;
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
@@ -1057,6 +1045,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			free(tmp);
 			sinful_private = strdup(private_sinful_string.Value());
 		}
+
+		free(m_private_network_name);
+		m_private_network_name = NULL;
+		if ((tmp = param("PRIVATE_NETWORK_NAME"))) {
+			m_private_network_name = tmp;
+		}
+
 #if HAVE_EXT_GCB
 		if (sinful_private == NULL
 			&& (param_boolean("NET_REMAP_ENABLE", false, false))) {
@@ -1071,15 +1066,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 #endif /* HAVE_EXT_GCB */
 		initialized_sinful_private = true;
 		m_dirty_sinful = true;
-	}
-
-	if( usePrivateAddress ) {
-		if( sinful_private ) {
-			return sinful_private;
-		}
-		else {
-			return sinful_public;
-		}
 	}
 
 	if( m_dirty_sinful ) { // need to rebuild full sinful string
@@ -1105,6 +1091,15 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			if( !ccb_contact.IsEmpty() ) {
 				m_sinful.setCCBContact(ccb_contact.Value());
 			}
+		}
+	}
+
+	if( usePrivateAddress ) {
+		if( sinful_private ) {
+			return sinful_private;
+		}
+		else {
+			return sinful_public;
 		}
 	}
 
@@ -2554,6 +2549,8 @@ DaemonCore::reconfig(void) {
 	// by the time we get here, because it needs to be called early
 	// in the process.
 
+	m_dirty_sinful = true; // refresh our address in case config changes it
+
 	SecMan *secman = getSecMan();
 	secman->reconfig();
 
@@ -2564,7 +2561,7 @@ DaemonCore::reconfig(void) {
 		if( m_refresh_dns_timer < 0 ) {
 			m_refresh_dns_timer =
 				Register_Timer( dns_interval, dns_interval,
-								(Eventcpp)&DaemonCore::refreshDNS,
+								(TimerHandlercpp)&DaemonCore::refreshDNS,
 								"DaemonCore::refreshDNS()", daemonCore );
 		} else {
 			Reset_Timer( m_refresh_dns_timer, dns_interval, dns_interval );
@@ -2578,12 +2575,6 @@ DaemonCore::reconfig(void) {
 	// Maximum number of bytes read from a stdout/stderr pipes.
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
-
-		// Grab a copy of our private network name (if any).
-	if (m_private_network_name) {
-		free(m_private_network_name);
-	}
-	m_private_network_name = param("PRIVATE_NETWORK_NAME");
 
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
@@ -2751,17 +2742,22 @@ DaemonCore::reconfig(void) {
 							   CondorThreads::stop_thread_safe_block);
 	// Supply a callback to daemonCore upon thread context switch.
 	CondorThreads::set_switch_callback( thread_switch_callback );
+
+		// in case our address changed, do whatever needs to be done
+	daemonContactInfoChanged();
 }
 
 void
-DaemonCore::InitSharedPort()
+DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 {
 	MyString why_not;
 	bool already_open = m_shared_port_endpoint != NULL;
 
 	if( SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
 		if( !m_shared_port_endpoint ) {
-			m_shared_port_endpoint = new SharedPortEndpoint();
+			char const *sock_name = m_daemon_sock_name.Value();
+			if( !*sock_name ) sock_name = NULL;
+			m_shared_port_endpoint = new SharedPortEndpoint(sock_name);
 		}
 		m_shared_port_endpoint->InitAndReconfig();
 		if( !m_shared_port_endpoint->StartListener() ) {
@@ -2773,6 +2769,12 @@ DaemonCore::InitSharedPort()
 				"Turning off shared port endpoint because %s\n",why_not.Value());
 		delete m_shared_port_endpoint;
 		m_shared_port_endpoint = NULL;
+
+			// if we have no non-shared port open, we better open one now
+			// or we will have cut ourselves off from the world
+		if( !in_init_dc_command_socket ) {
+			InitDCCommandSocket(1);
+		}
 	}
 	else if( DebugFlags & D_FULLDEBUG ) {
 		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.Value());
@@ -3386,6 +3388,13 @@ void DaemonCore::Driver()
 	}	// end of infinite for loop
 }
 
+bool
+DaemonCore::SocketIsRegistered( Stream *sock )
+{
+	int i = GetRegisteredSocketIndex( sock );
+	return i != -1;
+}
+
 int
 DaemonCore::GetRegisteredSocketIndex( Stream *sock )
 {
@@ -3773,7 +3782,7 @@ DaemonCore::RegisterSocketForHandleReq(Stream *stream)
 		// some love.
 	int tid = daemonCore->Register_Timer(
 		200,		
-		(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
+		(TimerHandlercpp) &DaemonCore::HandleReqSocketTimerHandler,
 		"DaemonCore::HandleReqSocketTimerHandler",
 		this);
 		// stash the socket with the timer 
@@ -4814,7 +4823,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// get the handler function
 		reqFound = CommandNumToTableIndex(req,&index);
 
-		if (reqFound) {
+			// There are two cases where we get here:
+			//  1. receiving unauthenticated command
+			//  2. receiving command on previously authenticated socket
+
+		if (reqFound && !((Sock *)stream)->getFullyQualifiedUser()) {
 			// need to check our security policy to see if this is allowed.
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", req, comTable[index].command_descrip);
@@ -6767,7 +6780,8 @@ int DaemonCore::Create_Process(
 			sigset_t      *sigmask,
 			int           job_opt_mask,
 			size_t        *core_hard_limit,
-			int			  *affinity_mask
+			int			  *affinity_mask,
+			char const    *daemon_sock
             )
 {
 	int i, j;
@@ -6790,7 +6804,7 @@ int DaemonCore::Create_Process(
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
-	SharedPortEndpoint shared_port_endpoint;
+	SharedPortEndpoint shared_port_endpoint( daemon_sock );
 	SafeSock ssock;
 	PidEntry *pidtmp;
 
@@ -8047,7 +8061,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 		// register a timer that will call the reaper.
 	m_tid = daemonCore->Register_Timer(
 		0,
-		(Eventcpp)&FakeCreateThreadReaperCaller::CallReaper,
+		(TimerHandlercpp)&FakeCreateThreadReaperCaller::CallReaper,
 		"FakeCreateThreadReaperCaller::CallReaper()",
 		this );
 
@@ -8340,6 +8354,12 @@ DaemonCore::Inherit( void )
 	char *inheritbuf = NULL;
 	int numInheritedSocks = 0;
 	char *ptmp;
+	static bool already_inherited = false;
+
+	if( already_inherited ) {
+		return;
+	}
+	already_inherited = true;
 
     /* Here we handle inheritance of sockets, file descriptors, and/or
 	   handles from our parent.  This is done via an environment variable
@@ -8497,6 +8517,11 @@ DaemonCore::Inherit( void )
 	}	// end of if we read out CONDOR_INHERIT ok
 }
 
+void
+DaemonCore::SetDaemonSockName( char const *sock_name )
+{
+	m_daemon_sock_name = sock_name;
+}
 
 void
 DaemonCore::InitDCCommandSocket( int command_port )
@@ -8513,7 +8538,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 	Inherit();
 
 		// If we are using a shared listener port, set that up.
-	InitSharedPort();
+	InitSharedPort(true);
 
 		// If dc_rsock/dc_ssock are still NULL, we need to create our
 		// own udp and tcp sockets, bind them, etc.
@@ -8584,8 +8609,22 @@ DaemonCore::InitDCCommandSocket( int command_port )
 	if (dc_ssock) {
 		Register_Command_Socket( (Stream*)dc_ssock );
 	}
-	dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
-			 InfoCommandSinfulString() );
+	char const *addr = publicNetworkIpAddr();
+	if( addr ) {
+		dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
+	}
+	else {
+		addr = privateNetworkIpAddr();
+		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", addr );
+	}
+
+	if( dc_rsock && m_shared_port_endpoint ) {
+			// SOAP-enabled daemons may have both a shared port and
+			// a fixed TCP port for receiving SOAP commands
+		dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
+				 dc_rsock->get_sinful() );
+	}
+
 	if (!dc_ssock) {
 		dprintf( D_FULLDEBUG, "DaemonCore: UDP Command socket not created.\n");
 	}
@@ -8613,17 +8652,22 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		// now register any DaemonCore "default" handlers
 
-		// register the command handler to take care of signals
-	daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
-				(CommandHandlercpp)&DaemonCore::HandleSigCommand,
-				"HandleSigCommand()", daemonCore, DAEMON );
+	static int already_registered = false;
+	if( !already_registered ) {
+		already_registered = true;
 
-		// this handler receives keepalive pings from our children, so
-		// we can detect if any of our kids are hung.
-	daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
-				(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-				"HandleChildAliveCommand", daemonCore, DAEMON,
-				D_FULLDEBUG );
+			// register the command handler to take care of signals
+		daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
+			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
+			"HandleSigCommand()", daemonCore, DAEMON );
+
+			// this handler receives keepalive pings from our children, so
+			// we can detect if any of our kids are hung.
+		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
+			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
+			"HandleChildAliveCommand", daemonCore, DAEMON,
+			D_FULLDEBUG );
+	}
 }
 
 
@@ -9226,7 +9270,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	} else {
 		pidentry->hung_tid =
 			Register_Timer(timeout_secs,
-							(Eventcpp) &DaemonCore::HungChildTimeout,
+							(TimerHandlercpp) &DaemonCore::HungChildTimeout,
 							"DaemonCore::HungChildTimeout", this);
 		ASSERT( pidentry->hung_tid != -1 );
 
@@ -10217,14 +10261,16 @@ DaemonCore::publish(ClassAd *ad) {
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();
 	if (tmp) {
+			// The private network name is published in the contact
+			// string, so we don't really need to advertise it in
+			// a separate attribute.  However, it may be useful for
+			// other purposes.
 		ad->Assign(ATTR_PRIVATE_NETWORK_NAME, tmp);
-		tmp = privateNetworkIpAddr();
-		ASSERT(tmp);
-		ad->Assign(ATTR_PRIVATE_NETWORK_IP_ADDR, tmp);
 	}
+
 	tmp = publicNetworkIpAddr();
 	if( tmp ) {
-		ad->Assign(ATTR_PUBLIC_NETWORK_IP_ADDR, tmp);
+		ad->Assign(ATTR_MY_ADDRESS, tmp);
 	}
 }
 

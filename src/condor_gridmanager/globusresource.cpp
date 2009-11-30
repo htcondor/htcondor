@@ -401,7 +401,7 @@ void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	}
 }
 
-int
+void
 GlobusResource::CheckMonitor()
 {
 	GlobusJob *job;
@@ -417,31 +417,31 @@ GlobusResource::CheckMonitor()
 	if ( m_isGt5 ) {
 		dprintf( D_FULLDEBUG, "Disabling grid_monitor for GRAM5 server %s\n",
 				 resourceName );
-		return TRUE;
+		return;
 	}
 
 	if ( monitorGahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS, "GAHP server not initialized yet, not submitting "
 				 "grid_monitor now\n" );
 		daemonCore->Reset_Timer( checkMonitorTid, 5 );
-		return TRUE;
+		return;
 	}
 
 	if ( !enableGridMonitor ) {
-		return TRUE;
+		return;
 	}
 
 	if ( time(NULL) < monitorRetryTime ) {
 		daemonCore->Reset_Timer( checkMonitorTid,
 								 monitorRetryTime - time(NULL) );
-		return TRUE;
+		return;
 	}
 
 	if ( firstPingDone == false ) {
 		dprintf(D_FULLDEBUG,"grid_monitor for %s: first ping not done yet, "
 			"will retry later\n", resourceName);
 		daemonCore->Reset_Timer( checkMonitorTid, 5 );
-		return TRUE;
+		return;
 	}
 
 	if ( monitorSubmitActive ) {
@@ -464,7 +464,7 @@ GlobusResource::CheckMonitor()
 					monitorGahp->globus_gram_client_error_string(rc));
 			monitorSubmitActive = false;
 			AbandonMonitor();
-			return TRUE;
+			return;
 		}
 	}
 
@@ -525,7 +525,7 @@ GlobusResource::CheckMonitor()
 					"file for %s, stopping grid monitor\n", resourceName);
 				// TODO: Try to restart monitor?
 				AbandonMonitor();
-				return TRUE;
+				return;
 
 			} else {
 				EXCEPT("ReadMonitorJobStatusFile returned unexpected %d "
@@ -615,7 +615,7 @@ GlobusResource::CheckMonitor()
 		}
 	}
 
-	return TRUE;
+	return;
 }
 
 void

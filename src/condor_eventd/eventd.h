@@ -28,7 +28,7 @@ public:
 	EventDaemon();
 	~EventDaemon();
 	int Config();
-	int Timeout();
+	void Timeout();
 private:
 	ScheduledEvent *NewEvent(const char name[], const char record[]);
 	int	EventInterval;

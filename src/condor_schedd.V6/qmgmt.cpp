@@ -125,7 +125,7 @@ static int TotalJobsCount = 0;
 
 static int flush_job_queue_log_timer_id = -1;
 static int flush_job_queue_log_delay = 0;
-static int HandleFlushJobQueueLogTimer(Service *);
+static void HandleFlushJobQueueLogTimer();
 static void ScheduleJobQueueLogFlush();
 
 static bool qmgmt_all_users_trusted = false;
@@ -2141,12 +2141,11 @@ ScheduleJobQueueLogFlush()
 	}
 }
 
-int
-HandleFlushJobQueueLogTimer(Service *)
+void
+HandleFlushJobQueueLogTimer()
 {
 	flush_job_queue_log_timer_id = -1;
 	JobQueue->FlushLog();
-	return 0;
 }
 
 int

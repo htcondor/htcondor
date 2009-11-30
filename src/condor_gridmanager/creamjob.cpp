@@ -57,6 +57,7 @@
 #define GM_DELEGATE_PROXY		17
 #define GM_CLEANUP				18
 #define GM_SET_LEASE			19
+#define GM_RECOVER_POLL			20
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -79,6 +80,7 @@ static const char *GMStateNames[] = {
 	"GM_DELEGATE_PROXY",
 	"GM_CLEANUP",
 	"GM_SET_LEASE",
+	"GM_RECOVER_POLL",
 };
 
 #define CREAM_JOB_STATE_UNSET			""
@@ -231,7 +233,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 	
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&BaseJob::SetEvaluateState, this );
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -365,6 +367,8 @@ CreamJob::CreamJob( ClassAd *classad )
 		jobAd->LookupString( ATTR_CREAM_LEASE_ID, &leaseId );
 	}
 
+	jobAd->LookupString( ATTR_GRID_JOB_STATUS, remoteState );
+
 	gahpErrorString = "";
 
 	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
@@ -460,7 +464,7 @@ CreamJob::~CreamJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -480,7 +484,7 @@ void CreamJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int CreamJob::doEvaluateState()
+void CreamJob::doEvaluateState()
 {
 	int old_gm_state;
 	MyString old_remote_state;
@@ -560,11 +564,58 @@ int CreamJob::doEvaluateState()
 					executeLogged = true;
 				}
 				
-				probeNow = true;
-
-				gmState = GM_SUBMITTED;
+				if ( remoteState == CREAM_JOB_STATE_UNSET ||
+					 remoteState == CREAM_JOB_STATE_REGISTERED ) {
+					gmState = GM_RECOVER_POLL;
+				} else {
+					probeNow = true;
+					gmState = GM_SUBMITTED;
+				}
 			}
 			} break;
+		case GM_RECOVER_POLL: {
+			char *status = NULL;
+			char *fault = NULL;
+			int exit_code = -1;
+			CHECK_PROXY;
+
+			rc = gahp->cream_job_status( resourceManagerString,
+										 remoteJobId, &status,
+										 &exit_code, &fault );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				// unhandled error
+				LOG_CREAM_ERROR( "cream_job_status()", rc );
+				gahpErrorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
+				if ( status ) {
+					free( status );
+				}
+				if ( fault ) {
+					free (fault);
+				}
+				break;
+			}
+
+			NewCreamState( status, exit_code, fault );
+			if ( status ) {
+				free( status );
+			}
+			if ( fault ) {
+				free( fault );
+			}
+			lastProbeTime = time(NULL);
+
+			if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
+				probeNow = true;
+				gmState = GM_SUBMIT_COMMIT;
+			} else {
+				gmState = GM_SUBMITTED;
+			}
+		} break;
  		case GM_UNSUBMITTED: {
 			// There are no outstanding submissions for this job (if
 			// there is one, we've given up on it).
@@ -764,7 +815,7 @@ int CreamJob::doEvaluateState()
 		case GM_SUBMIT_SAVE: {
 			// Save the jobmanager's contact for a new cream submission.
 			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
+				gmState = GM_CLEANUP;
 			} else {
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
@@ -1266,8 +1317,6 @@ int CreamJob::doEvaluateState()
 	} while ( reevaluate_state );
 
 		//end of evaluateState loop
-		
-	return TRUE;
 }
 
 BaseResource *CreamJob::GetResource()
@@ -1334,6 +1383,12 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 		remoteState = new_state_str;
 		enteredCurrentRemoteState = time(NULL);
 		SetRemoteJobStatus( remoteState.Value() );
+
+		if ( failure_reason ) {
+			remoteStateFaultString = failure_reason;
+		} else {
+			remoteStateFaultString = "";
+		}
 
 		// TODO handle jobs that exit via a signal
 		if ( remoteState == CREAM_JOB_STATE_DONE_OK ) {

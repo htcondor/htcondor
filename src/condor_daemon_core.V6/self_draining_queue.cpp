@@ -151,7 +151,7 @@ SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 //--------------------------------------------------
 
 
-int
+void
 SelfDrainingQueue::timerHandler( void )
 {
 	dprintf( D_FULLDEBUG,
@@ -161,7 +161,7 @@ SelfDrainingQueue::timerHandler( void )
 		dprintf( D_FULLDEBUG, "SelfDrainingQueue %s is empty, "
 				 "timerHandler() has nothing to do\n", name );
 		cancelTimer();
-		return TRUE;
+		return;
 	}
 	int count;
 	for( count=0; count<m_count_per_interval && !queue.IsEmpty(); count++ ) {
@@ -190,7 +190,6 @@ SelfDrainingQueue::timerHandler( void )
 				 "resetting timer\n", name, queue.Length() );
 		resetTimer();
 	}
-	return TRUE;
 }
 
 

@@ -47,7 +47,7 @@ class CondorResource : public BaseResource
 	void RegisterJob( CondorJob *job, const char *submitter_id );
 	void UnregisterJob( CondorJob *job );
 
-	int DoScheddPoll();
+	void DoScheddPoll();
 
 	static const char *HashName( const char *resource_name,
 								 const char *pool_name,

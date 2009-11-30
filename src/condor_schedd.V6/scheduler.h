@@ -269,7 +269,7 @@ class Scheduler : public Service
 	int				negotiate(int, Stream *);
 	int				reschedule_negotiator(int, Stream *);
 
-	int				reschedule_negotiator_timer() { return reschedule_negotiator(0, NULL); }
+	void				reschedule_negotiator_timer() { reschedule_negotiator(0, NULL); }
 	void			release_claim(int, Stream *);
 	AutoCluster		autocluster;
 		// send a reschedule command to the negotiatior unless we
@@ -700,7 +700,7 @@ private:
 	Timeslice m_negotiate_timeslice;
 
 	// some stuff about Quill that should go into the ad
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	int quill_enabled;
 	int quill_is_remotely_queryable;
 	char *quill_name;

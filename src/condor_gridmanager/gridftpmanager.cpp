@@ -92,14 +92,14 @@ GridftpServer::GridftpServer( Proxy *proxy )
 	m_checkServerTid = daemonCore->Register_Timer( 0,
 								(TimerHandlercpp)&GridftpServer::CheckServer,
 								"GridftpServer::CheckServer", (Service*)this );
-	AcquireProxy( m_proxy, (Eventcpp)&GridftpServer::CheckServerSoon, this );
+	AcquireProxy( m_proxy, (TimerHandlercpp)&GridftpServer::CheckServerSoon, this );
 
 }
 
 GridftpServer::~GridftpServer()
 {
 	m_serversByProxy.remove( HashKey( m_proxy->subject->subject_name ) );
-	ReleaseProxy( m_proxy, (Eventcpp)&GridftpServer::CheckServerSoon, this );
+	ReleaseProxy( m_proxy, (TimerHandlercpp)&GridftpServer::CheckServerSoon, this );
 	if ( m_urlBase ) {
 		free( m_urlBase );
 	}
@@ -194,7 +194,7 @@ bool GridftpServer::UseSelfCred()
 	return m_configUrlBase == NULL;
 }
 
-int GridftpServer::UpdateLeases()
+void GridftpServer::UpdateLeases()
 {
 	Qmgr_connection *schedd;
 	bool error = false;
@@ -239,8 +239,6 @@ int GridftpServer::UpdateLeases()
 	} else {
 		daemonCore->Reset_Timer( m_updateLeasesTid, SERVER_JOB_LEASE / 3 );
 	}
-
-	return TRUE;
 }
 
 void GridftpServer::CheckServerSoon( int delta )
@@ -250,7 +248,7 @@ void GridftpServer::CheckServerSoon( int delta )
 	}
 }
 
-int GridftpServer::CheckServer()
+void GridftpServer::CheckServer()
 {
 	bool existing_error = !m_errorMessage.IsEmpty();
  
@@ -260,14 +258,14 @@ int GridftpServer::CheckServer()
 			// If GRIDFTP_URL_BASE is set in the config file, then never
 			// try to start our own gridftp servers.
 		daemonCore->Reset_Timer( m_checkServerTid, TIMER_NEVER );
-		return TRUE;
+		return;
 	}
 
 	if ( !m_initialScanDone ) {
 		if ( ScanSchedd() ) {
 			m_initialScanDone = true;
 		} else {
-			return TRUE;
+			return;
 		}
 	}
 
@@ -281,7 +279,7 @@ int GridftpServer::CheckServer()
 	if ( IsEmpty() ) {
 		RemoveJob();
 		delete this;
-		return TRUE;
+		return;
 	}
 
 		// TODO wait for an explicit request from a job before
@@ -367,8 +365,6 @@ int GridftpServer::CheckServer()
 			daemonCore->Reset_Timer( tid, 0 );
 		}
 	}
-
-	return TRUE;
 }
 
 bool GridftpServer::ScanSchedd()
@@ -383,8 +379,8 @@ bool GridftpServer::ScanSchedd()
 
 	if ( m_updateLeasesTid == TIMER_UNSET ) {
 		m_updateLeasesTid = daemonCore->Register_Timer( 0,
-							(TimerHandler)&GridftpServer::UpdateLeases,
-							"GridftpServer::UpdateLeases", NULL );
+							GridftpServer::UpdateLeases,
+							"GridftpServer::UpdateLeases" );
 	}
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );

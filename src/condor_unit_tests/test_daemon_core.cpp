@@ -29,13 +29,13 @@ class Foo : public Service
 	public:
 
 		Foo();
-		int timer5();
-		int timerone();
+		void timer5();
+		void timerone();
 		int com1(int, Stream*);
 
 };
 
-int
+void
 Foo::timer5()
 {
 	static int times = 0;
@@ -46,10 +46,9 @@ Foo::timer5()
 	if ( times == 3 )
 		if (daemonCore->Cancel_Signal(9) == FALSE)
 			printf("*** CANCEL_SIGNAL 9 FAILED!!!!\n");
-	return TRUE;
 }
 
-int
+void
 Foo::timerone()
 {
 	int port;
@@ -58,7 +57,7 @@ Foo::timerone()
 
 	if ( (port=daemonCore->InfoCommandPort()) == -1 ) {
 		printf("OneTimer(): InfoCommandPort FAILED\n");
-		return FALSE;
+		return;
 	}
 
 	printf("*** going to port %d\n",port);
@@ -71,8 +70,6 @@ Foo::timerone()
 	rsock->code(buf);
 	rsock->end_of_message();
 	delete rsock;
-
-	return TRUE;
 }
 
 int
@@ -122,7 +119,7 @@ int reaper(Service*, int pid, int exit_status)
 Foo::Foo()
 {
 
-	daemonCore->Register_Timer(3,(Eventcpp)&Foo::timerone,"One-Time Timer",this);
+	daemonCore->Register_Timer(3,(TimerHandlercpp)&Foo::timerone,"One-Time Timer",this);
 	daemonCore->Register_Command(1,"Command One",(CommandHandlercpp)&Foo::com1,"com1()",this);
 
 // Can't catch signal 9 on unix.
@@ -192,7 +189,7 @@ main_init(int argc, char ** /*argv*/)
 		if ( !daemonCore->Send_Signal(result,10) ) {
 			printf("*** Send_Signal 10 to child failed!!!\n");
 		}
-		daemonCore->Register_Timer(5,5,(Eventcpp)&Foo::timer5,"Five Second Timer",f);
+		daemonCore->Register_Timer(5,5,(TimerHandlercpp)&Foo::timer5,"Five Second Timer",f);
 	}
 
 

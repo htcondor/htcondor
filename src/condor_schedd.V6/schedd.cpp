@@ -441,7 +441,7 @@ Scheduler::Scheduler() :
 	startjobsid = -1;
 	periodicid = -1;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	quill_enabled = FALSE;
 	quill_is_remotely_queryable = 0; //false
 	quill_name = NULL;
@@ -475,7 +475,7 @@ Scheduler::Scheduler() :
 	CronMgr = NULL;
 
 	jobThrottleNextJobDelay = 0;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	prevLHF = 0;
 #endif
 }
@@ -911,7 +911,7 @@ Scheduler::count_jobs()
 	daemonCore->UpdateLocalAd(m_ad);
 
 		// log classad into sql log so that it can be updated to DB
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
 #endif
 
@@ -3057,7 +3057,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 		// These three lists must be kept in sync!
-	const char *AttrsToModify[] = { 
+	static const int ATTR_ARRAY_SIZE = 8;
+	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
@@ -3065,9 +3066,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_ULOG_FILE,
-		ATTR_X509_USER_PROXY,
-		NULL };		// list must end with a NULL
-	const bool AttrIsList[] = {
+		ATTR_X509_USER_PROXY };
+	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
 		false,
 		false,
 		false,
@@ -3076,7 +3076,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		true,
 		false,
 		false };
-	const char *AttrXferBool[] = {
+	static const char *AttrXferBool[ATTR_ARRAY_SIZE] = {
 		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT,
 		ATTR_TRANSFER_OUTPUT,
@@ -3107,7 +3107,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	}
 
 
-	int i,cluster,proc,index;
+	int jobIndex,cluster,proc,attrIndex;
 	char new_attr_value[500];
 	char *buf = NULL;
 	ExprTree *expr = NULL;
@@ -3117,9 +3117,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 
 		// For each job, modify its ClassAd
-	for (i=0; i < len; i++) {
-		cluster = (*jobs)[i].cluster;
-		proc = (*jobs)[i].proc;
+	for (jobIndex = 0; jobIndex < len; jobIndex++) {
+		cluster = (*jobs)[jobIndex].cluster;
+		proc = (*jobs)[jobIndex].proc;
 
 		ClassAd *job_ad = GetJobAd(cluster,proc);
 		if (!job_ad) {
@@ -3173,13 +3173,12 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// Now, for all the attributes listed in 
 			// AttrsToModify, change them to be relative to new IWD
 			// by taking the basename of all file paths.
-		index = -1;
-		while ( AttrsToModify[++index] ) {
+		for ( attrIndex = 0; attrIndex < ATTR_ARRAY_SIZE; attrIndex++ ) {
 				// Lookup original value
 			bool xfer_it;
 			if (buf) free(buf);
 			buf = NULL;
-			job_ad->LookupString(AttrsToModify[index],&buf);
+			job_ad->LookupString(AttrsToModify[attrIndex],&buf);
 			if (!buf) {
 				// attribute not found, so no need to modify it
 				continue;
@@ -3188,8 +3187,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// null file -- no need to modify it
 				continue;
 			}
-			if ( AttrXferBool[i] &&
-				 job_ad->LookupBool( AttrXferBool[i], xfer_it ) && !xfer_it ) {
+			if ( AttrXferBool[attrIndex] &&
+				 job_ad->LookupBool( AttrXferBool[attrIndex], xfer_it ) && !xfer_it ) {
 					// ad says not to transfer this file, so no need
 					// to modify it
 				continue;
@@ -3198,7 +3197,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// some of these attributes contain a list of pathnames
 			StringList old_paths(NULL,",");
 			StringList new_paths(NULL,",");
-			if ( AttrIsList[i] ) {
+			if ( AttrIsList[attrIndex] ) {
 				old_paths.initializeFromString(buf);
 			} else {
 				old_paths.insert(buf);
@@ -3220,12 +3219,12 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			}
 			if ( changed ) {
 					// Backup original value
-				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[index]);
+				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[attrIndex]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();
 				ASSERT(new_value);
-				SetAttributeString(cluster,proc,AttrsToModify[index],new_value);
+				SetAttributeString(cluster,proc,AttrsToModify[attrIndex],new_value);
 				free(new_value);
 			}
 		}
@@ -6968,7 +6967,7 @@ Scheduler::tryNextJob()
 		// Queue the next job start via the daemoncore timer.  jobThrottle()
 		// implements job bursting, and returns the proper delay for the timer.
 			Register_Timer( jobThrottle(),
-							(Eventcpp)&Scheduler::StartJobHandler,
+							(TimerHandlercpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
 	} else {
 		StartJobs();
@@ -7474,7 +7473,7 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 		// proper delay for the timer.
 		StartJobTimer = daemonCore->
 			Register_Timer( jobThrottle(), 
-							(Eventcpp)&Scheduler::StartJobHandler,
+							(TimerHandlercpp)&Scheduler::StartJobHandler,
 							"StartJobHandler", this );
 	}
 }
@@ -10453,7 +10452,7 @@ Scheduler::Init()
 
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 	/* See if QUILL is configured for this schedd */
 	if (param_boolean("QUILL_ENABLED", false) == false) {
@@ -10562,7 +10561,7 @@ Scheduler::Init()
 	// fixed in count_job() -Erik 12/18/2006
 	m_ad->Assign(ATTR_NUM_USERS, 0);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
 		m_ad->Assign( ATTR_QUILL_ENABLED, true ); 
@@ -10804,11 +10803,11 @@ Scheduler::RegisterTimers()
 
 	 // timer handlers
 	timeoutid = daemonCore->Register_Timer(10,
-		(Eventcpp)&Scheduler::timeout,"timeout",this);
+		(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
 	startjobsid = daemonCore->Register_Timer(10,
-		(Eventcpp)&Scheduler::StartJobs,"StartJobs",this);
+		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
-		(Eventcpp)&Scheduler::sendAlives,"sendAlives", this);
+		(TimerHandlercpp)&Scheduler::sendAlives,"sendAlives", this);
     // Preset the job queue clean timer only upon cold start, or if the timer
     // value has been changed.  If the timer period has not changed, leave the
     // timer alone.  This will avoid undesirable behavior whereby timer is
@@ -10819,14 +10818,14 @@ Scheduler::RegisterTimers()
         }
         cleanid =
             daemonCore->Register_Timer(QueueCleanInterval,QueueCleanInterval,
-            (Event)&CleanJobQueue,"CleanJobQueue");
+            CleanJobQueue,"CleanJobQueue");
     }
     oldQueueCleanInterval = QueueCleanInterval;
 
 	if (WallClockCkptInterval) {
 		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
 												  WallClockCkptInterval,
-												  (Event)&CkptWallClock,
+												  CkptWallClock,
 												  "CkptWallClock");
 	} else {
 		wallclocktid = -1;
@@ -10844,7 +10843,7 @@ Scheduler::RegisterTimers()
 		periodicid = daemonCore->Register_Timer(
 			time_to_next_run,
 			time_to_next_run,
-			(Eventcpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
+			(TimerHandlercpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
 		dprintf( D_FULLDEBUG, "Registering PeriodicExprHandler(), next "
 				 "callback in %u seconds\n", time_to_next_run );
 	} else {

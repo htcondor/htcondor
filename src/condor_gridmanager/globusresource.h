@@ -91,7 +91,7 @@ class GlobusResource : public BaseResource
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );
-	int CheckMonitor();
+	void CheckMonitor();
 	void StopMonitor();
 	bool SubmitMonitorJob();
 	void StopMonitorJob();

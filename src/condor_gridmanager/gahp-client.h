@@ -102,7 +102,7 @@ class GahpServer : public Service {
 	void RemoveGahpClient();
 
 	int ProxyCallback();
-	int doProxyCheck();
+	void doProxyCheck();
 	GahpProxyInfo *RegisterProxy( Proxy *proxy );
 	void UnregisterProxy( Proxy *proxy );
 
@@ -131,11 +131,9 @@ class GahpServer : public Service {
 		this method is invoked automatically either by a timer set
 		via setPollInterval or by a Gahp Server async result
 		notification.
-		@return The number of pending commands which have completed
-		since the last poll (note: could easily be zero).	
 		@see setPollInterval
 	*/
-	int poll();
+	void poll();
 
 	void poll_real_soon();
 
@@ -1043,7 +1041,7 @@ class GahpClient : public Service {
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
-		int reset_user_timer_alarm();
+		void reset_user_timer_alarm();
 
 			// Private Data Members
 		unsigned int m_timeout;

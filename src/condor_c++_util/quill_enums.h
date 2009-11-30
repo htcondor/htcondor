@@ -67,11 +67,11 @@ enum FileOpErrCode {    FILE_OPEN_ERROR,
 
 typedef enum
 	{
-		T_ORACLE, 
-		T_PGSQL, 
-		T_DB2, 
-		T_SQLSERVER,
-		T_MYSQL
+//		T_ORACLE, /* Once had code, never compiled */
+		T_PGSQL /* Only type to ever really exist */
+//		T_DB2, 
+//		T_SQLSERVER,
+//		T_MYSQL
 	} dbtype;
 
 enum QuillAttrDataType {

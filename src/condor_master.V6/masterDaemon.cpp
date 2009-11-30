@@ -59,7 +59,7 @@ extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern int		run_preen(Service*);
+extern void		run_preen();
 
 extern FILESQL *FILEObj;
 extern int condor_main_argc;
@@ -532,6 +532,8 @@ int daemon::RealStart( )
 {
 	const char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
+	char const *daemon_sock = NULL;
+	MyString daemon_sock_buf;
 	char	buf[512];
 	ArgList args;
 
@@ -575,18 +577,8 @@ int daemon::RealStart( )
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
-			// **** OLD
-			// If we're spawning a collector, we can get the right
-			// port by asking the global Collector object for it,
-			// since we've already instantiated that with the info for
-			// the local pool's collector.  This also saves the
-			// trouble of instantiating a new DCCollector object,
-			// which duplicates some effort and is less efficient. 
-			// **** END OLD
 
-			// ckireyev 09/10/04
-			// Now that we have multiple collectors, the way to figure out
-			// the port on this machine, is to go through all of the
+			// Go through all of the
 			// collectors until we find the one for THIS machine. Then
 			// get the port from that entry
 		command_port = -1;
@@ -610,8 +602,19 @@ int daemon::RealStart( )
 
 				if (same_host (my_hostname, 
 							   my_daemon->fullHostname())) {
-					command_port = my_daemon->port();
-					dprintf ( D_FULLDEBUG, "Host name matches.\n" );
+					Sinful sinful( my_daemon->addr() );
+					if( sinful.getSharedPortID() ) {
+							// collector is using a shared port
+						daemon_sock_buf = sinful.getSharedPortID();
+						daemon_sock = daemon_sock_buf.Value();
+						command_port = 1;
+					}
+					else {
+							// collector is using its own port
+						command_port = sinful.getPortNum();
+					}
+					dprintf ( D_FULLDEBUG, "Host name matches collector %s.\n",
+							  sinful.getSinful() );
 					break;
 				}
 			}
@@ -635,7 +638,13 @@ int daemon::RealStart( )
 			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
 		}
 
-		dprintf (D_FULLDEBUG, "Starting Collector on port %d\n", command_port);
+		if( daemon_sock ) {
+			dprintf (D_FULLDEBUG,"Starting collector with shared port id %s\n",
+					 daemon_sock);
+		}
+		else {
+			dprintf (D_FULLDEBUG, "Starting Collector on port %d\n", command_port);
+		}
 
 
 			// We can't do this b/c of needing to read host certs as root 
@@ -733,6 +742,12 @@ int daemon::RealStart( )
 					command_port = atoi(port_arg);
 				}
 			}
+			else if(strncmp( cur_arg, "-sock", strlen(cur_arg)) == 0) {
+				i++;
+				if( i<args.Count() ) {
+					daemon_sock = args.GetArg(i);
+				}
+			}
 		}
     }
 
@@ -761,7 +776,10 @@ int daemon::RealStart( )
 				NULL,
 				0,
 				NULL,
-				jobopts);			// we want a new process family
+				jobopts,
+				NULL,
+				NULL,
+				daemon_sock);
 
 	if ( pid == FALSE ) {
 		// Create_Process failed!
@@ -958,11 +976,10 @@ daemon::StopPeaceful()
 	Kill( SIGTERM );
 }
 
-int
+void
 daemon::StopFastTimer()
 {
 	StopFast(false);
-	return TRUE;
 }
 
 void
@@ -1762,7 +1779,7 @@ Daemons::ScheduleRetryStartAllDaemons()
 	if( m_retry_start_all_daemons_tid == -1 ) {
 		m_retry_start_all_daemons_tid = daemonCore->Register_Timer(
 			1,
-			(Eventcpp)&Daemons::RetryStartAllDaemons,
+			(TimerHandlercpp)&Daemons::RetryStartAllDaemons,
 			"Daemons::RetryStartAllDaemons",
 			this);
 		ASSERT( m_retry_start_all_daemons_tid != -1 );
@@ -1778,12 +1795,11 @@ Daemons::CancelRetryStartAllDaemons()
 	}
 }
 
-int
+void
 Daemons::RetryStartAllDaemons()
 {
 	m_retry_start_all_daemons_tid = -1;
 	StartAllDaemons();
-	return 0;
 }
 
 void
@@ -2312,7 +2328,7 @@ Daemons::StartTimers()
 	if( new_preen && FS_Preen ) {
 		preen_tid = daemonCore->
 			Register_Timer( first_preen, preen_interval,
-							(TimerHandler)run_preen,
+							run_preen,
 							"run_preen()" );
 	}
 	old_preen_int = preen_interval;

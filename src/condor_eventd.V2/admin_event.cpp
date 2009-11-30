@@ -401,7 +401,7 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 
 */
 
-int 
+void 
 AdminEvent::th_DoShutdown_States( void )
 {
 	int secondsforvacates = 0;
@@ -604,7 +604,6 @@ AdminEvent::th_DoShutdown_States( void )
 				"th_DoShutdown_States( Why Default Case )\n");
 			break;
 	}
-	return(0);
 }
 
 /*
@@ -613,7 +612,7 @@ AdminEvent::th_DoShutdown_States( void )
 
 */
 
-int 
+void
 AdminEvent::th_DoShutdown( void )
 {
 	DCMaster *		d;
@@ -632,10 +631,9 @@ AdminEvent::th_DoShutdown( void )
 	dprintf(D_ALWAYS,"call Shutdown now.....\n");
 	//d->sendMasterOff(wantTcp);
 	delete d;
-	return(0);
 }
 
-int 
+void 
 AdminEvent::th_maintainCheckpoints( void )
 {
 	ClassAd *ad;
@@ -791,7 +789,6 @@ AdminEvent::th_maintainCheckpoints( void )
 		m_mystate = EVENT_DONE;
 		changeState(EVENT_NOW, m_mystate);
 	}
-	return(0);
 }
 
 /*

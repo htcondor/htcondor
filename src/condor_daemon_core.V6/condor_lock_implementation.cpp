@@ -298,7 +298,7 @@ CondorLockImpl::HaveLock( void )
 }
 
 // Perform poll cycle
-int
+void
 CondorLockImpl::DoPoll( void )
 {
 		// Store the time
@@ -312,12 +312,12 @@ CondorLockImpl::DoPoll( void )
 				(void) LockLost( LOCK_SRC_POLL );
 			}
 		}
-		return 0;
+		return;
 	}
 
 		// If we're not trying to acquire the lock, nothing to do
 	if ( ! lock_enabled ) {
-		return 0;
+		return;
 	}
 
 		// Ok, now try to grab the lock
@@ -325,11 +325,7 @@ CondorLockImpl::DoPoll( void )
 
 		// If it succeeded, notify the application
 	if ( 0 == status ) {
-		return LockAcquired( LOCK_SRC_POLL );
-	} else if ( 1 == status ) {
-		return 0;
-	} else {
-		return -1;
+		LockAcquired( LOCK_SRC_POLL );
 	}
 }
 

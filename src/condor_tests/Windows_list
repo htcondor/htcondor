@@ -107,3 +107,43 @@ job_dagman_basic
 #job_dagman_throttle needs x_read_joblog.exe
 #job_dagman_uncomlog needs x_read_joblog.exe
 #job_dagman_unlessexit needs x_read_joblog.exe
+#job_dagman_abnormal_term_recovery_retries
+#job_dagman_abort-A
+#job_dagman_default_log
+#job_dagman_depth_first
+#job_dagman_event_log
+#job_dagman_large_dag
+#job_dagman_log_path
+#job_dagman_multi_dag
+#job_dagman_node_dir
+#job_dagman_node_prio
+#job_dagman_parallel-A
+#job_dagman_prepost
+#job_dagman_recovery_event_check
+#job_dagman_rescue-A
+#job_dagman_rescue_recov
+#job_dagman_retry_recovery
+#job_dagman_splice-A
+#job_dagman_splice-B
+#job_dagman_splice-cat
+#job_dagman_splice-C
+#job_dagman_splice-D
+#job_dagman_splice-E
+#job_dagman_splice-F
+#job_dagman_splice-G
+#job_dagman_splice-H
+#job_dagman_splice-I
+##job_dagman_splice-J
+#job_dagman_splice-K
+#job_dagman_splice-L
+#job_dagman_splice-M
+#job_dagman_splice-N
+#job_dagman_splice-O
+#job_dagman_splice-scaling
+##job_dagman_stork-file-file
+##job_dagman_stork-remove
+#job_dagman_subdag-A
+#job_dagman_submit_fails_post
+#job_dagman_usedagdir
+#job_dagman_xmlcomlog
+#job_dagman_xmluncomlog

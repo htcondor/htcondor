@@ -62,7 +62,7 @@ int myproxyGetDelegationReaperId = 0;
 
 static int next_proxy_id = 1;
 
-int CheckProxies();
+void CheckProxies();
 
 static bool
 SetMasterProxy( Proxy *master, const Proxy *copy_src )
@@ -104,8 +104,8 @@ bool InitializeProxyManager( const char *proxy_dir )
 	}
 
 	CheckProxies_tid = daemonCore->Register_Timer( 1, CheckProxies_interval,
-												   (TimerHandler)&CheckProxies,
-												   "CheckProxies", NULL );
+												   CheckProxies,
+												   "CheckProxies" );
 
 	masterProxyDirectory = strdup( proxy_dir );
 
@@ -165,7 +165,7 @@ void ReconfigProxyManager()
 // string in the error parameter and return NULL.
 Proxy *
 AcquireProxy( const ClassAd *job_ad, MyString &error,
-			  Eventcpp func_ptr, Service *data  )
+			  TimerHandlercpp func_ptr, Service *data  )
 {
 	if ( proxymanager_initialized == false ) {
 		error = "Internal Error: ProxyManager not initialized";
@@ -434,7 +434,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 }
 
 Proxy *
-AcquireProxy( Proxy *proxy, Eventcpp func_ptr, Service *data )
+AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 {
 	proxy->num_references++;
 	if ( func_ptr ) {
@@ -453,7 +453,7 @@ AcquireProxy( Proxy *proxy, Eventcpp func_ptr, Service *data )
 // ProxyManager code will take care of that for you. If you provided a
 // notify_tid to AcquireProxy(), provide it again here.
 void
-ReleaseProxy( Proxy *proxy, Eventcpp func_ptr, Service *data )
+ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 {
 	if ( proxymanager_initialized == false || proxy == NULL ) {
 		return;
@@ -585,7 +585,7 @@ void doCheckProxies()
 // This function is called
 // periodically to check for updated proxies. It can be called earlier
 // if a proxy is about to expire.
-int CheckProxies()
+void CheckProxies()
 {
 	int now = time(NULL);
 	int next_check = CheckProxies_interval + now;
@@ -670,8 +670,6 @@ int CheckProxies()
 	// next_check is the absolute time of the next check, convert it to
 	// a relative time (from now)
 	daemonCore->Reset_Timer( CheckProxies_tid, next_check - now );
-
-	return TRUE;
 }
 
 int RefreshProxyThruMyProxy(Proxy * proxy)

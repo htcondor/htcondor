@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifdef WANT_QUILL
 #include "condor_common.h"
+#ifdef HAVE_EXT_POSTGRESQL
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
@@ -704,5 +704,5 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
     return;
 }
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 

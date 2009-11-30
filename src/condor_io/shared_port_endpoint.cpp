@@ -27,7 +27,7 @@
 #include "basename.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
-#include <sys/un.h>
+#include "shared_port_scm_rights.h"
 #endif
 
 // Check once that a method for passing fds has been enabled if we
@@ -39,7 +39,7 @@
 #endif
 #endif
 
-SharedPortEndpoint::SharedPortEndpoint():
+SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_listening(false),
 	m_registered_listener(false),
 	m_retry_remote_addr_timer(-1),
@@ -55,24 +55,30 @@ SharedPortEndpoint::SharedPortEndpoint():
 		// somebody.  Since our pid is in the name, this is a reasonable
 		// thing to do.
 
-	static unsigned short rand_tag = 0;
-	static unsigned int sequence = 0;
-	if( !rand_tag ) {
-			// We use a random tag in our name so that if we have
-			// re-used the PID of a daemon that recently ran and
-			// somebody tries to connect to that daemon, they are
-			// unlikely to connect to us.
-		rand_tag = (unsigned short)(get_random_float()*(((float)0xFFFF)+1));
-	}
-
-	if( !sequence ) {
-		m_local_id.sprintf("%lu_%04hx",(unsigned long)getpid(),rand_tag);
+	if( sock_name ) {
+			// we were given a name, so just use that
+		m_local_id = sock_name;
 	}
 	else {
-		m_local_id.sprintf("%lu_%04hx_%u",(unsigned long)getpid(),rand_tag,sequence);
-	}
+		static unsigned short rand_tag = 0;
+		static unsigned int sequence = 0;
+		if( !rand_tag ) {
+				// We use a random tag in our name so that if we have
+				// re-used the PID of a daemon that recently ran and
+				// somebody tries to connect to that daemon, they are
+				// unlikely to connect to us.
+			rand_tag = (unsigned short)(get_random_float()*(((float)0xFFFF)+1));
+		}
 
-	sequence++;
+		if( !sequence ) {
+			m_local_id.sprintf("%lu_%04hx",(unsigned long)getpid(),rand_tag);
+		}
+		else {
+			m_local_id.sprintf("%lu_%04hx_%u",(unsigned long)getpid(),rand_tag,sequence);
+		}
+
+		sequence++;
+	}
 }
 
 SharedPortEndpoint::~SharedPortEndpoint()
@@ -157,7 +163,8 @@ SharedPortEndpoint::CreateListener()
 	strncpy(named_sock_addr.sun_path,m_full_name.Value(),sizeof(named_sock_addr.sun_path)-1);
 	if( strcmp(named_sock_addr.sun_path,m_full_name.Value()) ) {
 		dprintf(D_ALWAYS,
-			"ERROR: SharedPortEndpoint: full listener socket name is too long:"
+			"ERROR: SharedPortEndpoint: full listener socket name is too long."
+			" Consider changing DAEMON_SOCKET_DIR to avoid this:"
 			" %s\n",m_full_name.Value());
 		return false;
 	}
@@ -281,11 +288,11 @@ SharedPortEndpoint::TouchSocketInterval()
 	return 900;
 }
 
-int
+void
 SharedPortEndpoint::SocketCheck()
 {
 	if( !m_listening || m_full_name.IsEmpty() ) {
-		return 0;
+		return;
 	}
 
 	if( utime(m_full_name.Value(), NULL) < 0 ) {
@@ -300,7 +307,6 @@ SharedPortEndpoint::SocketCheck()
 			}
 		}
 	}
-	return 0;
 }
 
 bool
@@ -346,21 +352,30 @@ SharedPortEndpoint::InitRemoteAddress()
 	}
 
 	MyString public_addr;
-	if( !ad->LookupString(ATTR_PUBLIC_NETWORK_IP_ADDR,public_addr) ) {
+	if( !ad->LookupString(ATTR_MY_ADDRESS,public_addr) ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to find %s in ad from %s.\n",
-				ATTR_PUBLIC_NETWORK_IP_ADDR, shared_port_server_ad_file.Value());
+				ATTR_MY_ADDRESS, shared_port_server_ad_file.Value());
 		return false;
 	}
 
 	Sinful sinful(public_addr.Value());
 	sinful.setSharedPortID( m_local_id.Value() );
+
+		// if there is a private address, set the shared port id on that too
+	char const *private_addr = sinful.getPrivateAddr();
+	if( private_addr ) {
+		Sinful private_sinful( private_addr );
+		private_sinful.setSharedPortID( m_local_id.Value() );
+		sinful.setPrivateAddr( private_sinful.getSinful() );
+	}
+
 	m_remote_addr = sinful.getSinful();
 
 	return true;
 }
 
-int
+void
 SharedPortEndpoint::RetryInitRemoteAddress()
 {
 	const int remote_addr_retry_time = 60;
@@ -376,7 +391,7 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 			// we don't have our listener (named) socket registered,
 			// so don't bother registering timers for keeping our
 			// address up to date either
-		return inited;
+		return;
 	}
 
 	if( inited ) {
@@ -404,7 +419,7 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 			}
 		}
 
-		return 1;
+		return;
 	}
 
 	if( daemonCoreSockAdapter.isEnabled() ) {
@@ -422,8 +437,6 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 		dprintf(D_ALWAYS,
 			"SharedPortEndpoint: did not successfully find SharedPortServer address.");
 	}
-
-	return 0;
 }
 
 void
@@ -701,16 +714,14 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 #else
 		// The shared port server itself should not try to operate as
 		// a shared point endpoint, since it needs to be the one
-		// daemon with its own port.  Also, it doesn't currently work
-		// to have the collector use SharedPortEndpoint, because the
-		// collector address needs to be static (in the config file).
-		// Both of these checks are appropriate for when we are inside
-		// of these daemons, not when we are the master trying to decide
-		// whether to create a shared port for our child.  In the latter
-		// case, other methods are used to determine that a shared port
-		// should not be used.
+		// daemon with its own port.
+		// This subsys check is appropriate for when we are inside of
+		// the daemon in question, not when we are the master trying
+		// to decide whether to create a shared port for our child.
+		// In the latter case, other methods are used to determine
+		// that a shared port should not be used.
+
 	bool never_use_shared_port =
-		get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR) ||
 		get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT);
 
 	if( never_use_shared_port ) {

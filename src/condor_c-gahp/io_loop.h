@@ -80,7 +80,7 @@ int verify_number (const char*);
 int verify_number_args (const int, const int);
 
 void flush_request (int worker_id, const char * request);
-int flush_pending_requests();
+void flush_pending_requests();
 
 int worker_thread_reaper (Service*, int pid, int exit_status);
 

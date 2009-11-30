@@ -154,7 +154,7 @@ public:
 		 * 
 		 * 
 		 **/
-	virtual int SpawnPreScript( void );
+	virtual void SpawnPreScript( void );
 
 		/** Does initial cleanup once all the jobs (and post script, if
 			any) have completed.  This notifies the JIC so it can

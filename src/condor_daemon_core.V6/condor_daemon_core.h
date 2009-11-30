@@ -650,6 +650,9 @@ class DaemonCore : public Service
     */
     int Cancel_Socket ( Stream * insock );
 
+		// Returns true if the given socket is already registered.
+	bool SocketIsRegistered( Stream *sock );
+
 		// Call the registered socket handler for this socket
 		// sock - previously registered socket
 		// default_to_HandleCommand - true if HandleCommand() should be called
@@ -819,40 +822,34 @@ class DaemonCore : public Service
         @param deltawhen       Not_Yet_Documented
         @param event           Not_Yet_Documented
         @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
-                        Event        event,
-                        const char * event_descrip, 
-                        Service*     s = NULL);
+                        TimerHandler handler,
+                        const char * event_descrip);
 
 	/** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param event           Not_Yet_Documented
         @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
-                        Event        event,
+                        TimerHandler handler,
 						Release      release,
-                        const char * event_descrip, 
-                        Service*     s = NULL);
+                        const char * event_descrip);
     
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param period          Not_Yet_Documented
         @param event           Not_Yet_Documented
         @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
                         unsigned     period,
-                        Event        event,
-                        const char * event_descrip,
-                        Service*     s = NULL);
+                        TimerHandler handler,
+                        const char * event_descrip);
 
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
@@ -862,7 +859,7 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Timer (unsigned     deltawhen,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
 
@@ -876,7 +873,7 @@ class DaemonCore : public Service
     */
     int Register_Timer (unsigned     deltawhen,
                         unsigned     period,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip,
                         Service *    s);
 
@@ -888,7 +885,7 @@ class DaemonCore : public Service
         @return                Timer id or -1 on error
     */
     int Register_Timer (const Timeslice &timeslice,
-                        Eventcpp     event,
+                        TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
 
@@ -902,7 +899,7 @@ class DaemonCore : public Service
         @param id The timer's ID
         @param when   Not_Yet_Documented
         @param period Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return 0 if successful, -1 on failure (timer not found)
     */
     int Reset_Timer ( int id, unsigned when, unsigned period = 0 );
 	//@}
@@ -1032,7 +1029,8 @@ class DaemonCore : public Service
         sigset_t      *sigmask             = NULL,
         int           job_opt_mask         = 0,
         size_t        *core_hard_limit     = NULL,
-		int			  *affinity_mask	   = NULL
+		int			  *affinity_mask	   = NULL,
+		char const    *daemon_sock         = NULL
         );
 
     //@}
@@ -1377,6 +1375,7 @@ class DaemonCore : public Service
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()
+	void SetDaemonSockName( char const *sock_name );
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki, Stream* accepted_sock=NULL);
@@ -1794,12 +1793,13 @@ class DaemonCore : public Service
 
 	class CCBListeners *m_ccb_listeners;
 	class SharedPortEndpoint *m_shared_port_endpoint;
+	MyString m_daemon_sock_name;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 
-	void InitSharedPort();
+	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

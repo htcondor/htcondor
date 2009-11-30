@@ -111,11 +111,11 @@ main (int argc, char *argv[])
 	// can override it
 	switch (type)
 	{
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case QUILL_AD:
 		setPPstyle(PP_QUILL_NORMAL, 0, DEFAULT);
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case STARTD_AD:
 		setPPstyle(PP_STARTD_NORMAL, 0, DEFAULT);
@@ -162,9 +162,9 @@ main (int argc, char *argv[])
 
 	// set the constraints implied by the mode
 	switch (mode) {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case MODE_QUILL_NORMAL:
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case MODE_STARTD_NORMAL:
 	  case MODE_MASTER_NORMAL:
@@ -337,11 +337,11 @@ main (int argc, char *argv[])
 			d = new Daemon( DT_STARTD, direct, addr );
 			break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case MODE_QUILL_NORMAL:
 			d = new Daemon( DT_QUILL, direct, addr );
 			break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		case MODE_SCHEDD_NORMAL:
 		case MODE_SCHEDD_SUBMITTORS:
@@ -450,9 +450,9 @@ usage ()
 		"\t-pool <name>\t\tGet information from collector <name>\n"
         "\t-grid\t\t\tDisplay grid resources\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		"\t-quill\t\t\tDisplay attributes of quills\n"
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
@@ -665,11 +665,11 @@ firstPass (int argc, char *argv[])
 				setMode (MODE_OTHER, i, argv[i]);
 			}
 		} else
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		if (matchPrefix (argv[i], "-quill", 2)) {
 			setMode (MODE_QUILL_NORMAL, i, argv[i]);
 		} else
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		if (matchPrefix (argv[i], "-license", 3)) {
 			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
 		} else
@@ -831,9 +831,9 @@ secondPass (int argc, char *argv[])
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
 			  case MODE_STARTD_COD:
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 			  case MODE_QUILL_NORMAL:
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 			  case MODE_SCHEDD_NORMAL:
 			  case MODE_SCHEDD_SUBMITTORS:
 			  case MODE_MASTER_NORMAL:

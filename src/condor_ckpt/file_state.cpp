@@ -38,7 +38,6 @@
 #include "condor_file_buffer.h"
 #include "condor_file_compress.h"
 #include "condor_file_append.h"
-#include "condor_file_nest.h"
 #include "condor_error.h"
 
 #include <stdarg.h>
@@ -475,12 +474,6 @@ CondorFile * CondorFileTable::create_url_chain( char const *url, char *method, c
 		return new CondorFileSpecial;
 	} else if( !strcmp( method, "remote" ) ) {
 		return new CondorFileRemote;
-
-#ifdef ENABLE_NEST
-	} else if( !strcmp( method, "nest" ) ) {
-		return new CondorFileNest;
-#endif
-
 	} else if( !strcmp( method, "buffer" ) ) {
 		f = create_url_chain( next );
 		if(f) return new CondorFileBuffer( f, buffer_size, buffer_block_size );

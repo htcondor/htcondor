@@ -48,8 +48,7 @@ class SharedPortServer: Service {
 	ForkWork forker;
 
 	int HandleConnectRequest(int cmd,Stream *sock);
-		// return value is junk to make this match TimerHandlercpp
-	int PublishAddress();
+	void PublishAddress();
 };
 
 #endif

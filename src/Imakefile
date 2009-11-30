@@ -19,7 +19,7 @@
 #define CreddProgs
 #endif
 
-#if HAVE_EXT_CLASSADS && WANT_QUILL
+#if HAVE_EXT_CLASSADS
 #define JobRouterProgs job_router
 #else
 #define JobRouterProgs
@@ -37,7 +37,7 @@
 #define StorkProgs
 #endif
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 #define TTProgs tt dbmsd
 #else
 #define TTProgs
@@ -269,7 +269,7 @@ condor_object_target(shadow.std)
 condor_object_target(transferd)
 condor_object_target(starter.std)
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 condor_object_target(quill)
 condor_object_target(tt)
 condor_object_target(dbmsd)
@@ -484,7 +484,7 @@ ext_target(EXT_EXPAT_VERSION,$(NULL))
 #endif
 
 #if HAVE_EXT_VOMS
-ext_target(EXT_VOMS_VERSION,$(EXT_TRIGGER)/$(EXT_EXPAT_VERSION))
+ext_target(EXT_VOMS_VERSION,$(EXT_TRIGGER)/$(EXT_EXPAT_VERSION) $(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION) $(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 #endif
 
 #if HAVE_EXT_GCB
@@ -614,7 +614,7 @@ man_target(condor_compile.1)
 man_target(condor_configure.1)
 man_target(condor_config_bind.1)
 man_target(condor_config_val.1)
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 man_target(condor_convert_history.1)
 #endif
 man_target(condor_dagman.1)
@@ -623,7 +623,7 @@ man_target(condor_findhost.1)
 man_target(condor_glidein.1)
 man_target(condor_history.1)
 man_target(condor_hold.1)
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 man_target(condor_load_history.1)
 #endif
 man_target(condor_master.1)

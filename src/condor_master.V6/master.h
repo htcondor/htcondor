@@ -68,7 +68,7 @@ public:
 	bool	OnHold( void ) { return on_hold; };
 	void	Stop( bool never_forward = false );
 	void	StopFast( bool never_forward = false );
-	int		StopFastTimer();
+	void	StopFastTimer();
 	void	StopPeaceful();
 	void	HardKill();
 	void	Exited( int );
@@ -219,7 +219,7 @@ private:
 
 	void ScheduleRetryStartAllDaemons();
 	void CancelRetryStartAllDaemons();
-	int RetryStartAllDaemons();
+	void RetryStartAllDaemons();
 
 		// returns true if there are no remaining daemons
 	bool StopDaemonsBeforeMasterStops();

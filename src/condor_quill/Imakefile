@@ -1,10 +1,10 @@
 
 all_target()
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(POSTGRESQL_CFLAGS)
 
 LDFLAGS = $(STD_LDFLAGS) 
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(QUILL_LIB)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(POSTGRESQL_LIBS)
 
 QUILL_LIB_OBJ = classadlogentry.o classadlogparser.o prober.o
 

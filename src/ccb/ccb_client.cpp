@@ -156,7 +156,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 
 			return false;
 		}
-		listener_addr = listen_sock->get_sinful();
+		listener_addr = listen_sock->get_sinful_public();
 	}
 	ASSERT( listener_addr );
 
@@ -706,7 +706,7 @@ CCBClient::RegisterReverseConnectCallback()
 	ASSERT( rc == 0 );
 }
 
-int
+void
 CCBClient::DeadlineExpired()
 {
 	dprintf(D_ALWAYS,
@@ -715,7 +715,6 @@ CCBClient::DeadlineExpired()
 
 	m_deadline_timer = -1;
 	CancelReverseConnect();
-	return 0;
 }
 
 void

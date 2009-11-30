@@ -167,7 +167,7 @@ public:
 	void	reconfig( void );
 
 	void	update( void );		// Schedule to update the central manager.
-	int		do_update( void );			// Actually update the CM
+	void		do_update( void );			// Actually update the CM
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK
     void    publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad );
 	void	final_update( void );		// Send a final update to the CM
@@ -197,7 +197,7 @@ public:
 
 #if HAVE_JOB_HOOKS
 	bool	isCurrentlyFetching( void ) { return m_currently_fetching; }
-	bool	tryFetchWork( void );
+	void	tryFetchWork( void );
 	void	createOrUpdateFetchClaim( ClassAd* job_ad, float rank = 0 );
 	bool	spawnFetchedWork( void );
 	void	terminateFetchedWork( void );

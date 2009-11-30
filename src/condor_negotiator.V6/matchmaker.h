@@ -69,7 +69,7 @@ class Matchmaker : public Service
 		int GET_RESLIST_commandHandler(int, Stream*);
 
 		// timeout handler (for periodic negotiations)
-		int negotiationTime ();
+		void negotiationTime ();
 
 			// the order of values in this enumeration is important!
 		enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};

@@ -39,10 +39,10 @@
 
 #include "history_utils.h"
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
 #include "historysnapshot.h"
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 #define NUM_PARAMETERS 3
 
@@ -59,7 +59,7 @@ static void Usage(char* name)
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"		
 		"\t\t-l\t\t\tVerbose output (entire classads)\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		"\t\t-name <schedd-name>\tRead history data from Quill database\n"
 		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
@@ -72,10 +72,10 @@ static void Usage(char* name)
   exit(1);
 }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseName, char *&queryPassword);
 static bool checkDBconfig();
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr);
@@ -99,12 +99,12 @@ main(int argc, char* argv[])
 {
   Collectors = NULL;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
   HistorySnapshot *historySnapshot;
   SQLQuery queryhor;
   SQLQuery queryver;
   QuillErrCode st;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
   void **parameters;
   char *dbconn=NULL;
@@ -131,10 +131,10 @@ main(int argc, char* argv[])
 
   config();
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
   queryhor.setQuery(HISTORY_ALL_HOR, NULL);
   queryver.setQuery(HISTORY_ALL_VER, NULL);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
   for(i=1; i<argc; i++) {
     if (strcmp(argv[i],"-l")==0) {
@@ -165,7 +165,7 @@ main(int argc, char* argv[])
         specifiedMatch = atoi(argv[i]);
     }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
     else if(match_prefix(argv[i], "-name")) {
 		i++;
 		if (argc <= i) {
@@ -202,7 +202,7 @@ main(int argc, char* argv[])
 		remotequill = false;
 		readfromfile = false;
     }
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
     else if (strcmp(argv[i],"-f")==0) {
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
@@ -232,7 +232,7 @@ main(int argc, char* argv[])
 		i++;
 		//readfromfile = true;
     }
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
     else if (match_prefix(argv[i],"-completedsince")) {
 		i++;
 		if (argc <= i) {
@@ -251,7 +251,7 @@ main(int argc, char* argv[])
 		queryhor.setQuery(HISTORY_COMPLETEDSINCE_HOR,parameters);
 		queryver.setQuery(HISTORY_COMPLETEDSINCE_VER,parameters);
     }
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
 		if (constraint) break;
@@ -260,20 +260,20 @@ main(int argc, char* argv[])
 		constraint=tmp;
 		parameters[0] = &cluster;
 		parameters[1] = &proc;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_CLUSTER_PROC_HOR, parameters);
 		queryver.setQuery(HISTORY_CLUSTER_PROC_VER, parameters);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (sscanf (argv[i], "%d", &cluster) == 1) {
 		if (constraint) break;
 		sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
 		constraint=tmp;
 		parameters[0] = &cluster;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
 		queryver.setQuery(HISTORY_CLUSTER_VER, parameters);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (strcmp(argv[i],"-debug")==0) {
           // dprintf to console
@@ -287,10 +287,10 @@ main(int argc, char* argv[])
 		sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, owner);
 		constraint=tmp;
 		parameters[0] = owner;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
 		queryver.setQuery(HISTORY_OWNER_VER, parameters);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
     }
   }
   if (i<argc) Usage(argv[0]);
@@ -301,7 +301,7 @@ main(int argc, char* argv[])
 	  exit( 1 );
   }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	/* This call must happen AFTER config() is called */
   if (checkDBconfig() == true && !readfromfile) {
   	readfromfile = false;
@@ -310,10 +310,10 @@ main(int argc, char* argv[])
   }
 #else 
   readfromfile = true;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
   if(readfromfile == false) {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  if(remotequill) {
 		  if (Collectors == NULL) {
 			  Collectors = CollectorList::create();
@@ -412,7 +412,7 @@ main(int argc, char* argv[])
 	  }
 	  historySnapshot->release();
 	  delete(historySnapshot);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
   }
   
   if(readfromfile == true) {
@@ -433,7 +433,7 @@ main(int argc, char* argv[])
 
 //------------------------------------------------------------------------
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 /* this function for checking whether database can be used for 
    querying in local machine */
@@ -553,7 +553,7 @@ static char * getDBConnStr(char *&quillName,
   return dbconn;
 }
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 

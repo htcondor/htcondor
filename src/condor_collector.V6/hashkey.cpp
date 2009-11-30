@@ -204,8 +204,11 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 	}
 
 	hk.ip_addr = "";
-	if ( !getIpAddr( "Start", ad, ATTR_STARTD_IP_ADDR,
-					 "STARTD_IP_ADDR", hk.ip_addr ) ) {
+	// As of 7.5.0, we look for MyAddress.  Prior to that, we did not,
+	// so new startds must continue to send StartdIpAddr to remain
+	// compatible with old collectors.
+	if ( !getIpAddr( "Start", ad, ATTR_MY_ADDRESS, ATTR_STARTD_IP_ADDR,
+					 hk.ip_addr ) ) {
 		dprintf (D_FULLDEBUG,
 				 "StartAd: No IP address in classAd from %s\n",
 				 hk.name.Value() );
@@ -214,7 +217,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 	return true;
 }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 bool
 makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 {
@@ -236,7 +239,7 @@ makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 
 	return true;
 }
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 bool
 makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
@@ -258,8 +261,11 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 	}
 
 	// get the IP and port of the schedd 
-	if ( !getIpAddr( "Schedd", ad, ATTR_SCHEDD_IP_ADDR,
-					 "SCHEDD_IP_ADDR", hk.ip_addr ) ) {
+	// As of 7.5.0, we look for MyAddress.  Prior to that, we did not,
+	// so new schedds must continue to send StartdIpAddr to remain
+	// compatible with old collectors.
+	if ( !getIpAddr( "Schedd", ad, ATTR_MY_ADDRESS, ATTR_SCHEDD_IP_ADDR,
+					 hk.ip_addr ) ) {
 		return false;
 	}
 

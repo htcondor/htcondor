@@ -70,7 +70,7 @@ int get_class_ad (const char *, ClassAd **);
 int enqueue_command (SchedDRequest *);
 char * escape_string (const char *);
 
-int doContactSchedd();
+void doContactSchedd();
 int request_pipe_handler(Service*, int);
 
 int handle_gahp_command(char ** argv, int argc);

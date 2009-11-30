@@ -171,8 +171,7 @@ static std::string urlEncodeParams(map_type const &params)
 	return result;
 }
 
-Sinful::Sinful(char const *sinful):
-	m_sinful(sinful ? sinful : "")
+Sinful::Sinful(char const *sinful)
 {
 	if( !sinful ) { // default constructor
 		m_valid = true;
@@ -182,7 +181,16 @@ Sinful::Sinful(char const *sinful):
 		char *port=NULL;
 		char *params=NULL;
 
-		m_valid = split_sin(sinful,&host,&port,&params);
+		if( *sinful != '<' ) {
+			m_sinful = "<";
+			m_sinful += sinful;
+			m_sinful += ">";
+		}
+		else {
+			m_sinful = sinful;
+		}
+
+		m_valid = split_sin(m_sinful.c_str(),&host,&port,&params);
 
 		if( m_valid ) {
 			if( host ) {
@@ -321,4 +329,34 @@ Sinful::regenerateSinful()
 		m_sinful += urlEncodeParams(m_params);
 	}
 	m_sinful += ">";
+}
+
+bool
+Sinful::addressPointsToMe( Sinful &addr )
+{
+	if( getHost() && addr.getHost() && !strcmp(getHost(),addr.getHost()) &&
+		getPort() && addr.getPort() && !strcmp(getPort(),addr.getPort()) )
+	{
+		char const *spid = getSharedPortID();
+		char const *addr_spid = addr.getSharedPortID();
+		if( spid == NULL && addr_spid == NULL ||
+			spid && addr_spid && !strcmp(spid,addr_spid) )
+		{
+			return true;
+		}
+	}
+	if( getPrivateAddr() ) {
+		Sinful private_addr( getPrivateAddr() );
+		return private_addr.addressPointsToMe( addr );
+	}
+	return false;
+}
+
+int
+Sinful::getPortNum()
+{
+	if( !getPort() ) {
+		return -1;
+	}
+	return atoi( getPort() );
 }

@@ -879,19 +879,6 @@ QuillErrCode PGSQLDatabase::execCommandWithBind(const char* sql,
 	return QUILL_FAILURE;
 }
 
-QuillErrCode PGSQLDatabase::execQueryWithBind(const char* sql, 
-												int bnd_cnt,
-												const char** val_arr,
-												QuillAttrDataType *typ_arr,
-												int &num_result) 
-{
-		/* this function is only used and implemented by oracle database, 
-		   it should not be called anywhere if it's postgres 
-		*/
-	EXCEPT("PROGRAMMER ERROR: execQueryWithBind should never be called on postgres");
-	return QUILL_FAILURE;
-}
-
 QuillErrCode		
 PGSQLDatabase::sendBulkData(const char *buffer) {
 	int result = ::PQputCopyData(connection, buffer, strlen(buffer));

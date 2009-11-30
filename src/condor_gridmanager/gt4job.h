@@ -52,7 +52,7 @@ class GT4Job : public BaseJob
 	~GT4Job();
 
 	void Reconfig();
-	int doEvaluateState();
+	void doEvaluateState();
 	void UpdateGlobusState( const MyString &new_state,
 							const MyString &new_fault );
 	void GramCallback( const char *new_state, const char *new_fault,

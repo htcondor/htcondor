@@ -205,7 +205,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (Eventcpp)&BaseJob::SetEvaluateState, this );
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
 	}
@@ -225,7 +225,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 INFNBatchJob::~INFNBatchJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( batchType != NULL ) {
 		free( batchType );
@@ -247,7 +247,7 @@ void INFNBatchJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int INFNBatchJob::doEvaluateState()
+void INFNBatchJob::doEvaluateState()
 {
 	int old_gm_state;
 	int old_remote_state;
@@ -664,8 +664,6 @@ int INFNBatchJob::doEvaluateState()
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 void INFNBatchJob::SetRemoteJobId( const char *job_id )

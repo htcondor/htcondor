@@ -605,7 +605,7 @@ LoadCredentialList () {
   return TRUE;
 }
 
-int
+void
 CheckCredentials () {
   CredentialWrapper * pCred;
   credentials.Rewind();  
@@ -641,8 +641,6 @@ CheckCredentials () {
     
     set_priv (priv); // restore old priv
   }
-  
-  return TRUE;
 }
 
 

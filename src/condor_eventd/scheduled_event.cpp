@@ -179,7 +179,7 @@ ScheduledEvent::ActivateEvent()
 	
 	DeactivateTid =
 		daemonCore->Register_Timer(EndTime+1-time(0),
-								   (Eventcpp)&ScheduledEvent::DeactivateEvent,
+								   (TimerHandlercpp)&ScheduledEvent::DeactivateEvent,
 								   "ScheduledEvent::DeactivateEvent()", this);
 
 	active = true;
@@ -197,7 +197,7 @@ int ScheduledShutdownEvent::SimulateShutdowns = 0;
 
 static int CleanupShutdownModeConfig(const char startd_machine[],
 									 const char startd_addr[]);
-static int CleanupShutdownModeConfigs();
+static void CleanupShutdownModeConfigs();
 static int CleanupTid = -1;
 static int StartdValidWindow = 600;
 static int RescheduleInterval = 60;
@@ -333,7 +333,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 		int firstCleanup = (CleanupInterval < 600) ? CleanupInterval : 600;
 		CleanupTid =
 			daemonCore->Register_Timer(firstCleanup, CleanupInterval,
-									   (Event)&CleanupShutdownModeConfigs,
+									   CleanupShutdownModeConfigs,
 									   "CleanupShutdownModeConfigs");
 	}
 
@@ -458,7 +458,7 @@ ScheduledShutdownEvent::ActivateEvent()
 
 	TimeoutTid =
 		daemonCore->Register_Timer(0,
-				(Eventcpp)&ScheduledShutdownEvent::Timeout,
+				(TimerHandlercpp)&ScheduledShutdownEvent::Timeout,
 				"ScheduledShutdownEvent::Timeout()", this);
 
 	// make sure to get an updated StartdList with the new config values
@@ -470,12 +470,12 @@ ScheduledShutdownEvent::ActivateEvent()
 	return 0;
 }
 
-int
+void
 ScheduledShutdownEvent::Timeout()
 {
 	if (!active || !valid) {
 		TimeoutTid = -1;
-		return -1;
+		return;
 	}
 	
 	time_t current_time = time(0);
@@ -524,13 +524,13 @@ ScheduledShutdownEvent::Timeout()
 		dprintf(D_ALWAYS, "Failed to reset timer for SHUTDOWN event %s!\n",
 				id);
 		TimeoutTid = -1;
-		return -1;
+		return;
 	}
 
 	// Make sure that all startds are in shutdown mode.
 	if (StartdList == NULL) {
 		if (GetStartdList() < 0) {
-			return -1;			// Oh well, try again next time...
+			return;			// Oh well, try again next time...
 		}
 	}
 
@@ -566,8 +566,6 @@ ScheduledShutdownEvent::Timeout()
 	// make sure to get an updated StartdList next time
 	delete StartdList;
 	StartdList = NULL;
-
-	return 0;
 }
 
 int

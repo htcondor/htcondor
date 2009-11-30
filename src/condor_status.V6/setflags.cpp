@@ -137,11 +137,11 @@ setType (char *dtype, int i, char *argv)
             type = LICENSE_AD;
         } else
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
         if (strcmp (dtype, "QUILL") == 0) {
             type = QUILL_AD;
         } else
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
         if (strcmp (dtype, "SCHEDD") == 0) {
             type = SCHEDD_AD;
@@ -201,9 +201,9 @@ getModeStr()
 		case MODE_STARTD_AVAIL:		return "Available (Startd)";
 		case MODE_STARTD_RUN:		return "Run (Startd)";
 		case MODE_STARTD_COD:		return "COD (Startd)";
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case MODE_QUILL_NORMAL:		return "Normal (Quill)";
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		case MODE_SCHEDD_NORMAL:	return "Normal (Schedd)";
 		case MODE_SCHEDD_SUBMITTORS:	return "Submittors (Schedd)";
@@ -262,12 +262,12 @@ setMode (Mode mod, int i, char *argv)
             setPPstyle (PP_SCHEDD_NORMAL, i, argv);
             break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		  case MODE_QUILL_NORMAL:
             setType ("QUILL", i, argv);
             setPPstyle (PP_QUILL_NORMAL, i, argv);
             break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		  case MODE_LICENSE_NORMAL:
             setType ("LICENSE", i, argv);
