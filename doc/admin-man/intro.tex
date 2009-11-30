@@ -333,7 +333,7 @@ that the central manager machine stops working.
 \index{daemon!condor\_transferer@\Condor{transferer}}
 \index{condor\_transferer daemon}
 \item[\Condor{transferer}] This short lived daemon is invoked by
-the \Condor{replication} daemon to accomplish the task of transfering
+the \Condor{replication} daemon to accomplish the task of transferring
 a state file before exiting.
 
 \index{Condor daemon!condor\_procd@\Condor{procd}}
@@ -365,6 +365,13 @@ Leases are represented by ClassAds.
 \index{condor\_rooster daemon} 
 \item[\Condor{rooster}] This daemon wakes hibernating machines based
 upon configuration details.
+
+\index{Condor daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{condor\_shared\_port daemon} 
+\item[\Condor{shared\_port}] This daemon listens for incoming TCP packets
+on behalf of Condor daemons, thereby reducing the number of required
+ports that must be opened when Condor is accessible through a firewall. 
 
 %\index{Condor daemon!stork\_server@\Stork{server}}
 %\index{daemon!stork\_server@\Stork{server}}

@@ -9635,13 +9635,15 @@ machine that can read from the pool's \Condor{collector} daemon.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-shared-port}\Condor{shared\_port} Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+\index{Condor daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{condor\_shared\_port daemon}
 \index{configuration!condor\_shared\_port configuration variables}
- \Condor{shared\_port} is an optional daemon that may be added to the
- \Condor{master} daemon's \MacroNI{DAEMON\_LIST} on platforms that
- support it (currently all unix systems except for HPUX).  It is
- responsible for creating a TCP listener port shared by all of the
- Condor daemons for which \Macro{USE\_SHARED\_PORT} is true.
+\Condor{shared\_port} is an optional daemon that may be added to the
+\Condor{master} daemon's \MacroNI{DAEMON\_LIST} on platforms that
+support it (currently all Unix systems except for HPUX).  It is
+responsible for creating a TCP listener port shared by all of the
+Condor daemons for which \Macro{USE\_SHARED\_PORT} is true.
 
 The main purpose of \Condor{shared\_port} is to reduce the
  number of ports that must be opened when condor needs to be
@@ -9661,7 +9663,7 @@ A secondary benefit of \Condor{shared\_port} is that it helps address
  scalability on the submit node.  Without \Condor{shared\_port}, about
  2.1 ephemeral ports per running job are required, possibly more
  depending on the rate of job completion.  There are only 64k ports in
- total and most standard unix installations only allocate a subset of
+ total and most standard Unix installations only allocate a subset of
  these as ephemeral ports.  In practice, with long running jobs, we
  have observed port exhaustion in typical Linux installations between
  11k and 14k simultaneously running jobs.  After increasing the
@@ -9696,7 +9698,7 @@ When \Condor{master} is configured to use the shared port
 
 The \Condor{collector} daemon typically has its own port (9618 by default).
 However, it can be configured to use a shared port.  Since the address of
-the collector must be set in the coniguration file, it is necessary to
+the collector must be set in the configuration file, it is necessary to
 specify the shared port socket name of the collector so that connections
 to the shared port that are intended for the collector can be forwarded
 to it.  If the shared port number is 11000, a collector address using this
@@ -9716,12 +9718,12 @@ COLLECTOR_ARGS = -sock collector
 \end{verbatim}
 
 When the collector address is a shared port, TCP updates will be
- automatically used instead of UDP.  Under unix, this means that the
+ automatically used instead of UDP.  Under Unix, this means that the
  \Condor{collector} daemon should be configured to have enough file
  descriptors.  See section~\ref{sec:tcp-collector-update} for more
  information.
 
-SOAP commands connot be sent over a shared port.  However, a daemon
+SOAP commands cannot be sent over a shared port.  However, a daemon
  may be configured to open a fixed non-shared port in addition to
  using a shared port.  This is done by setting both
  \Expr{USE\_SHARED\_PORT=True} and specifying a fixed port for the daemon
@@ -9747,7 +9749,7 @@ The TCP connections required to manage standard universe jobs do not
 
 \label{param:DaemonSocketDir}
 \item[\Macro{DAEMON\_SOCKET\_DIR}] This specifies the directory where
- Condor daemons will create named sockets so that incomming
+ Condor daemons will create named sockets so that incoming
  connections can be forwarded to them by \Condor{shared\_port}.  If
  this directory does not exist, it will be created. The maximum length
  of named socket paths plus names is restricted by the operating system,
@@ -9768,7 +9770,7 @@ Write access to this directory grants permission to receive
  of having a firewall in the first place if you are going to
  circumvent it in this way.)  The default
  \MacroNI{DAEMON\_SOCKET\_DIR} is \verb|$(LOCK)/daemon_sock|.  This
- directory must be on a local filesystem that supports named sockets.
+ directory must be on a local file system that supports named sockets.
 
 \label{param:SharedPortArgs}
 \item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by
