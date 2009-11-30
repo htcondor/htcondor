@@ -55,15 +55,6 @@ TCP connections.
   full restart.  It may take up to one \Condor{collector} update interval 
   for the changes to become visible.
 
-% gittrack #997
-\item Removed \MacroNI{COLLECTOR\_SOCKET\_CACHE\_SIZE}.  Configuration
-  of this parameter used to be mandatory to enable TCP updates to the
-  \Condor{collector}.  Now no special configuration of the
-  \Condor{collector} is required to allow TCP updates, but it is
-  important to ensure that there are sufficient file descriptors for
-  efficient operation.  See section~\ref{sec:tcp-collector-update} for
-  more information.
-
 % gittrack #1002
 \item Network compatibility with Condor prior to 6.3.3 is no longer
   supported unless \MacroNI{SEC\_CLIENT\_NEGOTIATION} is set to
@@ -76,6 +67,16 @@ TCP connections.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+% gittrack #997
+\item Removed the configuration variable 
+  \MacroNI{COLLECTOR\_SOCKET\_CACHE\_SIZE}.
+  Configuration of this parameter used to be mandatory to enable TCP updates
+  to the \Condor{collector}.  Now no special configuration of the
+  \Condor{collector} is required to allow TCP updates, but it is
+  important to ensure that there are sufficient file descriptors for
+  efficient operation.  See section~\ref{sec:tcp-collector-update} for
+  more information.
 
 % gittrack #892
 \item The new configuration variable \MacroNI{USE\_SHARED\_PORT} 

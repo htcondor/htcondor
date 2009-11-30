@@ -18,7 +18,7 @@ UDP sockets are datagrams, and are not reliable.
 There is very little overhead in establishing or using a UDP socket,
 but there is also no guarantee that the data will be delivered.
 Typically, the lack of guaranteed delivery for UDP does not cause
-problems for condor.
+problems for Condor.
 
 Condor can be configured to use TCP
 sockets to send updates to the \Condor{collector} instead of
@@ -41,7 +41,7 @@ setting is used:
 
 \end{description}
 
-When there are sufficient file descriptors, the collector leaves
+When there are sufficient file descriptors, the \Condor{collector} leaves
 established TCP sockets open, facilitating better performance.
 Subsequent updates can reuse an already open socket.
 
@@ -50,19 +50,21 @@ So, in a pool with N machines, each of them running a \Condor{master},
 \Condor{schedd}, and \Condor{startd}, the \Condor{collector} would
 need at least 3*N file descriptors.  If the \Condor{collector} is also
 acting as a CCB server, it will require an additional file descriptor for
-each registered daemon.  In typical unix installations,
-the default number of file descriptors available to the collector is only
-1024.  This can be modified with a configuration setting such as the following:
+each registered daemon.  In typical Unix installations,
+the default number of file descriptors available to the \Condor{collector}
+ is only 1024.
+  This can be modified with a configuration setting such as the following:
 
 \begin{verbatim}
 COLLECTOR_MAX_FILE_DESCRIPTORS = 1600
 \end{verbatim}
 
 If there are not sufficient file descriptors for all of the daemons
-sending updates to the collector, a warning will be printed in the
-\Condor{collector} log file.  Look for `file descriptor safety level exceeded'.
+sending updates to the \Condor{collector}, a warning will be printed in the
+\Condor{collector} log file.  Look for the string
+\Expr{file descriptor safety level exceeded}.
 
-\Note At this time, \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP}, only
+\Note At this time, \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} only
 affects the main \Condor{collector} for the site, not any sites that
 a \Condor{schedd} might flock to.
 
