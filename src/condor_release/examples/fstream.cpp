@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-#include <iostream.h>
+#include <iostream>
 #include <fstream.h>
 
 int main() {

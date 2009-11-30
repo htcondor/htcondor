@@ -88,6 +88,7 @@
 #include "setenv.h"
 #include "classadHistory.h"
 #include "forkwork.h"
+#include "condor_open.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"

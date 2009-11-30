@@ -23,9 +23,10 @@
 #include "fileinfo2.h"
 #include "network2.h"
 #include "gen_lib.h"
-#include "condor_fix_iostream.h"
-#include "condor_fix_fstream.h"
-#include "condor_fix_iomanip.h"
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+using namespace std;
 
 FileInformation::FileInformation()
 {

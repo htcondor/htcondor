@@ -20,6 +20,7 @@
 
  
 #include "condor_common.h"
+#include "condor_open.h"
 #include "url_condor.h"
 
 static

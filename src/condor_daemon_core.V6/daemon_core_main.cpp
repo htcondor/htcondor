@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_open.h"
 #include "condor_config.h"
 #include "util_lib_proto.h"
 #include "basename.h"
