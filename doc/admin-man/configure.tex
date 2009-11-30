@@ -7568,9 +7568,18 @@ the HDFS XML configuration.
 \label{param:HDFSNamenodeWeb}
 \item[\Macro{HDFS\_NAMENODE\_WEB}]
   The IP address and port number for the HDFS embedded web server within the
-  Name-node.
+  Name-node with the syntax of \Expr{a.b.c.d:portnumber}.
   There is no default value for this required variable.
-%  Defines the value of \Expr{dfs.datanode.dir} in the HDFS XML configuration.
+  Defines the value of \Expr{dfs.http.address} in the HDFS XML configuration.
+
+\label{param:HDFSNamenodeWeb}
+\item[\Macro{HDFS\_DATANODE\_WEB}]
+  The IP address and port number for the HDFS embedded web server within the
+  Name-node with the syntax of \Expr{a.b.c.d:portnumber}.
+  The default value for this optional variable is 0.0.0.0:0, which means
+  bind to the default interface on a dynamic port.
+  Defines the value of \Expr{dfs.datanode.http.address} in 
+  the HDFS XML configuration.
 
 \label{param:HDFSNamenodeDir}
 \item[\Macro{HDFS\_NAMENODE\_DIR}]
@@ -7605,16 +7614,22 @@ the HDFS XML configuration.
 \item[\Macro{HDFS\_LOG4J}]
   Used to set the configuration for the HDFS debugging level.
   Currently one of  \Expr{OFF}, \Expr{FATAL}, \Expr{ERROR}, \Expr{WARN},
-  \Expr{INFODEBUG} or \Expr{ALL}.
+  \Expr{INFODEBUG}, \Expr{ALL} or \Expr{INFO}.
   Debugging output is written to \File{\MacroUNI{LOG}/hdfs.log}.
+  The default value is \Expr{INFO}.
 
 \label{param:HDFSAllow}
 \item[\Macro{HDFS\_ALLOW}]
-  \emph{Definition not written yet.}
+  A comma separated list of hosts that are authorized with read and write
+  access to the invoked HDFS.
+  Note that this configuration variable name is likely to change to
+  \MacroNI{HOSTALLOW\_HDFS}.
 
 \label{param:HDFSDeny}
 \item[\Macro{HDFS\_DENY}]
-  \emph{Definition not written yet.}
+  A comma separated list of hosts that are denied access to the invoked HDFS.
+  Note that this configuration variable name is likely to change to
+  \MacroNI{HOSTDENY\_HDFS}.
 
 \label{param:HDFSNamenodeClass}
 \item[\Macro{HDFS\_NAMENODE\_CLASS}]
