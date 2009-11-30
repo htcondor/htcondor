@@ -212,14 +212,22 @@ UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
 	resetHwAddr( );
 	MemCopy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
 
-	char *str = m_hw_addr_str;
+	char			*str = m_hw_addr_str;
+	unsigned		 len = 0;
+	const unsigned	 maxlen = sizeof(m_hw_addr_str)-1;
+
+	*str = '\0';
 	for( int i = 0;  i < 6;  i++ ) {
-		char	tmp[3];
-		snprintf( tmp, sizeof(tmp), "%02x", (m_hw_addr[i] & 0xff) );
-		if ( i < 5 ) {
-			strcat( tmp, ":" );
-		}
+		char	tmp[4];
+		snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
+		len += strlen(tmp);
+		ASSERT( len < maxlen );
 		strcat( str, tmp );
+		if ( i < 5 ) {
+			len += 1;
+			ASSERT( len < maxlen );
+			strcat( str, ":" );
+		}
 	}
 }
 void
