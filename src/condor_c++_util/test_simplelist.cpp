@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-#include <iostream.h>
+#include <iostream>
 #include "simplelist.h"
 
 void iterate (const SimpleList<int> & list) {

@@ -22,7 +22,7 @@
 #define __EXPLAIN_H__
 
 #define WANT_CLASSAD_NAMESPACE
-#include "condor_fix_iostream.h"
+#include <iostream>
 #include "classad/classad_distribution.h"
 #include "list.h"
 #include "interval.h"

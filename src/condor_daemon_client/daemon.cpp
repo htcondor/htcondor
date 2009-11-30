@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_ver_info.h"
+#include "condor_open.h"
 
 #include "daemon.h"
 #include "condor_string.h"

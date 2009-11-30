@@ -84,7 +84,7 @@
 #include "condor_fix_assert.h"
 
 #if defined(WIN32)
-#include "condor_fix_iomanip.h"
+#include <iomanip.h>
 #endif
 
 

@@ -53,7 +53,7 @@ class Server
     int            max_req_sd_plus1;
     IMDS           imds;
     TransferState  transfers;
-    ofstream       log_file;
+    std::ofstream       log_file;
     int            num_store_xfers;
     int            num_restore_xfers;
 	int            num_replicate_xfers;

@@ -44,17 +44,6 @@
  #  define __USE_STD_IOSTREAM
  #  define HAVE_WCTOMB
  #  define HAVE_MBTOWC
-@@ -418,8 +427,8 @@
- #endif
- 
- #if defined(__cplusplus) && !defined(WITH_LEAN)
--# include <string>
--# include <iostream>
-+# include <string.h>
-+# include "condor_fix_iostream.h"
- #endif
- 
- #ifdef WITH_NOHTTP
 @@ -571,7 +562,7 @@
  # define SOAP_SOCKLEN_T SOCKLEN_T
  #elif defined(__socklen_t_defined) || defined(_SOCKLEN_T) || defined(CYGWIN) || defined(FREEBSD) || defined(__FreeBSD__) || defined(__QNX__) || defined(QNX) || defined(_AIX)

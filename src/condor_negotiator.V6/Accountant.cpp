@@ -21,7 +21,7 @@
 #include "condor_common.h"
 
 #include <math.h>
-#include "condor_fix_iomanip.h"
+#include <iomanip>
 
 #include "condor_accountant.h"
 #include "condor_debug.h"

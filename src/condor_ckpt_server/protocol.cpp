@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_fix_iostream.h"
-#include "condor_fix_fstream.h"
+#include <iostream>
+#include <fstream>
 #include "MyString.h"
 
 #include "constants2.h"
