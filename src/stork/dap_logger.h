@@ -29,7 +29,7 @@
 #ifndef WANT_CLASSAD_NAMESPACE
 #define WANT_CLASSAD_NAMESPACE
 #endif
-#include "condor_fix_iostream.h"
+#include <iostream>
 #include "classad/classad_distribution.h"
 
 void write_dap_log(const char *logfilename, const char *status, const char *param1, const char *value1, const char *param2 = NULL, const char *value2 = NULL, const char *param3 = NULL, const char *value3 = NULL, const char *param4 = NULL, const char *value4 = NULL, const char *param5 = NULL, const char *value5 = NULL, const char *param6 = NULL, const char *value6 = NULL);

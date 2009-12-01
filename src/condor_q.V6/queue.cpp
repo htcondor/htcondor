@@ -51,7 +51,7 @@
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_xml_classads.h"
-
+#include "condor_open.h"
 
 #ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"

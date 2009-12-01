@@ -99,7 +99,7 @@ protected:
 	char				*m_if_name;
 
 	// HW address & string rep of it
-    char				 m_hw_addr[32];
+    unsigned char		 m_hw_addr[32];
 	char				 m_hw_addr_str[32];
 
 	// Network mask

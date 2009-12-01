@@ -30,6 +30,7 @@
 #include "directory.h"
 #include "stdsoap2.h"
 #include "soap_core.h"
+#include "condor_open.h"
 
 #include "mimetypes.h"
 

@@ -36,10 +36,12 @@
 #include "..\condor_daemon_core.V6\condor_daemon_core.h"
 #include "master.h"
 
-#include "condor_fix_iostream.h"
+#include <iostream>
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+using namespace std;
 
 // Externs
 extern int dc_main(int, char**);

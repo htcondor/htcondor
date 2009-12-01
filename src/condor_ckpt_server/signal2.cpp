@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "signal2.h"
 #include "constants2.h"
-#include "condor_fix_iostream.h"
+#include <iostream>
 
 
 void BlockSignal(int sig)

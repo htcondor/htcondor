@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_open.h"
 #include "condor_debug.h"
 #include "MapFile.h"
 
