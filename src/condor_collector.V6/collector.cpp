@@ -1465,11 +1465,13 @@ void CollectorDaemon::init_classad(int interval)
         free( tmp );
     }
 
+    MyString id;
     if( CollectorName ) {
-            ad->Assign( ATTR_NAME, CollectorName );
+            id.sprintf( "%s@%s", CollectorName, my_full_hostname() );
     } else {
-            ad->Assign( ATTR_NAME, my_full_hostname() );
+            id.sprintf( "%s", my_full_hostname() );
     }
+    ad->Assign( ATTR_NAME, id.Value() );
 
     ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
 
