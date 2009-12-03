@@ -65,27 +65,33 @@ ORDER BY
     $hostname=$myrow["host"];
     $gid=$myrow["gid"];
     $base_filepath=$myrow["filepath"];
+	#echo "<h1>$hostname/$base_filepath/$gid/$taskname</h1>";
 
     # use .out file to determine path - .err file base path is indentical  
     $filepath = "";
     $basedir = $base_filepath; //"rundir";   
-    //$local_fs_prefix = "/nmi/nwo/www/html/";
+    #//$local_fs_prefix = "/nmi/nwo/www/html/";
 
       if ( strstr($taskname, "platform_job") ){
-        $file_found = 0;
-      # }  else if ( strstr($hostname, THIS_HOST) ){  
-        # if ( strstr($platform, "local") ) {
-        #   $filepath = "$basedir/$gid/$taskname";
-        # } else {
-        #   $filepath = "$basedir/$gid/$taskname.$platform";
-        # }
-	# $file_found=1;
-      } else if ( !(strstr($platform, "local")) ) {   
+         $filepath = "$basedir/$gid/$taskname.$platform";
+		 $file_found=file_exists($filepath.".out");;
+	  	#echo "<h1>$filepath</h1>";
+      } else if ( strstr($taskname, "platform_post") ){
+        $filepath = "$basedir/$gid/$taskname.$platform";
+		 $file_found=file_exists($filepath.".out");;
+	  	#echo "<h1>$filepath</h1>";
+      } else if ( strstr($taskname, "platform_pre") ){
+        $filepath = "$basedir/$gid/$taskname.$platform";
+		 $file_found=file_exists($filepath.".out");;
+	  	#echo "<h1>$filepath</h1>";
+      } else if (strstr($platform, "local"))  {   
+        $filepath = "$basedir/$gid/$taskname";
+		$file_found = file_exists($filepath.".out");
+	  	#echo "<h1>$filepath</h1>";
+      } else {   
         $filepath = "$basedir/$gid/userdir/$platform/$taskname";
-	$file_found = file_exists($local_fs_prefix.$filepath.".out");
-      } else {
-        $filepath = "$basedir/$gid/userdir/$platform/$taskname";
-	$file_found = 1;
+		$file_found = file_exists($filepath.".out");
+	  	#echo "<h1>$filepath</h1>";
       }
 
 		$resultspath = "$basedir/$gid/userdir/$platform/results.tar.gz";
