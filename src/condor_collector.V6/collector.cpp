@@ -1467,7 +1467,11 @@ void CollectorDaemon::init_classad(int interval)
 
     MyString id;
     if( CollectorName ) {
-            id.sprintf( "%s@%s", CollectorName, my_full_hostname() );
+            if( strchr( CollectorName, '@' ) ) {
+               id.sprintf( "%s", CollectorName );
+            } else {
+               id.sprintf( "%s@%s", CollectorName, my_full_hostname() );
+            }
     } else {
             id.sprintf( "%s", my_full_hostname() );
     }
