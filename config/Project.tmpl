@@ -264,7 +264,7 @@ EXPAT_FLAGS = -I$(EXPAT_INC)
 EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
 #endif /* expat */
 VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB)
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_$(GlobusFlavor).a $(EXPAT_LIB)
 #endif /* externals */
 #endif /* voms */
 
@@ -274,7 +274,7 @@ SECURITY_FLAGS = $(VOMS_FLAGS) \
 		 $(OPENSSL_FLAGS) \
 		 $(GSI_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
-		 $(GSI_LIB) $(VOMS_LIB) $(OPENSSL_LIB)
+		 $(VOMS_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
