@@ -1,0 +1,42 @@
+diff -u -r org.glite.security.voms/src/socklib/Makefile.am org.glite.security.voms-patched/src/socklib/Makefile.am
+--- org.glite.security.voms/src/socklib/Makefile.am	2007-11-19 08:54:07.000000000 -0600
++++ org.glite.security.voms-patched/src/socklib/Makefile.am	2009-12-01 11:30:19.000000000 -0600
+@@ -76,7 +76,7 @@
+ libsock_gcc32dbgpthr_la_CPPFLAGS = \
+ 	-I $(top_srcdir)/src/include \
+ 	-I $(top_srcdir)/src/sslutils \
+-	$(GLOBUS_GCC32DBG_CFLAGS)
++	$(GLOBUS_GCC32DBGPTHR_CFLAGS)
+ 
+ libsock_gcc32dbgpthr_la_LIBADD = \
+ 	$(top_builddir)/src/sslutils/libssl_utils_gcc32dbgpthr.la \
+@@ -128,7 +128,7 @@
+ libsock_gcc64dbgpthr_la_CPPFLAGS = \
+ 	-I $(top_srcdir)/src/include \
+ 	-I $(top_srcdir)/src/sslutils \
+-	$(GLOBUS_GCC64DBG_CFLAGS)
++	$(GLOBUS_GCC64DBGPTHR_CFLAGS)
+ 
+ libsock_gcc64dbgpthr_la_LIBADD = \
+ 	$(top_builddir)/src/sslutils/libssl_utils_gcc64dbgpthr.la \
+diff -u -r org.glite.security.voms/src/socklib/Makefile.in org.glite.security.voms-patched/src/socklib/Makefile.in
+--- org.glite.security.voms/src/socklib/Makefile.in	2008-07-15 10:12:40.000000000 -0500
++++ org.glite.security.voms-patched/src/socklib/Makefile.in	2009-12-01 11:33:37.000000000 -0600
+@@ -400,7 +400,7 @@
+ libsock_gcc32dbgpthr_la_CPPFLAGS = \
+ 	-I $(top_srcdir)/src/include \
+ 	-I $(top_srcdir)/src/sslutils \
+-	$(GLOBUS_GCC32DBG_CFLAGS)
++	$(GLOBUS_GCC32DBGPTHR_CFLAGS)
+ 
+ libsock_gcc32dbgpthr_la_LIBADD = \
+ 	$(top_builddir)/src/sslutils/libssl_utils_gcc32dbgpthr.la \
+@@ -452,7 +452,7 @@
+ libsock_gcc64dbgpthr_la_CPPFLAGS = \
+ 	-I $(top_srcdir)/src/include \
+ 	-I $(top_srcdir)/src/sslutils \
+-	$(GLOBUS_GCC64DBG_CFLAGS)
++	$(GLOBUS_GCC64DBGPTHR_CFLAGS)
+ 
+ libsock_gcc64dbgpthr_la_LIBADD = \
+ 	$(top_builddir)/src/sslutils/libssl_utils_gcc64dbgpthr.la \
