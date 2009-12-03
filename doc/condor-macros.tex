@@ -97,7 +97,7 @@
 \newcommand{\MethodDef}[6]
  { \BaseFunctionDef{{#1}::{#2}} {#3} {; #4} {}   {}      {#5} {#6} {Method}  }
 \newcommand{\ConstMethodDef}[6]
- { \BaseFunctionDef{{#1}::{#2}} {#3} {; #4} {} {const}   {#5} {#6} {Method}  }
+ { \BaseFunctionDef{{#1}::{#2}} {#3} {; #4} {} {\Type{const}}   {#5} {#6} {Method}  }
 \newcommand{\StaticMethodDef}[6]
  { \BaseFunctionDef{{#1}::{#2}} {#3} {; #4} {static } {} {#5} {#6} {Method}  }
 % \FunctionDef {1:function} {2:return type} {3:return description}
@@ -110,22 +110,22 @@
 % \Constructor {class} {param list} {synopsis}
 \newcommand{\Constructor}[3]
  { \BaseFunctionDef {{#1}::{#1}}     {} {None} {} {} {#2}
-    {{#1} Constructor -- {#3}} {Constructor} }
+    {Constructor {#3}} {Constructor} }
 % \Destructor {class}
 \newcommand{\Destructor}[1]
  { \BaseFunctionDef {{#1}::{\~{}#1}} {} {None} {} {} {void}
-    {{#1} Destructor} {Destructor}
+    {Destructor} {Destructor}
     \begin{itemize}\item None. \end{itemize} }
 
 % ==== Function parameters ====
 
 % Optional param
 \newcommand{\ParamDefOpt}[3]
- { \texttt{#2} {#1} -- \textit{Optional;} default = {#3} \\ }
+ { \texttt{#2} \texttt{#1} (\textit{Optional with default} = {#3}) \\ }
 % Required parameter
-\newcommand{\ParamDef}[2]    { \texttt{#2} {#1} \\ }
+\newcommand{\ParamDef}[2]    { \texttt{#2} \texttt{#1} \\ }
 % Parameter reference
-\newcommand{\Param}[1]       {\mbox{\textit{#1}}}
+\newcommand{\Param}[1]       {\texttt{#1}}
 % Constant expression
 \newcommand{\Const}[1]       {\texttt{#1}}
 % Custom type

@@ -7,8 +7,8 @@
 \index{ReadUserLog class@\texttt{ReadUserLog} class}
 \index{Job Log Reader API}
 
-Condor has the ability to log a job's significant events during its lifetime as
-a Condor job.  
+Condor has the ability to log a Condor job's significant events during 
+its lifetime.
 This is enabled in the job's submit description file with the
 \SubmitCmd{Log} command.
 
@@ -18,10 +18,12 @@ to read and parse events,
 polling for events, and saving and restoring reader state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Constants / Enumerated Types}
-\begin{itemize}
+\subsubsection{Constants and Enumerated Types}
 
-\item ULogEventOutcome (defined in ``condor\_event.h''):
+The following define enumerated types useful to the API.
+
+\begin{itemize}
+\item \Type{ULogEventOutcome} (defined in \File{condor\_event.h}):
   \begin{itemize}
     \item \Const{ULOG\_OK}: Event is valid
     \item \Const{ULOG\_NO\_EVENT}: No event occurred (like EOF)
@@ -30,7 +32,7 @@ polling for events, and saving and restoring reader state.
     \item \Const{ULOG\_UNK\_ERROR}: Unknown Error
   \end{itemize}
 
-\item ReadUserLog::FileStatus
+\item \Type{ReadUserLog::FileStatus}
   \begin{itemize}
     \item \Const{LOG\_STATUS\_ERROR}: An error was encountered
     \item \Const{LOG\_STATUS\_NOCHANGE}: No change in file size
@@ -43,16 +45,19 @@ polling for events, and saving and restoring reader state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Constructors and Destructors}
-All ReadUserLog constructors invoke one of the initialize() methods,
-below.  Since C++ constructors cannot return errors, however, an
-application using any but the default constructor should call
-isIinitialized() (see below) to verify that the object initialized
-correctly (had permissions to open required files, etc.).
 
-\Note Because the constructors cannot return status information, most of
-them will be eliminated In the future.  All constructors except for
-the default constructor (with no parameters) will be removed.
-The application will need to call the appropriate initialize() method.
+All \Code{ReadUserLog} constructors invoke one of the \Code{initialize()}
+methods.
+Since C++ constructors cannot return errors, 
+an application using any but the default constructor should call
+\Code{isIinitialized()} to verify that the object initialized correctly,
+and for example, had permissions to open required files.
+
+Note that because the constructors cannot return status information,
+most of these constructors will be eliminated in the future.
+All constructors, except for the default constructor with no parameters,
+will be removed.
+The application will need to call the appropriate \Code{initialize()} method.
 
 \begin{itemize}
 
@@ -62,36 +67,36 @@ The application will need to call the appropriate initialize() method.
   {default}
   \begin{itemize}
   \item \ParamDefOpt{isEventLog}{bool}{\Const{false}}
-    If \Const{true}, the ReadUserLog object is
+    If \Const{true}, the \Code{ReadUserLog} object is
     initialized to read the schedd-wide event log.
     \\ \Note If \Param{isEventLog} is \Const{true}, the initialization may
-    silently fail, and the \MethodRef{ReadUserLog}{isInitialized} should be
-    checked to verify that the initialization was successful.
+    silently fail, so the value of \MethodRef{ReadUserLog}{isInitialized}
+    should be checked to verify that the initialization was successful.
     \\ \Note The \Param{isEventLog} parameter will be removed in the future.
   \end{itemize}
 
 \item \Constructor
   {ReadUserLog}
   {FILE *fp, bool is\_xml, bool enable\_close}
-  {limited functionality reader: no rotation handling, no locking}
+  {of a limited functionality reader: no rotation handling, no locking}
   \begin{itemize}
   \item \ParamDef{fp}{FILE *}
-    FILE pointer to the previously opened log file to read.
+    File pointer to the previously opened log file to read.
   \item \ParamDef{is\_xml}{bool}
     If \Const{true}, the file is treated as XML; otherwise, it will be
-    read as an ``old style'' file.
+    read as an old style file.
   \item \ParamDefOpt{enable\_close}{bool}{\Const{false}}
     If \Const{true}, the reader will open the file read-only.
   \end{itemize}
-  \Note As noted above, the \MethodRef{ReadUserLog}{isInitialized}
+  \Note The \MethodRef{ReadUserLog}{isInitialized} method
   should be invoked to verify that this constructor was initialized
   successfully.
-  \\ \Note As noted above, this constructor will be removed in the future.
+  \\ \Note This constructor will be removed in the future.
 
 \item \Constructor
   {ReadUserLog}
   {const char *filename, bool read\_only}
-  {read a specific log file}
+  {to read a specific log file}
   \begin{itemize}
   \item \ParamDef{filename}{const char *}
     Path to the log file to read
@@ -99,12 +104,12 @@ The application will need to call the appropriate initialize() method.
     If \Const{true}, the reader will open the file read-only and
     disable locking.
   \end{itemize}
-  \Note As noted above, this constructor will be removed in the future.
+  \Note This constructor will be removed in the future.
 
 \item \Constructor
   {ReadUserLog}
   {const FileState \&state, bool read\_only}
-  {continue from a persisted reader state}
+  {to continue from a persisted reader state}
   \begin{itemize}
   \item \ParamDef{state}{const FileState \&}
     Reference to the persisted state to restore from
@@ -112,10 +117,10 @@ The application will need to call the appropriate initialize() method.
     If \Const{true}, the reader will open the file read-only and
     disable locking.
   \end{itemize}
-  \Note As noted above, the \MethodRef{ReadUserLog}{isInitialized}
+  \Note The \MethodRef{ReadUserLog}{isInitialized}
   method should be invoked to verify that this constructor was
   initialized successfully.
-  \\ \Note As noted above, this constructor will be removed in the future.
+  \\ \Note This constructor will be removed in the future.
 
 \item \Destructor{ReadUserLog}
 
@@ -124,45 +129,50 @@ The application will need to call the appropriate initialize() method.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Initializers}
-These methods are used to perform the initialization of the
-ReadUserLog objects.  These initializers are used by all contractors
-that do real work.  As noted above, applications should never use
-those contractors, and should use the default constructor (with no
-parameters) and should instead use one of these initializer methods.
 
-All of these functions will return \Const{false} if unable to open the
-  log file (among other problems), or \Const{true} if successful.
+These methods are used to perform the initialization of the
+\Code{ReadUserLog} objects.  These initializers are used by all constructors
+that do real work.  
+Applications should never use those constructors,
+should use the default constructor,
+ and should instead use one of these initializer methods.
+
+All of these functions will return \Const{false} if there are problems
+such as being unable to open the log file,
+or \Const{true} if successful.
+
 \begin{itemize}
 
 \item \MethodDef{ReadUserLog}{initialize}
-  {bool} {\Const{true}: success, \Const{false}: failed}
+  {\Type{bool}} {\Const{true}: success, \Const{false}: failed}
   {void}
   {Initialize to read the EventLog file.
   \\ \Note This method will likely be eliminated in the future, and this
-  functionality will be moved to a new ReadEventLog class.}
+  functionality will be moved to a new \Code{ReadEventLog} class.}
   \begin{itemize}\item None. \end{itemize}
 
 \item \MethodDef{ReadUserLog}{initialize}
-  {bool} {\Const{true}: success, \Const{false}: failed}
+  {\Type{bool}} {\Const{true}: success, \Const{false}: failed}
   {const char *filename, bool handle\_rotation,
     bool check\_for\_rotated, bool read\_only}
   {Initialize to read a specific log file.}
   \begin{itemize}
   \item \ParamDef{filename}{const char *}
     Path to the log file to read
-  \item \ParamDefOpt{handle\_rotation} {bool} {false}
-    If \Const{true}, enable the reader to handle rotating log files
-    (only useful for global user logs)
-  \item \ParamDefOpt{check\_for\_rotated} {bool} {false}
-    If \Const{true}, try to open the rotated (``.old'' or ``.1'', ``.2'',
-    ..) files first?
+  \item \ParamDefOpt{handle\_rotation} {bool} {\Const{false}}
+    If \Const{true}, enable the reader to handle rotating log files,
+    which is only useful for global user logs
+  \item \ParamDefOpt{check\_for\_rotated} {bool} {\Const{false}}
+    If \Const{true}, try to open the rotated files
+    (with file names appended with \File{.old} or \File{.1}, \File{.2}, \Dots)
+    first.
   \item \ParamDefOpt{read\_only} {bool} {\Const{false}}
     If \Const{true}, the reader will open the file read-only and
     disable locking.
   \end{itemize}
 
 \item \MethodDef{ReadUserLog}{initialize}
-  {bool} {\Const{true}: success, \Const{false}: failed}
+  {\Type{bool}} {\Const{true}: success, \Const{false}: failed}
   {const char *filename, int max\_rotation,
     bool check\_for\_rotated, bool read\_only}
   {Initialize to read a specific log file.}
@@ -170,18 +180,24 @@ All of these functions will return \Const{false} if unable to open the
   \item \ParamDef{filename}{const char *}
     Path to the log file to read
   \item \ParamDef{max\_rotation} {int}
-    Sets the max rotation file number the reader will
-    try to read (0 disables) (only useful for event logs)
-  \item \ParamDefOpt{check\_for\_rotated} {bool} {false}
-    If \Const{true}, try to open the rotated (``.old'' or ``.1'', ``.2'',
-    ..) files first?
+    Limits what previously rotated files will be considered by the number
+    given in the file name suffix.
+    A value of 0 disables looking for rotated files.
+    A value of 1 limits the rotated file to be that with the file name suffix
+    of \File{.old}.
+    As only event logs are rotated, this parameter is only useful for
+    event logs.
+  \item \ParamDefOpt{check\_for\_rotated} {bool} {\Const{false}}
+    If \Const{true}, try to open the rotated files
+    (with file names appended with \File{.old} or \File{.1}, \File{.2}, \Dots)
+    first.
   \item \ParamDefOpt{read\_only} {bool} {\Const{false}}
     If \Const{true}, the reader will open the file read-only and
     disable locking.
   \end{itemize}
 
 \item \MethodDef{ReadUserLog}{initialize}
-  {bool} {\Const{true}: success, \Const{false}: failed}
+  {\Type{bool}} {\Const{true}: success, \Const{false}: failed}
   {const FileState \&state, bool read\_only}
   {Initialize to continue from a persisted reader state.}
   \begin{itemize}
@@ -193,7 +209,7 @@ All of these functions will return \Const{false} if unable to open the
   \end{itemize}
 
 \item \MethodDef{ReadUserLog}{initialize}
-  {bool} {\Const{true}: success, \Const{false}: failed}
+  {\Type{bool}} {\Const{true}: success, \Const{false}: failed}
   {const FileState \&state, int max\_rotation, bool read\_only}
   {Initialize to continue from a persisted reader state and set the
   rotation parameters.}
@@ -201,8 +217,13 @@ All of these functions will return \Const{false} if unable to open the
   \item \ParamDef{state}{const FileState \&}
     Reference to the persisted state to restore from
   \item \ParamDef{max\_rotation} {int}
-    Sets the max rotation file number the reader will
-    try to read (0 disables) (only useful for event logs)
+    Limits what previously rotated files will be considered by the number
+    given in the file name suffix.
+    A value of 0 disables looking for rotated files.
+    A value of 1 limits the rotated file to be that with the file name suffix
+    of \File{.old}.
+    As only event logs are rotated, this parameter is only useful for
+    event logs.
   \item \ParamDefOpt{read\_only}{bool}{\Const{false}}
     If \Const{true}, the reader will open the file read-only and
     disable locking.
@@ -216,8 +237,8 @@ All of these functions will return \Const{false} if unable to open the
 
 \item \MethodDef{ReadUserLog}{readEvent}
   {\Type{ULogEventOutcome}}
-  {Outcome of the log read attempt. See above for ULogEventOutcome
-  values.}
+  {Outcome of the log read attempt. \Type{ULogEventOutcome} is an enumerated
+  type.}
   {ULogEvent $*$\& event}
   {Read the next event from the log file.}
   \begin{itemize}
@@ -230,12 +251,13 @@ All of these functions will return \Const{false} if unable to open the
   \end{itemize}
 
 \item \MethodDef{ReadUserLog}{synchronize}
-  {bool} {\Const{true}: success, \Const{false}: failed}
+  {\Type{bool}} {\Const{true}: success, \Const{false}: failed}
   {void}
   {Synchronize the log file if the last event read was an error.  This
     safe guard function should be called if there is some error reading an
-    event, but there are events after it in the file.  Will skip over the
-    "bad" event (i.e., read up to and including the event separator (...))
+    event, but there are events after it in the file.
+    It will skip over the
+    bad event, meaning it will read up to and including the event separator,
     so that the rest of the events can be read.}
   \begin{itemize}\item None. \end{itemize}
 
@@ -246,15 +268,17 @@ All of these functions will return \Const{false} if unable to open the
 \begin{itemize}
 
 \item \MethodDef{ReadUserLog}{CheckFileStatus}
-  {ReadUserLog::FileStatus}{Status of the log file -- see above for values.}
+  {\Type{ReadUserLog::FileStatus}}{the status of the log file, an
+  enumerated type.}
   {void}
-  {Check the status of the file - has it grown, shrunk, etc.}
+  {Check the status of the file, and whether it has grown, shrunk, etc.}
   \begin{itemize}\item None. \end{itemize}
 
 \item \MethodDef{ReadUserLog}{CheckFileStatus}
-  {ReadUserLog::FileStatus} {Status of the log file -- see above for values.}
+  {\Type{ReadUserLog::FileStatus}} {the status of the log file, an
+  enumerated type.}
   {bool \&is\_empty}
-  {Check the status of the file - has it grown, shrunk, etc.}
+  {Check the status of the file, and whether it has grown, shrunk, etc.}
   \begin{itemize}
   \item \ParamDef{is\_empty}{bool \&}
     Set to \Const{true} if the file is empty, \Const{false} otherwise.
@@ -264,24 +288,25 @@ All of these functions will return \Const{false} if unable to open the
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Methods for saving / restoring persistent reader state}
+\subsubsection{Methods for saving and restoring persistent reader state}
 
 The \Type{ReadUserLog::FileState} structure is used to save and
-restore the state of the ReadUserLog state for persistence.  The
-application should always use InitFileState() to initialize this
+restore the state of the \Type{ReadUserLog} state for persistence.  The
+application should always use \Procedure{InitFileState} to initialize this
 structure.
 
 All of these methods take a reference to a state buffer
 as their only parameter.
 
-All of these methods return true upon success.
+All of these methods return \Const{true} upon success.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Save state to persistent storage}
 To save the state, do something like this:
+\footnotesize
 \begin{verbatim}
-  ReadUserLog			reader;
-  ReadUserLog::FileState	statebuf;
+  ReadUserLog                reader;
+  ReadUserLog::FileState     statebuf;
 
   status = ReadUserLog::InitFileState( statebuf );
 
@@ -294,76 +319,82 @@ To save the state, do something like this:
 
   status = UninitFileState( statebuf );
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Restore state from persistent storage}
 To restore the state, do something like this:
+\footnotesize
 \begin{verbatim}
-  ReadUserLog::FileState	statebuf;
+  ReadUserLog::FileState     statebuf;
   status = ReadUserLog::InitFileState( statebuf );
 
   read( fd, statebuf.buf, statebuf.size );
 
-  ReadUserLog  				reader;
+  ReadUserLog                reader;
   status = reader.initialize( statebuf );
 
   status = UninitFileState( statebuf );
   ....
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{API Reference}
 \begin{itemize}
 
 \item \StaticMethodDef{ReadUserLog}{InitFileState}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {ReadUserLog::FileState \&state}
   {Initialize a file state buffer}
   \begin{itemize}
   \item \ParamDef{state}{ReadUserLog::FileState \&}
-    File state buffer to initialize.
+    The file state buffer to initialize.
   \end{itemize}
 
 \item \StaticMethodDef{ReadUserLog}{UninitFileState}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {ReadUserLog::FileState \&state}
-  {Clean up a file state buffer a free allocated memory}
+  {Clean up a file state buffer and free allocated memory}
   \begin{itemize}
   \item \ParamDef{state}{ReadUserLog::FileState \&}
-    File state buffer to un-initialize.
+    The file state buffer to un-initialize.
   \end{itemize}
 
 \item \ConstMethodDef{ReadUserLog}{GetFileState}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {ReadUserLog::FileState \&state}
-  {Get the current state to persist it / save it off to disk}
+  {Get the current state to persist it or save it off to disk}
   \begin{itemize}
   \item \ParamDef{state}{ReadUserLog::FileState \&}
-    File state buffer to read the state into.
+    The file state buffer to read the state into.
   \end{itemize}
 
 \item \MethodDef{ReadUserLog}{SetFileState}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {const ReadUserLog::FileState \&state}
-  {Use this method to set the current state (after restoring it).
-    \\ \Note The state buffer is NOT automatically updated; you MUST
-    call the GetFileState() method each time before persisting the
-    buffer to disk (or however else you choose to persist it's contents).}
+  {Use this method to set the current state, after restoring it.
+    \\ \Note The state buffer is \emph{NOT} automatically updated; a call 
+    \emph{MUST} be made to
+    the \Procedure{GetFileState} method each time before persisting the
+    buffer to disk, or however else is chosen to persist its contents.}
   \begin{itemize}
   \item \ParamDef{state}{const ReadUserLog::FileState \&}
-    File state buffer to restore from.
+    The file state buffer to restore from.
   \end{itemize}
 
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Access to the persistent state data}
+
 If the application needs access to the data elements in a persistent
 state, it should instantiate a \Type{ReadUserLogStateAccess} object.
 
 \begin{itemize}
 \item Constructors / Destructors
 
+\begin{itemize}
 \item \Constructor
   {ReadUserLogStateAccess}
   {const ReadUserLog::FileState \&state}
@@ -375,51 +406,52 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
 
 \item \Destructor
   {ReadUserLogStateAccess}
-  {default}
+\end{itemize}
 
 \item Accessor Methods
 \begin{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{isInitialized}
-  {bool} {\Const{true} if successfully initialized, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successfully initialized, \Const{false} otherwise}
   {void}
-  {Is the buffer initialized?}
+  {Checks if the buffer initialized}
   \begin{itemize} \item None. \end{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{isValid}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {void}
-  {Is buffer valid for use by the ReadUserLog::initialize()?}
+  {Checks if the buffer is valid for use by 
+  \Procedure{ReadUserLog::initialize}}
   \begin{itemize} \item None. \end{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{getFileOffset}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {unsigned long \&pos}
-  {Get position in individual file.
+  {Get position within individual file.
     \\ \Note Can return an error if the result is too large to be
-    stored in a long.}
+    stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{pos}{unsigned long \&}
-    Byte position in the current log file
+    Byte position within the current log file
   \end{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{getFileEventNum}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {unsigned long \&num}
   {Get event number in individual file.
     \\ \Note Can return an error if the result is too large to be
-    stored in a long.}
+    stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{num}{unsigned long \&}
     Event number of the current event in the current log file
   \end{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{getLogPosition}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {unsigned long \&pos}
   {Position of the start of the current file in overall log.
     \\ \Note Can return an error if the result is too large
-    to be stored in a long.}
+    to be stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{pos}{unsigned long \&}
     Byte offset of the start of the current file in the overall
@@ -431,7 +463,7 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
   {unsigned long \&num}
   {Get the event number of the first event in the current file
     \\ \Note Can return an error if the result is too large
-    to be stored in a long.}
+    to be stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{num}{unsigned long \&}
     This is the absolute event number of the first event in the
@@ -446,13 +478,13 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
   \item \ParamDef{buf}{char $*$}
     Buffer to fill with the unique ID of the current file.
   \item \ParamDef{size}{int}
-    Size (in bytes) of buf.
+    Size in bytes of \Param{buf}.
     \\ This is to prevent \MethodRef{ReadUserLogFileState}{getUniqId}
-    from writing past the end of buf.
+    from writing past the end of \Param{buf}.
   \end{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{getSequenceNumber}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {int \&seqno}
   {Get the sequence number of the associated state file.}
   \begin{itemize}
@@ -465,11 +497,12 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
 \begin{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{getFileOffsetDiff}
-  {bool} {\Const{true} if successful, \Const{false} otherwise}
+  {\Type{bool}} {\Const{true} if successful, \Const{false} otherwise}
   {const ReadUserLogStateAccess \&other, unsigned long \&pos}
-  {Get the position difference of two states (this - other).
+  {Get the position difference of two states given by \Code{this} 
+  and \Code{other}.
     \\ \Note Can return an error if the result is too large to be
-    stored in a long.}
+    stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{other}{const ReadUserLogStateAccess \&}
     Reference to the state to compare to.
@@ -482,7 +515,7 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
   {const ReadUserLogStateAccess \&other, long \&diff}
   {Get event number in individual file.
     \\ \Note Can return an error if the result is too large to be
-    stored in a long.}
+    stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{other}{const ReadUserLogStateAccess \&}
     Reference to the state to compare to.
@@ -493,15 +526,16 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
 \item \ConstMethodDef{ReadUserLogFileState}{getLogPosition}
   {bool} {\Const{true} if successful, \Const{false} otherwise}
   {const ReadUserLogStateAccess \&other, long \&diff}
-  {Get difference between the position of two log states (this - other).
+  {Get the position difference of two states given by \Code{this} 
+  and \Param{other}.
     \\ \Note Can return an error if the result is too large
-    to be stored in a long.}
+    to be stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{other}{const ReadUserLogStateAccess \&}
     Reference to the state to compare to.
   \item \ParamDef{diff}{long \&}
     Difference between the byte offset of the start of the current
-    file in the overall logical log stream and that of other.
+    file in the overall logical log stream and that of \Param{other}.
   \end{itemize}
 
 \item \ConstMethodDef{ReadUserLogFileState}{getEventNumber}
@@ -510,14 +544,14 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
   {Get the difference between the event number of the first event in
     two state buffers (this - other).
     \\ \Note Can return an error if the result is too large
-    to be stored in a long.}
+    to be stored in a \Type{long}.}
   \begin{itemize}
   \item \ParamDef{other}{const ReadUserLogStateAccess \&}
     Reference to the state to compare to.
   \item \ParamDef{diff}{long \&}
     Difference between the absolute event number of the first event in
     the current file in the overall logical log stream and that of
-    other.
+    \Param{other}.
   \end{itemize}
 
 \end{itemize}	% Comparison methods
@@ -527,8 +561,8 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Future persistence API}
 The \Type{ReadUserLog::FileState} will likely be replaced with a new
-C++ \Type{ReadUserLog::NewFileState} (or similarly named) class that
-will self initialize, etc.
+C++ \Type{ReadUserLog::NewFileState}, or a similarly named class that
+will self initialize.
 
 Additionally, the functionality of \Type{ReadUserLogStateAccess} will
 be integrated into this class.
