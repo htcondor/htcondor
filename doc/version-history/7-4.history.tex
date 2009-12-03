@@ -235,6 +235,10 @@ software.
 
 \begin{itemize}
 
+\item Condor is now integrated with the Hadoop Distributed File System (HDFS). 
+See documentation in section~\ref{sec:Condor-HDFS} and 
+section~\ref{sec:HDFS-Config-File-Entries}.
+
 % commit af65de7ccc1a281c2b05b8f68ac70bcfa56b2dd1
 \item \Condor{q} using the options \Opt{-analyze} and \Opt{-better-analyze}
   now provide analysis for scheduler and local universe jobs.
@@ -630,13 +634,19 @@ prior to 7.2.4.  This bug will be fixed in Condor version 7.4.1.
 turned on, \Condor{dagman} will hang when running any DAG that has
 POST scripts.
 
+% gittrac #979
+\item \Condor{dagman} will hang on Windows when running any DAG that
+uses more than one log file for the node jobs.
+
 \end{itemize}
 
 \noindent Additions and Changes to the Manual:
 
 \begin{itemize}
 
-\item None.
+\item See section~\ref{sec:Condor-HDFS} and 
+section~\ref{sec:HDFS-Config-File-Entries} for preliminary documentation of
+Condor's integration with the Hadoop Distributed File System (HDFS). 
 
 \end{itemize}
 

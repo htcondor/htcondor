@@ -429,6 +429,7 @@ the library routine which parses the configuration files.
   \item \verb@LEASEMANAGER@
   \item \verb@ROOSTER@
   \item \verb@SHARED_PORT@
+  \item \verb@HDFS@
     \label{list:subsystem names}
   \end{itemize}
 
@@ -7556,6 +7557,125 @@ This allows multiple instances of the
   It is used to further constrain the types
   of ClassAds from the \Condor{collector}.
   There is no default value, resulting in no constraints being placed on query.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:HDFS-Config-File-Entries}\condor{hdfs}
+Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$
+
+\index{configuration!condor\_hdfs configuration variables}
+These macros affect the \Condor{hdfs} daemon.
+Many of these variables determine how the \Condor{hdfs} daemon sets
+the HDFS XML configuration.
+
+\begin{description}
+
+\label{param:HDFSHome}
+\item[\Macro{HDFS\_HOME}]
+  The directory path for the Hadoop file system installation directory.
+  Defaults to \File{\MacroUNI{RELEASE\_DIR}/libexec}.
+  This directory is required to contain 
+
+  \begin{itemize}
+  \item{directory \File{lib}},
+  containing all necessary jar files for the execution of Name-nodes
+  and Data-nodes.
+  \item{directory \File{conf}},
+  containing default Hadoop file system configuration files with names that
+  conform to \Expr{*-site.xml}.
+  \item{directory \File{webapps}},
+  containing JavaServer pages (jsp) files for the Hadoop file 
+  system's embedded server.
+  \end{itemize}
+
+\label{param:HDFSNamenode}
+\item[\Macro{HDFS\_NAMENODE}]
+  The host and port number for the HDFS Name-node.
+  There is no default value for this required variable.
+  Defines the value of \Expr{fs.default.name} in the HDFS XML configuration.
+
+\label{param:HDFSNamenodeWeb}
+\item[\Macro{HDFS\_NAMENODE\_WEB}]
+  The IP address and port number for the HDFS embedded web server within the
+  Name-node with the syntax of \Expr{a.b.c.d:portnumber}.
+  There is no default value for this required variable.
+  Defines the value of \Expr{dfs.http.address} in the HDFS XML configuration.
+
+\label{param:HDFSNamenodeWeb}
+\item[\Macro{HDFS\_DATANODE\_WEB}]
+  The IP address and port number for the HDFS embedded web server within the
+  Name-node with the syntax of \Expr{a.b.c.d:portnumber}.
+  The default value for this optional variable is 0.0.0.0:0, which means
+  bind to the default interface on a dynamic port.
+  Defines the value of \Expr{dfs.datanode.http.address} in 
+  the HDFS XML configuration.
+
+\label{param:HDFSNamenodeDir}
+\item[\Macro{HDFS\_NAMENODE\_DIR}]
+  The path to the directory on a local file system where the Name-node will
+  store its meta-data for file blocks.
+  There is no default value for this variable; it is required to be defined
+  for the Name-node machine.
+  Defines the value of \Expr{dfs.name.dir} in the HDFS XML configuration.
+
+\label{param:HDFSDatanodeDir}
+\item[\Macro{HDFS\_DATANODE\_DIR}]
+  The path to the directory on a local file system where the Data-node will
+  store file blocks.
+  There is no default value for this variable; it is required to be defined
+  for a Data-node machine.
+  Defines the value of \Expr{dfs.data.dir} in the HDFS XML configuration.
+
+\label{param:HDFSDatanodeAddress}
+\item[\Macro{HDFS\_DATANODE\_ADDRESS}]
+  The IP address and port number of this machine's Data-node.
+  There is no default value for this variable; it is required to be defined
+  for a Data-node machine, and may be given the value \Expr{0.0.0.0:0}
+  as a Data-node need not be running on a known port.
+  Defines the value of \Expr{dfs.datanode.address} in the HDFS XML
+ configuration.
+
+\label{param:HDFSServices}
+\item[\Macro{HDFS\_SERVICES}]
+  A host name, to identify the machine acting as the Name-node.
+
+\label{param:HDFSLog4j}
+\item[\Macro{HDFS\_LOG4J}]
+  Used to set the configuration for the HDFS debugging level.
+  Currently one of  \Expr{OFF}, \Expr{FATAL}, \Expr{ERROR}, \Expr{WARN},
+  \Expr{INFODEBUG}, \Expr{ALL} or \Expr{INFO}.
+  Debugging output is written to \File{\MacroUNI{LOG}/hdfs.log}.
+  The default value is \Expr{INFO}.
+
+\label{param:HDFSAllow}
+\item[\Macro{HDFS\_ALLOW}]
+  A comma separated list of hosts that are authorized with read and write
+  access to the invoked HDFS.
+  Note that this configuration variable name is likely to change to
+  \MacroNI{HOSTALLOW\_HDFS}.
+
+\label{param:HDFSDeny}
+\item[\Macro{HDFS\_DENY}]
+  A comma separated list of hosts that are denied access to the invoked HDFS.
+  Note that this configuration variable name is likely to change to
+  \MacroNI{HOSTDENY\_HDFS}.
+
+\label{param:HDFSNamenodeClass}
+\item[\Macro{HDFS\_NAMENODE\_CLASS}]
+  An optional value that specifies the class to invoke.
+  The default value is \verb@org.apache.hadoop.hdfs.server.namenode.NameNode@.
+
+\label{param:HDFSDatanodeClass}
+\item[\Macro{HDFS\_DATANODE\_CLASS}]
+  An optional value that specifies the class to invoke.
+  The default value is \verb@org.apache.hadoop.hdfs.server.datanode.DataNode@.
+
+\label{param:HDFSSiteFile}
+\item[\Macro{HDFS\_SITE\_FILE}]
+  The optional value that specifies the HDFS XML configuration file to generate.
+  The default value is \File{hdfs-site.xml}.
 
 \end{description}
 

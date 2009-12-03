@@ -98,6 +98,11 @@ remote file access.
 when the configuration triggers the detection of virtual machine
 software.
 %
+\index{ClassAd machine attribute!JobVM\_VCPUS}
+\item[\AdAttr{JobVM\_VCPUS}:] An attribute defined if a vm universe job
+is running on this slot.  Defined by the number of virtualized CPUs
+in the virtual machine.
+%
 \index{ClassAd machine attribute!KeyboardIdle}
 \item[\AdAttr{KeyboardIdle}:] The number of seconds since activity on any
 keyboard or mouse associated with this machine has last been detected.
@@ -351,8 +356,29 @@ This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 
 (swap space) expressed in Kbytes.
 %
+\index{ClassAd machine attribute!VM\_AvailNum}
+\item[\AdAttr{VM\_AvailNum}:] The maximum number of vm universe jobs that
+can be started on this machine. This maximum is set by the configuration
+variable \Macro{VM\_MAX\_NUMBER}. 
+%
+\index{ClassAd machine attribute!VM\_Guest\_Mem}
+\item[\AdAttr{VM\_Guest\_Mem}:] An attribute defined if a vm universe job
+is running on this slot.  Defined by the amount of memory in use by the 
+virtual machine, given in Mbytes.
+%
+\index{ClassAd machine attribute!VM\_Memory}
+\item[\AdAttr{VM\_Memory}:] Gives the amount of memory available for starting 
+additional VM jobs on this machine, given in Mbytes.
+The maximum value is set by the configuration variable \Macro{VM\_MEMORY}.
+%
+\index{ClassAd machine attribute!VM\_Networking}
+\item[\AdAttr{VM\_Networking}:] A boolean value indicating whether networking 
+is allowed for virtual machines on this machine.
+%
 \index{ClassAd machine attribute!VM\_Type}
-\item[\AdAttr{VM\_Type}:] 
+\item[\AdAttr{VM\_Type}:] The type of virtual machine software that can run
+on this machine.  The value is set by the configuration variable
+\Macro{VM\_TYPE}.
 %
 \index{ClassAd machine attribute!WindowsBuildNumber}
 \item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the
