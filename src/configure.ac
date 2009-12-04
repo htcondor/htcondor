@@ -608,7 +608,7 @@ AC_MSG_RESULT([$_cv_kernel_rev])
 AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
 
 AC_MSG_CHECKING([platform name])
-AC_MSG_RESULT([$_platform])
+AC_MSG_RESULT([$_cv_platform])
 AC_SUBST(_cv_platform,$_cv_platform)
 
 # check out the libc
