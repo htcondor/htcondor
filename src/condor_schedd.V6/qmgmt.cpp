@@ -1839,15 +1839,42 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// marks.  Carefully remove them here.
 		MyString owner_buf;
 		char const *owner = attr_value;
+		bool owner_is_quoted = false;
 		if( *owner == '"' ) {
 			owner_buf = owner+1;
 			if( owner_buf.Length() && owner_buf[owner_buf.Length()-1] == '"' )
 			{
 				owner_buf.setChar(owner_buf.Length()-1,'\0');
+				owner_is_quoted = true;
 			}
 			owner = owner_buf.Value();
 		}
 
+		if( !owner_is_quoted ) {
+			// For sanity's sake, do not allow setting Owner to something
+			// strange, such as an attribute reference that happens to have
+			// the same name as the authenticated user.
+			errno = EACCES;
+			dprintf(D_ALWAYS, "SetAttribute security violation: "
+					"setting owner to %s which is not a valid string\n",
+					attr_value);
+			return -1;
+		}
+
+		MyString orig_owner;
+		if( GetAttributeString(cluster_id,proc_id,ATTR_OWNER,orig_owner) >= 0
+			&& orig_owner != owner
+			&& !qmgmt_all_users_trusted )
+		{
+			// Unless all users are trusted, nobody (not even queue super user)
+			// has the ability to change the owner attribute once it is set.
+			// See gittrack #1018.
+			errno = EACCES;
+			dprintf(D_ALWAYS, "SetAttribute security violation: "
+					"setting owner to %s when previously set to \"%s\"\n",
+					attr_value, orig_owner.Value());
+			return -1;
+		}
 
 		if (!qmgmt_all_users_trusted
 #if defined(WIN32)
