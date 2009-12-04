@@ -111,10 +111,12 @@ if( $versarg ) {
 } else {
     # If we weren't told on the command line, use the condor_master
     # binary with -version to find the version string.
-    if( -f "strip_dir/sbin/condor_master" ) {
-        $vers_string=`./strip_dir/sbin/condor_master -version`;
+    if( -f "release_dir/sbin/condor_master" ) {
+        $vers_string=`./release_dir/sbin/condor_master -version`;
     } elsif ( -f "static_dir/sbin/condor_master" ) {
         $vers_string=`./static_dir/sbin/condor_master -version`;
+    } elsif ( -f "strip_dir/sbin/condor_master" ) {
+        $vers_string=`./strip_dir/sbin/condor_master -version`;
     } else {
 	die "ERROR: can't find a condor_version, and no -v specified";
     }
