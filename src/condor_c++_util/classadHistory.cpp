@@ -93,7 +93,7 @@ void InitJobHistoryFile(const char *history_param, const char *per_job_history_p
         StatInfo si(PerJobHistoryDir);
         if (!si.IsDirectory()) {
             dprintf(D_ALWAYS | D_FAILURE,
-                    "invalid % (%s): must point to a "
+                    "invalid %s (%s): must point to a "
                     "valid directory; disabling per-job history output\n",
                     per_job_history_param, PerJobHistoryDir);
             free(PerJobHistoryDir);
