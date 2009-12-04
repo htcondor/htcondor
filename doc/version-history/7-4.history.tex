@@ -222,6 +222,12 @@ format used by the standard cream client UI:
 \MacroNI{SOAP\_SSL\_CA\_DIR} when authenticating
 an https proxy for Amazon EC2, when \MacroNI{AMAZON\_HTTP\_PROXY} is defined.
 
+% gittrac #485
+\item Previously, if \condor{rm} and friends were given both a constraint
+and a username or cluster id, they would act on all jobs matching the
+constraint and all jobs associated with the user or cluster. Now, this
+combination of arguments results in an error.
+
 % gittrac #947
 % Not documenting, as the parameter being removed was added for a specifc
 % customer and never documented.
