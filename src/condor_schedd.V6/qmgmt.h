@@ -46,11 +46,14 @@ class QmgmtPeer {
 		bool set(const struct sockaddr_in *sock, const char *fqOwnerAndDomain);
 		void unset();
 
+		bool setEffectiveOwner(char const *o);
+
 		ReliSock *getReliSock() const { return sock; };
 
 		const char *endpoint_ip_str() const;
 		const struct sockaddr_in *endpoint() const;
 		const char* getOwner() const;
+		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;
 		int isAuthenticated() const;
 

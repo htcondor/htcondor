@@ -60,6 +60,34 @@ InitializeReadOnlyConnection( const char *owner )
 }
 
 int
+QmgmtSetEffectiveOwner(char const *o)
+{
+	int rval = -1;
+
+	CurrentSysCall = CONDOR_SetEffectiveOwner;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	if( !o ) {
+		o = "";
+	}
+	assert( qmgmt_sock->put(o) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
+		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	assert( qmgmt_sock->end_of_message() );
+
+	return 0;
+}
+
+int
 NewCluster()
 {
 	int	rval = -1;

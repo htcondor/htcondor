@@ -55,10 +55,12 @@ int InitializeReadOnlyConnection(const char * );
 	       connection establishment
     @param read_only can be set to true to skip the potentially slow
 	       authenticate step for connections which don't modify the queue
+    @param effective_owner if not NULL, will call QmgmtSetEffectiveOwner()
 	@return opaque Qmgr_connection structure
 */		 
 Qmgr_connection *ConnectQ(const char *qmgr_location, int timeout=0, 
-				bool read_only=false, CondorError* errstack=NULL );
+				bool read_only=false, CondorError* errstack=NULL,
+				const char *effective_owner=NULL);
 
 /** Close the connection to the schedd job queue, and optionally commit
 	the transaction.
@@ -288,5 +290,15 @@ bool Reschedule();
 
 #define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
 #define SetAttributeExprByConstraint(con, name, val) SetAttributeByConstraint(con, name, val);
+
+/* Set the effective owner to use for authorizing subsequent qmgmt
+   opperations. Setting to NULL or an empty string will reset the
+   effective owner to the real authenticated owner.  Changing to
+   owner names other than the authenticated owner is only allowed
+   for queue super users.
+   Returns 0 on success. */
+
+int QmgmtSetEffectiveOwner(char const *owner);
+
 
 #endif

@@ -509,7 +509,6 @@ QmgmtPeer::set(ReliSock *input)
 	return true;
 }
 
-
 bool
 QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
 {
@@ -537,11 +536,23 @@ QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
 	return true;
 }
 
+bool
+QmgmtPeer::setEffectiveOwner(char const *o)
+{
+	delete [] owner;
+	owner = NULL;
+
+	if ( o ) {
+		owner = strnewp(o);
+	}
+	return true;
+}
+
 void
 QmgmtPeer::unset()
 {
 	if (owner) {
-		delete owner;
+		delete [] owner;
 		owner = NULL;
 	}
 	if (fquser) {
@@ -588,9 +599,23 @@ QmgmtPeer::endpoint() const
 const char*
 QmgmtPeer::getOwner() const
 {
+	// if effective owner has been set, use that
+	if( owner ) {
+		return owner;
+	}
 	if ( sock ) {
 		return sock->getOwner();
-	} else {
+	}
+	return NULL;
+}
+
+const char*
+QmgmtPeer::getRealOwner() const
+{
+	if ( sock ) {
+		return sock->getOwner();
+	}
+	else {
 		return owner;
 	}
 }
@@ -1031,6 +1056,43 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 	}
 	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.Value());
 	return false;
+}
+
+int
+QmgmtSetEffectiveOwner(char const *o)
+{
+	if( !Q_SOCK ) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	char const *real_owner = Q_SOCK->getRealOwner();
+	if( o && real_owner && strcmp(o,real_owner)==0 ) {
+		// change effective owner --> real owner
+		o = NULL;
+	}
+
+	if( o && !*o ) {
+		// treat empty string equivalently to NULL
+		o = NULL;
+	}
+
+	// always allow request to set effective owner to NULL,
+	// because this means set effective owner --> real owner
+	if( o && !qmgmt_all_users_trusted ) {
+		if( !isQueueSuperUser(real_owner) ||
+			!SuperUserAllowedToSetOwnerTo( o ) )
+		{
+			errno = EACCES;
+			return -1;
+		}
+	}
+
+	if( !Q_SOCK->setEffectiveOwner( o ) ) {
+		errno = EINVAL;
+		return -1;
+	}
+	return 0;
 }
 
 bool
