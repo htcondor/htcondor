@@ -205,7 +205,7 @@ void GridftpServer::UpdateLeases()
 	dprintf( D_FULLDEBUG, "GridftpServer: Updating job leases for gridftp "
 			 "server jobs\n" );
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::UpdateLeases: "
 				 "Failed to connect to schedd\n" );
@@ -383,7 +383,7 @@ bool GridftpServer::ScanSchedd()
 							"GridftpServer::UpdateLeases" );
 	}
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::ScanSchedd: "
 				 "Failed to connect to schedd\n" );
@@ -665,7 +665,7 @@ bool GridftpServer::SubmitServerJob()
 
 	job_ad->Assign( ATTR_GRIDFTP_SERVER_JOB, true );
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 				 "Failed to connect to schedd\n" );
@@ -739,7 +739,7 @@ bool GridftpServer::SubmitServerJob()
 
 	m_outputFile = NULL;
 	while ( m_outputFile == NULL ) {
-		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
+		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true, NULL, myUserName );
 		if ( !schedd ) {
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 					 "Failed to connect to schedd (2nd time)\n" );

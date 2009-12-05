@@ -622,7 +622,7 @@ doContactSchedd()
 	}
 
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
 	if ( !schedd ) {
 		error_str.sprintf( "Failed to connect to schedd!" );
 		goto contact_schedd_failure;
