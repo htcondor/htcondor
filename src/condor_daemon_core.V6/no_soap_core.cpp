@@ -37,7 +37,7 @@ dc_soap_accept(Sock *socket, const struct soap *soap)
 {
 	ASSERT(NULL_SOAP == soap);
 
-	dprintf(D_ALWAYS, "Ignoring SOAP connection attempt...\n");
+	dprintf(D_ALWAYS, "SOAP not available in this daemon, ignoring SOAP connection attempt...\n");
 
 		// Ideally the socket would be consumed during the
 		// dc_soap_serve call, except that would mean having to keep
@@ -59,7 +59,7 @@ dc_soap_serve(struct soap *soap)
 {
 	ASSERT(NULL_SOAP == soap);
 
-	dprintf(D_ALWAYS, "Ignoring SOAP request...\n");
+	dprintf(D_ALWAYS, "SOAP not available in this daemon, ignoring SOAP request...\n");
 
 	return SOAP_ERR;
 }
