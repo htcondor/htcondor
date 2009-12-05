@@ -23,7 +23,6 @@
 #include "condor_config.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "subsystem_info.h"
 #include "directory.h"
 #include "stdsoap2.h"
 #include "soap_core.h"
@@ -95,8 +94,6 @@ dc_soap_init(struct soap *soap)
 	if (NULL == soap) {
 		soap = soap_new();
 	}
-
-	MyString subsys = MyString(get_mySubSystem()->getName() );
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	//soap_init(soap);
