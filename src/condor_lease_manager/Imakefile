@@ -2,8 +2,6 @@ NAME = condor_lease_manager
 all_target( $(NAME) )
 TESTS =  	condor_lease_manager_test condor_lease_manager_tester
 
-soapobjs(leaseManager)
-
 CLASSAD_ANALYSIS = ../classad_analysis
 CLASSAD_CONVERSION = $(CLASSAD_CONVERSION)
 CLASSAD_CONVERSION_INC = -I$(CLASSAD_ANALYSIS)
@@ -20,7 +18,6 @@ CFLAGS  = $(STD_C_FLAGS) $(SC_DEMO_FLAGS)
 
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(NEW_CLASSAD_LIBDEFS) \
-	$(CONFIGURE_GSOAP_LDFLAGS) \
 	$(CLASSAD_CONVERSION_LIBDEFS)
 TEST_LIB =  $(STD_LIBS) $(NEW_CLASSAD_LIBDEFS) \
 	$(CLASSAD_CONVERSION_LIBDEFS)
@@ -28,7 +25,7 @@ TEST_LIB =  $(STD_LIBS) $(NEW_CLASSAD_LIBDEFS) \
 OBJ =	lease_manager_main.o		\
 	lease_manager.o			\
 	lease_manager_resources.o		\
-	lease_manager_lease.o $(SOAP_OBJS)
+	lease_manager_lease.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -43,5 +40,3 @@ testbin:: all
 testbin_target(condor_lease_manager_tester,755)
 
 -include Makelocal.i
-
-gen_soapfiles(leaseManager,condorLeaseManager)

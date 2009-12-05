@@ -10,7 +10,7 @@ all_target($(NAME) $(RSH_NAME) condor_gridshell)
 CFLAGS = $(STD_C_FLAGS) -I../condor_schedd.V6 $(CONFIGURE_PCRE_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6 $(CONFIGURE_PCRE_CFLAGS)
 
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB) $(CONFIGURE_PCRE_LDFLAGS)
 
 #if HAVE_JOB_HOOKS
@@ -20,8 +20,6 @@ JOB_HOOKS_OBJS = StarterHookMgr.o
 #if IS_LINUX
 GLEXEC_OBJS = glexec_privsep_helper.o
 #endif
-
-soapobjs(starter)
 
 # this can (and will have to) be made better, but
 # it will suffice for now:
@@ -35,7 +33,7 @@ OBJ = starter_v61_main.o baseStarter.o NTsenders.o user_proc.o \
 	starter_user_policy.o \
 	condor_privsep_helper.UNIX.o \
 	vm_proc.o vm_gahp_request.o vm_gahp_server.o \
-	stream_handler.o $(SOAP_OBJS) $(JOB_HOOKS_OBJS) $(GLEXEC_OBJS)
+	stream_handler.o $(JOB_HOOKS_OBJS) $(GLEXEC_OBJS)
 
 RSH_OBJ = condor_rsh.o
 
@@ -73,5 +71,3 @@ condor_gridshell: condor_starter
 	ln condor_starter condor_gridshell
 
 public_link_target(sbin,condor_starter,condor_gridshell)
-
-gen_soapfiles(starter,condorStarter)

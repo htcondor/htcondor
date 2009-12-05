@@ -14,12 +14,8 @@ testbin:: all
 
 
 
-ROOSTER_LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+ROOSTER_LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-soapobjs(rooster)
-
-ROOSTER_OBJ = rooster_main.o rooster.o $(SOAP_OBJS)
+ROOSTER_OBJ = rooster_main.o rooster.o
 
 public_c_plus_target(condor_rooster,libexec,$(ROOSTER_OBJ),$(ROOSTER_LIB))
-
-gen_soapfiles(rooster,condorRooster)
