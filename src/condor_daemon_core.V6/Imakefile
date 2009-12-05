@@ -1,4 +1,4 @@
-all_target(daemon_core.a)
+all_target(daemon_core.a soap_core.a)
 
 /* Compiling daemon core without -O produces an internal compiler error
 	on alpha linux with gcc 2.95.2. I turned on optimization to
@@ -13,20 +13,22 @@ FIX_BROKEN_GCC =
 #endif
 
 #if HAVE_EXT_GSOAP
-GSOAP_OBJS = mimetypes.o soap_core.o 
+GSOAP_OBJS = mimetypes.o soap_core.o
+NO_GSOAP_OBJS = no_soap_core.o
 #endif
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG) $(GSOAP_FLAGS)  $(CONFIGURE_PCRE_CFLAGS)
 LIB = $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
-OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
+OBJ = $(NO_GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
   condor_perms.o \
   condor_lock_base.o condor_lock_implementation.o condor_lock_file.o \
   condor_lock.o self_monitor.o datathread.o self_draining_queue.o \
   HookClient.o HookClientMgr.o ccb_listener.o
 
 library_target(daemon_core.a,$(OBJ))
+library_target(soap_core.a,$(GSOAP_OBJS))
 
 html_target( documentation )
 
