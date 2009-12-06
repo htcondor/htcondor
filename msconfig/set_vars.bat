@@ -35,7 +35,7 @@ REM Set paths to Visual C++, the Platform SDKs, and Perl
 set VS_DIR=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
-set PERL_DIR=%ROOT_DRIVE%\Perl\bin
+set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin;%SystemDrive%\prereq\ActivePerl-5.10.1\bin
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
 set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86)
 set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
