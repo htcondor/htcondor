@@ -158,7 +158,6 @@ _Evaluate (EvalState &state, Value &val) const
 	ClassAd		*curAd;
 	bool		rval;
 	Value		cv;
-	EvalCache::iterator	itr;
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
@@ -178,32 +177,29 @@ _Evaluate (EvalState &state, Value &val) const
 			state.curAd = curAd;
 			return true;
 
-		case EVAL_OK:
-			// lookup in cache
-			itr = state.cache.find( tree );
+		case EVAL_OK: 
+		{
+				// insert UNDEFINED in cache so circular references
+				// will not loop
+			pair<EvalCache::iterator,bool> insert_result = 
+				state.cache.insert( EvalCache::value_type(tree,cv) );
 
-			// if found, return cached value
-			if( itr != state.cache.end( ) ) {
-				val.CopyFrom( itr->second );	
-				state.curAd = curAd;		// NAC (fixed a bug)
+			if( !insert_result.second ) {
+					// already in cache
+				val.CopyFrom( insert_result.first->second );
+				state.curAd = curAd;
 				return true;
-			} 
+			}
 
-			// temporarily cache value as undef, so any circular refs
-			// in Evaluate() will eval to undef rather than loop
-
-			cv.SetUndefinedValue( );
-			state.cache[ tree ] = cv;
-
-			rval = tree->Evaluate( state , val );
+			rval = tree->Evaluate( state, val );
 
 			// replace cached undef with actual evaluation
-			state.cache[ tree ] = val;
+			insert_result.first->second = val;
 
 			state.curAd = curAd;
 
 			return rval;
-
+		}
 		default:  CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 	}
 	return false;
@@ -218,7 +214,6 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 	ClassAd		*curAd;
 	bool		rval;
 	Value 		cv;
-	EvalCache::iterator	itr;
 
 	curAd = state.curAd;
 	exprSig = NULL;
@@ -240,30 +235,26 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 			break;
 
 		case EVAL_OK:
+		{
+				// insert UNDEFINED in cache so circular references
+				// will not loop
+			pair<EvalCache::iterator,bool> insert_result = 
+				state.cache.insert( EvalCache::value_type(tree,cv) );
 
-			// lookup in cache
-			itr = state.cache.find( tree );
-
-			// if found in cache, return cached value
-			if( itr != state.cache.end( ) ) {
-				val.CopyFrom( itr->second );
-				state.curAd = curAd;		// NAC (fixed a bug)
+			if( !insert_result.second ) {
+					// already in cache
+				val.CopyFrom( insert_result.first->second );
+				state.curAd = curAd;
 				return true;
-			} 
-
-			// temporarily cache value as undef, so any circular refs
-			// in Evaluate() will eval to undef rather than loop
-
-			cv.SetUndefinedValue( );
-			state.cache[ tree ] = cv;
+			}
 
 			rval = tree->Evaluate( state, val );
 
-			// replace undef in cache with actual evaluation
-			state.cache[ tree ] = val;
+			// replace cached undef with actual evaluation
+			insert_result.first->second = val;
 
 			break;
-
+		}
 		default:  CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 	}
 	if(!rval || !(sig=new AttributeReference(exprSig,attributeStr,absolute))){
@@ -315,13 +306,15 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 			return true;
 
 		case EVAL_OK:
+		{
+				// insert UNDEFINED in cache so circular references
+				// will not loop
+			pair<EvalCache::iterator,bool> insert_result = 
+				state.cache.insert( EvalCache::value_type(tree,cv) );
 
-			// lookup in cache
-			itr = state.cache.find( tree );
-
-			// if found in cache, return cached value
-			if( itr != state.cache.end( ) ) {
-				val.CopyFrom( itr->second );
+			if( !insert_result.second ) {
+					// already in cache
+				val.CopyFrom( insert_result.first->second );
 				if( val.IsUndefinedValue( ) ) {
 					if( !(ntree = Copy( ) ) ) {
 						CondorErrno = ERR_MEM_ALLOC_FAILED;
@@ -335,13 +328,7 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 				}
 				state.curAd = curAd;
 				return true;
-			} 
-
-			// temporarily cache value as undef, so any circular refs
-			// in Flatten() will eval to undef rather than loop
-
-			cv.SetUndefinedValue( );
-			state.cache[ tree ] = cv;
+			}
 
 			rval = tree->Flatten( state, val, ntree );
 
@@ -356,12 +343,12 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 				val.SetUndefinedValue( );
 				state.cache.erase( tree );
 			} else {
-				state.cache[ tree ] = val;
+				insert_result.first->second = val;
 			}
 
 			state.curAd = curAd;
 			return rval;
-
+		}
 		default:  CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 	}
 	return false;
