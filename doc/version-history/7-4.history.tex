@@ -56,19 +56,9 @@ The details of each version are described below.
   empty string to \verb|jobrouter|.  See the release notes for more
   information about upgrading from an old version.
 
-\item \MacroNI{TCP\_FORWARDING\_HOST} has existed in Condor since
-  7.0.0, but was not documented.  This configuration variable
-  specifies the host or IP address that should be used as the public
-  address of this daemon.  This is useful if Condor on this host may
-  be reached through a NAT or firewall by connecting to a different IP
-  address that forwards connections to this host.  It is assumed that
-  the port number on the \MacroNI{TCP\_FORWARDING\_HOST} that forwards
-  to this host is the same port number assigned to Condor on this
-  host.  This option could also be used when ssh port forwarding is
-  being used.  In this case, the incoming addresses of connections to
-  this daemon will appear as though they are coming from this host
-  rather than from the real remote host, so any authorization settings
-  that rely on host addresses should be considered accordingly.
+\item The configuration variable \Macro{TCP\_FORWARDING\_HOST}
+  has existed in Condor since version 7.0.0, but was not documented.
+  See section~\ref{param:TcpForwardingHost} for documentation.
 
 \end{itemize}
 
@@ -76,44 +66,61 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrac #1019
+\item Fixed a problem introduced in Condor version 7.4.0 that caused GSI
+authentication between Condor processes to fail with using a
+non-legacy format X.509 proxy.
+
+% gittrac #923
+\item Improved the handling of previously-submitted gt2 grid jobs upon
+release from hold, when there is no Globus job manager for the job running
+on the remote resource.
+
+% gittrac #453
+\item Fixed a problem with job leases for jobs that use a \Condor{shadow}.
+Previously, while these jobs were running, lease renewals from the 
+submitter would not be
+noticed, and the job would be aborted when the original lease expired.
+
 % gittrac #870
 \item Fixed a bug that only allowed about 50 splices to be included into
-a DAG description file. There is now no limit to the number of splices
-one may include into a DAG description file except, of course, for the
+a DAG input file. There is now no limit to the number of splices
+one may include into a DAG input file except, of course, for the
 implicit memory allocation limit of the \Condor{dagman} process.
 
 % gittrack #899
 \item Fixed a bug that caused \MacroNI{ALLOW\_CONFIG} and
   \MacroNI{HOSTALLOW\_CONFIG} as well as the corresponding
-  \MacroNI{DENY} configuration parameters to incorrectly handle a
-  setting consisting of a single '*' or the equivalent '*/*'.  This
+  \MacroNI{DENY} configuration variables to incorrectly handle a
+  setting consisting of a single \Expr{*} or the equivalent \Expr{*/*}.  This
   also fixes a bug that caused incorrect merging of \MacroNI{ALLOW}
-  and \MacroNI{HOSTALLOW} settings when one but not both consisted of
-  a single '*' or the equivalent '*/*'.  These bugs have existed since
-  before 6.8.
+  and \MacroNI{HOSTALLOW} settings when one, but not both, consisted of
+  a single \Expr{*} or the equivalent \Expr{*/*}.
+  These bugs have existed since before Condor version 6.8.
 
 % gittrack #905
-\item Fixed a bug introduced in Condor version 7.3.0 that can cause Condor daemons to
-crash when reading malformed network addresses.
+\item Fixed a bug introduced in Condor version 7.3.0 that could cause 
+Condor daemons to crash when reading malformed network addresses.
 
 % gittrack #871
 \item Fixed a problem introduced in Condor version 7.3.2 that changed 
   the behavior of
   an undocumented method for selecting attributes to be displayed in
   \Condor{q} \Opt{-xml}.  Prior to this bug, the following command
-  would produce xml output with the attributes \Attr{A} and \Attr{B},
+  would produce XML output with the attributes \Attr{A} and \Attr{B},
   plus a few other attributes that were always shown.
 
 \begin{verbatim}
 condor_q -xml -format "%s" A+B
 \end{verbatim}
 
-In 7.3.2 and 7.4.0, this same command produced an empty xml ClassAd.
+In Condor versions 7.3.2 and 7.4.0,
+this same command produced an empty XML ClassAd.
 The workaround was to use multiple \Opt{-format} options, each listing
 just one desired attribute, rather than a single one with an
 expression of all desired attributes.  Although this is now fixed, the
-more straightforward way to select attributes since 7.3.2 is to use the
-\Opt{-attributes} option.
+more straightforward way to select attributes since Condor version 7.3.2
+is to use the \Opt{-attributes} option.
 
 % gittrack #907
 \item Fixed a bug introduced in Condor version 7.3.2 that resulted in 
@@ -155,12 +162,11 @@ Timer -1 not found
 
 % gittrac #934
 \item Fixed a bug that caused \Condor{dagman} to hang when running a
-DAG with POST scripts, if the global event log (see
-section~\ref{param:EventLog}) is turned on.
+DAG with POST scripts, if the global event log is turned on.
 
 % gittrack #973
 \item Improved how the private network address is published when using
-  \MacroNI{PRIVATE\_NETWORK\_NAME} and
+  the configuration variables \MacroNI{PRIVATE\_NETWORK\_NAME} and
   \MacroNI{PRIVATE\_NETWORK\_INTERFACE}.  In some cases, this
   information was not being used and therefore connections were made
   to the public address when they could have been made to the private
@@ -168,8 +174,58 @@ section~\ref{param:EventLog}) is turned on.
 
 % gittrack #713
 \item CCB now works with \MacroNI{TCP\_FORWARDING\_HOST}.  Previously,
-  it the reversed connection was made to the private address rather than
-  to \MacroNI{TCP\_FORWARDING\_HOST}.
+  the reverse connection was made to the private address rather than
+  to the host defined by \MacroNI{TCP\_FORWARDING\_HOST}.
+
+% gittrac #852
+\item Removed a bad optimization that caused some information about job
+execution to be lost during job completion or removal,
+ if a history file was not configured.
+
+% gittrac #893
+\item Condor now checks whether the configuration variable
+\MacroNI{GRIDFTP\_URL\_BASE} is set before
+submitting cream grid jobs, as that variable is required for cream jobs
+to function properly. If the variable is not set, cream jobs are put on
+hold with an appropriate message.
+
+% gittrac #912
+\item Fixed a bug in \Prog{cream\_gahp} which could cause crashes when
+there were more than 500 cream jobs queued.
+
+% gittrac #972
+\item Improved recovery when Condor crashes during submission of a cream
+grid job. Before, affected jobs would remain in \Expr{REGISTERED} state
+on the cream server, but never run.
+
+% gittrac #954
+\item Improved the \Attr{HoldReason} message when cream grid jobs are
+held by the \Condor{gridmanager}.
+
+% gittrac #895
+\item When naming a resource for a cream grid job, Condor now properly
+recognizes the format used by the standard cream client UI:
+\File{https://foo.edu:8443/cream-pbs-cream\_queue}.
+
+% gittrac #795
+% The memory leak is not worth documenting.
+\item The configuration variable \MacroNI{SOAP\_SSL\_CA\_FILE} is now 
+consulted in addition to
+\MacroNI{SOAP\_SSL\_CA\_DIR} when authenticating
+an https proxy for Amazon EC2, when \MacroNI{AMAZON\_HTTP\_PROXY} is defined.
+
+% gittrac #485
+\item Previously, if \Condor{rm} and friends were given both a constraint
+and a user name or cluster id, they would act on all jobs matching the
+constraint and all jobs associated with the user or cluster. Now, this
+combination of arguments results in an error.
+
+% gittrac #947
+% Not documenting, as the parameter being removed was added for a specifc
+% customer and never documented.
+
+% gittrac #932
+% Not documenting, as the bug hasn't caused any problems.
 
 \end{itemize}
 
@@ -622,6 +678,11 @@ crash on shutdown or reconfiguration.
 \noindent Known Bugs:
 
 \begin{itemize}
+
+% gittrac #161, #935, #936, #1020
+\item There are multiple bugs related to using VOMS attributes.
+In Condor version 7.4.0, VOMS support should be disabled by setting
+the configuration variable \Expr{USE\_VOMS\_ATTRIBUTES = FALSE}.
 
 \item A configuration variable of  \Macro{USE\_VISIBLE\_DESKTOP} set 
 to \Expr{True} will corrupt the visible desktop.
