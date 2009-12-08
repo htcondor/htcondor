@@ -1351,11 +1351,11 @@ SecManStartCommand::sendAuthInfo_inner()
 	// we set a cookie in daemoncore and put the cookie in the classad
 	// as proof that the message came from ourself.
 
-	MyString destsinful = m_sock->get_connect_addr();
-	MyString oursinful = global_dc_sinful();
+	Sinful destsinful( m_sock->get_connect_addr() );
+	Sinful oursinful( global_dc_sinful() );
 	bool using_cookie = false;
 
-	if (destsinful == oursinful) {
+	if (oursinful.addressPointsToMe(destsinful)) {
 		// use a cookie.
 		int len = 0;
 		unsigned char* randomjunk = NULL;
