@@ -679,6 +679,11 @@ crash on shutdown or reconfiguration.
 
 \begin{itemize}
 
+% gittrac #161, #935, #936, #1020
+\item There are multiple bugs related to using VOMS attributes.
+In Condor version 7.4.0, VOMS support should be disabled by setting
+the configuration variable \Expr{USE\_VOMS\_ATTRIBUTES = FALSE}.
+
 \item A configuration variable of  \Macro{USE\_VISIBLE\_DESKTOP} set 
 to \Expr{True} will corrupt the visible desktop.
   This bug is present back through Condor version 7.2.4.
