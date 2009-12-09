@@ -28,6 +28,8 @@ BEGIN_NAMESPACE( classad )
 
 extern int exprHash( const ExprTree* const&, int );
 
+static const int MAX_CLASSAD_RECURSION = 1000;
+
 ExprTree::
 ExprTree ()
 {
@@ -142,6 +144,7 @@ EvalState( )
 	rootAd = NULL;
 	curAd  = NULL;
 
+	depth_remaining = MAX_CLASSAD_RECURSION;
 	flattenAndInline = false;	// NAC
 }
 

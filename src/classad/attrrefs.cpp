@@ -157,7 +157,6 @@ _Evaluate (EvalState &state, Value &val) const
 	ExprTree	*dummy;
 	ClassAd		*curAd;
 	bool		rval;
-	Value		cv;
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
@@ -179,22 +178,16 @@ _Evaluate (EvalState &state, Value &val) const
 
 		case EVAL_OK: 
 		{
-				// insert UNDEFINED in cache so circular references
-				// will not loop
-			pair<EvalCache::iterator,bool> insert_result = 
-				state.cache.insert( EvalCache::value_type(tree,cv) );
-
-			if( !insert_result.second ) {
-					// already in cache
-				val.CopyFrom( insert_result.first->second );
+			if( state.depth_remaining <= 0 ) {
+				val.SetErrorValue();
 				state.curAd = curAd;
-				return true;
+				return false;
 			}
+			state.depth_remaining--;
 
 			rval = tree->Evaluate( state, val );
 
-			// replace cached undef with actual evaluation
-			insert_result.first->second = val;
+			state.depth_remaining++;
 
 			state.curAd = curAd;
 
@@ -213,7 +206,6 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 	ExprTree	*exprSig;
 	ClassAd		*curAd;
 	bool		rval;
-	Value 		cv;
 
 	curAd = state.curAd;
 	exprSig = NULL;
@@ -236,22 +228,16 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 
 		case EVAL_OK:
 		{
-				// insert UNDEFINED in cache so circular references
-				// will not loop
-			pair<EvalCache::iterator,bool> insert_result = 
-				state.cache.insert( EvalCache::value_type(tree,cv) );
-
-			if( !insert_result.second ) {
-					// already in cache
-				val.CopyFrom( insert_result.first->second );
+			if( state.depth_remaining <= 0 ) {
+				val.SetErrorValue();
 				state.curAd = curAd;
-				return true;
+				return false;
 			}
+			state.depth_remaining--;
 
 			rval = tree->Evaluate( state, val );
 
-			// replace cached undef with actual evaluation
-			insert_result.first->second = val;
+			state.depth_remaining++;
 
 			break;
 		}
@@ -278,8 +264,6 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 	ExprTree	*dummy;
 	ClassAd		*curAd;
 	bool		rval;
-	Value		cv;
-	EvalCache::iterator	itr;
 
 	ntree = NULL; // Just to be safe...  wenger 2003-12-11.
 
@@ -307,30 +291,16 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 
 		case EVAL_OK:
 		{
-				// insert UNDEFINED in cache so circular references
-				// will not loop
-			pair<EvalCache::iterator,bool> insert_result = 
-				state.cache.insert( EvalCache::value_type(tree,cv) );
-
-			if( !insert_result.second ) {
-					// already in cache
-				val.CopyFrom( insert_result.first->second );
-				if( val.IsUndefinedValue( ) ) {
-					if( !(ntree = Copy( ) ) ) {
-						CondorErrno = ERR_MEM_ALLOC_FAILED;
-						CondorErrMsg = "";
-						return( false );
-					}
-				} else {
-						// Fixes the bug I (wenger) ran into with Flatten()
-						// returning an expression with a bad pointer.
-					ntree = NULL;
-				}
+			if( state.depth_remaining <= 0 ) {
+				val.SetErrorValue();
 				state.curAd = curAd;
-				return true;
+				return false;
 			}
+			state.depth_remaining--;
 
 			rval = tree->Flatten( state, val, ntree );
+
+			state.depth_remaining++;
 
 			// don't inline if it didn't flatten to a value, and clear cache
 			// do inline if FlattenAndInline was called
@@ -341,9 +311,6 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 				delete ntree;
 				ntree = Copy( );
 				val.SetUndefinedValue( );
-				state.cache.erase( tree );
-			} else {
-				insert_result.first->second = val;
 			}
 
 			state.curAd = curAd;

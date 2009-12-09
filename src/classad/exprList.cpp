@@ -317,7 +317,6 @@ Initialize( const ExprList *el )
 {
 	// initialize eval state
 	l = el;
-	state.cache.clear( );
 	state.curAd = (ClassAd*)l->parentScope;
 	state.SetRootScope( );
 
@@ -386,36 +385,24 @@ GetValue( Value& val, const ExprTree *tree, EvalState *es )
 {
 	Value				cv;
 	EvalState			*currentState;
-    EvalCache::iterator	itrator;
 
 	if( !tree ) return false;
 
 	// if called from user code, es == NULL so we use &state instead
 	currentState = es ? es : &state;
 
-	// lookup in cache
-	itrator = currentState->cache.find( tree );
+	if( currentState->depth_remaining <= 0 ) {
+		val.SetErrorValue();
+		return false;
+	}
+	currentState->depth_remaining--;
 
-	// if found, return cached value
-	if( itrator != currentState->cache.end( ) ) {
-		val.CopyFrom( itrator->second );
-		return true;
-	} 
-
-	// temporarily cache value as undef, so any circular refs in
-    // Evaluate() will eval to undef rather than loop
-
-	cv.SetUndefinedValue( );
-
-	currentState->cache[ tree ] = cv;
-	
 	const ClassAd *tmpScope = currentState->curAd;
 	currentState->curAd = (ClassAd*) tree->GetParentScope();
 	tree->Evaluate( *currentState, val );
 	currentState->curAd = (ClassAd*) tmpScope;
 
-	// replace temporary cached value (above) with actual evaluation
-	currentState->cache[ tree ] = val;
+	currentState->depth_remaining++;
 
 	return true;
 }
@@ -447,35 +434,24 @@ GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es )
 {
 	Value				cv;
 	EvalState			*currentState;
-    EvalCache::iterator	itrator;
 
 	if( !tree ) return false;
 
 	// if called from user code, es == NULL so we use &state instead
 	currentState = es ? es : &state;
 
-	// lookup in cache
-	itrator = currentState->cache.find( tree );
-
-	// if found, return cached value
-	if( itrator != currentState->cache.end( ) ) {
-		val.CopyFrom( itrator->second );
-		return true;
-	} 
-
-	// temporarily cache value as undef, so any circular refs in
-    // Evaluate() will eval to undef rather than loop
-
-	cv.SetUndefinedValue( );
-	currentState->cache[ tree ] = cv;
+	if( currentState->depth_remaining <= 0 ) {
+		val.SetErrorValue();
+		return false;
+	}
+	currentState->depth_remaining--;
 
 	const ClassAd *tmpScope = currentState->curAd;
 	currentState->curAd = (ClassAd*) tree->GetParentScope();
 	tree->Evaluate( *currentState, val, sig );
 	currentState->curAd = (ClassAd*) tmpScope;
 
-	// replace temporary cached value (above) with actual evaluation
-	currentState->cache[ tree ] = val;
+	currentState->depth_remaining++;
 
 	return true;
 }

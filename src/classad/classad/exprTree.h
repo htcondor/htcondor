@@ -33,8 +33,6 @@ class ExprTree;
 class ClassAd;
 class MatchClassAd;
 
-typedef classad_hash_map< const ExprTree*, Value > EvalCache;
-
 class EvalState {
 	public:
 		EvalState( );
@@ -43,7 +41,8 @@ class EvalState {
 		void SetRootScope( );
 		void SetScopes( const ClassAd* );
 
-		EvalCache	cache;
+		int depth_remaining; // max recursion depth - current depth
+
 		ClassAd		*rootAd;
 		ClassAd 	*curAd;
 
