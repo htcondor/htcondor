@@ -70,11 +70,11 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 		// convenience expressions
 	ClassAd *upd;
 	if( !( upd = parser.ParseClassAd( 
-			"[symmetricMatch = leftMatchesRight && rightMatchesLeft ;"
-			"leftMatchesRight = adcr.ad.requirements ;"
-			"rightMatchesLeft = adcl.ad.requirements ;"
-			"leftRankValue = adcl.ad.rank ;"
-			"rightRankValue = adcr.ad.rank]" ) ) ) {
+			"[symmetricMatch = RIGHT.requirements && LEFT.requirements ;"
+			"leftMatchesRight = RIGHT.requirements ;"
+			"rightMatchesLeft = LEFT.requirements ;"
+			"leftRankValue = LEFT.rank ;"
+			"rightRankValue = RIGHT.rank]" ) ) ) {
 		Clear( );
 		lCtx = NULL;
 		rCtx = NULL;
@@ -83,47 +83,39 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 	Update( *upd );
 	delete upd;
 
-		// stash parent scopes
-	ladParent = adl ? adl->GetParentScope( ) : (ClassAd*)NULL;
-	radParent = adr ? adr->GetParentScope( ) : (ClassAd*)NULL;
+		// In the following, global-scope references to LEFT and RIGHT
+		// are used to make things slightly more efficient.  That means
+		// that this match ad should not be nested inside other ads.
+		// Also for effiency, the left and right ads are actually
+		// inserted as .LEFT and .RIGHT (ie at the top level) but
+		// their parent scope is set to the lCtx and rCtx ads as
+		// though they were inserted as lCtx.ad and rCtx.ad.  This way,
+		// the most direct way to reference the ads is through the
+		// top-level global names .LEFT and .RIGHT.
 
 		// the left context
 	if( !( lCtx = parser.ParseClassAd( 
-			"[other=adcr.ad;my=ad;target=other;ad=[]]" ) ) ) {
+			"[other=.RIGHT;target=.RIGHT;my=.LEFT;ad=.LEFT]" ) ) ) {
 		Clear( );
 		lCtx = NULL;
 		rCtx = NULL;
 		return( false );
 	}
-	if( adl ) {
-		lCtx->Insert( "ad", adl );
-	} else {
-		Value val;
-		lCtx->EvaluateAttr( "ad", val );
-		val.IsClassAdValue( adl );
-	}
 
 		// the right context
 	if( !( rCtx = parser.ParseClassAd( 
-			"[other=adcl.ad;my=ad;target=other;ad=[]]" ) ) ) {
+			"[other=.LEFT;target=.LEFT;my=.RIGHT;ad=.RIGHT]" ) ) ) {
 		delete lCtx;
 		lCtx = rCtx = NULL;
 		return( false );
 	}
-	if( adr ) {
-		rCtx->Insert( "ad", adr );
-	} else {
-		Value val;
-		rCtx->EvaluateAttr( "ad", val );
-		val.IsClassAdValue( adr );
-	}
 
 		// insert the left and right contexts
-	Insert( "adcl", lCtx );
-	Insert( "adcr", rCtx );
+	Insert( "lCtx", lCtx );
+	Insert( "rCtx", rCtx );
 
-	lad = adl;
-	rad = adr;
+	ReplaceLeftAd( adl );
+	ReplaceRightAd( adr );
 
 	return( true );
 }
@@ -134,7 +126,16 @@ ReplaceLeftAd( ClassAd *ad )
 {
 	lad = ad;
 	ladParent = lad ? lad->GetParentScope( ) : (ClassAd*)NULL;
-	return( ad ? lCtx->Insert( "ad", ad ) : true );
+	if( ad ) {
+		if( !Insert( "LEFT", ad ) ) {
+			return false;
+		}
+			// For the ability to efficiently reference the ad via
+			// .LEFT, it is inserted in the top match ad, but we want
+			// its parent scope to be the context ad.
+		lad->SetParentScope( lCtx );
+	}
+	return true;
 }
 
 
@@ -143,7 +144,16 @@ ReplaceRightAd( ClassAd *ad )
 {
 	rad = ad;
 	radParent = rad ? rad->GetParentScope( ) : (ClassAd*)NULL;
-	return( ad ? rCtx->Insert( "ad", ad ) : true );
+	if( ad ) {
+		if( !Insert( "RIGHT", ad ) ) {
+			return false;
+		}
+			// For the ability to efficiently reference the ad via
+			// .RIGHT, it is inserted in the top match ad, but we want
+			// its parent scope to be the context ad.
+		rad->SetParentScope( rCtx );
+	}
+	return true;
 }
 
 
@@ -179,7 +189,7 @@ ClassAd *MatchClassAd::
 RemoveLeftAd( )
 {
 	ClassAd *ad = lad;
-	lCtx->Remove( "ad" );
+	Remove( "LEFT" );
 	if( lad ) {
 		lad->SetParentScope( ladParent );
 	}
@@ -193,7 +203,7 @@ ClassAd *MatchClassAd::
 RemoveRightAd( )
 {
 	ClassAd	*ad = rad;
-	rCtx->Remove( "ad" );
+	Remove( "RIGHT" );
 	if( rad ) {
 		rad->SetParentScope( radParent );
 	}
