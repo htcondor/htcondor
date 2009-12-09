@@ -67,8 +67,8 @@ struct ViewMemberLT {
 typedef std::string ViewName;
 typedef std::multiset<ViewMember, ViewMemberLT> ViewMembers;
 typedef classad_slist<View*> SubordinateViews;
-typedef classad_hash_map<std::string,View*> PartitionedViews;
-typedef classad_hash_map<std::string,ViewMembers::iterator> MemberIndex;
+typedef classad_map<std::string,View*> PartitionedViews;
+typedef classad_map<std::string,ViewMembers::iterator> MemberIndex;
 
 
 /* View class */

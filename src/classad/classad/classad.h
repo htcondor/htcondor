@@ -37,7 +37,7 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-typedef classad_hash_map<std::string, ExprTree*, CaseIgnLTStr> AttrList;
+typedef classad_map<std::string, ExprTree*, CaseIgnLTStr> AttrList;
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);

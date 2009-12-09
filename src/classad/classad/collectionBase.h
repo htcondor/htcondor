@@ -43,9 +43,9 @@ public:
     ClassAd *ad;
 };
 
-typedef classad_hash_map<std::string,View*> ViewRegistry;
-typedef classad_hash_map<std::string,ClassAdProxy> ClassAdTable;
-typedef classad_hash_map<std::string,ServerTransaction*> XactionTable;
+typedef classad_map<std::string,View*> ViewRegistry;
+typedef classad_map<std::string,ClassAdProxy> ClassAdTable;
+typedef classad_map<std::string,ServerTransaction*> XactionTable;
 
 /** A ClassAdCollection stores a set of ClassAds. It is similar to a
     hash table, but with more interesting querying capabilities. */

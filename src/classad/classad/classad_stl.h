@@ -24,7 +24,7 @@
 #include <map>
 #include <list>
 
-#define classad_hash_map std::map 
-#define classad_slist    std::list
+#define classad_map   std::map 
+#define classad_slist std::list
 
 #endif /* __CLASSAD_STL_H__ */

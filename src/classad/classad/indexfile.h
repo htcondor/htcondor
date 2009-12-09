@@ -58,8 +58,8 @@ class IndexFile {
 	bool  TruncateStorageFile();
 	int  dump_index();
  private:
-	classad_hash_map<std::string,int> Index;
-	classad_hash_map<std::string,int>::iterator index_itr;
+	classad_map<std::string,int> Index;
+	classad_map<std::string,int>::iterator index_itr;
 	int filed;
 };
 
