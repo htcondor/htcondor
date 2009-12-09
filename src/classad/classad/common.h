@@ -164,21 +164,23 @@ struct ExprHash {
 
 struct StringHash {
 	size_t operator()( const std::string &s ) const {
-		size_t h = 0;
-		for( int i = s.size()-1; i >= 0; i-- ) {
-			h = 5*h + s[i];
+		unsigned long h = 0;
+		char const *ch;
+		for( ch = s.c_str(); *ch; ch++ ) {
+			h = 5*h + (unsigned char)*ch;
 		}
-		return( h );
+		return (size_t)h;
 	}
 };
 
 struct StringCaseIgnHash {
 	size_t operator()( const std::string &s ) const {
-		size_t h = 0;
-		for( int i = s.size()-1; i >= 0; i-- ) {
-			h = 5*h + tolower(s[i]);
+		unsigned long h = 0;
+		char const *ch;
+		for( ch = s.c_str(); *ch; ch++ ) {
+			h = 5*h + (unsigned char)tolower(*ch);
 		}
-		return( h );
+		return (size_t)h;
 	}
 };
 extern std::string       CondorErrMsg;
