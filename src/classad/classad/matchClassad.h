@@ -146,6 +146,36 @@ class MatchClassAd : public ClassAd
 		*/
 		ClassAd *RemoveRightAd( );
 
+		/** Modifies the requirements expression in the given ad to
+			make matchmaking more efficient.  This will only improve
+			efficiency if it is called once and then the resulting
+			requirements are used multiple times.  Saves the old
+			requirements expression so it can be restored via
+			UnoptimizeAdForMatchmaking.
+			@param ad The ad to be optimized.
+			@param error_msg non-NULL if an error description is desired.
+			@return True on success.
+		*/
+		bool OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg );
+
+		/** Modifies the requirements expression in the given ad to
+			make matchmaking more efficient.  This will only improve
+			efficiency if it is called once and then the resulting
+			requirements are used multiple times.  Saves the old
+			requirements expression so it can be restored via
+			UnoptimizeAdForMatchmaking.
+			@param ad The ad to be optimized.
+			@param error_msg non-NULL if an error description is desired.
+			@return True on success.
+		*/
+		bool OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg );
+
+		/** Restores ad previously optimized with OptimizeAdForMatchmaking.
+			@param ad The ad to be unoptimized.
+			@return True on success.
+		*/
+		bool UnoptimizeAdForMatchmaking( ClassAd *ad );
+
 	protected:
 		const ClassAd *ladParent, *radParent;
 		ClassAd *lCtx, *rCtx, *lad, *rad;
@@ -157,6 +187,19 @@ class MatchClassAd : public ClassAd
         // write them. 
         MatchClassAd(const MatchClassAd &) : ClassAd(){ return;       }
         MatchClassAd &operator=(const MatchClassAd &) { return *this; }
+
+		/** Modifies the requirements expression in the given ad to
+			make matchmaking more efficient.  This will only improve
+			efficiency if it is called once and then the resulting
+			requirements are used multiple times.  Saves the old
+			requirements expression so it can be restored via
+			UnoptimizeAdForMatchmaking.
+			@param ad The ad to be optimized.
+			@param is_right True if this ad will be the right ad.
+			@param error_msg non-NULL if an error description is desired.
+			@return True on success.
+		*/
+		bool OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg );
 
 };
 

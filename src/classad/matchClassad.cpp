@@ -24,6 +24,8 @@
 
 using namespace std;
 
+static char const *ATTR_UNOPTIMIZED_REQUIREMENTS = "UnoptimizedRequirements";
+
 BEGIN_NAMESPACE( classad )
 
 MatchClassAd::
@@ -210,6 +212,111 @@ RemoveRightAd( )
 	radParent = NULL;
 	rad = NULL;
 	return( ad );
+}
+
+bool MatchClassAd::
+OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg )
+{
+	return OptimizeAdForMatchmaking( ad, true, error_msg );
+}
+
+bool MatchClassAd::
+OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg )
+{
+	return OptimizeAdForMatchmaking( ad, false, error_msg );
+}
+
+bool MatchClassAd::
+OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
+{
+	if( ad->Lookup("my") ||
+		ad->Lookup("target") ||
+		ad->Lookup("other") ||
+		ad->Lookup(ATTR_UNOPTIMIZED_REQUIREMENTS) )
+	{
+		if( error_msg ) {
+			*error_msg = "Optimization of matchmaking requirements failed, because ad already contains one of my, target, other, or UnoptimizedRequirements.";
+		}
+		return false;
+	}
+
+	ExprTree *requirements = ad->Lookup(ATTR_REQUIREMENTS);
+	if( !requirements ) {
+		if( error_msg ) {
+			*error_msg = "No requirements found in ad to be optimized.";
+		}
+		return false;
+	}
+
+		// insert "my" into this ad so that references that use it
+		// can be flattened
+	Value me;
+	me.SetClassAdValue( ad );
+	ad->Insert("my",Literal::MakeLiteral(me));
+
+		// insert "target" and "other" into this ad so references can be
+		// _partially_ flattened to the more efficient .RIGHT or .LEFT
+	char const *other = is_right ? "LEFT" : "RIGT";
+	ExprTree *target =
+		AttributeReference::MakeAttributeReference(NULL,other,true);
+	ad->Insert("target",target);
+	ad->Insert("other",target);
+
+
+	ExprTree *flat_requirements = NULL;
+	Value flat_val;
+
+	if( ad->FlattenAndInline(requirements,flat_val,flat_requirements) ) {
+		if( !flat_requirements ) {
+				// flattened to a value
+			flat_requirements = classad::Literal::MakeLiteral(flat_val);
+		}
+		if( flat_requirements ) {
+				// save original requirements
+			ExprTree *orig_requirements = ad->Remove(ATTR_REQUIREMENTS);
+			if( orig_requirements ) {
+				if( !ad->Insert(ATTR_UNOPTIMIZED_REQUIREMENTS,orig_requirements) )
+				{
+						// Now we have no requirements.  Very bad!
+					if( error_msg ) {
+						*error_msg = "Failed to rename original requirements.";
+					}
+					delete orig_requirements;
+					return false;
+				}
+			}
+
+				// insert new flattened requirements
+			if( !ad->Insert(ATTR_REQUIREMENTS,flat_requirements) ) {
+				if( error_msg ) {
+					*error_msg = "Failed to insert optimized requirements.";
+				}
+				delete flat_requirements;
+				return false;
+			}
+		}
+	}
+
+		// After flatenning, no references should remain to MY or TARGET.
+		// Even if there are, those can be resolved by the context ads, so
+		// we don't need to leave these attributes in the ad.
+	ad->Delete("my");
+	ad->Remove("other"); // this is a pointer to same object as target
+	ad->Delete("target");
+
+	return true;
+}
+
+bool MatchClassAd::
+UnoptimizeAdForMatchmaking( ClassAd *ad )
+{
+	ExprTree *orig_requirements = ad->Remove(ATTR_UNOPTIMIZED_REQUIREMENTS);
+	if( orig_requirements ) {
+		if( !ad->Insert(ATTR_REQUIREMENTS,orig_requirements) ) {
+			return false;
+		}
+	}
+	return true;
 }
 
 END_NAMESPACE // classad
