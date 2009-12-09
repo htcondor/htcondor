@@ -23,7 +23,9 @@
 
 #include <map>
 #include <list>
+#include <ext/hash_map>
 
+#define classad_hash_map __gnu_cxx::hash_map
 #define classad_map   std::map 
 #define classad_slist std::list
 

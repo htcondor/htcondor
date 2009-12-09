@@ -185,6 +185,15 @@
 #include <sys/poll.h>
 #endif
 
+#if defined(__cplusplus)
+
+// This is here for new classads.  Putting it here prevents poisoning
+// of open member function in compiler functions.  Once we stop poisoning
+// via the pre-processor, this can go away.
+
+#include <ext/hash_map>
+#endif
+
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
 #define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
 
