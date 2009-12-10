@@ -72,3 +72,8 @@ clean::
 
 html:
 testbin:: all
+
+release::
+stripped::
+static::
+clean::
