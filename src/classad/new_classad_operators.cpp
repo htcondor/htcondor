@@ -551,10 +551,14 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 	// Flatten sub expressions
 	if( child1 && !child1->Flatten( state, val1, fChild1, &childOp1 ) ||
 		child2 && !child2->Flatten( state, val2, fChild2, &childOp2 ) ) {
+		delete fChild1;
+		delete fChild2;
 		tree = NULL;
 		return false;
 	}
 
+		// NOTE: combine() deletes fChild1 and/or fChild2 if they are not
+		// included in tree
 	if( !combine( newOp, val, tree, childOp1, val1, fChild1, 
 						childOp2, val2, fChild2 ) ) {
 		tree = NULL;
@@ -593,6 +597,8 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 						true, true, false, val );
 		if( val.IsBooleanValue() ) {
 			tree = NULL;
+			delete tree1;
+			delete tree2;
 			op = __NO_OP__;
 			return true;
 		}
@@ -616,7 +622,11 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		return true;
 	} else if( ( tree1 && op1 == __NO_OP__ ) && ( tree2 && op2 == __NO_OP__ ) ){
 		// left and rightsons are trees only
-		if( !( newOp = MakeOperation( op, tree1, tree2 )) ) return false;
+		if( !( newOp = MakeOperation( op, tree1, tree2 )) ) {
+			delete tree1;
+			delete tree2;
+			return false;
+		}
 		tree = newOp;
 		op   = __NO_OP__;
 		return true;
@@ -664,7 +674,11 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 	if( op == op1 && op == op2 ) {
 		// same operators on both children . since op!=NO_OP, neither are op1, 
 		// op2.  so they both make tree and value contributions
-		if( !( newOp = MakeOperation( op, tree1, tree2 ) ) ) return false;
+		if( !( newOp = MakeOperation( op, tree1, tree2 ) ) ) {
+			delete tree1;
+			delete tree2;
+			return false;
+		}
 		_doOperation( op, val1, val2, dummy, true, true, false, val );
 		tree = newOp;
 		return true;
@@ -679,6 +693,8 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			// rightson makes a tree contribution
 			Operation *local_newOp = MakeOperation( op, tree1, tree2 );
 			if( !local_newOp ) {
+				delete tree1;
+				delete tree2;
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
@@ -697,6 +713,8 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			// leftson makes a tree contribution
 			Operation *local_newOp = MakeOperation( op, tree1, tree2 );
 			if( !local_newOp ) {
+				delete tree1;
+				delete tree2;
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
