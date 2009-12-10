@@ -9479,10 +9479,10 @@ Configuration File Macros Affecting APIs}
   containing certificates of trusted Certificate Authorities (CAs).
   Only clients who present a certificate signed by a trusted
   CA will be authenticated.
-  When SOAP over SSL is enabled, this parameter or
-  \Macro{SOAP\_SSL\_CA\_FILE} must be set.
-  This parameter is also used when communicating with an Amazon EC2 server
-  (possibly through a proxy), though it's not required in that case.
+  When SOAP over SSL is enabled, this variable or the variable
+  \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
+  This variable is also used when communicating with an Amazon EC2 server
+  (possibly through a proxy), although it is not required in that case.
   There is no default value.
 
 \label{param:SoapSSLDhFile}
