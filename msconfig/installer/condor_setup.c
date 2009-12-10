@@ -322,7 +322,7 @@ set_daemonlist() {
 				(Opt.submitjobs == 'Y') ? "SCHEDD" : "",
 				(Opt.runjobs == 'A' ||
 				 Opt.runjobs == 'I' ||
-				 Opt.runjobs == 'C') ? "STARTD" : "",
+				 Opt.runjobs == 'C') ? "STARTD KBDD" : "",
 				(Opt.hadoop == 'Y') ? "HDFS" : "");
 
 		set_option("DAEMON_LIST", buf);
