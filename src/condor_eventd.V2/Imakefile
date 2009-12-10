@@ -3,14 +3,10 @@ all_target( $(NAME) )
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
-
-soapobjs(Eventd)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = 	admin_event_main.o 			\
-		admin_event.o 				\
-				\
-		$(SOAP_OBJS)
+		admin_event.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -20,5 +16,3 @@ stripped:: all
 static:: all
 clean::
 testbin:: all
-
-gen_soapfiles(Eventd,condorEventd)

@@ -167,6 +167,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_daemon_core.V6\mimetypes.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_collector.V6\offline_plugin.cpp"
 			>
 		</File>
@@ -209,6 +213,10 @@
 					UsePrecompiledHeader="0"
 				/>
 			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_daemon_core.V6\soap_core.cpp"
+			>
 		</File>
 		<File
 			RelativePath="..\src\condor_status.V6\totals.cpp"
