@@ -7229,6 +7229,13 @@ These macros affect the \Condor{gridmanager}.
 \label{param:AmazonEC2URL}
 \item[\Macro{AMAZON\_EC2\_URL}]
   The URL Condor should use when contacting the Amazon EC2 service.
+  This URL may include a user name and password as in the implied
+  syntax example:
+\footnotesize
+\begin{verbatim}
+  protocol://username:password@domain:port/path/to/resource
+\end{verbatim}
+\normalsize
   The default value is \MacroNI{https://ec2.amazonaws.com/}.
 
 \label{param:AmazonHttpProxy}
