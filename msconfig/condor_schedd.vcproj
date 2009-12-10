@@ -250,6 +250,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_daemon_core.V6\mimetypes.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_schedd.V6\prio_rec.h"
 			>
 		</File>
@@ -319,6 +323,10 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_schedd.V6\shadow_mgr.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_daemon_core.V6\soap_core.cpp"
 			>
 		</File>
 		<File

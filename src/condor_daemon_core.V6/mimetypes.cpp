@@ -54,17 +54,22 @@
 #include <string.h>
 #include <stdlib.h>
 
-struct mimetype { char *ext; const char *mimetype; };
+struct mimetype { 
+	char *ext; 
+	const char * pmimetype; 
+};
 
 struct mimetype *mime_lookup (const char *, unsigned int);
 
+extern "C" {
 const char *type_for_ext(const char *ext) {
       struct mimetype *tuple;
       if ((tuple = mime_lookup(ext, strlen(ext))) != NULL) {
-      	 return tuple->mimetype;
+      	 return tuple->pmimetype;
       } 
       
       return NULL;
+}
 }
 
 #define TOTAL_KEYWORDS 84

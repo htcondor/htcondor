@@ -22,6 +22,13 @@
 #include "condor_debug.h"
 #include "soap_core.h"
 
+#ifdef WIN32
+	#define __ATTRIBUTE__WEAK__
+	#define SHUT_RDWR 2
+#else
+	#define __ATTRIBUTE__WEAK__ __attribute__ ((weak))
+#endif
+
 /* A detectable pointer.
  *
  * If for any reason the stuct soap pointers are not equal to it, then
@@ -32,7 +39,7 @@
 /* From stdsoap2.h */
 #define SOAP_ERR EOF
 
-struct soap * __attribute__ ((weak))
+struct soap * __ATTRIBUTE__WEAK__
 dc_soap_accept(Sock *socket, const struct soap *soap)
 {
 	ASSERT(NULL_SOAP == soap);
@@ -54,7 +61,7 @@ dc_soap_accept(Sock *socket, const struct soap *soap)
 	return NULL_SOAP;
 }
 
-int __attribute__ ((weak))
+int __ATTRIBUTE__WEAK__
 dc_soap_serve(struct soap *soap)
 {
 	ASSERT(NULL_SOAP == soap);
@@ -64,13 +71,13 @@ dc_soap_serve(struct soap *soap)
 	return SOAP_ERR;
 }
 
-void __attribute__ ((weak))
+void __ATTRIBUTE__WEAK__
 dc_soap_free(struct soap *soap)
 {
 	ASSERT(NULL_SOAP == soap);
 }
 
-void __attribute__ ((weak))
+void __ATTRIBUTE__WEAK__
 dc_soap_init(struct soap *&soap)
 {
 	soap = NULL_SOAP;

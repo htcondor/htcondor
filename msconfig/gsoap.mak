@@ -15,10 +15,7 @@ SOAPCPP = soapcpp2.exe
 !endif
 SOAPCPPFLAGS = -I $(SRCDIR)\condor_daemon_core.V6
 
-DAEMONS = collector dagman gridmanager master negotiator had credd \
-		schedd shadow startd starter cgahp cgahp_worker quill \
-		replication transferer vmgahp dbmsd hdfs rooster kbdd \
-		shared_port
+DAEMONS = collector schedd 
 
 all : $(DAEMONS)
 
