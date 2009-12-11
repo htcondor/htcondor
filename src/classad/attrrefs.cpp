@@ -281,9 +281,33 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 
 		case EVAL_UNDEF:
 		case PROP_UNDEF:
+			if( expr && state.flattenAndInline ) {
+				ExprTree *expr_ntree = NULL;
+				Value expr_val;
+				if( state.depth_remaining <= 0 ) {
+					val.SetErrorValue();
+					state.curAd = curAd;
+					return false;
+				}
+				state.depth_remaining--;
+
+				rval = expr->Flatten(state,expr_val,expr_ntree);
+
+				state.depth_remaining++;
+
+				if( rval && expr_ntree ) {
+					ntree = MakeAttributeReference(expr_ntree,attributeStr);
+					if( ntree ) {
+						state.curAd = curAd;
+						return true;
+					}
+				}
+				delete expr_ntree;
+			}
 			if( !(ntree = Copy( ) ) ) {
 				CondorErrno = ERR_MEM_ALLOC_FAILED;
 				CondorErrMsg = "";
+				state.curAd = curAd;
 				return( false );
 			}
 			state.curAd = curAd;
