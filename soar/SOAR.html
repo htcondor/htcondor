@@ -387,19 +387,81 @@ Using SOAR
 Time activated tasks
 </h3>
 
+<p>
 The most convenient way to do production with SOAR is to place entries in a file which 
-condor manages the frequency of.  There are two included(per_runs and per_plotsandreports). Per_runs fires off the commands in continuous.cron once a day and 
+condor manages the frequency of.  There are two included(per_runs and per_plotsandreports). 
+Per_runs fires off the commands in continuous.cron once a day and 
 per_plotsandreports fires off the commands in checkprogress.com every 5 minutes. 
 Setting this up is as easy as placing what you want done similar to the sample files 
 and submitting them with condor_submit(condor_submit per_runs). The first usually 
 contains usage of the control.pl script and --kind=new so tracking of datasets already done 
-has only new datasets run. The second usually contains the usage of the status.pl script 
-with --last as it then looks up the most recent run of the project and updates the profile 
-and the report.
+has only new datasets run. The second as of version 0.7.5 is done for you. Every run
+gets an entry added when the run is started and is removed when the run completes.
+This allows us to use the information in the report system to accurately move jobs which were
+running to complete. This information allows the next run to search out all currently running jobs and not start them again.
+</p>
+<p>
+<b>If you need to remove a run, you must use the soar_rm.pl script to
+both extract this set of reports from the recheck interval or you waste
+the cycles on reports on a completed/removed run</b>.
+</p>
+<p>
 
 This way once you tie a project to do a particular job, you or the person doing the 
 research only need to worry about creating more data sets into the image location for 
 the project and pull results from the result location.
+</p>
+
+<h3>
+Automated Code Replacement
+</h3>
+<p>
+Input data for jobs in folders or folders in datasets are located either
+in the directory specified by IMAGERUNS is control/fsconfig, or in a location
+specified by the project name in the same location. Lets say your data is expected to 
+be in your home in a directory rundata. So job data for project redapple
+would be in /home/me/rundata/redapple.
+</p>
+<p>
+The way code replacement works is that anything placed in /home/me/rundata/redapple_objs
+is compared against the age of the current files for the currently requested version
+of your workflow code. Newer code from that location is inserted into your work flow.
+You have some control though its minimal at this point. The following four attributes 
+can be set in /home/me/rundata/redapple_objs/objconfig. The contents of this file will
+only be active if files are found to update.
+</p>
+
+</p>
+<ul>
+<li>
+kind = oneoff 
+<p>
+(maybe you usually run with --kind=new but you want to run all your data
+with the new code. This will run every data set you have.)
+</p>
+<li>
+limit = 2
+<p>
+You want to set up for rerunning all of your data but want to inspect results from just 2 runs
+first.
+</p>
+<li>
+version = v6
+<p>
+The changes are substantial enough that you want v5 to now become v6
+and you will run it as v6(Soar does that for you).
+</p>
+<li>
+matlabtarg = main.m,another.m
+<p>
+So we don't build software but the update works because we replace a binary
+with a binary or an R script with a newer one or we even replace Matlab 
+scripts/programs. In the last case all the scripts used by these two M files
+will be Matlab compiled before your jobs are run. At this point this is the only
+processing we do. Soar is not a build system but matlab jobs can not be run
+unless we compile them.
+</p>
+</ul>
 
 <h3>
  Control Scripts
@@ -608,6 +670,26 @@ Create a report for a particular run.
 </pre>
 Create a white list from the section of the report labeled "fail [No result files]"
 </ul>
+
+<h3>
+soar_rm.pl Usage
+</h3>
+
+<p>
+When a run is started you are givin an environment strings which describes 
+where the data for that particular run is. "soar_rm.pl" uses this to both
+find the actual job id to use with "condor_rm", but also uses it to remove 
+the run specific periodic "status.pl" runs which update the plots and reports
+at some interval.
+</p>
+
+<ul>
+<li>
+./soar_rm.pl --project=gravitropism --env=run6823_8_26_200
+<pre>
+</pre>
+</ul>
+
 <h2>How do I ......</h2>
 <p>
 You probably have a project running in SOAR but you want one of the following changes:
@@ -672,6 +754,13 @@ These two files make it possible to have links created from the file
 described above.
 </p>
 <h2>Release Notes</h2>
+<h3>Version 0.7.6</h3>
+<ul>
+<li> 
+	SOAR will now look for new code and will replace it and if it is matlab
+	re-compile a specified list of programs to make use of the new matlab files.
+	See "<b>Automatic Code Replacement</b> above.
+</ul>
 <h3>Version 0.7.5</h3>
 <ul>
 <li> 
