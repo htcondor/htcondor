@@ -5364,61 +5364,41 @@ SetGSICredentials()
 			free( proxy_file );
 		} else {
 #ifndef WIN32
-				// Versions of Condor prior to 6.7.3 set a different
-				// value for X509UserProxySubject. Specifically, the
-				// proxy's subject is used rather than the identity
-				// (the subject this is a proxy for), and spaces are
-				// converted to underscores. The elimination of spaces
-				// is important, as the proxy subject gets passed on
-				// the command line to the gridmanager in these older
-				// versions and daemon core's CreateProcess() can't
-				// handle spaces in command line arguments. So if
-				// we're talking to an older schedd, use the old format.
-			CondorVersionInfo *vi = NULL;
-			if ( !DumpClassAdToFile ) {
-				vi = new CondorVersionInfo( MySchedd->version() );
-			}
-
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				if ( vi ) delete vi;
 				exit( 1 );
 			}
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			if ( vi && !vi->built_since_version(6,7,3) ) {
-				// subject name with no VOMS attrs
-				proxy_subject = x509_proxy_subject_name(proxy_file, 0);
-			} else {
-				// identity with VOMS attrs
-				proxy_subject = x509_proxy_identity_name(proxy_file, 1);
-			}
+			proxy_subject = x509_proxy_subject_name(proxy_file, 0); // zero means subject only
+
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				if ( vi ) delete vi;
 				exit( 1 );
 			}
-			/* Dreadful hack: replace all the spaces in the cert subject
-			* with underscores.... why?  because we need to pass this
-			* as a command line argument to the gridmanager, and until
-			* daemoncore handles command-line args w/ an argv array, spaces
-			* will cause trouble.  
-			*/
-			if ( vi && !vi->built_since_version(6,7,3) ) {
-				char *space_tmp;
-				do {
-					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
-						*space_tmp = '_';
-					}
-				} while (space_tmp);
-			}
-			if ( vi ) delete vi;
 
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   proxy_subject);
 			InsertJobExpr(buffer);	
 			free( proxy_subject );
+
+			/* Insert the VOMS attributes into the ad */
+			char *proxy_voms_fqan;
+			proxy_voms_fqan = x509_proxy_subject_name(proxy_file, 1); // one means include fqan
+
+			if ( !proxy_voms_fqan ) {
+				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				exit( 1 );
+			}
+
+			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_FQAN, 
+						   proxy_voms_fqan);
+			InsertJobExpr(buffer);	
+			free( proxy_voms_fqan );
+
+			// ZKM TODO: INCLUDE AN ATTRIBUTE WITH ONLY SERIALIZED VOMS ATTRS?
+			// ZKM TODO: INCLUDE A NEW CLASSAD LIST OF VOMS ROLES/ATTRS
 #endif
 
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY, 

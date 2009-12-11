@@ -213,6 +213,7 @@ const char * const ATTR_GLOBUS_STATUS			 = "GlobusStatus";
 const char * const ATTR_GLOBUS_XML				 = "GlobusXML";
 const char * const ATTR_X509_USER_PROXY          = "x509userproxy";
 const char * const ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
+const char * const ATTR_X509_USER_PROXY_FQAN	 = "x509userproxyfqan";
 const char * const ATTR_DELEGATED_PROXY_EXPIRATION = "DelegatedProxyExpiration";
 const char * const ATTR_GLOBUS_JOBMANAGER_TYPE   	= "JobmanagerType";	// for gt4
 const char * const ATTR_GLOBUS_SUBMIT_ID	     = "GlobusSubmitId"; // for gt4
