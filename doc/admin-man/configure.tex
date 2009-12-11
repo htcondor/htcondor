@@ -7678,6 +7678,13 @@ the HDFS XML configuration.
   The optional value that specifies the HDFS XML configuration file to generate.
   The default value is \File{hdfs-site.xml}.
 
+\label{param:HDFSReplication}
+\item[\Macro{HDFS\_REPLICATION}]
+  An integer value that facilitates setting the replication factor of an HDFS,
+  defining the value of \Expr{dfs.replication} in the HDFS XML
+  configuration.  This configuration variable is optional, as the HDFS has
+  its own default value of 3 when not set through configuration.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
