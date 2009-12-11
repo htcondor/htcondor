@@ -167,6 +167,7 @@ extern const char * const  ATTR_GRID_JOB_STATUS;
 extern const char * const  ATTR_MYPROXY_SERVER_DN;
 extern const char * const  ATTR_MYPROXY_HOST_NAME;
 extern const char * const  ATTR_MYPROXY_PASSWORD;
+extern const char * const  ATTR_MYPROXY_PASSWORD_EXISTS;
 extern const char * const  ATTR_MYPROXY_CRED_NAME;
 extern const char * const  ATTR_MYPROXY_REFRESH_THRESHOLD;
 extern const char * const  ATTR_MYPROXY_NEW_PROXY_LIFETIME;

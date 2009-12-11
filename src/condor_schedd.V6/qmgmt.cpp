@@ -1673,6 +1673,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		BeginTransaction(); // for performance
 	}
 
+	// ckireyev: Destroy MyProxyPassword
+	(void)DestroyMyProxyPassword (cluster_id, proc_id);
+
 	JobQueue->DestroyClassAd(key);
 
 	DecrementClusterSize(cluster_id);
@@ -1683,10 +1686,6 @@ int DestroyProc(int cluster_id, int proc_id)
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
-
-
-	// ckireyev: Destroy MyProxyPassword
-	(void)DestroyMyProxyPassword (cluster_id, proc_id);
 
 	JobQueueDirty = true;
 
@@ -2301,6 +2300,12 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 
 	free (encoded_value);
 
+	if (SetAttribute(cluster_id, proc_id,
+					 ATTR_MYPROXY_PASSWORD_EXISTS, "TRUE") < 0) {
+		EXCEPT("Failed to record fact that MyProxyPassword file exists on %d.%d",
+			   cluster_id, proc_id);
+	}
+
 	return 0;
 
 }
@@ -2309,6 +2314,14 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 int
 DestroyMyProxyPassword( int cluster_id, int proc_id )
 {
+	int val = 0;
+	if (GetAttributeBool(cluster_id, proc_id,
+						 ATTR_MYPROXY_PASSWORD_EXISTS, &val) < 0 ||
+		!val) {
+			// It doesn't exist, nothing to destroy.
+		return 0;
+	}
+
 	MyString filename;
 	filename.sprintf( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
 					  cluster_id, proc_id );
@@ -2333,6 +2346,12 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 
 	// Switch back to non-root
 	set_priv(old_priv);
+
+	if (SetAttribute(cluster_id, proc_id,
+					 ATTR_MYPROXY_PASSWORD_EXISTS, "FALSE") < 0) {
+		EXCEPT("Failed to record fact that MyProxyPassword file does no exists on %d.%d",
+			   cluster_id, proc_id);
+	}
 
 	return 0;
 }

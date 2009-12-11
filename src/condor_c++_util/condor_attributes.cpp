@@ -227,6 +227,7 @@ const char * const ATTR_GRID_JOB_STATUS			 = "GridJobStatus";
 const char * const ATTR_MYPROXY_SERVER_DN		 = "MyProxyServerDN";
 const char * const ATTR_MYPROXY_HOST_NAME		 = "MyProxyHost";
 const char * const ATTR_MYPROXY_PASSWORD		 = "MyProxyPassword";
+const char * const ATTR_MYPROXY_PASSWORD_EXISTS	 = "MyProxyPasswordExists";
 const char * const ATTR_MYPROXY_CRED_NAME		 = "MyProxyCredentialName";
 const char * const ATTR_MYPROXY_REFRESH_THRESHOLD = "MyProxyRefreshThreshold";
 const char * const ATTR_MYPROXY_NEW_PROXY_LIFETIME = "MyProxyNewProxyLifetime";
