@@ -18,6 +18,10 @@ REM Now patch the build system to get the Multi-threaded runtime library
 REM For now, this is disabled, since I don't think we need it to make
 REM condor happy. -stolley
 
+touch zerolength
+call :patch %PACKAGE_BUILD_DIR%\renegotiate.patch
+if not %ERRORLEVEL%A == 0A goto failure
+
 cd %PACKAGE_SRC_NAME%
 rem touch zerolength
 rem patch -p1 -i ..\openssl-0.9.8-patch < zerolength
@@ -33,11 +37,11 @@ rem We do this because all warnings are treated as errors in this build.
 if /i A%NEED_MANIFESTS_IN_EXTERNALS%==Atrue ( 
     pushd util
     touch zerolength
-    call :patch %PACKAGE_BUILD_DIR%\mk1mf.pl-0.9.8l.patch
+    call :patch %PACKAGE_BUILD_DIR%\mk1mf.pl-0.9.8h-patch
     if not %ERRORLEVEL%A == 0A goto failure
     pushd pl
     touch zerolength
-    call :patch %PACKAGE_BUILD_DIR%\VC-32.pl-0.9.8l.patch
+    call :patch %PACKAGE_BUILD_DIR%\VC-32.pl-0.9.8h-patch
     if not %ERRORLEVEL%A == 0A goto failure
     popd && popd
 )
@@ -86,6 +90,6 @@ rem ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 patch --verbose -i %1 < zerolength
 if ERRORLEVEL 3 ( 
   set ERRORLEVEL=0
-  cdb -o -c "g; !gle; kb; q" patch --verbose -i %1 < zerolength
+  cdb -o -c "g; !gle; kb; q" patch --verbose -p0 -i %1 < zerolength
 )
 goto :EOF
