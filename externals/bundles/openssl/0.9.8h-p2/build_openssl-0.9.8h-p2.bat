@@ -87,9 +87,9 @@ rem  purpose: calls patch.exe in the context of the debugger if patch
 rem           fails.  This seems to resolve the errorlevel 3 problem.  
 rem           Hurray for mysteriously, magical, nonsensical solutions!
 rem ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-patch --verbose -i %1 < zerolength
+patch --verbose -p 0 -i %1 < zerolength
 if ERRORLEVEL 3 ( 
   set ERRORLEVEL=0
-  cdb -o -c "g; !gle; kb; q" patch --verbose -p0 -i %1 < zerolength
+  cdb -o -c "g; !gle; kb; q" patch --verbose -p 0 -i %1 < zerolength
 )
 goto :EOF
