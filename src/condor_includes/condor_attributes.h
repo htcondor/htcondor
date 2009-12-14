@@ -153,6 +153,7 @@ extern const char * const  ATTR_GLOBUS_STATUS;
 extern const char * const  ATTR_GLOBUS_XML;
 extern const char * const  ATTR_X509_USER_PROXY;
 extern const char * const  ATTR_X509_USER_PROXY_SUBJECT;
+extern const char * const  ATTR_X509_USER_PROXY_FQAN;
 extern const char * const  ATTR_DELEGATED_PROXY_EXPIRATION;
 extern const char * const  ATTR_GLOBUS_JOBMANAGER_TYPE;
 extern const char * const  ATTR_GLOBUS_SUBMIT_ID;
