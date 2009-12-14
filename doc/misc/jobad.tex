@@ -98,7 +98,13 @@ due to this job.
 \item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the Condor
 execute directory on the execute machine that this job has used.
 The initial estimate may be specified in the job
-submit file.
+submit file using the \SubmitCmd{request\_disk} command.
+If not initialized by the job's request,
+\SubmitCmd{vm} universe jobs will default to an initial value of the disk
+image size. 
+If not initialized by the job's request,
+non-\SubmitCmd{vm} universe jobs will default to an initial value of the 
+sum of the job's executable and all input files.
 
 %%% ClassAd attribute: EmailAttributes
 \index{ClassAd job attribute!EmailAttributes}
@@ -258,8 +264,11 @@ a set of job hooks, and added to the ClassAd once a job is fetched.
 \index{ImageSize!job ClassAd attribute}
 \item[\AdAttr{ImageSize}:]  Estimate of the memory image size of the
 job in Kbytes.  The initial estimate may be specified in the job
-submit file.  Otherwise, the initial value is equal to the size of the
-executable.  When the job checkpoints, the \AdAttr{ImageSize}
+submit file using \SubmitCmd{request\_memory} or for \SubmitCmd{vm}
+universe jobs using \SubmitCmd{vm\_memory}.  
+Otherwise, the initial value is equal to the size of the
+executable for non-vm universe jobs, and 0 for vm universe jobs.
+When the job writes a checkpoint, the \AdAttr{ImageSize}
 attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed

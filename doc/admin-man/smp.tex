@@ -592,7 +592,6 @@ This example shows a portion of the job submit description file
 for use when submitting a job to a pool with dynamic provisioning.
 \begin{verbatim}
 universe = vanilla
-executable = 
 
 request_cpus = 3
 request_memory = 1024
@@ -604,11 +603,14 @@ queue
 For each type of slot,
 the original, partitionable slot and the new smaller, dynamic slots,
 an attribute is added to identify it.
-The original slot will have an attribute stating 
+The original slot,
+as defined at page~\pageref{PartitionableSlot-machine-attribute},
+will have an attribute stating 
 \begin{verbatim}
   PartitionableSlot = True
 \end{verbatim}
-and the dynamic slots will have an attribute 
+and the dynamic slots will have an attribute, 
+as defined at page~\pageref{DynamicSlot-machine-attribute},
 \begin{verbatim}
   DynamicSlot = True
 \end{verbatim}
