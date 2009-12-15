@@ -274,6 +274,16 @@ checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
 
+%%% ClassAd attribute: IwdFlushNFSCache
+\index{ClassAd job attribute!IwdFlushNFSCache}
+\index{IwdFlushNFSCache!job ClassAd attribute}
+\label{IwdFlushNFSCache-job-attribute}
+\item[\AdAttr{IwdFlushNFSCache}:]  A boolean expression that controls
+whether or not Condor attempts to flush a submit machine's NFS cache,
+in order to refresh a Condor job's initial working directory.
+The value will be \Expr{True}, unless a job explicitly adds this
+attribute, setting it to \Expr{False}.
+
 %%% ClassAd attribute: JobLeaseDuration
 \index{ClassAd job attribute!JobLeaseDuration}
 \index{JobLeaseDuration!job ClassAd attribute}
