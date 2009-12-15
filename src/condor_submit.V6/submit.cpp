@@ -5388,7 +5388,7 @@ SetGSICredentials()
 			char *firstfqan = NULL;
 			char *quoted_DN_and_FQAN = NULL;
 
-			int error = extract_VOMS_info_from_file( proxy_file, VERIFY_NONE, &voname, &firstfqan, &quoted_DN_and_FQAN);
+			int error = extract_VOMS_info_from_file( proxy_file, 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
 			if ( error ) {
 				if (error == 1) {
 					// no attributes, skip silently.

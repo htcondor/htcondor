@@ -736,7 +736,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 			globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
 
 			char * voms_fqan = NULL;
-			int voms_err = extract_VOMS_info(peer_cred, 0, NULL, NULL, &voms_fqan);
+			int voms_err = extract_VOMS_info(peer_cred, 1, NULL, NULL, &voms_fqan);
 			if (!voms_err) {
 				setFQAN(voms_fqan);
 				free(voms_fqan);
@@ -827,7 +827,7 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 			globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
 
 			char * voms_fqan = NULL;
-			int voms_err = extract_VOMS_info(peer_cred, 0, NULL, NULL, &voms_fqan);
+			int voms_err = extract_VOMS_info(peer_cred, 1, NULL, NULL, &voms_fqan);
 			if (!voms_err) {
 				setFQAN(voms_fqan);
 				free(voms_fqan);

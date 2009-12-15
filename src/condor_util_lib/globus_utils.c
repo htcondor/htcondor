@@ -334,11 +334,13 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 		goto end;
 	}
 
-	ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
-	if (ret == 0) {
-		retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
-		ret = voms_err;
-		goto end;
+	if (verify_type == 0) {
+		ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
+		if (ret == 0) {
+			retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+			ret = voms_err;
+			goto end;
+		}
 	}
 
 	ret = VOMS_Retrieve(cert, chain, RECURSE_CHAIN,
