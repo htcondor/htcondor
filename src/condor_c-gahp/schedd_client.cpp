@@ -1418,7 +1418,7 @@ handle_gahp_command(char ** argv, int argc) {
 			SetEnv( "X509_USER_PROXY", argv[1] );
 			UnsetEnv( "X509_USER_CERT" );
 			UnsetEnv( "X509_USER_KEY" );
-			proxySubjectName = x509_proxy_identity_name( argv[1], 1 );
+			proxySubjectName = x509_proxy_identity_name( argv[1] );
 			if ( !proxySubjectName ) {
 				dprintf( D_ALWAYS, "Failed to query certificate identity "
 						 "from %s\n",  argv[1] );
