@@ -444,17 +444,13 @@ end:
 #endif
 
 }
-#endif
+#endif /* defined(HAVE_EXT_GLOBUS) */
 
 
+#if defined(HAVE_EXT_GLOBUS)
 int
 extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
 {
-
-#if !defined(HAVE_EXT_GLOBUS)
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
-	return 1;
-#else
 
 	globus_gsi_cred_handle_t         handle       = NULL;
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
@@ -513,8 +509,8 @@ extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **von
 
 	return error; // success
 
-#endif /* !defined(GSS_AUTHENTICATION) */
 }
+#endif /* defined(HAVE_EXT_GLOBUS) */
 
 
 /* Return the subject name of a given proxy cert. 

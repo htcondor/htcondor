@@ -5363,7 +5363,7 @@ SetGSICredentials()
 //			InsertJobExpr(buffer);	
 			free( proxy_file );
 		} else {
-#ifndef WIN32
+#if defined(HAVE_EXT_GLOBUS)
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 				exit( 1 );

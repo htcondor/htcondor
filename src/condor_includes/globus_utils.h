@@ -280,9 +280,11 @@ void parse_resource_manager_string( const char *string, char **host,
    (specifically, globus-url-copy) can handle */
 int is_globus_friendly_url(const char * path);
 
+#if defined(HAVE_EXT_GLOBUS)
 /* functions for extracting voms attributes */
 int extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
 int extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
+#endif
 
 END_C_DECLS
 
