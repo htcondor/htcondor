@@ -5371,7 +5371,7 @@ SetGSICredentials()
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			proxy_subject = x509_proxy_subject_name(proxy_file, 0); // zero means subject only
+			proxy_subject = x509_proxy_identity_name(proxy_file, 0); // zero means subject only
 
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
@@ -5385,7 +5385,7 @@ SetGSICredentials()
 
 			/* Insert the VOMS attributes into the ad */
 			char *proxy_voms_fqan;
-			proxy_voms_fqan = x509_proxy_subject_name(proxy_file, 1); // one means include fqan
+			proxy_voms_fqan = x509_proxy_identity_name(proxy_file, 1); // one means include fqan
 
 			if ( !proxy_voms_fqan ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
