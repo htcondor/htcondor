@@ -34,7 +34,7 @@ class NordugridResource : public BaseResource
 {
  public:
 
-	NordugridResource( const char *resource_name, const char *proxy_subject );
+	NordugridResource( const char *resource_name, const Proxy *proxy );
 	~NordugridResource();
 
 	const char *ResourceType();
@@ -43,13 +43,14 @@ class NordugridResource : public BaseResource
 	static const char *HashName( const char *resource_name,
 								 const char *proxy_subject );
 	static NordugridResource *FindOrCreateResource( const char *resource_name,
-													const char *proxy_subject );
+													const Proxy *proxy );
 
 	const char *GetHashName();
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
 	char *proxySubject;
+	char *proxyFQAN;
 	GahpClient *gahp;
 
 	static HashTable <HashKey, NordugridResource *> ResourcesByName;

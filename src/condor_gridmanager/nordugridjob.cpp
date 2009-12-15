@@ -207,7 +207,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		goto error_exit;
 	}
 	snprintf( buff, sizeof(buff), "NORDUGRID/%s",
-			  jobProxy->subject->subject_name );
+			  jobProxy->subject->fqan );
 	gahp = new GahpClient( buff, gahp_path );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -247,7 +247,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	}
 
 	myResource = NordugridResource::FindOrCreateResource( resourceManagerString,
-														  jobProxy->subject->subject_name );
+														  jobProxy );
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
