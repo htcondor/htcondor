@@ -22,6 +22,19 @@
 
 #include "condor_common.h"
 
+#if defined(HAVE_EXT_GLOBUS)
+#     include "globus_gsi_credential.h"
+#     include "globus_gsi_system_config.h"
+#     include "globus_gsi_system_config_constants.h"
+#     include "gssapi.h"
+#     include "globus_gss_assist.h"
+#     include "globus_gsi_proxy.h"
+#endif
+
+#if defined(HAVE_EXT_VOMS)
+#include "glite/security/voms/voms_apic.h"
+#endif
+
 BEGIN_C_DECLS
 
 #define NULL_JOB_CONTACT	"X"
@@ -235,9 +248,9 @@ int check_x509_proxy( const char *proxy_file );
 
 time_t x509_proxy_expiration_time( const char *proxy_file );
 
-char* x509_proxy_subject_name( const char *proxy_file, int include_voms_attributes);
+char* x509_proxy_subject_name( const char *proxy_file);
 
-char* x509_proxy_identity_name( const char *proxy_file, int include_voms_attributes);
+char* x509_proxy_identity_name( const char *proxy_file);
 
 int x509_proxy_seconds_until_expire( const char *proxy_file );
 
@@ -266,6 +279,12 @@ void parse_resource_manager_string( const char *string, char **host,
 /* Returns true (non-0) if path looks like an URL that Globus
    (specifically, globus-url-copy) can handle */
 int is_globus_friendly_url(const char * path);
+
+#if defined(HAVE_EXT_GLOBUS)
+/* functions for extracting voms attributes */
+int extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
+int extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
+#endif
 
 END_C_DECLS
 
