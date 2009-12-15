@@ -3,14 +3,11 @@ all_target( $(NAME) )
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 PUBLIC_INSTALL_DIR = src/startd_factory/BlueGeneP
 
-soapobjs(startd_factory)
-
 OBJ = startd_factory_main.o startd_factory.o partition.o partition_mgr.o \
-	workload.o workload_mgr.o \
-	$(SOAP_OBJS)
+	workload.o workload_mgr.o
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
@@ -30,7 +27,5 @@ release:: all
 stripped:: all
 static:: all
 clean::
-
-gen_soapfiles(startd_factory,condorStartdFactory)
 
 testbin:: all

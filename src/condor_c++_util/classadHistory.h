@@ -32,6 +32,6 @@ class ClassAd;
 
 void WritePerJobHistoryFile(ClassAd*, bool);
 void AppendHistory(ClassAd*);
-void InitJobHistoryFile(const char *);
+void InitJobHistoryFile(const char *, const char *);
 
 #endif

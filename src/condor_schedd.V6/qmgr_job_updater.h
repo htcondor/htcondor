@@ -127,6 +127,7 @@ private:
 
 	ClassAd* job_ad;
 	char* schedd_addr;
+	MyString m_owner;
 
 	int cluster;
 	int proc;

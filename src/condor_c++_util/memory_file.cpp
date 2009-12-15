@@ -26,7 +26,8 @@
 #endif
 
 #include "memory_file.h"
-#include "condor_fix_iostream.h"
+#include <iostream>
+using namespace std;
 
 static const int DEFAULT_BUFFER_SIZE=1024;
 static const int COMPARE_BUFFER_SIZE=10000;   

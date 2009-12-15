@@ -26,7 +26,6 @@
 
 #include "condor_common.h"
 #ifdef HAVE_EXT_GSOAP
-#include "stdsoap2.h"
 #include "soap_core.h"
 #endif
 
@@ -107,6 +106,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "basename.h"
 #include "condor_threads.h"
 #include "shared_port_endpoint.h"
+#include "condor_open.h"
 
 #include "valgrind.h"
 
@@ -226,9 +226,6 @@ static int _condor_exit_with_exec = 0;
 void **curr_dataptr;
 void **curr_regdataptr;
 
-#ifdef HAVE_EXT_GSOAP
-extern int soap_serve(struct soap*);
-#endif
 extern void drop_addr_file( void );
 
 TimerManager DaemonCore::t;
@@ -597,9 +594,7 @@ DaemonCore::~DaemonCore()
 
 #ifdef HAVE_EXT_GSOAP
 	if( soap ) {
-		soap_destroy(soap);
-		soap_end(soap);
-		soap_free(soap);
+		dc_soap_free(soap);
 		soap = NULL;
 	}
 #endif
@@ -2607,13 +2602,11 @@ DaemonCore::reconfig(void) {
 	{
 		// tstclair: reconfigure the soap object
 		if( soap ) {
-			soap_destroy(soap);
-			soap_end(soap);
-			soap_free(soap);
+			dc_soap_free(soap);
+			soap = NULL;
 		}
 
-		soap = soap_new(); 
-		init_soap(soap);
+		dc_soap_init(soap);
 		
 	}
 	else {
@@ -4180,32 +4173,12 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 
 		ASSERT( soap );
-		cursoap = soap_copy(soap);
-		ASSERT(cursoap);
-
-			// Mimic a gsoap soap_accept as follows:
-			//   1. stash the socket descriptor in the soap object
-			//   2. make socket non-blocking by setting a CEDAR timeout.
-			//   3. increase size of send and receive buffers
-			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
-		cursoap->socket = ((Sock*)stream)->get_file_desc();
-		cursoap->peer = *((Sock*)stream)->peer_addr();
-		cursoap->recvfd = soap->socket;
-		cursoap->sendfd = soap->socket;
-		if ( cursoap->recv_timeout > 0 ) {
-			stream->timeout(soap->recv_timeout);
-		} else {
-			stream->timeout(20);
-		}
-		((Sock*)stream)->set_os_buffers(SOAP_BUFLEN,false);	// set read buf size
-		((Sock*)stream)->set_os_buffers(SOAP_BUFLEN,true);	// set write buf size
+		cursoap = dc_soap_accept((Sock *)stream, soap);
 
 			// Now, process the Soap RPC request and dispatch it
 		dprintf(D_ALWAYS,"About to serve HTTP request...\n");
-		soap_serve(cursoap);
-		soap_destroy(cursoap); // clean up class instances
-		soap_end(cursoap); // clean up everything and close socket
-		soap_free(cursoap);
+		dc_soap_serve(cursoap);
+		dc_soap_free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
 			// gsoap already closed the socket.  so set the socket in
@@ -8854,12 +8827,17 @@ pidWatcherThread( void* arg )
 			// In the post v6.4.x world, SafeSock and startCommand
 			// are no longer thread safe, so we must grab our Big_fat lock.			
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
-	        SafeSock sock;
-			Daemon d( DT_ANY, daemonCore->InfoCommandSinfulString() );
 				// send a NOP command to wake up select()
-			notify_failed =
-					!sock.connect(daemonCore->InfoCommandSinfulString()) ||
-					!d.sendCommand(DC_NOP, &sock, 1);
+			Daemon d( DT_ANY, daemonCore->privateNetworkIpAddr() );
+	        SafeSock ssock;
+			ReliSock rsock;
+			Sock &sock = (d.hasUDPCommandPort() && daemonCore->dc_ssock) ?
+				*(Sock *)&ssock : *(Sock *)&rsock;
+				// Use raw command protocol to avoid blocking on ourself.
+			notify_failed = 
+				!d.connectSock(&sock,1) ||
+				!d.startCommand(DC_NOP, &sock, 1, NULL, "DC_NOP", true) ||
+				!sock.end_of_message();
 				// while we have the Big_fat_mutex, copy any exited pids
 				// out of our thread local MyExitedQueue and into our main
 				// thread's WaitpidQueue (of course, we must have the mutex

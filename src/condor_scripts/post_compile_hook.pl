@@ -35,7 +35,10 @@ my @poisoned_syms = (
 	# groups.
 	{
 		# The symbols which may not exist in any .o file...
-		'poison' => ['open', 'open64', 'fopen'],
+		'poison' => ['open', 'open64', 'fopen',
+                             '_open',   # OS X 10.5: open(2) -> _open$UNIX2003
+                             '_fopen'   # OS X 10.5: fopen(3) -> _fopen
+                            ],
 
 		# except these files...
 		'exempt' => [
@@ -195,6 +198,11 @@ sub get_unreferenced_symbols_from_objfile
 		# get the unreferenced symbols and where they were referenced.
 		# nm is quite nice for this
 		@unref = `$args->{'nm'} -u -l $args->{'obj-file'}`;
+		canonicalize_nm_urefs(\@unref);
+	} elsif ($args->{'distro'} =~ /OSX/) {
+		# get the unreferenced symbols
+		# nm on OS X does not provide line numbers
+		@unref = `$args->{'nm'} -u $args->{'obj-file'}`;
 		canonicalize_nm_urefs(\@unref);
 	} else {
 		print "WARNING: Poison policy not in effect on this platform.\n";

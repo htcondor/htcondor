@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_open.h"
 #include "condor_config.h"
 #include "util_lib_proto.h"
 #include "basename.h"
@@ -1083,15 +1084,17 @@ handle_fetch_log_history_purge(ReliSock *s) {
 }
 
 
+#ifdef WIN32
 int
 handle_nop( Service*, int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "handle_nop: failed to read end of message\n");
+		dprintf( D_FULLDEBUG, "handle_nop: failed to read end of message\n");
 		return FALSE;
 	}
 	return TRUE;
 }
+#endif
 
 
 int
@@ -2217,9 +2220,13 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_set_peaceful_shutdown,
 								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
 
+#ifdef WIN32
+		// DC_NOP is for waking up select.  There is no need for
+		// security here, because anyone can wake up select anyway.
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
 								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, READ );
+								  "handle_nop()", 0, ALLOW );
+#endif
 
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
 								  (CommandHandler)handle_fetch_log,

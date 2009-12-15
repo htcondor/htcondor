@@ -53,6 +53,11 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
 	}
 
+	// It is safest to read this attribute now, before the ad is
+	// potentially modified.  If it is missing, then SetEffectiveOwner
+	// will just be a no-op.
+	job_ad->LookupString(ATTR_OWNER, m_owner);
+
 	common_job_queue_attrs = NULL;
 	hold_job_queue_attrs = NULL;
 	evict_job_queue_attrs = NULL;
@@ -206,7 +211,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (updateMaster) {
 		p = 0;
 	}
-	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT) ) {
+	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.Value()) ) {
 		if( SetAttribute(cluster,p,name,expr) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
@@ -290,7 +295,7 @@ QmgrJobUpdater::updateJob( update_t type )
 			 job_queue_attrs->contains_anycase(name)) ) {
 
 			if( ! is_connected ) {
-				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT) ) {
+				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.Value()) ) {
 					return false;
 				}
 				is_connected = true;

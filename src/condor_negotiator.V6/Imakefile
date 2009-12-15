@@ -3,9 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
-
-soapobjs(negotiator)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 #if HAVE_DLOPEN
 PLUGIN_OBJ = NegotiatorPluginManager.o
@@ -14,12 +12,10 @@ PLUGIN_OBJ = NegotiatorPluginManager.o
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@
 #endif
 
-OBJ = Accountant.o matchmaker.o main.o  $(SOAP_OBJS) $(PLUGIN_OBJ)
+OBJ = Accountant.o matchmaker.o main.o $(PLUGIN_OBJ)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
-
-gen_soapfiles(negotiator,condorNegotiator)
 
 testbin:: all

@@ -55,6 +55,7 @@ $timed = sub
 	my %info = @_;
 	#my $cluster = $info{"cluster"};
 
+	CondorTest::RemoveTimed($testname);
 	CondorTest::debug("Cluster $cluster alarm wakeup\n",1);
 	CondorTest::debug("wakey wakey!!!!\n",1);
 

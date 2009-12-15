@@ -3,9 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
-
-soapobjs(master)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 #if HAVE_DLOPEN
 PLUGIN_OBJ = MasterPluginManager.o
@@ -14,12 +12,10 @@ PLUGIN_OBJ = MasterPluginManager.o
 %-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared -fPIC $< -o $@
 
-OBJ = master.o masterDaemon.o $(SOAP_OBJS) $(PLUGIN_OBJ)
+OBJ = master.o masterDaemon.o $(PLUGIN_OBJ)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
-
-gen_soapfiles(master,condorMaster)
 
 testbin:: all

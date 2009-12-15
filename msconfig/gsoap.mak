@@ -15,9 +15,7 @@ SOAPCPP = soapcpp2.exe
 !endif
 SOAPCPPFLAGS = -I $(SRCDIR)\condor_daemon_core.V6
 
-DAEMONS = collector dagman gridmanager master negotiator had credd \
-		schedd shadow startd starter cgahp cgahp_worker quill \
-		replication transferer vmgahp dbmsd hdfs rooster kbdd
+DAEMONS = collector schedd 
 
 all : $(DAEMONS)
 
@@ -285,6 +283,19 @@ kbdd : $(SRCDIR)\condor_kbdd\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_kbdd\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_kbdd
+	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
+	copy /Y $(TEMPDIR)\condor$@.nsmap    .
+	copy /Y $(TEMPDIR)\soap_$@H.h        .
+	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
+	copy /Y $(TEMPDIR)\condor$@.wsdl     .
+	rd /q /s $(TEMPDIR) > NUL 2>&1
+
+shared_port : $(SRCDIR)\condor_shared_port\soap_$@Stub.cpp \
+			$(SRCDIR)\condor_shared_port\gsoap_$@.h
+	-2mkdir $(TEMPDIR)
+	cd $(SRCDIR)\condor_shared_port
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
 	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
 	copy /Y $(TEMPDIR)\soap_$@Server.cpp .

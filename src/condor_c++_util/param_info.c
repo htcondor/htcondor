@@ -47,7 +47,7 @@ static int validate_double_range_lower_bound(const char* range_start,
 	double* min);
 
 // Ensure the subject matches the regex.
-static int validate_regex(char* pattern, char* subject);
+static int validate_regex(const char* pattern, const char* subject);
 
 #define CUSTOMIZATION_SELDOM 	0
 
@@ -105,20 +105,20 @@ param_info_init()
 }
 
 void
-param_info_insert(char* param,
-				  char* aliases,
-				  char* value,
-				  char* version,
-				  char* range,
+param_info_insert(const char* param,
+				  const char* aliases,
+				  const char* value,
+				  const char* version,
+				  const char* range,
 				  int   state,
 				  int	type,
 				  int   is_macro,
 				  int   reconfig,
 				  int   customization,
-				  char* friendly_name,
-				  char* usage,
-				  char* url,
-				  char* tags)
+				  const char* friendly_name,
+				  const char* usage,
+				  const char* url,
+				  const char* tags)
 {
 	param_info_t* p;
 	char* range_start;
@@ -496,7 +496,7 @@ validate_double_range_upper_bound(const char* range_end, double* max) {
 }
 
 static int
-validate_regex(char* pattern, char* subject) {
+validate_regex(const char* pattern, const char* subject) {
 
 	pcre* re;
 	const char* err;

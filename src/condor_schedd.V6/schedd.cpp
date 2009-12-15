@@ -88,6 +88,7 @@
 #include "setenv.h"
 #include "classadHistory.h"
 #include "forkwork.h"
+#include "condor_open.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -10157,7 +10158,7 @@ Scheduler::Init()
 		dprintf( D_FULLDEBUG, "No Accountant host specified in config file\n" );
 	}
 
-	InitJobHistoryFile("HISTORY"); // or re-init it, as the case may be
+	InitJobHistoryFile("HISTORY", "PER_JOB_HISTORY_DIR"); // or re-init it, as the case may be
 
 		//
 		// We keep a copy of the last interval

@@ -84,13 +84,14 @@
           "  FROM Run, Task ".
           " WHERE Task.runid = $runid ".
           "   AND Task.runid = Run.runid ".
-          "   AND Run.user = '$user' ".
-          "   AND Task.platform != 'local' ".
-          " ORDER BY (IF (platform='local', 'zzz', platform))";
+          //"   AND Run.user = '$user' ".
+          "   AND Run.user = '$user' ";
+          //"   AND Task.platform != 'local' ".
+          //" ORDER BY (IF (platform='local', 'zzz', platform))";
    $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
    $platforms = Array();
    while ($row = mysql_fetch_array($result)) {
-      $tmpp = $platforms[] = $row["platform"];
+      	$tmpp = $platforms[] = $row["platform"];
 		//echo "<H3>$tmpp</H3>";
    }
    mysql_free_result($result);
@@ -142,6 +143,7 @@
    $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
    while ($row = mysql_fetch_array($result)) {
       $task_name = $row["name"];
+	  //echo "<H3>$tmp</H3>";
    
       //
       // Now for each task, get the status from the platforms
@@ -185,8 +187,11 @@
 	// show link to run directory for each platform
    foreach ($platforms AS $platform) {
       $display = $platform;
-      $idx = strpos($display, "_");
-      $display[$idx] = " ";
+	  if( $display == 'local') {
+	  } else {
+      	$idx = strpos($display, "_");
+      	$display[$idx] = " ";
+	  }
 		$filepath = "";
    
    	// have to lookup the file location now

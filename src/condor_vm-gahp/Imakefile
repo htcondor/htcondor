@@ -20,14 +20,12 @@ LIBVIRT_LIBS =
 CFLAGS = $(STD_C_FLAGS) $(LIBVIRT_CFLAGS)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(LIBVIRT_CFLAGS)
-LIB = $(LIBVIRT_LIBS) $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
-
-soapobjs(vmgahp)
+LIB = $(LIBVIRT_LIBS) $(DAEMONCORE_LIB) $(STD_LIBS)
 
 #if IS_LINUX
-VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmgahp_config.o vmgahp_common.o vmware_type.o xen_type.o  $(SOAP_OBJS)
+VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmgahp_config.o vmgahp_common.o vmware_type.o xen_type.o
 #else
-VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmgahp_config.o vmgahp_common.o vmware_type.o  $(SOAP_OBJS)
+VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmgahp_config.o vmgahp_common.o vmware_type.o
 #endif
 
 
@@ -41,5 +39,3 @@ testbin:: all
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_util_lib, setsyscalls.o)
-
-gen_soapfiles(vmgahp,condorVMgahp)

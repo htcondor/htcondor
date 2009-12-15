@@ -1,11 +1,10 @@
 NAME = stork_store_cred stork_get_cred stork_rm_cred stork_list_cred condor_credd
 all_target( $(NAME) )
 
-soapobjs(credd)
 CFLAGS = $(STD_C_FLAGS) -I$(NEW_CLASSADS_INC)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(NEW_CLASSADS_INC)
 LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
-CRED_LIB = classadUtil.o $(SOAP_OBJS)
+CRED_LIB = classadUtil.o
 
 c_plus_target(stork_store_cred,store_cred.o $(CRED_LIB),$(LIB))
 
@@ -22,5 +21,3 @@ public_c_plus_target(condor_credd,sbin,$(OBJ), $(DAEMONCORE_LIB) $(LIB))
 html:
 clean::
 testbin:: all
-
-gen_soapfiles(credd,condorCredd)

@@ -8,18 +8,16 @@ all_target( $(PROGRAMS) )
 CFLAGS = $(STD_C_FLAGS)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-soapobjs(cgahp)
-
-WORKER_THREAD_OBJ = PipeBuffer.o schedd_client.o schedd_client_main.o SchedDCommands.o cgahp_common.o $(SOAP_OBJS)
+WORKER_THREAD_OBJ = PipeBuffer.o schedd_client.o schedd_client_main.o SchedDCommands.o cgahp_common.o
 
 public_c_plus_target($(WORKER_THREAD),sbin,$(WORKER_THREAD_OBJ),$(LIB))
 
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o ,$(LIB))
 
 
-IO_THREAD_OBJ = PipeBuffer.o io_loop.o cgahp_common.o $(SOAP_OBJS)
+IO_THREAD_OBJ = PipeBuffer.o io_loop.o cgahp_common.o
 
 public_c_plus_target($(IO_THREAD),sbin,$(IO_THREAD_OBJ),$(LIB))
 
@@ -28,7 +26,5 @@ html:
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_util_lib, setsyscalls.o )
-
-gen_soapfiles(cgahp,condorCgahp)
 
 testbin:: all

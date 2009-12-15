@@ -42,6 +42,8 @@ char	*MyName;
 char 	*actionReason = NULL;
 JobAction mode;
 bool All = false;
+bool ConstraintArg = false;
+bool UserJobIdArg = false;
 bool had_error = false;
 
 DCSchedd* schedd = NULL;
@@ -235,6 +237,7 @@ main( int argc, char *argv[] )
 				}				
 				args[nArgs] = *argv;
 				nArgs++;
+				ConstraintArg = true;
             } else if (match_prefix(arg, "-all")) {
                 All = true;
             } else if (match_prefix(arg, "-addr")) {
@@ -335,12 +338,18 @@ main( int argc, char *argv[] )
 			}
 			args[nArgs] = arg;
 			nArgs++;
+			UserJobIdArg = true;
 		}
 	}
 
 	if( ! (All || nArgs) ) {
 			// We got no indication of what to act on
 		fprintf( stderr, "You did not specify any jobs\n" ); 
+		usage();
+	}
+
+	if ( ConstraintArg && UserJobIdArg ) {
+		fprintf( stderr, "You can't use both -constraint and usernames or job ids\n" );
 		usage();
 	}
 

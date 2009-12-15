@@ -36,7 +36,7 @@ ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
 Qmgr_connection *
-ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack )
+ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack, const char *effective_owner )
 {
 	int		rval, ok;
 
@@ -136,6 +136,25 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 
 	if (username) free(username);
 	if (domain) free(domain);
+
+	if( effective_owner && *effective_owner ) {
+		if( QmgmtSetEffectiveOwner( effective_owner ) != 0 ) {
+			if( errstack ) {
+				errstack->pushf(
+					"Qmgmt",SCHEDD_ERR_SET_EFFECTIVE_OWNER_FAILED,
+					"SetEffectiveOwner(%s) failed with errno=%d: %s.",
+					effective_owner, errno, strerror(errno) );
+			}
+			else {
+				dprintf( D_ALWAYS,
+						 "SetEffectiveOwner(%s) failed with errno=%d: %s.\n",
+						 effective_owner, errno, strerror(errno) );
+			}
+			delete qmgmt_sock;
+			qmgmt_sock = NULL;
+			return 0;
+		}
+	}
 
 	return &connection;
 }

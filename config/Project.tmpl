@@ -265,7 +265,7 @@ EXPAT_FLAGS = -I$(EXPAT_INC)
 EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
 #endif /* expat */
 VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB)
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_$(GlobusFlavor).a $(EXPAT_LIB)
 #endif /* externals */
 #endif /* voms */
 
@@ -275,7 +275,7 @@ SECURITY_FLAGS = $(VOMS_FLAGS) \
 		 $(OPENSSL_FLAGS) \
 		 $(GSI_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
-		 $(GSI_LIB) $(VOMS_LIB) $(OPENSSL_LIB)
+		 $(VOMS_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
@@ -379,6 +379,7 @@ SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS) $(PTHREAD_LIB)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
+SOAP_LIB = ../condor_daemon_core.V6/mimetypes.o ../condor_daemon_core.V6/soap_core.o
 
 
 /* common ld flags which should be first in the list */

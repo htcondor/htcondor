@@ -26,7 +26,7 @@
 #ifndef WANT_CLASSAD_NAMESPACE
 #define WANT_CLASSAD_NAMESPACE
 #endif
-#include "condor_fix_iostream.h"
+#include <iostream>
 #include "classad/classad_distribution.h"
 
 using namespace std;

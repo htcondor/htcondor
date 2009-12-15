@@ -19,17 +19,14 @@
 
 #include "condor_common.h"
 #include "internet.h"
-#include "condor_timer_manager.h"
 #include "condor_daemon_core.h"
 #include "condor_config.h"
-#include "reli_sock.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "condor_socket_types.h"
-#include "subsystem_info.h"
 #include "directory.h"
 #include "stdsoap2.h"
 #include "soap_core.h"
+#include "condor_open.h"
 
 #include "mimetypes.h"
 
@@ -47,10 +44,57 @@ struct soap *ssl_soap;
 
 extern SOAP_NMAC struct Namespace namespaces[];
 
-void
-init_soap(struct soap *soap)
+int handle_soap_ssl_socket(Service *, Stream *stream);
+
+int get_handler(struct soap *soap);
+
+struct soap *
+dc_soap_accept(Sock *socket, const struct soap *soap)
 {
-	MyString subsys = MyString(get_mySubSystem()->getName() );
+	struct soap *cursoap = soap_copy(soap);
+	ASSERT(cursoap);
+
+		// Mimic a gsoap soap_accept as follows:
+		//   1. stash the socket descriptor in the soap object
+		//   2. make socket non-blocking by setting a CEDAR timeout.
+		//   3. increase size of send and receive buffers
+		//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
+	cursoap->socket = socket->get_file_desc();
+	cursoap->peer = *socket->peer_addr();
+	cursoap->recvfd = soap->socket;
+	cursoap->sendfd = soap->socket;
+	if ( cursoap->recv_timeout > 0 ) {
+		socket->timeout(soap->recv_timeout);
+	} else {
+		socket->timeout(20);
+	}
+	socket->set_os_buffers(SOAP_BUFLEN,false);	// set read buf size
+	socket->set_os_buffers(SOAP_BUFLEN,true);	// set write buf size
+
+	return cursoap;
+}
+
+int
+dc_soap_serve(struct soap *soap)
+{
+	return soap_serve(soap);
+}
+
+void
+dc_soap_free(struct soap *soap)
+{
+	soap_destroy(soap); // clean up class instances
+	soap_end(soap); // clean up everything and close socket
+	soap_free(soap);
+}
+
+void
+dc_soap_init(struct soap *&soap)
+{
+	if (NULL == soap) {
+		soap = soap_new();
+	}
+	ASSERT(soap);
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	//soap_init(soap);
