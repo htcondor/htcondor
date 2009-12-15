@@ -2972,7 +2972,7 @@ CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 
-CHECK_EXTERNAL([openssl], [0.9.8l], [soft],
+CHECK_EXTERNAL([openssl], [0.9.8h-p2], [soft],
                [use OpenSSL (provides authentication and encryption support)],
                MF_LIB_CHECK([openssl],
                             [[ssl SSL_connect], [crypto BF_encrypt]]))
@@ -2983,7 +2983,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.1-p4], [soft])
+  CHECK_EXTERNAL([globus],[4.2.1-p5], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -3016,14 +3016,14 @@ if test "$_cv_opsys" = "LINUX" ; then
 	_cv_including_voms=yes
 	AC_MSG_RESULT([$_cv_including_voms])
 	CHECK_EXTERNAL([expat], [2.0.1], [soft])
-	CHECK_EXTERNAL([voms], [1.8.8_2], [soft])
+	CHECK_EXTERNAL([voms], [1.8.8_2-p1], [soft])
 else
 	_cv_including_voms=no
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
 if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
-  CHECK_EXTERNAL([cream],[1.10.1-p1], [soft])
+  CHECK_EXTERNAL([cream],[1.10.1-p2], [soft])
 fi
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
@@ -3045,7 +3045,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p6], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p7], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -3187,7 +3187,7 @@ fi
 # NOTE: We don't need the --unresolved-symbols flag in the non-proper
 # case because in that case Condor links with the static libraries,
 # and the linker does not complain as much.
-CHECK_EXTERNAL([gsoap], [2.7.10-p4], [soft],
+CHECK_EXTERNAL([gsoap], [2.7.10-p5], [soft],
                [use gSOAP (enables Birdbath interface)],
                [_ldflags_save="$LDFLAGS"
                 LDFLAGS="$LDFLAGS -Wl[,]--unresolved-symbols=ignore-in-shared-libs"

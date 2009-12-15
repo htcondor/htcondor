@@ -198,7 +198,7 @@ OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	a_bitstr.o a_int.o bn_mod.o bn_mont.o bn_div.o bn_word.o bn_shift.o \
 	bn_add.o bn_asm.o bn_sqr.o bn_exp.o rsa_none.o rsa_pk1.o rsa_oaep.o \
 	rsa_ssl.o a_dup.o bn_recp.o bn_mul.o rsa_x931.o sha512.o sha256.o \
-	eng_ctrl.o bn_print.o evp_lib.o evp_asn1.o a_bytes.o err_def.o buf_str.o
+	eng_ctrl.o bn_print.o evp_lib.o evp_asn1.o a_bytes.o
 
 #if HAVE_EXT_OPENSSL
 CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \

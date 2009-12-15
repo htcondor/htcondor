@@ -1,6 +1,6 @@
---- VC-32.pl.old	2009-03-09 07:14:08.000000000 -0500
-+++ VC-32.pl	2009-11-18 18:49:36.404020835 -0600
-@@ -107,7 +107,7 @@
+--- VC-32.pl.old	2008-09-15 17:14:55.000000000 -0500
++++ VC-32.pl	2008-09-15 17:15:12.000000000 -0500
+@@ -93,7 +93,7 @@
      }
  else	# Win32
      {
@@ -8,4 +8,4 @@
 +    $base_cflags=' /W3 /Gs0 /GF /Gy /nologo -DOPENSSL_SYSNAME_WIN32 -DWIN32_LEAN_AND_MEAN -DL_ENDIAN -DDSO_WIN32';
      $base_cflags.=' -D_CRT_SECURE_NO_DEPRECATE';	# shut up VC8
      $base_cflags.=' -D_CRT_NONSTDC_NO_DEPRECATE';	# shut up VC8
-     my $f = $shlib || $fips ?' /MD':' /MT';
+     my $f = $shlib?' /MD':' /MT';

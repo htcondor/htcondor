@@ -8827,12 +8827,17 @@ pidWatcherThread( void* arg )
 			// In the post v6.4.x world, SafeSock and startCommand
 			// are no longer thread safe, so we must grab our Big_fat lock.			
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
-	        SafeSock sock;
-			Daemon d( DT_ANY, daemonCore->InfoCommandSinfulString() );
 				// send a NOP command to wake up select()
-			notify_failed =
-					!sock.connect(daemonCore->InfoCommandSinfulString()) ||
-					!d.sendCommand(DC_NOP, &sock, 1);
+			Daemon d( DT_ANY, daemonCore->privateNetworkIpAddr() );
+	        SafeSock ssock;
+			ReliSock rsock;
+			Sock &sock = (d.hasUDPCommandPort() && daemonCore->dc_ssock) ?
+				*(Sock *)&ssock : *(Sock *)&rsock;
+				// Use raw command protocol to avoid blocking on ourself.
+			notify_failed = 
+				!d.connectSock(&sock,1) ||
+				!d.startCommand(DC_NOP, &sock, 1, NULL, "DC_NOP", true) ||
+				!sock.end_of_message();
 				// while we have the Big_fat_mutex, copy any exited pids
 				// out of our thread local MyExitedQueue and into our main
 				// thread's WaitpidQueue (of course, we must have the mutex
