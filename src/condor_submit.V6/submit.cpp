@@ -5371,7 +5371,7 @@ SetGSICredentials()
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			proxy_subject = x509_proxy_identity_name(proxy_file, 0); // zero means subject only
+			proxy_subject = x509_proxy_identity_name(proxy_file);
 
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
@@ -5384,21 +5384,32 @@ SetGSICredentials()
 			free( proxy_subject );
 
 			/* Insert the VOMS attributes into the ad */
-			char *proxy_voms_fqan;
-			proxy_voms_fqan = x509_proxy_identity_name(proxy_file, 1); // one means include fqan
+			char *voname = NULL;
+			char *firstfqan = NULL;
+			char *quoted_DN_and_FQAN = NULL;
 
-			if ( !proxy_voms_fqan ) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				exit( 1 );
+			int error = extract_VOMS_info_from_file( proxy_file, VERIFY_NONE, &voname, &firstfqan, &quoted_DN_and_FQAN);
+			if ( error ) {
+				if (error == 1) {
+					// no attributes, skip silently.
+				} else {
+					// log all other errors
+					fprintf( stderr, "\nWARNING: unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
+				}
+			} else {
+				InsertJobExprString(ATTR_X509_USER_PROXY_VONAME, voname);	
+				free( voname );
+
+				InsertJobExprString(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);	
+				free( firstfqan );
+
+				InsertJobExprString(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);	
+				free( quoted_DN_and_FQAN );
 			}
 
-			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_FQAN, 
-						   proxy_voms_fqan);
-			InsertJobExpr(buffer);	
-			free( proxy_voms_fqan );
+			// When new classads arrive, all this should be replaced with a
+			// classad holding the VOMS atributes.  -zmiller
 
-			// ZKM TODO: INCLUDE AN ATTRIBUTE WITH ONLY SERIALIZED VOMS ATTRS?
-			// ZKM TODO: INCLUDE A NEW CLASSAD LIST OF VOMS ROLES/ATTRS
 #endif
 
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
