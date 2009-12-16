@@ -67,7 +67,7 @@ struct CreamProxyDelegation {
 };
 
 CreamResource *CreamResource::FindOrCreateResource( const char *resource_name,
-													const char *proxy_subject )
+													const Proxy *proxy )
 {
 	int rc;
 	CreamResource *resource = NULL;
@@ -75,12 +75,12 @@ CreamResource *CreamResource::FindOrCreateResource( const char *resource_name,
 	const char *canonical_name = CanonicalName( resource_name );
 	ASSERT(canonical_name);
 
-	const char *hash_name = HashName( canonical_name, proxy_subject );
+	const char *hash_name = HashName( canonical_name, proxy->subject->fqan );
 	ASSERT(hash_name);
 
 	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
 	if ( rc != 0 ) {
-		resource = new CreamResource( canonical_name, proxy_subject );
+		resource = new CreamResource( canonical_name, proxy );
 		ASSERT(resource);
 		if ( resource->Init() == false ) {
 			delete resource;
@@ -96,11 +96,12 @@ CreamResource *CreamResource::FindOrCreateResource( const char *resource_name,
 }
 
 CreamResource::CreamResource( const char *resource_name,
-							  const char *proxy_subject )
+							  const Proxy *proxy )
 	: BaseResource( resource_name )
 {
 	initialized = false;
-	proxySubject = strdup( proxy_subject );
+	proxySubject = strdup( proxy->subject->subject_name );
+	proxyFQAN = strdup( proxy->subject->fqan );
 	delegationTimerId = daemonCore->Register_Timer( 0,
 							(TimerHandlercpp)&CreamResource::checkDelegation,
 							"CreamResource::checkDelegation", (Service*)this );
@@ -171,6 +172,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 	if ( proxySubject ) {
 		free( proxySubject );
 	}
+	free( proxyFQAN );
 }
 
 bool CreamResource::Init()
@@ -182,7 +184,7 @@ bool CreamResource::Init()
 		// TODO This assumes that at least one CreamJob has already
 		// initialized the gahp server. Need a better solution.
 	MyString gahp_name;
-	gahp_name.sprintf( "CREAM/%s", proxySubject );
+	gahp_name.sprintf( "CREAM/%s", proxyFQAN );
 
 	gahp = new GahpClient( gahp_name.Value() );
 
@@ -284,7 +286,7 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 
 const char *CreamResource::GetHashName()
 {
-	return HashName( resourceName, proxySubject );
+	return HashName( resourceName, proxyFQAN );
 }
 
 void CreamResource::PublishResourceAd( ClassAd *resource_ad )
@@ -292,6 +294,7 @@ void CreamResource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 }
 
 void CreamResource::registerDelegationURI( const char *deleg_uri,
