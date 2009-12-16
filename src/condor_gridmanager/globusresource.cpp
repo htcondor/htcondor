@@ -47,7 +47,7 @@ HashTable <HashKey, GlobusResource *>
 static unsigned int g_MonitorUID = 0;
 
 GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
-													  const char *proxy_subject,
+													  const Proxy *proxy,
 													  bool is_gt5 )
 {
 	int rc;
@@ -56,12 +56,12 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 	const char *canonical_name = CanonicalName( resource_name );
 	ASSERT(canonical_name);
 
-	const char *hash_name = HashName( canonical_name, proxy_subject );
+	const char *hash_name = HashName( canonical_name, proxy->subject->fqan );
 	ASSERT(hash_name);
 
 	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
 	if ( rc != 0 ) {
-		resource = new GlobusResource( canonical_name, proxy_subject, is_gt5 );
+		resource = new GlobusResource( canonical_name, proxy, is_gt5 );
 		ASSERT(resource);
 		if ( resource->Init() == false ) {
 			delete resource;
@@ -77,11 +77,12 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 }
 
 GlobusResource::GlobusResource( const char *resource_name,
-								const char *proxy_subject, bool is_gt5 )
+								const Proxy *proxy, bool is_gt5 )
 	: BaseResource( resource_name )
 {
 	initialized = false;
-	proxySubject = strdup( proxy_subject );
+	proxySubject = strdup( proxy->subject->subject_name );
+	proxyFQAN = strdup( proxy->subject->fqan );
 
 	m_isGt5 = is_gt5;
 
@@ -111,7 +112,7 @@ GlobusResource::GlobusResource( const char *resource_name,
 
 GlobusResource::~GlobusResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxyFQAN ) ) );
 	if ( checkMonitorTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( checkMonitorTid );
 	}
@@ -125,6 +126,7 @@ GlobusResource::~GlobusResource()
 	if ( proxySubject ) {
 		free( proxySubject );
 	}
+	free( proxyFQAN );
 }
 
 bool GlobusResource::Init()
@@ -134,7 +136,7 @@ bool GlobusResource::Init()
 	}
 
 	MyString gahp_name;
-	gahp_name.sprintf( "GT2/%s", proxySubject );
+	gahp_name.sprintf( "GT2/%s", proxyFQAN );
 
 	gahp = new GahpClient( gahp_name.Value() );
 
@@ -231,7 +233,7 @@ const char *GlobusResource::HashName( const char *resource_name,
 
 const char *GlobusResource::GetHashName()
 {
-	return HashName( resourceName, proxySubject );
+	return HashName( resourceName, proxyFQAN );
 }
 
 void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
@@ -239,6 +241,7 @@ void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 	resource_ad->Assign( "SubmitJobmanagerLimit", submitJMLimit );
 	resource_ad->Assign( "SubmitJobmanagersAllowed", submitJMsAllowed.Number() );
 	resource_ad->Assign( "SubmitJobmanagersWanted", submitJMsWanted.Number() );
