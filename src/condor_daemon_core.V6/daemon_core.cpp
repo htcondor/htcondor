@@ -3090,6 +3090,13 @@ void DaemonCore::Driver()
 		time_t time_before = time(NULL);
 		time_t okay_delta = timeout;
 
+			// Performance around select is of high importance for all
+			// daemons that are single threaded (all of them). If you
+			// have questions ask matt.
+		if (DebugFlags & D_PERF_TRACE) {
+			dprintf(D_ALWAYS, "PERF: entering select\n");
+		}
+
 		selector.execute();
 
 		tmpErrno = errno;
@@ -3123,6 +3130,14 @@ void DaemonCore::Driver()
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
 #endif
+
+			// Performance around select is of high importance for all
+			// daemons that are single threaded (all of them). If you
+			// have questions ask matt.
+		if (DebugFlags & D_PERF_TRACE) {
+			dprintf(D_ALWAYS, "PERF: leaving select\n");
+			selector.display();
+		}
 
 		// For now, do not let other threads run while we are processing
 		// in the main loop.

@@ -466,11 +466,13 @@ Selector::display()
 void
 display_fd_set( char *msg, fd_set *set, int max, bool try_dup )
 {
-	int		i;
+	int		i, count;
 
 	dprintf( D_ALWAYS, "%s {", msg );
-	for( i=0; i<=max; i++ ) {
+	for( i=0, count=0; i<=max; i++ ) {
 		if( FD_ISSET(i,set) ) {
+			count++;
+
 			dprintf( D_ALWAYS | D_NOHEADER, "%d", i );
 
 			if( try_dup ) {
@@ -491,5 +493,5 @@ display_fd_set( char *msg, fd_set *set, int max, bool try_dup )
 			dprintf( D_ALWAYS | D_NOHEADER, " " );
 		}
 	}
-	dprintf( D_ALWAYS | D_NOHEADER, "}\n" );
+	dprintf( D_ALWAYS | D_NOHEADER, "} = %d\n", count );
 }
