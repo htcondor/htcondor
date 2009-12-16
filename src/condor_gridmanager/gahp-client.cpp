@@ -1224,7 +1224,7 @@ GahpClient::getErrorString()
 
 	output = "";
 
-	unsigned int i = 0;
+	int i = 0;
 	int input_len = error_string.Length();
 	for (i=0; i < input_len; i++) {
 			// Some error strings may contain characters that are
@@ -2100,34 +2100,37 @@ void
 GahpClient::now_pending(const char *command,const char *buf,
 						GahpProxyInfo *cmd_proxy)
 {
+	/*
+	A NULL command was once a legal way to say "try sending now",
+	but was only used by GahpServer::poll().  That functionality
+	is now in GahpClient::send_pending() and should continue to
+	only be called by GahpServer::poll.  A NULL command is no longer
+	valid.
+	*/
+	ASSERT(command);
 
-		// First, if command is not NULL we have a new pending request.
-		// If so, carefully clear out the previous pending request
-		// and stash our new pending request.  If command is NULL,
-		// we have a request which is pending, but not yet submitted
-		// to the GAHP.
-	if ( command ) {
-		clear_pending();
-		pending_command = strdup( command );
-		pending_reqid = server->new_reqid();
-		if (buf) {
-			pending_args = strdup(buf);
-		}
-		if (m_timeout) {
-			pending_timeout = m_timeout;
-		}
-		pending_proxy = cmd_proxy;
-			// add new reqid to hashtable
-		server->requestTable->insert(pending_reqid,this);
+	clear_pending();
+	pending_command = strdup( command );
+	pending_reqid = server->new_reqid();
+	if (buf) {
+		pending_args = strdup(buf);
 	}
-	ASSERT( pending_command != NULL );
+	if (m_timeout) {
+		pending_timeout = m_timeout;
+	}
+	pending_proxy = cmd_proxy;
+		// add new reqid to hashtable
+	server->requestTable->insert(pending_reqid,this);
 
-	if ( server->num_pending_requests >= server->max_pending_requests ) {
-			// We have too many requests outstanding.  Queue up
-			// this request for later.
-		server->waitingToSubmit.enqueue(pending_reqid);
-		return;
-	}
+	server->waitingToSubmit.enqueue(pending_reqid);
+}
+
+void
+GahpClient::send_pending()
+{
+	// GahpServer should be keeping an eye on this before
+	// calling into here.
+	ASSERT( server->num_pending_requests < server->max_pending_requests );
 
 		// Make sure the command is using the proxy it wants.
 	if ( server->is_initialized == true && server->can_cache_proxies == true ) {
@@ -2346,8 +2349,7 @@ GahpServer::poll()
 		requestTable->lookup(waiting_reqid,entry);
 		if ( entry ) {
 			ASSERT(entry->pending_reqid == waiting_reqid);
-				// Try to send this request to the gahp.
-			entry->now_pending(NULL,NULL);
+			entry->send_pending();
 		} else {
 				// this pending entry had been cleared long ago, and
 				// has been just sitting around in the hash table

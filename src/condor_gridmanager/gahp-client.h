@@ -1046,8 +1046,13 @@ class GahpClient : public Service {
 			// Various Private Methods
 		void clear_pending();
 		bool is_pending(const char *command, const char *buf);
+		// This is the new command we are now worrying about.
+		// The command will be queued up.
 		void now_pending(const char *command,const char *buf,
 						 GahpProxyInfo *proxy = NULL);
+		// Send out the pending command.  Called by GahpServer::poll
+		// as it works through that waitingToSubmit queue 
+		void send_pending();
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
