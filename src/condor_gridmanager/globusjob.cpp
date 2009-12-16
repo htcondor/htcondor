@@ -726,7 +726,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		free(args);
 	}
 	grid_proxy_subject.sprintf( "GT2/%s",
-			  jobProxy->subject->subject_name );
+			  jobProxy->subject->fqan );
 	gahp = new GahpClient( grid_proxy_subject.Value(), gahp_path, &gahp_args );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -792,7 +792,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	// Find/create an appropriate GlobusResource for this job
 	myResource = GlobusResource::FindOrCreateResource( resourceManagerString,
-													   jobProxy->subject->subject_name,
+													   jobProxy,
 													   is_gt5 );
 	if ( myResource == NULL ) {
 		error_string = "Failed to initialized GlobusResource object";

@@ -243,13 +243,18 @@ CreamJob::CreamJob( ClassAd *classad )
 		goto error_exit;
 	}
 
+	if ( jobProxy->subject->has_voms_attrs == false ) {
+		error_string = "Job proxy has no VOMS attributes";
+		goto error_exit;
+	}
+
 	gahp_path = param("CREAM_GAHP");
 	if ( gahp_path == NULL ) {
 		error_string = "CREAM_GAHP not defined";
 		goto error_exit;
 	}
 	snprintf( buff, sizeof(buff), "CREAM/%s",
-			  jobProxy->subject->subject_name );
+			  jobProxy->subject->fqan );
 
 	gahp = new GahpClient( buff, gahp_path );
 	free( gahp_path );
@@ -324,7 +329,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	
 		// Find/create an appropriate CreamResource for this job
 	myResource = CreamResource::FindOrCreateResource( resourceManagerString,
-													  jobProxy->subject->subject_name);
+													  jobProxy );
 	if ( myResource == NULL ) {
 		error_string = "Failed to initialize CreamResource object";
 		goto error_exit;

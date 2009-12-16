@@ -312,7 +312,7 @@ Sinful::regenerateSinful()
 }
 
 bool
-Sinful::addressPointsToMe( Sinful &addr )
+Sinful::addressPointsToMe( Sinful const &addr ) const
 {
 	if( getHost() && addr.getHost() && !strcmp(getHost(),addr.getHost()) &&
 		getPort() && addr.getPort() && !strcmp(getPort(),addr.getPort()) )

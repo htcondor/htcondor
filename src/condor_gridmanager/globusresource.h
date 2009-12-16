@@ -36,7 +36,7 @@ class GlobusResource;
 class GlobusResource : public BaseResource
 {
  protected:
-	GlobusResource( const char *resource_name, const char *proxy_subject,
+	GlobusResource( const char *resource_name, const Proxy *proxy,
 					bool is_gt5 );
 	~GlobusResource();
 
@@ -63,7 +63,7 @@ class GlobusResource : public BaseResource
 								 const char *proxy_subject );
 
 	static GlobusResource *FindOrCreateResource( const char *resource_name,
-												 const char *proxy_subject,
+												 const Proxy *proxy,
 												 bool is_gt5 );
 
 	const char *GetHashName();
@@ -104,6 +104,7 @@ class GlobusResource : public BaseResource
 	bool initialized;
 
 	char *proxySubject;
+	char *proxyFQAN;
 	static int gahpCallTimeout;
 
 	bool m_isGt5;

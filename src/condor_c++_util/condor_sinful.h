@@ -43,10 +43,10 @@ class Sinful {
 	char const *getSinful() const { return m_sinful.c_str(); }
 
 	// returns the host portion of the sinful string
-	char const *getHost() { return m_host.c_str(); }
+	char const *getHost() const { return m_host.c_str(); }
 
 	// returns the port portion of the sinful string
-	char const *getPort() { return m_port.c_str(); }
+	char const *getPort() const { return m_port.c_str(); }
 
 	void setHost(char const *host);
 	void setPort(char const *port);
@@ -76,7 +76,7 @@ class Sinful {
 	int numParams() const;
 
 	// returns true if addr points to this address
-	bool addressPointsToMe( Sinful &addr );
+	bool addressPointsToMe( Sinful const &addr ) const;
 
  private:
 	std::string m_sinful; // the sinful string "<host:port?params>"

@@ -53,7 +53,7 @@ const char *CondorResource::HashName( const char *resource_name,
 
 CondorResource *CondorResource::FindOrCreateResource( const char * resource_name,
 													  const char *pool_name,
-													  const char *proxy_subject )
+													  const Proxy *proxy )
 {
 	int rc;
 	MyString resource_key;
@@ -61,16 +61,16 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 
 	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
 													pool_name,
-													proxy_subject ) ),
+													proxy ? proxy->subject->fqan : NULL ) ),
 								 resource );
 	if ( rc != 0 ) {
 		resource = new CondorResource( resource_name, pool_name,
-									   proxy_subject );
+									   proxy );
 		ASSERT(resource);
 		resource->Reconfig();
 		ResourcesByName.insert( HashKey( HashName( resource_name,
 												   pool_name,
-												   proxy_subject ) ),
+												   proxy ? proxy->subject->fqan : NULL ) ),
 								resource );
 	} else {
 		ASSERT(resource);
@@ -80,15 +80,17 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 }
 
 CondorResource::CondorResource( const char *resource_name, const char *pool_name,
-								const char *proxy_subject )
+								const Proxy *proxy )
 	: BaseResource( resource_name )
 {
 	hasLeases = true;
 
-	if ( proxy_subject != NULL ) {
-		proxySubject = strdup( proxy_subject );
+	if ( proxy != NULL ) {
+		proxySubject = strdup( proxy->subject->subject_name );
+		proxyFQAN = strdup( proxy->subject->fqan );
 	} else {
-		proxySubject = 0;
+		proxySubject = NULL;
+		proxyFQAN = NULL;
 	}
 	scheddPollTid = TIMER_UNSET;
 	scheddName = strdup( resource_name );
@@ -116,7 +118,7 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		MyString buff;
 		ArgList args;
 		buff.sprintf( "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
-					  scheddName, proxySubject ? proxySubject : "NULL" );
+					  scheddName, proxyFQAN ? proxyFQAN : "NULL" );
 		args.AppendArg("-f");
 		args.AppendArg("-s");
 		args.AppendArg(scheddName);
@@ -148,7 +150,7 @@ CondorResource::~CondorResource()
 {
 	ResourcesByName.remove( HashKey( HashName( resourceName,
 											   poolName,
-											   proxySubject ) ) );
+											   proxyFQAN ) ) );
 
 		// Make sure we don't leak a ScheddPollInfo. If there are other
 		// CondorResources that still want to use it, they'll recreate it.
@@ -168,6 +170,7 @@ CondorResource::~CondorResource()
 	if ( proxySubject != NULL ) {
 		free( proxySubject );
 	}
+	free( proxyFQAN );
 	if ( scheddPollTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( scheddPollTid );
 	}
@@ -200,7 +203,7 @@ const char *CondorResource::ResourceType()
 
 const char *CondorResource::GetHashName()
 {
-	return HashName( resourceName, poolName, proxySubject );
+	return HashName( resourceName, poolName, proxyFQAN );
 }
 
 void CondorResource::PublishResourceAd( ClassAd *resource_ad )
@@ -213,6 +216,9 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_NAME, buff.Value() );
 	if ( proxySubject ) {
 		resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	}
+	if ( proxyFQAN ) {
+		resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 	}
 }
 
