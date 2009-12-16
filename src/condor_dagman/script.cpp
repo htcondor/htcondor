@@ -94,10 +94,12 @@ Script::BackgroundRun( int reaperId )
 			if ( !_post ) {
 				debug_printf( DEBUG_QUIET, "Warning: $JOBID macro should "
 							"not be used as a PRE script argument!" );
+				arg += token;
+			} else {
+            	arg += _node->_CondorID._cluster;
+            	arg += '.';
+            	arg += _node->_CondorID._proc;
 			}
-            arg += _node->_CondorID._cluster;
-            arg += '.';
-            arg += _node->_CondorID._proc;
 
         } else if (!strcasecmp(token, "$RETURN")) {
 			if ( !_post ) {
