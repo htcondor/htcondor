@@ -226,12 +226,25 @@ and a user name or cluster id, they would act on all jobs matching the
 constraint and all jobs associated with the user or cluster. Now, this
 combination of arguments results in an error.
 
+% gittrac #1062
+\item Failure to purge a Cream grid universe job from the remote server
+because it was previously purged no longer results in the job being held.
+
+% gittrac #1044
+\item The \Condor{gridmanager} now recognizes VOMS attributes in X509
+proxies and will handle them appropriately. For example, it recognizes
+that two proxies with the same identity but different VOMS attributes may
+be mapped to different accounts on a remote machine.
+
 % gittrac #947
 % Not documenting, as the parameter being removed was added for a specifc
 % customer and never documented.
 
 % gittrac #932
 % Not documenting, as the bug hasn't caused any problems.
+
+% gittrac #1043
+% Not documenting, as the problem never made it into a release.
 
 \end{itemize}
 
