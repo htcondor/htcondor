@@ -897,7 +897,7 @@ HADStateMachine::getHadList( const char *str,
             continue;
         }
 		allIps.insert( sinful_addr );
-        if( my_addr.addressPointsToMe( Sinful(sinful_addr) ) == 0 ) {
+        if( my_addr.addressPointsToMe( Sinful(sinful_addr) ) ) {
             iAmPresent = true;
             // HAD id of each HAD is just the index of its <ip:port>
             // in HAD_LIST in reverse order
