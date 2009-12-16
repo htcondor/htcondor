@@ -125,8 +125,8 @@ typedef struct user_arg_struct {
 	char **cmd;
 	int stage_idx;
 	int stage_last;
-	globus_ftp_client_handle_t handle;
-	globus_ftp_client_operationattr_t op_attr;
+	globus_ftp_client_handle_t *handle;
+	globus_ftp_client_operationattr_t *op_attr;
 	ptr_ref_count *cred;
 	void *buff;
 	globus_size_t buff_len;
@@ -557,16 +557,20 @@ void begin_ftp_command( user_arg_t *user_arg )
 
 	globus_fifo_enqueue( &entry->cmd_queue, user_arg );
 
-	result = globus_ftp_client_handle_init( &user_arg->handle,
+	user_arg->handle = globus_libc_malloc( sizeof(globus_ftp_client_handle_t) );
+
+	result = globus_ftp_client_handle_init( user_arg->handle,
 											&ftp_handle_attr );
 	assert( result == GLOBUS_SUCCESS );
 
-	result = globus_ftp_client_operationattr_init( &user_arg->op_attr );
+	user_arg->op_attr = globus_libc_malloc( sizeof(globus_ftp_client_operationattr_t) );
+
+	result = globus_ftp_client_operationattr_init( user_arg->op_attr );
 	assert( result == GLOBUS_SUCCESS );
 
 	if ( user_arg->cred ) {
 		result = globus_ftp_client_operationattr_set_authorization(
-														&user_arg->op_attr,
+														user_arg->op_attr,
 														user_arg->cred->cred,
 														NULL,
 														NULL,
@@ -577,7 +581,7 @@ void begin_ftp_command( user_arg_t *user_arg )
 		user_arg->cred->count++;
 	}
 
-	(*(user_arg->first_callback))( user_arg, &user_arg->handle, GLOBUS_SUCCESS );
+	(*(user_arg->first_callback))( user_arg, user_arg->handle, GLOBUS_SUCCESS );
 }
 
 void finish_ftp_command( user_arg_t *user_arg )
@@ -593,37 +597,43 @@ void finish_ftp_command( user_arg_t *user_arg )
 	assert( list_head == user_arg );
 
 	if ( globus_fifo_size( &entry->cmd_queue ) == 0 ) {
-		result = globus_ftp_client_operationattr_destroy( &user_arg->op_attr );
+		result = globus_ftp_client_operationattr_destroy( user_arg->op_attr );
 		assert( result == GLOBUS_SUCCESS );
+		globus_libc_free( user_arg->op_attr );
 
-		result = globus_ftp_client_handle_destroy( &user_arg->handle );
+		result = globus_ftp_client_handle_destroy( user_arg->handle );
 		assert( result == GLOBUS_SUCCESS );
+		globus_libc_free( user_arg->handle );
 
 		return;
 	}
 
 	list_head = globus_fifo_peek( &entry->cmd_queue );
 	if ( list_head->cred != user_arg->cred ) {
-		result = globus_ftp_client_handle_destroy( &user_arg->handle );
+		result = globus_ftp_client_handle_destroy( user_arg->handle );
 		assert( result == GLOBUS_SUCCESS );
 
-		result = globus_ftp_client_handle_init( &list_head->handle,
+		list_head->handle = user_arg->handle;
+
+		result = globus_ftp_client_handle_init( list_head->handle,
 												&ftp_handle_attr );
 		assert( result == GLOBUS_SUCCESS );
 
-		result = globus_ftp_client_operationattr_destroy( &user_arg->op_attr );
+		result = globus_ftp_client_operationattr_destroy( user_arg->op_attr );
 		assert( result == GLOBUS_SUCCESS );
 
 		if ( user_arg->cred ) {
 			unlink_ref_count( user_arg->cred, 1 );
 		}
 
-		result = globus_ftp_client_operationattr_init( &list_head->op_attr );
+		list_head->op_attr = user_arg->op_attr;
+
+		result = globus_ftp_client_operationattr_init( list_head->op_attr );
 		assert( result == GLOBUS_SUCCESS );
 
 		if ( list_head->cred ) {
 			result = globus_ftp_client_operationattr_set_authorization(
-														&list_head->op_attr,
+														list_head->op_attr,
 														list_head->cred->cred,
 														NULL,
 														NULL,
@@ -638,7 +648,7 @@ void finish_ftp_command( user_arg_t *user_arg )
 		list_head->op_attr = user_arg->op_attr;
 	}
 
-	(*(list_head->first_callback))( list_head, &list_head->handle,
+	(*(list_head->first_callback))( list_head, list_head->handle,
 									GLOBUS_SUCCESS );
 }
 
@@ -736,8 +746,8 @@ nordugrid_submit_start_callback( void *arg,
 
 	globus_libc_sprintf( url, "gsiftp://%s/jobs/new", user_arg->cmd[2] );
 
-	result = globus_ftp_client_cwd( &user_arg->handle, url,
-									&user_arg->op_attr,
+	result = globus_ftp_client_cwd( user_arg->handle, url,
+									user_arg->op_attr,
 									(globus_byte_t **)&user_arg->buff,
 									&user_arg->buff_len,
 									nordugrid_submit_cwd1_callback, arg );
@@ -774,15 +784,15 @@ void nordugrid_submit_cwd1_callback( void *arg,
 
 	globus_libc_sprintf( url, "gsiftp://%s/jobs/new/job", user_arg->cmd[2] );
 
-	result = globus_ftp_client_put( &user_arg->handle, url,
-									&user_arg->op_attr, NULL,
+	result = globus_ftp_client_put( user_arg->handle, url,
+									user_arg->op_attr, NULL,
 									nordugrid_submit_put_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
 		nordugrid_submit_cwd2_callback( arg, handle,
 									 globus_error_peek( result ) );
 		return;
 	} else {
-		result = globus_ftp_client_register_write( &user_arg->handle,
+		result = globus_ftp_client_register_write( user_arg->handle,
 												   user_arg->cmd[3],
 												   strlen( user_arg->cmd[3] ),
 												   0, GLOBUS_TRUE,
@@ -832,8 +842,8 @@ nordugrid_submit_put_callback( void *arg,
 
 	globus_libc_sprintf( url, "gsiftp://%s/jobs", user_arg->cmd[2] );
 
-	result = globus_ftp_client_cwd( &user_arg->handle, url,
-									&user_arg->op_attr, NULL, NULL,
+	result = globus_ftp_client_cwd( user_arg->handle, url,
+									user_arg->op_attr, NULL, NULL,
 									nordugrid_submit_cwd2_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
 		nordugrid_submit_cwd2_callback( arg, handle,
@@ -911,15 +921,15 @@ void nordugrid_status_start_callback( void *arg,
 	globus_libc_sprintf( url, "gsiftp://%s/jobs/info/%s/status",
 						 user_arg->cmd[2], user_arg->cmd[3] );
 
-	result = globus_ftp_client_get( &user_arg->handle, url,
-									&user_arg->op_attr, NULL,
+	result = globus_ftp_client_get( user_arg->handle, url,
+									user_arg->op_attr, NULL,
 									nordugrid_status_get_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
 		nordugrid_status_get_callback( arg, handle,
 									 globus_error_peek( result ) );
 	} else {
 		void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
-		result = globus_ftp_client_register_read( &user_arg->handle,
+		result = globus_ftp_client_register_read( user_arg->handle,
 												  read_buff,
 												  TRANSFER_BUFFER_SIZE,
 												  nordugrid_status_read_callback,
@@ -966,7 +976,7 @@ void nordugrid_status_read_callback( void *arg,
 	}
 
 	if ( !eof ) {
-		result = globus_ftp_client_register_read( &user_arg->handle,
+		result = globus_ftp_client_register_read( user_arg->handle,
 												  buffer,
 												  TRANSFER_BUFFER_SIZE,
 												  nordugrid_status_read_callback,
@@ -1053,8 +1063,8 @@ nordugrid_cancel_start_callback( void *arg,
 	globus_libc_sprintf( url, "gsiftp://%s/jobs/%s", user_arg->cmd[2],
 						 user_arg->cmd[3] );
 
-	result = globus_ftp_client_rmdir( &user_arg->handle, url,
-									  &user_arg->op_attr,
+	result = globus_ftp_client_rmdir( user_arg->handle, url,
+									  user_arg->op_attr,
 									  nordugrid_cancel_rmdir_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
 		nordugrid_cancel_rmdir_callback( arg, handle,
@@ -1142,8 +1152,8 @@ nordugrid_stage_in_start_callback( void *arg,
 	globus_libc_sprintf( url, "gsiftp://%s/jobs/%s/%s", user_arg->cmd[2],
 						 user_arg->cmd[3], STAGE_IN_COMPLETE_FILE );
 
-	result = globus_ftp_client_exists( &user_arg->handle, url,
-									   &user_arg->op_attr,
+	result = globus_ftp_client_exists( user_arg->handle, url,
+									   user_arg->op_attr,
 									   nordugrid_stage_in_exists_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
 		nordugrid_stage_in_start_file_callback( arg, handle,
@@ -1205,8 +1215,8 @@ void nordugrid_stage_in_start_file_callback( void *arg,
 							 basename( filename ) );
 		free( filename );
 
-		result = globus_ftp_client_put( &user_arg->handle, url,
-										&user_arg->op_attr, NULL,
+		result = globus_ftp_client_put( user_arg->handle, url,
+										user_arg->op_attr, NULL,
 										nordugrid_stage_in_put_callback, arg );
 		if ( result != GLOBUS_SUCCESS ) {
 			error = globus_error_peek( result );
@@ -1287,7 +1297,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 		return;
 	}
 
-	result = globus_ftp_client_register_write( &user_arg->handle,
+	result = globus_ftp_client_register_write( user_arg->handle,
 											   buffer,
 											   rc,
 											   offset + length,
@@ -1435,15 +1445,15 @@ void nordugrid_stage_out2_start_file_callback( void *arg,
 		globus_libc_sprintf( url, "gsiftp://%s/jobs/%s/%s",
 							 user_arg->cmd[2], user_arg->cmd[3], src_file );
 
-		result = globus_ftp_client_get( &user_arg->handle, url,
-										&user_arg->op_attr, NULL,
+		result = globus_ftp_client_get( user_arg->handle, url,
+										user_arg->op_attr, NULL,
 										nordugrid_stage_out2_get_callback, arg );
 		if ( result != GLOBUS_SUCCESS ) {
 			error = globus_error_peek( result );
 			goto stage_out2_end;
 		} else {
 			void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
-			result = globus_ftp_client_register_read( &user_arg->handle,
+			result = globus_ftp_client_register_read( user_arg->handle,
 													  read_buff,
 													  TRANSFER_BUFFER_SIZE,
 													  nordugrid_stage_out2_read_callback,
@@ -1522,7 +1532,7 @@ void nordugrid_stage_out2_read_callback( void *arg,
 	}
 
 	if ( !eof ) {
-		result = globus_ftp_client_register_read( &user_arg->handle,
+		result = globus_ftp_client_register_read( user_arg->handle,
 												  buffer,
 												  TRANSFER_BUFFER_SIZE,
 												  nordugrid_stage_out2_read_callback,
@@ -1603,15 +1613,15 @@ void nordugrid_exit_info_start_callback( void *arg,
 	globus_libc_sprintf( url, "gsiftp://%s/jobs/info/%s/diag",
 						 user_arg->cmd[2], user_arg->cmd[3] );
 
-	result = globus_ftp_client_get( &user_arg->handle, url,
-									&user_arg->op_attr, NULL,
+	result = globus_ftp_client_get( user_arg->handle, url,
+									user_arg->op_attr, NULL,
 									nordugrid_exit_info_get_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
 		nordugrid_exit_info_get_callback( arg, handle,
 										globus_error_peek( result ) );
 	} else {
 		void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
-		result = globus_ftp_client_register_read( &user_arg->handle,
+		result = globus_ftp_client_register_read( user_arg->handle,
 												  read_buff,
 												  TRANSFER_BUFFER_SIZE,
 												  nordugrid_exit_info_read_callback,
@@ -1660,7 +1670,7 @@ void nordugrid_exit_info_read_callback( void *arg,
 	}
 
 	if ( !eof ) {
-		result = globus_ftp_client_register_read( &user_arg->handle,
+		result = globus_ftp_client_register_read( user_arg->handle,
 												  buffer,
 												  TRANSFER_BUFFER_SIZE,
 												  nordugrid_exit_info_read_callback,
@@ -1848,8 +1858,8 @@ nordugrid_ping_start_callback( void *arg,
 
 	globus_libc_sprintf( url, "gsiftp://%s/jobs", user_arg->cmd[2] );
 
-	result = globus_ftp_client_exists( &user_arg->handle, url,
-									   &user_arg->op_attr,
+	result = globus_ftp_client_exists( user_arg->handle, url,
+									   user_arg->op_attr,
 									   nordugrid_ping_exists_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
 		nordugrid_ping_exists_callback( arg, handle,
