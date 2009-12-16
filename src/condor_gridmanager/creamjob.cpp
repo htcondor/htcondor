@@ -1006,12 +1006,16 @@ void CreamJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
-				// unhandled error
-				LOG_CREAM_ERROR( "cream_job_purge()", rc );
-				gahpErrorString = gahp->getErrorString();
-				gmState = GM_CLEAR_REQUEST;
-//				gmState = GM_CANCEL;
-				break;
+				if ( strstr( gahp->getErrorString(), "job does not exist" ) ) {
+					// Job already gone, treat as success
+				} else {
+					// unhandled error
+					LOG_CREAM_ERROR( "cream_job_purge()", rc );
+					gahpErrorString = gahp->getErrorString();
+					gmState = GM_CLEAR_REQUEST;
+//					gmState = GM_CANCEL;
+					break;
+				}
 			}
 			myResource->CancelSubmit( this );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
@@ -1069,11 +1073,15 @@ void CreamJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
+				if ( strstr( gahp->getErrorString(), "job does not exist" ) ) {
+					// Job already gone, treat as success
+				} else {
 					// unhandled error
-				LOG_CREAM_ERROR( "cream_job_purge", rc );
-				gahpErrorString = gahp->getErrorString();
-				gmState = GM_CLEAR_REQUEST;
-				break;
+					LOG_CREAM_ERROR( "cream_job_purge", rc );
+					gahpErrorString = gahp->getErrorString();
+					gmState = GM_CLEAR_REQUEST;
+					break;
+				}
 			}
 
 			SetRemoteJobId( NULL );
