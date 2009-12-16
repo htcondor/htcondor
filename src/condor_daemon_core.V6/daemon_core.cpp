@@ -1057,12 +1057,15 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 
 		m_sinful = Sinful(sinful_public);
 
+			// Only publish the private name if there is a private or CCB
+			// address, because otherwise, the private name doesn't matter.
+		bool publish_private_name = false;
+
 		char const *private_name = privateNetworkName();
 		if( private_name ) {
-			m_sinful.setPrivateNetworkName(private_name);
-
 			if( sinful_private && strcmp(sinful_public,sinful_private) ) {
 				m_sinful.setPrivateAddr(sinful_private);
+				publish_private_name = true;
 			}
 		}
 
@@ -1071,7 +1074,12 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			m_ccb_listeners->GetCCBContactString(ccb_contact);
 			if( !ccb_contact.IsEmpty() ) {
 				m_sinful.setCCBContact(ccb_contact.Value());
+				publish_private_name = true;
 			}
+		}
+
+		if( private_name && publish_private_name ) {
+			m_sinful.setPrivateNetworkName(private_name);
 		}
 	}
 
