@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "condor_sinful.h"
 // for 'param' function
 #include "condor_config.h"
 // for 'Daemon' class
@@ -78,6 +79,7 @@ AbstractReplicatorStateMachine::initializeReplicationList( char* buffer )
     StringList replicationAddressList;
     char*      replicationAddress    = NULL;
     bool       isMyAddressPresent    = false;
+	Sinful     my_addr( daemonCore->InfoCommandSinfulString( ) );
 
     replicationAddressList.initializeFromString( buffer );
     // initializing a list unrolls it, that's why the rewind is needed to bring
@@ -100,8 +102,7 @@ AbstractReplicatorStateMachine::initializeReplicationList( char* buffer )
 
             continue;
         }
-        if( strcmp( sinfulAddress,
-                    daemonCore->InfoCommandSinfulString( ) ) == 0 ) {
+        if( my_addr.addressPointsToMe( Sinful(sinfulAddress) ) ) {
             isMyAddressPresent = true;
         }
         else {
