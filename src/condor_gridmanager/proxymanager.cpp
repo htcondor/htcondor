@@ -290,6 +290,9 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 			error.sprintf( "Failed to get identity of proxy" );
 			return NULL;
 		}
+
+		fqan = NULL;
+#if defined(HAVE_EXT_GLOBUS)
 		int rc = extract_VOMS_info_from_file( proxy_path.Value(), 0, NULL,
 											  NULL, &fqan );
 		if ( rc != 0 && rc != 1 ) {
@@ -299,6 +302,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 			free( subject_name );
 			return NULL;
 		}
+#endif
 		if ( fqan ) {
 			has_voms_attrs = true;
 		} else {
