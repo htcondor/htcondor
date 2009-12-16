@@ -36,7 +36,7 @@ struct CreamProxyDelegation;
 class CreamResource : public BaseResource
 {
  protected:
-	CreamResource( const char *resource_name, const char *proxy_subject );
+	CreamResource( const char *resource_name, const Proxy *proxy );
 	~CreamResource();
 
  public:
@@ -59,7 +59,7 @@ class CreamResource : public BaseResource
 								 const char *proxy_subject );
 
 	static CreamResource *FindOrCreateResource( const char *resource_name,
-												const char *proxy_subject );
+												const Proxy *proxy );
 
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
@@ -77,6 +77,7 @@ class CreamResource : public BaseResource
 	bool initialized;
 
 	char *proxySubject;
+	char *proxyFQAN;
 	int delegationTimerId;
 	CreamProxyDelegation *activeDelegationCmd;
 	char *serviceUri;
