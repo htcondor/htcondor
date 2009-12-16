@@ -36,7 +36,7 @@ struct GT4ProxyDelegation;
 class GT4Resource : public BaseResource
 {
  protected:
-	GT4Resource( const char *resource_name, const char *proxy_subject );
+	GT4Resource( const char *resource_name, const Proxy *proxy );
 	~GT4Resource();
 
  public:
@@ -62,7 +62,7 @@ class GT4Resource : public BaseResource
 								 const char *proxy_subject );
 
 	static GT4Resource *FindOrCreateResource( const char *resource_name,
-											  const char *proxy_subject );
+											  const Proxy *proxy );
 
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
@@ -81,6 +81,7 @@ class GT4Resource : public BaseResource
 	bool initialized;
 
 	char *proxySubject;
+	char *proxyFQAN;
 	int delegationTimerId;
 	GT4ProxyDelegation *activeDelegationCmd;
 	char *delegationServiceUri;

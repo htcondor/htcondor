@@ -318,7 +318,7 @@ GT4Job::GT4Job( ClassAd *classad )
 		error_string = "GT4_GAHP not defined";
 		goto error_exit;
 	}
-	job_proxy_subject.sprintf( "GT4/%s", jobProxy->subject->subject_name );
+	job_proxy_subject.sprintf( "GT4/%s", jobProxy->subject->fqan );
 	gahp = new GahpClient( job_proxy_subject.Value(), gahp_path );
 	free( gahp_path );
 
@@ -378,7 +378,7 @@ GT4Job::GT4Job( ClassAd *classad )
 
 		// Find/create an appropriate GT4Resource for this job
 	myResource = GT4Resource::FindOrCreateResource( resourceManagerString,
-													jobProxy->subject->subject_name);
+													jobProxy );
 	if ( myResource == NULL ) {
 		error_string = "Failed to initialize GT4Resource object";
 		goto error_exit;
@@ -2233,7 +2233,7 @@ dprintf(D_ALWAYS,"(%d.%d) JEF: Switching to Gram 42\n",procID.cluster,procID.pro
 		SetEvaluateState();
 		return false;
 	}
-	gahp_name.sprintf( "GT42/%s", jobProxy->subject->subject_name );
+	gahp_name.sprintf( "GT42/%s", jobProxy->subject->fqan );
 	new_gahp = new GahpClient( gahp_name.Value(), gahp_path );
 	free( gahp_path );
 

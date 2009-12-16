@@ -322,7 +322,7 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 		goto end;
 	}
 
-	if (globus_gsi_cred_get_subject_name(cred_handle, &subject_name)) {
+	if (globus_gsi_cred_get_identity_name(cred_handle, &subject_name)) {
 		set_error_string( "unable to extract subject name" );
 		ret = 12;
 		goto end;
