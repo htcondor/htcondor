@@ -1,15 +1,17 @@
+# Note: it would be good to force one node to be retried, so we can
+# test that the $RETRY value gets incremented.
 Job NodeA job_dagman_script_args-node.cmd
-Script Pre NodeA job_dagman_script_args-script.pl NodeA Pre Cadel_Evans
-Script Post NodeA job_dagman_script_args-script.pl NodeA Post Mark_Cavendish Heinrich_Haussler
+Script Pre NodeA job_dagman_script_args-script.pl $JOB Pre Cadel_Evans $RETRY
+Script Post NodeA job_dagman_script_args-script.pl $JOB Post $RETURN Mark_Cavendish Heinrich_Haussler $RETRY $JOBID
 
 Job NodeB job_dagman_script_args-node.cmd
-Script Pre NodeB job_dagman_script_args-script.pl NodeB Pre Bernard_Hinault Joop_Zoetemelk
-Script Post NodeB job_dagman_script_args-script.pl NodeB Post Ottavio_Bottechia
+Script Pre NodeB job_dagman_script_args-script.pl $JOB Pre Bernard_Hinault Joop_Zoetemelk $RETRY
+Script Post NodeB job_dagman_script_args-script.pl $JOB Post $RETURN Ottavio_Bottechia $RETRY $JOBID
 
 Job NodeC job_dagman_script_args-node.cmd
-Script Pre NodeC job_dagman_script_args-script.pl NodeC Pre Miguel Indurain
-Script Post NodeC job_dagman_script_args-script.pl NodeC Post Laurent Jalabert
+Script Pre NodeC job_dagman_script_args-script.pl $JOB Pre Miguel Indurain $RETRY
+Script Post NodeC job_dagman_script_args-script.pl $JOB Post $RETURN Laurent Jalabert $RETRY $JOBID
 
 Job NodeD job_dagman_script_args-node.cmd
-Script Pre NodeD job_dagman_script_args-script.pl NodeD Pre Gilles Delion Charly Mottet
-Script Post NodeD job_dagman_script_args-script.pl NodeD Post Stephen Roche
+Script Pre NodeD job_dagman_script_args-script.pl $JOB Pre Gilles Delion Charly Mottet $RETRY
+Script Post NodeD job_dagman_script_args-script.pl $JOB Post $RETURN Stephen Roche $RETRY $JOBID
