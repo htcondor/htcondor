@@ -1,0 +1,15 @@
+Job NodeA job_dagman_script_args-node.cmd
+Script Pre NodeA job_dagman_script_args-script.pl NodeA Pre Cadel_Evans
+Script Post NodeA job_dagman_script_args-script.pl NodeA Post Mark_Cavendish Heinrich_Haussler
+
+Job NodeB job_dagman_script_args-node.cmd
+Script Pre NodeB job_dagman_script_args-script.pl NodeB Pre Bernard_Hinault Joop_Zoetemelk
+Script Post NodeB job_dagman_script_args-script.pl NodeB Post Ottavio_Bottechia
+
+Job NodeC job_dagman_script_args-node.cmd
+Script Pre NodeC job_dagman_script_args-script.pl NodeC Pre Miguel Indurain
+Script Post NodeC job_dagman_script_args-script.pl NodeC Post Laurent Jalabert
+
+Job NodeD job_dagman_script_args-node.cmd
+Script Pre NodeD job_dagman_script_args-script.pl NodeD Pre Gilles Delion Charly Mottet
+Script Post NodeD job_dagman_script_args-script.pl NodeD Post Stephen Roche
