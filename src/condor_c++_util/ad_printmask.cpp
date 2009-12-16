@@ -194,7 +194,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						// drat, we couldn't find it. Maybe it's an
 						// expression?
 					tree = NULL;
-					if( Parse(attr, tree) != 0 ) {
+					if( ParseClassAdRvalExpr(attr, tree) != 0 ) {
 						delete tree;
 
 							// drat, still no luck.  if there's an
@@ -215,10 +215,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
-						if( tree->EvalTree (al, target, &result) ) {
-							if( result.type == LX_STRING && result.s ) {
-								retval.sprintf_cat(fmt->printfFmt, result.s);
-							}
+						if( tree->EvalTree (al, target, &result) &&
+							result.type == LX_STRING && result.s ) {
+							retval.sprintf_cat(fmt->printfFmt, result.s);
 						} else {
 							// couldn't eval
 							if( alt ) {

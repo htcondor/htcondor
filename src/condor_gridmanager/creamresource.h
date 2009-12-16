@@ -64,13 +64,15 @@ class CreamResource : public BaseResource
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
+	int ProxyCallback();
+
 	// This should be private, but CreamJob references it directly for now
 	static HashTable <HashKey, CreamResource *> ResourcesByName;
 
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded );
-	int checkDelegation();
+	void checkDelegation();
 
 	bool initialized;
 

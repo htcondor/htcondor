@@ -135,48 +135,16 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_daemon_core.V6\no_soap_core.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c-gahp\PipeBuffer.cpp"
 			>
 		</File>
 		<File
 			RelativePath="..\src\condor_c-gahp\PipeBuffer.h"
 			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahpC.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahpServer.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahpStub.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
 		</File>
 	</Files>
 	<Globals>

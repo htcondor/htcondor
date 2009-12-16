@@ -15,10 +15,7 @@
 
 if [[ $_CONDOR_MACHINE_AD != "" ]]; then
    mem_limit=$((`egrep '^Memory' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` * 1024))
-#   block_size=$((`stat -f -c %s .` / 1024))
-#   disk_limit=$((`egrep '^Disk' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` / $block_size))
    disk_limit=`egrep '^Disk' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3`
-   vm_limit=`egrep '^VirtualMemory' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3`
 
    ulimit -d $mem_limit
    if [[ $? != 0 ]] || [[ $mem_limit = "" ]]; then
@@ -28,11 +25,6 @@ if [[ $_CONDOR_MACHINE_AD != "" ]]; then
    ulimit -f $disk_limit
    if [[ $? != 0 ]] || [[ $disk_limit = "" ]]; then
       echo "Failed to set Disk Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE
-      exit 1
-   fi
-   ulimit -v $vm_limit
-   if [[ $? != 0 ]] || [[ $vm_limit = "" ]]; then
-      echo "Failed to set Virtual Memory Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE
       exit 1
    fi
 fi

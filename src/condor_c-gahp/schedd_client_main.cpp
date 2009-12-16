@@ -57,7 +57,7 @@ usage()
 	DC_Exit( 1 );
 }
 
-int init_pipes();
+void init_pipes();
 
 int
 main_init( int argc, char ** const argv )
@@ -115,22 +115,22 @@ main_init( int argc, char ** const argv )
 
 
 	daemonCore->Register_Timer(0, 
-		  (TimerHandler)&init_pipes,
-		  "init_pipes", NULL );
+		  init_pipes,
+		  "init_pipes" );
 
 
     // Just set up timers....
     contactScheddTid = daemonCore->Register_Timer( 
 		   contact_schedd_interval,
-		  (TimerHandler)&doContactSchedd,
-		  "doContactSchedD", NULL );
+		   doContactSchedd,
+		  "doContactSchedD" );
 
 
 	
 	return TRUE;
 }
 
-int 
+void 
 init_pipes() {
 	dprintf (D_FULLDEBUG, "PRE Request pipe initialized\n");
 
@@ -142,7 +142,6 @@ init_pipes() {
 
 
 	dprintf (D_FULLDEBUG, "Request pipe initialized\n");
-	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -160,7 +159,7 @@ void
 Reconfig()
 {
 	contact_schedd_interval = 
-		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
+		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 5);
 
 	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
 

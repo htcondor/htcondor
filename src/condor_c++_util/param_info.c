@@ -47,7 +47,7 @@ static int validate_double_range_lower_bound(const char* range_start,
 	double* min);
 
 // Ensure the subject matches the regex.
-static int validate_regex(char* pattern, char* subject);
+static int validate_regex(const char* pattern, const char* subject);
 
 #define CUSTOMIZATION_SELDOM 	0
 
@@ -87,25 +87,38 @@ param_info_init()
 
 	param_info_hash_create(&param_info);
 
+	// due to #793 coupled with the fact that the new param code is disabled for
+	// the 7.4 series, and enabled for the 7.5 series, we short circuit the
+	// initialization of the table for the 7.4 series to save on ram in the
+	// shadow process.
+
+	// Normally, I'd use the CondorVersionInfo object here, but since this is
+	// A C file and I don't want to have to implement a C interface to the
+	// CondorVersionInfo object, this next line is commented out in the
+	// trunk, which represents the 7.5 series at the writing of this comment.
+/*	goto after_data_insertion;*/
+
 #include "param_info_init.c"
 
+	after_data_insertion:
+		;
 }
 
 void
-param_info_insert(char* param,
-				  char* aliases,
-				  char* value,
-				  char* version,
-				  char* range,
+param_info_insert(const char* param,
+				  const char* aliases,
+				  const char* value,
+				  const char* version,
+				  const char* range,
 				  int   state,
 				  int	type,
 				  int   is_macro,
 				  int   reconfig,
 				  int   customization,
-				  char* friendly_name,
-				  char* usage,
-				  char* url,
-				  char* tags)
+				  const char* friendly_name,
+				  const char* usage,
+				  const char* url,
+				  const char* tags)
 {
 	param_info_t* p;
 	char* range_start;
@@ -483,7 +496,7 @@ validate_double_range_upper_bound(const char* range_end, double* max) {
 }
 
 static int
-validate_regex(char* pattern, char* subject) {
+validate_regex(const char* pattern, const char* subject) {
 
 	pcre* re;
 	const char* err;

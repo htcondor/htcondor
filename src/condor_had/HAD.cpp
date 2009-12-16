@@ -39,7 +39,8 @@
 	#include "ReplicaStateMachine.h"
 #endif // USE_REPLICATION
 
-#include "condor_fix_iostream.h"
+#include <iostream>
+using namespace std;
 
 extern "C" int SetSyscalls(int val){return val;}
 extern char* myName;

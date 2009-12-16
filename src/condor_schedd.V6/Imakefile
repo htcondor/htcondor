@@ -4,7 +4,7 @@ all_target(libqmgmt.a $(NAME))
 C_PLUS_FLAGS = -I../condor_daemon_core.V6 $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 CFLAGS =  -I../condor_daemon_core.V6 $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 
-LIB= $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
+LIB= $(SOAP_LIB) $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
 QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_common.o \
 	schedd_files.o ickpt_share.o

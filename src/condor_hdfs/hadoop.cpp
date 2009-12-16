@@ -39,6 +39,7 @@ Hadoop::Hadoop() {
         m_state          = STATE_NULL;
         m_adPubInterval  = 5;
         m_hadoopHome     = NULL;
+        m_timer          = -1;
 }
 
 void Hadoop::initialize() {
@@ -58,10 +59,10 @@ void Hadoop::initialize() {
                 m_hadoopHome = MyString(hh);
                 free(hh);
         } else {
-                char * rd = param("RELEASE_DIR");
+                char * rd = param("LIBEXEC");
                 if (rd != NULL) {
                         MyString tmp;
-                        tmp.sprintf("%s/libexec/hdfs", rd);
+                        tmp.sprintf("%s/hdfs", rd);
                         m_hadoopHome = tmp;                
                         free(rd);
                 }                                 
@@ -233,18 +234,30 @@ void Hadoop::writeConfigFile() {
                 free(hdfs_allow);
         } else {
                 StringList allow_list;
+                hdfs_allow = param("ALLOW_READ");
+                if (hdfs_allow != NULL) {
+                        allow_list.append(hdfs_allow);
+                        free(hdfs_allow);
+                }
                 hdfs_allow = param("HOSTALLOW_READ");
                 if (hdfs_allow != NULL) {
                         allow_list.append(hdfs_allow);
                         free(hdfs_allow);
                 }
 
+                hdfs_allow = param("ALLOW_WRITE");
+                if(hdfs_allow != NULL) {
+                        allow_list.append(hdfs_allow);
+                        free(hdfs_allow);
+                }
                 hdfs_allow = param("HOSTALLOW_WRITE");
                 if(hdfs_allow != NULL) {
                         allow_list.append(hdfs_allow);
                         free(hdfs_allow);
                 }
-                writeXMLParam("dfs.net.allow", allow_list.print_to_delimed_string(","), &xml);
+                char *tmp_str = allow_list.print_to_delimed_string(",");
+                writeXMLParam("dfs.net.allow", tmp_str, &xml);
+                free(tmp_str);
         }
 
         char *hdfs_deny = param("HDFS_DENY");
@@ -263,7 +276,9 @@ void Hadoop::writeConfigFile() {
                         deny_list.append(hdfs_deny); 
                         free(hdfs_deny);
                 }
-                writeXMLParam("dfs.net.deny", deny_list.print_to_delimed_string(","), &xml);
+                char *tmp_str = deny_list.print_to_delimed_string(",");
+                writeXMLParam("dfs.net.deny", tmp_str, &xml);
+                free(tmp_str);
         }
 
         //TODO these shouldn't be hard-coded
@@ -301,7 +316,7 @@ void Hadoop::stop(bool fast) {
                 if (!fast) {
                         dprintf(D_ALWAYS, "Created timer on daemon kill signal\n");
                         m_timer = daemonCore->Register_Timer(5, 
-                                     (Eventcpp) &Hadoop::killTimer, 
+                                     (TimerHandlercpp) &Hadoop::killTimer, 
                                      "hadoop kill timer", this);
                 }
         }
@@ -329,15 +344,13 @@ int Hadoop::reaperResponse(int exit_pid, int exit_status) {
         return 0;
 }
 
-int Hadoop::killTimer() {        
+void Hadoop::killTimer() {        
         dprintf(D_FULLDEBUG, "Hadoop::KillTimer()\n");
         daemonCore->Cancel_Timer(m_timer);                
 
         //send sigkill now!
         if (m_state != STATE_NULL)
             stop(true);
-
-		return 0;
 }
 
 void Hadoop::startServices() {

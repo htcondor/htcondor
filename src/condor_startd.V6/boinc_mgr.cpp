@@ -288,7 +288,8 @@ BOINC_BackfillMgr::start( int slot_id )
 		// object for this slot, change to Backfill/BOINC
 	dprintf( D_ALWAYS, "State change: BOINC client running for slot%d\n",
 			 slot_id ); 
-	return rip->change_state( busy_act );
+	rip->change_state( busy_act );
+	return TRUE; // XXX: change TRUE
 }
 
 

@@ -27,8 +27,7 @@
 #include "credential.h"
 #include "X509credentialWrapper.h"
 
-
-int CheckCredentials ();
+void CheckCredentials ();
 
 int LoadCredentialList ();
 int SaveCredentialList ();

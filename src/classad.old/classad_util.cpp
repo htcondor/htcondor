@@ -21,6 +21,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_classad_util.h"
+#include "condor_adtypes.h"
 #include "MyString.h"
 
 bool EvalBool(AttrList* ad, ExprTree *tree)
@@ -63,7 +64,7 @@ bool EvalBool(ClassAd *ad, const char *constraint)
 			delete tree;
 			tree = NULL;
 		}
-		if (Parse(constraint, tree) != 0) {
+		if (ParseClassAdRvalExpr(constraint, tree) != 0) {
 			dprintf(D_ALWAYS,
 				"can't parse constraint: %s\n", constraint);
 			return false;

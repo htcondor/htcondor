@@ -129,10 +129,15 @@ AmazonRequest::SetupSoap(void)
 
 	const char* proxy_host_name;
 	int proxy_port = 0;
-	if( get_amazon_proxy_server(proxy_host_name, proxy_port) ) {
+	const char* proxy_user_name;
+	const char* proxy_passwd;
+	if( get_amazon_proxy_server(proxy_host_name, proxy_port, 
+				    proxy_user_name, proxy_passwd) ) {
 		m_soap->proxy_host = proxy_host_name;
 		m_soap->proxy_port = proxy_port; 
-	}
+		m_soap->proxy_userid = proxy_user_name;
+		m_soap->proxy_passwd = proxy_passwd;
+ 	}
 
 	if (soap_register_plugin(m_soap, soap_wsse)) {
 		ParseSoapError("setup WS-Security plugin");
@@ -173,6 +178,20 @@ AmazonRequest::SetupSoap(void)
 		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
 		return false;
 	}
+
+	char *ca_file = param("SOAP_SSL_CA_FILE");
+	char *ca_dir = param("SOAP_SSL_CA_DIR");;
+	if (soap_ssl_client_context(m_soap, SOAP_SSL_DEFAULT,
+				    NULL,
+				    NULL,
+				    ca_file,
+				    ca_dir,
+				    NULL))
+	{
+	    soap_print_fault(m_soap, stderr);
+	}
+	free(ca_file);
+	free(ca_dir);
 
 	// Timestamp must be signed, the "Timestamp" value just needs
 	// to be non-NULL

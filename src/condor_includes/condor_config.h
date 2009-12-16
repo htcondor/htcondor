@@ -115,7 +115,7 @@ class ParamValue {
 
 
 	double param_double(const char *name, double default_value,
-                        double min_value = DBL_MIN, double max_value = DBL_MAX,
+                        double min_value = -DBL_MAX, double max_value = DBL_MAX,
                         ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 

@@ -303,7 +303,8 @@ GT4Job::GT4Job( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -463,6 +464,11 @@ GT4Job::GT4Job( ClassAd *classad )
 		}
 	}
 
+		// Trigger recreation of the empty scratch directory for
+		// already-submitted jobs, in case it was deleted. This is
+		// a simple-but-crude way to fix this problem.
+	getDummyJobScratchDir();
+
 	return;
 
  error_exit:
@@ -499,7 +505,7 @@ GT4Job::~GT4Job()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	}
 	if ( gramCallbackContact ) {
 		free( gramCallbackContact );
@@ -522,14 +528,23 @@ void GT4Job::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int GT4Job::doEvaluateState()
+int GT4Job::ProxyCallback()
+{
+	if ( gmState == GM_PROXY_EXPIRED ) {
+		SetEvaluateState();
+	}
+	return 0;
+}
+
+void GT4Job::doEvaluateState()
 {
 	int old_gm_state;
 	MyString old_globus_state;
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -788,8 +803,9 @@ int GT4Job::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMIT;
@@ -876,8 +892,9 @@ int GT4Job::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMITTED;
@@ -1008,8 +1025,9 @@ int GT4Job::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 			}
@@ -1046,7 +1064,7 @@ int GT4Job::doEvaluateState()
 					globusState = "";
 					jobAd->Assign( ATTR_GLOBUS_STATUS, 32 );
 					SetRemoteJobStatus( NULL );
-					requestScheddUpdate( this );
+					requestScheddUpdate( this, false );
 				}
 				gmState = GM_CLEAR_REQUEST;
 			}
@@ -1113,7 +1131,7 @@ int GT4Job::doEvaluateState()
 			globusState = "";
 			jobAd->Assign( ATTR_GLOBUS_STATUS, 32 );
 			SetRemoteJobStatus( NULL );
-			requestScheddUpdate( this );
+			requestScheddUpdate( this, false );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1228,8 +1246,9 @@ int GT4Job::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			DeleteOutput();
@@ -1322,8 +1341,6 @@ int GT4Job::doEvaluateState()
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 bool GT4Job::AllowTransition( const MyString &new_state,
@@ -1429,7 +1446,7 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 		globusStateFaultString = new_fault;
 		enteredCurrentGlobusState = time(NULL);
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 		SetEvaluateState();
 	}
@@ -2114,29 +2131,32 @@ GT4Job::getDummyJobScratchDir() {
 	const int dir_mode = 0500;
 	const char *return_val = NULL;
 	static MyString dirname;
+	static time_t last_check = 0;
 
-	if ( dirname != "" ) {
+	if ( dirname != "" && time(NULL) < last_check + 60 ) {
 		return dirname.Value();
 	}
 
-	char *prefix = temp_dir_path();
-	ASSERT( prefix );
+	if ( dirname == "" ) {
+		char *prefix = temp_dir_path();
+		ASSERT( prefix );
 #ifndef WIN32 
-	dirname.sprintf ("%s%ccondor_g_empty_dir_u%d", // <scratch>/condorg_empty_dir_u<uid>
-					 prefix,
-					 DIR_DELIM_CHAR,
-					 geteuid());
+		dirname.sprintf ("%s%ccondor_g_empty_dir_u%d", // <scratch>/condorg_empty_dir_u<uid>
+						 prefix,
+						 DIR_DELIM_CHAR,
+						 geteuid());
 #else // Windows
-	char *user = my_username();
-	dirname.sprintf ("%s%ccondor_g_empty_dir_u%s", // <scratch>\empty_dir_u<username>
-					 prefix, 
-					 DIR_DELIM_CHAR,
-					 user);
-	free(user);
-	user = NULL;
+		char *user = my_username();
+		dirname.sprintf ("%s%ccondor_g_empty_dir_u%s", // <scratch>\empty_dir_u<username>
+						 prefix, 
+						 DIR_DELIM_CHAR,
+						 user);
+		free(user);
+		user = NULL;
 #endif
-	free( prefix );
-	
+		free( prefix );
+	}
+
 	StatInfo *dir_stat = new StatInfo( dirname.Value() );
 
 	if ( dir_stat->Error() == SINoFile ) {
@@ -2180,6 +2200,8 @@ GT4Job::getDummyJobScratchDir() {
 	}
 
 	return_val = dirname.Value();
+
+	last_check = time(NULL);
 
  error_exit:
 	if ( dir_stat ) {

@@ -77,7 +77,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
-		  const char *defaultNodeLog, bool findUserLogs) :
+		  const char *defaultNodeLog, bool isSplice) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -109,7 +109,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_catThrottleDeferredCount (0),
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst),
-	_defaultNodeLog		  (defaultNodeLog)
+	_defaultNodeLog		  (defaultNodeLog),
+	_isSplice			  (isSplice)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -120,21 +121,32 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	// paths, in which case nothing is done).
 	m_directory = ".";
 
-	// We only find the log files for the root dag file. FindLogFile is
-	// smart enough to already walk the parse tree of splices and find the
-	// log files. So we only want to do that once and not for each splice.
-	if (findUserLogs == true) {
+	// for the toplevel dag, emit the dag files we ended up using.
+	if (_isSplice == false) {
 		ASSERT( dagFiles.number() >= 1 );
 		PrintDagFiles( dagFiles );
 	}
 
  	_readyQ = new PrioritySimpleList<Job*>;
-	_preScriptQ = new ScriptQ( this );
-	_postScriptQ = new ScriptQ( this );
 	_submitQ = new Queue<Job*>;
-
-	if( !_readyQ || !_submitQ || !_preScriptQ || !_postScriptQ ) {
+	if( !_readyQ || !_submitQ ) {
 		EXCEPT( "ERROR: out of memory (%s:%d)!\n", __FILE__, __LINE__ );
+	}
+
+	/* The ScriptQ object allocates daemoncore reapers, which are a
+		regulated and precious resource. Since we *know* we will never need
+		this object when we are parsing a splice, we don't allocate it.
+		In the other codes that expect this pointer to be valid, there is
+		either an ASSERT or other checks to ensure it is valid. */
+	if (_isSplice == false) {
+		_preScriptQ = new ScriptQ( this );
+		_postScriptQ = new ScriptQ( this );
+		if( !_preScriptQ || !_postScriptQ ) {
+			EXCEPT( "ERROR: out of memory (%s:%d)!\n", __FILE__, __LINE__ );
+		}
+	} else {
+		_preScriptQ = NULL;
+		_postScriptQ = NULL;
 	}
 
 	debug_printf( DEBUG_DEBUG_4, "_maxJobsSubmitted = %d, "
@@ -187,16 +199,21 @@ Dag::~Dag() {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::Bootstrap (bool recovery) {
+bool Dag::Bootstrap (bool recovery)
+{
     Job* job;
     ListIterator<Job> jobs (_jobs);
+
+	// This function should never be called on a dag object which is acting
+	// like a splice.
+	ASSERT( _isSplice == false );
 
     // update dependencies for pre-completed jobs (jobs marked DONE in
     // the DAG input file)
     jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
 		if( job->GetStatus() == Job::STATUS_DONE ) {
-			TerminateJob( job, true );
+			TerminateJob( job, false, true );
 		}
     }
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
@@ -275,6 +292,7 @@ bool Dag::Bootstrap (bool recovery) {
 		PrintReadyQ( DEBUG_DEBUG_2 );
     }	
     
+		// Note: we're bypassing the ready queue here...
     jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
 		if( job->GetStatus() == Job::STATUS_READY &&
@@ -745,6 +763,10 @@ Dag::RemoveBatchJob(Job *node) {
 void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
+	// This function should never be called when the dag object is
+	// being used to parse a splice.
+	ASSERT ( _isSplice == false );
+
 	if ( job->_queuedNodeJobProcs == 0 ) {
 		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 	}
@@ -1130,9 +1152,19 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 
 	if ( node ) {
 		if ( condorID._cluster != node->_CondorID._cluster ) {
-			EXCEPT( "Searched for node for cluster %d; got %d!!",
-						condorID._cluster,
-						node->_CondorID._cluster );
+			if ( node->_CondorID._cluster != _defaultCondorId._cluster ) {
+			 	EXCEPT( "Searched for node for cluster %d; got %d!!",
+						 	condorID._cluster,
+						 	node->_CondorID._cluster );
+			} else {
+					// Note: we can get here if we get an aborted event
+					// after a terminated event for the same job (see
+					// gittrac #744 and the
+					// job_dagman_abnormal_term_recovery_retries test).
+				dprintf( D_ALWAYS, "Warning: searched for node for "
+							"cluster %d; got %d!!\n", condorID._cluster,
+							node->_CondorID._cluster );
+			}
 		}
 	}
 
@@ -1171,6 +1203,10 @@ Dag::StartNode( Job *node, bool isRetry )
 	if ( !node->CanSubmit() ) {
 		EXCEPT( "Node %s not ready to submit!", node->GetJobName() );
 	}
+
+	// We should never be calling this function when the dag is being used
+	// as a splicing dag.
+	ASSERT( _isSplice == false );
 
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
@@ -1462,7 +1498,12 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// core dumps if node has POST script and all submit attempts fail).
 		bool useXml = readLog.isInitialized() ? readLog.getIsXMLLog() : false;
 
-		UserLog ulog;
+		WriteUserLog ulog;
+			// Disabling the global log (EventLog) fixes the main problem
+			// in gittrac #934 (if you can't write to the global log the
+			// write to the user log also fails, and DAGMan hangs
+			// waiting for the event that wasn't written).
+		ulog.setEnableGlobalLog( false );
 		ulog.setUseXML( useXml );
 		ulog.initialize( job->_logFile, job->_CondorID._cluster,
 					 	0, 0, NULL );
@@ -1470,6 +1511,10 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,
 					  	"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
+			  // Exit here, because otherwise we'll wait forever to see
+			  // the event that we just failed to write (see gittrac #934).
+			  // wenger 2009-11-12.
+			main_shutdown_rescue( EXIT_ERROR );
 		}
 	}
 	return true;
@@ -1848,13 +1893,23 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 //-------------------------------------------------------------------------
 void
-Dag::TerminateJob( Job* job, bool recovery )
+Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
+	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
-	job->TerminateSuccess();
+	job->TerminateSuccess(); // marks job as STATUS_DONE
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
 		EXCEPT( "Node %s is not in DONE state", job->GetJobName() );
+	}
+
+		// this is a little ugly, but since this function can be
+		// called multiple times for the same job, we need to be
+		// careful not to double-count...
+	if( job->countedAsDone == false ) {
+		_numNodesDone++;
+		job->countedAsDone = true;
+		ASSERT( _numNodesDone <= _jobs.Number() );
 	}
 
     //
@@ -1868,25 +1923,24 @@ Dag::TerminateJob( Job* job, bool recovery )
         Job * child = FindNodeByNodeID( *qit );
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
-		// if child has no more parents in its waiting queue, submit it
 		if ( child->GetStatus() == Job::STATUS_READY &&
 			child->IsEmpty( Job::Q_WAITING ) ) {
-			if ( recovery ) {
-				(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, recovery, _defaultNodeLog );
-			} else {
-				StartNode( child, false );
+
+				// If we're bootstrapping, we don't want to do anything
+				// here.
+			if ( !bootstrap ) {
+				if ( recovery ) {
+						// We need to monitor the log file for the node that's
+						// newly ready.
+					(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+								_nfsLogIsError, recovery, _defaultNodeLog );
+				} else {
+						// If child has no more parents in its waiting queue,
+						// submit it.
+					StartNode( child, false );
+				}
 			}
 		}
-	}
-
-		// this is a little ugly, but since this function can be
-		// called multiple times for the same job, we need to be
-		// careful not to double-count...
-	if( job->countedAsDone == false ) {
-		_numNodesDone++;
-		job->countedAsDone = true;
-		ASSERT( _numNodesDone <= _jobs.Number() );
 	}
 }
 
@@ -2216,6 +2270,10 @@ Dag::CheckAllJobs()
 void
 Dag::PrintDeferrals( debug_level_t level, bool force ) const
 {
+	// This function should never be called when this dag object is acting like
+	// a splice. 
+	ASSERT( _isSplice == false);
+
 	if( _maxJobsDeferredCount > 0 || force ) {
 		debug_printf( level, "Note: %d total job deferrals because "
 					"of -MaxJobs limit (%d)\n", _maxJobsDeferredCount,
@@ -2991,6 +3049,10 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 void
 Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 {
+	// This function should never be called when the Dag ibject is being used
+	// to parse a splice.
+	ASSERT( _isSplice == false );
+
 		// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;

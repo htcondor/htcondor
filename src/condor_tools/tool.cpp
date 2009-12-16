@@ -152,7 +152,7 @@ usage( char *str )
 		fprintf( stderr, "    -collector\n" );
 		fprintf( stderr, "    -negotiator\n" );
 		fprintf( stderr, "    -kbdd\n" );
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		fprintf( stderr, "    -quill\n" );
 #endif
 	}
@@ -419,7 +419,7 @@ main( int argc, char *argv[] )
 		case 'v':
 			version();
 			break;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case 'q':
 			subsys_check( MyName );
 			dt = DT_QUILL;

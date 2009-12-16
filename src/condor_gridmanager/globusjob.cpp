@@ -48,7 +48,6 @@
 #include "globusjob.h"
 #include "condor_config.h"
 
-
 // GridManager job states
 #define GM_INIT					0
 #define GM_REGISTER				1
@@ -194,7 +193,7 @@ globusJobId( const char *contact )
 	return buff;
 }
 
-int
+void
 orphanCallbackHandler()
 {
 	int rc;
@@ -205,7 +204,7 @@ orphanCallbackHandler()
 	OrphanCallbackList.Rewind();
 	if ( OrphanCallbackList.Next( orphan ) == false ) {
 		// Empty list
-		return TRUE;
+		return;
 	}
 	OrphanCallbackList.DeleteCurrent();
 
@@ -220,7 +219,7 @@ orphanCallbackHandler()
 
 		free( orphan->job_contact );
 		delete orphan;
-		return TRUE;
+		return;
 	}
 
 	GlobusResource *next_resource;
@@ -233,7 +232,7 @@ orphanCallbackHandler()
 
 			free( orphan->job_contact );
 			delete orphan;
-			return TRUE;
+			return;
 		}
 	}
 
@@ -243,7 +242,6 @@ orphanCallbackHandler()
 			 orphan->job_contact, orphan->state, orphan->errorcode );
 	free( orphan->job_contact );
 	delete orphan;
-	return TRUE;
 }
 
 void
@@ -283,8 +281,8 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 	new_orphan->state = state;
 	new_orphan->errorcode = errorcode;
 	OrphanCallbackList.Append( new_orphan );
-	daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
-								"orphanCallbackHandler", NULL );
+	daemonCore->Register_Timer( 1, orphanCallbackHandler,
+								"orphanCallbackHandler" );
 }
 
 /////////////////////////interface functions to gridmanager.C
@@ -307,7 +305,7 @@ void GlobusJobReconfig()
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GlobusJob::setConnectFailureRetry( tmp_int );
 
-	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",false);
+	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",true);
 	GlobusResource::setEnableGridMonitor( tmp_bool );
 
 	tmp_int = param_integer("GRID_MONITOR_DISABLE_TIME",
@@ -697,7 +695,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -785,7 +784,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
-		SetRemoteJobId( token );
+		SetRemoteJobId( token, is_gt5 );
 		job_already_submitted = true;
 	}
 
@@ -907,7 +906,7 @@ GlobusJob::~GlobusJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	}
 	if ( gassServerUrl ) {
 		free( gassServerUrl );
@@ -927,7 +926,17 @@ void GlobusJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int GlobusJob::doEvaluateState()
+int GlobusJob::ProxyCallback()
+{
+	if ( ( gmState == GM_JOBMANAGER_ASLEEP && !JmShouldSleep() ) ||
+		 ( gmState == GM_SUBMITTED && jmProxyExpireTime < jobProxy->expiration_time ) ||
+		 gmState == GM_PROXY_EXPIRED ) {
+		SetEvaluateState();
+	}
+	return 0;
+}
+
+void GlobusJob::doEvaluateState()
 {
 	bool connect_failure_jobmanager = false;
 	bool connect_failure_gatekeeper = false;
@@ -936,7 +945,8 @@ int GlobusJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 	int status;
 	int error;
@@ -1096,18 +1106,11 @@ int GlobusJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			// Test for authorization error here because someone else's
-			// jobmanager could now be running on our old port.
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
-				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+			if ( rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 				gmState = GM_RESTART;
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
-				gmState = GM_RESTART;
-				break;
-			} 
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
 				// the job completed or failed while we were not around -- now
 				// the jobmanager is sitting in a state where all it will permit
@@ -1119,8 +1122,16 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_SUBMITTED;
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_PROTOCOL_FAILED ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ) {
 				// The jobmanager appears to not be running.
+				// The port appears to be in use as follows:
+				// CONTACTING_JOB_MANAGER: port not in use
+				// PROTOCOL_FAILED: port in use by another protocol
+				// AUTHORIZATION: port in use by another user's jobmanager
+				// JOB_CONTACT_NOT_FOUND: port in use for another job
 				gmState = GM_JOBMANAGER_ASLEEP;
 				break;
 			}
@@ -1307,8 +1318,9 @@ int GlobusJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMIT_COMMIT;
@@ -1620,8 +1632,9 @@ int GlobusJob::doEvaluateState()
 
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 			}
@@ -1866,8 +1879,9 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			} break;
 		case GM_RESTART_SAVE: {
 			// Save the restarted jobmanager's contact string on the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+			if ( attr_exists && attr_dirty ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			gmState = GM_RESTART_COMMIT;
@@ -1906,7 +1920,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_GLOBUS_STATUS, status );
 					SetRemoteJobStatus( GlobusJobStatusName( status ) );
 					enteredCurrentGlobusState = time(NULL);
-					requestScheddUpdate( this );
+					requestScheddUpdate( this, false );
 				}
 				// Do an active status call after the restart.
 				// This is part of a workaround for Globus bug 3411
@@ -2087,7 +2101,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				myResource->JMComplete( this );
 				jmDown = false;
 				SetRemoteJobId( NULL );
-				requestScheddUpdate( this );
+				requestScheddUpdate( this, false );
 
 				if ( condorState == REMOVED ) {
 					gmState = GM_DELETE;
@@ -2202,8 +2216,9 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			DeleteOutput();
@@ -2583,11 +2598,9 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			RequestPing();
 		}
 	}
-
-	return TRUE;
 }
 
-int GlobusJob::CommunicationTimeout()
+void GlobusJob::CommunicationTimeout()
 {
 	// This function is called by a daemonCore timer if the resource
 	// object has been waiting too long for a gatekeeper ping to 
@@ -2597,7 +2610,6 @@ int GlobusJob::CommunicationTimeout()
 	globusStateErrorCode = GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED;
 	gmState = GM_HOLD;
 	communicationTimeoutTid = -1;
-	return TRUE;
 }
 
 void GlobusJob::NotifyResourceDown()
@@ -2630,7 +2642,7 @@ void GlobusJob::NotifyResourceDown()
 
 	if (!time_of_death) {
 		jobAd->Assign(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,(int)now);
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -2650,7 +2662,7 @@ void GlobusJob::NotifyResourceUp()
 	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
 	if ( time_of_death ) {
 		jobAd->AssignExpr(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,"Undefined");
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -2758,7 +2770,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		globusStateErrorCode = new_error_code;
 		enteredCurrentGlobusState = time(NULL);
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 		SetEvaluateState();
 	}
@@ -2815,7 +2827,7 @@ BaseResource *GlobusJob::GetResource()
 	return (BaseResource *)myResource;
 }
 
-void GlobusJob::SetRemoteJobId( const char *job_id )
+void GlobusJob::SetRemoteJobId( const char *job_id, bool is_gt5 )
 {
 		// We need to maintain a hashtable based on job contact strings with
 		// the port number stripped. This is because the port number in the
@@ -2838,9 +2850,12 @@ void GlobusJob::SetRemoteJobId( const char *job_id )
 		jobContact = NULL;
 	}
 
+	if ( myResource ) {
+		is_gt5 = myResource->IsGt5();
+	}
 	MyString full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "%s %s %s", myResource->IsGt5() ? "gt5" : "gt2",
+		full_job_id.sprintf( "%s %s %s", is_gt5 ? "gt5" : "gt2",
 							 resourceManagerString, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );

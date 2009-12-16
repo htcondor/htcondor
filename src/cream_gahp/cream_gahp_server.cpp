@@ -97,7 +97,7 @@ check_result_wrapper(ResultWrapper& rw)
 void free_args( char ** );
 
 struct Request {
-	Request() { input_line = NULL; }
+	Request() { input_line = NULL; handler = NULL; }
 	~Request() { if ( input_line ) free_args( input_line ); }
 
 	char **input_line;
@@ -185,6 +185,7 @@ int gahp_printf(const char *format, ...)
   
 	va_start(ap, format);
 	vsprintf(buf, format, ap);
+	va_end(ap);
   
 	pthread_mutex_lock( &outputLock );
 
@@ -241,29 +242,26 @@ int count_args( char **input_line )
 char *escape_spaces( const char *input_line) 
 {
 	int i;
-	char *temp;
+	const char *temp;
 	char *output_line;
 
 	// first, count up the spaces
-	temp = (char *)input_line;
+	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
-		if( *temp == ' ' || *temp == '\r' || *temp =='\n')  i++;
+		if( *temp == ' ' || *temp == '\r' || *temp =='\n' || *temp == '\\' ) {
+			i++;
+		}
 	}
 
 	// get enough space to store it.  	
 	output_line = (char *)malloc(strlen(input_line) + i + 200);
 
 	// now, blast across it
-	temp = (char *)input_line;
+	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
-		if( *temp == ' ') {
+		if( *temp == ' ' || *temp == '\r' || *temp =='\n' || *temp == '\\' ) {
 			output_line[i] = '\\'; 
 			i++;
-		}
-		if( *temp == '\r' || *temp == '\n') {
-			output_line[i] = '\\'; 
-			i++;
-			*temp = ' ';
 		}
 		output_line[i] = *temp;
 		i++;
@@ -1738,12 +1736,13 @@ char **read_command()
 	int ibuf = 0;
 	int iargv = 0;
 	int result = 0;
+	int argv_size = 500;
 	
 	if ( buf == NULL ) {
 		buf = (char *) malloc(1024 * 500);
 	}
 	
-	command_argv = (char **)calloc(500, sizeof(char*));
+	command_argv = (char **)malloc(argv_size * sizeof(char*));
 	
 	while(1) {
 		result = read(0, &(buf[ibuf]), 1 );
@@ -1772,6 +1771,11 @@ char **read_command()
 			strcpy(command_argv[iargv],buf);
 			ibuf = 0;
 			iargv++;
+			if ( iargv >= argv_size - 1 ) {
+				argv_size += 500;
+				command_argv = (char **)realloc( command_argv,
+												 argv_size * sizeof(char*) );
+			}
 			continue;
 		}
 		
@@ -1780,6 +1784,7 @@ char **read_command()
 			buf[ibuf] = '\0';
 			command_argv[iargv] = (char *)malloc(ibuf + 5);
 			strcpy(command_argv[iargv],buf);
+			command_argv[iargv + 1] = NULL;
 			
 			return command_argv;
 		}

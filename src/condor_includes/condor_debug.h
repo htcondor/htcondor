@@ -42,7 +42,7 @@
 #define D_SYSCALLS		(1<<1)
 #define D_CKPT			(1<<2)
 #define D_HOSTNAME		(1<<3)
-#define D_UNUSED1		(1<<4)
+#define D_PERF_TRACE	(1<<4)
 #define D_LOAD			(1<<5)
 #define D_EXPR			(1<<6)
 #define D_PROC			(1<<7)

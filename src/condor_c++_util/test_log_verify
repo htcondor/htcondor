@@ -30,6 +30,8 @@ class EventLogVerifier( EventLogParser ) :
     def __init__( self, filename ) :
         EventLogParser.__init__( self, filename )
         self._errors = []
+        self._time_first = None
+        self._time_last = None
 
     def ProcessEvent( self, event ) :
         try :
@@ -38,6 +40,9 @@ class EventLogVerifier( EventLogParser ) :
             self._errors.append( e )
             if self.Verbose() :
                 print >>sys.stderr, e
+        if self._time_first is None :
+            self._time_first = event.GetHeader().Time()
+        self._time_last = event.GetHeader().Time()
 
     def HandleParseError( self, s ) :
         self._errors.append( s )
@@ -49,6 +54,10 @@ class EventLogVerifier( EventLogParser ) :
         names = self.GetEventNames()
         for name in sorted(names) :
             print "  %s: %d" % ( name, self.GetNumEvents(name) )
+        seconds = ( time.mktime(self._time_last) -
+                    time.mktime(self._time_first) )
+        print "  time: %d %.1f/s" % \
+              ( seconds, (1.0*self.GetNumEvents()/seconds) )
         if len(self._errors) :
             print "Summary:",len(self._errors),"errors detected:"
             for e in self._errors :

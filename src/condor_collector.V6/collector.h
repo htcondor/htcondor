@@ -90,7 +90,7 @@ public:
 	static void unixsigint_handler();
 	
 	static void init_classad(int interval);
-	static int sendCollectorAd();
+	static void sendCollectorAd();
 
 	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
 
@@ -132,9 +132,7 @@ protected:
 
 	static ForkWork forkQuery;
 
-	static SocketCache* sock_cache;
-	static int sockCacheHandler( Service*, Stream* sock );
-	static int stashSocket( Stream* sock );
+	static int stashSocket( ReliSock* sock );
 
 	static class CCBServer *m_ccb_server;
 

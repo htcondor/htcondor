@@ -31,7 +31,7 @@
 
 class BaseResource;
 
-class BaseJob
+class BaseJob : public Service
 {
  public:
 	BaseJob( ClassAd *ad );
@@ -41,7 +41,7 @@ class BaseJob
 
 	virtual void Reconfig() {}
 	void SetEvaluateState();
-	virtual int doEvaluateState();
+	virtual void doEvaluateState();
 	virtual BaseResource *GetResource();
 
 	void JobSubmitted( const char *remote_host);
@@ -62,16 +62,16 @@ class BaseJob
 	void UpdateJobLeaseReceived( int new_expiration_time );
 
 	void SetJobLeaseTimers();
-	virtual int JobLeaseSentExpired();
-	virtual int JobLeaseReceivedExpired();
+	virtual void JobLeaseSentExpired();
+	virtual void JobLeaseReceivedExpired();
 
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad );
 
-	static int EvalAllPeriodicJobExprs(Service *ignore);
+	static void EvalAllPeriodicJobExprs();
 	int EvalPeriodicJobExpr();
 	int EvalOnExitJobExpr();
 
-	static int CheckAllRemoteStatus( Service * );
+	static void CheckAllRemoteStatus();
 	static int m_checkRemoteStatusTid;
 	void CheckRemoteStatus();
 

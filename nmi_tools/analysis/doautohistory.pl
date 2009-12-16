@@ -3,9 +3,9 @@ use File::Copy;
 use File::Path;
 use Getopt::Long;
 
-system("mkdir -p /tmp/btplots");
+system("mkdir -p /scratch/bt/btplots");
 
-my $dbtimelog = "/tmp/btplots/autoplot.log";
+my $dbtimelog = "/scratch/bt/btplots/autoplot.log";
 #print "Trying to open logfile... $dbtimelog\n";
 open(OLDOUT, ">&STDOUT");
 open(OLDERR, ">&STDERR");
@@ -16,7 +16,7 @@ select(STDERR);
 select(STDOUT);
  $| = 1;
 
-my $timefiles = "/tmp/btplots/durationfiles";
+my $timefiles = "/scratch/bt/btplots/durationfiles";
 
 my $datalocation = "/p/condor/public/html/developers/testsuite/";
 #my $datalocation = "./";
@@ -24,7 +24,7 @@ my $datalocation = "/p/condor/public/html/developers/testsuite/";
 my $rundir = "/p/condor/home/tools/build-test-plots";
 #my $rundir = ".";
 
-my $tmpdir = "/tmp/btplots";
+my $tmpdir = "/scratch/bt/btplots/";
 #my $tmpdir = "./tmp/";
 
 my $outfile = "";
@@ -47,10 +47,10 @@ if ( $help )    { help() and exit(0); }
 #AUTO BUILDS
 if(defined $autobuilds || defined $all) {
 	$placefile = $datalocation . "autobuilds.png";
-	system("$rundir/condor_readNMIdb.pl --type=builds -d=2005-06-01");
+	system("$rundir/condor_readNMIdb.pl --type=builds -d=2005-07-01");
 
 	$outfile = $tmpdir . "autobuilds.merged";
-	system("$rundir/mergeruns.pl --type=builds --data=/tmp/btplots/autobuilds --out=$outfile");
+	system("$rundir/mergeruns.pl --type=builds --data=/scratch/bt/btplots/autobuilds --out=$outfile");
 
 	$infile = $tmpdir . "autobuilds.merged";
 	$outfile = $tmpdir . "autobuilds.avg";
@@ -62,11 +62,11 @@ if(defined $autobuilds || defined $all) {
 #AUTO TESTS
 if(defined $autotests || defined $all) {
 	$placefile = $datalocation . "autotests.png";
-	system("$rundir/condor_readNMIdb.pl --type=tests -d=2005-06-01");
+	system("$rundir/condor_readNMIdb.pl --type=tests -d=2005-07-01");
 
-	print "merging from /tmp/btplots/autotests to $outfile\n";
+	print "merging from /scratch/bt/btplots/autotests to $outfile\n";
 	$outfile = $tmpdir . "autotests.merged";
-	system("$rundir/mergeruns.pl --type=tests --data=/tmp/btplots/autotests --out=$outfile");
+	system("$rundir/mergeruns.pl --type=tests --data=/scratch/bt/btplots/autotests --out=$outfile");
 
 	$infile = $tmpdir . "autotests.merged";
 	$outfile = $tmpdir . "autotests.avg";
@@ -93,9 +93,9 @@ if(defined $testsperbuild || defined $all) {
 # PROJECT TESTS
 if(defined $projecttests || defined $all) {
 	$placefile = $datalocation . "projectautotests.png";
-	system("$rundir/condor_readNMIdb.pl --project --type=tests -d=2005-06-01");
+	system("$rundir/condor_readNMIdb.pl --project --type=tests -d=2005-07-01");
 
-	$infile = "/tmp/btplots/projectautotests";
+	$infile = "/scratch/bt/btplots/projectautotests";
 	$outfile = $tmpdir . "projectautotests.avg";
 	system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
 
@@ -106,9 +106,9 @@ if(defined $projecttests || defined $all) {
 #PROJECT BUILDS
 if(defined $projectbuilds || defined $all) {
 	$placefile = $datalocation . "projectautobuilds.png";
-	system("$rundir/condor_readNMIdb.pl --project --type=builds -d=2005-06-01");
+	system("$rundir/condor_readNMIdb.pl --project --type=builds -d=2005-07-01");
 
-	$infile = "/tmp/btplots/projectautobuilds";
+	$infile = "/scratch/bt/btplots/projectautobuilds";
 	$outfile = $tmpdir . "projectautobuilds.avg";
 	system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
 

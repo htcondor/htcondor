@@ -40,7 +40,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\..\Release/condor_starter.tlb"
+				TypeLibraryName=".\..\Release/$(ProjectName).tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -82,7 +82,7 @@
 				IgnoreDefaultLibraryNames="oleaut32.lib;ole32.lib;gdi32.lib;winspool.lib;comdlg32.lib;shell32.lib;odbc32.lib;odbccp32.lib"
 				GenerateDebugInformation="true"
 				GenerateMapFile="true"
-				MapFileName=".\..\Release/condor_starter.map"
+				MapFileName=".\..\Release/$(ProjectName).map"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
@@ -100,7 +100,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\..\Release/condor_starter.bsc"
+				OutputFile=".\..\Release/$(ProjectName).bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -117,6 +117,10 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="..\src\condor_daemon_core.V6\no_soap_core.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_power\rooster.cpp"
 			>
 		</File>
@@ -127,42 +131,6 @@
 		<File
 			RelativePath="..\src\condor_power\rooster_main.cpp"
 			>
-		</File>
-		<File
-			RelativePath="..\src\condor_power\soap_roosterC.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_power\soap_roosterServer.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_power\soap_roosterStub.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
 		</File>
 	</Files>
 	<Globals>

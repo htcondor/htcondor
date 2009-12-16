@@ -36,10 +36,6 @@
 
 #include "globusjob.h"
 
-#if defined(ORACLE_UNIVERSE)
-#include "oraclejob.h"
-#endif
-
 #include "nordugridjob.h"
 #include "unicorejob.h"
 #include "condorjob.h"
@@ -95,7 +91,12 @@ HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
 
 SimpleList<int> scheddUpdateNotifications;
 
-HashTable <PROC_ID, BaseJob *> pendingScheddUpdates( HASH_TABLE_SIZE,
+struct ScheddUpdateRequest {
+	BaseJob *m_job;
+	bool m_notify;
+};
+
+HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( HASH_TABLE_SIZE,
 													 hashFuncPROC_ID );
 bool addJobsSignaled = false;
 bool checkLeasesSignaled = false;
@@ -114,12 +115,12 @@ int scheddFailureCount = 0;
 int maxScheddFailures = 10;	// Years of careful research...
 
 void RequestContactSchedd();
-int doContactSchedd();
+void doContactSchedd();
 
 // handlers
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
-int CHECK_LEASES_signalHandler( int );
+void CHECK_LEASES_signalHandler();
 
 
 static bool jobExternallyManaged(ClassAd * ad)
@@ -169,28 +170,35 @@ bool MustExpandJobAd( const ClassAd *job_ad ) {
 // return value of true means requested update has been committed to schedd.
 // return value of false means requested update has been queued, but has not
 //   been committed to the schedd yet
-bool
-requestScheddUpdate( BaseJob *job )
+void
+requestScheddUpdate( BaseJob *job, bool notify )
 {
-	BaseJob *hashed_job;
+	ScheddUpdateRequest *request;
 
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
+
 	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
 		 job->jobAd->NextDirtyExpr() == NULL ) {
-		return true;
+		job->SetEvaluateState();
+		return;
 	}
 
 	// Check if the job is already in the hash table
-	if ( pendingScheddUpdates.lookup( job->procID, hashed_job ) != 0 ) {
+	if ( pendingScheddUpdates.lookup( job->procID, request ) != 0 ) {
 
-		pendingScheddUpdates.insert( job->procID, job );
+		request = new ScheddUpdateRequest();
+		request->m_job = job;
+		request->m_notify = notify;
+		pendingScheddUpdates.insert( job->procID, request );
 		RequestContactSchedd();
+	} else {
+		if ( request->m_notify == false ) {
+			request->m_notify = notify;
+		}
 	}
-
-	return false;
 }
 
 void
@@ -268,8 +276,8 @@ RequestContactSchedd()
 			delay = (lastContactSchedd + contactScheddDelay) - now;
 		}
 		contactScheddTid = daemonCore->Register_Timer( delay,
-												(TimerHandler)&doContactSchedd,
-												"doContactSchedd", NULL );
+												doContactSchedd,
+												"doContactSchedd" );
 	}
 }
 
@@ -317,16 +325,6 @@ Init()
 	}
 
 	JobType *new_type;
-
-#if defined(ORACLE_UNIVERSE)
-	new_type = new JobType;
-	new_type->Name = strdup( "Oracle" );
-	new_type->InitFunc = OracleJobInit;
-	new_type->ReconfigFunc = OracleJobReconfig;
-	new_type->AdMatchFunc = OracleJobAdMatch;
-	new_type->CreateFunc = OracleJobCreate;
-	jobTypes.Append( new_type );
-#endif
 
 #if !defined(WIN32)
 	new_type = new JobType;
@@ -421,8 +419,8 @@ Register()
 								 (SignalHandler)&CHECK_LEASES_signalHandler,
 								 "CHECK_LEASES_signalHandler", NULL );
 */
-	daemonCore->Register_Timer( 60, 60, (TimerHandler)&CHECK_LEASES_signalHandler,
-								"CHECK_LEASES_signalHandler", NULL );
+	daemonCore->Register_Timer( 60, 60, CHECK_LEASES_signalHandler,
+								"CHECK_LEASES_signalHandler" );
 
 	Reconfig();
 }
@@ -537,8 +535,8 @@ initJobExprs()
 	done = true;
 }
 
-int
-CHECK_LEASES_signalHandler( int )
+void
+CHECK_LEASES_signalHandler()
 {
 	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
 
@@ -546,11 +544,9 @@ CHECK_LEASES_signalHandler( int )
 		RequestContactSchedd();
 		checkLeasesSignaled = true;
 	}
-
-	return TRUE;
 }
 
-int
+void
 doContactSchedd()
 {
 	int rc;
@@ -626,7 +622,7 @@ doContactSchedd()
 	}
 
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
 	if ( !schedd ) {
 		error_str.sprintf( "Failed to connect to schedd!" );
 		goto contact_schedd_failure;
@@ -965,10 +961,12 @@ contact_schedd_next_add_job:
 
 	// Update existing jobs
 	/////////////////////////////////////////////////////
+	ScheddUpdateRequest *curr_request;
 	pendingScheddUpdates.startIterations();
 
-	while ( pendingScheddUpdates.iterate( curr_job ) != 0 ) {
+	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
 
+		curr_job = curr_request->m_job;
 		dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",
 				curr_job->procID.cluster, curr_job->procID.proc);
 		char attr_name[1024];
@@ -1030,8 +1028,9 @@ contact_schedd_next_add_job:
 
 	pendingScheddUpdates.startIterations();
 
-	while ( pendingScheddUpdates.iterate( curr_job ) != 0 ) {
+	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
 
+		curr_job = curr_request->m_job;
 		if ( curr_job->deleteFromSchedd ) {
 			dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",
 					curr_job->procID.cluster, curr_job->procID.proc);
@@ -1076,8 +1075,9 @@ contact_schedd_next_add_job:
 	// objects that wanted to be deleted
 	pendingScheddUpdates.startIterations();
 
-	while ( pendingScheddUpdates.iterate( curr_job ) != 0 ) {
+	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
 
+		curr_job = curr_request->m_job;
 		curr_job->jobAd->ClearAllDirtyFlags();
 
 		if ( curr_job->deleteFromGridmanager ) {
@@ -1105,9 +1105,12 @@ contact_schedd_next_add_job:
 		} else {
 			pendingScheddUpdates.remove( curr_job->procID );
 
-			curr_job->SetEvaluateState();
+			if ( curr_request->m_notify ) {
+				curr_job->SetEvaluateState();
+			}
 		}
 
+		delete curr_request;
 	}
 
 	// Poke objects that wanted to be notified when a schedd update completed
@@ -1139,7 +1142,7 @@ contact_schedd_next_add_job:
 	scheddFailureCount = 0;
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
-	return TRUE;
+	return;
 
  contact_schedd_failure:
 	scheddFailureCount++;
@@ -1153,7 +1156,7 @@ dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	dprintf( D_ALWAYS, "%s Will retry\n", error_str.Value() );
 	lastContactSchedd = time(NULL);
 	RequestContactSchedd();
-	return TRUE;
+	return;
 }
 
 

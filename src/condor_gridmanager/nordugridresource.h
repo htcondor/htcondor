@@ -58,7 +58,7 @@ class NordugridResource : public BaseResource
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );
 
-	int DoJobStatus();
+	void DoJobStatus();
 
 	bool m_jobStatusActive;
 	int m_jobStatusTid;

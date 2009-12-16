@@ -102,9 +102,8 @@ split_sin( const char *addr, char **host, char **port, char **params )
 		}
 		if( params ) {
 			free( *params );
-			params = NULL;
+			*params = NULL;
 		}
-		*host = *port = *params = NULL;
 		return 0;
 	}
 	return 1;
@@ -203,7 +202,7 @@ sock_to_string(SOCKET sockd)
 
 	addr_len = sizeof(addr);
 
-	if (getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0) 
+	if (getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0 || addr_len==0) 
 		return mynull;
 
 	return ( sin_to_string( &addr ) );

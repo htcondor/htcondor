@@ -854,6 +854,7 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 	if (cpus.number() < 1) {
 		dprintf(D_ALWAYS, "Could not parse affinity string %s, not setting affinity\n", affinityParamResult);
+		free(affinityParamResult);
 		return NULL;
 	}
 
@@ -866,6 +867,7 @@ OsProc::makeCpuAffinityMask(int slotId) {
 		mask[index++] = atoi(cpu);
 	}
 
+	free(affinityParamResult);
 	return mask;
 }
 
@@ -891,10 +893,13 @@ OsProc::WriteAdsToExeDir()
 						strerror(errno), errno);
 			ret_val = false;
 		}
-		ad->SetPrivateAttributesInvisible(true);
-		ad->fPrint(fp);
-		ad->SetPrivateAttributesInvisible(false);
-		fclose(fp);
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
 	}
 	else
 	{
@@ -915,10 +920,13 @@ OsProc::WriteAdsToExeDir()
 					strerror(errno), errno);
 			ret_val = false;
 		}
-		ad->SetPrivateAttributesInvisible(true);
-		ad->fPrint(fp);
-		ad->SetPrivateAttributesInvisible(false);
-		fclose(fp);
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
 	}
 
 	return ret_val;

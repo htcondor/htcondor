@@ -51,8 +51,6 @@ class ClassAd : public AttrList
     public :
 
 		ClassAd();								// No associated AttrList list
-//		ClassAd(ProcObj*);						// create from a proc object
-//		ClassAd(const CONTEXT*);				// create from a CONTEXT
         ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
         ClassAd(char *, char);					// Constructor, from string.
 		ClassAd(const ClassAd&);				// copy constructor
@@ -62,35 +60,11 @@ class ClassAd : public AttrList
 
 		// Type operations
         void		SetMyTypeName(const char *); /// my type name set.
-        const char*	GetMyTypeName();		// my type name returned.
+        const char*	GetMyTypeName() const;		// my type name returned.
         void 		SetTargetTypeName(const char *);// target type name set.
-        const char*	GetTargetTypeName();	// target type name returned.
-        int			GetMyTypeNumber();			// my type number returned.
-        int			GetTargetTypeNumber();		// target type number returned.
-
-		// Requirement operations
-#if 0
-		int			SetRequirements(char *);
-		void        SetRequirements(ExprTree *);
-#endif
-		ExprTree	*GetRequirements(void);
-
-		// Ranking operations
-#if 0
-		int 		SetRankExpr(char *);
-		void		SetRankExpr(ExprTree *);
-#endif
-		ExprTree	*GetRankExpr(void);
-
-		// Sequence numbers
-		void		SetSequenceNumber(int);
-		int			GetSequenceNumber(void);
-
-		// Matching operations
-        int			IsAMatch(class ClassAd*);			  // tests symmetric match
-		friend bool operator==(class ClassAd&,class ClassAd&);// same as symmetric match
-		friend bool operator>=(class ClassAd&,class ClassAd&);// lhs satisfies rhs
-		friend bool operator<=(class ClassAd&,class ClassAd&);// rhs satisifes lhs
+        const char*	GetTargetTypeName() const;	// target type name returned.
+        int			GetMyTypeNumber() const;			// my type number returned.
+        int			GetTargetTypeNumber() const;		// target type number returned.
 
         // shipping functions
         int put(Stream& s);
@@ -102,12 +76,6 @@ class ClassAd : public AttrList
 		 * @return true on success
 		 */
 		bool initFromString(char const *str,MyString *err_msg=NULL);
-
-#if defined(USE_XDR)
-		// xdr shipping
-		int put (XDR *);
-		int get (XDR *);
-#endif
 
 		// misc
 		class ClassAd*	FindNext();
@@ -172,5 +140,8 @@ class ClassAdList : public AttrListList
 	void	Sort(SortFunctionType,void*,AttrListAbstract*&);
 	static int SortCompare(const void*, const void*);
 };
+
+bool IsAMatch( const ClassAd *ad1, const ClassAd *ad2 );
+bool IsAHalfMatch( const ClassAd *ad1, const ClassAd *ad2 );
 
 #endif

@@ -1,0 +1,7 @@
+ports = dynamic
+condor = nightlies
+condorconfig = condor_config
+condorlocal = condor_config.local
+localpostsrc = x_lib_shared_port_van_locconfigpostsrc
+condordaemons = master,shared_port,schedd,collector,negotiator,startd
+slots	= 2

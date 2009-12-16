@@ -45,6 +45,7 @@
 #include "basename.h" // for condor_basename 
 #include "extArray.h"
 #include "link.h"
+#include "shared_port_endpoint.h"
 
 State get_machine_state();
 
@@ -55,6 +56,7 @@ int			MaxCkptInterval;	// max time between ckpts on this machine
 char		*Spool;				// dir for condor job queue
 StringList   ExecuteDirs;		// dirs for execution of condor jobs
 char		*Log;				// dir for condor program logs
+char		*DaemonSockDir;     // dir for daemon named sockets
 char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
@@ -72,6 +74,7 @@ void init_params();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
+void check_daemon_sock_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
@@ -83,6 +86,7 @@ BOOLEAN cluster_exists( int );
 BOOLEAN proc_exists( int, int );
 BOOLEAN is_myproxy_file( const char *name );
 BOOLEAN is_ccb_file( const char *name );
+BOOLEAN touched_recently(char const *fname,time_t delta);
 
 /*
   Tell folks how to use this program.
@@ -141,6 +145,7 @@ main( int argc, char *argv[] )
 	check_spool_dir();
 	check_execute_dir();
 	check_log_dir();
+	check_daemon_sock_dir();
 
 
 		// Produce output, either on stdout or by mail
@@ -574,7 +579,29 @@ check_log_dir()
 		}
 	}
 }
-	
+
+void
+check_daemon_sock_dir()
+{
+	const char	*f;
+	Directory dir(DaemonSockDir, PRIV_ROOT);
+
+	time_t stale_age = SharedPortEndpoint::TouchSocketInterval()*100;
+
+	while( (f = dir.Next()) ) {
+		MyString full_path;
+		full_path.sprintf("%s%c%s",DaemonSockDir,DIR_DELIM_CHAR,f);
+
+			// daemon sockets are touched periodically to mark them as
+			// still in use
+		if( touched_recently( full_path.Value(), stale_age ) ) {
+			good_file( DaemonSockDir, f );
+		}
+		else {
+			bad_file( DaemonSockDir, f, dir );
+		}
+	}
+}	
 
 extern "C" int
 SetSyscalls( int foo ) { return foo; }
@@ -594,6 +621,11 @@ init_params()
     if( Log == NULL ) {
         EXCEPT( "LOG not specified in config file\n" );
     }
+
+	DaemonSockDir = param("DAEMON_SOCKET_DIR");
+	if( DaemonSockDir == NULL ) {
+		EXCEPT("DAEMON_SOCKET_DIR not defined\n");
+	}
 
 	char *Execute = param("EXECUTE");
 	if( Execute ) {
@@ -714,3 +746,17 @@ get_machine_state()
 	return s;
 }
 
+BOOLEAN
+touched_recently(char const *fname,time_t delta)
+{
+	StatInfo statinfo(fname);
+	if( statinfo.Error() != 0 ) {
+		return false;
+	}
+		// extend the window of what it means to have been touched "recently"
+		// both forwards and backwards in time to handle system clock jumps.
+	if( abs((int)(time(NULL)-statinfo.GetModifyTime())) > delta ) {
+		return false;
+	}
+	return true;
+}

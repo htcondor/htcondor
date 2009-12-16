@@ -415,6 +415,7 @@ ULogEvent::toClassAd(void)
 		myad->SetMyTypeName("JobAdInformationEvent");
 		break;
 	  default:
+		delete myad;
 		return NULL;
 	}
 
@@ -425,27 +426,40 @@ ULogEvent::toClassAd(void)
 		MyString buf1;
 		buf1.sprintf("EventTime = \"%s\"", eventTimeStr);
 		free(eventTimeStr);
-		if( !myad->Insert(buf1.Value()) ) return NULL;
+		if( !myad->Insert(buf1.Value()) ) {
+			delete myad;
+			return NULL;
+		}
 	} else {
+		delete myad;
 		return NULL;
 	}
 
 	if( cluster >= 0 ) {
 		snprintf(buf0, 128, "Cluster = %d", cluster);
 		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Insert(buf0) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	if( proc >= 0 ) {
 		snprintf(buf0, 128, "Proc = %d", proc);
 		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Insert(buf0) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	if( subproc >= 0 ) {
 		snprintf(buf0, 128, "Subproc = %d", subproc);
 		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Insert(buf0) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1105,11 +1119,11 @@ GenericEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
+	char buf0[2048];
 
 	if( info[0] ) {
-		snprintf(buf0, 512, "Info = \"%s\"", info);
-		buf0[511] = 0;
+		snprintf(buf0, sizeof(buf0), "Info = \"%s\"", info);
+		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
 
@@ -1123,8 +1137,8 @@ GenericEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Info", info, 128) ) {
-		info[127] = 0;
+	if( ad->LookupString("Info", info, sizeof(info)-1 ) ) {
+		info[ sizeof(info) - 1 ] = '\0';
 	}
 }
 

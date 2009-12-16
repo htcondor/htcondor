@@ -41,48 +41,6 @@ class FileLock;
     This class was written at the same time the ULogEvent class was written,
     so it does not contain the old deprecated functions and parameters that
     the WriteUserLog class is plagued with.
-
-	There is one know problem with the reader:
-	First, let's define 3 files:
-	  file1 = the "current" file - let's say it's inode is 1001
-	  file2 = the next file - inode 1002
-	  file3 = the next file - inode 1003
-
-	Next, assume that the reader is reading file1, hits the end of the
-	file, generates a NO_EVENT to the application, but keeps the file
-	open.
-
-	Next, the reader sleeps for a period of time after this
-
-	While the reader is sleeping, the writer rotate the log file
-	*twice*, such that file3 becomes the current file being written
-	to, and file2 becomes the ".old" (note that the reader still has
-	file1 open, although all directory entries to it have been
-	removed)
-
-	After this, but before the writer rotates a 3rd time, the reader
-	wakes up.  It reads to the end of file1 (which it still has open),
-	reads the remaining events, and eventutally hits end of file, and
-	then looks for the next file.  It cannot find a file with the
-	signature of file1, assumes the it must have missed an event.
-	When it continues after the MISSED_EVENT, however, it starts
-	reading file2, which is, in fact, the next file, and no events
-	have actually been missed.
-
-	The writer object currently has a sequence number that it writes
-	to the file header, *but* that sequence number and the uniq ID are
-	unique to the writer object that's currently writing it.  In
-	theory, the reader could use these squence numbers to recognize
-	that the above file2 is, in fact, the next in the sequence and
-	that no events have acutally been lost.  A complicating factor for
-	this, however, is that, if there are multipe writers, there the
-	uniq ID and sequence nubmers are specific to each writer, and,
-	thus, relying on the sequence number in the reader is meaningless.
-
-	We have plans to have the writer re-write the header after
-	rotation, and, at that time, it could update the sequence info,
-	but that's currently not implemented.
-
 */
 class ReadUserLogState;
 class ReadUserLogMatch;

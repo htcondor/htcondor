@@ -212,6 +212,16 @@ ClassAdLog::AppendLog(LogRecord *log)
 	}
 }
 
+void
+ClassAdLog::FlushLog()
+{
+	if (log_fp!=NULL) {
+		if (fflush(log_fp) !=0){
+			EXCEPT("flush to %s failed, errno = %d", logFilename(), errno);
+		}
+	}
+}
+
 bool
 ClassAdLog::SaveHistoricalLogs()
 {

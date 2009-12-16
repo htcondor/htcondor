@@ -692,6 +692,8 @@ DedicatedScheduler::initialize( void )
 	dummy_job.Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI );
 	dummy_job.Assign( ATTR_JOB_STATUS, IDLE );
 	dummy_job.Assign( ATTR_IMAGE_SIZE, 10 ); // WANT_SUSPEND often needs this
+	dummy_job.Assign( ATTR_REQUEST_MEMORY, 10 ); // Dynamic slots needs this
+	dummy_job.Assign( ATTR_REQUEST_DISK, 10 ); //     and this
 	config_fill_ad( &dummy_job );
 
 		// Next, register our special MPI shadow reaper
@@ -1259,7 +1261,7 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 	}
 	hdjt_tid = daemonCore->
 		Register_Timer( seconds, 0,
-				(Eventcpp)&DedicatedScheduler::callHandleDedicatedJobs,
+				(TimerHandlercpp)&DedicatedScheduler::callHandleDedicatedJobs,
 						"callHandleDedicatedJobs", this );
 	if( hdjt_tid == -1 ) {
 		EXCEPT( "Can't register DC timer!" );
@@ -1901,7 +1903,7 @@ void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
 	int cluster, proc;
-	char owner_str[100];
+	MyString owner_str;
 
 	if( ! idle_clusters ) {
 		dprintf( debug_level, "DedicatedScheduler: No dedicated jobs\n" );
@@ -1913,10 +1915,10 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( i=0; i<=last; i++ ) {
 		cluster = (*idle_clusters)[i];
 		proc = 0;
-		owner_str[0] = '\0';
+		owner_str = "";
 		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
-				 proc, owner_str );
+				 proc, owner_str.Value() );
 	}
 }
 
@@ -2619,8 +2621,8 @@ DedicatedScheduler::computeSchedule( void )
 			// running jobs
 
 		if( (param1 != NULL) && (param2 != NULL)) {
-			Parse(param1, preemption_req);
-			Parse(param2, preemption_rank);
+			ParseClassAdRvalExpr(param1, preemption_req);
+			ParseClassAdRvalExpr(param2, preemption_rank);
 		}
 		if( param1 ) {
 			free(param1);
@@ -3674,7 +3676,7 @@ DedicatedScheduler::checkSanity( void )
 				// checkSanity(), so we actually have to register a
 				// timer, instead of just resetting it.
 			sanity_tid = daemonCore->Register_Timer( tmp, 0,
-  				         (Eventcpp)&DedicatedScheduler::checkSanity,
+  				         (TimerHandlercpp)&DedicatedScheduler::checkSanity,
 						 "checkSanity", this );
 			if( sanity_tid == -1 ) {
 				EXCEPT( "Can't register DC timer!" );
@@ -3950,6 +3952,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
 		StringList hosts(remote_hosts);
+		free(remote_hosts);
 
 			// Foreach host in the stringlist, build up a query to find the machine
 			// ad from the collector
@@ -4143,6 +4146,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			free(sinful);
 			sinful = NULL;
 		}
+		free(remote_hosts);
+		free(claims);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any

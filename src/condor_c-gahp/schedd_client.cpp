@@ -111,12 +111,12 @@ request_pipe_handler(Service*, int) {
 }
 
 
-int
+void
 doContactSchedd()
 {
 	if (command_queue.IsEmpty()) {
 		daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval ); // Come back in a min
-		return TRUE;
+		return;
 	}
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd\n");
@@ -1161,8 +1161,6 @@ submit_report_result:
 	// Come back soon..
 	// QUESTION: Should this always be a fixed time period?
 	daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval );
-	return TRUE;
-
 }
 
 
@@ -1418,7 +1416,7 @@ handle_gahp_command(char ** argv, int argc) {
 			SetEnv( "X509_USER_PROXY", argv[1] );
 			UnsetEnv( "X509_USER_CERT" );
 			UnsetEnv( "X509_USER_KEY" );
-			proxySubjectName = x509_proxy_identity_name( argv[1], 1 );
+			proxySubjectName = x509_proxy_identity_name( argv[1] );
 			if ( !proxySubjectName ) {
 				dprintf( D_ALWAYS, "Failed to query certificate identity "
 						 "from %s\n",  argv[1] );

@@ -121,8 +121,13 @@ private:
 	StringList* terminate_job_queue_attrs;
 	StringList* checkpoint_job_queue_attrs;
 
+		// List of attributes we should pull from the schedd when we
+		// do an update.
+	StringList* m_pull_attrs;
+
 	ClassAd* job_ad;
 	char* schedd_addr;
+	MyString m_owner;
 
 	int cluster;
 	int proc;

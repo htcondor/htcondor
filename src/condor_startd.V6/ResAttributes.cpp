@@ -38,6 +38,15 @@ MachAttributes::MachAttributes()
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
 
+	m_clock_day = -1;
+	m_clock_min = -1;
+	m_condor_load = -1.0;
+	m_console_idle = 0;
+	m_idle = 0;
+	m_load = -1.0;
+	m_owner_load = -1.0;
+	m_virt_mem = 0;
+
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
 		// value for this as soon as the MachAttributes object exists.
@@ -297,12 +306,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		char line[100];
-		snprintf( line, 100, "%s=%.2f", ATTR_TOTAL_LOAD_AVG, m_load );
-		cp->Insert(line);
+		cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
 		
-		snprintf( line, 100, "%s=%.2f", ATTR_TOTAL_CONDOR_LOAD_AVG, m_condor_load );
-		cp->Insert(line);
+		cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
 		
 		cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
 
@@ -480,6 +486,11 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 	c_console_idle = -1;
 	c_disk = 0;
 	c_total_disk = 0;
+
+	c_condor_load = -1.0;
+	c_owner_load = -1.0;
+	c_virt_mem = 0;
+	rip = NULL;
 }
 
 
@@ -493,8 +504,6 @@ CpuAttributes::attach( Resource* res_ip )
 void
 CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 {
-	char line[100];
-
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
 		cp->Assign( ATTR_VIRTUAL_MEMORY, (int)c_virt_mem );
@@ -506,12 +515,9 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		snprintf( line, 100, "%s=%.2f", ATTR_CONDOR_LOAD_AVG, c_condor_load );
-		cp->Insert(line);
+		cp->Assign( ATTR_CONDOR_LOAD_AVG, rint(c_condor_load * 100) / 100.0 );
 
-		snprintf( line, 100, "%s=%.2f", ATTR_LOAD_AVG, 
-				  (c_owner_load + c_condor_load) );
-		cp->Insert(line);
+		cp->Assign( ATTR_LOAD_AVG, rint((c_owner_load + c_condor_load) * 100) / 100.0 );
 
 		cp->Assign( ATTR_KEYBOARD_IDLE, (int)c_idle );
   
@@ -539,7 +545,10 @@ CpuAttributes::compute( amask_t how_much )
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
 
 			// Shared attributes that we only get a fraction of
-		val = map->virt_mem() * c_virt_mem_fraction;
+		val = map->virt_mem();
+		if (!IS_AUTO_SHARE(c_virt_mem_fraction)) {
+			val *= c_virt_mem_fraction;
+		}
 		c_virt_mem = (unsigned long)floor( val );
 	}
 
@@ -628,7 +637,7 @@ CpuAttributes::show_totals( int dflag )
 
 
 void
-CpuAttributes::dprintf( int flags, char* fmt, ... )
+CpuAttributes::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -642,8 +651,14 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 {
 	c_num_cpus += rhs.c_num_cpus;
 	c_phys_mem += rhs.c_phys_mem;
-	c_virt_mem_fraction += rhs.c_virt_mem_fraction;
-	c_disk_fraction += rhs.c_disk_fraction;
+	if (!IS_AUTO_SHARE(rhs.c_virt_mem_fraction) &&
+		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
+		c_virt_mem_fraction += rhs.c_virt_mem_fraction;
+	}
+	if (!IS_AUTO_SHARE(rhs.c_disk_fraction) &&
+		!IS_AUTO_SHARE(c_disk_fraction)) {
+		c_disk_fraction += rhs.c_disk_fraction;
+	}
 
 	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
 
@@ -655,8 +670,14 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 {
 	c_num_cpus -= rhs.c_num_cpus;
 	c_phys_mem -= rhs.c_phys_mem;
-	c_virt_mem_fraction -= rhs.c_virt_mem_fraction;
-	c_disk_fraction -= rhs.c_disk_fraction;
+	if (!IS_AUTO_SHARE(rhs.c_virt_mem_fraction) &&
+		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
+		c_virt_mem_fraction -= rhs.c_virt_mem_fraction;
+	}
+	if (!IS_AUTO_SHARE(rhs.c_disk_fraction) &&
+		!IS_AUTO_SHARE(c_disk_fraction)) {
+		c_disk_fraction -= rhs.c_disk_fraction;
+	}
 
 	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
 

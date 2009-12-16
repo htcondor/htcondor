@@ -58,8 +58,7 @@ public:
 
 	// begin processing for this event
 	virtual int ActivateEvent();
-	virtual int DeactivateEvent() { active = false; DeactivateTid = -1;
-									return 0; };
+	virtual void DeactivateEvent() { active = false; DeactivateTid = -1; };
 	bool IsActive() { return active; }
 	bool IsValid() { return valid; }
 
@@ -85,7 +84,7 @@ public:
 	virtual int TimeNeeded();
 	virtual int ActivateEvent();
 
-	int Timeout();
+	void Timeout();
 	
 private:
 	int GetStartdList();

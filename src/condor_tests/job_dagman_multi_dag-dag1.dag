@@ -1,4 +1,22 @@
-MultiLogFiles: Unable to read file: job_dagman_multi_dag-dag1.dag
-Error reading DAG file: Unable to read file: job_dagman_multi_dag-dag1.dag
-Recursive submit(s) failed; exiting without attempting top-level submit
+Job nodeA job_dagman_multi_dag-node.cmd
+Vars nodeA nodename="$(JOB)"
+Script pre nodeA job_dagman_multi_dag-pre.pl $JOB
+Script post nodeA job_dagman_multi_dag-post.pl $JOB
 
+Job nodeB job_dagman_multi_dag-node.cmd
+Vars nodeB nodename="$(JOB)"
+Script pre nodeB job_dagman_multi_dag-pre.pl $JOB
+Script post nodeB job_dagman_multi_dag-post.pl $JOB
+
+Job nodeC1 job_dagman_multi_dag-node.cmd
+Vars nodeC1 nodename="$(JOB)"
+Script pre nodeC1 job_dagman_multi_dag-pre.pl $JOB
+Script post nodeC1 job_dagman_multi_dag-post.pl $JOB
+
+Job nodeD1 job_dagman_multi_dag-node.cmd
+Vars nodeD1 nodename="$(JOB)"
+Script pre nodeD1 job_dagman_multi_dag-pre.pl $JOB
+Script post nodeD1 job_dagman_multi_dag-post.pl $JOB
+
+Parent nodeA Child nodeB nodeC1
+Parent nodeB nodeC1 Child nodeD1

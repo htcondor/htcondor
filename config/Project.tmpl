@@ -44,6 +44,7 @@ C_PLUS_INCLUDE =	../condor_c++_util
 DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 DAEMONCORE_INCLUDE =	../condor_daemon_core.V6
 CCB_INCLUDE = ../ccb
+CEDAR_INCLUDE = ../condor_io
 
 
 #if !defined( CLinker )
@@ -61,6 +62,14 @@ CCB_INCLUDE = ../ccb
 #if !defined(PlatformGppFlags)
 #define PlatformGppFlags
 #endif
+
+/*
+	This is run for *every single* compilation of a file into an object file.
+	This means it runs in all kinds of directories. The relative path supplied
+	works in the usual condor_* directories, but not in any subdirectories of
+	them.  This should be fixed better, later.
+*/
+PostCompileHook = if ! test -x ../condor_scripts/post_compile_hook.pl ; then echo "WARNING: Skipping PostCompileHook as workaround..."; exit 0; fi ; perl ../condor_scripts/post_compile_hook.pl
 
 #ifdef HAVE_RPM
 MakeRPMs = perl condor_scripts/make_public_rpms $(RPM_CMD)
@@ -256,7 +265,7 @@ EXPAT_FLAGS = -I$(EXPAT_INC)
 EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
 #endif /* expat */
 VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB)
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_$(GlobusFlavor).a $(EXPAT_LIB)
 #endif /* externals */
 #endif /* voms */
 
@@ -266,7 +275,7 @@ SECURITY_FLAGS = $(VOMS_FLAGS) \
 		 $(OPENSSL_FLAGS) \
 		 $(GSI_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
-		 $(GSI_LIB) $(VOMS_LIB) $(OPENSSL_LIB)
+		 $(VOMS_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
@@ -281,16 +290,12 @@ PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
 #endif
 #endif
 
-#ifdef WANT_QUILL
-#if HAS_EXTERNALS
+#if HAVE_EXT_POSTGRESQL && HAS_EXTERNALS
 /* These variables should be coalesced into something more meaningful */
-QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a 
-QUILL_INC = -I$(POSTGRESQL_INC) 
+POSTGRESQL_CFLAGS = -I$(POSTGRESQL_INC)
 POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a 
-TT_LIB = $(POSTGRESQL_LIBS) $(ORACLE_LIB)
-TT_INC = -I$(POSTGRESQL_INC) $(ORACLE_INC)
-#endif
-QUILL_FLAGS = -DWANT_QUILL 
+TT_LIB = $(POSTGRESQL_LIBS)
+TT_INC = $(POSTGRESQL_CFLAGS)
 #endif
 
 #ifdef WANT_LEASE_MANAGER
@@ -323,11 +328,11 @@ PTHREAD_FLAG = -pthread
 
 VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
-		 -I$(DAEMONCORE_INCLUDE) -I$(CCB_INCLUDE) \
+		 -I$(DAEMONCORE_INCLUDE) -I$(CCB_INCLUDE) -I$(CEDAR_INCLUDE) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) \
-		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
+		 $(GCB_FLAGS) \
 		 $(LEASE_MANAGER_FLAGS) \
 		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS) $(PTHREAD_FLAG)
 
@@ -374,6 +379,7 @@ SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS) $(PTHREAD_LIB)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
+SOAP_LIB = ../condor_daemon_core.V6/mimetypes.o ../condor_daemon_core.V6/soap_core.o
 
 
 /* common ld flags which should be first in the list */

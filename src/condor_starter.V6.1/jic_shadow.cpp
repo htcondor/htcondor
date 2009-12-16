@@ -1887,6 +1887,10 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) &&
 		    (cmd == CONDOR_EXEC))
 		{
+				// if we are running as root, the files were downloaded
+				// as PRIV_USER, so switch to that priv level to do chmod
+			priv_state saved_priv = set_priv( PRIV_USER );
+
 			if (chmod(CONDOR_EXEC, 0755) == -1) {
 				dprintf(D_ALWAYS,
 				        "warning: unable to chmod %s to "
@@ -1894,6 +1898,8 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 				        CONDOR_EXEC,
 				        strerror(errno));
 			}
+
+			set_priv( saved_priv );
 		}
 	}
 

@@ -31,7 +31,7 @@ public:
 	~WriteUserLogState( void );
 
 	// Accessors
-	void getFileSize( filesize_t filesize ) const { filesize = m_filesize; };
+	void getFileSize( filesize_t &filesize ) const { filesize = m_filesize; };
 
 	// Comparison operators
 	bool isNewFile(  const StatWrapper &stat ) const;

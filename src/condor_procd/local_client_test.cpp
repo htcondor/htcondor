@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "condor_fix_iostream.h"
+#include <iostream>
 #include "condor_debug.h"
 #include "local_client.h"
 

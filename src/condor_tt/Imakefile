@@ -2,24 +2,18 @@ NAME = condor_quill
 
 all_target($(NAME))
 
-soapobjs(tt)
-
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_POSTGRESQL_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS)
 LDFLAGS = $(STD_LDFLAGS) $(LIBCRYPT)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_POSTGRESQL_LDFLAGS) 
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) $(CONFIGURE_POSTGRESQL_LDFLAGS) 
 
-OBJ = tt_main.o ttmanager.o jobqueuecollection.o jobqueuedbmanager.o condor_ttdb.o  $(SOAP_OBJS)
+OBJ = tt_main.o ttmanager.o jobqueuecollection.o jobqueuedbmanager.o condor_ttdb.o
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 public_copy_target(common_createddl.sql,sql,common_createddl.sql,TEXT_MODE)
-public_copy_target(oracle_createddl.sql,sql,oracle_createddl.sql,TEXT_MODE)
 public_copy_target(pgsql_createddl.sql,sql,pgsql_createddl.sql,TEXT_MODE)
-public_copy_target(oracle_dropddl.sql,sql,oracle_dropddl.sql,TEXT_MODE)
 public_copy_target(pgsql_dropddl.sql,sql,pgsql_dropddl.sql,TEXT_MODE)
 
 html:
 testbin:: all
-
-gen_soapfiles(tt,condorTt)

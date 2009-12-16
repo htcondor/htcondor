@@ -42,17 +42,17 @@
 	/* Don't prevent calls to open() or fopen() in the ckpt or 
 	 * remote syscalls code.
 	 */
-#if defined(IN_CKPT_LIB) || defined(REMOTE_SYSCALLS)
+/*#if defined(IN_CKPT_LIB) || defined(REMOTE_SYSCALLS)
 #	if !defined(_CONDOR_ALLOW_OPEN_AND_FOPEN)
 #		define _CONDOR_ALLOW_OPEN_AND_FOPEN 1
 #	endif
-#endif
+#endif*/
 
 	/* For security purposes, do not allow open() or fopen().
 	 * Folks should use the wrapper functions in 
 	 * src/condor_c++_util/condor_open.[hC] 
 	 */
-#ifdef _CONDOR_ALLOW_OPEN_AND_FOPEN
+/*#ifdef _CONDOR_ALLOW_OPEN_AND_FOPEN
 #  ifndef _CONDOR_ALLOW_OPEN
 #     define _CONDOR_ALLOW_OPEN 1
 #  endif
@@ -77,14 +77,15 @@
 #  ifdef fopen
 #    undef fopen
 #  endif
+*/
 /* Condor's fopen macro does not play well with the new 
    version of the Platform SDKs (see cstdio for details) */
-#if !defined (WIN32)
+/*#if !defined (WIN32)
 #   define fopen (Calls_to_fopen_must_use___safe_fopen_wrapper___instead)   
 #endif
 #  ifdef __GNUC__
 #    pragma GCC poison Calls_to_fopen_must_use___safe_fopen_wrapper___instead
 #  endif
-#endif 
+#endif */
 
 #endif /* CONDOR_MACROS_H */

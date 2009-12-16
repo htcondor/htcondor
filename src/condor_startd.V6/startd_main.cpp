@@ -589,7 +589,7 @@ init_params( int /* first_time */)
 		free(tmp);
 	}
 
-	InitJobHistoryFile( "STARTD_HISTORY" );
+	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
 
 	return TRUE;
 }
@@ -672,7 +672,7 @@ main_shutdown_fast()
 	resmgr->walk( &Resource::killAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)startd_check_free,
+								startd_check_free,
 								 "startd_check_free" );
 	return TRUE;
 }
@@ -703,7 +703,7 @@ main_shutdown_graceful()
 	resmgr->walk( &Resource::releaseAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)startd_check_free,
+								startd_check_free,
 								 "startd_check_free" );
 	return TRUE;
 }
@@ -752,7 +752,7 @@ do_cleanup(int,int,char*)
 			// If the machine is already free, we can exit right away.
 		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
-		resmgr->walk( &Resource::kill_claim );
+		resmgr->walk( &Resource::void_kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
 
@@ -760,11 +760,11 @@ do_cleanup(int,int,char*)
 }
 
 
-int
+void
 startd_check_free()
 {	
 	if ( Cronmgr && ( ! Cronmgr->ShutdownOk() ) ) {
-		return FALSE;
+		return;
 	}
 	if ( ! resmgr ) {
 		startd_exit();
@@ -772,7 +772,7 @@ startd_check_free()
 	if( ! resmgr->hasAnyClaim() ) {
 		startd_exit();
 	}
-	return TRUE;
+	return;
 }
 
 

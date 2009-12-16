@@ -97,6 +97,33 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		return 0;
 	}
 
+	case CONDOR_SetEffectiveOwner:
+	{
+		MyString owner;
+		int terrno;
+
+		assert( syscall_sock->get(owner) );
+		assert( syscall_sock->end_of_message() );
+
+		rval = QmgmtSetEffectiveOwner( owner.Value() );
+		terrno = errno;
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );
+
+		char const *fqu = syscall_sock->getFullyQualifiedUser();
+		dprintf(D_SYSCALLS, "\tSetEffectiveOwner\n");
+		dprintf(D_SYSCALLS, "\tauthenticated user = '%s'\n", fqu ? fqu : "");
+		dprintf(D_SYSCALLS, "\trequested owner = '%s'\n", owner.Value());
+		dprintf(D_SYSCALLS, "\trval %d, errno %d\n", rval, terrno);
+
+		return 0;
+	}
+
 	case CONDOR_NewCluster:
 	  {
 		int terrno;
@@ -551,13 +578,11 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
-		// XXX: shouldn't need a fixed size here -- at least keep
-		// it off the stack to avoid overflow attacks
-		char *value = (char *)malloc(ATTRLIST_MAX_EXPRESSION*sizeof(char));
+		char *value = NULL;
 
 		errno = 0;
 		if( QmgmtMayAccessAttribute( attr_name ) ) {
-			rval = GetAttributeExpr( cluster_id, proc_id, attr_name, value );
+			rval = GetAttributeExprNew( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
 			rval = -1;

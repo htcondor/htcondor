@@ -115,40 +115,8 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_credd\soap_creddC.cpp"
+			RelativePath="..\src\condor_daemon_core.V6\no_soap_core.cpp"
 			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_credd\soap_creddServer.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_credd\soap_creddStub.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_credd\win_credd.cpp"

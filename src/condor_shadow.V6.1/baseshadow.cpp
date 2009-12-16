@@ -50,8 +50,6 @@ int getJobAdExitSignal(ClassAd *jad, int &exit_signal);
 BaseShadow::BaseShadow() {
 	spool = NULL;
 	fsDomain = uidDomain = NULL;
-	ckptServerHost = NULL;
-	useAFS = useNFS = useCkptServer = false;
 	jobAd = NULL;
 	remove_requested = false;
 	cluster = proc = -1;
@@ -68,7 +66,6 @@ BaseShadow::BaseShadow() {
 BaseShadow::~BaseShadow() {
 	if (spool) free(spool);
 	if (fsDomain) free(fsDomain);
-	if (ckptServerHost) free(ckptServerHost);
 	if (jobAd) FreeJobAd(jobAd);
 	if (gjid) free(gjid); 
 	if (scheddAddr) free(scheddAddr);
@@ -300,32 +297,6 @@ void BaseShadow::config()
 	if (!uidDomain) {
 		EXCEPT("UID_DOMAIN not specified in config file.");
 	}
-
-	tmp = param("USE_AFS");
-	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
-		useAFS = true;
-	} else {
-		useAFS = false;
-	}
-	if (tmp) free(tmp);
-
-	tmp = param("USE_NFS");
-	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
-		useNFS = true;
-	} else {
-		useNFS = false;
-	}
-	if (tmp) free(tmp);
-
-	if (ckptServerHost) free(ckptServerHost);
-	ckptServerHost = param("CKPT_SERVER_HOST");
-	tmp = param("USE_CKPT_SERVER");
-	if (tmp && ckptServerHost && (tmp[0] == 'T' || tmp[0] == 't')) {
-		useCkptServer = true;
-	} else {
-		useCkptServer = false;
-	}
-	if (tmp) free(tmp);
 
 	reconnect_ceiling = param_integer( "RECONNECT_BACKOFF_CEILING", 300 );
 
@@ -1124,33 +1095,6 @@ BaseShadow::updateJobInQueue( update_t type )
 void
 BaseShadow::evalPeriodicUserPolicy( void )
 {
-    // HACK FOR NMI USING CONDOR-C
-    // always update the job ad and then pull down a fresh copy
-    // so that everything, in particular the condor-c lease info,
-    // is up-to-date at the time of evaluation.  this is a major
-    // scalability issue, so it's off by default and needs the
-    // ALWAYS_UPDATE_JOB_AD_ON_PERIODIC_EVALUATION knob set to true.
-    bool always_update_job_ad =
-        param_boolean("ALWAYS_UPDATE_JOB_AD_ON_PERIODIC_EVALUATION", false);
-    if (jobAd && always_update_job_ad) {
-        job_updater->updateJob( U_PERIODIC );
-
-		if( ConnectQ( scheddAddr, SHADOW_QMGMT_TIMEOUT ) ) {
-			ClassAd *new_ad = GetJobAd(cluster, proc);
-			if ( new_ad ) {
-				jobAd->ExchangeExpressions( new_ad );
-				delete new_ad;
-			} else {
-				dprintf( D_ALWAYS, "Failed to fetch updated ad!\n" );
-			}
-			DisconnectQ( NULL );
-		} else {
-			dprintf( D_ALWAYS, "Failed to connect to schedd!\n" );
-		}
-    }
-    // END NMI HACK
-
-
 	shadow_user_policy.checkPeriodic();
 }
 

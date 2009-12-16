@@ -1,0 +1,24 @@
+all_target( libhdfs.so)
+
+JAVA_HOME=/s/java/i386_cent40/
+PLATFORM=i386
+LIB = $(STD_LIBS)
+
+HDFS_FLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux 
+CFLAGS = $(STD_C_FLAGS) $(HDFS_FLAGS)
+LDFLAGS = -L$(JAVA_HOME)/jre/lib/$(PLATFORM)/server -L. -ljvm -lhdfs -lpthread
+C_PLUS_FLAGS = -g $(HDFS_FLAGS) $(STD_C_PLUS_FLAGS)
+
+LIBHDFS_OBJ=hdfs.o hdfsJniHelper.o
+OBJ=hdfs_plugin.o hdfs_plugin_main.o
+
+shared_library_target(libhdfs.so, $(LIBHDFS_OBJ))
+
+public_c_plus_target(hdfs_plugin, sbin, $(OBJ), $(LIB))
+
+html:
+release:: all
+stripped:: all
+static:: all
+clean::
+testbin:: all

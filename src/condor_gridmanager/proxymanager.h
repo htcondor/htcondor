@@ -26,6 +26,17 @@
 #include "condor_daemon_core.h"
 #include "simplelist.h"
 
+struct Callback {
+	TimerHandlercpp m_func_ptr;
+	Service *m_data;
+	bool operator==(const Callback &rhs) const {
+		if ( this->m_func_ptr == rhs.m_func_ptr && this->m_data == rhs.m_data ) {
+			return true;
+		}
+		return false;
+	}
+};
+
 struct ProxySubject;
 
 struct MyProxyEntry {
@@ -58,7 +69,7 @@ struct Proxy {
 	bool near_expired;
 	int id;
 	int num_references;
-	SimpleList<int> notification_tids;
+	SimpleList<Callback> m_callbacks;
 	
 	SimpleList<MyProxyEntry*> myproxy_entries;
 	ProxySubject *subject;
@@ -84,9 +95,9 @@ bool InitializeProxyManager( const char *proxy_dir );
 void ReconfigProxyManager();
 
 Proxy *AcquireProxy( const ClassAd *job_ad, MyString &error,
-					 int notify_tid = -1 );
-Proxy *AcquireProxy( Proxy *proxy, int notify_tid = -1 );
-void ReleaseProxy( Proxy *proxy, int notify_tid = -1 );
+					 TimerHandlercpp func_ptr = NULL, Service *data = NULL );
+Proxy *AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
+void ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
 void DeleteProxy (Proxy *& proxy);
 void DeleteMyProxyEntry (MyProxyEntry *& proxy);
 

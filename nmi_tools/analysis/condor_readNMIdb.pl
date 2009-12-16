@@ -27,7 +27,8 @@ my %months = (
     "12" => "December",
 );
 
-# history of some platforms desired for platting increased tests
+# history of some platforms desired for plotting increased tests
+
 my %testtrackingplatforms = (
 	"sun4u_sol_5.9" => 1, 
 	"x86_rhas_3" => 1,
@@ -36,10 +37,10 @@ my %testtrackingplatforms = (
 );
 
 my %specialtests = (
-	"lib_classads-1" => 322,
-	"lib_classads" => 322,
-	"lib_unit_tests-1" => 53,
-	"lib_unit_tests" => 53,
+	"lib_classads-1" => 329,
+	"lib_classads" => 329,
+	"lib_unit_tests-1" => 55,
+	"lib_unit_tests" => 55,
 );
 
 my %metrotask = (
@@ -92,9 +93,9 @@ GetOptions (
 #print "project($project) type ($type)\n";
 if( (defined($project)) && ($type eq "tests")) {
 	if(!$thistfile) {
-		$thistfile = "/tmp/btplots/testhistory";
+		$thistfile = "/scratch/bt/btplots/testhistory";
 	}
-	#print "Creating /tmp/btplots/testhistory\n";
+	#print "Creating /scratch/bt/btplots/testhistory\n";
 	open(THIST,">$thistfile") or die "Unable to open test history file $thistfile:$!\n";
 }
 
@@ -104,9 +105,9 @@ if($datestring) {
 
 my $dropfile = "";
 if(!defined($project)) {
-	$dropfile = "/tmp/btplots/" . $branch . "auto" . $type;
+	$dropfile = "/scratch/bt/btplots/" . $branch . "auto" . $type;
 } else {
-	$dropfile = "/tmp/btplots/" . "projectauto" . $type;
+	$dropfile = "/scratch/bt/btplots/" . "projectauto" . $type;
 }
 print "Drop file will be $dropfile\n";
 
@@ -172,7 +173,7 @@ sub CollectTimeResults
 	print "Here are the keys from hash platformlist\n";
 	foreach $key (sort keys %platformlist) {
 		print "Key-----<$key>\n";
-		my $datafile = "/tmp/btplots/" . $branch . "-" . $key;
+		my $datafile = "/scratch/bt/btplots/" . $branch . "-" . $key;
 		print LIST "$datafile\n";
 		open(DATA,">$datafile") || die "Failed to start datafile:<$datafile> $!\n";
 		foreach $run (@buildruns) {
@@ -472,6 +473,9 @@ sub FindBuildRuns
 				if( $des =~ /^.*([V]*\d*[_]*\d*[\-]*(trunk|branch)).*$/ ) {
 					#changed to find trunk as a branch 12/08 bt
 					push(@buildruns,$rid . ":" . $plotdateform . ":" . $1);
+				} elsif( $des =~ /^.*(Continuous\s*Build\s*-.*)$/ ) {
+					#changed to find trunk as a branch 12/08 bt
+					push(@buildruns,$rid . ":" . $plotdateform . ":" . $1);
 				} else {
 					print "2: Did not find <$branch> in <$des>\n";
 				}
@@ -649,7 +653,7 @@ sub ShowBuildRuns
 
 sub DbConnect
 {
-	$db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-build25", "nmipublic", "nmiReadOnly!") || die "Could not connect to database: $!\n";
+	$db = DBI->connect("DBI:mysql:database=nmi_history;host=mysql.batlab.org", "nmipublic", "nmiReadOnly!") || die "Could not connect to database: $!\n";
 	#print "Connected to db!\n";
 }
 

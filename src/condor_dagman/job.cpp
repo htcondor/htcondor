@@ -739,7 +739,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			bool recovery, const char *defaultNodeLog )
 {
 	if ( _logIsMonitored ) {
-		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already monitored\n", GetJobName() );
 		return true;
 	}
@@ -752,6 +752,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
     	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
 					_directory );
 	} else {
+#ifdef HAVE_EXT_CLASSADS
 		StringList logFiles;
 		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 					_cmdFile, _directory, logFiles );
@@ -770,6 +771,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			logFiles.rewind();
 			logFileStr = logFiles.next();
 		}
+#else
+			// XXX
+		debug_printf( DEBUG_NORMAL,
+					  "Error: Stork log files not supported. "
+					  "Condor was built without new classad support\n" );
+		return false;
+#endif
 	}
 
 	if ( logFileStr == "" ) {
@@ -780,7 +788,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					_cmdFile, GetJobName(), logFileStr.Value() );
 	}
 
-	if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
+		// This function returns true if the log file is on NFS and
+		// that is an error.  If the log file is on NFS, but nfsIsError
+		// is false, it prints a warning but returns false.
+	if ( MultiLogFiles::logFileNFSError( logFileStr.Value(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
 					logFileStr.Value() );
@@ -817,7 +828,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				_logFile, GetJobName() );
 
 	if ( !_logIsMonitored ) {
-		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already unmonitored\n", GetJobName() );
 		return true;
 	}

@@ -27,6 +27,7 @@
 #include "condor_parser.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
+#include "condor_classad_util.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -129,14 +130,14 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STARTD_PVT_ADS;
 		break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case QUILL_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
 		command = QUERY_QUILL_ADS;
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case SCHEDD_AD:
 		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
@@ -411,11 +412,11 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	// fix types
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
 	switch (queryType) {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case QUILL_AD:
 		queryAd.SetTargetTypeName (QUILL_ADTYPE);
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
@@ -631,7 +632,7 @@ filterAds (ClassAdList &in, ClassAdList &out)
 	while( (candidate = (ClassAd *) in.Next()) )
     {
         // if a match occurs
-		if ((*candidate) >= (queryAd)) out.Insert (candidate);
+		if (IsAHalfMatch(&queryAd, candidate)) out.Insert (candidate);
     }
     in.Close ();
     

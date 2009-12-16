@@ -60,7 +60,7 @@ _Description: How much memory would you like reserved from Condor ?
  available to be used by Condor jobs. If this value is defined, 
  Condor subtracts it from the amount of memory it advertises as available.
 
-Template: condor/hostallowwrite
+Template: condor/allowwrite
 Type: string
 Default: localhost
 _Description: Which machines has write access to your pool

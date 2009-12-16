@@ -289,10 +289,14 @@ ReplicatorStateMachine::initializeClassAd()
     m_name.sprintf( "replication@%s -p %d", my_full_hostname( ),
 				  daemonCore->InfoCommandPort( ) );
     m_classAd->Assign( ATTR_NAME, m_name.Value( ) );
-    m_classAd->Assign( ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString( ) );
+    m_classAd->Assign( ATTR_MY_ADDRESS,
+					   daemonCore->InfoCommandSinfulString( ) );
 
     // publish list of replication nodes
     char* buffer = param( "REPLICATION_LIST" );
+	if ( NULL == buffer ) {
+		EXCEPT( "ReplicatorStateMachine: No replication list!!\n" );
+	}
     char* replAddress = NULL;
     StringList replList;
     MyString attrReplList;
@@ -310,6 +314,7 @@ ReplicatorStateMachine::initializeClassAd()
 
     // publish DC attributes
     daemonCore->publish(m_classAd);
+	free(buffer);
 }
 // sends the version of the last execution time to all the replication daemons,
 // then asks the pool replication daemons to send their own versions to it,
@@ -636,7 +641,7 @@ ReplicatorStateMachine::onSolicitVersionReply( Stream* stream )
  * Description: handler of REPLICATION_NEWLY_JOINED_VERSION command; void by now
  */
 void
-ReplicatorStateMachine::onNewlyJoinedVersion( Stream* stream )
+ReplicatorStateMachine::onNewlyJoinedVersion( Stream* /*stream*/ )
 {
     dprintf(D_ALWAYS, "ReplicatorStateMachine::onNewlyJoinedVersion started\n");
     
@@ -653,7 +658,7 @@ ReplicatorStateMachine::onNewlyJoinedVersion( Stream* stream )
  *				state)
  */
 void
-ReplicatorStateMachine::onGivingUpVersion( Stream* stream )
+ReplicatorStateMachine::onGivingUpVersion( Stream* /*stream*/ )
 {
     dprintf( D_ALWAYS, "ReplicatorStateMachine::onGivingUpVersion started\n" );
     

@@ -1,5 +1,12 @@
+10/14/2009 V7_4_0-branch
+ Branch for 7.4.0 release, of V7_4-branch.
+
 08/17/2009 V7_3_2-branch
  Branch for 7.3.2 release.
+09/14/2009 V7_3_2
+ The official tag for 7.3.2, from the V7_3_2-branch.
+ Version string: $CondorVersion: 7.3.2 Sep 10 2009 BuildID: 181136 $
+ Original build tag: BUILD-V7_3_2-branch-2009-9-10
 
 07/30/09 V7_3-view_collector-hack-branch
  Branch for removing static ARCH/OPSYS params from the ViewCollector.
@@ -3819,3 +3826,6 @@ V6_7-credd-root. By ckireyev.
 ?/?/98 V6_1-NewAds-branch
 
 12/9/98 V6_1_0
+The contents of this file have moved to
+http://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=GitBranchDescriptions .  Any
+references to this file should be updated to refer to that web page.

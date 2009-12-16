@@ -42,7 +42,7 @@
 StringList *_sysapi_console_devices = NULL;
 #endif
 /* this is not configured here, but is global, look in last_x_event.c */
-int _sysapi_last_x_event = 0;
+time_t _sysapi_last_x_event = 0;
 
 /* needed by free_fs_blocks.c */
 #ifndef WIN32
@@ -163,7 +163,7 @@ sysapi_reconfig(void)
 
 #ifdef LINUX
 	/* Should we count hyper threads? */
-	int _sysapi_count_hyperthread_cpus = 
+	_sysapi_count_hyperthread_cpus = 
 		param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1);
 #endif
 

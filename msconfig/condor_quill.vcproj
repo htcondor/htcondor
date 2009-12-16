@@ -132,40 +132,8 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\soap_quillC.cpp"
+			RelativePath="..\src\condor_daemon_core.V6\no_soap_core.cpp"
 			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_quill\soap_quillServer.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_quill\soap_quillStub.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_tt\tt_main.cpp"

@@ -68,7 +68,7 @@ public:
 	bool	OnHold( void ) { return on_hold; };
 	void	Stop( bool never_forward = false );
 	void	StopFast( bool never_forward = false );
-	int		StopFastTimer();
+	void	StopFastTimer();
 	void	StopPeaceful();
 	void	HardKill();
 	void	Exited( int );
@@ -84,6 +84,12 @@ public:
 
 	bool	IsHA( void ) { return is_ha; };
 
+	bool WaitBeforeStartingOtherDaemons(bool first_time);
+
+		// true if this daemon needs to run right up until just before
+		// the master shuts down (e.g. shared port server)
+	bool OnlyStopWhenMasterStops() { return m_only_stop_when_master_stops; }
+
 private:
 
 	int		runs_on_this_host();
@@ -93,6 +99,7 @@ private:
 	int		SetupHighAvailability( void );
 	int		HaLockAcquired( LockEventSrc src );
 	int		HaLockLost( LockEventSrc src );
+	void	DoActionAfterStartup();
 
 	int		start_tid;
 	int		recover_tid;
@@ -120,6 +127,12 @@ private:
 
 	int		num_controllees;
 	class daemon  *controllees[MAX_CONTROLLEES];
+
+	MyString m_after_startup_wait_for_file;
+	bool m_reload_shared_port_addr_after_startup;
+	bool m_never_use_shared_port;
+	bool m_waiting_for_startup;
+	bool m_only_stop_when_master_stops;
 };
 
 
@@ -202,6 +215,14 @@ private:
 	AllGoneT all_daemons_gone_action;
 	ReaperT reaper;
 	int prevLHF;
+	int m_retry_start_all_daemons_tid;
+
+	void ScheduleRetryStartAllDaemons();
+	void CancelRetryStartAllDaemons();
+	void RetryStartAllDaemons();
+
+		// returns true if there are no remaining daemons
+	bool StopDaemonsBeforeMasterStops();
 };
 
 #endif /* _CONDOR_MASTER_H */

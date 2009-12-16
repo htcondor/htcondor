@@ -40,7 +40,7 @@
 
 #include <setjmp.h>
 
-extern int PollActivity();
+extern void PollActivity();
 
 bool		g_connected;
 jmp_buf	 jmp;
@@ -156,7 +156,7 @@ XInterface::TryUser(const char *user)
 	init_user_ids( user, NULL );
 
 	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", 
-		 passwd_entry->pw_name, env);
+		 passwd_entry->pw_name );
 	}
 }
 	

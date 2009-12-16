@@ -26,6 +26,8 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "my_hostname.h"
+#include "daemon.h"
+#include "condor_sinful.h"
 
 #ifndef INADDR_NONE		/* Solaris */
 #  define INADDR_NONE	((in_addr_t) 0xffffffff)
@@ -69,9 +71,6 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 {
 
     int     found   = 0;
-    char    *start  = NULL,
-            *end    = NULL,
-            sinful[MAX_IP_ADDRESS_LENGTH+10];
 
     /* make sure we are only capable of sending the WOL
     magic packet if all of the initialization succeds */
@@ -95,26 +94,18 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     }
 
     /* retrieve the IP from the ad */
-    found = ad->LookupString (
-        ATTR_PUBLIC_NETWORK_IP_ADDR,
-        sinful,
-        MAX_IP_ADDRESS_LENGTH+9 );
-
-    if ( !found ) {
-
+	Daemon d(ad,DT_STARTD,NULL);
+	char const *addr = d.addr();
+	Sinful sinful( addr );
+	if( !addr || !sinful.getHost() ) {
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker: no IP address defined\n" );
 
         return;
-
-    }
-
-    /* extract the IP from the public 'sinful' string */
-    start = sinful + 1;
-    end = strchr ( sinful, ':' );
-    *end = '\0';
-    strncpy ( m_public_ip, start, MAX_IP_ADDRESS_LENGTH-1 );
+	}
+	strncpy( m_public_ip, sinful.getHost(), MAX_IP_ADDRESS_LENGTH-1);
+	m_public_ip[MAX_IP_ADDRESS_LENGTH-1] = '\0';
 
     /* retrieve the subnet from the ad */
     found = ad->LookupString (

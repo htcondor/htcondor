@@ -30,8 +30,9 @@
 #include "condor_socket_types.h"
 #include "subsystem_info.h"
 #include "condor_netdb.h"
-#include "condor_fix_iostream.h"
-#include "condor_fix_fstream.h"
+#include <iostream>
+#include <fstream>
+#include "condor_open.h"
 #include "directory.h"
 #include "basename.h"
 #include "stat_info.h"
@@ -45,6 +46,7 @@
 #include "classad_collection.h"
 #include "daemon.h"
 #include "protocol.h"
+using namespace std;
 
 XferSummary	xfer_summary;
 

@@ -195,7 +195,8 @@ CondorJob::CondorJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
 	}
@@ -309,7 +310,7 @@ CondorJob::CondorJob( ClassAd *classad )
 CondorJob::~CondorJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( submitterId != NULL ) {
 		free( submitterId );
@@ -340,7 +341,7 @@ void CondorJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int CondorJob::JobLeaseSentExpired()
+void CondorJob::JobLeaseSentExpired()
 {
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	BaseJob::JobLeaseSentExpired();
@@ -350,10 +351,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	if ( gmState != GM_INIT ) {
 		gmState = GM_CLEAR_REQUEST;
 	}
-	return 0;
 }
 
-int CondorJob::doEvaluateState()
+void CondorJob::doEvaluateState()
 {
 	bool connect_failure = false;
 	int old_gm_state;
@@ -361,7 +361,8 @@ int CondorJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -641,8 +642,9 @@ int CondorJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_STAGE_IN;
@@ -934,8 +936,9 @@ int CondorJob::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 			}
@@ -974,7 +977,7 @@ int CondorJob::doEvaluateState()
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
 				SetRemoteJobId( NULL );
 				myResource->CancelSubmit( this );
-				requestScheddUpdate( this );
+				requestScheddUpdate( this, false );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -1072,8 +1075,9 @@ int CondorJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			remoteProxyExpireTime = 0;
@@ -1169,8 +1173,6 @@ int CondorJob::doEvaluateState()
 			RequestPing();
 		}
 	}
-
-	return TRUE;
 }
 
 void CondorJob::SetRemoteJobId( const char *job_id )
@@ -1349,7 +1351,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		delete [] attrs_to_copy;
 	}
 
-	requestScheddUpdate( this );
+	requestScheddUpdate( this, false );
 
 	return;
 }
@@ -1380,12 +1382,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GRID_RESOURCE );
 	submit_ad->Delete( ATTR_JOB_MATCHED );
 	submit_ad->Delete( ATTR_JOB_MANAGED );
-	submit_ad->Delete( ATTR_MIRROR_ACTIVE );
-	submit_ad->Delete( ATTR_MIRROR_JOB_ID );
-	submit_ad->Delete( ATTR_MIRROR_LEASE_TIME );
-	submit_ad->Delete( ATTR_MIRROR_RELEASED );
-	submit_ad->Delete( ATTR_MIRROR_REMOTE_LEASE_TIME );
-	submit_ad->Delete( ATTR_MIRROR_SCHEDD );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
 	submit_ad->Delete( ATTR_STAGE_IN_START );
 	submit_ad->Delete( ATTR_SCHEDD_BIRTHDATE );

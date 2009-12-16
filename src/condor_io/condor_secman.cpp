@@ -1209,7 +1209,7 @@ SecManStartCommand::sendAuthInfo_inner()
 		}
 	}
 
-	m_session_key.sprintf ("{%s,<%i>}", m_sock->get_sinful_peer(), m_cmd);
+	m_session_key.sprintf ("{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
 		found_map_ent = (m_sec_man.command_map->lookup(m_session_key, sid) == 0);
@@ -1351,11 +1351,11 @@ SecManStartCommand::sendAuthInfo_inner()
 	// we set a cookie in daemoncore and put the cookie in the classad
 	// as proof that the message came from ourself.
 
-	MyString destsinful = m_sock->get_sinful_peer();
-	MyString oursinful = global_dc_sinful();
+	Sinful destsinful( m_sock->get_connect_addr() );
+	Sinful oursinful( global_dc_sinful() );
 	bool using_cookie = false;
 
-	if (destsinful == oursinful) {
+	if (oursinful.addressPointsToMe(destsinful)) {
 		// use a cookie.
 		int len = 0;
 		unsigned char* randomjunk = NULL;
@@ -1606,52 +1606,22 @@ SecManStartCommand::receiveAuthInfo_inner()
 				!m_sock->end_of_message() ) {
 
 				// if we get here, it means the serve accepted our connection
-				// but dropped it after we sent the DC_AUTHENTICATE.  it probably
-				// doesn't understand that command, so let's attempt to send it
-				// the old way, IF negotiation wasn't REQUIRED.
+				// but dropped it after we sent the DC_AUTHENTICATE.
 
-				// set this input/output parameter to reflect
-				m_peer_can_negotiate = false;
+				// We used to conclude from this that our peer must be
+				// too old to understand DC_AUTHENTICATE, so we would
+				// reconnect and try sending a raw command (unless our
+				// config required negotiation).  However, this is no
+				// longer considered worth doing, because the most
+				// likely case is not that our peer doesn't understand
+				// but that something else caused us to fail to get a
+				// response. Trying to reconnect can just make things
+				// worse in this case.
 
-				if (m_negotiation == SecMan::SEC_REQ_REQUIRED ||
-					m_cmd == DC_AUTHENTICATE )
-				{
-					dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
-					m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+				dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
+				m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to end classad message." );
-					return StartCommandFailed;
-				}
-
-				// we'll try to send it the old way.
-				dprintf (D_SECURITY, "SECMAN: negotiation failed.  trying the old way...\n");
-
-				// this is kind of ugly:  close and reconnect the socket.
-				// seems to work though! :)
-
-				MyString tcp_addr = m_sock->get_sinful_peer();
-				m_sock->close();
-
-				if (!m_sock->connect(tcp_addr.Value())) {
-					dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
-					m_errstack->pushf( "SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						"TCP connection to %s failed.", tcp_addr.Value());
-					return StartCommandFailed;
-				}
-
-				dprintf( D_ALWAYS, "SECMAN: reconnected to %s from port %d to send unauthenticated command %d %s\n",
-						 m_sock->peer_description(),
-						 m_sock->get_port(),
-						 m_cmd,
-						 m_cmd_description.Value());
-
-				m_sock->encode();
-				if( !m_sock->code(m_cmd) ) {
-					m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-									   "Failed to send raw command after reconnecting to %s.",
-									   m_sock->peer_description());
-					return StartCommandFailed;
-				}
-				return StartCommandSucceeded;
+				return StartCommandFailed;
 			}
 
 
@@ -1986,7 +1956,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			coms.rewind();
 			while ( (p = coms.next()) ) {
 				MyString keybuf;
-				keybuf.sprintf ("{%s,<%s>}", m_sock->get_sinful_peer(), p);
+				keybuf.sprintf ("{%s,<%s>}", m_sock->get_connect_addr(), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
 				if (m_sec_man.command_map->insert(keybuf, sesid) == 0) {
@@ -2081,7 +2051,7 @@ SecManStartCommand::DoTCPAuth_inner()
 	tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
 
 		// we already know the address - condor uses the same TCP port as it does UDP port.
-	MyString tcp_addr = m_sock->get_sinful_peer();
+	MyString tcp_addr = m_sock->get_connect_addr();
 	if (!tcp_auth_sock->connect(tcp_addr.Value(),0,m_nonblocking)) {
 		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
@@ -2635,7 +2605,7 @@ SecMan :: invalidateExpiredCache()
 				dprintf ( D_ALWAYS, "SECMAN: could not re-init MD5!\n");
 				return false;
 			}
-			if (!sock->connect(sin_to_string(sock->peer_addr()), 0)) {
+			if (!sock->connect(sock->get_connect_addr(), 0)) {
 				dprintf ( D_ALWAYS, "SECMAN: could not reconnect to %s.\n",
 						sin_to_string(sock->peer_addr()));
 				return false;

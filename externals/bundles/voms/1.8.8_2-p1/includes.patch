@@ -1,0 +1,55 @@
+diff -u -r org.glite.security.voms/src/ac/create.cc org.glite.security.voms-patched/src/ac/create.cc
+--- org.glite.security.voms/src/ac/create.cc	2006-05-18 06:11:22.000000000 -0500
++++ org.glite.security.voms-patched/src/ac/create.cc	2009-12-02 13:50:38.000000000 -0600
+@@ -19,6 +19,7 @@
+ #include <string>
+ 
+ extern "C" {
++#include <string.h>
+ #include <openssl/evp.h>
+ #include <openssl/x509.h>
+ #include <openssl/x509v3.h>
+diff -u -r org.glite.security.voms/src/api/ccapi/api_util.cc org.glite.security.voms-patched/src/api/ccapi/api_util.cc
+--- org.glite.security.voms/src/api/ccapi/api_util.cc	2008-07-15 10:12:38.000000000 -0500
++++ org.glite.security.voms-patched/src/api/ccapi/api_util.cc	2009-12-02 13:50:56.000000000 -0600
+@@ -13,6 +13,7 @@
+  *********************************************************************/
+ 
+ extern "C" {
++#include <string.h>
+ #include "config.h"
+ #include "replace.h"
+ 
+diff -u -r org.glite.security.voms/src/api/ccapi/cinterface.cc org.glite.security.voms-patched/src/api/ccapi/cinterface.cc
+--- org.glite.security.voms/src/api/ccapi/cinterface.cc	2008-07-15 10:12:38.000000000 -0500
++++ org.glite.security.voms-patched/src/api/ccapi/cinterface.cc	2009-12-02 13:50:38.000000000 -0600
+@@ -25,6 +25,7 @@
+ #include "cinterface.h"
+ #include <stdlib.h>
+ #include <time.h>
++#include <string.h>
+ }
+ 
+ #include "realdata.h"
+diff -u -r org.glite.security.voms/src/api/ccapi/voms_api.cc org.glite.security.voms-patched/src/api/ccapi/voms_api.cc
+--- org.glite.security.voms/src/api/ccapi/voms_api.cc	2008-07-15 10:12:38.000000000 -0500
++++ org.glite.security.voms-patched/src/api/ccapi/voms_api.cc	2009-12-02 13:51:11.000000000 -0600
+@@ -13,6 +13,7 @@
+  *********************************************************************/
+ 
+ extern "C" {
++#include <string.h>
+ #ifdef NOGLOBUS
+ #include <pthread.h>
+ #endif
+diff -u -r org.glite.security.voms/src/client/fqan.cc org.glite.security.voms-patched/src/client/fqan.cc
+--- org.glite.security.voms/src/client/fqan.cc	2008-02-05 03:39:16.000000000 -0600
++++ org.glite.security.voms-patched/src/client/fqan.cc	2009-12-02 13:50:38.000000000 -0600
+@@ -15,6 +15,7 @@
+ 
+ #include "config.h"
+ 
++#include <stdlib.h>
+ #include <iostream>
+ #include "fqan.h"
+ 

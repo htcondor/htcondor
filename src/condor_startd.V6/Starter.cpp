@@ -98,6 +98,14 @@ Starter::initRunData( void )
 	s_job_update_sock = NULL;
 
 	m_hold_job_cb = NULL;
+
+		// XXX: ProcFamilyUsage needs a constructor
+	s_usage.max_image_size = 0;
+	s_usage.num_procs = 0;
+	s_usage.percent_cpu = 0.0;
+	s_usage.sys_cpu_time = 0;
+	s_usage.total_image_size = 0;
+	s_usage.user_cpu_time = 0;
 }
 
 
@@ -476,7 +484,9 @@ Starter::reallykill( int signo, int type )
 		if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
 			if( type == 1 ) { 
 				ret = ::kill( -(s_pid), SIGCONT );
-			} else if( type == 0 ) {
+			} else if( type == 0 && 
+						!daemonCore->ProcessExitedButNotReaped(s_pid)) 
+			{
 				ret = ::kill( (s_pid), SIGCONT );
 			}
 		}
@@ -498,7 +508,9 @@ Starter::reallykill( int signo, int type )
 		} 
 #ifndef WIN32
 		else {
-			ret = ::kill( (s_pid), sig );
+			if (!daemonCore->ProcessExitedButNotReaped(s_pid)) {
+				ret = ::kill( (s_pid), sig );
+			}
 			break;
 		}
 #endif /* ! WIN32 */
@@ -1101,7 +1113,7 @@ Starter::active()
 	
 
 void
-Starter::dprintf( int flags, char* fmt, ... )
+Starter::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -1298,7 +1310,7 @@ Starter::cancelKillTimer( void )
 }
 
 
-bool
+void
 Starter::sigkillStarter( void )
 {
 		// In case the kill fails for some reason, we are on a periodic
@@ -1314,9 +1326,8 @@ Starter::sigkillStarter( void )
 		killkids( SIGKILL );
 
 			// Kill the starter's entire process group.
-		return killpg( SIGKILL );
+		killpg( SIGKILL );
 	}
-	return true;
 }
 
 bool

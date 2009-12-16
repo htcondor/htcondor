@@ -104,4 +104,9 @@ const int CONDOR_HOLD_CODE_HookPrepareJobFailure = 19;
 const int CONDOR_HOLD_CODE_MissedDeferredExecutionTime = 20;
 
 const int CONDOR_HOLD_CODE_StartdHeldJob = 21;
+
+// There was a problem opening or otherwise initializing
+// the user log for writing.
+const int CONDOR_HOLD_CODE_UnableToInitUserLog = 22;
+
 #endif

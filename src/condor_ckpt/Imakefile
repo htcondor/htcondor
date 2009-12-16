@@ -13,12 +13,8 @@ XCOMM
 
 PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
-#ifdef WANT_NEST
-NEST_CC_FLAGS = -DENABLE_NEST -I$(NEST_INC)
-#endif
-
-FILE_TABLE = -DFILE_TABLE -I$(ZLIB_INC) $(NEST_CC_FLAGS)
-FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_basic.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o condor_file_append.o condor_file_nest.o file_table_interf.o
+FILE_TABLE = -DFILE_TABLE -I$(ZLIB_INC)
+FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_basic.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o condor_file_append.o file_table_interf.o
 
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE

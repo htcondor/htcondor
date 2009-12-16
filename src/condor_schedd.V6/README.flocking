@@ -5,7 +5,7 @@ machines (not including the local central manager machine) of pools to
 which the schedd should submit.  Hosts in the list should be in order
 of preference.  The schedd will only send a request to a central
 manager in the list if the local pool and pools earlier in the list
-are not satisfying all the job requests.  HOSTALLOW_NEGOTIATOR_SCHEDD
+are not satisfying all the job requests.  ALLOW_NEGOTIATOR_SCHEDD
 must also be configured to allow negotiators from all of the
 FLOCK_HOSTS to contact the schedd.  (Similarly, the negotiators of the
 remote pools must be configured to listen to requests from this

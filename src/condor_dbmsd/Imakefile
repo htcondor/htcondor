@@ -3,17 +3,13 @@ all_target( $(NAME) )
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_POSTGRESQL_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_POSTGRESQL_LDFLAGS)
-
-soapobjs(dbmsd)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) $(CONFIGURE_POSTGRESQL_LDFLAGS)
 
 OBJ = dbmsd_main.o DBMSManager.o ManagedDatabase.o \
-../condor_tt/condor_ttdb.o $(SOAP_OBJS)
+../condor_tt/condor_ttdb.o
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
-
-gen_soapfiles(dbmsd,condorDbmsd)
 
 testbin:: all

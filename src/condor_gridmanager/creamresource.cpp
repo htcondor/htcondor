@@ -147,8 +147,8 @@ dprintf(D_FULLDEBUG,"*** ~CreamResource\n");
 dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 		delegatedProxies.DeleteCurrent();
 		free( next_deleg->deleg_uri );
-			// unacquire proxy?
-		ReleaseProxy( next_deleg->proxy );
+		ReleaseProxy( next_deleg->proxy,
+					  (TimerHandlercpp)&CreamResource::ProxyCallback, this );
 		delete next_deleg;
 	}
 	if ( delegationServiceUri != NULL ) {
@@ -259,8 +259,6 @@ void CreamResource::UnregisterJob( CreamJob *job )
 		}
 		if ( delete_deleg ) {
 dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
-			bool reacquire_proxy = false;
-			Proxy *proxy_to_reacquire = job->jobProxy;
 			CreamProxyDelegation *next_deleg;
 			delegatedProxies.Rewind();
 			while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
@@ -272,21 +270,16 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 						activeDelegationCmd = NULL;
 					}
 					free( next_deleg->deleg_uri );
-						// unacquire proxy?
-					ReleaseProxy( next_deleg->proxy );
+					ReleaseProxy( next_deleg->proxy,
+								  (TimerHandlercpp)&CreamResource::ProxyCallback,
+								  this );
 					delete next_deleg;
-				} else if ( next_deleg->proxy == proxy_to_reacquire ) {
-					reacquire_proxy = true;
 				}
-			}
-			if ( reacquire_proxy ) {
-				AcquireProxy( proxy_to_reacquire, delegationTimerId );
 			}
 		}
 	}
 
 	BaseResource::UnregisterJob( job );
-		// This object may be deleted now. Don't do anything below here!
 }
 
 const char *CreamResource::GetHashName()
@@ -324,8 +317,7 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-		// acquire proxy?
-	AcquireProxy( job_proxy, delegationTimerId );
+	AcquireProxy( job_proxy, (TimerHandlercpp)&CreamResource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds
@@ -356,8 +348,7 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-		// acquire proxy?
-	AcquireProxy( job_proxy, delegationTimerId );
+	AcquireProxy( job_proxy, (TimerHandlercpp)&CreamResource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds
@@ -387,7 +378,13 @@ const char *CreamResource::getDelegationError( Proxy *job_proxy )
 	return NULL;
 }
 
-int CreamResource::checkDelegation()
+int CreamResource::ProxyCallback()
+{
+	daemonCore->Reset_Timer( delegationTimerId, 0 );
+	return 0;
+}
+
+void CreamResource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
@@ -397,7 +394,7 @@ dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	if ( deleg_gahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying checkDelegation\n" );
 		daemonCore->Reset_Timer( delegationTimerId, 5 );
-		return 0;
+		return;
 	}
 
 	daemonCore->Reset_Timer( delegationTimerId, CHECK_DELEGATION_INTERVAL );
@@ -428,7 +425,7 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 			
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
-				return 0;
+				return;
 			}
 			if ( rc != 0 ) {
 					// Failure, what to do?
@@ -483,7 +480,7 @@ dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
-				return 0;
+				return;
 			}
 			next_deleg->last_proxy_refresh = now;
 			if ( rc != 0 ) {
@@ -551,7 +548,6 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_de
 			}
 		}
 	}
-	return 0;
 }
 
 void CreamResource::DoPing( time_t& ping_delay, bool& ping_complete,

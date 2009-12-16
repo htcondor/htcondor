@@ -1,0 +1,58 @@
+#!/bin/sh
+############# build_openssl-0.9.8h
+
+# This is a back-port of the renegotiation security fix from 0.9.8l.
+echo "Patching renegotiate bug"
+patch -p0 -i renegotiate.patch
+if [ $? -ne 0 ]
+then
+    echo "patch renegotiate.patch failed"
+    exit 1
+fi
+
+cd $PACKAGE_SRC_NAME
+
+# Omitting the frame pointer makes debugging very difficult.
+# A quick test on a modern x86 linux machine showed a roughly 4%
+# slowdown when the frame pointer is left in place.
+sed 's/-fomit-frame-pointer//' Configure > Configure.new
+mv Configure.new Configure
+
+# Globus builds on some platforms fail in creating their shared libraies
+# if OpenSSL isn't built with -fPIC
+if [ `uname` = "AIX" ] ; then
+    ./config --prefix=$PACKAGE_INSTALL_DIR --with-krb5-dir=$KERBEROS_DIR no-asm
+else
+    ./config --prefix=$PACKAGE_INSTALL_DIR --with-krb5-dir=$KERBEROS_DIR no-asm -fPIC
+fi
+if [ $? -ne 0 ]
+then
+    echo "config failed"
+    exit 1
+fi
+
+make
+if [ $? -ne 0 ]
+then
+    echo "make failed"
+    exit 1
+fi
+
+make test
+if [ $? -ne 0 ]
+then
+    echo "test failed"
+    exit 2
+fi
+
+mkdir -p $PACKAGE_INSTALL_DIR
+make install
+if [ $? -ne 0 ]
+then
+    echo "install failed"
+    exit 3
+fi
+
+exit 0
+
+############# end of build_openssl-0.9.8h

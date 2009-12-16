@@ -28,7 +28,6 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
-#include "condor_classad_lookup.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "daemon_types.h"
@@ -154,11 +153,11 @@ HADStateMachine::isHardConfigurationNeeded(void)
 
 	tmp = param( "HAD_CONTROLLEE" );
 	if ( tmp ) {
-		strncpy( controllee, tmp, sizeof(controllee) );
+		strncpy( controllee, tmp, sizeof(controllee) - 1 );
         free( tmp );
 	}
 	else {
-		strncpy( controllee, daemonString(DT_NEGOTIATOR), sizeof(controllee) );
+		strncpy( controllee, daemonString(DT_NEGOTIATOR), sizeof(controllee) - 1 );
 	}
 	if ( strcasecmp(controllee, m_controlleeName) ) {
 		return true;

@@ -3,11 +3,9 @@ all_target($(NAME))
 
 CFLAGS = $(STD_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-soapobjs(hdfs)
-
-OBJ = hadoop.o hadoop_main.o $(SOAP_OBJS)
+OBJ = hadoop.o hadoop_main.o
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
@@ -17,7 +15,6 @@ stripped:: all
 static:: all
 clean::
 
-gen_soapfiles(hdfs,condorHDFS)
 release_recursive_copy_target($(HADOOP_DIR)/hdfs,libexec/hdfs)
 
 testbin:: all

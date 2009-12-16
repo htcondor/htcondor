@@ -1,0 +1,19 @@
+000 (1.000.000) 09/11 00:54:30 Job submitted from host: <1.2.3.4:34870>
+    DAG Node: A
+...
+001 (1.000.000) 09/11 00:54:31 Job executing on host: <1.2.3.5:46937>
+...
+005 (1.000.000) 09/11 16:58:05 Job terminated.
+        (0) Abnormal termination (signal 11)
+        (0) No core file
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+                Usr 0 09:48:20, Sys 0 00:00:39  -  Total Remote Usage
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+        329  -  Run Bytes Sent By Job
+        743770368  -  Run Bytes Received By Job
+        0  -  Total Bytes Sent By Job
+        0  -  Total Bytes Received By Job
+...
+009 (1.000.000) 09/11 16:58:05 Job was aborted by the user.
+...

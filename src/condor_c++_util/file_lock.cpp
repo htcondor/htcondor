@@ -138,7 +138,7 @@ FileLockBase::FileLockEntry* FileLockBase::m_all_locks = NULL;
 FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 		: FileLockBase( )
 {
-	Reset( );
+	Reset( );	// initializes all vars to NULL
 	m_fd = fd;
 	m_fp = fp_arg;
 
@@ -154,7 +154,7 @@ FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 	// path could be NULL if fd is -1 and fp is NULL, in which case we don't
 	// insert ourselves into a the m_all_locks list.
 	if (path) {
-		m_path = strdup(path);
+		SetPath(path);
 		updateLockTimestamp();
 	}
 }
@@ -166,7 +166,7 @@ FileLock::FileLock( const char *path )
 
 	ASSERT(path != NULL);
 
-	m_path = strdup(path);
+	SetPath(path);
 	updateLockTimestamp();
 }
 
@@ -182,10 +182,8 @@ FileLock::~FileLock( void )
 		m_debug_win32_mutex = NULL;
 	}
 #endif
-	if ( m_path) {
-		free(m_path);
-		m_path = NULL;
-	}
+
+	SetPath(NULL);
 }
 
 void
@@ -201,6 +199,42 @@ FileLock::Reset( void )
 	m_debug_win32_mutex = NULL;
 #endif
 }
+
+	// This method manages settings data member m_path.  The real
+	// work here is on Win32, we want to try to make certain that path
+	// is canonical because we use the path as a lock identifier when
+	// we create a kernel lock.  Note that the path is only canonicalized 
+	// up to the limits of _fullpath (no reparse points, etc.)
+void
+FileLock::SetPath(const char *path)
+{
+	if ( m_path ) {
+		free(m_path);
+	}
+	m_path = NULL;
+	if (path) {
+
+#ifdef WIN32
+		m_path = _fullpath( NULL, path, _MAX_PATH );
+			// Note: if path does not yet exist on the filesystem, then
+			// _fullpath could still return NULL.  In this case, fall thru
+			// this #ifdef WIN32 block and do what we do on Unix - just
+			// strdup the path.  Hey, it is strictly better, eh?
+		if (m_path) {
+				// Cool, _fullpath "weakly" canonicalized the path
+				// for us, so we are done.  
+				// Weakly you say?  See gittrac #205.  Better not
+				// have reparse points thare fella.
+			return;
+		}
+#endif
+	
+			// Either we are on Unix or _fullpath failed us, so strdup.
+		m_path = strdup(path);
+	}
+}
+
+
 
 void
 FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
@@ -221,21 +255,19 @@ FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
 	if (m_path == NULL && file != NULL) {
 		// moving from a NULL object to a object needed to update the timestamp
 
-		m_path = strdup(file);
+		SetPath(file);
 		// This will use the new lock file in m_path
 		updateLockTimestamp();
 
 	} else if (m_path != NULL && file == NULL) {
 		// moving from an updatable timestamped object to a NULL object
 
-		free(m_path);
-		m_path = NULL;
+		SetPath(NULL);
 
 	} else if (m_path != NULL && file != NULL) {
 		// keeping the updatability of the object, but updating the path.
-
-		free(m_path);
-		m_path = strdup(file);
+		
+		SetPath(file);
 		updateLockTimestamp();
 	}
 }

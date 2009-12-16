@@ -9,7 +9,7 @@ public class VersionHandler implements CommandHandler{
     public CommandHandlerResponse handleCommand (String[] command) {
         return new CommandHandlerResponse (
                     CommandHandlerResponse.SUCCESS + 
-                    " $GahpVersion: 2.0.1 Oct 29 2008 "+
+                    " $GahpVersion: 2.0.2 Nov 11 2009 "+
                     IOUtils.escapeWord(gahp.getVersion())+" $");
     }
 }

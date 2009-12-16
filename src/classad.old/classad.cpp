@@ -44,10 +44,6 @@ static	SortFunctionType SortSmallerThan;
 static	void* SortInfo;
 static  const char *empty_string = "";
 
-#if defined(USE_XDR)
-extern "C" int xdr_mywrapstring (XDR *, char **);
-#endif
-
 // useful when debugging (std* are macros)
 FILE *__stdin__  = stdin;
 FILE *__stdout__ = stdout;
@@ -99,36 +95,7 @@ ClassAd::ClassAd() : AttrList()
 {
 	myType = NULL;
 	targetType = NULL;
-	// SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
 }
-
-#if 0 /* don't want to link with ProcObj class; we shouldn't need this */
-ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
-{
-	myType = NULL;
-	targetType = NULL;
-	// SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
-}
-#endif
-
-#if 0 // dont use CONTEXTs anymore
-ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
-{
-	myType = NULL;
-	targetType = NULL;
-	if (!Lookup ("Requirements"))
-	{
-		SetRequirements ("Requirements = TRUE");
-	}
-
-	if (!Lookup ("Rank"))
-	{
-    	SetRankExpr ("Rank = 0");
-	}
-}
-#endif
 
 ClassAd::
 ClassAd(FILE* f, char* d, int& i, int &err, int &empty) 
@@ -160,7 +127,7 @@ ClassAd::updateBoundVariables() {
     }
 
 	// Make a parse tree that contains the variable MyType
-    Parse("MyType", tree);
+    ParseClassAdRvalExpr("MyType", tree);
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
@@ -199,7 +166,7 @@ ClassAd::updateBoundVariables() {
 	val = new EvalResult;
 
 	// Make a parse tree that contains the variable TargetType
-    Parse("TargetType", tree);
+    ParseClassAdRvalExpr("TargetType", tree);
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
@@ -346,7 +313,7 @@ void ClassAd::SetMyTypeName(const char *tempName)
 //
 // This member function of class AttrList returns myType name.
 //
-const char *ClassAd::GetMyTypeName()
+const char *ClassAd::GetMyTypeName() const
 {
     if(!myType)
     {
@@ -389,7 +356,7 @@ void ClassAd::SetTargetTypeName(const char *tempName)
 //
 // This member function of class AttrList returns targetType name.
 //
-const char *ClassAd::GetTargetTypeName()
+const char *ClassAd::GetTargetTypeName() const
 {
     if(!targetType)
     {
@@ -404,7 +371,7 @@ const char *ClassAd::GetTargetTypeName()
 //
 // This member function of class AttrList returns myType number.
 //
-int ClassAd::GetMyTypeNumber()
+int ClassAd::GetMyTypeNumber() const 
 {
     if(!myType)
     {
@@ -419,7 +386,7 @@ int ClassAd::GetMyTypeNumber()
 //
 // This member function of class AttrList returns targetType number.
 //
-int ClassAd::GetTargetTypeNumber()
+int ClassAd::GetTargetTypeNumber() const
 {
     if(!targetType)
     {
@@ -431,210 +398,6 @@ int ClassAd::GetTargetTypeNumber()
     }
 }
 
-
-// Requirement expression management functions
-#if 0
-int ClassAd::
-SetRequirements (char *expr)
-{
-	ExprTree *tree;
-	int result = Parse (expr, tree);
-	if (result != 0)
-	{
-		delete tree;
-		return -1;		
-	}
-	SetRequirements (tree);	
-	return 0;
-}
-
-void ClassAd::
-SetRequirements (ExprTree *tree)
-{
-	if (!AttrList::Insert (tree))
-	{
-		AttrList::UpdateExpr (tree);
-		delete tree;
-	}
-}
-#endif
-
-ExprTree *ClassAd::
-GetRequirements (void)
-{
-	return Lookup (ATTR_REQUIREMENTS);
-}
-
-//
-// Implementation of rank expressions is same as the requirement --RR
-//
-#if 0
-int ClassAd::
-SetRankExpr (char *expr)
-{
-    ExprTree *tree;
-    int result = Parse (expr, tree);
-    if (result != 0)
-    {
-        delete tree;
-        return -1;     
-    }
-    SetRankExpr (tree); 
-    return 0;
-}
-
-void ClassAd::
-SetRankExpr (ExprTree *tree)
-{
-	if (!AttrList::Insert (tree))
-	{
-		AttrList::UpdateExpr (tree);
-		delete tree;
-	}
-}
-#endif
-
-ExprTree *ClassAd::
-GetRankExpr (void)
-{
-    return Lookup (ATTR_RANK);
-}
-
-
-//
-// Set and get sequence numbers --- stored in the attrlist
-//
-void ClassAd::
-SetSequenceNumber (int num)
-{
-	seq = num;
-}
-
-
-int ClassAd::
-GetSequenceNumber (void)
-{
-	return seq;
-}
-
-
-//
-// This member function tests whether two ClassAds match mutually.
-//
-
-// Parsing a classad from a string is slow.  Really slow.  We match
-// ads frequently, so cache the "MY.Requirements" tree so we only
-// need to parse it once.
-
-ExprTree *reqsTree = 0;
-
-int ClassAd::IsAMatch(ClassAd* temp)
-{
-    EvalResult *val;
-
-    if(!temp)
-    {
-        return 0;
-    }
-
-    if( (GetTargetTypeNumber()==temp->GetMyTypeNumber()) || !stricmp(GetTargetTypeName(),ANY_ADTYPE) ) {
-        /* MY.TargetType matches TARGET.MyType */
-    } else {
-        return 0;
-    }
-
-    if( (GetMyTypeNumber()==temp->GetTargetTypeNumber()) || !stricmp(temp->GetTargetTypeName(),ANY_ADTYPE) ) {
-        /* TARGET.TargetType matches MY.MyType */
-    } else {
-        return 0;
-    }
-
-    val = new EvalResult;
-    if(val == NULL)
-    {
-        EXCEPT("Warning : you ran out of memory -- quitting !");
-    }
-
-    if (reqsTree == 0) Parse("MY.Requirements", reqsTree);       // convention.
-
-    reqsTree->EvalTree(this, temp, val);         // match in one direction.
-    if(!val || val->type != LX_INTEGER)
-    {
-	delete val;
-	return 0;
-    }
-    else
-    {
-      if(!val->i)
-      {
-	  delete val;
-	  return 0; 
-      }
-    }
-
-    reqsTree->EvalTree(temp, this, val);      // match in the other direction.
-    if(!val || val->type != LX_INTEGER)
-    {
-	delete val;
-	return 0;
-    }
-    else
-    {
-        if(!val->i)
-	{
-	    delete val;
-	    return 0; 
-        }
-    }  
-
-    delete val;
-    return 1;   
-}
-
-bool operator== (ClassAd &lhs, ClassAd &rhs)
-{
-	return (lhs >= rhs && rhs >= lhs);
-}
-
-
-bool operator<= (ClassAd &lhs, ClassAd &rhs)
-{
-	return (rhs >= lhs);
-}
-
-
-bool operator>= (ClassAd &lhs, ClassAd &rhs)
-{
-	EvalResult *val;	
-	
-	if( (lhs.GetMyTypeNumber()!=rhs.GetTargetTypeNumber()) &&
-	    stricmp(rhs.GetTargetTypeName(),ANY_ADTYPE) )
-	{
-		return false;
-	}
-
-	if ((val = new EvalResult) == NULL)
-	{
-		EXCEPT("Out of memory -- quitting");
-	}
-
-	if (reqsTree == 0) Parse ("MY.Requirements", reqsTree);
-	reqsTree -> EvalTree (&rhs, &lhs, val);
-	if (!val || val->type != LX_INTEGER)
-	{
-		delete val;
-		return false;
-	}
-	else
-	if (!val->i)
-	{
-		delete val;
-		return false;
-	}
-
-	delete val;
-	return true;
-}
 
 int ClassAd::fPrintAsXML(FILE* f)
 {
@@ -840,68 +603,6 @@ ClassAd::initFromStream(Stream& s)
 }
 
 
-#if defined(USE_XDR)
-int ClassAd::put (XDR *xdrs)
-{
-	char*	tmp = NULL;
-
-	xdrs->x_op = XDR_ENCODE;
-
-	if (!AttrList::put (xdrs))
-		return 0;
-
-	if(myType)
-	{
-		if (!xdr_mywrapstring (xdrs, &myType->name))
-			return 0;
-	}
-	else
-	{
-		if (!xdr_mywrapstring (xdrs, &tmp))
-			return 0;
-	}
-
-	if(targetType)
-	{
-		if (!xdr_mywrapstring (xdrs, &targetType->name))
-			return 0;
-	}
-	else
-	{
-		if (!xdr_mywrapstring (xdrs, &tmp))
-			return 0;
-	}
-
-	return 1;
-}
-
-
-int ClassAd::get (XDR *xdrs)
-{
-	char buf[100];
-	char *line = buf;
-
-	if (!line) return 0;
-
-	xdrs->x_op = XDR_DECODE;
-
-	if (!AttrList::get (xdrs)) 
-		return 0;
-
-	if (!xdr_mywrapstring (xdrs, &line)) 
-		return 0;
-
-	SetMyTypeName (line);
-
-	if (!xdr_mywrapstring (xdrs, &line)) 
-		return 0;
-
-	SetTargetTypeName (line);
-
-	return 1;
-}
-#endif
-
 void ClassAd::
 ExchangeExpressions (ClassAd *ad)
 {
@@ -921,7 +622,6 @@ ExchangeExpressions (ClassAd *ad)
     SWAP(tail, ad->tail, tmp1);
     SWAP(ptrExpr, ad->ptrExpr, tmp1);
     SWAP(ptrName, ad->ptrName, tmp1);
-    SWAP(seq, ad->seq, tmp3);                      // this is an int
 
     // undefine macro to decrease name-space pollution
 #   undef SWAP
@@ -1067,3 +767,52 @@ ClassAd* ClassAd::FindNext()
 {
 	return (ClassAd*)next;
 }
+
+//
+// This function tests whether two ClassAds match mutually.
+//
+
+// Parsing a classad from a string is slow.  Really slow.  We match
+// ads frequently, so cache the "MY.Requirements" tree so we only
+// need to parse it once.
+
+ExprTree *reqsTree = 0;
+
+bool IsAMatch(const ClassAd *ad1, const ClassAd *ad2)
+{
+	return IsAHalfMatch(ad1, ad2) && IsAHalfMatch(ad2, ad1);
+}
+
+bool IsAHalfMatch(const ClassAd *my, const ClassAd *target)
+{
+	EvalResult *val;	
+	
+	if( (target->GetMyTypeNumber()!=my->GetTargetTypeNumber()) &&
+	    stricmp(my->GetTargetTypeName(),ANY_ADTYPE) )
+	{
+		return false;
+	}
+
+	if ((val = new EvalResult) == NULL)
+	{
+		EXCEPT("Out of memory -- quitting");
+	}
+
+	if (reqsTree == 0) ParseClassAdRvalExpr ("MY.Requirements", reqsTree);
+	reqsTree -> EvalTree (my, target, val);
+	if (!val || val->type != LX_INTEGER)
+	{
+		delete val;
+		return false;
+	}
+	else
+	if (!val->i)
+	{
+		delete val;
+		return false;
+	}
+
+	delete val;
+	return true;
+}
+

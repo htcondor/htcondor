@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_open.h"
 #include "condor_config.h"
 #include "util_lib_proto.h"
 #include "basename.h"
@@ -124,7 +125,7 @@ static bool doAuthInit = true;
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
 void
-check_parent()
+check_parent( )
 {
 	if ( daemonCore->Is_Pid_Alive( daemonCore->getppid() ) == FALSE ) {
 		// our parent is gone!
@@ -138,7 +139,7 @@ check_parent()
 
 // This function clears expired sessions from the cache
 void
-check_session_cache()
+check_session_cache( )
 {
 	daemonCore->getSecMan()->invalidateExpiredCache();
 }
@@ -160,7 +161,7 @@ bool global_dc_get_cookie(int &len, unsigned char* &data) {
 }
 
 void
-handle_cookie_refresh()
+handle_cookie_refresh( )
 {
 	unsigned char randomjunk[256];
 	char symbols[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
@@ -523,19 +524,17 @@ handle_log_append( char* append_str )
 }
 
 
-int
-dc_touch_log_file( Service* )
+void
+dc_touch_log_file( )
 {
 	dprintf_touch_log();
 
 	daemonCore->Register_Timer( param_integer( "TOUCH_LOG_INTERVAL", 60 ),
-				(TimerHandler)dc_touch_log_file, "dc_touch_log_file" );
-
-	return TRUE;
+				dc_touch_log_file, "dc_touch_log_file" );
 }
 
-int
-dc_touch_lock_files(Service *)
+void
+dc_touch_lock_files( )
 {
 	priv_state p;
 
@@ -555,9 +554,7 @@ dc_touch_lock_files(Service *)
 	// reset the timer for next incarnation of the update.
 	daemonCore->Register_Timer(
 		param_integer("LOCK_FILE_UPDATE_INTERVAL", 3600 * 8, 60, INT_MAX),
-		(TimerHandler)dc_touch_lock_files, "dc_touch_lock_files" );
-
-	return TRUE;
+		dc_touch_lock_files, "dc_touch_lock_files" );
 }
 
 
@@ -1070,10 +1067,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 	}
 
 	Directory d(dirName);
-	const char *filename;
 
 	result = 1;
-	while ((filename = d.Next())) {
+	while (d.Next()) {
 		time_t last = d.GetModifyTime();
 		if (last < cutoff) {
 			d.Remove_Current_File();
@@ -1088,15 +1084,17 @@ handle_fetch_log_history_purge(ReliSock *s) {
 }
 
 
+#ifdef WIN32
 int
 handle_nop( Service*, int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "handle_nop: failed to read end of message\n");
+		dprintf( D_FULLDEBUG, "handle_nop: failed to read end of message\n");
 		return FALSE;
 	}
 	return TRUE;
 }
+#endif
 
 
 int
@@ -1386,6 +1384,13 @@ handle_dc_sighup( Service*, int )
 }
 
 
+void
+TimerHandler_main_shutdown_fast()
+{
+	main_shutdown_fast();
+}
+
+
 int
 handle_dc_sigterm( Service*, int )
 {
@@ -1418,7 +1423,7 @@ handle_dc_sigterm( Service*, int )
 			free( tmp );
 		}
 		daemonCore->Register_Timer( timeout, 0, 
-									(TimerHandler)main_shutdown_fast,
+									TimerHandler_main_shutdown_fast,
 									"main_shutdown_fast" );
 		dprintf( D_FULLDEBUG, 
 				 "Started timer to call main_shutdown_fast in %d seconds\n", 
@@ -1426,6 +1431,12 @@ handle_dc_sigterm( Service*, int )
 	}
 	main_shutdown_graceful();
 	return TRUE;
+}
+
+void
+TimerHandler_dc_sigterm()
+{
+	handle_dc_sigterm(NULL, SIGTERM);
 }
 
 
@@ -1446,7 +1457,7 @@ handle_dc_sigquit( Service*, int )
 }
 
 void
-handle_gcb_recovery_failed( Service * /*ignore*/ )
+handle_gcb_recovery_failed( )
 {
 	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
 			 "Broker. Performing fast shutdown.\n" );
@@ -1460,7 +1471,7 @@ gcb_recovery_failed_callback()
 		// DaemonCore is blocked on a select() or CEDAR is blocked on a
 		// network operation. So we register a daemoncore timer to do
 		// the real work.
-	daemonCore->Register_Timer( 0, (TimerHandler)handle_gcb_recovery_failed,
+	daemonCore->Register_Timer( 0, handle_gcb_recovery_failed,
 								"handle_gcb_recovery_failed" );
 }
 
@@ -1476,6 +1487,7 @@ int main( int argc, char** argv )
 {
 	char**	ptr;
 	int		command_port = -1;
+	char const *daemon_sock_name = NULL;
 	int 	http_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
@@ -1756,6 +1768,27 @@ int main( int argc, char** argv )
 			}
 			//call Register_Timer below after intialized...
 			break;
+		case 's':
+				// the c-gahp uses -s, so for backward compatibility,
+				// do not allow abbreviations of -sock
+			if( strcmp("-sock",*ptr) ) {
+				done = true;
+				break;
+			}
+			else {
+				ptr++;
+				if( *ptr ) {
+					daemon_sock_name = *ptr;
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -sock needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify a socket name.\n" );
+					exit( 1 );
+				}
+			}
+			break;
 		case 't':		// log to Terminal (stderr)
 			Termlog = 1;
 			dcargs++;
@@ -2028,7 +2061,12 @@ int main( int argc, char** argv )
 		// right now: a) we are running as a service, and services are 
 		// born without a console, or b) the user did not specify "-f" 
 		// or "-t", and thus we called FreeConsole() above.
-	AllocConsole();
+
+		// for now, don't create a console for the kbdd, as that daemon
+		// is now a win32 app and not a console app.
+	BOOL is_kbdd = (0 == strcmp(get_mySubSystem()->getName(), "KBDD"));
+	if(!is_kbdd)
+		AllocConsole();
 #endif
 
 		// Avoid possibility of stale info sticking around from previous run.
@@ -2066,6 +2104,7 @@ int main( int argc, char** argv )
 	main_pre_command_sock_init();
 
 		// SETUP COMMAND SOCKET
+	daemonCore->SetDaemonSockName( daemon_sock_name );
 	daemonCore->InitDCCommandSocket( command_port );
 
 		// Install DaemonCore signal handlers common to all daemons.
@@ -2094,7 +2133,7 @@ int main( int argc, char** argv )
 	if ( runfor ) {
 		daemon_stop_time = time(NULL)+runfor*60;
 		daemonCore->Register_Timer( runfor * 60, 0, 
-				(TimerHandler)handle_dc_sigterm, "handle_dc_sigterm" );
+				TimerHandler_dc_sigterm, "handle_dc_sigterm" );
 		dprintf(D_ALWAYS,"Registered Timer for graceful shutdown in %d minutes\n",
 				runfor );
 	}
@@ -2108,18 +2147,18 @@ int main( int argc, char** argv )
 		// Also note: we do not want the master to exibit this behavior!
 	if ( ! get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
 		daemonCore->Register_Timer( 15, 120, 
-				(TimerHandler)check_parent, "check_parent" );
+				check_parent, "check_parent" );
 	}
 #endif
 
 	daemonCore->Register_Timer( 0,
-				(TimerHandler)dc_touch_log_file, "dc_touch_log_file" );
+				dc_touch_log_file, "dc_touch_log_file" );
 
 	daemonCore->Register_Timer( 0,
-				(TimerHandler)dc_touch_lock_files, "dc_touch_lock_files" );
+				dc_touch_lock_files, "dc_touch_lock_files" );
 
 	daemonCore->Register_Timer( 0, 5 * 60,
-				(TimerHandler)check_session_cache, "check_session_cache" );
+				check_session_cache, "check_session_cache" );
 	
 
 	// set the timer for half the session duration, 
@@ -2128,7 +2167,7 @@ int main( int argc, char** argv )
 	int cookie_refresh = (param_integer("SEC_DEFAULT_SESSION_DURATION", 3600)/2)+1;
 
 	daemonCore->Register_Timer( 0, cookie_refresh, 
-				(TimerHandler)handle_cookie_refresh, "handle_cookie_refresh");
+				handle_cookie_refresh, "handle_cookie_refresh");
  
 
 	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_MASTER ) ||
@@ -2181,9 +2220,13 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_set_peaceful_shutdown,
 								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
 
+#ifdef WIN32
+		// DC_NOP is for waking up select.  There is no need for
+		// security here, because anyone can wake up select anyway.
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
 								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, READ );
+								  "handle_nop()", 0, ALLOW );
+#endif
 
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
 								  (CommandHandler)handle_fetch_log,

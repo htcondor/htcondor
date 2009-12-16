@@ -145,8 +145,20 @@ class WriteUserLog
 
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
-	void setWriteUserLog(bool b){ m_userlog_enable = b; }
-	void setWriteGlobalLog(bool b){ m_global_disable = !b; }
+	/** Enable / disable writing of user or global logs
+	 */
+	bool setEnableUserLog( bool enable ) {
+		bool tmp = m_userlog_enable;
+		m_userlog_enable = enable;
+		return tmp;
+	};
+	bool setEnableGlobalLog( bool enable ) {
+		bool tmp = !m_global_disable;
+		m_global_disable = !enable;
+		return tmp;
+	};
+
+	void setCreatorName(const char *);
 
 	/** Verify that the event log is initialized
 		@return true on success
@@ -229,6 +241,10 @@ class WriteUserLog
 	const char *getGlobalPath( void ) const { return m_global_path; };
 	bool getGlobalLogSize( unsigned long &, bool use_fp );
 
+	bool isGlobalEnabled( void ) const {
+		return ( ( m_global_disable == false ) && ( NULL != m_global_path ) );
+	};
+
 
   private:
 
@@ -236,8 +252,9 @@ class WriteUserLog
     void Reset( void );
     bool internalInitialize(int c, int p, int s, const char *gjid);
 	void FreeAllResources( void );
-	void FreeGlobalResources( void );
+	void FreeGlobalResources( bool final );
 	void FreeLocalResources( void );
+	const char *GetGlobalIdBase( void );
 
 	// Write header event to global file
 	bool writeHeaderEvent ( const UserLogHeader &header );
@@ -288,7 +305,7 @@ class WriteUserLog
     /** The global log file          */  FILE     * m_global_fp;
     /** The global log file lock     */  FileLockBase *m_global_lock;
 	/** Whether we use XML or not    */  bool       m_global_use_xml;
-	/** The log file uniq ID base    */  char     * m_global_uniq_base;
+	/** The log file uniq ID base    */  char     * m_global_id_base;
 	/** The current sequence number  */  int        m_global_sequence;
 	/** Count event log events?      */  bool       m_global_count_events;
 	/** Max size of event log        */  long		m_global_max_filesize;
@@ -312,6 +329,7 @@ class WriteUserLog
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
+	/** Creator Name (schedd name)   */  char     * m_creator_name;
 };
 
 // For backward compatibility, define UserLog

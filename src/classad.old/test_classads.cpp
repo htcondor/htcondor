@@ -1169,7 +1169,7 @@ test_ads_match(
     int          line_number,  // IN: The line number to print
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
-	if (classad_1->IsAMatch(classad_2)) {
+	if (IsAMatch(classad_1, classad_2)) {
 		printf("Passed: classads match in line %d.\n", line_number);
 		results->AddResult(true);
 	} else {
@@ -1192,7 +1192,7 @@ test_ads_dont_match(
     int          line_number,  // IN: The line number to print
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
-	if (!classad_1->IsAMatch(classad_2)) {
+	if (!IsAMatch(classad_1, classad_2)) {
 		printf("Passed: classads don't match in line %d.\n", line_number);
 		results->AddResult(true);
 	} else {

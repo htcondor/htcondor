@@ -44,7 +44,7 @@ class StartdFactory : public Service
 
 		// The timer which initiates the daemon to try and alter the
 		// BG partitions to match the workload required.
-		int adjust_partitions(void);
+		void adjust_partitions(void);
 
 		// pull in all of the config file variables.
 		void reconfig(void);

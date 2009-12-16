@@ -232,6 +232,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_daemon_core.V6\no_soap_core.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_gridmanager\nordugridjob.cpp"
 			>
 		</File>
@@ -254,42 +258,6 @@
 		<File
 			RelativePath="..\src\condor_gridmanager\proxymanager.h"
 			>
-		</File>
-		<File
-			RelativePath="..\src\condor_gridmanager\soap_gridmanagerC.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_gridmanager\soap_gridmanagerServer.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_gridmanager\soap_gridmanagerStub.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_gridmanager\unicorejob.cpp"

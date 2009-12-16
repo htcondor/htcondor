@@ -139,6 +139,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_daemon_core.V6\no_soap_core.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_shadow.V6.1\NTreceivers.cpp"
 			>
 		</File>
@@ -185,42 +189,6 @@
 		<File
 			RelativePath="..\src\condor_shadow.V6.1\shadow_v61_main.cpp"
 			>
-		</File>
-		<File
-			RelativePath="..\src\condor_shadow.V6.1\soap_shadowC.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_shadow.V6.1\soap_shadowServer.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_shadow.V6.1\soap_shadowStub.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
 		</File>
 	</Files>
 	<Globals>

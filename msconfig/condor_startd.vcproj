@@ -192,6 +192,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_daemon_core.V6\no_soap_core.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_startd.V6\Reqexp.cpp"
 			>
 		</File>
@@ -230,42 +234,6 @@
 		<File
 			RelativePath="..\src\condor_startd.V6\ResState.h"
 			>
-		</File>
-		<File
-			RelativePath="..\src\condor_startd.V6\soap_startdC.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_startd.V6\soap_startdServer.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_startd.V6\soap_startdStub.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_startd.V6\startd.h"

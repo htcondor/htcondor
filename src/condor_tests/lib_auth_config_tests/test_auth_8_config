@@ -1,0 +1,4 @@
+# test ALLOW_CONFIG=*, since config, unlike other auth levels denies all
+# by default
+
+DENY_CONFIG = 198.162.0.1

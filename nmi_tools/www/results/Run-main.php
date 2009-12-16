@@ -60,7 +60,7 @@ load_config();
     unset($arg_year);
   }
 
-  $db = mysql_connect(DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+  $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
   mysql_select_db(DB_NAME) or die("Could not select database");
 
   # find all unique users of the system for the dropdown box
@@ -452,7 +452,7 @@ load_config();
   $query_stat4 = "select count(result) as builds4" . "$query1" . "$connector" . " result ='-1' and start > '$d_f' and start < '$date_format'";
 
   # run the statistics queries
-  $db = mysql_connect(DB_HOST, DB_READER_USER , DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+  $db = mysql_connect(WEB_DB_HOST, DB_READER_USER , DB_READER_PASS) or die ("Could not connect : " . mysql_error());
   mysql_select_db(DB_NAME) or die("Could not select database");
   $result1 = mysql_query($query_main) or die ("Query failed : " . mysql_error());
 
@@ -601,7 +601,7 @@ load_config();
     # if there is only one (besides local), display it, otherwise print the number of platforms
     $query7 = "SELECT * FROM Task where runid=$runid";
   
-    $db = mysql_connect(DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+    $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
     mysql_select_db(DB_NAME) or die("Could not select database");
     $result7 = mysql_query($query7) or die ("Query failed : " . mysql_error());
  

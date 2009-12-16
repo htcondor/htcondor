@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-#include <iostream.h>
+#include <iostream>
 #include "queue.h"
 
 int main (int argc, char *argv[]) {

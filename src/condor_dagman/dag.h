@@ -112,10 +112,11 @@ class Dag {
 			   in depth-first (as opposed to breadth-first) order
 		@param The user log file to be used for nodes whose submit files do
 				not specify a log file.
-		@param findUserLogs whether or not log files for the submit files
-				should be recursively dug out of the dag file and any
-				splices it contains. Usually this is true for the root
-				dag, and false for any splices brought in by the root dag.
+		@param isSplice is a boolean which lets the dag object know whether
+				of not it is a splicing dag, or the toplevel dag. We don't
+				wan't to allocate some regulated resources we won't need
+				if we are a splice. It is true for a top level dag, and false
+				for a splice.
     */
 
     Dag( /* const */ StringList &dagFiles,
@@ -126,7 +127,7 @@ class Dag {
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 const char *defaultNodeLog, bool findUserLogs = true );
+		 const char *defaultNodeLog, bool isSplice = false );
 
     ///
     ~Dag();
@@ -310,17 +311,32 @@ class Dag {
     /** @return the number of PRE scripts currently running
      */
     inline int NumPreScriptsRunning() const
-		{ return _preScriptQ->NumScriptsRunning(); }
+	{
+		// Do not call this function when the dag is being used to parse
+		// a splice.
+		ASSERT( _isSplice == false ); 
+		return _preScriptQ->NumScriptsRunning();
+	}
 
     /** @return the number of POST scripts currently running
      */
     inline int NumPostScriptsRunning() const
-		{ return _postScriptQ->NumScriptsRunning(); }
+	{
+		// Do not call this function when the dag is being used to parse
+		// a splice.
+		ASSERT( _isSplice == false ); 
+		return _postScriptQ->NumScriptsRunning(); 
+	}
 
     /** @return the total number of PRE/POST scripts currently running
      */
     inline int NumScriptsRunning() const
-		{ return NumPreScriptsRunning() + NumPostScriptsRunning(); }
+	{
+		// Do not call this function when the dag is being used to parse
+		// a splice.
+		ASSERT( _isSplice == false ); 
+		return NumPreScriptsRunning() + NumPostScriptsRunning();
+	}
 
 	/** @return the number of nodes currently in the status
 	 *          Job::STATUS_PRERUN.
@@ -624,9 +640,16 @@ class Dag {
 	*/
 	void UpdateJobCounts( Job *node, int change );
 
-    // add job to termination queue and report termination to all
-    // child jobs by removing job ID from each child's waiting queue
-    void TerminateJob( Job* job, bool bootstrap = false );
+	/** Add job to termination queue and report termination to all
+		child jobs by removing job ID from each child's waiting queue.
+		Note that this method should be called only in the case of
+		*successful* termination.
+		@param The job (node) just terminated
+		@param Whether we're in recovery mode (re-reading log events)
+		@param Whether we're in bootstrap mode (dealing with jobs marked
+			DONE in a rescue DAG)
+	*/
+    void TerminateJob( Job* job, bool recovery, bool bootstrap = false );
   
 	void PrintEvent( debug_level_t level, const ULogEvent* event,
 					 Job* node );
@@ -860,6 +883,14 @@ class Dag {
 		// The user log file to be used for nodes whose submit files do
 		// not specify a log file.
 	const char *_defaultNodeLog;
+
+		// Dag objects are used to parse splice files, which are like include
+		// files that ultimately result in a larger in memory dag. To toplevel
+		// dag will have this be false, and any included splices will be true.
+		// We use this knowledge to not allocate precious daemoncore resources
+		// because we know we aren't going to have an "executing" dag object
+		// which is also a splice.
+	bool _isSplice;
 
 };
 

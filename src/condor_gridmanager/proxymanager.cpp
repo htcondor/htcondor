@@ -62,7 +62,7 @@ int myproxyGetDelegationReaperId = 0;
 
 static int next_proxy_id = 1;
 
-int CheckProxies();
+void CheckProxies();
 
 static bool
 SetMasterProxy( Proxy *master, const Proxy *copy_src )
@@ -86,10 +86,10 @@ SetMasterProxy( Proxy *master, const Proxy *copy_src )
 	master->expiration_time = copy_src->expiration_time;
 	master->near_expired = copy_src->near_expired;
 
-	int tid;
-	master->notification_tids.Rewind();
-	while ( master->notification_tids.Next( tid ) ) {
-		daemonCore->Reset_Timer( tid, 0 );
+	Callback cb;
+	master->m_callbacks.Rewind();
+	while ( master->m_callbacks.Next( cb ) ) {
+		((cb.m_data)->*(cb.m_func_ptr))();
 	}
 
 	return true;
@@ -104,8 +104,8 @@ bool InitializeProxyManager( const char *proxy_dir )
 	}
 
 	CheckProxies_tid = daemonCore->Register_Timer( 1, CheckProxies_interval,
-												   (TimerHandler)&CheckProxies,
-												   "CheckProxies", NULL );
+												   CheckProxies,
+												   "CheckProxies" );
 
 	masterProxyDirectory = strdup( proxy_dir );
 
@@ -164,7 +164,8 @@ void ReconfigProxyManager()
 // any proxy-related attributes, AcquireProxy() will store the empty
 // string in the error parameter and return NULL.
 Proxy *
-AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
+AcquireProxy( const ClassAd *job_ad, MyString &error,
+			  TimerHandlercpp func_ptr, Service *data  )
 {
 	if ( proxymanager_initialized == false ) {
 		error = "Internal Error: ProxyManager not initialized";
@@ -227,9 +228,13 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 			// Now that we have a proxy_subject, return it's master proxy
 			proxy = proxy_subject->master_proxy;
 			proxy->num_references++;
-			if ( notify_tid > 0 &&
-				 proxy->notification_tids.IsMember( notify_tid ) == false ) {
-				proxy->notification_tids.Append( notify_tid );
+			if ( func_ptr ) {
+				Callback cb;
+				cb.m_func_ptr = func_ptr;
+				cb.m_data = data;
+				if ( proxy->m_callbacks.IsMember( cb ) == false ) {
+					proxy->m_callbacks.Append( cb );
+				}
 			}
 			free( subject_name );
 			return proxy;
@@ -245,9 +250,13 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 		// We already know about this proxy,
 		// use the existing Proxy struct
 		proxy->num_references++;
-		if ( notify_tid > 0 &&
-			 proxy->notification_tids.IsMember( notify_tid ) == false ) {
-			proxy->notification_tids.Append( notify_tid );
+		if ( func_ptr ) {
+			Callback cb;
+			cb.m_func_ptr = func_ptr;
+			cb.m_data = data;
+			if ( proxy->m_callbacks.IsMember( cb ) == false ) {
+				proxy->m_callbacks.Append( cb );
+			}
 		}
 		return proxy;
 
@@ -262,7 +271,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 			error.sprintf( "Failed to get expiration time of proxy" );
 			return NULL;
 		}
-		subject_name = x509_proxy_identity_name( proxy_path.Value(), 1 );
+		subject_name = x509_proxy_identity_name( proxy_path.Value() );
 		if ( subject_name == NULL ) {
 			dprintf( D_ALWAYS, "Failed to get identity of proxy %s\n",
 					 proxy_path.Value() );
@@ -277,9 +286,13 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 		proxy->expiration_time = expire_time;
 		proxy->near_expired = (expire_time - time(NULL)) <= minProxy_time;
 		proxy->id = next_proxy_id++;
-		if ( notify_tid > 0 &&
-			 proxy->notification_tids.IsMember( notify_tid ) == false ) {
-			proxy->notification_tids.Append( notify_tid );
+		if ( func_ptr ) {
+			Callback cb;
+			cb.m_func_ptr = func_ptr;
+			cb.m_data = data;
+			if ( proxy->m_callbacks.IsMember( cb ) == false ) {
+				proxy->m_callbacks.Append( cb );
+			}
 		}
 
 		ProxiesByFilename.insert(HashKey(proxy_path.Value()), proxy);
@@ -421,12 +434,16 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 }
 
 Proxy *
-AcquireProxy( Proxy *proxy, int notify_tid )
+AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 {
 	proxy->num_references++;
-	if ( notify_tid > 0 &&
-		 proxy->notification_tids.IsMember( notify_tid ) == false ) {
-		proxy->notification_tids.Append( notify_tid );
+	if ( func_ptr ) {
+		Callback cb;
+		cb.m_func_ptr = func_ptr;
+		cb.m_data = data;
+		if ( proxy->m_callbacks.IsMember( cb ) == false ) {
+			proxy->m_callbacks.Append( cb );
+		}
 	}
 	return proxy;
 }
@@ -436,15 +453,18 @@ AcquireProxy( Proxy *proxy, int notify_tid )
 // ProxyManager code will take care of that for you. If you provided a
 // notify_tid to AcquireProxy(), provide it again here.
 void
-ReleaseProxy( Proxy *proxy, int notify_tid )
+ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 {
 	if ( proxymanager_initialized == false || proxy == NULL ) {
 		return;
 	}
 
 	proxy->num_references--;
-	if ( notify_tid > 0 ) {
-		proxy->notification_tids.Delete( notify_tid );
+	if ( func_ptr ) {
+		Callback cb;
+		cb.m_func_ptr = func_ptr;
+		cb.m_data = data;
+		proxy->m_callbacks.Delete( cb );
 	}
 
 	if ( proxy->num_references < 0 ) {
@@ -565,7 +585,7 @@ void doCheckProxies()
 // This function is called
 // periodically to check for updated proxies. It can be called earlier
 // if a proxy is about to expire.
-int CheckProxies()
+void CheckProxies()
 {
 	int now = time(NULL);
 	int next_check = CheckProxies_interval + now;
@@ -613,10 +633,10 @@ int CheckProxies()
 				curr_proxy->near_expired =
 					(curr_proxy->expiration_time - now) <= minProxy_time;
 
-				int tid;
-				curr_proxy->notification_tids.Rewind();
-				while ( curr_proxy->notification_tids.Next( tid ) ) {
-					daemonCore->Reset_Timer( tid, 0 );
+				Callback cb;
+				curr_proxy->m_callbacks.Rewind();
+				while ( curr_proxy->m_callbacks.Next( cb ) ) {
+					((cb.m_data)->*(cb.m_func_ptr))();
 				}
 
 				if ( curr_proxy->expiration_time > new_master->expiration_time ) {
@@ -625,12 +645,11 @@ int CheckProxies()
 
 			} else if ( curr_proxy->near_expired ) {
 
-				int tid;
-				curr_proxy->notification_tids.Rewind();
-				while ( curr_proxy->notification_tids.Next( tid ) ) {
-					daemonCore->Reset_Timer( tid, 0 );
+				Callback cb;
+				curr_proxy->m_callbacks.Rewind();
+				while ( curr_proxy->m_callbacks.Next( cb ) ) {
+					((cb.m_data)->*(cb.m_func_ptr))();
 				}
-
 			}
 
 			if ( curr_proxy->expiration_time - minProxy_time < next_check &&
@@ -651,8 +670,6 @@ int CheckProxies()
 	// next_check is the absolute time of the next check, convert it to
 	// a relative time (from now)
 	daemonCore->Reset_Timer( CheckProxies_tid, next_check - now );
-
-	return TRUE;
 }
 
 int RefreshProxyThruMyProxy(Proxy * proxy)

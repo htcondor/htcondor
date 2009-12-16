@@ -1,0 +1,18 @@
+NAME = condor_shared_port
+all_target( $(NAME) )
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+
+OBJ = shared_port_main.o
+
+public_c_plus_target($(NAME),libexec,$(OBJ),$(LIB))
+
+html:
+release:: all
+stripped:: all
+static:: all
+clean::
+
+testbin:: all

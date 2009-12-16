@@ -59,7 +59,7 @@ HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 
 ## The access to HDFS services both name node and data node can be 
 ## restricted by specifying IP/host based filters. By default settings
-## from HOSTALLOW_READ/HOSTALLOW_WRITE and HOSTDENY_READ/HOSTDENY_WRITE
+## from ALLOW_READ/ALLOW_WRITE and DENY_READ/DENY_WRITE
 ## are used to specify allow and deny list. The below two parameters can
 ## be used to override these settings. Read the Condor manual for 
 ## specification of these filters.

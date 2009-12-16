@@ -280,14 +280,15 @@ void UnicoreJob::Reconfig()
 	}
 }
 
-int UnicoreJob::doEvaluateState()
+void UnicoreJob::doEvaluateState()
 {
 	int old_gm_state;
 	int old_unicore_state;
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -460,8 +461,9 @@ int UnicoreJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMIT_COMMIT;
@@ -564,8 +566,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) *** Processing callback ad\n",procID.cluster, procI
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 			}
@@ -595,7 +598,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) *** Processing callback ad\n",procID.cluster, procI
 //					jobContact = NULL;
 //					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
 //									   NULL_JOB_CONTACT );
-//					requestScheddUpdate( this );
+//					requestScheddUpdate( this, false );
 //				}
 //				gmState = GM_CLEAR_REQUEST;
 				gmState = GM_HOLD;
@@ -649,8 +652,9 @@ if ( unicoreState != COMPLETED ) {
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			executeLogged = false;
@@ -724,8 +728,6 @@ if ( unicoreState != COMPLETED ) {
 		}
 
 	} while ( reevaluate_state );
-
-	return TRUE;
 }
 
 BaseResource *UnicoreJob::GetResource()

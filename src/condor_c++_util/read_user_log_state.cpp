@@ -592,11 +592,11 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 	StatWrapper	sb;
 
 	if ( fd >= 0 ) {
-		sb.Stat( fd );
+		(void) sb.Stat( fd );
 	}
 
 	if ( m_cur_path.Length() && !sb.IsBufValid() ) {
-		sb.Stat( m_cur_path.Value() );
+		(void) sb.Stat( m_cur_path.Value() );
 	}
 
 	if ( sb.GetRc() ) {
@@ -664,7 +664,7 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 
 	// The paths shouldn't change... copy them only the first time
 	if( !strlen( istate->m_base_path ) ) {
-		memset( istate->m_base_path, sizeof(istate->m_base_path), 0 );
+		memset( istate->m_base_path, 0, sizeof(istate->m_base_path) );
 		if ( m_base_path.Value() ) {
 			strncpy( istate->m_base_path,
 					 m_base_path.Value(),

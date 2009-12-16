@@ -43,6 +43,7 @@
 #include "store_cred.h"
 #include "setenv.h"
 #include "file_lock.h"
+#include "shared_port_server.h"
 
 #if HAVE_DLOPEN
 #include "MasterPlugin.h"
@@ -80,7 +81,7 @@ void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-int		run_preen(Service*);
+void	run_preen();
 void	usage(const char* );
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
@@ -94,12 +95,6 @@ void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
 
 extern "C" int	DoCleanup(int,int,char*);
-
-#if 0
-int		GetConfig(char*, char*);
-void	StartConfigServer();
-char*			configServer;
-#endif
 
 // Global variables
 ClassAd	*ad = NULL;				// ClassAd to send to collector
@@ -142,7 +137,7 @@ char	*default_daemon_list[] = {
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
-"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER";
+"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -855,6 +850,14 @@ init_daemon_list()
 			daemon_names.insert( "COLLECTOR" );
 		}
 
+			// start shared_port first for a cleaner startup
+		if( daemon_names.contains("SHARED_PORT") ) {
+			daemon_names.deleteCurrent();
+			daemon_names.rewind();
+			daemon_names.next();
+			daemon_names.insert( "SHARED_PORT" );
+		}
+
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.GetIndex(daemon_name) < 0) {
@@ -926,15 +929,9 @@ init_classad()
 		delete [] default_name;
 	}
 
-		// CRUFT
-	ad->Assign(ATTR_MASTER_IP_ADDR, daemonCore->InfoCommandSinfulString());
-
 #if !defined(WIN32)
 	ad->Assign(ATTR_REAL_UID, (int)getuid());
 #endif
-
-		// Initialize all the DaemonCore-provided attributes
-	daemonCore->publish( ad ); 	
 }
 
 #ifndef WIN32
@@ -1071,8 +1068,8 @@ NewExecutable(char* file, time_t *tsp)
 	return( cts != *tsp );
 }
 
-int
-run_preen(Service*)
+void
+run_preen()
 {
 	int		child_pid;
 	char *args=NULL;
@@ -1083,7 +1080,7 @@ run_preen(Service*)
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 
 	if( FS_Preen == NULL ) {
-		return 0;
+		return;
 	}
 	preen_base = condor_basename( FS_Preen );
 	arglist.AppendArg(preen_base);
@@ -1101,8 +1098,6 @@ run_preen(Service*)
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
-
-	return child_pid;
 }
 
 
@@ -1113,44 +1108,9 @@ RestartMaster()
 }
 
 
-#if 0
-void StartConfigServer()
-{
-	daemon*			newDaemon;
-	
-	newDaemon = new daemon("CONFIG_SERVER");
-	newDaemon->process_name = param(newDaemon->name_in_config_file);
-	if(newDaemon->process_name == NULL && newDaemon->runs_here)
-	{
-		dprintf(D_ALWAYS, "Process not found in config file: %s\n",
-				newDaemon->name_in_config_file);
-		EXCEPT("Can't continue...");
-	}
-	newDaemon->config_info_file = param("CONFIG_SERVER_FILE");
-	newDaemon->port = param("CONFIG_SERVER_PORT");
-
-	// check that log file is necessary
-	if(newDaemon->log_filename_in_config_file != NULL)
-	{
-		newDaemon->log_name = param(newDaemon->log_filename_in_config_file);
-		if(newDaemon->log_name == NULL && newDaemon->runs_here)
-		{
-			dprintf(D_ALWAYS, "Log file not found in config file: %s\n",
-					newDaemon->log_filename_in_config_file);
-		}
-	}
-
-	newDaemon->StartDaemon();
-	
-	// sleep for a while because we want the config server to stable down
-	// before doing anything else
-	sleep(5); 
-}
-#endif
-
 #if HAVE_EXT_GCB
 void
-gcb_broker_down_handler( Service * )
+gcb_broker_down_handler()
 {
 	int num_slots;
 	const char *our_broker = GetEnv( "GCB_INAGENT" );
@@ -1209,12 +1169,12 @@ gcbBrokerDownCallback()
 		// DaemonCore is blocked on a select() or CEDAR is blocked on a
 		// network operation. So we register a daemoncore timer to do
 		// the real work.
-	daemonCore->Register_Timer( 0, (TimerHandler)gcb_broker_down_handler,
+	daemonCore->Register_Timer( 0, gcb_broker_down_handler,
 								"gcb_broker_down_handler" );
 }
 
 void
-gcb_recovery_failed_handler( Service * )
+gcb_recovery_failed_handler()
 {
 	dprintf(D_ALWAYS, "GCB failed to recover from a failure with the "
 			"Broker. Restarting all daemons\n");
@@ -1228,7 +1188,7 @@ gcbRecoveryFailedCallback()
 		// DaemonCore is blocked on a select() or CEDAR is blocked on a
 		// network operation. So we register a daemoncore timer to do
 		// the real work.
-	daemonCore->Register_Timer( 0, (TimerHandler)gcb_recovery_failed_handler,
+	daemonCore->Register_Timer( 0, gcb_recovery_failed_handler,
 								"gcb_recovery_failed_handler" );
 }
 #endif
@@ -1315,6 +1275,17 @@ main_pre_command_sock_init()
 		}
 	}
 #endif
+
+	MyString daemon_list;
+	if( param(daemon_list,"DAEMON_LIST") ) {
+		StringList sl(daemon_list.Value());
+		if( sl.contains("SHARED_PORT") ) {
+				// in case a shared port address file got left behind by an
+				// unclean shutdown, clean it up now before we create our
+				// command socket to avoid confusion
+			SharedPortServer::RemoveDeadAddressFile();
+		}
+	}
 }
 
 
@@ -1327,7 +1298,7 @@ void init_firewall_exceptions() {
 		 *negotiator_image_path, *collector_image_path, *starter_image_path,
 		 *shadow_image_path, *gridmanager_image_path, *gahp_image_path,
 		 *gahp_worker_image_path, *credd_image_path, 
-		 *vmgahp_image_path, *bin_path;
+		 *vmgahp_image_path, *kbdd_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
@@ -1375,6 +1346,7 @@ void init_firewall_exceptions() {
 	gahp_image_path = param("CONDOR_GAHP");
 	gahp_worker_image_path = param("CONDOR_GAHP_WORKER");
 	credd_image_path = param("CREDD");
+	kbdd_image_path = param("KBDD");
 	vmgahp_image_path = param("VM_GAHP_SERVER");
 	
 	// We also want to add exceptions for the DAGMan we ship
@@ -1457,6 +1429,11 @@ void init_firewall_exceptions() {
 				"windows firewall exception list.\n",
 				startd_image_path);
 		}
+		if ( !wfh.addTrusted(kbdd_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				kbdd_image_path);
+		}
 	}
 
 	if ( (! (daemons.GetIndex("QUILL") < 0) ) && quill_image_path ) {
@@ -1519,7 +1496,8 @@ void init_firewall_exceptions() {
 	if ( gridmanager_image_path ) { free(gridmanager_image_path); }
 	if ( gahp_image_path ) { free(gahp_image_path); }	
 	if ( credd_image_path ) { free(credd_image_path); }	
-	if ( vmgahp_image_path ) { free(vmgahp_image_path); }		
+	if ( vmgahp_image_path ) { free(vmgahp_image_path); }
+	if ( kbdd_image_path ) { free(kbdd_image_path); }
 #endif
 }
 

@@ -3,9 +3,7 @@ all_target( $(NAME) )
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
-
-soapobjs(transferd)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ =	td_main.o \
 		td_init.o \
@@ -13,9 +11,7 @@ OBJ =	td_main.o \
 		td_utils.o \
 		td_write_files.o \
 		td_read_files.o \
-		td_active.o \
-		 \
-		$(SOAP_OBJS)
+		td_active.o
 
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
@@ -26,5 +22,3 @@ stripped:: all
 static:: all
 clean::
 testbin:: all
-
-gen_soapfiles(transferd,condorTransferd)

@@ -18,28 +18,44 @@
 ##
 ##**************************************************************
 
-## This tests recovery mode after node retries (see gittrac #481).
-
-## Note: this is a bit of a tricky test -- the node C job actually
-## puts DAGMan on hold and then releases it to force it into recovery
-## mode.
-
-## TO DO: add some stuff to verify that each node really only got
-## successfully run once.
+## This tests running multiple DAGs in the same DAGMan instance
+## (multiple DAG files specified on the condor_submit_dag command line).
 
 use CondorTest;
 
-#TEMPTEMP -- will this work?
-@cmdTEMP = ("job_dagman_multi_dag-dag1.dag", "job_dagman_multi_dag-dag2.dag");
-$cmd = \@cmdTEMP;
+# $cmd is a reference to an array -- that's the way to pass multiple
+# DAG files to the subroutines in Condor.pm.
+$cmd = ['job_dagman_multi_dag-dag1.dag', 'job_dagman_multi_dag-dag2.dag'];
 $testdesc =  'Condor submit dag - multi-DAG test - scheduler U';
 $testname = "job_dagman_multi_dag";
 $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_multi_dag-dag1.dag.dagman.out");
 
-my $dag_was_held = 0;
-my $dag_was_released = 0;
+@outfiles = ( "job_dagman_multi_dag-0.nodeA-job.out",
+	"job_dagman_multi_dag-0.nodeA-post.out",
+	"job_dagman_multi_dag-0.nodeA-pre.out",
+	"job_dagman_multi_dag-0.nodeB-job.out",
+	"job_dagman_multi_dag-0.nodeB-post.out",
+	"job_dagman_multi_dag-0.nodeB-pre.out",
+	"job_dagman_multi_dag-0.nodeC1-job.out",
+	"job_dagman_multi_dag-0.nodeC1-post.out",
+	"job_dagman_multi_dag-0.nodeC1-pre.out",
+	"job_dagman_multi_dag-0.nodeD1-job.out",
+	"job_dagman_multi_dag-0.nodeD1-post.out",
+	"job_dagman_multi_dag-0.nodeD1-pre.out",
+	"job_dagman_multi_dag-1.nodeA-job.out",
+	"job_dagman_multi_dag-1.nodeA-post.out",
+	"job_dagman_multi_dag-1.nodeA-pre.out",
+	"job_dagman_multi_dag-1.nodeB-job.out",
+	"job_dagman_multi_dag-1.nodeB-post.out",
+	"job_dagman_multi_dag-1.nodeB-pre.out",
+	"job_dagman_multi_dag-1.nodeC2-job.out",
+	"job_dagman_multi_dag-1.nodeC2-post.out",
+	"job_dagman_multi_dag-1.nodeC2-pre.out",
+	"job_dagman_multi_dag-1.nodeD2-job.out",
+	"job_dagman_multi_dag-1.nodeD2-post.out",
+	"job_dagman_multi_dag-1.nodeD2-pre.out" );
 
 # truly const variables in perl
 sub IDLE{1};
@@ -48,6 +64,13 @@ sub RUNNING{2};
 
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
+	if (-e $name) {
+		system("rm -f $name");
+	}
+}
+
+# Get rid of any existing output files.
+foreach $name (@outfiles) {
 	if (-e $name) {
 		system("rm -f $name");
 	}
@@ -65,14 +88,7 @@ $aborted = sub
 
 $held = sub 
 {
-	CondorTest::debug("DAGMan was held -- good!\n");
-	$dag_was_held = 1;
-};
-
-$released = sub 
-{
-	CondorTest::debug("DAGMan was released -- good!\n");
-	$dag_was_released = 1;
+	die "Held event NOT expected\n";
 };
 
 $executed = sub
@@ -84,18 +100,11 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing, and successful completion\n",1);
 };
 
 $success = sub
 {
-	if (!$dag_was_held) {
-		die "Error: DAGMan was not held\n";
-	}
-	if (!$dag_was_released) {
-		die "Error: DAGMan was not released\n";
-	}
-
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
@@ -113,51 +122,9 @@ $success = sub
 			chomp();
 			$line = $_;
 
-			if( $line =~ /Starting to cache log lines/ ) {
+			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+				$passed = 1;
 				CondorTest::debug("$name: $line\n",1);
-				if( $cache_state == 0 ) {
-					$cache_state = 1;
-				} else {
-					CondorTest::debug("Started dagman.out caching in " .
-								"wrong sequence\n");
-				}
-
-			} elsif( $line =~ /Event: ULOG_SUBMIT for Condor Node A/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				if( $cache_state == 0 ) {
-					# Pre-recovery -- okay.
-				} elsif( $cache_state == 1 ) {
-					$cache_state = 2;
-				} else {
-					CondorTest::debug("Got submit event for Node A in " .
-								"wrong sequence\n");
-				}
-
-			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for Condor Node C/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				if( $cache_state == 2 or $cache_state == 3 ) {
-					$cache_state++;
-				} else {
-					CondorTest::debug("Got terminated event for Node C " .
-					   "in wrong sequence\n");
-				}
-
-			} elsif( $line =~ /Stopping the caching of log lines/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				if( $cache_state == 2 or $cache_state == 3 ) {
-					$cache_state++;
-				} else {
-					CondorTest::debug("Stopped dagman.out caching in " .
-								"wrong sequence\n");
-				}
-
-			} elsif( $line =~ /EXITING WITH STATUS 0/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				if( $cache_state == 4 ) {
-					$passed = 1;
-				} else {
-					CondorTest::debug("Got EXITING line in wrong sequence\n");
-				}
 			}
 		}
 		close(OUT);
@@ -165,6 +132,15 @@ $success = sub
 			;
 		} else {
 			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	foreach $name (@outfiles) {
+		# We could add stuff here to check for the proper output file
+		# contents.
+		if ( ! -e $name ) {
+			CondorTest::debug("Missing output file $name!\n");
 			$diditpass = 0;
 		}
 	}
@@ -179,10 +155,9 @@ CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
-CondorTest::RegisterRelease( $testname, $released );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
-if( CondorTest::RunDagTest($testname, cmd, 0, $dagman_args) ) {
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {

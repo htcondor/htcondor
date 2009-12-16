@@ -1,0 +1,24 @@
+Job nodeA job_dagman_rescue_recov-node_conditional.cmd
+Vars nodeA nodename="$(JOB)"
+Retry nodeA 1
+
+Job nodeB1 job_dagman_rescue_recov-node_conditional.cmd
+Vars nodeB1 nodename="$(JOB)"
+
+Job nodeB2 job_dagman_rescue_recov-node_conditional.cmd
+Vars nodeB2 nodename="$(JOB)"
+
+Job nodeC job_dagman_rescue_recov-node_conditional.cmd
+Vars nodeC nodename="$(JOB)"
+
+Job nodeD job_dagman_rescue_recov-node_conditional.cmd
+Vars nodeD nodename="$(JOB)"
+
+# This node will hold and release the DAG to force it into recovery mode.
+Job nodeE job_dagman_rescue_recov-node_hold-release.cmd
+Vars nodeE nodename="$(JOB)"
+
+Parent nodeA Child nodeB1 nodeB2
+Parent nodeB1 nodeB2 Child nodeC
+Parent nodeC Child nodeD
+Parent nodeD Child nodeE

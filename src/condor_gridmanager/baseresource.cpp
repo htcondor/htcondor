@@ -26,7 +26,7 @@
 #include "basejob.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
+#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		1000
 
 int BaseResource::probeInterval = 300;	// default value
 int BaseResource::probeDelay = 15;		// default value
@@ -139,7 +139,7 @@ char *BaseResource::ResourceName()
 	return resourceName;
 }
 
-int BaseResource::DeleteMe()
+void BaseResource::DeleteMe()
 {
 	deleteMeTid = TIMER_UNSET;
 
@@ -150,10 +150,7 @@ int BaseResource::DeleteMe()
 
 		delete this;
 		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
-
 	}
-
-	return TRUE;
 }
 
 bool BaseResource::Invalidate () {
@@ -205,7 +202,7 @@ bool BaseResource::SendUpdate () {
 	return daemonCore->sendUpdates( UPDATE_GRID_AD, &ad, NULL, true ) > 0;
 }
 
-int BaseResource::UpdateCollector () {
+void BaseResource::UpdateCollector () {
 
 	/* avoid updating the collector too often, except on the 
 	first update */
@@ -214,7 +211,7 @@ int BaseResource::UpdateCollector () {
 			_collectorUpdateInterval ) - time ( NULL );
 		if ( delay > 0 ) {
 			daemonCore->Reset_Timer ( _updateCollectorTimerId, delay );
-			return TRUE;
+			return;
 		}
 	} else {
 		_firstCollectorUpdate = false;
@@ -233,9 +230,6 @@ int BaseResource::UpdateCollector () {
 		_updateCollectorTimerId, 
 		_collectorUpdateInterval );
 	_lastCollectorUpdate = time ( NULL );
-
-	return TRUE;
-
 }
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
@@ -389,7 +383,7 @@ void BaseResource::AlreadySubmitted( BaseJob *job )
 	submitsAllowed.Append( job );
 }
 
-int BaseResource::Ping()
+void BaseResource::Ping()
 {
 	BaseJob *job;
 
@@ -404,7 +398,7 @@ int BaseResource::Ping()
 	}
 	if ( delay > 0 ) {
 		daemonCore->Reset_Timer( pingTimerId, delay );
-		return TRUE;
+		return;
 	}
 
 	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
@@ -416,12 +410,12 @@ int BaseResource::Ping()
 
 	if ( ping_delay ) {
 		daemonCore->Reset_Timer( pingTimerId, ping_delay );
-		return TRUE;
+		return;
 	}
 
 	if ( !ping_complete ) {
 		pingActive = true;
-		return TRUE;
+		return;
 	}
 
 	pingActive = false;
@@ -469,8 +463,6 @@ int BaseResource::Ping()
 	if ( resourceDown ) {
 		daemonCore->Reset_Timer( pingTimerId, probeInterval );
 	}
-
-	return 0;
 }
 
 void BaseResource::DoPing( time_t& ping_delay, bool& ping_complete,
@@ -481,14 +473,14 @@ void BaseResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	ping_succeeded = true;
 }
 
-int BaseResource::UpdateLeases()
+void BaseResource::UpdateLeases()
 {
 dprintf(D_FULLDEBUG,"*** UpdateLeases called\n");
 	if ( hasLeases == false ) {
 dprintf(D_FULLDEBUG,"    Leases not supported, cancelling timer\n" );
 		daemonCore->Cancel_Timer( updateLeasesTimerId );
 		updateLeasesTimerId = TIMER_UNSET;
-		return 0;
+		return;
 	}
 
 	// Don't start a new lease update too soon after the previous one.
@@ -497,7 +489,7 @@ dprintf(D_FULLDEBUG,"    Leases not supported, cancelling timer\n" );
 	if ( delay > 0 ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, delay );
 dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying\n");
-		return TRUE;
+		return;
 	}
 
 	daemonCore->Reset_Timer( updateLeasesTimerId, TIMER_NEVER );
@@ -527,7 +519,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 			updateLeasesActive = true;
 			leaseAttrsSynched = false;
 		}
-		return TRUE;
+		return;
 	}
 
 	if ( leaseAttrsSynched == false ) {
@@ -547,13 +539,13 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 			}
 			if ( dirty ) {
 				still_dirty = true;
-				requestScheddUpdate( curr_job );
+				requestScheddUpdate( curr_job, false );
 			}
 		}
 		if ( still_dirty ) {
 			requestScheddUpdateNotification( updateLeasesTimerId );
 dprintf(D_FULLDEBUG,"    UpdateLeases: waiting for schedd synch\n");
-			return TRUE;
+			return;
 		}
 else dprintf(D_FULLDEBUG,"    UpdateLeases: leases synched\n");
 	}
@@ -569,13 +561,13 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 	if ( update_delay ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, update_delay );
 dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay\n");
-		return TRUE;
+		return;
 	}
 
 	if ( !update_complete ) {
 		updateLeasesCmdActive = true;
 dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases in progress\n");
-		return TRUE;
+		return;
 	}
 
 dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing results\n");
@@ -604,7 +596,7 @@ dprintf(D_FULLDEBUG,"    %d.%d is not in succeeded list\n",curr_job->procID.clus
 		if ( curr_renewal_failed != last_renewal_failed ) {
 			curr_job->jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
 									 curr_renewal_failed );
-			requestScheddUpdate( curr_job );
+			requestScheddUpdate( curr_job, false );
 		}
 		leaseUpdates.DeleteCurrent();
 	}
@@ -612,8 +604,6 @@ dprintf(D_FULLDEBUG,"    %d.%d is not in succeeded list\n",curr_job->procID.clus
 	updateLeasesActive = false;
 
 	daemonCore->Reset_Timer( updateLeasesTimerId, 30 );
-
-	return 0;
 }
 
 void BaseResource::DoUpdateLeases( time_t& update_delay,

@@ -18,22 +18,33 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#define KBDD
+#ifdef WIN32
+#include "condor_daemon_core.h"
+#include "condor_debug.h"
+#include "condor_uid.h"
+#else
 #include "XInterface.h"
+#endif
 
 #include "my_hostname.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "subsystem_info.h"
 
+#ifdef WIN32
+#include <windows.h>
+#else
 #include <utmp.h>
 #include <sys/file.h>
 #include <netinet/in.h>
 #include <rpc/types.h>
 #include <X11/Xlib.h>
 
-DECL_SUBSYSTEM( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 XInterface *xinter;
+#endif
 
+DECL_SUBSYSTEM( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 
 bool
 update_startd()
@@ -64,9 +75,59 @@ update_startd()
 }
 
 
-int 
+void 
 PollActivity()
 {
+#ifdef WIN32
+	LASTINPUTINFO lii;
+	static POINT previous_pos = { 0, 0 }; 
+	static DWORD previous_input_tick = 0;
+
+	lii.cbSize = sizeof(LASTINPUTINFO);
+	lii.dwTime = 0;
+
+	if ( !GetLastInputInfo(&lii) ) {
+		dprintf(D_ALWAYS, "PollActivity: GetLastInputInfo()"
+			" failed with err=%d\n", GetLastError());
+	}
+	else
+	{
+
+		//Check if there has been new keyboard input since the last check.
+		if(lii.dwTime > previous_input_tick)
+		{
+			previous_input_tick = lii.dwTime;
+			update_startd();
+		}
+
+		return;
+	}
+
+	//If no change to keyboard input, check if mouse has been moved.
+	CURSORINFO cursor_inf;
+	cursor_inf.cbSize = sizeof(CURSORINFO);
+	if (!GetCursorInfo(&cursor_inf))
+	{
+		dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
+		GetLastError());
+	}
+	else
+	{
+		if ((cursor_inf.ptScreenPos.x != previous_pos.x) || 
+			(cursor_inf.ptScreenPos.y != previous_pos.y))
+		{
+			// the mouse has moved!
+			// stash new position
+			previous_pos.x = cursor_inf.ptScreenPos.x; 
+			previous_pos.y = cursor_inf.ptScreenPos.y;
+			previous_input_tick = GetTickCount();
+			update_startd();
+		}
+	}
+
+	return;
+
+#else
     if(xinter != NULL)
     {
 	if(xinter->CheckActivity())
@@ -74,13 +135,15 @@ PollActivity()
 	    update_startd();
 	}
     }
-    return TRUE;
+#endif
 }
 
 int 
 main_shutdown_graceful()
 {
+#ifndef WIN32
     delete xinter;
+#endif
     DC_Exit(EXIT_SUCCESS);
 	return TRUE;
 }
@@ -99,21 +162,22 @@ main_config( bool is_full )
 }
 
 int
-main_init(int, char **)
+main_init(int, char *[])
 {
-    
     int id;
-    xinter = NULL;
-
+#ifndef WIN32
+	xinter = NULL;
+	xinter = new XInterface(id);
+#endif
     //Poll for X activity every second.
-    id = daemonCore->Register_Timer(5, 5, (Event)PollActivity, "PollActivity");
-    xinter = new XInterface(id);
+    id = daemonCore->Register_Timer(5, 5, PollActivity, "PollActivity");
+
     return TRUE;
 }
 
 
 void
-main_pre_dc_init( int, char** )
+main_pre_dc_init( int, char*[] )
 {
 }
 
@@ -122,4 +186,18 @@ void
 main_pre_command_sock_init( )
 {
 }
+
+#ifdef WIN32
+int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
+{
+	// cons up a "standard" argv for dc_main.
+	char **parameters = (char**)malloc(sizeof(char*)*2);
+	parameters[0] = "condor_kbdd";
+	parameters[1] = NULL;
+	dc_main(1, parameters);
+
+	// dc_main should exit() so we probably never get here.
+	return 0;
+}
+#endif
 

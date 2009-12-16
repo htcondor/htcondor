@@ -868,7 +868,8 @@ sub WhereIsInstallDir
 	CondorTest::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
-		if($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) {
+		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
+		    ($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
 			$installdir = $1;
 			print "Testing This Install Directory: \"$installdir\"\n";
 		}
@@ -972,9 +973,9 @@ sub CreateConfig
 		} elsif($line =~ /^CONDOR_HOST\s*=.*/) {
 			debug( "Matching <<$line>>\n",2);
 			print NEWFIG "CONDOR_HOST = $currenthost\n";
-		} elsif($line =~ /^HOSTALLOW_WRITE\s*=.*/) {
+		} elsif($line =~ /^ALLOW_WRITE\s*=.*/) {
 			debug( "Matching <<$line>>\n",2);
-			print NEWFIG "HOSTALLOW_WRITE = *\n";
+			print NEWFIG "ALLOW_WRITE = *\n";
 		} elsif($line =~ /NOT_RESPONDING_WANT_CORE\s*=.*/ and $want_core_dumps ) {
 			debug( "Matching <<$line>>\n",2);
 			print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
@@ -1063,9 +1064,9 @@ sub CreateLocalConfig
 	print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
 
 	# condor_config.generic now contains a special value
-	# for HOSTALLOW_WRITE which causes it to EXCEPT on submit
+	# for ALLOW_WRITE which causes it to EXCEPT on submit
 	# till set to some legal value. Old was most insecure..
-	print FIX "HOSTALLOW_WRITE 			= *\n";
+	print FIX "ALLOW_WRITE 			= *\n";
 	print FIX "NUM_CPUS 			= 15\n";
 
 	if($iswindows == 1) {

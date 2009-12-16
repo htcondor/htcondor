@@ -19,17 +19,14 @@
 
 #include "condor_common.h"
 #include "internet.h"
-#include "condor_timer_manager.h"
 #include "condor_daemon_core.h"
 #include "condor_config.h"
-#include "reli_sock.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "condor_socket_types.h"
-#include "subsystem_info.h"
 #include "directory.h"
 #include "stdsoap2.h"
 #include "soap_core.h"
+#include "condor_open.h"
 
 #include "mimetypes.h"
 
@@ -47,10 +44,57 @@ struct soap *ssl_soap;
 
 extern SOAP_NMAC struct Namespace namespaces[];
 
-void
-init_soap(struct soap *soap)
+int handle_soap_ssl_socket(Service *, Stream *stream);
+
+int get_handler(struct soap *soap);
+
+struct soap *
+dc_soap_accept(Sock *socket, const struct soap *soap)
 {
-	MyString subsys = MyString(get_mySubSystem()->getName() );
+	struct soap *cursoap = soap_copy(soap);
+	ASSERT(cursoap);
+
+		// Mimic a gsoap soap_accept as follows:
+		//   1. stash the socket descriptor in the soap object
+		//   2. make socket non-blocking by setting a CEDAR timeout.
+		//   3. increase size of send and receive buffers
+		//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
+	cursoap->socket = socket->get_file_desc();
+	cursoap->peer = *socket->peer_addr();
+	cursoap->recvfd = soap->socket;
+	cursoap->sendfd = soap->socket;
+	if ( cursoap->recv_timeout > 0 ) {
+		socket->timeout(soap->recv_timeout);
+	} else {
+		socket->timeout(20);
+	}
+	socket->set_os_buffers(SOAP_BUFLEN,false);	// set read buf size
+	socket->set_os_buffers(SOAP_BUFLEN,true);	// set write buf size
+
+	return cursoap;
+}
+
+int
+dc_soap_serve(struct soap *soap)
+{
+	return soap_serve(soap);
+}
+
+void
+dc_soap_free(struct soap *soap)
+{
+	soap_destroy(soap); // clean up class instances
+	soap_end(soap); // clean up everything and close socket
+	soap_free(soap);
+}
+
+void
+dc_soap_init(struct soap *&soap)
+{
+	if (NULL == soap) {
+		soap = soap_new();
+	}
+	ASSERT(soap);
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	//soap_init(soap);
@@ -64,26 +108,18 @@ init_soap(struct soap *soap)
 
 #ifdef COMPILE_SOAP_SSL
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
-	bool subsys_enable_soap_ssl =
-		param_boolean((subsys + "_ENABLE_SOAP_SSL").Value(), false);
-	if (subsys_enable_soap_ssl ||
-		(enable_soap_ssl &&
-		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").Value())) ||
-		  subsys_enable_soap_ssl))) {
-		int ssl_port =
-			param_integer((subsys + "_SOAP_SSL_PORT").Value(), 0);
+	if (enable_soap_ssl) {
+		int ssl_port = param_integer("SOAP_SSL_PORT", 0);
 
  		if (ssl_port >= 0) {
 			dprintf(D_FULLDEBUG,
 					"Setting up SOAP SSL socket on port (0 = dynamic): %d\n",
 					ssl_port);
 
-			char *server_keyfile;
-			if (!(server_keyfile =
-				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE").Value())) &&
-				!(server_keyfile = param("SOAP_SSL_SERVER_KEYFILE"))) {
-				EXCEPT("DaemonCore: Must define [SUBSYS_]SOAP_SSL_SERVER_KEYFILE "
-					   "with [SUBSYS_]ENABLE_SOAP_SSL");
+			char *server_keyfile = param("SOAP_SSL_SERVER_KEYFILE");
+			if (!server_keyfile) {
+				EXCEPT("DaemonCore: Must define SOAP_SSL_SERVER_KEYFILE "
+					   "with ENABLE_SOAP_SSL");
 			}
 
 				/* gSOAP doesn't use the server_keyfile if no password
@@ -93,38 +129,21 @@ init_soap(struct soap *soap)
 				   figure this bug out? The symptom/error I was
 				   getting, was "no shared cipher" from SSL. -Matt 3/3/5
 				 */
-			bool freePassword = true;
-			char *server_keyfile_password;
-			if (!(server_keyfile_password =
-				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE_PASSWORD").Value())) &&
-				!(server_keyfile_password =
-				  param("SOAP_SSL_SERVER_KEYFILE_PASSWORD")))
-			if (NULL == server_keyfile_password) {
-				server_keyfile_password = "96hoursofmattslife";
-				freePassword = false;
+			char *server_keyfile_password =
+				param("SOAP_SSL_SERVER_KEYFILE_PASSWORD");
+			if (!server_keyfile_password) {
+				server_keyfile_password = strdup("96hoursofmattslife");
 			}
 
-			char *ca_file;
-			if (!(ca_file = param((subsys + "_SOAP_SSL_CA_FILE").Value()))) {
-				ca_file = param("SOAP_SSL_CA_FILE");
+			char *ca_file = param("SOAP_SSL_CA_FILE");
+			char *ca_path = param("SOAP_SSL_CA_DIR");
+
+			if (NULL == ca_file && NULL == ca_path) {
+				EXCEPT("DaemonCore: Must specify SOAP_SSL_CA_FILE "
+					   "or SOAP_SSL_CA_DIR with ENABLE_SOAP_SSL");
 			}
 
-			char *ca_path;
-			if (!(ca_path = param((subsys + "_SOAP_SSL_CA_DIR").Value()))) {
-				ca_path = param("SOAP_SSL_CA_DIR");
-			}
-
-			if (NULL == ca_file &&
-				NULL == ca_path) {
-				EXCEPT("DaemonCore: Must specify [SUBSYS_]SOAP_SSL_CA_FILE "
-					   "or [SUBSYS_]SOAP_SSL_CA_DIR with "
-					   "[SUBSYS_]ENABLE_SOAP_SSL");
-			}
-
-			char *dh_file;
-			if (!(dh_file = param((subsys + "_SOAP_SSL_DH_FILE").Value()))) {
-				dh_file = param("SOAP_SSL_DH_FILE");
-			}
+			char *dh_file = param("SOAP_SSL_DH_FILE");
 
 			dprintf(D_FULLDEBUG,
 					"SOAP SSL CONFIG: PORT %d; "
@@ -246,7 +265,7 @@ init_soap(struct soap *soap)
 				free(server_keyfile);
 				server_keyfile = NULL;
 			}
-			if (server_keyfile_password && freePassword) {
+			if (server_keyfile_password) {
 				free(server_keyfile_password);
 				server_keyfile_password = NULL;
 			}
@@ -264,8 +283,8 @@ init_soap(struct soap *soap)
 			}
 		} else {
 			dprintf(D_ALWAYS,
-					"DaemonCore: [SUBSYS_]ENABLE_SOAP_SSL set, "
-					"but no valid <SUBSYS>_SOAP_SSL_PORT.\n");
+					"DaemonCore: ENABLE_SOAP_SSL set, "
+					"but no valid SOAP_SSL_PORT.\n");
 
 		}
 	}

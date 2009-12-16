@@ -27,6 +27,9 @@ use Cwd;
 use Env; 
 use File::Copy;
 
+# Don't buffer output.
+$|=1;
+
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
 
@@ -76,7 +79,11 @@ while( <UNTAR> ) {
   }
   print;
 }
-close UNTAR;
+# NOTE: if we ran out of space, then we should detect that in
+# the call to close, but our error message probably will not
+# get recorded anywhere.  Perhaps we should reserve some space
+# before untarring and free it up here.
+close UNTAR || die "Failed to untar $release_tarball: exit code $?\n";
 
 
 ######################################################################

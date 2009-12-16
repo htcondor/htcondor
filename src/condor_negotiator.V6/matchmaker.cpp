@@ -25,6 +25,7 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
+#include "condor_classad_util.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "dc_startd.h"
@@ -58,8 +59,6 @@ enum { MM_ERROR, MM_DONE, MM_RESUME };
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
 typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
-
-static bool want_simple_matching = false;
 
 MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
@@ -100,10 +99,10 @@ Matchmaker ()
 	sockCache = NULL;
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buf, rankCondStd);
+	ParseClassAdRvalExpr (buf, rankCondStd);
 
 	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buf, rankCondPrioPreempt);
+	ParseClassAdRvalExpr (buf, rankCondPrioPreempt);
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
@@ -116,7 +115,6 @@ Matchmaker ()
 	cachedName = NULL;
 	cachedAddr = NULL;
 
-	want_simple_matching = false;
 	want_matchlist_caching = false;
 	ConsiderPreemption = true;
 	want_nonblocking_startd_contact = true;
@@ -237,7 +235,7 @@ reinitialize ()
 
 	// get timeout values
 
- 	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",300);
+ 	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",60);
 
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
@@ -272,7 +270,7 @@ reinitialize ()
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionReq) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionReq) ) {
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
@@ -332,7 +330,7 @@ reinitialize ()
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionRank) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
@@ -345,7 +343,7 @@ reinitialize ()
 	NegotiatorPreJobRank = NULL;
 	tmp = param("NEGOTIATOR_PRE_JOB_RANK");
 	if( tmp ) {
-		if( Parse(tmp, NegotiatorPreJobRank) ) {
+		if( ParseClassAdRvalExpr(tmp, NegotiatorPreJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
 	}
@@ -358,7 +356,7 @@ reinitialize ()
 	NegotiatorPostJobRank = NULL;
 	tmp = param("NEGOTIATOR_POST_JOB_RANK");
 	if( tmp ) {
-		if( Parse(tmp, NegotiatorPostJobRank) ) {
+		if( ParseClassAdRvalExpr(tmp, NegotiatorPostJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
 	}
@@ -381,7 +379,6 @@ reinitialize ()
 		free( preferred_collector );
 	}
 
-	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
@@ -397,7 +394,7 @@ reinitialize ()
 	if( tmp ) {
         dprintf(D_FULLDEBUG, "%s = %s\n", "GROUP_DYNAMIC_MACH_CONSTRAINT",
                 tmp);
-		if( Parse(tmp, DynQuotaMachConstraint) ) {
+		if( ParseClassAdRvalExpr(tmp, DynQuotaMachConstraint) ) {
 			dprintf(
                 D_ALWAYS, 
                 "Error parsing GROUP_DYNAMIC_MACH_CONSTRAINT expression: %s",
@@ -690,38 +687,6 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 }
 
 
-/*
-Look for an ad matching the given constraint string
-in the table given by arg.  Return a duplicate on success.
-Otherwise, return 0.
-*/
-#if 0
-static ClassAd * lookup_global( const char *constraint, void *arg )
-{
-	ClassAdList *list = (ClassAdList*) arg;
-	ClassAd *ad;
-	ClassAd queryAd;
-
-	if ( want_simple_matching ) {
-		return 0;
-	}
-
-	CondorQuery query(ANY_AD);
-	query.addANDConstraint(constraint);
-	query.getQueryAd(queryAd);
-	queryAd.SetTargetTypeName (ANY_ADTYPE);
-
-	list->Open();
-	while( (ad = list->Next()) ) {
-		if(queryAd <= *ad) {
-			return new ClassAd(*ad);
-		}
-	}
-
-	return 0;
-}
-#endif
-
 char *
 Matchmaker::
 compute_significant_attrs(ClassAdList & startdAds)
@@ -863,7 +828,7 @@ getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage
 
 
 
-int Matchmaker::
+void Matchmaker::
 negotiationTime ()
 {
 	ClassAdList startdAds;
@@ -890,7 +855,7 @@ negotiationTime ()
 		dprintf(D_FULLDEBUG,
 			"New cycle requested but just finished one -- delaying %u secs\n",
 			cycle_delay - elapsed);
-		return FALSE;
+		return;
 	}
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
@@ -909,7 +874,7 @@ negotiationTime ()
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
-		return FALSE;
+		return;
 	}
 
 	// Save this for future use.
@@ -921,9 +886,6 @@ negotiationTime ()
 
 	double minSlotWeight = 0;
 	double untrimmedSlotWeightTotal = sumSlotWeights(startdAds,&minSlotWeight);
-
-	// Register a lookup function that passes through the list of all ads.
-	// ClassAdLookupRegister( lookup_global, &allAds );
 
 	// Compute the significant attributes to pass to the schedd, so
 	// the schedd can do autoclustering to speed up the negotiation cycles.
@@ -1152,8 +1114,6 @@ negotiationTime ()
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
 
 	completedLastCycleTime = time(NULL);
-
-	return TRUE;
 }
 
 Matchmaker::SimpleGroupEntry::
@@ -1566,40 +1526,6 @@ obtainAdsFromCollector (
 	MyString buffer;
 	CollectorList* collects = daemonCore->getCollectorList();
 
-	if ( want_simple_matching ) {
-		CondorQuery publicQuery(STARTD_AD);
-		CondorQuery submittorQuery(SUBMITTOR_AD);
-
-		dprintf(D_ALWAYS, "  Getting all startd ads ...\n");
-		result = collects->query(publicQuery,startdAds);
-		if( result!=Q_OK ) {
-			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-			return false;
-		}
-
-		dprintf(D_ALWAYS, "  Getting all submittor ads ...\n");
-		result = collects->query(submittorQuery,scheddAds);
-		if( result!=Q_OK ) {
-			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-			return false;
-		}
-
-		dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-		ClassAdList startdPvtAdList;
-		result = collects->query(privateQuery,startdPvtAdList);
-		if( result!=Q_OK ) {
-			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-			return false;
-		}
-		MakeClaimIdHash(startdPvtAdList,claimIds);
-
-		dprintf(D_ALWAYS, 
-			"Got ads (simple matching): %d startd, %d submittor, %d private\n",
-	        startdAds.MyLength(),scheddAds.MyLength(),claimIds.getNumElements());
-
-		return true;
-	}
-
 	CondorQuery publicQuery(ANY_AD);
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
 	result = collects->query (publicQuery, allAds);
@@ -1700,7 +1626,7 @@ obtainAdsFromCollector (
 				}
 
 				ExprTree *expr = NULL;
-				::Parse(exprStr, expr); // expr will be null on error
+				::ParseClassAdRvalExpr(exprStr, expr); // expr will be null on error
 
 				int replace = true;
 				if (expr == NULL) {
@@ -2481,7 +2407,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		addRemoteUserPrios(candidate);
 
 			// the candidate offer and request must match
-		if( !( *candidate == request ) ) {
+		if( !IsAMatch(&request, candidate) ) {
 				// they don't match; continue
 			continue;
 		}

@@ -52,6 +52,7 @@ ReliSock::init()
 	rcv_msg.buf.reset();   
 	rcv_msg.init_parent(this);
 	snd_msg.init_parent(this);
+	m_target_shared_port_id = NULL;
 }
 
 
@@ -84,6 +85,10 @@ ReliSock::~ReliSock()
 	if ( hostAddr ) {
 		free( hostAddr );
 		hostAddr = NULL;
+	}
+	if( m_target_shared_port_id ) {
+		free( m_target_shared_port_id );
+		m_target_shared_port_id = NULL;
 	}
 }
 
@@ -177,7 +182,7 @@ ReliSock::accept( ReliSock	&c )
 
 	c._sock = c_sock;
 	c.move_descriptor_up();	// must be called _after_ we initialize c._sock
-	c._state = sock_connect;
+	c.enter_connected_state("ACCEPT");
 	c.decode();
 
 	int on = 1;
@@ -190,15 +195,6 @@ ReliSock::accept( ReliSock	&c )
 		*/
 	c.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 
-	if( DebugFlags & D_NETWORK ) {
-        char* from = strdup( sin_to_string(c.peer_addr()) );
-        char* to = strdup(  sock_to_string(_sock) );
-        dprintf( D_NETWORK, "ACCEPT from=%s newfd=%d to=%s\n",
-                 from, c._sock, to );
-        free( from );
-        free( to );
-	}
-	
 	return TRUE;
 }
 
@@ -1006,16 +1002,28 @@ ReliSock::authenticate(const char* methods, CondorError* errstack,int auth_timeo
 }
 
 bool
-ReliSock::connect_socketpair(ReliSock &sock)
+ReliSock::connect_socketpair(ReliSock &sock,bool use_standard_interface)
 {
 	ReliSock tmp_srv;
 
-	if( !bind_to_loopback() ) {
+	if( use_standard_interface ) {
+		if( !bind(false) ) {
+			dprintf(D_ALWAYS, "connect_socketpair: failed in bind()\n");
+			return false;
+		}
+	}
+	else if( !bind_to_loopback(false) ) {
 		dprintf(D_ALWAYS, "connect_socketpair: failed in bind_to_loopback()\n");
 		return false;
 	}
 
-	if( !tmp_srv.bind_to_loopback() ) {
+	if( use_standard_interface ) {
+		if( !tmp_srv.bind(false) ) {
+			dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind()\n");
+			return false;
+		}
+	}
+	else if( !tmp_srv.bind_to_loopback(false) ) {
 		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind_to_loopback()\n");
 		return false;
 	}
@@ -1060,10 +1068,27 @@ ReliSock::exit_reverse_connecting_state(ReliSock *sock)
 	if( sock ) {
 		int assign_rc = assign(sock->get_file_desc());
 		ASSERT( assign_rc );
-		_state = sock->_state;
 		isClient(true);
+		if( sock->_state == sock_connect ) {
+			enter_connected_state("REVERSE CONNECT");
+		}
+		else {
+			_state = sock->_state;
+		}
 		sock->_sock = INVALID_SOCKET;
 		sock->close();
 	}
 	m_ccb_client = NULL;
+}
+
+void
+ReliSock::setTargetSharedPortID( char const *id )
+{
+	if( m_target_shared_port_id ) {
+		free( m_target_shared_port_id );
+		m_target_shared_port_id  = NULL;
+	}
+	if( id ) {
+		m_target_shared_port_id = strdup( id );
+	}
 }

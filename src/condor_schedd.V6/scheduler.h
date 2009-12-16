@@ -269,7 +269,7 @@ class Scheduler : public Service
 	int				negotiate(int, Stream *);
 	int				reschedule_negotiator(int, Stream *);
 
-	int				reschedule_negotiator_timer() { return reschedule_negotiator(0, NULL); }
+	void				reschedule_negotiator_timer() { reschedule_negotiator(0, NULL); }
 	void			release_claim(int, Stream *);
 	AutoCluster		autocluster;
 		// send a reschedule command to the negotiatior unless we
@@ -337,7 +337,7 @@ class Scheduler : public Service
 	bool			availableTransferd( int cluster, int proc, 
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
-	UserLog*		InitializeUserLog( PROC_ID job_id );
+	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
 	bool			WriteReleaseToUserLog( PROC_ID job_id );
@@ -682,7 +682,6 @@ private:
 	int				leaseAliveInterval;  
 	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
-	bool			ManageBandwidth;
 
 		// put state into ClassAd return it.  Used for condor_squawk
 	int	dumpState(int, Stream *);
@@ -701,7 +700,7 @@ private:
 	Timeslice m_negotiate_timeslice;
 
 	// some stuff about Quill that should go into the ad
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	int quill_enabled;
 	int quill_is_remotely_queryable;
 	char *quill_name;

@@ -17,10 +17,7 @@ c_plus_target(condor_unit_tests,$(UNIT_TEST_DEPENDENCY_OBJ) $(OBJ),$(LIB))
 testbin_target(condor_unit_tests,755)
 testbin_target(test_daemon_core,755)
 
-soapobjs(test)
-c_plus_target(test_daemon_core,test_daemon_core.o $(SOAP_OBJS), $(DAEMONCORE_LIB) $(LIB) $(CONFIGURE_GSOAP_LDFLAGS))
-
-gen_soapfiles(test,condorTest)
+c_plus_target(test_daemon_core,test_daemon_core.o, $(DAEMONCORE_LIB) $(LIB))
 
 release:: all
 stripped:: all

@@ -802,38 +802,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=8
 
-[XEN_DEFAULT_KERNEL]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Default Kernel
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=9
-
-[XEN_DEFAULT_INITRD]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Default Initrd
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=10
-
 [XEN_BOOTLOADER]
 aliases=
 default=
@@ -945,22 +913,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=17
-
-[VM_VERSION]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vm Version
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,vmgahp_config
-id=18
 
 [VM_MAX_MEMORY]
 aliases=
@@ -2019,22 +1971,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=84
 
-[MANAGE_BANDWIDTH]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Manage Bandwidth
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=ckpt_server,server2
-id=85
-
 [NETWORK_HORIZON]
 aliases=
 default=300
@@ -2613,7 +2549,7 @@ id=121
 
 [RESERVED_SWAP]
 aliases=
-default=5
+default=0
 version=0.0.0
 range=.*
 state=default
@@ -3268,6 +3204,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=162
 
+[MASTER.PID_SNAPSHOT_INTERVAL]
+aliases=
+default=60
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Master Pid Snapshot Interval
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=daemon_core,HookClientMgr
+id=163
+
 [PID_SNAPSHOT_INTERVAL]
 aliases=
 default=15
@@ -3475,22 +3427,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=175
-
-[FAKE_CREATE_THREAD]
-aliases=
-default=true
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Fake Create Thread
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=daemon_core,daemon_core
-id=176
 
 [NOT_RESPONDING_TIMEOUT]
 aliases=
@@ -3846,7 +3782,7 @@ id=198
 
 [CONDOR_ADMIN]
 aliases=
-default=michaelb@cs.wisc.edu
+default=
 version=0.0.0
 range=.*
 state=default
@@ -4260,22 +4196,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,proxymanager
 id=224
 
-[ORACLE_HOME]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Oracle Home
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,oraclejob
-id=225
-
 [CONDOR_GAHP]
 aliases=
 default=$(SBIN)/condor_c-gahp
@@ -4369,40 +4289,8 @@ customization=seldom
 friendly_name=Gridmanager Connect Failure Retry Count
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,mirrorjob
+tags=gridmanager,globusjob
 id=231
-
-[MIRROR_JOB_LEASE_INTERVAL]
-aliases=
-default=1800
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Mirror Job Lease Interval
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,mirrorjob
-id=232
-
-[MIRROR_GAHP]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Mirror Gahp
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,mirrorjob
-id=233
 
 [PERIODIC_EXPR_INTERVAL]
 aliases=
@@ -4454,7 +4342,7 @@ id=236
 
 [ENABLE_GRID_MONITOR]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -4566,11 +4454,11 @@ id=243
 
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE]
 aliases=
-default=
+default=1000
 version=0.0.0
 range=.*
 state=default
-type=string
+type=int
 is_macro=false
 reconfig=true
 customization=seldom
@@ -5700,38 +5588,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,ast
 id=314
 
-[CLASSAD_CACHE_SIZE]
-aliases=
-default=127
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Classad Cache Size
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad,classad_lookup
-id=315
-
-[CLASSAD_CACHE_LIFETIME]
-aliases=
-default=300
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Classad Cache Lifetime
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad,classad_lookup
-id=316
-
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
 default=true
@@ -6052,7 +5908,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=336
 
-[job_lease_duration]
+[JOB_LEASE_DURATION]
 aliases=
 default=ATTR_JOB_LEASE_DURATION
 version=0.0.0
@@ -6148,22 +6004,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=342
 
-[FLAVOR]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Flavor
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=343
-
 [SANDBOX_TRANSFER_METHOD]
 aliases=
 default=
@@ -6196,7 +6036,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=345
 
-[vm_no_output_vm]
+[VM_NO_OUTPUT_VM]
 aliases=
 default=
 version=0.0.0
@@ -6212,7 +6052,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=346
 
-[vm_cdrom_files]
+[VM_CDROM_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6228,7 +6068,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=347
 
-[vm_should_transfer_cdrom_files]
+[VM_SHOULD_TRANSFER_CDROM_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6244,7 +6084,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=348
 
-[xen_transfer_files]
+[XEN_TRANSFER_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6260,7 +6100,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=349
 
-[xen_kernel]
+[XEN_KERNEL]
 aliases=
 default=
 version=0.0.0
@@ -6276,7 +6116,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=350
 
-[xen_initrd]
+[XEN_INITRD]
 aliases=
 default=
 version=0.0.0
@@ -6292,7 +6132,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=351
 
-[xen_root]
+[XEN_ROOT]
 aliases=
 default=
 version=0.0.0
@@ -6308,7 +6148,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=352
 
-[xen_disk]
+[XEN_DISK]
 aliases=
 default=
 version=0.0.0
@@ -6324,7 +6164,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=353
 
-[xen_kernel_params]
+[XEN_KERNEL_PARAMS]
 aliases=
 default=
 version=0.0.0
@@ -6340,7 +6180,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=354
 
-[xen_cdrom_device]
+[XEN_CDROM_DEVICE]
 aliases=
 default=
 version=0.0.0
@@ -6356,7 +6196,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=355
 
-[vmware_should_transfer_files]
+[VMWARE_SHOULD_TRANSFER_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6372,7 +6212,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=356
 
-[vmware_snapshot_disk]
+[VMWARE_SNAPSHOT_DISK]
 aliases=
 default=
 version=0.0.0
@@ -6388,7 +6228,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=357
 
-[vmware_dir]
+[VMWARE_DIR]
 aliases=
 default=
 version=0.0.0
@@ -7143,7 +6983,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,user_log
 id=401
 
-[reuse_condor_run_account]
+[REUSE_CONDOR_RUN_ACCOUNT]
 aliases=
 default=
 version=0.0.0
@@ -7753,7 +7593,7 @@ id=439
 
 [NEGOTIATOR_INTERVAL]
 aliases=
-default=300
+default=60
 version=0.0.0
 range=.*
 state=default
@@ -7878,22 +7718,6 @@ usage=(e.g. if a job is in the pre-empting stage for too long)
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=447
-
-[NEGOTIATOR_SIMPLE_MATCHING]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Negotiator Simple Matching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=negotiator,matchmaker
-id=448
 
 [NEGOTIATOR_MATCHLIST_CACHING]
 aliases=
@@ -8169,7 +7993,7 @@ id=465
 
 [VALID_SPOOL_FILES]
 aliases=
-default=job_queue.log, job_queue.log.tmp, history, \
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
 version=0.0.0
 range=.*
 state=default
@@ -8711,7 +8535,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,dedicated_scheduler
 id=499
 
-[mpi_master_ip]
+[MPI_MASTER_IP]
 aliases=
 default=
 version=0.0.0
@@ -8937,7 +8761,7 @@ id=513
 
 [MAX_JOBS_RUNNING]
 aliases=
-default=200
+default=ceiling(ifThenElse( regexp("WIN.*","$(OPSYS)"), 200, ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 )))
 version=0.0.0
 range=.*
 state=default
@@ -8953,7 +8777,7 @@ id=514
 
 [START_LOCAL_UNIVERSE]
 aliases=
-default=True
+default=TotalLocalJobsRunning < 200
 version=0.0.0
 range=.*
 state=default
@@ -8969,7 +8793,7 @@ id=515
 
 [START_SCHEDULER_UNIVERSE]
 aliases=
-default=True
+default=TotalSchedulerJobsRunning < 200
 version=0.0.0
 range=.*
 state=default
@@ -9462,38 +9286,6 @@ usage=one from this setting.
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=546
-
-[CONFIG_SERVER_FILE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Config Server File
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=547
-
-[CONFIG_SERVER_PORT]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Config Server Port
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=548
 
 [MASTER_WAITS_FOR_GCB_BROKER]
 aliases=
@@ -9990,4 +9782,100 @@ friendly_name=Negotiator Debug Wait
 usage=True if the negotiator should wait for a debugger to attach before doing anything
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
+id=555
+
+[SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY]
+aliases=
+default=5
+version=7.4.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Schedd Job Queue Log Flush Delay
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=555
+
+[DAEMON_SOCKET_DIR]
+aliases=
+default=$(LOCK)/daemon_sock
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Daemon Socket Dir
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
+[SHARED_PORT_DAEMON_AD_FILE]
+aliases=
+default=$(LOCK)/shared_port_ad
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shared Port Daemon Ad File
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
+[USE_SHARED_PORT]
+aliases=
+default=false
+version=7.5.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Use Shared Port
+usage=True if Condor daemons should share a single network port
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
+[SHARED_PORT_LOG]
+aliases=
+default=$(LOG)/SharedPortLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shared Port Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=shared_port
+id=550
+
+[CCB_HEARTBEAT_INTERVAL]
+aliases=
+default=1200
+version=7.5.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Schedd Job Queue Log Flush Delay
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
 id=555

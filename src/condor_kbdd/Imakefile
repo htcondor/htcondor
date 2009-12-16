@@ -1,11 +1,9 @@
 NAME = condor_kbdd
 all_target($(NAME))
 
-soapobjs(kbdd)
-
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_X11_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)  $(CONFIGURE_X11_LDFLAGS) $(CONFIGURE_X11_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)  $(CONFIGURE_X11_LDFLAGS) $(CONFIGURE_X11_LIBS)
 
 XCOMM We do not currently build the kbdd statically under Linux
 XCOMM because libX11.a is linked against pthreads on many distros.
@@ -19,7 +17,7 @@ LDFLAGS = -lX11 -ldnet_stub
 LDFLAGS = -L/usr/X11R6/lib -L/usr/X11R6/lib64 -lX11
 #endif
 
-OBJ = kbdd.o XInterface.o $(SOAP_OBJS)
+OBJ = kbdd.o XInterface.o
 
 /*
   NOTE: because of the static hackery below for DUX5, we can't use a
@@ -75,4 +73,7 @@ clean::
 html:
 testbin:: all
 
-gen_soapfiles(kbdd,condorKbdd)
+release::
+stripped::
+static::
+clean::

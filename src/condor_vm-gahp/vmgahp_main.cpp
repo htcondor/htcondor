@@ -26,7 +26,9 @@
 #include "vmgahp_common.h"
 #include "vmgahp.h"
 #include "vmware_type.h"
-#include "xen_type.h"
+#if defined(LINUX)
+#  include "xen_type.h"
+#endif
 #include "subsystem_info.h"
 #include "../condor_privsep/condor_privsep.h"
 
@@ -285,9 +287,8 @@ int main_init(int argc, char *argv[])
 		vmgahp_stderr_buffer.setPipeEnd(vmgahp_stderr_pipe);
 
 		vmgahp_stderr_tid = daemonCore->Register_Timer(2, 2,
-				(TimerHandler)&write_stderr_to_pipe,
-				"write_stderr_to_pipe",
-				NULL);
+				write_stderr_to_pipe,
+				"write_stderr_to_pipe");
 		if( vmgahp_stderr_tid == -1 ) {
 			vmprintf(D_ALWAYS,"Can't register stderr timer");
 			DC_Exit(1);
@@ -380,7 +381,7 @@ int main_init(int argc, char *argv[])
 	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		// Xen requires root priviledge 
 		if( !canSwitchUid() ) {
-			vmprintf(D_ALWAYS, "VMGahp server for Xen requires "
+			vmprintf(D_ALWAYS, "VMGahp server for Xen or KVM requires "
 					"root privilege\n");
 			DC_Exit(1);
 		}
@@ -465,8 +466,6 @@ int main_init(int argc, char *argv[])
 		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", CONDOR_VMGAHP_VERSION); 
 		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_TYPE, 
 				gahpconfig->m_vm_type.Value());
-		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_VERSION, 
-				gahpconfig->m_vm_version.Value());
 		write_to_daemoncore_pipe("%s = %d\n", ATTR_VM_MEMORY, 
 				gahpconfig->m_vm_max_memory);
 		write_to_daemoncore_pipe("%s = %s\n", ATTR_VM_NETWORKING, 
@@ -491,9 +490,11 @@ int main_init(int argc, char *argv[])
 		set_root_priv();
 
 #if defined(LINUX)
-		if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
-			VirshType::killVMFast(gahpconfig->m_vm_script.Value(), 
-					matchstring.Value());
+		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+			XenType::killVMFast(matchstring.Value());
+		}else
+		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0 ) {
+			KVMType::killVMFast(matchstring.Value());
 		}else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {

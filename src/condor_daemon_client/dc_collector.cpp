@@ -189,6 +189,7 @@ DCCollector::reconfig( void )
 		use_tcp = false;
 		break;
 	case CONFIG:
+		use_tcp = false;
 		tmp = param( "TCP_UPDATE_COLLECTORS" );
 		if( tmp ) {
 			tcp_collectors.initializeFromString( tmp );
@@ -200,17 +201,9 @@ DCCollector::reconfig( void )
 				break;
 			}
 		}
-		tmp = param( "UPDATE_COLLECTOR_WITH_TCP" );
-		if( ! tmp ) {
-			tmp = param( "UPDATE_COLLECTORS_WITH_TCP" );
-		}		
-		if( tmp ) {
-			if( tmp[0] == 't' || tmp[0] == 'T' || 
-				tmp[0] == 'y' || tmp[0] == 'Y' )
-			{ 
-				use_tcp = true;
-			}
-			free( tmp );
+		use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", use_tcp );
+		if( !hasUDPCommandPort() ) {
+			use_tcp = true;
 		}
 		break;
 	}
@@ -223,6 +216,7 @@ DCCollector::reconfig( void )
 		// Set an upper bound of one hour for the collector to be blacklisted.
 	int avoid_time = param_integer("DEAD_COLLECTOR_MAX_AVOIDANCE_TIME",3600);
 	blacklisted.setMaxInterval(avoid_time);
+	blacklisted.setInitialInterval(0);
 
 	parseTCPInfo();
 	initDestinationStrings();
@@ -306,22 +300,12 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
 	}
 
-	// Insert "my address"
-	char const *tmp = global_dc_sinful( );
-	if ( tmp ) {
-		MyString existing;
-		if ( ad1 ) {
-			if ( !ad1->LookupString( ATTR_MY_ADDRESS, existing ) ) {
-				ad1->Assign(ATTR_MY_ADDRESS,tmp);
-			}
-		}
-		if ( ad2 ) {
-			if ( !ad2->LookupString( ATTR_MY_ADDRESS, existing ) ) {
-				ad2->Assign(ATTR_MY_ADDRESS,tmp);
-			}
-		}
+		// Prior to 7.2.0, the negotiator depended on the startd
+		// supplying matching MyAddress in public and private ads.
+	if ( ad1 && ad2 ) {
+		ad2->CopyAttribute(ATTR_MY_ADDRESS,ad1);
 	}
-	
+
 		// We never want to try sending an update to port 0.  If we're
 		// about to try that, and we're trying to talk to a local
 		// collector, we should try re-reading the address file and

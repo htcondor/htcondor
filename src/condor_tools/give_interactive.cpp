@@ -27,6 +27,7 @@
 #include "condor_api.h"
 #include "my_username.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "condor_uid.h"
@@ -118,7 +119,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	while ((candidate = startdAds.Next ())) {
 
 		// the candidate offer and request must match
-		if( !( *candidate == request ) ) {
+		if( !IsAMatch( &request, candidate ) ) {
 				// they don't match; continue
 			//printf("DEBUG: MATCH FAILED\n\nCANDIDATE:\n");
 			//candidate->fPrint(stdout);
@@ -474,15 +475,15 @@ main(int argc, char *argv[])
 
 	// initialize some global expressions
 	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondStd);
+	ParseClassAdRvalExpr (buffer, rankCondStd);
 	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondPrioPreempt);
+	ParseClassAdRvalExpr (buffer, rankCondPrioPreempt);
 
 	// get PreemptionReq expression from config file
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionReq) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionReq) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_REQUIREMENTS.\n");
 			exit(1);
@@ -493,7 +494,7 @@ main(int argc, char *argv[])
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionRank) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_RANK.\n");
 			exit(1);

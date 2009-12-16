@@ -44,7 +44,7 @@ class GridftpServer : public Service
 
  protected:
 	static bool ScanSchedd();
-	static int UpdateLeases();
+	static void UpdateLeases();
 
 	static HashTable <HashKey, GridftpServer *> m_serversByProxy;
 	static bool m_initialScanDone;
@@ -53,7 +53,7 @@ class GridftpServer : public Service
 	static char *m_configUrlBase;
 
 	void CheckServerSoon( int delta = 0 );
-	int CheckServer();
+	void CheckServer();
 	bool SubmitServerJob();
 	bool ReadUrlBase();
 	void CheckJobStatus();

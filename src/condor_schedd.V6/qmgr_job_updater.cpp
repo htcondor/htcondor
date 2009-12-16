@@ -53,6 +53,11 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
 	}
 
+	// It is safest to read this attribute now, before the ad is
+	// potentially modified.  If it is missing, then SetEffectiveOwner
+	// will just be a no-op.
+	job_ad->LookupString(ATTR_OWNER, m_owner);
+
 	common_job_queue_attrs = NULL;
 	hold_job_queue_attrs = NULL;
 	evict_job_queue_attrs = NULL;
@@ -60,6 +65,7 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 	requeue_job_queue_attrs = NULL;
 	terminate_job_queue_attrs = NULL;
 	checkpoint_job_queue_attrs = NULL;
+	m_pull_attrs = NULL;
 	initJobQueueAttrLists();
 
 		// finally, clear all the dirty bits on this jobAd, so we only
@@ -83,6 +89,7 @@ QmgrJobUpdater::~QmgrJobUpdater()
 	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
 	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
 	if( checkpoint_job_queue_attrs ) { delete checkpoint_job_queue_attrs; }
+	delete m_pull_attrs;
 }
 
 
@@ -96,6 +103,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( checkpoint_job_queue_attrs ) { delete checkpoint_job_queue_attrs; }
+	delete m_pull_attrs;
 
 	common_job_queue_attrs = new StringList();
 	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
@@ -144,6 +152,11 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	checkpoint_job_queue_attrs->insert( ATTR_CKPT_OPSYS );
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_MAC );
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_IP );
+
+	m_pull_attrs = new StringList();
+	if ( job_ad->Lookup( ATTR_TIMER_REMOVE_CHECK ) ) {
+		m_pull_attrs->insert( ATTR_TIMER_REMOVE_CHECK );
+	}
 }
 
 
@@ -198,7 +211,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (updateMaster) {
 		p = 0;
 	}
-	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT) ) {
+	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.Value()) ) {
 		if( SetAttribute(cluster,p,name,expr) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
@@ -234,20 +247,9 @@ QmgrJobUpdater::updateJob( update_t type )
 	ExprTree* tree = NULL;
 	bool is_connected = false;
 	bool had_error = false;
-	bool final_update = false;
-	static bool checked_for_history = false;
-	static bool has_history = false;
-	char* name;
+	const char* name;
+	char *value = NULL;
 	
-	if( ! checked_for_history ) {
-		char* history = param( "HISTORY" );
-		if( history ) {
-			has_history = true;
-			free( history );
-		}
-		checked_for_history = true;
-	}
-
 	StringList* job_queue_attrs = NULL;
 	switch( type ) {
 	case U_HOLD:
@@ -255,14 +257,12 @@ QmgrJobUpdater::updateJob( update_t type )
 		break;
 	case U_REMOVE:
 		job_queue_attrs = remove_job_queue_attrs;
-		final_update = true;
 		break;
 	case U_REQUEUE:
 		job_queue_attrs = requeue_job_queue_attrs;
 		break;
 	case U_TERMINATE:
 		job_queue_attrs = terminate_job_queue_attrs;
-		final_update = true;
 		break;
 	case U_EVICT:
 		job_queue_attrs = evict_job_queue_attrs;
@@ -275,15 +275,6 @@ QmgrJobUpdater::updateJob( update_t type )
 		break;
 	default:
 		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!", type );
-	}
-	if( final_update && ! has_history ) {
-			// there's no history file on this machine, and this job
-			// is about to leave the queue.  there's no reason to send
-			// this stuff to the schedd, since it's all about to be
-			// flushed, anyway.
-		dprintf( D_FULLDEBUG, "QmgrJobUpdater::updateJob: job leaving "
-				 "queue and schedd has no history file, aborting update\n" );
-		return true;
 	}
 
 	job_ad->ResetExpr();
@@ -304,7 +295,7 @@ QmgrJobUpdater::updateJob( update_t type )
 			 job_queue_attrs->contains_anycase(name)) ) {
 
 			if( ! is_connected ) {
-				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT) ) {
+				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.Value()) ) {
 					return false;
 				}
 				is_connected = true;
@@ -313,6 +304,21 @@ QmgrJobUpdater::updateJob( update_t type )
 				had_error = true;
 			}
 		}
+	}
+	m_pull_attrs->rewind();
+	while ( (name = m_pull_attrs->next()) ) {
+		if ( !is_connected ) {
+			if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, true ) ) {
+				return false;
+			}
+			is_connected = true;
+		}
+		if ( GetAttributeExprNew( cluster, proc, name, &value ) < 0 ) {
+			had_error = true;
+		} else {
+			job_ad->AssignExpr( name, value );
+		}
+		free( value );
 	}
 	if( is_connected ) {
 		DisconnectQ(NULL);

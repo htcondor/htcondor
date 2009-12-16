@@ -28,10 +28,15 @@
 #ifndef WANT_CLASSAD_NAMESPACE
 #define WANT_CLASSAD_NAMESPACE
 #endif
-#include "condor_fix_iostream.h"
+#include <iostream>
 #include "classad/classad_distribution.h"
 #endif
 #include "fs_util.h"
+
+#ifdef WIN32
+// Note inversion of argument order...
+#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
+#endif
 
 #define LOG_HASH_SIZE 37 // prime
 
@@ -46,18 +51,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned int	InodeHash( const StatStructInode &inode )
-{
-	unsigned int result = inode & 0xffffffff;
-
-	return result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys)
+	allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
+	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
 {
 }
 
@@ -825,7 +821,7 @@ ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
+MultiLogFiles::logFileNFSError(const char *logFilename, bool nfsIsError)
 {
 
 	BOOLEAN isNfs;
@@ -850,36 +846,55 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-// Note: this should be changed to get both st_ino and st_dev, to make
-// sure we don't goof up if log files aren't all on the same devise.
-// (See gittrac #328.)  wenger 2009-07-16
+// Note: on Unix/Linux, the file ID is a string encoding the combination of
+// device number and inode; on Windows the file ID is simply the value
+// _fullpath() returns on the path we're given.  The Unix/Linux version
+// is preferable because it will work correctly even if there are hard
+// links to log files; but there are no inodes on Windows, so we're
+// doing what we can.
 bool
-GetInode( const MyString &file, StatStructInode &inode,
+GetFileID( const MyString &filename, MyString &fileID,
 			CondorError &errstack )
 {
+
 		// Make sure the log file exists.  Even though we may later call
-		// InitializeFile(), we have to do it here first so we make sure
-		// that the file exists and we can therefore get an inode for it.
+		// InitializeFile(), we have to make sure the file exists here
+		// first so we make sure that the file exists and we can therefore
+		// get an inode or real path for it.
 		// We *don't* want to truncate the file here, though, because
 		// we don't know for sure whether it's the first time we're seeing
 		// it.
-	if ( access( file.Value(), F_OK ) != 0 ) {
-		if ( !MultiLogFiles::InitializeFile( file.Value(),
+	if ( access( filename.Value(), F_OK ) != 0 ) {
+		if ( !MultiLogFiles::InitializeFile( filename.Value(),
 					false, errstack ) ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error initializing log file %s", file.Value() );
+						"Error initializing log file %s", filename.Value() );
 			return false;
 		}
 	}
 
-	StatWrapper swrap;
-	if ( swrap.Stat( file.Value() ) != 0 ) {
+#ifdef WIN32
+	char *tmpRealPath = realpath( filename.Value(), NULL );
+	if ( !tmpRealPath ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-					"Error getting inode for log file %s", file.Value() );
+					"Error (%d, %s) getting real path for specified path %s\n",
+					errno, strerror( errno ), filename.Value() );
 		return false;
 	}
-	inode = swrap.GetBuf()->st_ino;
+
+	fileID = tmpRealPath;
+	free( tmpRealPath );
+#else
+	StatWrapper swrap;
+	if ( swrap.Stat( filename.Value() ) != 0 ) {
+		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+					"Error getting inode for log file %s",
+					filename.Value() );
+		return false;
+	}
+	fileID.sprintf( "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
+				(unsigned long long)swrap.GetBuf()->st_ino );
+#endif
 
 	return true;
 }
@@ -895,23 +910,23 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
 				logfile.Value(), truncateIfFirst );
 
-	StatStructInode inode;
-	if ( !GetInode( logfile, inode, errstack ) ) {
+	MyString fileID;
+	if ( !GetFileID( logfile, fileID, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-					"Error getting inode in monitorLogFile()" );
+					"Error getting file ID in monitorLogFile()" );
 		return false;
 	}
 
 	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( inode, monitor ) == 0 ) {
+	if ( allLogFiles.lookup( fileID, monitor ) == 0 ) {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
-					"LogFileMonitor object for %s (%lu)\n",
-					logfile.Value(), inode );
+					"LogFileMonitor object for %s (%s)\n",
+					logfile.Value(), fileID.Value() );
 
 	} else {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: didn't "
-					"find LogFileMonitor object for %s (%lu)\n",
-					logfile.Value(), inode );
+					"find LogFileMonitor object for %s (%s)\n",
+					logfile.Value(), fileID.Value() );
 
 			// Make sure the log file is in the correct state -- it must
 			// exist, and be truncated if necessary.
@@ -929,7 +944,7 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 			// Note: we're only putting a pointer to the LogFileMonitor
 			// object into the hash table; the actual LogFileMonitor should
 			// only be deleted in this object's destructor.
-		if ( allLogFiles.insert( inode, monitor ) != 0 ) {
+		if ( allLogFiles.insert( fileID, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error inserting %s into allLogFiles",
 						logfile.Value() );
@@ -961,15 +976,15 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 						new ReadUserLog( monitor->logFile.Value() );
 		}
 
-		if ( activeLogFiles.insert( inode, monitor ) != 0 ) {
+		if ( activeLogFiles.insert( fileID, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error inserting %s (%lu) into activeLogFiles",
-						logfile.Value(), inode );
+						"Error inserting %s (%s) into activeLogFiles",
+						logfile.Value(), fileID.Value() );
 			return false;
 		} else {
 			dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
-						"file %s (%lu) to active list\n", logfile.Value(),
-						inode );
+						"file %s (%s) to active list\n", logfile.Value(),
+						fileID.Value() );
 		}
 	}
 
@@ -989,24 +1004,25 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
 				logfile.Value() );
 
-	StatStructInode inode;
-	if ( !GetInode( logfile, inode, errstack ) ) {
+	MyString fileID;
+	if ( !GetFileID( logfile, fileID, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-					"Error getting inode in unmonitorLogFile()" );
+					"Error getting file ID in monitorLogFile()" );
 		return false;
 	}
 
 	LogFileMonitor *monitor;
-	if ( activeLogFiles.lookup( inode, monitor ) != 0 ) {
+	if ( activeLogFiles.lookup( fileID, monitor ) != 0 ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
-					"file %s (%lu)!\n", logfile.Value(), inode );
+					"file %s (%s)!\n", logfile.Value(),
+					fileID.Value() );
 		return false;
 	}
 
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
-				"LogFileMonitor object for %s (%lu)\n",
-				logfile.Value(), inode );
+				"LogFileMonitor object for %s (%s)\n",
+				logfile.Value(), fileID.Value() );
 
 	monitor->refCount--;
 
@@ -1046,16 +1062,16 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 
 			// Now we remove this file from the "active" list, so
 			// we don't check it the next time we get an event.
-		if ( activeLogFiles.remove( inode ) != 0 ) {
+		if ( activeLogFiles.remove( fileID ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error removing %s (%lu) from activeLogFiles",
-						logfile.Value(), inode );
+						"Error removing %s (%s) from activeLogFiles",
+						logfile.Value(), fileID.Value() );
 			return false;
 		}
 
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: removed "
-					"log file %s (%lu) from active list\n",
-					logfile.Value(), inode );
+					"log file %s (%s) from active list\n",
+					logfile.Value(), fileID.Value() );
 	}
 
 	return true;
@@ -1083,13 +1099,13 @@ ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream ) const
 
 void
 ReadMultipleUserLogs::printLogMonitors( FILE *stream,
-			HashTable<StatStructInode, LogFileMonitor *> logTable ) const
+			HashTable<MyString, LogFileMonitor *> logTable ) const
 {
 	logTable.startIterations();
-	StatStructInode	inode;
+	MyString fileID;
 	LogFileMonitor *	monitor;
-	while ( logTable.iterate( inode,  monitor ) ) {
-		fprintf( stream, "  Inode: %lu\n", inode );
+	while ( logTable.iterate( fileID,  monitor ) ) {
+		fprintf( stream, "  File ID: %s\n", fileID.Value() );
 		fprintf( stream, "    Monitor: %p\n", monitor );
 		fprintf( stream, "    Log file: <%s>\n", monitor->logFile.Value() );
 		fprintf( stream, "    refCount: %d\n", monitor->refCount );
