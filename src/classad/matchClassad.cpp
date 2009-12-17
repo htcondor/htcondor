@@ -116,6 +116,12 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 	Insert( "lCtx", lCtx );
 	Insert( "rCtx", rCtx );
 
+	if( !adl ) {
+		adl = new ClassAd();
+	}
+	if( !adr ) {
+		adr = new ClassAd();
+	}
 	ReplaceLeftAd( adl );
 	ReplaceRightAd( adr );
 
