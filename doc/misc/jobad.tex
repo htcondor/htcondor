@@ -417,6 +417,15 @@ epoch (00:00:00 UTC, Jan 1, 1970).
 evicted from a remote workstation.  Measured in the number of seconds
 since the epoch (00:00:00 UTC, Jan 1, 1970).
 
+%%% ClassAd attribute: LeaveJobInQueue
+\index{ClassAd job attribute!LeaveJobInQueue}
+\index{LeaveJobInQueue!job ClassAd attribute}
+\item[\AdAttr{LeaveJobInQueue}:]  A boolean expression that defaults to
+\Expr{False}, causing the job to be removed from the queue upon completion.
+An exception is if the job is submitted using \Expr{condor\_submit -spool}.
+For this case, the expression causes the job to be kept in the queue
+for 10 days after completion.
+
 %%% ClassAd attribute: LocalSysCpu
 \index{ClassAd job attribute!LocalSysCpu}
 \index{LocalSysCpu!job ClassAd attribute}
