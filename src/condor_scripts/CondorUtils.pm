@@ -149,7 +149,6 @@ sub runcmd {
 		$t1 = [Time::HiRes::gettimeofday];
 	} else {
 		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, "/bin/sh -c \'$args\'");
-		$t1 = [Time::HiRes::gettimeofday];
 
 		my $bulkout = "";
 		my $bulkerror = "";
@@ -223,6 +222,7 @@ sub runcmd {
 		waitpid($childpid, 0);
 		$rc = $? & 0xffff;
 
+		$t1 = [Time::HiRes::gettimeofday];
 	}
 
 	my $elapsed = Time::HiRes::tv_interval($t0, $t1);
