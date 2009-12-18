@@ -68,7 +68,8 @@ Daemon::common_init() {
 	m_daemon_ad_ptr = NULL;
 	char buf[200];
 	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",get_mySubSystem()->getName() );
-	Sock::set_timeout_multiplier( param_integer(buf,0) );
+	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
+	dprintf(D_DAEMONCORE, "*** TIMEOUT_MULTIPLIER :: %d\n", Sock::get_timeout_multiplier());
 	m_has_udp_command_port = true;
 }
 
