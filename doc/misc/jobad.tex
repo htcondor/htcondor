@@ -423,7 +423,7 @@ since the epoch (00:00:00 UTC, Jan 1, 1970).
 \item[\AdAttr{LeaveJobInQueue}:]  A boolean expression that defaults to
 \Expr{False}, causing the job to be removed from the queue upon completion.
 An exception is if the job is submitted using \Expr{condor\_submit -spool}.
-For this case, the expression causes the job to be kept in the queue
+For this case, the default expression causes the job to be kept in the queue
 for 10 days after completion.
 
 %%% ClassAd attribute: LocalSysCpu
@@ -647,6 +647,26 @@ zero when a job is forced to migrate from one machine to another.
 \item[\AdAttr{RemoveKillSig}:]    Currently only for scheduler universe jobs,
 a string containing a name of
 a signal to be sent to the job if the job is removed.
+
+%%% ClassAd attribute: StageOutFinish
+\index{ClassAd job attribute!StageOutFinish}
+\index{StageOutFinish!job ClassAd attribute}
+\item[\AdAttr{StageOutFinish}:]   
+An attribute representing a Unix epoch time that is defined for a job that is
+spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
+and causes Condor to hold the output in the spool while the job waits 
+in the queue in the \Expr{Completed} state.
+This attribute is defined when retrieval of the output finishes.
+
+%%% ClassAd attribute: StageOutStart
+\index{ClassAd job attribute!StageOutStart}
+\index{StageOutStart!job ClassAd attribute}
+\item[\AdAttr{StageOutStart}:]   
+An attribute representing a Unix epoch time that is defined for a job that is
+spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
+and causes Condor to hold the output in the spool while the job waits 
+in the queue in the \Expr{Completed} state.
+This attribute is defined when retrieval of the output begins.
 
 %%% ClassAd attribute: StreamErr
 \index{ClassAd job attribute!StreamErr}

@@ -795,8 +795,8 @@ As an example, if the job is to be removed once the output is retrieved
 with \Condor{transfer\_data}, then use 
 \footnotesize
 \begin{verbatim}
-leave_in_queue = (JobStatus == 4) && ((StageOutStart =?= UNDEFINED) ||\
-                 (StageOutStart == 0))
+leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
+                 (StageOutFinish == 0))
 \end{verbatim}
 \normalsize
 
