@@ -161,7 +161,7 @@ Dagman::Config()
 			// message from the config code doesn't show up in dagman.out.
 		if ( access( _dagmanConfigFile, R_OK ) != 0 &&
 					!is_piped_command( _dagmanConfigFile ) ) {
-			debug_printf( DEBUG_NORMAL,
+			debug_printf( DEBUG_QUIET,
 						"ERROR: Can't read DAGMan config file: %s\n",
 						_dagmanConfigFile );
     		DC_Exit( EXIT_ERROR );
@@ -425,7 +425,7 @@ int main_shutdown_rescue( int exitVal ) {
 // assuming the DAGMan submit file was properly written, is the signal
 // the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
-    debug_printf( DEBUG_NORMAL, "Received SIGUSR1\n" );
+    debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	main_shutdown_rescue( EXIT_ABORT );
 	return false;
 }
@@ -652,7 +652,7 @@ int main_init (int argc, char ** const argv) {
 		// with -usedagdir and DIR nodes.
 	CondorError errstack;
 	if ( !MultiLogFiles::makePathAbsolute( tmpDefaultLog, errstack) ) {
-       	debug_printf( DEBUG_SILENT, "Unable to convert default log "
+       	debug_printf( DEBUG_QUIET, "Unable to convert default log "
 					"file name to absolute path: %s\n",
 					errstack.getFullText() );
 		DC_Exit( EXIT_ERROR );
@@ -687,7 +687,7 @@ int main_init (int argc, char ** const argv) {
 		// Make sure version in submit file is valid.
 	if( !submitFileVersion.is_valid() ) {
 		if ( !allowVerMismatch ) {
-        	debug_printf( DEBUG_SILENT, "Error: %s is invalid!\n",
+        	debug_printf( DEBUG_QUIET, "Error: %s is invalid!\n",
 						versionMsg.Value() );
 			DC_Exit( EXIT_ERROR );
 		} else {
@@ -702,7 +702,7 @@ int main_init (int argc, char ** const argv) {
 				MIN_SUBMIT_FILE_VERSION.minorVer,
 				MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
 		if ( !allowVerMismatch ) {
-        	debug_printf( DEBUG_SILENT, "Error: %s is older than "
+        	debug_printf( DEBUG_QUIET, "Error: %s is older than "
 						"oldest permissible version (%s)\n",
 						versionMsg.Value(), minSubmitVersionStr.Value() );
 			DC_Exit( EXIT_ERROR );
@@ -964,7 +964,7 @@ int main_init (int argc, char ** const argv) {
         }
     }
 
-    dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
+    debug_printf( DEBUG_VERBOSE, "Registering condor_event_timer...\n" );
     daemonCore->Register_Timer( 1, dagman.m_user_log_scan_interval, 
 				condor_event_timer, "condor_event_timer" );
 
