@@ -246,13 +246,27 @@ be mapped to different accounts on a remote machine.
 % gittrac #1043
 % Not documenting, as the problem never made it into a release.
 
+% gittrac #979
+\item Fixed a bug in \Condor{dagman} (introduced in 7.3.2) that will
+cause \Condor{dagman} running on Windows to hang on any DAG using
+more than one log file for the node jobs.
+
+% gittrac #967
+\item Fixed a bug in \Condor{dagman} (introduced in 7.3.2) that could
+cause \Condor{dagman} to fail on a DAG using node job log files on
+multiple devices (if log files on different devices happened to have
+the same inode number).
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+% gittrac #983
+\item \Condor{dagman} may fail on Windows if the set of node job log
+file names includes multiple paths that are hard links (not symlinks)
+to the same file.
 
 \end{itemize}
 
