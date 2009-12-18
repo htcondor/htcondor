@@ -2136,7 +2136,7 @@ Dag::ParentListString( Job *node, const char delim ) const
 //
 //-------------------------------------------------------------------------
 void 
-Dag::SetDotFileName(char *dot_file_name)
+Dag::SetDotFileName(const char *dot_file_name)
 {
 	delete[] _dot_file_name;
 	_dot_file_name = strnewp(dot_file_name);
@@ -2155,7 +2155,7 @@ Dag::SetDotFileName(char *dot_file_name)
 //
 //-------------------------------------------------------------------------
 void
-Dag::SetDotIncludeFileName(char *include_file_name)
+Dag::SetDotIncludeFileName(const char *include_file_name)
 {
 	delete[] _dot_include_file_name;
 	_dot_include_file_name = strnewp(include_file_name);

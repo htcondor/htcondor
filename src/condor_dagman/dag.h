@@ -419,8 +419,8 @@ class Dag {
     const int _maxPreScripts;
     const int _maxPostScripts;
 
-	void SetDotFileName(char *dot_file_name);
-	void SetDotIncludeFileName(char *include_file_name);
+	void SetDotFileName(const char *dot_file_name);
+	void SetDotIncludeFileName(const char *include_file_name);
 	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
 	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
