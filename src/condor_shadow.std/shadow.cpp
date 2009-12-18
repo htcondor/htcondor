@@ -310,7 +310,7 @@ main(int argc, char *argv[] )
 	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
 	dprintf( D_ALWAYS, "*******************************************\n" );
 
-	reserved_swap = param_integer("RESERVED_SWAP", 5);
+	reserved_swap = param_integer("RESERVED_SWAP", 0);
 	reserved_swap *= 1024; /* megabytes -> kb */
 
 	bool use_sql_log = param_boolean("QUILL_USE_SQL_LOG", false);
@@ -320,7 +320,7 @@ main(int argc, char *argv[] )
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
 	dprintf( D_FULLDEBUG, "*** Free Swap = %d\n", free_swap );
-	if( free_swap < reserved_swap ) {
+	if( reserved_swap && free_swap < reserved_swap ) {
 		dprintf( D_ALWAYS, "Not enough reserved swap space\n" );
 		if(FILEObj) {
 		  delete FILEObj;
