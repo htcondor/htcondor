@@ -162,7 +162,7 @@ int main (int argc, char **argv)
 	if (added == "Lance Armstrong") {
 		printf("OK: added is <Lance Armstrong> in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: added is <%s> in line %d.\n", added.GetCStr(),
+		printf("FAILED: added is <%s> in line %d.\n", added.Value(),
 				__LINE__);
 		everythingOkay = false;
 	}
@@ -171,18 +171,18 @@ int main (int argc, char **argv)
 	if (added == "Lance Armstrong123") {
 		printf("OK: added is <Lance Armstrong123> in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: added is <%s> in line %d.\n", added.GetCStr(),
+		printf("FAILED: added is <%s> in line %d.\n", added.Value(),
 				__LINE__);
 		everythingOkay = false;
 	}
 
 	added = "Lucien van Impe";
 	added += 987.6;
-	if (!strncmp(added.GetCStr(), "Lucien van Impe987.6", 20)) {
+	if (!strncmp(added.Value(), "Lucien van Impe987.6", 20)) {
 		printf("OK: operator+=(double) works in line %d.\n", __LINE__);
 	} else {
 		printf("OK: operator+=(double) fails: <%s> in line %d.\n",
-				added.GetCStr(), __LINE__);
+				added.Value(), __LINE__);
 		everythingOkay = false;
 	}
 
@@ -381,7 +381,7 @@ int main (int argc, char **argv)
 		printf("OK: Substr() returned \"\" in line %d.\n", __LINE__);
 	} else {
 		printf("FAILED: Substr() returned <%s> in line %d.\n",
-				b1s.GetCStr(), __LINE__);
+				b1s.Value(), __LINE__);
 		everythingOkay = false;
 	}
 
@@ -411,7 +411,7 @@ int main (int argc, char **argv)
 	b3b = "Laurent Jalabert";
 	b3a = b3b;
 	if ( (b3a == b3b) && (b3a == "Laurent Jalabert") &&
-			(b3a.Length() == (int)strlen(b3a.GetCStr())) ) {
+			(b3a.Length() == (int)strlen(b3a.Value())) ) {
 	    printf("OK: MyString assignment worked in line %d.\n", __LINE__);
 	} else {
 	    printf("FAILED: MyString assignment error in line %d.\n", __LINE__);
@@ -421,7 +421,7 @@ int main (int argc, char **argv)
 
     b3a = "Eddy Merckx";
 	b3a.setChar(5, '\0');
-	if (b3a.Length() == (int)strlen(b3a.GetCStr())) {
+	if (b3a.Length() == (int)strlen(b3a.Value())) {
 	    printf("OK: setChar worked in line %d.\n", __LINE__);
 	} else {
 	    printf("FAILED: setChar produces length conflict "
