@@ -2516,12 +2516,12 @@ JobQueueDBManager::registerAll()
 void
 JobQueueDBManager::registerCommands()
 {
-	daemonCore->Cancel_Command(QMGMT_CMD);
+	daemonCore->Cancel_Command(QMGMT_READ_CMD);
 
-		// register a handler for QMGMT_CMD command from condor_q
+		// register a handler for QMGMT_READ_CMD command from condor_q
 	daemonCore->Register_Command(
-						   QMGMT_CMD, 
-						   "QMGMT_CMD",
+						   QMGMT_READ_CMD, 
+						   "QMGMT_READ_CMD",
 						   (CommandHandlercpp)&JobQueueDBManager::handle_q,
 						   "JobQueueDBManager::handle_q", 
 						   this, 
@@ -2720,7 +2720,7 @@ JobQueueDBManager::pollingTime()
 	dprintf(D_ALWAYS, "++++++++ Sent schedd ad to collector ++++++++\n");
 }
 
-//! command handler for QMGMT_CMD command from condor_q
+//! command handler for QMGMT_READ_CMD command from condor_q
 /*!
  *  Much portion of this code was borrowed from handle_q in qmgmt.C which is
  *  part of schedd source code.

@@ -65,7 +65,8 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
 		}
 	} else { 
-		qmgmt_sock = (ReliSock*) d.startCommand( QMGMT_CMD, 
+		int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
+		qmgmt_sock = (ReliSock*) d.startCommand( cmd,
 												 Stream::reli_sock,
 												 timeout,
 												 errstack_select);

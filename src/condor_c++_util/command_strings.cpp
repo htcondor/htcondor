@@ -22,7 +22,8 @@
 #include "command_strings.h"
 
 const struct Translation DCTranslation[] = {
-	{ "QMGMT_CMD", QMGMT_CMD }, 
+	{ "QMGMT_READ_CMD", QMGMT_READ_CMD }, 
+	{ "QMGMT_WRITE_CMD", QMGMT_WRITE_CMD }, 
 	{ "CONTINUE_FRGM_JOB", CONTINUE_FRGN_JOB },
 	{ "CONTINUE_CLAIM", CONTINUE_CLAIM },
 	{ "SUSPEND_FRGN_JOB", SUSPEND_FRGN_JOB },

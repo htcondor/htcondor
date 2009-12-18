@@ -25,7 +25,8 @@
 /****
 ** Queue Manager Commands
 ****/
-#define QMGMT_CMD	1111
+#define QMGMT_READ_CMD	1111
+#define QMGMT_WRITE_CMD	1112
 
 /* Scheduler Commands */
 /*

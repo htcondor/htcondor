@@ -10742,13 +10742,22 @@ Scheduler::Register()
 #endif
 
 
-	// handler for queue management commands
-	// Note: We make QMGMT_CMD a READ command.  The command handler
-	// itself calls daemonCore->Verify() to check for WRITE access if
-	// someone tries to modify the queue.
-	daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
+	// Note: The QMGMT READ/WRITE commands have the same command handler.
+	// This is ok, because authorization to do write operations is verified
+	// internally in the command handler.
+	daemonCore->Register_Command( QMGMT_READ_CMD, "QMGMT_READ_CMD",
 								  (CommandHandler)&handle_q,
 								  "handle_q", NULL, READ, D_FULLDEBUG );
+
+	// This command always requires authentication.  Therefore, it is
+	// more efficient to force authentication when establishing the
+	// security session than to possibly create an unauthenticated
+	// security session that has to be authenticated every time in
+	// the command handler.
+	daemonCore->Register_Command( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
+								  (CommandHandler)&handle_q,
+								  "handle_q", NULL, WRITE, D_FULLDEBUG,
+								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
 								  (CommandHandlercpp)&Scheduler::dumpState,
