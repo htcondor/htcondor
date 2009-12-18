@@ -116,12 +116,12 @@ void Job::Init( const char* jobName, const char* directory,
 					MyString( _cmdFile ), MyString( _directory ),
 					errorMsg );
 		if ( queueCount == -1 ) {
-			debug_printf( DEBUG_NORMAL, "ERROR in "
+			debug_printf( DEBUG_QUIET, "ERROR in "
 						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
 						errorMsg.Value() );
 			main_shutdown_rescue( EXIT_ERROR );
 		} else if ( queueCount != 1 ) {
-			debug_printf( DEBUG_NORMAL, "ERROR: node %s job queues %d "
+			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
 						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
 						"set\n", _jobName, queueCount );
 			main_shutdown_rescue( EXIT_ERROR );
@@ -259,8 +259,11 @@ void Job::Print (bool condorID) const {
 
 //---------------------------------------------------------------------------
 void job_print (Job * job, bool condorID) {
-    if (job == NULL) dprintf( D_ALWAYS, "(UNKNOWN)");
-    else job->Print(condorID);
+    if (job == NULL) {
+		dprintf( D_ALWAYS, "(UNKNOWN)");
+	} else {
+		job->Print(condorID);
+	}
 }
 
 const char*
@@ -423,7 +426,7 @@ Job::AddChild( Job* child, MyString &whynot )
 	}
 
 	if( HasChild( child ) ) {
-		debug_printf( DEBUG_QUIET,
+		debug_printf( DEBUG_NORMAL,
 					"Warning: parent %s already has child %s\n",
 					GetJobName(), child->GetJobName() );
 		return true;

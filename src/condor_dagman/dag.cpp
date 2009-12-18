@@ -334,7 +334,7 @@ Dag::AddDependency( Job* parent, Job* child )
 Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 	Job *	job = NULL;
 	if ( _nodeIDHash.lookup(jobID, job) != 0 ) {
-    	debug_printf( DEBUG_VERBOSE, "ERROR: job %d not found!\n", jobID);
+    	debug_printf( DEBUG_NORMAL, "ERROR: job %d not found!\n", jobID);
 		job = NULL;
 	}
 
@@ -374,7 +374,7 @@ Dag::DetectCondorLogGrowth () {
 
 	if ( (int)elapsedEventTime >= _pendingReportInterval &&
 				(int)elapsedPrintTime >= _pendingReportInterval ) {
-		dprintf( D_ALWAYS, "%d seconds since last log event\n",
+		debug_printf( DEBUG_NORMAL, "%d seconds since last log event\n",
 					(int)elapsedEventTime );
 		PrintPendingNodes();
 
@@ -402,10 +402,10 @@ bool Dag::DetectDaPLogGrowth () {
 bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
 	if ( logsource == CONDORLOG ) {
-		dprintf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
+		debug_printf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
 					"log file(s)\n", _condorLogRdr.activeLogFileCount() );
 	} else if ( logsource == DAPLOG ) {
-		dprintf( DEBUG_VERBOSE, "Currently monitoring %d Stork "
+		debug_printf( DEBUG_VERBOSE, "Currently monitoring %d Stork "
 					"log file(s)\n", _storkLogRdr.activeLogFileCount() );
 	}
 
@@ -436,9 +436,9 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
 	if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
 		const char *name = (logsource == CONDORLOG) ? "Condor" : "Stork";
-		debug_printf( DEBUG_QUIET, "    ------------------------------\n");
-		debug_printf( DEBUG_QUIET, "       %s Recovery Complete\n", name);
-		debug_printf( DEBUG_QUIET, "    ------------------------------\n");
+		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
+		debug_printf( DEBUG_NORMAL, "       %s Recovery Complete\n", name);
+		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
 	}
 
 	return result;
@@ -755,7 +755,7 @@ Dag::RemoveBatchJob(Job *node) {
 			// Note: error here can't be fatal because there's a
 			// race condition where you could do a condor_rm on
 			// a job that already terminated.  wenger 2006-02-08.
-		debug_printf( DEBUG_VERBOSE, "Error removing DAG node jobs\n");
+		debug_printf( DEBUG_NORMAL, "Error removing DAG node jobs\n");
 	}
 }
 
@@ -1161,7 +1161,7 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 					// after a terminated event for the same job (see
 					// gittrac #744 and the
 					// job_dagman_abnormal_term_recovery_retries test).
-				dprintf( D_ALWAYS, "Warning: searched for node for "
+				debug_printf( DEBUG_QUIET, "Warning: searched for node for "
 							"cluster %d; got %d!!\n", condorID._cluster,
 							node->_CondorID._cluster );
 			}
@@ -1423,7 +1423,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		}
 	}
 	else {
-		debug_printf( DEBUG_QUIET, "PRE Script of Node %s completed "
+		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
 					  "successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
@@ -1599,7 +1599,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 					dm.DAGManJobId._cluster );
 		args.AppendArg( constraint.Value() );
 		if ( util_popen( args ) ) {
-			debug_printf( DEBUG_VERBOSE, "Error removing DAGMan jobs\n");
+			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
 	}
 
@@ -1618,7 +1618,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 			args.AppendArg( dm.storkRmExe );
 			args.AppendArg( job->_CondorID._cluster );
 			if ( util_popen( args ) ) {
-				debug_printf( DEBUG_VERBOSE, "Error removing Stork job\n");
+				debug_printf( DEBUG_NORMAL, "Error removing Stork job\n");
 			}
         }
 	}
@@ -2241,12 +2241,12 @@ Dag::CheckAllJobs()
 
 	result = _checkCondorEvents.CheckAllJobs(jobError);
 	if ( result == CheckEvents::EVENT_ERROR ) {
-		debug_printf( DEBUG_VERBOSE, "Error checking Condor job events: %s\n",
+		debug_printf( DEBUG_QUIET, "Error checking Condor job events: %s\n",
 				jobError.Value() );
 		ASSERT( false );
 	} else if ( result == CheckEvents::EVENT_BAD_EVENT ||
 				result == CheckEvents::EVENT_WARNING ) {
-		debug_printf( DEBUG_VERBOSE, "Warning checking Condor job events: %s\n",
+		debug_printf( DEBUG_NORMAL, "Warning checking Condor job events: %s\n",
 				jobError.Value() );
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All Condor job events okay\n");
@@ -2254,12 +2254,12 @@ Dag::CheckAllJobs()
 
 	result = _checkStorkEvents.CheckAllJobs(jobError);
 	if ( result == CheckEvents::EVENT_ERROR ) {
-		debug_printf( DEBUG_VERBOSE, "Error checking Stork job events: %s\n",
+		debug_printf( DEBUG_QUIET, "Error checking Stork job events: %s\n",
 				jobError.Value() );
 		ASSERT( false );
 	} else if ( result == CheckEvents::EVENT_BAD_EVENT ||
 				result == CheckEvents::EVENT_WARNING ) {
-		debug_printf( DEBUG_VERBOSE, "Warning checking Stork job events: %s\n",
+		debug_printf( DEBUG_NORMAL, "Warning checking Stork job events: %s\n",
 				jobError.Value() );
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All Stork job events okay\n");
@@ -2974,7 +2974,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		result = SUBMIT_RESULT_NO_SUBMIT;
 
 	} else {
-		debug_printf( DEBUG_VERBOSE, "Submitting %s Node %s job(s)...\n",
+		debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
 				  	node->JobTypeString(), node->GetJobName() );
 
     	MyString cmd_file = node->GetCmdFile();
