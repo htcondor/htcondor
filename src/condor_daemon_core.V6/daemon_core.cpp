@@ -627,19 +627,21 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  ********************************************************/
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
-				DCpermission perm, int dprintf_flag)
+				DCpermission perm, int dprintf_flag, bool force_authentication)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
-							perm, dprintf_flag, FALSE) );
+							 perm, dprintf_flag, FALSE, force_authentication) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm, int dprintf_flag)
+				Service* s, DCpermission perm, int dprintf_flag,
+				bool force_authentication)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, dprintf_flag, TRUE) );
+							 handler_descrip, s, perm, dprintf_flag, TRUE,
+							 force_authentication) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
@@ -869,7 +871,7 @@ int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period )
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
-				int dprintf_flag, int is_cpp)
+				int dprintf_flag, int is_cpp, bool force_authentication)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -915,6 +917,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].handlercpp = handlercpp;
 	comTable[i].is_cpp = is_cpp;
 	comTable[i].perm = perm;
+	comTable[i].force_authentication = force_authentication;
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
@@ -2341,7 +2344,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
-MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
+MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
 	MyString res;
 	int		i;
 	DCpermissionHierarchy hierarchy( perm );
@@ -2351,7 +2354,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
 		for (i = 0; i < maxCommand; i++) {
 			if( (comTable[i].handler || comTable[i].handlercpp) &&
-				(comTable[i].perm == perm) )
+				(comTable[i].perm == perm) &&
+				(!comTable[i].force_authentication || is_authenticated))
 			{
 				char const *comma = res.Length() ? "," : "";
 				res.sprintf_cat( "%s%i", comma, comTable[i].num );
@@ -4405,7 +4409,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// want to start one.  look at our security policy.
 				ClassAd our_policy;
 				if( ! sec_man->FillInSecurityPolicyAd(
-					  comTable[cmd_index].perm, &our_policy) ) {
+					comTable[cmd_index].perm,
+					&our_policy,
+					true,
+					false,
+					false,
+					comTable[cmd_index].force_authentication ) )
+				{
 						// our policy is invalid even without the other
 						// side getting involved.
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
@@ -4727,7 +4737,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					pa_ad.Assign(ATTR_SEC_SID, the_sid);
 
 					// other commands this session is good for
-					pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
+					pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm,fully_qualified_user != NULL).Value());
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
@@ -4834,7 +4844,12 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 				ClassAd our_policy;
 				if( ! sec_man->FillInSecurityPolicyAd(
-					comTable[index].perm, &our_policy) )
+					comTable[index].perm,
+					&our_policy,
+					true,
+					false,
+					false,
+					comTable[index].force_authentication ) )
 				{
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );

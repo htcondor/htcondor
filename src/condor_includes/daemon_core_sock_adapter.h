@@ -54,7 +54,8 @@ class DaemonCoreSockAdapterClass {
 		char const*     handler_descrip,
 		Service *       s,
 		DCpermission    perm,
-		int             dprintf_flag);
+		int             dprintf_flag,
+		bool            force_authentication);
 	typedef void (DaemonCore::*daemonContactInfoChanged_fnptr)();
 
 
@@ -228,10 +229,11 @@ class DaemonCoreSockAdapterClass {
                           char const*     handler_descrip,
                           Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
-                          int             dprintf_flag     = D_COMMAND)
+                          int             dprintf_flag     = D_COMMAND,
+						  bool            force_authentication = false)
 	{
 		ASSERT(m_daemonCore);
-		return (m_daemonCore->*m_Register_Command_fnptr)(command,com_descrip,handler,handler_descrip,s,perm,dprintf_flag);
+		return (m_daemonCore->*m_Register_Command_fnptr)(command,com_descrip,handler,handler_descrip,s,perm,dprintf_flag,force_authentication);
 	}
 
 	void daemonContactInfoChanged() {

@@ -326,7 +326,8 @@ class DaemonCore : public Service
                           const char *    handler_descrip,
                           Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
-                          int             dprintf_flag     = D_COMMAND);
+                          int             dprintf_flag     = D_COMMAND,
+                          bool            force_authentication = false);
     
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
@@ -344,7 +345,8 @@ class DaemonCore : public Service
                           const char *       handler_descrip,
                           Service *          s,
                           DCpermission       perm             = ALLOW,
-                          int                dprintf_flag     = D_COMMAND);
+                          int                dprintf_flag     = D_COMMAND,
+                          bool               force_authentication = false);
     
     /** Not_Yet_Documented
         @param command Not_Yet_Documented
@@ -1401,7 +1403,8 @@ class DaemonCore : public Service
                          Service* s, 
                          DCpermission perm,
                          int dprintf_flag,
-                         int is_cpp);
+                         int is_cpp,
+                         bool force_authentication);
 
     int Register_Signal(int sig,
                         const char *sig_descip,
@@ -1465,7 +1468,7 @@ class DaemonCore : public Service
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
 
-	MyString GetCommandsInAuthLevel(DCpermission perm);
+	MyString GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
     struct CommandEnt
     {
@@ -1474,6 +1477,7 @@ class DaemonCore : public Service
         CommandHandlercpp   handlercpp;
         int             is_cpp;
         DCpermission    perm;
+        bool            force_authentication;
         Service*        service; 
         char*           command_descrip;
         char*           handler_descrip;
