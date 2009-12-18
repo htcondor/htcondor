@@ -145,7 +145,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   MyString  command_output("");
   MyString keyLine("");
   while (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) != EOF) {
-	debug_printf(DEBUG_NORMAL, "From submit: %s\n", buffer);
+	debug_printf(DEBUG_VERBOSE, "From submit: %s\n", buffer);
 	command_output += buffer;
     if (strstr(buffer, marker) != NULL) {
 	  keyLine = buffer;
