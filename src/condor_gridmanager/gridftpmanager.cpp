@@ -30,6 +30,7 @@
 #include "filename_tools.h"
 #include "classad_helpers.h"
 #include "directory.h"
+#include "condor_version.h"
 
 #include "gridftpmanager.h"
 
@@ -205,7 +206,7 @@ void GridftpServer::UpdateLeases()
 	dprintf( D_FULLDEBUG, "GridftpServer: Updating job leases for gridftp "
 			 "server jobs\n" );
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::UpdateLeases: "
 				 "Failed to connect to schedd\n" );
@@ -383,7 +384,7 @@ bool GridftpServer::ScanSchedd()
 							"GridftpServer::UpdateLeases" );
 	}
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::ScanSchedd: "
 				 "Failed to connect to schedd\n" );
@@ -669,7 +670,7 @@ bool GridftpServer::SubmitServerJob()
 
 	job_ad->Assign( ATTR_GRIDFTP_SERVER_JOB, true );
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 				 "Failed to connect to schedd\n" );
@@ -743,7 +744,7 @@ bool GridftpServer::SubmitServerJob()
 
 	m_outputFile = NULL;
 	while ( m_outputFile == NULL ) {
-		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true, NULL, myUserName );
+		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true, NULL, myUserName, CondorVersion() );
 		if ( !schedd ) {
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 					 "Failed to connect to schedd (2nd time)\n" );

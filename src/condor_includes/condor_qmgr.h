@@ -56,11 +56,13 @@ int InitializeReadOnlyConnection(const char * );
     @param read_only can be set to true to skip the potentially slow
 	       authenticate step for connections which don't modify the queue
     @param effective_owner if not NULL, will call QmgmtSetEffectiveOwner()
+	@param schedd_version_str Version of schedd if known (o.w. NULL).
 	@return opaque Qmgr_connection structure
 */		 
 Qmgr_connection *ConnectQ(const char *qmgr_location, int timeout=0, 
 				bool read_only=false, CondorError* errstack=NULL,
-				const char *effective_owner=NULL);
+				const char *effective_owner=NULL,
+				char const *schedd_version_str=NULL);
 
 /** Close the connection to the schedd job queue, and optionally commit
 	the transaction.
