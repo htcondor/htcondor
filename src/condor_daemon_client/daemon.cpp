@@ -382,7 +382,8 @@ Daemon::idStr( void )
 		ASSERT( dt_str );
 		Sinful sinful(_addr);
 		sinful.clearParams(); // too much info is ugly
-		buf.sprintf( "%s at %s", dt_str, sinful.getSinful() );
+		buf.sprintf( "%s at %s", dt_str,
+					 sinful.getSinful() ? sinful.getSinful() : _addr );
 		if( _full_hostname ) {
 			buf.sprintf_cat( " (%s)", _full_hostname );
 		}
@@ -1461,7 +1462,8 @@ Daemon::getCmInfo( const char* subsys )
 			return false;
 		}
 		sinful.setHost( inet_ntoa(sin_addr) );
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n", sinful.getSinful() );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
+				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
 		New_addr( strnewp( sinful.getSinful() ) );
 		New_full_hostname( tmp );
 	}
