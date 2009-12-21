@@ -2,7 +2,7 @@ SUBDIR = v7.5.0
 SUBVER = V7_5_0
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
-LOCALDIR = ref-v750
+LOCALDIR = ref-master
 all:  ref.dvi
 #all:  man.ps
 
