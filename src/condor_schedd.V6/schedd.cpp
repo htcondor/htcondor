@@ -10696,32 +10696,40 @@ Scheduler::Register()
 			"abort_job", this, WRITE);
 	 daemonCore->Register_Command(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
-			"actOnJobs", this, WRITE);
+			"actOnJobs", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(SPOOL_JOB_FILES_WITH_PERMS,
 			"SPOOL_JOB_FILES_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(TRANSFER_DATA_WITH_PERMS,
 			"TRANSFER_DATA_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE);
+			"updateGSICred", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(DELEGATE_GSI_CRED_SCHEDD,
 			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE);
+			"updateGSICred", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(REQUEST_SANDBOX_LOCATION,
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
-			"requestSandboxLocation", this, WRITE);
+			"requestSandboxLocation", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
 			"receive_startd_alive", this, DAEMON,
@@ -10742,13 +10750,22 @@ Scheduler::Register()
 #endif
 
 
-	// handler for queue management commands
-	// Note: We make QMGMT_CMD a READ command.  The command handler
-	// itself calls daemonCore->Verify() to check for WRITE access if
-	// someone tries to modify the queue.
-	daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
+	// Note: The QMGMT READ/WRITE commands have the same command handler.
+	// This is ok, because authorization to do write operations is verified
+	// internally in the command handler.
+	daemonCore->Register_Command( QMGMT_READ_CMD, "QMGMT_READ_CMD",
 								  (CommandHandler)&handle_q,
 								  "handle_q", NULL, READ, D_FULLDEBUG );
+
+	// This command always requires authentication.  Therefore, it is
+	// more efficient to force authentication when establishing the
+	// security session than to possibly create an unauthenticated
+	// security session that has to be authenticated every time in
+	// the command handler.
+	daemonCore->Register_Command( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
+								  (CommandHandler)&handle_q,
+								  "handle_q", NULL, WRITE, D_FULLDEBUG,
+								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
 								  (CommandHandlercpp)&Scheduler::dumpState,
@@ -10761,7 +10778,8 @@ Scheduler::Register()
 
 	daemonCore->Register_Command( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
-								  "get_job_connect_info", this, WRITE );
+								  "get_job_connect_info", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(

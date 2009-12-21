@@ -172,7 +172,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		// permanent job queue.  this clears all the dirty bits on our
 		// copy of the classad, so anything we touch after this will
 		// be updated to the schedd when appropriate.
-	job_updater = new QmgrJobUpdater( jobAd, scheddAddr );
+	job_updater = new QmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
 
 		// change directory; hold on failure
 	if ( cdToIwd() == -1 ) {

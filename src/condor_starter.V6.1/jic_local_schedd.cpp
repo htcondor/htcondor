@@ -32,6 +32,7 @@
 #include "starter_user_policy.h"
 #include "jic_local.h"
 #include "jic_local_schedd.h"
+#include "condor_version.h"
 
 extern CStarter *Starter;
 
@@ -269,7 +270,7 @@ JICLocalSchedd::getLocalJobAd( void )
 	if( ! JICLocalFile::getLocalJobAd() ) {
 		return false;
 	}
-	job_updater = new QmgrJobUpdater( job_ad, schedd_addr );
+	job_updater = new QmgrJobUpdater( job_ad, schedd_addr, CondorVersion() );
 	return true;
 }
 

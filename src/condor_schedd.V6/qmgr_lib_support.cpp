@@ -36,7 +36,7 @@ ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
 Qmgr_connection *
-ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack, const char *effective_owner )
+ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack, const char *effective_owner, const char* schedd_version_str )
 {
 	int		rval, ok;
 
@@ -65,7 +65,27 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
 		}
 	} else { 
-		qmgmt_sock = (ReliSock*) d.startCommand( QMGMT_CMD, 
+		int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
+
+			// QMGMT_WRITE_CMD didn't exist before 7.5.0, so use QMGMT_READ_CMD
+			// when talking to older schedds
+		if( cmd == QMGMT_WRITE_CMD ) {
+			if( !schedd_version_str ) schedd_version_str = d.version();
+			if( !schedd_version_str ) {
+					// Some day when we don't care about compatibility with
+					// things from before 7.5.0, we could stop defaulting
+					// to QMGMT_READ_CMD here.
+				cmd = QMGMT_READ_CMD;
+			}
+			else {
+				CondorVersionInfo ver_info(schedd_version_str);
+				if( !ver_info.built_since_version(7,5,0) ) {
+					cmd = QMGMT_READ_CMD;
+				}
+			}
+		}
+
+		qmgmt_sock = (ReliSock*) d.startCommand( cmd,
 												 Stream::reli_sock,
 												 timeout,
 												 errstack_select);

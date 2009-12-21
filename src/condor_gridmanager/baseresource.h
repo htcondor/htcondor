@@ -26,6 +26,7 @@
 
 
 class BaseJob;
+class GahpClient;
 
 class BaseResource : public Service
 {
@@ -110,6 +111,71 @@ class BaseResource : public Service
 	time_t _collectorUpdateInterval;
 	bool _firstCollectorUpdate;
 
+private:
+
+	bool m_batchStatusActive;
+	int m_batchPollTid;
+
+protected:
+	// After StartBatchStatusTimer is called, return the timer's ID,
+	// suitable for passing to GahpClient::setNotificationTimerId.
+	// Do not call before calling StartBatchStatusTimer!
+	int BatchPollTid() const { 
+		ASSERT(m_batchPollTid); 
+		return m_batchPollTid;
+	}
+
+	// If a subclass wants the batch status timer running, call this function
+	// to initialize it.  If you call this, you MUST re-implement
+	// BatchStatusInterface, StartBatchStatus, FinishBatchStatus, and BatchGahp
+	// Do not call more than once.
+	void StartBatchStatusTimer();
+
+	enum BatchStatusResult {
+		// All done, next call should be to StartBatchStatus
+		// BatchStatus Timer was _not_ reset.
+		BSR_DONE,
+		// Waiting, next call should be to FinishBatchStatus
+		// BatchStatus Timer will be reset to 0 when ready.
+		BSR_PENDING,
+		// Oops, next call should be to StartBatchStatus
+		// BatchStatus Timer was _not_ reset.
+		BSR_ERROR,
+	};
+
+	// Only called if WatchBatchStatusTimer()
+	// How often do you want the batch status probe to run?
+	// Called every time the timer fires.
+	// Defaults to EXCEPTing!
+	virtual int BatchStatusInterval() const;
+
+	// Only called if WatchBatchStatusTimer()
+	// Begins a batch status probe.
+	// Defaults to EXCEPTing!
+	// If this returns BSR_PENDING, this function is
+	// responsible for resetting the timer when it's ready!
+	virtual BatchStatusResult StartBatchStatus();
+
+	// Only called if WatchBatchStatusTimer()
+	// Called repeatedly after StartBatchStatus
+	// until returns true.
+	// Defaults to EXCEPTing!
+	// If this returns BSR_PENDING, this function is
+	// responsible for resetting the timer when it's ready!
+	virtual BatchStatusResult FinishBatchStatus();
+
+	// Only called if WatchBatchStatusTimer()
+	// Return a pointer to the Gahp you need for StartBatchStatus
+	// and FinishBatchStatus to work.  If !gahp->isStarted(),
+	// we'll try to gahp->Startup().  If Startup fails, we'll
+	// skill DoBatchStatus.  You can return 0 to indicate
+	// that you don't care. Defaults to EXCEPTing!
+	virtual GahpClient * BatchGahp();
+
+	// Only called if WatchBatchStatusTimer()
+	// Implements the batch status probe, calling out to
+	// StartBatchStatus and FinishBatchStatus to implement.
+	int DoBatchStatus();
 };
 
 #endif // define BASERESOURCE_H

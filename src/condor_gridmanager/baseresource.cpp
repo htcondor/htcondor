@@ -25,6 +25,7 @@
 #include "baseresource.h"
 #include "basejob.h"
 #include "gridmanager.h"
+#include "gahp-client.h"
 
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		1000
 
@@ -65,6 +66,9 @@ BaseResource::BaseResource( const char *resource_name )
 	_firstCollectorUpdate = true;
 	_collectorUpdateInterval = param_integer ( 
 		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
+
+	m_batchStatusActive = false;
+	m_batchPollTid = 0;
 }
 
 BaseResource::~BaseResource()
@@ -613,4 +617,137 @@ void BaseResource::DoUpdateLeases( time_t& update_delay,
 dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 	update_delay = 0;
 	update_complete = true;
+}
+
+void BaseResource::StartBatchStatusTimer()
+{
+	if(m_batchPollTid) {
+		EXCEPT("BaseResource::StartBatchStatusTimer called more than once!");
+	}
+	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());
+	m_batchPollTid = daemonCore->Register_Timer( 0,
+		(TimerHandlercpp)&BaseResource::DoBatchStatus,
+		"BaseResource::DoBatchStatus", (Service*)this );
+}
+
+int BaseResource::BatchStatusInterval() const
+{
+	/*
+		Likely cause: someone called StartBatchStatusTimer
+		but failed to reimplement this.
+	*/
+	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return 0; // Required by Visual C++ compiler
+}
+
+BaseResource::BatchStatusResult BaseResource::StartBatchStatus()
+{
+	/*
+		Likely cause: someone called StartBatchStatusTimer
+		but failed to reimplement this.
+	*/
+	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return BSR_ERROR; // Required by Visual C++ compiler
+}
+
+BaseResource::BatchStatusResult BaseResource::FinishBatchStatus()
+{
+	/*
+		Likely cause: someone called StartBatchStatusTimer
+		but failed to reimplement this.
+	*/
+	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return BSR_ERROR; // Required by Visual C++ compiler
+}
+
+GahpClient * BaseResource::BatchGahp()
+{
+	/*
+		Likely cause: someone called StartBatchStatusTimer
+		but failed to reimplement this.
+	*/
+	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return 0;
+}
+
+int BaseResource::DoBatchStatus()
+{
+	dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s.\n", ResourceName());
+
+	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
+		 m_batchStatusActive == false ) {
+			// No jobs or we can't talk to the schedd, so no point
+			// in polling
+		daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
+		dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s skipped for %d seconds because %s.\n", ResourceName(), BatchStatusInterval(), resourceDown ? "the resource is down":"there are no jobs registered");
+		return 0;
+	}
+
+	GahpClient * gahp = BatchGahp();
+	if(gahp && (gahp->isStarted() == false) ) {
+		dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s is trying to start the GAHP.\n", ResourceName());
+		if ( gahp->Startup() == false ) {
+				// Failed to start the gahp server. Don't do anything
+				// about it. The job objects will also fail on this call
+				// and should go on hold as a result.
+			daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
+			dprintf(D_ALWAYS, "BaseResource::DoBatchStatus for %s failed to start the GAHP.\n", ResourceName());
+			return 0;
+		}
+	}
+
+	if ( gahp->isInitialized() == false ) {
+		int GAHP_INIT_DELAY = 5;
+		dprintf( D_ALWAYS,"BaseResource::DoBatchStatus: gahp server not up yet, delaying %d seconds\n", GAHP_INIT_DELAY );
+		daemonCore->Reset_Timer( m_batchPollTid, GAHP_INIT_DELAY );
+		return 0;
+	}
+
+	daemonCore->Reset_Timer( m_batchPollTid, TIMER_NEVER );
+
+	if(m_batchStatusActive == false) {
+		dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus: Starting bulk job poll of %s\n", ResourceName());
+		BatchStatusResult bsr = StartBatchStatus();
+		switch(bsr) {
+			case BSR_DONE:
+				dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus: Finished bulk job poll of %s\n", ResourceName());
+				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
+				return 0;
+
+			case BSR_ERROR:
+				dprintf(D_ALWAYS, "BaseResource::DoBatchStatus: An error occurred trying to start a bulk poll of %s\n", ResourceName());
+				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
+				return 0;
+
+			case BSR_PENDING:
+				m_batchStatusActive = true;
+				return 0;
+
+			default:
+				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d\n", (int)bsr);
+		}
+
+	} else {
+		BatchStatusResult bsr = FinishBatchStatus();
+		switch(bsr) {
+			case BSR_DONE:
+				dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus: Finished bulk job poll of %s\n", ResourceName());
+				m_batchStatusActive = false;
+				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
+				return 0;
+
+			case BSR_ERROR:
+				dprintf(D_ALWAYS, "BaseResource::DoBatchStatus: An error occurred trying to finish a bulk poll of %s\n", ResourceName());
+				m_batchStatusActive = false;
+				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
+				return 0;
+
+			case BSR_PENDING:
+				return 0;
+
+			default:
+				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d\n", (int)bsr);
+		}
+	}
+	return 0;
 }

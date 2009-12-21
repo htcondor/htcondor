@@ -346,7 +346,8 @@ SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level,
 bool
 SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
 								bool peer_can_negotiate, bool raw_protocol,
-								bool use_tmp_sec_session )
+								bool use_tmp_sec_session,
+								bool force_authentication )
 {
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -356,8 +357,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// list in turn.  The final level in the list will be "DEFAULT".
 	// if that fails, the default value (OPTIONAL) is used.
 
-	sec_req sec_authentication = sec_req_param(
-		"SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	sec_req sec_authentication = force_authentication ? SEC_REQ_REQUIRED :
+		sec_req_param("SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
 
 	sec_req sec_encryption = sec_req_param(
 		"SEC_%s_ENCRYPTION", auth_level, SEC_REQ_OPTIONAL);

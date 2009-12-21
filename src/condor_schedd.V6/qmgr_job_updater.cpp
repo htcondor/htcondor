@@ -31,7 +31,7 @@
 #include "condor_qmgr.h"
 
 
-QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
+QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address, const char *schedd_version )
 {
 	q_update_tid = -1;
 
@@ -40,6 +40,12 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 				schedd_address );
 	}
 	schedd_addr = strdup( schedd_address );
+	if( schedd_version ) {
+		this->schedd_ver = strdup( schedd_version );
+	}
+	else {
+		this->schedd_ver = NULL;
+	}
 
 		// we do *NOT* want to make our own copy of this ad
 	job_ad = job;
@@ -82,6 +88,7 @@ QmgrJobUpdater::~QmgrJobUpdater()
 		q_update_tid = -1;
 	}
 	if( schedd_addr ) { free(schedd_addr); }
+	free(schedd_ver);
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
@@ -211,7 +218,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (updateMaster) {
 		p = 0;
 	}
-	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.Value()) ) {
+	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.Value(),schedd_ver) ) {
 		if( SetAttribute(cluster,p,name,expr) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
@@ -295,7 +302,7 @@ QmgrJobUpdater::updateJob( update_t type )
 			 job_queue_attrs->contains_anycase(name)) ) {
 
 			if( ! is_connected ) {
-				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.Value()) ) {
+				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.Value(),schedd_ver) ) {
 					return false;
 				}
 				is_connected = true;
@@ -308,7 +315,7 @@ QmgrJobUpdater::updateJob( update_t type )
 	m_pull_attrs->rewind();
 	while ( (name = m_pull_attrs->next()) ) {
 		if ( !is_connected ) {
-			if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, true ) ) {
+			if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, true, NULL, NULL, schedd_ver ) ) {
 				return false;
 			}
 			is_connected = true;

@@ -549,7 +549,7 @@ doContactSchedd()
 	// Try connecting to the queue
 	Qmgr_connection * qmgr_connection;
 	
-	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false )) == NULL) {
+	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false, NULL, NULL, dc_schedd.version() )) == NULL) {
 		error = TRUE;
 		error_msg.sprintf( "Error connecting to schedd %s", ScheddAddr );
 		dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
