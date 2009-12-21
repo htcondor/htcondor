@@ -1,0 +1,38 @@
+--- gt5.0.0-all-source-installer/source-trees/usage/c/sender/source/globus_usage.c	2009-10-19 18:42:20.000000000 -0500
++++ gt5.0.0-all-source-installer.patched/source-trees/usage/c/sender/source/globus_usage.c	2010-01-22 09:20:15.000000000 -0600
+@@ -546,7 +546,7 @@
+                 handle->data_length += sprintf(
+                     (char *) handle->data + handle->data_length,
+                     "%s=\"%s\" ", key, value);
+-                val_start = handle->data + handle->data_length - val_len - 2;
++                val_start = (int)(handle->data + handle->data_length - val_len - 2);
+                 GlobusUsageTr(val_start, val_len, '"', '\'');
+                 GlobusUsageTr(val_start, val_len, '\n', ' ');
+             }
+@@ -567,7 +567,7 @@
+                 handle->data_length += sprintf(
+                     (char *) handle->data + handle->data_length,
+                     "%s=%s ", key, value);
+-                val_start = handle->data + handle->data_length - val_len - 1;
++                val_start = (int)(handle->data + handle->data_length - val_len - 1);
+                 GlobusUsageTr(val_start, val_len, '"', '\'');
+                 GlobusUsageTr(val_start, val_len, '\n', ' ');
+             }
+@@ -668,7 +668,7 @@
+                 handle->data_length += sprintf(
+                     (char *) handle->data + handle->data_length,
+                     "%s=\"%s\" ", key, value);
+-                val_start = handle->data + handle->data_length - val_len - 2;
++                val_start = (int)(handle->data + handle->data_length - val_len - 2);
+                 GlobusUsageTr(val_start, val_len, '"', '\'');
+                 GlobusUsageTr(val_start, val_len, '\n', ' ');
+             }
+@@ -689,7 +689,7 @@
+                 handle->data_length += sprintf(
+                     (char *) handle->data + handle->data_length,
+                     "%s=%s ", key, value);
+-                val_start = handle->data + handle->data_length - val_len - 1;
++                val_start = (int)(handle->data + handle->data_length - val_len - 1);
+                 GlobusUsageTr(val_start, val_len, '"', '\'');
+                 GlobusUsageTr(val_start, val_len, '\n', ' ');
+             }

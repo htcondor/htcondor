@@ -13,7 +13,7 @@ LIB = $(PRE_EXT_LIBS) \
 	$(GLOBUS_DIR)/lib/libglobus_gram_protocol_$(GlobusFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_io_$(GlobusFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_xio_$(GlobusFlavor).a \
-	$(GLOBUS_DIR)/lib/libgssapi_error_$(GlobusFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gssapi_error_$(GlobusFlavor).a \
 	$(GSI_LIB) $(OPENSSL_LIB) $(POST_EXT_LIBS)
 
 OBJ = my_ez.o gahp_server.o

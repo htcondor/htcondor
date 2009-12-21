@@ -1,4 +1,4 @@
-/* Modified from Globus 4.2.0 for use with the NorduGrid GAHP server. */
+/* Modified from Globus 5.0.0 for use with the NorduGrid GAHP server. */
 /*
  * Copyright 1999-2006 University of Chicago
  * 
@@ -20,8 +20,8 @@
  * @file
  *
  * $RCSfile: globus_ftp_client_transfer.c,v $
- * $Revision: 1.40 $
- * $Date: 2007/12/05 21:53:33 $
+ * $Revision: 1.41 $
+ * $Date: 2008/09/22 23:07:47 $
  */
 #endif
 
@@ -4821,6 +4821,7 @@ globus_ftp_client_abort(
     globus_i_ftp_client_debug_printf(1, 
         (stderr, "globus_ftp_client_abort() entering\n"));
     
+    handle = *u_handle;
     if(u_handle == GLOBUS_NULL)
     {
 	err = GLOBUS_I_FTP_CLIENT_ERROR_NULL_PARAMETER("handle");
@@ -4835,7 +4836,6 @@ globus_ftp_client_abort(
 	goto error;
     }
 
-    handle = *u_handle;
     globus_i_ftp_client_handle_lock(handle);
     
     globus_i_ftp_client_debug_states(2, handle);
@@ -4994,6 +4994,7 @@ globus_ftp_client_abort(
 
 	    if(result != GLOBUS_SUCCESS)
 	    {
+            err = globus_error_get(result);
 		goto unlock_error;
 	    }
 	    handle->state = GLOBUS_FTP_CLIENT_HANDLE_ABORT;

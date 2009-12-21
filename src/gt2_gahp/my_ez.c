@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /* This is a modified version of globus_gass_server_ez.c from the Globus
- * Toolkit 4.2.1. It allows up to 20 new connections to be authenticated
+ * Toolkit 5.0.0. It allows up to 20 new connections to be authenticated
  * in parallel rather than just 1.
  */
 

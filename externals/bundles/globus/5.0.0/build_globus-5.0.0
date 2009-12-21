@@ -5,36 +5,37 @@ FLAVOR=$GLOBUS_FLAVOR
 THR_FLAVOR=$GLOBUS_THR_FLAVOR
 cd $PACKAGE_BUILD_DIR
 
-SOURCE_DIR="gt4.2.1-all-source-installer"
+SOURCE_DIR="gt5.0.0-all-source-installer"
 
-##
-## For FreeBSD, we need to copy gmake into our local directory
-## and rename it to make. Then set the path to point to this
-## directory first so that gpt-build uses this copy of make
-## We only attempt this if our environment points to the BSD
-## version of make. This will not be executed in the NMI builds
-## Andy Pavlo - 06.12.2006
-##
-cd $PACKAGE_BUILD_DIR
-if [ `uname` = "FreeBSD" ]; then
-   if [ -z `make -v 2>/dev/null | grep "GNU Make"` ]; then
-      gmake_path=`which gmake`
-      if [ -z "$gmake_path" ]; then
-         echo "Missing GNU Make. Please install the gmake port"
-         exit 1
-      fi
-      cp $gmake_path ./
-      mv gmake make
-      PATH="${PACKAGE_BUILD_DIR}:${PATH}"
-      export PATH
-   fi
-   ##
-   ## For some reason it dies unless this directory is created beforehand
-   ##
-   dir="${SOURCE_DIR}/gpt-3.2autotools2004/packaging_tools/etc/gpt"
-   if [ ! -d "$dir" ]; then
-      mkdir -p $dir
-   fi
+# Solaris and AIX don't define AF_LOCAL, use AF_UNIX instead
+if [ `uname` = "AIX" -o `uname` = "SunOS" ] ; then
+  patch -i af_unix.patch -p0
+  if [ $? -ne 0 ]
+  then
+    echo "patch af_unix.patch failed"
+    exit 1
+  fi
+fi
+
+# Solaris doesn't have setenv(), just putenv()
+if [ `uname` = "SunOS" ] ; then
+  patch -i putenv.patch -p0
+  if [ $? -ne 0 ]
+  then
+    echo "patch putenv.patch failed"
+    exit 1
+  fi
+fi
+
+# AIX doesn't like certain forms of pointer arithmetic, so we have to
+# fool it.
+if [ `uname` = "AIX" ] ; then
+  patch -i aix-ptr.patch -p0
+  if [ $? -ne 0 ]
+  then
+    echo "patch aix-ptr.patch failed"
+    exit 1
+  fi
 fi
 
 # The XIO module usually wants to dlopen its GSI and popen drivers at
@@ -90,16 +91,6 @@ then
     echo "patch gram-reregister.patch failed"
     exit 1
 fi
-cd $PACKAGE_BUILD_DIR
-
-# Patch for gsi memory leak (Bugzilla #6787)
-cd $PACKAGE_BUILD_DIR/$SOURCE_DIR/source-trees/gsi/gssapi/source
-patch -p0 -i $PACKAGE_BUILD_DIR/gsi-leak.patch
-if [ $? -ne 0 ]
-then
-    echo "patch gsi-leak.patch failed"
-    exit 1
-fi 
 cd $PACKAGE_BUILD_DIR
 
 # These variables will make Globus link against our OpenSSL external,

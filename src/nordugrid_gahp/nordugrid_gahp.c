@@ -161,7 +161,7 @@ globus_hashtable_t ftp_cache_table;
    to be escaped or the gahp server gets confused. :(
    !!! BEWARE !!!
 */ 
-static char *VersionString ="$GahpVersion: 1.2.0 " __DATE__ " Nordugrid\\ Gahp $";
+static char *VersionString ="$GahpVersion: 1.2.1 " __DATE__ " Nordugrid\\ Gahp $";
 
 volatile int ResultsPending;
 volatile int AsyncResults;

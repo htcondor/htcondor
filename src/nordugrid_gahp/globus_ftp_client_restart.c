@@ -1,4 +1,4 @@
-/* Modified from Globus 4.2.0 for use with the NorduGrid GAHP server. */
+/* Modified from Globus 5.0.0 for use with the NorduGrid GAHP server. */
 /*
  * Copyright 1999-2006 University of Chicago
  * 
