@@ -831,12 +831,18 @@ to point to the new copy of the configuration,
 so the new version of Condor will use the new configuration
 when restarted.
 
-When upgrading from an earlier version of Condor to a version of 6.8,
+When upgrading from version of Condor earlier than 6.8 to more recent version,
 note that the configuration settings must be modified for security reasons. 
 Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
 must be explicitly changed,
 or no jobs may be submitted,
 and error messages will be issued by Condor tools.
+
+The Condor Wiki provides administrators with information under the
+topic heading "How to upgrade Condor gracefully."
+Note that this page is most relevant for Unix systems.
+See all topics at 
+\URL{http://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

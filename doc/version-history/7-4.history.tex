@@ -126,6 +126,12 @@ the \File{dagman.out} file.
 authentication between Condor processes to fail with using a
 non-legacy format X.509 proxy.
 
+% gittrack #1028
+\item Fixed a problem with CCB under Windows platforms that has existed since
+Condor version 7.3.0.  
+This problem caused CCB-enabled daemons to become unresponsive
+after the exit of a child process.
+
 % gittrac #923
 \item Improved the handling of previously-submitted gt2 grid jobs upon
 release from hold, when there is no Globus job manager for the job running
@@ -275,6 +281,16 @@ and a user name or cluster id, they would act on all jobs matching the
 constraint and all jobs associated with the user or cluster. Now, this
 combination of arguments results in an error.
 
+% gittrac #1062
+\item Failure to purge a Cream grid universe job from the remote server
+because it was previously purged no longer results in the job being held.
+
+% gittrac #1044
+\item The \Condor{gridmanager} now recognizes VOMS attributes in X509
+proxies and will handle them appropriately. For example, it recognizes
+that two proxies with the same identity but different VOMS attributes may
+be mapped to different accounts on a remote machine.
+
 % gittrac #947
 % Not documenting, as the parameter being removed was added for a specifc
 % customer and never documented.
@@ -282,13 +298,30 @@ combination of arguments results in an error.
 % gittrac #932
 % Not documenting, as the bug hasn't caused any problems.
 
+% gittrac #1043
+% Not documenting, as the problem never made it into a release.
+
+% gittrac #979
+\item Fixed a bug in \Condor{dagman} (introduced in 7.3.2) that will
+cause \Condor{dagman} running on Windows to hang on any DAG using
+more than one log file for the node jobs.
+
+% gittrac #967
+\item Fixed a bug in \Condor{dagman} (introduced in 7.3.2) that could
+cause \Condor{dagman} to fail on a DAG using node job log files on
+multiple devices (if log files on different devices happened to have
+the same inode number).
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+% gittrac #983
+\item \Condor{dagman} may fail on Windows if the set of node job log
+file names includes multiple paths that are hard links (not symlinks)
+to the same file.
 
 \end{itemize}
 

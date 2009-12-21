@@ -2200,6 +2200,7 @@ the usual method to nicely terminate a Unix program.
 \section{Special Environment Considerations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{AFS}
 
 \index{file system!AFS}
@@ -2235,22 +2236,25 @@ Please see section~\ref{sec:Condor-AFS-Users} on
 page~\pageref{sec:Condor-AFS-Users} in the Administrators Manual for
 further discussion of this problem.
 
-\subsection{NFS Automounter}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{NFS}
 
 \index{file system!NFS}
 \index{NFS!interaction with}
-If your current working directory when you run \Condor{submit}
+If the current working directory when a job is submitted,
+as with \Condor{submit},
 \index{Condor commands!condor\_submit}
 is accessed via an NFS automounter, Condor may have problems if the
-automounter later decides to unmount the volume before your job has
+automounter later decides to unmount the volume before the job has
 completed.
 This is because \Condor{submit} likely has stored the
 dynamic mount point as the job's initial current working directory, and
 this mount point could become automatically unmounted by the
 automounter.
 
-There is a simple work around: When submitting your job, use the 
-\Arg{initialdir} command in your submit description file to point to
+There is a simple work around.
+When submitting the job,
+use the \Arg{initialdir} command in the submit description file to point to
 the stable access point.
 For example,
 suppose the NFS automounter is configured to mount a volume at mount point
@@ -2259,9 +2263,27 @@ whenever the directory \File{/home/johndoe} is accessed.
 Adding the following line to the
 submit description file solves the problem.
 \begin{verbatim}
-        initialdir = /home/johndoe
+  initialdir = /home/johndoe
 \end{verbatim}
 
+\index{NFS!cache flush on submit machine}
+\index{ClassAd job attribute!IwdFlushNFSCache}
+As of Condor version 7.4.0, 
+Condor attempts to flush the NFS cache on a submit machine in order to
+refresh a job's initial working directory.
+This allows files written by the job into an NFS mounted 
+initial working directory to be immediately visible on the submit machine.
+Since the flush operation can require multiple multiple round trips
+to the NFS server, it is expensive.
+Therefore, a job may disable the flushing by setting
+\begin{verbatim}
+  +IwdFlushNFSCache = False
+\end{verbatim}
+in the job's submit description file.
+See page~\pageref{IwdFlushNFSCache-job-attribute} for a definition
+of the job ClassAd attribute.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Condor Daemons That Do Not Run as root}
 
 \index{Unix daemon!running as root}
