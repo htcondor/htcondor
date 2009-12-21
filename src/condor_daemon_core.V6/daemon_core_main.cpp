@@ -2037,11 +2037,6 @@ int main( int argc, char** argv )
 		AllocConsole();
 #endif
 
-		// Avoid possibility of stale info sticking around from previous run.
-		// For example, we had problems in 7.0.4 and earlier with reconnect
-		// shadows in parallel universe reading the old schedd ad file.
-	kill_daemon_ad_file();
-
 #ifndef WIN32
 		// Now that logging is setup, create a pipe to deal with unix 
 		// async signals.  We do this after logging is setup so that
@@ -2074,6 +2069,11 @@ int main( int argc, char** argv )
 		  *
 		  *  In the pidfile case, a second Master will start, drop its
 		  *  pid in the file and then exit, see GT343.
+		  *
+		  *  In the DAEMON_AD_FILE case, which isn't actually a
+		  *  problem as of this comment because the Master does not
+		  *  drop one, there would be a period of time when the file
+		  *  would be missing.
 		  */
 
 		// Now that we have our pid, we could dump our pidfile, if we
@@ -2081,6 +2081,12 @@ int main( int argc, char** argv )
 	if( pidFile ) {
 		drop_pid_file();
 	}
+
+		// Avoid possibility of stale info sticking around from previous run.
+		// For example, we had problems in 7.0.4 and earlier with reconnect
+		// shadows in parallel universe reading the old schedd ad file.
+	kill_daemon_ad_file();
+
 
 		// SETUP COMMAND SOCKET
 	daemonCore->InitDCCommandSocket( command_port );
