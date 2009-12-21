@@ -279,12 +279,17 @@ gahp_printf(const char *format, ...)
 	int ret_val;
 	va_list ap;
 	char buf[10000];
+	int actual;
 
 	globus_libc_lock();
 
 	va_start(ap, format);
-	vsprintf(buf, format, ap);
+	actual = vsnprintf(buf, sizeof(buf)/sizeof(buf[0]), format, ap);
 	va_end(ap);
+	if(actual >= (int)(sizeof(buf)/sizeof(buf[0]))) {
+		printf("gahp_printf\\ failed\\ sanity\\ check!!!\n");
+		_exit(7);
+	}
 
 	if (ResponsePrefix) {
 		ret_val = printf("%s%s",ResponsePrefix,buf);

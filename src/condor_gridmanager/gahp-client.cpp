@@ -1224,7 +1224,7 @@ GahpClient::getErrorString()
 
 	output = "";
 
-	unsigned int i = 0;
+	int i = 0;
 	int input_len = error_string.Length();
 	for (i=0; i < input_len; i++) {
 			// Some error strings may contain characters that are
@@ -2100,34 +2100,37 @@ void
 GahpClient::now_pending(const char *command,const char *buf,
 						GahpProxyInfo *cmd_proxy)
 {
+	/*
+	A NULL command was once a legal way to say "try sending now",
+	but was only used by GahpServer::poll().  That functionality
+	is now in GahpClient::send_pending() and should continue to
+	only be called by GahpServer::poll.  A NULL command is no longer
+	valid.
+	*/
+	ASSERT(command);
 
-		// First, if command is not NULL we have a new pending request.
-		// If so, carefully clear out the previous pending request
-		// and stash our new pending request.  If command is NULL,
-		// we have a request which is pending, but not yet submitted
-		// to the GAHP.
-	if ( command ) {
-		clear_pending();
-		pending_command = strdup( command );
-		pending_reqid = server->new_reqid();
-		if (buf) {
-			pending_args = strdup(buf);
-		}
-		if (m_timeout) {
-			pending_timeout = m_timeout;
-		}
-		pending_proxy = cmd_proxy;
-			// add new reqid to hashtable
-		server->requestTable->insert(pending_reqid,this);
+	clear_pending();
+	pending_command = strdup( command );
+	pending_reqid = server->new_reqid();
+	if (buf) {
+		pending_args = strdup(buf);
 	}
-	ASSERT( pending_command != NULL );
+	if (m_timeout) {
+		pending_timeout = m_timeout;
+	}
+	pending_proxy = cmd_proxy;
+		// add new reqid to hashtable
+	server->requestTable->insert(pending_reqid,this);
 
-	if ( server->num_pending_requests >= server->max_pending_requests ) {
-			// We have too many requests outstanding.  Queue up
-			// this request for later.
-		server->waitingToSubmit.enqueue(pending_reqid);
-		return;
-	}
+	server->waitingToSubmit.enqueue(pending_reqid);
+}
+
+void
+GahpClient::send_pending()
+{
+	// GahpServer should be keeping an eye on this before
+	// calling into here.
+	ASSERT( server->num_pending_requests < server->max_pending_requests );
 
 		// Make sure the command is using the proxy it wants.
 	if ( server->is_initialized == true && server->can_cache_proxies == true ) {
@@ -2142,7 +2145,7 @@ GahpClient::now_pending(const char *command,const char *buf,
 	server->read_argv(return_line);
 	if ( return_line.argc == 0 || return_line.argv[0][0] != 'S' ) {
 		// Badness !
-		EXCEPT("Bad %s Request",pending_command);
+		EXCEPT("Bad %s Request: %s",pending_command, return_line.argc?return_line.argv[0]:"Empty response");
 	}
 
 	pending_submitted_to_gahp = true;
@@ -2346,8 +2349,7 @@ GahpServer::poll()
 		requestTable->lookup(waiting_reqid,entry);
 		if ( entry ) {
 			ASSERT(entry->pending_reqid == waiting_reqid);
-				// Try to send this request to the gahp.
-			entry->now_pending(NULL,NULL);
+			entry->send_pending();
 		} else {
 				// this pending entry had been cleared long ago, and
 				// has been just sitting around in the hash table
@@ -2619,7 +2621,7 @@ GahpClient::gt4_gram_client_job_create(
 							 _jobmanager_type,
 							 _callback_contact,
 							 _rsl,
-							 termination_time);
+							 (int)termination_time);
 
 
 	free (_submit_id);
@@ -5345,8 +5347,8 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 }
 
 int 
-GahpClient::cream_job_register(const char *service, const char *delg_service, const char *delg_id, 
-							   const char *jdl, const char *lease_id, char **job_id, char **upload_url)
+GahpClient::cream_job_register(const char *service, const char *delg_id, 
+							   const char *jdl, const char *lease_id, char **job_id, char **upload_url, char **download_url)
 {
 	static const char* command = "CREAM_JOB_REGISTER";
 
@@ -5357,23 +5359,20 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 
 		// Generate request line
 	if (!service) service=NULLSTRING;
-	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
 	if (!jdl) jdl = NULLSTRING;
 	if (!lease_id) lease_id = "";
 
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(delg_service) );
-	char *esc3 = strdup( escapeGahpString(delg_id) );
-	char *esc4 = strdup( escapeGahpString(jdl) );
-	char *esc5 = strdup( escapeGahpString(lease_id) );
-	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5 );
+	char *esc2 = strdup( escapeGahpString(delg_id) );
+	char *esc3 = strdup( escapeGahpString(jdl) );
+	char *esc4 = strdup( escapeGahpString(lease_id) );
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	free( esc5 );
 	ASSERT( x == true );
 	const char *buf = reqline.Value();
 	
@@ -5402,7 +5401,7 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 			}
 			error_string = result->argv[1];
 			rc = 1;
-		} else if ( result->argc == 4 ) {
+		} else if ( result->argc == 5 ) {
 			if ( strcmp( result->argv[1], NULLSTRING ) ) {
 				EXCEPT( "Bad %s result", command );
 			}
@@ -5412,6 +5411,9 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 			}
 			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
 				*upload_url = strdup(result->argv[3]);
+			}
+			if ( strcasecmp(result->argv[4], NULLSTRING) ) {
+				*download_url = strdup(result->argv[4]);
 			}
 			rc = 0;
 		} else {
@@ -5449,7 +5451,8 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+		// Just start one job
+	bool x = reqline.sprintf("%s 1 %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x == true );
@@ -5844,8 +5847,94 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+int 
+GahpClient::cream_job_status_all(const char *service, 
+	GahpClient::CreamJobStatusMap & results)
+{
+	static const char* command = "CREAM_JOB_STATUS";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	MyString reqline;
+
+	char *esc1 = strdup( escapeGahpString(service) );
+	int job_number = 0; // "all"
+	bool x = reqline.sprintf("%s %d", esc1, job_number);
+	ASSERT( x == true );
+	free( esc1 );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,normal_proxy);
+	}
+
+		// If we made it here, command is pending.
+	const int FIRST_RESULT = 3; // Field 3 (0 indexed) is the first
+	                            // record result.
+	const int RECORD_FIELDS = 4; // How many fields in a record?
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		int num_results = 0;
+		if (result->argc > 2) {
+			num_results = atoi(result->argv[2]);
+			if( result->argc != FIRST_RESULT + num_results * RECORD_FIELDS) {
+				EXCEPT("Bad %s Result",command);
+			}
+		}
+		else if (result->argc != 2) {
+			EXCEPT("Bad %s Result",command);
+		}
+		
+		int rc;
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+		
+		if ( rc == 0 ) {
+			for(int i = 0; i < num_results; i++) {
+				CreamJobStatus status;
+				int offset = FIRST_RESULT + i * RECORD_FIELDS;
+				status.job_id = result->argv[offset + 0];
+				status.job_status = result->argv[offset + 1];
+				status.exit_code = atoi(result->argv[offset + 2]);
+				status.failure_reason = result->argv[offset + 3];
+
+				results[status.job_id] = status;
+			}
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
 int
-GahpClient::cream_proxy_renew(const char *service, const char *delg_service, const char *delg_id, StringList &job_ids)
+GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 {
 	static const char* command = "CREAM_PROXY_RENEW";
 
@@ -5854,32 +5943,16 @@ GahpClient::cream_proxy_renew(const char *service, const char *delg_service, con
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
-	if (job_ids.number() == 0) {
-		return 0;
-	}
-
 		// Generate request line
-	if (!service) service=NULLSTRING;
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
 	MyString reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(delg_service) );
-	char *esc3 = strdup( escapeGahpString(delg_id) );
-	bool x = reqline.sprintf("%s %s %s %d", esc1, esc2, esc3,  job_ids.number());
+	char *esc1 = strdup( escapeGahpString(delg_service) );
+	char *esc2 = strdup( escapeGahpString(delg_id) );
+	bool x = reqline.sprintf("%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	free( esc3 );
 	ASSERT( x == true );
-		// Add variable arguments
-	const char *temp;
-	job_ids.rewind();
-
-	while((temp = job_ids.next()) != NULL) {
-		x = reqline.sprintf_cat(" %s",temp);
-		
-		ASSERT(x == true);
-	}
 	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
@@ -6006,8 +6079,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(lease_id) );
-	int jobnum = 1;
-	bool x = reqline.sprintf("%s %s %d", esc1, esc2, lease_expiry);
+	bool x = reqline.sprintf("%s %s %ld", esc1, esc2, (long)lease_expiry);
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x == true );
