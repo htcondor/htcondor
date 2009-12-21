@@ -637,6 +637,7 @@ int BaseResource::BatchStatusInterval() const
 		but failed to reimplement this.
 	*/
 	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return 0; // Required by Visual C++ compiler
 }
 
 BaseResource::BatchStatusResult BaseResource::StartBatchStatus()
@@ -646,6 +647,7 @@ BaseResource::BatchStatusResult BaseResource::StartBatchStatus()
 		but failed to reimplement this.
 	*/
 	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
 BaseResource::BatchStatusResult BaseResource::FinishBatchStatus()
@@ -655,6 +657,7 @@ BaseResource::BatchStatusResult BaseResource::FinishBatchStatus()
 		but failed to reimplement this.
 	*/
 	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
 GahpClient * BaseResource::BatchGahp()
@@ -664,6 +667,7 @@ GahpClient * BaseResource::BatchGahp()
 		but failed to reimplement this.
 	*/
 	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	return 0;
 }
 
 int BaseResource::DoBatchStatus()
