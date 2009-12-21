@@ -25,11 +25,6 @@
 #include "pgsqldatabase.h"
 #include "condor_email.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
-
 ManagedDatabase::ManagedDatabase() {
 	char *tmp;
 	QuillErrCode ret_st;
@@ -62,8 +57,7 @@ ManagedDatabase::ManagedDatabase() {
 							 dbUser,
 							 spool);
 
-	dprintf(D_ALWAYS, "Using Database Type = %s\n",
-			(dt == T_ORACLE)?"ORACLE":"Postgres");
+	dprintf(D_ALWAYS, "Using Database Type = Postgres\n");
 	dprintf(D_ALWAYS, "Using Database IpAddress = %s\n", 
 			dbIpAddress?dbIpAddress:"");
 	dprintf(D_ALWAYS, "Using Database Name = %s\n", 
@@ -76,13 +70,6 @@ ManagedDatabase::ManagedDatabase() {
 	}
 
 	switch (dt) {				
-	case T_ORACLE:
-#if HAVE_ORACLE
-		DBObj = new ORACLEDatabase(dbConnStr);
-#else
-		EXCEPT("Oracle database requested, but this version of Condor is compiled without Oracle!\n");
-#endif
-		break;
 	case T_PGSQL:
 		DBObj = new PGSQLDatabase(dbConnStr);
 		break;
@@ -181,12 +168,6 @@ void ManagedDatabase::PurgeDatabase() {
 	}	
 
 	switch (dt) {				
-	case T_ORACLE:
-		sql_str.sprintf("begin quill_purgeHistory(%d, %d, %d); end;", 
-						resourceHistoryDuration,
-						runHistoryDuration,
-						jobHistoryDuration);
-		break;
 	case T_PGSQL:
 		sql_str.sprintf("select quill_purgeHistory(%d, %d, %d)", 
 						resourceHistoryDuration,
@@ -280,8 +261,6 @@ void ManagedDatabase::ReindexDatabase() {
 	MyString sql_str;
 
 	switch (dt) {				
-	case T_ORACLE: // we dont currently reindex oracle databases
-		break;
 	case T_PGSQL:
 		ret_st = DBObj->connectDB();
 		

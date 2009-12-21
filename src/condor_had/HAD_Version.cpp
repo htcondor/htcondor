@@ -29,7 +29,8 @@
 
 #include "Version.h"
 #include "FilesOperations.h"
-#include "condor_fix_fstream.h"
+#include <fstream>
+using namespace std;
 
 time_t Version::m_lastModifiedTime = -1;
 

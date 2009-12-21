@@ -105,11 +105,7 @@ DownloadReplicaTransferer::transferFileCommand( )
 
         return TRANSFERER_FALSE;
     }
-    char* hostNameString =
-        getHostFromAddr( daemonCore->InfoCommandSinfulString() );
-    sinfulString.sprintf( "<%s:%d>", hostNameString,
-                                  listeningSocket.get_port( ) );
-    free( hostNameString );
+    sinfulString = listeningSocket.get_sinful_public();
     // after the socket for the downloading/uploading process is occupied,
     // its number is sent to the remote replication daemon
     char* temporarySinfulString = const_cast<char*>( sinfulString.Value( ) );

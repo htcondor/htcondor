@@ -549,7 +549,7 @@ doContactSchedd()
 	// Try connecting to the queue
 	Qmgr_connection * qmgr_connection;
 	
-	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false )) == NULL) {
+	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false, NULL, NULL, dc_schedd.version() )) == NULL) {
 		error = TRUE;
 		error_msg.sprintf( "Error connecting to schedd %s", ScheddAddr );
 		dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
@@ -1402,7 +1402,7 @@ handle_gahp_command(char ** argv, int argc) {
 			SetEnv( "X509_USER_PROXY", argv[1] );
 			UnsetEnv( "X509_USER_CERT" );
 			UnsetEnv( "X509_USER_KEY" );
-			proxySubjectName = x509_proxy_identity_name( argv[1], 1 );
+			proxySubjectName = x509_proxy_identity_name( argv[1] );
 			if ( !proxySubjectName ) {
 				dprintf( D_ALWAYS, "Failed to query certificate identity "
 						 "from %s\n",  argv[1] );

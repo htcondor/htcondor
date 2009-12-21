@@ -26,10 +26,6 @@
 #include "quill_enums.h"
 #include "condor_classad_util.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
 //! constructor
 HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 {
@@ -38,22 +34,13 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 	dt = T_PGSQL; // assume PGSQL by default
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
-		if (strcasecmp(tmp, "ORACLE") == 0) {
-			dt = T_ORACLE;
-		} else if (strcasecmp(tmp, "PGSQL") == 0) {
+		if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
 		free(tmp);
 	} 
 
 	switch (dt) {				
-	case T_ORACLE:
-#if HAVE_ORACLE
-		jqDB = new ORACLEDatabase(dbcon_str);
-#else
-		EXCEPT("Oracle database requested, but this version of Condor does not have Oracle support compiled in!\n");
-#endif
-		break;
 	case T_PGSQL:
 		jqDB = new PGSQLDatabase(dbcon_str);
 		break;
@@ -104,12 +91,7 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
 	  /* to ensure read consistency with while maximizing concurrency, 
 		 use read only transaction if a database supports it.
 	  */
-  if (dt == T_ORACLE) {
-	  if(jqDB->execCommand("SET TRANSACTION READ ONLY") == QUILL_FAILURE) {
-		  printf("Error while querying the database: unable to set transaction read only");
-		  return QUILL_FAILURE;
-	  }
-  }
+	  /* INSERT CODE TO SET TRANSACTION READ ONLY: HERE */
   
   st = jqDB->openCursorsHistory(queryhor, 
 								queryver, 

@@ -326,7 +326,8 @@ class DaemonCore : public Service
                           const char *    handler_descrip,
                           Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
-                          int             dprintf_flag     = D_COMMAND);
+                          int             dprintf_flag     = D_COMMAND,
+                          bool            force_authentication = false);
     
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
@@ -344,7 +345,8 @@ class DaemonCore : public Service
                           const char *       handler_descrip,
                           Service *          s,
                           DCpermission       perm             = ALLOW,
-                          int                dprintf_flag     = D_COMMAND);
+                          int                dprintf_flag     = D_COMMAND,
+                          bool               force_authentication = false);
     
     /** Not_Yet_Documented
         @param command Not_Yet_Documented
@@ -649,6 +651,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Socket ( Stream * insock );
+
+		// Returns true if the given socket is already registered.
+	bool SocketIsRegistered( Stream *sock );
 
 		// Call the registered socket handler for this socket
 		// sock - previously registered socket
@@ -1026,7 +1031,8 @@ class DaemonCore : public Service
         sigset_t      *sigmask             = NULL,
         int           job_opt_mask         = 0,
         size_t        *core_hard_limit     = NULL,
-		int			  *affinity_mask	   = NULL
+		int			  *affinity_mask	   = NULL,
+		char const    *daemon_sock         = NULL
         );
 
     //@}
@@ -1371,6 +1377,7 @@ class DaemonCore : public Service
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()
+	void SetDaemonSockName( char const *sock_name );
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki, Stream* accepted_sock=NULL);
@@ -1396,7 +1403,8 @@ class DaemonCore : public Service
                          Service* s, 
                          DCpermission perm,
                          int dprintf_flag,
-                         int is_cpp);
+                         int is_cpp,
+                         bool force_authentication);
 
     int Register_Signal(int sig,
                         const char *sig_descip,
@@ -1460,7 +1468,7 @@ class DaemonCore : public Service
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
 
-	MyString GetCommandsInAuthLevel(DCpermission perm);
+	MyString GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
     struct CommandEnt
     {
@@ -1469,6 +1477,7 @@ class DaemonCore : public Service
         CommandHandlercpp   handlercpp;
         int             is_cpp;
         DCpermission    perm;
+        bool            force_authentication;
         Service*        service; 
         char*           command_descrip;
         char*           handler_descrip;
@@ -1788,6 +1797,7 @@ class DaemonCore : public Service
 
 	class CCBListeners *m_ccb_listeners;
 	class SharedPortEndpoint *m_shared_port_endpoint;
+	MyString m_daemon_sock_name;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 

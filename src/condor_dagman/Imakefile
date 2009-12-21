@@ -6,21 +6,17 @@ C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-Wall $(CONFIGURE_PCRE_CFLAGS)
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 TOOL_LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
-
-soapobjs(dagman)
 
 OBJ = dagman_main.o dagman_submit.o dag.o job.o dagman_util.o parse.o debug.o \
 	script.o scriptQ.o  dagman_commands.o \
-	dagman_multi_dag.o throttle_by_category.o $(SOAP_OBJS)
+	dagman_multi_dag.o throttle_by_category.o
 
 public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
 public_c_plus_target(condor_submit_dag,bin,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB))
 
 html_target( documentation )
-
-gen_soapfiles(dagman,condorDagman)
 
 testbin:: all

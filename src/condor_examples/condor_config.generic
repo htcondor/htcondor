@@ -625,7 +625,7 @@ MINUTE		= 60
 HOUR		= (60 * $(MINUTE))
 StateTimer	= (CurrentTime - EnteredCurrentState)
 ActivityTimer	= (CurrentTime - EnteredCurrentActivity)
-ActivationTimer = (CurrentTime - JobStart)
+ActivationTimer = ifThenElse(JobStart =!= UNDEFINED, (CurrentTime - JobStart), 0)
 LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
 
 ##  The JobUniverse attribute is just an int.  These macros can be

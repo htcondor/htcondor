@@ -175,19 +175,6 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\mimetypes.c"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					UsePrecompiledHeader="2"
-					PrecompiledHeaderFile="..\Release\condor_common_c.pch"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
 			RelativePath="..\src\condor_daemon_core.V6\mimetypes.h"
 			>
 		</File>
@@ -213,10 +200,6 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_daemon_core.V6\self_monitor.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_daemon_core.V6\soap_core.cpp"
 			>
 		</File>
 		<File

@@ -265,7 +265,7 @@ CondorJob::CondorJob( ClassAd *classad )
 
 	myResource = CondorResource::FindOrCreateResource( remoteScheddName,
 													   remotePoolName,
-													   jobProxy ? jobProxy->subject->subject_name : NULL );
+													   jobProxy );
 	myResource->RegisterJob( this, submitterId );
 	if ( job_already_submitted ) {
 		myResource->AlreadySubmitted( this );
@@ -280,7 +280,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		//   a gahp server can handle multiple schedds
 	sprintf( buff, "CONDOR/%s/%s/%s", remotePoolName ? remotePoolName : "NULL",
 			 remoteScheddName,
-			 jobProxy != NULL ? jobProxy->subject->subject_name : "NULL" );
+			 jobProxy != NULL ? jobProxy->subject->fqan : "NULL" );
 	args.AppendArg("-f");
 	args.AppendArg("-s");
 	args.AppendArg(remoteScheddName);
@@ -1506,6 +1506,10 @@ ClassAd *CondorJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_X509_USER_PROXY, jobProxy->proxy_filename );
 		submit_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
 						   jobProxy->subject->subject_name );
+		if ( jobProxy->subject->has_voms_attrs ) {
+			submit_ad->Assign( ATTR_X509_USER_PROXY_FQAN,
+							   jobProxy->subject->fqan );
+		}
 	}
 
 	bool cleared_environment = false;

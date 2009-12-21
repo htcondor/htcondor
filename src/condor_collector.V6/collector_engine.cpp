@@ -55,9 +55,9 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	QuillAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	ScheddAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	SubmittorAds  (GREATER_TABLE_SIZE, &adNameHashFunction),
@@ -86,9 +86,9 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 CollectorEngine::
 ~CollectorEngine ()
 {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	killHashTable (QuillAds);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	killHashTable (StartdAds);
 	killHashTable (StartdPrivateAds);
@@ -197,11 +197,11 @@ invokeHousekeeper (AdTypes adtype)
 			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
 			break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case QUILL_AD:
 			cleanHashTable (QuillAds, now, makeQuillAdHashKey);
 			break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		case SCHEDD_AD:
 			cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
@@ -307,11 +307,11 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &ScheddAds;
 		break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case QUILL_AD:
 		table = &QuillAds;
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case MASTER_AD:
 		table = &MasterAds;
@@ -375,7 +375,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			MasterAds.walk(scanFunction) &&
 			SubmittorAds.walk(scanFunction) &&
 			NegotiatorAds.walk(scanFunction) &&
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 			QuillAds.walk(scanFunction) &&
 #endif
 			HadAds.walk(scanFunction) &&
@@ -691,7 +691,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  clientAd, hk, hashString, insert, from );
 		break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case UPDATE_QUILL_AD:
 		if (!makeQuillAdHashKey (hk, clientAd, from))
 		{
@@ -704,7 +704,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		retVal=updateClassAd (QuillAds, "QuillAd     ", "Quill",
 							  clientAd, hk, hashString, insert, from );
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case UPDATE_SCHEDD_AD:
 		if (!makeScheddAdHashKey (hk, clientAd, from))
@@ -968,12 +968,12 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 				return 0;
 			break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case QUILL_AD:
 			if (QuillAds.lookup (hk, val) == -1)
 				return 0;
 			break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		case SCHEDD_AD:
 			if (ScheddAds.lookup (hk, val) == -1)
@@ -1056,10 +1056,10 @@ remove (AdTypes adType, AdNameHashKey &hk)
 		case STARTD_AD:
 			return !StartdAds.remove (hk);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 		case QUILL_AD:
 			return !QuillAds.remove (hk);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		case SCHEDD_AD:
 			return !ScheddAds.remove (hk);
@@ -1281,10 +1281,10 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
 	cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	dprintf (D_ALWAYS, "\tCleaning QuillAds ...\n");
 	cleanHashTable (QuillAds, now, makeQuillAdHashKey);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
 	cleanHashTable (ScheddAds, now, makeScheddAdHashKey);

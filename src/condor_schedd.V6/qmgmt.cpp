@@ -509,7 +509,6 @@ QmgmtPeer::set(ReliSock *input)
 	return true;
 }
 
-
 bool
 QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
 {
@@ -537,11 +536,23 @@ QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
 	return true;
 }
 
+bool
+QmgmtPeer::setEffectiveOwner(char const *o)
+{
+	delete [] owner;
+	owner = NULL;
+
+	if ( o ) {
+		owner = strnewp(o);
+	}
+	return true;
+}
+
 void
 QmgmtPeer::unset()
 {
 	if (owner) {
-		delete owner;
+		delete [] owner;
 		owner = NULL;
 	}
 	if (fquser) {
@@ -588,9 +599,23 @@ QmgmtPeer::endpoint() const
 const char*
 QmgmtPeer::getOwner() const
 {
+	// if effective owner has been set, use that
+	if( owner ) {
+		return owner;
+	}
 	if ( sock ) {
 		return sock->getOwner();
-	} else {
+	}
+	return NULL;
+}
+
+const char*
+QmgmtPeer::getRealOwner() const
+{
+	if ( sock ) {
+		return sock->getOwner();
+	}
+	else {
 		return owner;
 	}
 }
@@ -1031,6 +1056,43 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 	}
 	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.Value());
 	return false;
+}
+
+int
+QmgmtSetEffectiveOwner(char const *o)
+{
+	if( !Q_SOCK ) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	char const *real_owner = Q_SOCK->getRealOwner();
+	if( o && real_owner && strcmp(o,real_owner)==0 ) {
+		// change effective owner --> real owner
+		o = NULL;
+	}
+
+	if( o && !*o ) {
+		// treat empty string equivalently to NULL
+		o = NULL;
+	}
+
+	// always allow request to set effective owner to NULL,
+	// because this means set effective owner --> real owner
+	if( o && !qmgmt_all_users_trusted ) {
+		if( !isQueueSuperUser(real_owner) ||
+			!SuperUserAllowedToSetOwnerTo( o ) )
+		{
+			errno = EACCES;
+			return -1;
+		}
+	}
+
+	if( !Q_SOCK->setEffectiveOwner( o ) ) {
+		errno = EINVAL;
+		return -1;
+	}
+	return 0;
 }
 
 bool
@@ -1611,6 +1673,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		BeginTransaction(); // for performance
 	}
 
+	// ckireyev: Destroy MyProxyPassword
+	(void)DestroyMyProxyPassword (cluster_id, proc_id);
+
 	JobQueue->DestroyClassAd(key);
 
 	DecrementClusterSize(cluster_id);
@@ -1621,10 +1686,6 @@ int DestroyProc(int cluster_id, int proc_id)
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
-
-
-	// ckireyev: Destroy MyProxyPassword
-	(void)DestroyMyProxyPassword (cluster_id, proc_id);
 
 	JobQueueDirty = true;
 
@@ -1870,15 +1931,42 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// marks.  Carefully remove them here.
 		MyString owner_buf;
 		char const *owner = attr_value;
+		bool owner_is_quoted = false;
 		if( *owner == '"' ) {
 			owner_buf = owner+1;
 			if( owner_buf.Length() && owner_buf[owner_buf.Length()-1] == '"' )
 			{
 				owner_buf.setChar(owner_buf.Length()-1,'\0');
+				owner_is_quoted = true;
 			}
 			owner = owner_buf.Value();
 		}
 
+		if( !owner_is_quoted ) {
+			// For sanity's sake, do not allow setting Owner to something
+			// strange, such as an attribute reference that happens to have
+			// the same name as the authenticated user.
+			errno = EACCES;
+			dprintf(D_ALWAYS, "SetAttribute security violation: "
+					"setting owner to %s which is not a valid string\n",
+					attr_value);
+			return -1;
+		}
+
+		MyString orig_owner;
+		if( GetAttributeString(cluster_id,proc_id,ATTR_OWNER,orig_owner) >= 0
+			&& orig_owner != owner
+			&& !qmgmt_all_users_trusted )
+		{
+			// Unless all users are trusted, nobody (not even queue super user)
+			// has the ability to change the owner attribute once it is set.
+			// See gittrack #1018.
+			errno = EACCES;
+			dprintf(D_ALWAYS, "SetAttribute security violation: "
+					"setting owner to %s when previously set to \"%s\"\n",
+					attr_value, orig_owner.Value());
+			return -1;
+		}
 
 		if (!qmgmt_all_users_trusted
 #if defined(WIN32)
@@ -2212,6 +2300,12 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 
 	free (encoded_value);
 
+	if (SetAttribute(cluster_id, proc_id,
+					 ATTR_MYPROXY_PASSWORD_EXISTS, "TRUE") < 0) {
+		EXCEPT("Failed to record fact that MyProxyPassword file exists on %d.%d",
+			   cluster_id, proc_id);
+	}
+
 	return 0;
 
 }
@@ -2220,6 +2314,14 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 int
 DestroyMyProxyPassword( int cluster_id, int proc_id )
 {
+	int val = 0;
+	if (GetAttributeBool(cluster_id, proc_id,
+						 ATTR_MYPROXY_PASSWORD_EXISTS, &val) < 0 ||
+		!val) {
+			// It doesn't exist, nothing to destroy.
+		return 0;
+	}
+
 	MyString filename;
 	filename.sprintf( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
 					  cluster_id, proc_id );
@@ -2244,6 +2346,12 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 
 	// Switch back to non-root
 	set_priv(old_priv);
+
+	if (SetAttribute(cluster_id, proc_id,
+					 ATTR_MYPROXY_PASSWORD_EXISTS, "FALSE") < 0) {
+		EXCEPT("Failed to record fact that MyProxyPassword file does no exists on %d.%d",
+			   cluster_id, proc_id);
+	}
 
 	return 0;
 }

@@ -47,7 +47,7 @@
 #include "server_network.h"
 #include <stdlib.h>
 #include <string.h>
-#include <iostream.h>
+#include <iostream>
 #include <iomanip.h>
 #include "server_filestat.h"
 #include <stdio.h>

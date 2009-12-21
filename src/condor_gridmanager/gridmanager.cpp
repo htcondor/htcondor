@@ -41,6 +41,7 @@
 #include "condorjob.h"
 #include "gt4job.h"
 #include "infnbatchjob.h"
+#include "condor_version.h"
 
 // added by fangcao for amazon job 
 #include "amazonjob.h"
@@ -624,7 +625,7 @@ doContactSchedd()
 	}
 
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
 		error_str.sprintf( "Failed to connect to schedd!" );
 		goto contact_schedd_failure;

@@ -57,7 +57,7 @@ CloseJobHistoryFile() {
 	}
 }
 
-void InitJobHistoryFile(const char *history_param) {
+void InitJobHistoryFile(const char *history_param, const char *per_job_history_param) {
 
 	CloseJobHistoryFile();
 	if( JobHistoryFileName ) free( JobHistoryFileName );
@@ -89,13 +89,13 @@ void InitJobHistoryFile(const char *history_param) {
     }
 
     if (PerJobHistoryDir != NULL) free(PerJobHistoryDir);
-    if ((PerJobHistoryDir = param("PER_JOB_HISTORY_DIR")) != NULL) {
+    if ((PerJobHistoryDir = param(per_job_history_param)) != NULL) {
         StatInfo si(PerJobHistoryDir);
         if (!si.IsDirectory()) {
             dprintf(D_ALWAYS | D_FAILURE,
-                    "invalid PER_JOB_HISTORY_DIR (%s): must point to a "
+                    "invalid %s (%s): must point to a "
                     "valid directory; disabling per-job history output\n",
-                    PerJobHistoryDir);
+                    per_job_history_param, PerJobHistoryDir);
             free(PerJobHistoryDir);
             PerJobHistoryDir = NULL;
         }

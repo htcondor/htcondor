@@ -54,7 +54,7 @@ struct GT4ProxyDelegation {
 };
 
 GT4Resource *GT4Resource::FindOrCreateResource( const char *resource_name,
-												const char *proxy_subject )
+												const Proxy *proxy )
 {
 	int rc;
 	GT4Resource *resource = NULL;
@@ -62,12 +62,12 @@ GT4Resource *GT4Resource::FindOrCreateResource( const char *resource_name,
 	const char *canonical_name = CanonicalName( resource_name );
 	ASSERT(canonical_name);
 
-	const char *hash_name = HashName( canonical_name, proxy_subject );
+	const char *hash_name = HashName( canonical_name, proxy->subject->fqan );
 	ASSERT(hash_name);
 
 	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
 	if ( rc != 0 ) {
-		resource = new GT4Resource( canonical_name, proxy_subject );
+		resource = new GT4Resource( canonical_name, proxy );
 		ASSERT(resource);
 		if ( resource->Init() == false ) {
 			delete resource;
@@ -83,11 +83,12 @@ GT4Resource *GT4Resource::FindOrCreateResource( const char *resource_name,
 }
 
 GT4Resource::GT4Resource( const char *resource_name,
-						  const char *proxy_subject )
+						  const Proxy *proxy )
 	: BaseResource( resource_name )
 {
 	initialized = false;
-	proxySubject = strdup( proxy_subject );
+	proxySubject = strdup( proxy->subject->subject_name );
+	proxyFQAN = strdup( proxy->subject->fqan );
 	delegationTimerId = daemonCore->Register_Timer( 0,
 							(TimerHandlercpp)&GT4Resource::checkDelegation,
 							"GT4Resource::checkDelegation", (Service*)this );
@@ -144,6 +145,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 	if ( proxySubject ) {
 		free( proxySubject );
 	}
+	free( proxyFQAN );
 }
 
 bool GT4Resource::Init()
@@ -156,7 +158,7 @@ bool GT4Resource::Init()
 		// instantiated a GahpClient. Need a better solution.
 /*
 	MyString gahp_name;
-	gahp_name.sprintf( "GT4/%s", proxySubject );
+	gahp_name.sprintf( "GT4/%s", proxyFQAN );
 
 	gahp = new GahpClient( gahp_name.Value() );
 
@@ -240,7 +242,7 @@ const char *GT4Resource::HashName( const char *resource_name,
 
 const char *GT4Resource::GetHashName()
 {
-	return HashName( resourceName, proxySubject );
+	return HashName( resourceName, proxyFQAN );
 }
 
 void GT4Resource::PublishResourceAd( ClassAd *resource_ad )
@@ -248,6 +250,7 @@ void GT4Resource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 }
 
 void GT4Resource::UnregisterJob( GT4Job *job )
@@ -672,9 +675,9 @@ dprintf(D_ALWAYS,"JEF: Telling jobs to switch to Gram 42\n");
 
 	MyString gahp_name;
 	if ( m_isGram42 ) {
-		gahp_name.sprintf( "GT42/%s", proxySubject );
+		gahp_name.sprintf( "GT42/%s", proxyFQAN );
 	} else {
-		gahp_name.sprintf( "GT4/%s", proxySubject );
+		gahp_name.sprintf( "GT4/%s", proxyFQAN );
 	}
 
 	new_gahp = new GahpClient( gahp_name.Value() );

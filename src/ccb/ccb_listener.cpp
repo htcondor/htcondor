@@ -30,7 +30,12 @@ CCBListener::CCBListener(char const *ccb_address):
 	m_waiting_for_connect(false),
 	m_waiting_for_registration(false),
 	m_registered(false),
-	m_reconnect_timer(-1)
+	m_reconnect_timer(-1),
+	m_heartbeat_timer(-1),
+	m_heartbeat_interval(0),
+	m_last_contact_from_peer(0),
+	m_heartbeat_disabled(false),
+	m_heartbeat_initialized(false)
 {
 }
 
@@ -42,6 +47,27 @@ CCBListener::~CCBListener()
 	}
 	if( m_reconnect_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_reconnect_timer );
+	}
+	StopHeartbeat();
+}
+
+void
+CCBListener::InitAndReconfig()
+{
+	int new_heartbeat_interval = param_integer("CCB_HEARTBEAT_INTERVAL",1200,0);
+	if( new_heartbeat_interval != m_heartbeat_interval ) {
+		if( new_heartbeat_interval < 30 && new_heartbeat_interval > 0 ) {
+			new_heartbeat_interval = 30;
+				// CCB server doesn't expect a high rate of unsolicited
+				// input from us
+			dprintf(D_ALWAYS,
+					"CCBListener: using minimum heartbeat interval of %ds\n",
+					new_heartbeat_interval);
+		}
+		m_heartbeat_interval = new_heartbeat_interval;
+		if( m_heartbeat_initialized ) {
+			RescheduleHeartbeat();
+		}
 	}
 }
 
@@ -187,6 +213,9 @@ CCBListener::Connected()
 		this);
 
 	ASSERT( rc >= 0 );
+
+	m_last_contact_from_peer = time(NULL);
+	RescheduleHeartbeat();
 }
 
 void
@@ -200,6 +229,8 @@ CCBListener::Disconnected()
 
 	m_waiting_for_registration = false;
 	m_registered = false;
+
+	StopHeartbeat();
 
 	if( m_reconnect_timer != -1 ) {
 		return; // already in progress
@@ -219,6 +250,84 @@ CCBListener::Disconnected()
 		this );
 
 	ASSERT( m_reconnect_timer != -1 );
+}
+
+void
+CCBListener::StopHeartbeat()
+{
+	if( m_heartbeat_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_heartbeat_timer );
+		m_heartbeat_timer = -1;
+	}
+}
+
+void
+CCBListener::RescheduleHeartbeat()
+{
+	if( !m_heartbeat_initialized ) {
+		if( !m_sock ) {
+			return;
+		}
+
+		m_heartbeat_initialized = true;
+
+		m_heartbeat_disabled = false;
+		CondorVersionInfo const *server_version = m_sock->get_peer_version();
+		if( m_heartbeat_interval <= 0 ) {
+			dprintf(D_ALWAYS,"CCBListener: heartbeat disabled because interval is configured to be 0\n");
+		}
+		else if( server_version ) {
+			if( !server_version->built_since_version(7,5,0) ) {
+				m_heartbeat_disabled = true;
+				dprintf(D_ALWAYS,"CCBListener: server is too old to support heartbeat, so not sending one.\n");
+			}
+		}
+	}
+
+	if( m_heartbeat_interval <= 0 || m_heartbeat_disabled ) {
+		StopHeartbeat();
+		m_heartbeat_initialized = true;
+	}
+	else if( m_sock && m_sock->is_connected() ) {
+		int next_time = m_heartbeat_interval - (time(NULL)-m_last_contact_from_peer);
+		if( next_time < 0 || next_time > m_heartbeat_interval) {
+			next_time = 0;
+		}
+		if( m_heartbeat_timer == -1 ) {
+			m_last_contact_from_peer = time(NULL);
+			m_heartbeat_timer = daemonCore->Register_Timer(
+				next_time,
+				m_heartbeat_interval,
+				(TimerHandlercpp)&CCBListener::HeartbeatTime,
+				"CCBListener::HeartbeatTime",
+				this );
+			ASSERT( m_heartbeat_timer != -1 );
+		}
+		else {
+			daemonCore->Reset_Timer(
+				m_heartbeat_timer,
+				next_time,
+				m_heartbeat_interval);
+		}
+	}
+}
+
+void
+CCBListener::HeartbeatTime()
+{
+	int age = time(NULL) - m_last_contact_from_peer;
+	if( age > 3*m_heartbeat_interval ) {
+		dprintf(D_ALWAYS, "CCBListener: no activity from CCB server in %ds; "
+				"assuming connection is dead.\n", age);
+		Disconnected();
+		return;
+	}
+
+	dprintf(D_FULLDEBUG, "CCBListener: sent heartbeat to server.\n");
+
+	ClassAd msg;
+	msg.Assign(ATTR_COMMAND, ALIVE);
+	SendMsgToCCB(msg,false);
 }
 
 int
@@ -243,6 +352,9 @@ CCBListener::ReadMsgFromCCB()
 		return false;
 	}
 
+	m_last_contact_from_peer = time(NULL);
+	RescheduleHeartbeat();
+
 	int cmd = -1;
 	msg.LookupInteger( ATTR_COMMAND, cmd );
 	switch( cmd ) {
@@ -250,6 +362,9 @@ CCBListener::ReadMsgFromCCB()
 		return HandleCCBRegistrationReply( msg );
 	case CCB_REQUEST:
 		return HandleCCBRequest( msg );
+	case ALIVE:
+		dprintf(D_FULLDEBUG,"CCBListener: received heartbeat from server.\n");
+		return true;
 	}
 
 	MyString msg_str;
@@ -532,19 +647,18 @@ CCBListeners::Configure(char const *addresses)
 		if( !listener ) {
 
 			Daemon daemon(DT_COLLECTOR,address);
-			char const *addr = daemon.addr();
-			char const *public_addr = daemonCore->publicNetworkIpAddr();
-			char const *private_addr = daemonCore->privateNetworkIpAddr();
-			if( !public_addr ) public_addr = "null";
-			if( !private_addr ) private_addr = "null";
+			char const *ccb_addr_str = daemon.addr();
+			char const *my_addr_str = daemonCore->publicNetworkIpAddr();
+			Sinful ccb_addr( ccb_addr_str );
+			Sinful my_addr( my_addr_str );
 
-			if( addr && ( !strcmp(addr,private_addr) ||
-						  !strcmp(addr,public_addr) ) )
-			{
+			if( my_addr.addressPointsToMe( ccb_addr ) ) {
 				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address);
 				continue;
 			}
-			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s is not equal to my address (%s, %s)\n",addr?addr:"null",public_addr,private_addr);
+			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s does not point to my address %s\n",
+					ccb_addr_str?ccb_addr_str:"null",
+					my_addr_str?my_addr_str:"null");
 
 			listener = new CCBListener(address);
 		}
@@ -562,5 +676,7 @@ CCBListeners::Configure(char const *addresses)
 			continue;
 		}
 		m_ccb_listeners.Append( ccb_listener );
+
+		ccb_listener->InitAndReconfig();
 	}
 }

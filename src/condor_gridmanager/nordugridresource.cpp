@@ -45,21 +45,21 @@ const char *NordugridResource::HashName( const char *resource_name,
 }
 
 NordugridResource *NordugridResource::FindOrCreateResource( const char * resource_name,
-															const char *proxy_subject )
+															const Proxy *proxy )
 {
 	int rc;
 	MyString resource_key;
 	NordugridResource *resource = NULL;
 
 	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
-													proxy_subject ) ),
+													proxy->subject->fqan ) ),
 								 resource );
 	if ( rc != 0 ) {
-		resource = new NordugridResource( resource_name, proxy_subject );
+		resource = new NordugridResource( resource_name, proxy );
 		ASSERT(resource);
 		resource->Reconfig();
 		ResourcesByName.insert( HashKey( HashName( resource_name,
-												   proxy_subject ) ),
+												   proxy->subject->fqan ) ),
 								resource );
 	} else {
 		ASSERT(resource);
@@ -69,15 +69,16 @@ NordugridResource *NordugridResource::FindOrCreateResource( const char * resourc
 }
 
 NordugridResource::NordugridResource( const char *resource_name,
-									  const char *proxy_subject )
+									  const Proxy *proxy )
 	: BaseResource( resource_name )
 {
-	proxySubject = strdup( proxy_subject );
+	proxySubject = strdup( proxy->subject->subject_name );
+	proxyFQAN = strdup( proxy->subject->fqan );
 
 	gahp = NULL;
 
 	MyString buff;
-	buff.sprintf( "NORDUGRID/%s", proxySubject );
+	buff.sprintf( "NORDUGRID/%s", proxyFQAN );
 
 	gahp = new GahpClient( buff.Value() );
 	gahp->setNotificationTimerId( pingTimerId );
@@ -98,7 +99,8 @@ NordugridResource::NordugridResource( const char *resource_name,
 
 NordugridResource::~NordugridResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxyFQAN ) ) );
+	free( proxyFQAN );
 	if ( proxySubject ) {
 		free( proxySubject );
 	}
@@ -125,7 +127,7 @@ const char *NordugridResource::ResourceType()
 
 const char *NordugridResource::GetHashName()
 {
-	return HashName( resourceName, proxySubject );
+	return HashName( resourceName, proxyFQAN );
 }
 
 void NordugridResource::PublishResourceAd( ClassAd *resource_ad )
@@ -133,6 +135,7 @@ void NordugridResource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 }
 
 void NordugridResource::DoPing( time_t& ping_delay, bool& ping_complete,

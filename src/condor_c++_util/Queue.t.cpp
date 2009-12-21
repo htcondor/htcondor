@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-#include <iostream.h>
+#include <iostream>
 #include <stdio.h>
 #include "Queue.h"
 

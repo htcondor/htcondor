@@ -5302,15 +5302,22 @@ SetGlobusParams()
 		free( tmp );
 
 		int pos = resource.FindChar( ' ', 0 );
-		if ( pos >= 0 && resource.FindChar( ' ', pos + 1 ) < 0 &&
-			 ( pos = resource.find( "/cream-" ) ) >= 0 ) {
-			// We found the shortened form
-			resource.replaceString( "-", " ", pos );
-			resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
+		if ( pos >= 0 && resource.FindChar( ' ', pos + 1 ) < 0 ) {
+			int pos2 = resource.find( "://", pos + 1 );
+			if ( pos2 < 0 ) {
+				pos2 = pos + 1;
+			} else {
+				pos2 = pos2 + 3;
+			}
+			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
+				// We found the shortened form
+				resource.replaceString( "-", " ", pos );
+				resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
 
-			buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
-							resource.Value() );
-			InsertJobExpr( buffer );
+				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
+								resource.Value() );
+				InsertJobExpr( buffer );
+			}
 		}
 	}
 }
@@ -5357,62 +5364,53 @@ SetGSICredentials()
 //			InsertJobExpr(buffer);	
 			free( proxy_file );
 		} else {
-#ifndef WIN32
-				// Versions of Condor prior to 6.7.3 set a different
-				// value for X509UserProxySubject. Specifically, the
-				// proxy's subject is used rather than the identity
-				// (the subject this is a proxy for), and spaces are
-				// converted to underscores. The elimination of spaces
-				// is important, as the proxy subject gets passed on
-				// the command line to the gridmanager in these older
-				// versions and daemon core's CreateProcess() can't
-				// handle spaces in command line arguments. So if
-				// we're talking to an older schedd, use the old format.
-			CondorVersionInfo *vi = NULL;
-			if ( !DumpClassAdToFile ) {
-				vi = new CondorVersionInfo( MySchedd->version() );
-			}
-
+#if defined(HAVE_EXT_GLOBUS)
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				if ( vi ) delete vi;
 				exit( 1 );
 			}
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			if ( vi && !vi->built_since_version(6,7,3) ) {
-				// subject name with no VOMS attrs
-				proxy_subject = x509_proxy_subject_name(proxy_file, 0);
-			} else {
-				// identity with VOMS attrs
-				proxy_subject = x509_proxy_identity_name(proxy_file, 1);
-			}
+			proxy_subject = x509_proxy_identity_name(proxy_file);
+
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				if ( vi ) delete vi;
 				exit( 1 );
 			}
-			/* Dreadful hack: replace all the spaces in the cert subject
-			* with underscores.... why?  because we need to pass this
-			* as a command line argument to the gridmanager, and until
-			* daemoncore handles command-line args w/ an argv array, spaces
-			* will cause trouble.  
-			*/
-			if ( vi && !vi->built_since_version(6,7,3) ) {
-				char *space_tmp;
-				do {
-					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
-						*space_tmp = '_';
-					}
-				} while (space_tmp);
-			}
-			if ( vi ) delete vi;
 
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   proxy_subject);
 			InsertJobExpr(buffer);	
 			free( proxy_subject );
+
+			/* Insert the VOMS attributes into the ad */
+			char *voname = NULL;
+			char *firstfqan = NULL;
+			char *quoted_DN_and_FQAN = NULL;
+
+			int error = extract_VOMS_info_from_file( proxy_file, 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
+			if ( error ) {
+				if (error == 1) {
+					// no attributes, skip silently.
+				} else {
+					// log all other errors
+					fprintf( stderr, "\nWARNING: unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
+				}
+			} else {
+				InsertJobExprString(ATTR_X509_USER_PROXY_VONAME, voname);	
+				free( voname );
+
+				InsertJobExprString(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);	
+				free( firstfqan );
+
+				InsertJobExprString(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);	
+				free( quoted_DN_and_FQAN );
+			}
+
+			// When new classads arrive, all this should be replaced with a
+			// classad holding the VOMS atributes.  -zmiller
+
 #endif
 
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
@@ -5817,7 +5815,7 @@ connect_to_the_schedd()
 	setupAuthentication();
 
 	CondorError errstack;
-	if( ConnectQ(MySchedd->addr(), 0 /* default */, false /* default */, &errstack) == 0 ) {
+	if( ConnectQ(MySchedd->addr(), 0 /* default */, false /* default */, &errstack, NULL, MySchedd->version() ) == 0 ) {
 		if( ScheddName ) {
 			fprintf( stderr, 
 					"\nERROR: Failed to connect to queue manager %s\n%s\n",

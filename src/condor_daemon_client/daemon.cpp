@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_ver_info.h"
+#include "condor_open.h"
 
 #include "daemon.h"
 #include "condor_string.h"
@@ -68,7 +69,8 @@ Daemon::common_init() {
 	m_daemon_ad_ptr = NULL;
 	char buf[200];
 	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",get_mySubSystem()->getName() );
-	Sock::set_timeout_multiplier( param_integer(buf,0) );
+	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
+	dprintf(D_DAEMONCORE, "*** TIMEOUT_MULTIPLIER :: %d\n", Sock::get_timeout_multiplier());
 	m_has_udp_command_port = true;
 }
 
@@ -1373,11 +1375,24 @@ Daemon::getCmInfo( const char* subsys )
 
 	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", host ); 
 
+	Sinful sinful( host );
+
+	if( !sinful.valid() || !sinful.getHost() ) {
+		dprintf( D_ALWAYS, "Invalid address: %s\n", host );
+		buf.sprintf( "%s address or hostname not specified in config file",
+				 subsys ); 
+		newError( CA_LOCATE_FAILED, buf.Value() );
+		_is_configured = false;
+		free( host );
+		return false;
+	}
+
 		// See if it's already got a port specified in it, or if we
 		// should use the default port for this kind of daemon.
-	_port = getPortFromAddr( host );
+	_port = sinful.getPortNum();
 	if( _port < 0 ) {
 		_port = getDefaultPort();
+		sinful.setPort( _port );
 		dprintf( D_HOSTNAME, "Port not specified, using default (%d)\n",
 				 _port ); 
 	} else {
@@ -1407,10 +1422,11 @@ Daemon::getCmInfo( const char* subsys )
 		// (which we've already got stashed in _name if we need it),
 		// and finally reset host to point to the host for the rest of
 		// this function.
-	tmp = getHostFromAddr( host );
 	free( host );
-	host = tmp;
-	tmp = NULL;
+	host = NULL;
+	if( sinful.getHost() ) {
+		host = strdup( sinful.getHost() );
+	}
 
 
 
@@ -1424,8 +1440,7 @@ Daemon::getCmInfo( const char* subsys )
 
 
 	if( is_ipaddr(host, &sin_addr) ) {
-		buf.sprintf( "<%s:%d>", host, _port );
-		New_addr( strnewp(buf.Value() ) );
+		New_addr( strnewp( sinful.getSinful() ) );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1445,9 +1460,9 @@ Daemon::getCmInfo( const char* subsys )
 
 			return false;
 		}
-		buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
-		New_addr( strnewp(buf.Value() ) );
+		sinful.setHost( inet_ntoa(sin_addr) );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n", sinful.getSinful() );
+		New_addr( strnewp( sinful.getSinful() ) );
 		New_full_hostname( tmp );
 	}
 
@@ -1785,111 +1800,31 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	MyString buf = "";
 	MyString buf2 = "";
 	MyString addr_attr_name = "";
-	char *our_network_name = NULL;
 		// TODO Which attributes should trigger a failure if we don't find
 		// them in the ad? Just _addr?
 	bool ret_val = true;
 	bool found_addr = false;
-	char const *notes = "";
 
 		// We look for _name first because we use it, if available, for
 		// error messages if we fail  to find the other attributes.
 	initStringFromAd( ad, ATTR_NAME, &_name );
 
-		// Search for the daemon's address. This can be in one of
-		// several attributes in the classad. Search through the possible
-		// attributes until we find a match.
-		// In the future, _addr may become a list of addresses. In that
-		// case, we'd want to include all possible matches in the list.
-	if ( ad->LookupString( ATTR_PRIVATE_NETWORK_IP_ADDR, buf ) &&
-		 ad->LookupString( ATTR_PRIVATE_NETWORK_NAME, buf2 ) &&
-		 ( our_network_name = param( "PRIVATE_NETWORK_NAME" ) ) ) {
-
-		StringList addr_list( buf.Value(), ", " );
-		StringList network_list( buf2.Value(), "," );
-
-		addr_list.rewind();
-		network_list.rewind();
-		if ( !addr_list.isEmpty() && !network_list.isEmpty() &&
-			 strcmp( network_list.next(), our_network_name ) == 0 ) {
-
-			New_addr( strnewp( addr_list.next() ) );
-			found_addr = true;
-			addr_attr_name = ATTR_PRIVATE_NETWORK_IP_ADDR;
-		}
-	}
-	free( our_network_name );
-
-	if ( !found_addr && ad->LookupString( ATTR_PUBLIC_NETWORK_IP_ADDR, buf ) ) {
-		StringList addr_list( buf.Value(), ", " );
-
-		addr_list.rewind();
-		if ( !addr_list.isEmpty() ) {
-			New_addr( strnewp( addr_list.next() ) );
-			found_addr = true;
-			addr_attr_name = ATTR_PUBLIC_NETWORK_IP_ADDR;
-		}
-	}
-
-	if ( !found_addr ) {
 		// construct the IP_ADDR attribute
-		buf.sprintf( "%sIpAddr", _subsys );
-		if ( ad->LookupString( buf.Value(), buf2 ) ) {
-			New_addr( strnewp( buf2.Value() ) );
-			found_addr = true;
-			addr_attr_name = buf;
-		}
+	buf.sprintf( "%sIpAddr", _subsys );
+	if ( ad->LookupString( buf.Value(), buf2 ) ) {
+		New_addr( strnewp( buf2.Value() ) );
+		found_addr = true;
+		addr_attr_name = buf;
 	}
-
-	if( _addr ) {
-		// See if there is a matching private network address packed
-		// into the sinful string (starting in 7.3.0 this replaces the
-		// old method of putting it in a separate attribute).
-
-		Sinful sinful(_addr);
-		char const *priv_net = sinful.getPrivateNetworkName();
-		if( priv_net ) {
-			bool using_private = false;
-			our_network_name = param( "PRIVATE_NETWORK_NAME" );
-			if( our_network_name ) {
-				if( strcmp( our_network_name, priv_net ) == 0 ) {
-					char const *priv_addr = sinful.getPrivateAddr();
-					notes = " (private network name matched)";
-					using_private = true;
-					if( priv_addr ) {
-						// replace address with private address
-						if( *priv_addr != '<' ) {
-							MyString buf;
-							buf.sprintf("<%s>",priv_addr);
-							New_addr( strnewp( buf.Value() ) );
-						}
-						else {
-							New_addr( strnewp( priv_addr ) );
-						}
-					}
-					else {
-						// no private address was specified, so use public
-						// address with CCB disabled
-						sinful.setCCBContact(NULL);
-						New_addr( strnewp( sinful.getSinful() ) );
-					}
-				}
-				free( our_network_name );
-			}
-			if( !using_private ) {
-				// Remove junk from address that we don't care about so
-				// it is not so noisy in logs and such.
-				sinful.setPrivateAddr(NULL);
-				sinful.setPrivateNetworkName(NULL);
-				New_addr( strnewp( sinful.getSinful() ) );
-				notes = " (private network name not matched)";
-			}
-		}
+	else if ( ad->LookupString( ATTR_MY_ADDRESS, buf2 ) ) {
+		New_addr( strnewp( buf2.Value() ) );
+		found_addr = true;
+		addr_attr_name = ATTR_MY_ADDRESS;
 	}
 
 	if ( found_addr ) {
-		dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"%s\n",
-				 addr_attr_name.Value(), _addr, notes );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"\n",
+				 addr_attr_name.Value(), _addr);
 		_tried_locate = true;
 	} else {
 		dprintf( D_ALWAYS, "Can't find address in classad for %s %s\n",
@@ -1994,13 +1929,54 @@ Daemon::New_addr( char* str )
 	_addr = str;
 
 	if( _addr ) {
-		Sinful addr(_addr);
-		if( addr.getCCBContact() ) {
+		Sinful sinful(_addr);
+		char const *priv_net = sinful.getPrivateNetworkName();
+		if( priv_net ) {
+			bool using_private = false;
+			char *our_network_name = param( "PRIVATE_NETWORK_NAME" );
+			if( our_network_name ) {
+				if( strcmp( our_network_name, priv_net ) == 0 ) {
+					char const *priv_addr = sinful.getPrivateAddr();
+					dprintf( D_HOSTNAME, "Private network name matched.\n");
+					using_private = true;
+					if( priv_addr ) {
+						// replace address with private address
+						MyString buf;
+						if( *priv_addr != '<' ) {
+							buf.sprintf("<%s>",priv_addr);
+							priv_addr = buf.Value();
+						}
+						delete [] _addr;
+						_addr = strnewp( priv_addr );
+						sinful = Sinful( _addr );
+					}
+					else {
+						// no private address was specified, so use public
+						// address with CCB disabled
+						sinful.setCCBContact(NULL);
+						delete [] _addr;
+						_addr = strnewp( sinful.getSinful() );
+					}
+				}
+				free( our_network_name );
+			}
+			if( !using_private ) {
+				// Remove junk from address that we don't care about so
+				// it is not so noisy in logs and such.
+				sinful.setPrivateAddr(NULL);
+				sinful.setPrivateNetworkName(NULL);
+				delete [] _addr;
+				_addr = strnewp( sinful.getSinful() );
+				dprintf( D_HOSTNAME, "Private network name not matched.\n");
+			}
+		}
+
+		if( sinful.getCCBContact() ) {
 			// CCB cannot handle UDP, so pretend this daemon has no
 			// UDP port.
 			m_has_udp_command_port = false;
 		}
-		if( addr.getSharedPortID() ) {
+		if( sinful.getSharedPortID() ) {
 			// SharedPort does not handle UDP
 			m_has_udp_command_port = false;
 		}

@@ -1,0 +1,55 @@
+--- gsoap/stdsoap2.h.orig	2005-10-31 21:48:07.000000000 -0600
++++ gsoap/stdsoap2.h	2005-10-31 21:52:52.000000000 -0600
+@@ -49,10 +49,15 @@
+ --------------------------------------------------------------------------------
+ */
+ 
++#include "condor_common.h"
++
+ #ifdef WITH_SOAPDEFS_H
+ # include "soapdefs.h"		/* include user-defined stuff */
+ #endif
+ 
++/*
++To build on AIX5.2 with GCC3.3.2 nothing thread related can be used.
++
+ #ifndef _THREAD_SAFE
+ # define _THREAD_SAFE
+ #endif
+@@ -62,6 +67,7 @@
+ #  define _REENTRANT
+ # endif
+ #endif
++*/
+ 
+ #ifndef SOAP_FMAC1	/* stdsoap2.h declaration macro */
+ # define SOAP_FMAC1
+@@ -177,6 +183,7 @@
+ #if defined(__alpha) && !defined(__VMS) && !defined(LINUX)
+ # ifndef TRU64
+ #  define TRU64 
++# include <time.h>
+ # endif
+ #endif
+ 
+@@ -316,9 +323,11 @@
+ #  define HAVE_STRTOULL
+ #  define HAVE_GETTIMEOFDAY
+ #  define HAVE_SYS_TIMEB_H
++#  if defined(THREAD_SAFE) || defined(_REENTRANT)
+ #  define HAVE_RAND_R
+ #  define HAVE_GMTIME_R
+ #  define HAVE_LOCALTIME_R
++#  endif
+ #  define __USE_STD_IOSTREAM
+ #  define HAVE_WCTOMB
+ #  define HAVE_MBTOWC
+@@ -571,7 +562,7 @@
+ # define SOAP_SOCKLEN_T SOCKLEN_T
+ #elif defined(__socklen_t_defined) || defined(_SOCKLEN_T) || defined(CYGWIN) || defined(FREEBSD) || defined(__FreeBSD__) || defined(__QNX__) || defined(QNX) || defined(_AIX)
+ # define SOAP_SOCKLEN_T socklen_t
+-#elif defined(IRIX) || defined(WIN32) || defined(__APPLE__) || defined(HP_UX) || defined(SUN_OS) || defined(OPENSERVER) || defined(TRU64) || defined(VXWORKS)
++#elif defined(IRIX) || defined(WIN32) || defined(__APPLE__) || defined(HPUX10) || defined(SUN_OS) || defined(OPENSERVER) || defined(TRU64) || defined(VXWORKS)
+ # define SOAP_SOCKLEN_T int
+ #else
+ # define SOAP_SOCKLEN_T size_t

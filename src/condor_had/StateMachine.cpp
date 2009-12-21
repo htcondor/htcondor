@@ -878,18 +878,16 @@ HADStateMachine::getHadList( const char *str,
     char* try_address;
     had_list.rewind();
 
+	Sinful my_addr( daemonCore->InfoCommandSinfulString() );
+	ASSERT( daemonCore->InfoCommandSinfulString() && my_addr.valid() );
+
     bool iAmPresent = false;
     while( (try_address = had_list.next()) ) {
         char *sinful_addr = utilToSinful( try_address );
-		const char *my_sinful = daemonCore->InfoCommandSinfulString();
-		if ( NULL == my_sinful ) {
-			EXCEPT( "HADStateMachine::initializeHADList():"
-					" No sinful from daemonCore!" );
-		}
 		dprintf(D_ALWAYS,
 				"HADStateMachine::initializeHADList my address %s "
 				"vs. next address in the list%s\n",
-				my_sinful, sinful_addr );
+				my_addr.getSinful(), sinful_addr );
         if( sinful_addr == NULL ) {
             dprintf( D_ALWAYS,
 					 "HAD CONFIGURATION ERROR: pid %d", daemonCore->getpid() );
@@ -899,7 +897,7 @@ HADStateMachine::getHadList( const char *str,
             continue;
         }
 		allIps.insert( sinful_addr );
-        if(strcmp( sinful_addr, my_sinful ) == 0 ) {
+        if( my_addr.addressPointsToMe( Sinful(sinful_addr) ) ) {
             iAmPresent = true;
             // HAD id of each HAD is just the index of its <ip:port>
             // in HAD_LIST in reverse order

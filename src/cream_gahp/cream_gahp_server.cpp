@@ -179,20 +179,20 @@ int thread_cream_get_CEMon_url( Request *req );
 
 int gahp_printf(const char *format, ...)
 {
-	int ret_val;
+	int ret_val = 0;
 	va_list ap;
-	char buf[10000];
-  
-	va_start(ap, format);
-	vsprintf(buf, format, ap);
-	va_end(ap);
   
 	pthread_mutex_lock( &outputLock );
 
-	if (response_prefix)
-		ret_val = printf("%s%s", response_prefix, buf);
-	else
-		ret_val = printf("%s",buf);
+	if (response_prefix) {
+		ret_val = printf("%s", response_prefix);
+	}
+
+	if(ret_val >= 0) {
+		va_start(ap, format);
+		vprintf(format, ap);
+		va_end(ap);
+	}
 	
 	fflush(stdout);
 
@@ -421,7 +421,7 @@ int thread_cream_delegate( Request *req )
 
 int handle_cream_job_register( char **input_line )
 {
-	if ( count_args( input_line ) != 7 ) {
+	if ( count_args( input_line ) != 6 ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 	
@@ -445,15 +445,14 @@ int thread_cream_job_register( Request *req )
 	// the job than just its ID and upload URL. Should we make
 	// more of this available via our GAHP protocol?
 
-	char *reqid, *service, *delgservice, *delgid, *jdl, *lease_id;
+	char *reqid, *service, *delgid, *jdl, *lease_id;
 	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &delgservice );
-	process_string_arg( req->input_line[4], &delgid );
-	process_string_arg( req->input_line[5], &jdl );
-	process_string_arg( req->input_line[6], &lease_id );
+	process_string_arg( req->input_line[3], &delgid );
+	process_string_arg( req->input_line[4], &jdl );
+	process_string_arg( req->input_line[5], &lease_id );
 	
 	AbsCreamProxy::RegisterArrayResult resp;
 	try {
@@ -491,7 +490,9 @@ int thread_cream_job_register( Request *req )
 	              " NULL " +
 	              resp["JDI"].get<1>().getCreamJobID() +
 	              sp +
-	              props["CREAMInputSandboxURI"];
+	              props["CREAMInputSandboxURI"] +
+	              sp +
+	              props["CREAMOutputSandboxURI"];
 	enqueue_result(result_line);
 	
 	return 0;
@@ -503,7 +504,25 @@ int thread_cream_job_register( Request *req )
 
 int handle_cream_job_start( char **input_line )
 {
-	if ( count_args( input_line ) != 4 ) {
+	int arg_cnt = count_args( input_line );
+	char *jobnum = NULL;
+
+	// CRUFT: CREAM_JOB_START now comes in two flavors.
+	// Classic: <req id> <cream url> <job id>
+	// New:     <req id> <cream url> <#jobs> <job id>...
+	// The latter was introduced in Condor 7.5.0. The former is
+	// deprecated and could be removed at a future date.
+
+	// Convert the old syntax to the new.
+	if ( arg_cnt == 4 ) {
+		input_line[5] = input_line[4];
+		input_line[4] = input_line[3];
+		input_line[3] = strdup( "1" );
+		arg_cnt = 5;
+	}
+
+	process_string_arg( input_line[3], &jobnum );
+	if ( jobnum && ( atoi( jobnum ) + 4 != arg_cnt ) ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 
@@ -516,17 +535,30 @@ int handle_cream_job_start( char **input_line )
 
 int thread_cream_job_start( Request *req )
 {
-	char *reqid, *service, *jobid;
+	// FIXME: It doesn't appear that the new API supports
+	// operating on all jobs. It also doesn't look like the
+	// GridManager uses this capability. We should disable
+	// the syntax for asking for operating on all jobs
+
+	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &jobid );
+	process_string_arg( req->input_line[3], &jobnum_str );
 	
 	try {
-		JobIdWrapper jiw(jobid, service, vector<JobPropertyWrapper>());
+		if (jobnum_str == NULL) {
+			throw runtime_error("start of all jobs not supported");
+		}
 		vector<JobIdWrapper> jv;
-		jv.push_back(jiw);
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
 		vector<string> sv;
 		JobFilterWrapper jfw(jv,
 		                     sv,  // status contraint: none 
@@ -1364,8 +1396,9 @@ int handle_cream_proxy_renew( char **input_line )
 	int arg_cnt = count_args( input_line );
 	int jobnum;
 
-	if ( arg_cnt < 6 || !process_int_arg( input_line[5], &jobnum ) ||
-		 jobnum <= 0 || jobnum + 6 != arg_cnt ) {
+	if ( arg_cnt != 4 && ( arg_cnt < 6 ||
+						   !process_int_arg( input_line[5], &jobnum ) ||
+						   jobnum <= 0 || jobnum + 6 != arg_cnt ) ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 
@@ -1378,21 +1411,26 @@ int handle_cream_proxy_renew( char **input_line )
 
 int thread_cream_proxy_renew( Request *req )
 {
-	// FIXME: In the new API, the CREAM URL is no longer needed -
-	// only the URL to the delegation service. Also, a list of
-	// job IDs is no longer needed. The renewal simply happens
-	// for the given delegation ID.
+	// CRUFT: CREAM_PROXY_RENEW now comes in two flavors.
+	// Classic: <req id> <cream url> <delg url> <delg id> <#jobs> <job id>...
+	// New:     <req id> <delg url> <delg id>
+	// The latter was introduced in Condor 7.5.0. The former is
+	// deprecated and could be removed at a future date.
 
-	int jobnum;
-	char *reqid, *service, *delgservice, *delgid, *jobid;
+	int arg_cnt = count_args( req->input_line );
+	char *reqid, *delgservice, *delgid;
 	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
-	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &delgservice );
-	process_string_arg( req->input_line[4], &delgid );
-	process_int_arg( req->input_line[5], &jobnum );
-	
+
+	if ( arg_cnt == 4 ) {
+		process_string_arg( req->input_line[2], &delgservice );
+		process_string_arg( req->input_line[3], &delgid );
+	} else {
+		process_string_arg( req->input_line[3], &delgservice );
+		process_string_arg( req->input_line[4], &delgid );
+	}	
+
 	try {
 		AbsCreamProxy* cp =
 			CreamProxyFactory::make_CreamProxy_ProxyRenew(delgid,

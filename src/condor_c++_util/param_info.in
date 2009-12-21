@@ -4196,22 +4196,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,proxymanager
 id=224
 
-[ORACLE_HOME]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Oracle Home
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,oraclejob
-id=225
-
 [CONDOR_GAHP]
 aliases=
 default=$(SBIN)/condor_c-gahp
@@ -9879,3 +9863,19 @@ usage=Log files
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shared_port
 id=550
+
+[CCB_HEARTBEAT_INTERVAL]
+aliases=
+default=1200
+version=7.5.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Schedd Job Queue Log Flush Delay
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=555

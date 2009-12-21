@@ -589,7 +589,7 @@ init_params( int /* first_time */)
 		free(tmp);
 	}
 
-	InitJobHistoryFile( "STARTD_HISTORY" );
+	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
 
 	return TRUE;
 }

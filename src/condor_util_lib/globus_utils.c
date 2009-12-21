@@ -25,19 +25,6 @@
 
 #include "globus_utils.h"
 
-#if defined(HAVE_EXT_GLOBUS)
-#     include "globus_gsi_credential.h"
-#     include "globus_gsi_system_config.h"
-#     include "globus_gsi_system_config_constants.h"
-#     include "gssapi.h"
-#     include "globus_gss_assist.h"
-#     include "globus_gsi_proxy.h"
-#endif
-
-#if defined(HAVE_EXT_VOMS)
-#include "glite/security/voms/voms_apic.h"
-#endif
-
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
@@ -167,111 +154,364 @@ get_x509_proxy_filename( void )
 	return proxy_file;
 }
 
+
+// caller must free result
+char* trim_quotes( char* instr ) {
+	char * result;
+	int  instr_len;
+
+	if (instr == NULL) {
+		return NULL;
+	}
+
+	instr_len = strlen(instr);
+	// to trim, must be minimum three characters with a double quote first and last
+	if ((instr_len > 2) && (instr[0] == '"') && (instr[instr_len-1]) == '"') {
+		// alloc a shorter buffer, copy everything in, and null terminate
+		result = (char*)malloc(instr_len - 1); // minus two quotes, plus one NULL terminator.
+		strncpy(result, &(instr[1]), instr_len-2);
+		result[instr_len-2] = 0;
+	} else {
+		result = strdup(instr);
+	}
+
+	return result;
+}
+
+
+// caller responsible for freeing
+char*
+quote_x509_string( char* instr) {
+	char * result_string = 0;
+	int    result_string_len = 0;
+
+	char * x509_fqan_escape = 0;
+	char * x509_fqan_escape_sub = 0;
+	char * x509_fqan_delimiter = 0;
+	char * x509_fqan_delimiter_sub = 0;
+
+	int x509_fqan_escape_sub_len = 0;
+	int x509_fqan_delimiter_sub_len = 0;
+
+	char * tmp_scan_ptr;
+
+	// NULL in, NULL out
+	if (!instr) {
+		return NULL;
+	}
+
+	// we look at first char only.  default '&'.
+    if (!(x509_fqan_escape = param("X509_FQAN_ESCAPE"))) {
+		x509_fqan_escape = strdup("&");
+	}
+	// can be multiple chars
+    if (!(x509_fqan_escape_sub = param("X509_FQAN_ESCAPE_SUB"))) {
+		x509_fqan_escape_sub = strdup("&amp;");
+	}
+
+	// we look at first char only.  default ','.
+    if (!(x509_fqan_delimiter = param("X509_FQAN_DELIMITER"))) {
+		x509_fqan_delimiter = strdup(",");
+	}
+	// can be multiple chars
+    if (!(x509_fqan_delimiter_sub = param("X509_FQAN_DELIMITER_SUB"))) {
+		x509_fqan_delimiter_sub = strdup("&comma;");
+	}
+
+
+	// phase 0, trim quotes off if needed
+	// use tmp_scan_ptr to temporarily hold trimmed strings while being reassigned.
+	tmp_scan_ptr = trim_quotes(x509_fqan_escape);
+	free (x509_fqan_escape);
+	x509_fqan_escape = tmp_scan_ptr;
+
+	tmp_scan_ptr = trim_quotes(x509_fqan_escape_sub);
+	free (x509_fqan_escape_sub);
+	x509_fqan_escape_sub = tmp_scan_ptr;
+	x509_fqan_escape_sub_len = strlen(x509_fqan_escape_sub);
+
+	tmp_scan_ptr = trim_quotes(x509_fqan_delimiter);
+	free (x509_fqan_delimiter);
+	x509_fqan_delimiter = tmp_scan_ptr;
+
+	tmp_scan_ptr = trim_quotes(x509_fqan_delimiter_sub);
+	free (x509_fqan_delimiter_sub);
+	x509_fqan_delimiter_sub = tmp_scan_ptr;
+	x509_fqan_delimiter_sub_len = strlen(x509_fqan_delimiter_sub);
+
+
+	// phase 1, scan the string to compute the new length
+	result_string_len = 0;
+	for (tmp_scan_ptr = instr; *tmp_scan_ptr; tmp_scan_ptr++) {
+		if( ((*tmp_scan_ptr)==x509_fqan_escape[0]) ) {
+			result_string_len += x509_fqan_escape_sub_len;
+		} else if( ((*tmp_scan_ptr)==x509_fqan_delimiter[0]) ) {
+			result_string_len += x509_fqan_delimiter_sub_len;
+		} else {
+			result_string_len++;
+		}
+	}
+
+	// phase 2, process the string into the result buffer
+
+	// malloc new string (with NULL terminator)
+	result_string = (char*) malloc (result_string_len + 1);
+	*result_string = 0;
+	result_string_len = 0;
+
+	for (tmp_scan_ptr = instr; *tmp_scan_ptr; tmp_scan_ptr++) {
+		if( ((*tmp_scan_ptr)==x509_fqan_escape[0]) ) {
+			strcat(&(result_string[result_string_len]), x509_fqan_escape_sub);
+			result_string_len += x509_fqan_escape_sub_len;
+		} else if( ((*tmp_scan_ptr)==x509_fqan_delimiter[0]) ) {
+			strcat(&(result_string[result_string_len]), x509_fqan_delimiter_sub);
+			result_string_len += x509_fqan_delimiter_sub_len;
+		} else {
+			result_string[result_string_len] = *tmp_scan_ptr;
+			result_string_len++;
+		}
+		result_string[result_string_len] = 0;
+	}
+
+	// clean up
+	free(x509_fqan_escape);
+	free(x509_fqan_escape_sub);
+	free(x509_fqan_delimiter);
+	free(x509_fqan_delimiter_sub);
+
+	return result_string;
+}
+
 #if defined(HAVE_EXT_GLOBUS)
-char* extract_VOMS_attrs( globus_gsi_cred_handle_t handle, int *error) {
+int
+extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
+{
 
 #if !defined(HAVE_EXT_VOMS)
-	*error = 1;
-	return strdup("VOMS support not compiled into this build");
+	return 1;
 #else
 
-   int ret;
-   struct vomsdata *voms_data = NULL;
-   struct voms **voms_cert  = NULL;
-   char **fqan = NULL;
-   int voms_err;
-   char *retfqan = 0;
-   int num_attrs = 0;
-   int fqan_len = 0;
+	int ret;
+	struct vomsdata *voms_data = NULL;
+	struct voms *voms_cert  = NULL;
+	char *subject_name = NULL;
+	char **fqan = NULL;
+	int voms_err;
+	int fqan_len = 0;
+	char *retfqan = NULL;
+	char *tmp_scan_ptr = NULL;
 
-    STACK_OF(X509) *chain = NULL;
+	STACK_OF(X509) *chain = NULL;
 	X509 *cert = NULL;
 
+	char* x509_fqan_delimiter = NULL;
+
 	if (!param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
-		*error = 1;
-		return strdup("VOMS support was disabled by config parameter USE_VOMS_ATTRIBUTES.");
+		return 0;
 	}
 
-	ret = globus_gsi_cred_get_cert_chain(handle, &chain);
+	ret = globus_gsi_cred_get_cert_chain(cred_handle, &chain);
 	if(ret != GLOBUS_SUCCESS) {
-		retfqan = strdup("Failed to get cert chain from credential");
-		*error = 1;
+		ret = 10;
 		goto end;
 	}
 
-	ret = globus_gsi_cred_get_cert(handle, &cert);
+	ret = globus_gsi_cred_get_cert(cred_handle, &cert);
 	if(ret != GLOBUS_SUCCESS) {
-		retfqan = strdup("Failed to get cert from credential");
-		*error = 1;
+		ret = 11;
 		goto end;
 	}
 
-   voms_data = VOMS_Init(NULL, NULL);
-   if (voms_data == NULL) {
-		retfqan = strdup("Failed to read VOMS attributes, VOMS_Init() failed");
-	   *error = 1;
+	if (globus_gsi_cred_get_identity_name(cred_handle, &subject_name)) {
+		set_error_string( "unable to extract subject name" );
+		ret = 12;
 		goto end;
-   }
+	}
 
-   ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
-   if (ret == 0) {
-      retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
-      *error = 1;
-      goto end;
-   }
+	voms_data = VOMS_Init(NULL, NULL);
+	if (voms_data == NULL) {
+		ret = 13;
+		goto end;
+	}
 
-   ret = VOMS_Retrieve(cert, chain, RECURSE_CHAIN,
-                          voms_data, &voms_err);
-   if (ret == 0) {
-      if (voms_err == VERR_NOEXT) {
-         /* No VOMS extensions present, return silently */
-         *error = 0;
-         goto end;
-      } else {
-         retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
-     	*error = 1;
-        goto end;
-      }
-   }
+	if (verify_type == 0) {
+		ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
+		if (ret == 0) {
+			retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+			ret = voms_err;
+			goto end;
+		}
+	}
 
+	ret = VOMS_Retrieve(cert, chain, RECURSE_CHAIN,
+						voms_data, &voms_err);
+	if (ret == 0) {
+		if (voms_err == VERR_NOEXT) {
+			// No VOMS extensions present
+			ret = 1;
+			goto end;
+		} else {
+			retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+			ret = voms_err;
+			goto end;
+		}
+	}
 
-   // skim through once to find the length
-   for (voms_cert = voms_data->data; voms_cert && *voms_cert; voms_cert++) {
-      for (fqan = (*voms_cert)->fqan; fqan && *fqan; fqan++) {
-          num_attrs++;
-          fqan_len += strlen(*fqan);
-      }
-   }
+	// we only support one cert for now.  serializing and encoding all the
+	// attributes is bad enough, i don't want to deal with doing this to
+	// multiple certs.
+	voms_cert = voms_data->data[0];
 
-   // enough room for the attrs, ':' separator and NULL terminator.
-   retfqan = (char*) malloc (fqan_len + num_attrs);
-   *retfqan = 0;
+	// fill in the unquoted versions of things
+	if(voname) {
+		*voname = strdup(voms_cert->voname);
+	}
 
-   // now fill it all in
-   for (voms_cert = voms_data->data; voms_cert && *voms_cert; voms_cert++) {
-      for (fqan = (*voms_cert)->fqan; fqan && *fqan; fqan++) {
-          if (*retfqan) {
-              strcat (retfqan, ":");
-          }
-          strcat(retfqan, *fqan);
-      }
-   }
+	if(firstfqan) {
+		*firstfqan = strdup(voms_cert->fqan[0]);
+	}
 
-   *error = 0;
+	// only construct the quoted_DN_and_FQAN if needed
+	if (quoted_DN_and_FQAN) {
+		// get our delimiter and trim it
+		if (!(x509_fqan_delimiter = param("X509_FQAN_DELIMITER"))) {
+			x509_fqan_delimiter = strdup(",");
+		}
+		tmp_scan_ptr = trim_quotes(x509_fqan_delimiter);
+		free(x509_fqan_delimiter);
+		x509_fqan_delimiter = tmp_scan_ptr;
+
+		// calculate the length
+		fqan_len = 0;
+
+		// start with the length of the quoted DN
+		tmp_scan_ptr = quote_x509_string( subject_name );
+		fqan_len += strlen( tmp_scan_ptr );
+		free(tmp_scan_ptr);
+
+		// add the length of delimiter plus each voms attribute
+		for (fqan = voms_cert->fqan; fqan && *fqan; fqan++) {
+			// delimiter
+			fqan_len += strlen(x509_fqan_delimiter);
+
+			tmp_scan_ptr = quote_x509_string( *fqan );
+			fqan_len += strlen( tmp_scan_ptr );
+			free(tmp_scan_ptr);
+		}
+
+		// now malloc enough room for the quoted DN, quoted attrs, delimiters, and
+		// NULL terminator
+		retfqan = (char*) malloc (fqan_len+1);
+		*retfqan = 0;  // set null terminiator
+
+		// reset length counter -- we use this for efficient appending.
+		fqan_len = 0;
+
+		// start with the quoted DN
+		tmp_scan_ptr = quote_x509_string( subject_name );
+		strcat(retfqan, tmp_scan_ptr);
+		fqan_len += strlen( tmp_scan_ptr );
+		free(tmp_scan_ptr);
+
+		// add the delimiter plus each voms attribute
+		for (fqan = voms_cert->fqan; fqan && *fqan; fqan++) {
+			// delimiter
+			strcat(&(retfqan[fqan_len]), x509_fqan_delimiter);
+			fqan_len += strlen(x509_fqan_delimiter);
+
+			tmp_scan_ptr = quote_x509_string( *fqan );
+			strcat(&(retfqan[fqan_len]), tmp_scan_ptr);
+			fqan_len += strlen( tmp_scan_ptr );
+			free(tmp_scan_ptr);
+		}
+
+		*quoted_DN_and_FQAN = retfqan;
+	}
+
+	ret = 0;
 
 end:
-   if (voms_data)
-      VOMS_Destroy(voms_data);
+	free(subject_name);
+	free(x509_fqan_delimiter);
+	if (voms_data)
+		VOMS_Destroy(voms_data);
 	if (cert)
 		X509_free(cert);
 	if(chain)
 		sk_X509_free(chain);
 
-   return retfqan;
-#endif /* HAVE_EXT_VOMS */
+	return ret;
+#endif
 
 }
-#endif /* HAVE_EXT_GLOBUS */
+#endif /* defined(HAVE_EXT_GLOBUS) */
+
+
+#if defined(HAVE_EXT_GLOBUS)
+int
+extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
+{
+
+	globus_gsi_cred_handle_t         handle       = NULL;
+	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+	char *subject_name = NULL;
+	char *my_proxy_file = NULL;
+	int error = 0;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return 2;
+	}
+
+	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+		set_error_string( "problem during internal initialization1" );
+		error = 3;
+		goto cleanup;
+	}
+
+	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+		set_error_string( "problem during internal initialization2" );
+		error = 4;
+		goto cleanup;
+	}
+
+	/* Check for proxy file */
+	if (proxy_file == NULL) {
+		my_proxy_file = get_x509_proxy_filename();
+		if (my_proxy_file == NULL) {
+			error = 5;
+			goto cleanup;
+		}
+		proxy_file = my_proxy_file;
+	}
+
+	// We should have a proxy file, now, try to read it
+	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
+		set_error_string( "unable to read proxy file" );
+		error = 6;
+		goto cleanup;
+	}
+
+	error = extract_VOMS_info( handle, verify_type, voname, firstfqan, quoted_DN_and_FQAN );
+
+
+ cleanup:
+	if (my_proxy_file) {
+		free(my_proxy_file);
+	}
+
+	if (handle_attrs) {
+		globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+	}
+
+	if (handle) {
+		globus_gsi_cred_handle_destroy(handle);
+	}
+
+	return error; // success
+
+}
+#endif /* defined(HAVE_EXT_GLOBUS) */
+
 
 /* Return the subject name of a given proxy cert. 
   On error, return NULL.
@@ -280,7 +520,7 @@ end:
   WITH free().
  */
 char *
-x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
+x509_proxy_subject_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
@@ -291,15 +531,7 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
-	char *fqan = NULL;
-	char *combined_dn_and_fqan = NULL;
 	int error = 0;
-
-#if !defined(HAVE_EXT_VOMS)
-	// If we don't have VOMS, pretend the proxy doesn't have any VOMS
-	// extensions.
-	include_voms_fqan = 0;
-#endif
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -335,31 +567,6 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 		goto cleanup;
 	}
 
-	if (include_voms_fqan && param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
-		fqan = extract_VOMS_attrs(handle, &error);
-		if (error) {
-			set_error_string(fqan);
-			free(fqan);
-			goto cleanup;
-		}
-
-		// if there are attributes, append them
-		if (fqan) {
-			combined_dn_and_fqan = (char*)malloc(strlen(subject_name) + strlen(fqan) + 2);
-			strcpy (combined_dn_and_fqan, subject_name);
-			strcat (combined_dn_and_fqan, ":");
-			strcat (combined_dn_and_fqan, fqan);
-			free(subject_name);
-			free(fqan);
-		} else {
-			// this is returned at the end.  caller of function must free it.
-			combined_dn_and_fqan = subject_name;
-		}
-	} else {
-		// this is returned at the end.  caller of function must free it.
-		combined_dn_and_fqan = subject_name;
-	}
-
  cleanup:
 	if (my_proxy_file) {
 		free(my_proxy_file);
@@ -373,7 +580,7 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 		globus_gsi_cred_handle_destroy(handle);
 	}
 
-	return combined_dn_and_fqan;
+	return subject_name;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
@@ -390,7 +597,7 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
   WITH free().
  */
 char *
-x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
+x509_proxy_identity_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
@@ -401,15 +608,7 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
-	char *fqan = NULL;
-	char *combined_dn_and_fqan = NULL;
 	int error = 0;
-
-#if !defined(HAVE_EXT_VOMS)
-	// If we don't have VOMS, pretend the proxy doesn't have any VOMS
-	// extensions.
-	include_voms_fqan = 0;
-#endif
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -445,32 +644,7 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 		goto cleanup;
 	}
 
-	if (include_voms_fqan && param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
-		fqan = extract_VOMS_attrs(handle, &error);
-		if (error) {
-			set_error_string(fqan);
-			free(fqan);
-			goto cleanup;
-		}
-
-		// if there are attributes, append them
-		if (fqan) {
-			combined_dn_and_fqan = (char*)malloc(strlen(subject_name) + strlen(fqan) + 2);
-			strcpy (combined_dn_and_fqan, subject_name);
-			strcat (combined_dn_and_fqan, ":");
-			strcat (combined_dn_and_fqan, fqan);
-			free(subject_name);
-			free(fqan);
-		} else {
-			// this is returned at the end.  caller of function must free it.
-			combined_dn_and_fqan = subject_name;
-		}
-	} else {
-		// this is returned at the end.  caller of function must free it.
-		combined_dn_and_fqan = subject_name;
-	}
-
- cleanup:
+cleanup:
 	if (my_proxy_file) {
 		free(my_proxy_file);
 	}
@@ -483,7 +657,7 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 		globus_gsi_cred_handle_destroy(handle);
 	}
 
-	return combined_dn_and_fqan;
+	return subject_name;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }

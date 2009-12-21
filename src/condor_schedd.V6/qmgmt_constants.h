@@ -46,3 +46,4 @@
 #define	CONDOR_SetAttribute2 		10027
 #define CONDOR_CloseSocket			10028
 #define CONDOR_SendSpoolFileIfNeeded 10029
+#define CONDOR_SetEffectiveOwner	10030

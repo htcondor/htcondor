@@ -13,14 +13,15 @@ FIX_BROKEN_GCC =
 #endif
 
 #if HAVE_EXT_GSOAP
-GSOAP_OBJS = mimetypes.o soap_core.o 
+GSOAP_OBJS = mimetypes.o soap_core.o
+NO_GSOAP_OBJS = no_soap_core.o
 #endif
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG) $(GSOAP_FLAGS)  $(CONFIGURE_PCRE_CFLAGS)
 LIB = $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
-OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
+OBJ = $(NO_GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
   condor_perms.o \
   condor_lock_base.o condor_lock_implementation.o condor_lock_file.o \
   condor_lock.o self_monitor.o datathread.o self_draining_queue.o \
@@ -35,7 +36,7 @@ stripped:: all
 static:: all
 
 #if HAVE_EXT_GSOAP
-soap_core.cpp:: ../condor_includes/stdsoap2.h
+no_soap_core.cpp:: ../condor_includes/stdsoap2.h
 ../condor_includes/stdsoap2.h:
 	cp $(GSOAP_DIR)/include/stdsoap2.h ../condor_includes/
 	patch -p0 --fuzz=3 -d ../condor_includes < stdsoap2.h.patch

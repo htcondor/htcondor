@@ -39,9 +39,7 @@ HIBERNATION_OBJS = startd_hibernator.o
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 
-LIB= $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
-
-soapobjs(startd)
+LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = IdDispenser.o \
 	LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
@@ -51,7 +49,7 @@ OBJ = IdDispenser.o \
 	vm_common.o VMManager.o VMRegister.o VMMachine.o vmuniverse_mgr.o \
 	$(PLUGIN_OBJ) \
 	$(HIBERNATION_OBJS) \
-	$(BACKFILL_OBJS) $(GLEXEC_OBJ) $(JOB_HOOKS_OBJS) $(SOAP_OBJS)
+	$(BACKFILL_OBJS) $(GLEXEC_OBJ) $(JOB_HOOKS_OBJS)
 
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
@@ -75,7 +73,5 @@ html:
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_util_lib, setsyscalls.o )
-
-gen_soapfiles(startd,condorStartd)
 
 testbin:: all

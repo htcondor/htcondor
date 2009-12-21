@@ -28,6 +28,8 @@
 #include "condor_string.h"
 #include "CondorError.h"
 #include "setenv.h"
+#include "globus_utils.h"
+#include "condor_gssapi_openssl.h"
 
 #if defined(HAVE_EXT_VOMS)
 extern "C" {
@@ -729,7 +731,19 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 
 		// extract and store VOMS attributes
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
-			setFQAN(get_VOMS_string(credential_handle));
+
+			// get the voms attributes from the peer
+			globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
+
+			char * voms_fqan = NULL;
+			int voms_err = extract_VOMS_info(peer_cred, 1, NULL, NULL, &voms_fqan);
+			if (!voms_err) {
+				setFQAN(voms_fqan);
+				free(voms_fqan);
+			} else {
+				// complain!
+				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
+			}
 		}
 
         StringList * daemonNames = getDaemonList(mySock_);
@@ -808,7 +822,19 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 		// store the raw subject name for later mapping
 		setAuthenticatedName(GSSClientname);
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
-			setFQAN(get_VOMS_string(credential_handle));
+
+			// get the voms attributes from the peer
+			globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
+
+			char * voms_fqan = NULL;
+			int voms_err = extract_VOMS_info(peer_cred, 1, NULL, NULL, &voms_fqan);
+			if (!voms_err) {
+				setFQAN(voms_fqan);
+				free(voms_fqan);
+			} else {
+				// complain!
+				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
+			}
 		}
 
         // Try to map DN to local name (in the format of name@domain)
@@ -859,68 +885,6 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
         }
     }
     return (status == 0) ? FALSE : TRUE;
-}
-
-
-
-MyString Condor_Auth_X509::get_VOMS_string(gss_cred_id_t cred_handle) {
-
-#if !defined(HAVE_EXT_VOMS)
-	return "";
-#else
-
-	if (!param_boolean("USE_VOMS_ATTRIBUTES", true)) {
-		return "";
-	}
-
-	int ret;
-	struct vomsdata *voms_data = NULL;
-	struct voms **voms_cert  = NULL;
-	int voms_err;
-
-	voms_data = VOMS_Init(NULL, NULL);
-	if (voms_data == NULL) {
-		dprintf(D_ALWAYS, "ZKM: VOMS ERROR: VOMS_Init() failed\n");
-		return "";
-	}
-
-	ret = VOMS_RetrieveFromCred(cred_handle, RECURSE_CHAIN, voms_data, &voms_err);
-	if (ret == 0) {
-		// no voms extensions is not an error here, but anything else is.
-		if (voms_err != VERR_NOEXT) {
-			char *err_msg = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
-			MyString err_ret;
-			dprintf(D_ALWAYS, "ZKM: VOMS ERROR: %s\n", err_msg);
-			free(err_msg);
-		} else {
-			dprintf(D_FULLDEBUG, "ZKM: VOMS INFO: no attributes.\n");
-		}
-
-		// error or not, there's no attributes to return
-		VOMS_Destroy(voms_data);
-		return "";
-	}
-
-	// serialize the attributes into a string using ':' as a separator
-	MyString ms_fqan;
-	bool first_in_list = true;
-	char **fqan = NULL;
-	for (voms_cert = voms_data->data; voms_cert && *voms_cert; voms_cert++) {
-		for (fqan = (*voms_cert)->fqan; fqan && *fqan; fqan++) {
-			if (!first_in_list) {
-				ms_fqan += ":";
-			} else {
-				first_in_list = false;
-			}
-			ms_fqan += *fqan;
-		}
-	}
-
-	// clean up and return the serialized string
-	VOMS_Destroy(voms_data);
-	return ms_fqan;
-#endif
-
 }
 
 void Condor_Auth_X509::setFQAN(MyString fqan) {

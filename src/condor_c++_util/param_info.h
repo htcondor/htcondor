@@ -67,10 +67,20 @@ typedef struct param_info_t_s {
 
 BEGIN_C_DECLS
 
-	void param_info_insert(char* param, char* aliases, char* value, char* version,
-						char* range, int state, int type, int is_macro, int reconfig,
-						int customization, char* friendly_name, char* usage, char* url,
-						char* tags);
+	void param_info_insert(const char* param,
+						   const char* aliases,
+						   const char* value,
+						   const char* version,
+						   const char* range,
+						   int state,
+						   int type,
+						   int is_macro,
+						   int reconfig,
+						   int customization,
+						   const char* friendly_name,
+						   const char* usage,
+						   const char* url,
+						   const char* tags);
 
 	void param_info_init(void);
 

@@ -44,7 +44,7 @@ typedef enum {
 class QmgrJobUpdater : public Service
 {
 public:
-	QmgrJobUpdater( ClassAd* job_ad, const char* schedd_addr );
+	QmgrJobUpdater( ClassAd* job_ad, const char* schedd_addr, char const *schedd_version );
 	~QmgrJobUpdater();
 
 	void startUpdateTimer( void );
@@ -127,6 +127,8 @@ private:
 
 	ClassAd* job_ad;
 	char* schedd_addr;
+	char* schedd_ver;
+	MyString m_owner;
 
 	int cluster;
 	int proc;

@@ -67,7 +67,6 @@ int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
 Daemon* CollectorDaemon::View_Collector;
 Sock* CollectorDaemon::view_sock;
-SocketCache* CollectorDaemon::sock_cache;
 
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
@@ -126,7 +125,6 @@ void CollectorDaemon::Init()
 	View_Collector=NULL;
 	view_sock=NULL;
 	UpdateTimerId=-1;
-	sock_cache = NULL;
 	updateCollectors = NULL;
 	updateRemoteCollector = NULL;
 	Config();
@@ -143,10 +141,10 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	daemonCore->Register_Command(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
@@ -177,20 +175,14 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	
-		// // // // // // // // // // // // // // // // // // // // //
-		// WARNING!!!! If you add other invalidate commands here, you
-		// also need to add them to the switch statement in the
-		// sockCacheHandler() method!!!
-		// // // // // // // // // // // // // // // // // // // // //
-
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_STARTD_PERM);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	daemonCore->Register_Command(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
@@ -230,18 +222,12 @@ void CollectorDaemon::Init()
         "INVALIDATE_GRID_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
 
-		// // // // // // // // // // // // // // // // // // // // //
-		// WARNING!!!! If you add other update commands here, you
-		// also need to add them to the switch statement in the
-		// sockCacheHandler() method!!!
-		// // // // // // // // // // // // // // // // // // // // //
-
 	// install command handlers for updates
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	daemonCore->Register_Command(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
@@ -273,12 +259,6 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
     daemonCore->Register_Command(UPDATE_GRID_AD,"UPDATE_GRID_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-
-        // // // // // // // // // // // // // // // // // // // // //
-        // WARNING!!!! If you add other update commands here, you
-        // also need to add them to the switch statement in the
-        // sockCacheHandler() method!!!
-		// // // // // // // // // // // // // // // // // // // // //
 
     // install command handlers for updates with acknowledgement
 
@@ -440,12 +420,12 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = SCHEDD_AD;
 		break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case QUERY_QUILL_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_QUILL_ADS\n");
 		whichAds = QUILL_AD;
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		
 	  case QUERY_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
@@ -560,12 +540,12 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 		whichAds = SCHEDD_AD;
 		break;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	  case INVALIDATE_QUILL_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_QUILL_ADS\n");
 		whichAds = QUILL_AD;
 		break;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 		
 	  case INVALIDATE_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_SUBMITTOR_ADS\n");
@@ -655,10 +635,9 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 		send_classad_to_sock(command, View_Collector, &cad);
 	}	
 
-	if( sock_cache && sock->type() == Stream::reli_sock ) {
-			// if this is a TCP update and we've got a cache, stash
-			// this socket for future updates...
-		return stashSocket( sock );
+	if( sock->type() == Stream::reli_sock ) {
+			// stash this socket for future updates...
+		return stashSocket( (ReliSock *)sock );
 	}
 
     // all done; let daemon core will clean up connection
@@ -674,16 +653,6 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 
 	/* assume the ad is malformed... other functions set this value */
 	insert = -3;
-
-  		// unless the collector has been configured to use a socket
-  		// cache for TCP updates, refuse any update commands that come
-  		// in via TCP...
-	if( ! sock_cache && sock->type() == Stream::reli_sock ) {
-		// update via tcp; sorry buddy, use udp or you're outa here!
-		dprintf(D_ALWAYS,"Received UPDATE command via TCP; ignored\n");
-		// let daemon core clean up the socket
-		return TRUE;
-	}
 
 	// get endpoint
 	from = ((Sock*)sock)->peer_addr();
@@ -728,10 +697,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		send_classad_to_sock(command, View_Collector, cad);
 	}	
 
-	if( sock_cache && sock->type() == Stream::reli_sock ) {
-			// if this is a TCP update and we've got a cache, stash
-			// this socket for future updates...
-		return stashSocket( sock );
+	if( sock->type() == Stream::reli_sock ) {
+			// stash this socket for future updates...
+		return stashSocket( (ReliSock *)sock );
 	}
 
 	// let daemon core clean up the socket
@@ -859,122 +827,38 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
 
 int
-CollectorDaemon::stashSocket( Stream* sock )
+CollectorDaemon::stashSocket( ReliSock* sock )
 {
-		
-	ReliSock* rsock;
-	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
-	rsock = sock_cache->findReliSock( addr );
-	if( ! rsock ) {
-			// don't have it in the socket already, see if the cache
-			// is full.  if not, add this socket to the cache so we
-			// can reuse it for future updates.  if we're full, we're
-			// going to have to screw this connection and not cache
-			// it, to allow the cache to be useful for the other
-			// daemons.
-		if( sock_cache->isFull() ) {
-			dprintf( D_ALWAYS, "WARNING: socket cache (size: %d) "
-					 "is full - NOT caching TCP updates from %s\n",
-					 sock_cache->size(), addr );
-			return TRUE;
-		}
-		sock_cache->addReliSock( addr, (ReliSock*)sock );
-
-			// now that it's in our socket, we want to register this
-			// socket w/ DaemonCore so we wake up if there's more data
-			// to read...
-		daemonCore->Register_Socket( sock, "TCP Cached Socket",
-									 (SocketHandler)sockCacheHandler,
-									 "sockCacheHandler", NULL, DAEMON );
+	if( daemonCore->SocketIsRegistered( sock ) ) {
+		return KEEP_STREAM;
 	}
 
-		// if we're here, it means the sock is in the cache (either
-		// because it was there already, or because we just added it).
-		// either, way, we don't want daemonCore to mess with the
-		// socket...
+	MyString msg;
+	if( daemonCore->TooManyRegisteredSockets(sock->get_file_desc(),&msg) ) {
+		dprintf(D_ALWAYS,
+				"WARNING: cannot register TCP update socket from %s: %s\n",
+				sock->peer_description(), msg.Value());
+		return FALSE;
+	}
+
+		// Register this socket w/ DaemonCore so we wake up if
+		// there's more data to read...
+	int rc = daemonCore->Register_Command_Socket(
+		sock, "Update Socket" );
+
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS,
+				"Failed to register TCP socket from %s for updates: error %d.\n",
+				sock->peer_description(),rc);
+		return FALSE;
+	}
+
+	dprintf( D_FULLDEBUG,
+			 "Registered TCP socket from %s for updates.\n",
+			 sock->peer_description() );
+
 	return KEEP_STREAM;
 }
-
-
-int
-CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
-{
-	int cmd;
-	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
-	sock->decode();
-	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n",
-			 addr );
-
-	sock->timeout(20);
-
-	if( ! sock->code(cmd) ) {
-			// can't read an int, the other side probably closed the
-			// socket, which is why select() woke up.
-		dprintf( D_FULLDEBUG,
-				 "Socket has been closed, removing from cache\n" );
-		daemonCore->Cancel_Socket( sock );
-		sock_cache->invalidateSock( addr );
-		return KEEP_STREAM;
-	}
-
-	switch( cmd ) {
-#ifdef WANT_QUILL
-	case UPDATE_QUILL_AD:
-#endif /* WANT_QUILL */
-	case UPDATE_STARTD_AD:
-	case UPDATE_SCHEDD_AD:
-	case UPDATE_MASTER_AD:
-	case UPDATE_GATEWAY_AD:
-	case UPDATE_CKPT_SRVR_AD:
-	case UPDATE_SUBMITTOR_AD:
-	case UPDATE_COLLECTOR_AD:
-	case UPDATE_NEGOTIATOR_AD:
-	case UPDATE_HAD_AD:
-	case UPDATE_XFER_SERVICE_AD:
-	case UPDATE_LEASE_MANAGER_AD:
-	case UPDATE_LICENSE_AD:
-	case UPDATE_STORAGE_AD:
-	case UPDATE_AD_GENERIC:
-    case UPDATE_GRID_AD:
-		return receive_update( NULL, cmd, sock );
-		break;
-
-    case UPDATE_STARTD_AD_WITH_ACK:
-        return receive_update_expect_ack ( NULL, cmd, sock );
-
-#ifdef WANT_QUILL
-	case INVALIDATE_QUILL_ADS:
-#endif /* WANT_QUILL */
-	case INVALIDATE_STARTD_ADS:
-	case INVALIDATE_SCHEDD_ADS:
-	case INVALIDATE_MASTER_ADS:
-	case INVALIDATE_GATEWAY_ADS:
-	case INVALIDATE_CKPT_SRVR_ADS:
-	case INVALIDATE_SUBMITTOR_ADS:
-	case INVALIDATE_COLLECTOR_ADS:
-	case INVALIDATE_NEGOTIATOR_ADS:
-	case INVALIDATE_HAD_ADS:
-	case INVALIDATE_XFER_SERVICE_ADS:
-	case INVALIDATE_LEASE_MANAGER_ADS:
-	case INVALIDATE_LICENSE_ADS:
-	case INVALIDATE_STORAGE_ADS:
-    case INVALIDATE_GRID_ADS:
-	case INVALIDATE_ADS_GENERIC:
-		return receive_invalidation( NULL, cmd, sock );
-		break;
-
-	default:
-		dprintf( D_ALWAYS,
-				 "ERROR: invalid command %d on stashed TCP socket\n", cmd );
-		daemonCore->Cancel_Socket( sock );
-		sock_cache->invalidateSock( addr );
-		return KEEP_STREAM;
-		break;
-    }
-	EXCEPT( "Should never reach here" );
-	return FALSE;
-}
-
 
 int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
@@ -1270,10 +1154,10 @@ void CollectorDaemon::Config()
     tmp = param("CONDOR_VIEW_HOST");
     if(tmp) {
        View_Collector = new DCCollector( tmp );
-       char const *addr = View_Collector->addr();
+       Sinful view_addr( View_Collector->addr() );
+	   Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 
-       if( addr && ( !strcmp(addr,daemonCore->privateNetworkIpAddr()) ||
-                     !strcmp(addr,daemonCore->publicNetworkIpAddr()) ) )
+       if( my_addr.addressPointsToMe( view_addr ) )
        {
        	     // Do not forward to myself.
           dprintf(D_ALWAYS, "Not forwarding to View Server %s, because that's me!\n", tmp);
@@ -1289,33 +1173,7 @@ void CollectorDaemon::Config()
        }
     }
 
-		// the upper bound here is because a TCP port can't be any
-		// bigger than 64K (65536).  however, b/c of reserved ports
-		// and some other things, we leave it at 64000, just to be
-		// safe...
-	int size = param_integer( "COLLECTOR_SOCKET_CACHE_SIZE",-1,0,64000 );
-	if( size == -1 ) {
-		delete sock_cache;
-		sock_cache = NULL;
-	}
-	else {
-		if( sock_cache ) {
-			if( size > sock_cache->size() ) {
-				sock_cache->resize( size );
-			}
-		} else {
-			sock_cache = new SocketCache( size );
-		}
-	}
-	if( sock_cache ) {
-		dprintf( D_FULLDEBUG,
-				 "Using a SocketCache for TCP updates (size: %d)\n",
-				 sock_cache->size() );
-	} else {
-		dprintf( D_FULLDEBUG, "No SocketCache, will refuse TCP updates\n" );
-	}		
-
-	size = param_integer ("COLLECTOR_CLASS_HISTORY_SIZE",1024);
+	int size = param_integer ("COLLECTOR_CLASS_HISTORY_SIZE",1024);
 	collectorStats.setClassHistorySize( size );
 
 	bool collector_daemon_stats = param_boolean ("COLLECTOR_DAEMON_STATS",true);

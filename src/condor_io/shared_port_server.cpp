@@ -104,7 +104,7 @@ SharedPortServer::PublishAddress()
 	}
 
 	ClassAd ad;
-	ad.Assign(ATTR_PUBLIC_NETWORK_IP_ADDR,daemonCore->publicNetworkIpAddr());
+	ad.Assign(ATTR_MY_ADDRESS,daemonCore->publicNetworkIpAddr());
 
 	daemonCore->UpdateLocalAd(&ad,m_shared_port_server_ad_file.Value());
 }

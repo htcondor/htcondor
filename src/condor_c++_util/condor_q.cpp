@@ -29,18 +29,13 @@
 #include "condor_classad_util.h"
 #include "quill_enums.h"
 
-#if HAVE_ORACLE
-#undef ATTR_VERSION
-#include "oracledatabase.h"
-#endif
-
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 #include "pgsqldatabase.h"
 #include "jobqueuesnapshot.h"
 
 static ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot  *jqSnapshot);
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -298,7 +293,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 int CondorQ::
 fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorError*  /*errstack*/)
 {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	ClassAd 		filterAd;
 	int     		result;
 	JobQueueSnapshot	*jqSnapshot;
@@ -353,7 +348,7 @@ fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorErro
 	}	
 
 	delete jqSnapshot;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 	return Q_OK;
 }
 
@@ -393,7 +388,7 @@ fetchQueueFromHostAndProcess ( const char *host, StringList &attrs, process_func
 int CondorQ::
 fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function process_func, CondorError*  /*errstack*/ )
 {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	ClassAd 		filterAd;
 	int     		result;
 	JobQueueSnapshot	*jqSnapshot;
@@ -455,13 +450,13 @@ fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function p
 	}	
 
 	delete jqSnapshot;
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 
 	return Q_OK;
 }
 
 void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 	JobQueueDatabase *DBObj = NULL;
 	const char    *rowvalue;
@@ -472,9 +467,7 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
-		if (strcasecmp(tmp, "ORACLE") == 0) {
-			dt = T_ORACLE;
-		} else if (strcasecmp(tmp, "PGSQL") == 0) {
+		if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
 	} else {
@@ -484,13 +477,6 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 	free(tmp);
 
 	switch (dt) {				
-	case T_ORACLE:
-#if HAVE_ORACLE
-		DBObj = new ORACLEDatabase(dbconn);
-#else
-		EXCEPT("Oracle database requested, but no Oracle support compiled in this version of Condor!");
-#endif
-		break;
 	case T_PGSQL:
 		DBObj = new PGSQLDatabase(dbconn);
 		break;
@@ -520,8 +506,7 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 		
 		rowvalue = DBObj -> getValue(0, 0);
 
-		if(strcmp(rowvalue,"") == 0 ||  // result from empty job queue in pgsql
-		   strcmp(rowvalue, " ::") == 0) //result from empty jobqueue in oracle
+		if(strcmp(rowvalue,"") == 0) // result from empty job queue in pgsql
 			{ 
 			printf("\nJob queue is curently empty\n");
 		} else {
@@ -540,7 +525,7 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 	if(DBObj) {
 		delete DBObj;
 	}	
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */
 }
 
 int CondorQ::
@@ -709,7 +694,7 @@ short_print(
 	);
 }
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot	*jqSnapshot)
 {
@@ -730,4 +715,4 @@ ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot	*jqSn
 	return (ClassAd *) 0;
 }
 
-#endif /* WANT_QUILL */
+#endif /* HAVE_EXT_POSTGRESQL */

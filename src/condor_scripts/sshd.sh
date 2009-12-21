@@ -130,7 +130,7 @@ then
 	do
 			/bin/rm -f contact
 			$CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/contact $_CONDOR_SCRATCH_DIR/contact
-			lines=`wc -l $_CONDOR_SCRATCH_DIR/contact | awk "/$thisrun/"' {print $1}'`
+			lines=`grep -c $thisrun $_CONDOR_SCRATCH_DIR/contact`
 			if [ $lines -eq $_CONDOR_NPROCS ]
 			then
 				done=1

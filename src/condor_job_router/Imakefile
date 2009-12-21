@@ -5,15 +5,13 @@ all_target( $(NAME) )
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 #if HAVE_JOB_HOOKS
 JOB_HOOKS_OBJS = JobRouterHookMgr.o
 #endif /* HAVE_JOB_HOOKS */
 
-soapobjs(job_router)
-
-OBJ = NewClassAdJobLogConsumer.o JobLogMirror.o submit_job.o VanillaToGrid.o JobRouter.o schedd_main.o schedd_v7_utils.o set_user_from_ad.o $(SOAP_OBJS) $(JOB_HOOKS_OBJS) classad_newold.o
+OBJ = NewClassAdJobLogConsumer.o JobLogMirror.o submit_job.o VanillaToGrid.o JobRouter.o schedd_main.o schedd_v7_utils.o set_user_from_ad.o $(JOB_HOOKS_OBJS) classad_newold.o
 
 
 c_plus_target($(VANILLATOGRID),$(VANILLATOGRID_OBJS),$(VANILLATOGRID_LIB))
@@ -29,8 +27,6 @@ stripped:: all
 static:: all
 clean::
 testbin:: all
-
-gen_soapfiles(job_router,condorJobRouter)
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_c++_util,JobLogMirror.o)

@@ -7,11 +7,9 @@ all_target($(NAME) grid_monitor.sh $(GT4GAHP_WRAPPER_NAME) $(GT42GAHP_WRAPPER_NA
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
-soapobjs(gridmanager)
-
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt4job.o gt4resource.o infnbatchjob.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o amazonjob.o amazonresource.o proxymanager.o gahp-client.o basejob.o baseresource.o gridftpmanager.o  $(SOAP_OBJS)
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt4job.o gt4resource.o infnbatchjob.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o amazonjob.o amazonresource.o proxymanager.o gahp-client.o basejob.o baseresource.o gridftpmanager.o
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
@@ -55,5 +53,3 @@ public_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
 
 html:
 testbin:: all
-
-gen_soapfiles(gridmanager,condorGridmanager)

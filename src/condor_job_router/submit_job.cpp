@@ -41,10 +41,12 @@
 	// Simplify my error handling and reporting code
 class FailObj {
 public:
-	FailObj() : cluster(-1), proc(-1), qmgr(0) { }
+	FailObj() : cluster(-1), proc(-1), qmgr(0), save_error_msg(0) { }
 
 	void SetCluster(int c) { cluster = c; }
 	void SetProc(int p) { proc = p; }
+
+	void SetSaveErrorMsg(MyString *s) { save_error_msg = s; }
 
 	void SetNames(const char * schedd_name, const char * pool_name) {
 		if(schedd_name) {
@@ -91,13 +93,21 @@ public:
 		va_start(args,fmt);
 		msg.vsprintf_cat(fmt,args);
 		va_end(args);
-		dprintf(D_ALWAYS, "%s", msg.Value());
+
+
+		if( save_error_msg ) {
+			*save_error_msg = msg.Value();
+		}
+		else {
+			dprintf(D_ALWAYS, "%s", msg.Value());
+		}
 	}
 private:
 	MyString names;
 	int cluster;
 	int proc;
 	Qmgr_connection * qmgr;
+	MyString *save_error_msg;
 };
 
 
@@ -162,36 +172,59 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	return CJR_OK;
 }
 
-static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity)
+static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &schedd,FailObj &failobj)
 {
-	// Open a qmgr
-	FailObj failobj;
-	failobj.SetNames(schedd_name, pool_name);
+	CondorError errstack;
+	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner, schedd.version());
+	if( ! qmgr ) {
+		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
+		return NULL;
+	}
+	failobj.SetQmgr(qmgr);
+	return qmgr;
+}
 
+static Qmgr_connection *open_job(ClassAd &job,DCSchedd &schedd,FailObj &failobj)
+{
+		// connect to the q as the owner of this job
+	MyString effective_owner;
+	job.LookupString(ATTR_OWNER,effective_owner);
+
+	return open_q_as_owner(effective_owner.Value(),schedd,failobj);
+}
+
+static Qmgr_connection *open_job(classad::ClassAd const &job,DCSchedd &schedd,FailObj &failobj)
+{
+		// connect to the q as the owner of this job
+	std::string effective_owner;
+	job.EvaluateAttrString(ATTR_OWNER,effective_owner);
+
+	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
+}
+
+static Qmgr_connection *open_job(classad::ClassAd const &job,const char *schedd_name, const char *pool_name,FailObj &failobj)
+{
+	failobj.SetNames(schedd_name,pool_name);
 	DCSchedd schedd(schedd_name,pool_name);
 	if( ! schedd.locate() ) {
 		failobj.fail("Can't find address of schedd\n");
-		if(error_details) {
-			error_details->sprintf("Can't find address of schedd %s in pool %s",
-				schedd_name ? schedd_name : "local schedd",
-				pool_name ? pool_name : "local pool");
-		}
-		return CJR_ERROR;
+		return NULL;
 	}
 
-	CondorError errstack;
-	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
-	if( ! qmgr ) {
-		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
-		if(error_details) {
-			error_details->sprintf("Can't connect to schedd %s in pool %s (%s)",
-				schedd_name ? schedd_name : "local schedd",
-				pool_name ? pool_name : "local pool",
-				errstack.getFullText(true));
-		}
+	return open_job(job,schedd,failobj);
+}
+
+
+static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity,classad::ClassAd const &job)
+{
+	// Open a qmgr
+	FailObj failobj;
+	failobj.SetSaveErrorMsg( error_details );
+
+	Qmgr_connection * qmgr = open_job(job,schedd_name,pool_name,failobj);
+	if( !qmgr ) {
 		return CJR_ERROR;
 	}
-	failobj.SetQmgr(qmgr);
 
 
 	//-------
@@ -201,8 +234,8 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 
 
 	// Tear down the qmgr
+	failobj.SetQmgr(0);
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
-		failobj.SetQmgr(0);
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res == CJR_OK) {
 			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
@@ -219,7 +252,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 {
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity);
+	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity,ad);
 
 	set_priv(priv);
 	return result;
@@ -308,41 +341,24 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 
 
 
-static bool yield_job_with_current_privs(const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool release_on_hold, bool *keep_trying) {
+static bool yield_job_with_current_privs(
+	const char * pool_name, const char * schedd_name,
+	bool done, int cluster, int proc, MyString * error_details,
+	const char * my_identity, bool release_on_hold, bool *keep_trying,
+	classad::ClassAd const &job)
+{
 	// Open a qmgr
 	FailObj failobj;
-	failobj.SetNames(schedd_name, pool_name);
+	failobj.SetSaveErrorMsg( error_details );
 
 	bool junk_keep_trying;
 	if(!keep_trying) keep_trying = &junk_keep_trying;
 	*keep_trying = true;
 
-	DCSchedd schedd(schedd_name,pool_name);
-	if( ! schedd.locate() ) {
-		failobj.fail("Can't find address of schedd\n");
-		if(error_details) {
-			error_details->sprintf("Can't find address of schedd %s in pool %s",
-				schedd_name ? schedd_name : "local schedd",
-				pool_name ? pool_name : "local pool");
-		}
+	Qmgr_connection *qmgr = open_job(job,schedd_name,pool_name,failobj);
+	if( !qmgr ) {
 		return false;
 	}
-
-	CondorError errstack;
-	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
-	if( ! qmgr ) {
-		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
-		if(error_details) {
-			error_details->sprintf("Can't connect to schedd %s in pool %s (%s)",
-				schedd_name ? schedd_name : "local schedd",
-				pool_name ? pool_name : "local pool",
-				errstack.getFullText(true));
-		}
-		return false;
-	}
-	failobj.SetQmgr(qmgr);
-
 
 	//-------
 	// Do the actual yield
@@ -351,8 +367,8 @@ static bool yield_job_with_current_privs(const char * pool_name, const char * sc
 
 
 	// Tear down the qmgr
+	failobj.SetQmgr(0);
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
-		failobj.SetQmgr(0);
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res) {
 			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
@@ -374,7 +390,7 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,release_on_hold,keep_trying);
+	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,release_on_hold,keep_trying,ad);
 
 	set_priv(priv);
 
@@ -394,22 +410,10 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	}
 	// TODO Consider: condor_submit has to fret about storing a credential on Win32.
 
-		// Does the schedd support the new unified syntax for grid universe
-		// jobs (i.e. GridResource and GridJobId used for all types)?
-		// If not,  we can't send the job over.
-	CondorVersionInfo vi( schedd.version() );
-	if( ! vi.built_since_version(6,7,11) ) {
-		failobj.fail("Schedd is too old of version and can not handle new Grid unified syntax\n"); // TODO: List remote version number
+	Qmgr_connection * qmgr = open_job(src,schedd,failobj);
+	if( !qmgr ) {
 		return false;
 	}
-
-	CondorError errstack;
-	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
-	if( ! qmgr ) {
-		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
-		return false;
-	}
-	failobj.SetQmgr(qmgr);
 
 	int cluster = NewCluster();
 	if( cluster < 0 ) {
@@ -459,14 +463,14 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		}
 	}
 
+	failobj.SetQmgr(0);
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
-		failobj.SetQmgr(0);
 		failobj.fail("Failed to commit job submission\n");
 		return false;
 	}
 
 	if( is_sandboxed ) {
-		failobj.SetQmgr(0);
+		CondorError errstack;
 		ClassAd * adlist[1];
 		adlist[0] = &src;
 		if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
@@ -556,27 +560,15 @@ bool push_dirty_attributes(classad::ClassAd & src)
 
 static bool push_dirty_attributes_with_current_priv(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
 {
-	MyString scheddtitle = "local schedd";
-	if(schedd_name) {
-		scheddtitle = "schedd ";
-		scheddtitle += schedd_name;
-	}
-
-	DCSchedd schedd(schedd_name,pool_name);
-	if( ! schedd.locate() ) {
-		dprintf(D_ALWAYS, "push_dirty_attributes: Can't find address of %s\n", scheddtitle.Value());
-		return false;
-	}
-
-	CondorError errstack;
-	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
-	if( ! qmgr ) {
-		dprintf(D_ALWAYS, "push_dirty_attributes: Unable to connect to %s\n%s\n", scheddtitle.Value(), errstack.getFullText(true));
+	FailObj failobj;
+	Qmgr_connection *qmgr = open_job(src,schedd_name,pool_name,failobj);
+	if( !qmgr ) {
 		return false;
 	}
 
 	bool ret = push_dirty_attributes(src);
 
+	failobj.SetQmgr(0);
 	if( ! DisconnectQ(qmgr, ret /* commit */)) {
 		dprintf(D_ALWAYS, "push_dirty_attributes: Failed to commit changes\n");
 		return false;
@@ -601,9 +593,11 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	return success;
 }
 
-static bool finalize_job_with_current_privs(int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+static bool finalize_job_with_current_privs(classad::ClassAd const &job,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
 {
-	CondorError errstack;
+	FailObj failobj;
+	failobj.SetNames(schedd_name,pool_name);
+
 	DCSchedd schedd(schedd_name,pool_name);
 	if( ! schedd.locate() ) {
 		if(!schedd_name) { schedd_name = "local schedd"; }
@@ -619,6 +613,7 @@ static bool finalize_job_with_current_privs(int cluster, int proc, const char * 
 	if( is_sandboxed ) {
 			// Get our sandbox back
 		int jobssent;
+		CondorError errstack;
 		bool success = schedd.receiveJobSandbox(constraint.Value(), &errstack, &jobssent);
 		if( ! success ) {
 			dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
@@ -631,11 +626,9 @@ static bool finalize_job_with_current_privs(int cluster, int proc, const char * 
 		}
 	}
 
-
 	// Yield the job (clear MANAGED).
-	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
-	if( ! qmgr ) {
-		dprintf(D_ALWAYS, "finalize_job: Unable to connect to schedd\n%s\n", errstack.getFullText(true));
+	Qmgr_connection * qmgr = open_job(job,schedd,failobj);
+	if(!qmgr) {
 		return false;
 	}
 
@@ -643,6 +636,7 @@ static bool finalize_job_with_current_privs(int cluster, int proc, const char * 
 		dprintf(D_ALWAYS, "finalize_job: failed to set %s = %s for %d.%d\n", ATTR_JOB_LEAVE_IN_QUEUE, "FALSE", cluster, proc);
 	}
 
+	failobj.SetQmgr(0);
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		dprintf(D_ALWAYS, "finalize_job: Failed to commit changes\n");
 		return false;
@@ -657,7 +651,7 @@ bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char *
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = finalize_job_with_current_privs(cluster,proc,schedd_name,pool_name,is_sandboxed);
+	success = finalize_job_with_current_privs(ad,cluster,proc,schedd_name,pool_name,is_sandboxed);
 
 	set_priv(priv);
 	return success;

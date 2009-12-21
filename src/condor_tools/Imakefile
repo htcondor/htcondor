@@ -1,4 +1,4 @@
-#if WANT_QUILL
+#if HAVE_EXT_POSTGRESQL
 #define QuillProgs condor_convert_history condor_dump_history condor_load_history
 #else
 #define QuillProgs 
@@ -20,7 +20,7 @@ PROGRAMS =  	condor_config_val condor_preen condor_stats \
 all_target( $(PROGRAMS) )
 
 CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS) -I../condor_tt $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(POSTGRESQL_CFLAGS) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS) -I../condor_tt $(CONFIGURE_PCRE_CFLAGS)
 LIB = $(STD_LIBS) $(TT_LIB) $(CONFIGURE_POSTGRESQL_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
 LH_OBJ = load_history.o ../condor_tt/condor_ttdb.o \
@@ -46,10 +46,10 @@ public_c_plus_target(condor_userprio,bin,user_prio.o,$(LIB))
 public_c_plus_target(condor_findhost,bin,give_interactive.o,$(LIB))
 
 /* Notice that this tool has a different link line for QUILL */
-c_plus_target_complex(condor_history,history.o,$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
+c_plus_target_complex(condor_history,history.o,$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(POSTGRESQL_LIBS))
 release_target(condor_history,bin,EXECUTABLE_MODE)
 strip_target(condor_history,bin,EXECUTABLE_MODE)
-static_target(condor_history,history.o,$(LIB) $(QUILL_LIB),bin)
+static_target(condor_history,history.o,$(LIB) $(POSTGRESQL_LIBS),bin)
 
 public_c_plus_target(condor_qedit,bin,qedit.o,$(LIB))
 
@@ -64,17 +64,17 @@ public_c_plus_target(condor_version,bin,version.o,$(LIB))
 public_c_plus_target(condor_wait,bin,wait.o,$(LIB))
 
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 /* Notice that this tool has a different link line for QUILL */
-c_plus_target_complex(condor_load_history,$(LH_OBJ),$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
+c_plus_target_complex(condor_load_history,$(LH_OBJ),$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(POSTGRESQL_LIBS))
 release_target(condor_load_history,bin,EXECUTABLE_MODE)
 strip_target(condor_load_history,bin,EXECUTABLE_MODE)
-static_target(condor_load_history,$(LH_OBJ),$(LIB) $(QUILL_LIB),bin)
+static_target(condor_load_history,$(LH_OBJ),$(LIB) $(POSTGRESQL_LIBS),bin)
 
-c_plus_target_complex(condor_dump_history,dump_history.o,$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
+c_plus_target_complex(condor_dump_history,dump_history.o,$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(POSTGRESQL_LIBS))
 release_target(condor_dump_history,bin,EXECUTABLE_MODE)
 strip_target(condor_dump_history,bin,EXECUTABLE_MODE)
-static_target(condor_dump_history,dump_history.o,$(LIB) $(QUILL_LIB),bin)
+static_target(condor_dump_history,dump_history.o,$(LIB) $(POSTGRESQL_LIBS),bin)
 
 public_c_plus_target(condor_convert_history,sbin,convert_history.o,$(LIB))
 #endif

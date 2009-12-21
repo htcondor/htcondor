@@ -2362,6 +2362,8 @@ int Function::FunctionIfThenElse(
 
 	int number_of_args = arguments->Length();
 
+	conditionclause.debug = result->debug;
+
 	if ( number_of_args != 3 ) {
 		// we must have three arguments
 		result->type = LX_ERROR;	

@@ -76,7 +76,9 @@ struct Proxy {
 };
 
 struct ProxySubject {
+	char *fqan;
 	char *subject_name;
+	bool has_voms_attrs;
 	Proxy *master_proxy;
 	List<Proxy> proxies;
 };

@@ -64,8 +64,8 @@ set EXT_TRIGGERS=%EXTERN_DIR%\triggers
 REM Specify which versions of the externals we're using. To add a 
 REM new external, just add its version here, and add that to the 
 REM EXTERNALS_NEEDED variable defined below.
-set EXT_GSOAP_VERSION=gsoap-2.7.10-p3
-set EXT_OPENSSL_VERSION=openssl-0.9.8h-p1
+set EXT_GSOAP_VERSION=gsoap-2.7.10-p5
+set EXT_OPENSSL_VERSION=openssl-0.9.8h-p2
 set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6

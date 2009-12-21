@@ -88,6 +88,7 @@
 #include "setenv.h"
 #include "classadHistory.h"
 #include "forkwork.h"
+#include "condor_open.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -441,7 +442,7 @@ Scheduler::Scheduler() :
 	startjobsid = -1;
 	periodicid = -1;
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	quill_enabled = FALSE;
 	quill_is_remotely_queryable = 0; //false
 	quill_name = NULL;
@@ -475,7 +476,7 @@ Scheduler::Scheduler() :
 	CronMgr = NULL;
 
 	jobThrottleNextJobDelay = 0;
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	prevLHF = 0;
 #endif
 }
@@ -911,7 +912,7 @@ Scheduler::count_jobs()
 	daemonCore->UpdateLocalAd(m_ad);
 
 		// log classad into sql log so that it can be updated to DB
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
 #endif
 
@@ -3057,7 +3058,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 		// These three lists must be kept in sync!
-	const char *AttrsToModify[] = { 
+	static const int ATTR_ARRAY_SIZE = 8;
+	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
@@ -3065,9 +3067,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_ULOG_FILE,
-		ATTR_X509_USER_PROXY,
-		NULL };		// list must end with a NULL
-	const bool AttrIsList[] = {
+		ATTR_X509_USER_PROXY };
+	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
 		false,
 		false,
 		false,
@@ -3076,7 +3077,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		true,
 		false,
 		false };
-	const char *AttrXferBool[] = {
+	static const char *AttrXferBool[ATTR_ARRAY_SIZE] = {
 		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT,
 		ATTR_TRANSFER_OUTPUT,
@@ -3107,7 +3108,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	}
 
 
-	int i,cluster,proc,index;
+	int jobIndex,cluster,proc,attrIndex;
 	char new_attr_value[500];
 	char *buf = NULL;
 	ExprTree *expr = NULL;
@@ -3117,9 +3118,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 
 		// For each job, modify its ClassAd
-	for (i=0; i < len; i++) {
-		cluster = (*jobs)[i].cluster;
-		proc = (*jobs)[i].proc;
+	for (jobIndex = 0; jobIndex < len; jobIndex++) {
+		cluster = (*jobs)[jobIndex].cluster;
+		proc = (*jobs)[jobIndex].proc;
 
 		ClassAd *job_ad = GetJobAd(cluster,proc);
 		if (!job_ad) {
@@ -3170,13 +3171,12 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// Now, for all the attributes listed in 
 			// AttrsToModify, change them to be relative to new IWD
 			// by taking the basename of all file paths.
-		index = -1;
-		while ( AttrsToModify[++index] ) {
+		for ( attrIndex = 0; attrIndex < ATTR_ARRAY_SIZE; attrIndex++ ) {
 				// Lookup original value
 			bool xfer_it;
 			if (buf) free(buf);
 			buf = NULL;
-			job_ad->LookupString(AttrsToModify[index],&buf);
+			job_ad->LookupString(AttrsToModify[attrIndex],&buf);
 			if (!buf) {
 				// attribute not found, so no need to modify it
 				continue;
@@ -3185,8 +3185,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// null file -- no need to modify it
 				continue;
 			}
-			if ( AttrXferBool[i] &&
-				 job_ad->LookupBool( AttrXferBool[i], xfer_it ) && !xfer_it ) {
+			if ( AttrXferBool[attrIndex] &&
+				 job_ad->LookupBool( AttrXferBool[attrIndex], xfer_it ) && !xfer_it ) {
 					// ad says not to transfer this file, so no need
 					// to modify it
 				continue;
@@ -3195,7 +3195,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// some of these attributes contain a list of pathnames
 			StringList old_paths(NULL,",");
 			StringList new_paths(NULL,",");
-			if ( AttrIsList[i] ) {
+			if ( AttrIsList[attrIndex] ) {
 				old_paths.initializeFromString(buf);
 			} else {
 				old_paths.insert(buf);
@@ -3217,12 +3217,12 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			}
 			if ( changed ) {
 					// Backup original value
-				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[index]);
+				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[attrIndex]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();
 				ASSERT(new_value);
-				SetAttributeString(cluster,proc,AttrsToModify[index],new_value);
+				SetAttributeString(cluster,proc,AttrsToModify[attrIndex],new_value);
 				free(new_value);
 			}
 		}
@@ -10153,7 +10153,7 @@ Scheduler::Init()
 		dprintf( D_FULLDEBUG, "No Accountant host specified in config file\n" );
 	}
 
-	InitJobHistoryFile("HISTORY"); // or re-init it, as the case may be
+	InitJobHistoryFile("HISTORY", "PER_JOB_HISTORY_DIR"); // or re-init it, as the case may be
 
 		//
 		// We keep a copy of the last interval
@@ -10448,7 +10448,7 @@ Scheduler::Init()
 
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 
 	/* See if QUILL is configured for this schedd */
 	if (param_boolean("QUILL_ENABLED", false) == false) {
@@ -10557,7 +10557,7 @@ Scheduler::Init()
 	// fixed in count_job() -Erik 12/18/2006
 	m_ad->Assign(ATTR_NUM_USERS, 0);
 
-#ifdef WANT_QUILL
+#ifdef HAVE_EXT_POSTGRESQL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
 		m_ad->Assign( ATTR_QUILL_ENABLED, true ); 
@@ -10691,32 +10691,40 @@ Scheduler::Register()
 			"abort_job", this, WRITE);
 	 daemonCore->Register_Command(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
-			"actOnJobs", this, WRITE);
+			"actOnJobs", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(SPOOL_JOB_FILES_WITH_PERMS,
 			"SPOOL_JOB_FILES_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(TRANSFER_DATA_WITH_PERMS,
 			"TRANSFER_DATA_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE);
+			"spoolJobFiles", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE);
+			"updateGSICred", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(DELEGATE_GSI_CRED_SCHEDD,
 			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE);
+			"updateGSICred", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	 daemonCore->Register_Command(REQUEST_SANDBOX_LOCATION,
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
-			"requestSandboxLocation", this, WRITE);
+			"requestSandboxLocation", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
 			"receive_startd_alive", this, DAEMON,
@@ -10737,13 +10745,22 @@ Scheduler::Register()
 #endif
 
 
-	// handler for queue management commands
-	// Note: We make QMGMT_CMD a READ command.  The command handler
-	// itself calls daemonCore->Verify() to check for WRITE access if
-	// someone tries to modify the queue.
-	daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
+	// Note: The QMGMT READ/WRITE commands have the same command handler.
+	// This is ok, because authorization to do write operations is verified
+	// internally in the command handler.
+	daemonCore->Register_Command( QMGMT_READ_CMD, "QMGMT_READ_CMD",
 								  (CommandHandler)&handle_q,
 								  "handle_q", NULL, READ, D_FULLDEBUG );
+
+	// This command always requires authentication.  Therefore, it is
+	// more efficient to force authentication when establishing the
+	// security session than to possibly create an unauthenticated
+	// security session that has to be authenticated every time in
+	// the command handler.
+	daemonCore->Register_Command( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
+								  (CommandHandler)&handle_q,
+								  "handle_q", NULL, WRITE, D_FULLDEBUG,
+								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
 								  (CommandHandlercpp)&Scheduler::dumpState,
@@ -10756,7 +10773,8 @@ Scheduler::Register()
 
 	daemonCore->Register_Command( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
-								  "get_job_connect_info", this, WRITE );
+								  "get_job_connect_info", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(

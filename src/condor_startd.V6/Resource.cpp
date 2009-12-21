@@ -1254,10 +1254,8 @@ Resource::wants_suspend( void )
 		if( r_classad->EvalBool( "WANT_SUSPEND",
 								   r_cur->ad(),
 								   want_suspend ) == 0) {
-				// This should never happen, since we already check
-				// when we're constructing the internal config classad
-				// if we've got this defined. -Derek Wright 4/12/00
-			EXCEPT( "Can't find WANT_SUSPEND in internal ClassAd" );
+				// UNDEFINED means FALSE for WANT_SUSPEND
+			want_suspend = false;
 		}
 	}
 	return want_suspend;

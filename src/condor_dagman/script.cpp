@@ -24,10 +24,8 @@
 #include "script.h"
 #include "util.h"
 #include "job.h"
-#include "condor_id.h"
 #include "tmp_dir.h"
 
-#include "HashTable.h"
 #include "env.h"
 #include "condor_daemon_core.h"
 
@@ -83,20 +81,36 @@ Script::BackgroundRun( int reaperId )
     char * cmd = strnewp(_cmd);
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
+
 		MyString arg;
-		if( !strcasecmp( token, "$JOB" ) ) {
+
+		if ( !strcasecmp( token, "$JOB" ) ) {
 			arg += _node->GetJobName();
-		} 
-        else if ( !strcasecmp( token, "$RETRY" ) ) {
+
+		} else if ( !strcasecmp( token, "$RETRY" ) ) {
             arg += _node->retries;
-        }
-        else if ( _post && !strcasecmp( token, "$JOBID" ) ) {
-            arg += _node->_CondorID._cluster;
-            arg += '.';
-            arg += _node->_CondorID._proc;
-        }
-        else if (!strcasecmp(token, "$RETURN")) arg += _retValJob;
-        else                                    arg += token;
+
+        } else if ( !strcasecmp( token, "$JOBID" ) ) {
+			if ( !_post ) {
+				debug_printf( DEBUG_QUIET, "Warning: $JOBID macro should "
+							"not be used as a PRE script argument!" );
+				arg += token;
+			} else {
+            	arg += _node->_CondorID._cluster;
+            	arg += '.';
+            	arg += _node->_CondorID._proc;
+			}
+
+        } else if (!strcasecmp(token, "$RETURN")) {
+			if ( !_post ) {
+				debug_printf( DEBUG_QUIET, "Warning: $RETURN macro should "
+							"not be used as a PRE script argument!" );
+			}
+			arg += _retValJob;
+
+        } else {
+			arg += token;
+		}
 
 		args.AppendArg(arg.Value());
     }

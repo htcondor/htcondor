@@ -32,6 +32,7 @@
 
 #include "condor_ckpt_name.h"
 #include "condor_config.h"
+#include "condor_open.h"
 
 #include "schedd_api.h"
 

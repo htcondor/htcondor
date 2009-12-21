@@ -26,11 +26,13 @@
 #include "test.h"
 
 #include <stdio.h>
-#include "condor_fix_iostream.h"
+#include <iostream>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
+
+using namespace std;
 
 int main()
 {

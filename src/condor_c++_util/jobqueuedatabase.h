@@ -42,8 +42,6 @@ extern const bool proc_ver_clob_field [];
 extern const bool cluster_hor_clob_field [];
 extern const bool cluster_ver_clob_field [];
 
-#define QUILL_ORACLE_STRINGLIT_LIMIT 4000
-
 //! JobQueueDatabase
 /*! It provides interfaces to talk to DBMS
  */
@@ -80,11 +78,6 @@ public:
 	virtual QuillErrCode		execQuery(const char* sql) = 0;
 	virtual QuillErrCode        execQuery(const char* sql,
 										  int &num_result) = 0;
-	virtual QuillErrCode		execQueryWithBind(const char* sql,
-												  int bnd_cnt,
-												  const char **val_arr,
-												  QuillAttrDataType *typ_arr,
-												  int &num_result) = 0;
 
 	//! get a result for the executed SQL
 	// virtual QuillErrCode 		fetchNext() = 0;

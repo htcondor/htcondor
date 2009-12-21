@@ -115,9 +115,16 @@ CCBServer::RegisterHandlers()
 void
 CCBServer::InitAndReconfig()
 {
+		// construct the CCB address to be advertised by CCB listeners
 	Sinful sinful(daemonCore->publicNetworkIpAddr());
-	ASSERT( sinful.getHost() && sinful.getPort() );
-	m_address.sprintf("%s:%s",sinful.getHost(),sinful.getPort());
+		// strip out <>'s, private address, and CCB listener info
+	sinful.setPrivateAddr(NULL);
+	sinful.setCCBContact(NULL);
+	ASSERT( sinful.getSinful() && sinful.getSinful()[0] == '<' );
+	m_address.sprintf("%s",sinful.getSinful()+1);
+	if( m_address[m_address.Length()-1] == '>' ) {
+		m_address.setChar(m_address.Length()-1,'\0');
+	}
 
 	m_read_buffer_size = param_integer("CCB_SERVER_READ_BUFFER",2*1024);
 	m_write_buffer_size = param_integer("CCB_SERVER_WRITE_BUFFER",2*1024);
@@ -414,6 +421,12 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 		return;
 	}
 
+	int command = 0;
+	if( msg.LookupInteger( ATTR_COMMAND, command ) && command == ALIVE ) {
+		SendHeartbeatResponse( target );
+		return;
+	}
+
 	target->decPendingRequestResults();
 
 	bool success = false;
@@ -501,6 +514,28 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 	}
 
 	RequestFinished( request, success, error_msg.Value() );
+}
+
+void
+CCBServer::SendHeartbeatResponse( CCBTarget *target )
+{
+	Sock *sock = target->getSock();
+
+	ClassAd msg;
+	msg.Assign( ATTR_COMMAND, ALIVE );
+	sock->encode();
+	if( !msg.put( *sock ) || !sock->end_of_message() ) {
+		dprintf(D_ALWAYS,
+				"CCB: failed to send heartbeat to target "
+				"daemon %s with ccbid %lu\n",
+				target->getSock()->peer_description(),
+				target->getCCBID());
+
+		RemoveTarget( target );
+		return;
+	}
+	dprintf(D_FULLDEBUG,"CCB: sent heartbeat to target %s\n",
+			sock->peer_description());
 }
 
 void

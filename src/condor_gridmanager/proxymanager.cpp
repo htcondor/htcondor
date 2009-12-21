@@ -176,9 +176,11 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 	Proxy *proxy = NULL;
 	ProxySubject *proxy_subject = NULL;
 	char *subject_name = NULL;
+	char *fqan = NULL;
 	MyString proxy_path;
 	MyString owner;
 	char *param_str = NULL;
+	bool has_voms_attrs = false;
 
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) ) {
 		MyString param_name;
@@ -195,15 +197,22 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 									  proxy_path ) == 0 ) {
 
 		// Special handling for "use best proxy"
-		if ( job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT,
-								   proxy_path ) != 0 ) {
-			subject_name = strdup( proxy_path.Value() );
-			if ( SubjectsByName.lookup( HashKey(subject_name),
+		job_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, &fqan );
+		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &subject_name );
+		if ( subject_name ) {
+			if ( fqan == NULL ) {
+				fqan = strdup( subject_name );
+			} else {
+				has_voms_attrs = true;
+			}
+			if ( SubjectsByName.lookup( HashKey(fqan),
 										proxy_subject ) != 0 ) {
 				// We don't know about this proxy subject yet,
 				// create a new ProxySubject and fill it out
 				proxy_subject = new ProxySubject;
 				proxy_subject->subject_name = strdup( subject_name );
+				proxy_subject->fqan = strdup( fqan );
+				proxy_subject->has_voms_attrs = has_voms_attrs;
 
 				// Create a master proxy for our new ProxySubject
 				Proxy *new_master = new Proxy;
@@ -222,7 +231,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 
 				proxy_subject->master_proxy = new_master;
 
-				SubjectsByName.insert(HashKey(proxy_subject->subject_name),
+				SubjectsByName.insert(HashKey(proxy_subject->fqan),
 									  proxy_subject);
 			}
 			// Now that we have a proxy_subject, return it's master proxy
@@ -237,10 +246,13 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 				}
 			}
 			free( subject_name );
+			free( fqan );
 			return proxy;
 
 		}
 
+		free( subject_name );
+		free( fqan );
 		//error.sprintf( "%s is not set in the job ad", ATTR_X509_USER_PROXY );
 		error = "";
 		return NULL;
@@ -271,12 +283,30 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 			error.sprintf( "Failed to get expiration time of proxy" );
 			return NULL;
 		}
-		subject_name = x509_proxy_identity_name( proxy_path.Value(), 1 );
+		subject_name = x509_proxy_identity_name( proxy_path.Value() );
 		if ( subject_name == NULL ) {
 			dprintf( D_ALWAYS, "Failed to get identity of proxy %s\n",
 					 proxy_path.Value() );
 			error.sprintf( "Failed to get identity of proxy" );
 			return NULL;
+		}
+
+		fqan = NULL;
+#if defined(HAVE_EXT_GLOBUS)
+		int rc = extract_VOMS_info_from_file( proxy_path.Value(), 0, NULL,
+											  NULL, &fqan );
+		if ( rc != 0 && rc != 1 ) {
+			dprintf( D_ALWAYS, "Failed to get voms info of proxy %s\n",
+					 proxy_path.Value() );
+			error.sprintf( "Failed to get voms info of proxy" );
+			free( subject_name );
+			return NULL;
+		}
+#endif
+		if ( fqan ) {
+			has_voms_attrs = true;
+		} else {
+			fqan = strdup( subject_name );
 		}
 
 		// Create a Proxy struct for our new proxy and populate it
@@ -297,11 +327,13 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 
 		ProxiesByFilename.insert(HashKey(proxy_path.Value()), proxy);
 
-		if ( SubjectsByName.lookup( HashKey(subject_name), proxy_subject ) != 0 ) {
+		if ( SubjectsByName.lookup( HashKey(fqan), proxy_subject ) != 0 ) {
 			// We don't know about this proxy subject yet,
 			// create a new ProxySubject and fill it out
 			proxy_subject = new ProxySubject;
 			proxy_subject->subject_name = strdup( subject_name );
+			proxy_subject->fqan = strdup( fqan );
+			proxy_subject->has_voms_attrs = true;
 
 			// Create a master proxy for our new ProxySubject
 			Proxy *new_master = new Proxy;
@@ -318,7 +350,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 
 			proxy_subject->master_proxy = new_master;
 
-			SubjectsByName.insert(HashKey(proxy_subject->subject_name),
+			SubjectsByName.insert(HashKey(proxy_subject->fqan),
 								  proxy_subject);
 		}
 
@@ -333,6 +365,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 		}
 
 		free( subject_name );
+		free( fqan );
 	}
 
 		// MyProxy crap
@@ -505,8 +538,9 @@ ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 			free( proxy_subject->master_proxy->proxy_filename );
 			delete proxy_subject->master_proxy;
 
-			SubjectsByName.remove( HashKey(proxy_subject->subject_name) );
+			SubjectsByName.remove( HashKey(proxy_subject->fqan) );
 			free( proxy_subject->subject_name );
+			free( proxy_subject->fqan );
 			delete proxy_subject;
 		}
 

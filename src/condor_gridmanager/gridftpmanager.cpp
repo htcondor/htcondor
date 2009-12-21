@@ -30,6 +30,7 @@
 #include "filename_tools.h"
 #include "classad_helpers.h"
 #include "directory.h"
+#include "condor_version.h"
 
 #include "gridftpmanager.h"
 
@@ -98,7 +99,7 @@ GridftpServer::GridftpServer( Proxy *proxy )
 
 GridftpServer::~GridftpServer()
 {
-	m_serversByProxy.remove( HashKey( m_proxy->subject->subject_name ) );
+	m_serversByProxy.remove( HashKey( m_proxy->subject->fqan ) );
 	ReleaseProxy( m_proxy, (TimerHandlercpp)&GridftpServer::CheckServerSoon, this );
 	if ( m_urlBase ) {
 		free( m_urlBase );
@@ -119,12 +120,12 @@ GridftpServer *GridftpServer::FindOrCreateServer( Proxy *proxy )
 	int rc;
 	GridftpServer *server = NULL;
 
-	rc = m_serversByProxy.lookup( HashKey( proxy->subject->subject_name ),
+	rc = m_serversByProxy.lookup( HashKey( proxy->subject->fqan ),
 								  server );
 	if ( rc != 0 ) {
 		server = new GridftpServer( proxy );
 		ASSERT(server);
-		m_serversByProxy.insert( HashKey( proxy->subject->subject_name ),
+		m_serversByProxy.insert( HashKey( proxy->subject->fqan ),
 								 server );
 	} else {
 		ASSERT(server);
@@ -205,7 +206,7 @@ void GridftpServer::UpdateLeases()
 	dprintf( D_FULLDEBUG, "GridftpServer: Updating job leases for gridftp "
 			 "server jobs\n" );
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::UpdateLeases: "
 				 "Failed to connect to schedd\n" );
@@ -383,7 +384,7 @@ bool GridftpServer::ScanSchedd()
 							"GridftpServer::UpdateLeases" );
 	}
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::ScanSchedd: "
 				 "Failed to connect to schedd\n" );
@@ -422,14 +423,14 @@ bool GridftpServer::ScanSchedd()
 			// jobs for the same proxy subject, we'll end up picking
 			// the first one, ignoring the requested url base (which
 			// may match one of the later jobs). Tough luck.
-		next_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, buff );
+		next_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, buff );
 		if ( m_serversByProxy.lookup( HashKey( buff.Value() ), server ) ) {
 
 			MyString error_str;
 			Proxy *proxy = AcquireProxy( next_ad, error_str );
 			server = new GridftpServer( proxy );
 			ASSERT(server);
-			m_serversByProxy.insert( HashKey( proxy->subject->subject_name ),
+			m_serversByProxy.insert( HashKey( proxy->subject->fqan ),
 									 server );
 			ReleaseProxy( proxy );
 		}
@@ -513,7 +514,7 @@ bool GridftpServer::SubmitServerJob()
 	ArgList args_list;
 
 	dprintf( D_FULLDEBUG, "GridftpServer: Submitting job for proxy '%s'\n",
-			 m_proxy->subject->subject_name );
+			 m_proxy->subject->fqan );
 	if ( m_requestedUrlBase ) {
 		dprintf( D_FULLDEBUG, "   reusing URL %s\n", m_requestedUrlBase );
 	}
@@ -555,6 +556,10 @@ bool GridftpServer::SubmitServerJob()
 	job_ad->Assign( ATTR_X509_USER_PROXY, m_proxy->proxy_filename );
 	job_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
 					m_proxy->subject->subject_name );
+		// Always insert FQAN, since that identifies a unique GridftpServer
+		// object, and thus allows us to find find the GridftpServer
+		// object for a given gridftp job later on.
+	job_ad->Assign( ATTR_X509_USER_PROXY_FQAN, m_proxy->subject->fqan );
 	job_ad->Assign( ATTR_JOB_IWD, GridmanagerScratchDir );
 	buff.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
 	job_ad->Assign( ATTR_JOB_OUTPUT, buff.Value() );
@@ -665,7 +670,7 @@ bool GridftpServer::SubmitServerJob()
 
 	job_ad->Assign( ATTR_GRIDFTP_SERVER_JOB, true );
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 				 "Failed to connect to schedd\n" );
@@ -728,7 +733,7 @@ bool GridftpServer::SubmitServerJob()
 
 	m_outputFile = NULL;
 	while ( m_outputFile == NULL ) {
-		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
+		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true, NULL, myUserName, CondorVersion() );
 		if ( !schedd ) {
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 					 "Failed to connect to schedd (2nd time)\n" );

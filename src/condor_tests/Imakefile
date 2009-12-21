@@ -1907,6 +1907,20 @@ TESTCLASS(job_dagman_event_log,quick)
 TESTCLASS(job_dagman_event_log,full)
 TESTCLASS(job_dagman_event_log,quicknolink)
 
+DESC(job_dagman_vars,"Test DAG VARS feature")
+RUN(job_dagman_vars)
+TESTCLASS(job_dagman_vars,dagman)
+TESTCLASS(job_dagman_vars,quick)
+TESTCLASS(job_dagman_vars,full)
+TESTCLASS(job_dagman_vars,quicknolink)
+
+DESC(job_dagman_script_args,"Test pre/post script arguemnts")
+RUN(job_dagman_script_args)
+TESTCLASS(job_dagman_script_args,dagman)
+TESTCLASS(job_dagman_script_args,quick)
+TESTCLASS(job_dagman_script_args,full)
+TESTCLASS(job_dagman_script_args,quicknolink)
+
 /* Sample performance tests */
 
 /*

@@ -26,7 +26,6 @@
 
 #include "condor_common.h"
 #ifdef HAVE_EXT_GSOAP
-#include "stdsoap2.h"
 #include "soap_core.h"
 #endif
 
@@ -107,6 +106,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "basename.h"
 #include "condor_threads.h"
 #include "shared_port_endpoint.h"
+#include "condor_open.h"
 
 #include "valgrind.h"
 
@@ -226,9 +226,6 @@ static int _condor_exit_with_exec = 0;
 void **curr_dataptr;
 void **curr_regdataptr;
 
-#ifdef HAVE_EXT_GSOAP
-extern int soap_serve(struct soap*);
-#endif
 extern void drop_addr_file( void );
 
 TimerManager DaemonCore::t;
@@ -597,9 +594,7 @@ DaemonCore::~DaemonCore()
 
 #ifdef HAVE_EXT_GSOAP
 	if( soap ) {
-		soap_destroy(soap);
-		soap_end(soap);
-		soap_free(soap);
+		dc_soap_free(soap);
 		soap = NULL;
 	}
 #endif
@@ -632,19 +627,21 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  ********************************************************/
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
-				DCpermission perm, int dprintf_flag)
+				DCpermission perm, int dprintf_flag, bool force_authentication)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
-							perm, dprintf_flag, FALSE) );
+							 perm, dprintf_flag, FALSE, force_authentication) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm, int dprintf_flag)
+				Service* s, DCpermission perm, int dprintf_flag,
+				bool force_authentication)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, dprintf_flag, TRUE) );
+							 handler_descrip, s, perm, dprintf_flag, TRUE,
+							 force_authentication) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
@@ -874,7 +871,7 @@ int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period )
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
-				int dprintf_flag, int is_cpp)
+				int dprintf_flag, int is_cpp, bool force_authentication)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -920,6 +917,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].handlercpp = handlercpp;
 	comTable[i].is_cpp = is_cpp;
 	comTable[i].perm = perm;
+	comTable[i].force_authentication = force_authentication;
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
@@ -1021,34 +1019,22 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	}
 
 		// If we haven't initialized our address(es), do so now.
-	if (sinful_public == NULL) {
-		char* tmp = param("TCP_FORWARDING_HOST");
-			// If TCP_FORWARDING_HOST is defined, we will advertize
-			// our local IP address for daemons that have the same
-			// PRIVATE_NETWORK_NAME as us.  For everyone else, we
-			// advertize the address of the TCP forwarder.
-		if (tmp != NULL) {
-			MyString tcp_forwarding_host = tmp;
-			free(tmp);
-			struct sockaddr_in sin;
-			if (!is_ipaddr(tcp_forwarding_host.Value(), &sin.sin_addr)) {
-				struct hostent *he = condor_gethostbyname(tcp_forwarding_host.Value());
-				if (he == NULL) {
-					EXCEPT("failed to resolve address of SSH_BROKER");
-				}
-				sin.sin_addr = *(in_addr*)(he->h_addr_list[0]);;
-			}
-			sin.sin_port = htons(((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port());
-			sinful_public = strdup(sin_to_string(&sin));
+	if (sinful_public == NULL || m_dirty_sinful) {
+		free( sinful_public );
+		sinful_public = NULL;
+
+		char const *addr = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_sinful_public();
+		if( !addr ) {
+			EXCEPT("Failed to get public address of command socket!");
 		}
-		else {
-			sinful_public = strdup(
-			    sock_to_string( (*sockTable)[initial_command_sock].iosock->get_file_desc() ) );
-		}
+		sinful_public = strdup( addr );
 		m_dirty_sinful = true;
 	}
 
-	if (!initialized_sinful_private) {
+	if (!initialized_sinful_private || m_dirty_sinful) {
+		free( sinful_private);
+		sinful_private = NULL;
+
 		MyString private_sinful_string;
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
@@ -1057,6 +1043,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			free(tmp);
 			sinful_private = strdup(private_sinful_string.Value());
 		}
+
+		free(m_private_network_name);
+		m_private_network_name = NULL;
+		if ((tmp = param("PRIVATE_NETWORK_NAME"))) {
+			m_private_network_name = tmp;
+		}
+
 #if HAVE_EXT_GCB
 		if (sinful_private == NULL
 			&& (param_boolean("NET_REMAP_ENABLE", false, false))) {
@@ -1073,15 +1066,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		m_dirty_sinful = true;
 	}
 
-	if( usePrivateAddress ) {
-		if( sinful_private ) {
-			return sinful_private;
-		}
-		else {
-			return sinful_public;
-		}
-	}
-
 	if( m_dirty_sinful ) { // need to rebuild full sinful string
 		m_dirty_sinful = false;
 
@@ -1090,12 +1074,15 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 
 		m_sinful = Sinful(sinful_public);
 
+			// Only publish the private name if there is a private or CCB
+			// address, because otherwise, the private name doesn't matter.
+		bool publish_private_name = false;
+
 		char const *private_name = privateNetworkName();
 		if( private_name ) {
-			m_sinful.setPrivateNetworkName(private_name);
-
 			if( sinful_private && strcmp(sinful_public,sinful_private) ) {
 				m_sinful.setPrivateAddr(sinful_private);
+				publish_private_name = true;
 			}
 		}
 
@@ -1104,7 +1091,21 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			m_ccb_listeners->GetCCBContactString(ccb_contact);
 			if( !ccb_contact.IsEmpty() ) {
 				m_sinful.setCCBContact(ccb_contact.Value());
+				publish_private_name = true;
 			}
+		}
+
+		if( private_name && publish_private_name ) {
+			m_sinful.setPrivateNetworkName(private_name);
+		}
+	}
+
+	if( usePrivateAddress ) {
+		if( sinful_private ) {
+			return sinful_private;
+		}
+		else {
+			return sinful_public;
 		}
 	}
 
@@ -2343,7 +2344,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
-MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
+MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
 	MyString res;
 	int		i;
 	DCpermissionHierarchy hierarchy( perm );
@@ -2353,7 +2354,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
 		for (i = 0; i < maxCommand; i++) {
 			if( (comTable[i].handler || comTable[i].handlercpp) &&
-				(comTable[i].perm == perm) )
+				(comTable[i].perm == perm) &&
+				(!comTable[i].force_authentication || is_authenticated))
 			{
 				char const *comma = res.Length() ? "," : "";
 				res.sprintf_cat( "%s%i", comma, comTable[i].num );
@@ -2554,6 +2556,8 @@ DaemonCore::reconfig(void) {
 	// by the time we get here, because it needs to be called early
 	// in the process.
 
+	m_dirty_sinful = true; // refresh our address in case config changes it
+
 	SecMan *secman = getSecMan();
 	secman->reconfig();
 
@@ -2578,12 +2582,6 @@ DaemonCore::reconfig(void) {
 	// Maximum number of bytes read from a stdout/stderr pipes.
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
-
-		// Grab a copy of our private network name (if any).
-	if (m_private_network_name) {
-		free(m_private_network_name);
-	}
-	m_private_network_name = param("PRIVATE_NETWORK_NAME");
 
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
@@ -2616,13 +2614,11 @@ DaemonCore::reconfig(void) {
 	{
 		// tstclair: reconfigure the soap object
 		if( soap ) {
-			soap_destroy(soap);
-			soap_end(soap);
-			soap_free(soap);
+			dc_soap_free(soap);
+			soap = NULL;
 		}
 
-		soap = soap_new(); 
-		init_soap(soap);
+		dc_soap_init(soap);
 		
 	}
 	else {
@@ -2751,6 +2747,9 @@ DaemonCore::reconfig(void) {
 							   CondorThreads::stop_thread_safe_block);
 	// Supply a callback to daemonCore upon thread context switch.
 	CondorThreads::set_switch_callback( thread_switch_callback );
+
+		// in case our address changed, do whatever needs to be done
+	daemonContactInfoChanged();
 }
 
 void
@@ -2761,7 +2760,9 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 
 	if( SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
 		if( !m_shared_port_endpoint ) {
-			m_shared_port_endpoint = new SharedPortEndpoint();
+			char const *sock_name = m_daemon_sock_name.Value();
+			if( !*sock_name ) sock_name = NULL;
+			m_shared_port_endpoint = new SharedPortEndpoint(sock_name);
 		}
 		m_shared_port_endpoint->InitAndReconfig();
 		if( !m_shared_port_endpoint->StartListener() ) {
@@ -3101,6 +3102,13 @@ void DaemonCore::Driver()
 		time_t time_before = time(NULL);
 		time_t okay_delta = timeout;
 
+			// Performance around select is of high importance for all
+			// daemons that are single threaded (all of them). If you
+			// have questions ask matt.
+		if (DebugFlags & D_PERF_TRACE) {
+			dprintf(D_ALWAYS, "PERF: entering select\n");
+		}
+
 		selector.execute();
 
 		tmpErrno = errno;
@@ -3134,6 +3142,14 @@ void DaemonCore::Driver()
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
 #endif
+
+			// Performance around select is of high importance for all
+			// daemons that are single threaded (all of them). If you
+			// have questions ask matt.
+		if (DebugFlags & D_PERF_TRACE) {
+			dprintf(D_ALWAYS, "PERF: leaving select\n");
+			selector.display();
+		}
 
 		// For now, do not let other threads run while we are processing
 		// in the main loop.
@@ -3390,6 +3406,13 @@ void DaemonCore::Driver()
 		}	// if rv > 0
 
 	}	// end of infinite for loop
+}
+
+bool
+DaemonCore::SocketIsRegistered( Stream *sock )
+{
+	int i = GetRegisteredSocketIndex( sock );
+	return i != -1;
 }
 
 int
@@ -4177,32 +4200,12 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 
 		ASSERT( soap );
-		cursoap = soap_copy(soap);
-		ASSERT(cursoap);
-
-			// Mimic a gsoap soap_accept as follows:
-			//   1. stash the socket descriptor in the soap object
-			//   2. make socket non-blocking by setting a CEDAR timeout.
-			//   3. increase size of send and receive buffers
-			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
-		cursoap->socket = ((Sock*)stream)->get_file_desc();
-		cursoap->peer = *((Sock*)stream)->peer_addr();
-		cursoap->recvfd = soap->socket;
-		cursoap->sendfd = soap->socket;
-		if ( cursoap->recv_timeout > 0 ) {
-			stream->timeout(soap->recv_timeout);
-		} else {
-			stream->timeout(20);
-		}
-		((Sock*)stream)->set_os_buffers(SOAP_BUFLEN,false);	// set read buf size
-		((Sock*)stream)->set_os_buffers(SOAP_BUFLEN,true);	// set write buf size
+		cursoap = dc_soap_accept((Sock *)stream, soap);
 
 			// Now, process the Soap RPC request and dispatch it
 		dprintf(D_ALWAYS,"About to serve HTTP request...\n");
-		soap_serve(cursoap);
-		soap_destroy(cursoap); // clean up class instances
-		soap_end(cursoap); // clean up everything and close socket
-		soap_free(cursoap);
+		dc_soap_serve(cursoap);
+		dc_soap_free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
 			// gsoap already closed the socket.  so set the socket in
@@ -4406,7 +4409,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// want to start one.  look at our security policy.
 				ClassAd our_policy;
 				if( ! sec_man->FillInSecurityPolicyAd(
-					  comTable[cmd_index].perm, &our_policy) ) {
+					comTable[cmd_index].perm,
+					&our_policy,
+					true,
+					false,
+					false,
+					comTable[cmd_index].force_authentication ) )
+				{
 						// our policy is invalid even without the other
 						// side getting involved.
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
@@ -4728,7 +4737,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					pa_ad.Assign(ATTR_SEC_SID, the_sid);
 
 					// other commands this session is good for
-					pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
+					pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm,fully_qualified_user != NULL).Value());
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
@@ -4820,7 +4829,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// get the handler function
 		reqFound = CommandNumToTableIndex(req,&index);
 
-		if (reqFound) {
+			// There are two cases where we get here:
+			//  1. receiving unauthenticated command
+			//  2. receiving command on previously authenticated socket
+
+		if (reqFound && !((Sock *)stream)->getFullyQualifiedUser()) {
 			// need to check our security policy to see if this is allowed.
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", req, comTable[index].command_descrip);
@@ -4831,7 +4844,12 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 				ClassAd our_policy;
 				if( ! sec_man->FillInSecurityPolicyAd(
-					comTable[index].perm, &our_policy) )
+					comTable[index].perm,
+					&our_policy,
+					true,
+					false,
+					false,
+					comTable[index].force_authentication ) )
 				{
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
@@ -6773,7 +6791,8 @@ int DaemonCore::Create_Process(
 			sigset_t      *sigmask,
 			int           job_opt_mask,
 			size_t        *core_hard_limit,
-			int			  *affinity_mask
+			int			  *affinity_mask,
+			char const    *daemon_sock
             )
 {
 	int i, j;
@@ -6796,7 +6815,7 @@ int DaemonCore::Create_Process(
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
-	SharedPortEndpoint shared_port_endpoint;
+	SharedPortEndpoint shared_port_endpoint( daemon_sock );
 	SafeSock ssock;
 	PidEntry *pidtmp;
 
@@ -8509,6 +8528,11 @@ DaemonCore::Inherit( void )
 	}	// end of if we read out CONDOR_INHERIT ok
 }
 
+void
+DaemonCore::SetDaemonSockName( char const *sock_name )
+{
+	m_daemon_sock_name = sock_name;
+}
 
 void
 DaemonCore::InitDCCommandSocket( int command_port )
@@ -8841,12 +8865,17 @@ pidWatcherThread( void* arg )
 			// In the post v6.4.x world, SafeSock and startCommand
 			// are no longer thread safe, so we must grab our Big_fat lock.			
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
-	        SafeSock sock;
-			Daemon d( DT_ANY, daemonCore->InfoCommandSinfulString() );
 				// send a NOP command to wake up select()
-			notify_failed =
-					!sock.connect(daemonCore->InfoCommandSinfulString()) ||
-					!d.sendCommand(DC_NOP, &sock, 1);
+			Daemon d( DT_ANY, daemonCore->privateNetworkIpAddr() );
+	        SafeSock ssock;
+			ReliSock rsock;
+			Sock &sock = (d.hasUDPCommandPort() && daemonCore->dc_ssock) ?
+				*(Sock *)&ssock : *(Sock *)&rsock;
+				// Use raw command protocol to avoid blocking on ourself.
+			notify_failed = 
+				!d.connectSock(&sock,1) ||
+				!d.startCommand(DC_NOP, &sock, 1, NULL, "DC_NOP", true) ||
+				!sock.end_of_message();
 				// while we have the Big_fat_mutex, copy any exited pids
 				// out of our thread local MyExitedQueue and into our main
 				// thread's WaitpidQueue (of course, we must have the mutex
@@ -10248,14 +10277,16 @@ DaemonCore::publish(ClassAd *ad) {
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();
 	if (tmp) {
+			// The private network name is published in the contact
+			// string, so we don't really need to advertise it in
+			// a separate attribute.  However, it may be useful for
+			// other purposes.
 		ad->Assign(ATTR_PRIVATE_NETWORK_NAME, tmp);
-		tmp = privateNetworkIpAddr();
-		ASSERT(tmp);
-		ad->Assign(ATTR_PRIVATE_NETWORK_IP_ADDR, tmp);
 	}
+
 	tmp = publicNetworkIpAddr();
 	if( tmp ) {
-		ad->Assign(ATTR_PUBLIC_NETWORK_IP_ADDR, tmp);
+		ad->Assign(ATTR_MY_ADDRESS, tmp);
 	}
 }
 

@@ -1768,6 +1768,7 @@ Sock::addr_changed()
     _my_ip_buf[0] = '\0';
     _peer_ip_buf[0] = '\0';
     _sinful_self_buf[0] = '\0';
+    _sinful_public_buf[0] = '\0';
     _sinful_peer_buf[0] = '\0';
 }
 

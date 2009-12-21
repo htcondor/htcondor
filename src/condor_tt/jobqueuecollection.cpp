@@ -509,10 +509,7 @@ JobQueueCollection::loadAd(char* cid,
 					}
 
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					if (dt != T_ORACLE || 
-						newvalue.Length() < QUILL_ORACLE_STRINGLIT_LIMIT) {
-						tmpVal.sprintf("'%s'", newvalue.Value());
-					} else {
+					{
 							/* we need to use binded update for this col */
 						hor_bndcnt ++;
 						tmpVal.sprintf(":%d", hor_bndcnt);
@@ -567,44 +564,14 @@ JobQueueCollection::loadAd(char* cid,
 				len = 1024 + strlen(name) + strlen(scheddname) +
 					newvalue.Length() + strlen(cid) + strlen(pid);
 
-				if (dt != T_ORACLE) {
+
+				{
 					sql_str.sprintf("INSERT INTO ProcAds_Vertical VALUES('%s', %s, %s, '%s', '%s')", scheddname,cid, pid, name, newvalue.Value());
 
 					if (DBObj->execCommand(sql_str.Value()) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
-						return QUILL_FAILURE;
+                        dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
+                        return QUILL_FAILURE;
 					}
-				}  else {
-					const char* data_arr[6];
-					QuillAttrDataType data_typ[6];
-					int bndcnt = 0;
-
-					data_arr[0] = scheddname;
-					data_typ[0] = CONDOR_TT_TYPE_STRING;
-
-					data_arr[1] = cid;
-					data_typ[1] = CONDOR_TT_TYPE_STRING;
-
-					data_arr[2] = pid;
-					data_typ[2] = CONDOR_TT_TYPE_STRING;
-
-					data_arr[3] = name;
-					data_typ[3] = CONDOR_TT_TYPE_STRING;
-					
-					data_arr[4] = newvalue.Value();
-					data_typ[4] = CONDOR_TT_TYPE_STRING;
-
-					bndcnt = 5;
-
-					sql_str.sprintf("INSERT INTO ProcAds_Vertical VALUES(:1, :2, :3, :4, :5)");
-
-					if (DBObj->execCommandWithBind(sql_str.Value(), 
-												   bndcnt, 
-												   data_arr, 
-												   data_typ) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
-						return QUILL_FAILURE;
-					}					
 				}
 			}
 		} else {  // cluster ad
@@ -622,10 +589,7 @@ JobQueueCollection::loadAd(char* cid,
 					}
 					
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					if (dt != T_ORACLE || 
-						newvalue.Length() < QUILL_ORACLE_STRINGLIT_LIMIT) {
-						tmpVal.sprintf("'%s'", newvalue.Value());
-					} else {
+					{
 							/* we need to use binded update for this col */
 						hor_bndcnt ++;
 						tmpVal.sprintf(":%d", hor_bndcnt);
@@ -679,39 +643,11 @@ JobQueueCollection::loadAd(char* cid,
 				len = 1024 + strlen(name) + strlen(scheddname) +
 					newvalue.Length() + strlen(cid);
 
-				if (dt != T_ORACLE) {
+				{
 					sql_str.sprintf("INSERT INTO ClusterAds_Vertical VALUES('%s', %s, '%s', '%s')", scheddname,cid, name, newvalue.Value());
 					if (DBObj->execCommand(sql_str.Value()) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
-						return QUILL_FAILURE;
-					}
-				} else {
-					const char *data_arr[5];
-					QuillAttrDataType data_typ[5];
-					int   bndcnt = 0;
-
-					data_arr[0] = scheddname;
-					data_typ[0] = CONDOR_TT_TYPE_STRING;
-
-					data_arr[1] = cid;
-					data_typ[1] = CONDOR_TT_TYPE_STRING;
-
-					data_arr[2] = name;
-					data_typ[2] = CONDOR_TT_TYPE_STRING;
-					
-					data_arr[3] = newvalue.Value();
-					data_typ[3] = CONDOR_TT_TYPE_STRING;
-
-					bndcnt = 4;
-					
-					sql_str.sprintf("INSERT INTO ClusterAds_Vertical VALUES(:1, :2, :3, :4)");
-
-					if (DBObj->execCommandWithBind(sql_str.Value(),
-												   bndcnt,
-												   data_arr, 
-												   data_typ) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
-						return QUILL_FAILURE;
+                        dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
+                        return QUILL_FAILURE;
 					}
 				}
 			}
