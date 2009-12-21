@@ -759,7 +759,7 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 
 		bool same_host = false;
 		char const *my_ip = my_ip_string();
-		if( my_ip && strcmp(my_ip,sinful.getHost())==0 ) {
+		if( my_ip && sinful.getHost() && strcmp(my_ip,sinful.getHost())==0 ) {
 			same_host = true;
 		}
 
