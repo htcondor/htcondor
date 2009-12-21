@@ -2074,6 +2074,9 @@ int main( int argc, char** argv )
 		  *  problem as of this comment because the Master does not
 		  *  drop one, there would be a period of time when the file
 		  *  would be missing.
+		  *
+		  * PROBLEM: TRUNC_*_LOG_ON_OPEN=TRUE will get to delete the
+		  * log file before getting here.
 		  */
 
 		// Now that we have our pid, we could dump our pidfile, if we
