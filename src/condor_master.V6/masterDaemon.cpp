@@ -820,13 +820,13 @@ daemon::Stop( bool never_forward )
 			// We've already been here, just return.
 		return;
 	}
-	stop_state = GRACEFUL;
 		// Test for pid after setting state so HA daemons that aren't
 		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
 		return;
 	}
+	stop_state = GRACEFUL;
 
 	Kill( SIGTERM );
 
@@ -858,13 +858,13 @@ daemon::StopPeaceful()
 			// We've already been here, just return.
 		return;
 	}
-	stop_state = PEACEFUL;
 		// Test for pid after setting state so HA daemons that aren't
 		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
 		return;
 	}
+	stop_state = PEACEFUL;
 
 	// Ideally, we would somehow tell the daemon to die peacefully
 	// (only currently applies to startd).  However, we only have
@@ -913,13 +913,13 @@ daemon::StopFast( bool never_forward )
 			// We've already been here, just return.
 		return;
 	}
-	stop_state = FAST;
 		// Test for pid after setting state so HA daemons that aren't
 		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
 		return;
 	}
+	stop_state = FAST;
 
 	if( stop_fast_tid != -1 ) {
 		dprintf( D_ALWAYS, 
@@ -947,13 +947,13 @@ daemon::HardKill()
 			// We've already been here, just return.
 		return;
 	}
-	stop_state = KILL;
 		// Test for pid after setting state so HA daemons that aren't
 		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
 		return;
 	}
+	stop_state = KILL;
 
 	if( hard_kill_tid != -1 ) {
 		dprintf( D_ALWAYS, 

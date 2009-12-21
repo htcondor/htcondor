@@ -121,6 +121,7 @@ int		Lines;
 int		AllowAdminCommands = FALSE;
 int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
+int		MasterShuttingDown = FALSE;
 
 char	*default_daemon_list[] = {
 	"MASTER",
@@ -1002,6 +1003,7 @@ main_config( bool /* is_full */ )
 int
 main_shutdown_fast()
 {
+	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
 	if( daemons.NumberOfChildren() == 0 ) {
@@ -1020,6 +1022,7 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
 	if( daemons.NumberOfChildren() == 0 ) {

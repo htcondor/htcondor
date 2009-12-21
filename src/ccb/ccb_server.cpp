@@ -145,8 +145,8 @@ CCBServer::InitAndReconfig()
 		m_reconnect_fname.sprintf("%s%c%s-%s.ccb_reconnect",
 			spool,
 			DIR_DELIM_CHAR,
-			my_addr.getHost(),
-			my_addr.getPort());
+			my_addr.getHost() ? my_addr.getHost() : "localhost",
+			my_addr.getPort() ? my_addr.getPort() : "0");
 		free( spool );
 	}
 
