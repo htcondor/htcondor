@@ -98,7 +98,13 @@ due to this job.
 \item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the Condor
 execute directory on the execute machine that this job has used.
 The initial estimate may be specified in the job
-submit file.
+submit file using the \SubmitCmd{request\_disk} command.
+If not initialized by the job's request,
+\SubmitCmd{vm} universe jobs will default to an initial value of the disk
+image size. 
+If not initialized by the job's request,
+non-\SubmitCmd{vm} universe jobs will default to an initial value of the 
+sum of the job's executable and all input files.
 
 %%% ClassAd attribute: EmailAttributes
 \index{ClassAd job attribute!EmailAttributes}
@@ -258,12 +264,25 @@ a set of job hooks, and added to the ClassAd once a job is fetched.
 \index{ImageSize!job ClassAd attribute}
 \item[\AdAttr{ImageSize}:]  Estimate of the memory image size of the
 job in Kbytes.  The initial estimate may be specified in the job
-submit file.  Otherwise, the initial value is equal to the size of the
-executable.  When the job checkpoints, the \AdAttr{ImageSize}
+submit file using \SubmitCmd{request\_memory} or for \SubmitCmd{vm}
+universe jobs using \SubmitCmd{vm\_memory}.  
+Otherwise, the initial value is equal to the size of the
+executable for non-vm universe jobs, and 0 for vm universe jobs.
+When the job writes a checkpoint, the \AdAttr{ImageSize}
 attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
+
+%%% ClassAd attribute: IwdFlushNFSCache
+\index{ClassAd job attribute!IwdFlushNFSCache}
+\index{IwdFlushNFSCache!job ClassAd attribute}
+\label{IwdFlushNFSCache-job-attribute}
+\item[\AdAttr{IwdFlushNFSCache}:]  A boolean expression that controls
+whether or not Condor attempts to flush a submit machine's NFS cache,
+in order to refresh a Condor job's initial working directory.
+The value will be \Expr{True}, unless a job explicitly adds this
+attribute, setting it to \Expr{False}.
 
 %%% ClassAd attribute: JobLeaseDuration
 \index{ClassAd job attribute!JobLeaseDuration}
@@ -397,6 +416,15 @@ epoch (00:00:00 UTC, Jan 1, 1970).
 \item[\AdAttr{LastVacateTime}:]  Time at which the job was last
 evicted from a remote workstation.  Measured in the number of seconds
 since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: LeaveJobInQueue
+\index{ClassAd job attribute!LeaveJobInQueue}
+\index{LeaveJobInQueue!job ClassAd attribute}
+\item[\AdAttr{LeaveJobInQueue}:]  A boolean expression that defaults to
+\Expr{False}, causing the job to be removed from the queue upon completion.
+An exception is if the job is submitted using \Expr{condor\_submit -spool}.
+For this case, the default expression causes the job to be kept in the queue
+for 10 days after completion.
 
 %%% ClassAd attribute: LocalSysCpu
 \index{ClassAd job attribute!LocalSysCpu}
@@ -619,6 +647,26 @@ zero when a job is forced to migrate from one machine to another.
 \item[\AdAttr{RemoveKillSig}:]    Currently only for scheduler universe jobs,
 a string containing a name of
 a signal to be sent to the job if the job is removed.
+
+%%% ClassAd attribute: StageOutFinish
+\index{ClassAd job attribute!StageOutFinish}
+\index{StageOutFinish!job ClassAd attribute}
+\item[\AdAttr{StageOutFinish}:]   
+An attribute representing a Unix epoch time that is defined for a job that is
+spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
+and causes Condor to hold the output in the spool while the job waits 
+in the queue in the \Expr{Completed} state.
+This attribute is defined when retrieval of the output finishes.
+
+%%% ClassAd attribute: StageOutStart
+\index{ClassAd job attribute!StageOutStart}
+\index{StageOutStart!job ClassAd attribute}
+\item[\AdAttr{StageOutStart}:]   
+An attribute representing a Unix epoch time that is defined for a job that is
+spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
+and causes Condor to hold the output in the spool while the job waits 
+in the queue in the \Expr{Completed} state.
+This attribute is defined when retrieval of the output begins.
 
 %%% ClassAd attribute: StreamErr
 \index{ClassAd job attribute!StreamErr}

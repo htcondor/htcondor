@@ -7235,6 +7235,13 @@ These macros affect the \Condor{gridmanager}.
 \label{param:AmazonEC2URL}
 \item[\Macro{AMAZON\_EC2\_URL}]
   The URL Condor should use when contacting the Amazon EC2 service.
+  This URL may include a user name and password as in the implied
+  syntax example:
+\footnotesize
+\begin{verbatim}
+  protocol://username:password@domain:port/path/to/resource
+\end{verbatim}
+\normalsize
   The default value is \MacroNI{https://ec2.amazonaws.com/}.
 
 \label{param:AmazonHttpProxy}
@@ -7676,6 +7683,13 @@ the HDFS XML configuration.
 \item[\Macro{HDFS\_SITE\_FILE}]
   The optional value that specifies the HDFS XML configuration file to generate.
   The default value is \File{hdfs-site.xml}.
+
+\label{param:HDFSReplication}
+\item[\Macro{HDFS\_REPLICATION}]
+  An integer value that facilitates setting the replication factor of an HDFS,
+  defining the value of \Expr{dfs.replication} in the HDFS XML
+  configuration.  This configuration variable is optional, as the HDFS has
+  its own default value of 3 when not set through configuration.
 
 \end{description}
 
@@ -9478,10 +9492,10 @@ Configuration File Macros Affecting APIs}
   containing certificates of trusted Certificate Authorities (CAs).
   Only clients who present a certificate signed by a trusted
   CA will be authenticated.
-  When SOAP over SSL is enabled, this parameter or
-  \Macro{SOAP\_SSL\_CA\_FILE} must be set.
-  This parameter is also used when communicating with an Amazon EC2 server
-  (possibly through a proxy), though it's not required in that case.
+  When SOAP over SSL is enabled, this variable or the variable
+  \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
+  This variable is also used when communicating with an Amazon EC2 server
+  (possibly through a proxy), although it is not required in that case.
   There is no default value.
 
 \label{param:SoapSSLDhFile}
