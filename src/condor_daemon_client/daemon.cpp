@@ -381,7 +381,8 @@ Daemon::idStr( void )
 		ASSERT( dt_str );
 		Sinful sinful(_addr);
 		sinful.clearParams(); // too much info is ugly
-		buf.sprintf( "%s at %s", dt_str, sinful.getSinful() );
+		buf.sprintf( "%s at %s", dt_str,
+					 sinful.getSinful() ? sinful.getSinful() : _addr );
 		if( _full_hostname ) {
 			buf.sprintf_cat( " (%s)", _full_hostname );
 		}

@@ -17,12 +17,14 @@
  *
  ***************************************************************/
 
-
+#define _CONDOR_ALLOW_OPEN /* for sstream */
 #include "condor_common.h"
 #include "condor_sinful.h"
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_attributes.h"
+
+#include <sstream>
 
 static bool
 urlDecode(char const *str,size_t max,std::string &result)
@@ -277,19 +279,23 @@ Sinful::getPrivateNetworkName() const
 void
 Sinful::setHost(char const *host)
 {
+	ASSERT(host);
 	m_host = host;
 	regenerateSinful();
 }
 void
 Sinful::setPort(char const *port)
 {
+	ASSERT(port);
 	m_port = port;
 	regenerateSinful();
 }
 void
 Sinful::setPort(int port)
 {
-	m_port = port;
+	std::ostringstream tmp;
+	tmp << port;
+	m_port = tmp.str();
 	regenerateSinful();
 }
 
@@ -300,11 +306,11 @@ Sinful::regenerateSinful()
 
 	m_sinful = "<";
 	m_sinful += m_host;
-	if( m_port.size() ) {
+	if( !m_port.empty() ) {
 		m_sinful += ":";
 		m_sinful += m_port;
 	}
-	if( m_params.size() ) {
+	if( !m_params.empty() ) {
 		m_sinful += "?";
 		m_sinful += urlEncodeParams(m_params);
 	}
