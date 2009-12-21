@@ -452,6 +452,8 @@ STD_LIBS = \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
   $(GSOAP_LIB) \
+  $(addprefix -L, $(CLASSAD_DIRS)) \
+  $(addprefix -l, $(CLASSAD_LIBS)) \
   $(PRE_EXT_LIBS) \
   $(SECURITY_LIB) \
   $(PCRE_LIB) \
@@ -460,9 +462,7 @@ STD_LIBS = \
   $(PROCD_CLIENT_LIB) \
   $(PRIVSEP_CLIENT_LIB) \
   $(CONFIGURE_PCRE_LDFLAGS) \
-  $(CUTIL_LIB) \
-  $(addprefix -L, $(CLASSAD_DIRS)) \
-  $(addprefix -l, $(CLASSAD_LIBS))
+  $(CUTIL_LIB)
 
 STD_LIB_FILES = \
   $(CUTIL_LIB) \
