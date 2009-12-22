@@ -51,10 +51,11 @@ have been reported.  Details of the problem will be made available on Feb 1st,
 
 \begin{itemize}
 
-% gittrac #921
-\item Allow submit files to specify \SubmitCmd{IwdFlushNFSCache} expression to
-control if Condor tries to flush the NFS cache for a job's initial working
-directory on job completion.
+% gittrac #921, #999
+\item Condor allows submit files to specify an \SubmitCmd{IwdFlushNFSCache}
+expression,
+to control whether or not Condor tries to flush the NFS cache for 
+a job's initial working directory on job completion.
 
 % gittrac #929, #943
 \item The new \Opt{-attributes} option to \Condor{status}
@@ -79,6 +80,11 @@ separate from the X509UserProxySubjectName.
   has existed in Condor since version 7.0.0, but was not documented.
   See section~\ref{param:TcpForwardingHost} for documentation.
 
+% gittrac #933
+\item The new configuration variable \MacroNI{STARTD\_PER\_JOB\_HISTORY\_DIR}
+allows ClassAds of completed jobs to be stored in a directory separate 
+from the existing one specified with \MacroNI{PER\_JOB\_HISTORY\_DIR}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -87,7 +93,7 @@ separate from the X509UserProxySubjectName.
 
 % gittrac #749
 \item  Condor no longer creates the job sandbox in its \MacroNI{SPOOL}
-directory if it's not needed.
+directory if it is not needed.
 
 % gittrac #1019
 \item Fixed a problem introduced in Condor version 7.4.0 that caused GSI
@@ -114,18 +120,19 @@ submitter would not be
 noticed, and the job would be aborted when the original lease expired.
 
 % gittrac #870
-\item Fixed a bug that only allowed about 50 splices to be included into
+\item Fixed a bug that only allowed approximately 50 splices to be included into
 a DAG input file. There is now no limit to the number of splices
 one may include into a DAG input file except, of course, for the
 implicit memory allocation limit of the \Condor{dagman} process.
 
 % gittrac #909
-\item Removed attempted limiting of swap space via 'ulimit -v' using the
-VirtualMemory parameter in condor\_limits\_wrapper.sh
+\item Removed attempted limiting of swap space via \Prog{ulimit -v} using the
+\Attr{VirtualMemory} machine ClassAd attribute in the script
+\File{condor\_limits\_wrapper.sh}.
 
 % gittrack #899
 \item Fixed a bug that caused \MacroNI{ALLOW\_CONFIG} and
-  \MacroNI{HOSTALLOW\_CONFIG} as well as the corresponding
+  \MacroNI{HOSTALLOW\_CONFIG}, as well as the corresponding
   \MacroNI{DENY} configuration variables to incorrectly handle a
   setting consisting of a single \Expr{*} or the equivalent \Expr{*/*}.  This
   also fixes a bug that caused incorrect merging of \MacroNI{ALLOW}
@@ -138,11 +145,12 @@ VirtualMemory parameter in condor\_limits\_wrapper.sh
 Condor daemons to crash when reading malformed network addresses.
 
 % gittrac #883
-\item Removed a check for root ownership of script specified by
-\MacroNI{VM\_SCRIPT}
+\item Removed a check for root ownership of a script specified by
+the configuration variable \MacroNI{VM\_SCRIPT}.
 
 % gittrac #884
-\item Fixed a bug in writing the header of the \MacroNI{EVENT\_LOG}
+\item Fixed a bug in writing the header of the file identified by
+the configuration variable \MacroNI{EVENT\_LOG}.
 
 % gittrac #891
 \item Fixed a bug that could cause the \Condor{startd} to segfault on shutdown
@@ -218,12 +226,13 @@ DAG with POST scripts, if the global event log is turned on.
 \item Improved how the private network address is published when using
   the configuration variables \MacroNI{PRIVATE\_NETWORK\_NAME} and
   \MacroNI{PRIVATE\_NETWORK\_INTERFACE}.  In some cases, this
-  information was not being used and therefore connections were made
+  information was not being used, and therefore connections were made
   to the public address when they could have been made to the private
   address.
 
 %gittrac #801
-\item Fixed a bug in Windows XP where using \MacroNI{USE\_VISIBLE\_DESKTOP}
+\item Fixed a bug exhibited under Windows XP,
+where using \MacroNI{USE\_VISIBLE\_DESKTOP}
 would cause strange behavior after a job completed.
 
 % gittrack #713
@@ -234,7 +243,7 @@ would cause strange behavior after a job completed.
 % gittrac #852
 \item Removed a bad optimization that caused some information about job
 execution to be lost during job completion or removal,
- if a history file was not configured.
+if a history file was not configured.
 
 % gittrac #893
 \item Condor now checks whether the configuration variable
@@ -244,15 +253,15 @@ to function properly. If the variable is not set, cream jobs are put on
 hold with an appropriate message.
 
 % gittrac #920
-\item Fixed a bug that allowed running VMs to be leaked if the \Condor{startd}
-crashed.
+\item Fixed a bug that allowed running virtual machines to be leaked
+if the \Condor{startd} crashed.
 
 % gittrac #912
 \item Fixed a bug in \Prog{cream\_gahp} which could cause crashes when
 there were more than 500 cream jobs queued.
 
 % gittrac #972
-\item Improved recovery when Condor crashes during submission of a cream
+\item Improved recovery when Condor crashes during the submission of a cream
 grid job. Before, affected jobs would remain in \Expr{REGISTERED} state
 on the cream server, but never run.
 
@@ -279,11 +288,11 @@ constraint and all jobs associated with the user or cluster. Now, this
 combination of arguments results in an error.
 
 % gittrac #1062
-\item Failure to purge a Cream grid universe job from the remote server
+\item Failure to purge a cream grid universe job from the remote server
 because it was previously purged no longer results in the job being held.
 
 % gittrac #1044
-\item The \Condor{gridmanager} now recognizes VOMS attributes in X509
+\item The \Condor{gridmanager} now recognizes VOMS attributes in X.509
 proxies and will handle them appropriately. For example, it recognizes
 that two proxies with the same identity but different VOMS attributes may
 be mapped to different accounts on a remote machine.
@@ -292,11 +301,6 @@ be mapped to different accounts on a remote machine.
 % Not documenting, as the parameter being removed was added for a specifc
 % customer and never documented.
 
-% gittrac #933
-\item Added \MacroNI{STARTD\_PER\_JOB\_HISTORY\_DIR} to allow ads of completed
-jobs to be stored in a directory separate from the existing
-\MacroNI{PER\_JOB\_HISTORY\_DIR}.
-
 % gittrac #932
 % Not documenting, as the bug hasn't caused any problems.
 
@@ -304,29 +308,30 @@ jobs to be stored in a directory separate from the existing
 % Not documenting, as the problem never made it into a release.
 
 % gittrac #979
-\item Fixed a bug in \Condor{dagman} (introduced in 7.3.2) that will
+\item Fixed a bug in \Condor{dagman}, introduced in 7.3.2, that will
 cause \Condor{dagman} running on Windows to hang on any DAG using
 more than one log file for the node jobs.
 
 % gittrac #967
-\item Fixed a bug in \Condor{dagman} (introduced in 7.3.2) that could
+\item Fixed a bug in \Condor{dagman}, introduced in 7.3.2, that could
 cause \Condor{dagman} to fail on a DAG using node job log files on
-multiple devices (if log files on different devices happened to have
-the same inode number).
+multiple devices, if log files on different devices happened to have
+the same inode number.
 
 % gittrac #981
-\item Fixed a bug that caused the \Condor{schedd} to segfault when spooling
-more than 9 files.
+\item Fixed a bug that caused the \Condor{schedd} daemon to segfault when
+spooling more than 9 files.
 
 % gittrac #1011
-\item Fixed a bug that caused the \Condor{startd} to crash on Debian Stable.
+\item Fixed a bug that caused the \Condor{startd} daemon to crash on
+Debian Stable.
 
 % gittrac #1033
-\item Fixed keyboard activity detection on Windows XP.
+\item Fixed keyboard activity detection on the Windows XP platform.
 
 % gittrac #1068
-\item Fixed a bug in \Condor{had} that caused it to be not start the controlled
-daemon if CCB was enabled.
+\item Fixed a bug in the \Condor{had} daemon that caused it to not start
+the controlled daemon if CCB was enabled.
 
 \end{itemize}
 
@@ -336,7 +341,7 @@ daemon if CCB was enabled.
 
 % gittrac #983
 \item \Condor{dagman} may fail on Windows if the set of node job log
-file names includes multiple paths that are hard links (not symlinks)
+file names includes multiple paths that are hard links (not symbolic links)
 to the same file.
 
 \end{itemize}
