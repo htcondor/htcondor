@@ -62,6 +62,12 @@ TCP connections.
   causing performance problems resulting from automatic fall-back to the
   old protocol.
 
+% gittrack #930
+\item For efficiency, authentication between the \Condor{shadow} and
+  \Condor{schedd} daemons is now able to be cached and reused in more
+  cases.  Previously, authentication for updating job information was
+  only cached if read access was configured to require authentication.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
