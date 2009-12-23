@@ -189,6 +189,9 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 		bool parsed_line_successfully;
 
+//TEMPTEMP -- check for NOOP here -- if we find NOOP, set a flag and consume that token
+//TEMPTEMP -- make a noop branch...
+
 		// Handle a Job spec
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//

@@ -55,4 +55,7 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				   const char* DAGNodeName, const char* directory );
 
+bool fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
+					const char* directory, const char *logFile);
+
 #endif /* #ifndef CONDOR_SUBMIT_H */

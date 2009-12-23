@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_attributes.h"
+#include "condor_string.h"
 #include "util_lib_proto.h"
 #include "my_popen.h"
 
@@ -32,6 +33,7 @@
 #include "util.h"
 #include "debug.h"
 #include "tmp_dir.h"
+#include "write_user_log.h"
 
 typedef bool (* parse_submit_fnc)( const char *buffer, int &jobProcCount,
 			int &cluster );
@@ -370,4 +372,62 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 
   return success;
+}
+
+//TEMPTEMP -- make sure noop jobs work in recovery mode & rescue DAGs; also with DIR and initialdir
+//-------------------------------------------------------------------------
+bool
+fake_condor_submit( CondorID& condorID, const char* DAGNodeName, 
+			   const char* directory, const char *logFile )
+{
+	TmpDir		tmpDir;
+	MyString	errMsg;
+	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to node directory %s: %s\n",
+				directory, errMsg.Value() );
+		return false;
+	}
+
+	//static int clusterID = -101;//TEMPTEMP?
+	static int clusterID = 101;//TEMPTEMP?
+
+	condorID._cluster = clusterID;
+	condorID._proc = 0;
+	condorID._subproc = 0;
+	//TEMPTEMP? clusterID--;
+	clusterID++;
+
+
+//TEMPTEMP -- just get the string for the submit host once, for speed!
+	SubmitEvent subEvent;
+		//TEMPTEMP -- seems like we need submit host for event to be read correctly
+	sprintf( subEvent.submitHost, "<128.105.165.12:32779>");//TEMPTEMP!!!!
+		//TEMPTEMP -- avoid duplicate code here
+	MyString subEventNotes("DAG Node: " );
+	subEventNotes += DAGNodeName;
+	subEvent.submitEventLogNotes = strnewp( subEventNotes.Value() );
+
+		//TEMPTEMP -- is this what we want?  what the hell is a NodeTerminatedEvent?!?
+	JobTerminatedEvent termEvent;
+	termEvent.normal = true;
+	termEvent.returnValue = 0;
+	termEvent.signalNumber = 0;
+
+//TEMPTEMP -- at the point when we get the log file name for a node, we should probably also get whether the log file is XML or not (using MultiLogFiles::getValuesFromFile()?) and stick that into a flag in the Job object (use that when writing PostScriptTerminated events, too)
+	WriteUserLog ulog;
+	ulog.setEnableGlobalLog( false );
+	ulog.setUseXML( false );//TEMPTEMP -- we should check the submit file!!
+	ulog.initialize( logFile, condorID._cluster, condorID._proc,
+				condorID._subproc, NULL );//TEMPTEMP -- make sure args are correct
+
+	if ( !ulog.writeEvent( &subEvent ) ) {
+		EXCEPT( "fake submit failed\n" );//TEMPTEMP
+	}
+
+	if ( !ulog.writeEvent( &termEvent ) ) {
+		EXCEPT( "fake terminated failed\n" );//TEMPTEMP
+	}
+
+	return true;
 }

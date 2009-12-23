@@ -2984,6 +2984,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	  		node->_submitTries++;
 			const char *logFile = node->UsingDefaultLog() ?
 						node->_logFile : NULL;
+//TEMPTEMP -- call "fake" submit function here if node is noop
+			if ( false ) {//TEMPTEMP!!!!
 				// Note: assigning the ParentListString() return value
 				// to a variable here, instead of just passing it directly
 				// to condor_submit(), fixes a memory leak(!).
@@ -2993,6 +2995,11 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 						node->GetJobName(), parents,
 						node->varNamesFromDag, node->varValsFromDag,
 						node->GetDirectory(), logFile );
+			} else {
+      			submit_success = fake_condor_submit( condorID,
+							node->GetJobName(), node->GetDirectory(),
+							node->_logFile );
+			}
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
       		submit_success = stork_submit( dm, cmd_file.Value(), condorID,
