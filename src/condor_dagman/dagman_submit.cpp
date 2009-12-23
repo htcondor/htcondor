@@ -389,14 +389,12 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 		return false;
 	}
 
-	//static int clusterID = -101;//TEMPTEMP?
-	static int clusterID = 101;//TEMPTEMP?
+	static int clusterID = -101;
 
 	condorID._cluster = clusterID;
 	condorID._proc = 0;
 	condorID._subproc = 0;
-	//TEMPTEMP? clusterID--;
-	clusterID++;
+	clusterID--;
 
 
 //TEMPTEMP -- just get the string for the submit host once, for speed!
