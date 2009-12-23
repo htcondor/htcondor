@@ -25,6 +25,7 @@
 # This script was mainly created to make sure the new "lazy log file"
 # code works correctly on a large DAG with many log files.
 
+#TEMPTEMP -- this is at least mostly fixed to use a common submit file if using a common log file -- needs a bit more testing.
 my $usage = "Usage: create_large_dag <name> <width> <depth> " .
 			"<unique logs> <maxjobs>";
 
@@ -77,22 +78,36 @@ print DAGFILE "CONFIG $configfile\n";
 
 # Initial node.
 my $nodename = $testname . "-nodeA";
-WriteNode($testname, $nodename, $unique_logs, 0);
+my $submitfile = $nodename . ".cmd";
+WriteNode($nodename, $submitfile);
+WriteSubmit($testname, $submitfile, $unique_logs, 0);
 my $firstnodename = $nodename;
 
 # Final node -- written here to make parent/child lines easier to write.
 $nodename = $testname . "-nodeC";
-WriteNode($testname, $nodename, $unique_logs, 1);
+$submitfile = $nodename . ".cmd";
+WriteNode($nodename, $submitfile);
+WriteSubmit($testname, $submitfile, $unique_logs, 1);
 my $lastnodename = $nodename;
 
 # "Main" nodes.
+if ($unique_logs == 0) {
+	# Write the "master" submit file.
+	$submitfile = $testname . "-nodeB" . ".cmd";
+	WriteSubmit($testname, $submitfile, $unique_logs, 0);
+}
+
 my $windex;
 my $dindex;
 for ($windex = 0; $windex < $width; $windex++) {
 	my $prevnodename;
 	for ($dindex = 0; $dindex < $depth; $dindex++) {
 		$nodename = $testname . "-nodeB" . $windex . "_" . $dindex;
-		WriteNode($testname, $nodename, $unique_logs, 0);
+		if ($unique_logs != 0) {
+			$submitfile = $nodename . ".cmd";
+			WriteSubmit($testname, $submitfile, $unique_logs, 0);
+		}
+		WriteNode($nodename, $submitfile);
 		if ($dindex < 1) {
 			print DAGFILE "PARENT $firstnodename CHILD $nodename\n";
 		} else {
@@ -109,26 +124,36 @@ close(DAGFILE);
 
 # -----------------------------------------------------------------
 # Write a node in the DAG -- write the JOB and SCRIPT lines
-# in the DAG file, and the submit file.
+# in the DAG file.
 sub WriteNode
 {
-	my $testname = shift;
 	my $nodename = shift;
-	my $unique_logs = shift;
-	my $dohold = shift; # Whether node does condor_hold/condor_release.
-
-	my $submitfile = $nodename . ".cmd";
+	my $submitfile = shift;
 
 	print DAGFILE "\nJOB $nodename $submitfile\n";
 	print DAGFILE "SCRIPT PRE $nodename ../job_dagman_large_dag-node.pl " .
 				"Args: PRE $nodename\n";
 	print DAGFILE "SCRIPT POST $nodename ../job_dagman_large_dag-node.pl " .
 				"Args: POST $nodename\n";
+}
+
+# -----------------------------------------------------------------
+# Write a submit file.
+sub WriteSubmit
+{
+	my $testname = shift;
+	my $submitfile = shift;
+	my $unique_logs = shift;
+	my $dohold = shift; # Whether node does condor_hold/condor_release.
 
 	open(SUBMITFILE, ">$submitfile") or die "Can't open/create submit " .
 				"file $submitfile $!\n";
 
-	my $jobfile = "./" . $nodename . ".pl";
+	my $jobfile = $submitfile;
+	$jobfile =~ s/\.cmd/.pl/;
+print "DIAG jobfile <$jobfile>\n";#TEMPTEMP
+	my $jobfile = "./" . $jobfile;
+print "DIAG jobfile <$jobfile>\n";#TEMPTEMP
 	if ($dohold) {
 		print SUBMITFILE "executable = $jobfile\n";
 		print SUBMITFILE "# Note: we need getenv = true for the node " .

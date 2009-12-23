@@ -2985,7 +2985,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			const char *logFile = node->UsingDefaultLog() ?
 						node->_logFile : NULL;
 //TEMPTEMP -- call "fake" submit function here if node is noop
-			if ( false ) {//TEMPTEMP!!!!
+			if ( true ) {//TEMPTEMP!!!!
 				// Note: assigning the ParentListString() return value
 				// to a variable here, instead of just passing it directly
 				// to condor_submit(), fixes a memory leak(!).
