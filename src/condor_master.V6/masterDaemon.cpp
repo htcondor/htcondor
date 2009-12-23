@@ -546,19 +546,6 @@ int daemon::RealStart( )
 			// Already running
 		return TRUE;
 	}
-		// Check for a controller. If one exists, e.g. HAD, it is
-		// likely this daemon has stop_state = FAST, but we want to
-		// let it start anyway. The stop_state != NONE check is to
-		// avoid letting the master start HA daemons it is
-		// maintaining. A controller indicates something else is
-		// maintaining the daemon.
-	if( !controller && stop_state != NONE ) {
-			// Currently trying to shutdown, this might happen for an
-			// HA daemon who acquires a lock just before shutdown.
-		dprintf( D_FULLDEBUG, "::RealStart; %s stop_state=%d, ignoring\n",
-				 name_in_config_file, stop_state );
-		return FALSE;
-	}
 
 	shortname = condor_basename( process_name );
 
@@ -832,10 +819,6 @@ int daemon::RealStart( )
 		// Since we just started it, we know it's not a new executable. 
 	newExec = FALSE;
 
-		// Be sure to reset the stop_state, if the daemon is HAD
-		// managed it will have been set to FAST on startup
-	stop_state = NONE;
-
 		// If starting the collector, give it a few seconds to get
 		// going before starting other daemons or talking to ti
 		// ourselves
@@ -917,14 +900,12 @@ daemon::Stop( bool never_forward )
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
-	if( stop_state == GRACEFUL ) {
-			// We've already been here, just return.
-		return;
-	}
-		// Test for pid after setting state so HA daemons that aren't
-		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
+		return;
+	}
+	if( stop_state == GRACEFUL ) {
+			// We've already been here, just return.
 		return;
 	}
 	stop_state = GRACEFUL;
@@ -955,14 +936,12 @@ daemon::StopPeaceful()
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
-	if( stop_state == PEACEFUL ) {
-			// We've already been here, just return.
-		return;
-	}
-		// Test for pid after setting state so HA daemons that aren't
-		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
+		return;
+	}
+	if( stop_state == PEACEFUL ) {
+			// We've already been here, just return.
 		return;
 	}
 	stop_state = PEACEFUL;
@@ -1009,14 +988,12 @@ daemon::StopFast( bool never_forward )
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
-	if( stop_state == FAST ) {
-			// We've already been here, just return.
-		return;
-	}
-		// Test for pid after setting state so HA daemons that aren't
-		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
+		return;
+	}
+	if( stop_state == FAST ) {
+			// We've already been here, just return.
 		return;
 	}
 	stop_state = FAST;
@@ -1043,14 +1020,12 @@ daemon::HardKill()
 			// Never want to stop master.
 		return;
 	}
-	if( stop_state == KILL ) {
-			// We've already been here, just return.
-		return;
-	}
-		// Test for pid after setting state so HA daemons that aren't
-		// running get notified that they are shutting down
 	if( !pid ) {
 			// We're not running, just return.
+		return;
+	}
+	if( stop_state == KILL ) {
+			// We've already been here, just return.
 		return;
 	}
 	stop_state = KILL;
@@ -1834,10 +1809,7 @@ Daemons::StopAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-			// Need to stop HA daemons from trying to start during
-			// shutdown
-		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here &&
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
 			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
 		{
 			daemon_ptr[i]->Stop();
@@ -1857,10 +1829,7 @@ Daemons::StopFastAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-			// Need to stop HA daemons from trying to start during
-			// shutdown
-		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here &&
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
 			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
 		{
 			daemon_ptr[i]->StopFast();
@@ -1879,10 +1848,7 @@ Daemons::StopPeacefulAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-			// Need to stop HA daemons from trying to start during
-			// shutdown
-		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here &&
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
 			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
 		{
 			daemon_ptr[i]->StopPeaceful();
@@ -1902,10 +1868,7 @@ Daemons::HardKillAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-			// Need to stop HA daemons from trying to start during
-			// shutdown
-		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
-			daemon_ptr[i]->runs_here &&
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
 			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
 		{
 			daemon_ptr[i]->HardKill();
