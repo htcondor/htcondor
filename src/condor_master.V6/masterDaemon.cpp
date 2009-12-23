@@ -91,6 +91,7 @@ extern int			Lines;
 extern int			PublishObituaries;
 extern int			StartDaemons;
 extern int			GotDaemonsOff;
+extern int			MasterShuttingDown;
 extern char*		MasterName;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -510,6 +511,12 @@ int daemon::RealStart( )
 	if( pid ) {
 			// Already running
 		return TRUE;
+	}
+	if( MasterShuttingDown ) {
+		dprintf( D_ALWAYS,
+				 "Master is shutting down, so skipping startup of %s\n",
+				 name_in_config_file );
+		return FALSE;
 	}
 
 	shortname = condor_basename( process_name );
@@ -1757,6 +1764,7 @@ Daemons::InitMaster()
 void
 Daemons::RestartMaster()
 {
+	MasterShuttingDown = TRUE;
 	immediate_restart_master = immediate_restart;
 	if( NumberOfChildren() == 0 ) {
 		FinishRestartMaster();
@@ -1769,6 +1777,7 @@ Daemons::RestartMaster()
 void
 Daemons::RestartMasterPeaceful()
 {
+	MasterShuttingDown = TRUE;
 	immediate_restart_master = immediate_restart;
 	if( NumberOfChildren() == 0 ) {
 		FinishRestartMaster();
