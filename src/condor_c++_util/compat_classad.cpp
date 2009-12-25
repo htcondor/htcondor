@@ -178,6 +178,8 @@ void EvalResult::toString(bool force)
 
 ClassAd::ClassAd()
 {
+	m_privateAttrsAreInvisible = false;
+
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
@@ -194,6 +196,8 @@ ClassAd::ClassAd( const ClassAd &ad )
 {
 	CopyFrom( ad );
 
+	m_privateAttrsAreInvisible = false;
+
 	ResetName();
     ResetExpr();
 
@@ -203,6 +207,8 @@ ClassAd::ClassAd( const ClassAd &ad )
 ClassAd::ClassAd( const classad::ClassAd &ad )
 {
 	CopyFrom( ad );
+
+	m_privateAttrsAreInvisible = false;
 
 	ResetName();
     ResetExpr();
@@ -217,6 +223,8 @@ ClassAd::~ClassAd()
 ClassAd::
 ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 {
+	m_privateAttrsAreInvisible = false;
+
 	nodeKind = CLASSAD_NODE;
 
 	char		buffer[ATTRLIST_MAX_EXPRESSION];
@@ -758,7 +766,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 int ClassAd::
 put( Stream &s )
 {
-	if( !putOldClassAd( &s, *this ) ) {
+	if( !putOldClassAd( &s, *this, m_privateAttrsAreInvisible ) ) {
 		return FALSE;
 	}
 	return TRUE;
@@ -776,7 +784,7 @@ initFromStream(Stream& s)
 int ClassAd::
 putAttrList( Stream &s )
 {
-	if( !putOldClassAdNoTypes( &s, *this ) ) {
+	if( !putOldClassAdNoTypes( &s, *this, m_privateAttrsAreInvisible ) ) {
 		return FALSE;
 	}
 	return TRUE;
@@ -795,23 +803,10 @@ initAttrListFromStream(Stream& s)
 int	ClassAd::
 fPrint( FILE *file )
 {
-	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true );
-	string buffer = "";
+	MyString buffer;
 
-	if( !file ) {
-		return FALSE;
-	}
-
-	if ( GetChainedParentAd() ) {
-		unp.Unparse( buffer, GetChainedParentAd() );
-		fprintf( file, "%s", buffer.c_str() );
-
-		buffer = "";
-	}
-
-	unp.Unparse( buffer, this );
-	fprintf( file, "%s", buffer.c_str( ) );
+	sPrint( buffer );
+	fprintf( file, "%s", buffer.Value() );
 
 	return TRUE;
 }
@@ -819,34 +814,11 @@ fPrint( FILE *file )
 void ClassAd::
 dPrint( int level )
 {
-	classad::ClassAd::iterator itr;
-
-	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true );
-	string value;
 	MyString buffer;
 
-	classad::ClassAd *parent = GetChainedParentAd();
-
-	if ( parent ) {
-		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-			if ( !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
-				value = "";
-				unp.Unparse( value, itr->second );
-				buffer.sprintf_cat( "%s = %s\n", itr->first.c_str(),
-									value.c_str() );
-			}
-		}
-	}
-
-	for ( itr = this->begin(); itr != this->end(); itr++ ) {
-		if ( !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
-			value = "";
-			unp.Unparse( value, itr->second );
-			buffer.sprintf_cat( "%s = %s\n", itr->first.c_str(),
-								value.c_str() );
-		}
-	}
+	SetPrivateAttributesInvisible( true );
+	sPrint( buffer );
+	SetPrivateAttributesInvisible( false );
 
 	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 }
@@ -854,20 +826,37 @@ dPrint( int level )
 int ClassAd::
 sPrint( MyString &output )
 {
+	classad::ClassAd::iterator itr;
+
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
-	string buffer;
+	string value;
 
-	if ( GetChainedParentAd() ) {
-		unp.Unparse( buffer, GetChainedParentAd() );
-		output = buffer.c_str();
-	} else {
-		output = "";
+	output = "";
+
+	classad::ClassAd *parent = GetChainedParentAd();
+
+	if ( parent ) {
+		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+			if ( !m_privateAttrsAreInvisible ||
+				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				value = "";
+				unp.Unparse( value, itr->second );
+				output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+									value.c_str() );
+			}
+		}
 	}
 
-	buffer = "";
-	unp.Unparse( buffer, this );
-	output += buffer.c_str();
+	for ( itr = this->begin(); itr != this->end(); itr++ ) {
+		if ( !m_privateAttrsAreInvisible ||
+			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			value = "";
+			unp.Unparse( value, itr->second );
+			output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+								value.c_str() );
+		}
+	}
 
 	return TRUE;
 }

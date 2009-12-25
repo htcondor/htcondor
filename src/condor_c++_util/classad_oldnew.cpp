@@ -187,10 +187,10 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  * It should also do encryption now.
  */
 
-bool putOldClassAd ( Stream *sock, classad::ClassAd& ad )
+bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 {
     bool completion;
-    completion = _putOldClassAd(sock, ad, false);
+    completion = _putOldClassAd(sock, ad, false, exclude_private);
 
 
     //should be true by this point
@@ -198,12 +198,13 @@ bool putOldClassAd ( Stream *sock, classad::ClassAd& ad )
 }
 
 bool
-putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad )
+putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 {
-    return _putOldClassAd(sock, ad, true);
+    return _putOldClassAd(sock, ad, true, exclude_private);
 }
 
-bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
+bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
+					 bool exclude_private )
 {
 	classad::ClassAdUnParser	unp;
 	string						buf;
@@ -243,7 +244,8 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
             itor.CurrentAttribute( buf, expr );
 
 
-            if(!compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
+            if(!exclude_private ||
+			   !compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
             {
                 if(excludeTypes)
                 {
