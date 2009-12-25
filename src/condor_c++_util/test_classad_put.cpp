@@ -319,9 +319,9 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
 
 char *classad_strings[] = 
 {
-    "A = 1, B = 2",
-    "A = 1, B = 3",
-    "B = 1241, C = 3, D = 4"
+    "A = 1\n B = 2",
+    "A = 1\n B = 3",
+    "B = 1241\n C = 3\n D = 4"
 };
 
 //{{{setUpClassAds()
@@ -331,9 +331,12 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
     if(verbose)
         printf("Creating ClassAds\n");
 
-    c1 = new ClassAd(classad_strings[0], ',');
-    c2 = new ClassAd(classad_strings[1], ',');
-    c3 = new ClassAd(classad_strings[2], ',');
+	c1 = new ClassAd;
+	c2 = new ClassAd;
+	c3 =  new ClassAd;
+    c1->initFromString(classad_strings[0], NULL);
+    c2->initFromString(classad_strings[1], NULL);
+    c3->initFromString(classad_strings[2], NULL);
     c1->SetMyTypeName("c1");
     c2->SetMyTypeName("c2");
     c3->SetMyTypeName("c3");
