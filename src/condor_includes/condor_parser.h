@@ -29,6 +29,16 @@
 #ifndef _PARSER_H
 #define _PARSER_H
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_ast.h"
 
 // Parse an assignment expression, i.e. variable = expression
@@ -46,4 +56,7 @@ int Parse(const char*s, MyString&name, ExprTree*&tree, int *pos = NULL);
 // the error occurred.
 int ParseClassAdRvalExpr(const char*s, ExprTree*&tree, int *pos = NULL);
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _PARSER_H */

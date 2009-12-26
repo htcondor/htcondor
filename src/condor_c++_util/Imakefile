@@ -102,6 +102,7 @@ TT_OBJS = file_sql.o
  * This brings in cedar, but we define stub functions in libcondorapi_stubs.cpp
  * to remedy the situation. If you're just reading log files, then you don't
  * need that functionality anyway. */
+#ifdef WANT_OLD_CLASSADS
 CLASSAD_OBJ = \
 	../classad.old/ast.o \
 	../classad.old/astbase.o \
@@ -120,6 +121,35 @@ CLASSAD_OBJ = \
 	string_list.o \
 	MyString.o \
 	condor_xml_classads.o
+#else
+CLASSAD_OBJ = \
+	../classad/new_classad.o \
+	../classad/matchClassad.o \
+	../classad/exprTree.o \
+	../classad/new_classad_value.o \
+	../classad/sink.o \
+	../classad/source.o \
+	../classad/exprList.o \
+	../classad/literals.o \
+	../classad/attrrefs.o \
+	../classad/new_classad_util.o \
+	../classad/new_classad_debug.o \
+	../classad/new_classad_operators.o \
+	../classad/fnCall.o \
+	../classad/xmlSink.o \
+	../classad/lexer.o \
+	../classad/lexerSource.o \
+	../classad/xmlLexer.o \
+	../classad_analysis/conversion.o \
+	compat_classad.o \
+	compat_classad_util.o \
+	classad_oldnew.o \
+	../condor_util_lib/condor_snutils.o \
+	stringSpace.o \
+	string_list.o \
+	MyString.o \
+	condor_xml_classads.o
+#endif
 
 
 /*

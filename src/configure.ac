@@ -729,6 +729,15 @@ AC_ARG_ENABLE(soft-is-hard,
   [],
   [enable_soft_is_hard=no])
 
+AC_ARG_ENABLE(old-classads,
+  [AS_HELP_STRING([--disable-old-classads],
+     [Replace old ClassAds with compatiblity layer])],
+  [],
+  [enable_old_classads=yes])
+if test $enable_old_classads = "yes"; then
+  AC_DEFINE([WANT_OLD_CLASSADS],[1],[Define if using old ClassAds])
+fi
+
 # if we want a buildid, jam it into CPPFLAGS
 AC_MSG_CHECKING(for a build id to use)
 if test "x$BUILDID" != "xno"; then

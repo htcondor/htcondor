@@ -27,6 +27,16 @@
 #ifndef _ATTRLIST_H
 #define _ATTRLIST_H
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
@@ -365,4 +375,7 @@ class AttrListList
         int					length;			// length of the list
 };
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _ATTRLIST_H */

@@ -315,6 +315,11 @@ TT_INC = $(POSTGRESQL_CFLAGS)
 LEASE_MANAGER_FLAGS = -DWANT_LEASE_MANAGER
 #endif
 
+#ifdef WANT_OLD_CLASSADS
+OLD_CLASSAD_FLAGS = -DWANT_OLD_CLASSADS
+#else
+OLD_CLASSAD_FLAGS = -DWANT_CLASSAD_NAMESPACE
+#endif
 
 #if HAVE_EXT_GCB
 #  if ! HAVE_GNU_LD
@@ -358,6 +363,7 @@ VENDOR_C_FLAGS = \
 	$(SECURITY_FLAGS)			\
 	$(GCB_FLAGS)				\
 	$(LEASE_MANAGER_FLAGS)			\
+	$(OLD_CLASSAD_FLAGS)			\
 	$(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS) $(PTHREAD_FLAG)
 
 
@@ -400,10 +406,14 @@ TESTSUITE_FLAGS_CC = -g $(VENDOR_C_FLAGS) VendorCTestFlags PlatformFlags
 TESTSUITE_FLAGS_CPP = -g $(VENDOR_C_FLAGS) VendorCPPTestFlags PlatformFlags
 TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) PlatformFlags
 
+#ifdef WANT_OLD_CLASSADS
+OLD_CLASSAD_LIB = ../classad.old/libclassad.a
+#else
+OLD_CLASSAD_LIB =
+#endif
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
 QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
-CLASSAD_LIB = ../classad.old/libclassad.a
 IO_LIB = ../condor_io/libcedar.a
 CUTIL_LIB = ../condor_util_lib/util_lib.a
 CPLUS_LIB = ../condor_c++_util/cplus_lib.a
@@ -437,7 +447,7 @@ STD_LIBS = \
   $(PROCAPI_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
-  $(CLASSAD_LIB) \
+  $(OLD_CLASSAD_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
@@ -445,7 +455,7 @@ STD_LIBS = \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
   $(SYSAPI_LIB) \
-  $(CLASSAD_LIB) \
+  $(OLD_CLASSAD_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(IO_LIB) \
@@ -472,7 +482,7 @@ STD_LIB_FILES = \
   $(PROCAPI_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
-  $(CLASSAD_LIB) \
+  $(OLD_CLASSAD_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
@@ -480,7 +490,7 @@ STD_LIB_FILES = \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
   $(SYSAPI_LIB) \
-  $(CLASSAD_LIB) \
+  $(OLD_CLASSAD_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(IO_LIB) \

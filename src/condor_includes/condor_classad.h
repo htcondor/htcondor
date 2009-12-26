@@ -26,6 +26,16 @@
 #ifndef _CLASSAD_H
 #define _CLASSAD_H
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_attrlist.h"
@@ -141,4 +151,7 @@ class ClassAdList : public AttrListList
 bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
 bool IsAHalfMatch( ClassAd *ad1, ClassAd *ad2 );
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _CLASSAD_H */

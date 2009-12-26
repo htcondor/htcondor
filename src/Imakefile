@@ -24,6 +24,12 @@
 
 #define AnalysisLibs ClassAdAnalysis
 
+#if WANT_OLD_CLASSADS
+#define OldClassads target-classad.old
+#else
+#define OldClassads
+#endif
+
 #if WANT_STORK
 #define StorkProgs Stork
 #else
@@ -93,7 +99,7 @@
 #define Libraries \
 	target-classad 						\
 	util_lib target-ccb daemon_core.V6 daemon_client 	\
-	target-classad.old 					\
+	OldClassads	 					\
 	target-classad_support					\
 	c++_util						\
 	condor_procapi/libprocapi.a condor_sysapi/libsysapi.a	\
@@ -302,7 +308,9 @@ condor_object_target(syscall_lib)
 
 condor_object_target(io)
 object_target(target-ccb,ccb)
+#if WANT_OLD_CLASSADS
 object_target(target-classad.old,classad.old)
+#endif
 condor_object_target(daemon_core.V6)
 condor_object_target(daemon_client)
 condor_object_target(prio)

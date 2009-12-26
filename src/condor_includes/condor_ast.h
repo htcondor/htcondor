@@ -62,6 +62,16 @@
 #ifndef _AST_H_
 #define _AST_H_
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
@@ -506,4 +516,7 @@ class Function: public FunctionBase
 					 EvalResult *result);
 };
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _AST_H_ */

@@ -67,6 +67,16 @@
 #ifndef _ASTBASE_H_
 #define _ASTBASE_H_
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 class StringList;
 template <class Item> class List; // forward declaration
@@ -439,4 +449,6 @@ class FunctionBase : public ExprTree
   		char*               name;
 };
 
-#endif
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _ASTBASE_H_ */
