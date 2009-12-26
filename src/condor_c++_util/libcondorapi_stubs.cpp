@@ -162,6 +162,7 @@ void Stream::allow_one_empty_message() { not_impl(); }
 int Stream::put(char const *){ return not_impl(); }
 int Stream::get(char *&){ return not_impl(); }
 int Stream::get(char *,int ){ return not_impl(); }
+int Stream::get(MyString&){ return not_impl(); }
 int Stream::get_string_ptr(char const *&){ return not_impl(); }
 
 void Stream::prepare_crypto_for_secret(){not_impl();}

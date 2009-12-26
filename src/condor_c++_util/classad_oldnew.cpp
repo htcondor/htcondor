@@ -61,9 +61,8 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	classad::ClassAdParser	parser;
 	int 					numExprs;
 	string					buffer;
-	char					*tmp;
 	classad::ClassAd		*upd=NULL;
-	static char				*inputLine = new char[ 10240 ];
+	MyString				inputLine;
 
 
 	ad.Clear( );
@@ -72,37 +71,33 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
  		return false;
 	}
 
-    char *secret_line = NULL;
-
 		// pack exprs into classad
 	buffer = "[";
 	for( int i = 0 ; i < numExprs ; i++ ) {
-		tmp = NULL;
 		if( !sock->get( inputLine ) ) { 
 			return( false );	 
 		}		
 
-        if(strcmp(tmp,SECRET_MARKER) ==0 ){
-            free(secret_line);
-            secret_line = NULL;
+        if(strcmp(inputLine.Value(),SECRET_MARKER) ==0 ){
+	    char *secret_line = NULL;
             if( !sock->get_secret(secret_line) ) {
                 dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
                 break;
             }
+	    inputLine = secret_line;
+	    free( secret_line );
         }
 
-		buffer += string(inputLine) + ";";
-		free( tmp );
+		buffer += string(inputLine.Value()) + ";";
 	}
 	buffer += "]";
-    free(secret_line);
 
 		// get type info
-	if (!sock->get(inputLine)||!ad.InsertAttr("MyType",(string)inputLine)) {
+	if (!sock->get(inputLine)||!ad.InsertAttr("MyType",(string)inputLine.Value())) {
 		return false;
 	}
 	if (!sock->get(inputLine)|| !ad.InsertAttr("TargetType",
-											   (string)inputLine)) {
+											   (string)inputLine.Value())) {
 		return false;
 	}
 
@@ -129,9 +124,8 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	classad::ClassAdParser	parser;
 	int 					numExprs = 0; // Initialization clears Coverity warning
 	string					buffer;
-	char					*tmp;
 	classad::ClassAd		*upd=NULL;
-	static char				*inputLine = new char[ 10240 ];
+	MyString				inputLine;
 
 
 	ad.Clear( );
@@ -140,29 +134,26 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  		return false;
 	}
 
-    char *secret_line = NULL;
 		// pack exprs into classad
 	buffer = "[";
 	for( int i = 0 ; i < numExprs ; i++ ) {
-		tmp = NULL;
 		if( !sock->get( inputLine ) ) { 
 			return( false );	 
 		}		
 
-        if(strcmp(tmp,SECRET_MARKER) ==0 ){
-            free(secret_line);
-            secret_line = NULL;
+        if(strcmp(inputLine.Value(),SECRET_MARKER) ==0 ){
+            char *secret_line = NULL;
             if( !sock->get_secret(secret_line) ) {
                 dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
                 break;
             }
+	    inputLine = secret_line;
+	    free( secret_line );
         }
 
-		buffer += string(inputLine) + ";";
-		free( tmp );
+		buffer += string(inputLine.Value()) + ";";
 	}
 	buffer += "]";
-    free(secret_line);
 
 		// parse ad
 	if( !( upd = parser.ParseClassAd( buffer ) ) ) {
@@ -257,7 +248,10 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
                 }
                 else { numExprs++; }
             }
-            itor.NextAttribute( buf, expr );
+	    if ( strcasecmp( ATTR_CURRENT_TIME, buf.c_str() ) == 0 ) {
+		numExprs--;
+	    }
+	    itor.NextAttribute( buf, expr );
         }
     }
 
@@ -297,6 +291,9 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 
             //yea, these two if-statements could be combined into one, 
             //but this is more readable.
+	    if(strcasecmp(ATTR_CURRENT_TIME,buf.c_str())==0) {
+		continue;
+	    }
             if(compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
                 continue;
             }
@@ -352,7 +349,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 
     //ok, so the name of the bool doesn't really work here. It works
     //  in the other places though.
-    if(excludeTypes)
+    if(!excludeTypes)
     {
         // Send the type
         if (!ad.EvaluateAttrString("MyType",buf)) {
