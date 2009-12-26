@@ -196,6 +196,12 @@ ClassAd::ClassAd( const ClassAd &ad )
 {
 	CopyFrom( ad );
 
+		// Compatibility ads are born with this to emulate the special
+		// CurrentTime in old ClassAds. We don't protect it afterwards,
+		// but that shouldn't be problem unless someone is deliberately
+		// trying to shoot themselves in the foot.
+	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+
 	m_privateAttrsAreInvisible = false;
 
 	ResetName();
@@ -207,6 +213,12 @@ ClassAd::ClassAd( const ClassAd &ad )
 ClassAd::ClassAd( const classad::ClassAd &ad )
 {
 	CopyFrom( ad );
+
+		// Compatibility ads are born with this to emulate the special
+		// CurrentTime in old ClassAds. We don't protect it afterwards,
+		// but that shouldn't be problem unless someone is deliberately
+		// trying to shoot themselves in the foot.
+	AssignExpr( ATTR_CURRENT_TIME, "time()" );
 
 	m_privateAttrsAreInvisible = false;
 
@@ -275,6 +287,12 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 			empty = FALSE;
 		}
 	}
+
+		// Compatibility ads are born with this to emulate the special
+		// CurrentTime in old ClassAds. We don't protect it afterwards,
+		// but that shouldn't be problem unless someone is deliberately
+		// trying to shoot themselves in the foot.
+	AssignExpr( ATTR_CURRENT_TIME, "time()" );
 
 	ResetName();
     ResetExpr();
@@ -770,6 +788,10 @@ initFromString( char const *str,MyString *err_msg )
 	// First, clear our ad so we start with a fresh ClassAd
 	Clear();
 
+		// Reinsert CurrentTime, emulating the special version in old
+		// ClassAds
+	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+
 	char *exprbuf = new char[strlen(str)+1];
 	ASSERT( exprbuf );
 
@@ -820,6 +842,11 @@ initFromStream(Stream& s)
 	if( !getOldClassAd( &s, *this ) ) {
 		return FALSE;
 	}
+
+		// Reinsert CurrentTime, emulating the special version in old
+		// ClassAds
+	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+
 	return TRUE;
 }
 
@@ -838,6 +865,11 @@ initAttrListFromStream(Stream& s)
 	if( !getOldClassAdNoTypes( &s, *this ) ) {
 		return FALSE;
 	}
+
+		// Reinsert CurrentTime, emulating the special version in old
+		// ClassAds
+	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+
 	return TRUE;
 }
 
