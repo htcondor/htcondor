@@ -30,7 +30,7 @@
  * Forward declarations
  ***************************************************************/
 
-class ClassAd;
+//class ClassAd;
 
 /***************************************************************
  * UdpWakeOnLanWaker class

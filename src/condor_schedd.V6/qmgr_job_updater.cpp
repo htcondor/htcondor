@@ -286,9 +286,9 @@ QmgrJobUpdater::updateJob( update_t type )
 
 	job_ad->ResetExpr();
 	while( job_ad->NextDirtyExpr(name, tree) ) {
-		if( tree->invisible ) {
-			continue;
-		}
+		// There used to be a check for tree->invisible here,
+		// but there are no codepaths that reach here with
+		// private attributes set to invisible.
 
 			// If we have the lists of attributes we care about and
 			// this attribute is in one of the lists, actually do the

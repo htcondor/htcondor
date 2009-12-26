@@ -615,13 +615,16 @@ ClassAdLog::LogState(FILE *fp)
 		delete log;
 			// Unchain the ad -- we just want to write out this ads exprs,
 			// not all the exprs in the chained ad as well.
-		AttrList *chain = ad->GetChainedParentAd();
+		AttrList *chain = dynamic_cast<AttrList*>(ad->GetChainedParentAd());
 		ad->Unchain();
 		ad->ResetName();
 		attr_name = ad->NextNameOriginal();
 		while (attr_name) {
 			expr = ad->LookupExpr(attr_name);
-			if (expr && !expr->invisible) {
+				// This conditional used to check whether the ExprTree is
+				// invisible, but no codepath sets any attributes
+				// invisible for this call.
+			if (expr) {
 				log = new LogSetAttribute(key.Value(), attr_name,
 										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {

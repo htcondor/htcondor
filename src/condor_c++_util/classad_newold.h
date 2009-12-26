@@ -20,8 +20,10 @@
 #ifndef INCLUDE_CLASSAD_NEWOLD_H
 #define INCLUDE_CLASSAD_NEWOLD_H
 
+#include "condor_classad.h"
+
 namespace classad { class ClassAd; }
-class ClassAd;
+//class ClassAd;
 class MyString;
 
 /*

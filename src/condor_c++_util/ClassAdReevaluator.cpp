@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 
 bool
-classad_reevaluate(ClassAd *ad, const ClassAd *context)
+classad_reevaluate(ClassAd *ad, ClassAd *context)
 {
 	StringList *reevaluate_attrs;
 	MyString stmp;
