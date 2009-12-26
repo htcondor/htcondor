@@ -36,13 +36,6 @@
   #elif defined HAVE_PCRE_PCRE_H
     #include <pcre/pcre.h>
   #endif
-#elif defined HAVE_EXT_PCRE
-  #define USE_PCRE
-  #ifdef HAVE_PCRE_PCRE_H
-    #include "pcre/pcre.h"
-  #else
-    #include "pcre.h"
-  #endif
 #endif
 
 #if defined(HAVE_DLFCN_H)

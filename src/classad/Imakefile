@@ -9,7 +9,7 @@ STD_LIBS =
 WRAP_LDFLAGS =
 
 LOCAL_FLAGS = \
-	-DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK $(CONFIGURE_PCRE_CFLAGS) -O2
+	-DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK -O2
 C_PLUS_FLAGS 	= -Wall $(STD_C_PLUS_FLAGS) $(LOCAL_FLAGS)
 CFLAGS 		= -Wall $(STD_C_FLAGS) $(LOCAL_FLAGS)
 
@@ -62,7 +62,7 @@ OBJ = $(CLASSAD_OBJ_2)
 
 LIB_BASE =  ./libclassad_ns.a $(STLPORT_LIB)
 
-LIB = $(LIB_BASE) $(CONFIGURE_PCRE_LDFLAGS) $(PCRE_LIB)
+LIB = $(LIB_BASE)
 
 /* the main condor library target */
 all_target(libclassad_ns.a classad_functional_tester classad_unit_tester classad_version test_xml extra_tests)
