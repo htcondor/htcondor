@@ -630,7 +630,11 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr
 	// Then loop through all the other expressions in the ClassAd
 	classad->ResetExpr();
 	while (classad->NextExpr(name, expression)) {
-		if( expression->invisible ) {
+		// There used to be a check for expression->invisible here,
+		// but no codepath came here with private attributes set
+		// to invisible.
+		if ( strcasecmp(name, "MyType") == 0 ||
+		     strcasecmp(name, "TargetType") == 0 ) {
 			continue;
 		}
 		if( attr_white_list && !attr_white_list->contains_anycase(name) ) {
@@ -653,6 +657,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr
 void 
 ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &buffer)
 {
+#ifdef WANT_OLD_CLASSADS
 	add_attribute_start_tag(buffer, name);
 			
 	MyString  number_string;
@@ -699,7 +704,7 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 		add_tag(buffer, tag_Time, false);
 		break;
 	case LX_BOOL:
-		add_bool_start_tag(buffer, (BooleanBase *)expression);
+		add_bool_start_tag(buffer, ((BooleanBase *)expression)->Value());
 		break;
 	case LX_UNDEFINED:
 		add_empty_tag(buffer, tag_Undefined);
@@ -722,6 +727,65 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 		buffer += "\n";
 	}
 	return;
+#else
+	add_attribute_start_tag(buffer, name);
+			
+	MyString  number_string;
+	char      *expr_string;
+	int       int_number;
+	double    double_number;
+	std::string string_value;
+	MyString  fixed_string;
+	bool bool_value;
+	bool print_expr = true;
+
+	if (expression->GetKind() == classad::ExprTree::LITERAL_NODE ) {
+		classad::Value v;
+		((classad::Literal *)expression)->GetValue(v);
+		print_expr = false;
+		if ( v.IsIntegerValue( int_number ) ) {
+			number_string.sprintf("%d", int_number);
+			add_tag(buffer, tag_Integer, true);
+			buffer += number_string;
+			add_tag(buffer, tag_Integer, false);
+		} else if ( v.IsRealValue( double_number ) ) {
+			number_string.sprintf("%1.15E", double_number);
+			add_tag(buffer, tag_Real, true);
+			buffer += number_string;
+			add_tag(buffer, tag_Real, false);
+		} else if ( v.IsStringValue( string_value ) ) {
+			add_tag(buffer, tag_String, true);
+			fix_characters(string_value.c_str(), fixed_string);
+			buffer += fixed_string;
+			fixed_string = "";
+			add_tag(buffer, tag_String, false);
+		} else if ( v.IsBooleanValue( bool_value ) ) {
+			add_bool_start_tag(buffer, bool_value);
+		} else if ( v.IsUndefinedValue() ) {
+			add_empty_tag(buffer, tag_Undefined);
+		} else if ( v.IsErrorValue() ) {
+			add_empty_tag(buffer, tag_Error);
+		} else {
+				// Shouldn't get here! Treat it as an opaque expression.
+			print_expr = true;
+		}
+	}
+	if ( print_expr ) {
+		add_tag(buffer, tag_Expr, true);
+		expr_string = strdup( ExprTreeToString( expression ) );
+		fix_characters(expr_string, fixed_string);
+		free(expr_string);
+		buffer += fixed_string;
+		fixed_string = "";
+		add_tag(buffer, tag_Expr, false);
+	}
+
+	add_tag(buffer, tag_Attribute, false);
+	if (!_use_compact_spacing) {
+		buffer += "\n";
+	}
+	return;
+#endif
 }
 	
 /**************************************************************************
@@ -780,12 +844,12 @@ ClassAdXMLUnparser::add_attribute_start_tag(
 void
 ClassAdXMLUnparser::add_bool_start_tag(
 	MyString     &buffer, 
-	BooleanBase  *bool_expr)
+	bool         value)
 {
 	buffer += '<';
 	buffer += tag_names[tag_Bool].name;
 	buffer += " v=\"";
-	if (bool_expr->Value()) {
+	if (value) {
 		buffer += "t";
 	} else {
 		buffer += "f";
