@@ -1,4 +1,9 @@
+#ifdef WANT_OLD_CLASSADS
+#define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o
+#else
 #define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o compat_classad.o compat_classad_list.o compat_classad_util.o
+#endif
+
 #define New_classads_dc_obj	dc_credd.o dc_lease_manager.o dc_lease_manager_lease.o
 #define New_classads_lib	-lclassad_ns
 
@@ -293,13 +298,16 @@ c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
 c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_classad_put,test_classad_put.o,$(LIB))
-c_plus_target(test_compat_classad,test_compat_classad.o,$(LIB))
 c_plus_target(test_mystring,test_mystring.o,$(LIB))
 c_plus_target(test_condor_arglist,test_condor_arglist.o,$(LIB))
 c_plus_target(test_condor_crontab,test_condor_crontab.o,$(LIB))
 c_plus_target(test_spawn,test_spawn.o,$(LIB))
 c_plus_target(test_tree,test_tree.o,$(LIB))
 c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
+
+#if !defined(WANT_OLD_CLASSADS)
+c_plus_target(test_compat_classad,test_compat_classad.o,$(LIB))
+#endif
 
 
 /* this needs to be built more like a user would use the library, so it */
