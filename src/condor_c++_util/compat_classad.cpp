@@ -762,6 +762,48 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	return rc;
 }
 
+bool ClassAd::
+initFromString( char const *str,MyString *err_msg )
+{
+	bool succeeded = true;
+
+	// First, clear our ad so we start with a fresh ClassAd
+	Clear();
+
+	char *exprbuf = new char[strlen(str)+1];
+	ASSERT( exprbuf );
+
+	while( *str ) {
+		while( isspace(*str) ) {
+			str++;
+		}
+
+		size_t len = strcspn(str,"\n");
+		strncpy(exprbuf,str,len);
+		exprbuf[len] = '\0';
+
+		if( str[len] == '\n' ) {
+			len++;
+		}
+		str += len;
+
+		if (!Insert(exprbuf)) {
+			if( err_msg ) {
+				err_msg->sprintf("Failed to parse ClassAd expression: %s",
+					exprbuf);
+			} else {
+				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: %s\n",
+					exprbuf);
+			}
+			succeeded = false;
+			break;
+		}
+	}
+
+	delete [] exprbuf;
+	return succeeded;
+}
+
         // shipping functions
 int ClassAd::
 put( Stream &s )
@@ -1379,7 +1421,7 @@ sPrintAsXML(MyString &output)
 ///////////// end XML functions /////////
 
 char const *
-ClassAd::EscapeStringValue(char const *val)
+ClassAd::EscapeStringValue(char const *val, MyString &buf)
 {
     if(val == NULL)
         return NULL;
@@ -1391,7 +1433,8 @@ ClassAd::EscapeStringValue(char const *val)
     tmpValue.SetStringValue(val);
     unparse.Unparse(stringToAppeaseUnparse, tmpValue);
 
-    return stringToAppeaseUnparse.c_str();
+    buf = stringToAppeaseUnparse.c_str();
+    return buf.Value();
 }
 
 void ClassAd::ChainCollapse()

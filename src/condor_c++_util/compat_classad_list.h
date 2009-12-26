@@ -91,6 +91,8 @@ public:
 	void Sort(SortFunctionType smallerThan, void* userInfo = NULL);
 };
 
+typedef ClassAdList AttrListList;
+
 } // namespace compat_classad
 
 #endif

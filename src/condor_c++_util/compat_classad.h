@@ -28,6 +28,10 @@
 #include "classad/classad_distribution.h"
 #include "condor_io.h"
 
+#ifndef ATTRLIST_MAX_EXPRESSION
+#define	ATTRLIST_MAX_EXPRESSION 10240
+#endif
+
 namespace compat_classad {
 
 // This enum is lifted directly from old ClassAds.
@@ -310,6 +314,8 @@ class ClassAd : public classad::ClassAd
 		/** Get the value of the TargetType attribtute */
 	const char*	GetTargetTypeName() const;
 
+	bool initFromString(char const *str,MyString *err_msg);
+
 		/** Print the ClassAd as an old ClassAd to the stream
 		 * @param s the stream
 		 */
@@ -415,7 +421,7 @@ class ClassAd : public classad::ClassAd
      *  @param val The string we're escaping stuff in. 
      *  @return The escaped string.
      */
-    char const *EscapeStringValue(char const *val);
+    static char const *EscapeStringValue(char const *val, MyString &buf);
 
     /** Takes the ad this is chained to, copies over all the 
      *  attributes from the parent ad that aren't in this classad
@@ -454,6 +460,7 @@ class ClassAd : public classad::ClassAd
 };
 
 typedef ClassAd AttrList;
+typedef classad::ExprTree ExprTree;
 
 } // namespace compat_classad
 
