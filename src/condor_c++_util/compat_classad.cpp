@@ -23,7 +23,7 @@
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/classad/xmlSink.h"
-//#include "condor_xml_classads.h"
+#include "condor_xml_classads.h"
 
 using namespace std;
 
@@ -843,11 +843,11 @@ initAttrListFromStream(Stream& s)
 
 		// output functions
 int	ClassAd::
-fPrint( FILE *file )
+fPrint( FILE *file, StringList *attr_white_list )
 {
 	MyString buffer;
 
-	sPrint( buffer );
+	sPrint( buffer, attr_white_list );
 	fprintf( file, "%s", buffer.Value() );
 
 	return TRUE;
@@ -866,7 +866,7 @@ dPrint( int level )
 }
 
 int ClassAd::
-sPrint( MyString &output )
+sPrint( MyString &output, StringList *attr_white_list )
 {
 	classad::ClassAd::iterator itr;
 
@@ -880,6 +880,9 @@ sPrint( MyString &output )
 
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+				continue; // not in white-list
+			}
 			if ( !m_privateAttrsAreInvisible ||
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";
@@ -891,6 +894,9 @@ sPrint( MyString &output )
 	}
 
 	for ( itr = this->begin(); itr != this->end(); itr++ ) {
+		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+			continue; // not in white-list
+		}
 		if ( !m_privateAttrsAreInvisible ||
 			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 			value = "";
@@ -1409,14 +1415,14 @@ fPrintAsXML(FILE *fp)
 }
 
 int ClassAd::
-sPrintAsXML(MyString &output)
+sPrintAsXML(MyString &output, StringList *attr_white_list)
 {
-    classad::ClassAdXMLUnParser     unparser;
-    std::string             xml;
-    unparser.SetCompactSpacing(false);
-    unparser.Unparse(xml,this);
-    output += xml.c_str();
-    return TRUE;
+	ClassAdXMLUnparser  unparser;
+	MyString            xml;
+	unparser.SetUseCompactSpacing(false);
+	unparser.Unparse(this, xml, attr_white_list);
+	output += xml;
+	return TRUE;
 }
 ///////////// end XML functions /////////
 

@@ -89,6 +89,8 @@ public:
 		 * but continuing an iteration from the index would be unwise.
 		 */
 	void Sort(SortFunctionType smallerThan, void* userInfo = NULL);
+
+	void fPrintAttrListList(FILE* f, bool use_xml = false, StringList *attr_white_list = NULL);
 };
 
 typedef ClassAdList AttrListList;

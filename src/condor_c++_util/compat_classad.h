@@ -341,7 +341,7 @@ class ClassAd : public classad::ClassAd
 			@param file The file handle to print to.
 			@return TRUE
 		*/
-	int	fPrint(FILE *file);
+	int	fPrint(FILE *file, StringList *attr_white_list = NULL);
 
 		/** Print the ClassAd as an old ClasAd with dprintf
 			@param level The dprintf level.
@@ -352,7 +352,7 @@ class ClassAd : public classad::ClassAd
 			@param output The MyString to write into
 			@return TRUE
 		*/
-	int sPrint( MyString &output );
+	int sPrint( MyString &output, StringList *attr_white_list = NULL );
         /** Prints an expression with a certain name into a buffer. 
          *
          *  @param buffer The buffer to place the named expression into. NOTE: if this is NULL, then the function returns some malloc'd memory. Free it.
@@ -372,7 +372,7 @@ class ClassAd : public classad::ClassAd
      * @param output The MyString to have filled with the XML-ified classad.
      * @return TRUE
      */
-    int sPrintAsXML(MyString &output);
+    int sPrintAsXML(MyString &output, StringList *attr_white_list = NULL);
 
     void ResetExpr();
 
