@@ -32,10 +32,10 @@ $dagman_args = "-verbose";
 @outfiles = ("job_dagman_vars-NodeA.out", "job_dagman_vars-NodeB.out", 
 	"job_dagman_vars-NodeC.out", 
 	"job_dagman_vars-NodeD.out");
-@outlines = ("NodeA Alberto_Condator Andy_Schleck Lance_Armstrong",
-	"NodeB NodeA Greg_LeMond Laurent_Fignon Pedro_Delgado",
-	"NodeC NodeA Andreas_Kloden Carlos_Sastre",
-	"NodeD NodeB,NodeC Lance_Armstrong Andreas_Kloden Ivan_Basso");
+@outlines = ("<NodeA> <Alberto Condator> <Andy Schleck> <Lance_Armstrong>",
+	"<NodeB> <NodeA> <Greg\"_LeMond> <\\\\Laurent_Fignon> <Pedro_Delgado>",
+	"<NodeC> <NodeA> <Andreas_Kloden> <Carlos_Sastre>",
+	"<NodeD> <NodeB,NodeC> <Lance_Armstrong> <Andreas\"_Kloden> <\\\\Ivan_Basso>");
 
 # truly const variables in perl
 sub IDLE{1};

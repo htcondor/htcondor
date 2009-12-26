@@ -24,13 +24,18 @@ BEGIN {
 # that the entire classad has been sent to us.
 {
     gsub(/\"/, "")
-    attrs[$1] = $3
+    key = $1
+    # Matching value should be $3-$NR
+    $1 = ""
+    $2 = ""
+    sub(/^  /, "")
+    attrs[key] = $0
     bootloader = ""
     root = ""
     initrd = ""
     kernel = ""
-    kern_parms = ""
-    print "Received attribute: " $1 "=" attrs[$1] >debug_file
+    kern_params = ""
+    print "Received attribute: " key "=" attrs[key] >debug_file
 }
 
 END {
@@ -85,6 +90,11 @@ END {
     {
 	print "<bootloader>" bootloader "</bootloader>"
     }
+
+    # Make sure guests destroy on power off
+    print "<features><acpi/><apic/><pae/></features>" ;
+    print "<on_poweroff>destroy</on_poweroff><on_reboot>restart</on_reboot><on_crash>restart</on_crash>" ;
+
     print "<devices>" ;
     if(attrs["JobVMNetworking"] == "TRUE")
     {
@@ -94,7 +104,7 @@ END {
 	}
 	else
 	{
-	    print "<interface type='bridge'><mac address='" attrs["JobVM_MACADDR"] "'/></interface>" ;
+	    print "<interface type='bridge'><mac address='" attrs["JobVM_MACADDR"] "'/><source bridge='br0'/></interface>" ;
 	}
     }
     print "<disk type='file'>" ;

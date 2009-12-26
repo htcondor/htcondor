@@ -36,11 +36,11 @@ $dagman_args = "-verbose";
 	"job_dagman_script_args-NodeC-Post.out", 
 	"job_dagman_script_args-NodeD-Pre.out",
 	"job_dagman_script_args-NodeD-Post.out");
-@outlines = ( "<Cadel_Evans> <0>",
+@outlines = ( "<\"Cadel_Evans\"> <0>",
 	"<0> <Mark_Cavendish> <Heinrich_Haussler> <0> <[0-9]*\.0>",
-	"<Bernard_Hinault> <Joop_Zoetemelk> <0>",
+	"<'Bernard_Hinault'> <Joop_Zoetemelk> <0>",
 	"<0> <Ottavio_Bottechia> <0> <[0-9]*\.0>",
-	"<Miguel> <Indurain> <0>",
+	"<Miguel> <\\\\Indurain> <0>",
 	"<0> <Laurent> <Jalabert> <0> <[0-9]*\.0>",
 	"<Gilles> <Delion> <Charly> <Mottet> <0>",
 	"<0> <Stephen> <Roche> <0> <[0-9]*\.0>");

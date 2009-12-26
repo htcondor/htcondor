@@ -1120,7 +1120,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 				} else if(*str == '\'') { // these would mess the command line up 
 				                          // later on
 					debug_printf(DEBUG_QUIET,
-						"%s (line %d): sinqle quotes are not allowed in values.\n",
+						"%s (line %d): single quotes are not allowed in values.\n",
 						filename, lineNumber);
 					return false;
 				}

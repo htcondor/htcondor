@@ -1,3 +1,6 @@
 #! /usr/bin/env perl
 
-print "@ARGV\n";
+foreach $arg (@ARGV) {
+	print "<$arg> ";
+}
+print "\n";

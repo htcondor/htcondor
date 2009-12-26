@@ -488,7 +488,7 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 bool
 Job::AddPreScript( const char *cmd, MyString &whynot )
 {
-return AddScript( false, cmd, whynot );
+	return AddScript( false, cmd, whynot );
 }
 
 bool
