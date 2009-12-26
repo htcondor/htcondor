@@ -114,12 +114,12 @@ CLASSAD_OBJ = \
 	../classad.old/parser.o \
 	../classad.old/scanner.o \
 	../classad.old/value.o \
-	../classad.old/xml_classads.o \
 	../classad.old/registration.o \
 	../condor_util_lib/condor_snutils.o \
 	stringSpace.o \
 	string_list.o \
-	MyString.o
+	MyString.o \
+	condor_xml_classads.o
 
 
 /*
@@ -211,6 +211,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	metric_units.o condor_ver_info.o \
 	condor_md.o \
 	proc_id.o HashTable.o MyString.o \
+	condor_new_classads.o condor_xml_classads.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
 	Regex.o my_distribution.o error_utils.o $(DH_OBJ) $(BASE64_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \
