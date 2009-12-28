@@ -468,6 +468,12 @@ daemon::DoConfig( bool init )
 			m_only_stop_when_master_stops = true;
 		}
 	}
+
+	if( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+			// if a collector address file is configured, don't start any
+			// other daemons until the collector has written this file
+		param(m_after_startup_wait_for_file,"COLLECTOR_ADDRESS_FILE");
+	}
 }
 
 void
@@ -562,6 +568,10 @@ int daemon::RealStart( )
 		// Schedule to try and restart it a little later
 		Restart();
 		return 0;
+	}
+
+	if( !m_after_startup_wait_for_file.IsEmpty() ) {
+		remove( m_after_startup_wait_for_file.Value() );
 	}
 
 		// Collector needs to listen on a well known port, as does the
@@ -825,14 +835,6 @@ int daemon::RealStart( )
 
 		// Since we just started it, we know it's not a new executable. 
 	newExec = FALSE;
-
-		// If starting the collector, give it a few seconds to get
-		// going before starting other daemons or talking to ti
-		// ourselves
-	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
-		dprintf(D_FULLDEBUG, "Pausing to allow the collector to start\n");
-		sleep(3);
-	}
 
 	if( needs_update ) {
 		needs_update = FALSE;
