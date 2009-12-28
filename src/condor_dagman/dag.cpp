@@ -1,3 +1,4 @@
+//TEMPTEMP -- rescue DAG must preserve NOOP
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -2980,25 +2981,26 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
     	MyString cmd_file = node->GetCmdFile();
 		bool submit_success = false;
 
+//TEMPTEMP -- hmm -- should noop jobs be possible for stork, too?
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
 			const char *logFile = node->UsingDefaultLog() ?
 						node->_logFile : NULL;
-//TEMPTEMP -- call "fake" submit function here if node is noop
-			if ( true ) {//TEMPTEMP!!!!
-				// Note: assigning the ParentListString() return value
-				// to a variable here, instead of just passing it directly
-				// to condor_submit(), fixes a memory leak(!).
-				// wenger 2008-12-18
-			MyString parents = ParentListString( node );
-      		submit_success = condor_submit( dm, cmd_file.Value(), condorID,
-						node->GetJobName(), parents,
-						node->varNamesFromDag, node->varValsFromDag,
-						node->GetDirectory(), logFile );
-			} else {
+			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
 							node->_logFile );
+
+			} else {
+					// Note: assigning the ParentListString() return value
+					// to a variable here, instead of just passing it directly
+					// to condor_submit(), fixes a memory leak(!).
+					// wenger 2008-12-18
+				MyString parents = ParentListString( node );
+      			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
+							node->GetJobName(), parents,
+							node->varNamesFromDag, node->varValsFromDag,
+							node->GetDirectory(), logFile );
 			}
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
@@ -3056,7 +3058,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 void
 Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 {
-	// This function should never be called when the Dag ibject is being used
+	// This function should never be called when the Dag object is being used
 	// to parse a splice.
 	ASSERT( _isSplice == false );
 

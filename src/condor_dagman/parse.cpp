@@ -56,6 +56,7 @@ static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
 						const char *directory);
 
 static bool parse_node( Dag *dag, Job::job_type_t nodeType,
+						bool noop,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
@@ -189,14 +190,25 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 		bool parsed_line_successfully;
 
-//TEMPTEMP -- check for NOOP here -- if we find NOOP, set a flag and consume that token
-//TEMPTEMP -- make a noop branch...
+		bool noop = false;
+
+		if(strcasecmp(token, "NOOP") == 0) {
+			noop = true;
+			token = strtok(NULL, DELIMITERS);
+			if ( !token ) {
+				//TEMPTEMP -- this is an error
+				continue; // so Coverity is happy
+			} else {
+				//TEMPTEMP -- make sure next token is JOB, DAP, or DATA
+			}
+		}
 
 		// Handle a Job spec
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
+			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR,
+					   noop, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
@@ -205,7 +217,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
+			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK,
+					   noop, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
@@ -215,7 +228,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
-			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
+			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK,
+					   noop, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile");
 		}
@@ -340,8 +354,8 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 {
 	const char *inlineOrExt = strtok( NULL, DELIMITERS );
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile, lineNum,
-					directory, " EXTERNAL", "dagfile" );
+		return parse_node( dag, nodeType, false, nodeTypeKeyword, dagFile,
+					lineNum, directory, " EXTERNAL", "dagfile" );
 	} else {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
 					"EXTERNAL is supported at this time\n", dagFile, lineNum);
@@ -350,7 +364,8 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 }
 
 static bool 
-parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
+parse_node( Dag *dag, Job::job_type_t nodeType, bool noop,
+			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
 {
@@ -360,6 +375,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	Dag *tmp = NULL;
 
 	MyString expectedSyntax;
+	//TEMPTEMP -- add NOOP option here -- only for "regular" jobs?
 	expectedSyntax.sprintf( "Expected syntax: %s%s nodename %s "
 				"[DIR directory] [DONE]", nodeTypeKeyword, inlineOrExt,
 				submitOrDagFile );
@@ -450,7 +466,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 
 	// looks ok, so add it
 	if( !AddNode( dag, nodeType, nodeName, directory,
-				submitFile, NULL, NULL, done, whynot ) )
+				submitFile, NULL, NULL, noop, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );

@@ -153,6 +153,8 @@ void Job::Init( const char* jobName, const char* directory,
 
     _logFile = NULL;
 
+	_noop = false;
+
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
 

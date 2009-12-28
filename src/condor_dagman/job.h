@@ -81,6 +81,7 @@ class Job {
 	typedef enum {
 		TYPE_CONDOR,
 		TYPE_STORK,
+		//TEMPTEMP -- do we want this, or a separate noop flag?
 		TYPE_NOOP,	// TODO: yet to be implemented...
 	 } job_type_t;
   
@@ -179,6 +180,9 @@ class Job {
 	bool AddPreScript( const char *cmd, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
 	bool AddScript( bool post, const char *cmd, MyString &whynot );
+
+	void SetNoop( bool value ) { _noop = value; }
+	bool GetNoop( void ) { return _noop; }
 
     Script * _scriptPre;
     Script * _scriptPost;
@@ -508,6 +512,10 @@ private:
 
 		// Whether this node uses the default user log file.
 	bool _useDefaultLog;
+
+		// Whether this is a noop job (shouldn't actually be submitted
+		// to Condor).
+	bool _noop;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
