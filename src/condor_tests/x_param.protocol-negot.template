@@ -3,8 +3,6 @@ type = jobs
 
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 secprepostsrc = x_secneg_ANY
 localpostsrc = x_secneg_configpostsrc
 condordaemons = master,schedd,collector,startd,negotiator

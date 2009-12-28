@@ -7,8 +7,6 @@ duration = 20
 universe = scheduler
 type = loading
 
-condorconfig = condor_config
-condorlocal = condor_config.local
 vms	= 10
 encryption = 3DES,BLOWFISH
 #authentication = GSI
