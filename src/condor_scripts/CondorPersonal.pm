@@ -793,6 +793,12 @@ sub TunePersonalCondor
 	if( exists $control{"condorconfig"} )
 	{
 		$personal_config = $control{"condorconfig"};
+	} else {
+		$personal_config = "condor_config";
+
+		# store this default in the personal condor params so
+		# other parts of the code can rely on it.
+		$personal_condor_params{"condorconfig"} = $personal_config;
 	}
 
 	# was a special daemon list called out?
@@ -805,6 +811,8 @@ sub TunePersonalCondor
 	if( exists $control{"condorlocal"} )
 	{
 		$personal_local = $control{"condorlocal"};
+	} else {
+		$personal_local = "condor_config.local";
 	}
 
 	# was a special local config file src called out?
