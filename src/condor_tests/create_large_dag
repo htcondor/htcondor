@@ -62,7 +62,8 @@ my $configfile = $testname . ".config";
 open(CONFIGFILE, ">$configfile") or die "Can't open/create config file " .
 			"$configfile $!\n";
 print CONFIGFILE "DAGMAN_MAX_JOBS_SUBMITTED = $maxjobs\n";
-print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 100\n";
+#TEMPTEMP print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 100\n";
+print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 1000\n";#TEMPTEMP?
 # This only works in 7.3.2 and later.
 print CONFIGFILE "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
 print CONFIGFILE "DAGMAN_CONDOR_SUBMIT_EXE = ../dummy_condor_submit.pl\n";
@@ -131,9 +132,10 @@ sub WriteNode
 	my $submitfile = shift;
 
 	print DAGFILE "\nJOB $nodename $submitfile\n";
-	print DAGFILE "SCRIPT PRE $nodename ../job_dagman_large_dag-node.pl " .
+	#print DAGFILE "\nNOOP JOB $nodename $submitfile\n";#TEMPTEMP?
+	print DAGFILE "#TEMPTEMP SCRIPT PRE $nodename ../job_dagman_large_dag-node.pl " .
 				"Args: PRE $nodename\n";
-	print DAGFILE "SCRIPT POST $nodename ../job_dagman_large_dag-node.pl " .
+	print DAGFILE "#TEMPTEMP SCRIPT POST $nodename ../job_dagman_large_dag-node.pl " .
 				"Args: POST $nodename\n";
 }
 
@@ -151,9 +153,7 @@ sub WriteSubmit
 
 	my $jobfile = $submitfile;
 	$jobfile =~ s/\.cmd/.pl/;
-print "DIAG jobfile <$jobfile>\n";#TEMPTEMP
 	my $jobfile = "./" . $jobfile;
-print "DIAG jobfile <$jobfile>\n";#TEMPTEMP
 	if ($dohold) {
 		print SUBMITFILE "executable = $jobfile\n";
 		print SUBMITFILE "# Note: we need getenv = true for the node " .
