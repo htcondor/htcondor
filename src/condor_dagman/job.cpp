@@ -213,6 +213,7 @@ Job::CheckForLogFile() const
 void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
+    dprintf( D_ALWAYS, "           Noop: %s\n", _noop ? "true" : "false" );
     dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
     dprintf( D_ALWAYS, "    Node Status: %s\n", GetStatusName() );
     dprintf( D_ALWAYS, "Node return val: %d\n", retval );

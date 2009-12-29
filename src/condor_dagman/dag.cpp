@@ -1,4 +1,3 @@
-//TEMPTEMP -- rescue DAG must preserve NOOP
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1748,6 +1747,9 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 			// Print the JOB/DATA line.
 		const char *keyword = "";
+		if ( job->GetNoop() ) {
+        	fprintf( fp, "NOOP " );
+		}
         if( job->JobType() == Job::TYPE_CONDOR ) {
 			keyword = job->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
         } else if( job->JobType() == Job::TYPE_STORK ) {
