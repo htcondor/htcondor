@@ -65,12 +65,12 @@ use strict;
 #	condorconfig	Name for condor config file			condor_config				$personal_config
 #	condordomain	Name for domain						local						$condordomain
 #	condorlocal		Name for condor local config 		condor_config.local			$personal_local
-#	condor			"install" or path to tarball 									$condordistribution
+#	condor			"install" or path to tarball 		nightlies							$condordistribution
 #	collector	 	Used to define COLLECTOR_HOST									$collectorhost
 #	nameschedd	 	Used to define SCHEDD_NAME			cat(name and collector)		$scheddname
 #	condorhost	 	Used to define CONDOR_HOST										$condorhost
 #	ports			Select dynamic or normal ports		dynamic						$portchanges	
-#   slot				sets NUM_CPUS NUM_SLOTS				none
+#	slots			sets NUM_CPUS NUM_SLOTS			none
 #   universe		parallel configuration of schedd	none						$personal_universe
 #
 #   Notes added 12/14/05 bt
@@ -520,176 +520,169 @@ sub InstallPersonalCondor
 
 	my $binloc;
 
-	if( exists $control{"condor"} )
+	$condordistribution = $control{"condor"} || "nightlies";
+	debug( "Install this condor --$condordistribution--\n",$debuglevel);
+	if( $condordistribution eq "nightlies" ) {
+		# test if this is really the environment we are in or
+		# switch it to install mode.
+		 if(! -f "../../condor/sbin/condor_master") {
+		 	$condordistribution = "install";
+		 }
+	}
+	if( $condordistribution eq "install" )
 	{
-		$condordistribution = $control{"condor"};
-		debug( "Install this condor --$condordistribution--\n",$debuglevel);
-		if( $condordistribution eq "nightlies" ) {
-			# test if this is really the environment we are in or
-			# switch it to install mode.
-			 if(! -f "../../condor/sbin/condor_master") {
-			 	$condordistribution = "install";
-			 }
-		}
-		if( $condordistribution eq "install" )
+		# where is the hosting condor_config file? The one assumed to be based
+		# on a setup with condor_configure.
+		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+		while(<CONFIG>)
 		{
-			# where is the hosting condor_config file? The one assumed to be based
-			# on a setup with condor_configure.
-			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
-			while(<CONFIG>)
-			{
-				fullchomp($_);
-				$configline = $_;
-				push @configfiles, $configline;
-			}
-			close(CONFIG);
-			$personal_condor_params{"condortemplate"} = shift @configfiles;
-			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
-			#
-			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
-
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
-				debug( "Root path $1 and base $2\n",$debuglevel);
-				$binloc = $1;	# we'll get our binaries here.
-			} elsif(-f "../release_dir/bin/condor_status") {
-				print "Bummer which condor_q failed\n";
-				print "Using ../release_dir/bin(s)\n";
-				$binloc = "../release_dir/bin"; # we'll get our binaries here.
-			}
-			else
-			{
-				print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
-				die "Can not seem to find a Condor install!\n";
-			}
-			
-
-			if( $binloc =~ /^(\/.*\/)s*bin\/\s*$/ )
-			{
-				debug( "Root path to sbin is $1\n",$debuglevel);
-				$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
-			}
-			else
-			{
-				die "Can not seem to locate Condor release binaries\n";
-			}
-
-			$schedd = $sbinloc . "sbin/". "condor_schedd";
-			$master = $sbinloc . "sbin/". "condor_master";
-			$collector = $sbinloc . "sbin/". "condor_collector";
-			$submit = $binloc . "condor_submit";
-			$startd = $sbinloc . "sbin/". "condor_startd";
-			$negotiator = $sbinloc . "sbin/". "condor_negotiator";
-
-			debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
-
-
-			debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
-
-			runcmd("mkdir -p $topleveldir/execute");
-			runcmd("mkdir -p $topleveldir/spool");
-			runcmd("mkdir -p $topleveldir/log");
-			runcmd("mkdir -p $topleveldir/log/tmp");
+			fullchomp($_);
+			$configline = $_;
+			push @configfiles, $configline;
 		}
-		elsif( $condordistribution eq "nightlies" )
-		{
-			# we want a mechanism by which to find the condor binaries
-			# we are testing. But we know where they are relative to us
-			# ../../condor/bin etc
-			# That is simply the nightly test setup.... for now at least
-			# where is the hosting condor_config file? The one assumed to be based
-			# on a setup with condor_configure.
+		close(CONFIG);
+		$personal_condor_params{"condortemplate"} = shift @configfiles;
+		$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+		#
+		debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
 
-			debug(" Nightlies - find environment config files\n",$debuglevel);
-			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
-			while(<CONFIG>)
-			{
-				fullchomp($_);
-				$configline = $_;
-				debug( "$_\n" ,$debuglevel);
-				push @configfiles, $configline;
-			}
-			close(CONFIG);
-			# yes this assumes we don't have multiple config files!
-			$personal_condor_params{"condortemplate"} = shift @configfiles;
-			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
-
-			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
-
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
-			{
-				debug( "Root path $1 and base $2\n",$debuglevel);
-				$binloc = $1;	# we'll get our binaries here.
-			}
-			else
-			{
-				print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
-				die "Can not seem to find a Condor install!\n";
-			}
-			
-
-			if( $binloc =~ /^(\/.*\/)bin\/\s*$/ )
-			{
-				debug( "Root path to sbin is $1\n",$debuglevel);
-				$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
-			}
-			else
-			{
-				die "Can not seem to locate Condor release binaries\n";
-			}
-			#$binloc = "../../condor/bin/";
-			#$sbinloc = "../../condor/";
-
-			debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n",$debuglevel);
-
-			$schedd = $sbinloc . "sbin/" .  "condor_schedd";
-			$master = $sbinloc . "sbin/" .  "condor_master";
-			$collector = $sbinloc . "sbin/" .  "condor_collector";
-			$submit = $binloc . "condor_submit";
-			$startd = $sbinloc . "sbin/" .  "condor_startd";
-			$negotiator = $sbinloc . "sbin/" .  "condor_negotiator";
-
-			debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
-
-
-			debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
-
-			runcmd("mkdir -p $topleveldir/execute");
-			runcmd("mkdir -p $topleveldir/spool");
-			runcmd("mkdir -p $topleveldir/log");
-			runcmd("mkdir -p $topleveldir/log/tmp");
-		}
-		elsif( -e $condordistribution )
-		{
-			# in this option we ought to run condor_configure
-			# to get a current config files but we'll do this
-			# after getting the current condor_config from
-			# the environment we are in as it is supposed to
-			# have been generated this way in the nightly tests
-			# run in the NWO.
-
-			my $res = chdir "$topleveldir";
-			if(! $res)
-			{
-				die "Relcation failed!\n";
-				exit(1);
-			}
-			runcmd("mkdir -p $topleveldir/execute");
-			runcmd("mkdir -p $topleveldir/spool");
-			runcmd("mkdir -p $topleveldir/log");
-			runcmd("tar -xf $home/$condordistribution");
-			$sbinloc = $topleveldir; # local_dir is here
-			chdir "$home";
+		if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
+			debug( "Root path $1 and base $2\n",$debuglevel);
+			$binloc = $1;	# we'll get our binaries here.
+		} elsif(-f "../release_dir/bin/condor_status") {
+			print "Bummer which condor_q failed\n";
+			print "Using ../release_dir/bin(s)\n";
+			$binloc = "../release_dir/bin"; # we'll get our binaries here.
 		}
 		else
 		{
-			die "Undiscernable install directive! (condor = $condordistribution)\n";
+			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			die "Can not seem to find a Condor install!\n";
 		}
+		
+
+		if( $binloc =~ /^(\/.*\/)s*bin\/\s*$/ )
+		{
+			debug( "Root path to sbin is $1\n",$debuglevel);
+			$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
+		}
+		else
+		{
+			die "Can not seem to locate Condor release binaries\n";
+		}
+
+		$schedd = $sbinloc . "sbin/". "condor_schedd";
+		$master = $sbinloc . "sbin/". "condor_master";
+		$collector = $sbinloc . "sbin/". "condor_collector";
+		$submit = $binloc . "condor_submit";
+		$startd = $sbinloc . "sbin/". "condor_startd";
+		$negotiator = $sbinloc . "sbin/". "condor_negotiator";
+
+		debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
+
+
+		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
+
+		runcmd("mkdir -p $topleveldir/execute");
+		runcmd("mkdir -p $topleveldir/spool");
+		runcmd("mkdir -p $topleveldir/log");
+		runcmd("mkdir -p $topleveldir/log/tmp");
+	}
+	elsif( $condordistribution eq "nightlies" )
+	{
+		# we want a mechanism by which to find the condor binaries
+		# we are testing. But we know where they are relative to us
+		# ../../condor/bin etc
+		# That is simply the nightly test setup.... for now at least
+		# where is the hosting condor_config file? The one assumed to be based
+		# on a setup with condor_configure.
+
+		debug(" Nightlies - find environment config files\n",$debuglevel);
+		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+		while(<CONFIG>)
+		{
+			fullchomp($_);
+			$configline = $_;
+			debug( "$_\n" ,$debuglevel);
+			push @configfiles, $configline;
+		}
+		close(CONFIG);
+		# yes this assumes we don't have multiple config files!
+		$personal_condor_params{"condortemplate"} = shift @configfiles;
+		$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+
+		debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
+
+		if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
+		{
+			debug( "Root path $1 and base $2\n",$debuglevel);
+			$binloc = $1;	# we'll get our binaries here.
+		}
+		else
+		{
+			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			die "Can not seem to find a Condor install!\n";
+		}
+		
+
+		if( $binloc =~ /^(\/.*\/)bin\/\s*$/ )
+		{
+			debug( "Root path to sbin is $1\n",$debuglevel);
+			$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
+		}
+		else
+		{
+			die "Can not seem to locate Condor release binaries\n";
+		}
+		#$binloc = "../../condor/bin/";
+		#$sbinloc = "../../condor/";
+
+		debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n",$debuglevel);
+
+		$schedd = $sbinloc . "sbin/" .  "condor_schedd";
+		$master = $sbinloc . "sbin/" .  "condor_master";
+		$collector = $sbinloc . "sbin/" .  "condor_collector";
+		$submit = $binloc . "condor_submit";
+		$startd = $sbinloc . "sbin/" .  "condor_startd";
+		$negotiator = $sbinloc . "sbin/" .  "condor_negotiator";
+
+		debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
+
+
+		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
+
+		runcmd("mkdir -p $topleveldir/execute");
+		runcmd("mkdir -p $topleveldir/spool");
+		runcmd("mkdir -p $topleveldir/log");
+		runcmd("mkdir -p $topleveldir/log/tmp");
+	}
+	elsif( -e $condordistribution )
+	{
+		# in this option we ought to run condor_configure
+		# to get a current config files but we'll do this
+		# after getting the current condor_config from
+		# the environment we are in as it is supposed to
+		# have been generated this way in the nightly tests
+		# run in the NWO.
+
+		my $res = chdir "$topleveldir";
+		if(! $res)
+		{
+			die "Relcation failed!\n";
+			exit(1);
+		}
+		runcmd("mkdir -p $topleveldir/execute");
+		runcmd("mkdir -p $topleveldir/spool");
+		runcmd("mkdir -p $topleveldir/log");
+		runcmd("tar -xf $home/$condordistribution");
+		$sbinloc = $topleveldir; # local_dir is here
+		chdir "$home";
 	}
 	else
 	{
-		debug( " no condor attribute so not installing condor \n",$debuglevel);
-		$sbinloc = "";
+		die "Undiscernable install directive! (condor = $condordistribution)\n";
 	}
+
 	debug( "InstallPersonalCondor returning $sbinloc for LOCAL_DIR setting\n",$debuglevel);
 
 	# I hate to do this but....
