@@ -49,8 +49,10 @@ fi
 ##################################################
 
 IMAKE=imake
-which $IMAKE 2>&1 > /dev/null
-if [ $? -ne 0 -a X$USE_OLD_IMAKE = X ] ; then
+which $IMAKE 2>&1 > /dev/null ; HAS_IMAKE=$?
+grep Constantine /etc/issue 2>&1 > /dev/null ; IS_F12=$?
+if [ $IS_F12 -eq 0 -a $HAS_IMAKE -eq 0 ] ; then USE_OLD_IMAKE=YESPLEASE; fi
+if [ X$USE_OLD_IMAKE = X ] ; then
 
 if [ -d ../imake ] ; then
     IMAKEROOT="../imake"
