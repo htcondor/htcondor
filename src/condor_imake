@@ -49,7 +49,8 @@ fi
 ##################################################
 
 IMAKE=imake
-if [ X$USE_OLD_IMAKE = X ] ; then
+which $IMAKE 2>&1 > /dev/null
+if [ $? -ne 0 -a X$USE_OLD_IMAKE = X ] ; then
 
 if [ -d ../imake ] ; then
     IMAKEROOT="../imake"
