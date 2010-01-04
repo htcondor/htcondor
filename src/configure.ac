@@ -3017,7 +3017,9 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
 CHECK_EXTERNAL([classads], [1.0.4], [soft],
                [use new ClassAds (provides -better-analyze and more)],
 	       # This REALLY should test for headers, like most checks...
-               MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
+               MF_LIB_CHECK([classads], [[classad cclassad_create]], [classads]))
+AC_SUBST(CLASSADS_LDFLAGS, $CLASSADS_LDFLAGS)
+AC_SUBST(CLASSADS_CFLAGS, $CLASSADS_CFLAGS)
 
 CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
