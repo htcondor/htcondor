@@ -21,9 +21,8 @@
 #define _CONDOR_SCRIPT_PROC_H
 
 #include "condor_daemon_core.h"
+#include "condor_classad.h"
 #include "user_proc.h"
-
-class ClassAd;
 
 /** This class is for job wrapper scripts (pre/post) that the starter
 	might have to spawn.
