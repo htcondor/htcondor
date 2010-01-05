@@ -2092,6 +2092,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	char *round_param = param(round_param_name.Value());
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
+		LexemeType attr_type = LX_EOF;
+#ifdef WANT_OLD_CLASSADS
 		Token token;
 
 			// See if attr_value is a scalar (int or float) by
@@ -2101,22 +2103,45 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// notation, etc).
 		char const *avalue = attr_value; // scanner will modify ptr, so save it
 		Scanner(avalue,token);
+		attr_type = token.type;
+#else
+		ExprTree *tree = NULL;
+		classad::Value val;
+		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
+			 tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
+			((classad::Literal *)tree)->GetValue( val );
+			if ( val.GetType() == classad::Value::INTEGER_VALUE ) {
+				attr_type = LX_INTEGER;
+			} else if ( val.GetType() == classad::Value::REAL_VALUE ) {
+				attr_type = LX_FLOAT;
+			}
+		}
+		delete tree;
+#endif
 
-		if ( token.type == LX_INTEGER || token.type == LX_FLOAT ) {
+		if ( attr_type == LX_INTEGER || attr_type == LX_FLOAT ) {
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
 			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value);
 
-			long ivalue;
+			int ivalue;
 			double fvalue;
 
-			if ( token.type == LX_INTEGER ) {
+			if ( attr_type == LX_INTEGER ) {
+#ifdef WANT_OLD_CLASSADS
 				ivalue = token.intVal;
-				fvalue = token.intVal;
+#else
+				val.IsIntegerValue( ivalue );
+#endif
+				fvalue = ivalue;
 			} else {
-				ivalue = (long) token.floatVal;	// truncation conversion
+#ifdef WANT_OLD_CLASSADS
 				fvalue = token.floatVal;
+#else
+				val.IsRealValue( fvalue );
+#endif
+				ivalue = (int) fvalue;	// truncation conversion
 			}
 
 			if( strstr(round_param,"%") ) {
@@ -2139,7 +2164,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					double roundto = pow((double)10,magnitude) * percent/100.0;
 					fvalue = ceil( fvalue/roundto )*roundto;
 
-					if( token.type == LX_INTEGER ) {
+					if( attr_type == LX_INTEGER ) {
 						new_value.sprintf("%d",(int)fvalue);
 					}
 					else {
@@ -2163,7 +2188,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				new_value = ivalue;
 
 					// if it was a float, append ".0" to keep it a float
-				if ( token.type == LX_FLOAT ) {
+				if ( attr_type == LX_FLOAT ) {
 					new_value += ".0";
 				}
 			}

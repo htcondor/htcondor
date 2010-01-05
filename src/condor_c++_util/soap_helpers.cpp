@@ -135,6 +135,7 @@ convert_ad_to_adStruct(struct soap *s,
 		continue;
 	}
 
+#ifdef WANT_OLD_CLASSADS
     skip_attr = false;
     switch ( tree->MyType() ) {
     case LX_STRING:
@@ -200,7 +201,61 @@ convert_ad_to_adStruct(struct soap *s,
       }
       break;
     }
-
+#else
+    skip_attr = false;
+	if ( tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
+		classad::Value val;
+		((classad::Literal *)tree)->GetValue( val );
+		switch ( val.GetType() ) {
+		case classad::Value::STRING_VALUE:
+			const char *str;
+			val.IsStringValue( str );
+			ad_struct->__ptr[attr_index].value =
+				(char *) soap_malloc(s, strlen(str) + 1);
+			strcpy(ad_struct->__ptr[attr_index].value,str);
+			ad_struct->__ptr[attr_index].type = STRING_ATTR;
+			break;
+		case classad::Value::INTEGER_VALUE:
+			val.IsIntegerValue( tmpint );
+			ad_struct->__ptr[attr_index].value = (char*)soap_malloc(s,20);
+			snprintf(ad_struct->__ptr[attr_index].value,20,"%d",tmpint);
+			ad_struct->__ptr[attr_index].type = INTEGER_ATTR;
+			break;
+		case classad::Value::REAL_VALUE:
+			double tmpdouble;
+			val.IsRealValue( tmpdouble );
+			ad_struct->__ptr[attr_index].value = (char*)soap_malloc(s,20);
+			snprintf(ad_struct->__ptr[attr_index].value,20,"%f",tmpdouble);
+			ad_struct->__ptr[attr_index].type = FLOAT_ATTR;
+			break;
+		case classad::Value::BOOLEAN_VALUE:
+			val.IsBooleanValue( tmpbool );
+			if ( tmpbool ) {
+				ad_struct->__ptr[attr_index].value = "TRUE";
+			} else {
+				ad_struct->__ptr[attr_index].value = "FALSE";
+			}
+			ad_struct->__ptr[attr_index].type = BOOLEAN_ATTR;
+			break;
+		default:
+			skip_attr = true;
+		}
+	} else {
+		// assume everything else is some sort of expression
+		tmpstr = NULL;
+		int buflen = strlen( ExprTreeToString( tree ) );
+		tmpstr = (char*)soap_malloc(s,buflen + 1); // +1 for termination
+		ASSERT(tmpstr);
+		tmpstr[0] = '\0';
+		strcpy( tmpstr, ExprTreeToString( tree ) );
+		if ( !(tmpstr[0]) ) {
+			skip_attr = true;
+		} else {
+			ad_struct->__ptr[attr_index].value = tmpstr;
+			ad_struct->__ptr[attr_index].type = EXPRESSION_ATTR;
+		}
+	}
+#endif
     // skip this attr is requested to do so...
     if ( skip_attr ) continue;
 
@@ -213,6 +268,7 @@ convert_ad_to_adStruct(struct soap *s,
 	} else {
 		ad_struct->__ptr[attr_index].name = (char *)name;
 	}
+
     attr_index++;
     ad_struct->__size = attr_index;
   }
