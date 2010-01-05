@@ -1335,6 +1335,37 @@ IsValidAttrValue(const char *value)
     return true;
 }
 
+//	Decides if a string is a valid attribute name, the LHS
+//  of an expression.  As per the manual, valid names:
+//
+//  Attribute names are sequences of alphabetic characters, digits and 
+//  underscores, and may not begin with a digit
+
+/* static */ bool
+ClassAd::IsValidAttrName(const char *name) {
+		// NULL pointer certainly false
+	if (!name) {
+		return false;
+	}
+
+		// Must start with alpha or _
+	if (!isalpha(*name) && *name != '_') {
+		return false;
+	}
+
+	name++;
+
+		// subsequent letters must be alphanum or _
+	while (*name) {
+		if (!isalnum(*name) && *name != '_') {
+			return false;
+		}
+		name++;
+	}
+
+	return true;
+}
+
 bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 {
 	classad::ClassAd *chained_ad = GetChainedParentAd();

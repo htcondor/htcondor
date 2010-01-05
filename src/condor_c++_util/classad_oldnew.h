@@ -36,6 +36,8 @@
 
 using namespace std;
 
+void AttrList_setPublishServerTimeMangled( bool publish);
+
 classad::ClassAd* getOldClassAd( Stream *sock );
 bool getOldClassAd( Stream *sock, classad::ClassAd& ad );
 bool getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad );

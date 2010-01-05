@@ -18,7 +18,7 @@
  ***************************************************************/
 
 #include "compat_classad_util.h"
-
+#include "classad_oldnew.h"
 
 /* TODO This function needs to be tested.
  */
@@ -318,4 +318,9 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 
 	delete val;
 	return true;
+}
+
+void AttrList_setPublishServerTime( bool publish )
+{
+	AttrList_setPublishServerTimeMangled( publish );
 }

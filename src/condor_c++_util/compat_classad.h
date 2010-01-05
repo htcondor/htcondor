@@ -393,7 +393,14 @@ class ClassAd : public classad::ClassAd
      * @param value The thing we check to see if valid.
      * @return True, unless value had '\n' or '\r'.
      */
-    bool IsValidAttrValue(const char *value);
+    static bool IsValidAttrValue(const char *value);
+
+	//	Decides if a string is a valid attribute name, the LHS
+	//  of an expression.  As per the manual, valid names:
+	//
+	//  Attribute names are sequences of alphabetic characters, digits and 
+	//  underscores, and may not begin with a digit
+	static bool IsValidAttrName(const char *name);
 
 	bool NextExpr( const char *&name, ExprTree *&value );
 

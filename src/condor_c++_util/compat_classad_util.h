@@ -42,4 +42,6 @@ bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );
 
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target );
 
+void AttrList_setPublishServerTime( bool publish );
+
 #endif
