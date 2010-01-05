@@ -6892,9 +6892,6 @@ SaveClassAd ()
 
 	job->ResetExpr();
 	while( job->NextExpr(lhstr, tree) ) {
-		if( tree->invisible ) {
-			continue;
-		}
 		rhstr = ExprTreeToString( tree );
 		if( !lhstr || !rhstr ) { 
 			fprintf( stderr, "\nERROR: Null attribute name or value for job %d.%d\n",

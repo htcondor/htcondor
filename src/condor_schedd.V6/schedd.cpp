@@ -177,7 +177,7 @@ unsigned int UserIdentity::HashFcn(const UserIdentity & index)
 }
 
 UserIdentity::UserIdentity(const char *user, const char *domainname, 
-						   const ClassAd *ad):
+						   ClassAd *ad):
 	m_username(user), 
 	m_domain(domainname),
 	m_auxid("")
@@ -6924,7 +6924,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 
 void
-Scheduler::setNextJobDelay( ClassAd const *job_ad, ClassAd const *machine_ad ) {
+Scheduler::setNextJobDelay( ClassAd *job_ad, ClassAd *machine_ad ) {
 	int delay = 0;
 	ASSERT( job_ad );
 
