@@ -908,6 +908,24 @@ EvaluateAttrList( const string &attr, ExprList *&l ) const
 }
 
 bool ClassAd::
+GetReferences( const ExprTree *tree, References &externalRefs, References &internalRefs, bool fullNames)
+{
+    bool bothPassed = true;
+
+    if(!GetExternalReferences(tree, externalRefs, fullNames))
+    {
+        bothPassed = false;
+    }
+
+    if(!GetInternalReferences(tree, internalRefs, fullNames))
+    {
+        bothPassed = false;
+    }
+
+    return bothPassed;
+}   
+
+bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
 {
     EvalState       state;

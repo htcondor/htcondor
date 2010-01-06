@@ -529,6 +529,21 @@ e		*/
 		bool FlattenAndInline( const ExprTree* expr, Value& val,	// NAC
 							   ExprTree *&fexpr )const;				// NAC
 		
+        /** Return two lists of attribute references in the expression, one
+         *  which is for external references, the other for internal 
+         *  references.
+         *
+         *  @param tree The ExprTree for the expression that you wish to know
+         *  about
+         *  @param externalRefs List for external references.
+         *  @param internalRefs List for internal references.
+         *  @param fullNames Should be true if you want full names 
+         *  (other.foo) rather than shortened names.
+         */
+
+        bool GetReferences( const ExprTree *tree, References &externalRefs,
+                References &internalRefs, bool fullNames);
+
         /** Return a list of attribute references in the expression that are not 
          *  contained within this ClassAd.
          *  @param tree The ExprTree for the expression that has references that you are
