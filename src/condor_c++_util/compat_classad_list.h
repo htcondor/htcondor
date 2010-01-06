@@ -31,7 +31,7 @@ namespace compat_classad {
 // The SortFunction returns a 1 if the first classad is
 // "smaller than" the second classad. Do not assume
 // about other return values.
-typedef int (*SortFunctionType)(classad::ClassAd*,classad::ClassAd*,void*);
+typedef int (*SortFunctionType)(compat_classad::ClassAd*,compat_classad::ClassAd*,void*);
 
 class ClassAdList
 {
@@ -61,7 +61,7 @@ private:
 			 * @return true if a comes before b in sorted order,
 			 *  false otherwise.
 			 */
-		bool operator() (classad::ClassAd* a, classad::ClassAd* b)
+		bool operator() (compat_classad::ClassAd* a, compat_classad::ClassAd* b)
 		{
 			int res = this->smallerThan(a,b,this->userInfo);
 			if (res == 1) return true;
@@ -89,6 +89,8 @@ public:
 		 * but continuing an iteration from the index would be unwise.
 		 */
 	void Sort(SortFunctionType smallerThan, void* userInfo = NULL);
+
+	int Count( classad::ExprTree *constraint );
 
 	void fPrintAttrListList(FILE* f, bool use_xml = false, StringList *attr_white_list = NULL);
 };

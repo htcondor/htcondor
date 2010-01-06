@@ -144,4 +144,23 @@ void ClassAdList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_whi
     Close();
 }
 
+int ClassAdList::Count( classad::ExprTree *constraint )
+{
+	ClassAd *ad = NULL;
+	int matchCount  = 0;
+
+	// Check for null constraint.
+	if ( constraint == NULL ) {
+		return 0;
+	}
+
+	Rewind();
+	while( (ad = Next()) ) {
+		if ( EvalBool(ad, constraint) ) {
+			matchCount++;
+		}
+	}
+	return matchCount;
+}
+
 } // namespace compat_classad
