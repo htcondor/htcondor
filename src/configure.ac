@@ -2328,8 +2328,10 @@ AC_ARG_ENABLE([kbdd],
       enable_kbdd=no
     ;;
   esac])
+AC_HEADER_CHECK([X11/Xlib.h],[HAS_XLIB_H=yes])
 AS_IF([test "x$enable_kbdd" = xyes],
-  [AC_DEFINE([NEEDS_KBDD], [1], [Define if enabling KBDD])
+  [AS_IF([test "x$HAS_XLIB_H" != xyes], AC_MSG_ERROR([KBDD requested but no Xlib.h]))
+   AC_DEFINE([NEEDS_KBDD], [1], [Define if enabling KBDD])
    AC_SUBST(X11_CFLAGS, $X_CFLAGS)
    AC_SUBST(X11_LDFLAGS, $X_LDFLAGS)
    AC_SUBST(X11_LIBS, $X11_LIBS)],
