@@ -353,7 +353,8 @@ bool test_fPrintAsXML(compat_classad::ClassAd *c1, int verbose)
     bool passed = false;
     FILE* compC1XML;
 
-    compC1XML = fopen("compC1XML.xml", "w+");
+    compC1XML = safe_fopen_wrapper("compC1XML.xml", "w+");
+    //compC1XML = fopen("compC1XML.xml", "w+");
     c1->fPrintAsXML(compC1XML);
 
     fclose(compC1XML);
@@ -763,9 +764,10 @@ bool test_EscapeStringValue(compat_classad::ClassAd *c1, int verbose)
     classad::AttrList::iterator itr;
     itr = c1->begin();
 
+    MyString msTmp;
     c1->EvaluateAttrString((*itr).first, tmpString);
 
-    tmp = c1->EscapeStringValue(tmpString.c_str());
+    tmp = c1->EscapeStringValue(tmpString.c_str(), msTmp);
 
     if(!strcmp(tmp, "\"hello\""))
     {
@@ -775,7 +777,7 @@ bool test_EscapeStringValue(compat_classad::ClassAd *c1, int verbose)
     if(verbose == 2)
         printf("Expected %s and EscapeStringValue returned %s.\n", "\"hello\"", tmp); 
 
-    tmp2 = c1->EscapeStringValue(NULL);
+    tmp2 = c1->EscapeStringValue(NULL, msTmp);
     
     if(tmp2 != NULL)
     {
@@ -934,7 +936,7 @@ bool test_GIR(int verbose)
 
     GIRTestCase *testcase[numTests];
 
-    classad::ClassAd* c;
+    //classad::ClassAd* c;
     classad::ClassAdParser parser;
 
     // expr C is an opnode
@@ -1187,8 +1189,10 @@ runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, i
     classad::References* retRefs;
     std::vector<string> expectedVec;
 
+    /*
     int subStrStart = 0;
     int subStrEnd = 0;
+    */
 
     //if "," doesn't exist, then skip the splitting-stage.
     bool singleAttr = (listString.find(" ") == string::npos);
