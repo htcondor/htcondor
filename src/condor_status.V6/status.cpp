@@ -275,6 +275,7 @@ main (int argc, char *argv[])
 
 	if ((mode == MODE_STARTD_NORMAL) && (ppStyle == PP_STARTD_NORMAL)) {
 		projList.AppendArg("Name");
+		projList.AppendArg("Machine");
 		projList.AppendArg("Opsys");
 		projList.AppendArg("Arch");
 		projList.AppendArg("State");
