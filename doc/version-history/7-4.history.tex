@@ -48,6 +48,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrack #1093
+\item The sort of condor\_status output accidentally changed in V7.3, so that the output
+was sorted based on the slot name, then machine name.  It is now restored to the original
+sorting, first on machine name, then slot.
+
+% gittrack #728
+\item If one machine running a parallel job crashed, and job leases are enabled (which they
+are by default), the job wouldn't exit until the job lease duration expired.  As the starter
+won't get respawned, there's no need to wait. Many sites set long job lease durations, to
+prevent jobs from being killed when the scheduler machine reboots.  Now, if one node goes 
+away, the whole computation is shut down immediately.
+
 \item Fixed the verbosity level of some \Condor{dagman} messages written to
 the \File{dagman.out} file.
 
