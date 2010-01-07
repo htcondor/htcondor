@@ -111,7 +111,9 @@ do_REMOTE_syscall()
 			Shadow->logDisconnectedEvent( txt ); 
 
 			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
-					return 0;
+					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
+					Shadow->gracefulShutDown();
+					EXCEPT( "%s", err_msg.Value() );
 			}
 				// tell the shadow to start trying to reconnect
 			Shadow->reconnect();
