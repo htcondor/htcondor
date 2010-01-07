@@ -1543,4 +1543,55 @@ void ClassAd::ChainCollapse()
     }
 }
 
+//TODO: get something to convert a StringList to an std::set.
+void ClassAd::
+GetReferences(const char* attr,
+                StringList &internal_refs,
+                StringList &external_refs) const
+{
+    /*
+    ExprTree *tree;
+
+    tree = Lookup(attr);
+    if(tree != NULL)
+    {
+        GetReferences(tree, external_refs, internal_refs, true);
+    }
+
+    */
+    return;
+}
+
+bool ClassAd::
+GetExprReferences(const char* expr,
+                StringList &internal_refs,
+                StringList &external_refs) const
+{
+
+    /*
+    ExprTree *tree = NULL;
+
+    tree = Lookup(expr);
+    if(tree != NULL)
+    {
+        internal_refs.append(expr);
+        GetReferences(tree, external_refs, internal_refs);
+
+    }
+    else
+    {
+        if(ParseClassAdRvalExpr(expr,tree) != 0 || tree == NULL )
+        {
+            return false;
+        }
+        GetReferences(tree,external_refs, internal_refs);
+        delete tree;
+    }
+    */
+
+    return true;
+
+}
+
+
 } // namespace compat_classad

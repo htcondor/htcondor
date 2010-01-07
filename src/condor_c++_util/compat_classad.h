@@ -447,15 +447,13 @@ class ClassAd : public classad::ClassAd
      */
     void ChainCollapse();
 
+    void GetReferences(const char* attr,
+                StringList &internal_refs,
+                StringList &external_refs) const;
 
-    /*
-    bool GetInternalReferences( const ExprTree *tree, classad::References &refs, bool fullNames);
-
-
-    bool _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
-            classad::EvalState &state, classad::References& refs, bool fullNames);
-
-    */
+    bool GetExprReferences(const char* expr,
+                StringList &internal_refs,
+                StringList &external_refs) const;
 
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
