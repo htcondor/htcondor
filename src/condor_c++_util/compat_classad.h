@@ -449,11 +449,11 @@ class ClassAd : public classad::ClassAd
 
     void GetReferences(const char* attr,
                 StringList &internal_refs,
-                StringList &external_refs) const;
+                StringList &external_refs);
 
     bool GetExprReferences(const char* expr,
                 StringList &internal_refs,
-                StringList &external_refs) const;
+                StringList &external_refs);
 
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
@@ -471,6 +471,10 @@ class ClassAd : public classad::ClassAd
     bool m_dirtyItrInit;
 
 	bool m_privateAttrsAreInvisible;
+
+	void _GetReferences(classad::ExprTree *tree,
+						StringList &internal_refs,
+						StringList &external_refs);
 };
 
 typedef ClassAd AttrList;

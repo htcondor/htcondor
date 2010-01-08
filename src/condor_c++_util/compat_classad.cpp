@@ -1543,54 +1543,68 @@ void ClassAd::ChainCollapse()
     }
 }
 
-//TODO: get something to convert a StringList to an std::set.
 void ClassAd::
 GetReferences(const char* attr,
                 StringList &internal_refs,
-                StringList &external_refs) const
+                StringList &external_refs)
 {
-    /*
     ExprTree *tree;
 
     tree = Lookup(attr);
     if(tree != NULL)
     {
-        GetReferences(tree, external_refs, internal_refs, true);
+		_GetReferences( tree, internal_refs, external_refs );
     }
-
-    */
-    return;
 }
 
 bool ClassAd::
 GetExprReferences(const char* expr,
-                StringList &internal_refs,
-                StringList &external_refs) const
+				  StringList &internal_refs,
+				  StringList &external_refs)
 {
+	classad::ClassAdParser par;
+	classad::ExprTree *tree = NULL;
 
-    /*
-    ExprTree *tree = NULL;
-
-    tree = Lookup(expr);
-    if(tree != NULL)
-    {
-        internal_refs.append(expr);
-        GetReferences(tree, external_refs, internal_refs);
-
+    if ( !par.ParseExpression( expr, tree, true ) ) {
+        return false;
     }
-    else
-    {
-        if(ParseClassAdRvalExpr(expr,tree) != 0 || tree == NULL )
-        {
-            return false;
-        }
-        GetReferences(tree,external_refs, internal_refs);
-        delete tree;
-    }
-    */
 
-    return true;
+	_GetReferences( tree, internal_refs, external_refs );
 
+	delete tree;
+
+	return true;
+}
+
+void ClassAd::
+_GetReferences(classad::ExprTree *tree,
+			   StringList &internal_refs,
+			   StringList &external_refs)
+{
+	if ( tree == NULL ) {
+		return;
+	}
+
+	classad::References ext_refs_set;
+	classad::References int_refs_set;
+	classad::References::iterator set_itr;
+	GetExternalReferences(tree, ext_refs_set, true);
+	GetInternalReferences(tree, int_refs_set, true);
+
+	for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
+		  set_itr++ ) {
+		const char *name = set_itr->c_str();
+		if ( strncasecmp( name, "target.", 7 ) ) {
+			external_refs.append( set_itr->c_str() );
+		} else {
+			external_refs.append( &set_itr->c_str()[7] );
+		}
+	}
+
+	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
+		  set_itr++ ) {
+		internal_refs.append( set_itr->c_str() );
+	}
 }
 
 
