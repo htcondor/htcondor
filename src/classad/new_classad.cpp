@@ -1356,9 +1356,10 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 case EVAL_OK:   {
                     //whoo, it's internal.
                     refs.insert(attr);
+                    bool rval =_GetInternalReferences(result, ad, state, refs, fullNames);
                     //TODO: Does this actually matter?
                     state.curAd = curAd;
-                    return true;
+                    return rval;
                 break;
                                 }
 
