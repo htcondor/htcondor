@@ -93,6 +93,10 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
 {
 	chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
 	$opt_configure = $ENV{NMI_configure};
+	# Disable kbdd because we have no tests for the kbdd and some
+	# test platforms (cross tests) do not have X11 headers, which
+	# configure expects if the kbdd is requested.
+	$opt_configure .= " --disable-kbdd";
 	print "****************************************************\n";
 	print "**** running CONFIGURE ...\n"; 
 	print "****************************************************\n";
