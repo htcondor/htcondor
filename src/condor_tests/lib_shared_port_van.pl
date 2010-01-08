@@ -19,36 +19,27 @@
 ##**************************************************************
 
 use CondorTest;
+use File::Basename;
 
-$cmd = 'lib_shared_port_van.cmd';
-$out = 'lib_shared_port_van.out';
-$testdesc =  'sample wrapped test ';
-$testname = "lib_shared_port_van";
+my $testname = basename( $0, ".pl" );
+my $cmd = "$testname.cmd";
 
 $submitted = sub
 {
-	my %info = @_;
-	my $name = $info{"error"};
-	CondorTest::debug("Submit simple personal condor wrapped test\n",1);
+	CondorTest::debug("Job submitted\n",1);
 };
 
 $aborted = sub 
 {
-	my %info = @_;
-	my $done;
 	die "Abort event NOT expected\n";
 };
 
 $execute = sub
 {
-	my %info = @_;
-	my $cluster = $info{"cluster"};
-	my $name = $info{"error"};
 };
 
 $ExitSuccess = sub {
-	my %info = @_;
-	CondorTest::debug("simple wrapped test completed without error\n",1);
+	CondorTest::debug("Job completed\n",1);
 };
 
 
@@ -65,4 +56,3 @@ if( CondorTest::RunTest($testname, $cmd, 0) ) {
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
-
