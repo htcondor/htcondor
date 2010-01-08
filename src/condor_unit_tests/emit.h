@@ -32,6 +32,7 @@ private:
 	int aborted_tests;
 	int skipped_tests;
 
+	time_t start;
 public:
 		// constructor and destructor
 	Emitter();

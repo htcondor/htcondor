@@ -103,6 +103,7 @@ void Emitter::emit_problem(const char* problem) {
 void Emitter::emit_test(const char* test) {
 	function_tests++;
 	dprintf(D_ALWAYS, "TEST:  %s\n", test);
+	start = time(0);
 }
 
 /* A header saying that the function's input is going to follow.
@@ -127,7 +128,7 @@ void Emitter::emit_output_actual_header() {
  * be called like "emit_result_success(__LINE__);"
  */
 void Emitter::emit_result_success(int line) {
-	dprintf(D_ALWAYS, "RESULT:  SUCCESS, test passed at line %d\n", line);
+	dprintf(D_ALWAYS, "RESULT:  SUCCESS, test passed at line %d (%d seconds)\n", line, time(0) - start);
 	passed_tests++;
 	emit_test_break();
 }
