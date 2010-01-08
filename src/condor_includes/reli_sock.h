@@ -142,9 +142,11 @@ public:
     /// returns <0 on failure, 0 for ok
 	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)
 	//                 -1                    (all other errors)
-	int get_file( filesize_t *size, const char *destination, bool flush_buffers=false);
+	int get_file( filesize_t *size, const char *destination,
+				  bool flush_buffers=false, bool append=false);
     /// returns -1 on failure, 0 for ok
-	int get_file( filesize_t *size, int fd, bool flush_buffers=false);
+	int get_file( filesize_t *size, int fd,
+				  bool flush_buffers=false, bool append=false);
     /// returns <0 on failure, 0 for ok
 	//  See put_file() for the meaning of specific return codes.
 	int put_file_with_permissions( filesize_t *size, const char *source);
@@ -155,9 +157,9 @@ public:
 	// we can continue talking to the receiver, as though a file had
 	// been successfully sent.  In most cases, the next logical thing
 	// to do is to tell the receiver about the failure.
-	int put_file( filesize_t *size, const char *source);
+	int put_file( filesize_t *size, const char *source, filesize_t offset=0);
     /// returns -1 on failure, 0 for ok
-	int put_file( filesize_t *size, int fd );
+	int put_file( filesize_t *size, int fd, filesize_t offset=0 );
 	/// returns -1 on failure, 0 for ok
 	int get_x509_delegation( filesize_t *size, const char *destination,
 							 bool flush_buffers=false );

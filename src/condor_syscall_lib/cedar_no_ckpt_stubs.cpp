@@ -31,7 +31,8 @@
 
 
 int
-ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffers)
+ReliSock::get_file( filesize_t *size, const char *destination,
+					bool flush_buffers, bool append)
 {
 	EXCEPT( "ReliSock::get_file() should never be "
 			"called within the Condor syscall library" );
@@ -39,7 +40,8 @@ ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffer
 }
 
 int
-ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
+ReliSock::get_file( filesize_t *size, int fd,
+					bool flush_buffers, bool append )
 {
 	EXCEPT( "ReliSock::get_file() should never be "
 			"called within the Condor syscall library" );
@@ -55,7 +57,7 @@ ReliSock::put_empty_file( filesize_t *size )
 }
 
 int
-ReliSock::put_file( filesize_t *size, const char *source)
+ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset)
 {
 	EXCEPT( "ReliSock::put_file() should never be "
 			"called within the Condor syscall library" );
@@ -63,7 +65,7 @@ ReliSock::put_file( filesize_t *size, const char *source)
 }
 
 int
-ReliSock::put_file( filesize_t *size, int fd )
+ReliSock::put_file( filesize_t *size, int fd, filesize_t offset )
 {
 	EXCEPT( "ReliSock::put_file() should never be "
 			"called within the Condor syscall library" );
