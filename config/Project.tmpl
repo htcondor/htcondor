@@ -379,8 +379,9 @@ SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS) $(PTHREAD_LIB)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
+#if HAVE_EXT_GSOAP
 SOAP_LIB = ../condor_daemon_core.V6/mimetypes.o ../condor_daemon_core.V6/soap_core.o
-
+#endif
 
 /* common ld flags which should be first in the list */
 COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) $(GCC_HASH_STYLE_FLAG) -lm \
