@@ -91,7 +91,9 @@
 #define isnan _isnan
 	// isinf() defined in util.h
 
-
+#ifdef WIN32
+#include <hash_map>
+#endif
 
 #define snprintf _snprintf
 
@@ -173,7 +175,11 @@ struct StringHash {
 	}
 };
 
-struct StringCaseIgnHash {
+struct StringCaseIgnHash
+#ifdef WIN32
+	: public stdext::hash_compare <std::string>
+#endif
+{
 	size_t operator()( const std::string &s ) const {
 		unsigned long h = 0;
 		char const *ch;
@@ -182,6 +188,11 @@ struct StringCaseIgnHash {
 		}
 		return (size_t)h;
 	}
+#ifdef WIN32
+	bool operator( )( const std::string &s1, const std::string &s2 ) const {
+		return( strcasecmp( s1.c_str( ), s2.c_str( ) ) == 0 );
+	}
+#endif
 };
 extern std::string       CondorErrMsg;
 #endif

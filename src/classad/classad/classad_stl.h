@@ -23,9 +23,18 @@
 
 #include <map>
 #include <list>
-#include <ext/hash_map>
 
+#ifdef WIN32
+#include <hash_map>
+#else
+#include <ext/hash_map>
+#endif
+
+#ifdef WIN32
+#define classad_hash_map stdext::hash_map
+#else
 #define classad_hash_map __gnu_cxx::hash_map
+#endif
 #define classad_map   std::map 
 #define classad_slist std::list
 
