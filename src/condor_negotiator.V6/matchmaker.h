@@ -128,7 +128,7 @@ class Matchmaker : public Service
 								 double minSlotWeight,
 			ClassAdList& startdAds, 
 			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
-			float groupQuota=INT_MAX, const char* groupAccountingName=NULL);
+			float groupQuota=INT_MAX, float groupusage=0, const char* groupAccountingName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdList&,
@@ -160,6 +160,7 @@ class Matchmaker : public Service
 		void calculateSubmitterLimit(char const *scheddName,
 		                          char const *groupAccountingName,
 		                          float groupQuota,
+					  float groupusage,
 		                          double maxPrioValue,
 		                          double maxAbsPrioValue,
 		                          double normalFactor,
@@ -187,6 +188,7 @@ class Matchmaker : public Service
 		void calculatePieLeft( ClassAdList &scheddAds,
 		                       char const *groupAccountingName,
 		                       float groupQuota,
+				       float groupusage,
 		                       double maxPrioValue,
 		                       double maxAbsPrioValue,
 		                       double normalFactor,

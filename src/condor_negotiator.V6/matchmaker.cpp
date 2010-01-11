@@ -835,7 +835,8 @@ negotiationTime ()
 	ClaimIdHash claimIds(MyStringHash);
 	ClassAdList scheddAds;
 	ClassAdList allAds;
-
+	int unclaimedquota=0; 
+	int staticquota=0;
 	/**
 		Check if we just finished a cycle less than NEGOTIATOR_CYCLE_DELAY 
 		seconds ago.  If we did, reset our timer so at least 
@@ -880,12 +881,13 @@ negotiationTime ()
 	// Save this for future use.
 	// This _must_ come before trimming the startd ads.
 	int untrimmed_num_startds = startdAds.MyLength();
-
-    // Get number of available slots in any state.
-    int numDynGroupSlots = untrimmed_num_startds;
-
+	int numDynGroupSlots = untrimmed_num_startds;
 	double minSlotWeight = 0;
 	double untrimmedSlotWeightTotal = sumSlotWeights(startdAds,&minSlotWeight);
+	float unclaimed = 0;
+	
+	// Register a lookup function that passes through the list of all ads.
+	// ClassAdLookupRegister( lookup_global, &allAds );
 
 	// Compute the significant attributes to pass to the schedd, so
 	// the schedd can do autoclustering to speed up the negotiation cycles.
@@ -934,9 +936,9 @@ negotiationTime ()
 		strlwr(groups); // the accountant will want lower case!!!
 		groupList.initializeFromString(groups);
 		free(groups);		
-		groupArray = new SimpleGroupEntry[ groupList.number() ];
+		groupArray = new SimpleGroupEntry[ groupList.number()+1 ];
 		ASSERT(groupArray);
-
+		int numsubmits[groupList.number()+1];
         // Restrict number of slots available for dynamic quotas.
         if ( numDynGroupSlots && DynQuotaMachConstraint ) {
             int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
@@ -955,7 +957,10 @@ negotiationTime ()
 
 		MyString tmpstr;
 		i = 0;
-		groupQuotasHash->clear();
+		groupQuotasHash->clear();		
+		int unusedslots=0;
+		double quota_fraction;
+		float totalgroupquota=0;
 		groupList.rewind();
 		while ((groups = groupList.next ()))
 		{
@@ -965,6 +970,7 @@ negotiationTime ()
                 // Static groups quotas take priority over any dynamic quota
                 dprintf(D_FULLDEBUG, "group %s static quota = %.3f\n",
                         groups, quota);
+		staticquota=1;	
             } else {
                 // Next look for a floating point dynamic quota.
                 tmpstr.sprintf("GROUP_QUOTA_DYNAMIC_%s", groups);
@@ -977,7 +983,7 @@ negotiationTime ()
                     );
                 if (quota_fraction != 0.0) {
                     // use specified dynamic quota
-                    quota = (int)(quota_fraction * numDynGroupSlots);
+                    quota = rint(quota_fraction * numDynGroupSlots);
                     dprintf(D_FULLDEBUG,
                         "group %s dynamic quota for %d slots = %.3f\n",
                             groups, numDynGroupSlots, quota);
@@ -1018,9 +1024,45 @@ negotiationTime ()
 			dprintf(D_FULLDEBUG,
 				"Group Table : group %s quota %.3f usage %.3f prio %2.2f\n",
 					groups,quota,usage,groupArray[i].prio);
+		if (!staticquota){
+			//now count total number of group submitters  and fix up quota
+                	int numrunning=0;
+			int numidle=0;
+			ClassAd *ad = NULL;
+			char scheddName[80];
+			numsubmits[i]=0;
+			scheddAds.Open();
+			while( (ad=scheddAds.Next()) ) {
+				if (!ad->LookupString(ATTR_NAME, scheddName, sizeof(scheddName))) {
+					continue;
+				}
+				scheddName[79] = '\0'; // make certain we have a terminating NULL
+				char *sep = strchr(scheddName,'.');	// is there a group seperator?
+				if ( !sep ) {
+					continue;
+				};
+				 *sep = '\0'; 
+				if ( strcasecmp(scheddName,groups)==0 ) { 
+					numidle=0;
+					numrunning=0;
+					ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
+					ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
+		        		numsubmits[i]=numsubmits[i]+numrunning+numidle;
+            			}
+			} 		   
+		   	if( numsubmits[i]==0){
+		   		unusedslots=unusedslots+(int)groupArray[i].maxAllowed;		   
+		   	} else if(numsubmits[i]<quota ) {
+			 	unusedslots=unusedslots+(int)groupArray[i].maxAllowed-numsubmits[i];
+			}
+			totalgroupquota=totalgroupquota+quota;	
+			dprintf(D_FULLDEBUG, "group %s numgroupsubmits=%d quota=%f totalgroupquota=%f unusedslots=%d\n",groups, numsubmits[i], quota,totalgroupquota, unusedslots);
+		
+			} //if notstaticquota
 			i++;
-		}
+		} //while groups
 		int groupArrayLen = i;
+		
 
 			// pull out the submitter ads that specify a group from the
 			// scheddAds list, and insert them into a list specific to 
@@ -1046,7 +1088,126 @@ negotiationTime ()
 				}
 			}
 		}
+		
+		if (!staticquota){
+		
+		// totalgroupquota is num slots claimed in config for groups
+		// unclamedquota is quota not claimed in config..could be for user jobs
+		// unusedslots is number of totalgroupquota that goes unused due to lack of submitters
 
+		unclaimed=numDynGroupSlots-totalgroupquota;
+		unclaimedquota=numDynGroupSlots-(int)totalgroupquota;
+		
+		// to fix up roundoff
+		if (unclaimed<1) unclaimedquota=0;
+		
+		dprintf(D_FULLDEBUG, " numDynGroupSlots=%d totalgroupquota=%f unclaimedquota=%d\n",numDynGroupSlots,totalgroupquota,unclaimedquota);
+			
+		scheddAds.Open();
+		// here we check for submitters that are not in a group with quota
+		int nongroupusers=scheddAds.Length();
+		dprintf(D_FULLDEBUG, " nongroupusers=%d totalgroupquota=%f\n",nongroupusers,totalgroupquota);
+		if (nongroupusers){
+			scheddAds.Open();
+			int numrunning=0;
+			int numidle=0;
+			int totaljobs=0;
+			numsubmits[groupArrayLen]=0;
+			int totalsubmits=0;
+			float schedusagetotal=0;
+			float scheddUsage=0;
+			while( (ad=scheddAds.Next()) ) {
+				ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
+				ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
+				numsubmits[groupArrayLen]=numsubmits[groupArrayLen]+numrunning+numidle;
+				if (ad->LookupString(ATTR_NAME, scheddName, sizeof(scheddName))) {
+					scheddName[79] = '\0'; // make certain we have a terminating NULL
+					scheddUsage = accountant.GetWeightedResourcesUsed(scheddName);
+					schedusagetotal=scheddUsage+schedusagetotal;
+					dprintf(D_FULLDEBUG, " nongroupusers=%d schedusagetotal=%f\n",nongroupusers,schedusagetotal);	
+					groupArray[groupArrayLen].submitterAds.Insert(ad);
+					scheddAds.Delete(ad);
+				}
+			}
+			groupArray[groupArrayLen].groupName = "none\0"; 
+			groupArray[groupArrayLen].maxAllowed = unclaimedquota;			
+			groupArray[groupArrayLen].usage = schedusagetotal;
+			groupArray[groupArrayLen].prio = 100;		
+			if( totaljobs==0 ){
+		 		  unusedslots=unusedslots+(int)groupArray[groupArrayLen].maxAllowed;
+		   	} else if(totaljobs<(int)groupArray[groupArrayLen].maxAllowed ) {
+			 	unusedslots=unusedslots+(int)groupArray[groupArrayLen].maxAllowed-numsubmits[groupArrayLen];
+			}
+			groupArrayLen=groupArrayLen+1;
+		} else {
+			unusedslots=unusedslots+unclaimedquota;
+		}
+		dprintf(D_FULLDEBUG, " built array totalgroupquota=%f unusedslots=%d\n",totalgroupquota,unusedslots);
+		
+		// now we reassign unused slots for autogroup groups based upon percent group quota is of total slots
+		// this keeps fair share percentages the same as unused slots are spread around
+		float quotatotal=0;
+		float oldquota[groupArrayLen]; 
+		for (i=0;i<groupArrayLen;i++) { 
+			oldquota[i]=groupArray[i].maxAllowed;
+			quotatotal=quotatotal+oldquota[i];
+		}
+		//we know total unusedslots
+		int saveunusedslots=unusedslots;		
+		int unusedslotstotal=unusedslots;
+		int slotflag=1; 
+		int given=0;
+                
+		while (unusedslots>0 && slotflag){
+		 	int myshare=0;
+		  	slotflag=0;
+			int leftoverpie=unusedslots;
+			for (i=0; (i<groupArrayLen && unusedslots>0); i++){
+				double percentofunused=0;
+				dprintf(D_ALWAYS,"Group %s - unusedslots to give=%d maxallowed=%f \n",groupArray[i].groupName, unusedslots,groupArray[i].maxAllowed);
+		 		if (numsubmits[i]>groupArray[i].maxAllowed) {
+					// hand out unused slots to non group users if they had quota
+					if((i==groupArrayLen-1)&&nongroupusers&&groupArray[i].maxAllowed>0){
+						double piefraction=(double) leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots;
+						if (piefraction>0 && piefraction<1) {
+							myshare=1;
+						} else {
+							myshare=rint((double)leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots);
+						}
+						if (unusedslots<myshare) myshare=unusedslots;
+						groupArray[i].maxAllowed=groupArray[i].maxAllowed+myshare;
+						given=given+myshare;
+						slotflag=1;
+						unusedslots=unusedslots-myshare;
+					} else {
+						// hand out unused slots to group users with autoregroup
+						bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP",false);
+						MyString autoregroup_param;
+						autoregroup_param.sprintf("GROUP_AUTOREGROUP_%s",groupArray[i].groupName);
+						if(param_boolean(autoregroup_param.Value(),default_autoregroup)){			
+							double piefraction=(double) leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots;
+							if (piefraction>0 && piefraction<1) {
+								myshare=1;
+							} else {
+								myshare=rint((double)leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots);
+							}
+							if (unusedslots<myshare) myshare=unusedslots;
+							groupArray[i].maxAllowed=groupArray[i].maxAllowed+myshare;
+							given=given+myshare;
+							slotflag=1;
+							unusedslots=unusedslots-myshare;
+						}
+					} 
+			    } else {
+				groupArray[i].maxAllowed=(float)numsubmits[i];}
+		 	
+		 	}
+			dprintf(D_ALWAYS,"totalunusedslots=%d given=%d \n", unusedslotstotal,given); 
+			if(given==0)slotflag=0;
+		}
+		dprintf(D_ALWAYS,"totalunusedslots=%d given=%d \n", unusedslotstotal,given);
+		} //if notstaticquota
+		
 			// now sort the group array
 		qsort(groupArray,groupArrayLen,sizeof(SimpleGroupEntry),groupSortCompare);		
 
@@ -1066,15 +1227,14 @@ negotiationTime ()
 						groupArray[i].groupName,groupArray[i].usage);
 				continue;
 			}
-			dprintf(D_ALWAYS,"Group %s - negotiating\n",
-				groupArray[i].groupName);
-			negotiateWithGroup( untrimmed_num_startds,
-								untrimmedSlotWeightTotal,
-								minSlotWeight, startdAds, 
-				claimIds, groupArray[i].submitterAds, 
-				groupArray[i].maxAllowed, groupArray[i].groupName );
+			dprintf(D_ALWAYS,
+				"Group %s - negotiating\n",groupArray[i].groupName);
+			negotiateWithGroup( untrimmed_num_startds,untrimmedSlotWeightTotal, minSlotWeight, 
+					startdAds, claimIds, groupArray[i].submitterAds, 
+					groupArray[i].maxAllowed, groupArray[i].usage,groupArray[i].groupName );
 		}
-
+		if (staticquota){
+		
 			// if GROUP_AUTOREGROUP is set to true, then for any submitter
 			// assigned to a group that did match, insert the submitter
 			// ad back into the main scheddAds list.  this way, we will
@@ -1096,6 +1256,12 @@ negotiationTime ()
 				}
 			}
 		}
+		
+		
+		
+		
+		
+		} //if notstaticquota
 
 			// finally, cleanup 
 		delete []  groupArray;
@@ -1137,7 +1303,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 ClassAdList& startdAds,
 					 ClaimIdHash& claimIds, 
 					 ClassAdList& scheddAds, 
-					 float groupQuota, const char* groupAccountingName)
+					 float groupQuota, float groupusage,const char* groupAccountingName)
 {
 	ClassAd		*schedd;
 	MyString    scheddName;
@@ -1194,6 +1360,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			scheddAds,
 			groupAccountingName,
 			groupQuota,
+			groupusage,
 			maxPrioValue,
 			maxAbsPrioValue,
 			normalFactor,
@@ -1262,6 +1429,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				scheddName.Value(),
 				groupAccountingName,
 				groupQuota,
+				groupusage,
 				maxPrioValue,
 				maxAbsPrioValue,
 				normalFactor,
@@ -2919,6 +3087,7 @@ Matchmaker::calculateSubmitterLimit(
 	char const *scheddName,
 	char const *groupAccountingName,
 	float groupQuota,
+	float groupusage,
 	double maxPrioValue,
 	double maxAbsPrioValue,
 	double normalFactor,
@@ -2947,8 +3116,9 @@ Matchmaker::calculateSubmitterLimit(
 	}
 
 	if ( groupAccountingName ) {
-		float maxAllowed =
-			groupQuota - accountant.GetWeightedResourcesUsed(groupAccountingName);
+		float maxAllowed = groupQuota - groupusage;
+			dprintf (D_FULLDEBUG, "   maxAllowed  = %f groupQuota  = %f groupusage  = %f\n",
+					maxAllowed,groupQuota,groupusage);
 		if ( maxAllowed < 0 ) maxAllowed = 0.0;
 		if ( submitterLimit > maxAllowed ) {
 			submitterLimit = maxAllowed;
@@ -2967,6 +3137,7 @@ Matchmaker::calculatePieLeft(
 	ClassAdList &scheddAds,
 	char const *groupAccountingName,
 	float groupQuota,
+	float groupusage,
 	double maxPrioValue,
 	double maxAbsPrioValue,
 	double normalFactor,
@@ -2997,6 +3168,7 @@ Matchmaker::calculatePieLeft(
 			scheddName.Value(),
 			groupAccountingName,
 			groupQuota,
+			groupusage,
 			maxPrioValue,
 			maxAbsPrioValue,
 			normalFactor,
@@ -3009,6 +3181,8 @@ Matchmaker::calculatePieLeft(
 			submitterAbsShare,
 			submitterPrio,
 			submitterPrioFactor);
+			
+			
 		pieLeft += submitterLimit;
 	}
 	scheddAds.Close();
