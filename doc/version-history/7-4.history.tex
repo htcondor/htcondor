@@ -49,16 +49,22 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrack #1093
-\item The sort of condor\_status output accidentally changed in V7.3, so that the output
-was sorted based on the slot name, then machine name.  It is now restored to the original
-sorting, first on machine name, then slot.
+\item The sort based on \Condor{status} output accidentally changed in 
+Condor version 7.3,
+so that the output was based on the slot name first, then machine name.
+The behavior is now restored to the original sorting: first on machine name,
+then slot name.
 
 % gittrack #728
-\item If one machine running a parallel job crashed, and job leases are enabled (which they
-are by default), the job wouldn't exit until the job lease duration expired.  As the starter
-won't get respawned, there's no need to wait. Many sites set long job lease durations, to
-prevent jobs from being killed when the scheduler machine reboots.  Now, if one node goes 
-away, the whole computation is shut down immediately.
+\item If one machine running a parallel job crashed,
+and job leases are enabled (which they are by default),
+the job would not exit until the job lease duration expired.
+As the \Condor{starter} will not get respawned,
+there is no need to wait.
+Many sites set long job lease durations,
+to prevent jobs from being killed when the machine running
+the \Condor{schedd} daemon reboots.
+Now, if one node goes away, the whole computation is shut down immediately.
 
 \item Fixed the verbosity level of some \Condor{dagman} messages written to
 the \File{dagman.out} file.
@@ -332,7 +338,7 @@ the same inode number).
 
 % gittrac #983
 \item \Condor{dagman} may fail on Windows if the set of node job log
-file names includes multiple paths that are hard links (not symlinks)
+file names includes multiple paths that are hard links (not symbolic links)
 to the same file.
 
 \end{itemize}
