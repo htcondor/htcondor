@@ -240,7 +240,9 @@ The \Arg{ExecutableName}
 specifies the script to be executed, and it
 may be followed by any command line arguments to that script.
 The \Arg{ExecutableName} and optional \Arg{arguments} are
-case sensitive; they have their case preserved.
+case sensitive; they have their case preserved.  \Bold{Note that neither
+the \Arg{ExecutableName} nor the individual arguments within the
+\Arg{arguments} string can contain spaces.}
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
@@ -815,8 +817,8 @@ The string \$(JOB) maybe used in \Arg{string} and will expand to
 If the \Opt{VARS} line appears in a DAG file used as a splice file, 
 then \$(JOB) will be the fully scoped name of the node.
 
-Note that macro names cannot begin with the string "queue"
-(in any combination of upper and lower case).
+\Bold{Note that macro names cannot begin with the string "queue"
+(in any combination of upper and lower case).}
 
 If the DAG input file contains
 \footnotesize
@@ -875,13 +877,13 @@ file, and uses the \Arg{Vars} entry to name output files.
 
 The relevant portion of the DAG input file appears as 
 \begin{verbatim}
-JOB A theonefile.sub
-JOB B theonefile.sub
-JOB C theonefile.sub
+    JOB A theonefile.sub
+    JOB B theonefile.sub
+    JOB C theonefile.sub
 
-VARS A outfilename="A"
-VARS B outfilename="B"
-VARS C outfilename="C"
+    VARS A outfilename="A"
+    VARS B outfilename="B"
+    VARS C outfilename="C"
 \end{verbatim}
 
 The submit description file appears as 
@@ -900,6 +902,80 @@ The submit description file appears as
 For a DAG such as this one, but with thousands of nodes,
 being able to write and maintain a single submit description file 
 and a single, yet more complex, DAG input file is preferable.
+
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Special characters in VARS values]
+\end{description}
+
+It is now possible to have spaces and tabs within VARS values, as
+explained below.  It is also possible to have double quotes and
+backslashes within VARS values.  \Bold{Unfortunately, it is not
+possible to have single quotes within VARS values.}  In order to
+have spaces or tabs within a VARS value, you must use the "new-style"
+argument format in your node job submit file (see
+section~\ref{man-condor-submit-arguments}).  Double quotes must be
+escaped differently depending on whether you use the new- or old-style
+argument format (note that in both cases, double quotes require two
+"levels" of escaping -- one for the parsing of the DAG file, and one for
+passing the resulting value through \Condor{submit}).
+
+Below is an example of how to pass special characters in VARS values.
+
+The relevant parts of the DAG file are as follows (note that the
+NodeA "second" value contains a tab):
+\footnotesize
+\begin{verbatim}
+    ...
+    Vars NodeA first="Alberto Contador"
+    Vars NodeA second="\"\"Andy	Schleck\"\""
+    Vars NodeA third="Lance\\ Armstrong"
+    Vars NodeA misc="!@#$%^&*()_-=+=[]{}?/"
+    ...
+    Vars NodeB first="Lance_Armstrong"
+    Vars NodeB second="\\\"Andreas_Kloden\\\""
+    Vars NodeB third="Ivan\\_Basso"
+    Vars NodeB misc="!@#$%^&*()_-=+=[]{}?/"
+    ...
+\end{verbatim}
+\normalsize
+
+The (new-style) arguments line of the NodeA submit file is (note that
+the single quotes around each variable reference are only necessary
+if the variable value may contain spaces or tabs):
+\footnotesize
+\begin{verbatim}
+    arguments    = "'$(first)' '$(second)' '$(third)' '$(misc)'"
+\end{verbatim}
+\normalsize
+
+The (old-style) arguments line of the NodeB submit file is:
+\footnotesize
+\begin{verbatim}
+    arguments    = $(first) $(second) $(third) $(misc)
+\end{verbatim}
+\normalsize
+
+The resulting values passed to the NodeA executable are:
+\footnotesize
+\begin{verbatim}
+    Alberto Contador
+    "Andy	Schleck"
+    Lance\ Armstrong
+    !@#$%^&*()_-=+=[]{}?/
+\end{verbatim}
+\normalsize
+
+The resulting values passed to the NodeB executable are:
+\footnotesize
+\begin{verbatim}
+    Lance_Armstrong
+    "Andreas_Kloden"
+    Ivan\_Basso
+    !@#$%^&*()_-=+=[]{}?/
+\end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}

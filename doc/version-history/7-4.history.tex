@@ -268,13 +268,22 @@ the same inode number).
 file names includes multiple paths that are hard links (not symlinks)
 to the same file.
 
+% gittrac #1081
+\item \Condor{dagman} PRE and POST script arguments (and the names of
+the scripts themselves) cannot contain spaces.
+
+% gittrac #1082
+\item \Condor{dagman} VARS values cannot contain single quotes.
+
 \end{itemize}
 
 \noindent Additions and Changes to the Manual:
 
 \begin{itemize}
 
-\item None.
+% gittrac #725
+\item Added documentation about how to include spaces (and other
+special characters) in \Condor{dagman} VARS values.
 
 \end{itemize}
 
