@@ -1111,7 +1111,7 @@ negotiationTime ()
 			scheddAds.Open();
 			int numrunning=0;
 			int numidle=0;
-			int totaljobs=0;
+			
 			numsubmits[groupArrayLen]=0;
 			int totalsubmits=0;
 			float schedusagetotal=0;
@@ -1133,9 +1133,9 @@ negotiationTime ()
 			groupArray[groupArrayLen].maxAllowed = unclaimedquota;			
 			groupArray[groupArrayLen].usage = schedusagetotal;
 			groupArray[groupArrayLen].prio = 100;		
-			if( totaljobs==0 ){
+			if(numsubmits[groupArrayLen] ==0 ){
 		 		  unusedslots=unusedslots+(int)groupArray[groupArrayLen].maxAllowed;
-		   	} else if(totaljobs<(int)groupArray[groupArrayLen].maxAllowed ) {
+		   	} else if(numsubmits[groupArrayLen]<(int)groupArray[groupArrayLen].maxAllowed ) {
 			 	unusedslots=unusedslots+(int)groupArray[groupArrayLen].maxAllowed-numsubmits[groupArrayLen];
 			}
 			groupArrayLen=groupArrayLen+1;
