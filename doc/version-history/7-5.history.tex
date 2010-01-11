@@ -71,6 +71,17 @@ TCP connections.
 \item \Condor{config\_val} will now report the default value for
   configuration macros that are not set in the configuration files.
 
+% gittrac #939
+\item The \Condor{gridmanager} now uses a single status call to obtain
+the status of all CREAM grid universe jobs from the remote server.
+
+% gittrac #955
+\item The \Condor{gridmanager} will now retry CREAM commands that time out.
+
+% gittrac #941
+\item Forwarding a renewed proxy for CREAM grid universe jobs to the
+remote server is now much more efficient.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
