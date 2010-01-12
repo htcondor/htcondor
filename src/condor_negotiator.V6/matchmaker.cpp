@@ -938,7 +938,8 @@ negotiationTime ()
 		free(groups);		
 		groupArray = new SimpleGroupEntry[ groupList.number()+1 ];
 		ASSERT(groupArray);
-		int numsubmits[groupList.number()+1];
+		int* numsubmits = new int[groupList.number()+1];
+		ASSERT(numsubmits);
         // Restrict number of slots available for dynamic quotas.
         if ( numDynGroupSlots && DynQuotaMachConstraint ) {
             int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
@@ -1147,7 +1148,7 @@ negotiationTime ()
 		// now we reassign unused slots for autogroup groups based upon percent group quota is of total slots
 		// this keeps fair share percentages the same as unused slots are spread around
 		float quotatotal=0;
-		float oldquota[groupArrayLen]; 
+		float* oldquota = new float[groupArrayLen]; 
 		for (i=0;i<groupArrayLen;i++) { 
 			oldquota[i]=groupArray[i].maxAllowed;
 			quotatotal=quotatotal+oldquota[i];
@@ -1206,8 +1207,11 @@ negotiationTime ()
 			if(given==0)slotflag=0;
 		}
 		dprintf(D_ALWAYS,"totalunusedslots=%d given=%d \n", unusedslotstotal,given);
-		} //if notstaticquota
 		
+		delete [] oldquota;
+		oldquota = NULL;
+		} //if notstaticquota
+
 			// now sort the group array
 		qsort(groupArray,groupArrayLen,sizeof(SimpleGroupEntry),groupSortCompare);		
 
@@ -1266,6 +1270,8 @@ negotiationTime ()
 			// finally, cleanup 
 		delete []  groupArray;
 		groupArray = NULL;
+		delete [] numsubmits;
+		numsubmits = NULL;
 
 			// print out a message stating we are about to negotiate below w/
 			// all users who did not specify a group
