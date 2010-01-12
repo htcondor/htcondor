@@ -1778,6 +1778,8 @@ AC_SUBST([_cv_glibc_flag], [$_cv_glibc_flag])
 
 # PlatformFlags logic has been moved here from .cf files, primarily
 # HPUX11.cf and LINUX.cf.
+# On AIX, the TOC overflows when linking the schedd. These options reduce
+# the number of entries in the TOC.
 case "$_cv_opsys" in
   LINUX ) _cv_platform_flags="$_cv_arch_optimize_flag $_cv_glibc_flag" ;;
   HPUX ) # HPUX11 Only...
@@ -1785,6 +1787,7 @@ case "$_cv_opsys" in
       _cv_platform_flags="-DHPUX11=HPUX11";
     fi
    ;;
+  AIX ) _cv_platform_flags="-mno-fp-in-toc -mno-sum-in-toc -mminimal-toc" ;;
   * ) _cv_platform_flags="" ;;
 esac
 AC_SUBST([_cv_platform_flags], [$_cv_platform_flags])
