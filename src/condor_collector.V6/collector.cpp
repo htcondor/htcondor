@@ -67,6 +67,7 @@ int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
 Daemon* CollectorDaemon::View_Collector;
 Sock* CollectorDaemon::view_sock;
+Timeslice CollectorDaemon::view_sock_timeslice;
 
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
@@ -1169,7 +1170,15 @@ void CollectorDaemon::Config()
        }
        free(tmp);
        if(View_Collector) {
-           view_sock = View_Collector->safeSock();
+		   if( View_Collector->hasUDPCommandPort() ) {
+			   view_sock = new SafeSock();
+		   }
+		   else {
+			   view_sock = new ReliSock();
+		   }
+			   // protect against frequent time-consuming reconnect attempts
+		   view_sock_timeslice.setTimeslice(0.05);
+		   view_sock_timeslice.setMaxInterval(1200);
        }
     }
 
@@ -1359,9 +1368,46 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
 	dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL!!!\n");
         return;
     }
-    if (! d->startCommand(cmd, view_sock)) {
+	bool raw_command = false;
+	if( !view_sock->is_connected() ) {
+			// We must have gotten disconnected.  (Or this is the 1st time.)
+
+			// In case we keep getting disconnected or fail to connect,
+			// and each connection attempt takes a long time, restrict
+			// what fraction of our time we spend trying to reconnect.
+
+		char const *desc = d->idStr() ? d->idStr() : "(null)";
+		if( view_sock_timeslice.isTimeToRun() ) {
+			dprintf(D_ALWAYS,"Connecting to CONDOR_VIEW_HOST %s\n", desc );
+
+			view_sock_timeslice.setStartTimeNow();
+			d->connectSock(view_sock,20);
+			view_sock_timeslice.setFinishTimeNow();
+
+			if( !view_sock->is_connected() ) {
+				dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s "
+						" so not forwarding ad.\n",
+						desc );
+				return;
+			}
+		}
+		else {
+			dprintf(D_FULLDEBUG,"Skipping forwarding of ad to CONDOR_VIEW_HOST %s, because reconnect is delayed for %us.\n", desc, view_sock_timeslice.getTimeToNextRun());
+			return;
+		}
+
+	}
+	else if( view_sock->type() == Stream::reli_sock ) {
+			// we already did the security handshake the last time
+			// we sent a command on this socket, so just send a
+			// raw command this time to avoid reauthenticating
+		raw_command = true;
+	}
+
+    if (! d->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command)) {
         dprintf( D_ALWAYS, "Can't send command %d to View Collector\n", cmd);
         view_sock->end_of_message();
+		view_sock->close();
         return;
     }
 
@@ -1369,6 +1415,7 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
         if( ! theAd->put( *view_sock ) ) {
             dprintf( D_ALWAYS, "Can't forward classad to View Collector\n");
             view_sock->end_of_message();
+			view_sock->close();
             return;
         }
     }
@@ -1388,6 +1435,7 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
 			if( ! pvt_ad->put( *view_sock ) ) {
 				dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector\n");
 				view_sock->end_of_message();
+				view_sock->close();
 				return;
 			}
 		}
@@ -1395,6 +1443,7 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
 
     if( ! view_sock->end_of_message() ) {
         dprintf( D_ALWAYS, "Can't send end_of_message to View Collector\n");
+		view_sock->close();
         return;
     }
     return;

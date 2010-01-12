@@ -103,6 +103,7 @@ protected:
 	static CollectorEngine collector;
 	static Daemon* View_Collector;
 	static Sock* view_sock;
+	static Timeslice view_sock_timeslice;
 
 	static int ClientTimeout;
 	static int QueryTimeout;
