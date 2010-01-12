@@ -1305,7 +1305,6 @@ int thread_cream_ping( Request *req )
 	// the "service info" command to detect whether CREAM is up
 
 	char *reqid, *service;
-	bool ret;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -1353,7 +1352,6 @@ int handle_cream_does_accept_job_submissions( char **input_line )
 int thread_cream_does_accept_job_submissions( Request *req )
 {
 	char *reqid, *service;
-	bool ret;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -1878,7 +1876,7 @@ void process_request( char **input_line )
    WORKER_MAIN: called by every worker threads.
    ========================================================================= */
 
-void *worker_main(void *ignored)
+void *worker_main(void * /*ignored*/)
 {
 	Request *req;
 
@@ -1909,7 +1907,7 @@ void *worker_main(void *ignored)
    MAIN
    ========================================================================= */
 
-int main(int argc, char **argv)
+int main(int /*argc*/, char ** /*argv*/)
 {
 	int i;
 
