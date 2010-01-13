@@ -617,6 +617,7 @@ extern const char * const  ATTR_SEC_AUTHENTICATION_METHODS_LIST;
 extern const char * const  ATTR_SEC_AUTHENTICATION_METHODS;
 extern const char * const  ATTR_SEC_CRYPTO_METHODS;
 extern const char * const  ATTR_SEC_AUTHENTICATION;
+extern const char * const  ATTR_SEC_AUTH_REQUIRED;
 extern const char * const  ATTR_SEC_ENCRYPTION;
 extern const char * const  ATTR_SEC_INTEGRITY;
 extern const char * const  ATTR_SEC_ENACT;

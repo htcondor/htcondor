@@ -261,13 +261,13 @@ public:
 
 	void ignoreTimeoutMultiplier() { ignore_timeout_multiplier = true; }
 
-	const char * getFullyQualifiedUser() const { return _fqu; }
+	const char * getFullyQualifiedUser() const;
 
 		/// Get user portion of fqu
-	const char *getOwner() const { return _fqu_user_part; }
+	const char *getOwner() const;
 
 		/// Get domain portion of fqu
-	const char *getDomain() const { return _fqu_domain_part; }
+	const char *getDomain() const;
 
 	void setFullyQualifiedUser(char const *fqu);
 
@@ -281,6 +281,17 @@ public:
 	bool triedAuthentication() const { return _tried_authentication; }
 
 	void setTriedAuthentication(bool toggle) { _tried_authentication = toggle; }
+
+		/// Returns true if the fully qualified user name is
+		/// a non-anonymous user name (i.e. something not from
+		/// the unmapped domain)
+	bool isMappedFQU() const;
+
+		/// Returns true if the fully qualified user name was
+		/// authenticated
+	bool isAuthenticated() const;
+
+
 	/// if we are connecting, merges together Stream::get_deadline
 	/// and connect_timeout_time()
 	virtual time_t get_deadline();

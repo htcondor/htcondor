@@ -2253,3 +2253,38 @@ Sock::get_connect_addr()
 {
 	return m_connect_addr;
 }
+
+const char *
+Sock::getFullyQualifiedUser() const {
+	return _fqu ? _fqu : UNAUTHENTICATED_FQU;
+}
+
+const char *
+Sock::getOwner() const {
+	return _fqu_user_part ? _fqu_user_part : UNAUTHENTICATED_USER;
+}
+
+		/// Get domain portion of fqu
+const char *
+Sock::getDomain() const {
+	return _fqu_domain_part ? _fqu_domain_part : UNMAPPED_DOMAIN;
+}
+
+
+bool
+Sock::isMappedFQU() const
+{
+	if( !_fqu_domain_part ) {
+		return false;
+	}
+	return strcmp(_fqu_domain_part,UNMAPPED_DOMAIN) != 0;
+}
+
+bool
+Sock::isAuthenticated() const
+{
+	if( !_fqu ) {
+		return false;
+	}
+	return strcmp(_fqu,UNAUTHENTICATED_FQU) != 0;
+}

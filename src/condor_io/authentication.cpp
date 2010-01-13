@@ -51,8 +51,10 @@
 MapFile* Authentication::global_map_file = NULL;
 bool Authentication::global_map_file_load_attempted = false;
 
-char const *UNMAPPED_DOMAIN = "unmappeduser";
+char const *UNMAPPED_DOMAIN = "unmapped";
 char const *MATCHSESSION_DOMAIN = "matchsession";
+char const *UNAUTHENTICATED_FQU = "unauthenticated@unmapped";
+char const *UNAUTHENTICATED_USER = "unauthenticated";
 extern char const *EXECUTE_SIDE_MATCHSESSION_FQU = "execute-side@matchsession";
 extern char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
 
@@ -224,8 +226,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 				break;
  
 			case CAUTH_NONE:
-				dprintf(D_ALWAYS,"AUTHENTICATE: no available authentication methods succeeded, "
-						"failing!\n");
+				dprintf(D_SECURITY|D_FULLDEBUG,"AUTHENTICATE: no available authentication methods succeeded!\n");
 				errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_OUT_OF_METHODS,
 						"Failed to authenticate with any method");
 				return 0;

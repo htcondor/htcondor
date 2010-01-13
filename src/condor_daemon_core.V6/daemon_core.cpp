@@ -4167,7 +4167,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
         if (who != NULL) {
             ((SafeSock*)stream)->setFullyQualifiedUser(who);
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticated UDP message is from %s.\n", who);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: UDP message is from %s.\n", who);
         }
 	}
 
@@ -4651,24 +4651,45 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					int auth_timeout = getSecMan()->getSecTimeout( comTable[cmd_index].perm );
 					char *method_used = NULL;
+					bool auth_success = sock->authenticate(the_key, auth_methods, &errstack, auth_timeout, &method_used);
 
-					if (!sock->authenticate(the_key, auth_methods, &errstack, auth_timeout, &method_used)) {
-						free( auth_methods );
-						free( method_used );
-						dprintf( D_ALWAYS,
-								 "DC_AUTHENTICATE: authenticate failed: %s\n",
-								 errstack.getFullText() );
-						result = FALSE;
-						goto finalize;
+					free( auth_methods );
+					free( method_used );
+
+					if( comTable[cmd_index].force_authentication &&
+						!sock->isMappedFQU() )
+					{
+						dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
+								sock->peer_description(),
+								tmp_cmd,
+								comTable[cmd_index].command_descrip );
+					}
+
+					if( auth_success ) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: authentication of %s complete.\n", sock->peer_ip_str());
+					}
+					else {
+						bool auth_required = true;
+						the_policy->LookupBool(ATTR_SEC_AUTH_REQUIRED,auth_required);
+
+						if( !auth_required ) {
+							dprintf( D_SECURITY|D_FULLDEBUG,
+									 "DC_SECURITY: authentication of %s failed but was not required, so continuing.\n",
+									 sock->peer_ip_str());
+						}
+						else {
+							dprintf( D_ALWAYS,
+									 "DC_AUTHENTICATE: required authentication of %s failed: %s\n",
+									 sock->peer_ip_str(),
+									 errstack.getFullText() );
+							result = FALSE;
+							goto finalize;
+						}
 					}
 
 					if ( method_used ) {
 						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 					}
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", sock->peer_ip_str());
-
-					free( auth_methods );
-					free( method_used );
 
 				} else {
 					if (DebugFlags & D_FULLDEBUG) {
@@ -4762,7 +4783,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					pa_ad.Assign(ATTR_SEC_SID, the_sid);
 
 					// other commands this session is good for
-					pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm,fully_qualified_user != NULL).Value());
+					pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm,sock->isMappedFQU()).Value());
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
@@ -4870,7 +4891,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			//  1. receiving unauthenticated command
 			//  2. receiving command on previously authenticated socket
 
-		if (reqFound && !((Sock *)stream)->getFullyQualifiedUser()) {
+		if (reqFound && !((Sock *)stream)->isAuthenticated()) {
 			// need to check our security policy to see if this is allowed.
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", req, comTable[index].command_descrip);
@@ -4933,7 +4954,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// When re-using security sessions, need to set the socket's
 		// authenticated user name from the value stored in the cached
 		// session.
-		if( user.Length() && !((Sock*)stream)->getFullyQualifiedUser() ) {
+		if( user.Length() && !((Sock*)stream)->isAuthenticated() ) {
 			((Sock*)stream)->setFullyQualifiedUser(user.Value());
 		}
 
@@ -4948,7 +4969,25 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		MyString command_desc;
 		command_desc.sprintf("command %d (%s)",req,comTable[index].command_descrip);
 
-		if ( (perm = Verify(command_desc.Value(),comTable[index].perm, ((Sock*)stream)->peer_addr(), user.Value())) != USER_AUTH_SUCCESS )
+		if( comTable[index].force_authentication &&
+			!((Sock*)stream)->isMappedFQU() )
+		{
+			dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
+					((Sock*)stream)->peer_description(),
+					req,
+					comTable[index].command_descrip );
+
+			perm = USER_AUTH_FAILURE;
+		}
+		else {
+			perm = Verify(
+						  command_desc.Value(),
+						  comTable[index].perm,
+						  ((Sock*)stream)->peer_addr(),
+						  user.Value() );
+		}
+
+		if( perm != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below

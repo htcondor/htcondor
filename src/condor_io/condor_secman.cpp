@@ -587,7 +587,8 @@ SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 
 SecMan::sec_feat_act
 SecMan::ReconcileSecurityAttribute(const char* attr,
-									ClassAd &cli_ad, ClassAd &srv_ad) {
+								   ClassAd &cli_ad, ClassAd &srv_ad,
+								   bool *required ) {
 
 	// extract the values from the classads
 
@@ -617,6 +618,10 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 		free (srv_buf);
 	}
 
+	if( required ) {
+		// if either party requires this feature, indicate that
+		*required = (cli_req == SEC_REQ_REQUIRED || srv_req == SEC_REQ_REQUIRED);
+	}
 
 	// this policy is moderately complicated.  make sure you know
 	// the implications if you monkey with the below code.  -zach
@@ -696,11 +701,12 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	sec_feat_act authentication_action;
 	sec_feat_act encryption_action;
 	sec_feat_act integrity_action;
+	bool auth_required = false;
 
 
 	authentication_action = ReconcileSecurityAttribute(
 								ATTR_SEC_AUTHENTICATION,
-								cli_ad, srv_ad );
+								cli_ad, srv_ad, &auth_required );
 
 	encryption_action = ReconcileSecurityAttribute(
 								ATTR_SEC_ENCRYPTION,
@@ -727,6 +733,15 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 	sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[authentication_action]);
 	action_ad->Insert(buf);
+
+	if( authentication_action == SecMan::SEC_FEAT_ACT_YES ) {
+			// record whether the authentication is required or not, so
+			// both parties know what to expect if authentication fails
+		if( !auth_required ) {
+				// this is assumed to be true if not set
+			action_ad->Assign(ATTR_SEC_AUTH_REQUIRED,false);
+		}
+	}
 
 	sprintf (buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION, SecMan::sec_feat_act_rev[encryption_action]);
 	action_ad->Insert(buf);
@@ -1703,6 +1718,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTH_REQUIRED );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENCRYPTION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_INTEGRITY );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
@@ -1812,15 +1828,27 @@ SecManStartCommand::authenticate_inner()
 			}
 
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			if (!m_sock->authenticate(m_private_key, auth_methods, m_errstack,auth_timeout)) {
-            	if (auth_methods) {  
-                	free(auth_methods);
-            	}
-				return StartCommandFailed;
+			bool auth_success = m_sock->authenticate(m_private_key, auth_methods, m_errstack,auth_timeout);
+
+			if (auth_methods) {  
+				free(auth_methods);
 			}
-            if (auth_methods) {  
-                free(auth_methods);
-            }
+
+			if( !auth_success ) {
+				bool auth_required = true;
+				m_auth_info.LookupBool(ATTR_SEC_AUTH_REQUIRED,auth_required);
+
+				if( auth_required ) {
+					dprintf( D_ALWAYS,
+							 "SECMAN: required authentication with %s failed, so aborting command %s.\n",
+							 m_sock->peer_description(),
+							 m_cmd_description.Value());
+					return StartCommandFailed;
+				}
+				dprintf( D_SECURITY|D_FULLDEBUG,
+						 "SECMAN: authentication with %s failed but was not required, so continuing.\n",
+						 m_sock->peer_description() );
+			}
 		} else {
 			// !m_new_session is equivalent to use_session in this client.
 			if (!m_new_session) {

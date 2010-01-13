@@ -681,6 +681,7 @@ const char * const ATTR_SEC_AUTHENTICATION_METHODS_LIST= "AuthMethodsList";
 const char * const ATTR_SEC_AUTHENTICATION_METHODS= "AuthMethods";
 const char * const ATTR_SEC_CRYPTO_METHODS       = "CryptoMethods";
 const char * const ATTR_SEC_AUTHENTICATION       = "Authentication";
+const char * const ATTR_SEC_AUTH_REQUIRED        = "AuthRequired";
 const char * const ATTR_SEC_ENCRYPTION           = "Encryption";
 const char * const ATTR_SEC_INTEGRITY            = "Integrity";
 const char * const ATTR_SEC_ENACT                = "Enact";

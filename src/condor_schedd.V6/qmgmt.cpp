@@ -474,7 +474,7 @@ int
 QmgmtPeer::isAuthenticated() const
 {
 	if ( sock ) {
-		return sock->triedAuthentication();
+		return sock->isMappedFQU();
 	} else {
 		if ( qmgmt_all_users_trusted ) {
 			return TRUE;
