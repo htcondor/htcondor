@@ -50,13 +50,13 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
-static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
+static bool parse_subdag( Dag *dag, bool noop, Job::job_type_t nodeType,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory);
 
-static bool parse_node( Dag *dag, Job::job_type_t nodeType,
-						bool noop,
+static bool parse_node( Dag *dag, bool noop,
+						Job::job_type_t nodeType,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
@@ -191,15 +191,26 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		bool parsed_line_successfully;
 
 		bool noop = false;
-
-		if(strcasecmp(token, "NOOP") == 0) {
+		if (strcasecmp(token, "NOOP") == 0) {
 			noop = true;
+
+				// Note: trailing space is important...
+			const char *noopList = "JOB DAP DATA SUBDAG ";
 			token = strtok(NULL, DELIMITERS);
-			if ( !token ) {
-				//TEMPTEMP -- this is an error
-				continue; // so Coverity is happy
+			MyString checkToken;
+			if ( token ) {
+				checkToken = token;
+				checkToken += " "; // Avoid tokens matching "JO", for example.
+				checkToken.upper_case();
 			} else {
-				//TEMPTEMP -- make sure next token is JOB, DAP, or DATA
+				checkToken = "NULL";
+			}
+			if ( !strstr( noopList, checkToken.Value() ) ) {
+				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): NOOP "
+							"must be followed by one of: %s\n", filename,
+							lineNumber, noopList );
+				fclose(fp);
+				return false;
 			}
 		}
 
@@ -207,8 +218,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR,
-					   noop, token,
+			parsed_line_successfully = parse_node( dag, noop,
+					   Job::TYPE_CONDOR, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
@@ -217,8 +228,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK,
-					   noop, token,
+			parsed_line_successfully = parse_node( dag, noop,
+					   Job::TYPE_STORK, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
@@ -228,14 +239,15 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
-			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK,
-					   noop, token,
+			parsed_line_successfully = parse_node( dag, noop,
+					   Job::TYPE_STORK, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile");
 		}
 
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
-			parsed_line_successfully = parse_subdag( dag, Job::TYPE_CONDOR,
+			parsed_line_successfully = parse_subdag( dag, noop,
+						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
 		}
 
@@ -315,8 +327,9 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Expected JOB, DATA, SCRIPT, PARENT, RETRY, ABORT-DAG-ON, "
-				"DOT, VARS, PRIORITY, CATEGORY, MAXJOBS or CONFIG token\n",
+				"Expected NOOP, JOB, DATA, SCRIPT, PARENT, RETRY, "
+				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS "
+				"or CONFIG token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}
@@ -349,12 +362,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 }
 
 static bool 
-parse_subdag( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
+parse_subdag( Dag *dag, bool noop, Job::job_type_t nodeType,
+			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory )
 {
 	const char *inlineOrExt = strtok( NULL, DELIMITERS );
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-		return parse_node( dag, nodeType, false, nodeTypeKeyword, dagFile,
+		return parse_node( dag, noop, nodeType, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
 	} else {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
@@ -364,7 +378,7 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 }
 
 static bool 
-parse_node( Dag *dag, Job::job_type_t nodeType, bool noop,
+parse_node( Dag *dag, bool noop, Job::job_type_t nodeType,
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
@@ -375,8 +389,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, bool noop,
 	Dag *tmp = NULL;
 
 	MyString expectedSyntax;
-	//TEMPTEMP -- add NOOP option here -- only for "regular" jobs?
-	expectedSyntax.sprintf( "Expected syntax: %s%s nodename %s "
+	expectedSyntax.sprintf( "Expected syntax: [NOOP] %s%s nodename %s "
 				"[DIR directory] [DONE]", nodeTypeKeyword, inlineOrExt,
 				submitOrDagFile );
 

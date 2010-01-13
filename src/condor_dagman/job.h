@@ -81,8 +81,6 @@ class Job {
 	typedef enum {
 		TYPE_CONDOR,
 		TYPE_STORK,
-		//TEMPTEMP -- do we want this, or a separate noop flag?
-		TYPE_NOOP,	// TODO: yet to be implemented...
 	 } job_type_t;
   
     /** Enumeration for specifying which queue for Add() and Remove().

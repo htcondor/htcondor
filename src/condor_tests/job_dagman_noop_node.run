@@ -65,6 +65,13 @@ foreach $name (@rescuedags) {
 	}
 }
 
+# Get rid of node output files we should have at the end.
+foreach $name (@nodeoutput) {
+	if (-e $name) {
+		system("rm -f $name");
+	}
+}
+
 $abnormal = sub 
 {
 	die "Want to see only submit, execute and successful completion\n";

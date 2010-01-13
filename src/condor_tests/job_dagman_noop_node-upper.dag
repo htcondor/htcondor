@@ -10,4 +10,7 @@ Vars nodeA nodename="$(JOB)"
 Subdag External nodeB job_dagman_noop_node-lower.dag
 Retry nodeB 3
 
+Noop Subdag External nodeC job_dagman_noop_node-dummy.dag
+
 Parent nodeA Child nodeB
+Parent nodeB Child nodeC

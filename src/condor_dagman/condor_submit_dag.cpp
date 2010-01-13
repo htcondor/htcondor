@@ -228,6 +228,12 @@ doRecursion( SubmitDagOptions &opts )
 			tokens.rewind();
 			const char *first = tokens.next();
 
+				// Skip NOOP tokens so we still generate .condor.sub
+				// files (so we get the right log file).
+			if ( !strcasecmp( first, "NOOP" ) ) {
+				first = tokens.next();
+			}
+
 			if ( first && !strcasecmp( first, "JOB" ) ) {
 
 					// Get the submit file and directory from the DAG
