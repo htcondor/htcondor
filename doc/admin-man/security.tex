@@ -1755,7 +1755,12 @@ not the specific identity of the server.
   ALLOW_CLIENT
   DENY_CLIENT
 \end{verbatim}
-	
+
+The names `\MacroNI{ALLOW\_CLIENT}' and `\MacroNI{DENY\_CLIENT}' should
+be thought of as `when I am acting as a client, these are the servers
+I allow/deny'.  It should not be confused for `when I am the server, these
+are the clients I allow/deny'.
+
 All authorization settings are defined by a comma-separated list of
 fully qualified users.
 Each fully qualified user
