@@ -32,7 +32,7 @@ $dagman_args = "-verbose";
 @outfiles = ("job_dagman_vars-NodeA.out", "job_dagman_vars-NodeB.out", 
 	"job_dagman_vars-NodeC.out", 
 	"job_dagman_vars-NodeD.out");
-@outlines = ("<NodeA> <Alberto Condator> <Andy	Schleck> <Lance_Armstrong> <!@#\$%^&*()_-=+=[]{}?> ",
+@outlines = ("<NodeA> <Alberto Contador> <Andy	Schleck> <Lance_Armstrong> <!@#\$%^&*()_-=+=[]{}?> ",
 	"<NodeB> <NodeA> <Greg\"_LeMond> <\\Laurent_Fignon> <Pedro_Delgado> <> ",
 	"<NodeC> <NodeA> <Andreas_Kloden> <Carlos_Sastre> ",
 	"<NodeD> <NodeB,NodeC> <Lance_Armstrong> <Andreas\"_Kloden> <\\Ivan_Basso> <!@#\$%^&*()_-=+=[]{}?> ");

@@ -1,6 +1,6 @@
 Job NodeA job_dagman_vars-node-newargs.cmd
 Vars NodeA nodename="$(JOB)"
-Vars NodeA first="Alberto Condator" second="Andy	Schleck"
+Vars NodeA first="Alberto Contador" second="Andy	Schleck"
 Vars NodeA third="Lance_Armstrong"
 Vars NodeA misc="!@#$%^&*()_-=+=[]{}?"
 
