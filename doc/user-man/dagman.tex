@@ -798,7 +798,7 @@ node's submit description file.
 These macros are defined on a per-node basis, using the
 following syntax:
 
-\Opt{VARS} \Arg{JobName} \OptArg{macroname=}{"string"} \oOptArg{macroname=}{"string"\Dots}
+\Opt{VARS} \Arg{JobName} \Arg{macroname=}\Arg{"string"} [\Arg{macroname=}\Arg{"string"\Dots]}
 
 The macro may be used within the
 submit description file of the relevant node.  A \Arg{macroname}
@@ -814,11 +814,12 @@ escape it with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
 The string \$(JOB) maybe used in \Arg{string} and will expand to
 \Arg{JobName}. 
-If the \Opt{VARS} line appears in a DAG file used as a splice file, 
+If the \Arg{VARS} line appears in a DAG file used as a splice file, 
 then \$(JOB) will be the fully scoped name of the node.
 
-\Bold{Note that macro names cannot begin with the string "queue"
-(in any combination of upper and lower case).}
+\Bold{Note that the \Arg{macroname} itself cannot begin with the string
+\Expr{queue},
+in any combination of upper or lower case.}
 
 If the DAG input file contains
 \footnotesize
@@ -873,7 +874,7 @@ Note that the user log file for a job currently cannot be specified
 using a macro passed from the DAG.
 
 The example uses a single submit description file in the DAG input
-file, and uses the \Arg{Vars} entry to name output files.
+file, and uses the \Arg{VARS} entry to name output files.
 
 The relevant portion of the DAG input file appears as 
 \begin{verbatim}
@@ -906,74 +907,75 @@ and a single, yet more complex, DAG input file is preferable.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
-\item[Special characters in VARS values]
+\item[Special characters within VARS string definitions]
 \end{description}
 
-It is now possible to have spaces and tabs within VARS values, as
-explained below.  It is also possible to have double quotes and
-backslashes within VARS values.  \Bold{Unfortunately, it is not
-possible to have single quotes within VARS values.}  In order to
-have spaces or tabs within a VARS value, you must use the "new-style"
-argument format in your node job submit file (see
-section~\ref{man-condor-submit-arguments}).  Double quotes must be
-escaped differently depending on whether you use the new- or old-style
-argument format (note that in both cases, double quotes require two
-"levels" of escaping -- one for the parsing of the DAG file, and one for
-passing the resulting value through \Condor{submit}).
+The value of a \Arg{VARS} \Arg{macroname} may contain spaces and tabs.
+It is also possible to have double quote marks and
+backslashes within these values.
+\Bold{Unfortunately, it is not
+possible to have single quote marks within these values.}
+In order to have spaces or tabs within a value,
+use the new syntax format for the \SubmitCmd{arguments} command
+in the node's Condor job submit description file,
+as described in section~\ref{man-condor-submit-arguments}.
+Double quote marks are escaped differently,
+depending on the new syntax or old syntax argument format.
+Note that in both syntaxes,
+double quote marks require two levels of escaping:
+one level is for the parsing of the DAG input file, and the other level is for
+passing the resulting value through \Condor{submit}.
 
-Below is an example of how to pass special characters in VARS values.
-
-The relevant parts of the DAG file are as follows (note that the
-NodeA "second" value contains a tab):
+As an example, here are only the relevant parts of a DAG input file.
+Note that the NodeA value for \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
-    ...
     Vars NodeA first="Alberto Contador"
     Vars NodeA second="\"\"Andy	Schleck\"\""
     Vars NodeA third="Lance\\ Armstrong"
     Vars NodeA misc="!@#$%^&*()_-=+=[]{}?/"
-    ...
+    
     Vars NodeB first="Lance_Armstrong"
     Vars NodeB second="\\\"Andreas_Kloden\\\""
     Vars NodeB third="Ivan\\_Basso"
     Vars NodeB misc="!@#$%^&*()_-=+=[]{}?/"
-    ...
 \end{verbatim}
 \normalsize
 
-The (new-style) arguments line of the NodeA submit file is (note that
-the single quotes around each variable reference are only necessary
-if the variable value may contain spaces or tabs):
+The new syntax \SubmitCmd{arguments} line of the Condor submit description file
+for NodeA is
 \footnotesize
 \begin{verbatim}
-    arguments    = "'$(first)' '$(second)' '$(third)' '$(misc)'"
+  arguments = "'$(first)' '$(second)' '$(third)' '$(misc)'"
+\end{verbatim}
+\normalsize
+The single quotes around each variable reference are only necessary
+if the variable value may contain spaces or tabs.
+The resulting values passed to the NodeA executable are
+\footnotesize
+\begin{verbatim}
+  Alberto Contador
+  "Andy	Schleck"
+  Lance\ Armstrong
+  !@#$%^&*()_-=+=[]{}?/
 \end{verbatim}
 \normalsize
 
-The (old-style) arguments line of the NodeB submit file is:
+The old syntax \SubmitCmd{arguments} line of the Condor submit description file
+for NodeB is
 \footnotesize
 \begin{verbatim}
-    arguments    = $(first) $(second) $(third) $(misc)
+  arguments = $(first) $(second) $(third) $(misc)
 \end{verbatim}
 \normalsize
 
-The resulting values passed to the NodeA executable are:
+The resulting values passed to the NodeB executable are
 \footnotesize
 \begin{verbatim}
-    Alberto Contador
-    "Andy	Schleck"
-    Lance\ Armstrong
-    !@#$%^&*()_-=+=[]{}?/
-\end{verbatim}
-\normalsize
-
-The resulting values passed to the NodeB executable are:
-\footnotesize
-\begin{verbatim}
-    Lance_Armstrong
-    "Andreas_Kloden"
-    Ivan\_Basso
-    !@#$%^&*()_-=+=[]{}?/
+  Lance_Armstrong
+  "Andreas_Kloden"
+  Ivan\_Basso
+  !@#$%^&*()_-=+=[]{}?/
 \end{verbatim}
 \normalsize
 
