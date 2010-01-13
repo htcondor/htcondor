@@ -2061,16 +2061,16 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
-  For systems with multiple network interfaces, if this configuration
-  setting is not defined, Condor binds all network sockets to first
-  interface found.
-  To bind to a specific network interface other than the
-  first one, this \MacroNI{NETWORK\_INTERFACE} should be set to 
-  the IP address to use.
-  When \MacroNI{BIND\_ALL\_INTERFACES} is set to \Expr{True} (the
-  default), this
-  setting simply controls what IP address a given Condor host will
-  advertise.
+  The meaning of this configuration setting depends on the setting of
+  \MacroNI{BIND\_ALL\_INTERFACES}.  If \MacroNI{BIND\_ALL\_INTERFACES}
+  is true (the default), then this setting simply controls what IP
+  address will be advertised as the public address of the daemon.
+  If \MacroNI{BIND\_ALL\_INTERFACES} is false, then this setting
+  specifies which IP address to bind network sockets to.
+  If \MacroNI{BIND\_ALL\_INTERFACES} is false and \Macro{NETWORK\_INTERFACE}
+  is unset, Condor chooses a network interface automatically.  It tries
+  to choose a public interface if one is available.  If it can't decide
+  which of two interfaces to choose, it will pick the first one.
   More information about configuring Condor on machines with multiple
   network interfaces can be found in
   section~\ref{sec:Multiple-Interfaces} on
