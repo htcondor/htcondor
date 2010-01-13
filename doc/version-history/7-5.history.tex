@@ -29,12 +29,14 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrack #1102
-\item \MacroNI{CONDOR\_VIEW\_HOST} may now use a shared port.
+\item A port number defined within \Macro{CONDOR\_VIEW\_HOST} may now use 
+  a shared port.
 
 % gittrack #1104
-\item \Condor{master} no longer pauses for 3 seconds after starting
-  \Condor{collector}.  However, if \MacroNI{COLLECTOR\_ADDRESS\_FILE}
-  is configured, \Condor{master} will wait for that file to be created
+\item The \Condor{master} no longer pauses for 3 seconds after starting
+  the \Condor{collector}.  However, if the configuration variable
+  \MacroNI{COLLECTOR\_ADDRESS\_FILE} is defines a file, 
+  the \Condor{master} will wait for that file to be created
   before starting other daemons.
 
 \end{itemize}
