@@ -2983,17 +2983,16 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
     	MyString cmd_file = node->GetCmdFile();
 		bool submit_success = false;
 
-//TEMPTEMP -- hmm -- should noop jobs be possible for stork, too?
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
-			const char *logFile = node->UsingDefaultLog() ?
-						node->_logFile : NULL;
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
 							node->_logFile );
 
 			} else {
+				const char *logFile = node->UsingDefaultLog() ?
+							node->_logFile : NULL;
 					// Note: assigning the ParentListString() return value
 					// to a variable here, instead of just passing it directly
 					// to condor_submit(), fixes a memory leak(!).
@@ -3006,8 +3005,15 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			}
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
-      		submit_success = stork_submit( dm, cmd_file.Value(), condorID,
-				   	node->GetJobName(), node->GetDirectory() );
+			if ( node->GetNoop() ) {
+      			submit_success = fake_condor_submit( condorID,
+							node->GetJobName(), node->GetDirectory(),
+							node->_logFile );
+
+			} else {
+      			submit_success = stork_submit( dm, cmd_file.Value(), condorID,
+				   		node->GetJobName(), node->GetDirectory() );
+			}
     	} else {
 	    	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n",
 						node->JobType() );

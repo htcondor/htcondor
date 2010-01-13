@@ -12,5 +12,8 @@ Retry nodeB 3
 
 Noop Subdag External nodeC job_dagman_noop_node-dummy.dag
 
+Noop Job nodeD job_dagman_noop_node-withlog.cmd
+
 Parent nodeA Child nodeB
 Parent nodeB Child nodeC
+Parent nodeC Child nodeD
