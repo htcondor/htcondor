@@ -1,5 +1,5 @@
 executable   = ./job_dagman_vars-node.pl
-arguments    = $(nodename) $$([DAGParentNodeNames]) $(first) $(second) $(third)
+arguments    = $(nodename) $$([DAGParentNodeNames]) $(first) $(second) $(third) $(misc)
 # Note: this needs to be vanilla universe for the $$([DAGParentNodeNames])
 # expansion to work above.
 universe     = vanilla

@@ -32,10 +32,10 @@ $dagman_args = "-verbose";
 @outfiles = ("job_dagman_vars-NodeA.out", "job_dagman_vars-NodeB.out", 
 	"job_dagman_vars-NodeC.out", 
 	"job_dagman_vars-NodeD.out");
-@outlines = ("<NodeA> <Alberto Condator> <Andy Schleck> <Lance_Armstrong>",
-	"<NodeB> <NodeA> <Greg\"_LeMond> <\\\\Laurent_Fignon> <Pedro_Delgado>",
-	"<NodeC> <NodeA> <Andreas_Kloden> <Carlos_Sastre>",
-	"<NodeD> <NodeB,NodeC> <Lance_Armstrong> <Andreas\"_Kloden> <\\\\Ivan_Basso>");
+@outlines = ("<NodeA> <Alberto Condator> <Andy	Schleck> <Lance_Armstrong> <!@#\$%^&*()_-=+=[]{}?> ",
+	"<NodeB> <NodeA> <Greg\"_LeMond> <\\Laurent_Fignon> <Pedro_Delgado> <> ",
+	"<NodeC> <NodeA> <Andreas_Kloden> <Carlos_Sastre> ",
+	"<NodeD> <NodeB,NodeC> <Lance_Armstrong> <Andreas\"_Kloden> <\\Ivan_Basso> <!@#\$%^&*()_-=+=[]{}?> ");
 
 # truly const variables in perl
 sub IDLE{1};
@@ -130,7 +130,8 @@ $success = sub
 			chomp();
 			$line = $_;
 
-			if( $line =~ /$outlines[$filenum]/ ) {
+			# Using eq here to avoid having to escape regexp special chars.
+			if( $line eq $outlines[$filenum] ) {
 				CondorTest::debug("$name: $line\n",1);
 				$passed = 1;
 			}

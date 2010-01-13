@@ -1,7 +1,8 @@
 Job NodeA job_dagman_vars-node-newargs.cmd
 Vars NodeA nodename="$(JOB)"
-Vars NodeA first="Alberto Condator" second="Andy Schleck"
+Vars NodeA first="Alberto Condator" second="Andy	Schleck"
 Vars NodeA third="Lance_Armstrong"
+Vars NodeA misc="!@#$%^&*()_-=+=[]{}?"
 
 Job NodeB job_dagman_vars-node-newargs.cmd
 Vars NodeB nodename="$(JOB)"
@@ -21,6 +22,7 @@ Vars NodeD first="Lance_Armstrong"
 # once for condor_submit -- we should probably change that...
 Vars NodeD second="Andreas\\\"_Kloden"
 Vars NodeD third="\\Ivan_Basso"
+Vars NodeD misc="!@#$%^&*()_-=+=[]{}?"
 
 Parent NodeA Child NodeB NodeC
 Parent NodeB NodeC Child NodeD
