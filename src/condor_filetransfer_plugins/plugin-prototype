@@ -2,8 +2,9 @@
 
 
 if ($ARGV[0] eq "-classad") {
+	print "PluginVersion = \"0.1\"\n";
 	print "PluginType = \"FileTransfer\"\n";
-	print "SupportedURLs = \"http,ftp,file\"\n";
+	print "SupportedMethods = \"http,ftp,file\"\n";
 	exit 0;
 }
 
