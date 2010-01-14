@@ -238,7 +238,7 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 			result->type = compat_classad::LX_UNDEFINED;
 			break;
 		case classad::Value::BOOLEAN_VALUE: {
-			result->type = compat_classad::LX_BOOL;
+			result->type = compat_classad::LX_INTEGER;
 			bool v;
 			val.IsBooleanValue( v );
 			result->i = v ? 1 : 0;
@@ -287,7 +287,7 @@ bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
 {
 	static classad::ExprTree *reqsTree = NULL;
-	compat_classad::EvalResult *val;	
+	compat_classad::EvalResult val;
 	
 	if( stricmp(target->GetMyTypeName(),my->GetTargetTypeName()) &&
 	    stricmp(my->GetTargetTypeName(),ANY_ADTYPE) )
@@ -295,28 +295,15 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 		return false;
 	}
 
-	if ((val = new compat_classad::EvalResult) == NULL)
-	{
-		EXCEPT("Out of memory -- quitting");
-	}
-
 	if ( reqsTree == NULL ) {
-		ParseClassAdRvalExpr ("MY.Requirements", reqsTree);
+		ParseClassAdRvalExpr ("Requirements", reqsTree);
 	}
-	EvalExprTree( reqsTree, my, target, val );
-	if (!val || val->type != compat_classad::LX_INTEGER)
-	{
-		delete val;
+	if ( EvalExprTree( reqsTree, my, target, &val ) == FALSE ) {
 		return false;
-	}
-	else
-	if (!val->i)
-	{
-		delete val;
-		return false;
+	} else if ( val.type == compat_classad::LX_INTEGER && val.i ) {
+		return true;
 	}
 
-	delete val;
 	return true;
 }
 
