@@ -58,9 +58,10 @@ public:
 	    /** Gets the log file from a Condor submit file.
 		    on success, the return value will be the log file name
 		    on failure, it will be ""
+			TEMPTEMP -- document all params
 		 */
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
-			const MyString &directory);
+			const MyString &directory, bool &isXml);
 
 		/** Makes the given filename an absolute path
 			@param the name of the file (input/output)

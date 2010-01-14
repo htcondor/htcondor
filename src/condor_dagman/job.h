@@ -408,8 +408,11 @@ class Job {
 
 	//The log file for this job -- needed because we're now allowing
 	//each job to have its own log file.
-	// Note: this is needed only for writing a POST script terminated event.
+	// Note: this is needed only for writing a POST script terminated event,
+	// or for NOOP nodes.
+	//TEMPTEMP -- make this private and make an accessor function?
 	char *_logFile;
+	bool _logFileIsXml;
 
 	// DAG definition files can now pass named variables into job submit files.
 	// For lack of a pair<> class, I made two lists, and these lists work together

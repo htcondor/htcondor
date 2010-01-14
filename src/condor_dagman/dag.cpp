@@ -1490,14 +1490,6 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		ProcessPostTermEvent(&e, job, _recovery);
 
 	} else {
-			//TEMPTEMP -- change this to look at a flag in the job object
-			// Determine whether the job's log is XML.  (Yes, it probably
-			// would be better to just figure that out from the submit file,
-			// but this is a quick way to do it.  wenger 2005-04-29.)
-		ReadUserLog readLog( job->_logFile );
-			// Check for isInitialized() here fixes gittrac #435 (DAGMan
-			// core dumps if node has POST script and all submit attempts fail).
-		bool useXml = readLog.isInitialized() ? readLog.getIsXMLLog() : false;
 
 		WriteUserLog ulog;
 			// Disabling the global log (EventLog) fixes the main problem
@@ -1505,7 +1497,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// write to the user log also fails, and DAGMan hangs
 			// waiting for the event that wasn't written).
 		ulog.setEnableGlobalLog( false );
-		ulog.setUseXML( useXml );
+		ulog.setUseXML( job->_logFileIsXml );
 		ulog.initialize( job->_logFile, job->_CondorID._cluster,
 					 	0, 0, NULL );
 
@@ -2989,7 +2981,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							node->_logFile );
+							node->_logFile, node->_logFileIsXml );
 
 			} else {
 				const char *logFile = node->UsingDefaultLog() ?
@@ -3009,7 +3001,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							node->_logFile );
+							node->_logFile, node->_logFileIsXml );
 
 			} else {
       			submit_success = stork_submit( dm, cmd_file.Value(), condorID,

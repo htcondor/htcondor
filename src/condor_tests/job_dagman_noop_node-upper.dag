@@ -19,8 +19,7 @@ Noop Job nodeD job_dagman_noop_node-withlog.cmd
 Job nodeE job_dagman_noop_node-xmllog.cmd
 Script Post nodeE job_dagman_noop_node-script.pl $JOB post $RETURN
 
-#TEMPTEMP Noop Job nodeF job_dagman_noop_node-xmllog.cmd
-Job nodeF job_dagman_noop_node-xmllog.cmd
+Noop Job nodeF job_dagman_noop_node-xmllog.cmd
 Script Post nodeF job_dagman_noop_node-script.pl $JOB post $RETURN
 
 Parent nodeA Child nodeB

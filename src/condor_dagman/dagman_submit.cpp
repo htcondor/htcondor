@@ -378,7 +378,7 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 //-------------------------------------------------------------------------
 bool
 fake_condor_submit( CondorID& condorID, const char* DAGNodeName, 
-			   const char* directory, const char *logFile )
+			   const char* directory, const char *logFile, bool logIsXml )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -389,16 +389,24 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 		return false;
 	}
 
-	static int clusterID = -101;
+		//TEMPTEMP -- XML code refuses to use negative cluster IDs!
+		//TEMPTEMP -- this is for test only -- need to use scheme agreed upon with FW: cluster is *dagman's* cluster ID, proc is some special value, subproc is what we actually use for values to index on
+	//TEMPTEMP static int clusterID = -100;
+	static int clusterID = 9999999;//TEMPTEMP
 
+	//TEMPTEMP clusterID--;
+	clusterID++;//TEMPTEMP
 	condorID._cluster = clusterID;
 	condorID._proc = 0;
 	condorID._subproc = 0;
-	clusterID--;
 
 
 //TEMPTEMP -- just get the string for the submit host once, for speed!
 	SubmitEvent subEvent;
+	subEvent.cluster = condorID._cluster;
+	subEvent.proc = condorID._proc;
+	subEvent.subproc = condorID._subproc;
+
 		//TEMPTEMP -- seems like we need submit host for event to be read correctly
 	sprintf( subEvent.submitHost, "<128.105.165.12:32779>");//TEMPTEMP!!!!
 		//TEMPTEMP -- avoid duplicate code here
@@ -408,14 +416,16 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 
 		//TEMPTEMP -- is this what we want?  what the hell is a NodeTerminatedEvent?!?
 	JobTerminatedEvent termEvent;
+	termEvent.cluster = condorID._cluster;
+	termEvent.proc = condorID._proc;
+	termEvent.subproc = condorID._subproc;
 	termEvent.normal = true;
 	termEvent.returnValue = 0;
 	termEvent.signalNumber = 0;
 
-//TEMPTEMP -- at the point when we get the log file name for a node, we should probably also get whether the log file is XML or not (using MultiLogFiles::getValuesFromFile()?) and stick that into a flag in the Job object (use that when writing PostScriptTerminated events, too)
 	WriteUserLog ulog;
 	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( false );//TEMPTEMP -- we should check the submit file!!
+	ulog.setUseXML( logIsXml );
 	ulog.initialize( logFile, condorID._cluster, condorID._proc,
 				condorID._subproc, NULL );//TEMPTEMP -- make sure args are correct
 

@@ -156,6 +156,7 @@ void Job::Init( const char* jobName, const char* directory,
 	_nodePriority = 0;
 
     _logFile = NULL;
+	_logFileIsXml = false;
 
 	_noop = false;
 
@@ -207,8 +208,9 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 bool
 Job::CheckForLogFile() const
 {
-    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-				_directory );
+	bool tmpLogFileIsXml;
+	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+				_directory, tmpLogFileIsXml );
 	bool result = (logFile != "");
 	return result;
 }
@@ -748,6 +750,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
 			bool recovery, const char *defaultNodeLog )
 {
+	debug_printf( DEBUG_QUIET, "DIAG Job(%s)::MonitorLogFile()\n", GetJobName());//TEMPTEMP
 	if ( _logIsMonitored ) {
 		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already monitored\n", GetJobName() );
@@ -760,7 +763,8 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
     MyString logFileStr;
 	if ( _jobType == TYPE_CONDOR ) {
     	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-					_directory );
+					_directory, _logFileIsXml );
+	debug_printf( DEBUG_QUIET, "  DIAG _logFileIsXml: %d\n", _logFileIsXml );//TEMPTEMP
 	} else {
 #ifdef HAVE_EXT_CLASSADS
 		StringList logFiles;
@@ -793,6 +797,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	if ( logFileStr == "" ) {
 		logFileStr = defaultNodeLog;
 		_useDefaultLog = true;
+		_logFileIsXml = false;
 		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
 					"submit file %s (node %s); using default (%s)\n",
 					_cmdFile, GetJobName(), logFileStr.Value() );
