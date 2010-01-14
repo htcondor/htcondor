@@ -615,7 +615,11 @@ AC_SUBST(_cv_platform,$_cv_platform)
 # check out the libc
 if test "$_cv_opsys" = "LINUX" ; then
   AC_MSG_CHECKING([exact libc version])
-  for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" "/lib64/libc.so.6" ; do
+  glibc_prefix=
+  if test "x$with_glibc" != "xno" -a -d "$with_glibc"; then
+      glibc_prefix="$with_glibc"
+  fi
+  for _libc in "$glibc_prefix/lib/libc.so.6" "$glibc_prefix/lib/libc.so.6.1" "$glibc_prefix/lib64/libc.so.6" ; do
     if test -f "$_libc" && test -L "$_libc" ; then
       _libc_ver=`echo $_libc|$PERL -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
       break;
