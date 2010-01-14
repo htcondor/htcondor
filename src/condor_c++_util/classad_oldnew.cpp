@@ -202,6 +202,8 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 	const classad::ExprTree		*expr;
     bool send_server_time = false;
 
+	unp.SetOldClassAd( true );
+
 	int numExprs=0;
 
 	classad::ClassAdIterator itor(ad);

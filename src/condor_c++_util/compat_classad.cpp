@@ -954,6 +954,8 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
     string parsedString;
 	classad::ExprTree* expr;
 
+	unp.SetOldClassAd( true );
+
     expr = Lookup(name); 
 
     if(!expr)
@@ -1498,6 +1500,8 @@ ClassAd::EscapeStringValue(char const *val, MyString &buf)
     classad::Value tmpValue;
     string stringToAppeaseUnparse;
     classad::ClassAdUnParser unparse;
+
+	unparse.SetOldClassAd( true );
 
     tmpValue.SetStringValue(val);
     unparse.Unparse(stringToAppeaseUnparse, tmpValue);
