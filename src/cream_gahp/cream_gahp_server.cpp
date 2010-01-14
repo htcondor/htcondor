@@ -37,10 +37,12 @@
 using namespace std;
 using namespace glite::ce::cream_client_api::soap_proxy;
 
+#define USE_QUICKLOG 0
+
 #if USE_QUICKLOG
 // Profoundly quick and dirty logging system for debugging
 FILE * tmplog = NULL;
-void quicklog(const char * p)
+static void quicklog(const char * p)
 {
 	struct tm t;
 	time_t timet = time(0);
@@ -55,6 +57,8 @@ void quicklog(const char * p)
 		t.tm_sec+1,
 		(int)getpid(), p);
 }
+#else
+static inline void quicklog(const char *) { }
 #endif
 
 #define WORKER 6 // Worker threads
@@ -196,7 +200,7 @@ char *response_prefix = NULL;
 int thread_cream_delegate( Request *req );
 int thread_cream_job_register( Request *req );
 int thread_cream_job_start( Request **req );
-int thread_cream_job_purge( Request *req );
+int thread_cream_job_purge( Request **req );
 int thread_cream_job_cancel( Request *req );
 int thread_cream_job_suspend( Request *req );
 int thread_cream_job_resume( Request *req );
@@ -380,6 +384,89 @@ void enqueue_result(string result_line)
 }
 
 
+
+/* =========================================================================
+collect_job_ids - collect job and request ids from a list of Requests.
+
+A number of commands take a list of Requests, each of which has one or more jobids to be handled.  This spins over that list of lists and returns a vector<JobIdWrapper> suitable for handling to CREAM, and a vector<string> of request IDs, suitable for returning results.
+
+reqlist - Array of Requests with a NULL pointer at the end.
+    Request::index[1] -  must be request ID
+    Request::index[2] -  must be service ID 
+    Request::index[3] -  must be number of job ids that follow
+    Request::index[4+] -  must be job ids
+
+vector<JobIdWrapper> & jv - Output: will be appended to contain all jobids found
+
+vector<string> & reqids - Output: will be appended to contain all request IDs found.  The request ID must be the entry in Request::index[1].
+   ========================================================================= */
+void collect_job_ids(Request ** reqlist, vector<JobIdWrapper> & jv, 
+	vector<string> & reqids) {
+
+	if(reqlist == NULL) {
+		internal_error("collect_job_ids called with NULL pointer\n");
+	}
+	if(reqlist[0] == NULL) {
+		internal_error("collect_job_ids called with empty list\n");
+	}
+	
+	char *service;
+	process_string_arg( reqlist[0]->input_line[2], &service );
+	string proxy = reqlist[0]->proxy;
+
+	for(size_t j = 0; reqlist[j] != NULL; j++) {
+		Request * req = reqlist[j];
+
+		// Check that all jobs share the same service.
+		// Should not be called with mixed services.
+		char * this_service;
+		process_string_arg( req->input_line[2], &this_service );
+		if(strcmp(this_service, service) != 0) {
+			internal_error("Multiple services in one request");
+		}
+
+		// Check that all jobs share the same proxy.
+		// Should not be called with mixed proxies.
+		string this_proxy = req->proxy;;
+		if(this_proxy != proxy) {
+			internal_error("Multiple proxies in one request");
+		}
+
+		// Add reqid to list to report on result. 
+		char * reqid = NULL;
+		process_string_arg( req->input_line[1], &reqid );
+		if(reqid == NULL) {
+			internal_error("request lacks reqid");
+		}
+		reqids.push_back(reqid);
+
+		// How many jobs does this request list?
+		char * jobnum_str;
+		process_string_arg( req->input_line[3], &jobnum_str );
+		if (jobnum_str == NULL) {
+			throw runtime_error("handling of all jobs (NULL jobnum) not supported");
+		}
+
+		// Add jobs to vector of jobs to process.
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			char * jobid;
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+									  service,
+									  vector<JobPropertyWrapper>()));
+		}
+	}
+}
+
+/* =========================================================================
+Compare a->input_line[2]s (frequently the service)
+   ========================================================================= */
+bool cmp_request_2(Request * a, Request * b) {
+	// Confirm they share the same service.
+	return strcmp(a->input_line[2], b->input_line[2]);
+}
+
 /* =========================================================================
    INITIALIZE_FROM_FILE: provides the GAHP server with a
    GSI Proxy certificate used for all subsequent authentication
@@ -557,11 +644,6 @@ int thread_cream_job_register( Request *req )
    CREAM_START: triggers registered jobs.
    ========================================================================= */
 
-bool cmp_cream_job_start(Request * a, Request * b) {
-	// Confirm they share the same service.
-	return (strcmp(a->input_line[2], b->input_line[2]) != 0);
-}
-
 int handle_cream_job_start( char **input_line )
 {
 	int arg_cnt = count_args( input_line );
@@ -586,7 +668,7 @@ int handle_cream_job_start( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request_batch( input_line, thread_cream_job_start, cmp_cream_job_start );
+	enqueue_request_batch( input_line, thread_cream_job_start, cmp_request_2 );
 
 	gahp_printf("S\n");  
 
@@ -615,50 +697,8 @@ int thread_cream_job_start( Request **reqlist )
 	
 	try {
 		vector<JobIdWrapper> jv;
+		collect_job_ids(reqlist, jv, reqids);
 
-		for(size_t j = 0; reqlist[j] != NULL; j++) {
-			Request * req = reqlist[j];
-
-			// Check that all jobs share the same service.
-			// Should not be called with mixed services.
-			char * this_service;
-			process_string_arg( req->input_line[2], &this_service );
-			if(strcmp(this_service, service) != 0) {
-				internal_error("Multiple services in one start request");
-			}
-
-			// Check that all jobs share the same proxy.
-			// Should not be called with mixed proxies.
-			string this_proxy = req->proxy;;
-			if(this_proxy != proxy) {
-				internal_error("Multiple proxies in one start request");
-			}
-
-			// Add reqid to list to report on result. 
-			char * reqid = NULL;
-			process_string_arg( req->input_line[1], &reqid );
-			if(reqid == NULL) {
-				internal_error("job start request lacks reqid");
-			}
-			reqids.push_back(reqid);
-
-			// How many jobs does this request list?
-			char * jobnum_str;
-			process_string_arg( req->input_line[3], &jobnum_str );
-			if (jobnum_str == NULL) {
-				throw runtime_error("start of all jobs not supported");
-			}
-
-			// Add jobs to vector of jobs to start.
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				char * jobid;
-				process_string_arg( req->input_line[i+4], &jobid );
-				jv.push_back(JobIdWrapper(jobid,
-										  service,
-										  vector<JobPropertyWrapper>()));
-			}
-		}
 		vector<string> sv;
 		JobFilterWrapper jfw(jv,
 		                     sv,  // status contraint: none 
@@ -715,67 +755,70 @@ int handle_cream_job_purge( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request( input_line, thread_cream_job_purge );
+	enqueue_request_batch( input_line, thread_cream_job_purge, cmp_request_2 );
 
 	gahp_printf("S\n");
 	
 	return 0;
 }
 
-int thread_cream_job_purge( Request *req )
+int thread_cream_job_purge( Request **reqlist )
 {
 	// FIXME: It doesn't appear that the new API supports
 	// operating on all jobs. It also doesn't look like the
 	// GridManager uses this capability. We should disable
 	// the syntax for asking for operating on all jobs
 
-	char *reqid, *service, *jobnum_str, *jobid;
-	string result_line;
-	
-	process_string_arg( req->input_line[1], &reqid );
-	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &jobnum_str );
+	if(reqlist == NULL) {
+		internal_error("thread_cream_job_purge called with NULL pointer\n");
+	}
+	if(reqlist[0] == NULL) {
+		internal_error("thread_cream_job_purge called with empty list\n");
+	}
+
+	char *service;
+	process_string_arg( reqlist[0]->input_line[2], &service );
+	string proxy = reqlist[0]->proxy;
+
+	vector<string> reqids;
 	
 	try {
-		if (jobnum_str == NULL) {
-			throw runtime_error("purge of all jobs not supported");
-		}
 		vector<JobIdWrapper> jv;
-		int jobnum = atoi( jobnum_str );
-		for ( int i = 0; i < jobnum; i++) {
-			process_string_arg( req->input_line[i+4], &jobid );
-			jv.push_back(JobIdWrapper(jobid,
-			                          service,
-			                          vector<JobPropertyWrapper>()));
-		}
+		collect_job_ids(reqlist, jv, reqids);
+
 		vector<string> sv;
 		JobFilterWrapper jfw(jv,
-		                     sv,  // status contraint: none 
-		                     -1,  // from date: none 
-		                     -1,  // to date: none
-		                     "",  // delegation ID constraint: none
-		                     ""); // lease ID constraint: none
+							 sv,  // status contraint: none 
+							 -1,  // from date: none 
+							 -1,  // to date: none
+							 "",  // delegation ID constraint: none
+							 ""); // lease ID constraint: none
 		ResultWrapper rw;
 		AbsCreamProxy* cp =
 			CreamProxyFactory::make_CreamProxyPurge(&jfw,
-			                                        &rw,
-			                                        DEFAULT_TIMEOUT);
+													&rw,
+													DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
-		cp->setCredential(req->proxy.c_str());
+		cp->setCredential(proxy.c_str());
 		cp->execute(service);
 		delete cp;
 		check_result_wrapper(rw);
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Purge\\ Error:\\ " + escape_spaces(ex.what());
-		enqueue_result(result_line);
+
+		for(vector<string>::const_iterator it = reqids.begin();
+			it != reqids.end(); it++) {
+			enqueue_result((*it) + " CREAM_Job_Purge\\ Error:\\ " + escape_spaces(ex.what()));
+		}
 		
 		return 1;
 	}
 	
-	result_line = (string)reqid + " NULL";
-	enqueue_result(result_line);
+	for(vector<string>::const_iterator it = reqids.begin();
+		it != reqids.end(); it++) {
+		enqueue_result((*it) + " NULL");
+	}
 	
 	return 0;
 }
@@ -2001,6 +2044,8 @@ bool is_a_batchable_pair(Request * a, Request * b) {
 	return true;
 }
 
+
+
 /* =========================================================================
    WORKER_MAIN: called by every worker threads.
    ========================================================================= */
@@ -2028,7 +2073,7 @@ void *worker_main(void * /*ignored*/)
 				//deque<Request *> requestQueue;
 				pthread_mutex_lock( &requestQueueLock );
 				typedef deque<Request*> ReqDeque;
-				int size = requestQueue.size();
+				int size = requestQueue.size()+1;//+1 = we pop_fronted earlier
 				for(ReqDeque::iterator it = requestQueue.begin();
 					it != requestQueue.end(); ) {
 					if(is_a_batchable_pair(req, *it)) {
@@ -2039,6 +2084,16 @@ void *worker_main(void * /*ignored*/)
 					}
 				}
 				pthread_mutex_unlock( &requestQueueLock );
+
+				char buf[1024];
+				char * type = "unknown type";
+				if(req->bhandler == thread_cream_job_start) {
+					type = "CREAM_JOB_START";
+				} else if(req->bhandler == thread_cream_job_purge) {
+					type = "CREAM_JOB_PURGE";
+				}
+				sprintf(buf, "Batch merged %d %s requests from queue of %d", (int)rv.size(), type, size);
+				quicklog(buf);
 
 				rv.push_back(NULL); // Indicates end.
 				req->bhandler( &rv[0] );
