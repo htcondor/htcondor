@@ -39,7 +39,7 @@ all: clean license condor_setup condor_set_acls config_file version_file msi
 
 # Build the config file setter-upper
 condor_setup: condor_setup.c 
-	cl /nologo /DWIN32 /I $(BASE)\\src\\h /I $(BASE)\\src\\condor_includes condor_setup.c $(BASE)\\src\\condor_util_lib\\my_getopt.c /link /nologo
+	cl /nologo /DWIN32 /I $(BASE)\\src\\h /I $(BASE)\\src\\condor_includes /I $(BASE)\\src\condor_c++_util condor_setup.c $(BASE)\\src\\condor_util_lib\\my_getopt.c /link /nologo
 
 # Build the utility for calling cacls in a language-independent way
 condor_set_acls: condor_set_acls.c
