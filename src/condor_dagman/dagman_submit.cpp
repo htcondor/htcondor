@@ -421,10 +421,12 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 
 	if ( !ulog.writeEvent( &subEvent ) ) {
 		EXCEPT( "fake submit failed\n" );//TEMPTEMP
+		return false;
 	}
 
 	if ( !ulog.writeEvent( &termEvent ) ) {
 		EXCEPT( "fake terminated failed\n" );//TEMPTEMP
+		return false;
 	}
 
 	return true;

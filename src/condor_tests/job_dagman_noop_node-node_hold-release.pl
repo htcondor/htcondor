@@ -9,7 +9,7 @@ while (<OUTPUT>) {
 }
 close (OUTPUT) or die "Condor_hold failed: $?";
 
-sleep 60;
+sleep 10;
 
 open (OUTPUT, "condor_release $parentid 2>&1 |") or die "Can't fork: $!";
 while (<OUTPUT>) {

@@ -1,3 +1,5 @@
+#TEMPTEMP -- not passing node names to jobs...
+#TEMPTEMP -- why the hell is this taking so long to run?
 # Note: using a nested DAG structure here so that the lower-level DAG
 # will get run twice -- the first time through, it will generate a
 # rescue DAG; the second time through, it will succeed (if everything
@@ -14,6 +16,14 @@ Noop Subdag External nodeC job_dagman_noop_node-dummy.dag
 
 Noop Job nodeD job_dagman_noop_node-withlog.cmd
 
+Job nodeE job_dagman_noop_node-xmllog.cmd
+Script Post nodeE job_dagman_noop_node-script.pl $JOB post $RETURN
+
+#TEMPTEMP Noop Job nodeF job_dagman_noop_node-xmllog.cmd
+Job nodeF job_dagman_noop_node-xmllog.cmd
+Script Post nodeF job_dagman_noop_node-script.pl $JOB post $RETURN
+
 Parent nodeA Child nodeB
-Parent nodeB Child nodeC
-Parent nodeC Child nodeD
+Parent nodeB Child nodeC nodeD
+Parent nodeD Child nodeE
+Parent nodeE Child nodeF

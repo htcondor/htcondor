@@ -1490,6 +1490,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		ProcessPostTermEvent(&e, job, _recovery);
 
 	} else {
+			//TEMPTEMP -- change this to look at a flag in the job object
 			// Determine whether the job's log is XML.  (Yes, it probably
 			// would be better to just figure that out from the submit file,
 			// but this is a quick way to do it.  wenger 2005-04-29.)
