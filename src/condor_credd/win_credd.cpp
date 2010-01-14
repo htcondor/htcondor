@@ -113,7 +113,7 @@ CredDaemon::reconfig()
 void
 CredDaemon::initialize_classad()
 {
-	m_classad.clear();
+	m_classad.Clear();
 
 	m_classad.SetMyTypeName(CREDD_ADTYPE);
 	m_classad.SetTargetTypeName("");

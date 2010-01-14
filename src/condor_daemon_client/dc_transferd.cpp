@@ -298,9 +298,9 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	MyString reason;
 	int num_transfers;
 	ClassAd jad;
-	char *lhstr = NULL;
-	char *rhstr = NULL;
-	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
+	const char *lhstr = NULL;
+	const char *rhstr = NULL;
+	ExprTree *tree = NULL;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Connect to the transferd and authenticate
@@ -395,34 +395,15 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 				// saved SUBMIT_ attributes so the download goes into the
 				// correct place.
 				jad.ResetExpr();
-				while( (tree = jad.NextExpr()) ) {
-					lhstr = NULL;
-					if( (lhs = tree->LArg()) ) { 
-						lhs->PrintToNewStr (&lhstr); 
-					}
+				while( jad.NextExpr(lhstr, tree) ) {
 					if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 							// this attr name starts with SUBMIT_
 							// compute new lhs (strip off the SUBMIT_)
-						char *new_attr_name = strchr(lhstr,'_');
+						const char *new_attr_name = strchr(lhstr,'_');
 						ASSERT(new_attr_name);
 						new_attr_name++;
-							// compute new rhs (just use the same)
-						rhstr = NULL;
-						if( (rhs = tree->RArg()) ) { 
-							rhs->PrintToNewStr (&rhstr); 
-						}
 							// insert attribute
-						if(rhstr) {
-							MyString newattr;
-							newattr += new_attr_name;
-							newattr += "=";
-							newattr += rhstr;
-							jad.Insert(newattr.Value());
-							free(rhstr);
-						}
-					}
-					if ( lhstr ) {
-						free(lhstr);
+						jad.Insert(new_attr_name, tree->Copy());
 					}
 				}	// while next expr
 		

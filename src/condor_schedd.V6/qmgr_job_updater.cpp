@@ -161,7 +161,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_IP );
 
 	m_pull_attrs = new StringList();
-	if ( job_ad->Lookup( ATTR_TIMER_REMOVE_CHECK ) ) {
+	if ( job_ad->LookupExpr( ATTR_TIMER_REMOVE_CHECK ) ) {
 		m_pull_attrs->insert( ATTR_TIMER_REMOVE_CHECK );
 	}
 }
@@ -285,11 +285,10 @@ QmgrJobUpdater::updateJob( update_t type )
 	}
 
 	job_ad->ResetExpr();
-	while( (tree = job_ad->NextDirtyExpr()) ) {
-		if( tree->invisible ) {
-			continue;
-		}
-		name = ((Variable*)tree->LArg())->Name();
+	while( job_ad->NextDirtyExpr(name, tree) ) {
+		// There used to be a check for tree->invisible here,
+		// but there are no codepaths that reach here with
+		// private attributes set to invisible.
 
 			// If we have the lists of attributes we care about and
 			// this attribute is in one of the lists, actually do the
@@ -307,7 +306,7 @@ QmgrJobUpdater::updateJob( update_t type )
 				}
 				is_connected = true;
 			}
-			if( ! updateExprTree(tree) ) {
+			if( ! updateExprTree(name, tree) ) {
 				had_error = true;
 			}
 		}
@@ -346,22 +345,21 @@ QmgrJobUpdater::periodicUpdateQ( void )
 
 
 bool
-QmgrJobUpdater::updateExprTree( ExprTree* tree )
+QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
 {
 	if( ! tree ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateExprTree: tree is NULL!\n" );
 		return false;
 	}
-	ExprTree *rhs = tree->RArg(), *lhs = tree->LArg();
-	if( ! rhs || ! lhs ) {
-		dprintf( D_ALWAYS,
-				 "QmgrJobUpdater::updateExprTree: tree is invalid!\n" );
-		return false;
-	}
-	char* name = ((Variable*)lhs)->Name();
 	if( ! name ) {
 		dprintf( D_ALWAYS,
 				 "QmgrJobUpdater::updateExprTree: can't find name!\n" );
+		return false;
+	}		
+	const char* value = ExprTreeToString( tree );
+	if( ! value ) {
+		dprintf( D_ALWAYS,
+				 "QmgrJobUpdater::updateExprTree: can't find value!\n" );
 		return false;
 	}		
 		// This code used to be smart about figuring out what type of
@@ -372,19 +370,15 @@ QmgrJobUpdater::updateExprTree( ExprTree* tree )
 		// and call SetAttribute(), so it was both a waste of effort
 		// here, and made this code needlessly more complex.  
 		// Derek Wright, 3/25/02
-	char* tmp = NULL;
-	rhs->PrintToNewStr( &tmp );
-	if( SetAttribute(cluster, proc, name, tmp) < 0 ) {
+	if( SetAttribute(cluster, proc, name, value) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
-				 name, tmp );
-		free( tmp );
+				 name, value );
 		return false;
 	}
 	dprintf( D_FULLDEBUG, 
 			 "Updating Job Queue: SetAttribute(%s = %s)\n",
-			 name, tmp );
-	free( tmp );
+			 name, value );
 	return true;
 }
 

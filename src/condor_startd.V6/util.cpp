@@ -412,7 +412,6 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 		  const char* prefix )
 {
 	ExprTree* tree;
-	bool rval = true;
 
 	if( !attr ) {
 		EXCEPT( "caInsert called with NULL attribute" );
@@ -421,44 +420,23 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 		EXCEPT( "caInsert called with NULL classad" );
 	}
 
-	tree = source->Lookup( attr );
+	MyString new_attr;
+	if( prefix ) {
+		new_attr = prefix;
+	}
+	new_attr += attr;
+
+	tree = source->LookupExpr( attr );
 	if( !tree ) {
-		MyString attrname;
-		if( prefix ) {
-			attrname = prefix;
-		}
-		attrname += attr;
-		target->Delete(attrname.Value());
+		target->Delete(new_attr.Value());
 		return false;
 	}
-	if( prefix ) {
-			// since there's no way to rename the attribute name in an
-			// existing ExprTree, we have to print it out to a string
-			// to append the prefix...
-		char* str = NULL;
-		tree->PrintToNewStr( &str );
-		MyString modified_str = prefix;
-		modified_str += str;
-		free( str );
-		str = NULL;
-		if( ! target->Insert(modified_str.Value()) ) {
-			rval = false;
-		}
-	} else {
-			// there's no prefix, we can just Insert a copy directly
-			// (like we always do on the V6_6-branch version, which
-			// doesn't support a prefix).
-		ExprTree* new_tree = tree->DeepCopy();
-		if( ! target->Insert(new_tree) ) {
-			rval = false;
-		}			
-	}
-
-	if( ! rval ) {
+	if ( !target->Insert(new_attr.Value(), tree->Copy()) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
 				 attr );
-	}		
-	return rval;
+		return false;
+	}
+	return true;
 }
 
 

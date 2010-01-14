@@ -20,7 +20,6 @@
 #ifndef _CLASSAD_VISA_H
 #define _CLASSAD_VISA_H
 
-class ClassAd;
 class MyString;
 
 extern bool classad_visa_write(ClassAd* ad,

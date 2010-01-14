@@ -237,8 +237,8 @@ bool
 DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone /*=0*/)
 {
 	if(numdone) { *numdone = 0; }
-	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
-	char *lhstr, *rhstr;
+	ExprTree *tree = NULL;
+	const char *lhstr, *rhstr;
 	int reply;
 	int i;
 	ReliSock rsock;
@@ -382,34 +382,15 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			// translate the job ad by replacing the 
 			// saved SUBMIT_ attributes
 		job.ResetExpr();
-		while( (tree = job.NextExpr()) ) {
-			lhstr = NULL;
-			if( (lhs = tree->LArg()) ) { 
-				lhs->PrintToNewStr (&lhstr); 
-			}
+		while( job.NextExpr(lhstr, tree) ) {
 			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
-				char *new_attr_name = strchr(lhstr,'_');
+				const char *new_attr_name = strchr(lhstr,'_');
 				ASSERT(new_attr_name);
 				new_attr_name++;
-					// compute new rhs (just use the same)
-				rhstr = NULL;
-				if( (rhs = tree->RArg()) ) { 
-					rhs->PrintToNewStr (&rhstr); 
-				}
 					// insert attribute
-				if(rhstr) {
-					MyString newattr;
-					newattr += new_attr_name;
-					newattr += "=";
-					newattr += rhstr;
-					job.Insert(newattr.Value());
-					free(rhstr);
-				}
-			}
-			if ( lhstr ) {
-				free(lhstr);
+				job.Insert(new_attr_name, tree->Copy());
 			}
 		}	// while next expr
 

@@ -65,23 +65,22 @@ QuillErrCode FILEXML::file_newEvent(const char * /*eventType*/, AttrList *info) 
 
         MyString temp("<event>\n");
         const char *tag;
-        char *val_temp = NULL;
+        const char *val_temp = NULL;
 
         info->ResetName();
         while (NULL != (tag = info->NextNameOriginal())) {
             temp += "\t<";
             temp += tag;
             temp += ">";
-            ExprTree *value = info->Lookup(tag);
-			if (value->RArg()) 
-				value->RArg()->PrintToNewStr(&val_temp);
+            ExprTree *value = info->LookupExpr(tag);
+			val_temp = ExprTreeToString(value);
+			if (val_temp)
+				temp += val_temp;
 			else 
-				val_temp = strdup("NULL");
-            temp += val_temp;
+				temp += "NULL";
             temp += "</";
             temp += tag;
             temp += ">\n";
-            free(val_temp);
         }
         temp += "</event>\n";
 

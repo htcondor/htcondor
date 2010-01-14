@@ -27,6 +27,16 @@
 #ifndef _ATTRLIST_H
 #define _ATTRLIST_H
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
@@ -78,12 +88,6 @@ class AttrListElem
         class AttrListElem*	next;	// next element in the list
 };
 
-// An abstract pair returned by unchain.
-struct ChainedPair {
-	AttrListElem **exprList;
-	HashTable<YourString, AttrListElem *> *exprHash;
-};
-
 class AttrListAbstract
 {
     public :
@@ -127,15 +131,14 @@ class AttrList : public AttrListAbstract
 {
     public :
 	    void ChainToAd( AttrList * );
-		ChainedPair unchain( void );
-		void RestoreChain(const ChainedPair &p);
-		void ChainCollapse(bool with_deep_copy = true);
+		void Unchain( void );
+		AttrList *GetChainedParentAd();
+        void ChainCollapse();
 
 		// ctors/dtor
 		AttrList();							// No associated AttrList list
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE*,char*,int&,int&,int&);// Constructor, read from file.
-        AttrList(const char *, char);		// Constructor, from string.
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
 
@@ -145,9 +148,15 @@ class AttrList : public AttrListAbstract
         int        	Insert(const char*, 
 							bool check_for_dups=true);	// insert at the tail
 
+        int        	Insert(const char*,
+						   ExprTree*, 
+							bool check_for_dups=true);	// insert at the tail
+
+ private:
         int        	Insert(ExprTree*, 
 							bool check_for_dups=true);	// insert at the tail
 
+ public:
 		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
 
 		// The Assign() functions are equivalent to Insert("variable = value"),
@@ -221,8 +230,12 @@ class AttrList : public AttrListAbstract
 
 		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; this->ptrExprInChain = false; }
+ private:
 		ExprTree*	NextExpr();					// next unvisited expression
 		ExprTree*   NextDirtyExpr();
+ public:
+		bool NextExpr( const char *&name, ExprTree *&value );
+		bool NextDirtyExpr( const char *&name, ExprTree *&value );
 
 		// for iteration through names (i.e., lhs of the expressions)
 		void		ResetName() { this->ptrName = exprList; this->ptrNameInChain = false; }
@@ -231,10 +244,17 @@ class AttrList : public AttrListAbstract
 		char*       NextDirtyName();
 
 		// lookup values in classads  (for simple assignments)
+ private:
 		ExprTree*   Lookup(char *) const;  		// for convenience
         ExprTree*	Lookup(const char*) const;	// look up an expression
 		ExprTree*	Lookup(const ExprTree*) const;
+ public:
+		// This next method returns the value of the attribute
+		// (i.e. the right-hand side of the assignment)
+		ExprTree*	LookupExpr(const char*) const;
+ private:
 		AttrListElem *LookupElem(const char *name) const;
+ public:
 		int         LookupString(const char *, char *) const; 
 		int         LookupString(const char *, char *, int) const; //uses strncpy
 		int         LookupString (const char *name, char **value) const;
@@ -264,8 +284,8 @@ class AttrList : public AttrListAbstract
 		void		dPrint( int );				// dprintf to given dprintf level
 
         // shipping functions
-        int put(Stream& s);
-		int initFromStream(Stream& s);
+        int putAttrList(Stream& s);
+		int initAttrListFromStream(Stream& s);
 
 		/*
 		 * @param str The newline-delimited string of attribute assignments
@@ -274,7 +294,7 @@ class AttrList : public AttrListAbstract
 		 */
 		bool initFromString(char const *str,MyString *err_msg);
 
-		void clear( void );
+		void Clear( void );
 
 			// Create a list of all ClassAd attribute references made
 			// by the value of the specified attribute.  Note that
@@ -299,7 +319,7 @@ class AttrList : public AttrListAbstract
 		static bool		IsValidAttrValue(const char *);
 
     protected :
-	    AttrListElem**	chainedAttrs;
+		AttrList *chainedAd;
 
 		// update an aggregate expression if the AttrList list associated with
 		// this AttrList is changed
@@ -313,7 +333,6 @@ class AttrList : public AttrListAbstract
 		bool			ptrNameInChain;		// used by NextName and NextDirtyName
 
 		HashTable<YourString, AttrListElem *> *hash;
-		HashTable<YourString, AttrListElem *> *chained_hash;
 
 private:
 	bool inside_insert;
@@ -335,6 +354,7 @@ class AttrListList
 
       	void 	  	Insert(AttrList*);	// insert at the tail of the list
       	int			Delete(AttrList*); 	// delete a AttrList
+		int Remove(AttrList* at) { return Delete(at); }
 
       	void  	  	fPrintAttrListList(FILE *, bool use_xml = false, StringList *attr_white_list=NULL );// print out the list
       	int 	  	MyLength() { return length; } 	// length of this list
@@ -355,4 +375,7 @@ class AttrListList
         int					length;			// length of the list
 };
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _ATTRLIST_H */

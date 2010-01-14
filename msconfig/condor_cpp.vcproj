@@ -369,6 +369,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\condor_new_classads.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_new_classads.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\condor_open.cpp"
 			>
 			<FileConfiguration
@@ -461,6 +469,14 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\condor_version.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_xml_classads.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_xml_classads.h"
 			>
 		</File>
 		<File

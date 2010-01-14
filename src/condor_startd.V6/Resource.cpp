@@ -1133,9 +1133,10 @@ Resource::hold_job( )
 		ExprTree *want_hold_expr;
 		MyString want_hold_str;
 
-		want_hold_expr = r_classad->Lookup("WANT_HOLD");
+		want_hold_expr = r_classad->LookupExpr("WANT_HOLD");
 		if( want_hold_expr ) {
-			want_hold_expr->PrintToStr(want_hold_str);
+			want_hold_str.sprintf( "%s = %s", "WANT_HOLD",
+								   ExprTreeToString( want_hold_expr ) );
 		}
 
 		hold_reason = "The startd put this job on hold.  (At preemption time, WANT_HOLD evaluated to true: ";
@@ -1338,7 +1339,7 @@ Resource::claimWorklifeExpired()
 		int ClaimWorklife = 0;
 
 		//look up the maximum retirement time specified by the startd
-		if(!r_classad->LookupElem("CLAIM_WORKLIFE") ||
+		if(!r_classad->LookupExpr("CLAIM_WORKLIFE") ||
 		   !r_classad->EvalInteger(
 				  "CLAIM_WORKLIFE",
 		          NULL,
@@ -1368,7 +1369,7 @@ Resource::retirementExpired()
 
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		//look up the maximum retirement time specified by the startd
-		if(!r_classad->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) ||
+		if(!r_classad->LookupExpr(ATTR_MAX_JOB_RETIREMENT_TIME) ||
 		   !r_classad->EvalInteger(
 		          ATTR_MAX_JOB_RETIREMENT_TIME,
 		          r_cur->ad(),
@@ -1381,7 +1382,7 @@ Resource::retirementExpired()
 			MaxJobRetirementTime = INT_MAX;
 		}
 		//look up the maximum retirement time specified by the job
-		if(r_cur->ad()->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) &&
+		if(r_cur->ad()->LookupExpr(ATTR_MAX_JOB_RETIREMENT_TIME) &&
 		   r_cur->ad()->EvalInteger(
 		          ATTR_MAX_JOB_RETIREMENT_TIME,
 		          r_classad,

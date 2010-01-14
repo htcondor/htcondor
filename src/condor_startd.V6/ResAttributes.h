@@ -28,8 +28,10 @@
 #ifndef _RES_ATTRIBUTES_H
 #define _RES_ATTRIBUTES_H
 
+#include "condor_common.h"
+#include "condor_classad.h"
+
 class Resource;
-class ClassAd;
 
 typedef int amask_t;
 

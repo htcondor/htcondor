@@ -2671,8 +2671,8 @@ DedicatedScheduler::computeSchedule( void )
 
 						// See if this machine has a true
 						// SCHEDD_PREEMPTION_REQUIREMENT
-					requirement = preemption_req->EvalTree( machine, job,
-															&result );
+					requirement = EvalExprTree( preemption_req, machine, job,
+												&result );
 					if (requirement) {
 						if (result.type == LX_INTEGER) {
 							requirement = result.i;
@@ -2686,18 +2686,16 @@ DedicatedScheduler::computeSchedule( void )
 							// Evaluate its SCHEDD_PREEMPTION_RANK in
 							// the context of this job
 						int rval;
-						rval = preemption_rank->EvalTree( machine, job,
-														  &result );
+						rval = EvalExprTree( preemption_rank, machine, job,
+											 &result );
 						if( !rval || result.type != LX_FLOAT) {
 								// The result better be a float
-							char *s = NULL;
+							const char *s = ExprTreeToString( preemption_rank );
 							char *m = NULL;
-							preemption_rank->PrintToNewStr( &s );
 							machine->LookupString( ATTR_NAME, &m );
 							dprintf( D_ALWAYS, "SCHEDD_PREEMPTION_RANK (%s) "
 									 "did not evaluate to float on job %d "
 									 "for machine %s\n", s, cluster, m );
-							free(s);
 							free(m);
 							continue;
 						}
@@ -3452,19 +3450,17 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 
 	req->Assign( ATTR_CURRENT_HOSTS, 0 );
 
-    ExprTree* expr = job->Lookup( ATTR_REQUIREMENTS );
+    ExprTree* expr = job->LookupExpr( ATTR_REQUIREMENTS );
 
-		// ATTR_REQUIREMENTS better be there, better be an assignment,
-		// and better have a right argument! 
+		// ATTR_REQUIREMENTS better be there!
 	ASSERT( expr );
-	ASSERT( expr->MyType() == LX_ASSIGN );
-	ASSERT( expr->RArg() );
 
 		// We just want the right side of the assignment, which is
 		// just the value (without the "Requirements = " part)
-	char *rhs;
+	const char *rhs = ExprTreeToString( expr );
 
-	expr->RArg()->PrintToNewStr( &rhs );
+		// We had better have a string for the expression!
+	ASSERT( rhs );
 
 		// Construct the new requirements expression by adding a
 		// clause that says we need to run on a machine that's going
@@ -3481,7 +3477,6 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
 	req->InsertOrUpdate( buf.Value() );
 
-	free(rhs);
 	return req;
 }
 
@@ -4389,11 +4384,9 @@ void
 displayRequest( ClassAd* ad, char* str, int debug_level )
 {
 	ExprTree* expr;
-	expr = ad->Lookup( ATTR_REQUIREMENTS );
-	char req[1024];
-	req[0] = '\0';
-	expr->PrintToStr( req );
-	dprintf( debug_level, "%s%s\n", str, req );
+	expr = ad->LookupExpr( ATTR_REQUIREMENTS );
+	dprintf( debug_level, "%s%s = %s\n", str, ATTR_REQUIREMENTS,
+			 ExprTreeToString( expr ) );
 }
 
 

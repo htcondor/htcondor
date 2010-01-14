@@ -80,7 +80,7 @@ ErrorPolicy::init( ClassAd *ad )
 bool
 ErrorPolicy::containsError( ClassAd *ad )
 {
-	return ( ad->Lookup( ATTR_ERROR_REASON_CODE ) );
+	return ( ad->LookupExpr( ATTR_ERROR_REASON_CODE ) );
 }
 
 /**
@@ -99,7 +99,7 @@ ErrorPolicy::setDefaults( )
 			// If they didn't specify an ErrorAction, we'll use
 			// our default value
 			//
-		if ( this->ad->Lookup( ATTR_ERROR_ACTION ) == NULL) {
+		if ( this->ad->LookupExpr( ATTR_ERROR_ACTION ) == NULL) {
 			this->ad->Assign( ATTR_ERROR_ACTION, ERROR_ACTION_DEFAULT );
 		}
 	}

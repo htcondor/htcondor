@@ -62,8 +62,35 @@
 #ifndef _AST_H_
 #define _AST_H_
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
+
+class ClassAd;
+
+/* This helper function calls expr->EvalTree( source, target, result )
+ * This function is meant to ease the transition to new ClassAds,
+ * whose ExprTree doesn't have EvalTree().
+ */
+int EvalExprTree( ExprTree *expr, const AttrList *source, const AttrList *target,
+				  EvalResult *result );
+
+/* This helper function unparses the given ExprTree and returns a
+ * pointer to the resulting string. The string is valid until the next
+ * call of this function.
+ * This function is meant to ease the transition to new ClassAds,
+ * whose ExprTree doesn't have PrintToStr() or PrintToNewStr().
+ */
+const char *ExprTreeToString( ExprTree *expr );
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class EvalResult is passed to ExprTree::EvalTree() to buffer the result of
@@ -489,4 +516,7 @@ class Function: public FunctionBase
 					 EvalResult *result);
 };
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _AST_H_ */

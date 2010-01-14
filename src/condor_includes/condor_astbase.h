@@ -67,6 +67,16 @@
 #ifndef _ASTBASE_H_
 #define _ASTBASE_H_
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 class StringList;
 template <class Item> class List; // forward declaration
@@ -93,6 +103,7 @@ class ExprTree
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
 		virtual ExprTree*   DeepCopy(void) const = 0;
+		ExprTree*           Copy() const { return DeepCopy(); }
         virtual void        Display();    // display the expression
 		virtual int         CalcPrintToStr(void) {return 0;}
 		virtual void        PrintToNewStr(char **str);
@@ -438,4 +449,6 @@ class FunctionBase : public ExprTree
   		char*               name;
 };
 
-#endif
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _ASTBASE_H_ */

@@ -21,6 +21,16 @@
 #ifndef CONDOR_CLASSAD_UTIL_H
 #define CONDOR_CLASSAD_UTIL_H
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_classad.h"
 #include "string_list.h"
 
@@ -30,4 +40,6 @@ bool EvalBool(AttrList* ad, ExprTree *tree);
 bool ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, 
 					  StringList* ignored_attrs=NULL, bool verbose=false );
 
-#endif
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* CONDOR_CLASSAD_UTIL_H */

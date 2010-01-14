@@ -119,10 +119,10 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
   char remote_user[128];
   EvalResult eval_result;
 
-  bool satisfied_std_rank = std_rank_condition->EvalTree (offer, request, &eval_result) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
-  bool satisfied_preempt_prio = preempt_prio_condition->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE; 
-  bool satisfied_preempt_rank = preempt_rank_condition->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
-  bool satisfied_preempt_req = preemption_req->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
+  bool satisfied_std_rank = EvalExprTree(std_rank_condition, offer, request, &eval_result) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
+  bool satisfied_preempt_prio = EvalExprTree( preempt_prio_condition, offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE; 
+  bool satisfied_preempt_rank = EvalExprTree( preempt_rank_condition, offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
+  bool satisfied_preempt_req = EvalExprTree( preemption_req, offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
 
   if (!IsAHalfMatch(request, offer)) {
     result_add_explanation(classad_analysis::MACHINES_REJECTED_BY_JOB_REQS, offer);

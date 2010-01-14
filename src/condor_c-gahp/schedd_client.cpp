@@ -592,13 +592,11 @@ doContactSchedd()
 
 		current_command->classad->ResetExpr();
 		ExprTree *tree;
-		while( (tree = current_command->classad->NextExpr()) ) {
-			ExprTree *lhs = NULL, *rhs = NULL;
-			char *lhstr = NULL, *rhstr = NULL;
+		const char *lhstr, *rhstr;
+		while( current_command->classad->NextExpr(lhstr, tree) ) {
 
-			if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-			if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-			if( !lhs || !rhs || !lhstr || !rhstr) {
+			rhstr = ExprTreeToString( tree );
+			if( !lhstr || !rhstr) {
 				error_msg.sprintf( "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
 				dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
@@ -635,9 +633,6 @@ doContactSchedd()
 					}
 				}
 			}
-
-			free(lhstr);
-			free(rhstr);
 
 			if (error)
 				break;
@@ -902,17 +897,11 @@ update_report_result:
 			// Set all the classad attribute on the remote classad
 			current_command->classad->ResetExpr();
 			ExprTree *tree;
-			while( (tree = current_command->classad->NextExpr()) ) {
-				ExprTree *lhs;
-				ExprTree *rhs;
-				char *lhstr, *rhstr;
+			const char *lhstr, *rhstr;
+			while( current_command->classad->NextExpr(lhstr, tree) ) {
 
-				lhs = NULL, rhs = NULL;
-				rhs = NULL, rhstr = NULL;
-
-				if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-				if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-				if( !lhs || !rhs || !lhstr || !rhstr) {
+				rhstr = ExprTreeToString( tree );
+				if( !lhstr || !rhstr) {
 					error_msg.sprintf( "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
 					dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
@@ -930,9 +919,6 @@ update_report_result:
 					dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
 					error = TRUE;
 				}
-
-				if (lhstr) free(lhstr);
-				if (rhstr) free(rhstr);
 
 				if (error) break;
 			} // elihw classad

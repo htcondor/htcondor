@@ -191,10 +191,6 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\classad.old\new_classads.cpp"
-			>
-		</File>
-		<File
 			RelativePath="..\src\classad.old\operators.cpp"
 			>
 		</File>
@@ -220,10 +216,6 @@
 		</File>
 		<File
 			RelativePath="..\src\classad.old\value.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\classad.old\xml_classads.cpp"
 			>
 		</File>
 	</Files>

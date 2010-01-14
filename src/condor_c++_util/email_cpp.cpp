@@ -121,7 +121,7 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
     attributes = "";
 
 	bool first_time = true;
-	char *attr_str = NULL, *tmp = NULL;
+	char *tmp = NULL;
 	job_ad->LookupString( ATTR_EMAIL_ATTRIBUTES, &tmp );
 	if( ! tmp ) {
 		return;
@@ -135,7 +135,7 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
 	ExprTree* expr_tree;
 	email_attrs.rewind();
 	while( (tmp = email_attrs.next()) ) {
-		expr_tree = job_ad->Lookup(tmp);
+		expr_tree = job_ad->LookupExpr(tmp);
 		if( ! expr_tree ) {
             dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.", 
                     tmp);
@@ -145,10 +145,7 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
 			attributes.sprintf_cat( "\n\n" );
 			first_time = false;
 		}
-		expr_tree->PrintToNewStr( &attr_str );
-		attributes.sprintf_cat( "%s\n", attr_str );
-		free( attr_str );
-		attr_str = NULL;
+		attributes.sprintf_cat( "%s = %s\n", tmp, ExprTreeToString(expr_tree) );
 	}
     return;
 }

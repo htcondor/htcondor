@@ -228,23 +228,15 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
 	}
 
-	ExprTree *tree, *lhs;
-	char *expr_str = NULL, *lhstr = NULL;
+	ExprTree *tree;
+	const char *lhstr = NULL;
 	s_ad->ResetExpr();
-	while( (tree = s_ad->NextExpr()) ) {
-		if( (lhs = tree->LArg()) ) {
-			lhs->PrintToNewStr( &lhstr );
-		} else {
-			dprintf( D_ALWAYS, 
-					 "ERROR parsing Starter classad attribute!\n" );
-			continue;
-		}
-		tree->PrintToNewStr( &expr_str );
+	while( s_ad->NextExpr(lhstr, tree) ) {
 
 		if (ignored_attr_list) {
 				// insert every attr that's not in the ignored_attr_list
 			if (!ignored_attr_list->contains(lhstr)) {
-				ad->Insert(expr_str);
+				ad->Insert(lhstr, tree->Copy());
 				if (strincmp(lhstr, "Has", 3) == MATCH) {
 					list->append(lhstr);
 				}
@@ -253,19 +245,14 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		else {
 				// no list of attrs to ignore - fallback on old behavior
 			if( strincmp(lhstr, "Has", 3) == MATCH ) {
-				ad->Insert( expr_str );
+				ad->Insert( lhstr, tree->Copy() );
 				if( list ) {
 					list->append( lhstr );
 				}
 			} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
-				ad->Insert( expr_str );
+				ad->Insert( lhstr, tree->Copy() );
 			}
 		}
-
-		free( expr_str );
-		expr_str = NULL;
-		free( lhstr );
-		lhstr = NULL;
 	}
 
 	if (ignored_attr_list) {

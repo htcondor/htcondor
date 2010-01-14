@@ -77,6 +77,7 @@ my @poisoned_syms = (
 		# of this symbol set. I could probably implement the method by which
 		# this is checked better, and using perl's module to rip apart paths.
 		'exempt_dirs' => [
+			'classad',
 			'condor_privsep',
 			'gt2_gahp',
 			'cream_gahp',

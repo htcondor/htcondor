@@ -91,7 +91,7 @@ StartdHibernator::initialize( void )
 
 		// Run the plugin with the "ad" option,
 		// and grab the output as a ClassAd
-	m_ad.clear();
+	m_ad.Clear();
 	FILE *fp = my_popenv( args, "r", FALSE );
 
 	if( ! fp ) {

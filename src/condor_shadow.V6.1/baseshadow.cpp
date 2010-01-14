@@ -31,6 +31,7 @@
 #include "enum_utils.h"
 #include "condor_holdcodes.h"
 #include "classad_helpers.h"
+#include "classad_merge.h"
 
 #include <math.h>
 

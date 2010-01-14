@@ -1834,7 +1834,7 @@ match_info( Resource* rip, char* id )
 int
 caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
-	char* requirements_str = NULL;
+	const char* requirements_str = NULL;
 	Resource* rip;
 	Claim* claim;
 	MyString err_msg;
@@ -1855,18 +1855,15 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 			 owner );
 
 		// Make sure the ad's got a requirements expression at all.
-	tree = req_ad->Lookup( ATTR_REQUIREMENTS );
+	tree = req_ad->LookupExpr( ATTR_REQUIREMENTS );
 	if( ! tree ) {
 		dprintf( D_FULLDEBUG, 
 				 "Request did not contain %s, assuming TRUE\n",
 				 ATTR_REQUIREMENTS );
-		requirements_str = strdup( "TRUE" );
+		requirements_str = "TRUE";
 		req_ad->Insert( "Requirements = TRUE" );
 	} else {
-		rhs = tree->RArg();
-		if( rhs ) {
-			rhs->PrintToNewStr( &requirements_str );
-		}
+		requirements_str = ExprTreeToString( tree );
 	}
 
 		// Find the right resource for this claim
@@ -1878,12 +1875,8 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += " (";
 		err_msg += requirements_str;
 		err_msg += ')';
-		free( requirements_str );
 		return sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
 	}
-
-		// done with this now, so don't leak it
-	free( requirements_str );
 
 	if( !req_ad->LookupInteger(ATTR_JOB_LEASE_DURATION, lease_duration) ) {
 		lease_duration = -1;

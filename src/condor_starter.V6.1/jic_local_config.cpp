@@ -201,7 +201,7 @@ JICLocalConfig::getAttr( bool warn, bool is_string, const char* attr,
 	MyString expr;
 	bool needs_quotes = false;
 
-	if( job_ad->Lookup(attr) ) {
+	if( job_ad->LookupExpr(attr) ) {
 			// we've already got this attribute in our ClassAd, we're
 			// done.  
 		return true;

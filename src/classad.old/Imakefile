@@ -8,7 +8,7 @@ LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
 	  attrlist.o classad.o environment.o \
 	  value.o operators.o evaluateOperators.o  \
-	  xml_classads.o new_classads.o classad_list.o classad_util.o
+	  classad_list.o classad_util.o
 
 depend_cplus_objects_target(OBJ)
 

@@ -198,7 +198,7 @@ CronTab::needsCronTab( ClassAd *ad ) {
 			//
 			// As soon as we find one we can quit
 			//
-		if ( ad->Lookup( CronTab::attributes[ctr] ) ) {
+		if ( ad->LookupExpr( CronTab::attributes[ctr] ) ) {
 			ret = true;
 			break;
 		}

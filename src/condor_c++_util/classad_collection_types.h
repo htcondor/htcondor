@@ -123,7 +123,7 @@ public:
         return false;
     }
 
-    if (!tree->EvalTree(NULL, Ad, &result)) {
+    if (!EvalExprTree(tree, Ad, NULL, &result)) {
         delete tree;
         return false;
     }

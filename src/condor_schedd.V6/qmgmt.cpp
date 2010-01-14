@@ -2092,6 +2092,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	char *round_param = param(round_param_name.Value());
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
+		LexemeType attr_type = LX_EOF;
+#ifdef WANT_OLD_CLASSADS
 		Token token;
 
 			// See if attr_value is a scalar (int or float) by
@@ -2101,22 +2103,45 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// notation, etc).
 		char const *avalue = attr_value; // scanner will modify ptr, so save it
 		Scanner(avalue,token);
+		attr_type = token.type;
+#else
+		ExprTree *tree = NULL;
+		classad::Value val;
+		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
+			 tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
+			((classad::Literal *)tree)->GetValue( val );
+			if ( val.GetType() == classad::Value::INTEGER_VALUE ) {
+				attr_type = LX_INTEGER;
+			} else if ( val.GetType() == classad::Value::REAL_VALUE ) {
+				attr_type = LX_FLOAT;
+			}
+		}
+		delete tree;
+#endif
 
-		if ( token.type == LX_INTEGER || token.type == LX_FLOAT ) {
+		if ( attr_type == LX_INTEGER || attr_type == LX_FLOAT ) {
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
 			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value);
 
-			long ivalue;
+			int ivalue;
 			double fvalue;
 
-			if ( token.type == LX_INTEGER ) {
+			if ( attr_type == LX_INTEGER ) {
+#ifdef WANT_OLD_CLASSADS
 				ivalue = token.intVal;
-				fvalue = token.intVal;
+#else
+				val.IsIntegerValue( ivalue );
+#endif
+				fvalue = ivalue;
 			} else {
-				ivalue = (long) token.floatVal;	// truncation conversion
+#ifdef WANT_OLD_CLASSADS
 				fvalue = token.floatVal;
+#else
+				val.IsRealValue( fvalue );
+#endif
+				ivalue = (int) fvalue;	// truncation conversion
 			}
 
 			if( strstr(round_param,"%") ) {
@@ -2139,7 +2164,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					double roundto = pow((double)10,magnitude) * percent/100.0;
 					fvalue = ceil( fvalue/roundto )*roundto;
 
-					if( token.type == LX_INTEGER ) {
+					if( attr_type == LX_INTEGER ) {
 						new_value.sprintf("%d",(int)fvalue);
 					}
 					else {
@@ -2163,7 +2188,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				new_value = ivalue;
 
 					// if it was a float, append ".0" to keep it a float
-				if ( token.type == LX_FLOAT ) {
+				if ( attr_type == LX_FLOAT ) {
 					new_value += ".0";
 				}
 			}
@@ -2745,6 +2770,7 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
+	const char *tmp_val;
 
 	*val = NULL;
 
@@ -2759,12 +2785,12 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 		return -1;
 	}
 
-	tree = ad->Lookup(attr_name);
+	tree = ad->LookupExpr(attr_name);
 	if (!tree) {
 		return -1;
 	}
 
-	tree->RArg()->PrintToNewStr(val);
+	*val = strdup(ExprTreeToString(tree));
 
 	return 0;
 }
@@ -2841,7 +2867,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// Copy attributes from chained parent ad into the expanded ad
 		// so if parent is deleted before caller is finished with this
 		// ad, things will still be ok.
-		expanded_ad->ChainCollapse(true);
+		expanded_ad->ChainCollapse();
 
 			// Make a stringlist of all attribute names in job ad.
 			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...
@@ -2882,14 +2908,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			if( !startd_ad ) {
 					// No startd ad, so try to find cached value from back
 					// when we did have a startd ad.
-				ExprTree *cached_value = ad->Lookup(cachedAttrName.Value());
+				ExprTree *cached_value = ad->LookupExpr(cachedAttrName.Value());
 				if( cached_value ) {
-					char *cached_value_buf = NULL;
-					ASSERT( cached_value->RArg() );
-					cached_value->RArg()->PrintToNewStr(&cached_value_buf);
+					const char *cached_value_buf =
+						ExprTreeToString(cached_value);
 					ASSERT(cached_value_buf);
 					expanded_ad->AssignExpr(curr_attr_to_expand,cached_value_buf);
-					free(cached_value_buf);
 					continue;
 				}
 
@@ -2912,17 +2936,15 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			// them later into the expanded ClassAd.
 			// Note: deallocate attribute_value with free(), despite
 			// the mis-leading name PrintTo**NEW**Str.  
-			ExprTree *tree = ad->Lookup(curr_attr_to_expand);
+			ExprTree *tree = ad->LookupExpr(curr_attr_to_expand);
 			if ( tree ) {
-				ExprTree *rhs = tree->RArg();
-				if ( rhs ) {
-					rhs->PrintToNewStr( &attribute_value );
+				const char *new_value = ExprTreeToString( tree );
+				if ( new_value ) {
+					attribute_value = strdup( new_value );
 				}
 			}
 
 			if ( attribute_value == NULL ) {
-					// Did not find the attribute to expand in the job ad.
-					// Just move on to the next attribute...
 				continue;
 			}
 
@@ -3158,14 +3180,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
 			while( (c_name=startd_ad->NextNameOriginal()) ) {
 				if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-					ExprTree *expr = startd_ad->Lookup(c_name);
-					ASSERT(expr);
-					expr = expr->RArg();
+					ExprTree *expr = startd_ad->LookupExpr(c_name);
 					if( !expr ) {
 						continue;
 					}
-					char *new_value = NULL;
-					expr->PrintToNewStr( &new_value );
+					const char *new_value = NULL;
+					new_value = ExprTreeToString(expr);
 					ASSERT(new_value);
 					expanded_ad->AssignExpr(c_name,new_value);
 
@@ -3176,7 +3196,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
 						       match_exp_name.Value(), new_value, cluster_id, proc_id);
 					}
-					free( new_value );
 				}
 			}
 		}
@@ -3965,7 +3984,7 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
  * my_match_ad (which is a startd ad).  If user is NULL, get a job for
  * any user; o.w. only get jobs for specified user.
  */
-void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
 					 char * user)
 {
 	ClassAd				*ad;

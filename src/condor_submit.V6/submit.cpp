@@ -4059,8 +4059,8 @@ SetEnvironment()
 	//There may already be environment info in the ClassAd from SUBMIT_EXPRS.
 	//Check for that now.
 
-	bool ad_contains_env1 = job->Lookup(ATTR_JOB_ENVIRONMENT1);
-	bool ad_contains_env2 = job->Lookup(ATTR_JOB_ENVIRONMENT2);
+	bool ad_contains_env1 = job->LookupExpr(ATTR_JOB_ENVIRONMENT1);
+	bool ad_contains_env2 = job->LookupExpr(ATTR_JOB_ENVIRONMENT2);
 
 	bool MyCondorVersionRequiresV1 = false;
 	if ( !DumpClassAdToFile ) {
@@ -6871,8 +6871,8 @@ log_submit()
 int
 SaveClassAd ()
 {
-	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
-	char *lhstr, *rhstr;
+	ExprTree *tree = NULL;
+	const char *lhstr, *rhstr;
 	int  retval = 0;
 	int myprocid = ProcId;
 	static ClassAd* current_cluster_ad = NULL;
@@ -6891,15 +6891,9 @@ SaveClassAd ()
 	
 
 	job->ResetExpr();
-	while( (tree = job->NextExpr()) ) {
-		if( tree->invisible ) {
-			continue;
-		}
-		lhstr = NULL;
-		rhstr = NULL;
-		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) { 
+	while( job->NextExpr(lhstr, tree) ) {
+		rhstr = ExprTreeToString( tree );
+		if( !lhstr || !rhstr ) { 
 			fprintf( stderr, "\nERROR: Null attribute name or value for job %d.%d\n",
 					 ClusterId, ProcId );
 			retval = -1;
@@ -6925,8 +6919,6 @@ SaveClassAd ()
 			}
 			myprocid = tmpProcId;
 		}
-		free(lhstr);
-		free(rhstr);
 		if(retval == -1) {
 			return -1;
 		}
@@ -6972,7 +6964,8 @@ InsertJobExpr (MyString const &expr, bool clustercheck)
 void 
 InsertJobExpr (const char *expr, bool clustercheck)
 {
-	ExprTree *tree = NULL, *lhs = NULL;
+	MyString attr_name;
+	ExprTree *tree = NULL;
 	int unused = 0;
 
 	MyString hashkey(expr);
@@ -6989,7 +6982,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 	}
 
 	int pos = 0;
-	int retval = Parse (expr, tree, &pos);
+	int retval = Parse (expr, attr_name, tree, &pos);
 
 	if (retval)
 	{
@@ -7003,14 +6996,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		exit( 1 );
 	}
 
-	if( !(lhs = tree->LArg()) ) {
-		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
-		fprintf(stderr,"Error in submit file\n");
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-	
-	if (!job->InsertOrUpdate (expr))
+	if (!job->Insert (attr_name.Value(), tree))
 	{	
 		fprintf(stderr,"\nERROR: Unable to insert expression: %s\n", expr);
 		DoCleanup(0,0,NULL);
@@ -7027,8 +7013,6 @@ InsertJobExpr (const char *expr, bool clustercheck)
 			exit( 1 );
 		}
 	}
-
-	delete tree;
 }
 
 void 

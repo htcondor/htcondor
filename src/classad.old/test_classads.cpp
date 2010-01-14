@@ -43,11 +43,11 @@ extern StringSpace classad_string_space; // for debugging only!
 char *classad_strings[] = 
 {
 #ifdef HAVE_DLOPEN
-	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', G=GetTime(1), H=foo(1)",
+	"A = 1\n B=2\n C = 3\n D='2001-04-05T12:14:15'\n G=GetTime(1)\n H=foo(1)",
 #else
-	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=TRUE",
+	"A = 1\n B=2\n C = 3\n D='2001-04-05T12:14:15'\n E=TRUE",
 #endif
-	"A = 0.7, B=2, C = 3, D = \"alain\", MyType=\"foo\", TargetType=\"blah\"",
+	"A = 0.7\n B=2\n C = 3\n D = \"alain\"\n MyType=\"foo\"\n TargetType=\"blah\"",
 
 	"Rank = (Memory >= 50)",
 
@@ -57,10 +57,10 @@ char *classad_strings[] =
             "MACHTYPE=i386;SHELL=/bin/tcsh;PATH=/s/std/bin:/usr/afsws/bin:"
         	"/usr/ccs/bin:/usr/ucb:/bin:/usr/bin:/usr/X11R6/bin:/unsup/condor/bin:.\"",
 
-    "MyType=\"Job\", TargetType=\"Machine\", Owner = \"alain\", Requirements = (TARGET.Memory > 50)",
-    "MyType=\"Machine\", TargetType=\"Job\", Memory = 100,  Requirements = (TARGET.owner == \"alain\")",
-    "MyType=\"Machine\", TargetType=\"Job\", Memory = 40, Requirements = (TARGET.owner == \"alain\")",
-    "MyType=\"Machine\", TargetType=\"Job\", Memory = 100, Requirements = (TARGET.owner != \"alain\")",
+    "MyType=\"Job\"\n TargetType=\"Machine\"\n Owner = \"alain\"\n Requirements = (TARGET.Memory > 50)",
+    "MyType=\"Machine\"\n TargetType=\"Job\"\n Memory = 100\n  Requirements = (TARGET.owner == \"alain\")",
+    "MyType=\"Machine\"\n TargetType=\"Job\"\n Memory = 40\n Requirements = (TARGET.owner == \"alain\")",
+    "MyType=\"Machine\"\n TargetType=\"Job\"\n Memory = 100\n Requirements = (TARGET.owner != \"alain\")",
 
 	// A classad to test PrintToNewStr()--we need to ensure everything
 	// we can print is properly accounted for. 
@@ -71,20 +71,20 @@ char *classad_strings[] =
 
 	/* Some classads to test GetReferences() 
 	 * The first one is simple, but we can also check that things aren't listed twice. */
-	"Memory = 60, Disk = 40, OS = Linux, X = 4, Requirements = ((ImageSize > Memory) "
+	"Memory = 60\n Disk = 40\n OS = Linux\n X = 4\n Requirements = ((ImageSize > Memory) "
 	"&& (AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > Disk)) "
     "&& foo(X; XX)",
 	/* The second one is to test MY and TARGET. */
-	"Memory = 60, Disk = 40, OS = Linux, Requirements = ((TARGET.ImageSize > MY.Memory) "
+	"Memory = 60\n Disk = 40\n OS = Linux\n Requirements = ((TARGET.ImageSize > MY.Memory) "
 	"&& (AvailableDisk > Disk) && (TARGET.AvailableDisk > MY.Memory) && (TARGET.ImageSize > MY.Disk)) "
     "&& foo(TARGET.X; TARGET.XX)",
 
 	/* Test case sensitivity */
-	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\","
+	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\"\n"
 	"DoesntMatch = \"a\" =?= \"A\"",
 
     /* Test XML preservation of spaces */
-    "A = \"\", B=\" \""
+    "A = \"\"\n B=\" \""
 };
 
 /*----------------------------------------------------------
@@ -272,7 +272,8 @@ main(
 
 		printf("%s\n", classad_strings[classad_index]);
 
-		original = new ClassAd(classad_strings[classad_index], ',');
+		original = new ClassAd;
+		original->initFromString(classad_strings[classad_index], NULL);
 		classads[classad_index] = original;
 
 		if (parameters.test_copy_constructor) {
@@ -281,8 +282,9 @@ main(
 			classads[classad_index] = duplicate;
 		}
 		else if (parameters.test_assignment) {
-			duplicate = new ClassAd("A = 1, MyType=\"x\", TargetType=\"y\"",
-									',');
+			duplicate = new ClassAd;
+			duplicate->initFromString("A = 1\n MyType=\"x\"\n TargetType=\"y\"",
+									  NULL);
 			*duplicate = *original;
 			delete original;
 			classads[classad_index] = duplicate;
@@ -388,7 +390,8 @@ main(
             "&& z == FALSE && j == TRUE",
 			 __LINE__, &test_results);
 
-		ClassAd *big_classad = new ClassAd(expression, ',');
+		ClassAd *big_classad = new ClassAd;
+		big_classad->initFromString(expression, NULL);
 		test_printed_version(big_classad, variable, expression, __LINE__, &test_results);
 		delete big_classad;
 		free(variable);
@@ -929,7 +932,7 @@ test_eval_error(
 	ExprTree *tree;
 	EvalResult val;
 
-	tree = classad->Lookup(attribute_name);
+	tree = classad->LookupExpr(attribute_name);
 	if(!tree) {
         is_error = false;
     } else if (tree->EvalTree(classad, NULL, &val) && val.type == LX_ERROR) {
@@ -1210,13 +1213,13 @@ test_printed_version(
 	int         line_number,      // IN: The line number to print
     TestResults *results)         // OUT: Modified to reflect result of test
 {
-	char      *printed_version;
+	MyString printed_version;
 	ExprTree  *tree;
 
-	tree = classad->Lookup(attribute_name);
-	tree->PrintToNewStr(&printed_version);
+	tree = classad->LookupExpr(attribute_name);
+	printed_version.sprintf( "%s = %s", attribute_name, ExprTreeToString( tree ) );
 
-	if (!strcmp(expected_string, printed_version)) {
+	if (!strcmp(expected_string, printed_version.Value())) {
 		printf("Passed: ");
 		print_truncated_string(attribute_name, 40);
 		printf(" prints correctly in line %d.\n", line_number);
@@ -1225,11 +1228,10 @@ test_printed_version(
 		printf("Failed: ");
 		print_truncated_string(attribute_name, 40);
 		printf(" does not print correctly in line %d.\n", line_number);
-		printf("Printed as: %s\n", printed_version);
+		printf("Printed as: %s\n", printed_version.Value());
 		printf("Expected  : %s\n", expected_string);
 		results->AddResult(false);
 	}
-	free(printed_version);
 	return;
 }
 
@@ -1321,7 +1323,9 @@ test_dirty_attribute(
 	ClassAd  *classad;
 	char     *name;
 
-	classad = new ClassAd("A = 1, B = 2", ',');
+	classad = new ClassAd;
+	classad->initFromString("A = 1\nB = 2", NULL);
+	classad->ClearAllDirtyFlags();
 
 	// First of all, we should have zero dirty attributes. 
 	classad->ResetName(); 
@@ -1499,31 +1503,32 @@ static void test_functions(
 
 	char classad_string[] = 
 							/* batch 1 testing of functions */
-							"D0=GetTime():"
-							"D1=Time():"
+							"D0=GetTime()\n"
+							"D1=Time()\n"
 
-							"D2=Interval(60):"
-							"D3=Interval(3600):"
-							"D4=Interval(86400):"
+							"D2=Interval(60)\n"
+							"D3=Interval(3600)\n"
+							"D4=Interval(86400)\n"
 
-		                    "E=sharedstring():"
-                            "G=sharedinteger(2):"
-	                        "H=sharedfloat(3.14):"
+		                    "E=sharedstring()\n"
+                            "G=sharedinteger(2)\n"
+	                        "H=sharedfloat(3.14)\n"
 
-							"L=toupper(\"AbCdEfg\"):"
-							"M=toLower(\"ABCdeFg\"):"
+							"L=toupper(\"AbCdEfg\")\n"
+							"M=toLower(\"ABCdeFg\")\n"
 
-							"N0=size(\"ABC\"):"
-							"N1=size(\"\"):"
-							"N2=size(foo):"
-							"E0=isError(N2):"
+							"N0=size(\"ABC\")\n"
+							"N1=size(\"\")\n"
+							"N2=size(foo)\n"
+							"E0=isError(N2)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for functions in line %d\n", 
 			   __LINE__);
@@ -1710,23 +1715,24 @@ static void test_function_int(
 	int		integer;
 
 	char classad_string[] = 
-							"BC0=int(-3):"
-							"BC1=int(3.4):"
-							"BC2=int(-3.4):"
-							"BC3=int(\"-3.4\"):"
-							"BC4=int(true):"
-							"BC5=int(t):"
-							"BC6=int(false):"
-							"BC7=int(f):"
-							"BC8=int(\"this is not a number\"):"
-							"BC9=isError(BC8):"
+							"BC0=int(-3)\n"
+							"BC1=int(3.4)\n"
+							"BC2=int(-3.4)\n"
+							"BC3=int(\"-3.4\")\n"
+							"BC4=int(true)\n"
+							"BC5=int(t)\n"
+							"BC6=int(false)\n"
+							"BC7=int(f)\n"
+							"BC8=int(\"this is not a number\")\n"
+							"BC9=isError(BC8)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function int() in line %d\n", 
 			   __LINE__);
@@ -1849,31 +1855,32 @@ static void test_function_ifthenelse(
 	int		integer;
 
 	char classad_string[] = 
-							"BB=2:"
-							"BC=10:"
+							"BB=2\n"
+							"BC=10\n"
 							//BD is undefined.....
-							"BB2=ifThenElse(BB > 5, \"big\",\"small\"):"
-							"BB3=ifThenElse(BC > 5, \"big\",\"small\"):"
-							"BB4=ifThenElse(BD > 5, \"big\",\"small\"):"
-							"BB5=isUndefined(BB4):"
-							"BB6=ifThenElse(4 / \"hello\", \"big\",\"small\"):"
-							"BB7=ifThenElse(\"big\",\"small\"):"
-							"E0=isError(BB6):"
-							"E1=isError(BB7):"
-							"BB8=ifThenElse(BB > 5, 4 / 0,\"small\"):"
-							"BB9=ifThenElse(BC > 5, \"big\", 4 / 0):"
-							"BB10=ifThenElse(0.0, \"then\", \"else\"):"
-							"BB11=ifThenElse(1.0, \"then\", \"else\"):"
-							"BB12=ifThenElse(3.7, \"then\", \"else\"):"
-							"BB13=ifThenElse(\"\", \"then\", \"else\"):"
-							"E2=isError(BB13):"
+							"BB2=ifThenElse(BB > 5, \"big\",\"small\")\n"
+							"BB3=ifThenElse(BC > 5, \"big\",\"small\")\n"
+							"BB4=ifThenElse(BD > 5, \"big\",\"small\")\n"
+							"BB5=isUndefined(BB4)\n"
+							"BB6=ifThenElse(4 / \"hello\", \"big\",\"small\")\n"
+							"BB7=ifThenElse(\"big\",\"small\")\n"
+							"E0=isError(BB6)\n"
+							"E1=isError(BB7)\n"
+							"BB8=ifThenElse(BB > 5, 4 / 0,\"small\")\n"
+							"BB9=ifThenElse(BC > 5, \"big\", 4 / 0)\n"
+							"BB10=ifThenElse(0.0, \"then\", \"else\")\n"
+							"BB11=ifThenElse(1.0, \"then\", \"else\")\n"
+							"BB12=ifThenElse(3.7, \"then\", \"else\")\n"
+							"BB13=ifThenElse(\"\", \"then\", \"else\")\n"
+							"E2=isError(BB13)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function ifthenelse() in line %d\n", 
 			   __LINE__);
@@ -2016,71 +2023,72 @@ static void test_function_stringlists(
     float	real;
 
 	char classad_string[] = 
-							"O0=stringlistsize(\"A ,0 ,C\"):"
-							"O1=stringlistsize(\"\"):"
-							"O2=stringlistsize(\"A;B;C;D;E\",\";\"):"
-							"O3=isError(stringlistsize(\"A;B;C;D;E\",true)):"
-							"O4=isError(stringlistsize(true,\"A;B;C;D;E\")):"
-							"O5=stringlistsize(\"A B C,D\"):"
-							"O6=stringlistsize(\"A B C,,,,,D\"):"
-							"O7=stringlistsize(\"A B C ; D\",\";\"):"
-							"O8=stringlistsize(\"A B C;D\",\" ; \"):"
-							"O9=stringlistsize(\"A  +B;C$D\",\"$;+\"):"
+							"O0=stringlistsize(\"A ,0 ,C\")\n"
+							"O1=stringlistsize(\"\")\n"
+							"O2=stringlistsize(\"A;B;C;D;E\",\";\")\n"
+							"O3=isError(stringlistsize(\"A;B;C;D;E\",true))\n"
+							"O4=isError(stringlistsize(true,\"A;B;C;D;E\"))\n"
+							"O5=stringlistsize(\"A B C,D\")\n"
+							"O6=stringlistsize(\"A B C,,,,,D\")\n"
+							"O7=stringlistsize(\"A B C ; D\",\";\")\n"
+							"O8=stringlistsize(\"A B C;D\",\" ; \")\n"
+							"O9=stringlistsize(\"A  +B;C$D\",\"$;+\")\n"
 
-							"P0=stringlistsum(\"1,2,3\"):"
-							"P1=stringlistsum(\"\"):"
-							"P2=stringlistsum(\"1;2;3\",\";\"):"
-							"P3=isError(stringlistsum(\"1;2;3\",true)):"
-							"P4=isError(stringlistsum(true,\"1;2;3\")):"
-							"P5=isError(stringlistsum(\"this, list, bad\")):"
-							"P6=stringlistsum(\"1,2.0,3\"):"
+							"P0=stringlistsum(\"1,2,3\")\n"
+							"P1=stringlistsum(\"\")\n"
+							"P2=stringlistsum(\"1;2;3\",\";\")\n"
+							"P3=isError(stringlistsum(\"1;2;3\",true))\n"
+							"P4=isError(stringlistsum(true,\"1;2;3\"))\n"
+							"P5=isError(stringlistsum(\"this, list, bad\"))\n"
+							"P6=stringlistsum(\"1,2.0,3\")\n"
 
-							"Q0=stringlistmin(\"-1,2,-3\"):"
-							"Q1=isUndefined(stringlistmin(\"\")):"
-							"Q2=stringlistmin(\"1;2;3\",\";\"):"
-							"Q3=isError(stringlistmin(\"1;2;3\",true)):"
-							"Q4=isError(stringlistmin(true,\"1;2;3\")):"
-							"Q5=isError(stringlistmin(\"this, list, bad\")):"
-							"Q6=isError(stringlistmin(\"1;A;3\",\";\")):"
-							"Q7=stringlistmin(\"1,-2.0,3\"):"
+							"Q0=stringlistmin(\"-1,2,-3\")\n"
+							"Q1=isUndefined(stringlistmin(\"\"))\n"
+							"Q2=stringlistmin(\"1;2;3\",\";\")\n"
+							"Q3=isError(stringlistmin(\"1;2;3\",true))\n"
+							"Q4=isError(stringlistmin(true,\"1;2;3\"))\n"
+							"Q5=isError(stringlistmin(\"this, list, bad\"))\n"
+							"Q6=isError(stringlistmin(\"1;A;3\",\";\"))\n"
+							"Q7=stringlistmin(\"1,-2.0,3\")\n"
 
-							"R0=stringlistmax(\"1 , 4.5, -5\"):"
-							"R1=isUndefined(stringlistmax(\"\")):"
-							"R2=stringlistmax(\"1;2;3\",\";\"):"
-							"R3=isError(stringlistmax(\"1;2;3\",true)):"
-							"R4=isError(stringlistmax(true,\"1;2;3\")):"
-							"R5=isError(stringlistmax(\"this, list, bad\")):"
-							"R6=isError(stringlistmax(\"1;A;3\",\";\")):"
-							"R7=stringlistmax(\"1,-2.0,3.0\"):"
+							"R0=stringlistmax(\"1 , 4.5, -5\")\n"
+							"R1=isUndefined(stringlistmax(\"\"))\n"
+							"R2=stringlistmax(\"1;2;3\",\";\")\n"
+							"R3=isError(stringlistmax(\"1;2;3\",true))\n"
+							"R4=isError(stringlistmax(true,\"1;2;3\"))\n"
+							"R5=isError(stringlistmax(\"this, list, bad\"))\n"
+							"R6=isError(stringlistmax(\"1;A;3\",\";\"))\n"
+							"R7=stringlistmax(\"1,-2.0,3.0\")\n"
 
-							"S0=stringlistavg(\"10, 20, 30, 40\"):"
-							"S1=stringlistavg(\"\"):"
-							"S2=stringlistavg(\"1;2;3\",\";\"):"
-							"S3=isError(stringlistavg(\"1;2;3\",true)):"
-							"S4=isError(stringlistavg(true,\"1;2;3\")):"
-							"S5=isError(stringlistavg(\"this, list, bad\")):"
-							"S6=isError(stringlistavg(\"1;A;3\",\";\")):"
-							"S7=stringlistavg(\"1,-2.0,3.0\"):"
+							"S0=stringlistavg(\"10, 20, 30, 40\")\n"
+							"S1=stringlistavg(\"\")\n"
+							"S2=stringlistavg(\"1;2;3\",\";\")\n"
+							"S3=isError(stringlistavg(\"1;2;3\",true))\n"
+							"S4=isError(stringlistavg(true,\"1;2;3\"))\n"
+							"S5=isError(stringlistavg(\"this, list, bad\"))\n"
+							"S6=isError(stringlistavg(\"1;A;3\",\";\"))\n"
+							"S7=stringlistavg(\"1,-2.0,3.0\")\n"
 
-							"U0=stringlistmember(\"green\", \"red, blue, green\"):"
-							"U1=stringlistmember(\"green\",\"\"):"
-							"U2=stringlistmember(\"green\", \"red; blue; green\",\";\"):"
-							"U3=isError(stringlistmember(\"green\",\"1;2;3\",true)):"
-							"U4=isError(stringlistmember(\"green\",true,\";\")):"
-							"U5=isError(stringlistmember(true,\"green\",\";\")):"
-							"U6=isError(stringlistmember(\"this, list, bad\")):"
-							"U7=isError(stringlistmember(\"1;A;3\",\";\")):"
-							"U8=stringlistmember(\"-2.9\",\"1,-2.0,3.0\"):"
+							"U0=stringlistmember(\"green\", \"red, blue, green\")\n"
+							"U1=stringlistmember(\"green\",\"\")\n"
+							"U2=stringlistmember(\"green\", \"red; blue; green\",\";\")\n"
+							"U3=isError(stringlistmember(\"green\",\"1;2;3\",true))\n"
+							"U4=isError(stringlistmember(\"green\",true,\";\"))\n"
+							"U5=isError(stringlistmember(true,\"green\",\";\"))\n"
+							"U6=isError(stringlistmember(\"this, list, bad\"))\n"
+							"U7=isError(stringlistmember(\"1;A;3\",\";\"))\n"
+							"U8=stringlistmember(\"-2.9\",\"1,-2.0,3.0\")\n"
 
-							"U=stringlistmember(\"green\", \"red, blue, green\"):"
-							"V=stringlistimember(\"ReD\", \"RED, BLUE, GREEN\"):"
+							"U=stringlistmember(\"green\", \"red, blue, green\")\n"
+							"V=stringlistimember(\"ReD\", \"RED, BLUE, GREEN\")\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function stringlists() in line %d\n", 
 			   __LINE__);
@@ -2531,23 +2539,24 @@ static void test_function_real(
     float	real;
 
 	char classad_string[] = 
-							"BC0=real(-3):"
-							"BC1=real(3.4):"
-							"BC2=real(-3.4):"
-							"BC3=real(\"-3.4\"):"
-							"BC4=real(true):"
-							"BC5=real(t):"
-							"BC6=real(false):"
-							"BC7=real(f):"
-							"BC8=real(\"this is not a number\"):"
-							"BC9=isError(BC8):"
+							"BC0=real(-3)\n"
+							"BC1=real(3.4)\n"
+							"BC2=real(-3.4)\n"
+							"BC3=real(\"-3.4\")\n"
+							"BC4=real(true)\n"
+							"BC5=real(t)\n"
+							"BC6=real(false)\n"
+							"BC7=real(f)\n"
+							"BC8=real(\"this is not a number\")\n"
+							"BC9=isError(BC8)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function real() in line %d\n", 
 			   __LINE__);
@@ -2679,16 +2688,17 @@ static void test_function_string(
 	int		integer;
 
 	char classad_string[] = 
-							"BC0=string(\"-3\"):"
-							"BC1=string(123):"
-							"E0=isError(BC1):"
+							"BC0=string(\"-3\")\n"
+							"BC1=string(123)\n"
+							"E0=isError(BC1)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function string() in line %d\n", 
 			   __LINE__);
@@ -2728,15 +2738,16 @@ static void test_function_strcat(
 	char	big_string[1024];
 
 	char classad_string[] = 
-							"BC0=strcat(\"-3\",\"3\"):"
-							"BC1=strcat(\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\"):"
+							"BC0=strcat(\"-3\",\"3\")\n"
+							"BC1=strcat(\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\")\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function strcat() in line %d\n", 
 			   __LINE__);
@@ -2777,11 +2788,11 @@ static void test_function_floor(
 	int		integer;
 
 	char classad_string[] = 
-							"BC0=floor(\"-3\"):"
-							"BC1=floor(\"-3.4\"):"
-							"BC2=floor(\"3\"):"
-							"BC3=floor(5):"
-							"BC4=floor(5.2):"
+							"BC0=floor(\"-3\")\n"
+							"BC1=floor(\"-3.4\")\n"
+							"BC2=floor(\"3\")\n"
+							"BC3=floor(5)\n"
+							"BC4=floor(5.2)\n"
 							// error test ??????
 							"";
 
@@ -2789,7 +2800,8 @@ static void test_function_floor(
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function floor() in line %d\n", 
 			   __LINE__);
@@ -2860,11 +2872,11 @@ static void test_function_ceiling(
 	int		integer;
 
 	char classad_string[] = 
-							"BC0=ceiling(\"-3\"):"
-							"BC1=ceiling(\"-3.4\"):"
-							"BC2=ceiling(\"3\"):"
-							"BC3=ceiling(5):"
-							"BC4=ceiling(5.2):"
+							"BC0=ceiling(\"-3\")\n"
+							"BC1=ceiling(\"-3.4\")\n"
+							"BC2=ceiling(\"3\")\n"
+							"BC3=ceiling(5)\n"
+							"BC4=ceiling(5.2)\n"
 							// error test ??????
 							"";
 
@@ -2872,7 +2884,8 @@ static void test_function_ceiling(
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function ceiling() in line %d\n", 
 			   __LINE__);
@@ -2943,11 +2956,11 @@ static void test_function_round(
 	int		integer;
 
 	char classad_string[] = 
-							"BC0=round(\"-3\"):"
-							"BC1=round(\"-3.5\"):"
-							"BC2=round(\"3\"):"
-							"BC3=round(5.5):"
-							"BC4=round(5.2):"
+							"BC0=round(\"-3\")\n"
+							"BC1=round(\"-3.5\")\n"
+							"BC2=round(\"3\")\n"
+							"BC3=round(5.5)\n"
+							"BC4=round(5.2)\n"
 							// error test ??????
 							"";
 
@@ -2955,7 +2968,8 @@ static void test_function_round(
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function round() in line %d\n", 
 			   __LINE__);
@@ -3027,15 +3041,15 @@ static void test_function_random(
     float	real;
 
 	char classad_string[] = 
-							"BC1=random(5):"
-							"BC2=random():"
-							"BC3=random(3.5):"
-							"BC4=random(\"-3.5\"):"
-							"BC5=random(\"-3.5\"):"
-							"BC6=random(\"-3.5\"):"
-							"BC7=random(\"3\"):"
-							"BC8=random(5.5):"
-							"BC9=random(5.2):"
+							"BC1=random(5)\n"
+							"BC2=random()\n"
+							"BC3=random(3.5)\n"
+							"BC4=random(\"-3.5\")\n"
+							"BC5=random(\"-3.5\")\n"
+							"BC6=random(\"-3.5\")\n"
+							"BC7=random(\"3\")\n"
+							"BC8=random(5.5)\n"
+							"BC9=random(5.2)\n"
 							// error testn test_function_iserror 
 							"";
 
@@ -3043,7 +3057,8 @@ static void test_function_random(
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function random() in line %d\n", 
 			   __LINE__);
@@ -3097,15 +3112,16 @@ static void test_function_isstring(
 	int		integer;
 
 	char classad_string[] = 
-							"BC3=isString(\"abc\"):"
-							"BC0=isString(strcat(\"-3\",\"3\")):"
+							"BC3=isString(\"abc\")\n"
+							"BC0=isString(strcat(\"-3\",\"3\"))\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function isString() in line %d\n", 
 			   __LINE__);
@@ -3146,18 +3162,19 @@ static void test_function_isundefined(
 	int		integer;
 
 	char classad_string[] = 
-							"BB=2:"
-							"BC=10:"
+							"BB=2\n"
+							"BC=10\n"
 							//"BD=undefined:"
-							"BB0=isUndefined(BD):"
-							"BB1=isUndefined(BC):"
+							"BB0=isUndefined(BD)\n"
+							"BB1=isUndefined(BC)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function isundefined() in line %d\n", 
 			   __LINE__);
@@ -3200,17 +3217,18 @@ static void test_function_iserror(
 	int		integer;
 
 	char classad_string[] = 
-							"BC0=isError(random(\"-3\")):"
-							"BC1=isError(int(\"this is not an int\")):"
-							"BC2=isError(real(\"this is not a float\")):"
-							"BC3=isError(floor(\"this is not a float\")):"
+							"BC0=isError(random(\"-3\"))\n"
+							"BC1=isError(int(\"this is not an int\"))\n"
+							"BC2=isError(real(\"this is not a float\"))\n"
+							"BC3=isError(floor(\"this is not a float\"))\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function iserror() in line %d\n", 
 			   __LINE__);
@@ -3275,20 +3293,21 @@ static void test_function_isinteger(
 	int		integer;
 
 	char classad_string[] = 
-							"BC1=isInteger(-3.4 ):"
-							"BC2=isInteger(-3):"
-							"BC3=isInteger(\"-3\"):"
-							"BC4=isInteger( 3.4 ):"
-							"BC5=isInteger( int(3.4) ):"
-							"BC6=isInteger(int(\"-3\")):"
-							"BC7=isInteger(3):"
+							"BC1=isInteger(-3.4 )\n"
+							"BC2=isInteger(-3)\n"
+							"BC3=isInteger(\"-3\")\n"
+							"BC4=isInteger( 3.4 )\n"
+							"BC5=isInteger( int(3.4) )\n"
+							"BC6=isInteger(int(\"-3\"))\n"
+							"BC7=isInteger(3)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function isinteger() in line %d\n", 
 			   __LINE__);
@@ -3379,22 +3398,23 @@ static void test_function_isreal(
 	int		integer;
 
 	char classad_string[] = 
-							"BC1=isReal(-3.4 ):"
-							"BC2=isReal(-3):"
-							"BC3=isReal(\"-3\"):"
-							"BC4=isReal( 3.4 ):"
-							"BC5=isReal( real(3) ):"
-							"BC6=isReal(real(\"-3\")):"
-							"BC7=isReal(3):"
-							"BC8=isReal(3,1):"
-							"BC9=isError(BC8):"
+							"BC1=isReal(-3.4 )\n"
+							"BC2=isReal(-3)\n"
+							"BC3=isReal(\"-3\")\n"
+							"BC4=isReal( 3.4 )\n"
+							"BC5=isReal( real(3) )\n"
+							"BC6=isReal(real(\"-3\"))\n"
+							"BC7=isReal(3)\n"
+							"BC8=isReal(3,1)\n"
+							"BC9=isError(BC8)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function isreal() in line %d\n", 
 			   __LINE__);
@@ -3495,14 +3515,15 @@ static void test_function_isboolean(
 	int		integer;
 
 	char classad_string[] = 
-							"BC1=isBoolean(isReal(-3.4 )):"
+							"BC1=isBoolean(isReal(-3.4 ))\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function isboolean() in line %d\n", 
 			   __LINE__);
@@ -3536,21 +3557,22 @@ static void test_function_formattime(
 	int 	integer;
 
 	char classad_string[] = 
-							"I0=formattime():"
-							"I1=formattime(CurrentTime):"
-							"I2=formattime(CurrentTime,\"%c\"):"
-							"I3=formattime(1174737600,\"%m/%d/%y\"):"
-							"I4=formattime(-231):"
-							"I5=formattime(1174694400,1174694400):"
-							"E0=isError(I4):"
-							"E1=isError(I5):"
+							"I0=formattime()\n"
+							"I1=formattime(CurrentTime)\n"
+							"I2=formattime(CurrentTime,\"%c\")\n"
+							"I3=formattime(1174737600,\"%m/%d/%y\")\n"
+							"I4=formattime(-231)\n"
+							"I5=formattime(1174694400,1174694400)\n"
+							"E0=isError(I4)\n"
+							"E1=isError(I5)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function formattime() in line %d\n", 
 			   __LINE__);
@@ -3652,22 +3674,23 @@ static void test_function_substr(
 	int 	integer;
 
 	char classad_string[] = 
-							"I0=substr(\"abcdefg\", 3):"
-							"I1=substr(\"abcdefg\", 3, 2):"
-							"I2=substr(\"abcdefg\", -2, 1):"
-							"I3=substr(\"abcdefg\", 3, -1):"
-							"I4=substr(\"abcdefg\", 3, -9):"
-							"I5=substr(\"abcdefg\", 3.3, -9):"
-							"I6=substr(foo, 3, -9):"
-							"E0=isError(I5):"
-							"E1=isError(I6):"
+							"I0=substr(\"abcdefg\", 3)\n"
+							"I1=substr(\"abcdefg\", 3, 2)\n"
+							"I2=substr(\"abcdefg\", -2, 1)\n"
+							"I3=substr(\"abcdefg\", 3, -1)\n"
+							"I4=substr(\"abcdefg\", 3, -9)\n"
+							"I5=substr(\"abcdefg\", 3.3, -9)\n"
+							"I6=substr(foo, 3, -9)\n"
+							"E0=isError(I5)\n"
+							"E1=isError(I6)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function substr() in line %d\n", 
 			   __LINE__);
@@ -3763,23 +3786,24 @@ static void test_function_strcmp(
 	int		integer;
 
 	char classad_string[] = 
-							"J0=strcmp(\"ABCDEFgxx\"; \"ABCDEFg\"):"
-							"J1=strcmp(\"BBBBBBBxx\"; \"CCCCCCC\"):"
-							"J2=strcmp(\"AbAbAbAb\"; \"AbAbAbAb\"):"
-							"J3=strcmp(1+1; \"2\"):"
-							"J4=strcmp(\"2\"; 1+1):"
-							"K0=stricmp(\"ABCDEFg\"; \"abcdefg\"):"
-							"K1=stricmp(\"ffgghh\"; \"aabbcc\"):"
-							"K2=stricmp(\"aBabcd\"; \"ffgghh\"):"
-							"K3=stricmp(1+1; \"2\"):"
-							"K4=stricmp(\"2\"; 1+1):"
+							"J0=strcmp(\"ABCDEFgxx\"; \"ABCDEFg\")\n"
+							"J1=strcmp(\"BBBBBBBxx\"; \"CCCCCCC\")\n"
+							"J2=strcmp(\"AbAbAbAb\"; \"AbAbAbAb\")\n"
+							"J3=strcmp(1+1; \"2\")\n"
+							"J4=strcmp(\"2\"; 1+1)\n"
+							"K0=stricmp(\"ABCDEFg\"; \"abcdefg\")\n"
+							"K1=stricmp(\"ffgghh\"; \"aabbcc\")\n"
+							"K2=stricmp(\"aBabcd\"; \"ffgghh\")\n"
+							"K3=stricmp(1+1; \"2\")\n"
+							"K4=stricmp(\"2\"; 1+1)\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function strcmp() in line %d\n", 
 			   __LINE__);
@@ -3903,14 +3927,15 @@ static void test_function_attrnm(
 	bool	found_bool;
 
 	char classad_string[] = 
-							"T012=t:"
+							"T012=t\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function attrnm() in line %d\n", 
 			   __LINE__);
@@ -3933,34 +3958,35 @@ static void test_function_regexp(
 	bool	found_bool;
 
 	char classad_string[] = 
-							"W0=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\", \"i\"):"
-							"W1=regexp(20, \"thisisamatchlist\", \"i\"):"
-							"E1=isError(W1):" 
-							"W2=regexp(\"[Mm]atcH.i\", 20, \"i\"):"
-							"E2=isError(W2):" 
-							"W3=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\", 20):"
-							"E3=isError(W3):" 
-							"W4=regexp(\"[Mm]atcH.i\", \"thisisalist\", \"i\"):"
-							"W5=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\"):"
-							"W6=regexp(\"([Mm]+[Nn]+)\", \"aaaaaaaaaabbbmmmmmNNNNNN\", \"i\"):"
+							"W0=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\", \"i\")\n"
+							"W1=regexp(20, \"thisisamatchlist\", \"i\")\n"
+							"E1=isError(W1)\n" 
+							"W2=regexp(\"[Mm]atcH.i\", 20, \"i\")\n"
+							"E2=isError(W2)\n" 
+							"W3=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\", 20)\n"
+							"E3=isError(W3)\n" 
+							"W4=regexp(\"[Mm]atcH.i\", \"thisisalist\", \"i\")\n"
+							"W5=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\")\n"
+							"W6=regexp(\"([Mm]+[Nn]+)\", \"aaaaaaaaaabbbmmmmmNNNNNN\", \"i\")\n"
 
-							"X0=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two is \\2\"):"
-							"X1=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two is \\2\",\"i\"):"
-							"X2=regexps(20 , \"thisisamatchlist\", \"one is \\1 two is \\2\",\"i\"):"
-							"E4=isError(X2):" 
-							"X3=regexps(\"([Mm]at)c(h).i\", 20 , \"one is \\1 two is \\2\",\"i\"):"
-							"E5=isError(X3):" 
-							"X4=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", 20 ,\"i\"):"
-							"E6=isError(X4):" 
-							"X5=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two is \\2\",20):"
-							"E7=isError(X5):" 
+							"X0=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two is \\2\")\n"
+							"X1=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two is \\2\",\"i\")\n"
+							"X2=regexps(20 , \"thisisamatchlist\", \"one is \\1 two is \\2\",\"i\")\n"
+							"E4=isError(X2)\n" 
+							"X3=regexps(\"([Mm]at)c(h).i\", 20 , \"one is \\1 two is \\2\",\"i\")\n"
+							"E5=isError(X3)\n" 
+							"X4=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", 20 ,\"i\")\n"
+							"E6=isError(X4)\n" 
+							"X5=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two is \\2\",20)\n"
+							"E7=isError(X5)\n" 
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function regexp() in line %d\n", 
 			   __LINE__);
@@ -4123,29 +4149,30 @@ static void test_function_stringlists_regexpmember(
 	bool	found_bool;
 
 	char classad_string[] = 
-							"U0=stringlist_regexpMember(\"green\", \"red, blue, green\"):"
-							"U1=stringlist_regexpMember(\"green\", \"red; blue; green\",\"; \"):"
-							"U2=stringlist_regexpMember(\"([e]+)\", \"red, blue, green\"):"
-							"U3=stringlist_regexpMember(\"([p]+)\", \"red, blue, green\"):"
-							"W0=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", \" ,\", \"i\"):"
-							"W1=stringlist_regexpMember(20, \"thisisamatchlist\", \"i\"):"
-							"E1=isError(W1):" 
-							"W2=stringlist_regexpMember(\"[Mm]atcH.i\", 20, \"i\"):"
-							"E2=isError(W2):" 
-							"W3=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", 20):"
-							"E3=isError(W3):" 
-							"W7=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", \" ,\", 20):"
-							"E4=isError(W7):" 
-							"W4=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisalist\", \" ,\", \"i\"):"
-							"W5=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\"):"
-							"W6=stringlist_regexpMember(\"([Mm]+[Nn]+)\", \"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\"):"
+							"U0=stringlist_regexpMember(\"green\", \"red, blue, green\")\n"
+							"U1=stringlist_regexpMember(\"green\", \"red; blue; green\",\"; \")\n"
+							"U2=stringlist_regexpMember(\"([e]+)\", \"red, blue, green\")\n"
+							"U3=stringlist_regexpMember(\"([p]+)\", \"red, blue, green\")\n"
+							"W0=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", \" ,\", \"i\")\n"
+							"W1=stringlist_regexpMember(20, \"thisisamatchlist\", \"i\")\n"
+							"E1=isError(W1)\n" 
+							"W2=stringlist_regexpMember(\"[Mm]atcH.i\", 20, \"i\")\n"
+							"E2=isError(W2)\n" 
+							"W3=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", 20)\n"
+							"E3=isError(W3)\n" 
+							"W7=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", \" ,\", 20)\n"
+							"E4=isError(W7)\n" 
+							"W4=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisalist\", \" ,\", \"i\")\n"
+							"W5=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\")\n"
+							"W6=stringlist_regexpMember(\"([Mm]+[Nn]+)\", \"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\")\n"
 							"";
 
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function stringlists_regexpmember() in line %d\n", 
 			   __LINE__);
@@ -4303,7 +4330,8 @@ static void test_function_XXX(
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ':');
+	classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for function XXX() in line %d\n", 
 			   __LINE__);
@@ -4402,7 +4430,7 @@ make_big_string(
 void test_random(
     TestResults *results)
 {
-    char *classad_string = "R1 = random(), R2 = random(10)";
+    char *classad_string = "R1 = random()\nR2 = random(10)";
     int  base_r1, r1;
     int  r2;
     bool have_different_numbers;
@@ -4411,7 +4439,8 @@ void test_random(
 
     ClassAd *classad;
 
-    classad = new ClassAd(classad_string, ',');
+    classad = new ClassAd;
+	classad->initFromString(classad_string, NULL);
 
     // First we check that random gives us different numbers
     have_different_numbers = false;
@@ -4460,14 +4489,15 @@ void test_random(
 void test_equality(TestResults *results)
 {
     ExprTree *e1, *e2, *e3;
+	MyString n1, n2, n3;
     const char *s1 = "Foo = 3";
     const char *s3 = "Bar = 5";
 
-    Parse(s1, e1);
-    Parse(s1, e2);
-    Parse(s3, e3);
+    Parse(s1, n1, e1);
+    Parse(s1, n2, e2);
+    Parse(s3, n3, e3);
 
-    if ((*e1) == (*e2)) {
+    if ((*e1) == (*e2) && n1 == n2) {
         printf("Passed: operator== detects equality in line %d\n", __LINE__);
         results->AddResult(true);
     } else {
@@ -4475,7 +4505,7 @@ void test_equality(TestResults *results)
         results->AddResult(false);
     }
 
-    if ((*e1) == (*e3)) {
+    if ((*e1) == (*e3) || n1 == n3) {
         printf("Failed: operator== does not detect inequality in line %d\n", __LINE__);
         results->AddResult(false);
     } else {
@@ -4493,24 +4523,25 @@ void test_operators(TestResults *results)
     extern bool classad_debug_function_run;
     char *classad_string = 
         // Test short-circuiting with logical OR
-        "A = TRUE || _debug_function_(), "
-        "B = 1 || _debug_function_(), "
-        "C = 1.2 || _debug_function_(), "
+        "A = TRUE || _debug_function_()\n "
+        "B = 1 || _debug_function_()\n "
+        "C = 1.2 || _debug_function_()\n "
         // Test no short-circuiting with logical OR
-        "D = \"foo\" || _debug_function_(), "
-        "E = FALSE || _debug_function_(), "
-        "G = 0 || _debug_function_(), "
-        "H = 0.0 || _debug_function_(), "
+        "D = \"foo\" || _debug_function_()\n "
+        "E = FALSE || _debug_function_()\n "
+        "G = 0 || _debug_function_()\n "
+        "H = 0.0 || _debug_function_()\n "
         // Test short-circuiting with logical AND
-        "I = FALSE && _debug_function_(), "
-        "J = 0 && _debug_function_(), "
-        "K = 0.0 && _debug_function_(), "
-        "L = \"foo\" && _debug_function_(), "
+        "I = FALSE && _debug_function_()\n "
+        "J = 0 && _debug_function_()\n "
+        "K = 0.0 && _debug_function_()\n "
+        "L = \"foo\" && _debug_function_()\n "
         // Test no short-circuiting with logical AND
-        "M = TRUE && _debug_function_(), "
-        "N = 1 && _debug_function_(), "
+        "M = TRUE && _debug_function_()\n "
+        "N = 1 && _debug_function_()\n "
         "O = 1.2 && _debug_function_() ";
-    ClassAd *c = new ClassAd(classad_string, ',');
+    ClassAd *c = new ClassAd;
+	c->initFromString(classad_string, NULL);
 
     // Test short-circuiting with logical OR
     classad_debug_function_run = false;
@@ -4586,11 +4617,13 @@ void test_operators(TestResults *results)
 void 
 test_scoping(TestResults *results)
 {
-    char *ad1_string = "A = MY.X, B = TARGET.X, C=MY.Y, D = TARGET.Y, E = Y, G=MY.Z, H=TARGET.Z, J=TARGET.K, L=5, X = 1, Z=4";
-    char *ad2_string = "X = 2, Y = 3, K=TARGET.L";
+    char *ad1_string = "A = MY.X\n B = TARGET.X\n C=MY.Y\n D = TARGET.Y\n E = Y\n G=MY.Z\n H=TARGET.Z\n J=TARGET.K\n L=5\n X = 1\n Z=4";
+    char *ad2_string = "X = 2\n Y = 3\n K=TARGET.L";
     int value;
-    ClassAd *ad1  =  new ClassAd(ad1_string, ',');
-    ClassAd *ad2  =  new ClassAd(ad2_string, ',');
+    ClassAd *ad1  =  new ClassAd;
+	ad1->initFromString(ad1_string, NULL);
+    ClassAd *ad2  =  new ClassAd;
+	ad2->initFromString(ad2_string, NULL);
 
     if (ad1->EvalInteger("A", ad2, value) && value == 1) {
          printf("Passed: eval of A is good in line %d\n", __LINE__);

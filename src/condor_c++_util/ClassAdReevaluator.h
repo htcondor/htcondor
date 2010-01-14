@@ -65,6 +65,6 @@
  * returned.
  */
 
-bool classad_reevaluate(ClassAd *ad, const ClassAd *context);
+bool classad_reevaluate(ClassAd *ad, ClassAd *context);
 
 #endif /* _CLASSAD_REEVALUATOR_H */

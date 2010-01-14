@@ -734,6 +734,15 @@ AC_ARG_ENABLE(soft-is-hard,
   [],
   [enable_soft_is_hard=no])
 
+AC_ARG_ENABLE(old-classads,
+  [AS_HELP_STRING([--disable-old-classads],
+     [Replace old ClassAds with compatiblity layer])],
+  [],
+  [enable_old_classads=yes])
+if test $enable_old_classads = "yes"; then
+  AC_DEFINE([WANT_OLD_CLASSADS],[1],[Define if using old ClassAds])
+fi
+
 # if we want a buildid, jam it into CPPFLAGS
 AC_MSG_CHECKING(for a build id to use)
 if test "x$BUILDID" != "xno"; then
@@ -1773,6 +1782,8 @@ AC_SUBST([_cv_glibc_flag], [$_cv_glibc_flag])
 
 # PlatformFlags logic has been moved here from .cf files, primarily
 # HPUX11.cf and LINUX.cf.
+# On AIX, the TOC overflows when linking the schedd. These options reduce
+# the number of entries in the TOC.
 case "$_cv_opsys" in
   LINUX ) _cv_platform_flags="$_cv_arch_optimize_flag $_cv_glibc_flag" ;;
   HPUX ) # HPUX11 Only...
@@ -1780,6 +1791,7 @@ case "$_cv_opsys" in
       _cv_platform_flags="-DHPUX11=HPUX11";
     fi
    ;;
+  AIX ) _cv_platform_flags="-mno-fp-in-toc -mno-sum-in-toc -mminimal-toc" ;;
   * ) _cv_platform_flags="" ;;
 esac
 AC_SUBST([_cv_platform_flags], [$_cv_platform_flags])
@@ -2518,10 +2530,28 @@ AC_CHECK_FUNCS([strsignal				\
 		execl					\
 		access					\
 		vasprintf				\
+		localtime_r				\
 		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))
+
+# On HPUX11, localtime_r() and gmtime_r() are not defined unless
+# _REENTRANT is defined.  Test for that case here.
+
+AC_MSG_CHECKING([if localtime_r() needs _REENTRANT])
+AC_LANG_PUSH([C++])
+AC_COMPILE_IFELSE([#include <time.h>
+		   void testfunc() {localtime_r(NULL,NULL);}],[
+		   AC_MSG_RESULT([no])],[
+		   AC_COMPILE_IFELSE([
+		     #define _REENTRANT
+		     #include <time.h>
+		     void testfunc() {localtime_r(NULL,NULL);}],[
+		     AC_MSG_RESULT([yes])
+		     AC_DEFINE([_REENTRANT],[1],[needed for localtime_r() and gmtime_r()])],[
+		   AC_MSG_RESULT([test failed])])])
+AC_LANG_POP([C++])
 
 AC_CHECK_FUNCS(backtrace)
 #########
@@ -2662,6 +2692,11 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
 
+# Do we have member tm_gmtoff in struct tm?
+AC_CHECK_MEMBER([struct tm.tm_gmtoff],
+                [AC_DEFINE([HAVE_TM_GMTOFF], [1], [tm.tm_gmtoff available])],
+                [],
+                [[#include <time.h>]])
 
 # Do we have the "ethtool" and similar declarations?
 AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])

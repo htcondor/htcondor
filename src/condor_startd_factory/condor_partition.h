@@ -20,8 +20,10 @@
 #ifndef CONDOR_PARTITION_H
 #define CONDOR_PARTITION_H
 
+#include "condor_common.h"
+#include "condor_classad.h"
+
 class MyString;
-class ClassAd;
 
 enum PState
 {

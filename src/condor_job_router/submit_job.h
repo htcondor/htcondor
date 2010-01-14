@@ -21,9 +21,9 @@
 #define INCLUDE_SUBMIT_JOB_H
 
 #include "MyString.h"
+#include "condor_classad.h"
 
 namespace classad { class ClassAd; }
-class ClassAd;
 
 enum ClaimJobResult { 
 	CJR_OK,       // Job claimed (put in managed state)

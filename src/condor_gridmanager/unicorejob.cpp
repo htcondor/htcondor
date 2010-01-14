@@ -159,11 +159,12 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 
 		// If we already have an unprocessed update ad, merge the two,
 		// with the new one overwriting duplicate attributes.
+	const char *new_name;
 	ExprTree *new_expr;
 
 	update_ad->ResetExpr();
-	while ( (new_expr = update_ad->NextExpr()) ) {
-		job->newRemoteStatusAd->Insert( new_expr->DeepCopy() );
+	while ( update_ad->NextExpr( new_name, new_expr ) ) {
+		job->newRemoteStatusAd->Insert( new_name, new_expr->Copy() );
 	}
 
 	job->SetEvaluateState();
@@ -652,8 +653,10 @@ if ( unicoreState != COMPLETED ) {
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
+			const char *name;
+			ExprTree *expr;
 			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr() ) {
+			if ( jobAd->NextDirtyExpr(name, expr) ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -783,8 +786,8 @@ void UnicoreJob::UpdateUnicoreState( ClassAd *update_ad )
 				JobIdle();
 			}
 		}
-		next_expr = update_ad->Lookup( next_attr_name );
-		jobAd->Insert( next_expr->DeepCopy() );
+		next_expr = update_ad->LookupExpr( next_attr_name );
+		jobAd->Insert( next_attr_name, next_expr->Copy() );
 	}
 }
 

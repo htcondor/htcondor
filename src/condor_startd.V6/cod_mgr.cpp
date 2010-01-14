@@ -300,9 +300,8 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	Starter* tmp_starter;
 	tmp_starter = resmgr->starter_mgr.findStarter( req, mach_classad );
 	if( ! tmp_starter ) {
-		ExprTree *tree, *rhs;
-		char* tmp = NULL;
-		tree = req->Lookup( ATTR_REQUIREMENTS );
+		ExprTree *tree;
+		tree = req->LookupExpr( ATTR_REQUIREMENTS );
 		if( ! tree ) {
 			err_msg = "Request does not contain ";
 			err_msg += ATTR_REQUIREMENTS;
@@ -310,14 +309,9 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 			return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
 								   CA_INVALID_REQUEST, err_msg.Value() ); 
 		}
-		rhs = tree->RArg();
-        if( rhs ) {
-            rhs->PrintToNewStr( &tmp );
-        }
 		err_msg = "Cannot find starter that satisfies requirements '";
-		err_msg += tmp;
+		err_msg += ExprTreeToString( tree );
 		err_msg += "'";
-		free( tmp );
 		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
 							   CA_INVALID_REQUEST, err_msg.Value() );
 	}

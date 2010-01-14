@@ -279,16 +279,18 @@ HookPrepareJobClient::hookExited(int exit_status) {
 	else {
 			// Make an update ad from the stdout of the hook
 		MyString out(*getStdOut());
-		ClassAd updateAd((char *)out.Value(), '\n');
+		ClassAd updateAd;
+		updateAd.initFromString(out.Value(), NULL);
 		dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
 		updateAd.dPrint(D_FULLDEBUG);
 
 			// Insert each expr from the update ad into the job ad
 		updateAd.ResetExpr();
 		ClassAd* job_ad = Starter->jic->jobClassAd();
+		const char *name;
 		ExprTree *et;
-		while ((et = updateAd.NextExpr())) {
-			job_ad->Insert(et->DeepCopy());
+		while (updateAd.NextExpr(name, et)) {
+			job_ad->Insert(name, et->Copy());
 		}
 		dprintf(D_FULLDEBUG, "After Prepare hook: merged job classad:\n");
 		job_ad->dPrint(D_FULLDEBUG);

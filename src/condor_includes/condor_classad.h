@@ -26,6 +26,16 @@
 #ifndef _CLASSAD_H
 #define _CLASSAD_H
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_attrlist.h"
@@ -52,7 +62,6 @@ class ClassAd : public AttrList
 
 		ClassAd();								// No associated AttrList list
         ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
-        ClassAd(char *, char);					// Constructor, from string.
 		ClassAd(const ClassAd&);				// copy constructor
         virtual ~ClassAd();						// destructor
 
@@ -96,10 +105,7 @@ class ClassAd : public AttrList
 		int         sPrintAsXML(MyString &output,StringList *attr_white_list=NULL);
 		void		dPrint( int );				// dprintf to given dprintf level
 
-		void		clear( void );				// clear out all attributes
-
-		// poor man's update function until ClassAd Update Protocol  --RR
-		 void ExchangeExpressions (class ClassAd *);
+		void		Clear( void );				// clear out all attributes
 
     private :
 
@@ -125,6 +131,7 @@ class ClassAdList : public AttrListList
 	int			Length() { return AttrListList::MyLength(); }
 	void		Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
 	int			Delete(ClassAd* ca){return AttrListList::Delete((AttrList*)ca);}
+	int			Remove(ClassAd* ca){return AttrListList::Remove((AttrList*)ca);}
 	ClassAd*	Lookup(const char* name);
 
 	// User supplied function should define the "<" relation and the list
@@ -141,7 +148,10 @@ class ClassAdList : public AttrListList
 	static int SortCompare(const void*, const void*);
 };
 
-bool IsAMatch( const ClassAd *ad1, const ClassAd *ad2 );
-bool IsAHalfMatch( const ClassAd *ad1, const ClassAd *ad2 );
+bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
+bool IsAHalfMatch( ClassAd *ad1, ClassAd *ad2 );
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _CLASSAD_H */

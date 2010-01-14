@@ -1,9 +1,9 @@
 NAME = stork_store_cred stork_get_cred stork_rm_cred stork_list_cred condor_credd
 all_target( $(NAME) )
 
-CFLAGS = $(STD_C_FLAGS) -I$(NEW_CLASSADS_INC)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(NEW_CLASSADS_INC)
-LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB = $(STD_LIBS)
 CRED_LIB = classadUtil.o
 
 c_plus_target(stork_store_cred,store_cred.o $(CRED_LIB),$(LIB))

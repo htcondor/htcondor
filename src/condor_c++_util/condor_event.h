@@ -36,7 +36,14 @@
 	bringing in the full classad.h header file structure causing complications
 	to third parties using this API. -psilord 02/21/03
 */
+#ifdef WANT_OLD_CLASSADS
 class ClassAd;
+#else
+namespace compat_classad {
+  class ClassAd;
+}
+using namespace compat_classad;
+#endif
 
 
 

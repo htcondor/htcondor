@@ -113,8 +113,8 @@ bool
 Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, CondorVersionInfo *condor_version) const
 {
 
-	bool has_env1 = ad->Lookup(ATTR_JOB_ENVIRONMENT1) != NULL;
-	bool has_env2 = ad->Lookup(ATTR_JOB_ENVIRONMENT2) != NULL;
+	bool has_env1 = ad->LookupExpr(ATTR_JOB_ENVIRONMENT1) != NULL;
+	bool has_env2 = ad->LookupExpr(ATTR_JOB_ENVIRONMENT2) != NULL;
 
 	bool requires_env1 = false;
 	if(condor_version) {

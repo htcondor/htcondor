@@ -608,27 +608,18 @@ VMType::createConfigUsingScript(const char* configfile)
 	}
 
 	// Set temporary environments for script program
-	MyString name;
-	MyString value;
 	StringList name_list;
 
+	const char *name;
 	ExprTree* expr = NULL;
-	ExprTree* L_expr;
-	ExprTree* R_expr;
 
 	m_classAd.ResetExpr();
-	while( (expr = m_classAd.NextExpr()) != NULL ) {
-		L_expr = expr->LArg();
-		L_expr->PrintToStr(name);
+	while( m_classAd.NextExpr(name, expr) ) {
+		if( !strncasecmp( name, "JobVM", strlen("JobVM") ) ||
+			!strncasecmp( name, "VMPARAM", strlen("VMPARAM") )) {
 
-		R_expr = expr->RArg();
-		R_expr->PrintToStr(value);
-
-		if( !strncasecmp( name.Value(), "JobVM", strlen("JobVM") ) ||
-			!strncasecmp( name.Value(), "VMPARAM", strlen("VMPARAM") )) {
-
-			name_list.append(name.Value());
-			SetEnv(name.Value(), value.Value());
+			name_list.append(name);
+			SetEnv(name, ExprTreeToString(expr));
 		}
 	}
 

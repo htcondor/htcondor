@@ -30,7 +30,6 @@
 
 class DCCollector;
 class CondorQuery;
-class ClassAdList;
 
 /** Basically, a SimpleList of Daemon objects.  This is slightly
 	more complicated than that, and provides some useful, shared

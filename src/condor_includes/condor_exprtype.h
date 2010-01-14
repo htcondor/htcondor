@@ -29,6 +29,16 @@
 #ifndef _EXPRTYPE_H_
 #define _EXPRTYPE_H_
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #ifndef TRUE
 #define TRUE  1
 #endif
@@ -84,4 +94,6 @@ typedef enum
   NOT_KEYWORD
 } LexemeType;
 
-#endif
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _EXPRTYPE_H_ */

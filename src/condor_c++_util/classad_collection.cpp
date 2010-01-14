@@ -82,21 +82,11 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
 {
   LogRecord* log=new LogNewClassAd(key,ad->GetMyTypeName(),ad->GetTargetTypeName());
   ClassAdLog::AppendLog(log);
+  const char *name;
   ExprTree* expr;
-  ExprTree* L_expr;
-  ExprTree* R_expr;
-  char name[1000];
-  char *value;
   ad->ResetExpr();
-  while ((expr=ad->NextExpr())!=NULL) {
-    strcpy(name,"");
-    L_expr=expr->LArg();
-    L_expr->PrintToStr(name);
-    R_expr=expr->RArg();
-	value = NULL;
-    R_expr->PrintToNewStr(&value);
-    LogRecord* l=new LogSetAttribute(key,name,value);
-	free(value);
+  while (ad->NextExpr(name, expr)) {
+    LogRecord* l=new LogSetAttribute(key,name,ExprTreeToString(expr));
     ClassAdLog::AppendLog(l);
   }
   // return AddClassAd(0,key);
@@ -329,17 +319,15 @@ bool ClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, C
     StringSet Values;
     MyString AttrName;
     MyString AttrValue;
-    char tmp[1000];
     ParentColl->Attributes.StartIterations();
 // printf("Checking OID %s\n",OID.Value());
     while (ParentColl->Attributes.Iterate(AttrName)) {
-      *tmp='\0';
-      ExprTree* expr=Ad->Lookup(AttrName.Value());
+      ExprTree* expr=Ad->LookupExpr(AttrName.Value());
       if (expr) {
-        expr=expr->RArg();
-        expr->PrintToStr(tmp);
-      }
-      AttrValue=tmp;
+		  AttrValue = ExprTreeToString( expr );
+      } else {
+		  AttrValue = "";
+	  }
       Values.Add(AttrValue);
     }
 // Values.StartIterations(); while (Values.Iterate(AttrValue)) { printf("Val: AttrValue=%s\n",AttrValue.Value()); }
@@ -516,9 +504,8 @@ bool ClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
 float ClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
 {
   if (RankExpr.Length()==0) return 0.0;
-  MyString tmp;
-  tmp.sprintf("%s=%s",ATTR_RANK,RankExpr.Value());
-  AttrList RankingAd(tmp.Value(),'\0');
+  AttrList RankingAd;
+  RankingAd.AssignExpr( ATTR_RANK, RankExpr.Value() );
   float Rank;
   if (!RankingAd.EvalFloat(ATTR_RANK,Ad,Rank)) Rank=0.0;
   return Rank;

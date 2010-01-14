@@ -24,8 +24,7 @@
 #include "condor_distribution.h"
 #include "utc_time.h"
 #include "env.h"
-
-class ClassAd;
+#include "condor_classad.h"
 
 /** This class is a base class for the various types of startable
 	processes.  It defines a bunch of pure virtual functions that 

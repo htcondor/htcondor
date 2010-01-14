@@ -20,8 +20,10 @@
 #ifndef FILESQL_H
 #define FILESQL_H
 
+#include "condor_common.h"
+#include "condor_attrlist.h"
+
 class FileLock;
-class AttrList;
 class MyString;
 
 #include <stdio.h> // for FILE *

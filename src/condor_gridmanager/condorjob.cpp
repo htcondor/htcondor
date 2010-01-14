@@ -1075,8 +1075,10 @@ void CondorJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
+			const char *name;
+			ExprTree *expr;
 			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr() ) {
+			if ( jobAd->NextDirtyExpr(name, expr) ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -1334,11 +1336,11 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		old_expr = jobAd->Lookup( attrs_to_copy[index] );
-		new_expr = remote_ad->Lookup( attrs_to_copy[index] );
+		old_expr = jobAd->LookupExpr( attrs_to_copy[index] );
+		new_expr = remote_ad->LookupExpr( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			jobAd->Insert( new_expr->DeepCopy() );
+			jobAd->Insert( attrs_to_copy[index], new_expr->Copy() );
 		}
 	}
 
@@ -1527,14 +1529,11 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	jobAd->ResetExpr();
-	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
-		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(),
-						  "REMOTE_", 7 ) == 0 &&
-			 strlen( ((Variable*)next_expr->LArg())->Name() ) > 7 ) {
+	while ( jobAd->NextExpr(next_name, next_expr) ) {
+		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+			 strlen( next_name ) > 7 ) {
 
-			char *attr_value;
-			char const *attr_name = &((Variable*)next_expr->LArg())->Name()[7];
-			MyString buf;
+			char const *attr_name = &(next_name[7]);
 
 			if(strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1) == 0 ||
 			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1_DELIM) == 0 ||
@@ -1566,11 +1565,7 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			next_expr->RArg()->PrintToNewStr(&attr_value);
-			buf.sprintf( "%s = %s", attr_name,
-						 attr_value );
-			submit_ad->Insert( buf.Value() );
-			free(attr_value);
+			submit_ad->Insert( attr_name, next_expr->Copy() );
 		}
 	}
 

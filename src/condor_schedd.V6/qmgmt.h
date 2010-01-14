@@ -107,7 +107,7 @@ extern int N_PrioRecs;
 extern HashTable<int,int> *PrioRecAutoClusterRejected;
 extern int grow_prio_recs(int);
 
-extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
 					 char * user);
 extern int Runnable(PROC_ID*);
 extern int Runnable(ClassAd*);

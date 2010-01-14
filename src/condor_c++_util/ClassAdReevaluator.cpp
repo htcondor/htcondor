@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 
 bool
-classad_reevaluate(ClassAd *ad, const ClassAd *context)
+classad_reevaluate(ClassAd *ad, ClassAd *context)
 {
 	StringList *reevaluate_attrs;
 	MyString stmp;
@@ -60,7 +60,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 				"classad_reevaluate: Attempting reevaluate %s with %s\n",
 				atmp, stmp.Value());
 
-		etmp = ad->Lookup(atmp);
+		etmp = ad->LookupExpr(atmp);
 		if (!etmp) {
 			dprintf(D_ALWAYS,
 					"classad_reevaluate: %s does not exist in ad, returning\n",
@@ -69,8 +69,10 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			goto FAIL;
 		}
 
-		switch (etmp->RArg()->MyType()) {
-		case LX_STRING:
+		if ( ad->LookupString(atmp, &ntmp) ) {
+			free(ntmp);
+			ntmp = NULL;
+
 			if (!ad->EvalString(stmp.Value(), context, &ntmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a String\n",
@@ -94,8 +96,8 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			free(ntmp);
 			ntmp = NULL;
 
-			break;
-		case LX_INTEGER:
+		} else if ( ad->LookupInteger(atmp, itmp) ) {
+
 			if (!ad->EvalInteger(stmp.Value(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as an Integer\n",
@@ -116,8 +118,8 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 					"classad_reevaluate: Updated %s to %d\n",
 					atmp, itmp);
 
-			break;
-		case LX_FLOAT:
+		} else if ( ad->LookupFloat(atmp, ftmp) ) {
+
 			if (!ad->EvalFloat(stmp.Value(), context, ftmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Float\n",
@@ -138,8 +140,8 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 					"classad_reevaluate: Updated %s to %f\n",
 					atmp, ftmp);
 
-			break;
-		case LX_BOOL:
+		} else if ( ad->LookupBool(atmp, itmp) ) {
+
 			if (!ad->EvalBool(stmp.Value(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Bool\n",
@@ -160,11 +162,10 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 					"classad_reevaluate: Updated %s to %d\n",
 					atmp, itmp);
 
-			break;
-		default:
+		} else {
 			dprintf(D_ALWAYS,
-					"classad_reevaluate: %s has unsupported type %d\n, cannot reevaluate\n",
-					atmp, etmp->MyType());
+					"classad_reevaluate: %s has an unsupported type\n, cannot reevaluate\n",
+					atmp);
 		}
 	}
 

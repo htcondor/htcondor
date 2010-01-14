@@ -53,9 +53,7 @@
 #include "condor_xml_classads.h"
 #include "condor_open.h"
 
-#ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"
-#endif
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -157,9 +155,7 @@ static	ClassAdList	scheddList;
 
 static  Daemon *g_cur_schedd_for_process_buffer_line = NULL;
 
-#ifdef WANT_CLASSAD_ANALYSIS
 static  ClassAdAnalyzer analyzer;
-#endif
 
 static char* format_owner( char*, AttrList* );
 
@@ -1202,15 +1198,9 @@ processCommandLineArguments (int argc, char *argv[])
         else
         if (match_prefix( arg, "better-analyze")
 			|| match_prefix( arg , "better-analyse")) {
-#ifdef WANT_CLASSAD_ANALYSIS
             analyze = true;
             better_analyze = true;
 			attrs.clearAll();
-#else
-            fprintf(stderr, "Sorry, the -better-analyze option is not available "
-                            "on this platform.\n");
-            exit(1);
-#endif
         }
 		else
 		if (match_prefix( arg, "run")) {
@@ -1690,7 +1680,7 @@ format_owner (char *owner, AttrList *ad)
 	// pre-v6.3 schedd)
 
 	if ( dag ) {
-		if ( ad->Lookup( ATTR_DAGMAN_JOB_ID ) ) {
+		if ( ad->LookupExpr( ATTR_DAGMAN_JOB_ID ) ) {
 
 				// We have a DAGMan job ID, this means we have a DAG node
 				// -- don't worry about what type the DAGMan job ID is.
@@ -1862,9 +1852,7 @@ usage (char *myName)
 		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
-#ifdef WANT_CLASSAD_ANALYSIS
         "\t\t-better-analyze\t\tImproved version of -analyze\n"
-#endif
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
@@ -2619,7 +2607,7 @@ fetchSubmittorPrios()
 
 	sock->eom();
 	sock->decode();
-	if( !al.initFromStream(*sock) || !sock->end_of_message() ) {
+	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
@@ -2768,7 +2756,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-			if( stdRankCondition->EvalTree( offer, request, &eval_result ) &&
+			if( EvalExprTree( stdRankCondition, offer, request, &eval_result ) &&
 					eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
 				// both sides satisfied and no remote user
 				if( verbose ) sprintf( return_buff, "%sAvailable\n",
@@ -2788,11 +2776,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		}
 
 		// 4. Satisfies preemption priority condition?
-		if( preemptPrioCondition->EvalTree( offer, request, &eval_result ) &&
+		if( EvalExprTree( preemptPrioCondition, offer, request, &eval_result ) &&
 			eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
 
 			// 5. Satisfies standard rank condition?
-			if( stdRankCondition->EvalTree( offer , request , &eval_result ) &&
+			if( EvalExprTree( stdRankCondition, offer , request , &eval_result ) &&
 				eval_result.type == LX_INTEGER && eval_result.i == TRUE )  
 			{
 				if( verbose )
@@ -2801,11 +2789,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-				if( preemptRankCondition->EvalTree( offer, request, &eval_result ) &&
+				if( EvalExprTree( preemptRankCondition, offer, request, &eval_result ) &&
 					eval_result.type == LX_INTEGER && eval_result.i == TRUE )
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if( preemptionReq->EvalTree( offer , request , &eval_result ) &&
+					if( EvalExprTree( preemptionReq, offer , request , &eval_result ) &&
 						eval_result.type == LX_INTEGER && eval_result.i == FALSE ) 
 					{
 						fPreemptReqTest++;
@@ -2899,27 +2887,20 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	if( fReqConstraint == totalMachines ) {
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No resources matched request's constraints\n");
-#ifdef WANT_CLASSAD_ANALYSIS
         if (!better_analyze) {
-#endif
-            char reqs[2048];
             ExprTree *reqExp;
             sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
                      return_buff, ATTR_REQUIREMENTS );
-            if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
+            if( !(reqExp = request->LookupExpr( ATTR_REQUIREMENTS) ) ) {
                 sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
                          return_buff, ATTR_REQUIREMENTS );
             } else {
-                reqs[0] = '\0';
-                reqExp->PrintToStr( reqs );
-                sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
+				sprintf( return_buff, "%s%s = %s\n\n", return_buff,
+						 ATTR_REQUIREMENTS, ExprTreeToString( reqExp ) );
             }
-#ifdef WANT_CLASSAD_ANALYSIS
         }
-#endif
 	}
 
-#if defined( WANT_CLASSAD_ANALYSIS )
     if (better_analyze) {
         std::string buffer_string = "";
         char ana_buffer[SHORT_BUFFER_SIZE];
@@ -2931,7 +2912,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
             strcat( return_buff, ana_buffer );
         }
     }
-#endif
 
 	if( fOffConstraint == totalMachines ) {
 		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
@@ -2939,7 +2919,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
 
-#if defined( WANT_CLASSAD_ANALYSIS )
     if (better_analyze) {
         std::string buffer_string = "";
         char ana_buffer[SHORT_BUFFER_SIZE];
@@ -2951,7 +2930,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
             strcat( return_buff, ana_buffer );
         }
     }
-#endif
 
 	/* Attributes to check for grid universe matchmaking */ 
 	const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,
@@ -3284,9 +3262,9 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 			if( schedd_requirements_attr ) {
 				MyString schedd_requirements_expr;
-				ExprTree *expr = ad->Lookup(schedd_requirements_attr);
+				ExprTree *expr = ad->LookupExpr(schedd_requirements_attr);
 				if( expr ) {
-					expr->PrintToStr(schedd_requirements_expr);
+					schedd_requirements_expr = ExprTreeToString(expr);
 				}
 				else {
 					schedd_requirements_expr = "UNDEFINED";

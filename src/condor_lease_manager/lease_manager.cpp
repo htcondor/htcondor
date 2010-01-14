@@ -534,7 +534,7 @@ LeaseManager::timerHandler_GetAds ( void )
 int
 LeaseManager::initPublicAd( void )
 {
-	m_publicAd.clear();
+	m_publicAd.Clear();
 
 	m_publicAd.SetMyTypeName( LEASE_MANAGER_ADTYPE );
 	m_publicAd.SetTargetTypeName( "" );

@@ -27,7 +27,8 @@
 
 #include <string>
 
-class ClassAd;
+#include "condor_common.h"
+#include "condor_classad.h"
 
 // given a ClassAd with information about a job's executable (like
 // its MD5 sum), return a string that can be used as a per-owner

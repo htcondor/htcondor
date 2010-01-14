@@ -33,22 +33,16 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 	merge_from->ResetName();
 	merge_from->ResetExpr();
 
-	while (1) {
-		const char     *name;
-		ExprTree       *expression;
+	const char     *name;
+	ExprTree       *expression;
 
-		name       = merge_from->NextNameOriginal();
-		expression = merge_from->NextExpr();
+	while ( merge_from->NextExpr(name, expression) ) {
 
-		if (name == NULL || expression == NULL) {
-			break;
-		} else {
-			if (merge_conflicts || !merge_into->Lookup(name)) {
-				ExprTree  *copy_expression;
+		if (merge_conflicts || !merge_into->LookupExpr(name)) {
+			ExprTree  *copy_expression;
 
-				copy_expression = expression->DeepCopy();
-				merge_into->Insert(copy_expression);
-			}
+			copy_expression = expression->Copy();
+			merge_into->Insert(name, copy_expression);
 		}
 	}
 

@@ -179,10 +179,12 @@ requestScheddUpdate( BaseJob *job, bool notify )
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
 
+	const char *name;
+	ExprTree *value;
 	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
-		 job->jobAd->NextDirtyExpr() == NULL ) {
+		 job->jobAd->NextDirtyExpr(name, value) == false ) {
 		job->SetEvaluateState();
 		return;
 	}
@@ -970,17 +972,14 @@ contact_schedd_next_add_job:
 		curr_job = curr_request->m_job;
 		dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",
 				curr_job->procID.cluster, curr_job->procID.proc);
-		char attr_name[1024];
-		char attr_value[1024];
+		const char *attr_name;
+		const char *attr_value;
 		ExprTree *expr;
 		bool fake_job_in_queue = false;
 		curr_job->jobAd->ResetExpr();
-		while ( (expr = curr_job->jobAd->NextDirtyExpr()) != NULL &&
+		while ( curr_job->jobAd->NextDirtyExpr(attr_name, expr) == true &&
 				fake_job_in_queue == false ) {
-			attr_name[0] = '\0';
-			attr_value[0] = '\0';
-			expr->LArg()->PrintToStr(attr_name);
-			expr->RArg()->PrintToStr(attr_value);
+			attr_value = ExprTreeToString( expr );
 
 			dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 			rc = SetAttribute( curr_job->procID.cluster,

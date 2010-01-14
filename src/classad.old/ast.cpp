@@ -44,6 +44,21 @@ bool classad_debug_function_run = 0;
 
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
+int EvalExprTree( ExprTree *expr, const AttrList *source, const AttrList *target,
+				  EvalResult *result )
+{
+	return expr->EvalTree( source, target, result );
+}
+
+const char *ExprTreeToString( ExprTree *expr ) {
+	static MyString value;
+	if ( expr == NULL ) {
+		return NULL;
+	}
+	expr->PrintToStr( value );
+	return value.Value();
+}
+
 // EvalResult ctor
 EvalResult::EvalResult()
 {
@@ -340,7 +355,7 @@ int Variable::_EvalTree(const AttrList* classad, EvalResult* val)
 	return FALSE;
     }
     
-    if(!(tmp = classad->Lookup(name)))
+    if(!(tmp = classad->LookupExpr(name)))
     {
 		val->type = LX_UNDEFINED;
 		dprintResult(this, val);
@@ -413,7 +428,7 @@ int Variable::_EvalTreeSimple( const char *adName, const AttrList *my_classad, c
 
 	if(my_classad)
 	{
-		tmp = my_classad->Lookup(adName);
+		tmp = my_classad->LookupExpr(adName);
 		if(tmp) {
 			int result = tmp->EvalTree(my_classad, target_classad, val);
 			dprintResult(this, val);
@@ -423,7 +438,7 @@ int Variable::_EvalTreeSimple( const char *adName, const AttrList *my_classad, c
 
 	if(!restrict_search && target_classad)
 	{
-		tmp = target_classad->Lookup(adName);
+		tmp = target_classad->LookupExpr(adName);
 		if(tmp) {
 			int result = tmp->EvalTree(target_classad, my_classad, val);
 			dprintResult(this, val);

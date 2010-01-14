@@ -80,7 +80,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				//   these older schedds. This used to be done inside
 				//   the ClassAd library.
 			if ( !strcmp( ad->GetMyTypeName(), SCHEDD_ADTYPE ) &&
-				 !ad->Lookup( ATTR_NUM_USERS ) ) {
+				 !ad->LookupExpr( ATTR_NUM_USERS ) ) {
 				ad->SetMyTypeName( SUBMITTER_ADTYPE );
 			}
 			switch (ppStyle) {

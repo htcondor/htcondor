@@ -309,7 +309,7 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\xml_classads.obj"
+			RelativePath="$(OutDir)\condor_xml_classads.obj"
 			>
 		</File>
 	</Files>

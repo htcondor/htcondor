@@ -2024,10 +2024,8 @@ TESTCLASS(lib_shared_port_van,full)
 TESTCLASS(lib_shared_port_van,quicknolink)
 #endif
 
-lib_eventlog_build.exe : lib_eventlog_base.cpp
-	$(CPlusPlus) $< -ggdb -DLIBAPI_ONLY \
-	-I ../release_dir/include ../release_dir/lib/libcondorapi.a \
-	-lc -ldl -o $@
+lib_eventlog_build.exe : lib_eventlog_base.o
+	$(CPlusPlus) -o $@ $< ../release_dir/lib/libcondorapi.a $(TEST_LDFLAGS)
 
 
 /************************************************************************

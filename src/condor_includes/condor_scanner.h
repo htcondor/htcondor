@@ -26,6 +26,16 @@
 #ifndef _SCANNER_H_
 #define _SCANNER_H_
 
+#if !defined(WANT_OLD_CLASSADS)
+
+#include "compat_classad.h"
+#include "compat_classad_list.h"
+#include "compat_classad_util.h"
+using namespace compat_classad;
+
+#else
+
+
 #define MAXVARNAME 256
 
 #define USE_NEW_SCANNER
@@ -62,4 +72,7 @@ class Token
 
 extern	void		Scanner(const char *&, Token&);
 
-#endif
+
+#endif /* !defined(WANT_OLD_CLASSADS) */
+
+#endif /* _SCANNER_H */

@@ -816,17 +816,14 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
-		expr = jad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
+		expr = jad->LookupExpr(ATTR_TRANSFER_OUTPUT_REMAPS);
 		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
-			char *remap_buf = NULL;
-			ASSERT( expr->RArg() );
-			expr->RArg()->PrintToNewStr(&remap_buf);
+			const char *remap_buf = ExprTreeToString( expr );
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
-			free(remap_buf);
 		}
-		else if(jad->Lookup(new_attr_value)) {
+		else if(jad->LookupExpr(new_attr_value)) {
 				// SUBMIT_TransferOutputRemaps is defined, but
 				// TransferOutputRemaps is not; disable the former,
 				// so that when somebody fetches the sandbox, nothing
@@ -1382,17 +1379,14 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
-		expr = ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
+		expr = ad->LookupExpt(ATTR_TRANSFER_OUTPUT_REMAPS);
 		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
-			char *remap_buf = NULL;
-			ASSERT( expr->RArg() );
-			expr->RArg()->PrintToNewStr(&remap_buf);
+			const char *remap_buf = ExprTreeToString( expr );
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
-			free(remap_buf);
 		}
-		else if(ad->Lookup(new_attr_value)) {
+		else if(ad->LookupExpr(new_attr_value)) {
 				// SUBMIT_TransferOutputRemaps is defined, but
 				// TransferOutputRemaps is not; disable the former,
 				// so that when somebody fetches the sandbox, nothing

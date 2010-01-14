@@ -959,22 +959,16 @@ MPIShadow::handleJobRemoval( int sig ) {
 void
 MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
-	ExprTree *tree = NULL, *rhs = NULL, *lhs = NULL;
+	ExprTree *tree = NULL;
 	char node[9];
+	const char *lhstr, *rhstr;
 
 	sprintf( node, "%d", nodenum );
 
 	ad->ResetExpr();
-	while( (tree = ad->NextExpr()) ) {
-		MyString rhstr;
-		MyString lhstr;
-		if( (lhs = tree->LArg()) ) {
-			lhs->PrintToStr (lhstr);
-		}
-		if( (rhs = tree->RArg()) ) {
-			rhs->PrintToStr (rhstr);
-		}
-		if( !lhs || !rhs ) {
+	while( ad->NextExpr(lhstr, tree) ) {
+		rhstr = ExprTreeToString(tree);
+		if( !lhstr || !rhstr ) {
 			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;
 		}
@@ -982,9 +976,9 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 		MyString strRh(rhstr);
 		if (strRh.replaceString("#MpInOdE#", node))
 		{
-			ad->AssignExpr(lhstr.Value(), strRh.Value());
+			ad->AssignExpr(lhstr, strRh.Value());
 			dprintf( D_FULLDEBUG, "Replaced $(NODE), now using: %s = %s\n", 
-					 lhstr.Value(), strRh.Value() );
+					 lhstr, strRh.Value() );
 		}
 	}	
 }

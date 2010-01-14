@@ -20,8 +20,10 @@
 #ifndef CONDOR_WORKLOAD_H
 #define CONDOR_WORKLOAD_H
 
+#include "condor_common.h"
+#include "condor_classad.h"
+
 class MyString;
-class ClassAd;
 class StringList;
 
 // This class provides an api which represents a workload from a single

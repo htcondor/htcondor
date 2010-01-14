@@ -147,14 +147,11 @@ int main( int argc, char *argv[] )
 	}
 
 	// If there's no "MyAddress", generate one..
-	ExprTree *tree = ad->Lookup( ATTR_MY_ADDRESS );
 	MyString tmp = "";
-	if ( tree ) {
-		tmp = ((MyString *)tree->RArg())->Value();
-	}
+	ad->LookupString( ATTR_MY_ADDRESS, tmp );
 	if ( tmp.Length() == 0 ) {
-		tmp.sprintf( "%s = \"<%s:0>\"", ATTR_MY_ADDRESS, my_ip_string() );
-		ad->Insert( tmp.Value() );
+		tmp.sprintf( "<%s:0>", my_ip_string() );
+		ad->Assign( ATTR_MY_ADDRESS, tmp.Value() );
 	}
 
 	CollectorList * collectors;

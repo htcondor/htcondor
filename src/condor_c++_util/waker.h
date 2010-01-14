@@ -24,7 +24,8 @@
  * Forward declarations
  ***************************************************************/
 
-class ClassAd;
+#include "condor_classad.h"
+//class ClassAd;
 
 /***************************************************************
  * Base Waker class

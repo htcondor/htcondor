@@ -1892,7 +1892,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			else {
 					// we did not authenticate peer, so this attribute
 					// should not be defined
-				ASSERT( !m_auth_info.Lookup( ATTR_SEC_USER ) );
+				ASSERT( !m_auth_info.LookupExpr( ATTR_SEC_USER ) );
 			}
 			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_TRIED_AUTHENTICATION );
 
@@ -2522,10 +2522,10 @@ SecMan::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fq
 
 bool
 SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
-	ExprTree *e = source.Lookup(attr);
+	ExprTree *e = source.LookupExpr(attr);
 	if (e) {
-		ExprTree *cp = e->DeepCopy();
-		dest.Insert(cp);
+		ExprTree *cp = e->Copy();
+		dest.Insert(attr,cp);
 		return true;
 	} else {
 		return false;
@@ -2534,16 +2534,12 @@ SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
 
 bool
 SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source, const char *from_attr ) {
-	ExprTree *e = source.Lookup(from_attr);
+	ExprTree *e = source.LookupExpr(from_attr);
 	if (!e) {
 		return false;
 	}
 
-	ASSERT(e->MyType() == LX_ASSIGN && e->RArg());
-	char *buf = NULL;
-	e->RArg()->PrintToNewStr(&buf);
-	bool retval = dest.AssignExpr(to_attr,buf) != 0;
-	free(buf);
+	bool retval = dest.Insert(to_attr, e->Copy()) != 0;
 	return retval;
 }
 
@@ -2932,15 +2928,15 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 
 	session_info += "[";
 	exp_policy.ResetExpr();
+	const char *name;
 	ExprTree *elem;
-	while( (elem=exp_policy.NextExpr()) ) {
+	while( exp_policy.NextExpr(name, elem) ) {
 			// In the following, we attempt to avoid any spaces in the
 			// result string.  However, no code should depend on this.
-		session_info += ((Variable*)elem->LArg())->Name();
+		session_info += name;
 		session_info += "=";
 
-        char *line = NULL;
-        elem->RArg()->PrintToNewStr(&line);
+        const char *line = ExprTreeToString(elem);
 
 			// none of the ClassAd values should ever contain ';'
 			// that makes things easier in ImportSecSessionInfo()
@@ -2948,8 +2944,6 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 
 		session_info += line;
 		session_info += ";";
-
-		free(line);
     }
 	session_info += "]";
 

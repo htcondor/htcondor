@@ -25,6 +25,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_ast.h"
+#include "parser_internal.h"
 #include "condor_attrlist.h"
 #include "condor_attributes.h"
 #include "iso_dates.h"
@@ -120,9 +121,8 @@ AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 {
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
+	chainedAd = NULL;
 	inside_insert = false;
-	chainedAttrs = NULL;
     tail = NULL;
     ptrExpr = NULL;
     ptrName = NULL;
@@ -140,9 +140,8 @@ AttrList::AttrList(AttrListList* assocList) :
 {
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
+	chainedAd = NULL;
 	inside_insert = false;
-	chainedAttrs = NULL;
     tail = NULL;
     ptrExpr = NULL;
     ptrName = NULL;
@@ -179,8 +178,7 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
     exprList 		= NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	inside_insert = false;
-	chainedAttrs = NULL;
-	chained_hash = NULL;
+	chainedAd = NULL;
     associatedList 	= NULL;
     tail 			= NULL;
     ptrExpr 		= NULL;
@@ -236,118 +234,6 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 			empty = FALSE;
 		}
 	}
-	ClearAllDirtyFlags();
-	return;
-}
-
-//
-// Constructor of AttrList class, read from a string.
-// The character 'delimitor' passed in or end of string delimits an expression,
-// end of string delimits a AttrList input.
-// If there are only white spaces between the last delimitor and the end of 
-// string, they are to be ignored, no parse error.
-//
-AttrList::AttrList(const char *AttrLists, char delimitor) : AttrListAbstract(ATTRLISTENTITY)
-{
-    ExprTree *tree;
-
-    exprList = NULL;
-	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
-	inside_insert = false;
-	chainedAttrs = NULL;
-    associatedList = NULL;
-    tail = NULL;
-    ptrExpr = NULL;
-    ptrName = NULL;
-    ptrExprInChain = false;
-    ptrNameInChain = false;
-
-    char c;
-    int buffer_size = 10;                    // size of the input buffer.
-    int current = 0;                         // current position in buffer. 
-    char *buffer = new char[buffer_size];
-    if(!buffer)
-    {
-		EXCEPT("Warning : you ran out of memory");
-    }
-    int i=0;
-    while(isspace(c = AttrLists[i]))
-    {
-        i++;                                 // skip white spaces.
-    }    
-
-    while(1)                                 // loop character by character 
-    {                                        // to the end of the stirng to
-        c = AttrLists[i];                    // construct a AttrList object.
-        if(c == delimitor || c == '\0')                 
-		{                                    // end of an expression.
-			if(current)
-			{                                // if expression not empty.
-				buffer[current] = '\0';
-				if(!Parse(buffer, tree))
-				{
-					if(tree->MyType() == LX_ERROR)
-					{
-						EXCEPT("Warning : you ran out of memory");
-					}
-				}
-				else
-			   	{
-					EXCEPT("Parse error in the input string");
-				}
-				Insert(tree);
-			}
-			delete []buffer;
-			if(c == '\0')
-			{                                // end of input.
-				break;
-			}
-			i++;                             // look at the next character.
-			while(isspace(c = AttrLists[i]))
-			{
-				i++;                         // skip white spaces.
-			}
-            if((c = AttrLists[i]) == '\0')
-			{
-				break;                       // end of input.
-			}
-			i--;
-			buffer_size = 10;                // process next expression.
-			current = 0;                  
-			buffer = new char[buffer_size];
-			if(!buffer)
-			{
-				EXCEPT("Warning: you ran out of memory");
-			}	    
-		}
-		else
-		{                                    // fill in the buffer.
-			if(current >= (buffer_size - 1))        
-			{
-				int  old_buffer_size;
-				char *new_buffer;
-				
-				old_buffer_size = buffer_size;
-				buffer_size *= 2;
-				// Can you believe, someone called realloc on 
-				// a buffer that had been new-ed? Now we call
-				// new and copy it over with memcpy.--Alain, 23-Sep-2001
-				new_buffer = new char[buffer_size];
-				if(!new_buffer)
-				{
-					EXCEPT("Warning: you ran out of memory");
-				}
-				memset(new_buffer, 0, buffer_size);
-				memcpy(new_buffer, buffer, old_buffer_size * sizeof(char));
-				delete [] buffer;
-				buffer = new_buffer;
-			}
-			buffer[current] = c;
-			current++;
-		}
-		i++;
-    }
 	ClearAllDirtyFlags();
 	return;
 }
@@ -466,9 +352,8 @@ AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
     ptrNameInChain = false;
 	exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
+	chainedAd = NULL;
 	inside_insert = false;
-	chainedAttrs = NULL;
 
 	for(i = 0; i < context->len; i++)
 	{
@@ -577,8 +462,7 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
         this->tail = NULL;
     }
 
-	this->chainedAttrs = old.chainedAttrs;
-	chained_hash = old.chained_hash;
+	this->chainedAd = old.chainedAd;
 	this->inside_insert = false;
     this->ptrExpr = NULL;
     this->ptrName = NULL;
@@ -597,7 +481,7 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
 AttrList::~AttrList()
 {
 		// Delete all of the attributes in this list
-	clear();
+	Clear();
 	
 		// Free memory associated with the hash table
 	if ( hash ) {
@@ -617,7 +501,7 @@ AttrList& AttrList::operator=(const AttrList& other)
 {
 	if (this != &other) {
 		// First delete our old stuff.
-		clear();
+		Clear();
 
 		if ( !this->hash ) {
 			// should not happen, but just in case...
@@ -651,8 +535,7 @@ AttrList& AttrList::operator=(const AttrList& other)
 			this->tail = NULL;
 		}
 
-		this->chainedAttrs = other.chainedAttrs;
-		this->chained_hash = other.chained_hash;
+		this->chainedAd = other.chainedAd;
 		this->inside_insert = false;
 		this->ptrExpr = NULL;
 		this->ptrName = NULL;
@@ -690,6 +573,23 @@ int AttrList::Insert(const char* str, bool check_for_dups)
 		delete tree;
 	}
 	return result;
+}
+
+int AttrList::Insert(const char *str, ExprTree *expr, bool check_for_dups)
+{
+	ExprTree *lhs;
+	ExprTree *assign;
+	if ( str == NULL || expr == NULL || expr->MyType() == LX_ASSIGN ||
+		 !IsValidAttrName( str ) ) {
+		return FALSE;
+	}
+	if ( ParseClassAdRvalExpr( str, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
+		return FALSE;
+	}
+	assign = new AssignOp( lhs, expr );
+	ASSERT( Insert( assign, check_for_dups ) );
+	return TRUE;
 }
 
 int AttrList::Insert(ExprTree* expr, bool check_for_dups)
@@ -787,8 +687,8 @@ int AttrList::Delete(const char* name)
 
 	// see this attr exists in our chained
 	// ad; if so, must insert the attr into this ad as UNDEFINED.
-	if ( chainedAttrs && !inside_insert) {
-		for (cur = *chainedAttrs; cur; cur = cur->next ) {
+	if ( chainedAd && !inside_insert) {
+		for (cur = chainedAd->exprList; cur; cur = cur->next ) {
 			if(!strcasecmp(name, cur->name))
 			// expression to be deleted is found
 			{
@@ -854,19 +754,18 @@ void AttrList::ClearAllDirtyFlags()
 }
 
 void
-AttrList::ChainCollapse(bool with_deep_copy)
+AttrList::ChainCollapse()
 {
 	ExprTree *tmp;
 
-	if (!chainedAttrs) {
+	if (!chainedAd) {
 		// no chained attributes, we're done
 		return;
 	}
 
-	AttrListElem* chained = *chainedAttrs;
+	AttrListElem* chained = chainedAd->exprList;
 	
-	chainedAttrs = NULL;
-	chained_hash = NULL;	// do not delete chained_hash here!
+	chainedAd = NULL;	// do not delete chainedAd here!
 
 	while (chained && (tmp=chained->tree)) {
 			// Move the value from our chained ad into our ad ONLY
@@ -875,11 +774,11 @@ AttrList::ChainCollapse(bool with_deep_copy)
 			// This is because we want attributes in our ad to have
 			// precedent over the chained (cluster) ad when we collapse.
 		if ( !Lookup(tmp->LArg()) ) {
-			if ( with_deep_copy ) {
-				tmp = tmp->DeepCopy();
-				ASSERT(tmp);
-			}
-			Insert(tmp,false);	// no need for Insert() to check for dups
+			
+            tmp = tmp->DeepCopy();
+			ASSERT(tmp);
+			
+            Insert(tmp,false);	// no need for Insert() to check for dups
 		}
 		chained = chained->next;
 	}
@@ -890,9 +789,9 @@ ExprTree* AttrList::NextExpr()
 {
 	// After iterating through all the exprs in this ad,
 	// get all the exprs in our chained ad as well.
-    if (!this->ptrExpr && chainedAttrs && !ptrExprInChain ) {
+    if (!this->ptrExpr && chainedAd && !ptrExprInChain ) {
 		ptrExprInChain = true;
-		ptrExpr = *chainedAttrs;
+		ptrExpr = chainedAd->exprList;
 	}
     if(!this->ptrExpr)
     {
@@ -904,6 +803,17 @@ ExprTree* AttrList::NextExpr()
 		ptrExpr = ptrExpr->next;
 		return tmp;
     }
+}
+
+bool AttrList::NextExpr( const char *&name, ExprTree *&value ) {
+	ExprTree *assign = NextExpr();
+	if ( assign ) {
+		name = ((Variable *)assign->LArg())->Name();
+		value = assign->RArg();
+		return true;
+	} else {
+		return false;
+	}
 }
 
 ExprTree* AttrList::NextDirtyExpr()
@@ -925,6 +835,17 @@ ExprTree* AttrList::NextDirtyExpr()
 		ptrExpr = ptrExpr->next;
 	}
 	return expr;
+}
+
+bool AttrList::NextDirtyExpr( const char *&name, ExprTree *&value ) {
+	ExprTree *assign = NextDirtyExpr();
+	if ( assign ) {
+		name = ((Variable *)assign->LArg())->Name();
+		value = assign->RArg();
+		return true;
+	} else {
+		return false;
+	}
 }
 
 char* AttrList::NextName()
@@ -949,9 +870,9 @@ const char* AttrList::NextNameOriginal()
 
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
-    if (!this->ptrName && chainedAttrs && !ptrNameInChain ) {
+    if (!this->ptrName && chainedAd && !ptrNameInChain ) {
 		ptrNameInChain = true;
-		ptrName = *chainedAttrs;
+		ptrName = chainedAd->exprList;
 	}
     if (!this->ptrName) {
 		name = NULL;
@@ -994,6 +915,16 @@ ExprTree* AttrList::Lookup(char* name) const
 	return Lookup ((const char *) name);
 }
 
+ExprTree* AttrList::LookupExpr(const char* name) const
+{
+	ExprTree *expr = Lookup(name);
+	if ( expr ) {
+		return expr->RArg();
+	} else {
+		return NULL;
+	}
+}
+
 ExprTree* AttrList::Lookup(const char* name) const
 {
     AttrListElem*	tmpNode = NULL;
@@ -1005,8 +936,8 @@ ExprTree* AttrList::Lookup(const char* name) const
 		return tmpNode->tree;
 	}
 
-	if (chained_hash && !inside_insert) {
-		chained_hash->lookup(name, tmpNode);
+	if (chainedAd && !inside_insert) {
+		chainedAd->hash->lookup(name, tmpNode);
 		if (tmpNode) {
 			return tmpNode->tree;
 		}
@@ -1025,8 +956,8 @@ AttrListElem *AttrList::LookupElem(const char *name) const
 		return theElem;
 	}
 
-	if (chained_hash && !inside_insert) {
-		chained_hash->lookup(name, theElem);
+	if (chainedAd && !inside_insert) {
+		chainedAd->hash->lookup(name, theElem);
 	}
 
     return theElem;
@@ -1523,8 +1454,8 @@ int AttrList::fPrint(FILE* f,StringList *attr_white_list)
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
-	if ( chainedAttrs ) {
-		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+	if ( chainedAd ) {
+		for(tmpElem = chainedAd->exprList; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
 			if( tmpElem->tree->invisible ) {
@@ -1571,8 +1502,8 @@ int AttrList::sPrint(MyString &output)
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
-	if ( chainedAttrs ) {
-		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+	if ( chainedAd ) {
+		for(tmpElem = chainedAd->exprList; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
 			if( tmpElem->tree->invisible ) {
@@ -1624,8 +1555,8 @@ AttrList::dPrint( int level )
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
-	if ( chainedAttrs ) {
-		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+	if ( chainedAd ) {
+		for(tmpElem = chainedAd->exprList; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
 			if( tmpElem->tree->invisible ) {
@@ -2007,7 +1938,7 @@ void AttrListList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_wh
 }
 
 // shipping functions for AttrList -- added by Lei Cao
-int AttrList::put(Stream& s)
+int AttrList::putAttrList(Stream& s)
 {
     AttrListElem*   elem;
     int             numExprs = 0;
@@ -2021,9 +1952,9 @@ int AttrList::put(Stream& s)
         numExprs++;
 	}
 
-	if ( chainedAttrs ) {
+	if ( chainedAd ) {
 		// now count up all the chained ad attrs
-		for(elem = *chainedAttrs; elem; elem = elem->next) {
+		for(elem = chainedAd->exprList; elem; elem = elem->next) {
 			if( elem->tree->invisible ) {
 				continue;
 			}
@@ -2049,10 +1980,10 @@ int AttrList::put(Stream& s)
 				// copy chained attrs first, so if there are
 				// duplicates, the get() method will overide the attrs
 				// from the chained ad with attrs from this ad.
-			if( !chainedAttrs ) {
+			if( !chainedAd ) {
 				continue;
 			}
-			elem = *chainedAttrs;
+			elem = chainedAd->exprList;
 		}
 		else {
 			elem = exprList;
@@ -2103,10 +2034,10 @@ int AttrList::put(Stream& s)
 
 
 void
-AttrList::clear( void )
+AttrList::Clear( void )
 {
 		// First, unchain ourselves, if we're a chained classad
-	unchain();
+	Unchain();
 
 		// Clear out hashtable of attributes. Note we cannot
 		// delete the hash table here - we can do that safely
@@ -2124,7 +2055,6 @@ AttrList::clear( void )
     }
 	exprList = NULL;
 
-	chained_hash = NULL;	// do not delete chained_hash here!
 	tail = NULL;
 }
 
@@ -2225,7 +2155,7 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 }
 
 int
-AttrList::initFromStream(Stream& s)
+AttrList::initAttrListFromStream(Stream& s)
 {
 	char const *line;
     int numExprs;
@@ -2234,7 +2164,7 @@ AttrList::initFromStream(Stream& s)
 	succeeded = 1;
 
 	// First, clear our ad so we start with a fresh ClassAd
-	clear();
+	Clear();
 	if ( !hash ) {
 		// is hash ever NULL? don't think so, but just in case.
 		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
@@ -2289,7 +2219,7 @@ AttrList::initFromString(char const *str,MyString *err_msg)
 	bool succeeded = true;
 
 	// First, clear our ad so we start with a fresh ClassAd
-	clear();
+	Clear();
 	if ( !hash ) {
 		// is hash ever NULL? don't think so, but just in case.
 		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
@@ -2337,26 +2267,19 @@ void AttrList::ChainToAd(AttrList *ad)
 		return;
 	}
 
-	chainedAttrs = &( ad->exprList );
-	chained_hash = ad->hash;
+	chainedAd = ad;
 }
 
 
-ChainedPair
-AttrList::unchain( void )
+void
+AttrList::Unchain( void )
 {
-	ChainedPair p;
-	p.exprList = chainedAttrs;
-	p.exprHash = chained_hash;
-	chainedAttrs = NULL;
-	chained_hash = NULL;
-	return p;
+	chainedAd = NULL;
 }
 
-void AttrList::RestoreChain(const ChainedPair &p)
+AttrList *AttrList::GetChainedParentAd()
 {
-	this->chainedAttrs = p.exprList;
-	this->chained_hash = p.exprHash;
+	return chainedAd;
 }
 
 /* This is used for %s = %s style constructs */
@@ -2555,6 +2478,7 @@ bool AttrList::SetInvisible(char const *name,bool invisible)
 	if( tree ) {
 		bool old_state = tree->invisible;
 		tree->invisible = invisible;
+		tree->RArg()->invisible = invisible;
 		return old_state;
 	}
 	return invisible;

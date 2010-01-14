@@ -134,7 +134,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 			candidate->LookupString (ATTR_REMOTE_USER, remoteUser)) 
 		{
 				// check if we are preempting for rank or priority
-			if( rankCondStd->EvalTree( candidate, &request, &result ) && 
+			if( EvalExprTree( rankCondStd, candidate, &request, &result ) &&
 					result.type == LX_INTEGER && result.i == TRUE ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
@@ -147,14 +147,14 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
+					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) {
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
+				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,&result)&&
 						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
 					continue;
@@ -188,7 +188,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
 			if( PreemptionRank &&
-			   		PreemptionRank->EvalTree(candidate,&request,&result) &&
+				EvalExprTree(PreemptionRank,candidate,&request,&result) &&
 					result.type == LX_FLOAT) {
 				candidatePreemptRankValue = result.f;
 			} else if( PreemptionRank ) {
@@ -341,7 +341,7 @@ fetchSubmittorPrios()
 
 	sock->eom();
 	sock->decode();
-	if( !al.initFromStream(*sock) || !sock->end_of_message() ) {
+	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );

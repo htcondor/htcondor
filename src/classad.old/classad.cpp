@@ -107,14 +107,6 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
 	updateBoundVariables();
 }
 
-ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
-{
-	myType = NULL;
-	targetType = NULL;
-
-	updateBoundVariables();
-}
-
 void
 ClassAd::updateBoundVariables() {
     ExprTree *tree;
@@ -505,7 +497,7 @@ int ClassAd::put(Stream& s)
 {
 
 	// first send over all the attributes
-	if ( !AttrList::put(s) ) {
+	if ( !AttrList::putAttrList(s) ) {
 		return 0;
 	}
 
@@ -537,13 +529,13 @@ int ClassAd::put(Stream& s)
 
 
 void
-ClassAd::clear( void )
+ClassAd::Clear( void )
 {
 		// First, clear out everything in our AttrList
-	AttrList::clear();
+	AttrList::Clear();
 
 		// Now, clear out our Type fields, since those are specific to
-		// ClassAd and aren't handled by AttrList::clear().
+		// ClassAd and aren't handled by AttrList::Clear().
     if( myType ) {
         delete myType;
 		myType = NULL;
@@ -573,7 +565,7 @@ ClassAd::initFromStream(Stream& s)
 
 		// First, initialize ourselves from the stream.  This will
 		// delete any existing attributes in the list...
-	if ( !AttrList::initFromStream(s) ) {
+	if ( !AttrList::initAttrListFromStream(s) ) {
 		return 0;
 	}
 
@@ -602,32 +594,6 @@ ClassAd::initFromStream(Stream& s)
     return 1; 
 }
 
-
-void ClassAd::
-ExchangeExpressions (ClassAd *ad)
-{
-    AttrListElem *tmp1;
-    AttrListList *tmp2;
-    int           tmp3;
-	HashTable<YourString,AttrListElem *> *tmpHash;
-
-    // exchange variables which maintain the attribute list
-    // see condor_attrlist.h  --RR
-
-#   define SWAP(a,b,t) {t=a; a=b; b=t;}
-
-    SWAP(associatedList, ad->associatedList, tmp2); // this is AttrListList*
-    SWAP(exprList, ad->exprList, tmp1);             // these are AttrListElem*
-	SWAP(hash, ad->hash, tmpHash);
-    SWAP(tail, ad->tail, tmp1);
-    SWAP(ptrExpr, ad->ptrExpr, tmp1);
-    SWAP(ptrName, ad->ptrName, tmp1);
-
-    // undefine macro to decrease name-space pollution
-#   undef SWAP
-
-    return;
-}
 
 ClassAd* ClassAdList::Lookup(const char* name)
 {
@@ -778,12 +744,12 @@ ClassAd* ClassAd::FindNext()
 
 ExprTree *reqsTree = 0;
 
-bool IsAMatch(const ClassAd *ad1, const ClassAd *ad2)
+bool IsAMatch(ClassAd *ad1, ClassAd *ad2)
 {
 	return IsAHalfMatch(ad1, ad2) && IsAHalfMatch(ad2, ad1);
 }
 
-bool IsAHalfMatch(const ClassAd *my, const ClassAd *target)
+bool IsAHalfMatch(ClassAd *my, ClassAd *target)
 {
 	EvalResult *val;	
 	

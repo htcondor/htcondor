@@ -26,16 +26,17 @@ toNewClassAd( ClassAd *ad )
 {
 	classad::ClassAdParser parser;
 	classad::ClassAd *newAd;
-	char *str;
+	const char *name;
 	ExprTree* expr;
 
 		// add brackets and semicolons to old ClassAd and parse
  	std::string buffer = "[";
 	ad->ResetExpr( );
-	while( ( expr = ad->NextExpr( ) ) ) {
-		str = NULL;
-		expr->PrintToNewStr( &str );
-		buffer += std::string( str ) + ";";
+	while( ad->NextExpr( name, expr ) ) {
+		buffer += name;
+		buffer += "=";
+		buffer += ExprTreeToString( expr );
+		buffer += ";";
 	}
 	buffer += "]";
 
@@ -45,14 +46,10 @@ toNewClassAd( ClassAd *ad )
 			// ad didn't parse so we try quoting atttibute names
 		buffer = "[";
 		ad->ResetExpr( );
-		while( ( expr = ad->NextExpr( ) ) ) {
+		while( ad->NextExpr( name, expr ) ) {
 			buffer += "'";
-			str = NULL;
-			expr->LArg( )->PrintToNewStr( &str );
-			buffer += std::string( str ) + "' = ";
-			str = NULL;
-			expr->RArg( )->PrintToNewStr( &str );
-			buffer += std::string( str ) + ";";
+			buffer += std::string( name ) + "' = ";
+			buffer += std::string( ExprTreeToString( expr ) ) + ";";
 		}
 		buffer += "]";
 
@@ -77,16 +74,12 @@ toOldClassAd( classad::ClassAd * ad )
     classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
 	std::string rhstring;
-	char assign[ATTRLIST_MAX_EXPRESSION];
-	ExprTree *tree;
 	for( adIter = ad->begin( ); adIter != ad->end( ); adIter++ ) {
 		if( strcasecmp( "MyType", adIter->first.c_str( ) ) != 0 &&
 			strcasecmp( "TargetType", adIter->first.c_str( ) ) != 0 ) {
 			rhstring = "";
 			unp.Unparse( rhstring, adIter->second );
-			strcpy( assign, ( adIter->first + " = " + rhstring ).c_str( ));
-			Parse( assign, tree );
-			oldAd->Insert( tree );
+			oldAd->AssignExpr( adIter->first.c_str(), rhstring.c_str() );
 		}
 	}
 

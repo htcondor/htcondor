@@ -1123,7 +1123,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		// NOTE: LastHeardFrom will already be in ad if we are loading
 		// adds from the offline classad collection, so don't mess with
 		// it if it is already there
-	if( !ad->Lookup(ATTR_LAST_HEARD_FROM) ) {
+	if( !ad->LookupExpr(ATTR_LAST_HEARD_FROM) ) {
 		(void) time (&now);
 		if (now == (time_t) -1)
 		{
@@ -1164,12 +1164,17 @@ updateClassAd (CollectorHashTable &hashTable,
 		collectorStats->update( label, old_ad, new_ad );
 
 		// Now, finally, store the new ClassAd
-		old_ad->ExchangeExpressions (new_ad);
+		if (hashTable.remove(hk) == -1) {
+			EXCEPT( "Error removing ad" );
+		}
+		if (hashTable.insert(hk, new_ad) == -1) {
+			EXCEPT( "Error inserting ad" );
+		}
 
-		delete new_ad;
+		delete old_ad;
 
 		insert = 0;
-		return old_ad;
+		return new_ad;
 	}
 }
 

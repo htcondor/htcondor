@@ -255,4 +255,9 @@ END_C_DECLS
 /* fix [f]stat on Windows */
 #include "stat.WINDOWS.h"
 
+// For now, always use old ClassAds
+#if !defined( WANT_OLD_CLASSADS )
+# define WANT_OLD_CLASSADS 1
+#endif
+
 #endif /* CONDOR_SYS_NT_H */

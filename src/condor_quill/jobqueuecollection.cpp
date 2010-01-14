@@ -523,8 +523,8 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	char	tmp_line_str1[MAX_FIXED_SQL_STR_LENGTH];
 	char    tmp_line_str2[MAX_FIXED_SQL_STR_LENGTH];
 
-	AssignOp*	expr;		// For Each Attribute in ClassAd
-	Variable* 	nameExpr;	// For Attribute Name
+	const char *name;
+	ExprTree *expr;
 	String* 	valExpr;	// For Value
 
 
@@ -556,9 +556,8 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	
 	ad->ResetExpr(); // for iteration initialization
 
-	while((expr = (AssignOp*)(ad->NextExpr())) != NULL) {
-	  nameExpr = (Variable*)expr->LArg(); // Name Express Tree
-	  valExpr = (String*)expr->RArg();	// Value Express Tree
+	while( ad->NextExpr(name, expr) ) {
+	  valExpr = (String*)expr;	// Value Express Tree
 	  val = valExpr->Value();	      		// Value
 	  if (val == NULL) {
 		  break;
@@ -571,23 +570,23 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	  //line_str = (char*)malloc(strlen(nameExpr->Name()) 
 	  //			   + strlen(val) + strlen(cid) 
 	  //			   + strlen(pid) + strlen("\t\t\t\n") + 1);
-	  if(strcmp(nameExpr->Name(),"ClusterId") == 0 ||
-	     strcmp(nameExpr->Name(),"ProcId") == 0) {
+	  if(strcmp(name,"ClusterId") == 0 ||
+	     strcmp(name,"ProcId") == 0) {
 		free(val);
 	    continue;
 	  }
-	  else if(strcmp(nameExpr->Name(),"QDate") == 0 ||
-		  strcmp(nameExpr->Name(),"RemoteWallClockTime") == 0 ||
-		  strcmp(nameExpr->Name(),"RemoteUserCpu") == 0 ||
-		  strcmp(nameExpr->Name(),"RemoteSysCpu") == 0 ||
-		  strcmp(nameExpr->Name(),"ImageSize") == 0 ||
-		  strcmp(nameExpr->Name(),"JobStatus") == 0 ||
-		  strcmp(nameExpr->Name(),"JobPrio") == 0 ||
-		  strcmp(nameExpr->Name(),"CompletionDate") == 0) {
+	  else if(strcmp(name,"QDate") == 0 ||
+		  strcmp(name,"RemoteWallClockTime") == 0 ||
+		  strcmp(name,"RemoteUserCpu") == 0 ||
+		  strcmp(name,"RemoteSysCpu") == 0 ||
+		  strcmp(name,"ImageSize") == 0 ||
+		  strcmp(name,"JobStatus") == 0 ||
+		  strcmp(name,"JobPrio") == 0 ||
+		  strcmp(name,"CompletionDate") == 0) {
 	    sprintf(tmp_line_str2, 
 				"UPDATE History_Horizontal SET \"%s\" = %s "
 				"WHERE cid=%s AND pid=%s AND \"%s\" IS NULL;",  
-				nameExpr->Name(), val,cid,pid,nameExpr->Name());
+				name, val,cid,pid,name);
 	    historyad_hor_str = (char*)realloc(historyad_hor_str, 
 										   strlen(historyad_hor_str) + 
 										   strlen(tmp_line_str2) + 1);
@@ -597,13 +596,13 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	    strcat(historyad_hor_str, tmp_line_str2);		
 	  }
 
-	  else if(strcmp(nameExpr->Name(),"Owner") == 0 ||
-		  strcmp(nameExpr->Name(),"Cmd") == 0 ||
-		  strcmp(nameExpr->Name(),"LastRemoteHost") == 0) {
+	  else if(strcmp(name,"Owner") == 0 ||
+		  strcmp(name,"Cmd") == 0 ||
+		  strcmp(name,"LastRemoteHost") == 0) {
 	    sprintf(tmp_line_str2, 
 				"UPDATE History_Horizontal SET \"%s\" = '%s' "
 				"WHERE cid=%s AND pid=%s AND \"%s\" IS NULL;",  
-				nameExpr->Name(), val,cid,pid, nameExpr->Name());
+				name, val,cid,pid, name);
 	    historyad_hor_str = (char*)realloc(historyad_hor_str, 
 					       strlen(historyad_hor_str) + strlen(tmp_line_str2) + 1);
 		if(!historyad_hor_str) {
@@ -613,13 +612,13 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	  }
 	  else {
 		char *b = (char *) malloc(MAX_FIXED_SQL_STR_LENGTH + 
-				2 * strlen(nameExpr->Name()) +
+				2 * strlen(name) +
 				strlen(val));
 	    sprintf(b, 
 				"INSERT INTO History_Vertical(cid,pid,attr,val) "
 				"SELECT %s,%s,'%s','%s' WHERE NOT EXISTS(SELECT cid,pid FROM "
 				"History_Vertical where cid=%s and pid=%s and attr='%s');",  
-				cid, pid, nameExpr->Name(), val,cid,pid,nameExpr->Name());
+				cid, pid, name, val,cid,pid,name);
 	    historyad_ver_str = (char*)realloc(historyad_ver_str, 
 										   strlen(historyad_ver_str) + 
 										   strlen(b) + 1);
@@ -759,7 +758,8 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 	int  		value_type; // 1: Number, 
 	double      doubleval = 0;
 
-	AssignOp*	expr;		// For Each Attribute in ClassAd
+	const char *name;
+	ExprTree*	expr;		// For Each Attribute in ClassAd
 	Variable* 	nameExpr;	// For Attribute Name
 	String* 	valExpr;	// For Value
 
@@ -793,17 +793,16 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 	
 	ad->ResetExpr(); // for iteration initialization
 
-	while((expr = (AssignOp*)(ad->NextExpr())) != NULL) {
+	while(ad->NextExpr(name, expr)) {
 
-		nameExpr = (Variable*)expr->LArg(); // Name Express Tree
 		if ( expr->invisible ) {
 			continue;
 		}
-		if ( ClassAd::ClassAdAttributeIsPrivate(nameExpr->Name()) ) {
+		if ( ClassAd::ClassAdAttributeIsPrivate(name) ) {
 				// This hides private stuff like ClaimID.
 			continue;
 		}
-		valExpr = (String*)expr->RArg();	// Value Express Tree
+		valExpr = (String*)expr;	// Value Express Tree
 		val = valExpr->Value();					// Value
 		if (val == NULL) break;
 		
@@ -827,18 +826,18 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 		{
 				// make a COPY line for each attribute
 			if (pid != NULL) { // ProcAd								
-				line_str = (char*)malloc(strlen(nameExpr->Name()) 
+				line_str = (char*)malloc(strlen(name) 
 						 + strlen(val) + strlen(cid) 
 						 + strlen(pid) + strlen("\t\t\t\n") + 1);
 				sprintf(line_str, "%s\t%s\t%s\t%s\n", 
-							cid, pid, nameExpr->Name(), val); 	
+							cid, pid, name, val); 	
 			} 
 			else { // ClusterAd
-				line_str = (char*)malloc(strlen(nameExpr->Name()) 
+				line_str = (char*)malloc(strlen(name) 
 						 + strlen(val) + strlen(cid) 
 						 + strlen("\t\t\n") + 1);
 				sprintf(line_str, "%s\t%s\t%s\n", 
-							cid, nameExpr->Name(), val); 	
+							cid, name, val); 	
 			}
 
 				// concatenate the line to the ClassAd COPY string  

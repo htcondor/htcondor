@@ -20,7 +20,9 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
-class ClassAd;
+#include "condor_common.h"
+#include "condor_classad.h"
+
 class Stream;
 class Resource;
 class StringList;

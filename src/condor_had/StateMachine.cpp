@@ -327,7 +327,7 @@ HADStateMachine::initializeClassAd(void)
 {
 	char	*buffer;
 
-	m_classAd.clear();
+	m_classAd.Clear();
 
     m_classAd.SetMyTypeName(HAD_ADTYPE);
     m_classAd.SetTargetTypeName("");
