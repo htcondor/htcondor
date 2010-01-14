@@ -28,6 +28,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrak #221
+\item The configuration variable
+\MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
+delegations done by Condor.  The value is a boolean and defaults to False,
+which means that when doing delegation Condor will now create a limited proxy
+instead of a full proxy.
+
 % gittrack #1102
 \item A port number defined within \Macro{CONDOR\_VIEW\_HOST} may now use 
   a shared port.
