@@ -49,7 +49,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	}
 	if( _parent ) {
 		r_sub_id = _parent->m_id_dispenser->next();
-		tmp.sprintf_cat( "%d.%d", r_id, r_sub_id );
+		tmp.sprintf_cat( "%d_%d", r_id, r_sub_id );
 	} else {
 		tmp.sprintf_cat( "%d", r_id );
 	}
