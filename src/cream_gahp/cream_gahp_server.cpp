@@ -37,6 +37,26 @@
 using namespace std;
 using namespace glite::ce::cream_client_api::soap_proxy;
 
+#if USE_QUICKLOG
+// Profoundly quick and dirty logging system for debugging
+FILE * tmplog = NULL;
+void quicklog(const char * p)
+{
+	struct tm t;
+	time_t timet = time(0);
+	localtime_r(&timet, &t);
+	if( ! p ) { p = "No message"; }
+	fprintf(tmplog, "%04d-%02d-%02d %02d:%02d:%02d (pid: %d) %s\n", 
+		t.tm_year+1900,
+		t.tm_mon+1,
+		t.tm_mday+1,
+		t.tm_hour+1,
+		t.tm_min+1,
+		t.tm_sec+1,
+		(int)getpid(), p);
+}
+#endif
+
 #define WORKER 6 // Worker threads
 
 #define DEFAULT_TIMEOUT 60
@@ -58,6 +78,20 @@ if (strcasecmp(#x, input_line[0]) == 0) \
 { \
  gahp_printf("E\n"); \
  free_args(input_line); \
+}
+
+struct Request;
+// A function that takes a single Request pointer.
+typedef int(*SingleHandler)(Request *);
+// A function that takes one or more Request pointers.  The list
+// is terminated with a NULL Request pointer.
+typedef int(*BatchHandler)(Request **);
+typedef bool(*RequestCmp)(Request *, Request *);
+
+static void internal_error(const char * p)
+{
+	fprintf(stderr, "FATAL INTERNAL ERROR: %s\n", p);
+	exit(4);
 }
 
 static void
@@ -97,12 +131,14 @@ check_result_wrapper(ResultWrapper& rw)
 void free_args( char ** );
 
 struct Request {
-	Request() { input_line = NULL; handler = NULL; }
+	Request() { input_line = NULL; handler = NULL; bhandler = NULL; requestcomp = NULL; }
 	~Request() { if ( input_line ) free_args( input_line ); }
 
 	char **input_line;
 	string proxy;
-	int (*handler)(Request *);
+	SingleHandler handler;
+	BatchHandler bhandler;
+	RequestCmp requestcomp;
 };
 
 static char *commands_list =
@@ -142,7 +178,7 @@ map<string, string> proxies;
 string sp = " "; // CHANGE THIS
 
 // Mutex requestQueueLock controlls access to requestQueue
-queue<Request *> requestQueue;
+deque<Request *> requestQueue;
 pthread_cond_t requestQueueEmpty = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t requestQueueLock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -159,7 +195,7 @@ char *response_prefix = NULL;
 
 int thread_cream_delegate( Request *req );
 int thread_cream_job_register( Request *req );
-int thread_cream_job_start( Request *req );
+int thread_cream_job_start( Request **req );
 int thread_cream_job_purge( Request *req );
 int thread_cream_job_cancel( Request *req );
 int thread_cream_job_suspend( Request *req );
@@ -288,18 +324,37 @@ void free_args( char **input_line )
 	free(input_line);
 }
 
-void enqueue_request( char **input_line,
-					  int(* handler)(Request *) )
+/* Don't call directly, use enqueue_request or
+enqueue_request_batch */
+void enqueue_request_impl( char **input_line,
+                           SingleHandler shandler,
+                           BatchHandler bhandler,
+						   RequestCmp rhandler)
 {
 	Request *req = new Request();
 	req->input_line = input_line;
 	req->proxy = active_proxy;
-	req->handler = handler;
+	req->handler = shandler;
+	req->bhandler = bhandler;
+	req->requestcomp = rhandler;
 
 	pthread_mutex_lock( &requestQueueLock );
-	requestQueue.push( req );
+	requestQueue.push_back( req );
 	pthread_cond_signal( &requestQueueEmpty );
 	pthread_mutex_unlock( &requestQueueLock );
+}
+
+void enqueue_request( char **input_line,
+					  SingleHandler handler)
+{
+	enqueue_request_impl(input_line, handler, NULL, NULL);
+}
+
+void enqueue_request_batch( char **input_line,
+                            BatchHandler handler,
+							RequestCmp reqcmp)
+{
+	enqueue_request_impl(input_line, NULL, handler, reqcmp);
 }
 
 /* =========================================================================
@@ -502,6 +557,11 @@ int thread_cream_job_register( Request *req )
    CREAM_START: triggers registered jobs.
    ========================================================================= */
 
+bool cmp_cream_job_start(Request * a, Request * b) {
+	// Confirm they share the same service.
+	return (strcmp(a->input_line[2], b->input_line[2]) != 0);
+}
+
 int handle_cream_job_start( char **input_line )
 {
 	int arg_cnt = count_args( input_line );
@@ -526,38 +586,78 @@ int handle_cream_job_start( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request( input_line, thread_cream_job_start );
+	enqueue_request_batch( input_line, thread_cream_job_start, cmp_cream_job_start );
 
 	gahp_printf("S\n");  
 
 	return 0;
 }
 
-int thread_cream_job_start( Request *req )
+int thread_cream_job_start( Request **reqlist )
 {
 	// FIXME: It doesn't appear that the new API supports
 	// operating on all jobs. It also doesn't look like the
 	// GridManager uses this capability. We should disable
 	// the syntax for asking for operating on all jobs
 
-	char *reqid, *service, *jobnum_str, *jobid;
-	string result_line;
+	if(reqlist == NULL) {
+		internal_error("thread_cream_job_start called with NULL pointer\n");
+	}
+	if(reqlist[0] == NULL) {
+		internal_error("thread_cream_job_start called with empty list\n");
+	}
 	
-	process_string_arg( req->input_line[1], &reqid );
-	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &jobnum_str );
+	char *service;
+	process_string_arg( reqlist[0]->input_line[2], &service );
+	string proxy = reqlist[0]->proxy;
+
+	vector<string> reqids;
 	
 	try {
-		if (jobnum_str == NULL) {
-			throw runtime_error("start of all jobs not supported");
-		}
 		vector<JobIdWrapper> jv;
-		int jobnum = atoi( jobnum_str );
-		for ( int i = 0; i < jobnum; i++) {
-			process_string_arg( req->input_line[i+4], &jobid );
-			jv.push_back(JobIdWrapper(jobid,
-			                          service,
-			                          vector<JobPropertyWrapper>()));
+
+		for(size_t j = 0; reqlist[j] != NULL; j++) {
+			Request * req = reqlist[j];
+
+			// Check that all jobs share the same service.
+			// Should not be called with mixed services.
+			char * this_service;
+			process_string_arg( req->input_line[2], &this_service );
+			if(strcmp(this_service, service) != 0) {
+				internal_error("Multiple services in one start request");
+			}
+
+			// Check that all jobs share the same proxy.
+			// Should not be called with mixed proxies.
+			string this_proxy = req->proxy;;
+			if(this_proxy != proxy) {
+				internal_error("Multiple proxies in one start request");
+			}
+
+			// Add reqid to list to report on result. 
+			char * reqid = NULL;
+			process_string_arg( req->input_line[1], &reqid );
+			if(reqid == NULL) {
+				internal_error("job start request lacks reqid");
+			}
+			reqids.push_back(reqid);
+
+			// How many jobs does this request list?
+			char * jobnum_str;
+			process_string_arg( req->input_line[3], &jobnum_str );
+			if (jobnum_str == NULL) {
+				throw runtime_error("start of all jobs not supported");
+			}
+
+			// Add jobs to vector of jobs to start.
+			int jobnum = atoi( jobnum_str );
+			for ( int i = 0; i < jobnum; i++) {
+				char * jobid;
+				process_string_arg( req->input_line[i+4], &jobid );
+				jv.push_back(JobIdWrapper(jobid,
+										  service,
+										  vector<JobPropertyWrapper>()));
+			}
 		}
 		vector<string> sv;
 		JobFilterWrapper jfw(jv,
@@ -572,21 +672,25 @@ int thread_cream_job_start( Request *req )
 			                                        &rw,
 			                                        DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
-		cp->setCredential(req->proxy.c_str());
+		cp->setCredential(proxy.c_str());
 		cp->execute(service);
 		delete cp;
 		check_result_wrapper(rw);
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Start\\ Error:\\ " + escape_spaces(ex.what());
-		enqueue_result(result_line);
+		for(vector<string>::const_iterator it = reqids.begin();
+			it != reqids.end(); it++) {
+			enqueue_result((*it) + " CREAM_Job_Start\\ Error:\\ " + escape_spaces(ex.what()));
+		}
 		
 		return 1;
 	}
 	
-	result_line = (string)reqid + " NULL";
-	enqueue_result(result_line);
+	for(vector<string>::const_iterator it = reqids.begin();
+		it != reqids.end(); it++) {
+		enqueue_result((*it) + " NULL");
+	}
 	
 	return 0;
 }
@@ -1871,6 +1975,31 @@ void process_request( char **input_line )
 	else HANDLE_INVALID_REQ();
 }
 
+/* =========================================================================
+   batchable_pair: Are these two requests similar enough that they
+   can be batched together?
+   ========================================================================= */
+bool is_a_batchable_pair(Request * a, Request * b) {
+	if( a == NULL || b == NULL) {
+		internal_error("is_a_batchable_pair passed a NULL pointer");
+	}
+	if(a->bhandler == NULL && b->bhandler == NULL) {
+		internal_error("is_a_batchable_pair passed all NULL bhandler");
+	}
+	if(a->bhandler != b->bhandler) { // Not the same command; impossible
+		return false;
+	}
+	if(a->proxy != b->proxy) { // Need to share the same proxy
+		return false;
+	}
+	if(a->requestcomp != b->requestcomp) { // Need to share the same comparison
+		return false;
+	}
+	if(a->requestcomp) {
+		return ! a->requestcomp(a,b);
+	}
+	return true;
+}
 
 /* =========================================================================
    WORKER_MAIN: called by every worker threads.
@@ -1886,17 +2015,45 @@ void *worker_main(void * /*ignored*/)
 			pthread_cond_wait( &requestQueueEmpty, &requestQueueLock );
 		}
 		req = requestQueue.front();
-		requestQueue.pop();
+		requestQueue.pop_front();
 		pthread_mutex_unlock( &requestQueueLock );
 
+		vector<Request*> rv;
 		try {
-			req->handler( req );
+			rv.push_back(req);
+			if(req->bhandler) {
+
+				// This can be handled in batch. Snoop through the queue
+				// looking for other requests to merge in.
+				//deque<Request *> requestQueue;
+				pthread_mutex_lock( &requestQueueLock );
+				typedef deque<Request*> ReqDeque;
+				int size = requestQueue.size();
+				for(ReqDeque::iterator it = requestQueue.begin();
+					it != requestQueue.end(); ) {
+					if(is_a_batchable_pair(req, *it)) {
+						rv.push_back(*it);
+						it = requestQueue.erase(it);
+					} else {
+						it++;
+					}
+				}
+				pthread_mutex_unlock( &requestQueueLock );
+
+				rv.push_back(NULL); // Indicates end.
+				req->bhandler( &rv[0] );
+			} else if(req->handler) {
+				req->handler( req );
+			} else {
+				internal_error("Request lacks batch or single handler");
+			}
 		} catch ( std::exception& ex ) {
 			enqueue_result( (string)req->input_line[0] + " " +
 							escape_spaces( ex.what() ) );
 		}
-
-		delete req;
+		for(vector<Request*>::iterator it = rv.begin(); it != rv.end(); it++) {
+			if(*it) { delete *it; }
+		}
 	}
 
 	return NULL;
@@ -1919,6 +2076,10 @@ int main(int /*argc*/, char ** /*argv*/)
 	log_dev->setPriority( log4cpp::Priority::INFO );
 	//logger_instance->setLogFile( string( "/tmp/cream.log" ) );
 	logger_instance->setConsoleEnabled( true );
+
+#if USE_QUICKLOG
+	tmplog = fopen("/tmp/cream.log", "a");
+#endif
 
 	gahp_printf("%s\n", VersionString);
 	
