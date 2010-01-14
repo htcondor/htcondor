@@ -9674,7 +9674,7 @@ id=555
 [DEBUG_TIME_FORMAT]
 aliases=
 # The default has a trailing space...
-default=%m/%d %H:%M:%S 
+default=%m/%d/%y %H:%M:%S 
 version=0.0.0
 range=.*
 state=default

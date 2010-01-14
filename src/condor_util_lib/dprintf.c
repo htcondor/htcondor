@@ -154,7 +154,7 @@ static char *formatTimeHeader(struct tm *tm) {
 		firstTime = 0;
 		timeFormat = param( "DEBUG_TIME_FORMAT" );
 		if (!timeFormat) {
-			timeFormat = strdup("%m/%d %H:%M:%S ");
+			timeFormat = strdup("%m/%d/%y %H:%M:%S ");
 		} else {
 			// Skip enclosing quotes
 			char *p;
