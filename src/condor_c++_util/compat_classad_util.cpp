@@ -95,20 +95,12 @@ const char *ExprTreeToString( classad::ExprTree *expr )
 	return buffer.c_str();
 }
 
-static compat_classad::ClassAd *empty_ad = NULL;
-
-/* TODO This function needs to be written.
- */
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 {
 	static classad::ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
 	compat_classad::EvalResult result;
 	bool constraint_changed = true;
-
-	if ( empty_ad == NULL ) {
-		empty_ad = new compat_classad::ClassAd;
-	}
 
 	if ( saved_constraint ) {
 		if ( strcmp(saved_constraint,constraint) == 0 ) {
@@ -136,7 +128,7 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, empty_ad, ad, &result ) ) {
+	if ( !EvalExprTree( tree, ad, NULL, &result ) ) {
 		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
 		return false;
 	}
@@ -148,19 +140,13 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 	return false;
 }
 
-/* TODO This function needs to be written.
- */
 bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
 	compat_classad::EvalResult result;
 
-	if ( empty_ad == NULL ) {
-		empty_ad = new compat_classad::ClassAd;
-	}
-
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, empty_ad, ad, &result ) ) {        
+	if ( !EvalExprTree( tree, ad, NULL, &result ) ) {        
 		return false;
 	}
 
@@ -304,7 +290,7 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 		return true;
 	}
 
-	return true;
+	return false;
 }
 
 void AttrList_setPublishServerTime( bool publish )
