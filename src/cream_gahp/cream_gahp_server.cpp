@@ -201,7 +201,7 @@ int thread_cream_delegate( Request *req );
 int thread_cream_job_register( Request *req );
 int thread_cream_job_start( Request **req );
 int thread_cream_job_purge( Request **req );
-int thread_cream_job_cancel( Request *req );
+int thread_cream_job_cancel( Request **req );
 int thread_cream_job_suspend( Request *req );
 int thread_cream_job_resume( Request *req );
 int thread_cream_set_lease( Request *req );
@@ -843,39 +843,36 @@ int handle_cream_job_cancel( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request( input_line, thread_cream_job_cancel );
-
+	enqueue_request_batch(input_line, thread_cream_job_cancel, cmp_request_2);
 	gahp_printf("S\n");
 	
 	return 0;
 }
 
-int thread_cream_job_cancel( Request *req )
+int thread_cream_job_cancel( Request **reqlist )
 {
 	// FIXME: It doesn't appear that the new API supports
 	// operating on all jobs. It also doesn't look like the
 	// GridManager uses this capability. We should disable
 	// the syntax for asking for operating on all jobs
 
-	char *reqid, *service, *jobnum_str, *jobid;
-	string result_line;
-	
-	process_string_arg( req->input_line[1], &reqid );
-	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &jobnum_str );
-	
+	if(reqlist == NULL) {
+		internal_error("thread_cream_job_cancel called with NULL pointer\n");
+	}
+	if(reqlist[0] == NULL) {
+		internal_error("thread_cream_job_cancel called with empty list\n");
+	}
+
+	char *service;
+	process_string_arg( reqlist[0]->input_line[2], &service );
+	string proxy = reqlist[0]->proxy;
+
+	vector<string> reqids;
+
 	try {
-		if (jobnum_str == NULL) {
-			throw runtime_error("cancel of all jobs not supported");
-		}
 		vector<JobIdWrapper> jv;
-		int jobnum = atoi( jobnum_str );
-		for ( int i = 0; i < jobnum; i++) {
-			process_string_arg( req->input_line[i+4], &jobid );
-			jv.push_back(JobIdWrapper(jobid,
-			                          service,
-			                          vector<JobPropertyWrapper>()));
-		}
+		collect_job_ids(reqlist, jv, reqids);
+
 		vector<string> sv;
 		JobFilterWrapper jfw(jv,
 		                     sv,  // status contraint: none 
@@ -889,21 +886,26 @@ int thread_cream_job_cancel( Request *req )
 			                                         &rw,
 			                                         DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
-		cp->setCredential(req->proxy.c_str());
+		cp->setCredential(proxy.c_str());
 		cp->execute(service);
 		delete cp;
 		check_result_wrapper(rw);
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Cancel\\ Error:\\ " + escape_spaces(ex.what());
-		enqueue_result(result_line);
+
+		for(vector<string>::const_iterator it = reqids.begin();
+			it != reqids.end(); it++) {
+			enqueue_result((*it) + " CREAM_Job_Cancel\\ Error:\\ " + escape_spaces(ex.what()));
+		}
 		
 		return 1;
 	}
 	
-	result_line = (string)reqid + " NULL";
-	enqueue_result(result_line);
+	for(vector<string>::const_iterator it = reqids.begin();
+		it != reqids.end(); it++) {
+		enqueue_result((*it) + " NULL");
+	}
 	
 	return 0;
 }
@@ -2084,16 +2086,6 @@ void *worker_main(void * /*ignored*/)
 					}
 				}
 				pthread_mutex_unlock( &requestQueueLock );
-
-				char buf[1024];
-				char * type = "unknown type";
-				if(req->bhandler == thread_cream_job_start) {
-					type = "CREAM_JOB_START";
-				} else if(req->bhandler == thread_cream_job_purge) {
-					type = "CREAM_JOB_PURGE";
-				}
-				sprintf(buf, "Batch merged %d %s requests from queue of %d", (int)rv.size(), type, size);
-				quicklog(buf);
 
 				rv.push_back(NULL); // Indicates end.
 				req->bhandler( &rv[0] );
