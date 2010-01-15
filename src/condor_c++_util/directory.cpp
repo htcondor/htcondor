@@ -505,7 +505,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 		rm_buf += path;
 		rm_buf += "\"\"";
 #else
-		rm_buf = "rm -rf ";
+		rm_buf = "/bin/rm -rf ";
 		rm_buf += path;
 #endif
 
@@ -517,7 +517,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 		// we use system here instead of my_system since rmdir is a shell command
 		rval = my_system(rm_buf.Value());
 #else
-		rval = my_spawnl( "rm", "rm", "-rf", path, NULL );
+		rval = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
 
 		// When all of that is done, switch back to our normal user
@@ -531,7 +531,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 			errmsg = "my_spawnl returned ";
 			errmsg += rval;
 		} else {
-			errmsg = "rm ";
+			errmsg = "/bin/rm ";
 			statusString( rval, errmsg );
 		}
 		dprintf( D_FULLDEBUG, "Removing \"%s\" as %s failed: %s\n", path, 
