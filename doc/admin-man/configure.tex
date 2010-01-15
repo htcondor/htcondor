@@ -2061,25 +2061,21 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
-  The meaning of this configuration setting depends on the setting of
+  An IP address that depends on the setting of
   \MacroNI{BIND\_ALL\_INTERFACES}.  If \MacroNI{BIND\_ALL\_INTERFACES}
-  is true (the default), then this setting simply controls what IP
+  is \Expr{True} (the default), then this variable controls what IP
   address will be advertised as the public address of the daemon.
-  If \MacroNI{BIND\_ALL\_INTERFACES} is false, then this setting
+  If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False}, then this variable
   specifies which IP address to bind network sockets to.
-  If \MacroNI{BIND\_ALL\_INTERFACES} is false and \Macro{NETWORK\_INTERFACE}
-  is unset, Condor chooses a network interface automatically.  It tries
-  to choose a public interface if one is available.  If it can't decide
-  which of two interfaces to choose, it will pick the first one.
+  If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False}
+  and \MacroNI{NETWORK\_INTERFACE} is not defined,
+  Condor chooses a network interface automatically.  It tries
+  to choose a public interface if one is available.  If it cannot decide
+  which of two interfaces to choose from, it will pick the first one.
   More information about configuring Condor on machines with multiple
   network interfaces can be found in
   section~\ref{sec:Multiple-Interfaces} on
   page~\pageref{sec:Multiple-Interfaces}.
-  % PKK
-  % Described in default config file: NO
-  % Defined in the default config file: NO
-  % Default definition in config file: N/A
-  % Result if not defined or RHS is empty: Condor binds to first interface found
 
 \label{param:PrivateNetworkName}
 \item[\Macro{PRIVATE\_NETWORK\_NAME}]
