@@ -378,6 +378,9 @@ AssignExpr(char const *name,char const *value)
 	classad::ClassAdParser par;
 	classad::ExprTree *expr = NULL;
 
+	if ( value == NULL ) {
+		value = "Undefined";
+	}
 	if ( !par.ParseExpression( value, expr, true ) ) {
 		return FALSE;
 	}
@@ -386,6 +389,16 @@ AssignExpr(char const *name,char const *value)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+int ClassAd::
+Assign(char const *name,char const *value)
+{
+	if ( value == NULL ) {
+		return AssignExpr( name, NULL );
+	} else {
+		return InsertAttr( name, value ) ? TRUE : FALSE;
+	}
 }
 
 //  void ClassAd::

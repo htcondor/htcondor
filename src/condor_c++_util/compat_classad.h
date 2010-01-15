@@ -159,8 +159,7 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name, MyString const &value)
 	{ return InsertAttr( name, value.Value()) ? TRUE : FALSE; }
 
-	int Assign(char const *name,char const *value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	int Assign(char const *name,char const *value);
 
 	int Assign(char const *name,int value)
 	{ return InsertAttr( name, value) ? TRUE : FALSE; }
