@@ -392,6 +392,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	int                     more;
 	QueryResult result;
 	ClassAd     queryAd(extraAttrs), *ad;
+	ExprTree *tree;
 
 	if ( !poolName ) {
 		return Q_NO_COLLECTOR_HOST;
@@ -406,8 +407,9 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 
 
 	// make the query ad
-	result = (QueryResult) query.makeQuery (queryAd);
+	result = (QueryResult) query.makeQuery (tree, true);
 	if (result != Q_OK) return result;
+	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
 	// fix types
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
@@ -563,9 +565,11 @@ QueryResult CondorQuery::
 getQueryAd (ClassAd &queryAd)
 {
 	QueryResult	result;
+	ExprTree *tree;
 
-	result = (QueryResult) query.makeQuery (queryAd);
+	result = (QueryResult) query.makeQuery (tree, true);
 	if (result != Q_OK) return result;
+	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
 	// fix types
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
@@ -623,10 +627,12 @@ filterAds (ClassAdList &in, ClassAdList &out)
 {
 	ClassAd queryAd, *candidate;
 	QueryResult	result;
+	ExprTree *tree;
 
 	// make the query ad
-	result = (QueryResult) query.makeQuery (queryAd);
+	result = (QueryResult) query.makeQuery (tree, true);
 	if (result != Q_OK) return result;
+	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
 	in.Open();
 	while( (candidate = (ClassAd *) in.Next()) )
