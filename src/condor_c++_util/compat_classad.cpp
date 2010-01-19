@@ -1085,8 +1085,8 @@ AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr )
 	return true;
 }
 
-classad::ClassAd *ClassAd::
-AddExplicitTargetRefs( )
+void ClassAd::
+AddExplicitTargetRefs(  ) 
 {
 	string attr = "";
 	set< string, classad::CaseIgnLTStr > definedAttrs;
@@ -1094,13 +1094,19 @@ AddExplicitTargetRefs( )
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
 		definedAttrs.insert( a->first );
 	}
-	
-	classad::ClassAd *newAd = new classad::ClassAd( );
+
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		newAd->Insert( a->first, 
+		this->Insert( a->first, 
 					   AddExplicitTargetRefs( a->second, definedAttrs ) );
 	}
-	return newAd;
+	
+}
+
+classad::ExprTree *ClassAd::
+AddExplicitTargetRefsWrap( classad::ExprTree *eTree,
+						std::set < std::string, classad::CaseIgnLTStr > & scSet) 
+{
+	return this->AddExplicitTargetRefs(eTree, scSet);
 }
 
 
@@ -1624,5 +1630,33 @@ _GetReferences(classad::ExprTree *tree,
 	}
 }
 
+
+
+// the freestanding functions 
+
+classad::ExprTree *
+AddExplicitTargetRefsExternal(ClassAd *ad, classad::ExprTree *eTree,
+						std::set < std::string, classad::CaseIgnLTStr > & scSet) 
+{
+	return ad->AddExplicitTargetRefsWrap(eTree, scSet);
+} 
+
+classad::ExprTree *
+AddExplicitTargetRefsExternalAd(ClassAd *ad, classad::ExprTree *eTreede) 
+{
+	set< string, classad::CaseIgnLTStr > definedAttrs;
+	
+	for( classad::AttrList::iterator a = ad->begin( ); a != ad->end( ); a++ ) {
+		definedAttrs.insert( a->first );
+	}
+	return AddExplicitTargetRefsExternal(ad, eTree, definedAttrs);
+}
+
+void AddExplicitTargetRefsAd(ClassAd* ad)
+{
+	ad->AddExplicitTargetRefs();
+}	
+
+// end functions
 
 } // namespace compat_classad

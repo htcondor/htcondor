@@ -388,8 +388,10 @@ class ClassAd : public classad::ClassAd
 	// that is similar to the original ClassAd, except that if it refers
 	// to attributes that are not in the current classad and they are not
 	// scoped, then they are renamed "target.attribute"
-	classad::ClassAd *AddExplicitTargetRefs( );
-		//@}
+	void AddExplicitTargetRefs(  );
+	
+	classad::ExprTree *AddExplicitTargetRefsWrap( classad::ExprTree *,
+						std::set < std::string, classad::CaseIgnLTStr > & );
 
 	static bool ClassAdAttributeIsPrivate( char const *name );
 
@@ -475,6 +477,18 @@ class ClassAd : public classad::ClassAd
 						StringList &internal_refs,
 						StringList &external_refs);
 };
+
+
+// freestanding
+
+classad::ExprTree *AddExplicitTargetRefsExternal(ClassAd*, classad::ExprTree *,
+						std::set < std::string, classad::CaseIgnLTStr > & );
+						
+classad::ExprTree *AddExplicitTargetRefsExternalAd(ClassAd*, classad::ExprTree *);
+
+void AddExplicitTargetRefsAd(ClassAd*);
+
+// end
 
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;
