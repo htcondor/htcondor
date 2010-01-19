@@ -1642,7 +1642,7 @@ AddExplicitTargetRefsExternal(ClassAd *ad, classad::ExprTree *eTree,
 } 
 
 classad::ExprTree *
-AddExplicitTargetRefsExternalAd(ClassAd *ad, classad::ExprTree *eTreede) 
+AddExplicitTargetRefsExternalAd(ClassAd *ad, classad::ExprTree *eTree) 
 {
 	set< string, classad::CaseIgnLTStr > definedAttrs;
 	
