@@ -56,8 +56,8 @@ NetStringList::find_matches_withnetwork(const char *ip_address,StringList *match
 		return false;
 	}
 
-	strings.Rewind();
-	while ( (x = strings.Next()) ) {
+	m_strings.Rewind();
+	while ( (x = m_strings.Next()) ) {
 		if (is_valid_network(x, &base_ip, &mask)) {
 			// test_ip, base_ip, and mask are all filled
 

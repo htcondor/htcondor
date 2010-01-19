@@ -36,7 +36,7 @@ char *strnewp( const char * );
 int
 StringList::isSeparator( char x )
 {
-	for ( char *sep = delimiters; *sep; sep++ ) {
+	for ( char *sep = m_delimiters; *sep; sep++ ) {
 		if ( x == ( *sep ) ) {
 			return 1;
 		}
@@ -46,9 +46,33 @@ StringList::isSeparator( char x )
 
 StringList::StringList(const char *s, const char *delim ) 
 {
-	delimiters = strnewp( delim );
+	m_delimiters = strnewp( delim );
 	if ( s ) {
 		initializeFromString(s);
+	}
+}
+
+StringList::StringList( const StringList &other )
+		: m_delimiters( NULL )
+{
+	char				*str;
+	ListIterator<char>	 iter;
+
+	const char *delim = other.getDelimiters();
+	if ( delim ) {
+		m_delimiters = strnewp( delim );
+	}
+
+	// Walk through the other list, verify that everything is in my list
+	iter.Initialize( other.getList() );
+	iter.ToBeforeFirst( );
+	while ( iter.Next(str) ) {
+		char	*dup = strdup( str );
+		ASSERT( dup );
+		m_strings.Append( dup );
+	}
+	if ( other.getDelimiters( ) ) {
+		m_delimiters = strdup( other.getDelimiters() );
 	}
 }
 
@@ -87,7 +111,7 @@ StringList::initializeFromString (const char *s)
 		tmp_string[len] = '\0';
 		
 		// put the string into the StringList
-		strings.Append (tmp_string);
+		m_strings.Append (tmp_string);
 	}
 }
 
@@ -95,8 +119,8 @@ void
 StringList::print (void)
 {
 	char *x;
-	strings.Rewind ();
-	while ((x = strings.Next ()))
+	m_strings.Rewind ();
+	while ((x = m_strings.Next ()))
 		printf ("[%s]\n", x);
 }
 
@@ -104,8 +128,8 @@ void
 StringList::clearAll()
 {
 	char *x;
-	strings.Rewind ();
-	while ((x = strings.Next ()))
+	m_strings.Rewind ();
+	while ((x = m_strings.Next ()))
 	{
 		deleteCurrent();
 	}
@@ -114,8 +138,8 @@ StringList::clearAll()
 StringList::~StringList ()
 {
 	clearAll();
-	if ( delimiters )
-		delete [] delimiters;
+	if ( m_delimiters )
+		delete [] m_delimiters;
 }
 
 
@@ -169,8 +193,8 @@ StringList::contains( const char *st )
 {
 	char	*x;
 
-	strings.Rewind ();
-	while ((x = strings.Next ())) {
+	m_strings.Rewind ();
+	while ((x = m_strings.Next ())) {
 		if( strcmp(st, x) == MATCH ) {
 			return TRUE;
 		}
@@ -184,8 +208,8 @@ StringList::contains_anycase( const char *st )
 {
 	char	*x;
 
-	strings.Rewind ();
-	while ((x = strings.Next ())) {
+	m_strings.Rewind ();
+	while ((x = m_strings.Next ())) {
 		if( stricmp(st, x) == MATCH ) {
 			return TRUE;
 		}
@@ -199,8 +223,8 @@ StringList::remove(const char *str)
 {
 	char *x;
 
-	strings.Rewind();
-	while ((x = strings.Next())) {
+	m_strings.Rewind();
+	while ((x = m_strings.Next())) {
 		if (strcmp(str, x) == MATCH) {
 			deleteCurrent();
 		}
@@ -212,8 +236,8 @@ StringList::remove_anycase(const char *str)
 {
 	char *x;
 
-	strings.Rewind();
-	while ((x = strings.Next())) {
+	m_strings.Rewind();
+	while ((x = m_strings.Next())) {
 		if (stricmp(str, x) == MATCH) {
 			deleteCurrent();
 		}
@@ -226,8 +250,8 @@ StringList::substring( const char *st )
 	char    *x;
 	int len;
 	
-	strings.Rewind ();
-	while( (x = strings.Next()) ) {
+	m_strings.Rewind ();
+	while( (x = m_strings.Next()) ) {
 		len = strlen(x);
 		if( strncmp(st, x, len) == MATCH ) {
 			return TRUE;
@@ -274,9 +298,9 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 	if ( !string )
 		return NULL;
 
-	strings.Rewind();
+	m_strings.Rewind();
 
-	while ( (x=strings.Next()) ) {
+	while ( (x=m_strings.Next()) ) {
 
 		if ( (asterisk = strchr(x,'*')) == NULL ) {
 			// There is no wildcard in this entry; just compare
@@ -401,7 +425,7 @@ StringList::find( const char *str, bool anycase ) const
 {
 	char	*x;
 
-    ListIterator<char> iter ( strings );
+    ListIterator<char> iter ( m_strings );
     iter.ToBeforeFirst ();
 	while ( iter.Next(x) ) {
 		if( (anycase) && (strcasecmp( str, x ) == MATCH) ) {
@@ -435,7 +459,7 @@ StringList::identical( const StringList &other, bool anycase ) const
 	}
 
 	// Walk through my list, verify that everything is in the other list
-	iter.Initialize ( strings );
+	iter.Initialize ( m_strings );
 	iter.ToBeforeFirst ();
 	while ( iter.Next(x) ) {
 		if ( !other.find( x, anycase ) ) {
@@ -450,9 +474,7 @@ bool
 StringList::similar( const StringList &other, bool anycase ) const
 {
 	char *this_str, *other_str;
-	bool ret_val;
 	ListIterator<char> this_iter;
-	ListIterator<char> other_iter;
 
 	// First, if they're different sizes, quit
 	if ( other.number() != this->number() ) {
@@ -460,20 +482,25 @@ StringList::similar( const StringList &other, bool anycase ) const
 	}
 
 	// Walk through the other list, verify that everything is in my list
-	this_iter.Initialize ( strings );
+	this_iter.Initialize ( m_strings );
 	this_iter.ToBeforeFirst ();
-	other_iter.Initialize ( other.getList() );
-	other_iter.ToBeforeFirst ();
 	while ( this_iter.Next(this_str) ) {
-		if ( !other_iter.Next(other_str) ) {
-			return false;
+		bool	found = false;
+		ListIterator<char> other_iter;
+		other_iter.Initialize ( other.getList() );
+		other_iter.ToBeforeFirst ();
+		while ( !found && other_iter.Next(other_str) ) {
+			if ( anycase ) {
+				if ( strcasecmp( this_str, other_str ) != 0 ) {
+					found = true;
+				}
+			} else {
+				if ( strcmp( this_str, other_str ) != 0 ) {
+					found = true;
+				}
+			}
 		}
-		if ( anycase ) {
-			ret_val = ( strcasecmp( this_str, other_str ) != 0 );
-		} else {
-			ret_val = ( strcmp( this_str, other_str ) != 0 );
-		}
-		if( ret_val == false ) {
+		if( ! found ) {
 			return false;
 		}
 	}
@@ -497,23 +524,23 @@ StringList::print_to_delimed_string(const char *delim) const
 	char				*tmp;
 
 	if ( delim == NULL ) {
-		delim = delimiters;
+		delim = m_delimiters;
 	}
 
 	/* no string at all if there isn't anything in it */
-	int num = strings.Number();
+	int num = m_strings.Number();
 	if(num == 0) {
 		return NULL;
 	}
 
-    iter.Initialize( strings );
+    iter.Initialize( m_strings );
     iter.ToBeforeFirst ();
 	int		len = 1;
 	while ( iter.Next(tmp) ) {
 		len += ( strlen(tmp) + strlen(delim) );
 	}
 
-	/* get memory for all of the strings, plus the delimiter characters
+	/* get memory for all of the m_strings, plus the delimiter characters
 	   between them and one more for the \0 */
 	char *buf = (char*)calloc( len, 1);
 	if (buf == NULL) {
@@ -521,7 +548,7 @@ StringList::print_to_delimed_string(const char *delim) const
 	}
 	*buf = '\0';
 
-    iter.Initialize( strings );
+    iter.Initialize( m_strings );
     iter.ToBeforeFirst ();
 	int		n = 0;
 	while ( iter.Next(tmp) ) {
@@ -538,10 +565,10 @@ StringList::print_to_delimed_string(const char *delim) const
 
 void
 StringList::deleteCurrent() {
-	if( strings.Current() ) {
-		FREE( strings.Current() );
+	if( m_strings.Current() ) {
+		FREE( m_strings.Current() );
 	}
-	strings.DeleteCurrent();
+	m_strings.DeleteCurrent();
 }
 
 
@@ -553,17 +580,17 @@ void
 StringList::qsort() {
 	char *str;
  	int i;
-	int count = strings.Length();
+	int count = m_strings.Length();
 	char **list = (char **) calloc(count, sizeof(char *));
 
-	for (i = 0, strings.Rewind(); (str = strings.Next()); i++) {
+	for (i = 0, m_strings.Rewind(); (str = m_strings.Next()); i++) {
 		list[i] = strdup(str); // If only we had InsertAt on List...
 	}
 
 	::qsort(list, count, sizeof(char *), string_compare);
 
 	for (i = 0, clearAll(); i < count; i++) {
-		strings.Append(list[i]);
+		m_strings.Append(list[i]);
 	}
 
 	free(list);
@@ -573,23 +600,23 @@ void
 StringList::shuffle() {
 	char *str;
  	unsigned int i;
-	unsigned int count = strings.Length();
+	unsigned int count = m_strings.Length();
 	char **list = (char **) calloc(count, sizeof(char *));
 
-	for (i = 0, strings.Rewind(); (str = strings.Next()); i++) {
+	for (i = 0, m_strings.Rewind(); (str = m_strings.Next()); i++) {
 		list[i] = strdup(str);
 	}
 
 	for (i = 0; i+1 < count; i++) {
 		unsigned int j = (unsigned int)(i + (get_random_float() * (count-i)));
-		// swap strings at i and j
+		// swap m_strings at i and j
 		str = list[i];
 		list[i] = list[j];
 		list[j] = str;
 	}
 
 	for (i = 0, clearAll(); i < count; i++) {
-		strings.Append(list[i]);
+		m_strings.Append(list[i]);
 	}
 
 	free(list);
