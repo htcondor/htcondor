@@ -1,0 +1,107 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+
+$cmd = 'job_core_shadow-lessthan-memlimit_van.cmd';
+$testdesc =  'Make sure shadow process memory stays bellow a limit - vanilla U';
+$testname = "job_core_shadow-lessthan-memlimit_van";
+
+$abnormal = sub {
+	CondorTest::debug("Normal abort event\n");
+};
+
+$aborted = sub {
+	CondorTest::debug("Abnormal abort event\n",1);
+};
+
+$executed = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	CondorTest::debug("Received execute event: $cluster\n", 1);
+
+	my $line;
+	my $shadowPid;
+	my $privateMem;
+	open(SHADOWLOG, "<TestingPersonalCondor/local/log/ShadowLog") || die "Failed to open Shadow log";
+
+	# find the shadow id from the shadow log
+	while(<SHADOWLOG>)
+	{
+		CondorTest::fullchomp($_);
+		$line = $_;
+
+		if( $line =~ /.*\($cluster\.0\)[\s]\(([0-9]*)\).*/)
+	    {
+			$shadowPid = $1;
+			CondorTest::debug("Located shadow pid: $1\n", 1);
+			last;
+		}
+	}
+	close(SHADOWLOG);
+
+	# calc the private memory usage using top
+	open(TOPOUT, "top -b -n1 -p$shadowPid |") || die "Failed to run top on shadow log pid: $shadowPid";
+	while(<TOPOUT>)
+	{
+		chomp($_);
+		$line = $_;
+		if($line =~ /$shadowPid/)
+		{
+			$line =~ s/^\s+//;
+			$line =~ s/\s+$//;
+			@fields = split(/[\s]+/, $line);
+
+			$privateMem = $fields[5] - $fields[6];
+			CondorTest::debug("Priavte memory calculated as: $privateMem\n", 1);
+		}
+	}
+	close(TOPOUT);
+
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(1)
+	}
+
+	my $shadowMemoryLimit = 800; # in kilobytes
+	if($privateMem > $shadowMemoryLimit)
+	{
+		CondorTest::debug("Test failure do to shadow memory usage\n", 1);
+		exit(1)
+	}
+
+};
+
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort         ( $testname, $aborted );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
