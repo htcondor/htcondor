@@ -119,11 +119,14 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 			delete tree;
 			tree = NULL;
 		}
-		if ( ParseClassAdRvalExpr( constraint, tree ) != 0 ) {
+		classad::ExprTree *tmp_tree = NULL;
+		if ( ParseClassAdRvalExpr( constraint, tmp_tree ) != 0 ) {
 			dprintf( D_ALWAYS,
 				"can't parse constraint: %s\n", constraint );
 			return false;
 		}
+		tree = compat_classad::RemoveExplicitTargetRefs( tmp_tree );
+		delete tmp_tree;
 		saved_constraint = strdup( constraint );
 	}
 
