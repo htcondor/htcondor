@@ -396,9 +396,6 @@ class ClassAd : public classad::ClassAd
 	
 	void RemoveExplicitTargetRefs(  );
 	
-	classad::ExprTree *AddExplicitTargetRefsWrap( classad::ExprTree *,
-						std::set < std::string, classad::CaseIgnLTStr > & );
-
 	void AddTargetRefs( StringList &target_attrs );
 
 	static bool ClassAdAttributeIsPrivate( char const *name );
@@ -467,9 +464,7 @@ class ClassAd : public classad::ClassAd
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
-	classad::ExprTree *AddExplicitTargetRefs( classad::ExprTree *,
-						std::set < std::string, classad::CaseIgnLTStr > & );
-	classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
+
 	classad::ClassAd::iterator m_nameItr;
 	bool m_nameItrInChain;
 
@@ -492,6 +487,7 @@ classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
 						
 classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *, classad::ClassAd*);
+classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
 
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,

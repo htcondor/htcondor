@@ -1089,41 +1089,29 @@ AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr )
 	return true;
 }
 
-void ClassAd::
-AddExplicitTargetRefs(  ) 
+void ClassAd::AddExplicitTargetRefs(  ) 
 {
-	string attr = "";
 	set< string, classad::CaseIgnLTStr > definedAttrs;
-	// create temporary classad with same contents as current one to avoid problems with iterator. 
-	classad::ClassAd tmp;
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		definedAttrs.insert( a->first );
-		tmp.Insert(a->first, a->second);
-	}
-
-	for( classad::AttrList::iterator a = tmp.begin( ); a != tmp.end( ); a++ ) {
-		this->Insert( a->first, 
-					   AddExplicitTargetRefs( a->second, definedAttrs ) );
+		definedAttrs.insert(a->first);
 	}
 	
+	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+		this->Insert( a->first,
+							compat_classad::AddExplicitTargetRefs( a->second, definedAttrs )) ;
+	}
 }
 
 void ClassAd::RemoveExplicitTargetRefs( )
 {
-	// create temporary classad with same contents as current one to avoid problems with iterator. 
-	classad::ClassAd tmp;
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		tmp.Insert(a->first, a->second);
-	}
-	
-	for( classad::AttrList::iterator a = tmp.begin( ); a != tmp.end( ); a++ ) {
 		this->Insert( a->first, 
-					   RemoveExplicitTargetRefs( a->second ) );
+					   compat_classad::RemoveExplicitTargetRefs( a->second ) );
 	}
-} 
+}  
 
 
-void ClassAd::
+void ClassAd:: 
 AddTargetRefs( StringList &target_attrs )
 {
 	for( classad::AttrList::iterator a = begin(); a != end(); a++ ) {
@@ -1294,136 +1282,6 @@ AddExplicitConditionals( classad::ExprTree *expr )
 	return NULL;
 }
 
-classad::ExprTree *ClassAd::
-AddExplicitTargetRefs( classad::ExprTree *tree, set<string,classad::CaseIgnLTStr> &definedAttrs )
-{
-	if( tree == NULL ) {
-		return NULL;
-	}
-	classad::ExprTree::NodeKind nKind = tree->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-		classad::ExprTree *expr = NULL;
-		string attr = "";
-		bool abs = false;
-		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
-		if( abs || expr != NULL ) {
-			return tree->Copy( );
-		}
-		else {
-			if( definedAttrs.find( attr ) == definedAttrs.end( ) ) {
-					// attribute is not defined, so insert "target"
-				classad::AttributeReference *target = NULL;
-				target = classad::AttributeReference::MakeAttributeReference(NULL,
-																	"target");
-				return classad::AttributeReference::MakeAttributeReference(target,attr);
-			}
-			else {
-				return tree->Copy( );
-			}
-		}
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		classad::ExprTree * newExpr1 = NULL;
-		classad::ExprTree * newExpr2 = NULL;
-		classad::ExprTree * newExpr3 = NULL;
-		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
-		if( expr1 != NULL ) {
-			newExpr1 = AddExplicitTargetRefs( expr1, definedAttrs );
-		}
-		if( expr2 != NULL ) {
-			newExpr2 = AddExplicitTargetRefs( expr2, definedAttrs );
-		}
-		if( expr3 != NULL ) {
-			newExpr3 = AddExplicitTargetRefs( expr3, definedAttrs );
-		}
-		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
-	}
-	case classad::ExprTree::FN_CALL_NODE: {
-		std::string fn_name;
-		classad::ArgumentList old_fn_args;
-		classad::ArgumentList new_fn_args;
-		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
-		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
-			new_fn_args.push_back( AddExplicitTargetRefs( *i, definedAttrs ) );
-		}
-		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
-	}
-	default: {
- 			// old ClassAds have no nested ClassAds or lists
-			// literals have no attrrefs in them
-		return tree->Copy( );
-	}
-	}
-}
-
-classad::ExprTree *ClassAd::
-RemoveExplicitTargetRefs( classad::ExprTree *tree )
-{
-	if( tree == NULL ) {
-		return NULL;
-	}
-	classad::ExprTree::NodeKind nKind = tree->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-		classad::ExprTree *expr = NULL;
-		string attr = "";
-		bool abs = false;
-		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
-		if(!abs && (expr != NULL)) {
-			string newAttr = "";
-			classad::ExprTree *exp = NULL;
-			abs = false;
-			( ( classad::AttributeReference * )expr )->GetComponents(exp,newAttr,abs);
-			if (strcmp(newAttr.c_str(), "target") == 0){
-				classad::AttributeReference *noTarget = NULL;
-				noTarget = classad::AttributeReference::MakeAttributeReference(exp,"",abs);
-				return classad::AttributeReference::MakeAttributeReference(noTarget,attr);
-			}	 
-		} 
-		return tree->Copy();
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		classad::ExprTree * newExpr1 = NULL;
-		classad::ExprTree * newExpr2 = NULL;
-		classad::ExprTree * newExpr3 = NULL;
-		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
-		if( expr1 != NULL ) {
-			newExpr1 = RemoveExplicitTargetRefs( expr1  );
-		}
-		if( expr2 != NULL ) {
-			newExpr2 = RemoveExplicitTargetRefs( expr2 );
-		}
-		if( expr3 != NULL ) {
-			newExpr3 = RemoveExplicitTargetRefs( expr3 );
-		}
-		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
-	}
-	case classad::ExprTree::FN_CALL_NODE: {
-		std::string fn_name;
-		classad::ArgumentList old_fn_args;
-		classad::ArgumentList new_fn_args;
-		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
-		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
-			new_fn_args.push_back( RemoveExplicitTargetRefs( *i ) );
-		}
-		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
-	}
-	default: {
- 			// old ClassAds have no function calls, nested ClassAds or lists
-			// literals have no attrrefs in them
-		return tree->Copy( );
-	}
-	}
-}
 
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
@@ -1806,6 +1664,69 @@ AddExplicitTargetRefs(classad::ExprTree *eTree, classad::ClassAd *ad )
 		definedAttrs.insert( a->first );
 	}
 	return AddExplicitTargetRefs(eTree, definedAttrs);
+}
+
+classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
+{
+	if( tree == NULL ) {
+		return NULL;
+	}
+	classad::ExprTree::NodeKind nKind = tree->GetKind( );
+	switch( nKind ) {
+	case classad::ExprTree::ATTRREF_NODE: {
+		classad::ExprTree *expr = NULL;
+		string attr = "";
+		bool abs = false;
+		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
+		if(!abs && (expr != NULL)) {
+			string newAttr = "";
+			classad::ExprTree *exp = NULL;
+			abs = false;
+			( ( classad::AttributeReference * )expr )->GetComponents(exp,newAttr,abs);
+			if (strcmp(newAttr.c_str(), "target") == 0){
+				classad::AttributeReference *noTarget = NULL;
+				noTarget = classad::AttributeReference::MakeAttributeReference(exp,"",abs);
+				return classad::AttributeReference::MakeAttributeReference(noTarget,attr);
+			}	 
+		} 
+		return tree->Copy();
+	}
+	case classad::ExprTree::OP_NODE: {
+		classad::Operation::OpKind oKind;
+		classad::ExprTree * expr1 = NULL;
+		classad::ExprTree * expr2 = NULL;
+		classad::ExprTree * expr3 = NULL;
+		classad::ExprTree * newExpr1 = NULL;
+		classad::ExprTree * newExpr2 = NULL;
+		classad::ExprTree * newExpr3 = NULL;
+		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
+		if( expr1 != NULL ) {
+			newExpr1 = RemoveExplicitTargetRefs( expr1  );
+		}
+		if( expr2 != NULL ) {
+			newExpr2 = RemoveExplicitTargetRefs( expr2 );
+		}
+		if( expr3 != NULL ) {
+			newExpr3 = RemoveExplicitTargetRefs( expr3 );
+		}
+		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
+	}
+	case classad::ExprTree::FN_CALL_NODE: {
+		std::string fn_name;
+		classad::ArgumentList old_fn_args;
+		classad::ArgumentList new_fn_args;
+		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
+		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
+			new_fn_args.push_back( RemoveExplicitTargetRefs( *i ) );
+		}
+		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
+	}
+	default: {
+ 			// old ClassAds have no function calls, nested ClassAds or lists
+			// literals have no attrrefs in them
+		return tree->Copy( );
+	}
+	}
 }	
 
 static const char *machine_attrs_list[] = {
