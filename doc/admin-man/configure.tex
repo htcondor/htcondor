@@ -3543,8 +3543,12 @@ WANT_HOLD_REASON = \
 \item[\Macro{MAXJOBRETIREMENTTIME}]
   An integer value representing the number of seconds a preempted job
   will be allowed to run before being evicted. The default value of 0
-  (when the configuration variable is not present) implements the
-  expected policy that there is no retirement time.  See
+  (when the configuration variable is not present) means that the job
+  gets no retirement time.  Note that in peaceful shutdown mode of the
+  \Condor{startd}, retirement time is treated as though infinite.
+  In graceful shutdown mode, the job will not be preempted until the
+  configured retirement time expires or \Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}
+  expires.  In fast shutdown mode, retirement time is ignored.  See
   \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 

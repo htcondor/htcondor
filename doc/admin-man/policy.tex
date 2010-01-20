@@ -1157,7 +1157,9 @@ For the Claimed/Retiring state, the following transitions may occur:
 job was started by the startd minus any suspension time.  (When retiring
 due to startd shutdown or restart, it is possible for the admin to issue a
 ``peaceful'' shutdown command, which causes \MacroNI{MaxJobRetirementTime}
-to effectively be infinite, avoiding any killing of jobs.)
+to effectively be infinite, avoiding any killing of jobs.  It is also
+possible for the admin to issue a ``fast'' shutdown command, which causes
+\MacroNI{MaxJobRetirementTime} to be effectively 0.)
 
 \item[Claimed/Busy] If the startd was retiring because of a preempting
 claim only and the preempting claim goes away, the normal Claimed/Busy
