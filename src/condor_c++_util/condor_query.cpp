@@ -32,10 +32,6 @@
 #include "daemon.h"
 #include "dc_collector.h"
 
-#define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
-
-char *new_strdup (const char *);
-
 // The order and number of the elements of the following arrays *are*
 // important.  (They follow the structure of the enumerations supplied
 // in the header file condor_query.h)
