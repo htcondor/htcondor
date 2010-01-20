@@ -1322,8 +1322,18 @@ AddExplicitTargetRefs( classad::ExprTree *tree, set<string,classad::CaseIgnLTStr
 		}
 		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
 	}
+	case classad::ExprTree::FN_CALL_NODE: {
+		std::string fn_name;
+		classad::ArgumentList old_fn_args;
+		classad::ArgumentList new_fn_args;
+		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
+		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
+			new_fn_args.push_back( AddExplicitTargetRefs( *i, definedAttrs ) );
+		}
+		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
+	}
 	default: {
- 			// old ClassAds have no function calls, nested ClassAds or lists
+ 			// old ClassAds have no nested ClassAds or lists
 			// literals have no attrrefs in them
 		return tree->Copy( );
 	}
