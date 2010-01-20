@@ -29,6 +29,10 @@ using namespace std;
 
 namespace compat_classad {
 
+static bool target_attrs_init = false;
+StringList TargetMachineAttrs;
+StringList TargetJobAttrs;
+
 // EvalResult ctor
 EvalResult::EvalResult()
 {
@@ -1110,6 +1114,14 @@ AddExplicitTargetRefsWrap( classad::ExprTree *eTree,
 }
 
 
+void ClassAd::
+AddTargetRefs( StringList &target_attrs )
+{
+	for( classad::AttrList::iterator a = begin(); a != end(); a++ ) {
+		this->Insert( a->first, 
+					  compat_classad::AddTargetRefs( a->second, target_attrs ) );
+	}
+}
 
 classad::ExprTree *ClassAd::
 AddExplicitConditionals( classad::ExprTree *expr )
@@ -1666,6 +1678,118 @@ void AddExplicitTargetRefsAd(ClassAd* ad)
 {
 	ad->AddExplicitTargetRefs();
 }	
+
+static const char *machine_attrs_list[] = {
+	ATTR_NAME,
+	ATTR_MACHINE,
+	// TODO add more entries
+	NULL		// list must end with NULL
+};
+
+static const char *job_attrs_list[]  = {
+	ATTR_CLUSTER_ID,
+	ATTR_PROC_ID,
+	// TODO add more entries
+	NULL		// list must end with NULL
+};
+
+static void InitTargetAttrLists()
+{
+	EXCEPT( "Unimplemented!" );
+
+	const char **attr;
+
+	// Set up Machine attributes list
+	for ( attr = machine_attrs_list; *attr; attr++ ) {
+		TargetMachineAttrs.append( *attr );
+	}
+
+	// TODO Add attributes from STARTD_ATTRS
+	// TODO Add attributes from STARTD_JOB_EXPRS
+	// TODO Add attributes from STARTD_SLOT_ATTRS
+	// TODO Check new config param for additional attributes
+
+	// Set up Job attributes list
+	for ( attr = job_attrs_list; *attr; attr++ ) {
+		TargetJobAttrs.append( *attr );
+	}
+
+	// TODO Add attributes from SUBMIT_EXPRS
+	// TODO Add attributes from NEGOTIATOR_MATCH_EXPRS
+	// TODO Check new config param for additional attributes
+
+	target_attrs_init = true;
+}
+
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, StringList &target_attrs )
+{
+	if ( !target_attrs_init ) {
+		InitTargetAttrLists();
+	}
+
+	if( tree == NULL ) {
+		return NULL;
+	}
+	classad::ExprTree::NodeKind nKind = tree->GetKind( );
+	switch( nKind ) {
+	case classad::ExprTree::ATTRREF_NODE: {
+		classad::ExprTree *expr = NULL;
+		string attr = "";
+		bool abs = false;
+		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
+		if( abs || expr != NULL ) {
+			return tree->Copy( );
+		}
+		else {
+			if( target_attrs.contains_anycase_withwildcard( attr.c_str() ) ) {
+					// attribute is in our list, so insert "target"
+				classad::AttributeReference *target = NULL;
+				target = classad::AttributeReference::MakeAttributeReference(NULL,
+																	"target");
+				return classad::AttributeReference::MakeAttributeReference(target,attr);
+			}
+			else {
+				return tree->Copy( );
+			}
+		}
+	}
+	case classad::ExprTree::OP_NODE: {
+		classad::Operation::OpKind oKind;
+		classad::ExprTree * expr1 = NULL;
+		classad::ExprTree * expr2 = NULL;
+		classad::ExprTree * expr3 = NULL;
+		classad::ExprTree * newExpr1 = NULL;
+		classad::ExprTree * newExpr2 = NULL;
+		classad::ExprTree * newExpr3 = NULL;
+		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
+		if( expr1 != NULL ) {
+			newExpr1 = AddTargetRefs( expr1, target_attrs );
+		}
+		if( expr2 != NULL ) {
+			newExpr2 = AddTargetRefs( expr2, target_attrs );
+		}
+		if( expr3 != NULL ) {
+			newExpr3 = AddTargetRefs( expr3, target_attrs );
+		}
+		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
+	}
+	case classad::ExprTree::FN_CALL_NODE: {
+		std::string fn_name;
+		classad::ArgumentList old_fn_args;
+		classad::ArgumentList new_fn_args;
+		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
+		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
+			new_fn_args.push_back( AddTargetRefs( *i, target_attrs ) );
+		}
+		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
+	}
+	default: {
+ 			// old ClassAds have no nested ClassAds or lists
+			// literals have no attrrefs in them
+		return tree->Copy( );
+	}
+	}
+}
 
 // end functions
 

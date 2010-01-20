@@ -27,12 +27,16 @@
 #include "condor_common.h"
 #include "classad/classad_distribution.h"
 #include "condor_io.h"
+#include "string_list.h"
 
 #ifndef ATTRLIST_MAX_EXPRESSION
 #define	ATTRLIST_MAX_EXPRESSION 10240
 #endif
 
 namespace compat_classad {
+
+extern StringList TargetMachineAttrs;
+extern StringList TargetJobAttrs;
 
 // This enum is lifted directly from old ClassAds.
 typedef enum
@@ -393,6 +397,8 @@ class ClassAd : public classad::ClassAd
 	classad::ExprTree *AddExplicitTargetRefsWrap( classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
 
+	void AddTargetRefs( StringList &target_attrs );
+
 	static bool ClassAdAttributeIsPrivate( char const *name );
 
 	void SetPrivateAttributesInvisible( bool invisible )
@@ -489,6 +495,9 @@ classad::ExprTree *AddExplicitTargetRefsExternalAd(ClassAd*, classad::ExprTree *
 void AddExplicitTargetRefsAd(ClassAd*);
 
 // end
+
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
+								  StringList &target_attrs );
 
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;
