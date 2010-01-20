@@ -94,7 +94,7 @@
 	TTProgs DeploymentTools \
 	eventd.V2 transferd procd privsep vm-gahp EC2 \
 	JobRouterProgs GlobusGahps NordugridGahp startd_factory \
-	CreamGahp power SHARED_PORT_PROGS
+	CreamGahp power soapshell SHARED_PORT_PROGS
 
 #define Libraries \
 	target-classad 						\
@@ -260,6 +260,7 @@ condor_object_target(sysapi)
 condor_object_target(unit_tests)
 condor_object_target(tools)
 condor_object_target(power)
+condor_object_target(soapshell)
 #if HAVE_SHARED_PORT
 condor_object_target(shared_port)
 #endif
