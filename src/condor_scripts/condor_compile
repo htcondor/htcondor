@@ -340,7 +340,7 @@ ARGS=$*
 for i in $ARGS
 do
 	case $i in
-		-print-prog-name* | -print-file-name*)
+		-print-prog-name* | -print-file-name* | --version)
 			DIE_WITH_LD_NOT_IN_USE=no
 			;;
 	esac
