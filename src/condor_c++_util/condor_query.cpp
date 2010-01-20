@@ -501,6 +501,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		return Q_INVALID_QUERY;
 	}
 
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
+
 	if( DebugFlags & D_HOSTNAME ) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
 				 my_collector.addr(), my_collector.fullHostname() );
@@ -614,6 +618,10 @@ getQueryAd (ClassAd &queryAd)
 		return Q_INVALID_QUERY;
 	}
 
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
+
 	return Q_OK;
 }
 
@@ -629,6 +637,10 @@ filterAds (ClassAdList &in, ClassAdList &out)
 	result = (QueryResult) query.makeQuery (tree, true);
 	if (result != Q_OK) return result;
 	queryAd.Insert(ATTR_REQUIREMENTS, tree);
+
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
 
 	in.Open();
 	while( (candidate = (ClassAd *) in.Next()) )
