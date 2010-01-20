@@ -394,6 +394,8 @@ class ClassAd : public classad::ClassAd
 	// scoped, then they are renamed "target.attribute"
 	void AddExplicitTargetRefs(  );
 	
+	void RemoveExplicitTargetRefs(  );
+	
 	classad::ExprTree *AddExplicitTargetRefsWrap( classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
 
@@ -467,7 +469,7 @@ class ClassAd : public classad::ClassAd
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
 	classad::ExprTree *AddExplicitTargetRefs( classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
-
+	classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
 	classad::ClassAd::iterator m_nameItr;
 	bool m_nameItrInChain;
 
@@ -485,16 +487,12 @@ class ClassAd : public classad::ClassAd
 };
 
 
-// freestanding
 
-classad::ExprTree *AddExplicitTargetRefsExternal(ClassAd*, classad::ExprTree *,
+classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
 						
-classad::ExprTree *AddExplicitTargetRefsExternalAd(ClassAd*, classad::ExprTree *);
+classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *, classad::ClassAd*);
 
-void AddExplicitTargetRefsAd(ClassAd*);
-
-// end
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
 								  StringList &target_attrs );
