@@ -28,23 +28,30 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gittrak #221
+% gittrac #221
 \item The configuration variable
 \MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
 delegations done by Condor.  The value is a boolean and defaults to False,
 which means that when doing delegation Condor will now create a limited proxy
 instead of a full proxy.
 
-% gittrack #1102
+% gittrac #1102
 \item A port number defined within \Macro{CONDOR\_VIEW\_HOST} may now use 
   a shared port.
 
-% gittrack #1104
+% gittrac #1104
 \item The \Condor{master} no longer pauses for 3 seconds after starting
   the \Condor{collector}.  However, if the configuration variable
   \MacroNI{COLLECTOR\_ADDRESS\_FILE} is defines a file, 
   the \Condor{master} will wait for that file to be created
   before starting other daemons.
+
+% trac #938
+\item Grid universe jobs using the CREAM grid system now batch up
+a number of common requests into larger single requests.  This
+reduces network traffic, increases the number of parallel tasks
+the Condor can handle at once, and reduces the load on the remote
+gatekeeper.
 
 \end{itemize}
 
