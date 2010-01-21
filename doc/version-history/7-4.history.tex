@@ -49,9 +49,12 @@ The details of each version are described below.
 \begin{itemize}
 
 % gitrack #553
-\item Fixed a bug where if \Condor{compile} is invoked in such a manner as
-this: \Condor{compile} \Opt{gcc} \Opt{-print-prog-name=ld} an error would
-be emitted and \Condor{compile} would exit with a bad exit code.
+\item Fixed a bug where if \Condor{compile} is invoked in a manner such as:
+\begin{verbatim}
+  condor_compile gcc -print-prog-name=ld 
+\end{verbatim}
+an error would be emitted,
+and \Condor{compile} would exit with a bad exit code.
 
 % gittrack #1093
 \item The sort based on \Condor{status} output accidentally changed in 
