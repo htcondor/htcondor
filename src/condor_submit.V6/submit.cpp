@@ -6888,7 +6888,9 @@ SaveClassAd ()
 		}
 	}
 
-	
+#if !defined(WANT_OLD_CLASSADS)
+	job->AddTargetRefs( TargetMachineAttrs );
+#endif
 
 	job->ResetExpr();
 	while( job->NextExpr(lhstr, tree) ) {
