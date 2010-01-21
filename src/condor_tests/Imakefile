@@ -2024,6 +2024,20 @@ TESTCLASS(lib_shared_port_van,full)
 TESTCLASS(lib_shared_port_van,quicknolink)
 #endif
 
+/** 
+	Shadow bloat test, only run on linux systems
+*/
+#if defined(IA64-LINUX_RHEL3) || defined(CONDOR_PPC-LINUX_YD50) || defined(X86_64-LINUX_DEBIAN50) || \
+	defined(X86_64-LINUX_RHEL5) || defined(X86_64-LINUX_RHEL3) || defined(I386-LINUX_DEBIAN40) || \
+	defined(I386-LINUX_DEBIAN50) || defined(I386-LINUX_RHEL5) || defined(I386-LINUX_RHEL3)
+DESC(job_core_shadow-lessthan-memlimit_van, "Make sure the shadow stays below memory limit")
+RUN(job_core_shadow-lessthan-memlimit_van)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,quick)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,core)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,full)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,btdebug)
+#endif
+
 lib_eventlog_build.exe : lib_eventlog_base.o
 	$(CPlusPlus) -o $@ $< ../release_dir/lib/libcondorapi.a $(TEST_LDFLAGS)
 
