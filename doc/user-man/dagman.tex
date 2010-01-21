@@ -544,6 +544,22 @@ submitted to Condor.
 For DAGs with many nodes, this
 reduces or eliminates excessive numbers of e-mails.
 
+\index{ClassAd job attribute!DAGParentNodeNames}
+\index{DAGParentNodeNames!job ClassAd attribute}
+The job ClassAd attribute \Attr{DAGParentNodeNames} is also available
+for use within the submit description file. 
+It defines a comma separated list of each \Arg{JobName}
+which is a parent node of this job's node.
+This attribute may be used in the \SubmitCmd{arguments} command
+for all but scheduler universe jobs.
+For example, if the job has two parents, with \Arg{JobName}s B and C,
+the submit description file command
+\begin{verbatim}
+arguments = $$([DAGParentNodeNames])
+\end{verbatim}
+will pass the string ``B,C'' as the command line argument when invoking
+the job.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
