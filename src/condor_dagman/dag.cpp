@@ -88,6 +88,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_storkIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
+	_noopIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),
@@ -1144,7 +1145,12 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 	}
 
 	Job *	node = NULL;
-	if ( GetEventIDHash( logsource )->lookup(condorID._cluster, node) != 0 ) {
+		//TEMPTEMP -- make this into a static function somewhere?
+	bool isNoop = (condorID._cluster == 0) &&
+				(condorID._proc == Job::NOOP_NODE_PROCID);
+	int id = isNoop ? condorID._subproc : condorID._cluster;
+	if ( GetEventIDHash( isNoop, logsource )->
+				lookup(id, node) != 0 ) {
     	debug_printf( DEBUG_VERBOSE, "ERROR: node for cluster %d not found!\n",
 					condorID._cluster);
 		node = NULL;
@@ -2730,10 +2736,14 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 						// mode).  (In "normal" mode we should have already
 						// inserted it when we did the condor_submit.)
 					Job *tmpNode = NULL;
-					if ( GetEventIDHash( logsource )->
-								lookup(condorID._cluster, tmpNode) != 0 ) {
-						int insertResult = GetEventIDHash( logsource )->
-									insert( condorID._cluster, node );
+					bool isNoop = (condorID._cluster == 0) &&
+								(condorID._proc == Job::NOOP_NODE_PROCID);
+					int id = isNoop ? condorID._subproc : condorID._cluster;
+//TEMPTEMP -- maybe make wrapper methods for insert and lookup that also grab the right part of the CondorID
+					if ( GetEventIDHash( isNoop, logsource )->
+								lookup(id, tmpNode) != 0 ) {
+						int insertResult = GetEventIDHash( isNoop, logsource )->
+									insert( id, node );
 						ASSERT( insertResult == 0 );
 					} else {
 						ASSERT( tmpNode == node );
@@ -2881,8 +2891,12 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 
 //---------------------------------------------------------------------------
 HashTable<int, Job *> *
-Dag::GetEventIDHash(int jobType)
+Dag::GetEventIDHash(bool isNoop, int jobType)
 {
+	if ( isNoop ) {
+		return &_noopIDHash;
+	}
+
 	switch (jobType) {
 	case Job::TYPE_CONDOR:
 		return &_condorIDHash;
@@ -2902,8 +2916,12 @@ Dag::GetEventIDHash(int jobType)
 
 //---------------------------------------------------------------------------
 const HashTable<int, Job *> *
-Dag::GetEventIDHash(int jobType) const
+Dag::GetEventIDHash(bool isNoop, int jobType) const
 {
+	if ( isNoop ) {
+		return &_noopIDHash;
+	}
+
 	switch (jobType) {
 	case Job::TYPE_CONDOR:
 		return &_condorIDHash;
@@ -2934,8 +2952,10 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
 		// Resetting the Condor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->_CondorID._cluster != _defaultCondorId._cluster ) {
-		int removeResult = GetEventIDHash( node->JobType() )->
-					remove( node->_CondorID._cluster );
+		int id = node->GetNoop() ? node->_CondorID._subproc :
+					node->_CondorID._cluster;
+		int removeResult = GetEventIDHash( node->GetNoop(), node->JobType() )->
+					remove( id );
 		ASSERT( removeResult == 0 );
 	}
 	node->_CondorID = _defaultCondorId;
@@ -3052,8 +3072,10 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
         // since we won't have seen the submit command stdout...)
 
 	node->_CondorID = condorID;
-	int insertResult = GetEventIDHash( node->JobType() )->
-				insert( condorID._cluster, node );
+	int id = node->GetNoop() ? node->_CondorID._subproc :
+				node->_CondorID._cluster;
+	int insertResult = GetEventIDHash( node->GetNoop(), node->JobType() )->
+				insert( id, node );
 	ASSERT( insertResult == 0 );
 
 	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d)\n",

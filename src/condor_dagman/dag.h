@@ -687,19 +687,22 @@ class Dag {
 
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.
+			@param whether the node is a NOOP node
 			@param the node type/logsource (Condor or Stork) (see
 				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	HashTable<int, Job *> *		GetEventIDHash(int jobType);
+	HashTable<int, Job *> *		GetEventIDHash(bool isNoop, int jobType);
 
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.
+			@param whether the node is a NOOP node
 			@param the node type/logsource (Condor or Stork) (see
 				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	const HashTable<int, Job *> *		GetEventIDHash(int jobType) const;
+	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop,
+				int jobType) const;
 
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
@@ -735,6 +738,9 @@ class Dag {
 	// Hash by StorkID (really just by the cluster ID because all
 	// procs in the same cluster map to the same node).
 	HashTable<int, Job *>			_storkIDHash;
+
+	// NOOP nodes are indexed by subprocID.
+	HashTable<int, Job *>			_noopIDHash;
 
     // Number of nodes that are done (completed execution)
     int _numNodesDone;

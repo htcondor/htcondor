@@ -389,20 +389,14 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 		return false;
 	}
 
-		//TEMPTEMP -- XML code refuses to use negative cluster IDs!
-		//TEMPTEMP -- this is for test only -- need to use scheme agreed upon with FW: cluster is *dagman's* cluster ID, proc is some special value, subproc is what we actually use for values to index on
-	//TEMPTEMP static int clusterID = -100;
-	static int clusterID = 9999999;//TEMPTEMP
 	static int subprocID = 0;
 
-	//TEMPTEMP clusterID--;
-	clusterID++;//TEMPTEMP
 	subprocID++;
-	condorID._cluster = clusterID;
+		// Special CondorID for NOOP jobs -- actually indexed by
+		// otherwise-unused subprocID.
+	condorID._cluster = 0;
 	condorID._proc = Job::NOOP_NODE_PROCID;
 	condorID._subproc = subprocID;
-	//condorID._proc = 0;//TEMPTEMP!!!
-	//condorID._subproc = 0;//TEMPTEMP!!!
 
 
 //TEMPTEMP -- just get the string for the submit host once, for speed!
