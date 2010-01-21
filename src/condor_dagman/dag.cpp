@@ -1498,8 +1498,12 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// waiting for the event that wasn't written).
 		ulog.setEnableGlobalLog( false );
 		ulog.setUseXML( job->_logFileIsXml );
+			// For NOOP jobs, we need the proc and subproc values;
+			// for "real" jobs, they are not significant.
+		int procID = job->GetNoop() ? job->_CondorID._proc : 0;
+		int subprocID = job->GetNoop() ? job->_CondorID._subproc : 0;
 		ulog.initialize( job->_logFile, job->_CondorID._cluster,
-					 	0, 0, NULL );
+					 	procID, subprocID, NULL );
 
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,
@@ -3046,6 +3050,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
         // with what we see in the userlog later as a sanity-check
         // (note: this sanity-check is not possible during recovery,
         // since we won't have seen the submit command stdout...)
+
 	node->_CondorID = condorID;
 	int insertResult = GetEventIDHash( node->JobType() )->
 				insert( condorID._cluster, node );

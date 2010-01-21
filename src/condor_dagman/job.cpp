@@ -1,7 +1,5 @@
-//TEMPTEMP -- get log file type ("regular" or XML) from submit file
 //TEMPTEMP -- can Stork log files be XML?
 //TEMPTEMP -- what if the submit file specifies a format of XML, but no log file?
-//TEMPTEMP -- make sure noop jobs work with XML log file...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -34,6 +32,7 @@
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
+int Job::NOOP_NODE_PROCID = 1000000000;
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the queue_t enum

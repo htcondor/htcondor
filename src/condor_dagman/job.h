@@ -147,6 +147,8 @@ class Job {
 
 	// explanation text for errors
 	char error_text[JOB_ERROR_TEXT_MAXLEN];
+
+	static int NOOP_NODE_PROCID;
   
     /** Constructor
         @param jobType Type of job in dag file.

@@ -70,11 +70,7 @@ foreach $name (@logfiles) {
 }
 
 # Get rid of the rescue DAGs we should have at the end.
-foreach $name (@rescuedags) {
-	if (-e $name) {
-		system("rm -f $name");
-	}
-}
+unlink <job_dagman_noop_node-lower.dag.rescue???>;
 
 # Get rid of node output files we should have at the end.
 foreach $name (@nodeoutput) {
