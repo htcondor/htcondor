@@ -6,7 +6,7 @@ $result = shift;
 $name = "job_dagman_noop_node-" . $node . "-" . $script . ".out";
 
 open(OUT, ">$name") or die "Can't open file $name";
-print OUT "Node result: <$result> ";
+print OUT "$node result: <$result> ";
 print OUT "\n";
 
 close(OUT);

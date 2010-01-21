@@ -374,7 +374,6 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   return success;
 }
 
-//TEMPTEMP -- make sure noop jobs work in recovery mode & rescue DAGs; also with DIR and initialdir
 //-------------------------------------------------------------------------
 bool
 fake_condor_submit( CondorID& condorID, const char* DAGNodeName, 

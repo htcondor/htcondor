@@ -2,4 +2,8 @@
 
 # Set things up for lower-level nodes...
 
+$nodename = shift;
+
 unlink <job_dagman_noop_node-node*.works>;
+
+print "$nodename succeeded\n";

@@ -37,14 +37,25 @@ $dagman_args = "-verbose";
 	"job_dagman_noop_node-lower.dag.rescue002");
 
 @nodeoutput = ( "job_dagman_noop_node-nodeA.out",
-	"job_dagman_noop_node-nodeB1-post.out",
 	"job_dagman_noop_node-nodeB1-pre.out",
+	"job_dagman_noop_node-nodeB1-post.out",
 	"job_dagman_noop_node-nodeB2.out",
-	"job_dagman_noop_node-nodeB2-post.out",
 	"job_dagman_noop_node-nodeB2-pre.out",
-	"job_dagman_noop_node-nodeC-post.out",
-	"job_dagman_noop_node-nodeC-pre.out",
-	"job_dagman_noop_node-nodeD.out");
+	"job_dagman_noop_node-nodeB2-post.out",
+	"job_dagman_noop_node-nodeD1.out",
+	"job_dagman_noop_node-nodeD2-pre.out",
+	"job_dagman_noop_node-nodeD2-post.out",
+	"job_dagman_noop_node-subdir/job_dagman_noop_node-nodeD3-pre.out",
+	"job_dagman_noop_node-subdir/job_dagman_noop_node-nodeD3-post.out",
+	"job_dagman_noop_node-nodeE.out",
+	"job_dagman_noop_node-nodeUA.out",
+	"job_dagman_noop_node-lower.dag.lib.out",
+	"job_dagman_noop_node-nodeUC-pre.out",
+	"job_dagman_noop_node-nodeUC-post.out",
+	"job_dagman_noop_node-nodeUD-pre.out",
+	"job_dagman_noop_node-nodeUD-post.out",
+	"job_dagman_noop_node-nodeUE-post.out",
+	"job_dagman_noop_node-nodeUF-post.out" );
 
 # truly const variables in perl
 sub IDLE{1};
