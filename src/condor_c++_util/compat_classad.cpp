@@ -1097,16 +1097,20 @@ void ClassAd::AddExplicitTargetRefs(  )
 	}
 	
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		this->Insert( a->first,
-							compat_classad::AddExplicitTargetRefs( a->second, definedAttrs )) ;
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+			this->Insert( a->first,
+						  compat_classad::AddExplicitTargetRefs( a->second, definedAttrs )) ;
+		}
 	}
 }
 
 void ClassAd::RemoveExplicitTargetRefs( )
 {
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		this->Insert( a->first, 
-					   compat_classad::RemoveExplicitTargetRefs( a->second ) );
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+			this->Insert( a->first, 
+						  compat_classad::RemoveExplicitTargetRefs( a->second ) );
+		}
 	}
 }  
 
@@ -1115,8 +1119,10 @@ void ClassAd::
 AddTargetRefs( StringList &target_attrs )
 {
 	for( classad::AttrList::iterator a = begin(); a != end(); a++ ) {
-		this->Insert( a->first, 
-					  compat_classad::AddTargetRefs( a->second, target_attrs ) );
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+			this->Insert( a->first, 
+						  compat_classad::AddTargetRefs( a->second, target_attrs ) );
+		}
 	}
 }
 
