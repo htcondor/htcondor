@@ -2064,6 +2064,21 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
 	}
+#if !defined(WANT_OLD_CLASSADS)
+	else if ( stricmp( attr_name, ATTR_REQUIREMENTS ) == 0 ||
+			  stricmp( attr_name, ATTR_RANK ) ) {
+		// Check Requirements and Rank for proper TARGET scoping of
+		// machine attributes.
+		ExprTree *tree = NULL;
+		if ( ParseClassAdRvalExpr( attr_value, tree ) == 0 ) {
+			ExprTree *tree2 = AddTargetRefs( tree, TargetMachineAttrs );
+			new_value = ExprTreeToString( tree2 );
+			attr_value = new_value.Value();
+			delete tree;
+			delete tree2;
+		}
+	}
+#endif
 
 	// If any of the attrs used to create the signature are
 	// changed, then delete the ATTR_AUTO_CLUSTER_ID, since
