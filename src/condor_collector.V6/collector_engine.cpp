@@ -594,6 +594,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	{
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
+#if !defined(WANT_OLD_CLASSADS)
+		  clientAd->AddTargetRefs( TargetJobAttrs );
+#endif
 		if ( repeatStartdAds > 0 ) {
 			clientAdToRepeat = new ClassAd(*clientAd);
 		}
@@ -679,6 +682,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		break;
 
 	  case MERGE_STARTD_AD:
+#if !defined(WANT_OLD_CLASSADS)
+		  clientAd->AddTargetRefs( TargetJobAttrs );
+#endif
 		if (!makeStartdAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
