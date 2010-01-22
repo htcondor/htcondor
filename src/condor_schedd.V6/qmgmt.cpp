@@ -293,6 +293,16 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		return;
 	}
 
+		// CRUST
+		// Convert expressions to have properl TARGET scoping when
+		// referring to machine attributes. The switch from old to new
+		// ClassAds happened around 7.5.1.
+		// At some future point in time, this code should be removed
+		// (no earlier than the 7.7 series).
+#if !defined(WANT_OLD_CLASSADS)
+	job_ad->AddTargetRefs( TargetMachineAttrs );
+#endif
+
 		// CRUFT
 		// Convert old job ads to the new format of GridResource
 		// and GridJobId. This switch happened on the V6_7-lease
