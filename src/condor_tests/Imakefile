@@ -2027,9 +2027,9 @@ TESTCLASS(lib_shared_port_van,quicknolink)
 /** 
 	Shadow bloat test, only run on linux systems
 */
-#if defined(IA64-LINUX_RHEL3) || defined(CONDOR_PPC-LINUX_YD50) || defined(X86_64-LINUX_DEBIAN50) || \
-	defined(X86_64-LINUX_RHEL5) || defined(X86_64-LINUX_RHEL3) || defined(I386-LINUX_DEBIAN40) || \
-	defined(I386-LINUX_DEBIAN50) || defined(I386-LINUX_RHEL5) || defined(I386-LINUX_RHEL3)
+#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_DEBIAN50) || \
+	defined(IS_X86_64_LINUX_RHEL5) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_LINUX_DEBIAN40) || \
+	defined(IS_I386_LINUX_DEBIAN50) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL3)
 DESC(job_core_shadow-lessthan-memlimit_van, "Make sure the shadow stays below memory limit")
 RUN(job_core_shadow-lessthan-memlimit_van)
 TESTCLASS(job_core_shadow-lessthan-memlimit_van,quick)
