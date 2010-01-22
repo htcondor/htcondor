@@ -1152,12 +1152,17 @@ For the Claimed/Retiring state, the following transitions may occur:
 \begin{description}
 
 \item[Preempting] If the job finishes or the job's run time exceeds
-\MacroNI{MaxJobRetirementTime}, the Preempting state is entered
+the value defined for the job ClassAd attribute \Attr{MaxJobRetirementTime},
+the Preempting state is entered
 (transition \Bold{18}).  The run time is computed from the time when the
-job was started by the startd minus any suspension time.  (When retiring
-due to startd shutdown or restart, it is possible for the admin to issue a
-``peaceful'' shutdown command, which causes \MacroNI{MaxJobRetirementTime}
-to effectively be infinite, avoiding any killing of jobs.)
+job was started by the startd minus any suspension time.  When retiring
+due to \Condor{startd} daemon shutdown or restart,
+it is possible for the administrator to issue a
+\Term{peaceful} shutdown command, which causes \MacroNI{MaxJobRetirementTime}
+to effectively be infinite, avoiding any killing of jobs.  It is also
+possible for the administrator to issue a \Term{fast} shutdown command,
+which causes
+\MacroNI{MaxJobRetirementTime} to be effectively 0.
 
 \item[Claimed/Busy] If the startd was retiring because of a preempting
 claim only and the preempting claim goes away, the normal Claimed/Busy
@@ -1377,7 +1382,7 @@ This may be useful if you want to force periodic renegotiation of
 resources without preemption having to occur.  For example, if you
 have some low-priority jobs which should never be interrupted with
 kill signals, you could prevent them from being killed with
-\MacroNI{MaxJobRetirementTime}, but now high-priority jobs may have to
+\Attr{MaxJobRetirementTime}, but now high-priority jobs may have to
 wait in line when they match to a machine that is busy running one of
 these uninterruptible jobs.  You can prevent the high-priority jobs
 from ever matching to such a machine by using a rank expression in the
@@ -1392,15 +1397,15 @@ them, of course).
 
 \item[\Macro{MAXJOBRETIREMENTTIME}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
-seconds) that the startd will wait for the job to finish naturally
-(without any kill signals from the startd).  The clock starts when the
+seconds) that the \Condor{startd} will wait for the job to finish naturally
+(without any kill signals from the \Condor{startd}).  The clock starts when the
 job is started and is paused during any suspension.  The job may
-provide its own expression for \MacroNI{MaxJobRetirementTime}, but this
+provide its own expression for \Attr{MaxJobRetirementTime}, but this
 can only be used to take \emph{less} than the time granted by the
-startd, never more.  (For convenience, standard universe and
+\Condor{startd}, never more.  For convenience, standard universe and
 nice\_user jobs are submitted with a default retirement time of 0, so
 they will never wait in retirement unless the user overrides the
-default.)
+default.
 
 Once the job finishes or if the retirement time expires, the machine
 enters the Preempting state.
@@ -1415,7 +1420,7 @@ current job to retire, you could use \AdAttr{PreemptingRank} in the
 expression.  Example:
 
 \begin{verbatim}
-MaxJobRetirementTime = 3600 * ( \
+MAXJOBRETIREMENTTIME = 3600 * ( \
   MY.PreemptingRank =?= UNDEFINED || \
   PreemptingRank < 600)
 \end{verbatim}
@@ -1626,7 +1631,7 @@ Do not give jobs any time to retire on their own when they are about to
 be preempted.
 
 \begin{verbatim}
-MaxJobRetirementTime = 0
+MAXJOBRETIREMENTTIME = 0
 \end{verbatim}
 
 
@@ -1694,7 +1699,7 @@ CONTINUE        = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
 PREEMPT	        = ( ((Activity == "Suspended") && \
                     ($(ActivityTimer) > $(MaxSuspendTime))) \
                     || (SUSPEND && (WANT_SUSPEND == False)) )
-MaxJobRetirementTime = 0
+MAXJOBRETIREMENTTIME = 0
 KILL            = $(ActivityTimer) > $(MaxVacateTime)
 PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
@@ -1878,7 +1883,7 @@ PREEMPT = ( ((Activity == "Suspended") && \
 # retirement time you want dedicated machines to provide.  The other part
 # of the expression forces the whole expression to 0 on desktop
 # machines.
-MaxJobRetirementTime = (IsDesktop =!= True) * 0
+MAXJOBRETIREMENTTIME = (IsDesktop =!= True) * 0
 
 # Kill jobs if they have taken too long to vacate gracefully
 KILL = $(ActivityTimer) > $(MaxVacateTime) 

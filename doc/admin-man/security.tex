@@ -1755,7 +1755,13 @@ not the specific identity of the server.
   ALLOW_CLIENT
   DENY_CLIENT
 \end{verbatim}
-	
+
+The names \MacroNI{ALLOW\_CLIENT} and \MacroNI{DENY\_CLIENT} should
+be thought of as
+``when I am acting as a client, these are the servers I allow or deny.''
+It should \emph{not} be confused with the incorrect thought
+``when I am the server, these are the clients I allow or deny.''
+
 All authorization settings are defined by a comma-separated list of
 fully qualified users.
 Each fully qualified user
@@ -2612,13 +2618,13 @@ The name of the control lists have the following form:
 
 \footnotesize
 \begin{verbatim}
-<SUBSYS>_SETTABLE_ATTRS_PERMISSION-LEVEL
+<SUBSYS>.SETTABLE_ATTRS_<PERMISSION-LEVEL>
 \end{verbatim}
 \normalsize
 
 The two parts of this name that can vary are
-PERMISSION-LEVEL and the \verb@<@SUBSYS\verb@>@.
-The PERMISSION-LEVEL can be any of the security access levels
+the \verb@<@PERMISSION-LEVEL\verb@>@ and the \verb@<@SUBSYS\verb@>@.
+The \verb@<@PERMISSION-LEVEL\verb@>@ can be any of the security access levels
 described earlier in this section.
 Examples include \DCPerm{WRITE}, \DCPerm{OWNER}, and \DCPerm{CONFIG}.
 
@@ -2635,7 +2641,7 @@ look for \Macro{SETTABLE\_ATTRS\_PERMISSION-LEVEL}.
 
 Each control list is defined by a comma-separated list of attribute
 names which should be allowed to be modified.
-The lists can contain wild cards characters (`*'). 
+The lists can contain wild cards characters (\verb@*@). 
 
 Some examples of valid definitions of control lists with explanations:
 
@@ -2649,12 +2655,12 @@ This was the default behavior before Condor version 6.3.2.
 
 \item \begin{verbatim}SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG\end{verbatim} 
 Grant access to change any configuration setting that ended
-with ``\_DEBUG'' (for example, \Macro{STARTD\_DEBUG}) and any
-attribute that matched ``MAX\_*\_LOG'' (for example,
-\Macro{MAX\_SCHEDD\_LOG}) to any host with \DCPerm{ADMINISTRATOR}
+with \verb@_DEBUG@ (for example, \MacroNI{STARTD\_DEBUG}) and any
+attribute that matched \verb@MAX_*_LOG@ (for example,
+\MacroNI{MAX\_SCHEDD\_LOG}) to any host with \DCPerm{ADMINISTRATOR}
 access. 
 
-\item \begin{verbatim}STARTD_SETTABLE_ATTRS_OWNER = HasDataSet\end{verbatim}
+\item \begin{verbatim}STARTD.SETTABLE_ATTRS_OWNER = HasDataSet\end{verbatim}
 Allows any request to modify the \MacroNI{HasDataSet} 
 attribute that came from a host with \DCPerm{OWNER} access.
 By default, \DCPerm{OWNER} covers any request originating from the
