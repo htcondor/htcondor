@@ -1744,8 +1744,7 @@ which use DaemonCore).
   To use this functionality, Condor administrators must specifically
   enable it by setting \MacroNI{ENABLE\_RUNTIME\_CONFIG} to \Expr{True}, and
   specify what configuration variables can be changed using the
-  \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options
-  (described below).
+  \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options.
   Defaults to \Expr{False}.
 
 \label{param:EnablePersistentConfig}
@@ -1762,8 +1761,7 @@ which use DaemonCore).
   dynamically-generated persistent configuration files (declared using
   \MacroNI{PERSISTENT\_CONFIG\_DIR}, described below) and specify what
   configuration variables can be changed using the
-  \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options
-  (described below).
+  \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options.
   Defaults to \Expr{False}.
 
 \label{param:PersistentConfigDir}
@@ -1786,7 +1784,7 @@ which use DaemonCore).
 \label{param:SettableAttrs}
 \item[\Macro{SETTABLE\_ATTRS\Dots}]
   All macros that begin with \Macro{SETTABLE\_ATTRS} or
-  \MacroNI{<SUBSYS>\_SETTABLE\_ATTRS} are settings used to restrict the 
+  \MacroNI{<SUBSYS>.SETTABLE\_ATTRS} are settings used to restrict the 
   configuration values that can be changed using the \Condor{config\_val} 
   command.
   Section~\ref{sec:Host-Security} on Setting up
