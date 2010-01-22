@@ -24,6 +24,7 @@
 #include "condor_attributes.h"
 #include "classad/classad/xmlSink.h"
 #include "condor_xml_classads.h"
+#include "condor_config.h"
 
 using namespace std;
 
@@ -1754,25 +1755,64 @@ static void InitTargetAttrLists()
 	EXCEPT( "Unimplemented!" );
 
 	const char **attr;
+	char *tmp;
+	MyString buff;
 
+	///////////////////////////////////
 	// Set up Machine attributes list
+	///////////////////////////////////
 	for ( attr = machine_attrs_list; *attr; attr++ ) {
 		TargetMachineAttrs.append( *attr );
 	}
 
-	// TODO Add attributes from STARTD_ATTRS
-	// TODO Add attributes from STARTD_JOB_EXPRS
-	// TODO Add attributes from STARTD_SLOT_ATTRS
-	// TODO Check new config param for additional attributes
+	tmp = param( "STARTD_EXPRS" );
+	if ( tmp ) {
+		TargetMachineAttrs.initializeFromString( tmp );
+		free( tmp );
+	}
 
+	tmp = param( "STARTD_ATTRS" );
+	if ( tmp ) {
+		TargetMachineAttrs.initializeFromString( tmp );
+		free( tmp );
+	}
+
+	tmp = param( "STARTD_RESOURCE_PREFIX" );
+	if ( tmp ) {
+		buff.sprintf( "%s*", tmp );
+		TargetMachineAttrs.append( buff.Value() );
+		free( tmp );
+	} else {
+		TargetMachineAttrs.append( "slot*" );
+	}
+
+	tmp = param( "TARGET_MACHINE_ATTRS" );
+	if ( tmp ) {
+		TargetMachineAttrs.initializeFromString( tmp );
+		free( tmp );
+	}
+
+	///////////////////////////////////
 	// Set up Job attributes list
+	///////////////////////////////////
 	for ( attr = job_attrs_list; *attr; attr++ ) {
 		TargetJobAttrs.append( *attr );
 	}
 
-	// TODO Add attributes from SUBMIT_EXPRS
-	// TODO Add attributes from NEGOTIATOR_MATCH_EXPRS
-	// TODO Check new config param for additional attributes
+	tmp = param( "SUBMIT_EXPRS" );
+	if ( tmp ) {
+		TargetJobAttrs.initializeFromString( tmp );
+		free( tmp );
+	}
+
+	buff.sprintf( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
+	TargetJobAttrs.append( buff.Value() );
+
+	tmp = param( "TARGET_JOB_ATTRS" );
+	if ( tmp ) {
+		TargetJobAttrs.initializeFromString( tmp );
+		free( tmp );
+	}
 
 	target_attrs_init = true;
 }
