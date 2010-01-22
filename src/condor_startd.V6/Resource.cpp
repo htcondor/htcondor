@@ -1759,6 +1759,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {
 		resmgr->publishSlotAttrs( cap );
 	}
+
+#if !defined(WANT_OLD_CLASSADS)
+	cap->AddTargetRefs( TargetJobAttrs );
+#endif
 }
 
 void
