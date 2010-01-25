@@ -684,22 +684,48 @@ VirshType::Status()
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
 	set_priv(priv);
 	if(dom == NULL)
-	  {
-	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    if (err && err->code == VIR_ERR_NO_DOMAIN)
-	      {
-		// The VM isn't there anymore, so signal shutdown
-		vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.Value());
-		m_self_shutdown = true;
-		m_result_msg += "Stopped";
-		return true;
-	      }
-	    else
-	      {
-		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
-		return false;
-	      }
-	  }
+	{
+		virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+
+	    if ( err )
+		{
+			switch (err->code)
+			{
+				case (VIR_ERR_NO_DOMAIN):
+					// The VM isn't there anymore, so signal shutdown
+					vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.Value());
+					m_self_shutdown = true;
+					m_result_msg += "Stopped";
+					return true;
+				break;
+				case (VIR_ERR_SYSTEM_ERROR): //
+					vmprintf(D_ALWAYS, "libvirt communication error detected, attempting to reconnect...\n");
+					this->Connect();
+					if ( NULL == ( dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value() ) ) )
+					{
+						vmprintf(D_ALWAYS, "could not reconnect to libvirt... marking vm as stopped (should exit)\n");
+						m_self_shutdown = true;
+						m_result_msg += "Stopped";
+						return true;
+					}
+					else
+					{
+						vmprintf(D_ALWAYS, "libvirt has successfully reconnected!\n");
+					}
+				break;
+			default:
+				vmprintf(D_ALWAYS, "Error finding domain %s(%d): %s\n", m_vm_name.Value(), err->code, err->message );
+				return false;
+			}	
+		}
+		else
+		{
+			vmprintf(D_ALWAYS, "Error finding domain, no error returned from libvirt\n" );
+			return false;
+		}
+
+	}
+
 	virDomainInfo _info;
 	virDomainInfoPtr info = &_info;
 	if(virDomainGetInfo(dom, info) < 0)
@@ -945,6 +971,24 @@ VirshType::CreateXenVMConfigFile(const char* filename)
        	return CreateVirshConfigFile(filename);
 }
 
+void VirshType::Connect()
+{
+	priv_state priv = set_root_priv();
+
+	if ( m_libvirt_connection )
+	{
+		virConnectClose( m_libvirt_connection );
+	}
+
+    m_libvirt_connection = virConnectOpen( m_sessionID.c_str() );
+    set_priv(priv);
+
+  	if( m_libvirt_connection == NULL )
+    {
+		virErrorPtr err = virGetLastError();
+		EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
+    }
+}
 
 bool 
 VirshType::parseXenDiskParam(const char *format)
@@ -1605,15 +1649,8 @@ XenType::XenType(const char * scriptname, const char * workingpath, ClassAd * ad
   : VirshType(scriptname, workingpath, ad)
 {
 
-    priv_state priv = set_root_priv();
-    m_libvirt_connection = virConnectOpen("xen:///");
-    set_priv(priv);
-  if(m_libvirt_connection == NULL)
-    {
-      virErrorPtr err = virGetLastError();
-      EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
-    }
-
+  m_sessionID="xen:///";
+  this->Connect();
   m_vmtype = CONDOR_VM_UNIVERSE_XEN;
 
 }
@@ -1834,17 +1871,9 @@ KVMType::KVMType(const char * scriptname, const char * workingpath, ClassAd * ad
   : VirshType(scriptname, workingpath, ad)
 {
 
-    priv_state priv = set_root_priv();
-    m_libvirt_connection = virConnectOpen("qemu:///session");
-    set_priv(priv);
-
-	if(m_libvirt_connection == NULL)
-    {
-		virErrorPtr err = virGetLastError();
-		EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
-    }
-
-  m_vmtype = CONDOR_VM_UNIVERSE_KVM;
+	m_sessionID="qemu:///session";
+	this->Connect();
+	m_vmtype = CONDOR_VM_UNIVERSE_KVM;
 
 }
 
