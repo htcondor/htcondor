@@ -35,8 +35,10 @@
 
 namespace compat_classad {
 
-extern StringList TargetMachineAttrs;
-extern StringList TargetJobAttrs;
+typedef enum {
+	TargetMachineAttrs,
+	TargetJobAttrs
+} TargetAdType;
 
 // This enum is lifted directly from old ClassAds.
 typedef enum
@@ -396,7 +398,7 @@ class ClassAd : public classad::ClassAd
 	
 	void RemoveExplicitTargetRefs(  );
 	
-	void AddTargetRefs( StringList &target_attrs );
+	void AddTargetRefs( TargetAdType target_type );
 
 	static bool ClassAdAttributeIsPrivate( char const *name );
 
@@ -491,7 +493,7 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
 
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
-								  StringList &target_attrs );
+								  TargetAdType target_type );
 
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;

@@ -30,10 +30,6 @@ using namespace std;
 
 namespace compat_classad {
 
-static bool target_attrs_init = false;
-StringList TargetMachineAttrs;
-StringList TargetJobAttrs;
-
 // EvalResult ctor
 EvalResult::EvalResult()
 {
@@ -1117,12 +1113,12 @@ void ClassAd::RemoveExplicitTargetRefs( )
 
 
 void ClassAd:: 
-AddTargetRefs( StringList &target_attrs )
+AddTargetRefs( TargetAdType target_type )
 {
 	for( classad::AttrList::iterator a = begin(); a != end(); a++ ) {
 		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
 			this->Insert( a->first, 
-						  compat_classad::AddTargetRefs( a->second, target_attrs ) );
+						  compat_classad::AddTargetRefs( a->second, target_type ) );
 		}
 	}
 }
@@ -1736,6 +1732,13 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 	}
 }	
 
+static ClassAd job_attrs_ad;
+static ClassAd machine_attrs_ad;
+static StringList job_attrs_strlist;
+static StringList machine_attrs_strlist;
+
+static bool target_attrs_init = false;
+
 static const char *machine_attrs_list[] = {
 	ATTR_NAME,
 	ATTR_MACHINE,
@@ -1949,38 +1952,49 @@ static void InitTargetAttrLists()
 	const char **attr;
 	char *tmp;
 	MyString buff;
+	StringList tmp_strlist;
 
 	///////////////////////////////////
 	// Set up Machine attributes list
 	///////////////////////////////////
 	for ( attr = machine_attrs_list; *attr; attr++ ) {
-		TargetMachineAttrs.append( *attr );
+		machine_attrs_ad.AssignExpr( *attr, "True" );
 	}
 
 	tmp = param( "STARTD_EXPRS" );
 	if ( tmp ) {
-		TargetMachineAttrs.initializeFromString( tmp );
+		tmp_strlist.initializeFromString( tmp );
 		free( tmp );
+		tmp_strlist.rewind();
+		while ( (tmp = tmp_strlist.next()) ) {
+			machine_attrs_ad.AssignExpr( tmp, "True" );
+		}
+		tmp_strlist.clearAll();
 	}
 
 	tmp = param( "STARTD_ATTRS" );
 	if ( tmp ) {
-		TargetMachineAttrs.initializeFromString( tmp );
+		tmp_strlist.initializeFromString( tmp );
 		free( tmp );
+		tmp_strlist.rewind();
+		while ( (tmp = tmp_strlist.next()) ) {
+			machine_attrs_ad.AssignExpr( tmp, "True" );
+		}
+		tmp_strlist.clearAll();
 	}
 
 	tmp = param( "STARTD_RESOURCE_PREFIX" );
 	if ( tmp ) {
 		buff.sprintf( "%s*", tmp );
-		TargetMachineAttrs.append( buff.Value() );
+		machine_attrs_strlist.append( buff.Value() );
 		free( tmp );
 	} else {
-		TargetMachineAttrs.append( "slot*" );
+		machine_attrs_strlist.append( "slot*" );
 	}
 
 	tmp = param( "TARGET_MACHINE_ATTRS" );
 	if ( tmp ) {
-		TargetMachineAttrs.initializeFromString( tmp );
+		machine_attrs_strlist.initializeFromString( tmp );
 		free( tmp );
 	}
 
@@ -1988,37 +2002,45 @@ static void InitTargetAttrLists()
 	// Set up Job attributes list
 	///////////////////////////////////
 	for ( attr = job_attrs_list; *attr; attr++ ) {
-		TargetJobAttrs.append( *attr );
+		job_attrs_ad.AssignExpr( *attr, "True" );
 	}
 
 	tmp = param( "SUBMIT_EXPRS" );
 	if ( tmp ) {
-		TargetJobAttrs.initializeFromString( tmp );
+		tmp_strlist.initializeFromString( tmp );
 		free( tmp );
+		tmp_strlist.rewind();
+		while ( (tmp = tmp_strlist.next()) ) {
+			job_attrs_ad.AssignExpr( tmp, "True" );
+		}
+		tmp_strlist.clearAll();
 	}
 
 	buff.sprintf( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
-	TargetJobAttrs.append( buff.Value() );
+	job_attrs_strlist.append( buff.Value() );
 
 	buff.sprintf( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
-	TargetJobAttrs.append( buff.Value() );
+	job_attrs_strlist.append( buff.Value() );
 
 	tmp = param( "TARGET_JOB_ATTRS" );
 	if ( tmp ) {
-		TargetJobAttrs.initializeFromString( tmp );
+		job_attrs_strlist.initializeFromString( tmp );
 		free( tmp );
 	}
 
 	target_attrs_init = true;
 }
 
-classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, StringList &target_attrs )
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
 {
 	if ( !target_attrs_init ) {
 		InitTargetAttrLists();
 	}
 
 	if( tree == NULL ) {
+		return NULL;
+	}
+	if ( target_type != TargetMachineAttrs && target_type != TargetJobAttrs ) {
 		return NULL;
 	}
 	classad::ExprTree::NodeKind nKind = tree->GetKind( );
@@ -2032,7 +2054,19 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, StringList &target_at
 			return tree->Copy( );
 		}
 		else {
-			if( target_attrs.contains_anycase_withwildcard( attr.c_str() ) ) {
+			bool add_target = false;
+			if ( target_type == TargetMachineAttrs ) {
+				if ( machine_attrs_ad.Lookup( attr.c_str() ) ||
+					 machine_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
+					add_target = true;
+				}
+			} else {
+				if ( job_attrs_ad.Lookup( attr.c_str() ) ||
+					 job_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
+					add_target = true;
+				}
+			}
+			if( add_target ) {
 					// attribute is in our list, so insert "target"
 				classad::AttributeReference *target = NULL;
 				target = classad::AttributeReference::MakeAttributeReference(NULL,
@@ -2054,13 +2088,13 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, StringList &target_at
 		classad::ExprTree * newExpr3 = NULL;
 		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
 		if( expr1 != NULL ) {
-			newExpr1 = AddTargetRefs( expr1, target_attrs );
+			newExpr1 = AddTargetRefs( expr1, target_type );
 		}
 		if( expr2 != NULL ) {
-			newExpr2 = AddTargetRefs( expr2, target_attrs );
+			newExpr2 = AddTargetRefs( expr2, target_type );
 		}
 		if( expr3 != NULL ) {
-			newExpr3 = AddTargetRefs( expr3, target_attrs );
+			newExpr3 = AddTargetRefs( expr3, target_type );
 		}
 		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
 	}
@@ -2070,7 +2104,7 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, StringList &target_at
 		classad::ArgumentList new_fn_args;
 		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
 		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
-			new_fn_args.push_back( AddTargetRefs( *i, target_attrs ) );
+			new_fn_args.push_back( AddTargetRefs( *i, target_type ) );
 		}
 		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
 	}
