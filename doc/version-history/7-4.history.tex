@@ -77,6 +77,18 @@ Now, if one node goes away, the whole computation is shut down immediately.
 \item Fixed the verbosity level of some \Condor{dagman} messages written to
 the \File{dagman.out} file.
 
+% gittrack #1137
+\item Fixed a bug introduced in Condor version 7.3.2 that resulted in
+  messages such as the following even in cases where no problem in
+  communicating with the \Condor{collector} had been encountered:
+
+\begin{verbatim}
+Collector <X> is still being avoided if an alternative succeeds.
+\end{verbatim}
+
+This problem was believed to be fixed in Condor 7.4.1, but some cases
+of the problem remained in that version.
+
 \end{itemize}
 
 \noindent Known Bugs:
