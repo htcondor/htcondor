@@ -27,6 +27,7 @@ use Cwd;
 
 use Getopt::Long;
 use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
+# We use -- and everything after it will be configure arguments only.
 GetOptions(
             'use_externals_cache' => \$opt_use_externals_cache,
             'use-externals-cache' => \$opt_use_externals_cache,
@@ -53,6 +54,7 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     system("env");
 }
 print "------------------------- ENV DUMP ------------------------\n";
+print "Configure args: " . join(' ', @ARGV) . "\n";
 
 ######################################################################
 # grab out the build id so we can tell configure what to use for the
@@ -69,7 +71,7 @@ if( ! $buildid ) {
     die "Can't find Condor build id in $buildid_file!\n";
 }
 print "Build id is: $buildid\n";
-$buildid = " --with-buildid=$buildid ";
+$buildid = "--with-buildid=$buildid ";
 
 ######################################################################
 # grab the Condor version out of the version file so we can unpack our 
@@ -234,8 +236,8 @@ print "running CONFIGURE ...\n";
 my $configexecstr = 
       "./configure " .
 	  $buildid .
-      " --enable-soft-is-hard " .
-      " --with-externals=$externals";
+      "--with-externals=$externals " .
+	  join(' ', @ARGV); # GetOpt already stripped out the non-configure args!
 
 print "$configexecstr\n";
 
