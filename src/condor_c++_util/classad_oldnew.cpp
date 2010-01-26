@@ -296,7 +296,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 	    if(strcasecmp(ATTR_CURRENT_TIME,buf.c_str())==0) {
 		continue;
 	    }
-            if(compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
+            if(exclude_private && compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
                 continue;
             }
 

@@ -477,9 +477,11 @@ LookupInteger( const char *name, int &value ) const
 	bool    boolVal;
 	int     haveInteger;
 	string  sName;
+	int		tmp_val;
 
 	sName = string(name);
-	if( EvaluateAttrInt(sName, value ) ) {
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
 		haveInteger = TRUE;
 	} else if( EvaluateAttrBool(sName, boolVal ) ) {
 		value = boolVal ? 1 : 0;
@@ -527,7 +529,6 @@ LookupBool( const char *name, int &value ) const
 		value = (intVal != 0) ? 1 : 0;
 	} else {
 		haveBool = false;
-		value = 0;
 	}
 	return haveBool;
 }
@@ -550,7 +551,6 @@ LookupBool( const char *name, bool &value ) const
 		value = (intVal != 0) ? true : false;
 	} else {
 		haveBool = false;
-		value = false;
 	}
 	return haveBool;
 }
@@ -655,9 +655,11 @@ int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
+	int tmp_val;
 
 	if( target == this || target == NULL ) {
-		if( EvaluateAttrInt( name, value ) ) { 
+		if( EvaluateAttrInt( name, tmp_val ) ) { 
+			value = tmp_val;
 			return 1;
 		}
 		return 0;
@@ -665,11 +667,13 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 
 	classad::MatchClassAd mad( this, target );
 	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrInt( name, value ) ) {
+		if( this->EvaluateAttrInt( name, tmp_val ) ) {
+			value = tmp_val;
 			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrInt( name, value ) ) {
+		if( target->EvaluateAttrInt( name, tmp_val ) ) {
+			value = tmp_val;
 			rc = 1;
 		}
 	}
@@ -1061,7 +1065,7 @@ NextNameOriginal()
 	classad::ClassAd *chained_ad = GetChainedParentAd();
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
-	if ( m_nameItr == end() && chained_ad ) {
+	if ( m_nameItr == end() && chained_ad && !m_nameItrInChain ) {
 		m_nameItr = chained_ad->begin();
 		m_nameItrInChain = true;
 	}
@@ -1348,7 +1352,7 @@ bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 	classad::ClassAd *chained_ad = GetChainedParentAd();
 	// After iterating through all the attributes in this ad,
 	// get all the attributes in our chained ad as well.
-	if ( m_exprItr == end() && chained_ad ) {
+	if ( m_exprItr == end() && chained_ad && !m_exprItrInChain ) {
 		m_exprItr = chained_ad->begin();
 		m_exprItrInChain = true;
 	}
@@ -1482,6 +1486,7 @@ ClassAd::EscapeStringValue(char const *val, MyString &buf)
     unparse.Unparse(stringToAppeaseUnparse, tmpValue);
 
     buf = stringToAppeaseUnparse.c_str();
+	buf = buf.Substr( 1, buf.Length() - 2 );
     return buf.Value();
 }
 
