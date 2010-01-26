@@ -1289,7 +1289,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                  */
 
                 if( val.IsUndefinedValue() ) {
-                    return false;
+                    return true;
                 }
 
                 string nameToAddToRefs = "";
@@ -1349,7 +1349,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                     
                     //bool rval = _GetInternalReferences(result, ad, state, refs, fullNames);
                     //state.curAd = curAd;
-                    return false;
+                    return true;
                 break;
                                 }
 
