@@ -1345,7 +1345,7 @@ test_dirty_attribute(
 	classad->ClearAllDirtyFlags();
 
 	// First of all, we should have zero dirty attributes. 
-	classad->ResetName(); 
+	classad->ResetExpr(); 
 	classad->NextDirtyExpr(name, expr);
 	if (name) {
 		printf("Failed: new ClassAd has dirty attributes in line %d\n",
@@ -1360,7 +1360,7 @@ test_dirty_attribute(
 	classad->Insert("C = 3");
 
 	// Now we should have exactly one dirty attribute, C.
-	classad->ResetName();
+	classad->ResetExpr();
 	classad->NextDirtyExpr(name, expr);
 	if (!name) {
 		printf("Failed: C isn't dirty in line %d\n", __LINE__);
@@ -1385,7 +1385,7 @@ test_dirty_attribute(
 	classad->Insert("D = 4");
 
 	// Now we should have two dirty attributes, C & D
-	classad->ResetName();
+	classad->ResetExpr();
 	classad->NextDirtyExpr(name, expr);
 	if (!name) {
 		printf("Failed: C isn't dirty in line %d\n", __LINE__);
@@ -1419,7 +1419,7 @@ test_dirty_attribute(
 
 	// Clear the dirty flags, and there should be no dirty attributes
 	classad->ClearAllDirtyFlags();
-	classad->ResetName(); 
+	classad->ResetExpr(); 
 	classad->NextDirtyExpr(name, expr);
 	if (name) {
 		printf("Failed: ClassAd has dirty attributes in line %d\n",
@@ -1436,7 +1436,7 @@ test_dirty_attribute(
 	classad->SetDirtyFlag("B", true);
 	classad->SetDirtyFlag("B", false);
 
-	classad->ResetName();
+	classad->ResetExpr();
 	classad->NextDirtyExpr(name, expr);
 	if (!name) {
 		printf("Failed: A isn't dirty in line %d\n", __LINE__);
