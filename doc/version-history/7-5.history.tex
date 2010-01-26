@@ -67,7 +67,22 @@ gatekeeper.
 
 \begin{itemize}
 
-\item None.
+% gittrack #1141
+\item The default value for \MacroNI{SEC\_DEFAULT\_SESSION\_DURATION}
+  was effectively 3600 in 7.5.0.  This produced longer than desired
+  cached sessions for short-lived tools such as \Condor{status}.  It
+  also produced shorter than possibly desired cached sessions for
+  long-lived daemons such as \Condor{startd}.  The default has been
+  restored to what it was before 7.5.0, with the exception of
+  \Condor{submit}, which has been changed from 1 hour to 60s.  For
+  command-line tools, the default is 60s and for daemons it is 1 day.
+
+% gittrack #1142
+\item \MacroNI{SEC\_<access-level>\_SESSION\_DURATION} previously did
+  not support integer expressions, but it did not detect invalid
+  input, so the use of an expression could produce unexpected results.
+  Now, like other integer configuration settings, a constant expression can
+  be used and input is fully validated.
 
 \end{itemize}
 
