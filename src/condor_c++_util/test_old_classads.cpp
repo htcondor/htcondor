@@ -73,11 +73,11 @@ char *classad_strings[] =
 	 * The first one is simple, but we can also check that things aren't listed twice. */
 	"Memory = 60\n Disk = 40\n OS = Linux\n X = 4\n Requirements = ((ImageSize > Memory) "
 	"&& (AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > Disk)) "
-    "&& foo(X; XX)",
+    "&& foo(X, XX)",
 	/* The second one is to test MY and TARGET. */
-	"Memory = 60\n Disk = 40\n OS = Linux\n Requirements = ((TARGET.ImageSize > MY.Memory) "
-	"&& (AvailableDisk > Disk) && (TARGET.AvailableDisk > MY.Memory) && (TARGET.ImageSize > MY.Disk)) "
-    "&& foo(TARGET.X; TARGET.XX)",
+	"Memory = 60\n Disk = 40\n OS = Linux\n Requirements = ((TARGET.ImageSize > Memory) "
+	"&& (AvailableDisk > Disk) && (TARGET.AvailableDisk > Memory) && (TARGET.ImageSize > Disk)) "
+    "&& foo(TARGET.X, TARGET.XX)",
 
 	/* Test case sensitivity */
 	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\"\n"
