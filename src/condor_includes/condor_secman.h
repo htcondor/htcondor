@@ -155,6 +155,10 @@ public:
 		// Caller should free the returned string.
 	static char*            getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name=NULL, char const *check_subsystem=NULL );
 
+	static bool getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name = NULL, char const *check_subsystem = NULL );
+
+	static bool getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name, char const *check_subsystem );
+
 		// for each auth level in the hierarchy, look up config value,
 		// and parse it as REQUIRED, OPTIONAL, etc.
 	sec_req         sec_req_param( const char* fmt, DCpermission auth_level, sec_req def );
