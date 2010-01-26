@@ -1189,15 +1189,12 @@ processCommandLineArguments (int argc, char *argv[])
 			usage(argv[0]);
 			exit(0);
 		}
-		else
-		if (match_prefix( arg , "analyze")
-			|| match_prefix( arg , "analyse")) {
-			analyze = true;
-			attrs.clearAll();
-		}
         else
         if (match_prefix( arg, "better-analyze")
-			|| match_prefix( arg , "better-analyse")) {
+			|| match_prefix( arg , "better-analyse")
+			|| match_prefix( arg , "analyze")
+			|| match_prefix( arg , "analyse")
+			) {
             analyze = true;
             better_analyze = true;
 			attrs.clearAll();
