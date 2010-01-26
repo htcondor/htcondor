@@ -557,13 +557,6 @@ TESTCLASS(cmd_q_shows-sub,quick)
 TESTCLASS(cmd_q_shows-sub,full)
 TESTCLASS(cmd_q_shows-sub,quicknolink)
 
-DESC(cmd_q_shows-analyze,"Condor_q shows analyze")
-RUN(cmd_q_shows-analyze)
-TESTCLASS(cmd_q_shows-analyze,core)
-TESTCLASS(cmd_q_shows-analyze,quick)
-TESTCLASS(cmd_q_shows-analyze,full)
-TESTCLASS(cmd_q_shows-analyze,quicknolink)
-
 DESC(cmd_q_shows-better-analyze,"Condor_q shows better-analyze")
 RUN(cmd_q_shows-better-analyze)
 TESTCLASS(cmd_q_shows-better-analyze,core)
