@@ -226,7 +226,7 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
     (*compC3) = new compat_classad::ClassAd(*c);
     delete c;
 
-    c = parser.ParseClassAd("[A = \"hello\";E = 5; ]");
+    c = parser.ParseClassAd("[A = \"hello\";E = 5;F=\"abc\\\"\\\\efg\\\\\" ]");
     (*compC4) = new compat_classad::ClassAd(*c);
     delete c;
 
@@ -753,47 +753,54 @@ bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose)
 //{{{ test_EscapeStringValue
 bool test_EscapeStringValue(compat_classad::ClassAd *c1, int verbose)
 {
-    bool passed;
-    bool passedTest[2];
-    passedTest[0] = false; passedTest[1] = false; 
+    bool passed = true;
+
+	const char *ans1 = "hello";
+	const char *ans2 = "abc\\\"\\efg\\";
 
     const char *tmp; 
-    const char *tmp2;
     string tmpString;
 
-    classad::AttrList::iterator itr;
-    itr = c1->begin();
-
     MyString msTmp;
-    c1->EvaluateAttrString((*itr).first, tmpString);
+    c1->EvaluateAttrString("A", tmpString);
 
     tmp = c1->EscapeStringValue(tmpString.c_str(), msTmp);
 
-    if(!strcmp(tmp, "\"hello\""))
+    if(strcmp(tmp, ans1))
     {
-        passedTest[0] = true;
+        passed = false;
     }
 
     if(verbose == 2)
-        printf("Expected %s and EscapeStringValue returned %s.\n", "\"hello\"", tmp); 
+        printf("Expected %s and EscapeStringValue returned %s.\n", ans1, tmp); 
 
-    tmp2 = c1->EscapeStringValue(NULL, msTmp);
-    
-    if(tmp2 != NULL)
+    c1->EvaluateAttrString("F", tmpString);
+    tmp = c1->EscapeStringValue(tmpString.c_str(), msTmp);
+
+    if(strcmp(tmp, ans2))
     {
-        printf("%s\n", tmp2);
+        passed = false;
+    }
+
+    if(verbose == 2)
+        printf("Expected %s and EscapeStringValue returned %s.\n", ans2, tmp); 
+
+    tmp = c1->EscapeStringValue(NULL, msTmp);
+    
+    if(tmp != NULL)
+    {
+		passed = false;
+        printf("%s\n", tmp);
 
         if(verbose == 2)
             printf("Bad. Passed in NULL and got something back.\n");
     }
     else
     {
-        passedTest[1] = true;
         if(verbose == 2)
             printf("Good. Passed in NULL and got NULL back.\n");
     }   
 
-    passed = passedTest[0] && passedTest[1];
     return passed;
 
 }
