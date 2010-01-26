@@ -1003,7 +1003,7 @@ Resource::final_update( void )
 	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
 
 		// We only want to invalidate this slot.
-	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
+	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
 			 r_name );
 	invalidate_ad.Insert( line.Value() );
 
