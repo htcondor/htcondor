@@ -49,7 +49,7 @@ char *classad_strings[] =
 #endif
 	"A = 0.7\n B=2\n C = 3\n D = \"alain\"\n MyType=\"foo\"\n TargetType=\"blah\"",
 
-	"Rank = (Memory >= 50)",
+	"Rank = ( Memory >= 50 )",
 
     "Env = \"CPUTYPE=i86pc;GROUP=unknown;LM_LICENSE_FILE=/p/multifacet/"
             "projects/simics/dist10/v9-sol7-gcc/sys/flexlm/license.dat;"
@@ -66,8 +66,8 @@ char *classad_strings[] =
 	// we can print is properly accounted for. 
 	"Requirements = (a > 3) && (b >= 1.3) && (c < MY.rank) && ((d <= TARGET.RANK) "
     "|| (g == \"alain\") || (g != \"roy\") || (h =?= 5) || (i =!= 6)) "
-    "&& ((a + b) < (c-d)) && ((e * f) > (g / h)) && x == false && y == true "
-    "&& z == f && j == t",
+    "&& ((a + b) < (c-d)) && ((e * false) > (g / h)) && x == false && y == true "
+    "&& z == false && j == true",
 
 	/* Some classads to test GetReferences() 
 	 * The first one is simple, but we can also check that things aren't listed twice. */
@@ -396,10 +396,10 @@ main(
 		test_printed_version(classads[3], "Env",          classad_strings[3],
 							 __LINE__, &test_results);
 		test_printed_version(classads[8], "Requirements", 
-			"Requirements = (a > 3) && (b >= 1.300000) && (c < MY.rank) && ((d <= TARGET.RANK) "
-		    "|| (g == \"alain\") || (g != \"roy\") || (h =?= 5) || (i =!= 6)) "
-            "&& ((a + b) < (c - d)) && ((e * FALSE) > (g / h)) && x == FALSE && y == TRUE "
-            "&& z == FALSE && j == TRUE",
+			"Requirements = ( a > 3 ) && ( b >= 1.300000 ) && ( c < MY.rank ) && ( ( d <= TARGET.RANK ) "
+		    "|| ( g == \"alain\" ) || ( g != \"roy\" ) || ( h =?= 5 ) || ( i =!= 6 ) ) "
+            "&& ( ( a + b ) < ( c - d ) ) && ( ( e * false ) > ( g / h ) ) && x == false && y == true "
+            "&& z == false && j == true",
 			 __LINE__, &test_results);
 
 		ClassAd *big_classad = new ClassAd;
