@@ -3684,22 +3684,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=192
 
-[SEC_DEFAULT_SESSION_DURATION]
-aliases=
-default=3600
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Sec Default Session Duration
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=daemon_core,daemon_core_main
-id=193
-
 [QUILL_USE_SQL_LOG]
 aliases=
 default=false
