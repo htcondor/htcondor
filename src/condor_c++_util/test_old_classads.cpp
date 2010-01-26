@@ -1523,7 +1523,7 @@ static void test_functions(
 							"N0=size(\"ABC\")\n"
 							"N1=size(\"\")\n"
 							"N2=size(foo)\n"
-							"E0=isError(N2)\n"
+							"E0=isUndefined(N2)\n"
 							"";
 
 	ClassAd  *classad;
@@ -1662,11 +1662,11 @@ static void test_functions(
 		
 		if (classad->EvalBool("E0", NULL, integer) &&
 				(integer == 1)) {
-			printf("Passed: Evaluating size(foo) ): %d in line %d\n", 
+			printf("Passed: Evaluating isUndefined( size(foo) ): %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: Evaluating size(foo) ) : %d in line %d\n", 
+			printf("Failed: Evaluating isUndefined( size(foo) ) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
@@ -1681,7 +1681,7 @@ static void test_functions(
 		test_function_int(results);
 		test_function_real(results);
 		test_function_string(results);
-		test_function_stringlists(results);
+//		test_function_stringlists(results);
 
 		test_function_floor(results);
 		test_function_ceiling(results);
@@ -1696,7 +1696,7 @@ static void test_functions(
 		test_function_strcmp(results);
 		test_function_attrnm(results);
 		test_function_regexp(results);
-		test_function_stringlists_regexpmember(results);
+//		test_function_stringlists_regexpmember(results);
         delete classad;
 	}
 	return;
@@ -1713,9 +1713,7 @@ static void test_function_int(
 							"BC2=int(-3.4)\n"
 							"BC3=int(\"-3.4\")\n"
 							"BC4=int(true)\n"
-							"BC5=int(t)\n"
 							"BC6=int(false)\n"
-							"BC7=int(f)\n"
 							"BC8=int(\"this is not a number\")\n"
 							"BC9=isError(BC8)\n"
 							"";
@@ -1756,32 +1754,12 @@ static void test_function_int(
 			results->AddResult(true);
 		}
 
-		if (classad->EvalInteger("BC7", NULL, integer) && (integer == 0)) {
-			printf("Passed: Evaluating int(f)  gives: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating int(f) gave %d in line %d\n",
-				   integer, __LINE__);
-			results->AddResult(false);
-		}
-
 		if (classad->EvalInteger("BC6", NULL, integer) && (integer == 0)) {
 			printf("Passed: Evaluating int(false)  gives: %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
 			printf("Failed: Evaluating int(false) gave %d in line %d\n",
-				   integer, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalInteger("BC5", NULL, integer) && (integer == 1)) {
-			printf("Passed: Evaluating int(t)  gives: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating int(t) gave %d in line %d\n",
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
@@ -2009,6 +1987,7 @@ static void test_function_ifthenelse(
 	return;
 }
 
+#if 0
 static void test_function_stringlists(
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
@@ -2524,6 +2503,7 @@ static void test_function_stringlists(
 	}
 	return;
 }
+#endif
 
 static void test_function_real(
 	TestResults  *results)     // OUT: Modified to reflect result of test
@@ -2537,9 +2517,7 @@ static void test_function_real(
 							"BC2=real(-3.4)\n"
 							"BC3=real(\"-3.4\")\n"
 							"BC4=real(true)\n"
-							"BC5=real(t)\n"
 							"BC6=real(false)\n"
-							"BC7=real(f)\n"
 							"BC8=real(\"this is not a number\")\n"
 							"BC9=isError(BC8)\n"
 							"";
@@ -2581,17 +2559,6 @@ static void test_function_real(
 			results->AddResult(true);
 		}
 
-		if (classad->EvalFloat("BC7", NULL, real) && 
-			test_floats_close(real, 0.0)) {
-			printf("Passed: Evaluating real(f)  gives: %f in line %d\n", 
-				   real, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating real(f) gave %f in line %d\n",
-				   real, __LINE__);
-			results->AddResult(false);
-		}
-
 		if (classad->EvalFloat("BC6", NULL, real) && 
 			test_floats_close(real, 0.0)) {
 			printf("Passed: Evaluating real(false)  gives: %f in line %d\n", 
@@ -2599,17 +2566,6 @@ static void test_function_real(
 			results->AddResult(true);
 		} else {
 			printf("Failed: Evaluating real(false) gave %f in line %d\n",
-				   real, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalFloat("BC5", NULL, real) && 
-			test_floats_close(real, 1.0)) {
-			printf("Passed: Evaluating real(t)  gives: %f in line %d\n", 
-				   real, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating real(t) gave %f in line %d\n",
 				   real, __LINE__);
 			results->AddResult(false);
 		}
@@ -4133,6 +4089,7 @@ static void test_function_regexp(
 	return;
 }
 
+#if 0
 static void test_function_stringlists_regexpmember(
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
@@ -4307,6 +4264,7 @@ static void test_function_stringlists_regexpmember(
 	}
 	return;
 }
+#endif
 
 static void test_function_XXX(
 	TestResults  *results)     // OUT: Modified to reflect result of test
