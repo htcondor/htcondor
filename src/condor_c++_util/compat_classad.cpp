@@ -1017,7 +1017,7 @@ GetMyTypeName( ) const
 {
 	string myTypeStr;
 	if( !EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
-		return NULL;
+		return "";
 	}
 	return myTypeStr.c_str( );
 }
@@ -1037,7 +1037,7 @@ GetTargetTypeName( ) const
 {
 	string targetTypeStr;
 	if( !EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
-		return NULL;
+		return "";
 	}
 	return targetTypeStr.c_str( );
 }
