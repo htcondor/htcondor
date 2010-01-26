@@ -91,47 +91,60 @@ my $submit = sub {
 	}
 	print "ok\n";
 
+	run_analyze("-better-analyze", $cluster);
+	run_analyze("-better-analyse", $cluster);
+	run_analyze("-analyze", $cluster);
+	run_analyze("-analyse", $cluster);
+
+	$cmd = "condor_rm $cluster";
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	print "ok\n";
+};
+
+# pass in the argument: -better-analyze, -analyze, or possibly the analyse varients
+sub run_analyze {
+	my($arg, $cluster) = @_;
 	my $foundcluster = 0;
 	my $foundanalyze = 0;
-	my $cmd = "condor_q -better-analyze $cluster";
-	print "Execute: condor_q -better-analyze $cluster - ";
+	my $cmd = "condor_q $arg $cluster";
+	print "Execute: $cmd - ";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
 		print "bad\n";
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+		$test_failed = 1;
 		exit(1)
 	}
 	print "ok\n";
 
-	CondorTest::debug("Examining condor_q -better-analyze output...\n",$debuglevel);
+	CondorTest::debug("Examining $cmd output...\n",$debuglevel);
 
 	print "Looking at command output - ";
 	foreach my $line (@adarray) {
 		chomp($line);
 		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-				CondorTest::debug("Score!!!!! found cluster $cluster:\n",$debuglevel);
+				CondorTest::debug("Good: found cluster $cluster:\n",$debuglevel);
 				CondorTest::debug("  $line\n",$debuglevel);
 				$foundcluster = 1;
 		}
 		if($line =~ /^\s*The\s+Requirements\s+expression\s+for\s+your\s+job\s+is:\s*.*$/) {
-				CondorTest::debug("Score!!!!! found -better-analyze output:\n",$debuglevel);
+				CondorTest::debug("Good: found -better-analyze output:\n",$debuglevel);
 				CondorTest::debug("  $line\n",$debuglevel);
 				$foundanalyze = 1;
 		}
 	}
 
-	$cmd = "condor_rm $cluster";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 
 	if( !$foundcluster | !$foundanalyze ) {
 		print "bad\n";
-		CondorTest::debug("Failed to find expected output from condor_q -better-analyze\n",$debuglevel);
+		CondorTest::debug("Failed to find expected output from $cmd\n",$debuglevel);
+		return 0;
 		$test_failed = 1;
 	}
-	print "ok\n";
-};
+	return 1;
+}
 
 my $aborted = sub {
 	CondorTest::debug("Job aborted\n",$debuglevel);
