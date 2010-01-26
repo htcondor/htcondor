@@ -363,6 +363,20 @@ class Job {
 	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
 				ReadMultipleUserLogs &storkLogReader );
 
+		// Whether this node is using the default node log file.
+	bool UsingDefaultLog() { return _useDefaultLog; }
+
+	/** Get the log file for this node.
+		@return the name of this node's log file.
+	*/
+	const char *GetLogFile() const { return _logFile; }
+
+	/** Get whether this node's log file is XML (versus "standard"
+		format).
+		@return true iff the log file is XML.
+	*/
+	bool GetLogFileIsXml() const { return _logFileIsXml; }
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -408,14 +422,6 @@ class Job {
 	//DFS ordering of the node
 	int _dfsOrder; 
 
-	//The log file for this job -- needed because we're now allowing
-	//each job to have its own log file.
-	// Note: this is needed only for writing a POST script terminated event,
-	// or for NOOP nodes.
-	//TEMPTEMP -- make this private and make an accessor function?
-	char *_logFile;
-	bool _logFileIsXml;
-
 	// DAG definition files can now pass named variables into job submit files.
 	// For lack of a pair<> class, I made two lists, and these lists work together
 	// closely. The order of their items defines the mapping between names
@@ -434,9 +440,6 @@ class Job {
 
 		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
-
-		// Whether this node is using the default node log file.
-	bool UsingDefaultLog() { return _useDefaultLog; }
 
 private:
 
@@ -515,6 +518,14 @@ private:
 
 		// Whether this node uses the default user log file.
 	bool _useDefaultLog;
+
+		// The log file for this job -- it will be assigned the default
+		// log file name if no log file is specified in the submit file.
+	char *_logFile;
+
+		// Whether the log file is XML.
+	bool _logFileIsXml;
+
 
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).

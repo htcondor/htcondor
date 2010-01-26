@@ -1,5 +1,3 @@
-//TEMPTEMP -- can Stork log files be XML?
-//TEMPTEMP -- what if the submit file specifies a format of XML, but no log file?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -749,7 +747,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
 			bool recovery, const char *defaultNodeLog )
 {
-	debug_printf( DEBUG_QUIET, "DIAG Job(%s)::MonitorLogFile()\n", GetJobName());//TEMPTEMP
+	debug_printf( DEBUG_DEBUG_2,
+				"Attempting to mononitor log file for node %s\n",
+				GetJobName() );
+
 	if ( _logIsMonitored ) {
 		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already monitored\n", GetJobName() );
@@ -763,7 +764,6 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	if ( _jobType == TYPE_CONDOR ) {
     	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
 					_directory, _logFileIsXml );
-	debug_printf( DEBUG_QUIET, "  DIAG _logFileIsXml: %d\n", _logFileIsXml );//TEMPTEMP
 	} else {
 #ifdef HAVE_EXT_CLASSADS
 		StringList logFiles;
@@ -816,10 +816,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	delete [] _logFile;
 		// Saving log file here in case submit file gets changed.
 	_logFile = strnewp( logFileStr.Value() );
-	debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
-				_logFile, GetJobName() );
+	debug_printf( DEBUG_DEBUG_2, "Monitoring log file <%s> for node %s\n",
+				GetLogFile(), GetJobName() );
 	CondorError errstack;
-	if ( !logReader.monitorLogFile( _logFile, !recovery, errstack ) ) {
+	if ( !logReader.monitorLogFile( GetLogFile(), !recovery, errstack ) ) {
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
@@ -838,8 +838,8 @@ bool
 Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader )
 {
-	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
-				_logFile, GetJobName() );
+	debug_printf( DEBUG_DEBUG_2, "Unmonitoring log file <%s> for node %s\n",
+				GetLogFile(), GetJobName() );
 
 	if ( !_logIsMonitored ) {
 		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
@@ -851,10 +851,10 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				condorLogReader : storkLogReader;
 
 	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
-				_logFile, GetJobName() );
+				GetLogFile(), GetJobName() );
 
 	CondorError errstack;
-	bool result = logReader.unmonitorLogFile( _logFile, errstack );
+	bool result = logReader.unmonitorLogFile( GetLogFile(), errstack );
 	if ( !result ) {
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to unmonitor log " "file for node %s",

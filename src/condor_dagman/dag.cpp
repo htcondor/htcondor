@@ -1145,14 +1145,12 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 	}
 
 	Job *	node = NULL;
-		//TEMPTEMP -- make this into a static function somewhere?
-	bool isNoop = (condorID._cluster == 0) &&
-				(condorID._proc == Job::NOOP_NODE_PROCID);
-	int id = isNoop ? condorID._subproc : condorID._cluster;
-	if ( GetEventIDHash( isNoop, logsource )->
-				lookup(id, node) != 0 ) {
-    	debug_printf( DEBUG_VERBOSE, "ERROR: node for cluster %d not found!\n",
-					condorID._cluster);
+	bool isNoop = JobIsNoop( condorID );
+	int id = GetIndexID( condorID );
+	if ( GetEventIDHash( isNoop, logsource )->lookup(id, node) != 0 ) {
+    	debug_printf( DEBUG_VERBOSE,
+					"ERROR: node for condor ID %d.%d.%d not found!\n",
+					condorID._cluster, condorID._proc, condorID._subproc);
 		node = NULL;
 	}
 
@@ -1172,6 +1170,7 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 							node->_CondorID._cluster );
 			}
 		}
+		ASSERT( isNoop == node->GetNoop() );
 	}
 
 	return node;
@@ -1503,12 +1502,12 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// write to the user log also fails, and DAGMan hangs
 			// waiting for the event that wasn't written).
 		ulog.setEnableGlobalLog( false );
-		ulog.setUseXML( job->_logFileIsXml );
+		ulog.setUseXML( job->GetLogFileIsXml() );
 			// For NOOP jobs, we need the proc and subproc values;
 			// for "real" jobs, they are not significant.
 		int procID = job->GetNoop() ? job->_CondorID._proc : 0;
 		int subprocID = job->GetNoop() ? job->_CondorID._subproc : 0;
-		ulog.initialize( job->_logFile, job->_CondorID._cluster,
+		ulog.initialize( job->GetLogFile(), job->_CondorID._cluster,
 					 	procID, subprocID, NULL );
 
 		if( !ulog.writeEvent( &e ) ) {
@@ -2736,16 +2735,17 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 						// mode).  (In "normal" mode we should have already
 						// inserted it when we did the condor_submit.)
 					Job *tmpNode = NULL;
-					bool isNoop = (condorID._cluster == 0) &&
-								(condorID._proc == Job::NOOP_NODE_PROCID);
-					int id = isNoop ? condorID._subproc : condorID._cluster;
-//TEMPTEMP -- maybe make wrapper methods for insert and lookup that also grab the right part of the CondorID
-					if ( GetEventIDHash( isNoop, logsource )->
-								lookup(id, tmpNode) != 0 ) {
-						int insertResult = GetEventIDHash( isNoop, logsource )->
-									insert( id, node );
+					bool isNoop = JobIsNoop( condorID );
+					ASSERT( isNoop == node->GetNoop() );
+					int id = GetIndexID( condorID );
+					HashTable<int, Job *> *ht =
+								GetEventIDHash( isNoop, logsource );
+					if ( ht->lookup(id, tmpNode) != 0 ) {
+							// Node not found.
+						int insertResult = ht->insert( id, node );
 						ASSERT( insertResult == 0 );
 					} else {
+							// Node was found.
 						ASSERT( tmpNode == node );
 					}
 				}
@@ -2952,10 +2952,10 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
 		// Resetting the Condor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->_CondorID._cluster != _defaultCondorId._cluster ) {
-		int id = node->GetNoop() ? node->_CondorID._subproc :
-					node->_CondorID._cluster;
-		int removeResult = GetEventIDHash( node->GetNoop(), node->JobType() )->
-					remove( id );
+		ASSERT( JobIsNoop( condorID ) == node->GetNoop() );
+		int id = GetIndexID( node->_CondorID );
+		int removeResult = GetEventIDHash( node->GetNoop(),
+					node->JobType() )->remove( id );
 		ASSERT( removeResult == 0 );
 	}
 	node->_CondorID = _defaultCondorId;
@@ -3005,11 +3005,11 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							node->_logFile, node->_logFileIsXml );
+							node->GetLogFile(), node->GetLogFileIsXml() );
 
 			} else {
 				const char *logFile = node->UsingDefaultLog() ?
-							node->_logFile : NULL;
+							node->GetLogFile() : NULL;
 					// Note: assigning the ParentListString() return value
 					// to a variable here, instead of just passing it directly
 					// to condor_submit(), fixes a memory leak(!).
@@ -3025,7 +3025,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							node->_logFile, node->_logFileIsXml );
+							node->GetLogFile(), node->GetLogFileIsXml() );
 
 			} else {
       			submit_success = stork_submit( dm, cmd_file.Value(), condorID,
@@ -3072,8 +3072,8 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
         // since we won't have seen the submit command stdout...)
 
 	node->_CondorID = condorID;
-	int id = node->GetNoop() ? node->_CondorID._subproc :
-				node->_CondorID._cluster;
+	ASSERT( JobIsNoop( node->_CondorID ) == node->GetNoop() );
+	int id = GetIndexID( node->_CondorID );
 	int insertResult = GetEventIDHash( node->GetNoop(), node->JobType() )->
 				insert( id, node );
 	ASSERT( insertResult == 0 );

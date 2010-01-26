@@ -507,6 +507,23 @@ class Dag {
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
+	/** Determine whether a job is a NOOP job based on the Condor ID.
+		@param the Condor ID of the job
+		@return true iff the job is a NOOP
+	*/
+	static bool JobIsNoop( const CondorID &id ) {
+		return (id._cluster == 0) && (id._proc == Job::NOOP_NODE_PROCID);
+	}
+
+	/** Get the part of the CondorID that we're indexing by (cluster ID
+		for "normal" jobs, subproc ID for NOOP jobs).
+		@param the Condor ID of the job
+		@return the part of the ID to index by
+	*/
+	static int GetIndexID( const CondorID &id ) {
+		return JobIsNoop( id ) ? id._subproc : id._cluster; 
+	}
+
 	// return same thing as HashTable.insert()
 	int InsertSplice(MyString spliceName, Dag *splice_dag);
 
