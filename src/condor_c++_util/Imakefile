@@ -307,6 +307,7 @@ c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
 
 #if !defined(WANT_OLD_CLASSADS)
 c_plus_target(test_compat_classad,test_compat_classad.o,$(LIB))
+c_plus_target(test_old_classads,test_old_classads.o,$(LIB))
 #endif
 
 
