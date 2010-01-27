@@ -1,4 +1,3 @@
-//TEMPTEMP -- make sure this runs with job_dagman_parallel-A
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -399,20 +398,33 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 	condorID._subproc = subprocID;
 
 
-//TEMPTEMP -- just get the string for the submit host once, for speed!
+	WriteUserLog ulog;
+	ulog.setEnableGlobalLog( false );
+	ulog.setUseXML( logIsXml );
+	ulog.initialize( logFile, condorID._cluster, condorID._proc,
+				condorID._subproc, NULL );
+
+
 	SubmitEvent subEvent;
 	subEvent.cluster = condorID._cluster;
 	subEvent.proc = condorID._proc;
 	subEvent.subproc = condorID._subproc;
 
-		//TEMPTEMP -- seems like we need submit host for event to be read correctly
-	sprintf( subEvent.submitHost, "<128.105.165.12:32779>");//TEMPTEMP!!!!
-		//TEMPTEMP -- avoid duplicate code here
+		// We need some value for submitHost for the event to be read
+		// correctly.
+	sprintf( subEvent.submitHost, "<dummy-submit>");
+
 	MyString subEventNotes("DAG Node: " );
 	subEventNotes += DAGNodeName;
+		// submitEventLogNotes get deleted in SubmitEvent destructor.
 	subEvent.submitEventLogNotes = strnewp( subEventNotes.Value() );
 
-		//TEMPTEMP -- is this what we want?  what the hell is a NodeTerminatedEvent?!?
+	if ( !ulog.writeEvent( &subEvent ) ) {
+		EXCEPT( "Error: writing dummy submit event for NOOP node failed!\n" );
+		return false;
+	}
+
+
 	JobTerminatedEvent termEvent;
 	termEvent.cluster = condorID._cluster;
 	termEvent.proc = condorID._proc;
@@ -421,19 +433,8 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 	termEvent.returnValue = 0;
 	termEvent.signalNumber = 0;
 
-	WriteUserLog ulog;
-	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( logIsXml );
-	ulog.initialize( logFile, condorID._cluster, condorID._proc,
-				condorID._subproc, NULL );//TEMPTEMP -- make sure args are correct
-
-	if ( !ulog.writeEvent( &subEvent ) ) {
-		EXCEPT( "fake submit failed\n" );//TEMPTEMP
-		return false;
-	}
-
 	if ( !ulog.writeEvent( &termEvent ) ) {
-		EXCEPT( "fake terminated failed\n" );//TEMPTEMP
+		EXCEPT( "Error: writing dummy terminated event for NOOP node failed!\n" );
 		return false;
 	}
 
