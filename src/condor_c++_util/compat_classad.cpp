@@ -2070,6 +2070,8 @@ static void InitTargetAttrLists()
 		machine_attrs_ad.AssignExpr( *attr, "True" );
 	}
 
+	machine_attrs_ad.Delete( ATTR_CURRENT_TIME );
+
 	tmp = param( "STARTD_EXPRS" );
 	if ( tmp ) {
 		tmp_strlist.initializeFromString( tmp );
@@ -2113,6 +2115,8 @@ static void InitTargetAttrLists()
 	for ( attr = job_attrs_list; *attr; attr++ ) {
 		job_attrs_ad.AssignExpr( *attr, "True" );
 	}
+
+	job_attrs_ad.Delete( ATTR_CURRENT_TIME );
 
 	tmp = param( "SUBMIT_EXPRS" );
 	if ( tmp ) {
