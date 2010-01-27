@@ -2109,11 +2109,12 @@ random( const char*,const ArgumentList &argList,EvalState &state,
     double  random_double;
 
     // takes exactly one argument
-	if( argList.size() != 1 ) {
+	if( argList.size() > 1 ) {
 		result.SetErrorValue( );
 		return( true );
-	}
-	if( !argList[0]->Evaluate( state, arg ) ) {
+	} else if ( argList.size() == 0 ) {
+		arg.SetRealValue( 1.0 );
+	} else if( !argList[0]->Evaluate( state, arg ) ) {
 		result.SetErrorValue( );
 		return( false );
 	}
