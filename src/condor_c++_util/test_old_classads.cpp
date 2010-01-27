@@ -3590,6 +3590,10 @@ static void test_function_formattime(
 
 
 
+		/* new ClassAds don't check for a negative value passed to
+		 * formattime()
+		 */
+#if 0
 		if (classad->EvalBool("E0", NULL, integer) && (integer == 1)) {
 			printf("Passed: Caught error from a negative time : %d in line %d\n", 
 				   integer, __LINE__);
@@ -3599,6 +3603,7 @@ static void test_function_formattime(
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
+#endif
 
 		if (classad->EvalBool("E1", NULL, integer) && (integer == 1)) {
 			printf("Passed: Bad string caught : %d in line %d\n", 
@@ -3631,7 +3636,7 @@ static void test_function_substr(
 							"I5=substr(\"abcdefg\", 3.3, -9)\n"
 							"I6=substr(foo, 3, -9)\n"
 							"E0=isError(I5)\n"
-							"E1=isError(I6)\n"
+							"E1=isUndefined(I6)\n"
 							"";
 
 	ClassAd  *classad;
@@ -3735,16 +3740,16 @@ static void test_function_strcmp(
 	int		integer;
 
 	char classad_string[] = 
-							"J0=strcmp(\"ABCDEFgxx\"; \"ABCDEFg\")\n"
-							"J1=strcmp(\"BBBBBBBxx\"; \"CCCCCCC\")\n"
-							"J2=strcmp(\"AbAbAbAb\"; \"AbAbAbAb\")\n"
-							"J3=strcmp(1+1; \"2\")\n"
-							"J4=strcmp(\"2\"; 1+1)\n"
-							"K0=stricmp(\"ABCDEFg\"; \"abcdefg\")\n"
-							"K1=stricmp(\"ffgghh\"; \"aabbcc\")\n"
-							"K2=stricmp(\"aBabcd\"; \"ffgghh\")\n"
-							"K3=stricmp(1+1; \"2\")\n"
-							"K4=stricmp(\"2\"; 1+1)\n"
+							"J0=strcmp(\"ABCDEFgxx\", \"ABCDEFg\")\n"
+							"J1=strcmp(\"BBBBBBBxx\", \"CCCCCCC\")\n"
+							"J2=strcmp(\"AbAbAbAb\", \"AbAbAbAb\")\n"
+							"J3=strcmp(1+1, \"2\")\n"
+							"J4=strcmp(\"2\", 1+1)\n"
+							"K0=stricmp(\"ABCDEFg\", \"abcdefg\")\n"
+							"K1=stricmp(\"ffgghh\", \"aabbcc\")\n"
+							"K2=stricmp(\"aBabcd\", \"ffgghh\")\n"
+							"K3=stricmp(1+1, \"2\")\n"
+							"K4=stricmp(\"2\", 1+1)\n"
 							"";
 
 	ClassAd  *classad;
@@ -4494,34 +4499,38 @@ void test_operators(TestResults *results)
     ClassAd *c = new ClassAd;
 	c->initFromString(classad_string, NULL);
 
+	/* In new ClassAds, the operands of && and || must be booleans.
+	 * Thus, most of the tests here won't work properly.
+	 */
+
     // Test short-circuiting with logical OR
 //    classad_debug_function_run = false;
     test_eval_bool(c, "A", 1, __LINE__, results);
 //    test_debug_function_run(false, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "B", 1, __LINE__, results);
+//    test_eval_bool(c, "B", 1, __LINE__, results);
 //    test_debug_function_run(false, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "C", 1, __LINE__, results);
+//    test_eval_bool(c, "C", 1, __LINE__, results);
 //    test_debug_function_run(false, __LINE__, results);
 
     // Test no short-circuiting with logical OR
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "D", 1, __LINE__, results);
+//    test_eval_bool(c, "D", 1, __LINE__, results);
 //    test_debug_function_run(true, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "E", 1, __LINE__, results);
+    test_eval_error(c, "E", __LINE__, results);
 //    test_debug_function_run(true, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "G", 1, __LINE__, results);
+//    test_eval_bool(c, "G", 1, __LINE__, results);
 //    test_debug_function_run(true, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "H", 1, __LINE__, results);
+//    test_eval_bool(c, "H", 1, __LINE__, results);
 //    test_debug_function_run(true, __LINE__, results);
 
     // Test short-circuiting with logical AND
@@ -4530,11 +4539,11 @@ void test_operators(TestResults *results)
 //    test_debug_function_run(false, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "J", 0, __LINE__, results);
+//    test_eval_bool(c, "J", 0, __LINE__, results);
 //    test_debug_function_run(false, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "K", 0, __LINE__, results);
+//    test_eval_bool(c, "K", 0, __LINE__, results);
 //    test_debug_function_run(false, __LINE__, results);
 
 //    classad_debug_function_run = false;
@@ -4543,15 +4552,15 @@ void test_operators(TestResults *results)
 
     // Test no short-circuiting with logical AND
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "M", 1, __LINE__, results);
+    test_eval_error(c, "M", __LINE__, results);
 //    test_debug_function_run(true, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "N", 1, __LINE__, results);
+//    test_eval_bool(c, "N", 1, __LINE__, results);
 //    test_debug_function_run(true, __LINE__, results);
 
 //    classad_debug_function_run = false;
-    test_eval_bool(c, "O", 1, __LINE__, results);
+//    test_eval_bool(c, "O", 1, __LINE__, results);
 //    test_debug_function_run(true, __LINE__, results);
 
 }
@@ -4604,12 +4613,17 @@ test_scoping(TestResults *results)
         printf("Failed: eval of D is bad in line %d\n", __LINE__);
     }
 
+		/* new ClassAds require a TARGET. scope when referring to
+		 * attributes in the remote ad of a two-ad evaluation.
+		 */
+#if 0
     if (ad1->EvalInteger("E", ad2, value) && value == 3) {
          printf("Passed: eval of E is good in line %d\n", __LINE__);
         results->AddResult(true);
     } else {
         printf("Failed: eval of E is bad in line %d\n", __LINE__);
     }
+#endif
 
     if (ad1->EvalInteger("G", ad2, value) && value == 4) {
          printf("Passed: eval of G is good in line %d\n", __LINE__);
