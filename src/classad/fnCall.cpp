@@ -1683,6 +1683,9 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	}
 	if( len <= 0 ) {
 		len = alen - offset + len;
+		if( len < 0 ) {
+			len = 0;
+		}
 	} else if( len > alen - offset ) {
 		len = alen - offset;
 	}
