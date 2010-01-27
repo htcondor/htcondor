@@ -1412,11 +1412,17 @@ void ClassAd::
 GetDirtyFlag(const char *name, bool *exists, bool *dirty)
 {
 	if ( Lookup( name ) == NULL ) {
-		*exists = false;
+		if ( exists ) {
+			*exists = false;
+		}
 		return;
 	}
-	*exists = true;
-	*dirty = IsAttributeDirty( name );
+	if ( exists ) {
+		*exists = true;
+	}
+	if ( dirty ) {
+		*dirty = IsAttributeDirty( name );
+	}
 }
 
 void ClassAd::
