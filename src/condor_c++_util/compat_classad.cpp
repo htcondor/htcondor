@@ -297,6 +297,8 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 
 	ResetName();
     ResetExpr();
+
+	EnableDirtyTracking();
 }
 
 bool ClassAd::
