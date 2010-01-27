@@ -2166,8 +2166,8 @@ ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
 		break;
 	}
 	case Value::REAL_VALUE: {
-		int realval;
-		if( !arg1.IsIntegerValue(realval) ) {
+		double realval;
+		if( !arg1.IsRealValue(realval) ) {
 			result.SetErrorValue();
 			return( false );
 		}
