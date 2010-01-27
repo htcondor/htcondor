@@ -1621,10 +1621,10 @@ changeCase(const char*name,const ArgumentList &argList,EvalState &state,
             return true;
         } else if (stringVal.IsErrorValue()) {
             result.SetErrorValue();
-            return false;
+            return true;
         } else if (!stringVal.IsStringValue(str)) {
             result.SetErrorValue();
-            return false;
+            return true;
         }
 	}
 
@@ -1648,7 +1648,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 		// two or three arguments
 	if( argList.size() < 2 || argList.size() > 3 ) {
 		result.SetErrorValue( );
-		return( false );
+		return( true );
 	}
 
 		// Evaluate all arguments
@@ -1663,14 +1663,14 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) ||
 		(argList.size() > 2 && arg2.IsUndefinedValue( ) ) ) {
 		result.SetUndefinedValue( );
-		return( false );
+		return( true );
 	}
 
 		// arg0 must be string, arg1 must be int, arg2 (if given) must be int
 	if( !arg0.IsStringValue( buf ) || !arg1.IsIntegerValue( offset )||
 		(argList.size( ) > 2 && !arg2.IsIntegerValue( len ) ) ) {
 		result.SetErrorValue( );
-		return( false );
+		return( true );
 	}
 
 		// perl-like substr; negative offsets and lengths count from the end
@@ -1717,7 +1717,7 @@ compareString( const char*name, const ArgumentList &argList, EvalState &state,
     // Must have two arguments
 	if(argList.size() != 2) {
 		result.SetErrorValue( );
-		return( false );
+		return( true );
 	}
 
     // Evaluate both arguments
@@ -1731,7 +1731,7 @@ compareString( const char*name, const ArgumentList &argList, EvalState &state,
     // undefined.
 	if(arg0.IsUndefinedValue() || arg1.IsUndefinedValue()) {
 		result.SetUndefinedValue( );
-		return false;
+		return true;
     }
 
     string  s0, s1;
@@ -1929,7 +1929,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 		time_t rsecs = 0;
 		if(relative) {// 2nd argument is N/A for reltime
 			result.SetErrorValue( );
-			return( false );
+			return( true );
 		}
 		// 2nd arg should be integer, real or reltime
 		else if (arg2.IsIntegerValue(ivalue2)) {
@@ -1943,7 +1943,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 		}
 		else {
 			result.SetErrorValue( );
-			return( false );
+			return( true );
 		}
 	} else {
         secondarg = false;
