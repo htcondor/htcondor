@@ -381,8 +381,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		// Now look through the submit file logical lines to find the
 		// log file and initial directory (if specified) and combine
 		// them into a path to the log file that's either absolute or
-		// relative to the DAG submit directory.
-		//TEMPTEMP -- add stuff about log_xml
+		// relative to the DAG submit directory.  Also look for log_xml.
 	const char *logicalLine;
 	while( (logicalLine = logicalLines.next()) != NULL ) {
 		MyString	submitLine(logicalLine);
@@ -433,7 +432,6 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		}
 	}
 
-		//TEMPTEMP -- make sure there are no other variations to test for
 	isXmlLogStr.lower_case();
 	if ( isXmlLogStr == "true" ) {
 		isXml = true;

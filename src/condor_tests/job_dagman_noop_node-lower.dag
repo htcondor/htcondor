@@ -5,7 +5,7 @@ Vars nodeA nodename="$(JOB)"
 Retry nodeA 1
 
 # This node will succeed (NOOP nodes always succeed).
-Noop Job nodeB1 job_dagman_noop_node-node_conditional.cmd
+Job nodeB1 job_dagman_noop_node-node_conditional.cmd Noop
 Vars nodeB1 nodename="$(JOB)"
 Script Pre nodeB1 job_dagman_noop_node-script.pl $JOB pre 0
 Script Post nodeB1 job_dagman_noop_node-script.pl $JOB post $RETURN
@@ -19,7 +19,7 @@ Script Post nodeB2 job_dagman_noop_node-script.pl $JOB post $RETURN
 
 # This node will succeed (NOOP nodes always succeed).
 # Have one noop node with no PRE or POST script...
-Noop Job nodeC job_dagman_noop_node-node_conditional.cmd
+Job nodeC job_dagman_noop_node-node_conditional.cmd Noop
 Vars nodeC nodename="$(JOB)"
 
 # This node will fail the first time (causing a second rescue DAG to be
@@ -28,19 +28,19 @@ Job nodeD1 job_dagman_noop_node-node_conditional.cmd
 Vars nodeD1 nodename="$(JOB)"
 
 # Test NOOP with initialdir in submit file.
-Noop Job nodeD2 job_dagman_noop_node-initialdir.cmd
+Job nodeD2 job_dagman_noop_node-initialdir.cmd Noop
 Vars nodeD2 nodename="$(JOB)"
 Script Pre nodeD2 job_dagman_noop_node-script.pl $JOB pre 0
 Script Post nodeD2 job_dagman_noop_node-script.pl $JOB post $RETURN
 
 # Test NOOP with DIR.
-Noop Job nodeD3 job_dagman_noop_node-dir.cmd Dir job_dagman_noop_node-subdir
+Job nodeD3 job_dagman_noop_node-dir.cmd Dir job_dagman_noop_node-subdir Noop
 Vars nodeD3 nodename="$(JOB)"
 Script Pre nodeD3 ../job_dagman_noop_node-script.pl $JOB pre 0
 Script Post nodeD3 ../job_dagman_noop_node-script.pl $JOB post $RETURN
 
 # This node will succeed (NOOP nodes always succeed).
-Noop Job nodeE job_dagman_noop_node-node_conditional.cmd
+Job nodeE job_dagman_noop_node-node_conditional.cmd Noop
 Vars nodeE nodename="$(JOB)"
 
 # This node will hold and release the DAG to force it into recovery mode.
@@ -48,7 +48,7 @@ Job nodeF job_dagman_noop_node-node_hold-release.cmd
 Vars nodeF nodename="$(JOB)"
 
 # This node will succeed (NOOP nodes always succeed).
-Noop Job nodeG job_dagman_noop_node-node_conditional.cmd
+Job nodeG job_dagman_noop_node-node_conditional.cmd Noop
 Vars nodeG nodename="$(JOB)"
 
 Parent nodeA Child nodeB1 nodeB2

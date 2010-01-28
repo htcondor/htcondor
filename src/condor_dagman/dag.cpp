@@ -1510,7 +1510,6 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 
 	} else {
 
-//TEMPTEMP - add note for noop jobs
 		WriteUserLog ulog;
 			// Disabling the global log (EventLog) fixes the main problem
 			// in gittrac #934 (if you can't write to the global log the
@@ -1764,10 +1763,6 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 			// Print the JOB/DATA line.
 		const char *keyword = "";
-			//TEMPTEMP -- change this to put NOOP at end
-		if ( job->GetNoop() ) {
-        	fprintf( fp, "NOOP " );
-		}
         if( job->JobType() == Job::TYPE_CONDOR ) {
 			keyword = job->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
         } else if( job->JobType() == Job::TYPE_STORK ) {
@@ -1780,6 +1775,9 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 					job->GetCmdFile());
 		if ( strcmp( job->GetDirectory(), "" ) ) {
 			fprintf(fp, "DIR %s ", job->GetDirectory());
+		}
+		if ( job->GetNoop() ) {
+        	fprintf( fp, "NOOP " );
 		}
 		fprintf (fp, "%s\n",
 				job->_Status == Job::STATUS_DONE ? "DONE" : "");

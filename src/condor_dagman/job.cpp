@@ -30,7 +30,7 @@
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
-int Job::NOOP_NODE_PROCID = 1000000000;
+int Job::NOOP_NODE_PROCID = MAXINT;
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the queue_t enum
@@ -238,8 +238,8 @@ void Job::Dump ( const Dag *dag ) const {
 				 JobTypeString() );
 	}
 	else {
-		dprintf( D_ALWAYS, " %7s Job ID: (%d)\n", JobTypeString(),
-				 _CondorID._cluster );
+		dprintf( D_ALWAYS, " %7s Job ID: (%d.%d.%d)\n", JobTypeString(),
+				 _CondorID._cluster, _CondorID._proc, _CondorID._subproc );
 	}
   
     for (int i = 0 ; i < 3 ; i++) {

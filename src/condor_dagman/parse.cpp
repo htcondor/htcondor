@@ -50,13 +50,12 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
-static bool parse_subdag( Dag *dag, bool noop, Job::job_type_t nodeType,
+static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory);
 
-static bool parse_node( Dag *dag, bool noop,
-						Job::job_type_t nodeType,
+static bool parse_node( Dag *dag, Job::job_type_t nodeType,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
@@ -190,35 +189,11 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 		bool parsed_line_successfully;
 
-		bool noop = false;
-		if (strcasecmp(token, "NOOP") == 0) {
-			noop = true;
-
-				// Note: trailing space is important...
-			const char *noopList = "JOB DAP DATA SUBDAG ";
-			token = strtok(NULL, DELIMITERS);
-			MyString checkToken;
-			if ( token ) {
-				checkToken = token;
-				checkToken += " "; // Avoid tokens matching "JO", for example.
-				checkToken.upper_case();
-			} else {
-				checkToken = "NULL";
-			}
-			if ( !strstr( noopList, checkToken.Value() ) ) {
-				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): NOOP "
-							"must be followed by one of: %s\n", filename,
-							lineNumber, noopList );
-				fclose(fp);
-				return false;
-			}
-		}
-
 		// Handle a Job spec
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_node( dag, noop,
+			parsed_line_successfully = parse_node( dag, 
 					   Job::TYPE_CONDOR, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
@@ -228,7 +203,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			parsed_line_successfully = parse_node( dag, noop,
+			parsed_line_successfully = parse_node( dag,
 					   Job::TYPE_STORK, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
@@ -239,14 +214,14 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
-			parsed_line_successfully = parse_node( dag, noop,
+			parsed_line_successfully = parse_node( dag,
 					   Job::TYPE_STORK, token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile");
 		}
 
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
-			parsed_line_successfully = parse_subdag( dag, noop,
+			parsed_line_successfully = parse_subdag( dag, 
 						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
 		}
@@ -327,7 +302,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Expected NOOP, JOB, DATA, SCRIPT, PARENT, RETRY, "
+				"Expected JOB, DATA, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS "
 				"or CONFIG token\n",
 				filename, lineNumber );
@@ -362,13 +337,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 }
 
 static bool 
-parse_subdag( Dag *dag, bool noop, Job::job_type_t nodeType,
+parse_subdag( Dag *dag, Job::job_type_t nodeType,
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory )
 {
 	const char *inlineOrExt = strtok( NULL, DELIMITERS );
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-		return parse_node( dag, noop, nodeType, nodeTypeKeyword, dagFile,
+		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
 	} else {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
@@ -378,7 +353,7 @@ parse_subdag( Dag *dag, bool noop, Job::job_type_t nodeType,
 }
 
 static bool 
-parse_node( Dag *dag, bool noop, Job::job_type_t nodeType,
+parse_node( Dag *dag, Job::job_type_t nodeType,
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
@@ -389,8 +364,8 @@ parse_node( Dag *dag, bool noop, Job::job_type_t nodeType,
 	Dag *tmp = NULL;
 
 	MyString expectedSyntax;
-	expectedSyntax.sprintf( "Expected syntax: [NOOP] %s%s nodename %s "
-				"[DIR directory] [DONE]", nodeTypeKeyword, inlineOrExt,
+	expectedSyntax.sprintf( "Expected syntax: %s%s nodename %s "
+				"[DIR directory] [NOOP] [DONE]", nodeTypeKeyword, inlineOrExt,
 				submitOrDagFile );
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
@@ -404,52 +379,66 @@ parse_node( Dag *dag, bool noop, Job::job_type_t nodeType,
 		// next token is the submit file name
 	const char *submitFile = strtok( NULL, DELIMITERS );
 
-		// next token (if any) is "DIR" or "DONE"
-	const char *doneKey = NULL;
+		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
 	const char* nextTok = strtok( NULL, DELIMITERS );
 	TmpDir nodeDir;
-	if ( nextTok && (strcasecmp(nextTok, "DIR") == 0) ) {
-		if ( strcmp(directory, "") ) {
-			debug_printf( DEBUG_QUIET, "ERROR: DIR specification in node "
-						"lines not allowed with -UseDagDir command-line "
-						"argument\n");
-			return false;
-		}
+	if ( nextTok ) {
+		if (strcasecmp(nextTok, "DIR") == 0) {
+			if ( strcmp(directory, "") ) {
+				debug_printf( DEBUG_QUIET, "ERROR: DIR specification in node "
+							"lines not allowed with -UseDagDir command-line "
+							"argument\n");
+				return false;
+			}
 
-		directory = strtok( NULL, DELIMITERS );
-		if ( !directory ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no directory "
-						"specified after DIR keyword\n", dagFile, lineNum );
+			directory = strtok( NULL, DELIMITERS );
+			if ( !directory ) {
+				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no directory "
+							"specified after DIR keyword\n", dagFile, lineNum );
+				debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+				return false;
+			}
+
+			MyString errMsg;
+			if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
+				debug_printf( DEBUG_QUIET,
+							"ERROR: can't change to directory %s: %s\n",
+							directory, errMsg.Value() );
+				return false;
+			}
+			nextTok = strtok( NULL, DELIMITERS );
+		} else {
+			// Fall through to check for NOOP.
+		}
+	}
+
+	bool noop = false;
+
+	if ( nextTok ) {
+		if ( strcasecmp( nextTok, "NOOP" ) == 0 ) {
+			noop = true;
+			nextTok = strtok( NULL, DELIMITERS );
+		} else {
+			// Fall through to check for DONE.
+		}
+	}
+
+	if( nextTok ) {
+		if( strcasecmp( nextTok, "DONE" ) == 0 ) {
+			done = true;
+		} else {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
 			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 			return false;
 		}
-
-		MyString errMsg;
-		if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
-			debug_printf( DEBUG_QUIET,
-						"ERROR: can't change to directory %s: %s\n",
-						directory, errMsg.Value() );
-			return false;
-		}
-		doneKey = strtok( NULL, DELIMITERS );
-	} else {
-		doneKey = nextTok;
+		nextTok = strtok( NULL, DELIMITERS );
 	}
 
 		// anything else is garbage
-	char *garbage = strtok( 0, DELIMITERS );
-	if( doneKey ) {
-		if( strcasecmp( doneKey, "DONE" ) != 0 ) {
+	if( nextTok ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", dagFile, lineNum, doneKey );
-			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
-			return false;
-		}
-		done = true;
-	}
-	if( garbage ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", dagFile, lineNum, garbage );
+						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
 			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 			return false;
 	}

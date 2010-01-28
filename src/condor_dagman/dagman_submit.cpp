@@ -399,9 +399,6 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 		return false;
 	}
 
-		//TEMPTEMP -- shit -- could cause problems in recovery mode
-		//TEMPTEMP -- recovery mode should keep track of the max subprocID we've seen and set that here...
-
 	_subprocID++;
 		// Special CondorID for NOOP jobs -- actually indexed by
 		// otherwise-unused subprocID.
