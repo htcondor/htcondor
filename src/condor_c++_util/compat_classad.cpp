@@ -240,46 +240,52 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 
 	nodeKind = CLASSAD_NODE;
 
-	char		buffer[ATTRLIST_MAX_EXPRESSION];
+	int index;
+	MyString buffer;
 	int			delimLen = strlen( delimitor );
 
-	buffer[0] = '\0';
+	empty = TRUE;
+
 	while( 1 ) {
 
 			// get a line from the file
-		if( fgets( buffer, delimLen+1, file ) == NULL ) {
+		if ( buffer.readLine( file, false ) == false ) {
 			error = ( isEOF = feof( file ) ) ? 0 : errno;
 			return;
 		}
 
 			// did we hit the delimitor?
-		if( strncmp( buffer, delimitor, delimLen ) == 0 ) {
+		if ( strncmp( buffer.Value(), delimitor, delimLen ) == 0 ) {
 				// yes ... stop
 			isEOF = feof( file );
 			error = 0;
 			return;
-		} else {
-				// no ... read the rest of the line (into the same buffer)
-			if( fgets( buffer+delimLen, ATTRLIST_MAX_EXPRESSION-delimLen,file )
-					== NULL ) {
-				error = ( isEOF = feof( file ) ) ? 0 : errno;
-				return;
-			}
 		}
 
-			// if the string is empty, try reading again
-		if( strlen( buffer ) == 0 || strcmp( buffer, "\n" ) == 0 ) {
+			// Skip any leading white-space
+		index = 0;
+		while ( index < buffer.Length() &&
+				( buffer[index] == ' ' || buffer[index] == '\t' ) ) {
+			index++;
+		}
+
+			// if the rest of the string is empty, try reading again
+			// if it starts with a pound character ("#"), treat as a comment
+		if( index == buffer.Length() || buffer[index] == '\n' ||
+			buffer[index] == '#' ) {
 			continue;
 		}
 
 			// Insert the string into the classad
-		if( Insert( buffer ) == FALSE ) { 	
+		if( Insert( buffer.Value() ) == FALSE ) { 	
 				// print out where we barfed to the log file
 			dprintf(D_ALWAYS,"failed to create classad; bad expr = %s\n",
-				buffer);
+					buffer.Value());
 				// read until delimitor or EOF; whichever comes first
-			while( strncmp( buffer, delimitor, delimLen ) && !feof( file ) ) {
-				fgets( buffer, delimLen+1, file );
+			buffer = "";
+			while ( strncmp( buffer.Value(), delimitor, delimLen ) &&
+					!feof( file ) ) {
+				buffer.readLine( file, false );
 			}
 			isEOF = feof( file );
 			error = -1;
