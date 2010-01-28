@@ -2080,6 +2080,11 @@ check:: resubmit
 check-serialized:: resubmit
 	./x_runtests.pl -c quick -t 1200
 
+test: all
+	cd .. && make testbin
+	/bin/env "PATH=`pwd`/../release_dir/bin:`pwd`/../release_dir/sbin:${PATH}" ./batch_test.pl -b -c
+	
+
 /***********************************************************************
    Empty rules to make our top-level Imakefile happy
 ************************************************************************/
