@@ -88,7 +88,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	    free( secret_line );
         }
 
-		buffer += string(inputLine.Value()) + ";";
+		buffer += string(ConvertEscapingOldToNew(inputLine.Value())) + ";";
 	}
 	buffer += "]";
 

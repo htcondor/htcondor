@@ -495,6 +495,8 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
 								  TargetAdType target_type );
 
+const char *ConvertEscapingOldToNew( const char *str );
+
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;
 

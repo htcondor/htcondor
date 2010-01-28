@@ -36,16 +36,7 @@ int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
 	std::string newAdStr = "[";
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-		if ( str[i] == '\\' && 
-			 ( str[i + 1] != '"' ||
-			   str[i + 1] == '"' &&
-			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
-				 str[i + 2] == '\r') ) ) {
-			newAdStr.append( 1, '\\' );
-		}
-		newAdStr.append( 1, str[i] );
-	}
+	newAdStr.append( compat_classad::ConvertEscapingOldToNew( str ) );
 	newAdStr += "]";
 	newAd = parser.ParseClassAd( newAdStr );
 	if ( newAd == NULL ) {
@@ -70,7 +61,7 @@ int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 {
 	classad::ClassAdParser parser;
-	std::string str = s;
+	std::string str = compat_classad::ConvertEscapingOldToNew( s );
 	if ( parser.ParseExpression( str, tree, true ) ) {
 		return 0;
 	} else {

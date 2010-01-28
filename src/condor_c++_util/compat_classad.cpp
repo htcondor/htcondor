@@ -384,7 +384,7 @@ AssignExpr(char const *name,char const *value)
 	if ( value == NULL ) {
 		value = "Undefined";
 	}
-	if ( !par.ParseExpression( value, expr, true ) ) {
+	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
 		return FALSE;
 	}
 	if ( !Insert( name, expr ) ) {
@@ -1557,7 +1557,7 @@ GetExprReferences(const char* expr,
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
 
-    if ( !par.ParseExpression( expr, tree, true ) ) {
+    if ( !par.ParseExpression( ConvertEscapingOldToNew( expr ), tree, true ) ) {
         return false;
     }
 
@@ -2227,6 +2227,29 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 		return tree->Copy( );
 	}
 	}
+}
+
+const char *ConvertEscapingOldToNew( const char *str )
+{
+	static std::string new_str;
+
+	new_str = "";
+
+		// String escaping is different between new and old ClassAds.
+		// We need to convert the escaping from old to new style before
+		// handing the expression to the new ClassAds parser.
+	for ( int i = 0; str[i] != '\0'; i++ ) {
+		if ( str[i] == '\\' && 
+			 ( str[i + 1] != '"' ||
+			   str[i + 1] == '"' &&
+			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
+				 str[i + 2] == '\r') ) ) {
+			new_str.append( 1, '\\' );
+		}
+		new_str.append( 1, str[i] );
+	}
+
+	return new_str.c_str();
 }
 
 // end functions
