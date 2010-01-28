@@ -320,7 +320,7 @@ class ClassAd : public classad::ClassAd
 		/** Get the value of the TargetType attribtute */
 	const char*	GetTargetTypeName() const;
 
-	bool initFromString(char const *str,MyString *err_msg);
+	bool initFromString(char const *str,MyString *err_msg=NULL);
 
 		/** Print the ClassAd as an old ClassAd to the stream
 		 * @param s the stream
