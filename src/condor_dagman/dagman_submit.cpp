@@ -375,6 +375,17 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 }
 
 //-------------------------------------------------------------------------
+// Subproc ID for "fake" events (for NOOP jobs).
+static int _subprocID = 0;
+
+//-------------------------------------------------------------------------
+void
+set_fake_condorID( int subprocID )
+{
+	_subprocID = subprocID;
+}
+
+//-------------------------------------------------------------------------
 bool
 fake_condor_submit( CondorID& condorID, const char* DAGNodeName, 
 			   const char* directory, const char *logFile, bool logIsXml )
@@ -388,14 +399,15 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 		return false;
 	}
 
-	static int subprocID = 0;
+		//TEMPTEMP -- shit -- could cause problems in recovery mode
+		//TEMPTEMP -- recovery mode should keep track of the max subprocID we've seen and set that here...
 
-	subprocID++;
+	_subprocID++;
 		// Special CondorID for NOOP jobs -- actually indexed by
 		// otherwise-unused subprocID.
 	condorID._cluster = 0;
 	condorID._proc = Job::NOOP_NODE_PROCID;
-	condorID._subproc = subprocID;
+	condorID._subproc = _subprocID;
 
 
 	WriteUserLog ulog;
@@ -412,7 +424,7 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 
 		// We need some value for submitHost for the event to be read
 		// correctly.
-	sprintf( subEvent.submitHost, "<dummy-submit>");
+	sprintf( subEvent.submitHost, "<dummy-submit-for-noop-job>");
 
 	MyString subEventNotes("DAG Node: " );
 	subEventNotes += DAGNodeName;

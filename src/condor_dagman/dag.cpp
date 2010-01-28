@@ -111,7 +111,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst),
 	_defaultNodeLog		  (defaultNodeLog),
-	_isSplice			  (isSplice)
+	_isSplice			  (isSplice),
+	_recoveryMaxfakeID	  (0)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -278,6 +279,8 @@ bool Dag::Bootstrap (bool recovery)
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
+
+		set_fake_condorID( _recoveryMaxfakeID );
 
 		debug_cache_stop_caching();
 
@@ -505,7 +508,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			bool submitEventIsSane;
 			Job *job = LogEventNodeLookup( logsource, event,
 						submitEventIsSane );
-			PrintEvent( DEBUG_VERBOSE, event, job );
+			PrintEvent( DEBUG_VERBOSE, event, job, recovery );
 			if( !job ) {
 					// event is for a job outside this DAG; ignore it
 				break;
@@ -604,9 +607,9 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		if ( job->_Status != Job::STATUS_ERROR ) {
 			job->_Status = Job::STATUS_ERROR;
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-				  "Condor reported %s event for job proc (%d.%d)",
+				  "Condor reported %s event for job proc (%d.%d.%d)",
 				  ULogEventNumberNames[event->eventNumber],
-				  event->cluster, event->proc );
+				  event->cluster, event->proc, event->subproc );
 			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
 			if ( job->_queuedNodeJobProcs > 0 ) {
 			  // once one job proc fails, remove the whole cluster
@@ -638,14 +641,14 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				// job failed or was killed by a signal
 
 			if( termEvent->normal ) {
-				debug_printf( DEBUG_QUIET, "Node %s job proc (%d.%d) "
+				debug_printf( DEBUG_QUIET, "Node %s job proc (%d.%d.%d) "
 						"failed with status %d.\n", job->GetJobName(),
-						event->cluster, event->proc,
+						event->cluster, event->proc, event->subproc,
 						termEvent->returnValue );
 			} else {
-				debug_printf( DEBUG_QUIET, "Node %s job proc (%d.%d) "
+				debug_printf( DEBUG_QUIET, "Node %s job proc (%d.%d.%d) "
 						"failed with signal %d.\n", job->GetJobName(),
-						event->cluster, event->proc,
+						event->cluster, event->proc, event->subproc,
 						termEvent->signalNumber );
 			}
 
@@ -654,9 +657,9 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 			if ( job->_Status != Job::STATUS_ERROR ) {
 				if( termEvent->normal ) {
 					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-							"Job proc (%d.%d) failed with status %d",
+							"Job proc (%d.%d.%d) failed with status %d",
 							termEvent->cluster, termEvent->proc,
-							termEvent->returnValue );
+							termEvent->subproc, termEvent->returnValue );
 					job->retval = termEvent->returnValue;
 					if ( job->_scriptPost != NULL) {
 							// let the script know the job's exit status
@@ -664,9 +667,9 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 					}
 				} else {
 					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-							"Job proc (%d.%d) failed with signal %d",
+							"Job proc (%d.%d.%d) failed with signal %d",
 							termEvent->cluster, termEvent->proc,
-							termEvent->signalNumber );
+							termEvent->subproc, termEvent->signalNumber );
 					job->retval = (0 - termEvent->signalNumber);
 					if ( job->_scriptPost != NULL) {
 							// let the script know the job's exit status
@@ -696,9 +699,10 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				}
 			}
 			debug_printf( DEBUG_NORMAL,
-							"Node %s job proc (%d.%d) completed "
+							"Node %s job proc (%d.%d.%d) completed "
 							"successfully.\n", job->GetJobName(),
-							termEvent->cluster, termEvent->proc );
+							termEvent->cluster, termEvent->proc,
+							termEvent->subproc );
 		}
 
 		if( job->_scriptPost == NULL ) {
@@ -966,6 +970,16 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 
 	if ( !job ) {
 		return;
+	}
+
+		// If we're in recovery mode, we need to keep track of the
+		// maximum subprocID for NOOP jobs, so we can start out at
+		// the next value instead of zero.
+	if ( recovery ) {
+		if ( JobIsNoop( job->_CondorID ) ) {
+			_recoveryMaxfakeID = MAX( _recoveryMaxfakeID,
+						GetIndexID( job->_CondorID ) );
+		}
 	}
 
 	if ( !job->IsEmpty( Job::Q_WAITING ) ) {
@@ -1496,6 +1510,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 
 	} else {
 
+//TEMPTEMP - add note for noop jobs
 		WriteUserLog ulog;
 			// Disabling the global log (EventLog) fixes the main problem
 			// in gittrac #934 (if you can't write to the global log the
@@ -1749,6 +1764,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 			// Print the JOB/DATA line.
 		const char *keyword = "";
+			//TEMPTEMP -- change this to put NOOP at end
 		if ( job->GetNoop() ) {
         	fprintf( fp, "NOOP " );
 		}
@@ -1951,18 +1967,25 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 
 //-------------------------------------------------------------------------
 void Dag::
-PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
+PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
+			bool recovery )
 {
 	ASSERT( event );
+
+	const char *recovStr = recovery ? " [recovery mode]" : "";
+
 	if( node ) {
-	    debug_printf( level, "Event: %s for %s Node %s (%d.%d)\n",
+	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d)%s\n",
 					  event->eventName(), node->JobTypeString(),
-					  node->GetJobName(), event->cluster, event->proc );
+					  node->GetJobName(), event->cluster, event->proc,
+					  event->subproc, recovStr );
 	} else {
-        debug_printf( level, "Event: %s for unknown Node (%d.%d): "
-					  "ignoring...\n", event->eventName(),
-					  event->cluster, event->proc );
+        debug_printf( level, "Event: %s for unknown Node (%d.%d.%d): "
+					  "ignoring...%s\n", event->eventName(),
+					  event->cluster, event->proc,
+					  event->subproc, recovStr );
 	}
+
 	return;
 }
 
@@ -2867,11 +2890,13 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 	}
 
 	MyString message;
-	message.sprintf( "ERROR: node %s: job ID in userlog submit event (%d.%d) "
+	message.sprintf( "ERROR: node %s: job ID in userlog submit event (%d.%d.%d) "
 				"doesn't match ID reported earlier by submit command "
-				"(%d.%d)!", 
+				"(%d.%d.%d)!", 
 				node->GetJobName(), condorID._cluster, condorID._proc,
-				node->_CondorID._cluster, node->_CondorID._proc );
+				condorID._subproc,
+				node->_CondorID._cluster, node->_CondorID._proc,
+				node->_CondorID._subproc );
 
 	if ( _abortOnScarySubmit ) {
 		debug_printf( DEBUG_QUIET, "%s  Aborting DAG; set "
@@ -3078,8 +3103,9 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 				insert( id, node );
 	ASSERT( insertResult == 0 );
 
-	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d)\n",
-				  node->JobTypeString(), condorID._cluster, condorID._proc );
+	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d.%d)\n",
+				  node->JobTypeString(), condorID._cluster, condorID._proc,
+				  condorID._subproc );
 }
 
 //---------------------------------------------------------------------------

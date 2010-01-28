@@ -55,6 +55,8 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				   const char* DAGNodeName, const char* directory );
 
+void set_fake_condorID( int subprocID );
+
 bool fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 					const char* directory, const char *logFile,
 					bool logIsXml );

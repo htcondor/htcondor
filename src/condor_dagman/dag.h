@@ -669,7 +669,7 @@ class Dag {
     void TerminateJob( Job* job, bool recovery, bool bootstrap = false );
   
 	void PrintEvent( debug_level_t level, const ULogEvent* event,
-					 Job* node );
+					 Job* node, bool recovery );
 
 	// Retry a node that we ran, but which failed.
 	void RestartNode( Job *node, bool recovery );
@@ -914,6 +914,11 @@ class Dag {
 		// because we know we aren't going to have an "executing" dag object
 		// which is also a splice.
 	bool _isSplice;
+
+		// The maximum fake subprocID we see in recovery mode (needed to
+		// initialize the ID for subsequent fake events so IDs don't
+		// collide).
+	int _recoveryMaxfakeID;
 
 };
 
