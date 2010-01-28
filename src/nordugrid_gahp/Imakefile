@@ -11,7 +11,7 @@ LIB = $(PRE_EXT_LIBS) \
 	$(GLOBUS_DIR)/lib/libglobus_ftp_control_$(GlobusFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_io_$(GlobusFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_xio_$(GlobusFlavor).a \
-	$(GLOBUS_DIR)/lib/libgssapi_error_$(GlobusFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gssapi_error_$(GlobusFlavor).a \
 	$(GSI_LIB) $(LDAP_LIB) $(OPENSSL_LIB) $(POST_EXT_LIBS)
 
 OBJ = nordugrid_gahp.o globus_ftp_client_transfer.o globus_ftp_client_restart.o globus_ftp_client_state.o

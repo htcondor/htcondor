@@ -6343,7 +6343,7 @@ check_requirements( char const *orig, MyString &answer )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 		if ( !checks_mem ) {
-			answer += " && ( (TARGET.Memory * 1024) >= ImageSize )";
+			answer += " && ( ( (TARGET.Memory * 1024) >= ImageSize ) && ( ( RequestMemory * 1024 ) >= ImageSize ) )";
 		}
 	}
 

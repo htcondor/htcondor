@@ -16,7 +16,6 @@ cmd_q_shows-run
 cmd_q_shows-global
 cmd_q_shows-name
 cmd_q_shows-pool
-cmd_q_shows-analyze
 cmd_q_shows-xml
 cmd_q_shows-cputime
 cmd_q_shows-format

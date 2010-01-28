@@ -58,6 +58,14 @@ fi
 # make it available to all future children of condor_compile
 export CONDOR_LD_IN_USE_FILE
 
+# Sometimes, a user can invoke condor_compile in such a manner as it'll never
+# invoke an ld, but be correct. An example of this is: condor_compile gcc
+# -print-prog-name=ld So, if we discover a situation like that, we'll set this
+# to 'no' and not die with the unable to invoke ld error message. This allows
+# condor_compile to be called under configure and libtool properly.  The
+# default for this is to emit it.
+DIE_WITH_LD_NOT_IN_USE=yes
+
 # When we invoke a compiler/linker/whatever, make sure it eventually ends
 # up calling our linker. We check for that by seeing if the file we exported
 # into the environment is touched. This feature doesn't check all cases of
@@ -78,8 +86,14 @@ invoke_linker () {
 
 	if [ "X$CONDOR_LD_ROOT_INVOCATION" = "Xyes" ]; then
 		# I'm the root invocation, see if the file my children made exists,
-		# and raise an error if it doesn't
-		if [ ! -f "$CONDOR_LD_IN_USE_FILE" ]; then
+		# and raise an error if it doesn't. However, other invocations of
+		# condor_compile legitimately ask information from the compiler and
+		# don't expect to produce an executable. So, in those cases, emit
+		# nothing and don't die with a failure.
+		if [ ! -f "$CONDOR_LD_IN_USE_FILE" -a \
+			"$DIE_WITH_LD_NOT_IN_USE" = "yes" ];
+		then
+
 			echo 'ERROR: Internal ld was not invoked!'
 			echo 'ERROR: Executable may not be linked properly for Condor!'
 			echo 'ERROR: For users of Condor on Linux, we highly recommend'
@@ -318,10 +332,23 @@ if [ $CONDOR_FULLINSTALL = true ]; then
 	invoke_linker $*
 fi
 
+ARGS=$*
+
+# check to see if the compiler is passed things like -print-prog-name=...
+# If so, we don't want to die with the ld no in use error message since
+# the compiler produces good output in this case but no executable is expected.
+for i in $ARGS
+do
+	case $i in
+		-print-prog-name* | -print-file-name* | --version)
+			DIE_WITH_LD_NOT_IN_USE=no
+			;;
+	esac
+done
+
 # If we were passed a -c, we're not going to be used for linking, so
 # we don't have to do anything special to make sure our special ld is
 # used.  
-ARGS=$*
 NAME=$1
 while [ A = A ]
 do

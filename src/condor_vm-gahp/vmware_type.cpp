@@ -1862,7 +1862,20 @@ VMwareType::CreateConfigFile()
 		tmp_line.sprintf("ethernet0.connectionType = \"%s\"", 
 				networking_type.Value());
 		m_configVars.append(tmp_line.Value());
-		m_configVars.append("ethernet0.addressType = \"generated\"");
+        if (!m_vm_job_mac.IsEmpty())
+        {
+            vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
+            m_configVars.append("ethernet0.addressType = \"static\"");
+            tmp_line.sprintf("ethernet0.address = \"%s\"", m_vm_job_mac.Value());
+            m_configVars.append(tmp_line.Value());
+            //**********************************************************************
+            // LIMITATION: the mac address has to be in the range
+            // 00:50:56:00:00:00 - 00:50:56:3F:FF:FF
+            // This is a vmware limitation and I can't find a way to circumvent it.
+            //**********************************************************************
+        } else {
+    		m_configVars.append("ethernet0.addressType = \"generated\"");
+        }
 	}
 
 	// Add uuid option

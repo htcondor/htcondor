@@ -1,0 +1,11 @@
+--- gt5.0.0-all-source-installer/source-trees/xio/drivers/popen/source/globus_xio_popen_driver.c	2010-01-06 17:46:52.000000000 -0600
++++ gt5.0.0-all-source-installer.patched//source-trees/xio/drivers/popen/source/globus_xio_popen_driver.c	2010-01-21 11:25:34.000000000 -0600
+@@ -556,7 +556,7 @@
+     
+ #   if defined(USE_SOCKET_PAIR)
+     {
+-        rc = socketpair(AF_LOCAL, SOCK_STREAM, 0, s_fds);
++        rc = socketpair(AF_UNIX, SOCK_STREAM, 0, s_fds);
+         if(rc != 0)
+         {
+             result = GlobusXIOErrorSystemError("socketpair", errno);

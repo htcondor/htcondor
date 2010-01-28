@@ -67,6 +67,7 @@ protected:
 	MyString makeVirshDiskString(void);
 	bool createISO();
 
+	void Connect();
 	bool parseXenDiskParam(const char *format);
 	bool writableXenDisk(const char* file);
 	void updateLocalWriteDiskTimestamp(time_t timestamp);
@@ -101,6 +102,7 @@ protected:
 	bool m_has_transferred_disk_file;
 
 	MyString m_xml;
+	std::string m_sessionID; ///< required for connect filled on constructor
 	virConnectPtr m_libvirt_connection;
 };
 

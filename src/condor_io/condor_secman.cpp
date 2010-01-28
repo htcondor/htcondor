@@ -289,10 +289,25 @@ void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 	}
 }
 
+bool
+SecMan::getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
+{
+	return getSecSetting_implementation(&result,NULL,fmt,auth_level,param_name,check_subsystem);
+}
+
 char* 
-SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name /* = NULL */, char const *check_subsystem /* = NULL */ ) {
+SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
+{
+	char *result = NULL;
+	getSecSetting_implementation(NULL,&result,fmt,auth_level,param_name,check_subsystem);
+	return result;
+}
+
+bool
+SecMan::getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name, char const *check_subsystem )
+{
 	DCpermission const *perms = auth_level.getConfigPerms();
-	char *result;
+	bool found;
 
 		// Now march through the list of config settings to look for.  The
 		// last one in the list will be DEFAULT_PERM, which we only use
@@ -305,28 +320,40 @@ SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level,
 				// specified condor subsystem.
 			buf.sprintf( fmt, PermString(*perms) );
 			buf.sprintf_cat("_%s",check_subsystem);
-			result = param( buf.Value() );
-			if( result ) {
+			if( int_result ) {
+				found = param_integer( buf.Value(), *int_result, false, 0, false, 0, 0 );
+			}
+			else {
+				*str_result = param( buf.Value() );
+				found = *str_result;
+			}
+			if( found ) {
 				if( param_name ) {
 						// Caller wants to know the param name.
 					param_name->append_to_list(buf);
 				}
-				return result;
+				return true;
 			}
 		}
 
 		buf.sprintf( fmt, PermString(*perms) );
-		result = param( buf.Value() );
-		if( result ) {
+		if( int_result ) {
+			found = param_integer( buf.Value(), *int_result, false, 0, false, 0, 0 );
+		}
+		else {
+			*str_result = param( buf.Value() );
+			found = *str_result;
+		}
+		if( found ) {
 			if( param_name ) {
 					// Caller wants to know the param name.
 				param_name->append_to_list(buf);
 			}
-			return result;
+			return true;
 		}
 	}
 
-	return NULL;
+	return false;
 }
 
 
@@ -509,43 +536,39 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// first try the form SEC_<subsys>_<authlev>_SESSION_DURATION
 	// if that does not exist, fall back to old form of
 	// SEC_<authlev>_SESSION_DURATION.
-	char fmt[128];
-	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", get_mySubSystem()->getName() );
-	paramer = SecMan::getSecSetting(fmt, auth_level);
-	if (!paramer) {
-		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
-	}
+	int session_duration;
 
-	if( use_tmp_sec_session ) {
-		// expire this session soon
-		free(paramer);
-		paramer = strdup("60");
-	}
-
-	if (paramer) {
-		// take whichever value we found and put it in the ad.
-		ad->Assign ( ATTR_SEC_SESSION_DURATION, paramer );
-		free( paramer );
-		paramer = NULL;
-	} else {
-		// no value defined, use defaults.
-		if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ) {
+		// set default session duration
+	if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ||
+		 get_mySubSystem()->isType(SUBSYSTEM_TYPE_SUBMIT) ) {
 			// default for tools is 1 minute.
-			ad->Assign ( ATTR_SEC_SESSION_DURATION, "60" );
-		} else if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SUBMIT) ) {
-			// default for submit is 1 hour.  yeah, that's a long submit
-			// but you never know with file transfer and all.
-			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );
-		} else {
+		session_duration = 60;
+	} else {
 			// default for daemons is one day.
 
 			// Note that pre 6.6 condors have bugs with re-negotiation
 			// of security sessions, so we used to set this to 100 days.
 			// That caused memory bloating for dynamic pools.  
 
-			ad->Assign ( ATTR_SEC_SESSION_DURATION, "86400" );
-		}
+		session_duration = 86400;
 	}
+
+	char fmt[128];
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", get_mySubSystem()->getName() );
+	if( !SecMan::getIntSecSetting(session_duration, fmt, auth_level) ) {
+		SecMan::getIntSecSetting(session_duration, "SEC_%s_SESSION_DURATION", auth_level);
+	}
+
+	if( use_tmp_sec_session ) {
+		// expire this session soon
+		session_duration = 60;
+	}
+
+		// For historical reasons, session duration is inserted as a string
+		// in the ClassAd
+	MyString session_duration_buf;
+	session_duration_buf.sprintf("%d",session_duration);
+	ad->Assign ( ATTR_SEC_SESSION_DURATION, session_duration_buf );
 
 	return true;
 }
@@ -2726,13 +2749,8 @@ SecMan::authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* 
 int
 SecMan::getSecTimeout(DCpermission perm)
 {
-	MyString param_name;
-	char *value = getSecSetting("SEC_%s_AUTHENTICATION_TIMEOUT",perm,&param_name);
 	int auth_timeout = -1;
-	if (value) {
-		auth_timeout = param_integer(param_name.Value(),-1);
-		free(value);
-	}
+	getIntSecSetting(auth_timeout,"SEC_%s_AUTHENTICATION_TIMEOUT",perm);
 	return auth_timeout;
 }
 
