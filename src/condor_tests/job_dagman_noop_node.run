@@ -50,7 +50,7 @@ $dagman_args = "-verbose";
 	"job_dagman_noop_node-nodeD2-post.out",
 	"job_dagman_noop_node-subdir/job_dagman_noop_node-nodeD3-pre.out",
 	"job_dagman_noop_node-subdir/job_dagman_noop_node-nodeD3-post.out",
-	"job_dagman_noop_node-nodeE.out",
+	"job_dagman_noop_node-nodeF.out",
 	"job_dagman_noop_node-nodeUA.out",
 	"job_dagman_noop_node-lower.dag.lib.out",
 	"job_dagman_noop_node-nodeUC-pre.out",
@@ -81,6 +81,9 @@ foreach $name (@nodeoutput) {
 		system("rm -f $name");
 	}
 }
+
+# Make sure we don't have any lock files hanging around...
+unlink <job_dagman_noop_node-*.dag.lock>;
 
 $abnormal = sub 
 {

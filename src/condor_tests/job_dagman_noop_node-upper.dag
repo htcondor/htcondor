@@ -1,4 +1,3 @@
-#TEMPTEMP -- why the hell is this taking so long to run?
 # Note: using a nested DAG structure here so that the lower-level DAG
 # will get run twice -- the first time through, it will generate a
 # rescue DAG; the second time through, it will succeed (if everything

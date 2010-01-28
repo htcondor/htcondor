@@ -1,4 +1,4 @@
-executable   = ./job_dagman_noop_node-node_normal.pl
+executable   = ./job_dagman_noop_node-node_conditional.pl
 arguments    = $(nodename)
 initialdir   = job_dagman_noop_node-subdir
 universe     = scheduler

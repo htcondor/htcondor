@@ -39,11 +39,21 @@ Vars nodeD3 nodename="$(JOB)"
 Script Pre nodeD3 ../job_dagman_noop_node-script.pl $JOB pre 0
 Script Post nodeD3 ../job_dagman_noop_node-script.pl $JOB post $RETURN
 
-# This node will hold and release the DAG to force it into recovery mode.
-Job nodeE job_dagman_noop_node-node_hold-release.cmd
+# This node will succeed (NOOP nodes always succeed).
+Noop Job nodeE job_dagman_noop_node-node_conditional.cmd
 Vars nodeE nodename="$(JOB)"
+
+# This node will hold and release the DAG to force it into recovery mode.
+Job nodeF job_dagman_noop_node-node_hold-release.cmd
+Vars nodeF nodename="$(JOB)"
+
+# This node will succeed (NOOP nodes always succeed).
+Noop Job nodeG job_dagman_noop_node-node_conditional.cmd
+Vars nodeG nodename="$(JOB)"
 
 Parent nodeA Child nodeB1 nodeB2
 Parent nodeB1 nodeB2 Child nodeC
 Parent nodeC Child nodeD1 nodeD2 nodeD3
 Parent nodeD1 nodeD2 nodeD3 Child nodeE
+Parent nodeE Child nodeF
+Parent nodeF Child nodeG
