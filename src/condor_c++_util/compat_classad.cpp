@@ -1753,6 +1753,7 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 
 static ClassAd job_attrs_ad;
 static ClassAd machine_attrs_ad;
+static ClassAd schedd_attrs_ad;
 static StringList job_attrs_strlist;
 static StringList machine_attrs_strlist;
 
@@ -2062,6 +2063,46 @@ static const char *job_attrs_list[]  = {
 	NULL		// list must end with NULL
 };
 
+static const char *schedd_attrs_list[]  = {
+	ATTR_SCHEDD_IP_ADDR,
+	"MyShadowSockname",
+	"QueueCleanInterval",
+	"JobStartDelay",
+	"JobStartCount",
+	"JobsThisBurst",
+	ATTR_MAX_JOBS_RUNNING,
+	"MaxJobsSubmitted",
+	"JobsStarted",
+	"SwapSpace",
+	"ShadowSizeEstimate",
+	"SwapSpaceExhausted",
+	"ReservedSwap",
+	"JobsIdle",
+	"JobsRunning",
+	"BadCluster",
+	"BadProc",
+	"N_Owners",
+	"NegotiationRequestTime",
+	"ExitWhenDone",
+	"StartJobTimer",
+	"CondorAdministrator",
+	"AccountantName",
+	"MaxFlockLevel",
+	"FlockLevel",
+	"MaxExceptions",
+	ATTR_ARCH,
+	ATTR_OPSYS,
+	ATTR_MEMORY,
+	ATTR_DISK,
+	ATTR_TOTAL_LOCAL_IDLE_JOBS,
+	ATTR_TOTAL_LOCAL_RUNNING_JOBS,
+	ATTR_START_LOCAL_UNIVERSE,
+	ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
+	ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
+	ATTR_START_SCHEDULER_UNIVERSE,
+	NULL		// list must end with NULL
+};
+
 static void InitTargetAttrLists()
 {
 	const char **attr;
@@ -2147,6 +2188,15 @@ static void InitTargetAttrLists()
 		free( tmp );
 	}
 
+	///////////////////////////////////
+	// Set up Schedd attributes list
+	///////////////////////////////////
+	for ( attr = schedd_attrs_list; *attr; attr++ ) {
+		schedd_attrs_ad.AssignExpr( *attr, "True" );
+	}
+
+	schedd_attrs_ad.Delete( ATTR_CURRENT_TIME );
+
 	target_attrs_init = true;
 }
 
@@ -2159,7 +2209,8 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 	if( tree == NULL ) {
 		return NULL;
 	}
-	if ( target_type != TargetMachineAttrs && target_type != TargetJobAttrs ) {
+	if ( target_type != TargetMachineAttrs && target_type != TargetJobAttrs &&
+		 target_type != TargetScheddAttrs ) {
 		return NULL;
 	}
 	classad::ExprTree::NodeKind nKind = tree->GetKind( );
@@ -2179,9 +2230,13 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 					 machine_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
 					add_target = true;
 				}
-			} else {
+			} else if ( target_type == TargetJobAttrs ) {
 				if ( job_attrs_ad.Lookup( attr.c_str() ) ||
 					 job_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
+					add_target = true;
+				}
+			} else {
+				if ( schedd_attrs_ad.Lookup( attr.c_str() ) ) {
 					add_target = true;
 				}
 			}

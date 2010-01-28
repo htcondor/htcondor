@@ -300,7 +300,12 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		// At some future point in time, this code should be removed
 		// (no earlier than the 7.7 series).
 #if !defined(WANT_OLD_CLASSADS)
-	job_ad->AddTargetRefs( TargetMachineAttrs );
+	if ( universe == CONDOR_UNIVERSE_SCHEDULER ||
+		 universe == CONDOR_UNIVERSE_LOCAL ) {
+		job_ad->AddTargetRefs( TargetScheddAttrs );
+	} else {
+		job_ad->AddTargetRefs( TargetMachineAttrs );
+	}
 #endif
 
 		// CRUFT

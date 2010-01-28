@@ -37,7 +37,8 @@ namespace compat_classad {
 
 typedef enum {
 	TargetMachineAttrs,
-	TargetJobAttrs
+	TargetJobAttrs,
+	TargetScheddAttrs
 } TargetAdType;
 
 // This enum is lifted directly from old ClassAds.
