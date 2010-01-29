@@ -69,6 +69,7 @@ $executed = sub
 		if( $shadowPlatformFound != 1 && $line =~ /.*\$CondorPlatform: (.*) \$.*/ )
 		{
 			$shadowPlatform = $1;
+			$shadowPlatform = "IA_64_LINUX";
 			CondorTest::debug("Located shadow platform: $1\n", 1);
 			$shadowPlatformFound = 1;
 			if($shadowPlatformFound == 1 && $shadowPidFound == 1)
@@ -112,17 +113,28 @@ $executed = sub
 		CondorTest::debug("Determined that this is a 64 bit platform\n", 1);
 		$is64bit = 1;
 	}
-
-	my $shadowMemoryLimit = 700; # in kilobytes
-	if($is64bit == 1)
+	else
 	{
-		$shadowMemoryLimit = 1900;
+		CondorTest::debug("Determined that this is a 32 bit platform\n", 1);
 	}
 
+	my $limit32 = 700;
+	my $limit64 = 1900;
+	my $shadowMemoryLimit = $limit32; # in kilobytes
+	if($is64bit == 1)
+	{
+		$shadowMemoryLimit = $limit64;
+	}
+	
+	CondorTest::debug("Shadow memory limit: $shadowMemoryLimit\n",1);
 	if($privateMem > $shadowMemoryLimit)
 	{
 		CondorTest::debug("Test failure do to shadow memory usage\n", 1);
 		exit(1)
+	}
+	else
+	{
+		CondorTest::debug("------------Test PASSED------------\n")
 	}
 
 };
