@@ -89,6 +89,14 @@ Collector <X> is still being avoided if an alternative succeeds.
 This problem was believed to be fixed in Condor 7.4.1, but some cases
 of the problem remained in that version.
 
+% gittrack 1160
+\item Fixed a bug from 6.1.14 that resulted in the \Condor{schedd} performing
+the operation scheduled via \MacroNI{WALL\_CLOCK\_CKPT\_INTERVAL} at the
+specified frequency (default 1h) multiplied by the number of times the
+\Condor{schedd} daemon had been reconfigured during its lifetime.  This could
+lead to degraded performance, especially prior to 7.4.1 when this operation
+was more disk-intensive.
+
 \end{itemize}
 
 \noindent Known Bugs:
