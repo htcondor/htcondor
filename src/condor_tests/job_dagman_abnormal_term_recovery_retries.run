@@ -105,7 +105,7 @@ $success = sub
 				}
 
 			} elsif( $line =~
-						/Node A job proc \(*\d\.0\) failed with signal 11/ ) {
+						/Node A job proc \(*\d\.0\.0\) failed with signal 11/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				if( $dag_state == 1) {
 					$dag_state++;
