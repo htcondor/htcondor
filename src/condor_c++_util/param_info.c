@@ -96,7 +96,7 @@ param_info_init()
 	// A C file and I don't want to have to implement a C interface to the
 	// CondorVersionInfo object, this next line is commented out in the
 	// trunk, which represents the 7.5 series at the writing of this comment.
-/*	goto after_data_insertion;*/
+	goto after_data_insertion;
 
 #include "param_info_init.c"
 
