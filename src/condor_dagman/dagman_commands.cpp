@@ -63,7 +63,8 @@ bool
 AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		 const char* directory,
 		 const char* submitFile,
-		 const char *precmd, const char *postcmd, bool done,
+		 const char *precmd, const char *postcmd, bool noop,
+		 bool done,
 		 MyString &failReason )
 {
 	MyString why;
@@ -98,6 +99,7 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 			return false;
 		}
 	}
+	node->SetNoop( noop );
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}

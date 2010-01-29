@@ -507,6 +507,23 @@ class Dag {
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
+	/** Determine whether a job is a NOOP job based on the Condor ID.
+		@param the Condor ID of the job
+		@return true iff the job is a NOOP
+	*/
+	static bool JobIsNoop( const CondorID &id ) {
+		return (id._cluster == 0) && (id._proc == Job::NOOP_NODE_PROCID);
+	}
+
+	/** Get the part of the CondorID that we're indexing by (cluster ID
+		for "normal" jobs, subproc ID for NOOP jobs).
+		@param the Condor ID of the job
+		@return the part of the ID to index by
+	*/
+	static int GetIndexID( const CondorID &id ) {
+		return JobIsNoop( id ) ? id._subproc : id._cluster; 
+	}
+
 	// return same thing as HashTable.insert()
 	int InsertSplice(MyString spliceName, Dag *splice_dag);
 
@@ -652,7 +669,7 @@ class Dag {
     void TerminateJob( Job* job, bool recovery, bool bootstrap = false );
   
 	void PrintEvent( debug_level_t level, const ULogEvent* event,
-					 Job* node );
+					 Job* node, bool recovery );
 
 	// Retry a node that we ran, but which failed.
 	void RestartNode( Job *node, bool recovery );
@@ -687,19 +704,22 @@ class Dag {
 
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.
+			@param whether the node is a NOOP node
 			@param the node type/logsource (Condor or Stork) (see
 				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	HashTable<int, Job *> *		GetEventIDHash(int jobType);
+	HashTable<int, Job *> *		GetEventIDHash(bool isNoop, int jobType);
 
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.
+			@param whether the node is a NOOP node
 			@param the node type/logsource (Condor or Stork) (see
 				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	const HashTable<int, Job *> *		GetEventIDHash(int jobType) const;
+	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop,
+				int jobType) const;
 
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
@@ -735,6 +755,9 @@ class Dag {
 	// Hash by StorkID (really just by the cluster ID because all
 	// procs in the same cluster map to the same node).
 	HashTable<int, Job *>			_storkIDHash;
+
+	// NOOP nodes are indexed by subprocID.
+	HashTable<int, Job *>			_noopIDHash;
 
     // Number of nodes that are done (completed execution)
     int _numNodesDone;
@@ -891,6 +914,11 @@ class Dag {
 		// because we know we aren't going to have an "executing" dag object
 		// which is also a splice.
 	bool _isSplice;
+
+		// The maximum fake subprocID we see in recovery mode (needed to
+		// initialize the ID for subsequent fake events so IDs don't
+		// collide).
+	int _recoveryMaxfakeID;
 
 };
 

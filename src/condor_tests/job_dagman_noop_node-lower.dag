@@ -1,0 +1,59 @@
+# This node will fail the first time, but the retry will succeed,
+# so it won't cause a rescue DAG.
+Job nodeA job_dagman_noop_node-node_conditional.cmd
+Vars nodeA nodename="$(JOB)"
+Retry nodeA 1
+
+# This node will succeed (NOOP nodes always succeed).
+Job nodeB1 job_dagman_noop_node-node_conditional.cmd Noop
+Vars nodeB1 nodename="$(JOB)"
+Script Pre nodeB1 job_dagman_noop_node-script.pl $JOB pre 0
+Script Post nodeB1 job_dagman_noop_node-script.pl $JOB post $RETURN
+
+# This node will fail the first time (causing a rescue DAG to be
+# written) and then succeed (when the rescue DAG is run).
+Job nodeB2 job_dagman_noop_node-node_conditional.cmd
+Vars nodeB2 nodename="$(JOB)"
+Script Pre nodeB2 job_dagman_noop_node-script.pl $JOB pre 0
+Script Post nodeB2 job_dagman_noop_node-script.pl $JOB post $RETURN
+
+# This node will succeed (NOOP nodes always succeed).
+# Have one noop node with no PRE or POST script...
+Job nodeC job_dagman_noop_node-node_conditional.cmd Noop
+Vars nodeC nodename="$(JOB)"
+
+# This node will fail the first time (causing a second rescue DAG to be
+# written) and then succeed (when the rescue DAG is run).
+Job nodeD1 job_dagman_noop_node-node_conditional.cmd
+Vars nodeD1 nodename="$(JOB)"
+
+# Test NOOP with initialdir in submit file.
+Job nodeD2 job_dagman_noop_node-initialdir.cmd Noop
+Vars nodeD2 nodename="$(JOB)"
+Script Pre nodeD2 job_dagman_noop_node-script.pl $JOB pre 0
+Script Post nodeD2 job_dagman_noop_node-script.pl $JOB post $RETURN
+
+# Test NOOP with DIR.
+Job nodeD3 job_dagman_noop_node-dir.cmd Dir job_dagman_noop_node-subdir Noop
+Vars nodeD3 nodename="$(JOB)"
+Script Pre nodeD3 ../job_dagman_noop_node-script.pl $JOB pre 0
+Script Post nodeD3 ../job_dagman_noop_node-script.pl $JOB post $RETURN
+
+# This node will succeed (NOOP nodes always succeed).
+Job nodeE job_dagman_noop_node-node_conditional.cmd Noop
+Vars nodeE nodename="$(JOB)"
+
+# This node will hold and release the DAG to force it into recovery mode.
+Job nodeF job_dagman_noop_node-node_hold-release.cmd
+Vars nodeF nodename="$(JOB)"
+
+# This node will succeed (NOOP nodes always succeed).
+Job nodeG job_dagman_noop_node-node_conditional.cmd Noop
+Vars nodeG nodename="$(JOB)"
+
+Parent nodeA Child nodeB1 nodeB2
+Parent nodeB1 nodeB2 Child nodeC
+Parent nodeC Child nodeD1 nodeD2 nodeD3
+Parent nodeD1 nodeD2 nodeD3 Child nodeE
+Parent nodeE Child nodeF
+Parent nodeF Child nodeG

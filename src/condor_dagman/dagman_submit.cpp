@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_attributes.h"
+#include "condor_string.h"
 #include "util_lib_proto.h"
 #include "my_popen.h"
 
@@ -32,6 +33,7 @@
 #include "util.h"
 #include "debug.h"
 #include "tmp_dir.h"
+#include "write_user_log.h"
 
 typedef bool (* parse_submit_fnc)( const char *buffer, int &jobProcCount,
 			int &cluster );
@@ -370,4 +372,80 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 
   return success;
+}
+
+//-------------------------------------------------------------------------
+// Subproc ID for "fake" events (for NOOP jobs).
+static int _subprocID = 0;
+
+//-------------------------------------------------------------------------
+void
+set_fake_condorID( int subprocID )
+{
+	_subprocID = subprocID;
+}
+
+//-------------------------------------------------------------------------
+bool
+fake_condor_submit( CondorID& condorID, const char* DAGNodeName, 
+			   const char* directory, const char *logFile, bool logIsXml )
+{
+	TmpDir		tmpDir;
+	MyString	errMsg;
+	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to node directory %s: %s\n",
+				directory, errMsg.Value() );
+		return false;
+	}
+
+	_subprocID++;
+		// Special CondorID for NOOP jobs -- actually indexed by
+		// otherwise-unused subprocID.
+	condorID._cluster = 0;
+	condorID._proc = Job::NOOP_NODE_PROCID;
+	condorID._subproc = _subprocID;
+
+
+	WriteUserLog ulog;
+	ulog.setEnableGlobalLog( false );
+	ulog.setUseXML( logIsXml );
+	ulog.initialize( logFile, condorID._cluster, condorID._proc,
+				condorID._subproc, NULL );
+
+
+	SubmitEvent subEvent;
+	subEvent.cluster = condorID._cluster;
+	subEvent.proc = condorID._proc;
+	subEvent.subproc = condorID._subproc;
+
+		// We need some value for submitHost for the event to be read
+		// correctly.
+	sprintf( subEvent.submitHost, "<dummy-submit-for-noop-job>");
+
+	MyString subEventNotes("DAG Node: " );
+	subEventNotes += DAGNodeName;
+		// submitEventLogNotes get deleted in SubmitEvent destructor.
+	subEvent.submitEventLogNotes = strnewp( subEventNotes.Value() );
+
+	if ( !ulog.writeEvent( &subEvent ) ) {
+		EXCEPT( "Error: writing dummy submit event for NOOP node failed!\n" );
+		return false;
+	}
+
+
+	JobTerminatedEvent termEvent;
+	termEvent.cluster = condorID._cluster;
+	termEvent.proc = condorID._proc;
+	termEvent.subproc = condorID._subproc;
+	termEvent.normal = true;
+	termEvent.returnValue = 0;
+	termEvent.signalNumber = 0;
+
+	if ( !ulog.writeEvent( &termEvent ) ) {
+		EXCEPT( "Error: writing dummy terminated event for NOOP node failed!\n" );
+		return false;
+	}
+
+	return true;
 }
