@@ -69,7 +69,6 @@ $executed = sub
 		if( $shadowPlatformFound != 1 && $line =~ /.*\$CondorPlatform: (.*) \$.*/ )
 		{
 			$shadowPlatform = $1;
-			$shadowPlatform = "IA_64_LINUX";
 			CondorTest::debug("Located shadow platform: $1\n", 1);
 			$shadowPlatformFound = 1;
 			if($shadowPlatformFound == 1 && $shadowPidFound == 1)
