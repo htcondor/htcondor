@@ -1941,6 +1941,13 @@ SetMachineCount()
 	MyString buffer;
 	int		request_cpus = 1;
 
+	char *wantParallelString = NULL;
+	bool wantParallel = false;
+	wantParallelString = condor_param("WantParallelScheduling");
+	if (wantParallelString && (wantParallelString[0] == 'T' || wantParallelString[0] == 't')) {
+		wantParallel = true;
+	}
+ 
 	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
 
 		mach_count = condor_param( MachineCount, "MachineCount" );
@@ -1972,7 +1979,7 @@ SetMachineCount()
 
 		request_cpus = 1;
 	} else if (JobUniverse == CONDOR_UNIVERSE_MPI ||
-			   JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
+			   JobUniverse == CONDOR_UNIVERSE_PARALLEL || wantParallel) {
 
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( ! mach_count ) { 
