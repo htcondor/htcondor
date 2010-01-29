@@ -30,9 +30,7 @@
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
-// Windows doesn't like MAXINT...
-// int Job::NOOP_NODE_PROCID = MAXINT;
-int Job::NOOP_NODE_PROCID = 1000000000;
+int Job::NOOP_NODE_PROCID = INT_MAX;
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the queue_t enum
