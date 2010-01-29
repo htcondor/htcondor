@@ -904,6 +904,14 @@ class DaemonCore : public Service
         @return 0 if successful, -1 on failure (timer not found)
     */
     int Reset_Timer ( int id, unsigned when, unsigned period = 0 );
+
+    /** Change a timer's period.  Recompute time to fire next based on this
+		new period and how long this timer has been waiting.
+        @param id The timer's ID
+        @param period New period for this timer.
+        @return 0 on success
+    */
+    int Reset_Timer_Period ( int id, unsigned period );
 	//@}
 
     /** Not_Yet_Documented

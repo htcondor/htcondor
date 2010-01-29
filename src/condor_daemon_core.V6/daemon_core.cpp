@@ -865,6 +865,11 @@ int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period )
 	return( t.ResetTimer(id,when,period) );
 }
 
+int DaemonCore::Reset_Timer_Period ( int id, unsigned period )
+{
+	return( t.ResetTimerPeriod(id,period) );
+}
+
 /************************************************************************/
 
 
