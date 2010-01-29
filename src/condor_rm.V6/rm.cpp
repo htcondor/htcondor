@@ -133,7 +133,7 @@ usage()
 		fprintf( stderr,
 				     "  -fast               Use a fast vacate (hardkill)\n" );
 	}
-	fprintf( stderr, " and where [constraints] is one or more of:\n" );
+	fprintf( stderr, " and where [constraints] is one of:\n" );
 	fprintf( stderr, "  cluster.proc        %s the given job\n", word );
 	fprintf( stderr, "  cluster             %s the given cluster of jobs\n", word );
 	fprintf( stderr, "  user                %s all jobs owned by user\n", word );
