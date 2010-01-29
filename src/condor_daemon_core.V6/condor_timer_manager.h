@@ -83,6 +83,7 @@ const time_t TIME_T_NEVER	= 0x7fffffff;
 /// Not_Yet_Documented
 struct tagTimer {
     /** Not_Yet_Documented */ time_t            when;
+    /** Not_Yet_Documented */ time_t            period_started;
     /** Not_Yet_Documented */ unsigned          period;
     /** Not_Yet_Documented */ int               id;
     /** Not_Yet_Documented */ Event             handler;
@@ -187,11 +188,21 @@ class TimerManager
 
     /** Not_Yet_Documented.
         @param tid The ID of the timer
-        @param when    Not_Yet_Documented
+        @param when    Timestamp for next call (ignored if recompute_when=true)
         @param period  Not_Yet_Documented
+		@param recompute_when If true, 'when' is recomputed from new period
+		                      and how long this timer has been waiting.
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int ResetTimer(int tid, unsigned when, unsigned period = 0);
+    int ResetTimer(int tid, unsigned when, unsigned period = 0, bool recompute_when=false);
+
+	/**
+       This is equivalent to calling ResetTimer with recompute_when=true.
+	   @param tid The ID of the timer
+	   @param period The new period for the timer.
+	   @return 0 if successful, -1 on failure (timer not found)
+	 */
+    int ResetTimerPeriod(int tid, unsigned period);
 
     /// Not_Yet_Documented.
     void CancelAllTimers();
