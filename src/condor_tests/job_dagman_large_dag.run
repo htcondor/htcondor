@@ -30,11 +30,13 @@ if (!-e $dir) {
 }
 chdir $dir;
 unlink <*>;
+symlink("job_dagman_large_dag-node.pl", ".");
+symlink("dummy_condor_submit.pl", ".");
 
 # Create the DAG file, submit files, etc., to be used in this test.
 # It would be nice to make the DAG even bigger, but that could take
 # an awfully long time...
-system("../create_large_dag job_dagman_large_dag 100 5 1 100");
+system("../create_large_dag job_dagman_large_dag 100 5 0 100");
 # Only uncomment this to run manually (outside of the nightly tests).
 # This will time out if run as part of the nightly tests.
 #system("../create_large_dag job_dagman_large_dag 1000 10 0 1000");

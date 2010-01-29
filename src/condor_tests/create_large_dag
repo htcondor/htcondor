@@ -25,7 +25,6 @@
 # This script was mainly created to make sure the new "lazy log file"
 # code works correctly on a large DAG with many log files.
 
-#TEMPTEMP -- this is at least mostly fixed to use a common submit file if using a common log file -- needs a bit more testing.
 my $usage = "Usage: create_large_dag <name> <width> <depth> " .
 			"<unique logs> <maxjobs>";
 
@@ -62,11 +61,10 @@ my $configfile = $testname . ".config";
 open(CONFIGFILE, ">$configfile") or die "Can't open/create config file " .
 			"$configfile $!\n";
 print CONFIGFILE "DAGMAN_MAX_JOBS_SUBMITTED = $maxjobs\n";
-#TEMPTEMP print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 100\n";
-print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 1000\n";#TEMPTEMP?
+print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 1000\n";
 # This only works in 7.3.2 and later.
 print CONFIGFILE "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
-print CONFIGFILE "DAGMAN_CONDOR_SUBMIT_EXE = ../dummy_condor_submit.pl\n";
+# print CONFIGFILE "DAGMAN_CONDOR_SUBMIT_EXE = dummy_condor_submit.pl\n";
 close(CONFIGFILE);
 
 #
@@ -80,22 +78,23 @@ print DAGFILE "CONFIG $configfile\n";
 # Initial node.
 my $nodename = $testname . "-nodeA";
 my $submitfile = $nodename . ".cmd";
-WriteNode($nodename, $submitfile);
-WriteSubmit($testname, $submitfile, $unique_logs, 0);
+WriteNode($nodename, $submitfile, 1);
+WriteSubmit($testname, $submitfile, $nodename, $unique_logs, 0);
 my $firstnodename = $nodename;
 
 # Final node -- written here to make parent/child lines easier to write.
 $nodename = $testname . "-nodeC";
 $submitfile = $nodename . ".cmd";
-WriteNode($nodename, $submitfile);
-WriteSubmit($testname, $submitfile, $unique_logs, 1);
+WriteNode($nodename, $submitfile, 0);
+WriteSubmit($testname, $submitfile, $nodename, $unique_logs, 1);
 my $lastnodename = $nodename;
 
 # "Main" nodes.
 if ($unique_logs == 0) {
 	# Write the "master" submit file.
+	$nodename = $testname . "-nodeB";
 	$submitfile = $testname . "-nodeB" . ".cmd";
-	WriteSubmit($testname, $submitfile, $unique_logs, 0);
+	WriteSubmit($testname, $submitfile, $nodename, $unique_logs, 0);
 }
 
 my $windex;
@@ -106,9 +105,9 @@ for ($windex = 0; $windex < $width; $windex++) {
 		$nodename = $testname . "-nodeB" . $windex . "_" . $dindex;
 		if ($unique_logs != 0) {
 			$submitfile = $nodename . ".cmd";
-			WriteSubmit($testname, $submitfile, $unique_logs, 0);
+			WriteSubmit($testname, $submitfile, $nodename, $unique_logs, 0);
 		}
-		WriteNode($nodename, $submitfile);
+		WriteNode($nodename, $submitfile, 1);
 		if ($dindex < 1) {
 			print DAGFILE "PARENT $firstnodename CHILD $nodename\n";
 		} else {
@@ -130,13 +129,17 @@ sub WriteNode
 {
 	my $nodename = shift;
 	my $submitfile = shift;
+	my $noop = shift;
 
-	print DAGFILE "\nJOB $nodename $submitfile\n";
-	#print DAGFILE "\nNOOP JOB $nodename $submitfile\n";#TEMPTEMP?
-	print DAGFILE "#TEMPTEMP SCRIPT PRE $nodename ../job_dagman_large_dag-node.pl " .
-				"Args: PRE $nodename\n";
-	print DAGFILE "#TEMPTEMP SCRIPT POST $nodename ../job_dagman_large_dag-node.pl " .
-				"Args: POST $nodename\n";
+	my $jobline = "JOB $nodename $submitfile";
+	if ($noop) {
+		$jobline = $jobline . " NOOP";
+	}
+	print DAGFILE "\n$jobline\n";
+	# print DAGFILE "SCRIPT PRE $nodename job_dagman_large_dag-node.pl " .
+				# "Args: PRE $nodename\n";
+	# print DAGFILE "SCRIPT POST $nodename job_dagman_large_dag-node.pl " .
+				# "Args: POST $nodename\n";
 }
 
 # -----------------------------------------------------------------
@@ -145,6 +148,7 @@ sub WriteSubmit
 {
 	my $testname = shift;
 	my $submitfile = shift;
+	my $nodename = shift;
 	my $unique_logs = shift;
 	my $dohold = shift; # Whether node does condor_hold/condor_release.
 
@@ -163,18 +167,20 @@ sub WriteSubmit
 		print SUBMITFILE "arguments = \$(DAGManJobId)\n";
 
 	} else {
-		print SUBMITFILE "executable = ../job_dagman_large_dag-node.pl\n";
+		print SUBMITFILE "executable = job_dagman_large_dag-node.pl\n";
 		print SUBMITFILE "arguments = JOB $nodename\n";
-		print SUBMITFILE "events = sub exec term\n";
+		# print SUBMITFILE "events = sub exec term\n";
 	}
 	print SUBMITFILE "universe = scheduler\n";
 	my $logfile;
 	if ($unique_logs) {
 		$logfile = $nodename . ".log";
+		print SUBMITFILE "log = $logfile\n";
 	} else {
-		$logfile = $testname . ".log";
+		# Use default log file.
+		# $logfile = $testname . ".log";
 	}
-	print SUBMITFILE "log = $logfile\n";
+	# print SUBMITFILE "log = $logfile\n";
 	print SUBMITFILE "notification = NEVER\n";
 	my $outfile = $nodename . ".out";
 	print SUBMITFILE "output = $outfile\n";
