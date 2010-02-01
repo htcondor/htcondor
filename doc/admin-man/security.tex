@@ -825,10 +825,6 @@ GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
 \end{verbatim}
 \normalsize
 
-A complete example that has the question marks filled in and the
-daemon's user name filled in is given in the 
-example configuration below.
-
 Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
 There are two ways to accomplish this mapping.
@@ -837,18 +833,16 @@ section~\ref{sec:Security-Unified-Map-File}
 to use Condor's unified map file.
 The second way to do the mapping is within
 an administrator-maintained GSI-specific file called an X.509 map file,
-mapping from X509 Distinguished Name (DN) to Condor user id.
+mapping from X.509 Distinguished Name (DN) to Condor user id.
 It is similar to a Globus grid map file, except that it is only used for
 mapping to a user id, not for authorization. 
 If the user names in the
 map file do not specify a domain for the user
 (specification would appear as \verb|user@domain|),
 then the value of \MacroNI{UID\_DOMAIN} is used.
-Information about authorization can be found in
-Section~\ref{sec:Security-Authorization}. 
 Entries (lines) in the file each contain two items.
 The first item in an entry is the 
-X.509 certificate subject name, and it is enclosed in quotes
+X.509 certificate subject name, and it is enclosed in double quote marks
 (using the character \verb@"@).
 The second item is the Condor user id.
 The two items in an entry are separated by tab or space character(s).
@@ -1375,11 +1369,11 @@ Look ups are therefore defined to use the first mapping that
 matches.
 
 A regular expression may need to contain spaces, and in this case the
-entire expression can be surrounded by double-quotes. If a
-double-quote character also needs to appear in such an expression, it
-should be preceded by a backslash.
+entire expression can be surrounded by double quote marks. If a
+double quote character also needs to appear in such an expression, it
+is preceded by a backslash.
 
-The default behavior of Condor when no mapfile is specified is to
+The default behavior of Condor when no map file is specified is to
 do the following mappings, with some additional logic noted below:
 \begin{verbatim}
 FS (.*) \1
@@ -1392,17 +1386,28 @@ CLAIMTOBE (.*) \1
 PASSWORD (.*) \1
 \end{verbatim}
 
-For GSI (or SSL), the special name \verb|GSS_ASSIST_GRIDMAP| instructs Condor
-to use the GSI grid mapfile (configured with \Macro{GRIDMAP}
+For GSI (or SSL), the special name \MacroNI{GSS\_ASSIST\_GRIDMAP} instructs 
+Condor to use the GSI grid map file (configured with \Macro{GRIDMAP}
 as shown in section~\ref{sec:GSI-Authentication}) to do the mapping.
 If no mapping can be found for GSI (with or without the use of
-\verb|GSS_ASSIST_GRIDMAP|), the user is mapped to \verb|gsi@unmappeduser|.
+\MacroNI{GSS\_ASSIST\_GRIDMAP}), the user is mapped to \verb|gsi@unmappeduser|.
 
 For Kerberos, if \Macro{KERBEROS\_MAP\_FILE} is specified, the domain portion
 of the name is obtained by mapping the Kerberos realm to the value specified
 in the map file, rather than just using the realm verbatim as the domain
 portion of the condor user name.  See section~\ref{sec:Kerberos-Authentication}
 for details.
+
+With the integration of VOMS for GSI authentication,
+the interpretation of the regular expression
+representing the authenticated name may change.
+First, the full serialized DN and FQAN are used in attempting a match.
+If no match is found using the full DN and FQAN,
+then the DN is then used on its own without the FQAN.
+Using this, roles or user names from the VOMS attributes may be extracted
+to be used as the target for mapping.
+And, in this case the FQAN are verified, permitting reliance
+on their authenticity.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Encryption}Encryption}
@@ -2803,7 +2808,7 @@ are classified by daemon:
    This is nice for the job, since it gets unlimited access to the
    machine, but awful for the machine owner or administrator.  If there is
    trust of the users submitting jobs to Condor, this might not be a
-   concern.  To ensure, however, that the policy choosen is
+   concern.  To ensure, however, that the policy chosen is
    effectively enforced by Condor, the \Condor{startd} should be
    started as \Login{root}.
 

@@ -1678,9 +1678,15 @@ If that variable is not present,
 it will search in the default location.
 
 \SubmitCmd{x509userproxy} is relevant when
-the \SubmitCmd{universe} is \SubmitCmd{grid},
+the \SubmitCmd{universe} is \SubmitCmd{vanilla},
+or when the \SubmitCmd{universe} is \SubmitCmd{grid}
 and the type of grid system is one of \SubmitCmd{gt2},
 \SubmitCmd{gt4}, or \SubmitCmd{nordugrid}.
+Defining a value causes the proxy to be delegated to the execute machine.
+Further, VOMS attributes defined in the proxy will appear in
+the job ClassAd.
+See the unnumbered subsection labeled Job ClassAd Attributes
+on page~\pageref{sec:Job-ClassAd-Attributes} for all job attribute descriptions.
 
 \end{description} 
 
