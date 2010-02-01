@@ -469,3 +469,8 @@ KeyCache::getKeysForProcess(char const *parent_unique_id,int pid)
 	}
 	return keyids;
 }
+
+int KeyCache::count() {
+	ASSERT( key_table );
+	return key_table->getNumElements();
+}

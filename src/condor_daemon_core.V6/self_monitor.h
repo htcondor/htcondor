@@ -69,6 +69,8 @@ public:
     long          age;
 	// How many sockets are registered in daemonCore
 	int           registered_socket_count;
+	// How many security sessions exist in the cache
+	int           cached_security_sessions;
 
 private:
     int           _timer_id;

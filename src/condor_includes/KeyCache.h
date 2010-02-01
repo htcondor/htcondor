@@ -77,6 +77,7 @@ public:
 	bool lookup(const char *key_id, KeyCacheEntry*&);
 	bool remove(const char *key_id);
 	void expire(KeyCacheEntry*);
+	int  count();
 
 	StringList * getExpiredKeys();
 	StringList * getKeysForPeerAddress(char const *addr);
