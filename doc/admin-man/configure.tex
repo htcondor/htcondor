@@ -8341,6 +8341,13 @@ section~\ref{sec:Security} on Security.
   The session expires to reduce the window of opportunity where
   the key may be compromised by attack.
 
+\label{param:SecDefaultSessionLease}
+\item[\Macro{SEC\_access-level\_SESSION\_LEASE}]
+  the maximum number of seconds an unused security session will be
+  kept in a daemon's session cache before being removed to save memory.
+  The default is 3600.  If the server and client have different
+  configurations, the smaller one will be used.
+
 \label{param:SecInvalidateSessionsViaTcp}
 \item[\Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}]
   Use TCP (if True) or UDP (if False)
