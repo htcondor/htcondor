@@ -48,6 +48,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrack #1167
+\item Fixed a problem with GSI authentication in Condor that would cause
+daemons to consume more and more memory over time.  The biggest source
+of trouble was introduced in 7.3.2.  However, a smaller memory leak that
+existed in all previous versions of Condor has also been fixed.
+
 % gitrack #553
 \item Fixed a bug where if \Condor{compile} is invoked in a manner such as:
 \begin{verbatim}
