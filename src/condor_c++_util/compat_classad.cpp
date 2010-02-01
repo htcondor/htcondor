@@ -1127,6 +1127,14 @@ void ClassAd::RemoveExplicitTargetRefs( )
 void ClassAd:: 
 AddTargetRefs( TargetAdType target_type )
 {
+	MyString ver_str;
+	if ( this->LookupString( ATTR_VERSION, ver_str ) ) {
+		CondorVersionInfo ver( ver_str.Value() );
+		if ( ver.built_since_version( 7, 5, 1 ) ) {
+			return;
+		}
+	}
+
 	for( classad::AttrList::iterator a = begin(); a != end(); a++ ) {
 		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
 			this->Insert( a->first, 
