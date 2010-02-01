@@ -6,7 +6,7 @@ log = job_core_matchlist_van.log
 match_list_length = 5
 #requirements = (TARGET.Name =!= LastMatchName1 || LastMatchName1 =?= UNDEFINED )
 rank = ((TARGET.Name != LastMatchName0) * 100) 
-on_exit_remove = (CurrentTime - QDate) > 10000
+on_exit_remove = (time() - QDate) > 10000
 should_transfer_files = ALWAYS
 transfer_input_files = CondorTest.pm
 when_to_transfer_output = ON_EXIT_OR_EVICT

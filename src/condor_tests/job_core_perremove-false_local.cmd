@@ -9,6 +9,6 @@ Notification = NEVER
 ## to make sure we sleep for just a little bit more than that
 ##
 arguments  = 20
-periodic_remove = (CurrentTime - QDate) < (0)
+periodic_remove = (time() - QDate) < (0)
 queue
 

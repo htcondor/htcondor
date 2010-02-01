@@ -6459,21 +6459,19 @@ check_requirements( char const *orig, MyString &answer )
 			// our job from being matched and executed after it could
 			// possibly run
 			//
-			//	( ( ATTR_CURRENT_TIME + ATTR_SCHEDD_INTERVAL ) >= 
+			//	( ( time() + ATTR_SCHEDD_INTERVAL ) >= 
 			//	  ( ATTR_DEFERRAL_TIME - ATTR_DEFERRAL_PREP_TIME ) )
 			//  &&
-			//    ( ATTR_CURRENT_TIME < 
+			//    ( time() < 
 			//    ( ATTR_DEFFERAL_TIME + ATTR_DEFERRAL_WINDOW ) )
 			//  )
 			//
 		MyString attrib;
-		attrib.sprintf( "( ( %s + %s ) >= ( %s - %s ) ) && "\
-						"( %s < ( %s + %s ) )",
-						ATTR_CURRENT_TIME,
+		attrib.sprintf( "( ( time() + %s ) >= ( %s - %s ) ) && "\
+						"( time() < ( %s + %s ) )",
 						ATTR_SCHEDD_INTERVAL,
 						ATTR_DEFERRAL_TIME,
 						ATTR_DEFERRAL_PREP_TIME,
-						ATTR_CURRENT_TIME,
 						ATTR_DEFERRAL_TIME,
 						ATTR_DEFERRAL_WINDOW );
 		answer += " && (";
