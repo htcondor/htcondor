@@ -557,13 +557,6 @@ TESTCLASS(cmd_q_shows-sub,quick)
 TESTCLASS(cmd_q_shows-sub,full)
 TESTCLASS(cmd_q_shows-sub,quicknolink)
 
-DESC(cmd_q_shows-analyze,"Condor_q shows analyze")
-RUN(cmd_q_shows-analyze)
-TESTCLASS(cmd_q_shows-analyze,core)
-TESTCLASS(cmd_q_shows-analyze,quick)
-TESTCLASS(cmd_q_shows-analyze,full)
-TESTCLASS(cmd_q_shows-analyze,quicknolink)
-
 DESC(cmd_q_shows-better-analyze,"Condor_q shows better-analyze")
 RUN(cmd_q_shows-better-analyze)
 TESTCLASS(cmd_q_shows-better-analyze,core)
@@ -1921,6 +1914,13 @@ TESTCLASS(job_dagman_script_args,quick)
 TESTCLASS(job_dagman_script_args,full)
 TESTCLASS(job_dagman_script_args,quicknolink)
 
+DESC(job_dagman_noop_node,"Test noop nodes")
+RUN(job_dagman_noop_node)
+TESTCLASS(job_dagman_noop_node,dagman)
+TESTCLASS(job_dagman_noop_node,quick)
+TESTCLASS(job_dagman_noop_node,full)
+TESTCLASS(job_dagman_noop_node,quicknolink)
+
 /* Sample performance tests */
 
 /*
@@ -2086,6 +2086,11 @@ check:: resubmit
 
 check-serialized:: resubmit
 	./x_runtests.pl -c quick -t 1200
+
+test: all
+	cd .. && make testbin
+	/bin/env "PATH=`pwd`/../release_dir/bin:`pwd`/../release_dir/sbin:${PATH}" ./batch_test.pl -b -c
+	
 
 /***********************************************************************
    Empty rules to make our top-level Imakefile happy

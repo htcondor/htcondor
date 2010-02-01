@@ -1312,7 +1312,9 @@ count( ClassAd *job )
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
 
-		if( (universe == CONDOR_UNIVERSE_MPI ||
+		int sendToDS = 0;
+		job->LookupBool("WantParallelScheduling", sendToDS);
+		if( (sendToDS || universe == CONDOR_UNIVERSE_MPI ||
 			 universe == CONDOR_UNIVERSE_PARALLEL) && status == IDLE ) {
 			if( max_hosts > cur_hosts ) {
 				int cluster = 0;
@@ -1460,7 +1462,14 @@ service_this_universe(int universe, ClassAd* job)
 		case CONDOR_UNIVERSE_LOCAL:
 			return false;
 		default:
-			return true;
+
+			int sendToDS = 0;
+			job->LookupBool("WantParallelScheduling", sendToDS);
+			if (sendToDS) {
+				return false;
+			} else {
+				return true;
+			}
 	}
 }
 
@@ -6916,7 +6925,10 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		// if this is a shadow for an MPI job, we need to tell the
 		// dedicated scheduler we finally spawned it so it can update
 		// some of its own data structures, too.
-	if( (universe == CONDOR_UNIVERSE_MPI ) ||
+	int sendToDS = 0;
+	GetAttributeInt(job_id->cluster, job_id->proc, "WantParallelScheduling", &sendToDS);
+
+	if( (sendToDS || universe == CONDOR_UNIVERSE_MPI ) ||
 	    (universe == CONDOR_UNIVERSE_PARALLEL) ){
 		dedicated_scheduler.shadowSpawned( srec );
 	}
@@ -10837,11 +10849,19 @@ Scheduler::RegisterTimers()
     oldQueueCleanInterval = QueueCleanInterval;
 
 	if (WallClockCkptInterval) {
-		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
+		if( wallclocktid != -1 ) {
+			daemonCore->Reset_Timer_Period(wallclocktid,WallClockCkptInterval);
+		}
+		else {
+			wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
 												  WallClockCkptInterval,
 												  CkptWallClock,
 												  "CkptWallClock");
+		}
 	} else {
+		if( wallclocktid != -1 ) {
+			daemonCore->Cancel_Timer( wallclocktid );
+		}
 		wallclocktid = -1;
 	}
 

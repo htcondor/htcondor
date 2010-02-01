@@ -355,7 +355,7 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 
 MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
-		const MyString &directory)
+		const MyString &directory, bool &isXml)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
@@ -376,11 +376,12 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 
 	MyString	logFileName("");
 	MyString	initialDir("");
+	MyString	isXmlLogStr("");
 
 		// Now look through the submit file logical lines to find the
 		// log file and initial directory (if specified) and combine
 		// them into a path to the log file that's either absolute or
-		// relative to the DAG submit directory.
+		// relative to the DAG submit directory.  Also look for log_xml.
 	const char *logicalLine;
 	while( (logicalLine = logicalLines.next()) != NULL ) {
 		MyString	submitLine(logicalLine);
@@ -393,6 +394,11 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 				"initialdir");
 		if ( tmpInitialDir != "" ) {
 			initialDir = tmpInitialDir;
+		}
+
+		MyString tmpLogXml = getParamFromSubmitLine(submitLine, "log_xml");
+		if ( tmpLogXml != "" ) {
+			isXmlLogStr = tmpLogXml;
 		}
 	}
 
@@ -424,6 +430,13 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
 			return "";
 		}
+	}
+
+	isXmlLogStr.lower_case();
+	if ( isXmlLogStr == "true" ) {
+		isXml = true;
+	} else {
+		isXml = false;
 	}
 
 	if ( directory != "" ) {

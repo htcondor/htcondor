@@ -205,7 +205,6 @@ static 	void		fetchSubmittorPrios();
 static	void		doRunAnalysis( ClassAd*, Daemon* );
 static	char *		doRunAnalysisToBuffer( ClassAd*, Daemon* );
 struct 	PrioEntry { MyString name; float prio; };
-static 	bool		analyze	= false;
 static  bool        better_analyze = false;
 static	bool		run = false;
 static	bool		goodput = false;
@@ -342,7 +341,7 @@ int main (int argc, char **argv)
 	}
 
 	// check if analysis is required
-	if( analyze ) {
+	if( better_analyze ) {
 		setupAnalysis();
 	}
 
@@ -1189,16 +1188,12 @@ processCommandLineArguments (int argc, char *argv[])
 			usage(argv[0]);
 			exit(0);
 		}
-		else
-		if (match_prefix( arg , "analyze")
-			|| match_prefix( arg , "analyse")) {
-			analyze = true;
-			attrs.clearAll();
-		}
         else
         if (match_prefix( arg, "better-analyze")
-			|| match_prefix( arg , "better-analyse")) {
-            analyze = true;
+			|| match_prefix( arg , "better-analyse")
+			|| match_prefix( arg , "analyze")
+			|| match_prefix( arg , "analyse")
+			) {
             better_analyze = true;
 			attrs.clearAll();
         }
@@ -1852,7 +1847,6 @@ usage (char *myName)
 		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
-        "\t\t-better-analyze\t\tImproved version of -analyze\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
@@ -2236,7 +2230,7 @@ process_buffer_line( ClassAd *job )
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
 		tempCPS->string = strnewp( s.Value() );
-	} else if( analyze ) {
+	} else if( better_analyze ) {
 		tempCPS->string = strnewp( doRunAnalysisToBuffer( job, g_cur_schedd_for_process_buffer_line ) );
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
@@ -2346,7 +2340,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	}
 
 		// check if job is being analyzed
-	if( analyze ) {
+	if( better_analyze ) {
 			// print header
 		if (useDB) {
 			printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 

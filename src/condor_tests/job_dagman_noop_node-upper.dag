@@ -1,0 +1,36 @@
+# Note: using a nested DAG structure here so that the lower-level DAG
+# will get run twice -- the first time through, it will generate a
+# rescue DAG; the second time through, it will succeed (if everything
+# goes right).
+
+# This node makes sure things are set up correctly.
+Job nodeUA job_dagman_noop_node-node_setup.cmd
+Vars nodeUA nodename="$(JOB)"
+
+Subdag External nodeUB job_dagman_noop_node-lower.dag
+Retry nodeUB 3
+
+# Test NOOP with SUBDAG.
+Subdag External nodeUC job_dagman_noop_node-dummy.dag Noop
+Script Pre nodeUC job_dagman_noop_node-script.pl $JOB pre 0
+Script Post nodeUC job_dagman_noop_node-script.pl $JOB post $RETURN
+
+# Test NOOP with log file specified (most nodes use default log file).
+Job nodeUD job_dagman_noop_node-withlog.cmd Noop
+Script Pre nodeUD job_dagman_noop_node-script.pl $JOB pre 0
+Script Post nodeUD job_dagman_noop_node-script.pl $JOB post $RETURN
+
+# Run a "real" node with the XML log to make sure that the log file
+# is actually initialized in the XML format -- then, if the subsequent
+# NOOP job writes the "normal" format, things will fail...
+Job nodeUE job_dagman_noop_node-xmllog.cmd
+Script Post nodeUE job_dagman_noop_node-script.pl $JOB post $RETURN
+
+# Test NOOP with XML-format log file.
+Job nodeUF job_dagman_noop_node-xmllog.cmd Noop
+Script Post nodeUF job_dagman_noop_node-script.pl $JOB post $RETURN
+
+Parent nodeUA Child nodeUB
+Parent nodeUB Child nodeUC nodeUD
+Parent nodeUD Child nodeUE
+Parent nodeUE Child nodeUF

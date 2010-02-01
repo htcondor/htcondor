@@ -58,9 +58,15 @@ public:
 	    /** Gets the log file from a Condor submit file.
 		    on success, the return value will be the log file name
 		    on failure, it will be ""
+			@param strSubFilename: the submit file name
+			@param directory: the directory of the submit file (can be blank)
+			@param isXml: reference to a binary variable that will be
+				set to true if log_xml is "true" in the submit file
+			@return the log file name from the submit file if successful,
+				or "" if unsuccessful
 		 */
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
-			const MyString &directory);
+			const MyString &directory, bool &isXml);
 
 		/** Makes the given filename an absolute path
 			@param the name of the file (input/output)
