@@ -51,7 +51,8 @@ The details of each version are described below.
 % gittrack #1167
 \item Fixed a problem with GSI authentication in Condor that would cause
 daemons to consume more and more memory over time.  The biggest source
-of trouble was introduced in 7.3.2.  However, a smaller memory leak that
+of trouble was introduced in Condor version 7.3.2.
+However, a smaller memory leak that
 existed in all previous versions of Condor has also been fixed.
 
 % gitrack #553
@@ -96,12 +97,15 @@ This problem was believed to be fixed in Condor 7.4.1, but some cases
 of the problem remained in that version.
 
 % gittrack 1160
-\item Fixed a bug from 6.1.14 that resulted in the \Condor{schedd} performing
+\item Fixed a bug from Condor version 6.1.14,
+that resulted in the \Condor{schedd} performing
 the operation scheduled via \MacroNI{WALL\_CLOCK\_CKPT\_INTERVAL} at the
-specified frequency (default 1h) multiplied by the number of times the
-\Condor{schedd} daemon had been reconfigured during its lifetime.  This could
-lead to degraded performance, especially prior to 7.4.1 when this operation
-was more disk-intensive.
+specified frequency (default time of 1 hour),
+multiplied by the number of times the
+\Condor{schedd} daemon had been reconfigured during its lifetime.
+This could lead to degraded performance,
+especially prior to Condor version 7.4.1,
+when this operation was more disk-intensive.
 
 \end{itemize}
 
