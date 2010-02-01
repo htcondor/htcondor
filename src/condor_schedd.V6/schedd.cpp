@@ -10823,11 +10823,19 @@ Scheduler::RegisterTimers()
     oldQueueCleanInterval = QueueCleanInterval;
 
 	if (WallClockCkptInterval) {
-		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
+		if( wallclocktid != -1 ) {
+			daemonCore->Reset_Timer_Period(wallclocktid,WallClockCkptInterval);
+		}
+		else {
+			wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
 												  WallClockCkptInterval,
 												  (Event)&CkptWallClock,
 												  "CkptWallClock");
+		}
 	} else {
+		if( wallclocktid != -1 ) {
+			daemonCore->Cancel_Timer( wallclocktid );
+		}
 		wallclocktid = -1;
 	}
 

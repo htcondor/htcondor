@@ -517,36 +517,15 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 	dprintf( D_ALWAYS, "VMType('%s') is supported\n", vmtype);
 
 	// Read vm_memory
-	int tmp_mem = 0;
-	if( m_vmgahp_info.LookupInteger(ATTR_VM_MEMORY, tmp_mem) != 1 ) {
+	if( m_vmgahp_info.LookupInteger(ATTR_VM_MEMORY, m_vm_max_memory) != 1 ) {
 		dprintf( D_ALWAYS, "There is no %s in the output of vmgahp\n",ATTR_VM_MEMORY);
 		return false;
 	}
-	if( tmp_mem == 0 ) {
+	if( m_vm_max_memory == 0 ) {
 		dprintf( D_ALWAYS, "There is no sufficient memory for virtual machines\n");
 		return false;
 	}
 
-	// VM_MEMORY in condor config should be less than 
-	// VM_MEMORY provided by vmgahp */
-	char *vmtmp = NULL;
-	vmtmp = param( "VM_MEMORY" );
-	if(vmtmp) {
-		int vmem = (int)strtol(vmtmp, (char **)NULL, 10);
-		if( (vmem <= 0) || (vmem > tmp_mem)) {
-			m_vm_max_memory = tmp_mem;
-			dprintf( D_ALWAYS, "Warning: Even though '%s = %d' is defined "
-					"in condor config file, the amount of memory for "
-					"vm universe is set to %d MB, because vmgahp says "
-					"(%d MB) as the maximum memory for vm universe\n", 
-					"VM_MEMORY", vmem, tmp_mem, tmp_mem);
-		}else {
-			m_vm_max_memory = vmem;
-		}
-		free(vmtmp);
-	} else {
-		m_vm_max_memory = tmp_mem;
-	}
 	dprintf( D_ALWAYS, "The maximum available memory for vm universe is "
 			"set to %d MB\n", m_vm_max_memory);
 

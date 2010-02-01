@@ -127,10 +127,11 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 		new_timer->timeslice = NULL;
 	}
 
+	new_timer->period_started = time(NULL);
 	if ( TIMER_NEVER == deltawhen ) {
 		new_timer->when = TIME_T_NEVER;
 	} else {
-		new_timer->when = deltawhen + time(NULL);
+		new_timer->when = deltawhen + new_timer->period_started;
 	}
 	new_timer->data_ptr = NULL;
 	if ( event_descrip ) 
@@ -154,7 +155,12 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	return	new_timer->id;
 }
 
-int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
+int TimerManager::ResetTimerPeriod(int id,unsigned period)
+{
+	return ResetTimer(id,0,period,true);
+}
+
+int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recompute_when)
 {
 	Timer*			timer_ptr;
 	Timer*			trail_ptr;
@@ -180,14 +186,40 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 		dprintf( D_DAEMONCORE, "Timer %d with timeslice can't be reset\n",
 				 id );
 		return 0;
+	} else if( recompute_when ) {
+		time_t old_when = timer_ptr->when;
+
+		timer_ptr->when = timer_ptr->period_started + period;
+
+			// sanity check
+		int wait_time = (int)timer_ptr->when - (int)time(NULL);
+		if( wait_time > period ) {
+			dprintf(D_ALWAYS,"ResetTimer() tried to set next call to %d (%s) %ds into the future, which is larger than the new period %d.\n",
+					id,
+					timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
+					wait_time,
+					period);
+
+				// start a new period now to restore sanity
+			timer_ptr->period_started = time(NULL);
+			timer_ptr->when = timer_ptr->period_started + period;
+		}
+
+		dprintf(D_FULLDEBUG,"Changing period of timer %d (%s) from %u to %u (added %ds to time of next scheduled call)\n",
+				id, 
+				timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
+				timer_ptr->period,
+				period,
+				(int)timer_ptr->when - (int)old_when);
 	} else {
+		timer_ptr->period_started = time(NULL);
 		if ( when == TIMER_NEVER ) {
 			timer_ptr->when = TIME_T_NEVER;
 		} else {
-			timer_ptr->when = when + time(NULL);
+			timer_ptr->when = when + timer_ptr->period_started;
 		}
-		timer_ptr->period = period;
 	}
+	timer_ptr->period = period;
 
 	RemoveTimer( timer_ptr, trail_ptr );
 	InsertTimer( timer_ptr );
@@ -396,7 +428,8 @@ TimerManager::Timeout()
 			// periodic.
 			RemoveTimer( in_timeout, NULL );
 			if ( in_timeout->period > 0 || in_timeout->timeslice ) {
-				in_timeout->when = time(NULL);
+				in_timeout->period_started = time(NULL);
+				in_timeout->when = in_timeout->period_started;
 				if ( in_timeout->timeslice ) {
 					in_timeout->when += in_timeout->timeslice->getTimeToNextRun();
 				} else {

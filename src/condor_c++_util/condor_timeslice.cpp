@@ -150,11 +150,43 @@ Timeslice::updateNextStartTime()
 		// we never ran before and an initial interval was explicitly given
 		delay = m_initial_interval;
 	}
-	m_next_start_time = (time_t)floor(
-      delay +
-	  m_start_time.seconds() +
-      m_start_time.microseconds()/1000000.0 +
-      0.5 /*round to nearest integer*/ );
+
+	if( delay > 0.5 || delay < 0.0 ) {
+		m_next_start_time = (time_t)floor(
+	      delay +
+		  m_start_time.combined() +
+	      0.5 /*round to nearest integer*/ );
+	}
+	else {
+			// For delays less than 0.5s, we have to deal with the
+			// fact that the next start time is effectively either
+			// *now* or time(NULL)+1, assuming m_start_time is now or
+			// earlier.  Simply rounding to the nearest timestamp
+			// produces a delay that is slightly too big on average.
+			// This is especially annoying when the delay is supposed
+			// to be 0s, because rouding produces an average of 0.125s.
+
+			// The solution is to solve for k, the cuttoff past which
+			// we should round up to produce the desired average delay.
+
+			// d = desired delay
+			// t = fraction of current second that has already passed
+			// k = cutoff past which t should be rounded up
+
+			// Given t, the actual delay is:
+			// 0 <= t < k: 0
+			// k <= t < 1: 1-t
+
+			// Avg delay = 0.5*(1-k)(1-k) == d
+
+			// k = 1-sqrt(2d)
+
+		double cutoff = 1.0 - sqrt(2.0*delay);
+		m_next_start_time = (time_t)m_start_time.seconds();
+		if( m_start_time.microseconds()/1000000.0 > cutoff ) {
+			m_next_start_time++;
+		}
+	}
 }
 
 unsigned int 
