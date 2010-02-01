@@ -3999,6 +3999,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				goto finalize;
 			}
 
+			session->renewLease();
+
 			if (!session->key()) {
 				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
@@ -4089,6 +4091,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				result = FALSE;
 				goto finalize;
 			}
+
+			session->renewLease();
 
 			if (!session->key()) {
 				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
@@ -4377,6 +4381,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 						free(return_addr);
 					}
 				}
+
+				session->renewLease();
 
 				if (session->key()) {
 					// copy this to the HandleReq() scope
@@ -4784,7 +4790,19 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// cached session.
 					int slop = param_integer("SEC_SESSION_DURATION_SLOP", 20);
 					int durint = atoi(dur) + slop;
-					int expiration_time = time(0) + durint;
+					time_t now = time(0);
+					int expiration_time = now + durint;
+
+					// extract the session lease time (max unused time)
+					int session_lease = 0;
+					the_policy->LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease);
+					if( session_lease ) {
+							// Add some slop on the server side to avoid
+							// expiration right before the client tries
+							// to renew the lease.
+						session_lease += slop;
+					}
+
 
 					// add the key to the cache
 
@@ -4793,9 +4811,9 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// because then this key would get confused for an
 					// outgoing session to a daemon with that IP and
 					// port as its command socket.
-					KeyCacheEntry tmp_key(the_sid, NULL, the_key, the_policy, expiration_time);
+					KeyCacheEntry tmp_key(the_sid, NULL, the_key, the_policy, expiration_time, session_lease );
 					sec_man->session_cache->insert(tmp_key);
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (return address is %s).\n", the_sid, durint, return_addr ? return_addr : "unknown");
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", the_sid, durint, session_lease, return_addr ? return_addr : "unknown");
 					if (DebugFlags & D_FULLDEBUG) {
 						the_policy->dPrint(D_SECURITY);
 					}
