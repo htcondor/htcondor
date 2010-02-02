@@ -139,9 +139,9 @@ SameAs(const ExprTree *tree) const
    } else if (tree->GetKind() != CLASSAD_NODE) {
         is_same = false;
    } else {
-       ClassAd *other_classad;
+       const ClassAd *other_classad;
 
-       other_classad = (ClassAd *) tree;
+       other_classad = (const ClassAd *) tree;
 
        if (attrList.size() != other_classad->attrList.size()) {
            is_same = false;
@@ -1297,7 +1297,6 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 refs.insert(nameToAddToRefs);
 
                 ExprTree *followRef;
-                ExprTree *innerAttr;
                 //TODO: If we get to this point, must there be a prefix?
                 //  FIGURE OUT WHAT A SIMPLE / ABSOLUTE ATTR IS
                 followRef = ad->Lookup(prefixStr);

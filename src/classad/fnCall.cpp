@@ -229,14 +229,14 @@ bool FunctionCall::
 SameAs(const ExprTree *tree) const
 {
     bool is_same;
-    FunctionCall *other_fn;
+    const FunctionCall *other_fn;
     
     if (this == tree) {
         is_same = true;
     } else if (tree->GetKind() != FN_CALL_NODE) {
         is_same = false;
     } else {
-        other_fn = (FunctionCall *) tree;
+        other_fn = (const FunctionCall *) tree;
         
         if (functionName == other_fn->functionName
             && function == other_fn->function
@@ -2133,7 +2133,7 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
+ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg1;
@@ -2207,7 +2207,7 @@ ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-eval( const char* name,const ArgumentList &argList,EvalState &state,
+eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	  Value &result )
 {
 	Value arg,strarg;
@@ -2247,7 +2247,7 @@ eval( const char* name,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-interval( const char* name,const ArgumentList &argList,EvalState &state,
+interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg,intarg;
