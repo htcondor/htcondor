@@ -8326,14 +8326,43 @@ section~\ref{sec:Security} on Security.
   X.509 distinguished names to Condor user ids.
 
 \label{param:SecDefaultSessionDuration}
-\item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
+\MacroIndex{SEC\_DEFAULT\_SESSION\_DURATION}
+\item[\Macro{SEC\_<access-level>\_SESSION\_DURATION}]
   The amount of time in seconds before
   a communication session expires.
-  Defaults to 86400 seconds (1 day).
   A session is a record of necessary information to do communication
   between a client and daemon, and is protected by a shared secret key.
   The session expires to reduce the window of opportunity where
-  the key may be compromised by attack.
+  the key may be compromised by attack.  A short session duration
+  increases the frequency with which daemons have to reauthenticate
+  with each other, which may impact performance.
+
+  If the client and server are configured with different durations,
+  the shorter of the two will be used.  The default for daemons is
+  86400 seconds (1 day) and the default for command-line tools is 60
+  seconds.  The shorter default for command-line tools is intended to
+  prevent daemons from accumulating a large number of communication
+  sessions from the short-lived tools that contact them over time.  A
+  large number of security sessions consumes a large amount of memory.
+  It is therefore important when changing this configuration setting
+  to preserve the small session duration for command-line tools.
+
+  One example of how to safely change the session duration is to
+  explicitly set a short duration for tools and \Condor{submit}
+  and a longer duration for everything else:
+
+\begin{verbatim}
+SEC_DEFAULT_SESSION_DURATION = 50000
+TOOL.SEC_DEFAULT_SESSION_DURATION = 60
+SUBMIT.SEC_DEFAULT_SESSION_DURATION = 60
+\end{verbatim}
+
+Another example of how to safely change the session duration is to
+explicitly set the session duration for a specific daemon:
+
+\begin{verbatim}
+COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
+\end{verbatim}
 
 \label{param:SecInvalidateSessionsViaTcp}
 \item[\Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}]
