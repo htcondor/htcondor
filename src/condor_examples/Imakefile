@@ -7,6 +7,7 @@ FILES = README condor_config.local.central.manager \
 	condor_config.local.view_server \
 	lamscript \
 	mp1script \
+	mp2script \
 	condor.init
 
 all::
