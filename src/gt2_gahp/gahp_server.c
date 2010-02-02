@@ -27,6 +27,7 @@
 
 #include "config.h"
 
+#include "globus_gram_protocol.h"
 #include "globus_gram_client.h"
 #include "globus_gass_server_ez.h"
 #include "globus_gss_assist.h"
@@ -89,7 +90,8 @@ static char *commands_list =
 "CACHE_PROXY_FROM_FILE "
 "USE_CACHED_PROXY "
 "UNCACHE_PROXY "
-"GRAM_JOB_REFRESH_PROXY";
+"GRAM_JOB_REFRESH_PROXY "
+"GRAM_GET_JOBMANAGER_VERSION";
 /* The last command in the list should NOT have a space after it */
 
 typedef struct gahp_semaphore {
@@ -144,6 +146,7 @@ int handle_gram_job_callback_register(void *);
 int handle_gram_job_refresh_proxy(void *);
 int handle_gass_server_init(void *);
 int handle_gram_ping(void *);
+int handle_gram_get_jobmanager_version(void*);
 
 /* These are all of the callbacks for non-blocking async commands */
 void
@@ -1015,6 +1018,54 @@ callback_gram_job_refresh_proxy(void *arg,
 	return;
 }
 
+int
+handle_gram_get_jobmanager_version(void * user_arg)
+{
+	char **input_line = (char **) user_arg;
+	int result;
+	char *output, *req_id, *resource_contact;
+	globus_hashtable_t extensions;
+	globus_gram_protocol_extension_t *entry;
+	char *esc_str;
+
+	if( !process_string_arg(input_line[1], &req_id) ) {
+		HANDLE_SYNTAX_ERROR();
+		return 0;
+	}
+
+	if( !process_string_arg(input_line[2], &resource_contact ) ){
+		HANDLE_SYNTAX_ERROR();
+		return 0;
+	}
+
+	gahp_printf("S\n");
+	gahp_sem_up(&print_control);
+
+	result = globus_gram_client_get_jobmanager_version(resource_contact,
+													   &extensions);
+
+	output = (char *)globus_libc_malloc(10240);
+
+	globus_libc_sprintf(output, "%s %d", req_id, result);
+
+	entry = globus_hashtable_first( &extensions );
+	while ( entry ) {
+		strcat( output, " " );
+		strcat( output, entry->attribute );
+		strcat( output, "=" );
+		esc_str = escape_spaces( entry->value );
+		strcat( output, esc_str );
+		free( esc_str );
+		entry = globus_hashtable_next( &extensions );
+	}
+
+	enqueue_results(output);	
+
+	globus_gram_protocol_hash_destroy( &extensions );
+
+	return 0;
+}
+
 int 
 handle_gram_callback_allow(void * user_arg)
 {
@@ -1690,6 +1741,7 @@ service_commands(void *arg,globus_io_handle_t* gio_handle,globus_result_t rest)
 		HANDLE_SYNC( gass_server_init ) else 
 		HANDLE_SYNC( gram_job_signal ) else
 		HANDLE_SYNC( gram_job_refresh_proxy ) else
+		HANDLE_SYNC( gram_get_jobmanager_version ) else
 		{
 			handle_bad_request(input_line);
 			result = 0;
