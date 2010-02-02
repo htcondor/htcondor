@@ -4661,17 +4661,17 @@ Power Management for more details.
 
 \label{param:Hibernate}
 \item[\Macro{HIBERNATE}]
-  An string expression that represents lower power state.  When this
+  A string expression that represents lower power state.  When this
   state name evaluates to a valid non-``NONE'' state (see below),
-  causes Condor to put the machine into a low power state given by the
-  evaluation of the expression.  The following names are supported
+  causes Condor to put the machine into the specified low power state.
+  The following names are supported
   (and are not case sensitive):
 
   \begin{itemize}
   \item[] "NONE", "0": No-op: do not enter a low power state
-  \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, Sleep (standby)
-  \item[] "S2",   "2": On Windows, Sleep (standby)
-  \item[] "S3",   "3", "RAM", "MEM", "SUSPEND": Sleep (standby)
+  \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, this is Sleep (standby)
+  \item[] "S2",   "2": On Windows, this is Sleep (standby)
+  \item[] "S3",   "3", "RAM", "MEM", "SUSPEND": On Windows, this is Sleep (standby)
   \item[] "S4",   "4", "DISK", "HIBERNATE": Hibernate
   \item[] "S5",   "5", "SHUTDOWN", "OFF": Shutdown (soft-off)
   \end{itemize}
@@ -4709,7 +4709,7 @@ Power Management for more details.
   \Attr{Unhibernate} expression of offline machine ClassAds.
   The special attribute
   \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
-  when a job would have been matched to the machine if it had been on line.
+  when a job would have been matched to the machine if it had been online.
   For multi-slot machines, the offline ClassAd for slot1 will also contain
   the attributes \Attr{slot<X>\_MachineLastMatchTime},
   where \MacroNI{X} is replaced by the
