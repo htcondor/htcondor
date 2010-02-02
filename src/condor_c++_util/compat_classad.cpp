@@ -756,7 +756,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = boolVal ? 1 : 0;
 				return 1;
 			}
-			if( val.IsIntegerValue( value ) ) {
+			if( val.IsIntegerValue( intVal ) ) {
 				value = intVal ? 1 : 0;
 				return 1;
 			}
