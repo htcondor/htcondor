@@ -150,11 +150,11 @@ my @minimal_build_configure_args =
 ###############################################################################
 # Default List of Tests to Run.
 #
-# This specifies the test suite testclasses which are run by default for 
-# any test.
+# This specifies the test suite testclasses (more than one if you'd like)
+# which are run by default for any test. The default of 'quick' means the
+# tests we expect to be run by default every day in the nightlies.
 ###############################################################################
-# Use the 'simple' test class since it is much faster.
-my @default_testclass = ( 'simple' );
+my @default_testclass = ( 'quick' );
 
 ###############################################################################
 # Default Test Suite Configure Arguments
