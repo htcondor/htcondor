@@ -390,6 +390,10 @@ class GahpClient : public Service {
 		int
 		globus_gass_server_superez_init( char **gass_url, int port );
 
+		///
+		int 
+		globus_gram_client_get_jobmanager_version(const char * resource_manager_contact);
+
 
 		///
 		int

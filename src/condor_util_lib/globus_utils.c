@@ -438,7 +438,7 @@ end:
 	if (cert)
 		X509_free(cert);
 	if(chain)
-		sk_X509_free(chain);
+		sk_X509_pop_free(chain, X509_free);
 
 	return ret;
 #endif

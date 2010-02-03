@@ -37,7 +37,8 @@ class KeyCacheEntry {
 			struct sockaddr_in * addr,
 			KeyInfo * key,
 			ClassAd * policy,
-			int expiration
+			int expiration,
+			int session_lease
 			);
     KeyCacheEntry(const KeyCacheEntry &copy);
     ~KeyCacheEntry();
@@ -49,8 +50,10 @@ class KeyCacheEntry {
     KeyInfo*              key();
     ClassAd*              policy();
     int                   expiration();
+	char const *          expirationType();
 	void                  setExpiration(int new_expiration);
 
+	void                  renewLease();
  private:
 
 	void delete_storage();
@@ -61,6 +64,8 @@ class KeyCacheEntry {
     KeyInfo*             _key;
     ClassAd*             _policy;
     int                  _expiration;
+	int                  _lease_interval;   // max seconds of unused time
+	time_t               _lease_expiration; // time of lease expiration
 };
 
 
@@ -77,6 +82,7 @@ public:
 	bool lookup(const char *key_id, KeyCacheEntry*&);
 	bool remove(const char *key_id);
 	void expire(KeyCacheEntry*);
+	int  count();
 
 	StringList * getExpiredKeys();
 	StringList * getKeysForPeerAddress(char const *addr);

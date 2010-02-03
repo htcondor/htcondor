@@ -570,6 +570,10 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	session_duration_buf.sprintf("%d",session_duration);
 	ad->Assign ( ATTR_SEC_SESSION_DURATION, session_duration_buf );
 
+	int session_lease = 3600;
+	SecMan::getIntSecSetting(session_lease, "SEC_%s_SESSION_LEASE", auth_level);
+	ad->Assign( ATTR_SEC_SESSION_LEASE, session_lease );
+
 	return true;
 }
 
@@ -808,6 +812,28 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	sprintf (buf, "%s=\"%i\"", ATTR_SEC_SESSION_DURATION,
 			(cli_duration < srv_duration) ? cli_duration : srv_duration );
 	action_ad->Insert(buf);
+
+
+		// Session lease time (max unused time) is the shorter of the
+		// server's and client's values.  Note that a value of 0 means
+		// no lease.  For compatibility with older versions that do not
+		// support leases, we choose no lease if either side does not
+		// specify one.
+	int cli_lease = 0;
+	int srv_lease = 0;
+
+	if( cli_ad.LookupInteger(ATTR_SEC_SESSION_LEASE, cli_lease) &&
+		srv_ad.LookupInteger(ATTR_SEC_SESSION_LEASE, srv_lease) )
+	{
+		if( cli_lease == 0 ) {
+			cli_lease = srv_lease;
+		}
+		if( srv_lease == 0 ) {
+			srv_lease = cli_lease;
+		}
+		action_ad->Assign( ATTR_SEC_SESSION_LEASE,
+						   cli_lease < srv_lease ? cli_lease : srv_lease );
+	}
 
 
 	sprintf (buf, "%s=\"YES\"", ATTR_SEC_ENACT);
@@ -1206,7 +1232,8 @@ SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_
 
 		// check the expiration.
 	time_t cutoff_time = time(0);
-	if (session_key->expiration() && session_key->expiration() <= cutoff_time) {
+	time_t expiration = session_key->expiration();
+	if (expiration && expiration <= cutoff_time) {
 		session_cache->expire(session_key);
 		session_key = NULL;
 		return false;
@@ -1267,6 +1294,13 @@ SecManStartCommand::sendAuthInfo_inner()
 			m_sec_man.key_printf(D_SECURITY, m_enc_key->key());
 			m_auth_info.dPrint( D_SECURITY );
 		}
+
+			// Ideally, we would only increment our lease expiration time after
+			// verifying that the server renewed the lease on its side.  However,
+			// there is no ACK in the protocol, so we just do it here.  Worst case,
+			// we may end up trying to use a session that the server threw out,
+			// which has the same error-handling as a restart of the server.
+		m_enc_key->renewLease();
 
 		m_new_session = false;
 	} else {
@@ -1683,6 +1717,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENCRYPTION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_INTEGRITY );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
@@ -1952,15 +1987,20 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 
 			int expiration_time = 0;
+			time_t now = time(0);
 			if( dur ) {
-				expiration_time = time(0) + atoi(dur);
+				expiration_time = now + atoi(dur);
 			}
+
+			int session_lease = 0;
+			m_auth_info.LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease );
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
 			KeyCacheEntry tmp_key( sesid, m_sock->peer_addr(), m_private_key,
-								   &m_auth_info, expiration_time ); 
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds.\n", sesid, dur);
+								   &m_auth_info, expiration_time,
+								   session_lease ); 
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
 
             if (dur) {
                 free(dur);
@@ -2329,6 +2369,12 @@ bool SecMan :: invalidateKey(const char * key_id)
 	if (session_cache) {
 
         session_cache->lookup(key_id, keyEntry);
+
+		if( keyEntry && keyEntry->expiration() <= time(NULL) ) {
+			dprintf( D_SECURITY,
+					 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
+					 key_id, keyEntry->expirationType() );
+		}
 
         remove_commands(keyEntry);
 
@@ -2853,7 +2899,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
 	}
 
-	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time);
+	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {
 		dprintf(D_SECURITY, "SECMAN: failed to create session %s.\n",
