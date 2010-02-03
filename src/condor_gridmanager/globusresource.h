@@ -108,6 +108,7 @@ class GlobusResource : public BaseResource
 	static int gahpCallTimeout;
 
 	bool m_isGt5;
+	bool m_versionKnown;
 
 	// We limit the number of jobmanagers we're willing to run at a time
 	// on each resource. We keep seperate queues for initial job

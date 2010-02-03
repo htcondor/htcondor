@@ -39,6 +39,7 @@ SelfMonitorData::SelfMonitorData()
     rs_size          = 0;
     age              = -1;
 	registered_socket_count = 0;
+	cached_security_sessions = 0;
     return;
 }
 
@@ -94,6 +95,8 @@ void SelfMonitorData::CollectData(void)
 
 	registered_socket_count = daemonCore->RegisteredSocketCount();
 
+	cached_security_sessions = daemonCore->getSecMan()->session_cache->count();
+
     // Collecting more info is yet to be done
     return;
 }
@@ -112,6 +115,7 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
         ad->Assign("MonitorSelfResidentSetSize", (int)   rs_size);
         ad->Assign("MonitorSelfAge",             (int)   age);
 		ad->Assign("MonitorSelfRegisteredSocketCount", (int) registered_socket_count);
+		ad->Assign("MonitorSelfSecuritySessions", (int) cached_security_sessions);
 
         success = true;
     }

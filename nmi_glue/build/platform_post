@@ -123,6 +123,11 @@ print "Attempting to submit test job for platform: '$platform' "
 # path to the condor_nmi_submit binary we're planning to use
 my $cns = "nmi_tools/condor_nmi_submit";
 -f $cns || die "Can't submit tests: $cns does not exist\n";
+
+my $cwd = `pwd`;
+chomp $cwd;
+print "Will be using cns: $cwd/$cns\n";
+
 if( ! -x $cns ) {
 	chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
 	. "and chmod() failed: $!\n";
@@ -135,18 +140,20 @@ my $cmd = "";
 my $cmd1 = "";
 my $cmd2 = "--platforms=$platform "; 
 my $cmd3 = "";
+my $desc = "--desc=\'Auto-Test Suite for ($platform, $runid)\'";
+
 if(defined $opt_tests_at_once) {
 	# hand off the concurrency test running back to condor_nmi_submit
-	$cmd3 = "$notify_arg $opt_test_args $xtests_arg --tests-at-once=$opt_tests_at_once";
+	$cmd3 = "$notify_arg $opt_test_args $xtests_arg --tests-at-once=$opt_tests_at_once ";
 } else {
-	$cmd3 = "$notify_arg $opt_test_args $xtests_arg";
+	$cmd3 = "$notify_arg $opt_test_args $xtests_arg ";
 }
 
 my $git_cmd_arg = (defined $opt_git ? "--git" : "");
 if($mode ne "workspace") {
 	if((! defined $opt_test_args) && ($wday == 6)) {
 		# run even the long tests tonight/saturday 2am bt
-        $cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module --test-args=full $git_cmd_arg ";
+        $cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module --test-class=full $git_cmd_arg ";
     } else {
         $cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module $git_cmd_arg ";
     }
@@ -154,7 +161,7 @@ if($mode ne "workspace") {
 	# set up tests for a workspace build
    	$cmd1 = "$cns --test --buildid=$runid $git_cmd_arg "; 
 }
-$cmd = $cmd1 . $cmd2 . $cmd3;
+$cmd = $cmd1 . $cmd2 . $cmd3 . $desc;
 
 # submit the tests for the native build
 print "Invoking CNS ($cmd)\n";
@@ -183,11 +190,19 @@ foreach $test (@crossplatforms) {
 	# run only tests which do not link to 32 bit libraries
 	$cmd2 = "--platforms=$test --input-platform=$platform ";
 	if((!($platform =~ /^.*64.*$/)) && ($test =~ /^.*64.*$/)){
-		$cmd4 = " --configure=--disable-full-port --test-args=quicknolink";
+
+		# XXX This uses --configure, which needs fixing! The main
+		# problem is --configure is stupid about is it for a build, a test,
+		# who knows.
+		$cmd4 = " --configure=--disable-full-port --test-class=quicknolink";
+
 		$cmd = $cmd1 . $cmd2 . $cmd3 . $cmd4;
 	} else {
 		$cmd = $cmd1 . $cmd2 . $cmd3;
 	}
+
+	# Set up the desc so we can get better info about where this came from.
+	$cmd .= " --desc=\'Auto-Cross test for ($platform, $runid) onto $test\'";
 
 	# submit the tests for cross test request
    	print "Invoking CNS ($cmd)\n";

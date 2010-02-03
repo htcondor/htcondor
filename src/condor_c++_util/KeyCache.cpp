@@ -24,7 +24,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 
-KeyCacheEntry::KeyCacheEntry( char const *id_param, struct sockaddr_in * addr_param, KeyInfo* key_param, ClassAd * policy_param, int expiration_param) {
+KeyCacheEntry::KeyCacheEntry( char const *id_param, struct sockaddr_in * addr_param, KeyInfo* key_param, ClassAd * policy_param, int expiration_param, int lease_interval ) {
 	if (id_param) {
 		_id = strdup(id_param);
 	} else {
@@ -50,6 +50,9 @@ KeyCacheEntry::KeyCacheEntry( char const *id_param, struct sockaddr_in * addr_pa
 	}
 
 	_expiration = expiration_param;
+	_lease_interval = lease_interval;
+	_lease_expiration = 0;
+	renewLease();
 }
 
 KeyCacheEntry::KeyCacheEntry(const KeyCacheEntry& copy) 
@@ -86,11 +89,37 @@ ClassAd* KeyCacheEntry::policy() {
 }
 
 int KeyCacheEntry::expiration() {
-	return _expiration;
+		// Return the sooner of the two expiration timestamps.
+		// A 0 timestamp indicates no expiration.
+	if( _expiration ) {
+		if( _lease_expiration ) {
+			if( _lease_expiration < _expiration ) {
+				return _lease_expiration;
+			}
+		}
+		return _expiration;
+	}
+	return _lease_expiration;
+}
+
+char const *KeyCacheEntry::expirationType() {
+	if( _lease_expiration && (_lease_expiration < _expiration || !_expiration) ) {
+		return "lease";
+	}
+	if( _expiration ) {
+		return "lifetime";
+	}
+	return "";
 }
 
 void KeyCacheEntry::setExpiration(int new_expiration) {
 	_expiration = new_expiration;
+}
+
+void KeyCacheEntry::renewLease() {
+	if( _lease_interval ) {
+		_lease_expiration = time(0) + _lease_interval;
+	}
 }
 
 void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
@@ -119,6 +148,8 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
 	}
 
 	_expiration = copy._expiration;
+	_lease_interval = copy._lease_interval;
+	_lease_expiration = copy._lease_expiration;
 }
 
 
@@ -373,8 +404,9 @@ bool KeyCache::remove(const char *key_id) {
 void KeyCache::expire(KeyCacheEntry *e) {
 	char* key_id = strdup (e->id());
 	time_t key_exp = e->expiration();
+	char const *expiration_type = e->expirationType();
 
-	dprintf (D_SECURITY, "KEYCACHE: Session %s expired at %s", e->id(), ctime(&key_exp) );
+	dprintf (D_SECURITY, "KEYCACHE: Session %s %s expired at %s", e->id(), expiration_type, ctime(&key_exp) );
 
 	// remove its reference from the hash table
 	remove(key_id);       // This should do it
@@ -468,4 +500,9 @@ KeyCache::getKeysForProcess(char const *parent_unique_id,int pid)
 		keyids->append(key->id());
 	}
 	return keyids;
+}
+
+int KeyCache::count() {
+	ASSERT( key_table );
+	return key_table->getNumElements();
 }

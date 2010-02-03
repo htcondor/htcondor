@@ -296,10 +296,9 @@ while( $_ = shift( @ARGV ) ) {
                 next SWITCH;
         }
         if( /^-c.*/ ) {
-                # This is not used on windows systems at the moment.
-                $cleanupcondor = 1;
-                push (@extracondorargs, "-pidfile $condorpidfile");
-                next SWITCH;
+			$cleanupcondor = 1;
+			push (@extracondorargs, "-pidfile $condorpidfile");
+			next SWITCH;
         }
   }
 }
@@ -799,18 +798,52 @@ close SUMOUTF;
 
 if ( $cleanupcondor )
 {
-   if ( $iswindows ) 
-   {
-      # Currently not implemented.
-   }
-   else
-   {
-      my $pid=`cat $condorpidfile`;
-      system("kill -QUIT $pid");
-      system("rm -f $condorpidfile");
-   }
+	my $pid;
+	local *IN;
+	if( open IN, '<', $condorpidfile) {
+		$pid = <IN>;
+		close IN;
+		chomp $pid;
+	}
+	if($pid !~ /^\d+$/) {
+		print STDERR "PID file appears corrupt! Contains: $pid\n";
+		$pid = undef;
+	}
+	if(not defined $pid) {
+		print STDERR "PID file wasn't available; may not be able to shut down Condor.\n";
+	}
+	system("condor_off","-master");
+	if($pid) {
+		if( ! wait_for_process_gone($pid, 5) ) {
+			kill('QUIT', $pid);
+			if( ! wait_for_process_gone($pid, 5) ) {
+				# TODO: More ruthlessly enumerate all of my children and kil them.
+				kill('KILL', $pid);
+				if( ! wait_for_process_gone($pid, 1) ) {
+					print STDERR "Warning: Unable to shut down Condor daemons\n";
+				}
+			}
+		}
+	}
+	unlink($condorpidfile) if -f $condorpidfile;
 }
 exit $num_failed;
+
+# Spin wait until $pid is no longer present or $max_wait (seconds) passes.
+# Returns 1 if process exited, 0 if we timed out.
+# Seconds are the smallest granularity.
+# This uses the "kill(0)" trick; specifically, it's asking "Is this PID alive?"
+# in a loop. On a very heavily loaded system with PIDs being reused very
+# quickly, this could wait on the wrong process or processes.
+sub wait_for_process_gone {
+	my($pid, $max_wait) = @_;
+	my $done_time = time() + $max_wait;
+	while(1) {
+		if(time() >= $done_time) { return 0; }
+		if(kill(0, $pid)) { return 1; }
+		select(undef,undef,undef, 0.01); # Sleep 0.01th of a second
+	}
+}
 
 sub CleanFromPath
 {

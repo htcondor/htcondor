@@ -1914,6 +1914,13 @@ TESTCLASS(job_dagman_script_args,quick)
 TESTCLASS(job_dagman_script_args,full)
 TESTCLASS(job_dagman_script_args,quicknolink)
 
+DESC(job_dagman_noop_node,"Test noop nodes")
+RUN(job_dagman_noop_node)
+TESTCLASS(job_dagman_noop_node,dagman)
+TESTCLASS(job_dagman_noop_node,quick)
+TESTCLASS(job_dagman_noop_node,full)
+TESTCLASS(job_dagman_noop_node,quicknolink)
+
 /* Sample performance tests */
 
 /*
@@ -2017,6 +2024,20 @@ TESTCLASS(lib_shared_port_van,full)
 TESTCLASS(lib_shared_port_van,quicknolink)
 #endif
 
+/** 
+	Shadow bloat test, only run on linux systems
+*/
+#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_DEBIAN50) || \
+	defined(IS_X86_64_LINUX_RHEL5) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_LINUX_DEBIAN40) || \
+	defined(IS_I386_LINUX_DEBIAN50) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL3)
+DESC(job_core_shadow-lessthan-memlimit_van, "Make sure the shadow stays below memory limit")
+RUN(job_core_shadow-lessthan-memlimit_van)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,quick)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,core)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,full)
+TESTCLASS(job_core_shadow-lessthan-memlimit_van,btdebug)
+#endif
+
 lib_eventlog_build.exe : lib_eventlog_base.o
 	$(CPlusPlus) -o $@ $< ../release_dir/lib/libcondorapi.a $(TEST_LDFLAGS)
 
@@ -2079,6 +2100,11 @@ check:: resubmit
 
 check-serialized:: resubmit
 	./x_runtests.pl -c quick -t 1200
+
+test: all
+	cd .. && make testbin
+	/bin/env "PATH=`pwd`/../release_dir/bin:`pwd`/../release_dir/sbin:${PATH}" ./batch_test.pl -b -c
+	
 
 /***********************************************************************
    Empty rules to make our top-level Imakefile happy

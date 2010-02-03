@@ -704,6 +704,7 @@ const char * const ATTR_SEC_NEGOTIATION          = "OutgoingNegotiation";
 const char * const ATTR_SEC_VALID_COMMANDS       = "ValidCommands";
 const char * const ATTR_SEC_SESSION_DURATION     = "SessionDuration";
 const char * const ATTR_SEC_SESSION_EXPIRES      = "SessionExpires";
+const char * const ATTR_SEC_SESSION_LEASE        = "SessionLease";
 const char * const ATTR_SEC_USER                 = "User";
 const char * const ATTR_SEC_MY_REMOTE_USER_NAME  = "MyRemoteUserName";
 const char * const ATTR_SEC_NEW_SESSION          = "NewSession";

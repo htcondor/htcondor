@@ -166,6 +166,9 @@ testbin:: release
 libs:: h h_all externals condor_includes makefiles Directories Libraries
 externals::
 
+test: makefiles release
+	cd condor_tests && $(MAKE) test
+
 help::
 	@echo "object: all release stripped static testbin libs externals public"
 	@echo "special: h makefiles examples"

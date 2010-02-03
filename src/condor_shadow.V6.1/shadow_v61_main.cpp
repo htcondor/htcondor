@@ -236,6 +236,12 @@ initShadow( ClassAd* ad )
 	dprintf( D_ALWAYS, "Initializing a %s shadow for job %d.%d\n", 
 			 CondorUniverseName(universe), cluster, proc );
 
+	int wantPS = 0;
+	ad->LookupBool("WantParallelScheduling", wantPS);
+	if (wantPS) {
+		universe = CONDOR_UNIVERSE_PARALLEL;
+	}
+
 	switch ( universe ) {
 	case CONDOR_UNIVERSE_PARALLEL:
 		Shadow = new ParallelShadow();

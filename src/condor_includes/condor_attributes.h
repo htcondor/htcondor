@@ -640,6 +640,7 @@ extern const char * const  ATTR_SEC_NEGOTIATION;
 extern const char * const  ATTR_SEC_VALID_COMMANDS;
 extern const char * const  ATTR_SEC_SESSION_DURATION;
 extern const char * const  ATTR_SEC_SESSION_EXPIRES;
+extern const char * const  ATTR_SEC_SESSION_LEASE;
 extern const char * const  ATTR_SEC_USER;
 extern const char * const  ATTR_SEC_MY_REMOTE_USER_NAME;
 extern const char * const  ATTR_SEC_NEW_SESSION;

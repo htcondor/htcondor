@@ -41,6 +41,9 @@ $executed = sub
 
 	my $line;
 	my $shadowPid;
+	my $shadowPidFound = 0;
+	my $shadowPlatform;
+	my $shadowPlatformFound = 0;
 	my $privateMem;
 	open(SHADOWLOG, "<TestingPersonalCondor/local/log/ShadowLog") || die "Failed to open Shadow log";
 
@@ -50,11 +53,28 @@ $executed = sub
 		CondorTest::fullchomp($_);
 		$line = $_;
 
-		if( $line =~ /.*\($cluster\.0\)[\s]\(([0-9]*)\).*/)
+		# grab the pid from the line that has the cluster id <date time (cluster.0) (pid) message>
+		if( $shadowPidFound != 1 && $line =~ /.*\($cluster\.0\)[\s]\(([0-9]*)\).*/)
 	    {
 			$shadowPid = $1;
 			CondorTest::debug("Located shadow pid: $1\n", 1);
-			last;
+			$shadowPidFound = 1;
+			if($shadowPidFound == 1 && $shadowPlatformFound == 1)
+			{
+				last;
+			}
+		}
+
+		# grab the platform from the CondorPlatform field
+		if( $shadowPlatformFound != 1 && $line =~ /.*\$CondorPlatform: (.*) \$.*/ )
+		{
+			$shadowPlatform = $1;
+			CondorTest::debug("Located shadow platform: $1\n", 1);
+			$shadowPlatformFound = 1;
+			if($shadowPlatformFound == 1 && $shadowPidFound == 1)
+			{
+				last;		
+			}
 		}
 	}
 	close(SHADOWLOG);
@@ -85,11 +105,35 @@ $executed = sub
 		exit(1)
 	}
 
-	my $shadowMemoryLimit = 800; # in kilobytes
+	# determin if we are a 64 bit platform	
+	my $is64bit = 0;
+	if($shadowPlatform =~ /.*64.*/)
+	{
+		CondorTest::debug("Determined that this is a 64 bit platform\n", 1);
+		$is64bit = 1;
+	}
+	else
+	{
+		CondorTest::debug("Determined that this is a 32 bit platform\n", 1);
+	}
+
+	my $limit32 = 700;
+	my $limit64 = 1900;
+	my $shadowMemoryLimit = $limit32; # in kilobytes
+	if($is64bit == 1)
+	{
+		$shadowMemoryLimit = $limit64;
+	}
+	
+	CondorTest::debug("Shadow memory limit: $shadowMemoryLimit\n",1);
 	if($privateMem > $shadowMemoryLimit)
 	{
 		CondorTest::debug("Test failure do to shadow memory usage\n", 1);
 		exit(1)
+	}
+	else
+	{
+		CondorTest::debug("------------Test PASSED------------\n")
 	}
 
 };
