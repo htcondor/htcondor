@@ -16,13 +16,13 @@
  * limitations under the License.
  *
  ***************************************************************/
-
+#include "condor_common.h"
 #include "compat_classad.h"
 
 #include "condor_classad.h"
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
-#include "classad/classad/xmlSink.h"
+#include "classad/xmlSink.h"
 #include "condor_xml_classads.h"
 #include "condor_config.h"
 
