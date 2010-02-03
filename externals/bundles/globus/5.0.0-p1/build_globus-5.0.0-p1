@@ -38,6 +38,13 @@ if [ `uname` = "AIX" ] ; then
   fi
 fi
 
+# Most gram client calls leak a globus_gram_client_job_info_t.
+patch -i gram-info-leak.patch -p0
+if [ $? -ne 0 ] ; then
+  echo "patch gram-info-leak.patch failed"
+  exit 1
+fi
+
 # The XIO module usually wants to dlopen its GSI and popen drivers at
 # runtime. Since we want to statically link in all of the Globus libraries,
 # convince XIO to include these drivers as built-ins.
