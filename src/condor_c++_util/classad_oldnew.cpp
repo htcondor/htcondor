@@ -29,7 +29,6 @@ using namespace std;
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "conversion.h"
 #include "compat_classad.h"
 
 
@@ -107,12 +106,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	}
 
 		// put exprs into ad
-	classad::ClassAd *tmpAd = new classad::ClassAd( );
-	tmpAd->Update( *upd );
-	classad::ClassAd *tmpAd2 = AddExplicitTargets( tmpAd );
-	ad.Update( *tmpAd );
-	delete tmpAd;
-	delete tmpAd2;
+	ad.Update( *upd );
 	delete upd;
 
 	return true;
