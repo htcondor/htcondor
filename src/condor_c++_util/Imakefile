@@ -153,7 +153,9 @@ CLASSAD_OBJ = \
 	stringSpace.o \
 	string_list.o \
 	MyString.o \
-	condor_xml_classads.o
+	condor_xml_classads.o \
+	condor_ver_info.o \
+	condor_version.o
 #endif
 
 
