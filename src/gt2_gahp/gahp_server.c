@@ -1063,6 +1063,7 @@ handle_gram_get_jobmanager_version(void * user_arg)
 
 	globus_gram_protocol_hash_destroy( &extensions );
 
+	all_args_free( user_arg );
 	return 0;
 }
 
