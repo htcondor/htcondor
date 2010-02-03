@@ -336,7 +336,7 @@ our %submit_info = (
 				'vac-6', 'vacpp-6', 'perl-5.8.5', 'gzip-1.3.3',
 				'coreutils-5.2.1',
 			],
-			'xtests'	=> [ 'ppc_aix_5.2', 'ppc_aix_5.3' ],
+			'xtests'	=> [ 'ppc_aix_5.3' ],
 		},
 
 		'test' => {
