@@ -1,0 +1,6 @@
+condor (7.4.0-1) unstable; urgency=low
+
+  * Initial release, based on Condor's dynamic tarfile.
+
+ -- Thawan Kooburat <kooburat@cs.wisc.edu>  Wed, 25 Nov 2009 16:55:29 -0600
+

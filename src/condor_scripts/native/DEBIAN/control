@@ -1,0 +1,18 @@
+Source: condor
+Section: contrib/misc
+Priority: extra
+Maintainer: Condor Team <condor-admin@cs.wisc.edu>
+Homepage: http://www.cs.wisc.edu/condor/
+Package: condor
+Version: 7.4.0-1
+Architecture: i386
+Installed-Size: 369000
+Depends: libc6, libc6-i686, libgcc1, libice6, libsm6, libstdc++6, libx11-6, zlib1g, python, adduser
+Description: workload management system
+ Condor is a specialized workload management system for
+ compute-intensive jobs. Condor provides a job queueing mechanism, 
+ scheduling policy, priority scheme, resource monitoring, 
+ and resource management. Users submit their serial or parallel jobs
+ to Condor, Condor places them into a queue, chooses when and where 
+ to run the jobs based upon a policy, carefully monitors their progress,
+ and ultimately informs the user upon completion.

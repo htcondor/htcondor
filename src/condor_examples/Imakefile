@@ -8,6 +8,10 @@ FILES = README condor_config.local.central.manager \
 	lamscript \
 	mp1script \
 	mp2script \
+	condor_config.generic.debian.patch\
+	condor_config.generic.rpm.patch\
+	condor.boot.vdt\
+	condor_config.local.generic\
 	condor.init
 
 all::
