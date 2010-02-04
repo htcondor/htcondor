@@ -628,10 +628,14 @@ Inclusion of characters other than these as options are ignored.
     The dollar sign character matches before a newline character.
   \item[\Expr{S} or \Expr{s}]
     The period matches any character, including the newline character. 
-  \item[\Expr{X} or \Expr{x}]
-    Ignore both white space and comments within the pattern.
-    A comment is defined by starting with the pound sign (\verb@#@)
-    character, and continuing until the newline character.
+%%% The X flag is not documented as it's basically useless without
+%%% the ability to have newlines in the regex.
+%  \item[\Expr{X} or \Expr{x}]
+%    Ignore both white space and comments within the pattern.
+%    A comment is defined by starting with the pound sign (\verb@#@)
+%    character, and continuing until the newline character.  Note that
+%    ClassAd values generally cannot contain newlines, limiting the
+%    usefulness of this option.
 \end{description}
 
 \begin{description}
