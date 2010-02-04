@@ -107,6 +107,18 @@ This could lead to degraded performance,
 especially prior to Condor version 7.4.1,
 when this operation was more disk-intensive.
 
+% gittrack 1184
+\item 32-bit Linux versions of condor running in a 64-bit environment would
+sometimes wrongly detect that a tracked process belonged to root when it
+actually belonged to some other user.  This could lead to failure to detect
+processes belonging to a job.  When this problem happened,
+the following message appeared in the \Condor{master} and/or \Condor{procd}
+logs:
+
+\begin{verbatim}
+ProcAPI: fstat failed in /proc! (errno=75)
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
