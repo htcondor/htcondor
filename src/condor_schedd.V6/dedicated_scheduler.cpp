@@ -3483,8 +3483,8 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// >= the duration of the job...
 
 	MyString buf;
-	buf.sprintf( "%s = (DedicatedScheduler == \"%s\") && "
-				 "(RemoteOwner =!= \"%s\") && (%s)", 
+	buf.sprintf( "%s = (Target.DedicatedScheduler == \"%s\") && "
+				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
 	req->InsertOrUpdate( buf.Value() );
 
