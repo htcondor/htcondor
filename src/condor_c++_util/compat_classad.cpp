@@ -1125,10 +1125,10 @@ void ClassAd::RemoveExplicitTargetRefs( )
 
 
 void ClassAd:: 
-AddTargetRefs( TargetAdType target_type )
+AddTargetRefs( TargetAdType target_type, bool do_version_check )
 {
 	MyString ver_str;
-	if ( this->LookupString( ATTR_VERSION, ver_str ) ) {
+	if ( do_version_check && this->LookupString( ATTR_VERSION, ver_str ) ) {
 		CondorVersionInfo ver( ver_str.Value() );
 		if ( ver.built_since_version( 7, 5, 1 ) ) {
 			return;

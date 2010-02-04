@@ -6896,9 +6896,9 @@ SaveClassAd ()
 #if !defined(WANT_OLD_CLASSADS)
 	if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ||
 		 JobUniverse == CONDOR_UNIVERSE_LOCAL ) {
-		job->AddTargetRefs( TargetScheddAttrs );
+		job->AddTargetRefs( TargetScheddAttrs, false );
 	} else {
-		job->AddTargetRefs( TargetMachineAttrs );
+		job->AddTargetRefs( TargetMachineAttrs, false );
 	}
 #endif
 

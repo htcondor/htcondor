@@ -399,7 +399,7 @@ class ClassAd : public classad::ClassAd
 	
 	void RemoveExplicitTargetRefs(  );
 	
-	void AddTargetRefs( TargetAdType target_type );
+	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
 
 	static bool ClassAdAttributeIsPrivate( char const *name );
 
