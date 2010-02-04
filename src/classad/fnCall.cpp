@@ -28,6 +28,11 @@
 #include "classad/sink.h"
 #include "classad/util.h"
 
+#if defined(WIN32) && !defined(USE_PCRE) && !defined(USE_POSIX_REGEX)
+  #define USE_PCRE
+  #define HAVE_PCRE_H
+#endif
+
 #if defined USE_POSIX_REGEX 
   #include <regex.h>
 #elif defined USE_PCRE
