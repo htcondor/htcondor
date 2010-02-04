@@ -4568,9 +4568,10 @@ The following configuration variables support java universe jobs.
 \end{description}
 
 These macros control the system of job hooks invoked by the
-\Condor{startd} to optionally fetch work.
+\Condor{startd} to optionally fetch work,
+as well as some invoked by the \Condor{starter}.
 See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
-``Job Hooks'' for more details.
+Job Hooks for more details.
 
 \begin{description}
 
@@ -4579,7 +4580,7 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
   The keyword used to define which set of hooks a particular
   compute slot should invoke.
   The value of \verb@<N>@ is replaced by the slot
-  identification number. For example, on slot 1, th variable name will be
+  identification number. For example, on slot 1, the variable name will be
   called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
   There is no default keyword.
   Sites that wish to use these job hooks must explicitly define the
@@ -4592,35 +4593,75 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
   This setting is only used if a slot-specific keyword is not defined
   for a given compute slot.
   There is no default keyword.
-  Sites that wish to use these job hooks must explicitly define the
-  keyword (and the corresponding hook paths).
+  Sites that wish to use job hooks must explicitly define the
+  keyword and the corresponding hook paths.
 
 \label{param:HookFetchWork}
-\item[\Macro{HOOK\_FETCH\_WORK}]
+\item[\Macro{<Keyword>\_HOOK\_FETCH\_WORK}]
   The full path to the program to invoke whenever the \Condor{startd}
   wants to fetch work.
-  The actual configuration setting must be prefixed with a hook keyword.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
   There is no default.
+
+\label{param:HookReplyFetch}
+\item[\Macro{<Keyword>\_HOOK\_REPLY\_FETCH}]
+  The full path to the program to invoke when the hook defined by
+  \MacroNI{<Keyword>\_HOOK\_FETCH\_WORK}  returns data and the the \Condor{startd}
+  decides if it is going to accept the fetched job or not.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
 
 \label{param:HookReplyClaim}
-\item[\Macro{HOOK\_REPLY\_CLAIM}]
+\item[\Macro{<Keyword>\_HOOK\_REPLY\_CLAIM}]
   The full path to the program to invoke whenever the \Condor{startd}
   finishes fetching a job and decides what to do with it.
-  The actual configuration setting must be prefixed with a hook keyword.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
   There is no default.
 
+\label{param:HookPrepareJob}
+\item[\Macro{<Keyword>\_HOOK\_PREPARE\_JOB}]
+  The full path to the program invoked by the \Condor{starter} before it
+  runs the job.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:HookUpdateJobInfo}
+\item[\Macro{<Keyword>\_HOOK\_UPDATE\_JOB\_INFO}]
+  The full path to the program invoked by the \Condor{starter} periodically
+  as the job runs, allowing the \Condor{starter} to present an updated
+  and augmented job ClassAd to the program.
+  See section~\ref{sec:job-hooks-hooks} on page~\pageref{sec:job-hooks-hooks}
+  for the list of additional attributes included.
+  When the job is first invoked, the \Condor{starter} will invoke the program
+  after \MacroUNI{STARTER\_INITIAL\_UPDATE\_INTERVAL} seconds.
+  Thereafter, the \Condor{starter} will invoke the program every 
+  \MacroUNI{STARTER\_UPDATE\_INTERVAL} seconds.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
 \label{param:HookEvictClaim}
-\item[\Macro{HOOK\_EVICT\_CLAIM}]
+\item[\Macro{<Keyword>\_HOOK\_EVICT\_CLAIM}]
   The full path to the program to invoke whenever the \Condor{startd}
   needs to evict a fetched claim.
-  The actual configuration setting must be prefixed with a hook keyword.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
   There is no default.
+
+\label{param:HookJobExit}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT}]
+  The full path to the program invoked by the \Condor{starter}
+  whenever a job exits,
+  either on its own or when being evicted from an execution slot. 
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
 
 \label{param:FetchWorkDelay}
 \item[\Macro{FetchWorkDelay}]
   An expression that defines the number of seconds that the
   \Condor{startd} should wait after an invocation of
-  \Macro{HOOK\_FETCH\_WORK} completes before the hook should be
+  \Macro{<Keyword>\_HOOK\_FETCH\_WORK} completes before the hook should be
   invoked again.
   The expression is evaluated in the context of the slot ClassAd, and
   the ClassAd of the currently running job (if any).
