@@ -1232,7 +1232,8 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "globus" ) ) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			globus = true;
-			attrs.clearAll();
+			attrs.append( ATTR_GLOBUS_STATUS );
+			attrs.append( ATTR_GRID_RESOURCE );
 		}
 		else
 		if( match_prefix( arg, "debug" ) ) {
