@@ -1023,7 +1023,7 @@ SetMyTypeName( const char *myType )
 const char*	ClassAd::
 GetMyTypeName( ) const
 {
-	string myTypeStr;
+	static string myTypeStr;
 	if( !EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
 		return "";
 	}
@@ -1043,7 +1043,7 @@ SetTargetTypeName( const char *targetType )
 const char*	ClassAd::
 GetTargetTypeName( ) const
 {
-	string targetTypeStr;
+	static string targetTypeStr;
 	if( !EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
 		return "";
 	}
