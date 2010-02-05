@@ -2348,7 +2348,7 @@ int
 ProcAPI::buildPidList() {
 
 	DIR *dirp;
-	struct dirent *direntp;
+	struct dirent64 *direntp;
 	pidlistPTR current;
 	pidlistPTR temp;
 
@@ -2359,7 +2359,7 @@ ProcAPI::buildPidList() {
 	current = pidList;
 
 	if( (dirp = opendir("/proc")) != NULL ) {
-		while( (direntp = readdir(dirp)) != NULL ) {
+		while( (direntp = readdir64(dirp)) != NULL ) {
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				temp = new pidlist;
 				temp->pid = (pid_t) atol ( direntp->d_name );
