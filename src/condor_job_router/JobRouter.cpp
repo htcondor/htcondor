@@ -444,12 +444,20 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 			dprintf(D_ALWAYS, "JobRouter failure (%s): Unable to "
 					"evaluate job's periodic policy "
 					"expressions.\n", job->JobDesc().c_str());
+			if( !orig_ad ) {
+				dprintf(D_ALWAYS, "JobRouter failure (%s): "
+					"failed to reset src job "
+					"attributes, because ad not found"
+					"in collection.\n",job->JobDesc().c_str());
+				continue;
+			}
+
 			job->SetSrcJobAd(job->src_key.c_str(), orig_ad, ad_collection);
 			if (false == push_dirty_attributes(job->src_ad,NULL,NULL))
 			{
 				dprintf(D_ALWAYS, "JobRouter failure (%s): "
 						"failed to reset src job "
-						"attributesin the schedd.\n",
+						"attributes in the schedd.\n",
 						job->JobDesc().c_str());
 			}
 			else
