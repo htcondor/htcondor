@@ -53,6 +53,12 @@ if( -f "/etc/redhat-release")  {
 
 	#Guess that the fist number in this file is major version number
     my $version = `cat /etc/redhat-release`;
+
+	#to support yellow dog linux
+	if ( $version=~/Yellow/)  {
+		$os="yd"; 
+	}
+
 	$version=~/.*?(\d).*/;
 	$version=$1;
     $os=$os . $version;
