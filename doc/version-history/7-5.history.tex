@@ -53,6 +53,11 @@ reduces network traffic, increases the number of parallel tasks
 the Condor can handle at once, and reduces the load on the remote
 gatekeeper.
 
+% gittrac #1078
+\item \Condor{dagman} now has the capability to run DAGs containing nodes
+that are declared to be NOOPs -- for these nodes, a job is never actually
+submitted.  See section~\ref{dagman:NOOP} for for information.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
