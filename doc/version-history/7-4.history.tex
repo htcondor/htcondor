@@ -129,6 +129,13 @@ it would exit with the following message in its log:
 ERROR: master has exited
 \end{verbatim}
 
+% gittrack 1186
+\item Fixed a problem in \Condor{job\_router} introduced in 7.2.2 that
+  could cause the daemon to crash when failing to carry out the change
+  of state dictated by a job's periodic policy expressions
+  (e.g. failure to put a job on hold when \AdAttr{periodic\_hold}
+  becomes true).
+
 \end{itemize}
 
 \noindent Known Bugs:
