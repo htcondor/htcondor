@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="condor_api"
-	ProjectGUID="{D790062E-34A2-471f-B261-CC47D2961EC3}"
+	ProjectGUID="{D790062E-34A2-471F-B261-CC47D2961EC3}"
 	RootNamespace="condor_api"
 	TargetFrameworkVersion="0"
 	>
@@ -97,15 +97,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="$(OutDir)\ast.obj"
-			>
-		</File>
-		<File
-			RelativePath="$(OutDir)\astbase.obj"
-			>
-		</File>
-		<File
-			RelativePath="$(OutDir)\attrlist.obj"
+			RelativePath="$(OutDir)\attrrefs.obj"
 			>
 		</File>
 		<File
@@ -113,19 +105,19 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\buildtable.obj"
-			>
-		</File>
-		<File
 			RelativePath="$(OutDir)\chomp.obj"
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\classad.obj"
+			RelativePath="$(OutDir)\classad_merge.obj"
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\classad_merge.obj"
+			RelativePath="$(OutDir)\collection.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\collectionBase.obj"
 			>
 		</File>
 		<File
@@ -149,6 +141,10 @@
 			>
 		</File>
 		<File
+			RelativePath="$(OutDir)\condor_xml_classads.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\distribution.obj"
 			>
 		</File>
@@ -165,15 +161,15 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\environment.obj"
-			>
-		</File>
-		<File
-			RelativePath="$(OutDir)\evaluateOperators.obj"
-			>
-		</File>
-		<File
 			RelativePath="$(OutDir)\except.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\exprList.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\exprTree.obj"
 			>
 		</File>
 		<File
@@ -185,6 +181,10 @@
 			>
 		</File>
 		<File
+			RelativePath="$(OutDir)\fnCall.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\format_time.obj"
 			>
 		</File>
@@ -193,7 +193,19 @@
 			>
 		</File>
 		<File
+			RelativePath="$(OutDir)\indexfile.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\iso_dates.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\lexer.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\lexerSource.obj"
 			>
 		</File>
 		<File
@@ -201,7 +213,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\Release\lock_file.WINDOWS.obj"
+			RelativePath="$(OutDir)\literals.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\lock_file.WINDOWS.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\matchClassad.obj"
 			>
 		</File>
 		<File
@@ -225,11 +245,27 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\operators.obj"
+			RelativePath="$(OutDir)\new_classad.obj"
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\parser.obj"
+			RelativePath="$(OutDir)\new_classad_debug.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\new_classad_operators.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\new_classad_util.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\new_classad_value.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\query.obj"
 			>
 		</File>
 		<File
@@ -241,19 +277,19 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\registration.obj"
-			>
-		</File>
-		<File
 			RelativePath="$(OutDir)\rotate_file.obj"
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\scanner.obj"
+			RelativePath="$(OutDir)\setsyscalls.obj"
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\setsyscalls.obj"
+			RelativePath="$(OutDir)\sink.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\source.obj"
 			>
 		</File>
 		<File
@@ -285,6 +321,10 @@
 			>
 		</File>
 		<File
+			RelativePath="$(OutDir)\transaction.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\uids.obj"
 			>
 		</File>
@@ -297,10 +337,6 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\value.obj"
-			>
-		</File>
-		<File
 			RelativePath="$(OutDir)\write_user_log.obj"
 			>
 		</File>
@@ -309,7 +345,15 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\condor_xml_classads.obj"
+			RelativePath="$(OutDir)\xmlLexer.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\xmlSink.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\xmlSource.obj"
 			>
 		</File>
 	</Files>

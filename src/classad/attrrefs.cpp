@@ -110,7 +110,7 @@ SameAs(const ExprTree *tree) const
     if (tree->GetKind() != ATTRREF_NODE) {
         is_same = false;
     } else {
-        AttributeReference *other_ref = (AttributeReference *) tree;
+        const AttributeReference *other_ref = (const AttributeReference *) tree;
         
         if (   absolute     != other_ref->absolute
             || attributeStr != other_ref->attributeStr) {

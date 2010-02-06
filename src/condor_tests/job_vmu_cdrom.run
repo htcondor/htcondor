@@ -53,7 +53,7 @@ x_vm_utils::add_submit_command("vmware_should_transfer_files = yes");
 x_vm_utils::add_submit_command("vmware_snapshot_disk = false");
 x_vm_utils::add_submit_command("vm_cdrom_files = a.txt,b.txt,c.txt");
 x_vm_utils::add_submit_command("vm_should_transfer_cdrom_files = yes");
-x_vm_utils::add_submit_command("periodic_remove = (CurrentTime - QDate) > 600");
+x_vm_utils::add_submit_command("periodic_remove = (time() - QDate) > 600");
 $success = x_vm_utils::run_test($testname);
 
 x_vm_utils::cleanup();

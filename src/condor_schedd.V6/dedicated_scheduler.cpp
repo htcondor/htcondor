@@ -2640,6 +2640,17 @@ DedicatedScheduler::computeSchedule( void )
 			int nodes;
 			int proc;
 
+#if !defined(WANT_OLD_CLASSADS)
+			ExprTree *tmp_expr;
+			tmp_expr = AddTargetRefs( preemption_req, TargetJobAttrs );
+			delete preemption_req;
+			preemption_req = tmp_expr;
+
+			tmp_expr = AddTargetRefs( preemption_rank, TargetJobAttrs );
+			delete preemption_rank;
+			preemption_rank = tmp_expr;
+#endif
+
 			nodes_per_proc = new int[nprocs];
 			for (int ni = 0; ni < nprocs; ni++) {
 				nodes_per_proc[ni] = 0;
@@ -3472,8 +3483,8 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// >= the duration of the job...
 
 	MyString buf;
-	buf.sprintf( "%s = (DedicatedScheduler == \"%s\") && "
-				 "(RemoteOwner =!= \"%s\") && (%s)", 
+	buf.sprintf( "%s = (Target.DedicatedScheduler == \"%s\") && "
+				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
 	req->InsertOrUpdate( buf.Value() );
 

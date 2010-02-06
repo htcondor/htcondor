@@ -251,6 +251,30 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_io\shared_port_client.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_io\shared_port_client.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_io\shared_port_endpoint.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_io\shared_port_endpoint.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_io\shared_port_server.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_io\shared_port_server.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_io\sock.cpp"
 			>
 		</File>
@@ -272,30 +296,6 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_includes\stream.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_io\shared_port_server.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_io\shared_port_server.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_io\shared_port_client.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_io\shared_port_client.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_io\shared_port_endpoint.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_io\shared_port_endpoint.h"
 			>
 		</File>
 	</Files>

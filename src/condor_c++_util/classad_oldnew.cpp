@@ -29,7 +29,6 @@ using namespace std;
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "conversion.h"
 #include "compat_classad.h"
 
 
@@ -88,7 +87,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	    free( secret_line );
         }
 
-		buffer += string(inputLine.Value()) + ";";
+		buffer += string(compat_classad::ConvertEscapingOldToNew(inputLine.Value())) + ";";
 	}
 	buffer += "]";
 
@@ -107,12 +106,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	}
 
 		// put exprs into ad
-	classad::ClassAd *tmpAd = new classad::ClassAd( );
-	tmpAd->Update( *upd );
-	classad::ClassAd *tmpAd2 = AddExplicitTargets( tmpAd );
-	ad.Update( *tmpAd );
-	delete tmpAd;
-	delete tmpAd2;
+	ad.Update( *upd );
 	delete upd;
 
 	return true;
@@ -201,6 +195,8 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 	string						buf;
 	const classad::ExprTree		*expr;
     bool send_server_time = false;
+
+	unp.SetOldClassAd( true );
 
 	int numExprs=0;
 
@@ -294,7 +290,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 	    if(strcasecmp(ATTR_CURRENT_TIME,buf.c_str())==0) {
 		continue;
 	    }
-            if(compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
+            if(exclude_private && compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
                 continue;
             }
 

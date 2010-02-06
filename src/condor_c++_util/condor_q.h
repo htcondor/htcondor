@@ -116,8 +116,8 @@ class CondorQ
 	time_t scheddBirthdate;
 	
 	// helper functions
-	int getAndFilterAds( ClassAd &, StringList &attrs, ClassAdList &, bool useAll );
-	int getFilterAndProcessAds( ClassAd &, StringList &attrs, process_function, bool useAll );
+	int getAndFilterAds( const char *, StringList &attrs, ClassAdList &, bool useAll );
+	int getFilterAndProcessAds( const char *, StringList &attrs, process_function, bool useAll );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);

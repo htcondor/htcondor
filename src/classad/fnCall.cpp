@@ -28,6 +28,11 @@
 #include "classad/sink.h"
 #include "classad/util.h"
 
+#if defined(WIN32) && !defined(USE_PCRE) && !defined(USE_POSIX_REGEX)
+  #define USE_PCRE
+  #define HAVE_PCRE_H
+#endif
+
 #if defined USE_POSIX_REGEX 
   #include <regex.h>
 #elif defined USE_PCRE
@@ -229,14 +234,14 @@ bool FunctionCall::
 SameAs(const ExprTree *tree) const
 {
     bool is_same;
-    FunctionCall *other_fn;
+    const FunctionCall *other_fn;
     
     if (this == tree) {
         is_same = true;
     } else if (tree->GetKind() != FN_CALL_NODE) {
         is_same = false;
     } else {
-        other_fn = (FunctionCall *) tree;
+        other_fn = (const FunctionCall *) tree;
         
         if (functionName == other_fn->functionName
             && function == other_fn->function
@@ -1621,10 +1626,10 @@ changeCase(const char*name,const ArgumentList &argList,EvalState &state,
             return true;
         } else if (stringVal.IsErrorValue()) {
             result.SetErrorValue();
-            return false;
+            return true;
         } else if (!stringVal.IsStringValue(str)) {
             result.SetErrorValue();
-            return false;
+            return true;
         }
 	}
 
@@ -1648,7 +1653,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 		// two or three arguments
 	if( argList.size() < 2 || argList.size() > 3 ) {
 		result.SetErrorValue( );
-		return( false );
+		return( true );
 	}
 
 		// Evaluate all arguments
@@ -1663,14 +1668,14 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) ||
 		(argList.size() > 2 && arg2.IsUndefinedValue( ) ) ) {
 		result.SetUndefinedValue( );
-		return( false );
+		return( true );
 	}
 
 		// arg0 must be string, arg1 must be int, arg2 (if given) must be int
 	if( !arg0.IsStringValue( buf ) || !arg1.IsIntegerValue( offset )||
 		(argList.size( ) > 2 && !arg2.IsIntegerValue( len ) ) ) {
 		result.SetErrorValue( );
-		return( false );
+		return( true );
 	}
 
 		// perl-like substr; negative offsets and lengths count from the end
@@ -1683,6 +1688,9 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	}
 	if( len <= 0 ) {
 		len = alen - offset + len;
+		if( len < 0 ) {
+			len = 0;
+		}
 	} else if( len > alen - offset ) {
 		len = alen - offset;
 	}
@@ -1714,7 +1722,7 @@ compareString( const char*name, const ArgumentList &argList, EvalState &state,
     // Must have two arguments
 	if(argList.size() != 2) {
 		result.SetErrorValue( );
-		return( false );
+		return( true );
 	}
 
     // Evaluate both arguments
@@ -1728,7 +1736,7 @@ compareString( const char*name, const ArgumentList &argList, EvalState &state,
     // undefined.
 	if(arg0.IsUndefinedValue() || arg1.IsUndefinedValue()) {
 		result.SetUndefinedValue( );
-		return false;
+		return true;
     }
 
     string  s0, s1;
@@ -1926,7 +1934,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 		time_t rsecs = 0;
 		if(relative) {// 2nd argument is N/A for reltime
 			result.SetErrorValue( );
-			return( false );
+			return( true );
 		}
 		// 2nd arg should be integer, real or reltime
 		else if (arg2.IsIntegerValue(ivalue2)) {
@@ -1940,7 +1948,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 		}
 		else {
 			result.SetErrorValue( );
-			return( false );
+			return( true );
 		}
 	} else {
         secondarg = false;
@@ -2106,11 +2114,12 @@ random( const char*,const ArgumentList &argList,EvalState &state,
     double  random_double;
 
     // takes exactly one argument
-	if( argList.size() != 1 ) {
+	if( argList.size() > 1 ) {
 		result.SetErrorValue( );
 		return( true );
-	}
-	if( !argList[0]->Evaluate( state, arg ) ) {
+	} else if ( argList.size() == 0 ) {
+		arg.SetRealValue( 1.0 );
+	} else if( !argList[0]->Evaluate( state, arg ) ) {
 		result.SetErrorValue( );
 		return( false );
 	}
@@ -2129,7 +2138,7 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
+ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg1;
@@ -2162,8 +2171,8 @@ ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
 		break;
 	}
 	case Value::REAL_VALUE: {
-		int realval;
-		if( !arg1.IsIntegerValue(realval) ) {
+		double realval;
+		if( !arg1.IsRealValue(realval) ) {
 			result.SetErrorValue();
 			return( false );
 		}
@@ -2203,7 +2212,7 @@ ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-eval( const char* name,const ArgumentList &argList,EvalState &state,
+eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	  Value &result )
 {
 	Value arg,strarg;
@@ -2243,7 +2252,7 @@ eval( const char* name,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-interval( const char* name,const ArgumentList &argList,EvalState &state,
+interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg,intarg;

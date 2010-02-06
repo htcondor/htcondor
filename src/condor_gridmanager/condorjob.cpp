@@ -1482,8 +1482,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
-		expr.sprintf_cat( " && ( %s < %s )", ATTR_CURRENT_TIME,
-						  ATTR_TIMER_REMOVE_CHECK );
+		expr.sprintf_cat( " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
 	}
 
 	submit_ad->Insert( expr.Value() );
@@ -1492,7 +1491,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Insert( expr.Value() );
 
 	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
-	expr.sprintf( "%s = (%s > 0) =!= True && CurrentTime > %s + %d",
+	expr.sprintf( "%s = (%s > 0) =!= True && time() > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
 				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
 	submit_ad->Insert( expr.Value() );

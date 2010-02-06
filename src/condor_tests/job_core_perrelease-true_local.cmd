@@ -10,6 +10,6 @@ Notification = NEVER
 ## to make sure we sleep for just a little bit more than that
 ##
 arguments  = 20
-periodic_release = (CurrentTime - QDate) > 3
+periodic_release = (time() - QDate) > 3
 queue
 

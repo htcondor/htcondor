@@ -5,6 +5,6 @@ output = job_core_onexithold-false_local.out
 error = job_core_onexithold-false_local.err
 Notification = NEVER
 arguments  = 5
-on_exit_hold = (CurrentTime - QDate) < (2)
+on_exit_hold = (time() - QDate) < (2)
 queue
 

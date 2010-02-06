@@ -5,6 +5,6 @@ output = job_core_perremove-false_java.out
 error = job_core_perremove-false_java.err
 Notification = NEVER
 arguments  = x_java_Sleep 3
-periodic_remove = (CurrentTime - QDate) < (0 )
+periodic_remove = (time() - QDate) < (0 )
 queue
 

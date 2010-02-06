@@ -5161,6 +5161,9 @@ Scheduler::negotiate(int command, Stream* s)
 						FREE( claim_id );
 						return (!(KEEP_STREAM));
 					}
+#if !defined(WANT_OLD_CLASSADS)
+					my_match_ad->AddTargetRefs( TargetJobAttrs );
+#endif
 
 					{
 						ClaimIdParser idp(claim_id);
@@ -10262,23 +10265,29 @@ Scheduler::Init()
 		// This will be added into the requirements expression for
 		// the schedd to know whether we can start a local job 
 		// 
+	ExprTree *tmp_expr;
 	if ( this->StartLocalUniverse ) {
 		free( this->StartLocalUniverse );
+		this->StartLocalUniverse = NULL;
 	}
 	tmp = param( "START_LOCAL_UNIVERSE" );
-	if ( ! tmp ) {
-			//
-			// Default Expression: TRUE
-			//
-		this->StartLocalUniverse = strdup( "TotalLocalJobsRunning < 200" );
-	} else {
-			//
-			// Use what they had in the config file
-			// Should I be checking this first??
-			//
+	if ( tmp && ParseClassAdRvalExpr( tmp, tmp_expr ) == 0 ) {
+#if !defined (WANT_OLD_CLASSADS)
+		ExprTree *tmp_expr2 = AddTargetRefs( tmp_expr, TargetJobAttrs );
+		this->StartLocalUniverse = strdup( ExprTreeToString( tmp_expr2 ) );
+		delete tmp_expr2;
+#else
 		this->StartLocalUniverse = tmp;
 		tmp = NULL;
+#endif
+		delete tmp_expr;
+	} else {
+		// Default Expression
+		this->StartLocalUniverse = strdup( "TotalLocalJobsRunning < 200" );
+		dprintf( D_FULLDEBUG, "Using default expression for "
+				 "START_LOCAL_UNIVERSE: %s\n", this->StartLocalUniverse );
 	}
+	free( tmp );
 
 		//
 		// Start Scheduler Universe Expression
@@ -10287,21 +10296,26 @@ Scheduler::Init()
 		// 
 	if ( this->StartSchedulerUniverse ) {
 		free( this->StartSchedulerUniverse );
+		this->StartSchedulerUniverse = NULL;
 	}
 	tmp = param( "START_SCHEDULER_UNIVERSE" );
-	if ( ! tmp ) {
-			//
-			// Default Expression: TRUE
-			//
-		this->StartSchedulerUniverse = strdup( "TotalSchedulerJobsRunning < 200" );
-	} else {
-			//
-			// Use what they had in the config file
-			// Should I be checking this first??
-			//
+	if ( tmp && ParseClassAdRvalExpr( tmp, tmp_expr ) == 0 ) {
+#if !defined (WANT_OLD_CLASSADS)
+		ExprTree *tmp_expr2 = AddTargetRefs( tmp_expr, TargetJobAttrs );
+		this->StartSchedulerUniverse = strdup( ExprTreeToString( tmp_expr2 ) );
+		delete tmp_expr2;
+#else
 		this->StartSchedulerUniverse = tmp;
 		tmp = NULL;
+#endif
+		delete tmp_expr;
+	} else {
+		// Default Expression
+		this->StartSchedulerUniverse = strdup( "TotalSchedulerJobsRunning < 200" );
+		dprintf( D_FULLDEBUG, "Using default expression for "
+				 "START_SCHEDULER_UNIVERSE: %s\n", this->StartSchedulerUniverse );
 	}
+	free( tmp );
 
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	
@@ -11133,7 +11147,7 @@ Scheduler::invalidate_ads()
     m_ad->SetTargetTypeName( SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
-    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
+    line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
     m_ad->Insert( line.Value() );
 
 
@@ -11143,7 +11157,7 @@ Scheduler::invalidate_ads()
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
 		// Invalidate all our submittor ads.
-	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
+	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
 				  Name );
     m_ad->InsertOrUpdate( line.Value() );
 

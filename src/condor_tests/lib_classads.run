@@ -23,6 +23,9 @@ my @got;
 $testdesc =  'lib_classad - runs prebuilt classad tests from testbin_dir';
 $testname = "lib_classads";
 $test = "../testbin_dir/test_classads";
+if ( ! -x $test ) {
+	$test = "../testbin_dir/test_old_classads";
+}
 
 print scalar localtime() . "\n";
 

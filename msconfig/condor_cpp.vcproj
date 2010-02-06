@@ -213,6 +213,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\classad_oldnew.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\classad_oldnew.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\classad_visa.cpp"
 			>
 		</File>
@@ -250,6 +258,30 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\command_strings.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\compat_classad.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\compat_classad.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\compat_classad_list.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\compat_classad_list.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\compat_classad_util.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\compat_classad_util.h"
 			>
 		</File>
 		<File

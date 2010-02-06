@@ -602,7 +602,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 			FALSE,						// do not want a command port
 			&myEnv,  		            // environment
 			Log_dir,					// current working directory
-			FALSE,						// do not create a new process group
+			NULL,						// do not create a new process group
 			NULL,						// list of socks to inherit
 			module_stdio				// child stdio file descriptors
 		 								// nice increment = 0
@@ -1272,7 +1272,7 @@ low_water_timer(Service *)
 				FALSE,					// do not want a command port
 				NULL,  		            // colon seperated environment string
 				Log_dir,				// current working directory
-				FALSE,					// do not create a new process group
+				NULL,					// do not create a new process group
 				NULL,					// list of socks to inherit
 				module_stdio			// child stdio file descriptors
 										// nice increment = 0

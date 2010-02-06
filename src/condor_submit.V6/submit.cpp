@@ -6273,7 +6273,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( answer[0] ) {
 			answer += " && ";
 		}
-		answer += "(";
+		answer += "(TARGET.";
 		answer += ATTR_HAS_JAVA;
 		answer += ")";
 	} else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
@@ -6282,7 +6282,7 @@ check_requirements( char const *orig, MyString &answer )
 			if( answer[0] ) {
 				answer += " && ";
 			}
-			answer += "(Arch == \"";
+			answer += "(TARGET.Arch == \"";
 			answer += Architecture;
 			answer += "\")";
 		}
@@ -6290,7 +6290,7 @@ check_requirements( char const *orig, MyString &answer )
 		bool checks_vm = false;
 		checks_vm = findClause( answer, ATTR_HAS_VM );
 		if( !checks_vm ) {
-			answer += "&& (";
+			answer += "&& (TARGET.";
 			answer += ATTR_HAS_VM;
 			answer += ")";
 		}
@@ -6298,7 +6298,7 @@ check_requirements( char const *orig, MyString &answer )
 		bool checks_vmtype = false;
 		checks_vmtype = findClause( answer, ATTR_VM_TYPE);
 		if( !checks_vmtype ) {
-			answer += " && (";
+			answer += " && (TARGET.";
 			answer += ATTR_VM_TYPE;
 			answer += " == \"";
 			answer += VMType.Value();
@@ -6308,7 +6308,7 @@ check_requirements( char const *orig, MyString &answer )
 		bool checks_avail = false;
 		checks_avail = findClause(answer, ATTR_VM_AVAIL_NUM);
 		if( !checks_avail ) {
-			answer += " && (";
+			answer += " && (TARGET.";
 			answer += ATTR_VM_AVAIL_NUM;
 			answer += " > 0)";
 		}
@@ -6317,22 +6317,22 @@ check_requirements( char const *orig, MyString &answer )
 			if( answer[0] ) {
 				answer += " && ";
 			}
-			answer += "(Arch == \"";
+			answer += "(TARGET.Arch == \"";
 			answer += Architecture;
 			answer += "\")";
 		}
 
 		if( !checks_opsys ) {
-			answer += " && (OpSys == \"";
+			answer += " && (TARGET.OpSys == \"";
 			answer += OperatingSystem;
 			answer += "\")";
 		}
 	}
 
 	if ( JobUniverse == CONDOR_UNIVERSE_STANDARD && !checks_ckpt_arch ) {
-		answer += " && ((CkptArch == Arch) ||";
+		answer += " && ((CkptArch == TARGET.Arch) ||";
 		answer += " (CkptArch =?= UNDEFINED))";
-		answer += " && ((CkptOpSys == OpSys) ||";
+		answer += " && ((CkptOpSys == TARGET.OpSys) ||";
 		answer += "(CkptOpSys =?= UNDEFINED))";
 	}
 
@@ -6340,9 +6340,9 @@ check_requirements( char const *orig, MyString &answer )
 		if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 			// VM universe uses Total Disk 
 			// instead of Disk for Condor slot
-			answer += " && (TotalDisk >= DiskUsage)";
+			answer += " && (TARGET.TotalDisk >= DiskUsage)";
 		}else {
-			answer += " && (Disk >= DiskUsage)";
+			answer += " && (TARGET.Disk >= DiskUsage)";
 		}
 	}
 
@@ -6350,19 +6350,19 @@ check_requirements( char const *orig, MyString &answer )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 		if ( !checks_mem ) {
-			answer += " && ( ( (Memory * 1024) >= ImageSize ) && ( ( RequestMemory * 1024 ) >= ImageSize ) )";
+			answer += " && ( ( (TARGET.Memory * 1024) >= ImageSize ) && ( ( RequestMemory * 1024 ) >= ImageSize ) )";
 		}
 	}
 
 	if( HasTDP && !checks_tdp ) {
-		answer += "&& (";
+		answer += "&& (TARGET.";
 		answer += ATTR_HAS_TDP;
 		answer += ")";
 	}
 
 	if ( JobUniverse == CONDOR_UNIVERSE_PVM ) {
 		if( ! checks_pvm ) {
-			answer += "&& (";
+			answer += "&& (TARGET.";
 			answer += ATTR_HAS_PVM;
 			answer += ")";
 		}
@@ -6370,7 +6370,7 @@ check_requirements( char const *orig, MyString &answer )
 
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		if( ! checks_mpi ) {
-			answer += "&& (";
+			answer += "&& (TARGET.";
 			answer += ATTR_HAS_MPI;
 			answer += ")";
 		}
@@ -6403,10 +6403,10 @@ check_requirements( char const *orig, MyString &answer )
 		case STF_YES:
 				// we're definitely going to use file transfer.  
 			if( ! checks_file_transfer ) {
-				answer += "&& (";
+				answer += "&& (TARGET.";
 				answer += ATTR_HAS_FILE_TRANSFER;
 				if (!checks_per_file_encryption && NeedsPerFileEncryption) {
-					answer += " && ";
+					answer += " && TARGET.";
 					answer += ATTR_HAS_PER_FILE_ENCRYPTION;
 				}
 				answer += ")";
@@ -6420,10 +6420,10 @@ check_requirements( char const *orig, MyString &answer )
 				// domain, but explictly turned on IF_NEEDED, assume
 				// they know what they're doing. 
 			if( ! checks_fsdomain ) {
-				ft_clause = "&& ((";
+				ft_clause = "&& ((TARGET.";
 				ft_clause += ATTR_HAS_FILE_TRANSFER;
 				if (NeedsPerFileEncryption) {
-					ft_clause += " && ";
+					ft_clause += " && TARGET.";
 					ft_clause += ATTR_HAS_PER_FILE_ENCRYPTION;
 				}
 				ft_clause += ") || (TARGET.";
@@ -6452,7 +6452,7 @@ check_requirements( char const *orig, MyString &answer )
 			//
 			//
 		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) {
-			answer += " && (";
+			answer += " && (TARGET.";
 			answer += ATTR_HAS_JOB_DEFERRAL;
 			answer += ")";
 		}
@@ -6466,21 +6466,19 @@ check_requirements( char const *orig, MyString &answer )
 			// our job from being matched and executed after it could
 			// possibly run
 			//
-			//	( ( ATTR_CURRENT_TIME + ATTR_SCHEDD_INTERVAL ) >= 
+			//	( ( time() + ATTR_SCHEDD_INTERVAL ) >= 
 			//	  ( ATTR_DEFERRAL_TIME - ATTR_DEFERRAL_PREP_TIME ) )
 			//  &&
-			//    ( ATTR_CURRENT_TIME < 
+			//    ( time() < 
 			//    ( ATTR_DEFFERAL_TIME + ATTR_DEFERRAL_WINDOW ) )
 			//  )
 			//
 		MyString attrib;
-		attrib.sprintf( "( ( %s + %s ) >= ( %s - %s ) ) && "\
-						"( %s < ( %s + %s ) )",
-						ATTR_CURRENT_TIME,
+		attrib.sprintf( "( ( time() + %s ) >= ( %s - %s ) ) && "\
+						"( time() < ( %s + %s ) )",
 						ATTR_SCHEDD_INTERVAL,
 						ATTR_DEFERRAL_TIME,
 						ATTR_DEFERRAL_PREP_TIME,
-						ATTR_CURRENT_TIME,
 						ATTR_DEFERRAL_TIME,
 						ATTR_DEFERRAL_WINDOW );
 		answer += " && (";
@@ -6497,10 +6495,10 @@ check_requirements( char const *orig, MyString &answer )
 		//   - LocalCredd == <CREDD_HOST> (if LocalCredd not found)
 		//
 	if ( RunAsOwnerCredD ) {
-		MyString tmp_rao = " && (";
+		MyString tmp_rao = " && (TARGET.";
 		tmp_rao += ATTR_HAS_WIN_RUN_AS_OWNER;
 		if (!checks_credd) {
-			tmp_rao += " && (";
+			tmp_rao += " && (TARGET.";
 			tmp_rao += ATTR_LOCAL_CREDD;
 			tmp_rao += " =?= \"";
 			tmp_rao += RunAsOwnerCredD;
@@ -6895,7 +6893,14 @@ SaveClassAd ()
 		}
 	}
 
-	
+#if !defined(WANT_OLD_CLASSADS)
+	if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ||
+		 JobUniverse == CONDOR_UNIVERSE_LOCAL ) {
+		job->AddTargetRefs( TargetScheddAttrs, false );
+	} else {
+		job->AddTargetRefs( TargetMachineAttrs, false );
+	}
+#endif
 
 	job->ResetExpr();
 	while( job->NextExpr(lhstr, tree) ) {

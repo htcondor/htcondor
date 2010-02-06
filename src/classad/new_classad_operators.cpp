@@ -104,12 +104,12 @@ bool Operation::
 SameAs(const ExprTree *tree) const
 {
     bool is_same;
-    Operation *other_op;
+    const Operation *other_op;
 
     if (tree->GetKind() != OP_NODE) {
         is_same = false;
     } else {
-        other_op = (Operation *) tree;
+        other_op = (const Operation *) tree;
         
         if (   operation == other_op->operation
             && SameChild(child1, other_op->child1)

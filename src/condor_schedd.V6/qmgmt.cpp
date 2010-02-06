@@ -293,6 +293,21 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		return;
 	}
 
+		// CRUST
+		// Convert expressions to have properl TARGET scoping when
+		// referring to machine attributes. The switch from old to new
+		// ClassAds happened around 7.5.1.
+		// At some future point in time, this code should be removed
+		// (no earlier than the 7.7 series).
+#if !defined(WANT_OLD_CLASSADS)
+	if ( universe == CONDOR_UNIVERSE_SCHEDULER ||
+		 universe == CONDOR_UNIVERSE_LOCAL ) {
+		job_ad->AddTargetRefs( TargetScheddAttrs );
+	} else {
+		job_ad->AddTargetRefs( TargetMachineAttrs );
+	}
+#endif
+
 		// CRUFT
 		// Convert old job ads to the new format of GridResource
 		// and GridJobId. This switch happened on the V6_7-lease
@@ -2064,6 +2079,21 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
 	}
+#if !defined(WANT_OLD_CLASSADS)
+	else if ( stricmp( attr_name, ATTR_REQUIREMENTS ) == 0 ||
+			  stricmp( attr_name, ATTR_RANK ) ) {
+		// Check Requirements and Rank for proper TARGET scoping of
+		// machine attributes.
+		ExprTree *tree = NULL;
+		if ( ParseClassAdRvalExpr( attr_value, tree ) == 0 ) {
+			ExprTree *tree2 = AddTargetRefs( tree, TargetMachineAttrs );
+			new_value = ExprTreeToString( tree2 );
+			attr_value = new_value.Value();
+			delete tree;
+			delete tree2;
+		}
+	}
+#endif
 
 	// If any of the attrs used to create the signature are
 	// changed, then delete the ATTR_AUTO_CLUSTER_ID, since

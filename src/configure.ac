@@ -738,7 +738,7 @@ AC_ARG_ENABLE(old-classads,
   [AS_HELP_STRING([--disable-old-classads],
      [Replace old ClassAds with compatiblity layer])],
   [],
-  [enable_old_classads=yes])
+  [enable_old_classads=no])
 if test $enable_old_classads = "yes"; then
   AC_DEFINE([WANT_OLD_CLASSADS],[1],[Define if using old ClassAds])
 fi

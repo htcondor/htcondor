@@ -414,10 +414,10 @@ MASTER_DEBUG		= D_COMMAND
 ##  expressions:
 MINUTE		= 60
 HOUR		= (60 * $(MINUTE))
-StateTimer	= (CurrentTime - EnteredCurrentState)
-ActivityTimer	= (CurrentTime - EnteredCurrentActivity)
-ActivationTimer = (CurrentTime - JobStart)
-LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
+StateTimer	= (time() - EnteredCurrentState)
+ActivityTimer	= (time() - EnteredCurrentActivity)
+ActivationTimer = (time() - JobStart)
+LastCkpt	= (time() - LastPeriodicCheckpoint)
 
 ##  The JobUniverse attribute is just an int.  These macros can be
 ##  used to specify the universe in a human-readable way:
@@ -866,7 +866,7 @@ STARTD_ADDRESS_FILE	= $(LOG)/.startd_address
 ##  of the benchmark results to provide more accurate values.
 ##  Note, if you don't want any benchmarks run at all, either comment
 ##  RunBenchmarks out, or set it to "False".
-BenchmarkTimer = (CurrentTime - LastBenchmark)
+BenchmarkTimer = (time() - LastBenchmark)
 RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 #RunBenchmarks : False
 

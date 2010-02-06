@@ -5,6 +5,6 @@ output = job_core_onexitrem-false_local.out
 error = job_core_onexitrem-false_local.err
 Notification = NEVER
 arguments  = 10
-on_exit_remove = (CurrentTime - QDate) > 5000
+on_exit_remove = (time() - QDate) > 5000
 queue
 
