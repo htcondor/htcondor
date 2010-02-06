@@ -2347,7 +2347,11 @@ ProcAPI::getAndRemNextPid () {
 int
 ProcAPI::buildPidList() {
 
+#if defined(AIX)
+	DIR64 *dirp;
+#else
 	DIR *dirp;
+#endif
 	struct dirent64 *direntp;
 	pidlistPTR current;
 	pidlistPTR temp;
@@ -2358,7 +2362,12 @@ ProcAPI::buildPidList() {
 
 	current = pidList;
 
-	if( (dirp = opendir("/proc")) != NULL ) {
+#if defined(AIX)
+	dirp = opendir64("/proc");
+#else
+	dirp = opendir("/proc");
+#endif
+	if( dirp != NULL ) {
 		while( (direntp = readdir64(dirp)) != NULL ) {
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				temp = new pidlist;
@@ -2368,7 +2377,11 @@ ProcAPI::buildPidList() {
 				current = temp;
 			}
 		}
+#if defined(AIX)
+		closedir64( dirp );
+#else
 		closedir( dirp );
+#endif
     
 		temp = pidList;
 		pidList = pidList->next;
