@@ -21,10 +21,10 @@ $log_file = $home .'/nightly.log' . (defined $opt_git ? ".git" : "");
 $CVS="/usr/bin/cvs -d /space/cvs/CONDOR_SRC";
 $GIT="/prereq/git-1.5.4/bin/git";
 $GIT_SRC_ROOT="/space/git/CONDOR_SRC.git";
-$GIT_EXT_ROOT="/space/git/CONDOR_EXT.git";
+#$GIT_EXT_ROOT="/space/git/CONDOR_EXT.git";
 $GIT_DOC_ROOT="/space/git/CONDOR_DOC.git";
-$GIT_TSTCNF_ROOT="/space/git/CONDOR_TEST_CNFDTL.git";
-$GIT_TSTLRG_ROOT="/space/git/CONDOR_TEST_LRG.git";
+#$GIT_TSTCNF_ROOT="/space/git/CONDOR_TEST_CNFDTL.git";
+#$GIT_TSTLRG_ROOT="/space/git/CONDOR_TEST_LRG.git";
 
 
 # Open log file and setup autoflushing
@@ -53,7 +53,8 @@ chdir $home || die "Can't chdir($home): $!\n";
 # We need to make sure the clones are current, since they aren't
 # rsync'd constantly anymore
 if (defined $opt_git) {
-    @roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT, $GIT_EXT_ROOT, $GIT_TSTCNF_ROOT, $GIT_TSTLRG_ROOT);
+#    @roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT, $GIT_EXT_ROOT, $GIT_TSTCNF_ROOT, $GIT_TSTLRG_ROOT);
+    @roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT);
     foreach $root (@roots) {
 	open(OUT, "$GIT --git-dir=$root fetch 2>&1|")
 	    || die "Can't fetch $root: $!\n";

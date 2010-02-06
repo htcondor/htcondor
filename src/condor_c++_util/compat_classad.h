@@ -27,12 +27,19 @@
 #include "condor_common.h"
 #include "classad/classad_distribution.h"
 #include "condor_io.h"
+#include "string_list.h"
 
 #ifndef ATTRLIST_MAX_EXPRESSION
 #define	ATTRLIST_MAX_EXPRESSION 10240
 #endif
 
 namespace compat_classad {
+
+typedef enum {
+	TargetMachineAttrs,
+	TargetJobAttrs,
+	TargetScheddAttrs
+} TargetAdType;
 
 // This enum is lifted directly from old ClassAds.
 typedef enum
@@ -159,8 +166,7 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name, MyString const &value)
 	{ return InsertAttr( name, value.Value()) ? TRUE : FALSE; }
 
-	int Assign(char const *name,char const *value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	int Assign(char const *name,char const *value);
 
 	int Assign(char const *name,int value)
 	{ return InsertAttr( name, value) ? TRUE : FALSE; }
@@ -314,7 +320,7 @@ class ClassAd : public classad::ClassAd
 		/** Get the value of the TargetType attribtute */
 	const char*	GetTargetTypeName() const;
 
-	bool initFromString(char const *str,MyString *err_msg);
+	bool initFromString(char const *str,MyString *err_msg=NULL);
 
 		/** Print the ClassAd as an old ClassAd to the stream
 		 * @param s the stream
@@ -389,8 +395,11 @@ class ClassAd : public classad::ClassAd
 	// that is similar to the original ClassAd, except that if it refers
 	// to attributes that are not in the current classad and they are not
 	// scoped, then they are renamed "target.attribute"
-	classad::ClassAd *AddExplicitTargetRefs( );
-		//@}
+	void AddExplicitTargetRefs(  );
+	
+	void RemoveExplicitTargetRefs(  );
+	
+	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
 
 	static bool ClassAdAttributeIsPrivate( char const *name );
 
@@ -458,8 +467,6 @@ class ClassAd : public classad::ClassAd
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
-	classad::ExprTree *AddExplicitTargetRefs( classad::ExprTree *,
-						std::set < std::string, classad::CaseIgnLTStr > & );
 
 	classad::ClassAd::iterator m_nameItr;
 	bool m_nameItrInChain;
@@ -476,6 +483,20 @@ class ClassAd : public classad::ClassAd
 						StringList &internal_refs,
 						StringList &external_refs);
 };
+
+
+
+classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,
+						std::set < std::string, classad::CaseIgnLTStr > & );
+						
+classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *, classad::ClassAd*);
+classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
+
+
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
+								  TargetAdType target_type );
+
+const char *ConvertEscapingOldToNew( const char *str );
 
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;

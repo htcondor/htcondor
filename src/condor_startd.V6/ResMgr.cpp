@@ -204,6 +204,10 @@ ResMgr::init_config_classad( void )
 	// Publish all DaemonCore-specific attributes, which also handles
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
+
+#if !defined(WANT_OLD_CLASSADS)
+	config_classad->AddTargetRefs( TargetJobAttrs );
+#endif
 }
 
 

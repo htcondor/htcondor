@@ -591,6 +591,10 @@ command_query_ads( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
+
 		// Construct a list of all our ClassAds:
 	resmgr->makeAdList( &ads );
 	
@@ -1017,6 +1021,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd\n" );
 		ABORT;
 	}
+
+#if !defined(WANT_OLD_CLASSADS)
+	req_classad->AddTargetRefs( TargetMachineAttrs );
+#endif
 
 		// Try now to read the schedd addr and aline interval.
 		// Do _not_ abort if we fail, since older (pre v6.1.11) schedds do 
@@ -1535,6 +1543,10 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Can't receive eom() from shadow.\n" );
 		ABORT;
 	}
+
+#if !defined(WANT_OLD_CLASSADS)
+	req_classad->AddTargetRefs( TargetMachineAttrs );
+#endif
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
 

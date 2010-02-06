@@ -623,10 +623,10 @@ TRANSFERER_DEBUG	=
 ##  expressions:
 MINUTE		= 60
 HOUR		= (60 * $(MINUTE))
-StateTimer	= (CurrentTime - EnteredCurrentState)
-ActivityTimer	= (CurrentTime - EnteredCurrentActivity)
-ActivationTimer = ifThenElse(JobStart =!= UNDEFINED, (CurrentTime - JobStart), 0)
-LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
+StateTimer	= (time() - EnteredCurrentState)
+ActivityTimer	= (time() - EnteredCurrentActivity)
+ActivationTimer = ifThenElse(JobStart =!= UNDEFINED, (time() - JobStart), 0)
+LastCkpt	= (time() - LastPeriodicCheckpoint)
 
 ##  The JobUniverse attribute is just an int.  These macros can be
 ##  used to specify the universe in a human-readable way:
@@ -850,7 +850,7 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
 ##  and the owner of the idle job has a better priority than the owner
 ##  of the running job.  This expression defaults to true.
 UWCS_PREEMPTION_REQUIREMENTS = ( $(StateTimer) > (1 * $(HOUR)) && \
-	RemoteUserPrio > SubmitterUserPrio * 1.2 ) || (MY.NiceUser == True)
+	RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2 ) || (MY.NiceUser == True)
 
 ##  The PREEMPTION_RANK expression is used in a case where preemption
 ##  is the only option and all other negotiation ranks are equal.  For
@@ -1183,7 +1183,7 @@ STARTD_ADDRESS_FILE	= $(LOG)/.startd_address
 ##  of the benchmark results to provide more accurate values.
 ##  Note, if you don't want any benchmarks run at all, either comment
 ##  RunBenchmarks out, or set it to "False".
-BenchmarkTimer = (CurrentTime - LastBenchmark)
+BenchmarkTimer = (time() - LastBenchmark)
 RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 #RunBenchmarks : False
 

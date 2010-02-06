@@ -2347,8 +2347,12 @@ ProcAPI::getAndRemNextPid () {
 int
 ProcAPI::buildPidList() {
 
+#if defined(AIX)
+	DIR64 *dirp;
+#else
 	DIR *dirp;
-	struct dirent *direntp;
+#endif
+	struct dirent64 *direntp;
 	pidlistPTR current;
 	pidlistPTR temp;
 
@@ -2358,8 +2362,13 @@ ProcAPI::buildPidList() {
 
 	current = pidList;
 
-	if( (dirp = opendir("/proc")) != NULL ) {
-		while( (direntp = readdir(dirp)) != NULL ) {
+#if defined(AIX)
+	dirp = opendir64("/proc");
+#else
+	dirp = opendir("/proc");
+#endif
+	if( dirp != NULL ) {
+		while( (direntp = readdir64(dirp)) != NULL ) {
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				temp = new pidlist;
 				temp->pid = (pid_t) atol ( direntp->d_name );
@@ -2368,7 +2377,11 @@ ProcAPI::buildPidList() {
 				current = temp;
 			}
 		}
+#if defined(AIX)
+		closedir64( dirp );
+#else
 		closedir( dirp );
+#endif
     
 		temp = pidList;
 		pidList = pidList->next;
@@ -2741,9 +2754,15 @@ ProcAPI::printProcInfo(FILE* fp, piPTR pi){
 uid_t 
 ProcAPI::getFileOwner(int fd) {
 	
+#if HAVE_FSTAT64
+	// If we do not use fstat64(), fstat() fails if the inode number
+	// is too big and possibly for a few other reasons as well.
+	struct stat64 si;
+	if ( fstat64(fd, &si) != 0 ) {
+#else
 	struct stat si;
-
 	if ( fstat(fd, &si) != 0 ) {
+#endif
 		dprintf(D_ALWAYS, 
 			"ProcAPI: fstat failed in /proc! (errno=%d)\n", errno);
 		return 0; 	// 0 is probably wrong, but this should never

@@ -1,3 +1,18 @@
+Changes for version 1.0.5 (unreleased)
+* Significant performance optimizations. This includes restoring use of
+  the non-standard STL hash_map.
+* When unparsing to old ClassAd format, print reals with the same
+  precision as in old ClassAds.
+* Fixed a bug in GetInternalReferences() that would return an incomplete
+  list if an external reference was encountered.
+* Fixed a bug in function substr() that could return the wrong substring
+  when a negative length was provided.
+* Make the single argument to function random() optional, as documented.
+* Fixed a bug in function ifThenElse() that caused evaluation to fail if
+  the first argument was a real.
+* Fixed a bug in several functions that caused evaluation to fail if the
+  wrong number or type of arguments was provided.
+
 Changes for version 1.0.4 (Release 2009-10-05)
 * Added eval() function to be consistent with "old" classad library used
   by Condor.

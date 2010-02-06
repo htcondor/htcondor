@@ -5,6 +5,6 @@ output = job_core_onexitrem-false_java.out
 error = job_core_onexitrem-false_java.err
 Notification = NEVER
 arguments  = x_java_Sleep 3
-on_exit_remove = (CurrentTime - QDate) > (2 )
+on_exit_remove = (time() - QDate) > (2 )
 queue
 

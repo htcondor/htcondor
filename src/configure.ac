@@ -738,7 +738,7 @@ AC_ARG_ENABLE(old-classads,
   [AS_HELP_STRING([--disable-old-classads],
      [Replace old ClassAds with compatiblity layer])],
   [],
-  [enable_old_classads=yes])
+  [enable_old_classads=no])
 if test $enable_old_classads = "yes"; then
   AC_DEFINE([WANT_OLD_CLASSADS],[1],[Define if using old ClassAds])
 fi
@@ -3024,7 +3024,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[5.0.0], [soft])
+  CHECK_EXTERNAL([globus],[5.0.0-p1], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then

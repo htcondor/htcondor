@@ -227,6 +227,7 @@ reinitialize ()
 {
 	char *tmp;
 	static bool first_time = true;
+	ExprTree *tmp_expr;
 
     // Initialize accountant params
     accountant.Initialize();
@@ -274,6 +275,11 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
+#if !defined(WANT_OLD_CLASSADS)
+		tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
+		delete PreemptionReq;
+		PreemptionReq = tmp_expr;
+#endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
@@ -334,6 +340,11 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
+#if !defined(WANT_OLD_CLASSADS)
+		tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
+		delete PreemptionRank;
+		PreemptionRank = tmp_expr;
+#endif
 
 	dprintf (D_ALWAYS,"PREEMPTION_RANK = %s\n", (tmp?tmp:"None"));
 
@@ -346,6 +357,11 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPreJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
+#if !defined(WANT_OLD_CLASSADS)
+		tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
+		delete NegotiatorPreJobRank;
+		NegotiatorPreJobRank = tmp_expr;
+#endif
 	}
 
 	dprintf (D_ALWAYS,"NEGOTIATOR_PRE_JOB_RANK = %s\n", (tmp?tmp:"None"));
@@ -359,6 +375,11 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPostJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
+#if !defined(WANT_OLD_CLASSADS)
+		tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
+		delete NegotiatorPostJobRank;
+		NegotiatorPostJobRank = tmp_expr;
+#endif
 	}
 
 	dprintf (D_ALWAYS,"NEGOTIATOR_POST_JOB_RANK = %s\n", (tmp?tmp:"None"));
@@ -1762,6 +1783,10 @@ obtainAdsFromCollector (
 				continue;
 			}
 
+#if !defined(WANT_OLD_CLASSADS)
+			ad->AddTargetRefs( TargetJobAttrs );
+#endif
+
 			// Next, let's transform the ad. The first thing we might
 			// do is replace the Requirements attribute with whatever
 			// we find in NegotiatorRequirements
@@ -2183,6 +2208,10 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			return MM_ERROR;
 		}
 		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
+
+#if !defined(WANT_OLD_CLASSADS)
+		request.AddTargetRefs( TargetMachineAttrs );
+#endif
 
 		// insert the submitter user priority attributes into the request ad
 		// first insert old-style ATTR_SUBMITTOR_PRIO

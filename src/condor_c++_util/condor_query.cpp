@@ -32,10 +32,6 @@
 #include "daemon.h"
 #include "dc_collector.h"
 
-#define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
-
-char *new_strdup (const char *);
-
 // The order and number of the elements of the following arrays *are*
 // important.  (They follow the structure of the enumerations supplied
 // in the header file condor_query.h)
@@ -392,6 +388,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	int                     more;
 	QueryResult result;
 	ClassAd     queryAd(extraAttrs), *ad;
+	ExprTree *tree;
 
 	if ( !poolName ) {
 		return Q_NO_COLLECTOR_HOST;
@@ -406,8 +403,9 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 
 
 	// make the query ad
-	result = (QueryResult) query.makeQuery (queryAd);
+	result = (QueryResult) query.makeQuery (tree, true);
 	if (result != Q_OK) return result;
+	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
 	// fix types
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
@@ -503,6 +501,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		return Q_INVALID_QUERY;
 	}
 
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
+
 	if( DebugFlags & D_HOSTNAME ) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
 				 my_collector.addr(), my_collector.fullHostname() );
@@ -563,9 +565,11 @@ QueryResult CondorQuery::
 getQueryAd (ClassAd &queryAd)
 {
 	QueryResult	result;
+	ExprTree *tree;
 
-	result = (QueryResult) query.makeQuery (queryAd);
+	result = (QueryResult) query.makeQuery (tree, true);
 	if (result != Q_OK) return result;
+	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
 	// fix types
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
@@ -614,6 +618,10 @@ getQueryAd (ClassAd &queryAd)
 		return Q_INVALID_QUERY;
 	}
 
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
+
 	return Q_OK;
 }
 
@@ -623,10 +631,16 @@ filterAds (ClassAdList &in, ClassAdList &out)
 {
 	ClassAd queryAd, *candidate;
 	QueryResult	result;
+	ExprTree *tree;
 
 	// make the query ad
-	result = (QueryResult) query.makeQuery (queryAd);
+	result = (QueryResult) query.makeQuery (tree, true);
 	if (result != Q_OK) return result;
+	queryAd.Insert(ATTR_REQUIREMENTS, tree);
+
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
 
 	in.Open();
 	while( (candidate = (ClassAd *) in.Next()) )

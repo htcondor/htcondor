@@ -243,6 +243,10 @@ VMRegister::requestHostClassAds(void)
 	adList.Rewind();
 	ad = adList.Next();
 
+#if !defined(WANT_OLD_CLASSADS)
+	ad->AddTargetRefs( TargetJobAttrs );
+#endif
+
 	// Get each Attribute from the classAd
 	// added "HOST_" in front of each Attribute name
 	const char *name;

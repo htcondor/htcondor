@@ -50,10 +50,10 @@ sub FALSE { 0; };
 
 # Constants for use with makeFetchFileVCS to specify if fetching from
 # source (SRC), externals (EXT) or manual (DOC) repositories.
-sub TST_LRG	{ 5; };
-sub TST_CNF	{ 4; };
-sub TST 	{ 3; };
-sub EXT 	{ 2; };
+#sub TST_LRG	{ 5; };
+#sub TST_CNF	{ 4; };
+#sub TST 	{ 3; };
+#sub EXT 	{ 2; };
 sub DOC 	{ 1; };
 sub SRC 	{ 0; };
 
@@ -74,13 +74,13 @@ my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
 my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
 
 # Root of the GIT Externals repository
-my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
+#my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
 
 # Root of the GIT Confidential Test repository
-my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
+#my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
 
 # Root of the GIT Large Test repository
-my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
+#my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
 
 # name of the submit_info file
 my $submit_info_basename = "SubmitInfo.pm";
@@ -1818,14 +1818,15 @@ sub makeFetchFileVCS
 		# ==> git archive --remote=<git_root> <git_tree> <git_path> | tar x
 		# perl case clause to allow 3 different test repositories long term
 		my $gitroot;
-		if( EXT == $repo) {
-			$gitroot = $GITROOT_EXT;
-		} elsif(DOC == $repo) {
+#		if( EXT == $repo) {
+#			$gitroot = $GITROOT_EXT;
+#		} elsif(DOC == $repo) {
+		if(DOC == $repo) {
 			$gitroot = $GITROOT_DOC;
-		} elsif(TST_CNF == $repo) {
-			$gitroot = $GITROOT_TSTCNF;
-		} elsif(TST_LRG == $repo) {
-			$gitroot = $GITROOT_TSTLRG;
+#		} elsif(TST_CNF == $repo) {
+#			$gitroot = $GITROOT_TSTCNF;
+#		} elsif(TST_LRG == $repo) {
+#			$gitroot = $GITROOT_TSTLRG;
 		} else {
 			$gitroot = $GITROOT_SRC;
 		}
