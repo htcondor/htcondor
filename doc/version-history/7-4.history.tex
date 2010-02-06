@@ -108,15 +108,25 @@ especially prior to Condor version 7.4.1,
 when this operation was more disk-intensive.
 
 % gittrack 1184
+% gittrack 1181
 \item 32-bit Linux versions of condor running in a 64-bit environment would
-sometimes wrongly detect that a tracked process belonged to root when it
-actually belonged to some other user.  This could lead to failure to detect
-processes belonging to a job.  When this problem happened,
+sometimes not detect the existence of some processes and sometimes
+wrongly detect that a tracked process belonged to root when it
+actually belonged to some other user.  This could lead to failure to run
+jobs or failure to properly monitor and clean up after them.  When the wrong
+process ownership problem happened,
 the following message appeared in the \Condor{master} and/or \Condor{procd}
 logs:
 
 \begin{verbatim}
 ProcAPI: fstat failed in /proc! (errno=75)
+\end{verbatim}
+
+If \Condor{procd} failed to detect the existence of its own parent process,
+it would exit with the following message in its log:
+
+\begin{verbatim}
+ERROR: master has exited
 \end{verbatim}
 
 \end{itemize}
