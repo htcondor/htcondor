@@ -1073,12 +1073,12 @@ NextNameOriginal()
 	classad::ClassAd *chained_ad = GetChainedParentAd();
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
-	if ( m_nameItr == end() && chained_ad && !m_nameItrInChain ) {
+	if ( chained_ad && !m_nameItrInChain && m_nameItr == end() ) {
 		m_nameItr = chained_ad->begin();
 		m_nameItrInChain = true;
 	}
-	if ( m_nameItr == end() ||
-		 m_nameItrInChain && m_nameItr == chained_ad->end() ) {
+	if ( ( !m_nameItrInChain && m_nameItr == end() ) ||
+		 ( m_nameItrInChain && m_nameItr == chained_ad->end() ) ) {
 		return NULL;
 	}
 	name = m_nameItr->first.c_str();
@@ -1368,12 +1368,12 @@ bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 	classad::ClassAd *chained_ad = GetChainedParentAd();
 	// After iterating through all the attributes in this ad,
 	// get all the attributes in our chained ad as well.
-	if ( m_exprItr == end() && chained_ad && !m_exprItrInChain ) {
+	if ( chained_ad && !m_exprItrInChain && m_exprItr == end() ) {
 		m_exprItr = chained_ad->begin();
 		m_exprItrInChain = true;
 	}
-	if ( m_exprItr == end() ||
-		 m_exprItrInChain && m_exprItr == chained_ad->end() ) {
+	if ( ( !m_exprItrInChain && m_exprItr == end() ) ||
+		 ( m_exprItrInChain && m_exprItr == chained_ad->end() ) ) {
 		return false;
 	}
 	name = m_exprItr->first.c_str();
