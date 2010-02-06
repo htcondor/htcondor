@@ -20,9 +20,7 @@ FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remo
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
 SAVE_SIGSTATE_OBJ = signals_support.o signals_control.o
 
-#if IS_DUX
-SIG_EXTRACT = SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o _SIGSUSPEND.o
-#elif IS_SUN4X_SOLARIS
+#if IS_SUN4X_SOLARIS
 SIG_EXTRACT = SIGACTION.o _SIGACTION.o
 #elif IS_LINUX
 SIG_EXTRACT = SIGSUSPEND.o SIGACTION.o
@@ -40,8 +38,6 @@ NEED_SYSDEP =
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o $(NEED_SYSDEP) PIPE.o
 #elif IS_SOLARIS
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o 
-#elif IS_ALPHA_DUX
-PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o
 #elif IS_HPUX
 PLATFORM_EXTRACT = SYSCALL.o __SYSCALL.o PIPE.o
 #else 
@@ -156,11 +152,7 @@ uppercase_target($(SIMPLE_LIBC),signal.o,SIGNAL.o,signal,SIGNAL)
 uppercase_target($(SIMPLE_LIBC),sigvec.o,SIGVEC.o,sigvec,SIGVEC)
 uppercase_target($(SIMPLE_LIBC),_sigvec.o,_SIGVEC.o,_sigvec,_SIGVEC)
 
-#if IS_ALPHA_DUX
-uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
-#else
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
-#endif
 
 #if IS_SOLARIS
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
@@ -170,27 +162,7 @@ uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
 
 uppercase_target($(SIMPLE_LIBC),sigprocmask.o,SIGPROCMASK.o,sigprocmask,SIGPROCMASK)
 
-#if IS_ALPHA_DUX
-SIGSUSPEND.o :  $(SIMPLE_LIBC)  ToUpper
-	ar x    $(SIMPLE_LIBC)      sigsuspend.o 	  ; mv  sigsuspend.o  $(TMP_DIR)
-	./ToUpper $(TMP_DIR)/sigsuspend.o   $(TMP_DIR)/SIGSUSPEND.o   sigsuspend   SIGSUSPEND
-	./ToUpper $(TMP_DIR)/SIGSUSPEND.o SIGSUSPEND.o __SIGSUSPEND_nc __sigsuspend_nc
-	rm -f $(TMP_DIR)/sigsuspend.o $(TMP_DIR)/SIGSUSPEND.o
-
-_SIGSUSPEND.o : $(SIMPLE_LIBC) ToUpper
-	ar x $(SIMPLE_LIBC) _sigsuspend.o ; mv _sigsuspend.o $(TMP_DIR)
-	./ToUpper $(TMP_DIR)/_sigsuspend.o _SIGSUSPEND.o sigsuspend SIGSUSPEND
-	rm -f $(TMP_DIR)/_sigsuspend.o
-
-SIGACTION.o : $(SIMPLE_LIBC) ToUpper
-	ar x $(SIMPLE_LIBC) sigaction.o; mv sigaction.o $(TMP_DIR)
-	./ToUpper $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o sigaction SIGACTION
-	./ToUpper $(TMP_DIR)/SIGACTION.o SIGACTION.o _sigtramp _SIGTRAMP
-	rm -f $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o
-
-#else
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
-#endif
 
 #if IS_LINUX
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
@@ -214,7 +186,7 @@ SYSDEP.o: SYSDEP_TMP.o ToUpper
 
 clean::
 	rm -f SYSCALL_TMP.o
-#elif IS_DUX || IS_HPUX
+#elif IS_HPUX
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),__syscall.o,__SYSCALL.o,__syscall,__SYSCALL)
 #endif

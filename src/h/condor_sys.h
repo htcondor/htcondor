@@ -32,7 +32,7 @@
 #include <sys/syscall.h>
 #endif
 
-#if defined(HPUX) || defined(LINUX) || defined(DUX)
+#if defined(HPUX) || defined(LINUX)
 #include <syscall.h> 
 #endif
 

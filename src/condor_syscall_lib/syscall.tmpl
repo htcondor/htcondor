@@ -370,8 +370,8 @@ All of these calls manipulate the open file table.
 #		endif
 #	endif
 
-	/* on Linux, lseek64 just goes to llseek, I can't find an lseek64 on OSF1 */
-#	if !defined(LINUX) && !defined(OSF1)
+	/* on Linux, lseek64 just goes to llseek */
+#	if !defined(LINUX)
 	off64_t lseek64( int fd, off64_t offset, int whence )
 		: file_table_name(lseek), remote_name(lseek)
 #		if defined(Solaris)
@@ -447,10 +447,6 @@ All of these calls manipulate the open file table.
 	*/
 
 #	if defined(SWITCH) || defined(SENDER)
-#		if defined(OSF1)
-			int poll( struct pollfd *fds, nfds_t nfds, int timeout ) : file_table;
-			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table;
-#		else
 			int poll( struct pollfd *fds, unsigned long nfds, int timeout ) : file_table;
 			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table
 #			if defined(LINUX)
@@ -461,7 +457,6 @@ All of these calls manipulate the open file table.
 #				endif
 #			endif
 			; /* closes the select() */
-#		endif
 #	endif
 
 	/*
@@ -587,8 +582,6 @@ version.
 
 #	if defined(Solaris)
 		int statfs( const char *path, struct statfs *buf, rdiscard(int len), rdiscard(int fstyp) ) : pseudo {
-#	elif defined(OSF1)
-		int statfs( char *path, struct statfs *buf, rdiscard(int len) ) : pseudo {
 #	else
 		int statfs( const char *path, struct statfs *buf ) : pseudo {
 #	endif
@@ -600,8 +593,6 @@ version.
 
 #	if defined(Solaris)
 		int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
-#	elif defined(OSF1)
-		int fstatfs( map(int fd), struct statfs *buf, int len) {
 #	else
 		int fstatfs( map(int fd), struct statfs *buf ) {
 #	endif
@@ -614,7 +605,7 @@ version.
 	int lockf64( map(int fd), int op, off64_t where )
 		: remote_name(lockf);
 
-#	if defined(HPUX) || defined(OSF1) || defined(LINUX)
+#	if defined(HPUX) || defined(LINUX)
 #	    if defined(LINUX)
 #			if defined(I386)
 		int getdirentries( map(int fd), char *buf, size_t nbytes, 
@@ -716,10 +707,10 @@ version.
 		map(int fd),
 		SOCKET_COUNT_TYPE count) : INDIRECT;
 
-	/* OSF1, LINUX/X86_64 doesn't support a separate send and recv. 
+	/* LINUX/X86_64 doesn't support a separate send and recv. 
 		They are implemented as sendto and recvfrom in switches.special.C */
 
-#	if !defined(OSF1) && !(defined(LINUX) && defined(X86_64))
+#	if !(defined(LINUX) && defined(X86_64))
 		SOCKET_SENDRECV_TYPE send(
 			map(int fd),
 			SOCKET_DATA_CONST SOCKET_DATA_TYPE data,
@@ -733,8 +724,6 @@ version.
 			SOCKET_FLAGS_TYPE flags) : INDIRECT;
 #	endif
 
-	/* On OSF1, this doesn't work unless recvfrom calls SYS_old_recvfrom.  I don't know why.  */
-
 	SOCKET_RECVFROM_TYPE recvfrom(
 		map(int fd),
 		SOCKET_DATA_TYPE data,
@@ -743,11 +732,7 @@ version.
 		SOCKET_ADDR_TYPE addr,
 		SOCKET_ALTERNATE_LENGTH_TYPE *addrlength) : INDIRECT
 
-#	if defined(OSF1)
-		, local_name(old_recvfrom);
-#	else
 		;
-#	endif
 
 	SOCKET_SENDRECV_TYPE recvmsg(
 		map(int fd),
@@ -978,7 +963,7 @@ They are not needed for remote I/O or for the condor daemons.
 		}
 #	endif
 
-#	if defined(LINUX) || defined(OSF1)
+#	if defined(LINUX)
 		int gethostname( char *address, size_t address_len ) {
 #	else 
 		int gethostname( char *address, int address_len ) {
@@ -1005,11 +990,7 @@ They are not needed for remote I/O or for the condor daemons.
 		}
 #endif
 
-#	if defined(OSF1)
-		long gethostid();
-#	else
 		int gethostid();
-#	endif
 
 #	if defined(HPUX) || defined(LINUX) || defined(Solaris)
 		int setrlimit( int resource, const  struct rlimit *rlp ) {
@@ -1041,13 +1022,6 @@ They are not needed for remote I/O or for the condor daemons.
 		out code_bytes_bool( name, namelen );
 		alloc( name, namelen );
 	}
-
-#	if defined(OSF1)
-		int getaddressconf( struct addressconf *buf, size_t length ) {
-			out code_bytes_bool( buf, length );
-			alloc( buf, length );
-		}
-#	endif
 
 #	if defined(Solaris) || defined(LINUX) || defined(HPUX)
 		not_supported { 
@@ -1410,7 +1384,7 @@ ignored {
 /* Memory mapped files */
 
 not_supported {
-#	if defined(OSF1) || defined(HPUX)
+#	if defined(HPUX)
 		void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 		int mprotect( const void * addr, size_t len, int prot );
 		int madvise( void * addr, size_t len, int behav );
@@ -1431,7 +1405,7 @@ not_supported {
 }
 
 ignored {
-#	if defined(OSF1) || defined(HPUX)
+#	if defined(HPUX)
 		int msync( void * addr, size_t len, int flags );
 #	elif defined(LINUX)
 		int msync( MMAP_T addr, size_t len, int flags );
@@ -1444,11 +1418,7 @@ not_supported {
 	int setuid( uid_t uid );
 	int setgid( gid_t gid );
 	int setreuid( uid_t ruid, uid_t euid );
-#	if defined(OSF1)
-		int setregid( gid_t rgid, gid_t egid );
-#	else
-		int setregid( uid_t rgid, uid_t egid );
-#	endif
+	int setregid( uid_t rgid, uid_t egid );
 	int setlogin( char *name );
 	int revoke( char *path );
 	int chroot( const char *path );
@@ -1488,9 +1458,6 @@ not_supported {
 #		if defined(Solaris)
 			int mount( const char *spec, const char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( const char *path );
-#		elif defined(OSF1)
-			int mount( int type, char *mnt_path, int mnt_flag, char *data );
-			int acct( char *path );
 #		else
 			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( char *path );
@@ -1503,11 +1470,7 @@ not_supported {
 		int settimeofday( struct timeval *tp, struct timezone *tzp );
 		int setdomainname( char *name, int namelen );
 
-#		if defined(OSF1) 
-			int swapon( const char *path, int flags );
-#		else
-			int swapon( char *path, int flags, int lo_water, int hi_water );
-#		endif
+		int swapon( char *path, int flags, int lo_water, int hi_water );
 #	endif  /* not LINUX */
 }
 
@@ -1566,11 +1529,7 @@ not_supported {
 #	endif
 		int setpgid( pid_t process_id, pid_t gid );
 		pid_t setsid();
-#	if defined(OSF1)
-		int setpgrp( pid_t process_id , pid_t process_group_id );
-#	else 
 		pid_t setpgrp( );
-#	endif
 }
 
 /* Profiling and measuring */
@@ -1589,7 +1548,7 @@ not_supported {
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes, int *start, char *arg );
 
-#	if defined(LINUX) || defined(OSF1)
+#	if defined(LINUX)
 		int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
 #	elif defined(HPUX)

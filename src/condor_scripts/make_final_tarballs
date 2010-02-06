@@ -236,8 +236,6 @@ my $realskel="condor_release";
 
 # Convert from AFS @sys names to our names for the tarballs.
 my %opsysname = (
-  "alpha_dux40"   => "dux40",
-  "alpha_dux51"   => "dux51",
   "alpha_rh72"    => "linux",
   "condor_ppc_rhel3" => "linux",
   "condor_ppc_sles9" => "linux",
@@ -310,8 +308,6 @@ my %opsysname = (
 );
 
 my %archname = (
-  "alpha_dux40"   => "Alpha",
-  "alpha_dux51"   => "Alpha",
   "alpha_rh72"    => "Alpha",
   "condor_ppc_rhel3" => "PPC",
   "condor_ppc_sles9" => "PPC",

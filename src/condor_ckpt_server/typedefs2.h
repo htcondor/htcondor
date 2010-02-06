@@ -24,11 +24,7 @@
 #include <time.h>
 #include "sig_install.h"
 
-#ifdef OSF1
-typedef unsigned int u_lint;
-#else
 typedef unsigned long int u_lint;
-#endif
 
 
 

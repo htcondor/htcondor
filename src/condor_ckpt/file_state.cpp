@@ -1096,11 +1096,6 @@ int CondorFileTable::ftruncate( int fd, size_t size )
 {
 	if( resume(fd)<0 ) return -1;
 
-	/* The below length check is a hack to patch an f77 problem on
-	   OSF1.  - Jim B. */
-
-	if( size<0 ) return 0;
-
 	return pointers[fd]->file->ftruncate(size);
 }
 

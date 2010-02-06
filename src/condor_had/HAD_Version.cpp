@@ -24,8 +24,6 @@
 #include "stat_wrapper.h"
 // for 'getHostFromAddr' and 'getPortFromAddr'
 #include "internet.h"
-// implicit declaration for 'ctime_r' on Alpha OSF V5.1 platforms
-//#include <time.h>
 
 #include "Version.h"
 #include "FilesOperations.h"

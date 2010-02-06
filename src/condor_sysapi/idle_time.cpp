@@ -202,10 +202,7 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 #include <utmp.h>
 #define UTMP_KIND utmp
 
-#if defined(OSF1)
-static char *UtmpName = "/var/adm/utmp";
-static char *AltUtmpName = "/etc/utmp";
-#elif defined(LINUX)
+#if defined(LINUX)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
 #elif defined(CONDOR_FREEBSD)
@@ -263,7 +260,7 @@ utmp_pty_idle_time( time_t now )
 	}
 
 	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp)) {
-#if defined(AIX) || defined(LINUX) || defined(OSF1) || defined(IRIX65)
+#if defined(AIX) || defined(LINUX) || defined(IRIX65)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
 			if (utmp_info.ut_name[0] == '\0')
@@ -401,7 +398,7 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#elif defined( OSF1 ) || defined(Darwin) || defined(CONDOR_FREEBSD)
+#elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>

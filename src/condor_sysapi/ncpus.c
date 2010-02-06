@@ -75,7 +75,7 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 		if( num_cpus ) *num_cpus = 0;
 		if( num_hyperthread_cpus ) *num_hyperthread_cpus = 0;
 	}
-#elif defined(Solaris) || defined(DUX)
+#elif defined(Solaris)
 	int cpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;

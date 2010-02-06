@@ -64,10 +64,6 @@
 #include <sys/user.h>
 #endif 
 
-#ifdef OSF1                // this is for getting physical/available
-#include <sys/table.h>     // memory in OSF1
-#endif
-
 #ifdef IRIX              // this is the include for memory info in Irix.
 #include <sys/sysmp.h>
 #endif
@@ -199,7 +195,6 @@ typedef long birthday_t;
     WITH THE EXCEPTION OF MAJ/MIN FAULTS:
     <ul>
      <li> Linux, Irix, and Hpux all return a reasonable-looking number.
-     <li> They are completely unsupported by OSF/1.
      <li> Solaris 2.5.1 and 2.6 *Sometimes* returns small number of major 
         faults, and I've only seen a 0 for minor faults.  The documentation
         claims that they are inexact values, anyway.

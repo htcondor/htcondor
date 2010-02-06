@@ -47,11 +47,7 @@
 #	endif
 #endif
 
-#if defined(OSF1)
-#   define SYSCALL_PTR	void
-#   define INV_SYSCALL_PTR	char
-#   define NEED_CONST	const
-#elif defined(HPUX)
+#if defined(HPUX)
 #   define SYSCALL_PTR	char
 #   define INV_SYSCALL_PTR	const void
 #	define NEED_CONST
@@ -75,7 +71,7 @@
 #	else
 #		define SYNC_RETURNS_VOID 0
 #	endif
-#else /* Solaris, Alpha, DUX4.0 all confirmed... */
+#else /* Solaris, Alpha all confirmed... */
 #	define SYNC_RETURNS_VOID 1
 #endif
 

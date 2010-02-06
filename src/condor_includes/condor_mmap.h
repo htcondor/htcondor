@@ -42,8 +42,6 @@
 #	endif
 #elif defined(HPUX)
 #	define MMAP_T void*
-#elif defined(OSF1)
-#	define MMAP_T void*
 #elif defined(AIX)
 #	define MMAP_T void*
 #endif

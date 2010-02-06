@@ -64,8 +64,6 @@
 #	include "condor_sys_hpux.h"
 #elif defined(Solaris)
 #	include "condor_sys_solaris.h"
-#elif defined(OSF1)
-#	include "condor_sys_dux.h"
 #elif defined(Darwin)
 #	include "condor_sys_bsd.h"
 #elif defined(AIX)

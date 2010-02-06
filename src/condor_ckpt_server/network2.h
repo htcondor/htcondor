@@ -72,17 +72,10 @@
 
 #if 0
 
-#ifdef OSF1
-extern "C" { unsigned int ntohl(unsigned int); }
-extern "C" { unsigned int htonl(unsigned int); }
-extern "C" { unsigned short int ntohs(unsigned short int); }
-extern "C" { unsigned short int htons(unsigned short int); }
-#else
 extern "C" { unsigned long int ntohl(unsigned long int); }
 extern "C" { unsigned long int htonl(unsigned long int); }
 extern "C" { unsigned short int ntohs(unsigned int); }
 extern "C" { unsigned short int htons(unsigned int); }
-#endif
 extern "C" { void bzero(char*, int); }
 extern "C" { pid_t getpid(void); }
 /* extern "C" { int gethostname(const char*, int); } */
