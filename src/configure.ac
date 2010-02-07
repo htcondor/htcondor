@@ -2500,6 +2500,7 @@ AC_CHECK_FUNCS([strsignal				\
 		_stati64				\
 		_lstati64				\
 		_fstati64				\
+		readdir64				\
 		fseeko					\
 		ftello					\
 		lchown					\

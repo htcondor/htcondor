@@ -23,6 +23,15 @@
 #include "procapi.h"
 #include "procapi_internal.h"
 
+// Ugly hack: stat64 prototyps are wacked on HPUX
+// These are cut & pasted from the HPUX man pages...                            
+#if defined( HPUX )
+extern "C" {
+    extern int fstat64(int fildes, struct stat64 *buf);
+}
+#endif
+
+
 unsigned int pidHashFunc( const pid_t& pid );
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
@@ -2341,7 +2350,6 @@ ProcAPI::buildPidList() {
 #else
 	DIR *dirp;
 #endif
-	struct dirent64 *direntp;
 	pidlistPTR current;
 	pidlistPTR temp;
 
@@ -2357,7 +2365,16 @@ ProcAPI::buildPidList() {
 	dirp = opendir("/proc");
 #endif
 	if( dirp != NULL ) {
+			// use readdir64() when available to avoid skipping over
+			// directories with an inode value that doesn't happen to
+			// fit in the 32-bit ano_t
+#if HAVE_READDIR64 || defined(AIX)
+		struct dirent64 *direntp;
 		while( (direntp = readdir64(dirp)) != NULL ) {
+#else
+		struct dirent *direntp;
+		while( (direntp = readdir(dirp)) != NULL ) {
+#endif
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				temp = new pidlist;
 				temp->pid = (pid_t) atol ( direntp->d_name );
