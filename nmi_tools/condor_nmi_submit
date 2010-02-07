@@ -1758,11 +1758,11 @@ sub generateBuildFetchFiles
         die "Internal consistancy error: build lacks a --tag/--nightly or a --workspace.";
     }
 
-    if( defined $opt_externals ) { 
-        my $ext_file = "externals.src";
-        makeFetchFileVCS( $ext_file, TRUE, EXT, $opt_externals );
-        push( @fetch_files, "$ext_file" );
-    }
+#    if( defined $opt_externals ) { 
+#        my $ext_file = "externals.src";
+#        makeFetchFileVCS( $ext_file, TRUE, EXT, $opt_externals );
+#        push( @fetch_files, "$ext_file" );
+#    }
 
 	# If the $srctag is available, then use it for where to get the nmi tools.
 	# In general, we'd like to match the branch of the glue to the branch we're
