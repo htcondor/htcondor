@@ -178,12 +178,6 @@ func()
 #	define JMP_BUF_SP_INDEX 1
 #endif
 
-#elif defined(OSF1)
-#   define SETJMP _setjmp
-#   define LONGJMP _longjmp
-#	define StackGrowsDown TRUE
-#	define JMP_BUF_SP_INDEX 34
-
 #elif defined(HPUX)
 #   define SETJMP setjmp
 #   define LONGJMP longjmp

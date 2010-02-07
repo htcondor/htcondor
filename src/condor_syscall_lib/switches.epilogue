@@ -46,12 +46,4 @@
 #include "switches.remap-LINUX.h"
 #endif
 
-#ifdef OSF1
-# if defined DUX4
-#  include "switches.remap-DUX4.h"
-# elif defined DUX5
-#  include "switches.remap-DUX5.h"
-# endif
-#endif
-
 } // end of extern "C"

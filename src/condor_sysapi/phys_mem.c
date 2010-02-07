@@ -178,28 +178,6 @@ sysapi_phys_memory_raw_no_param(void)
 	return (int)(statex.ullTotalPhys/(1024*1024));
 }
 
-#elif defined(OSF1)
-
-
-/* Need these two to avoid compiler warning since <sys/table.h>
-   includes a stupid version of <net/if.h> that does forward decls of
-   struct mbuf and struct rtentry for C++, but not C. -Derek 6/3/98 */
-#include <sys/mbuf.h>
-#include <net/route.h>
-
-#include <sys/table.h>
-
-int
-sysapi_phys_memory_raw_no_param(void)
-{
-	struct tbl_pmemstats s;
-
-	if (table(TBL_PMEMSTATS,0,(void *)&s,1,sizeof(s)) < 0) {
-		return -1;
-	}
-	return (int)(s.physmem/(1024*1024));
-}
-
 // See GNATS 529. This code should now detect >= 2Gigs properly.
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>

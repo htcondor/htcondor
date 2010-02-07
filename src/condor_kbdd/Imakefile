@@ -8,67 +8,13 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS)  $(CONFIGURE_X11_LDFLAGS) $(CONFIGURE_X11_LI
 XCOMM We do not currently build the kbdd statically under Linux
 XCOMM because libX11.a is linked against pthreads on many distros.
 
-XCOMM On Digital Unix 5.0, if we are linking against libX11.a, we need
-XCOMM -ldnet_stub.  libX11.a has hooks to support DecNet, and we must
-XCOMM link with the DecNet stub library to avoid undefined symbols. 
-#if IS_DUX5
-LDFLAGS = -lX11 -ldnet_stub
-#else
 LDFLAGS = -L/usr/X11R6/lib -L/usr/X11R6/lib64 -lX11
-#endif
 
 OBJ = kbdd.o XInterface.o
 
-/*
-  NOTE: because of the static hackery below for DUX5, we can't use a
-  monolithic public_c_plus_target() for this...
-*/  
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 strip_target($(NAME),sbin,EXECUTABLE_MODE)
-
-#if IS_DUX5 && HAVE_EXT_OPENSSL
-
-XCOMM On Digital Unix 5.0, if we are using OpenSSL security, statically 
-XCOMM linking against libX11.a causes additional problems.  libX11.a
-XCOMM defines its own version of des_key_sched, an encryption related
-XCOMM method that gives us multiply defined symbols when we link with
-XCOMM the OpenSSL libcrypto.a.  To get a statically linked kbdd on this
-XCOMM platform, we do the ugly hack of using ToUpper to mask the
-XCOMM des_key_sched symbol from a local copy of libX11.a.  So, we
-XCOMM handle statically linking for DUX5 totally seperate. 
-
-condor_kbdd.static: $(OBJ) $(LIB) ./libX11.a 
-	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o condor_kbdd.static $(OBJ) $(LIB) -lm ./libX11.a -ldnet_stub $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)  $(DEMANGLE)
-
-./libX11.a: ToUpper /usr/lib/libX11.a
-	cp -f /usr/lib/libX11.a .
-	/bin/ar -x ./libX11.a krb5_stub.o
-	mv krb5_stub.o krb5_stub.tmp.o
-	./ToUpper ./krb5_stub.tmp.o krb5_stub.o des_key_sched DES_KEY_SCHED
-	/bin/ar -r ./libX11.a krb5_stub.o
-	rm -f krb5_stub.o krb5_stub.tmp.o
-
-ToUpper:
-	ln -s ../condor_ckpt/ToUpper ToUpper
-
-static:: $(STATIC_DIR)/sbin/condor_kbdd $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
-
-$(STATIC_DIR)/sbin/condor_kbdd: condor_kbdd.static
-	rm -f $(STATIC_DIR)/sbin/condor_kbdd
-	cp condor_kbdd.static $(STATIC_DIR)/sbin/condor_kbdd
-	chmod EXECUTABLE_MODE $(STATIC_DIR)/sbin/condor_kbdd
-	$(STRIP) $(STATIC_DIR)/sbin/condor_kbdd
-
-$(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd: condor_kbdd.static
-	rm -f $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
-	cp condor_kbdd.static $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
-	chmod EXECUTABLE_MODE $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
-
-clean::
-	rm -f condor_kbdd.static $(OBJ) ./libX11.a ToUpper
-
-#endif
 
 html:
 testbin:: all

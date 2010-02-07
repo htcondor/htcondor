@@ -57,11 +57,7 @@
 /* Changing this constant will result is total havoc with the backward 
 	compatibility code in protocol.cpp. If you do change it, it effectively
 	means a "different version" of the protocol. */
-#ifdef OSF1
-#define AUTHENTICATION_TCKT                 1637102411
-#else
 #define AUTHENTICATION_TCKT                 1637102411L
-#endif
 
 #define MAX_CONDOR_FILENAME_LENGTH          256
 #define MAX_MACHINE_NAME_LENGTH             50

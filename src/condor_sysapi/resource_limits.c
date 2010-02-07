@@ -26,7 +26,7 @@
 #define SLOP 50
 
 
-#if defined( OSF1 ) || defined( LINUX )
+#if defined( LINUX )
 
 void
 sysapi_set_resource_limits()

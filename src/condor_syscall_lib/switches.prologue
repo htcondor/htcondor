@@ -59,10 +59,6 @@ extern "C" int errno;
 	#define PIPE _PIPE_sys
 #endif
 
-#if defined(OSF1)
-	#define FORK _FORK
-#endif
-
 #if defined(LINUX) 
 	#define PIPE __PIPE
 	#define FORK __FORK

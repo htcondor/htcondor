@@ -481,15 +481,11 @@ Convert a time value from the POSIX style "clock_t" to a BSD style
 void
 clock_t_to_timeval( clock_t ticks, struct timeval *tv )
 {
-#if defined(OSF1)
-        static long clock_tick = CLK_TCK;
-#else
         static long clock_tick = 0;
 
         if( !clock_tick ) {
                 clock_tick = sysconf( _SC_CLK_TCK );
         }
-#endif
 
         tv->tv_sec = ticks / clock_tick;
         tv->tv_usec = ticks % clock_tick;

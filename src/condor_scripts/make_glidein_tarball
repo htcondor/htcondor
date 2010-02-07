@@ -41,7 +41,6 @@ $target_dir = "/p/condor/public/binaries/glidein";
   "i386_linux22"  => "i686-glibc21-linux-2.2.10",
   "i386_rh61"     => "i686-glibc21-linux-2.2.10",
   "alpha_linux3"  => "alpha-glibc20-linux-2.2.10",
-  "alpha_dux40"   => "unknown",
   "sgi_62"        => "mips-sgi-irix-6.2",
   "sgi_65"        => "mips-sgi-irix-6.5",
   "hp_ux102"      => "unknown"

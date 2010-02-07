@@ -28,7 +28,6 @@
 	-DIRIX
 	-DSolaris
 	-DLINUX
-	-DOSF1
 
 	-pete
 
@@ -63,11 +62,6 @@
 #include <sys/vfs.h>
 #endif
 
-#if defined(OSF1)
-#include <sys/mount.h>
-#include <sys/uio.h>
-#endif
-
 #if defined(IRIX) || defined(Solaris)
 #include <sys/statfs.h>
 #endif
@@ -100,18 +94,6 @@ extern "C" int utimes(char *filename, struct timeval *tvp);
 #else
 int utimes(char *filename, struct timeval *tvp);
 #endif
-#endif
-
-/* for some reason, g++ needs this extern definition */
-#if defined(OSF1) && defined(__cplusplus) && defined(__GNUC__)
-extern "C" int fchdir(int);
-extern "C" int getdomainname(char *name, size_t len);
-#endif
-#if defined(DUX4) && defined(__cplusplus) && defined(__GNUC__)
-/* these are only a problem on dux4, it appears */
-extern "C" int statfs(char *, struct statfs *);
-extern "C" int fstatfs(int, struct statfs *);
-extern "C" int mknod(const char *, mode_t, dev_t );
 #endif
 
 #if defined(LINUX) && defined(GLIBC)
