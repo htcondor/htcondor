@@ -23,6 +23,15 @@
 #include "procapi.h"
 #include "procapi_internal.h"
 
+// Ugly hack: stat64 prototyps are wacked on HPUX
+// These are cut & pasted from the HPUX man pages...                            
+#if defined( HPUX )
+extern "C" {
+    extern int fstat64(int fildes, struct stat64 *buf);
+}
+#endif
+
+
 unsigned int pidHashFunc( const pid_t& pid );
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
