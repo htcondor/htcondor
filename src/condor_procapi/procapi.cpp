@@ -2357,7 +2357,6 @@ int
 ProcAPI::buildPidList() {
 
 	DIR *dirp;
-	struct dirent64 *direntp;
 	pidlistPTR current;
 	pidlistPTR temp;
 
@@ -2368,7 +2367,16 @@ ProcAPI::buildPidList() {
 	current = pidList;
 
 	if( (dirp = opendir("/proc")) != NULL ) {
+			// use readdir64() when available to avoid skipping over
+			// directories with an inode value that doesn't happen to
+			// fit in the 32-bit ano_t
+#if HAVE_READDIR64
+		struct dirent64 *direntp;
 		while( (direntp = readdir64(dirp)) != NULL ) {
+#else
+		struct dirent *direntp;
+		while( (direntp = readdir(dirp)) != NULL ) {
+#endif
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				temp = new pidlist;
 				temp->pid = (pid_t) atol ( direntp->d_name );
