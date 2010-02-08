@@ -1684,6 +1684,17 @@ case "$_cv_opsys_vers" in
   OSX_10_4 ) AC_DEFINE([Darwin_10_4], [Darwin_10_4], [Define if on OS X 10.4]) ;;
 esac
 
+# Old ALPHA_OSF1_V*.cf files contained -DDUX=DUX -DDUX*=DUX* -DTRU64,
+# so instead we AC_DEFINE them here, TRU64 is just for gsoap
+if test "x$_cv_opsys" = xyes; then
+  AC_DEFINE([DUX], [DUX], [Define if on DUX])
+  AC_DEFINE([TRU64], [DUX], [Define if on TRU64 (DUX)])
+
+  case "$_cv_opsys_vers" in
+    DUX5 ) AC_DEFINE([DUX5], [DUX5], [Define if on DUX5]) ;;
+  esac
+fi
+
 # ArchOptimizeFlag logic used to live in .cf files, mostly
 # LINUX_I386.cf, that logic now lives here.
 if test "x$_cv_opsys" = xLINUX \
@@ -1718,6 +1729,7 @@ case "$_cv_opsys" in
   # specifically ask for the C++ libraries to be statically linked
   AIX ) _cv_platform_ld_flags="-Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc" ;;
   LINUX | DARWIN ) _cv_platform_ld_flags="-lresolv" ;;
+  DUX ) _cv_platform_ld_flags="-lmld" ;;
   HPUX ) # HPUX11 Only...
     if test "x$_cv_opsys_vers" = "xHPUX11" ; then
       _cv_platform_ld_flags="-Wl,+vnocompatwarnings $_cv_lib_std_cpp";
@@ -2992,7 +3004,7 @@ fi
 
 # Build drmaa on any platform with pthreads available, except for the following
 # platforms where the build is known to fail
-if test "x$_cv_sysname" != "xppc_aix52" -a "x$_cv_linux_distro" != "xRH72" -a  "x$_cv_sysname" != "xsun4x_58" -a "x$_cv_sysname" != "xsun4x_59" -a "x$_cv_sysname" != "xhp_ux113" ; then
+if test "x$_cv_sysname" != "xppc_aix52" -a "x$_cv_linux_distro" != "xRH72" -a  "x$_cv_sysname" != "xsun4x_58" -a "x$_cv_sysname" != "xsun4x_59" -a "x$_cv_sysname" != "xalpha_dux51" -a "x$_cv_sysname" != "xhp_ux113" ; then
   if test "x$_cv_sysname" = "xppc_macosx" -o "x$ac_pthreads" = "xyes"; then
    CHECK_EXTERNAL([drmaa],[1.6], [soft])
   fi
@@ -3296,6 +3308,7 @@ _cv_libc_a=none
 GLIBC_DIR="$ac_cv_externals_build/install/$_cv_ext_glibc_version/lib"
 case "$_cv_opsys" in
 # Ignore on clipped ports
+#  ?ALPHA_OSF1? ) /lib/libc.a ;;
 #  ?HPUX? ) /lib/libc.a ;;
 #  ?HPUX11? ) /usr/lib/pa20_64/libc.a ;;
   LINUX )

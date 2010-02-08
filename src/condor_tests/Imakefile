@@ -373,8 +373,8 @@ TESTCLASS(lib_auth_protocol-ctb,quick)
 TESTCLASS(lib_auth_protocol-ctb,full)
 TESTCLASS(lib_auth_protocol-ctb,quicknolink)
 
-/* GNATS 764 - SSL missing on HPUX 11 machines */
-#if !defined( IS_HPUX11 )
+/* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
+#if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
 
 DESC(lib_auth_protocol-ssl,"SSL authentication test")
 RUN(lib_auth_protocol-ssl)
@@ -842,10 +842,10 @@ TESTCLASS(job_dagman_stork-remove,quicknolink)
 ****************** Tests being readied for prime time **********************
 */
 
-#if !defined( IS_DARWIN ) && !defined(IS_HPUX10) && !defined(IS_PPC_AIX) && !defined(IS_SOLARIS28) && !defined(IS_SOLARIS29) && !defined(IS_IRIX) && !defined(IS_HPUX11) && !defined(IS_CONDOR_FREEBSD)
+#if !defined( IS_DARWIN ) && !defined(IS_DUX5) && !defined(IS_HPUX10) && !defined(IS_PPC_AIX) && !defined(IS_SOLARIS28) && !defined(IS_SOLARIS29) && !defined(IS_IRIX) && !defined(IS_HPUX11) && !defined(IS_CONDOR_FREEBSD)
 /* 
    Gnats 545 this procapi test of pid tracking not working MacOsX
-   Gnats 547 this procapi test of pid tracking not working IS_HPUX10 IS_PPC_AIX SOLARIS28 SOLARIS29 
+   Gnats 547 this procapi test of pid tracking not working IS_ALPHA_OSF1_V5 IS_HPUX10 IS_PPC_AIX SOLARIS28 SOLARIS29 
 */
 DESC(lib_procapi_pidtracking-byenv,"Slow Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-byenv)
@@ -934,7 +934,7 @@ TESTCLASS(job_core_plus_java,quicknolink)
 Gnats bugs 723 and 724
 Gnats bug 790 for john memory failings
 */
-#if !defined( IS_CONDOR_PPC_LINUX_SLES9 ) && !defined(IS_IA64_LINUX_SLES81) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_CONDOR_PPC_LINUX_YD50 )
+#if !defined( IS_CONDOR_PPC_LINUX_SLES9 ) && !defined(IS_IA64_LINUX_SLES81) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_ALPHA_DUX5 ) && !defined( IS_CONDOR_PPC_LINUX_YD50 )
 DESC(soap_job_tests,"Soap: currently 10 different interface tests")
 RUN(soap_job_tests)
 TESTCLASS(soap_job_tests,core)

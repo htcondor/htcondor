@@ -183,7 +183,7 @@ main_init( int, char* argv[] )
 		// Resource's LoadQueue object.
 	init_params(1);		// The 1 indicates that this is the first time
 
-#if defined (IRIX62) || defined(WIN32)
+#if defined( OSF1 ) || defined (IRIX62) || defined(WIN32)
 		// Pretend we just got an X event so we think our console idle
 		// is something, even if we haven't heard from the kbdd yet.
 		// We do this on Win32 as well, since Win32 uses last_x_event
@@ -385,7 +385,7 @@ main_init( int, char* argv[] )
 
 	daemonCore->Set_Default_Reaper( main_reaper );
 
-#if defined (IRIX) || defined(WIN32)
+#if defined( OSF1 ) || defined (IRIX) || defined(WIN32)
 		// Pretend we just got an X event so we think our console idle
 		// is something, even if we haven't heard from the kbdd yet.
 		// We do this on Win32 as well, since Win32 uses last_x_event

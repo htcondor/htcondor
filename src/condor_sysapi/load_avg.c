@@ -281,6 +281,40 @@ void
 get_k_vars() {}
 
 
+#elif defined(OSF1)
+
+#include <sys/table.h>
+
+float
+sysapi_load_avg_raw(void)
+{
+	struct tbl_loadavg	avg;
+	float short_avg, medium_avg, long_avg;
+
+	sysapi_internal_reconfig();
+
+	if( table(TBL_LOADAVG,0,(char *)&avg,1,sizeof(avg)) < 0 ) {
+		dprintf( D_ALWAYS, "Can't get load average info from kernel\n" );
+		exit( 1 );
+	}
+
+	if( avg.tl_lscale ) {
+		short_avg = avg.tl_avenrun.l[0] / (float)avg.tl_lscale;
+		medium_avg = avg.tl_avenrun.l[1] / (float)avg.tl_lscale;
+		long_avg = avg.tl_avenrun.l[2] / (float)avg.tl_lscale;
+	} else {
+		short_avg = avg.tl_avenrun.d[0];
+		medium_avg = avg.tl_avenrun.d[1];
+		long_avg = avg.tl_avenrun.d[2];
+	}
+
+	/* Unlike other Unixes, OSF1 computes the load average in 5
+	   second, 30 second, and 60 second intervals (see uptime(1)), so
+	   we want to use the long_avg here. */
+
+	return long_avg;
+}
+
 #elif defined(Solaris)
 
 #include "condor_uid.h"

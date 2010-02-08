@@ -62,6 +62,11 @@ extern "C" {
 	void HoldJob( const char* long_reason, const char* short_reason,
 				  int reason_code, int reason_subcode );
 	void reaper();
+	#if defined(DUX4)
+		int statfs(const char *, struct statfs*);
+	#elif defined(DUX5)
+		int _F64_statfs(char *, struct statfs*, ...);
+	#endif
 }
 
 extern int JobStatus;
@@ -2137,6 +2142,8 @@ pseudo_statfs( const char *path, struct statfs *buf )
 
 #if defined(Solaris) || defined(IRIX)
 	ret = statfs( str, buf, 0, 0);
+#elif defined DUX5
+	ret = _F64_statfs( str, buf );
 #else
 	ret = statfs( str, buf );
 #endif

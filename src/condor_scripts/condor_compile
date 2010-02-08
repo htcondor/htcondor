@@ -299,6 +299,11 @@ case $os in
 			CONDOR_FULLINSTALL=true
 		fi 
 		;;
+	OSF1 )
+		if [ -x /usr/lib/cmplrs/cc/ld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi 
+		;;
 	* )
 		if [ -x /bin/ld.real ]; then
 			CONDOR_FULLINSTALL=true
@@ -469,6 +474,38 @@ case $os in
 
 		;;
 	
+	OSF1 )
+		if [ $myname = "cc" ]; then
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
+		fi
+
+		if [ $myname = "CC" ]; then
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
+		fi
+
+		if [ $myname = "cxx" ]; then
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
+		fi
+
+		if [ $myname = "c89" ]; then
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
+		fi
+
+		if [ $myname = "f77" ]; then
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
+		fi 
+	
+		if [ $myname = "f90" ]; then	
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
+		fi 
+
+		if [ $myname = "KCC" ]; then	
+			invoke_linker $ARGS --backend -tl --backend \
+			-h$CONDOR_LD_DIR --backend -B
+		fi 
+
+		;;
+
 	HP-UX )
 		if [ $myname = "cc" ]; then
 			invoke_linker $ARGS -tl,$CONDOR_LD_DIR/ld

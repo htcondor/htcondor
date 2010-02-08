@@ -111,8 +111,8 @@ ProcAPI::~ProcAPI() {
 // Each platform gets its own function unless two are so similar that you can
 // ifdef between them.
 
-// this version works for Solaris 2.5.1, IRIX
-#if ( defined(Solaris251) || defined(IRIX) )
+// this version works for Solaris 2.5.1, IRIX, OSF/1 
+#if ( defined(Solaris251) || defined(IRIX) || defined(OSF1) )
 int
 ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 
 {
@@ -209,7 +209,9 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	char path[64];
 	struct prpsinfo pri;
 	struct prstatus prs;
-	struct prusage pru;
+#ifndef DUX4
+	struct prusage pru;   // prusage doesn't exist in OSF/1
+#endif
 
 	int fd;
 
@@ -274,7 +276,9 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	procRaw.owner = getFileOwner(fd);			
 
     // PIOCUSAGE is used for page fault info
-    // solaris 2.5.1 and Irix only
+    // solaris 2.5.1 and Irix only - unsupported by osf/1 dux-4
+    // Now in DUX5, though...
+#ifndef DUX4
 	if ( ioctl( fd, PIOCUSAGE, &pru ) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "ProcAPI: PIOCUSAGE Error occurred for pid %d\n", 
@@ -296,8 +300,15 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	procRaw.majfault = pru.pu_majf;
 #endif // IRIX
 	
+#else  // here we are in osf/1, which doesn't give this info.
+
+	procRaw.minfault = 0;   // let's default to zero in osf1
+	procRaw.majfault = 0;
+
+#endif // DUX4
+
    // PIOCSTATUS gets process user & sys times
-   // this following bit works for Sol 2.5.1, Irix,
+   // this following bit works for Sol 2.5.1, Irix, Osf/1
 	if ( ioctl( fd, PIOCSTATUS, &prs ) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "ProcAPI: PIOCSTATUS Error occurred for pid %d\n", 

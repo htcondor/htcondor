@@ -139,6 +139,23 @@ my @OsInfo = (
 		 },
 		},
 	      },
+	      # OS/F
+	      { ostype => "OSF1", osrev => ".*",
+		df =>
+		{
+		 Command => "/usr/bin/df",
+		 BlockSize => 512,
+		 Fields =>
+		 {
+		  fs => 0,
+		  size => 1,
+		  used => 2,
+		  avail => 3,
+		  pused => 4,
+		  mnt => 5,
+		 },
+		},
+	      },
 	  );
 
 my @MountProgs = (

@@ -1115,7 +1115,7 @@ exception_cleanup(int,int,char*)
 int	AvoidNFS = 0;
 
 
-#if defined(HPUX)
+#if defined(OSF1) || defined(HPUX)
 /*
   None of this stuff is ever used, but it must be here so that we
   can link with the remote system call library without getting

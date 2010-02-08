@@ -64,7 +64,10 @@ extern "C" {
 }
 #endif
 
-#if defined(HPUX)
+#if defined(OSF1)
+	extern "C" unsigned int htonl( unsigned int );
+	extern "C" unsigned int ntohl( unsigned int );
+#elif defined(HPUX)
 #	include <netinet/in.h>
 #elif defined(Solaris)
 	#define htonl(x)		(x)
@@ -1591,7 +1594,11 @@ Checkpoint( int sig, int code, void *scp )
 		p_scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 		memset(&bsd_usage,0,sizeof(struct rusage));
 		times( &posix_usage );
+#if defined(OSF1)
+		clock_tick = CLK_TCK;
+#else
 		clock_tick = sysconf( _SC_CLK_TCK );
+#endif
 		bsd_usage.ru_utime.tv_sec = posix_usage.tms_utime / clock_tick;
 		bsd_usage.ru_utime.tv_usec = posix_usage.tms_utime % clock_tick;
 		(bsd_usage.ru_utime.tv_usec) *= 1000000 / clock_tick;
