@@ -2367,7 +2367,7 @@ ProcAPI::buildPidList() {
 	if( dirp != NULL ) {
 			// use readdir64() when available to avoid skipping over
 			// directories with an inode value that doesn't happen to
-			// fit in the 32-bit ano_t
+			// fit in the 32-bit ino_t
 #if HAVE_READDIR64 || defined(AIX)
 		struct dirent64 *direntp;
 		while( (direntp = readdir64(dirp)) != NULL ) {
