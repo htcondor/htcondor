@@ -23,10 +23,6 @@
 #include "condor_uid.h"
 #include "stat_info.h"
 
-#ifndef WIN32
-#	include <dirent.h>
-#endif
-
 
 /** Class to iterate filenames in a subdirectory.  Given a subdirectory
 	path, this class can iterate the names of the files in the directory,
@@ -253,7 +249,7 @@ private:
 	long dirp;
 	struct _finddata_t filedata;
 #else
-	DIR *dirp;
+	condor_DIR *dirp;
 	priv_state setOwnerPriv( const char* path );
 	uid_t owner_uid;
 	gid_t owner_gid;
