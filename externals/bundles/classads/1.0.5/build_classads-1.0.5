@@ -32,7 +32,7 @@ cd $PACKAGE_BUILD_DIR/$PACKAGE_NAME/
 # explicitly point at that version.  Also, all other things that link
 # with classads must then link with pcre as well (e.g. blahp external).
 
-./configure --without-pcre --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
+./configure --without-pcre --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
 if [ $? -ne 0 ]
 then
     echo "Configure failed"
