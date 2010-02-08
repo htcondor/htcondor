@@ -1,4 +1,4 @@
-Changes for version 1.0.5 (unreleased)
+Changes for version 1.0.5 (Released 2010-02-09)
 * Significant performance optimizations. This includes restoring use of
   the non-standard STL hash_map.
 * When unparsing to old ClassAd format, print reals with the same
