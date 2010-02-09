@@ -327,18 +327,6 @@ int _ngetdents64(int fd, struct dirent64 *buf, size_t nbytes, int *eof )
 #endif
 
 /*
-  This is some kind of cleanup routine for dynamically linked programs which
-  is called by exit.  For some reason it occasionally cuases a SEGV
-  when mixed with the condor checkpointing code.  Since condor programs
-  are always statically linked, we just make a dummy here to avoid
-  the problem.
-*/
-
-#if defined(OSF1)
-void ldr_atexit() {}
-#endif
-
-/*
 gcc seems to make pure virtual functions point to this symbol instead
 of to zero.  Although we never instantiate an object with pure virtuals,
 this symbol remains undefined when linking against C programs, so
@@ -351,32 +339,10 @@ void __pure_virtual()
 
 /*
 Send and recv are special cases of sendfrom and recvto.
-On some platforms (OSF1, LINUX X86_64), send and recv are defined or otherwise
+On some platforms (LINUX X86_64), send and recv are defined or otherwise
 mucked with, so instead of trapping them, convert them into
 sendto and recvfrom.
 */
-
-#if defined(OSF1)
-int send( int fd, const void *data, int length, int flags )
-{
-	return sendto(fd,data,length,flags,0,0);
-}
-
-int __send( int fd, const void *data, int length, int flags )
-{
-	return send(fd,data,length,flags);
-}
-
-int recv( int fd, void *data, int length, int flags )
-{
-	return recvfrom(fd,data,length,flags,0,0);
-}
-
-int __recv( int fd, void *data, int length, int flags )
-{
-	return recv(fd,data,length,flags);
-}
-#endif
 
 #if defined(LINUX) && defined(X86_64)
 ssize_t send( int fd, const void *data, long unsigned int length, int flags )

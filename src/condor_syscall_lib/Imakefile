@@ -21,11 +21,7 @@ HAS_64BIT_STRUCTS = -DHAS_64BIT_STRUCTS
 
 #if DOES_SAVE_SIGSTATE
 	SAVE_SIGSTATE = -DSAVE_SIGSTATE
-#       if IS_DUX
-		SIG_CKPT_OBJS = signals_support.o signals_control.o SIGPROCMASK.o SIGSUSPEND.o SIGACTION.o SIGNAL.o _SIGSUSPEND.o
-#       else
 		SIG_CKPT_OBJS = signals_support.o signals_control.o
-#       endif
 #endif
 
 FILE_TABLE = -DFILE_TABLE -I$(ZLIB_INC)
@@ -55,9 +51,6 @@ EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o SYSCALL.o __SYSCALL.o \
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
 		$(FORK_OBJ) PIPE.o GETLOGIN.o SYSDEP.o SIGSUSPEND.o \
 		TRUNCATE.o SIGACTION.o GETDIRENTRIES.o 
-#	elif IS_DUX
-EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o GETCWD.o \
-		  MMAP.o PIPE.o SYSCALL.o
 #	elif IS_SUN4X_SOLARIS26
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
@@ -247,9 +240,7 @@ uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
 uppercase_target($(SIMPLE_LIBC),getlogin.o,GETLOGIN.o,getlogin,GETLOGIN)
 uppercase_target($(SIMPLE_LIBC),fsync.o,FSYNC.o,fsync,FSYNC)
 
-#if !IS_ALPHA_DUX
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
-#endif
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
 
 #if IS_SOLARIS
@@ -265,11 +256,7 @@ clean::
 uppercase_target($(SIMPLE_LIBC),truncate.o,TRUNCATE.o,truncate,TRUNCATE)
 #endif
 
-#if  IS_DUX
-/* do nothing */
-#else
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
-#endif
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
 uppercase_target($(SIMPLE_LIBC),getdirentries.o,GETDIRENTRIES.o,getdirentries,GETDIRENTRIES)
@@ -472,10 +459,6 @@ STUB_GEN_PLATFORM = -DSolaris27
 STUB_GEN_PLATFORM = -DSolaris28
 #elif IS_SOLARIS29
 STUB_GEN_PLATFORM = -DSolaris29
-#elif IS_DUX4
-STUB_GEN_PLATFORM = -DDUX4
-#elif IS_DUX5
-STUB_GEN_PLATFORM = -DDUX5
 #endif
 
 STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) -D$(ARCH) \

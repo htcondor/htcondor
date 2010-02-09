@@ -28,9 +28,6 @@ case "x$os" in
 	xAIX)
 		exec /lib/cpp $*
 		;;
-	xOSF1)
-		exec /lib/cpp $*
-		;;
 	xHP-UX)
 		# Use /lib/cpp.ansi if we've got it, otherwise try /usr/ccs/lbin
 		test -x /lib/cpp.ansi && exec /lib/cpp.ansi $*

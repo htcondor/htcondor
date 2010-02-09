@@ -193,32 +193,6 @@ sysapi_swap_space_raw()
 	return (int)freeswap;
 }
 
-#elif defined(OSF1)
-
-#include <net/route.h>
-#include <sys/mbuf.h>
-#include <sys/table.h>
-
-int
-sysapi_swap_space_raw()
-{
-	struct tbl_swapinfo	swap;
-	double freeswap;
-
-	sysapi_internal_reconfig();
-	if( table(TBL_SWAPINFO,-1,(char *)&swap,1,sizeof(swap)) < 0 ) {
-		return -1;
-	}
-
-	/* hopefully, this shouldn't overflow a double */
-	freeswap = ((double)swap.free * (double)NBPG) / (double)1024;
-
-	if (freeswap > INT_MAX)
-		return INT_MAX;
-
-	return (int)freeswap;
-}
-
 #elif defined(Solaris)
 
 #include <sys/types.h>
