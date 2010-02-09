@@ -540,7 +540,6 @@ the attribute.
 Any output from this hook is an update to the job ClassAd.  
 Therefore, the hook that changes the executable may be
 
-\footnotesize
 \begin{verbatim}
 #!/bin/sh
 
@@ -550,6 +549,7 @@ echo 'Cmd = "/usr/java/java5/bin/java"'
 \end{verbatim}
 
 The submit description file for this example job may be
+\footnotesize
 \begin{verbatim}
 universe = vanilla
 executable = /usr/bin/java
@@ -580,56 +580,80 @@ Hooks for a Job Router}
 \index{Job hooks!Job Router} 
 
 Job Router Hooks allow for an alternate transformation and/or 
-monitoring engine for the Job Router.
-Routing is still controlled by the Job Router,
-but if the Job Router Hooks are configured,
+monitoring than the \Condor{job\_router} daemon implements.
+Routing is still managed by the \Condor{job\_router} daemon,
+but if the Job Router Hooks are specified,
 then these hooks will be used to transform
-and monitor the job instead of Condor's internal engine.
+and monitor the job instead.
 
-Job Router Hooks are similar in concept to Job Fetch Hooks,
-but they are limited in their scope to just the Job Router.
-As with Job Fetch Hooks,
-a hook is an external program or script invoked by Condor's Job Router
-at various points during the life cycle of a routed job.
+Job Router Hooks are similar in concept to Fetch Work Hooks,
+but they are limited in their scope.
+A hook is an external program or script invoked by the \Condor{job\_router}
+daemon at various points during the life cycle of a routed job.
 
-The following sections describe how these hooks are used by the Job Router,
-what hooks are invoked by Condor at various stages of the job's life, 
-and how to configure Condor to use Job Router Hooks.
+The following sections describe how and when these hooks are used,
+what hooks are invoked at various stages of the job's life, 
+and how to configure Condor to use these Hooks.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:job-hooks-JR}
 Hooks Invoked for Job Routing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job Router}
 
 The Job Router Hooks allow for replacement of the transformation engine used
 by Condor for routing a job.
 Since the external transformation engine is not controlled by Condor,
 additional hooks provide a means to update the job's
-status in Condor and clean up upon exit or failure cases.
-This allows a job to be transformed to just about any other type of job
+status in Condor, and to clean up upon exit or failure cases.
+This allows one job to be transformed to just about any other type of job
 that Condor supports,
 as well as to use execution nodes not normally available to Condor.
 
-It is important to note that if the Job Router Hooks are configured, 
-then Condor will not ignore a failure in any hook execution.
+It is important to note that if the Job Router Hooks are utilized, 
+then Condor will not ignore or work around a failure in any hook execution.
 If a hook is configured,
-then Condor assumes it is required to execute and will not
+then Condor assumes its invocation is required and will not
 continue by falling back to a part of its internal engine.
 For example,
 if there is a problem transforming the job using the hooks,
-Condor will not fall back on its internal transformation engine 
+Condor will not fall back on its transformation accomplished without the hook
 to process the job.
+
+There are 2 ways in which the Job Router Hooks may be enabled.
+A job's submit description file may cause the hooks to be invoked with 
+\footnotesize
+\begin{verbatim}
+  +HookKeyword = "HOOKNAME"
+\end{verbatim}
+\normalsize
+Adding this attribute to the job's ClassAd causes the \Condor{job\_router}
+daemon on the submit machine to invoke hooks prefixed with the defined keyword.
+\Expr{HOOKNAME} is a string chosen as an example; any string may be used.
+
+The job's ClassAd attribute definition of \Attr{HookKeyword} takes
+precedence,
+but if not present, hooks may be enabled by defining on the submit machine
+the configuration variable 
+\footnotesize
+\begin{verbatim}
+ JOB_ROUTER_HOOK_KEYWORD = HOOKNAME
+\end{verbatim}
+\normalsize
+Like the example attribute above,
+\Expr{HOOKNAME} represents a chosen name for the hook, 
+replaced as desired or appropriate.
 
 There are 4 hooks that the Job Router can be configured to use.
 Each hook will be described below along with data passed 
 to the hook and expected output.
-Again, all hooks must exit successfully.
+All hooks must exit successfully.
 
 \begin{itemize}
 \index{Job hooks!Job Router Hooks!Translate}
 \item[Hook: Translate]
 
-  The hook defined by the configuration variable \Macro{HOOK\_TRANSLATE}
+  The hook defined by the configuration variable \Macro{<Keyword>\_HOOK\_TRANSLATE}
   is invoked when the Job Router has determined that a job
   meets the definition for a route.  This hook is responsible for doing the
   transformation of the job and configuring any resources that are external to
@@ -652,7 +676,8 @@ Again, all hooks must exit successfully.
 \index{Job hooks!Job Router Hooks!Update Job Info}
 \item[Hook: Update Job Info]
 
-  The hook defined by the configuration variable \Macro{<Keyword>\_HOOK\_UPDATE\_JOB\_INFO}
+  The hook defined by the configuration variable 
+  \Macro{<Keyword>\_HOOK\_UPDATE\_JOB\_INFO}
   is invoked to provide status on the specified routed job
   when the Job Router polls the status of routed jobs at intervals
   set by \Macro{JOB\_ROUTER\_POLLING\_PERIOD}.
@@ -676,7 +701,8 @@ Again, all hooks must exit successfully.
 \index{Job hooks!Job Router Hooks!Job Finalize}
 \item[Hook: Job Finalize]
 
-  The hook defined by the configuration variable \Macro{HOOK\_JOB\_FINALIZE}
+  The hook defined by the configuration variable 
+  \Macro{<Keyword>\_HOOK\_JOB\_FINALIZE}
   is invoked when the Job Router has found that the job has completed.
   Any output from the hook is treated as an update to the source job.
 
@@ -695,7 +721,8 @@ Again, all hooks must exit successfully.
 \index{Job hooks!Job Router Hooks!Job Cleanup}
 \item[Hook: Job Cleanup]
 
-  The hook defined by the configuration variable \Macro{HOOK\_JOB\_CLEANUP}
+  The hook defined by the configuration variable 
+  \Macro{<Keyword>\_HOOK\_JOB\_CLEANUP}
   is invoked when the Job Router finishes managing the job.
   This hook will be invoked regardless of whether the job
   completes successfully or not,
