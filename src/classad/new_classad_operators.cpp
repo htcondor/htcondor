@@ -322,7 +322,6 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	return SIG_NONE;
 }
 
-
 bool Operation::
 _Evaluate (EvalState &state, Value &result) const
 {
@@ -341,6 +340,10 @@ _Evaluate (EvalState &state, Value &result) const
 			return( false );
 		}
 		valid1 = true;
+
+		if( shortCircuit( state, val1, result ) ) {
+			return true;
+		}
 	}
 
 	if (child2) {
@@ -364,6 +367,40 @@ _Evaluate (EvalState &state, Value &result) const
 	return( rval != SIG_NONE );
 }
 
+bool Operation::
+shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
+{
+	bool arg1_bool;
+
+	switch( operation ) {
+	case LOGICAL_OR_OP:
+		if( arg1.IsBooleanValue(arg1_bool) && arg1_bool ) {
+			result.SetBooleanValue( true );
+			return true;
+		}
+		break;
+	case LOGICAL_AND_OP:
+		if( arg1.IsBooleanValue(arg1_bool) && !arg1_bool ) {
+			result.SetBooleanValue( false );
+			return true;
+		}
+		break;
+	case TERNARY_OP:
+		if( arg1.IsBooleanValue(arg1_bool) ) {
+			if( arg1_bool ) {
+				if( child2 ) {
+					return child2->Evaluate(state,result);
+				}
+			}
+			else {
+				if( child3 ) {
+					return child3->Evaluate(state,result);
+				}
+			}
+		}
+	}
+	return false;
+}
 
 bool Operation::
 _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
