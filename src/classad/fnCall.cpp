@@ -482,6 +482,7 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, int* ) const
 		return false;
 	}
 	newCall->functionName = functionName;
+	newCall->function = function;
 
 	// flatten the arguments
 	for(ArgumentList::const_iterator i=arguments.begin();i!=arguments.end();
