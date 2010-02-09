@@ -109,7 +109,7 @@ when this operation was more disk-intensive.
 
 % gittrack 1184
 % gittrack 1181
-\item 32-bit Linux versions of condor running in a 64-bit environment would
+\item 32-bit Linux versions of Condor running in a 64-bit environment would
 sometimes not detect the existence of some processes and sometimes
 wrongly detect that a tracked process belonged to root when it
 actually belonged to some other user.  This could lead to failure to run
@@ -130,11 +130,12 @@ ERROR: master has exited
 \end{verbatim}
 
 % gittrack 1186
-\item Fixed a problem in \Condor{job\_router} introduced in 7.2.2 that
-  could cause the daemon to crash when failing to carry out the change
-  of state dictated by a job's periodic policy expressions
-  (e.g. failure to put a job on hold when \AdAttr{periodic\_hold}
-  becomes true).
+\item Fixed a problem in the \Condor{job\_router} daemon,
+  introduced in Condor version 7.2.2,
+  that could cause the daemon to crash when failing to carry out the change
+  of state dictated by a job's periodic policy expressions,
+  for example, the failure to put a job on hold when \AdAttr{periodic\_hold}
+  becomes \Expr{True}.
 
 \end{itemize}
 
