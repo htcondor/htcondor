@@ -262,7 +262,7 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 
 		// insert "target" and "other" into this ad so references can be
 		// _partially_ flattened to the more efficient .RIGHT or .LEFT
-	char const *other = is_right ? "LEFT" : "RIGT";
+	char const *other = is_right ? "LEFT" : "RIGHT";
 	ExprTree *target =
 		AttributeReference::MakeAttributeReference(NULL,other,true);
 	ad->Insert("target",target);
