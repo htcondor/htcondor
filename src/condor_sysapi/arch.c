@@ -337,6 +337,9 @@ sysapi_translate_opsys( const char *sysname,
 		}
 	}
 
+	else if( !strcmp(sysname, "OSF1") ) {
+		sprintf( tmp, "OSF1" );
+	}
 	else if( !strcmp(sysname, "HP-UX") ) {
 		if( !strcmp(release, "B.10.20") ) {
 			sprintf( tmp, "HPUX10" );

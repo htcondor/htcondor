@@ -405,7 +405,7 @@ Starter::reallykill( int signo, int type )
 		case EACCES:
 			needs_stat = FALSE;
 			break;
-#if defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(OSF1) || defined(Darwin) || defined(CONDOR_FREEBSD)
 				// dux 4.0 doesn't have ENOLINK for stat().  It does
 				// have ESTALE, which means our binaries live on a
 				// stale NFS mount.  So, we can at least EXCEPT with a

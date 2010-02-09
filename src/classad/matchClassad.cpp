@@ -275,7 +275,7 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 	if( ad->FlattenAndInline(requirements,flat_val,flat_requirements) ) {
 		if( !flat_requirements ) {
 				// flattened to a value
-			flat_requirements = classad::Literal::MakeLiteral(flat_val);
+			flat_requirements = Literal::MakeLiteral(flat_val);
 		}
 		if( flat_requirements ) {
 				// save original requirements

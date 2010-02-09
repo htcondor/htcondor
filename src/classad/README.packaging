@@ -18,7 +18,7 @@ of the file.
 Edit TAGS and add a new tag name for this version.  Tag the source
 with this tag.
 
-What I do then is copy condor_classads.V6 to a build tree and create
+What I do then is copy src/classad to a build tree and create
 the makefile:
 
 ../condor_imake
@@ -33,17 +33,17 @@ in Makefile.am.m4:
 
 ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
 
+Once you're happy with the final distribution tarball, tag the repository
+with the new release:
 
+git tag classads_1.0-rc4
+git push origin classads_1.0-rc4
+
+The ClassAds webpage under /p/condor/public/html/classad
+should be updated to show the new version. The distribution tarball
+should be placed in /p/condor/public/ftp/classad/c++. A copy of the
+CHANGELOG should be placed in
+/p/condor/public/html/classad/c++changelogs/changes-<version>.txt
 
 To update the external package used by Condor, follow the instructions
-for creating externals from the Condor Developers web page.  Basically,
-just create another directory inside externals/bundles/classads and copy
-in the build script and the distribution tarball.
-
-Edit src/configure.ac and change the version of classads.  Example:
-
-CHECK_EXTERNAL([classads], [1.0rc4], [soft])
-
-Remake configure using 'autoconf'.  Then check out the new external,
-run ./configure, and then build it with 'make'.
-
+for creating externals from the Condor Developers web page.

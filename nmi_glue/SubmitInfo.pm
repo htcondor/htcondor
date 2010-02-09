@@ -393,7 +393,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ 
-				@default_prereqs,
 				'libtool-1.5.26', # used for the blahp
 			],
 			'xtests'	=> undef,
@@ -401,7 +400,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'prereqs'	=> [ 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -469,7 +468,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ 
-				@default_prereqs,
 				'libtool-1.5.26',
 			],
 			'xtests'	=> undef,
@@ -477,7 +475,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'prereqs'	=> [ 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},

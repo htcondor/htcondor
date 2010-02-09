@@ -21,7 +21,11 @@
  
 #include "condor_common.h"
 
-#if defined(AIX32)
+#if defined(OSF1)
+#	define _OSF_SOURCE
+#endif
+
+#if defined(OSF1) || defined(AIX32)
 #	define _BSD
 #endif
 

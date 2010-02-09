@@ -8,8 +8,14 @@ VENDOR_C_FLAGS = -D$(ARCH_FLAG)=$(ARCH_FLAG) -D$(OS_FLAG)=$(OS_FLAG) -DHAVE_CONF
 STD_LIBS =
 WRAP_LDFLAGS =
 
+#if defined(HAVE_EXT_PCRE)
+REGEX_FLAGS = -DUSE_PCRE
+#else
+REGEX_FLAGS = -DUSE_POSIX_REGEX
+#endif
+
 LOCAL_FLAGS = \
-	-DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK -DUSE_POSIX_REGEX -O2
+	-DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK $(REGEX_FLAGS) -O2
 C_PLUS_FLAGS 	= -Wall $(STD_C_PLUS_FLAGS) $(LOCAL_FLAGS)
 CFLAGS 		= -Wall $(STD_C_FLAGS) $(LOCAL_FLAGS)
 
@@ -62,7 +68,7 @@ OBJ = $(CLASSAD_OBJ_2)
 
 LIB_BASE =  ./libclassad_ns.a $(STLPORT_LIB)
 
-LIB = $(LIB_BASE)
+LIB = $(LIB_BASE) $(CONFIGURE_PCRE_LDFLAGS) $(PCRE_LIB)
 
 /* the main condor library target */
 all_target(libclassad_ns.a classad_functional_tester classad_unit_tester classad_version test_xml extra_tests)
@@ -76,7 +82,7 @@ testbin:: all
 /* template instantiations go in here */
 
 /* Standalone distribution of classads/collections */
-DIST_VERSION = 1.0.4
+DIST_VERSION = 1.0.5
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
 DIST_FILES = 								\
