@@ -4589,72 +4589,6 @@ The following configuration variables support java universe jobs.
   A list of additional arguments to be passed to the Java executable.
 \end{description}
 
-These macros control the system of job hooks invoked by the
-\Condor{startd} to optionally fetch work.
-See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
-``Job Hooks'' for more details.
-
-\begin{description}
-
-\label{param:SlotNJobHookKeyword}
-\item[\Macro{SLOT<N>\_JOB\_HOOK\_KEYWORD}]
-  The keyword used to define which set of hooks a particular
-  compute slot should invoke.
-  The value of \verb@<N>@ is replaced by the slot
-  identification number. For example, on slot 1, th variable name will be
-  called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
-  There is no default keyword.
-  Sites that wish to use these job hooks must explicitly define the
-  keyword and the corresponding hook paths.
-
-\label{param:StartdJobHookKeyword}
-\item[\Macro{STARTD\_JOB\_HOOK\_KEYWORD}]
-  The keyword used to define which set of hooks a particular
-  \Condor{startd} should invoke.
-  This setting is only used if a slot-specific keyword is not defined
-  for a given compute slot.
-  There is no default keyword.
-  Sites that wish to use these job hooks must explicitly define the
-  keyword (and the corresponding hook paths).
-
-\label{param:HookFetchWork}
-\item[\Macro{HOOK\_FETCH\_WORK}]
-  The full path to the program to invoke whenever the \Condor{startd}
-  wants to fetch work.
-  The actual configuration setting must be prefixed with a hook keyword.
-  There is no default.
-
-\label{param:HookReplyClaim}
-\item[\Macro{HOOK\_REPLY\_CLAIM}]
-  The full path to the program to invoke whenever the \Condor{startd}
-  finishes fetching a job and decides what to do with it.
-  The actual configuration setting must be prefixed with a hook keyword.
-  There is no default.
-
-\label{param:HookEvictClaim}
-\item[\Macro{HOOK\_EVICT\_CLAIM}]
-  The full path to the program to invoke whenever the \Condor{startd}
-  needs to evict a fetched claim.
-  The actual configuration setting must be prefixed with a hook keyword.
-  There is no default.
-
-\label{param:FetchWorkDelay}
-\item[\Macro{FetchWorkDelay}]
-  An expression that defines the number of seconds that the
-  \Condor{startd} should wait after an invocation of
-  \Macro{HOOK\_FETCH\_WORK} completes before the hook should be
-  invoked again.
-  The expression is evaluated in the context of the slot ClassAd, and
-  the ClassAd of the currently running job (if any).
-  The expression must evaluate to an integer.
-  If not defined, the \Condor{startd} will wait 300 seconds (five
-  minutes) between attempts to fetch work.
-  For more information about this expression, see
-  section~\ref{sec:job-hooks-fetch-work-delay} on
-  page~\pageref{sec:job-hooks-fetch-work-delay}.
-
-\end{description}
-
 These macros control the power management capabilities of the 
 \Condor{startd} to optionally put the machine in to a low power state
 and wake it up later.
@@ -4683,17 +4617,17 @@ Power Management for more details.
 
 \label{param:Hibernate}
 \item[\Macro{HIBERNATE}]
-  An string expression that represents lower power state.  When this
+  A string expression that represents lower power state.  When this
   state name evaluates to a valid non-``NONE'' state (see below),
-  causes Condor to put the machine into a low power state given by the
-  evaluation of the expression.  The following names are supported
+  causes Condor to put the machine into the specified low power state.
+  The following names are supported
   (and are not case sensitive):
 
   \begin{itemize}
   \item[] "NONE", "0": No-op: do not enter a low power state
-  \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, Sleep (standby)
-  \item[] "S2",   "2": On Windows, Sleep (standby)
-  \item[] "S3",   "3", "RAM", "MEM", "SUSPEND": Sleep (standby)
+  \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, this is Sleep (standby)
+  \item[] "S2",   "2": On Windows, this is Sleep (standby)
+  \item[] "S3",   "3", "RAM", "MEM", "SUSPEND": On Windows, this is Sleep (standby)
   \item[] "S4",   "4", "DISK", "HIBERNATE": Hibernate
   \item[] "S5",   "5", "SHUTDOWN", "OFF": Shutdown (soft-off)
   \end{itemize}
@@ -4731,7 +4665,7 @@ Power Management for more details.
   \Attr{Unhibernate} expression of offline machine ClassAds.
   The special attribute
   \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
-  when a job would have been matched to the machine if it had been on line.
+  when a job would have been matched to the machine if it had been online.
   For multi-slot machines, the offline ClassAd for slot1 will also contain
   the attributes \Attr{slot<X>\_MachineLastMatchTime},
   where \MacroNI{X} is replaced by the
@@ -8332,14 +8266,43 @@ section~\ref{sec:Security} on Security.
   X.509 distinguished names to Condor user ids.
 
 \label{param:SecDefaultSessionDuration}
-\item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
+\MacroIndex{SEC\_DEFAULT\_SESSION\_DURATION}
+\item[\Macro{SEC\_<access-level>\_SESSION\_DURATION}]
   The amount of time in seconds before
   a communication session expires.
-  Defaults to 86400 seconds (1 day).
   A session is a record of necessary information to do communication
   between a client and daemon, and is protected by a shared secret key.
   The session expires to reduce the window of opportunity where
-  the key may be compromised by attack.
+  the key may be compromised by attack.  A short session duration
+  increases the frequency with which daemons have to reauthenticate
+  with each other, which may impact performance.
+
+  If the client and server are configured with different durations,
+  the shorter of the two will be used.  The default for daemons is
+  86400 seconds (1 day) and the default for command-line tools is 60
+  seconds.  The shorter default for command-line tools is intended to
+  prevent daemons from accumulating a large number of communication
+  sessions from the short-lived tools that contact them over time.  A
+  large number of security sessions consumes a large amount of memory.
+  It is therefore important when changing this configuration setting
+  to preserve the small session duration for command-line tools.
+
+  One example of how to safely change the session duration is to
+  explicitly set a short duration for tools and \Condor{submit}
+  and a longer duration for everything else:
+
+\begin{verbatim}
+SEC_DEFAULT_SESSION_DURATION = 50000
+TOOL.SEC_DEFAULT_SESSION_DURATION = 60
+SUBMIT.SEC_DEFAULT_SESSION_DURATION = 60
+\end{verbatim}
+
+Another example of how to safely change the session duration is to
+explicitly set the session duration for a specific daemon:
+
+\begin{verbatim}
+COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
+\end{verbatim}
 
 \label{param:SecDefaultSessionLease}
 \item[\Macro{SEC\_access-level\_SESSION\_LEASE}]
@@ -9830,5 +9793,174 @@ SHARED_PORT_ARGS = -p 4080
 
 If no port is specified, a port will be dynamically chosen; it may be
  different each time Condor is started.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-hooks}Configuration File Entries Relating to Hooks}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!hook configuration variables}
+\index{Job Router}
+
+These macros control the various hooks that interact with Condor.
+Currently, there are two independent sets of hooks.
+One is a set of fetch work hooks, some of which are invoked by
+the \Condor{startd} to optionally fetch work,
+and some are invoked by the \Condor{starter}.
+See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
+Job Hooks for more details.
+The other set replace functionality of the \Condor{job\_router} daemon.
+Documentation for the \Condor{job\_router} daemon is in
+section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
+
+\begin{description}
+
+\label{param:SlotNJobHookKeyword}
+\item[\Macro{SLOT<N>\_JOB\_HOOK\_KEYWORD}]
+  For the fetch work hooks,
+  the keyword used to define which set of hooks a particular
+  compute slot should invoke.
+  The value of \verb@<N>@ is replaced by the slot
+  identification number. For example, on slot 1, the variable name will be
+  called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
+  There is no default keyword.
+  Sites that wish to use these job hooks must explicitly define the
+  keyword and the corresponding hook paths.
+
+\label{param:StartdJobHookKeyword}
+\item[\Macro{STARTD\_JOB\_HOOK\_KEYWORD}]
+  For the fetch work hooks,
+  the keyword used to define which set of hooks a particular
+  \Condor{startd} should invoke.
+  This setting is only used if a slot-specific keyword is not defined
+  for a given compute slot.
+  There is no default keyword.
+  Sites that wish to use job hooks must explicitly define the
+  keyword and the corresponding hook paths.
+
+\label{param:HookFetchWork}
+\item[\Macro{<Keyword>\_HOOK\_FETCH\_WORK}]
+  For the fetch work hooks,
+  the full path to the program to invoke whenever the \Condor{startd}
+  wants to fetch work.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+  There is no default.
+
+\label{param:HookReplyFetch}
+\item[\Macro{<Keyword>\_HOOK\_REPLY\_FETCH}]
+  For the fetch work hooks,
+  the full path to the program to invoke when the hook defined by
+  \MacroNI{<Keyword>\_HOOK\_FETCH\_WORK}  returns data and the the \Condor{startd}
+  decides if it is going to accept the fetched job or not.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:HookReplyClaim}
+\item[\Macro{<Keyword>\_HOOK\_REPLY\_CLAIM}]
+  For the fetch work hooks,
+  the full path to the program to invoke whenever the \Condor{startd}
+  finishes fetching a job and decides what to do with it.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+
+  between sets of hooks.
+  There is no default.
+
+\label{param:HookPrepareJob}
+\item[\Macro{<Keyword>\_HOOK\_PREPARE\_JOB}]
+  For the fetch work hooks,
+  the full path to the program invoked by the \Condor{starter} before it
+  runs the job.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:HookUpdateJobInfo}
+\item[\Macro{<Keyword>\_HOOK\_UPDATE\_JOB\_INFO}]
+  This configuration variable is used by both fetch work hooks and
+  by \Condor{job\_router} hooks.
+
+  For the fetch work hooks,
+  the full path to the program invoked by the \Condor{starter} periodically
+  as the job runs, allowing the \Condor{starter} to present an updated
+  and augmented job ClassAd to the program.
+  See section~\ref{sec:job-hooks-hooks} on page~\pageref{sec:job-hooks-hooks}
+  for the list of additional attributes included.
+  When the job is first invoked, the \Condor{starter} will invoke the program
+  after \MacroUNI{STARTER\_INITIAL\_UPDATE\_INTERVAL} seconds.
+  Thereafter, the \Condor{starter} will invoke the program every 
+  \MacroUNI{STARTER\_UPDATE\_INTERVAL} seconds.
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
+  between sets of hooks.
+
+  As a Job Router hook,
+  the full path to the program invoked when the Job Router polls the status
+  of routed jobs at intervals set by \MacroNI{JOB\_ROUTER\_POLLING\_PERIOD}.
+  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
+
+\label{param:HookEvictClaim}
+\item[\Macro{<Keyword>\_HOOK\_EVICT\_CLAIM}]
+  For the fetch work hooks,
+  the full path to the program to invoke whenever the \Condor{startd}
+  needs to evict a fetched claim.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+  There is no default.
+
+\label{param:HookJobExit}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT}]
+  For the fetch work hooks,
+  the full path to the program invoked by the \Condor{starter}
+  whenever a job exits,
+  either on its own or when being evicted from an execution slot. 
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:FetchWorkDelay}
+\item[\Macro{FetchWorkDelay}]
+  An expression that defines the number of seconds that the
+  \Condor{startd} should wait after an invocation of
+  \Macro{<Keyword>\_HOOK\_FETCH\_WORK} completes before the hook should be
+  invoked again.
+  The expression is evaluated in the context of the slot ClassAd, and
+  the ClassAd of the currently running job (if any).
+  The expression must evaluate to an integer.
+  If not defined, the \Condor{startd} will wait 300 seconds (five
+  minutes) between attempts to fetch work.
+  For more information about this expression, see
+  section~\ref{sec:job-hooks-fetch-work-delay} on
+  page~\pageref{sec:job-hooks-fetch-work-delay}.
+
+\label{param:JobRouterHookKeyword}
+\item[\Macro{JOB\_ROUTER\_HOOK\_KEYWORD}]
+  For the Job Router hooks,
+  the keyword used to define the set of hooks the \Condor{job\_router}
+  is to invoke to replace functionality of routing translation.
+  There is no default keyword.
+  Use of these hooks requires the explicit definition of the
+  keyword and the corresponding hook paths.
+
+\label{param:HookTranslate}
+\item[\Macro{<Keyword>\_HOOK\_TRANSLATE}]
+  A Job Router hook,
+  the full path to the program invoked when the Job Router has determined
+  that a job meets the definition for a route.  
+  This hook is responsible for doing the transformation of the job.
+  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
+
+\label{param:HookJobFinalize}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_FINALIZE}]
+  A Job Router hook,
+  the full path to the program invoked when the Job Router has determined
+  that the job completed.
+  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
+
+\label{param:HookJobCleanup}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_CLEANUP}]
+  A Job Router hook,
+  the full path to the program invoked when the Job Router finishes 
+  managing the job.
+  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \end{description}

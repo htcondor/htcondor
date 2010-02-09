@@ -57,18 +57,16 @@ to finish any clean up at the remote scheduler.
 \GenRem
 
 Use the \Arg{-forcex} argument with caution, as it will remove jobs
-from the local queue immediately, but can ``orphan'' parts of the job
-that are running remotely and haven't yet been stopped or removed.
+from the local queue immediately, but can orphan parts of the job
+that are running remotely and have not yet been stopped or removed.
 
 \Examples
-To remove all jobs of a user named Mary that are not currently running:
+For a user to remove all their jobs that are not currently running:
 \footnotesize
 \begin{verbatim}
-% condor_rm Mary -constraint Activity!=\"Busy\"
+% condor_rm -constraint 'JobStatus =!= 2'
 \end{verbatim}
 \normalsize
-Note that quotation marks must be escaped with the backslash characters
-for most shells.
 
 \ExitStatus
 

@@ -48,6 +48,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrack #1167
+\item Fixed a problem with GSI authentication in Condor that would cause
+daemons to consume more and more memory over time.  The biggest source
+of trouble was introduced in Condor version 7.3.2.
+However, a smaller memory leak that
+existed in all previous versions of Condor has also been fixed.
+
 % gitrack #553
 \item Fixed a bug where if \Condor{compile} is invoked in a manner such as:
 \begin{verbatim}
@@ -76,6 +83,59 @@ Now, if one node goes away, the whole computation is shut down immediately.
 
 \item Fixed the verbosity level of some \Condor{dagman} messages written to
 the \File{dagman.out} file.
+
+% gittrack #1137
+\item Fixed a bug introduced in Condor version 7.3.2 that resulted in
+  messages such as the following even in cases where no problem in
+  communicating with the \Condor{collector} had been encountered:
+
+\begin{verbatim}
+Collector <X> is still being avoided if an alternative succeeds.
+\end{verbatim}
+
+This problem was believed to be fixed in Condor 7.4.1, but some cases
+of the problem remained in that version.
+
+% gittrack 1160
+\item Fixed a bug from Condor version 6.1.14,
+that resulted in the \Condor{schedd} performing
+the operation scheduled via \MacroNI{WALL\_CLOCK\_CKPT\_INTERVAL} at the
+specified frequency (default time of 1 hour),
+multiplied by the number of times the
+\Condor{schedd} daemon had been reconfigured during its lifetime.
+This could lead to degraded performance,
+especially prior to Condor version 7.4.1,
+when this operation was more disk-intensive.
+
+% gittrack 1184
+% gittrack 1181
+\item 32-bit Linux versions of Condor running in a 64-bit environment would
+sometimes not detect the existence of some processes and sometimes
+wrongly detect that a tracked process belonged to root when it
+actually belonged to some other user.  This could lead to failure to run
+jobs or failure to properly monitor and clean up after them.  When the wrong
+process ownership problem happened,
+the following message appeared in the \Condor{master} and/or \Condor{procd}
+logs:
+
+\begin{verbatim}
+ProcAPI: fstat failed in /proc! (errno=75)
+\end{verbatim}
+
+If \Condor{procd} failed to detect the existence of its own parent process,
+it would exit with the following message in its log:
+
+\begin{verbatim}
+ERROR: master has exited
+\end{verbatim}
+
+% gittrack 1186
+\item Fixed a problem in the \Condor{job\_router} daemon,
+  introduced in Condor version 7.2.2,
+  that could cause the daemon to crash when failing to carry out the change
+  of state dictated by a job's periodic policy expressions,
+  for example, the failure to put a job on hold when \AdAttr{periodic\_hold}
+  becomes \Expr{True}.
 
 \end{itemize}
 
