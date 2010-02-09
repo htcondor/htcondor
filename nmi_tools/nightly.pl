@@ -78,7 +78,7 @@ while (<CVS>) {
 
 # don't edit this file on the build machine... it's in cvs
 
-$cns_cmd = "./$CNS --build --nightly --use_externals_cache --clear-externals-cache-weekly --submit-xtests --notify=condor-builds\@cs.wisc.edu --notify-fail-only" . (defined $opt_git ? " --git" : "");
+$cns_cmd = "./$CNS --build --nightly --use-externals-cache --clear-externals-cache-weekly --submit-xtests --notify=condor-builds\@cs.wisc.edu --notify-fail-only" . (defined $opt_git ? " --git" : "");
 
 print LOG "Cwd is " . `pwd`;
 print LOG "Running $cns_cmd\n";
