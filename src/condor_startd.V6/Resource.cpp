@@ -1765,7 +1765,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	}
 
 #if !defined(WANT_OLD_CLASSADS)
-	cap->AddTargetRefs( TargetJobAttrs );
+	cap->AddTargetRefs( TargetJobAttrs, false );
 #endif
 }
 
