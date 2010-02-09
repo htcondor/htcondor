@@ -701,7 +701,7 @@ Directory::Rewind()
 			}
 		}
 	}
-	rewinddir( dirp );
+	condor_rewinddir( dirp );
 #else
 	// Win32
 	if ( dirp != -1 ) {
