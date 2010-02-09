@@ -2356,11 +2356,7 @@ ProcAPI::getAndRemNextPid () {
 int
 ProcAPI::buildPidList() {
 
-#if defined(AIX)
-	DIR64 *dirp;
-#else
-	DIR *dirp;
-#endif
+	condor_DIR *dirp;
 	pidlistPTR current;
 	pidlistPTR temp;
 
@@ -2370,22 +2366,13 @@ ProcAPI::buildPidList() {
 
 	current = pidList;
 
-#if defined(AIX)
-	dirp = opendir64("/proc");
-#else
-	dirp = opendir("/proc");
-#endif
+	dirp = condor_opendir("/proc");
 	if( dirp != NULL ) {
-			// use readdir64() when available to avoid skipping over
-			// directories with an inode value that doesn't happen to
-			// fit in the 32-bit ino_t
-#if HAVE_READDIR64 || defined(AIX)
-		struct dirent64 *direntp;
-		while( (direntp = readdir64(dirp)) != NULL ) {
-#else
-		struct dirent *direntp;
-		while( (direntp = readdir(dirp)) != NULL ) {
-#endif
+			// NOTE: this will use readdir64() when available to avoid
+			// skipping over directories with an inode value that
+			// doesn't happen to fit in the 32-bit ino_t
+		condor_dirent *direntp;
+		while( (direntp = condor_readdir(dirp)) != NULL ) {
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				temp = new pidlist;
 				temp->pid = (pid_t) atol ( direntp->d_name );
@@ -2394,11 +2381,7 @@ ProcAPI::buildPidList() {
 				current = temp;
 			}
 		}
-#if defined(AIX)
-		closedir64( dirp );
-#else
-		closedir( dirp );
-#endif
+		condor_closedir( dirp );
     
 		temp = pidList;
 		pidList = pidList->next;

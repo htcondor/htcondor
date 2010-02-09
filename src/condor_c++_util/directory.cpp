@@ -49,6 +49,7 @@
 // -----------------------------------------------
 
 
+
 #ifndef WIN32
 static bool GetIds( const char *path, uid_t *owner, gid_t *group );
 #endif
@@ -130,7 +131,7 @@ Directory::~Directory()
 #ifndef WIN32
 	// Unix
 	if( dirp ) {
-		(void)closedir( dirp );
+		(void)condor_closedir( dirp );
 	}
 #else
 	// Win32
@@ -661,7 +662,7 @@ Directory::Rewind()
 	// Unix
 	if( dirp == NULL ) {
 		errno = 0;
-		dirp = opendir( curr_dir );
+		dirp = condor_opendir( curr_dir );
 		if( dirp == NULL ) {
 				// This could only mean that a) we've been given a bad
 				// priv_state to try to go in or b) we're trying to do
@@ -687,9 +688,9 @@ Directory::Rewind()
 				return_and_resetpriv(false);
 			}
 				// if we made it here, setOwnerPriv() worked so we 
-				// can try the opendir() again. 
+				// can try the condor_opendir() again. 
 			errno = 0;
-			dirp = opendir( curr_dir );
+			dirp = condor_opendir( curr_dir );
 			if( dirp == NULL ) {
 				dprintf( D_ALWAYS, "Can't open directory \"%s\" as owner, "
 						 "errno: %d (%s)", curr_dir, errno, strerror(errno) );
@@ -699,7 +700,7 @@ Directory::Rewind()
 			}
 		}
 	}
-	rewinddir( dirp );
+	condor_rewinddir( dirp );
 #else
 	// Win32
 	if ( dirp != -1 ) {
@@ -727,8 +728,8 @@ Directory::Next()
 		Rewind();
 	}
 	// Unix
-	struct dirent *dirent;
-	while( ! done && dirp && (dirent = readdir(dirp)) ) {
+	condor_dirent *dirent;
+	while( ! done && dirp && (dirent = condor_readdir(dirp)) ) {
 		if( strcmp(".",dirent->d_name) == MATCH ) {
 			continue;
 		}
