@@ -253,7 +253,7 @@ reason that a job was put on hold.
   \Condor{shadow} version available on the submitting machine.  \\ \hline
 18 & An internal Condor protocol error was encountered when transferring
   files. \\ \hline
-19 & \Macro{HOOK\_PREPARE\_JOB} was defined but couldn't be executed or returned failure. \\ \hline
+19 & \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} was defined but could not be executed or returned failure. \\ \hline
 20 & The job missed its deferred execution time and therefore failed to run. \\ \hline
 21 & The job was put on hold because \Macro{WANT\_HOLD} in the machine policy was true. \\ \hline
 \end{tabular}
@@ -801,6 +801,48 @@ platform type of the machine upon which this job is submitted,
 representing a minor version number (currently 0, 1, or 2)
 for a Windows operating system.
 This attribute only exists for jobs submitted from Windows machines.
+
+%%% ClassAd attribute: X509UserProxyFirstFQAN
+\index{ClassAd job attribute!X509UserProxyFirstFQAN}
+\index{X509UserProxyFirstFQAN!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyFirstFQAN}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this is the VOMS Fully Qualified Attribute Name (FQAN) of
+the primary role of the credential. 
+A credential may have multiple roles defined, 
+but by convention the one listed first is the primary role. 
+
+%%% ClassAd attribute: X509UserProxyFQAN
+\index{ClassAd job attribute!X509UserProxyFQAN}
+\index{X509UserProxyFQAN!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyFQAN}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this is a serialized list of the DN and all FQAN.
+A comma is used as a separator,
+and any existing commas in the DN or FQAN are replaced with the string
+\Expr{\&comma;}.
+Likewise, any ampersands in the DN or FQAN are replaced with
+\Expr{\&amp;}.
+
+%%% ClassAd attribute: X509UserProxySubject
+\index{ClassAd job attribute!X509UserProxySubject}
+\index{X509UserProxySubject!job ClassAd attribute}
+\item[\AdAttr{X509UserProxySubject}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this attribute contains the Distinguished Name (DN) of the credential
+used to submit the job.
+
+%%% ClassAd attribute: X509UserProxyVOName
+\index{ClassAd job attribute!X509UserProxyVOName}
+\index{X509UserProxyVOName!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyVOName}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this is the name of the VOMS virtual organization (VO) that 
+the user's credential is part of. 
 
 \end{description}
 
