@@ -240,12 +240,14 @@ typedef fd_set *SELECT_FDSET_PTR;
     typedef DIR64 condor_DIR;
     #define condor_opendir opendir64
     #define condor_closedir closedir64
+    #define condor_rewinddir rewinddir64
 
   #else
 
     typedef DIR condor_DIR;
     #define condor_opendir opendir
     #define condor_closedir closedir
+    #define condor_rewinddir rewinddir
 
   #endif
 
