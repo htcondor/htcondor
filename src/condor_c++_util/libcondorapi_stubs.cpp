@@ -97,7 +97,7 @@ int param_boolean_int(const char *, int default_value)
 pcre *pcre_compile(const char *, int, const char **, int *,
 				   const unsigned char *)
 { not_impl(); return NULL; }
-int  pcre_exec(const pcre *, const pcre_extra *, PCRE_SPTR,
+int  pcre_exec(const pcre *, const pcre_extra *, const char *,
 			   int, int, int, int *, int)
 { return not_impl(); }
 static void my_pcre_free(void *) { not_impl(); }
