@@ -747,12 +747,33 @@ sub getSubmitInfoNew
 
 sub loadModule
 {
+	# module_path contains the path up to and including the module name.
+	# module_name just includes the module name without a path or suffix.
 	my ($module_path, $module_name) =  @_;
+	my $mpath;
+	
+	$mpath = dirname($module_path);
 
-	# I need this to happen with runtime information, not compile time, so this
-	# is why I'm messing about with @INC here.
+	# The --nightly code path expects to reload modules multiple times because
+	# they are different versions. Here we make the idempotency check fail so
+	# the new module gets loaded and stomps on the old module's
+	# definitions--which is what we want. This is vile and ugly and is a result
+	# of the coupling between the nightlies and this script. See gittrac ticket
+	# #974 for details about this coupling.
+	if (exists($INC{"$module_name.pm"})) {
+		print "Removing perl's module idempotency check to allow reloading " .
+				"of $module_name.pm with new definitions.\n";
+		delete $INC{"$module_name.pm"};
+	}
+
+	# I need the load to happen with runtime information, not compile time, so
+	# this is why I'm messing about with @INC here.
+	if (scalar(grep(/^\Q$mpath\E$/, @INC)) == 0) {
+		# Only push path if not already present.
+		push @INC, $mpath;
+	}
 	print "About to load module: $module_path\n";
-	push @INC, dirname($module_path);
+	print "You can ignore the warnings about function redefinitions, if any.\n";
 	eval "use $module_name;";
 	die $@ if $@;
 	print "Loaded $module_name.pm!\n";
