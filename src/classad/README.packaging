@@ -18,7 +18,7 @@ of the file.
 Edit TAGS and add a new tag name for this version.  Tag the source
 with this tag.
 
-What I do then is copy condor_classads.V6 to a build tree and create
+What I do then is copy src/classad to a build tree and create
 the makefile:
 
 ../condor_imake
@@ -32,6 +32,12 @@ about AC_PROG_LIBTOOL.  To get around that, uncomment the following line
 in Makefile.am.m4:
 
 ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
+
+Once you're happy with the final distribution tarball, tag the repository
+with the new release:
+
+git tag classads_1.0-rc4
+git push origin classads_1.0-rc4
 
 The ClassAds webpage under /p/condor/public/html/classad
 should be updated to show the new version. The distribution tarball
