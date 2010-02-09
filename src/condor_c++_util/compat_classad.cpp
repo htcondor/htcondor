@@ -1582,6 +1582,33 @@ GetExprReferences(const char* expr,
 	return true;
 }
 
+static void AppendReference( StringList &reflist, char const *name )
+{
+	char const *end = strchr(name,'.');
+	std::string buf;
+	if( end ) {
+			// if attribute reference is of form 'one.two.three...'
+			// only insert 'one' in the list of references
+
+		if( end == name ) {
+				// If reference is of form '.one.two.three...'
+				// only insert 'one'.  This is unlikely to be correct,
+				// because the root scope is likely to be the MatchClassAd,
+				// but inserting an empty attribute name would make it
+				// harder to understand what is going on, so it seems
+				// better to insert 'one'.
+			end = strchr(end,'.');
+		}
+
+		buf.append(name,end-name);
+		name = buf.c_str();
+	}
+
+	if( !reflist.contains_anycase(name) ) {
+		reflist.append(name);
+	}
+}
+
 void ClassAd::
 _GetReferences(classad::ExprTree *tree,
 			   StringList &internal_refs,
@@ -1597,19 +1624,39 @@ _GetReferences(classad::ExprTree *tree,
 	GetExternalReferences(tree, ext_refs_set, true);
 	GetInternalReferences(tree, int_refs_set, true);
 
+		// We first process the references and save results in
+		// final_*_refs_set.  The processing may hit duplicates that
+		// are referred to xand then copy from there to the caller's
+		// StringLists.  This scales better than trying to remove
+		// duplicates while inserting into the StringList.
+
 	for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
 		  set_itr++ ) {
 		const char *name = set_itr->c_str();
-		if ( strncasecmp( name, "target.", 7 ) ) {
-			external_refs.append( set_itr->c_str() );
+			// Check for references to things in the MatchClassAd
+			// and do the right thing.  This does not cover all
+			// possible ways of referencing things in the match ad,
+			// but it covers the ones users are expected to use
+			// and the ones expected from OptimizeAdForMatchmaking.
+		if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[7] );
+		} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[6] );
+		} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[6] );
+		} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[7] );
+		} else if ( strncasecmp( name, "my.", 3 ) == 0 ) {
+				// this one is actually in internal reference!
+			AppendReference( internal_refs, &set_itr->c_str()[3] );
 		} else {
-			external_refs.append( &set_itr->c_str()[7] );
+			AppendReference( external_refs, set_itr->c_str() );
 		}
 	}
 
 	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
 		  set_itr++ ) {
-		internal_refs.append( set_itr->c_str() );
+		AppendReference( internal_refs, set_itr->c_str() );
 	}
 }
 
