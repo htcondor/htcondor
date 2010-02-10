@@ -31,7 +31,8 @@ The details of each version are described below.
 % gittrac #221
 \item The configuration variable
 \MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
-delegations done by Condor.  The value is a boolean and defaults to False,
+delegations done between Condor daemons and tools.  The value is a boolean
+and defaults to False,
 which means that when doing delegation Condor will now create a limited proxy
 instead of a full proxy.
 
@@ -46,12 +47,24 @@ instead of a full proxy.
   the \Condor{master} will wait for that file to be created
   before starting other daemons.
 
+% gittrac #1144
+\item In the grid universe, Condor can now automatically distinguish
+between GRAM2 and GRAM5 servers (i.e. grid-types 'gt2' and 'gt5').
+Users can submit jobs using a grid-type of 'gt2' or 'gt5' for either
+type of server.
+
 % gittrac #938
 \item Grid universe jobs using the CREAM grid system now batch up
 common requests into larger single requests.  This
 reduces network traffic, increases the number of parallel tasks
 the Condor can handle at once, and reduces the load on the remote
 gatekeeper.
+
+% gittrac #1100
+\item Added new submit file attribute \Macro{cream\_attributes}. When
+submitting a grid universe job destined for the CREAM grid system, this
+attribute can be used to add addtional attribute/value pairs to the CREAM
+job description that Condor creates.
 
 % gittrac #1138
 \item The -analyze option to \Condor{q} is now identical to -better-analyze.  -better-analyze includes the same information as -analyze but also includes more specific information on a job's Requirements.
@@ -68,6 +81,15 @@ the daemon ad as \Attr{MonitorSelfSecuritySessions}.
 \item \Condor{dagman} now has the capability to run DAGs containing nodes
 that are declared to be NOOPs -- for these nodes, a job is never actually
 submitted.  See section~\ref{dagman:NOOP} for for information.
+
+% gittrac #1128
+\item The submit file attribute \Macro{vm\_macaddr} can now be used to set
+the MAC address for vm universe jobs that use VMware. The range of valid
+MAC addresses is constrained by limits imposed by VMware.
+
+% gittrac #1173
+\item \Macro{condor\_q -globus} is now much more efficient in its
+communication with the \Condor{schedd}.
 
 \end{itemize}
 
@@ -104,6 +126,10 @@ submitted.  See section~\ref{dagman:NOOP} for for information.
   input, so the use of an expression could produce unexpected results.
   Now, like other integer configuration settings, a constant expression can
   be used and input is fully validated.
+
+% gittrac #1196
+\item Configuration parameter \Macro{LOCAL\_CONFIG\_DIR} is no longer
+ignored if defined in a local configuration file.
 
 \end{itemize}
 
