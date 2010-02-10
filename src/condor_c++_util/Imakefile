@@ -153,7 +153,9 @@ CLASSAD_OBJ = \
 	stringSpace.o \
 	string_list.o \
 	MyString.o \
-	condor_xml_classads.o
+	condor_xml_classads.o \
+	condor_ver_info.o \
+	condor_version.o
 #endif
 
 
@@ -307,6 +309,8 @@ c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
 
 #if !defined(WANT_OLD_CLASSADS)
 c_plus_target(test_compat_classad,test_compat_classad.o,$(LIB))
+c_plus_target(test_old_classads,test_old_classads.o,$(LIB))
+testbin_target(test_old_classads,755)
 #endif
 
 

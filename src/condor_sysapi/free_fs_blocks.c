@@ -230,7 +230,7 @@ char *filename;
 }
 #endif /* VAX && ULTRIX */
 
-#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX) || defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(Solaris) || defined(IRIX) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>
 
@@ -238,8 +238,6 @@ char *filename;
 #include <sys/statfs.h>
 #elif defined(Solaris)
 #include <sys/statvfs.h>
-#elif defined(OSF1)
-#include <sys/mount.h>
 #endif
 
 #if defined(IRIX)
@@ -263,8 +261,6 @@ const char *filename;
 
 #if defined(IRIX331) || defined(IRIX53) || defined(IRIX65) || defined(IRIX62)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
-#elif defined(OSF1)
-	if(statfs(filename, &statfsbuf, sizeof statfsbuf) < 0) {
 #elif defined(Solaris)
 	if(statvfs(filename, &statfsbuf) < 0) {
 #else
@@ -285,8 +281,6 @@ const char *filename;
 		   filesystem block size", not f_bsize, the "preferred file
 		   system block size".  3/25/98  Derek Wright */
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / 1024.0 );
-#elif defined(OSF1)
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_fsize / 1024.0 );
 #else
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / 1024.0 );
 #endif

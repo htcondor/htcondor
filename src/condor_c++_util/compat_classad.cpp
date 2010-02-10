@@ -16,14 +16,15 @@
  * limitations under the License.
  *
  ***************************************************************/
-
+#include "condor_common.h"
 #include "compat_classad.h"
 
 #include "condor_classad.h"
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
-#include "classad/classad/xmlSink.h"
+#include "classad/xmlSink.h"
 #include "condor_xml_classads.h"
+#include "condor_config.h"
 
 using namespace std;
 
@@ -239,46 +240,52 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 
 	nodeKind = CLASSAD_NODE;
 
-	char		buffer[ATTRLIST_MAX_EXPRESSION];
+	int index;
+	MyString buffer;
 	int			delimLen = strlen( delimitor );
 
-	buffer[0] = '\0';
+	empty = TRUE;
+
 	while( 1 ) {
 
 			// get a line from the file
-		if( fgets( buffer, delimLen+1, file ) == NULL ) {
+		if ( buffer.readLine( file, false ) == false ) {
 			error = ( isEOF = feof( file ) ) ? 0 : errno;
 			return;
 		}
 
 			// did we hit the delimitor?
-		if( strncmp( buffer, delimitor, delimLen ) == 0 ) {
+		if ( strncmp( buffer.Value(), delimitor, delimLen ) == 0 ) {
 				// yes ... stop
 			isEOF = feof( file );
 			error = 0;
 			return;
-		} else {
-				// no ... read the rest of the line (into the same buffer)
-			if( fgets( buffer+delimLen, ATTRLIST_MAX_EXPRESSION-delimLen,file )
-					== NULL ) {
-				error = ( isEOF = feof( file ) ) ? 0 : errno;
-				return;
-			}
 		}
 
-			// if the string is empty, try reading again
-		if( strlen( buffer ) == 0 || strcmp( buffer, "\n" ) == 0 ) {
+			// Skip any leading white-space
+		index = 0;
+		while ( index < buffer.Length() &&
+				( buffer[index] == ' ' || buffer[index] == '\t' ) ) {
+			index++;
+		}
+
+			// if the rest of the string is empty, try reading again
+			// if it starts with a pound character ("#"), treat as a comment
+		if( index == buffer.Length() || buffer[index] == '\n' ||
+			buffer[index] == '#' ) {
 			continue;
 		}
 
 			// Insert the string into the classad
-		if( Insert( buffer ) == FALSE ) { 	
+		if( Insert( buffer.Value() ) == FALSE ) { 	
 				// print out where we barfed to the log file
 			dprintf(D_ALWAYS,"failed to create classad; bad expr = %s\n",
-				buffer);
+					buffer.Value());
 				// read until delimitor or EOF; whichever comes first
-			while( strncmp( buffer, delimitor, delimLen ) && !feof( file ) ) {
-				fgets( buffer, delimLen+1, file );
+			buffer = "";
+			while ( strncmp( buffer.Value(), delimitor, delimLen ) &&
+					!feof( file ) ) {
+				buffer.readLine( file, false );
 			}
 			isEOF = feof( file );
 			error = -1;
@@ -296,6 +303,8 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 
 	ResetName();
     ResetExpr();
+
+	EnableDirtyTracking();
 }
 
 bool ClassAd::
@@ -378,7 +387,10 @@ AssignExpr(char const *name,char const *value)
 	classad::ClassAdParser par;
 	classad::ExprTree *expr = NULL;
 
-	if ( !par.ParseExpression( value, expr, true ) ) {
+	if ( value == NULL ) {
+		value = "Undefined";
+	}
+	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
 		return FALSE;
 	}
 	if ( !Insert( name, expr ) ) {
@@ -386,6 +398,16 @@ AssignExpr(char const *name,char const *value)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+int ClassAd::
+Assign(char const *name,char const *value)
+{
+	if ( value == NULL ) {
+		return AssignExpr( name, NULL );
+	} else {
+		return InsertAttr( name, value ) ? TRUE : FALSE;
+	}
 }
 
 //  void ClassAd::
@@ -463,9 +485,11 @@ LookupInteger( const char *name, int &value ) const
 	bool    boolVal;
 	int     haveInteger;
 	string  sName;
+	int		tmp_val;
 
 	sName = string(name);
-	if( EvaluateAttrInt(sName, value ) ) {
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
 		haveInteger = TRUE;
 	} else if( EvaluateAttrBool(sName, boolVal ) ) {
 		value = boolVal ? 1 : 0;
@@ -513,7 +537,6 @@ LookupBool( const char *name, int &value ) const
 		value = (intVal != 0) ? 1 : 0;
 	} else {
 		haveBool = false;
-		value = 0;
 	}
 	return haveBool;
 }
@@ -536,7 +559,6 @@ LookupBool( const char *name, bool &value ) const
 		value = (intVal != 0) ? true : false;
 	} else {
 		haveBool = false;
-		value = false;
 	}
 	return haveBool;
 }
@@ -641,9 +663,11 @@ int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
+	int tmp_val;
 
 	if( target == this || target == NULL ) {
-		if( EvaluateAttrInt( name, value ) ) { 
+		if( EvaluateAttrInt( name, tmp_val ) ) { 
+			value = tmp_val;
 			return 1;
 		}
 		return 0;
@@ -651,11 +675,13 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 
 	classad::MatchClassAd mad( this, target );
 	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrInt( name, value ) ) {
+		if( this->EvaluateAttrInt( name, tmp_val ) ) {
+			value = tmp_val;
 			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrInt( name, value ) ) {
+		if( target->EvaluateAttrInt( name, tmp_val ) ) {
+			value = tmp_val;
 			rc = 1;
 		}
 	}
@@ -730,7 +756,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = boolVal ? 1 : 0;
 				return 1;
 			}
-			if( val.IsIntegerValue( value ) ) {
+			if( val.IsIntegerValue( intVal ) ) {
 				value = intVal ? 1 : 0;
 				return 1;
 			}
@@ -954,6 +980,8 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
     string parsedString;
 	classad::ExprTree* expr;
 
+	unp.SetOldClassAd( true );
+
     expr = Lookup(name); 
 
     if(!expr)
@@ -995,9 +1023,9 @@ SetMyTypeName( const char *myType )
 const char*	ClassAd::
 GetMyTypeName( ) const
 {
-	string myTypeStr;
+	static string myTypeStr;
 	if( !EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
-		return NULL;
+		return "";
 	}
 	return myTypeStr.c_str( );
 }
@@ -1015,9 +1043,9 @@ SetTargetTypeName( const char *targetType )
 const char*	ClassAd::
 GetTargetTypeName( ) const
 {
-	string targetTypeStr;
+	static string targetTypeStr;
 	if( !EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
-		return NULL;
+		return "";
 	}
 	return targetTypeStr.c_str( );
 }
@@ -1045,12 +1073,12 @@ NextNameOriginal()
 	classad::ClassAd *chained_ad = GetChainedParentAd();
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
-	if ( m_nameItr == end() && chained_ad ) {
+	if ( chained_ad && !m_nameItrInChain && m_nameItr == end() ) {
 		m_nameItr = chained_ad->begin();
 		m_nameItrInChain = true;
 	}
-	if ( m_nameItr == end() ||
-		 m_nameItrInChain && m_nameItr == chained_ad->end() ) {
+	if ( ( !m_nameItrInChain && m_nameItr == end() ) ||
+		 ( m_nameItrInChain && m_nameItr == chained_ad->end() ) ) {
 		return NULL;
 	}
 	name = m_nameItr->first.c_str();
@@ -1070,25 +1098,50 @@ AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr )
 	return true;
 }
 
-classad::ClassAd *ClassAd::
-AddExplicitTargetRefs( )
+void ClassAd::AddExplicitTargetRefs(  ) 
 {
-	string attr = "";
 	set< string, classad::CaseIgnLTStr > definedAttrs;
-	
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		definedAttrs.insert( a->first );
+		definedAttrs.insert(a->first);
 	}
 	
-	classad::ClassAd *newAd = new classad::ClassAd( );
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		newAd->Insert( a->first, 
-					   AddExplicitTargetRefs( a->second, definedAttrs ) );
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+			this->Insert( a->first,
+						  compat_classad::AddExplicitTargetRefs( a->second, definedAttrs )) ;
+		}
 	}
-	return newAd;
 }
 
+void ClassAd::RemoveExplicitTargetRefs( )
+{
+	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+			this->Insert( a->first, 
+						  compat_classad::RemoveExplicitTargetRefs( a->second ) );
+		}
+	}
+}  
 
+
+void ClassAd:: 
+AddTargetRefs( TargetAdType target_type, bool do_version_check )
+{
+	MyString ver_str;
+	if ( do_version_check && this->LookupString( ATTR_VERSION, ver_str ) ) {
+		CondorVersionInfo ver( ver_str.Value() );
+		if ( ver.built_since_version( 7, 5, 1 ) ) {
+			return;
+		}
+	}
+
+	for( classad::AttrList::iterator a = begin(); a != end(); a++ ) {
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+			this->Insert( a->first, 
+						  compat_classad::AddTargetRefs( a->second, target_type ) );
+		}
+	}
+}
 
 classad::ExprTree *ClassAd::
 AddExplicitConditionals( classad::ExprTree *expr )
@@ -1252,62 +1305,6 @@ AddExplicitConditionals( classad::ExprTree *expr )
 	return NULL;
 }
 
-classad::ExprTree *ClassAd::
-AddExplicitTargetRefs( classad::ExprTree *tree, set<string,classad::CaseIgnLTStr> &definedAttrs )
-{
-	if( tree == NULL ) {
-		return NULL;
-	}
-	classad::ExprTree::NodeKind nKind = tree->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-		classad::ExprTree *expr = NULL;
-		string attr = "";
-		bool abs = false;
-		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
-		if( abs || expr != NULL ) {
-			return tree->Copy( );
-		}
-		else {
-			if( definedAttrs.find( attr ) == definedAttrs.end( ) ) {
-					// attribute is not defined, so insert "target"
-				classad::AttributeReference *target = NULL;
-				target = classad::AttributeReference::MakeAttributeReference(NULL,
-																	"target");
-				return classad::AttributeReference::MakeAttributeReference(target,attr);
-			}
-			else {
-				return tree->Copy( );
-			}
-		}
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		classad::ExprTree * newExpr1 = NULL;
-		classad::ExprTree * newExpr2 = NULL;
-		classad::ExprTree * newExpr3 = NULL;
-		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
-		if( expr1 != NULL ) {
-			newExpr1 = AddExplicitTargetRefs( expr1, definedAttrs );
-		}
-		if( expr2 != NULL ) {
-			newExpr2 = AddExplicitTargetRefs( expr2, definedAttrs );
-		}
-		if( expr3 != NULL ) {
-			newExpr3 = AddExplicitTargetRefs( expr3, definedAttrs );
-		}
-		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
-	}
-	default: {
- 			// old ClassAds have no function calls, nested ClassAds or lists
-			// literals have no attrrefs in them
-		return tree->Copy( );
-	}
-	}
-}
 
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
@@ -1371,12 +1368,12 @@ bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 	classad::ClassAd *chained_ad = GetChainedParentAd();
 	// After iterating through all the attributes in this ad,
 	// get all the attributes in our chained ad as well.
-	if ( m_exprItr == end() && chained_ad ) {
+	if ( chained_ad && !m_exprItrInChain && m_exprItr == end() ) {
 		m_exprItr = chained_ad->begin();
 		m_exprItrInChain = true;
 	}
-	if ( m_exprItr == end() ||
-		 m_exprItrInChain && m_exprItr == chained_ad->end() ) {
+	if ( ( !m_exprItrInChain && m_exprItr == end() ) ||
+		 ( m_exprItrInChain && m_exprItr == chained_ad->end() ) ) {
 		return false;
 	}
 	name = m_exprItr->first.c_str();
@@ -1429,11 +1426,17 @@ void ClassAd::
 GetDirtyFlag(const char *name, bool *exists, bool *dirty)
 {
 	if ( Lookup( name ) == NULL ) {
-		*exists = false;
+		if ( exists ) {
+			*exists = false;
+		}
 		return;
 	}
-	*exists = true;
-	*dirty = IsAttributeDirty( name );
+	if ( exists ) {
+		*exists = true;
+	}
+	if ( dirty ) {
+		*dirty = IsAttributeDirty( name );
+	}
 }
 
 void ClassAd::
@@ -1499,10 +1502,13 @@ ClassAd::EscapeStringValue(char const *val, MyString &buf)
     string stringToAppeaseUnparse;
     classad::ClassAdUnParser unparse;
 
+	unparse.SetOldClassAd( true );
+
     tmpValue.SetStringValue(val);
     unparse.Unparse(stringToAppeaseUnparse, tmpValue);
 
     buf = stringToAppeaseUnparse.c_str();
+	buf = buf.Substr( 1, buf.Length() - 2 );
     return buf.Value();
 }
 
@@ -1565,7 +1571,7 @@ GetExprReferences(const char* expr,
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
 
-    if ( !par.ParseExpression( expr, tree, true ) ) {
+    if ( !par.ParseExpression( ConvertEscapingOldToNew( expr ), tree, true ) ) {
         return false;
     }
 
@@ -1574,6 +1580,33 @@ GetExprReferences(const char* expr,
 	delete tree;
 
 	return true;
+}
+
+static void AppendReference( StringList &reflist, char const *name )
+{
+	char const *end = strchr(name,'.');
+	std::string buf;
+	if( end ) {
+			// if attribute reference is of form 'one.two.three...'
+			// only insert 'one' in the list of references
+
+		if( end == name ) {
+				// If reference is of form '.one.two.three...'
+				// only insert 'one'.  This is unlikely to be correct,
+				// because the root scope is likely to be the MatchClassAd,
+				// but inserting an empty attribute name would make it
+				// harder to understand what is going on, so it seems
+				// better to insert 'one'.
+			end = strchr(end,'.');
+		}
+
+		buf.append(name,end-name);
+		name = buf.c_str();
+	}
+
+	if( !reflist.contains_anycase(name) ) {
+		reflist.append(name);
+	}
 }
 
 void ClassAd::
@@ -1591,21 +1624,750 @@ _GetReferences(classad::ExprTree *tree,
 	GetExternalReferences(tree, ext_refs_set, true);
 	GetInternalReferences(tree, int_refs_set, true);
 
+		// We first process the references and save results in
+		// final_*_refs_set.  The processing may hit duplicates that
+		// are referred to xand then copy from there to the caller's
+		// StringLists.  This scales better than trying to remove
+		// duplicates while inserting into the StringList.
+
 	for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
 		  set_itr++ ) {
 		const char *name = set_itr->c_str();
-		if ( strncasecmp( name, "target.", 7 ) ) {
-			external_refs.append( set_itr->c_str() );
+			// Check for references to things in the MatchClassAd
+			// and do the right thing.  This does not cover all
+			// possible ways of referencing things in the match ad,
+			// but it covers the ones users are expected to use
+			// and the ones expected from OptimizeAdForMatchmaking.
+		if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[7] );
+		} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[6] );
+		} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[6] );
+		} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+			AppendReference( external_refs, &set_itr->c_str()[7] );
+		} else if ( strncasecmp( name, "my.", 3 ) == 0 ) {
+				// this one is actually in internal reference!
+			AppendReference( internal_refs, &set_itr->c_str()[3] );
 		} else {
-			external_refs.append( &set_itr->c_str()[7] );
+			AppendReference( external_refs, set_itr->c_str() );
 		}
 	}
 
 	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
 		  set_itr++ ) {
-		internal_refs.append( set_itr->c_str() );
+		AppendReference( internal_refs, set_itr->c_str() );
 	}
 }
 
+
+
+// the freestanding functions 
+
+classad::ExprTree *
+AddExplicitTargetRefs(classad::ExprTree *tree,
+						std::set < std::string, classad::CaseIgnLTStr > & definedAttrs) 
+{
+	if( tree == NULL ) {
+		return NULL;
+	}
+	classad::ExprTree::NodeKind nKind = tree->GetKind( );
+	switch( nKind ) {
+	case classad::ExprTree::ATTRREF_NODE: {
+		classad::ExprTree *expr = NULL;
+		string attr = "";
+		bool abs = false;
+		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
+		if( abs || expr != NULL ) {
+			return tree->Copy( );
+		}
+		else {
+			if( definedAttrs.find( attr ) == definedAttrs.end( ) ) {
+					// attribute is not defined, so insert "target"
+				classad::AttributeReference *target = NULL;
+				target = classad::AttributeReference::MakeAttributeReference(NULL,
+																	"target");
+				return classad::AttributeReference::MakeAttributeReference(target,attr);
+			}
+			else {
+				return tree->Copy( );
+			}
+		}
+	}
+	case classad::ExprTree::OP_NODE: {
+		classad::Operation::OpKind oKind;
+		classad::ExprTree * expr1 = NULL;
+		classad::ExprTree * expr2 = NULL;
+		classad::ExprTree * expr3 = NULL;
+		classad::ExprTree * newExpr1 = NULL;
+		classad::ExprTree * newExpr2 = NULL;
+		classad::ExprTree * newExpr3 = NULL;
+		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
+		if( expr1 != NULL ) {
+			newExpr1 = AddExplicitTargetRefs( expr1, definedAttrs );
+		}
+		if( expr2 != NULL ) {
+			newExpr2 = AddExplicitTargetRefs( expr2, definedAttrs );
+		}
+		if( expr3 != NULL ) {
+			newExpr3 = AddExplicitTargetRefs( expr3, definedAttrs );
+		}
+		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
+	}
+	case classad::ExprTree::FN_CALL_NODE: {
+		std::string fn_name;
+		classad::ArgumentList old_fn_args;
+		classad::ArgumentList new_fn_args;
+		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
+		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
+			new_fn_args.push_back( AddExplicitTargetRefs( *i, definedAttrs ) );
+		}
+		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
+	}
+	default: {
+ 			// old ClassAds have no function calls, nested ClassAds or lists
+			// literals have no attrrefs in them
+		return tree->Copy( );
+	}
+	}
+} 
+
+classad::ExprTree *
+AddExplicitTargetRefs(classad::ExprTree *eTree, classad::ClassAd *ad ) 
+{
+	set< string, classad::CaseIgnLTStr > definedAttrs;
+	
+	for( classad::AttrList::iterator a = ad->begin( ); a != ad->end( ); a++ ) {
+		definedAttrs.insert( a->first );
+	}
+	return AddExplicitTargetRefs(eTree, definedAttrs);
+}
+
+classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
+{
+	if( tree == NULL ) {
+		return NULL;
+	}
+	classad::ExprTree::NodeKind nKind = tree->GetKind( );
+	switch( nKind ) {
+	case classad::ExprTree::ATTRREF_NODE: {
+		classad::ExprTree *expr = NULL;
+		string attr = "";
+		bool abs = false;
+		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
+		if(!abs && (expr != NULL)) {
+			string newAttr = "";
+			classad::ExprTree *exp = NULL;
+			abs = false;
+			( ( classad::AttributeReference * )expr )->GetComponents(exp,newAttr,abs);
+			if (strcmp(newAttr.c_str(), "target") == 0){
+				classad::AttributeReference *noTarget = NULL;
+				noTarget = classad::AttributeReference::MakeAttributeReference(exp,"",abs);
+				return classad::AttributeReference::MakeAttributeReference(noTarget,attr);
+			}	 
+		} 
+		return tree->Copy();
+	}
+	case classad::ExprTree::OP_NODE: {
+		classad::Operation::OpKind oKind;
+		classad::ExprTree * expr1 = NULL;
+		classad::ExprTree * expr2 = NULL;
+		classad::ExprTree * expr3 = NULL;
+		classad::ExprTree * newExpr1 = NULL;
+		classad::ExprTree * newExpr2 = NULL;
+		classad::ExprTree * newExpr3 = NULL;
+		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
+		if( expr1 != NULL ) {
+			newExpr1 = RemoveExplicitTargetRefs( expr1  );
+		}
+		if( expr2 != NULL ) {
+			newExpr2 = RemoveExplicitTargetRefs( expr2 );
+		}
+		if( expr3 != NULL ) {
+			newExpr3 = RemoveExplicitTargetRefs( expr3 );
+		}
+		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
+	}
+	case classad::ExprTree::FN_CALL_NODE: {
+		std::string fn_name;
+		classad::ArgumentList old_fn_args;
+		classad::ArgumentList new_fn_args;
+		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
+		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
+			new_fn_args.push_back( RemoveExplicitTargetRefs( *i ) );
+		}
+		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
+	}
+	default: {
+ 			// old ClassAds have no function calls, nested ClassAds or lists
+			// literals have no attrrefs in them
+		return tree->Copy( );
+	}
+	}
+}	
+
+static ClassAd job_attrs_ad;
+static ClassAd machine_attrs_ad;
+static ClassAd schedd_attrs_ad;
+static StringList job_attrs_strlist;
+static StringList machine_attrs_strlist;
+
+static bool target_attrs_init = false;
+
+static const char *machine_attrs_list[] = {
+	ATTR_NAME,
+	ATTR_MACHINE,
+	ATTR_AVAIL_TIME,
+	ATTR_LAST_AVAIL_INTERVAL,
+	ATTR_AVAIL_SINCE,
+	ATTR_AVAIL_TIME_ESTIMATE,
+	ATTR_IS_VALID_CHECKPOINT_PLATFORM,
+	ATTR_WITHIN_RESOURCE_LIMITS,
+	ATTR_RUNNING_COD_JOB,
+	ATTR_ARCH,
+	ATTR_OPSYS,
+	ATTR_HAS_IO_PROXY,
+	ATTR_CHECKPOINT_PLATFORM,
+	ATTR_TOTAL_VIRTUAL_MEMORY,
+	ATTR_TOTAL_CPUS,
+	ATTR_TOTAL_MEMORY,
+	ATTR_KFLOPS,
+	ATTR_MIPS,
+	ATTR_LOCAL_CREDD,
+	ATTR_LAST_BENCHMARK,
+	ATTR_TOTAL_LOAD_AVG,
+	ATTR_TOTAL_CONDOR_LOAD_AVG,
+	ATTR_CLOCK_MIN,
+	ATTR_CLOCK_DAY,
+	ATTR_RUN_BENCHMARKS,
+	ATTR_VIRTUAL_MEMORY,
+	ATTR_TOTAL_DISK,
+	ATTR_DISK,
+	ATTR_CONDOR_LOAD_AVG,
+	ATTR_LOAD_AVG,
+	ATTR_KEYBOARD_IDLE,
+	ATTR_CONSOLE_IDLE,
+	ATTR_MEMORY,
+	ATTR_CPUS,
+	ATTR_MAX_JOB_RETIREMENT_TIME,
+	ATTR_FETCH_WORK_DELAY,
+	ATTR_UNHIBERNATE,
+	ATTR_MACHINE_LAST_MATCH_TIME,
+	ATTR_SLOT_WEIGHT,
+	ATTR_IS_OWNER,
+	ATTR_CPU_BUSY,
+	ATTR_TOTAL_SLOTS,
+	ATTR_TOTAL_VIRTUAL_MACHINES,
+	ATTR_STATE,
+	ATTR_LAST_HEARD_FROM,
+	ATTR_ENTERED_CURRENT_STATE,
+	ATTR_ACTIVITY,
+	ATTR_ENTERED_CURRENT_ACTIVITY,
+	ATTR_TOTAL_TIME_OWNER_IDLE,
+	ATTR_TOTAL_TIME_UNCLAIMED_IDLE,
+	ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING,
+	ATTR_TOTAL_TIME_MATCHED_IDLE,
+	ATTR_TOTAL_TIME_CLAIMED_IDLE,
+	ATTR_TOTAL_TIME_CLAIMED_BUSY,
+	ATTR_TOTAL_TIME_CLAIMED_SUSPENDED,
+	ATTR_TOTAL_TIME_CLAIMED_RETIRING,
+	ATTR_TOTAL_TIME_PREEMPTING_VACATING,
+	ATTR_TOTAL_TIME_PREEMPTING_KILLING,
+	ATTR_TOTAL_TIME_BACKFILL_IDLE,
+	ATTR_TOTAL_TIME_BACKFILL_BUSY,
+	ATTR_TOTAL_TIME_BACKFILL_KILLING,
+	ATTR_CPU_IS_BUSY,
+	ATTR_CPU_BUSY_TIME,
+	ATTR_VIRTUAL_MACHINE_ID,
+	ATTR_SLOT_PARTITIONABLE,
+	ATTR_SLOT_DYNAMIC,
+	ATTR_LAST_FETCH_WORK_SPAWNED,
+	ATTR_LAST_FETCH_WORK_COMPLETED,
+	ATTR_NEXT_FETCH_WORK_DELAY,
+	ATTR_CURRENT_RANK,
+	ATTR_REMOTE_USER,
+	ATTR_REMOTE_OWNER,
+	ATTR_CLIENT_MACHINE,
+	ATTR_NUM_COD_CLAIMS,
+	ATTR_HIBERNATION_SUPPORTED_STATES,
+	ATTR_STARTER_ABILITY_LIST,
+	ATTR_HAS_VM,
+	ATTR_VM_GUEST_MAC,
+	ATTR_VM_GUEST_IP,
+	ATTR_VM_GUEST_MEM,
+	ATTR_VM_AVAIL_NUM,
+	ATTR_VM_MEMORY,
+	ATTR_VM_NETWORKING,
+	ATTR_VM_ALL_GUEST_IPS,
+	ATTR_VM_ALL_GUEST_MACS,
+	ATTR_VM_TYPE,
+	ATTR_VM_NETWORKING_TYPES,
+	ATTR_HAS_RECONNECT,
+	ATTR_HAS_FILE_TRANSFER,
+	ATTR_HAS_PER_FILE_ENCRYPTION,
+	ATTR_HAS_MPI,
+	ATTR_HAS_TDP,
+	ATTR_HAS_JOB_DEFERRAL,
+	ATTR_HAS_JIC_LOCAL_CONFIG,
+	ATTR_HAS_JIC_LOCAL_STDIN,
+	ATTR_HAS_JAVA,
+	ATTR_HAS_WIN_RUN_AS_OWNER,
+	ATTR_JAVA_VENDOR,
+	ATTR_JAVA_VERSION,
+	"JavaSpecificationVersion",
+	ATTR_JAVA_MFLOPS,
+	NULL		// list must end with NULL
+};
+
+static const char *job_attrs_list[]  = {
+	ATTR_CLUSTER_ID,
+	ATTR_PROC_ID,
+	ATTR_Q_DATE,
+	ATTR_COMPLETION_DATE,
+	ATTR_OWNER,
+	ATTR_NT_DOMAIN,
+	ATTR_JOB_REMOTE_WALL_CLOCK,
+	ATTR_JOB_LOCAL_USER_CPU,
+	ATTR_JOB_LOCAL_SYS_CPU,
+	ATTR_JOB_REMOTE_USER_CPU,
+	ATTR_JOB_REMOTE_SYS_CPU,
+	ATTR_NUM_CKPTS,
+	ATTR_NUM_JOB_STARTS,
+	ATTR_NUM_RESTARTS,
+	ATTR_NUM_SYSTEM_HOLDS,
+	ATTR_JOB_COMMITTED_TIME,
+	ATTR_TOTAL_SUSPENSIONS,
+	ATTR_LAST_SUSPENSION_TIME,
+	ATTR_CUMULATIVE_SUSPENSION_TIME,
+	ATTR_JOB_UNIVERSE,
+	ATTR_JOB_CMD,
+	ATTR_TRANSFER_EXECUTABLE,
+	ATTR_WANT_REMOTE_SYSCALLS,
+	ATTR_WANT_CHECKPOINT,
+	ATTR_JOB_CMD_MD5,
+	ATTR_JOB_CMD_HASH,
+	ATTR_GRID_RESOURCE,
+	ATTR_JOB_VM_TYPE,
+	ATTR_JOB_VM_CHECKPOINT,
+	ATTR_JOB_VM_NETWORKING,
+	ATTR_JOB_VM_NETWORKING_TYPE,
+	ATTR_JOB_VM_MEMORY,
+	ATTR_JOB_VM_VCPUS,
+	ATTR_JOB_VM_MACADDR,
+	ATTR_JOB_VM_HARDWARE_VT,
+	ATTR_WHEN_TO_TRANSFER_OUTPUT,
+	ATTR_SHOULD_TRANSFER_FILES,
+	ATTR_MIN_HOSTS,
+	ATTR_MAX_HOSTS,
+	ATTR_MACHINE_COUNT,
+	ATTR_REQUEST_CPUS,
+	ATTR_NEXT_JOB_START_DELAY,
+	ATTR_IMAGE_SIZE,
+	ATTR_EXECUTABLE_SIZE,
+	ATTR_DISK_USAGE,
+	ATTR_REQUEST_MEMORY,
+	ATTR_REQUEST_DISK,
+	ATTR_FILE_REMAPS,
+	ATTR_BUFFER_FILES,
+	ATTR_BUFFER_SIZE,
+	ATTR_BUFFER_BLOCK_SIZE,
+	ATTR_TRANSFER_INPUT_FILES,
+	ATTR_TRANSFER_OUTPUT_FILES,
+	ATTR_JAR_FILES,
+	ATTR_JOB_INPUT,
+	ATTR_JOB_OUTPUT,
+	ATTR_JOB_ERROR,
+	ATTR_TRANSFER_OUTPUT_REMAPS,
+	ATTR_ENCRYPT_INPUT_FILES,
+	ATTR_ENCRYPT_OUTPUT_FILES,
+	ATTR_DONT_ENCRYPT_INPUT_FILES,
+	ATTR_DONT_ENCRYPT_OUTPUT_FILES,
+	ATTR_TRANSFER_FILES,
+	ATTR_NEVER_CREATE_JOB_SANDBOX,
+	ATTR_FETCH_FILES,
+	ATTR_COMPRESS_FILES,
+	ATTR_APPEND_FILES,
+	ATTR_LOCAL_FILES,
+	ATTR_JOB_JAVA_VM_ARGS1,
+	ATTR_JOB_JAVA_VM_ARGS2,
+	ATTR_PARALLEL_SCRIPT_SHADOW,
+	ATTR_PARALLEL_SCRIPT_STARTER,
+	ATTR_TRANSFER_INPUT,
+	ATTR_STREAM_INPUT,
+	ATTR_TRANSFER_OUTPUT,
+	ATTR_STREAM_OUTPUT,
+	ATTR_TRANSFER_ERROR,
+	ATTR_STREAM_ERROR,
+	ATTR_JOB_STATUS,
+	ATTR_LAST_JOB_STATUS,
+	ATTR_HOLD_REASON,
+	ATTR_HOLD_REASON_CODE,
+	ATTR_HOLD_REASON_SUBCODE,	
+	ATTR_ENTERED_CURRENT_STATUS,
+	ATTR_JOB_PRIO,
+	ATTR_NICE_USER,
+	ATTR_PERIODIC_HOLD_CHECK,
+	ATTR_PERIODIC_RELEASE_CHECK,
+	ATTR_PERIODIC_REMOVE_CHECK,
+	ATTR_ON_EXIT_HOLD_CHECK,
+	ATTR_JOB_LEAVE_IN_QUEUE,
+	ATTR_ON_EXIT_REMOVE_CHECK,
+	ATTR_JOB_NOOP,
+	ATTR_JOB_NOOP_EXIT_SIGNAL,
+	ATTR_JOB_NOOP_EXIT_CODE,
+	ATTR_JOB_NOTIFICATION,
+	ATTR_NOTIFY_USER,
+	ATTR_EMAIL_ATTRIBUTES,
+	ATTR_LAST_MATCH_LIST_LENGTH,
+	ATTR_DAG_NODE_NAME,
+	ATTR_DAGMAN_JOB_ID,
+	ATTR_JOB_REMOTE_IWD,
+	ATTR_JOB_ARGUMENTS1,
+	ATTR_JOB_ARGUMENTS2,
+	ATTR_DEFERRAL_TIME,
+	ATTR_DEFERRAL_WINDOW,
+	ATTR_DEFERRAL_PREP_TIME,
+	ATTR_SCHEDD_INTERVAL,
+	ATTR_JOB_ENVIRONMENT1,
+	ATTR_JOB_ENVIRONMENT2,
+	ATTR_JOB_ENVIRONMENT1_DELIM,
+	ATTR_JOB_ROOT_DIR,
+	ATTR_TOOL_DAEMON_CMD,
+	ATTR_TOOL_DAEMON_INPUT,
+	ATTR_TOOL_DAEMON_OUTPUT,
+	ATTR_TOOL_DAEMON_ERROR,
+	ATTR_TOOL_DAEMON_ARGS1,
+	ATTR_TOOL_DAEMON_ARGS2,
+	ATTR_SUSPEND_JOB_AT_EXEC,
+	ATTR_JOB_RUNAS_OWNER,
+	ATTR_JOB_LOAD_PROFILE,
+	ATTR_JOB_IWD,
+	ATTR_ULOG_FILE,
+	ATTR_ULOG_USE_XML,
+	ATTR_CORE_SIZE,
+	ATTR_JOB_LEASE_DURATION,
+	ATTR_GRID_JOB_ID,
+	ATTR_JOB_MATCHED,
+	ATTR_CURRENT_HOSTS,
+	ATTR_GLOBUS_RESUBMIT_CHECK,
+	ATTR_USE_GRID_SHELL,
+	ATTR_REMATCH_CHECK,
+	ATTR_GLOBUS_RSL,
+	ATTR_GLOBUS_XML,
+	ATTR_NORDUGRID_RSL,
+	ATTR_KEYSTORE_ALIAS,
+	ATTR_KEYSTORE_PASSPHRASE_FILE,
+	ATTR_AMAZON_PUBLIC_KEY,
+	ATTR_AMAZON_PRIVATE_KEY,
+	ATTR_AMAZON_KEY_PAIR_FILE,
+	ATTR_AMAZON_SECURITY_GROUPS,
+	ATTR_AMAZON_AMI_ID,
+	ATTR_AMAZON_INSTANCE_TYPE,
+	ATTR_AMAZON_USER_DATA,
+	ATTR_AMAZON_USER_DATA_FILE,
+	ATTR_X509_USER_PROXY_SUBJECT,
+	ATTR_X509_USER_PROXY,
+	ATTR_X509_USER_PROXY_VONAME,
+	ATTR_X509_USER_PROXY_FIRST_FQAN,
+	ATTR_X509_USER_PROXY_FQAN,
+	ATTR_MYPROXY_HOST_NAME,
+	ATTR_MYPROXY_SERVER_DN,
+	ATTR_MYPROXY_PASSWORD,
+	ATTR_MYPROXY_CRED_NAME,
+	ATTR_MYPROXY_REFRESH_THRESHOLD,
+	ATTR_MYPROXY_NEW_PROXY_LIFETIME,
+	ATTR_MYPROXY_PASSWORD_EXISTS,
+	ATTR_KILL_SIG,
+	ATTR_REMOVE_KILL_SIG,
+	ATTR_HOLD_KILL_SIG,
+	ATTR_CONCURRENCY_LIMITS,
+	ATTR_REMOVE_REASON,
+	ATTR_USER,
+	ATTR_SHADOW_BIRTHDATE,
+	ATTR_JOB_FINISHED_HOOK_DONE,
+	ATTR_STAGE_OUT_FINISH,
+	ATTR_STAGE_IN_START,
+	ATTR_STAGE_OUT_START,
+	ATTR_JOB_STATUS_ON_RELEASE,
+	ATTR_LAST_REJ_MATCH_REASON,
+	ATTR_LAST_REJ_MATCH_TIME,
+	ATTR_LAST_MATCH_TIME,
+	ATTR_NUM_MATCHES,
+	ATTR_LAST_JOB_LEASE_RENEWAL,
+	ATTR_JOB_START_DATE,
+	ATTR_JOB_LAST_START_DATE,
+	ATTR_JOB_CURRENT_START_DATE,
+	ATTR_JOB_RUN_COUNT,
+	ATTR_NUM_SHADOW_STARTS,
+	ATTR_NUM_RESTARTS,
+	ATTR_REMOTE_HOST,
+	ATTR_REMOTE_SLOT_ID,
+	ATTR_REMOTE_POOL,
+	ATTR_STARTD_PRINCIPAL,
+	ATTR_JOB_WALL_CLOCK_CKPT,
+	ATTR_LAST_REMOTE_HOST,
+	ATTR_LAST_PUBLIC_CLAIM_ID,
+	ATTR_ORIG_MAX_HOSTS,
+	ATTR_NUM_SHADOW_EXCEPTIONS,
+	ATTR_JOB_EXIT_STATUS,
+	ATTR_ON_EXIT_CODE,
+	ATTR_ON_EXIT_BY_SIGNAL,
+	ATTR_ON_EXIT_SIGNAL,
+	ATTR_RELEASE_REASON,
+	ATTR_GRID_JOB_ID,
+	NULL		// list must end with NULL
+};
+
+static const char *schedd_attrs_list[]  = {
+	ATTR_SCHEDD_IP_ADDR,
+	"MyShadowSockname",
+	"QueueCleanInterval",
+	"JobStartDelay",
+	"JobStartCount",
+	"JobsThisBurst",
+	ATTR_MAX_JOBS_RUNNING,
+	"MaxJobsSubmitted",
+	"JobsStarted",
+	"SwapSpace",
+	"ShadowSizeEstimate",
+	"SwapSpaceExhausted",
+	"ReservedSwap",
+	"JobsIdle",
+	"JobsRunning",
+	"BadCluster",
+	"BadProc",
+	"N_Owners",
+	"NegotiationRequestTime",
+	"ExitWhenDone",
+	"StartJobTimer",
+	"CondorAdministrator",
+	"AccountantName",
+	"MaxFlockLevel",
+	"FlockLevel",
+	"MaxExceptions",
+	ATTR_ARCH,
+	ATTR_OPSYS,
+	ATTR_MEMORY,
+	ATTR_DISK,
+	ATTR_TOTAL_LOCAL_IDLE_JOBS,
+	ATTR_TOTAL_LOCAL_RUNNING_JOBS,
+	ATTR_START_LOCAL_UNIVERSE,
+	ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
+	ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
+	ATTR_START_SCHEDULER_UNIVERSE,
+	NULL		// list must end with NULL
+};
+
+static void InitTargetAttrLists()
+{
+	const char **attr;
+	char *tmp;
+	MyString buff;
+	StringList tmp_strlist;
+
+	///////////////////////////////////
+	// Set up Machine attributes list
+	///////////////////////////////////
+	for ( attr = machine_attrs_list; *attr; attr++ ) {
+		machine_attrs_ad.AssignExpr( *attr, "True" );
+	}
+
+	machine_attrs_ad.Delete( ATTR_CURRENT_TIME );
+
+	tmp = param( "STARTD_EXPRS" );
+	if ( tmp ) {
+		tmp_strlist.initializeFromString( tmp );
+		free( tmp );
+		tmp_strlist.rewind();
+		while ( (tmp = tmp_strlist.next()) ) {
+			machine_attrs_ad.AssignExpr( tmp, "True" );
+		}
+		tmp_strlist.clearAll();
+	}
+
+	tmp = param( "STARTD_ATTRS" );
+	if ( tmp ) {
+		tmp_strlist.initializeFromString( tmp );
+		free( tmp );
+		tmp_strlist.rewind();
+		while ( (tmp = tmp_strlist.next()) ) {
+			machine_attrs_ad.AssignExpr( tmp, "True" );
+		}
+		tmp_strlist.clearAll();
+	}
+
+	tmp = param( "STARTD_RESOURCE_PREFIX" );
+	if ( tmp ) {
+		buff.sprintf( "%s*", tmp );
+		machine_attrs_strlist.append( buff.Value() );
+		free( tmp );
+	} else {
+		machine_attrs_strlist.append( "slot*" );
+	}
+
+	tmp = param( "TARGET_MACHINE_ATTRS" );
+	if ( tmp ) {
+		machine_attrs_strlist.initializeFromString( tmp );
+		free( tmp );
+	}
+
+	///////////////////////////////////
+	// Set up Job attributes list
+	///////////////////////////////////
+	for ( attr = job_attrs_list; *attr; attr++ ) {
+		job_attrs_ad.AssignExpr( *attr, "True" );
+	}
+
+	job_attrs_ad.Delete( ATTR_CURRENT_TIME );
+
+	tmp = param( "SUBMIT_EXPRS" );
+	if ( tmp ) {
+		tmp_strlist.initializeFromString( tmp );
+		free( tmp );
+		tmp_strlist.rewind();
+		while ( (tmp = tmp_strlist.next()) ) {
+			job_attrs_ad.AssignExpr( tmp, "True" );
+		}
+		tmp_strlist.clearAll();
+	}
+
+	buff.sprintf( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
+	job_attrs_strlist.append( buff.Value() );
+
+	buff.sprintf( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
+	job_attrs_strlist.append( buff.Value() );
+
+	tmp = param( "TARGET_JOB_ATTRS" );
+	if ( tmp ) {
+		job_attrs_strlist.initializeFromString( tmp );
+		free( tmp );
+	}
+
+	///////////////////////////////////
+	// Set up Schedd attributes list
+	///////////////////////////////////
+	for ( attr = schedd_attrs_list; *attr; attr++ ) {
+		schedd_attrs_ad.AssignExpr( *attr, "True" );
+	}
+
+	schedd_attrs_ad.Delete( ATTR_CURRENT_TIME );
+
+	target_attrs_init = true;
+}
+
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
+{
+	if ( !target_attrs_init ) {
+		InitTargetAttrLists();
+	}
+
+	if( tree == NULL ) {
+		return NULL;
+	}
+	if ( target_type != TargetMachineAttrs && target_type != TargetJobAttrs &&
+		 target_type != TargetScheddAttrs ) {
+		return NULL;
+	}
+	classad::ExprTree::NodeKind nKind = tree->GetKind( );
+	switch( nKind ) {
+	case classad::ExprTree::ATTRREF_NODE: {
+		classad::ExprTree *expr = NULL;
+		string attr = "";
+		bool abs = false;
+		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
+		if( abs || expr != NULL ) {
+			return tree->Copy( );
+		}
+		else {
+			bool add_target = false;
+			if ( target_type == TargetMachineAttrs ) {
+				if ( machine_attrs_ad.Lookup( attr.c_str() ) ||
+					 machine_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
+					add_target = true;
+				}
+			} else if ( target_type == TargetJobAttrs ) {
+				if ( job_attrs_ad.Lookup( attr.c_str() ) ||
+					 job_attrs_strlist.contains_anycase_withwildcard( attr.c_str() ) ) {
+					add_target = true;
+				}
+			} else {
+				if ( schedd_attrs_ad.Lookup( attr.c_str() ) ) {
+					add_target = true;
+				}
+			}
+			if( add_target ) {
+					// attribute is in our list, so insert "target"
+				classad::AttributeReference *target = NULL;
+				target = classad::AttributeReference::MakeAttributeReference(NULL,
+																	"target");
+				return classad::AttributeReference::MakeAttributeReference(target,attr);
+			}
+			else {
+				return tree->Copy( );
+			}
+		}
+	}
+	case classad::ExprTree::OP_NODE: {
+		classad::Operation::OpKind oKind;
+		classad::ExprTree * expr1 = NULL;
+		classad::ExprTree * expr2 = NULL;
+		classad::ExprTree * expr3 = NULL;
+		classad::ExprTree * newExpr1 = NULL;
+		classad::ExprTree * newExpr2 = NULL;
+		classad::ExprTree * newExpr3 = NULL;
+		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
+		if( expr1 != NULL ) {
+			newExpr1 = AddTargetRefs( expr1, target_type );
+		}
+		if( expr2 != NULL ) {
+			newExpr2 = AddTargetRefs( expr2, target_type );
+		}
+		if( expr3 != NULL ) {
+			newExpr3 = AddTargetRefs( expr3, target_type );
+		}
+		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
+	}
+	case classad::ExprTree::FN_CALL_NODE: {
+		std::string fn_name;
+		classad::ArgumentList old_fn_args;
+		classad::ArgumentList new_fn_args;
+		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
+		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
+			new_fn_args.push_back( AddTargetRefs( *i, target_type ) );
+		}
+		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
+	}
+	default: {
+ 			// old ClassAds have no nested ClassAds or lists
+			// literals have no attrrefs in them
+		return tree->Copy( );
+	}
+	}
+}
+
+const char *ConvertEscapingOldToNew( const char *str )
+{
+	static std::string new_str;
+
+	new_str = "";
+
+		// String escaping is different between new and old ClassAds.
+		// We need to convert the escaping from old to new style before
+		// handing the expression to the new ClassAds parser.
+	for ( int i = 0; str[i] != '\0'; i++ ) {
+		if ( str[i] == '\\' && 
+			 ( str[i + 1] != '"' ||
+			   str[i + 1] == '"' &&
+			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
+				 str[i + 2] == '\r') ) ) {
+			new_str.append( 1, '\\' );
+		}
+		new_str.append( 1, str[i] );
+	}
+
+	return new_str.c_str();
+}
+
+// end functions
 
 } // namespace compat_classad

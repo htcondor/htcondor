@@ -894,7 +894,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //	submit_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, true );
 //	submit_ad->Assign( ATTR_SHOULD_TRANSFER_FILES, false );
 
-//	expr.sprintf( "%s = (%s >= %s) =!= True && CurrentTime > %s + %d",
+//	expr.sprintf( "%s = (%s >= %s) =!= True && time() > %s + %d",
 //				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
 //				  ATTR_STAGE_IN_START, ATTR_Q_DATE, 1800 );
 //	submit_ad->Insert( expr.Value() );

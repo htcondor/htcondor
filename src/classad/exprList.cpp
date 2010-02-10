@@ -123,9 +123,9 @@ SameAs(const ExprTree *tree) const
     } else if (tree->GetKind() != EXPR_LIST_NODE) {
         is_same = false;
     } else {
-        ExprList *other_list;
+        const ExprList *other_list;
 
-        other_list = (ExprList *) tree;
+        other_list = (const ExprList *) tree;
 
         if (exprList.size() != other_list->exprList.size()) {
             is_same = false;

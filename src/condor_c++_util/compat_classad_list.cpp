@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "compat_classad_list.h"
 #include "condor_xml_classads.h"
 

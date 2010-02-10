@@ -1003,7 +1003,7 @@ Resource::final_update( void )
 	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
 
 		// We only want to invalidate this slot.
-	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
+	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
 			 r_name );
 	invalidate_ad.Insert( line.Value() );
 
@@ -1437,7 +1437,11 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
 			r_classad->dPrint(D_ALWAYS);
 			dprintf(D_ALWAYS, "=============================\n");
-			r_cur->ad()->dPrint(D_ALWAYS);
+			if ( r_cur->ad() ) {
+				r_cur->ad()->dPrint(D_ALWAYS);
+			} else {
+				dprintf( D_ALWAYS, "<no job ad>\n" );
+			}
 			EXCEPT( "Can't evaluate %s", expr_name );
 		} else {
 				// anything else for here?
@@ -1759,6 +1763,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {
 		resmgr->publishSlotAttrs( cap );
 	}
+
+#if !defined(WANT_OLD_CLASSADS)
+	cap->AddTargetRefs( TargetJobAttrs, false );
+#endif
 }
 
 void

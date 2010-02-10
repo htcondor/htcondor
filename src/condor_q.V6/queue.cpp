@@ -1232,7 +1232,8 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "globus" ) ) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			globus = true;
-			attrs.clearAll();
+			attrs.append( ATTR_GLOBUS_STATUS );
+			attrs.append( ATTR_GRID_RESOURCE );
 		}
 		else
 		if( match_prefix( arg, "debug" ) ) {
@@ -2547,6 +2548,9 @@ setupAnalysis()
 				ad->Insert( buffer );
 			}
 		}
+#if !defined(WANT_OLD_CLASSADS)
+		ad->AddTargetRefs( TargetJobAttrs );
+#endif
 	}
 	startdAds.Close();
 	
@@ -2573,6 +2577,11 @@ setupAnalysis()
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );
 		}
+#if !defined(WANT_OLD_CLASSADS)
+		ExprTree *tmp_expr = AddTargetRefs( preemptionReq, TargetJobAttrs );
+		delete preemptionReq;
+		preemptionReq = tmp_expr;
+#endif
 		free( preq );
 	}
 
@@ -2662,6 +2671,10 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	int		totalMachines	= 0;
 
 	return_buff[0]='\0';
+
+#if !defined(WANT_OLD_CLASSADS)
+	request->AddTargetRefs( TargetMachineAttrs );
+#endif
 
 	if( schedd ) {
 		MyString buf;

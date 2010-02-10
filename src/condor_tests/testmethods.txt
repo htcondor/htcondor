@@ -341,16 +341,16 @@ job_core_leaveinqueue_sched.run*
 	Description:  Verify with two built in tests that BOTH uses (T/F) impact the job queue as 
 		desired. 
 	Method: Run file fires off two tests, one for each case for leave_inqueue.
-			leave_in_queue = (CurrentTime - QDate) < (2 ) /bin/sleep 3 false
-			leave_in_queue = (CurrentTime - QDate) > (2 ) /bin/sleep 3 true
+			leave_in_queue = (time() - QDate) < (2 ) /bin/sleep 3 false
+			leave_in_queue = (time() - QDate) > (2 ) /bin/sleep 3 true
 	Expects: returns from both tests to be zero.
 
 job_core_leaveinqueue_van.run*
 	Description:  Verify with two built in tests that BOTH uses (T/F) impact the job queue as 
 		desired. 
 	Method: Run file fires off two tests, one for each case for leave_inqueue.
-			leave_in_queue = (CurrentTime - QDate) < (2 ) /bin/sleep 3 false
-			leave_in_queue = (CurrentTime - QDate) > (2 ) /bin/sleep 3 true
+			leave_in_queue = (time() - QDate) < (2 ) /bin/sleep 3 false
+			leave_in_queue = (time() - QDate) > (2 ) /bin/sleep 3 true
 	Expects: returns from both tests to be zero.
 
 job_core_macros-dollardollar_van.run*
@@ -411,15 +411,15 @@ job_core_onexithold_java.run*
 job_core_onexithold_sched.run*
 	Description: Verify on_exit_hold works with both a true and a false trigger
 	Method: Run two tests and check correct behaviour.
-		on_exit_hold = (CurrentTime - QDate) < (2 ) /bin/sleep 3 false
-		on_exit_hold = (CurrentTime - QDate) < (2 * 60) /bin/sleep 3 true
+		on_exit_hold = (time() - QDate) < (2 ) /bin/sleep 3 false
+		on_exit_hold = (time() - QDate) < (2 * 60) /bin/sleep 3 true
 	Expects: false job should complete trivially and true should be held
 
 job_core_onexithold_van.run*
 	Description: Verify on_exit_hold works with both a true and a false trigger
 	Method: Run two tests and check correct behaviour.
-		on_exit_hold = (CurrentTime - QDate) < (2 ) /bin/sleep 3 false
-		on_exit_hold = (CurrentTime - QDate) < (2 * 60) /bin/sleep 3 true
+		on_exit_hold = (time() - QDate) < (2 ) /bin/sleep 3 false
+		on_exit_hold = (time() - QDate) < (2 * 60) /bin/sleep 3 true
 	Expects: false job should complete trivially and true should be held
 
 job_core_onexitrem_java.run*
@@ -430,15 +430,15 @@ job_core_onexitrem_java.run*
 job_core_onexitrem_sched.run*
 	Description: Verify true and false triggers of on_exit_remove
 	Method:  run two tests and verify both
-		on_exit_remove = (CurrentTime - QDate) > 60 /bin/sleep 3 true
-		on_exit_remove = (CurrentTime - QDate) > (2 ) /bin/sleep 3 false
+		on_exit_remove = (time() - QDate) > 60 /bin/sleep 3 true
+		on_exit_remove = (time() - QDate) > (2 ) /bin/sleep 3 false
 	Expects: requeue on true and trivial completion on false
 
 job_core_onexitrem_van.run*
 	Description:  Verify true and false triggers of on_exit_remove
 	Method:  run two tests and verify both
-		on_exit_remove = (CurrentTime - QDate) > 60 /bin/sleep 3 true
-		on_exit_remove = (CurrentTime - QDate) > (2 ) /bin/sleep 3 false
+		on_exit_remove = (time() - QDate) > 60 /bin/sleep 3 true
+		on_exit_remove = (time() - QDate) > (2 ) /bin/sleep 3 false
 	Expects: requeue on true and trivial completion on false
 
 job_core_output_java.run*
@@ -465,8 +465,8 @@ job_core_perhold_sched.run*
 	Description: verify true and false triggers for periodic hold
 	Method: run 2 tests for true evaluation and false with true ending
 		up by having the job placed on hold.
-		periodic_hold = (CurrentTime - QDate) > 5 /bin/sleep 40 true
-		periodic_hold = (CurrentTime - QDate) < 0 /bin/sleep 4 false
+		periodic_hold = (time() - QDate) > 5 /bin/sleep 40 true
+		periodic_hold = (time() - QDate) < 0 /bin/sleep 4 false
 	Expects: true should pass from executed to hold to abort when we remove it
 		while false should have trivial completion.
 
@@ -474,8 +474,8 @@ job_core_perhold_van.run*
 	Description: verify true and false triggers for periodic hold
 	Method: run 2 tests for true evaluation and false with true ending
 		up by having the job placed on hold.
-		periodic_hold = (CurrentTime - QDate) > 5 /bin/sleep 40 true
-		periodic_hold = (CurrentTime - QDate) < 0 /bin/sleep 4 false
+		periodic_hold = (time() - QDate) > 5 /bin/sleep 40 true
+		periodic_hold = (time() - QDate) < 0 /bin/sleep 4 false
 	Expects: true should pass from executed to hold to abort when we remove it
 		while false should have trivial completion.
 
@@ -487,15 +487,15 @@ job_core_perrelease_java.run*
 job_core_perrelease_sched.run*
 	Description: Verify true/false policies for periodic release do the right thing.
 	Method: run 2 tests for periodic release where one evaluates to true and the other false.
-		periodic_release = (CurrentTime - QDate) > 3 /bin/sleep 6 true
-		periodic_release = (CurrentTime - QDate) < 0 /bin/sleep 10 false
+		periodic_release = (time() - QDate) > 3 /bin/sleep 6 true
+		periodic_release = (time() - QDate) < 0 /bin/sleep 10 false
 	Expects: True version should see execute/release/reschedule. False should see a timeout.
 
 job_core_perrelease_van.run*
 	Description: Verify true/false policies for periodic release do the right thing.
 	Method: run 2 tests for periodic release where one evaluates to true and the other false.
-		periodic_release = (CurrentTime - QDate) > 3 /bin/sleep 6 true
-		periodic_release = (CurrentTime - QDate) < 0 /bin/sleep 10 false
+		periodic_release = (time() - QDate) > 3 /bin/sleep 6 true
+		periodic_release = (time() - QDate) < 0 /bin/sleep 10 false
 	Expects: True version should see execute/release/reschedule. False should see a timeout.
 
 job_core_perremove_java.run*
@@ -506,15 +506,15 @@ job_core_perremove_java.run*
 job_core_perremove_sched.run*
 	Description:  Verify true/false policy settings for preiodic remove.
 	Method: Run two tests where one evaluates to true and the other to false.
-		periodic_remove = (CurrentTime - QDate) > 2 /bin/sleep 3 true
-		periodic_remove = (CurrentTime - QDate) < (0 ) /bin/sleep 3 false
+		periodic_remove = (time() - QDate) > 2 /bin/sleep 3 true
+		periodic_remove = (time() - QDate) < (0 ) /bin/sleep 3 false
 	Expects: False expects trivail success. True expects an executed followed by an abort.
 
 job_core_perremove_van.run*
 	Description:  Verify true/false policy settings for preiodic remove.
 	Method: Run two tests where one evaluates to true and the other to false.
-		periodic_remove = (CurrentTime - QDate) > 2 /bin/sleep 3 true
-		periodic_remove = (CurrentTime - QDate) < (0 ) /bin/sleep 3 false
+		periodic_remove = (time() - QDate) > 2 /bin/sleep 3 true
+		periodic_remove = (time() - QDate) < (0 ) /bin/sleep 3 false
 	Expects: False expects trivail success. True expects an executed followed by an abort.
 
 job_core_plus_java.run*

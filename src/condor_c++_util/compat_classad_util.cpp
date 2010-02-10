@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "compat_classad_util.h"
 #include "classad_oldnew.h"
 
@@ -36,16 +37,7 @@ int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
 	std::string newAdStr = "[";
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-		if ( str[i] == '\\' && 
-			 ( str[i + 1] != '"' ||
-			   str[i + 1] == '"' &&
-			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
-				 str[i + 2] == '\r') ) ) {
-			newAdStr.append( 1, '\\' );
-		}
-		newAdStr.append( 1, str[i] );
-	}
+	newAdStr.append( compat_classad::ConvertEscapingOldToNew( str ) );
 	newAdStr += "]";
 	newAd = parser.ParseClassAd( newAdStr );
 	if ( newAd == NULL ) {
@@ -70,7 +62,7 @@ int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 {
 	classad::ClassAdParser parser;
-	std::string str = s;
+	std::string str = compat_classad::ConvertEscapingOldToNew( s );
 	if ( parser.ParseExpression( str, tree, true ) ) {
 		return 0;
 	} else {
@@ -89,26 +81,19 @@ const char *ExprTreeToString( classad::ExprTree *expr )
 	static std::string buffer;
 	classad::ClassAdUnParser unparser;
 
+	buffer = "";
 	unparser.SetOldClassAd( true );
 	unparser.Unparse( buffer, expr );
 
 	return buffer.c_str();
 }
 
-static compat_classad::ClassAd *empty_ad = NULL;
-
-/* TODO This function needs to be written.
- */
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 {
 	static classad::ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
 	compat_classad::EvalResult result;
 	bool constraint_changed = true;
-
-	if ( empty_ad == NULL ) {
-		empty_ad = new compat_classad::ClassAd;
-	}
 
 	if ( saved_constraint ) {
 		if ( strcmp(saved_constraint,constraint) == 0 ) {
@@ -126,17 +111,20 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 			delete tree;
 			tree = NULL;
 		}
-		if ( ParseClassAdRvalExpr( constraint, tree ) != 0 ) {
+		classad::ExprTree *tmp_tree = NULL;
+		if ( ParseClassAdRvalExpr( constraint, tmp_tree ) != 0 ) {
 			dprintf( D_ALWAYS,
 				"can't parse constraint: %s\n", constraint );
 			return false;
 		}
+		tree = compat_classad::RemoveExplicitTargetRefs( tmp_tree );
+		delete tmp_tree;
 		saved_constraint = strdup( constraint );
 	}
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, empty_ad, ad, &result ) ) {
+	if ( !EvalExprTree( tree, ad, NULL, &result ) ) {
 		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
 		return false;
 	}
@@ -148,19 +136,13 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 	return false;
 }
 
-/* TODO This function needs to be written.
- */
 bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
 	compat_classad::EvalResult result;
 
-	if ( empty_ad == NULL ) {
-		empty_ad = new compat_classad::ClassAd;
-	}
-
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, empty_ad, ad, &result ) ) {        
+	if ( !EvalExprTree( tree, ad, NULL, &result ) ) {        
 		return false;
 	}
 
@@ -213,6 +195,24 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 	return ! found_diff;
 }
 
+static classad::MatchClassAd *the_match_ad;
+static bool the_match_ad_in_use;
+static classad::MatchClassAd *getTheMatchAd() {
+	ASSERT( !the_match_ad_in_use );
+	the_match_ad_in_use = true;
+
+	if( !the_match_ad ) {
+		the_match_ad = new classad::MatchClassAd( );
+	}
+	return the_match_ad;
+}
+
+static void releaseTheMatchAd() {
+	ASSERT( the_match_ad_in_use );
+
+	the_match_ad_in_use = false;
+}
+
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 				  compat_classad::ClassAd *target, compat_classad::EvalResult *result )
 {
@@ -227,7 +227,10 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
-		mad = new classad::MatchClassAd( source, target );
+		mad = getTheMatchAd();
+
+		mad->ReplaceLeftAd( source );
+		mad->ReplaceRightAd( target );
 	}
 	if ( source->EvaluateExpr( expr, val ) ) {
 		switch ( val.GetType() ) {
@@ -238,7 +241,7 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 			result->type = compat_classad::LX_UNDEFINED;
 			break;
 		case classad::Value::BOOLEAN_VALUE: {
-			result->type = compat_classad::LX_BOOL;
+			result->type = compat_classad::LX_INTEGER;
 			bool v;
 			val.IsBooleanValue( v );
 			result->i = v ? 1 : 0;
@@ -272,7 +275,8 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	if ( mad ) {
 		mad->RemoveLeftAd();
 		mad->RemoveRightAd();
-		delete mad;
+
+		releaseTheMatchAd();
 	}
 	expr->SetParentScope( old_scope );
 
@@ -281,43 +285,32 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 {
-	return IsAHalfMatch(ad1, ad2) && IsAHalfMatch(ad2, ad1);
+	classad::MatchClassAd *mad = getTheMatchAd();
+	mad->ReplaceLeftAd( ad1 );
+	mad->ReplaceRightAd( ad2 );
+
+	bool result = mad->symmetricMatch();
+
+	mad->RemoveLeftAd();
+	mad->RemoveRightAd();
+
+	releaseTheMatchAd();
+	return result;
 }
 
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
 {
-	static classad::ExprTree *reqsTree = NULL;
-	compat_classad::EvalResult *val;	
-	
-	if( stricmp(target->GetMyTypeName(),my->GetTargetTypeName()) &&
-	    stricmp(my->GetTargetTypeName(),ANY_ADTYPE) )
-	{
-		return false;
-	}
+	classad::MatchClassAd *mad = getTheMatchAd();
+	mad->ReplaceLeftAd( my );
+	mad->ReplaceRightAd( target );
 
-	if ((val = new compat_classad::EvalResult) == NULL)
-	{
-		EXCEPT("Out of memory -- quitting");
-	}
+	bool result = mad->rightMatchesLeft();
 
-	if ( reqsTree == NULL ) {
-		ParseClassAdRvalExpr ("MY.Requirements", reqsTree);
-	}
-	EvalExprTree( reqsTree, my, target, val );
-	if (!val || val->type != compat_classad::LX_INTEGER)
-	{
-		delete val;
-		return false;
-	}
-	else
-	if (!val->i)
-	{
-		delete val;
-		return false;
-	}
+	mad->RemoveLeftAd();
+	mad->RemoveRightAd();
 
-	delete val;
-	return true;
+	releaseTheMatchAd();
+	return result;
 }
 
 void AttrList_setPublishServerTime( bool publish )

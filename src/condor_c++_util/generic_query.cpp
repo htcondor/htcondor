@@ -242,13 +242,14 @@ setFloatKwList (char **value)
 
 // make query
 int GenericQuery::
-makeQuery (ClassAd &ad)
+makeQuery (ExprTree *&tree, bool use_target)
 {
 	int		i, value;
 	char	*item;
 	float   fvalue;
 	MyString req = "";
-	ExprTree *tree;
+
+	tree = NULL;
 
 	// construct query requirement expression
 	bool firstCategory = true;
@@ -263,8 +264,9 @@ makeQuery (ClassAd &ad)
 			req += firstCategory ? "(" : " && (";
 			while ((item = stringConstraints [i].Next ()))
 			{
-				req.sprintf_cat ("%s(TARGET.%s == \"%s\")", 
+				req.sprintf_cat ("%s(%s%s == \"%s\")", 
 						 firstTime ? " " : " || ", 
+						 use_target ? "TARGET." : "",
 						 stringKeywordList [i], item);
 				firstTime = false;
 				firstCategory = false;
@@ -283,8 +285,9 @@ makeQuery (ClassAd &ad)
 			req += firstCategory ? "(" : " && (";
 			while (integerConstraints [i].Next (value))
 			{
-				req.sprintf_cat ("%s(TARGET.%s == %d)", 
+				req.sprintf_cat ("%s(%s%s == %d)", 
 						 firstTime ? " " : " || ",
+						 use_target ? "TARGET." : "",
 						 integerKeywordList [i], value);
 				firstTime = false;
 				firstCategory = false;
@@ -303,8 +306,9 @@ makeQuery (ClassAd &ad)
 			req += firstCategory ? "(" : " && (";
 			while (floatConstraints [i].Next (fvalue))
 			{
-				req.sprintf_cat ("%s(TARGET.%s == %f)", 
+				req.sprintf_cat ("%s(%s%s == %f)", 
 						 firstTime ? " " : " || ",
+						 use_target ? "TARGET." : "",
 						 floatKeywordList [i], fvalue);
 				firstTime = false;
 				firstCategory = false;
@@ -348,7 +352,6 @@ makeQuery (ClassAd &ad)
 
 	// parse constraints and insert into query ad
 	if (ParseClassAdRvalExpr (req.Value(), tree) > 0) return Q_PARSE_ERROR;
-	ad.Insert (ATTR_REQUIREMENTS, tree);
 
 	return Q_OK;
 }

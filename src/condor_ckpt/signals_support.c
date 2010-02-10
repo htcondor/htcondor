@@ -397,28 +397,11 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		}
 	}
 
-#if defined(OSF1) || defined(Solaris) || defined(LINUX)
+#if defined(Solaris) || defined(LINUX)
 	return SIGACTION( sig, my_act, oact);
 #else
 	return syscall(SYS_sigaction, sig, my_act, oact);
 #endif
-}
-#endif
-
-/* On OSF1 there is a sigprocmask.o and a _sigprocmsk.o.  We extract the
-   former and upcase SIGPROCMASK, but we can no longer extract the
-   latter, because it results in a redefinition of _user_signal_mask.
-   sigprocmask (in sigprocmask.o) calls _sigprocmask (in _sigprocmsk.o).
-   In the upcase versions, SIGPROCMASK wants to call _SIGPROCMASK.  Since
-   we do not trap _sigprocmask in remote syscalls, we just define
-   _SIGPROCMASK in terms of _sigprocmask, and the _user_signal_mask
-   data structure is kept in synch whether SIGPROCMASK or sigprocmask is
-   called.  -Jim B. */
-#if defined(OSF1)
-int
-_SIGPROCMASK( int how, const sigset_t *set, sigset_t *oset)
-{
-	return _sigprocmask( how, set, oset );
 }
 #endif
 
@@ -441,11 +424,7 @@ int sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 			sigdelset(my_set,SIGCONT);
 		}
 	}
-#if defined(OSF1)
-	SIGPROCMASK(how,my_set,oset);
-#else
 	return syscall(SYS_sigprocmask,how,my_set,oset);
-#endif
 }
 #endif
 
@@ -460,7 +439,7 @@ const sigset_t *set;
 		sigdelset(&my_set,SIGTSTP);
 		sigdelset(&my_set,SIGCONT);
 	}
-#if defined(OSF1) || defined(LINUX)
+#if defined(LINUX)
 	return SIGSUSPEND(&my_set);
 #else
 	return syscall(SYS_sigsuspend,&my_set);
@@ -489,9 +468,7 @@ void (*func)(int);
 		}
 	}
 
-#if defined(OSF1)
-	SIGNAL(sig, func);
-#elif defined(VOID_SIGNAL_RETURN)
+#if defined(VOID_SIGNAL_RETURN)
 	return ( (void (*) (int)) syscall(SYS_signal,sig,func) );
 #else
 	return ( (int (*) (int)) syscall(SYS_signal,sig,func) );

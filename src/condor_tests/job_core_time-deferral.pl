@@ -226,10 +226,10 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	} else {
 		## 
 		##
-		## By using CurrenTime we are assuming that our clock is the
+		## By using time() we are assuming that our clock is the
 		## same as the machine it is running on
 		##
-		print FILE "DeferralTime = (CurrentTime + $delta)\n";	
+		print FILE "DeferralTime = (time() + $delta)\n";	
 	}
 	
 	##

@@ -45,7 +45,7 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "1.0.4";
+    version_string = "1.0.5";
     return;
 }
 
@@ -139,9 +139,9 @@ SameAs(const ExprTree *tree) const
    } else if (tree->GetKind() != CLASSAD_NODE) {
         is_same = false;
    } else {
-       ClassAd *other_classad;
+       const ClassAd *other_classad;
 
-       other_classad = (ClassAd *) tree;
+       other_classad = (const ClassAd *) tree;
 
        if (attrList.size() != other_classad->attrList.size()) {
            is_same = false;
@@ -908,24 +908,6 @@ EvaluateAttrList( const string &attr, ExprList *&l ) const
 }
 
 bool ClassAd::
-GetReferences( const ExprTree *tree, References &externalRefs, References &internalRefs, bool fullNames)
-{
-    bool bothPassed = true;
-
-    if(!GetExternalReferences(tree, externalRefs, fullNames))
-    {
-        bothPassed = false;
-    }
-
-    if(!GetInternalReferences(tree, internalRefs, fullNames))
-    {
-        bothPassed = false;
-    }
-
-    return bothPassed;
-}   
-
-bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
 {
     EvalState       state;
@@ -1289,7 +1271,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                  */
 
                 if( val.IsUndefinedValue() ) {
-                    return false;
+                    return true;
                 }
 
                 string nameToAddToRefs = "";
@@ -1315,7 +1297,6 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 refs.insert(nameToAddToRefs);
 
                 ExprTree *followRef;
-                ExprTree *innerAttr;
                 //TODO: If we get to this point, must there be a prefix?
                 //  FIGURE OUT WHAT A SIMPLE / ABSOLUTE ATTR IS
                 followRef = ad->Lookup(prefixStr);
@@ -1349,7 +1330,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                     
                     //bool rval = _GetInternalReferences(result, ad, state, refs, fullNames);
                     //state.curAd = curAd;
-                    return false;
+                    return true;
                 break;
                                 }
 

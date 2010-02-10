@@ -63,6 +63,8 @@ patch -i dl.patch -p0
 # Globus 2.4 with included OpenSSL), remove the check for threaded Globus
 # libraries (which aren't used) and use the correct name for the
 # namespace-enabled ClassAds library (libclassad_ns instead of libclassad).
+# They also statically link the ClassAds library instead of dynamically
+# linnking it.
 cp classads.m4 org.glite.ce.blahp/project
 cp globus.m4 org.glite.ce.blahp/project
 cp glite.m4 org.glite.ce.blahp/project

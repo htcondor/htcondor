@@ -524,6 +524,9 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
     }
+#if !defined(WANT_OLD_CLASSADS)
+	cad.AddExplicitTargetRefs();
+#endif
 
     // cancel timeout --- collector engine sets up its own timeout for
     // collecting further information
@@ -892,6 +895,9 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
 											List<ClassAd>* results)
 {
+#if !defined(WANT_OLD_CLASSADS)
+	query->AddExplicitTargetRefs();
+#endif
 	// set up for hashtable scan
 	__query__ = query;
 	__numAds__ = 0;

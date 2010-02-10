@@ -738,7 +738,7 @@ AC_ARG_ENABLE(old-classads,
   [AS_HELP_STRING([--disable-old-classads],
      [Replace old ClassAds with compatiblity layer])],
   [],
-  [enable_old_classads=yes])
+  [enable_old_classads=no])
 if test $enable_old_classads = "yes"; then
   AC_DEFINE([WANT_OLD_CLASSADS],[1],[Define if using old ClassAds])
 fi
@@ -1684,17 +1684,6 @@ case "$_cv_opsys_vers" in
   OSX_10_4 ) AC_DEFINE([Darwin_10_4], [Darwin_10_4], [Define if on OS X 10.4]) ;;
 esac
 
-# Old ALPHA_OSF1_V*.cf files contained -DDUX=DUX -DDUX*=DUX* -DTRU64,
-# so instead we AC_DEFINE them here, TRU64 is just for gsoap
-if test "x$_cv_opsys" = xyes; then
-  AC_DEFINE([DUX], [DUX], [Define if on DUX])
-  AC_DEFINE([TRU64], [DUX], [Define if on TRU64 (DUX)])
-
-  case "$_cv_opsys_vers" in
-    DUX5 ) AC_DEFINE([DUX5], [DUX5], [Define if on DUX5]) ;;
-  esac
-fi
-
 # ArchOptimizeFlag logic used to live in .cf files, mostly
 # LINUX_I386.cf, that logic now lives here.
 if test "x$_cv_opsys" = xLINUX \
@@ -1729,7 +1718,6 @@ case "$_cv_opsys" in
   # specifically ask for the C++ libraries to be statically linked
   AIX ) _cv_platform_ld_flags="-Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc" ;;
   LINUX | DARWIN ) _cv_platform_ld_flags="-lresolv" ;;
-  DUX ) _cv_platform_ld_flags="-lmld" ;;
   HPUX ) # HPUX11 Only...
     if test "x$_cv_opsys_vers" = "xHPUX11" ; then
       _cv_platform_ld_flags="-Wl,+vnocompatwarnings $_cv_lib_std_cpp";
@@ -2512,6 +2500,7 @@ AC_CHECK_FUNCS([strsignal				\
 		_stati64				\
 		_lstati64				\
 		_fstati64				\
+		readdir64				\
 		fseeko					\
 		ftello					\
 		lchown					\
@@ -3003,7 +2992,7 @@ fi
 
 # Build drmaa on any platform with pthreads available, except for the following
 # platforms where the build is known to fail
-if test "x$_cv_sysname" != "xppc_aix52" -a "x$_cv_linux_distro" != "xRH72" -a  "x$_cv_sysname" != "xsun4x_58" -a "x$_cv_sysname" != "xsun4x_59" -a "x$_cv_sysname" != "xalpha_dux51" -a "x$_cv_sysname" != "xhp_ux113" ; then
+if test "x$_cv_sysname" != "xppc_aix52" -a "x$_cv_linux_distro" != "xRH72" -a  "x$_cv_sysname" != "xsun4x_58" -a "x$_cv_sysname" != "xsun4x_59" -a "x$_cv_sysname" != "xhp_ux113" ; then
   if test "x$_cv_sysname" = "xppc_macosx" -o "x$ac_pthreads" = "xyes"; then
    CHECK_EXTERNAL([drmaa],[1.6], [soft])
   fi
@@ -3045,7 +3034,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [1.0.4], [soft],
+CHECK_EXTERNAL([classads], [1.0.5], [soft],
                [use new ClassAds (provides -better-analyze and more)],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]], [classads]))
@@ -3066,7 +3055,7 @@ else
 fi
 
 if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
-  CHECK_EXTERNAL([cream],[1.10.1-p3], [soft])
+  CHECK_EXTERNAL([cream],[1.10.1-p4], [soft])
 fi
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
@@ -3088,7 +3077,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p8], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p9], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -3307,7 +3296,6 @@ _cv_libc_a=none
 GLIBC_DIR="$ac_cv_externals_build/install/$_cv_ext_glibc_version/lib"
 case "$_cv_opsys" in
 # Ignore on clipped ports
-#  ?ALPHA_OSF1? ) /lib/libc.a ;;
 #  ?HPUX? ) /lib/libc.a ;;
 #  ?HPUX11? ) /usr/lib/pa20_64/libc.a ;;
   LINUX )

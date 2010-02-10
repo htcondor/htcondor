@@ -35,7 +35,6 @@ $worked = "yes";
 	#"AIX52" => "broken",
 	#"HPUX10" => "broken",
 	#"IRIX65" => "broken",
-	#"OSF1" => "broken",
 	#"OSX_UNK" => "broken",
 	#"SOLARIS28" => "broken",
 	#"SOLARIS29" => "broken",

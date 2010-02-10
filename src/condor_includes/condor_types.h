@@ -65,13 +65,6 @@ typedef char * caddr_t;
 #endif	/* _POSIX_SOURCE */
 
 #define MALLOC_DEFINED_AS_VOID
-#if defined(OSF1)
-#define malloc hide_malloc
-#endif
-#if defined(OSF1)
-#undef malloc
-#define mem_alloc(bsize)        malloc(bsize)
-#endif
 
 
 #include "proc.h"

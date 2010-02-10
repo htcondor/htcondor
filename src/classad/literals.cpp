@@ -484,9 +484,9 @@ SameAs(const ExprTree *tree) const
     if (tree->GetKind() != LITERAL_NODE) {
         is_same = false;
     } else {
-        Literal *other_literal;
+        const Literal *other_literal;
         
-        other_literal = (Literal *) tree;
+        other_literal = (const Literal *) tree;
         is_same = (   factor == other_literal->factor
                    && value.SameAs(other_literal->value));
     }

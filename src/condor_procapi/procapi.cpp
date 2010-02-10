@@ -23,6 +23,15 @@
 #include "procapi.h"
 #include "procapi_internal.h"
 
+// Ugly hack: stat64 prototyps are wacked on HPUX
+// These are cut & pasted from the HPUX man pages...                            
+#if defined( HPUX )
+extern "C" {
+    extern int fstat64(int fildes, struct stat64 *buf);
+}
+#endif
+
+
 unsigned int pidHashFunc( const pid_t& pid );
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
@@ -102,8 +111,8 @@ ProcAPI::~ProcAPI() {
 // Each platform gets its own function unless two are so similar that you can
 // ifdef between them.
 
-// this version works for Solaris 2.5.1, IRIX, OSF/1 
-#if ( defined(Solaris251) || defined(IRIX) || defined(OSF1) )
+// this version works for Solaris 2.5.1, IRIX
+#if ( defined(Solaris251) || defined(IRIX) )
 int
 ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 
 {
@@ -200,9 +209,7 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	char path[64];
 	struct prpsinfo pri;
 	struct prstatus prs;
-#ifndef DUX4
-	struct prusage pru;   // prusage doesn't exist in OSF/1
-#endif
+	struct prusage pru;
 
 	int fd;
 
@@ -267,9 +274,7 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	procRaw.owner = getFileOwner(fd);			
 
     // PIOCUSAGE is used for page fault info
-    // solaris 2.5.1 and Irix only - unsupported by osf/1 dux-4
-    // Now in DUX5, though...
-#ifndef DUX4
+    // solaris 2.5.1 and Irix only
 	if ( ioctl( fd, PIOCUSAGE, &pru ) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "ProcAPI: PIOCUSAGE Error occurred for pid %d\n", 
@@ -291,15 +296,8 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	procRaw.majfault = pru.pu_majf;
 #endif // IRIX
 	
-#else  // here we are in osf/1, which doesn't give this info.
-
-	procRaw.minfault = 0;   // let's default to zero in osf1
-	procRaw.majfault = 0;
-
-#endif // DUX4
-
    // PIOCSTATUS gets process user & sys times
-   // this following bit works for Sol 2.5.1, Irix, Osf/1
+   // this following bit works for Sol 2.5.1, Irix,
 	if ( ioctl( fd, PIOCSTATUS, &prs ) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "ProcAPI: PIOCSTATUS Error occurred for pid %d\n", 
@@ -2347,8 +2345,7 @@ ProcAPI::getAndRemNextPid () {
 int
 ProcAPI::buildPidList() {
 
-	DIR *dirp;
-	struct dirent *direntp;
+	condor_DIR *dirp;
 	pidlistPTR current;
 	pidlistPTR temp;
 
@@ -2358,8 +2355,13 @@ ProcAPI::buildPidList() {
 
 	current = pidList;
 
-	if( (dirp = opendir("/proc")) != NULL ) {
-		while( (direntp = readdir(dirp)) != NULL ) {
+	dirp = condor_opendir("/proc");
+	if( dirp != NULL ) {
+			// NOTE: this will use readdir64() when available to avoid
+			// skipping over directories with an inode value that
+			// doesn't happen to fit in the 32-bit ino_t
+		condor_dirent *direntp;
+		while( (direntp = condor_readdir(dirp)) != NULL ) {
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				temp = new pidlist;
 				temp->pid = (pid_t) atol ( direntp->d_name );
@@ -2368,7 +2370,7 @@ ProcAPI::buildPidList() {
 				current = temp;
 			}
 		}
-		closedir( dirp );
+		condor_closedir( dirp );
     
 		temp = pidList;
 		pidList = pidList->next;
@@ -2741,9 +2743,15 @@ ProcAPI::printProcInfo(FILE* fp, piPTR pi){
 uid_t 
 ProcAPI::getFileOwner(int fd) {
 	
+#if HAVE_FSTAT64
+	// If we do not use fstat64(), fstat() fails if the inode number
+	// is too big and possibly for a few other reasons as well.
+	struct stat64 si;
+	if ( fstat64(fd, &si) != 0 ) {
+#else
 	struct stat si;
-
 	if ( fstat(fd, &si) != 0 ) {
+#endif
 		dprintf(D_ALWAYS, 
 			"ProcAPI: fstat failed in /proc! (errno=%d)\n", errno);
 		return 0; 	// 0 is probably wrong, but this should never

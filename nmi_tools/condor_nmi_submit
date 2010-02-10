@@ -50,10 +50,10 @@ sub FALSE { 0; };
 
 # Constants for use with makeFetchFileVCS to specify if fetching from
 # source (SRC), externals (EXT) or manual (DOC) repositories.
-sub TST_LRG	{ 5; };
-sub TST_CNF	{ 4; };
-sub TST 	{ 3; };
-sub EXT 	{ 2; };
+#sub TST_LRG	{ 5; };
+#sub TST_CNF	{ 4; };
+#sub TST 	{ 3; };
+#sub EXT 	{ 2; };
 sub DOC 	{ 1; };
 sub SRC 	{ 0; };
 
@@ -74,13 +74,13 @@ my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
 my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
 
 # Root of the GIT Externals repository
-my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
+#my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
 
 # Root of the GIT Confidential Test repository
-my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
+#my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
 
 # Root of the GIT Large Test repository
-my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
+#my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
 
 # name of the submit_info file
 my $submit_info_basename = "SubmitInfo.pm";
@@ -747,12 +747,33 @@ sub getSubmitInfoNew
 
 sub loadModule
 {
+	# module_path contains the path up to and including the module name.
+	# module_name just includes the module name without a path or suffix.
 	my ($module_path, $module_name) =  @_;
+	my $mpath;
+	
+	$mpath = dirname($module_path);
 
-	# I need this to happen with runtime information, not compile time, so this
-	# is why I'm messing about with @INC here.
+	# The --nightly code path expects to reload modules multiple times because
+	# they are different versions. Here we make the idempotency check fail so
+	# the new module gets loaded and stomps on the old module's
+	# definitions--which is what we want. This is vile and ugly and is a result
+	# of the coupling between the nightlies and this script. See gittrac ticket
+	# #974 for details about this coupling.
+	if (exists($INC{"$module_name.pm"})) {
+		print "Removing perl's module idempotency check to allow reloading " .
+				"of $module_name.pm with new definitions.\n";
+		delete $INC{"$module_name.pm"};
+	}
+
+	# I need the load to happen with runtime information, not compile time, so
+	# this is why I'm messing about with @INC here.
+	if (scalar(grep(/^\Q$mpath\E$/, @INC)) == 0) {
+		# Only push path if not already present.
+		push @INC, $mpath;
+	}
 	print "About to load module: $module_path\n";
-	push @INC, dirname($module_path);
+	print "You can ignore the warnings about function redefinitions, if any.\n";
 	eval "use $module_name;";
 	die $@ if $@;
 	print "Loaded $module_name.pm!\n";
@@ -1532,11 +1553,6 @@ sub writeTestGlue
     print $fh "remote_pre = nmi_glue/test/remote_pre\n";
     print $fh "remote_task = nmi_glue/test/remote_task\n";
     print $fh "remote_task_timeout = $test_timeout\n";
-    if( grep(/alpha_osf_V5\.1/, @platforms) ) {
-        # we know tests take longer on DUX...
-        my $dux_test_timeout = $test_timeout * 2;
-        print $fh "alpha_osf_V5.1_remote_task_timeout = $dux_test_timeout\n";
-    }
     print $fh "remote_post = nmi_glue/test/remote_post\n";
     print $fh "platform_post = nmi_glue/test/platform_post\n";
     print $fh "post_all = nmi_glue/test/post_all\n";
@@ -1763,11 +1779,11 @@ sub generateBuildFetchFiles
         die "Internal consistancy error: build lacks a --tag/--nightly or a --workspace.";
     }
 
-    if( defined $opt_externals ) { 
-        my $ext_file = "externals.src";
-        makeFetchFileVCS( $ext_file, TRUE, EXT, $opt_externals );
-        push( @fetch_files, "$ext_file" );
-    }
+#    if( defined $opt_externals ) { 
+#        my $ext_file = "externals.src";
+#        makeFetchFileVCS( $ext_file, TRUE, EXT, $opt_externals );
+#        push( @fetch_files, "$ext_file" );
+#    }
 
 	# If the $srctag is available, then use it for where to get the nmi tools.
 	# In general, we'd like to match the branch of the glue to the branch we're
@@ -1818,14 +1834,15 @@ sub makeFetchFileVCS
 		# ==> git archive --remote=<git_root> <git_tree> <git_path> | tar x
 		# perl case clause to allow 3 different test repositories long term
 		my $gitroot;
-		if( EXT == $repo) {
-			$gitroot = $GITROOT_EXT;
-		} elsif(DOC == $repo) {
+#		if( EXT == $repo) {
+#			$gitroot = $GITROOT_EXT;
+#		} elsif(DOC == $repo) {
+		if(DOC == $repo) {
 			$gitroot = $GITROOT_DOC;
-		} elsif(TST_CNF == $repo) {
-			$gitroot = $GITROOT_TSTCNF;
-		} elsif(TST_LRG == $repo) {
-			$gitroot = $GITROOT_TSTLRG;
+#		} elsif(TST_CNF == $repo) {
+#			$gitroot = $GITROOT_TSTCNF;
+#		} elsif(TST_LRG == $repo) {
+#			$gitroot = $GITROOT_TSTLRG;
 		} else {
 			$gitroot = $GITROOT_SRC;
 		}

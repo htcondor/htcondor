@@ -346,9 +346,6 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 	encapsulation_method_line = str; // makes a copy
 	free(str);
 
-	if (encapsulation_method_line.Value() == FALSE) {
-		EXCEPT("Failed to read encapsulation method line!");
-	}
 	encapsulation_method_line.trim();
 
 	dprintf(D_ALWAYS, "Read encap line: %s\n", 

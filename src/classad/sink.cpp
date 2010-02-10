@@ -189,6 +189,9 @@ Unparse( string &buffer, const Value &val )
                 buffer += "real(\"-INF\")";
             } else if (classad_isinf(real) == 1) {
                 buffer += "real(\"INF\")";
+			} else if (oldClassAd) {
+                sprintf(tempBuf, "%f", real);
+                buffer += tempBuf;
             } else {
                 sprintf(tempBuf, "%1.15E", real);
                 buffer += tempBuf;
