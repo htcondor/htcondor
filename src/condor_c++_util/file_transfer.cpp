@@ -1533,6 +1533,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+	CondorError errstack;
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
@@ -1706,10 +1707,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
-			CondorError e;
-			// TODO: do something useful with the error stack
-
-			rc = InvokeFileTransferPlugin(e, URL.Value(), fullname.Value());
+			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value());
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -1735,13 +1733,18 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.Value());
 			download_success = false;
-			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
+			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED ||
+					rc == GET_FILE_PLUGIN_FAILED) {
 				// errno is well defined in this case, and transferred data
 				// has been consumed so that the wire protocol is in a well
 				// defined state
 
-				error_buf.replaceString("receive","write to");
-				error_buf.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+				if (rc == GET_FILE_PLUGIN_FAILED) {
+					error_buf.sprintf_cat(": %s", errstack.getFullText());
+				} else {
+					error_buf.replaceString("receive","write to");
+					error_buf.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+				}
 
 				// Since there is a well-defined errno describing what just
 				// went wrong while trying to open the file, put the job
@@ -3112,6 +3115,12 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 
 int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest) {
 
+	if (plugin_table == NULL) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", URL);
+		e.pushf("FILETRANSFER", 1, "No plugin table defined", URL);
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
 	// find the type of transfer
 	const char* colon = strchr(URL, ':');
 
@@ -3119,7 +3128,7 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 		// in theory, this should never happen -- then sending side should only
 		// send URLS after having checked this.  however, trust but verify.
 		e.pushf("FILETRANSFER", 1, "Specified URL does not contain a ':' (%s)", URL);
-		return 1;
+		return GET_FILE_PLUGIN_FAILED;
 	}
 
 	// extract the protocol/method
@@ -3134,10 +3143,10 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 	// hashtable returns zero if found.
 	if (plugin_table->lookup((MyString)method, plugin)) {
 		// no plugin for this type!!!
-		// TODO: push onto CondorError e
+		e.pushf("FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method);
 		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method);
 		free(method);
-		return 1;
+		return GET_FILE_PLUGIN_FAILED;
 	}
 
 	
@@ -3163,7 +3172,15 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 	// clean up
 	free(method);
 
-	return retval;
+	// any non-zero exit from plugin indicates error.  this function needs
+	// to return -1 on error, or zero otherwise, so map retval to the proper
+	// value.
+	if (retval != 0) {
+		e.pushf("FILETRANSFER", 1, "non-zero exit from %s\n", cmd_line.Value());
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	return 0;
 }
 
 
@@ -3219,7 +3236,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 
     if( ! fp ) {
         dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
-		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring\n", path );
+		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring", path );
         return "";
     }
     ClassAd* ad = new ClassAd;
@@ -3231,7 +3248,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
                      "ignoring invalid plugin\n", buf );
             delete( ad );
             pclose( fp );
-			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring\n", buf );
+			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring", buf );
             return "";
         }
     }
@@ -3241,7 +3258,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
                  "FILETRANSFER: \"%s -classad\" did not produce any output, ignoring\n",
                  path );
         delete( ad );
-		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring\n", path );
+		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring", path );
         return "";
     }
 
@@ -3258,8 +3275,8 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 		return m;
 	}
 
-	dprintf(D_ALWAYS, "FILETRANSFER output of \"%s -classad\" does not contain SupportedMethods, ignoring\n", path );
-	e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring\n", path );
+	dprintf(D_ALWAYS, "FILETRANSFER output of \"%s -classad\" does not contain SupportedMethods, ignoring plugin\n", path );
+	e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring", path );
 
 	delete( ad );
 	return "";
