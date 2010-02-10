@@ -194,12 +194,32 @@ ls | xargs gzip -9
 
 
 echo "Preparing metadata files"
+
+############################################################################################
+#Updating changelog 
+############################################################################################
+echo "Generating changelog file"
+echo
+cd $DEB_ROOT
+
+DEB_DATE=`date -R`
+sed < DEBIAN/changelog \
+     "s|_VERSION_|$VERSION-$REVISION|g; \
+     s|_DATE_|$DEB_DATE|g; \
+     s|_CONDORVERSION_|$VERSION|g" > DEBIAN/changelog.new
+
+#Debian distribution list in changelog is not valid for some platform. 
+#but it does not affect package usability.
+
+mv DEBIAN/changelog.new DEBIAN/changelog
+
+
 ############################################################################################
 #Generate md5sum
 ############################################################################################
 echo "Generating md5sums"
 echo
-cd $DEB_ROOT
+
 (find . -type f  ! -regex '.*/DEBIAN/.*' -printf '%P\0' | xargs -r0 md5sum > DEBIAN/md5sums) >/dev/null
 
 

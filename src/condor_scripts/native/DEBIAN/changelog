@@ -1,6 +1,6 @@
-condor (7.4.0-1) unstable; urgency=low
+condor (_VERSION_) stable; urgency=low
 
-  * Initial release, based on Condor's dynamic tarfile.
+  * Please see version history at http://www.cs.wisc.edu/condor/manual/v_CONDORVERSION_/8_Version_History.html
 
- -- Thawan Kooburat <kooburat@cs.wisc.edu>  Wed, 25 Nov 2009 16:55:29 -0600
+ -- Condor Team <condor-users@cs.wisc.edu>  _DATE_
 
