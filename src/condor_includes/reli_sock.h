@@ -44,6 +44,7 @@ class Condor_MD_MAC;
 #define GET_FILE_OPEN_FAILED -2
 #define PUT_FILE_OPEN_FAILED -2
 #define GET_FILE_WRITE_FAILED -3
+#define GET_FILE_PLUGIN_FAILED -4
 
 class ReliSock : public Sock {
 	friend class Authentication;
