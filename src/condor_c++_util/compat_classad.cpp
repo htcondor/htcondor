@@ -25,6 +25,7 @@
 #include "classad/xmlSink.h"
 #include "condor_xml_classads.h"
 #include "condor_config.h"
+#include "Regex.h"
 
 using namespace std;
 
@@ -177,8 +178,344 @@ void EvalResult::toString(bool force)
 	}
 }
 
+static bool strlist_functions_registered = false;
+
+static
+bool stringListSize_func( const char *name,
+						  const classad::ArgumentList &arg_list,
+						  classad::EvalState &state, classad::Value &result )
+{
+	classad::Value arg0, arg1;
+	std::string list_str;
+	std::string delim_str = ", ";
+
+	// Must have one or two arguments
+	if ( arg_list.size() < 1 || arg_list.size() > 2 ) {
+		result.SetErrorValue();
+		return( true );
+	}
+
+	// Evaluate both arguments
+	if( !arg_list[0]->Evaluate( state, arg0 ) ||
+		( arg_list.size() == 2 && !arg_list[1]->Evaluate( state, arg1 ) ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If either argument isn't a string, then the result is
+	// an error.
+	if( !arg0.IsStringValue( list_str) ||
+		( arg_list.size() == 2 && !arg1.IsStringValue( delim_str ) ) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	StringList sl( list_str.c_str(), delim_str.c_str() );
+	result.SetIntegerValue( sl.number() );
+
+	return true;
+}
+
+static
+double sum_func( double item, double accumulator )
+{
+	return item + accumulator;
+}
+
+static
+double min_func( double item, double accumulator )
+{
+	return item < accumulator ? item : accumulator;
+}
+
+static
+double max_func( double item, double accumulator )
+{
+	return item > accumulator ? item : accumulator;
+}
+
+static
+bool stringListSummarize_func( const char *name,
+							   const classad::ArgumentList &arg_list,
+							   classad::EvalState &state, classad::Value &result )
+{
+	classad::Value arg0, arg1;
+	std::string list_str;
+	std::string delim_str = ", ";
+	bool is_avg = false;
+	double (* func)( double, double ) = NULL;
+	double accumulator;
+	bool is_real = false;
+	bool empty_allowed = false;
+
+	// Must have one or two arguments
+	if ( arg_list.size() < 1 || arg_list.size() > 2 ) {
+		result.SetErrorValue();
+		return( true );
+	}
+
+	// Evaluate both arguments
+	if( !arg_list[0]->Evaluate( state, arg0 ) ||
+		( arg_list.size() == 2 && !arg_list[1]->Evaluate( state, arg1 ) ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If either argument isn't a string, then the result is
+	// an error.
+	if( !arg0.IsStringValue( list_str) ||
+		( arg_list.size() == 2 && !arg1.IsStringValue( delim_str ) ) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	if ( strcasecmp( name, "stringlistsum" ) == 0 ) {
+		func = sum_func;
+		accumulator = 0.0;
+		empty_allowed = true;
+	} else if ( strcasecmp( name, "stringlistavg" ) == 0 ) {
+		func = sum_func;
+		accumulator = 0.0;
+		empty_allowed = true;
+		is_avg = true;
+	} else if ( strcasecmp( name, "stringlistmin" ) == 0 ) {
+		func = min_func;
+		accumulator = FLT_MAX;
+	} else if ( strcasecmp( name, "stringlistmax" ) == 0 ) {
+		func = max_func;
+		accumulator = FLT_MIN;
+	} else {
+		result.SetErrorValue();
+		return false;
+	}
+
+	StringList sl( list_str.c_str(), delim_str.c_str() );
+	if ( sl.number() == 0 ) {
+		if ( empty_allowed ) {
+			result.SetRealValue( 0.0 );
+		} else {
+			result.SetUndefinedValue();
+		}
+		return true;
+	}
+
+	sl.rewind();
+	const char *entry;
+	while ( (entry = sl.next()) ) {
+		double temp;
+		int r = sscanf(entry, "%lf", &temp);
+		if (r != 1) {
+			result.SetErrorValue();
+			return true;
+		}
+		if (strspn(entry, "+-0123456789") != strlen(entry)) {
+			is_real = true;
+		}
+		accumulator = func( temp, accumulator );
+	}
+
+	if ( is_avg ) {
+		accumulator /= sl.number();
+	}
+
+	if ( is_real ) {
+		result.SetRealValue( accumulator );
+	} else {
+		result.SetIntegerValue( (int)accumulator );
+	}
+
+	return true;
+}
+
+static
+bool stringListMember_func( const char *name,
+							const classad::ArgumentList &arg_list,
+							classad::EvalState &state, classad::Value &result )
+{
+	classad::Value arg0, arg1, arg2;
+	std::string item_str;
+	std::string list_str;
+	std::string delim_str = ", ";
+
+	// Must have two or three arguments
+	if ( arg_list.size() < 2 || arg_list.size() > 3 ) {
+		result.SetErrorValue();
+		return( true );
+	}
+
+	// Evaluate both arguments
+	if( !arg_list[0]->Evaluate( state, arg0 ) ||
+		!arg_list[1]->Evaluate( state, arg1 ) ||
+		( arg_list.size() == 3 && !arg_list[2]->Evaluate( state, arg2 ) ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If any argument isn't a string, then the result is
+	// an error.
+	if( !arg0.IsStringValue( item_str) ||
+		!arg1.IsStringValue( list_str) ||
+		( arg_list.size() == 3 && !arg2.IsStringValue( delim_str ) ) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	StringList sl( list_str.c_str(), delim_str.c_str() );
+	int rc;
+	if ( sl.number() == 0 ) {
+		result.SetUndefinedValue();
+		return true;
+	} else if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
+		rc = sl.contains( item_str.c_str() );
+	} else {
+		rc = sl.contains_anycase( item_str.c_str() );
+	}
+	result.SetBooleanValue( rc ? true : false );
+
+	return true;
+}
+
+static int regexp_str_to_options( const char *option_str )
+{
+	int options = 0;
+	while (*option_str) {
+		switch (*option_str) {
+			case 'i':
+			case 'I':
+				options |= Regex::caseless;
+				break;
+			case 'm':
+			case 'M':
+				options |= Regex::multiline;
+				break;
+			case 's':
+			case 'S':
+				options |= Regex::dotall;
+				break;
+			case 'x':
+			case 'X':
+				options |= Regex::extended;
+				break;
+			default:
+				// Ignore for forward compatibility 
+				break;
+		}
+		option_str++;
+	}
+	return options;
+}
+
+static
+bool stringListRegexpMember_func( const char *name,
+								  const classad::ArgumentList &arg_list,
+								  classad::EvalState &state,
+								  classad::Value &result )
+{
+	classad::Value arg0, arg1, arg2, arg3;
+	std::string pattern_str;
+	std::string list_str;
+	std::string delim_str = ", ";
+	std::string options_str;
+
+	// Must have two or three arguments
+	if ( arg_list.size() < 2 || arg_list.size() > 4 ) {
+		result.SetErrorValue();
+		return( true );
+	}
+
+	// Evaluate both arguments
+	if( !arg_list[0]->Evaluate( state, arg0 ) ||
+		!arg_list[1]->Evaluate( state, arg1 ) ||
+		( arg_list.size() >= 3 && !arg_list[2]->Evaluate( state, arg2 ) ) ||
+		( arg_list.size() == 4 && !arg_list[3]->Evaluate( state, arg3 ) ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If any argument isn't a string, then the result is
+	// an error.
+	if( !arg0.IsStringValue( pattern_str) ||
+		!arg1.IsStringValue( list_str) ||
+		( arg_list.size() >= 3 && !arg2.IsStringValue( delim_str ) ) ||
+		( arg_list.size() == 4 && !arg3.IsStringValue( options_str ) ) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	StringList sl( list_str.c_str(), delim_str.c_str() );
+	if ( sl.number() == 0 ) {
+		result.SetUndefinedValue();
+		return true;
+	}
+
+	Regex r;
+	const char *errstr = 0;
+	int errpos = 0;
+	bool valid;
+	int options = regexp_str_to_options(options_str.c_str());
+
+	/* can the pattern be compiled */
+	valid = r.compile(pattern_str.c_str(), &errstr, &errpos, options);
+	if (!valid) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	result.SetBooleanValue( false );
+
+	sl.rewind();
+	char *entry;
+	int match = 0;
+	while( (entry = sl.next())) {
+		if (r.match(entry)) {
+			result.SetBooleanValue( true );
+		}
+	}
+
+	return true;
+}
+
+static
+void registerStrlistFunctions()
+{
+	if ( strlist_functions_registered ) {
+		return;
+	}
+	std::string name;
+	name = "stringListSize";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListSize_func );
+	name = "stringListSum";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListSummarize_func );
+	name = "stringListAvg";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListSummarize_func );
+	name = "stringListMin";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListSummarize_func );
+	name = "stringListMax";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListSummarize_func );
+	name = "stringListMember";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListMember_func );
+	name = "stringListIMember";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListMember_func );
+	name = "stringList_regexpMember";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListRegexpMember_func );
+
+	strlist_functions_registered = true;
+}
+
 ClassAd::ClassAd()
 {
+	if ( !strlist_functions_registered ) {
+		registerStrlistFunctions();
+	}
+
 	m_privateAttrsAreInvisible = false;
 
 		// Compatibility ads are born with this to emulate the special
