@@ -256,6 +256,7 @@ const char 	*UnicoreVSite = "unicore_v_site";
 const char	*KeystoreFile = "keystore_file";
 const char	*KeystoreAlias = "keystore_alias";
 const char	*KeystorePassphraseFile = "keystore_passphrase_file";
+const char  *CreamAttributes = "cream_attributes";
 
 const char	*FileRemaps = "file_remaps";
 const char	*BufferFiles = "buffer_files";
@@ -5154,6 +5155,11 @@ SetGlobusParams()
 		InsertJobExpr ( buffer );
 	}
 
+	if( (tmp = condor_param(CreamAttributes, ATTR_CREAM_ATTRIBUTES)) ) {
+		InsertJobExprString ( ATTR_CREAM_ATTRIBUTES, tmp );
+		free( tmp );
+	}
+
 	if ( (tmp = condor_param( KeystoreFile, ATTR_KEYSTORE_FILE )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_KEYSTORE_FILE, tmp );
 		InsertJobExpr( buffer );
@@ -7042,7 +7048,8 @@ InsertJobExprString(const char * name, const char * val, bool clustercheck /*= t
 	ASSERT(name);
 	ASSERT(val);
 	MyString buf;
-	buf.sprintf("%s = \"%s\"", name, val);
+	MyString esc;
+	buf.sprintf("%s = \"%s\"", name, ClassAd::EscapeStringValue(val, esc));
 	InsertJobExpr(buf.Value(), clustercheck);
 }
 

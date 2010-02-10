@@ -1812,6 +1812,16 @@ char *CreamJob::buildSubmitAd()
 	}
 	deleteStringArray(env_vec);
 
+	if ( jobAd->LookupString( ATTR_CREAM_ATTRIBUTES, tmp_str ) ) {
+		if ( tmp_str[tmp_str.Length()-1] != ';' ) {
+			tmp_str += ";";
+		}
+		tmp_str += " ]";
+
+		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
+		ad_string.replaceString( "]", tmp_str.Value(), insert_pos );
+	}
+
 /*
 	dprintf(D_FULLDEBUG, "SUBMITAD:\n%s\n",ad_string.Value()); 
 */
