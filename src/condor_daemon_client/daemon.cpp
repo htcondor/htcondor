@@ -1341,6 +1341,7 @@ Daemon::getCmInfo( const char* subsys )
 		itr = NULL;
 		while ((itr = host_list.next()) != NULL) {
 			host_name = getHostFromAddr( itr );
+			if(!host_name) { continue; }
 			if ((strlen(full_name) == strlen(host_name) ||
 				(strlen(local_name) == strlen(host_name))) &&
 				((strcmp(full_name, host_name) == 0) ||
