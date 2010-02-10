@@ -87,6 +87,30 @@ int param_boolean_int(const char *, int default_value)
 	return default_value;
 }
 
+#ifdef HAVE_EXT_PCRE
+
+#ifdef HAVE_PCRE_PCRE_H
+#  include "pcre/pcre.h"
+#else
+#  include "pcre.h"
+#endif
+pcre *pcre_compile(const char *, int, const char **, int *,
+				   const unsigned char *)
+{ not_impl(); return NULL; }
+int  pcre_exec(const pcre *, const pcre_extra *, const char *,
+			   int, int, int, int *, int)
+{ return not_impl(); }
+static void my_pcre_free(void *) { not_impl(); }
+void  (*pcre_free)(void *) = my_pcre_free;
+void pcre_free_substring_list(const char **)
+{ not_impl(); }
+int  pcre_fullinfo(const pcre *, const pcre_extra *, int, void *)
+{ return not_impl(); }
+int  pcre_get_substring_list(const char *, int *, int, const char ***)
+{ return not_impl(); }
+
+#endif
+
 END_C_DECLS
 int param_integer(const char *, int default_value, int, int, ClassAd *, 
 	ClassAd *, bool)

@@ -195,6 +195,24 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 	return ! found_diff;
 }
 
+static classad::MatchClassAd *the_match_ad;
+static bool the_match_ad_in_use;
+static classad::MatchClassAd *getTheMatchAd() {
+	ASSERT( !the_match_ad_in_use );
+	the_match_ad_in_use = true;
+
+	if( !the_match_ad ) {
+		the_match_ad = new classad::MatchClassAd( );
+	}
+	return the_match_ad;
+}
+
+static void releaseTheMatchAd() {
+	ASSERT( the_match_ad_in_use );
+
+	the_match_ad_in_use = false;
+}
+
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 				  compat_classad::ClassAd *target, compat_classad::EvalResult *result )
 {
@@ -209,7 +227,10 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
-		mad = new classad::MatchClassAd( source, target );
+		mad = getTheMatchAd();
+
+		mad->ReplaceLeftAd( source );
+		mad->ReplaceRightAd( target );
 	}
 	if ( source->EvaluateExpr( expr, val ) ) {
 		switch ( val.GetType() ) {
@@ -254,7 +275,8 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	if ( mad ) {
 		mad->RemoveLeftAd();
 		mad->RemoveRightAd();
-		delete mad;
+
+		releaseTheMatchAd();
 	}
 	expr->SetParentScope( old_scope );
 
@@ -263,30 +285,32 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 {
-	return IsAHalfMatch(ad1, ad2) && IsAHalfMatch(ad2, ad1);
+	classad::MatchClassAd *mad = getTheMatchAd();
+	mad->ReplaceLeftAd( ad1 );
+	mad->ReplaceRightAd( ad2 );
+
+	bool result = mad->symmetricMatch();
+
+	mad->RemoveLeftAd();
+	mad->RemoveRightAd();
+
+	releaseTheMatchAd();
+	return result;
 }
 
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
 {
-	static classad::ExprTree *reqsTree = NULL;
-	compat_classad::EvalResult val;
-	
-	if( stricmp(target->GetMyTypeName(),my->GetTargetTypeName()) &&
-	    stricmp(my->GetTargetTypeName(),ANY_ADTYPE) )
-	{
-		return false;
-	}
+	classad::MatchClassAd *mad = getTheMatchAd();
+	mad->ReplaceLeftAd( my );
+	mad->ReplaceRightAd( target );
 
-	if ( reqsTree == NULL ) {
-		ParseClassAdRvalExpr ("Requirements", reqsTree);
-	}
-	if ( EvalExprTree( reqsTree, my, target, &val ) == FALSE ) {
-		return false;
-	} else if ( val.type == compat_classad::LX_INTEGER && val.i ) {
-		return true;
-	}
+	bool result = mad->rightMatchesLeft();
 
-	return false;
+	mad->RemoveLeftAd();
+	mad->RemoveRightAd();
+
+	releaseTheMatchAd();
+	return result;
 }
 
 void AttrList_setPublishServerTime( bool publish )

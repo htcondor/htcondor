@@ -439,7 +439,11 @@ const sigset_t *set;
 		sigdelset(&my_set,SIGTSTP);
 		sigdelset(&my_set,SIGCONT);
 	}
+#if defined(LINUX)
+	return SIGSUSPEND(&my_set);
+#else
 	return syscall(SYS_sigsuspend,&my_set);
+#endif
 }
 #endif
 
