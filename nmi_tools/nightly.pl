@@ -9,11 +9,17 @@
 use Getopt::Long;
 
 # Variables for Getopt::Long::GetOptions
-use vars qw/ $opt_git /;
+use vars qw/ $opt_git $opt_platforms $opt_desc /;
 
-# Parse command-line arguments, currently only one, --git, which turns
-# on Git support.
-GetOptions('git' => \$opt_git);
+# Parse command-line arguments:
+GetOptions(
+			# turns on Git support.
+			'git' => \$opt_git,
+			# specifies a set of platforms to pass on to condor_nmi_submit
+			'platforms=s' => \$opt_platforms,
+			# specifies a description for the builds to be passed 
+			# to condor_nmi_submit
+			'desc=s' => \$opt_desc);
 
 # Configuration
 $home = '/home/cndrauto/condor';
@@ -79,7 +85,13 @@ while (<CVS>) {
 
 # don't edit this file on the build machine... it's in cvs
 
-$cns_cmd = "./$CNS --build --nightly --use-externals-cache --clear-externals-cache-weekly --submit-xtests --notify=condor-builds\@cs.wisc.edu --notify-fail-only" . (defined $opt_git ? " --git" : "");
+$cns_cmd =
+	"./$CNS --build --nightly --use-externals-cache " .
+	"--clear-externals-cache-weekly --submit-xtests " .
+	"--notify=condor-builds\@cs.wisc.edu --notify-fail-only" . 
+	(defined $opt_git ? " --git" : "") . 
+	(defined $opt_platforms ? " --platforms=$opt_platforms" : "") .
+	(defined $opt_desc ? " --desc=\"$opt_desc\"" : "");
 
 print LOG "Cwd is " . `pwd`;
 print LOG "Running $cns_cmd\n";
