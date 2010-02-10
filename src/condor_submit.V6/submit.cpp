@@ -7042,7 +7042,8 @@ InsertJobExprString(const char * name, const char * val, bool clustercheck /*= t
 	ASSERT(name);
 	ASSERT(val);
 	MyString buf;
-	buf.sprintf("%s = \"%s\"", name, val);
+	MyString esc;
+	buf.sprintf("%s = \"%s\"", name, ClassAd::EscapeStringValue(val, esc));
 	InsertJobExpr(buf.Value(), clustercheck);
 }
 
