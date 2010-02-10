@@ -35,10 +35,10 @@ typedef struct stat StatStructType;
 #if HAVE__STATI64	/* Win32 */
 typedef _ino_t StatStructInode;
 typedef _dev_t StatStructDev;
-typedef unsigned short StatStuctMode;
-typedef short StatStuctNlink;
-typedef short StatStuctUID;
-typedef short StatStuctGID;
+typedef unsigned short StatStructMode;
+typedef short StatStructNlink;
+typedef short StatStructUID;
+typedef short StatStructGID;
 typedef _off_t StatStructOff;
 #undef STAT_STRUCT_HAVE_BLOCK_SIZE
 #undef STAT_STRUCT_HAVE_BLOCK_COUNT
