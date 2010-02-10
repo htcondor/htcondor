@@ -187,6 +187,10 @@ class Operation : public ExprTree
 		virtual bool _Evaluate( EvalState &, Value &, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 
+			// returns true if result is determined for this operation
+			// based on the evaluated arg1
+		bool shortCircuit( EvalState &state, Value const &arg1, Value &result ) const;
+
 		// auxillary functionms
 		bool combine( OpKind&, Value&, ExprTree*&, 
 				int, Value&, ExprTree*, int, Value&, ExprTree* ) const;

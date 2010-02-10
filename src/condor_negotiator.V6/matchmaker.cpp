@@ -1917,6 +1917,9 @@ obtainAdsFromCollector (
 					allAds.Insert(ad);
 				}
 			}
+
+			OptimizeMachineAdForMatchmaking( ad );
+
 			startdAds.Insert(ad);
 		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ||
 				   ( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) &&
@@ -1949,6 +1952,46 @@ obtainAdsFromCollector (
 		scheddAds.MyLength(), startdAds.MyLength() );
 
 	return true;
+}
+
+void
+Matchmaker::OptimizeMachineAdForMatchmaking(ClassAd *ad)
+{
+#if !defined(WANT_OLD_CLASSADS)
+		// The machine ad will be passed as the RIGHT ad during
+		// matchmaking (i.e. in the call to IsAMatch()), so
+		// optimize it accordingly.
+	std::string error_msg;
+	if( !classad::MatchClassAd::OptimizeRightAdForMatchmaking( ad, &error_msg ) ) {
+		MyString name;
+		ad->LookupString(ATTR_NAME,name);
+		dprintf(D_ALWAYS,
+				"Failed to optimize machine ad %s for matchmaking: %s\n",	
+			name.Value(),
+				error_msg.c_str());
+	}
+#endif
+}
+
+void
+Matchmaker::OptimizeJobAdForMatchmaking(ClassAd *ad)
+{
+#if !defined(WANT_OLD_CLASSADS)
+		// The job ad will be passed as the LEFT ad during
+		// matchmaking (i.e. in the call to IsAMatch()), so
+		// optimize it accordingly.
+	std::string error_msg;
+	if( !classad::MatchClassAd::OptimizeLeftAdForMatchmaking( ad, &error_msg ) ) {
+		int cluster_id=-1,proc_id=-1;
+		ad->LookupInteger(ATTR_CLUSTER_ID,cluster_id);
+		ad->LookupInteger(ATTR_PROC_ID,proc_id);
+		dprintf(D_ALWAYS,
+				"Failed to optimize job ad %d.%d for matchmaking: %s\n",	
+				cluster_id,
+				proc_id,
+				error_msg.c_str());
+	}
+#endif
 }
 
 void
@@ -2229,6 +2272,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			request.Assign(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,temp_groupUsage);
 			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
 			is_group = true;
+		}
+
+		OptimizeJobAdForMatchmaking( &request );
+
+		if( DebugFlags & D_JOB ) {
+			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");
+			request.dPrint(D_JOB);
 		}
 
 		// 2e.  find a compatible offer for the request --- keep attempting
@@ -2634,8 +2684,28 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			// usage information 
 		addRemoteUserPrios(candidate);
 
+		if( (DebugFlags & D_MACHINE) && (DebugFlags & D_FULLDEBUG) ) {
+			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
+			candidate->dPrint(D_MACHINE);
+		}
+
 			// the candidate offer and request must match
-		if( !IsAMatch(&request, candidate) ) {
+		bool is_a_match = IsAMatch(&request, candidate);
+
+		if( DebugFlags & D_MACHINE ) {
+			int cluster_id=-1,proc_id=-1;
+			MyString name;
+			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
+			request.LookupInteger(ATTR_PROC_ID,proc_id);
+			candidate->LookupString(ATTR_NAME,name);
+			dprintf(D_MACHINE,"Job %d.%d %s match with %s.\n",
+					cluster_id,
+					proc_id,
+					is_a_match ? "does" : "does not",
+					name.Value());
+		}
+
+		if( !is_a_match ) {
 				// they don't match; continue
 			continue;
 		}
@@ -3031,6 +3101,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// Claiming is *not* desired
 		claim_id = "null";
 	}
+
+#if !defined(WANT_OLD_CLASSADS)
+	classad::MatchClassAd::UnoptimizeAdForMatchmaking( offer );
+#endif
 
 	savedRequirements = NULL;
 	length = strlen("Saved") + strlen(ATTR_REQUIREMENTS) + 2;

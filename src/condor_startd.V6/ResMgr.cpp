@@ -206,7 +206,7 @@ ResMgr::init_config_classad( void )
 	daemonCore->publish(config_classad);
 
 #if !defined(WANT_OLD_CLASSADS)
-	config_classad->AddTargetRefs( TargetJobAttrs );
+	config_classad->AddTargetRefs( TargetJobAttrs, false );
 #endif
 }
 

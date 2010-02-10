@@ -34,6 +34,9 @@ MatchClassAd()
 	lCtx = rCtx = NULL;
 	lad = rad = NULL;
 	ladParent = radParent = NULL;
+	symmetric_match = NULL;
+	right_matches_left = NULL;
+	left_matches_right = NULL;
 	InitMatchClassAd( NULL, NULL );
 }
 
@@ -115,6 +118,10 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 		// insert the left and right contexts
 	Insert( "lCtx", lCtx );
 	Insert( "rCtx", rCtx );
+
+	symmetric_match = Lookup("symmetricMatch");
+	right_matches_left = Lookup("rightMatchesLeft");
+	left_matches_right = Lookup("leftMatchesRight");
 
 	if( !adl ) {
 		adl = new ClassAd();
@@ -223,13 +230,13 @@ RemoveRightAd( )
 bool MatchClassAd::
 OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg )
 {
-	return OptimizeAdForMatchmaking( ad, true, error_msg );
+	return MatchClassAd::OptimizeAdForMatchmaking( ad, true, error_msg );
 }
 
 bool MatchClassAd::
 OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg )
 {
-	return OptimizeAdForMatchmaking( ad, false, error_msg );
+	return MatchClassAd::OptimizeAdForMatchmaking( ad, false, error_msg );
 }
 
 bool MatchClassAd::
@@ -262,7 +269,7 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 
 		// insert "target" and "other" into this ad so references can be
 		// _partially_ flattened to the more efficient .RIGHT or .LEFT
-	char const *other = is_right ? "LEFT" : "RIGT";
+	char const *other = is_right ? "LEFT" : "RIGHT";
 	ExprTree *target =
 		AttributeReference::MakeAttributeReference(NULL,other,true);
 	ad->Insert("target",target);
@@ -323,6 +330,45 @@ UnoptimizeAdForMatchmaking( ClassAd *ad )
 		}
 	}
 	return true;
+}
+
+bool MatchClassAd::
+EvalMatchExpr(ExprTree *match_expr)
+{
+	Value val;
+	if( !match_expr ) {
+		return false;
+	}
+
+	if( EvaluateExpr( match_expr, val ) ) {
+		bool result = false;
+		if( val.IsBooleanValue( result ) ) {
+			return result;
+		}
+		int int_result = 0;
+		if( val.IsIntegerValue( int_result ) ) {
+			return int_result != 0;
+		}
+	}
+	return false;
+}
+
+bool MatchClassAd::
+symmetricMatch()
+{
+	return EvalMatchExpr( symmetric_match );
+}
+
+bool MatchClassAd::
+rightMatchesLeft()
+{
+	return EvalMatchExpr( right_matches_left );
+}
+
+bool MatchClassAd::
+leftMatchesRight()
+{
+	return EvalMatchExpr( left_matches_right );
 }
 
 END_NAMESPACE // classad

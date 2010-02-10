@@ -36,8 +36,8 @@ BEGIN_NAMESPACE( classad )
 	<pre>
     [
        symmetricMatch   = leftMatchesRight && rightMatchesLeft;
-       leftMatchesRight = LEFT.requirements;
-       rightMatchesLeft = RIGHT.requirements;
+       leftMatchesRight = RIGHT.requirements;
+       rightMatchesLeft = LEFT.requirements;
        leftRankValue    = LEFT.rank;
        rightRankValue   = RIGHT.rank;
        RIGHT            = rCtx.ad;
@@ -93,6 +93,18 @@ class MatchClassAd : public ClassAd
 			@return true if the operation succeeded, false otherwise
 		*/
 		bool InitMatchClassAd( ClassAd* al, ClassAd *ar );
+
+		/** @return true if right and left ads match each other
+		 */
+		bool symmetricMatch();
+
+		/** @return true if the right ad matches the left ad's requirements
+		 */
+		bool rightMatchesLeft();
+
+		/** @return true if the left ad matches the right ad's requirements
+		 */
+		bool leftMatchesRight();
 
 		/** Replaces ad in the left context, or insert one if an ad did not
 			previously exist
@@ -156,7 +168,7 @@ class MatchClassAd : public ClassAd
 			@param error_msg non-NULL if an error description is desired.
 			@return True on success.
 		*/
-		bool OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg );
+		static bool OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg );
 
 		/** Modifies the requirements expression in the given ad to
 			make matchmaking more efficient.  This will only improve
@@ -168,17 +180,18 @@ class MatchClassAd : public ClassAd
 			@param error_msg non-NULL if an error description is desired.
 			@return True on success.
 		*/
-		bool OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg );
+		static bool OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg );
 
 		/** Restores ad previously optimized with OptimizeAdForMatchmaking.
 			@param ad The ad to be unoptimized.
 			@return True on success.
 		*/
-		bool UnoptimizeAdForMatchmaking( ClassAd *ad );
+		static bool UnoptimizeAdForMatchmaking( ClassAd *ad );
 
 	protected:
 		const ClassAd *ladParent, *radParent;
 		ClassAd *lCtx, *rCtx, *lad, *rad;
+		ExprTree *symmetric_match, *right_matches_left, *left_matches_right;
 
     private:
         // The copy constructor and assignment operator are defined
@@ -199,8 +212,12 @@ class MatchClassAd : public ClassAd
 			@param error_msg non-NULL if an error description is desired.
 			@return True on success.
 		*/
-		bool OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg );
+		static bool OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg );
 
+		/**
+		   @return true if the given expression evaluates to true
+		*/
+		bool EvalMatchExpr(ExprTree *match_expr);
 };
 
 END_NAMESPACE // classad
