@@ -716,8 +716,13 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	process_locals( "LOCAL_CONFIG_FILE", host );
 
 	char* newdirlist = param("LOCAL_CONFIG_DIR");
-	if(newdirlist && dirlist) {
-		if(strcmp(dirlist, newdirlist) ) {
+	if(newdirlist) {
+		if (dirlist) {
+			if(strcmp(dirlist, newdirlist) ) {
+				process_directory(newdirlist, host);
+			}
+		}
+		else {
 			process_directory(newdirlist, host);
 		}
 	}
