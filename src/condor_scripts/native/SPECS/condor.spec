@@ -76,7 +76,6 @@ rm -rf $PREFIX
 #Extract binaries and remove tar file
 cd %_builddir
 cp %{SOURCE0} .
-r
 source_file=%{SOURCE0}
 tar xzf ${source_file##*/}
 rm ${source_file##*/}
