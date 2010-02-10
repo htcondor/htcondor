@@ -83,6 +83,7 @@ extern const char * const  ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 extern const char * const  ATTR_CONSOLE_IDLE;
 extern const char * const  ATTR_CONTINUE;
 extern const char * const  ATTR_CORE_SIZE;
+extern const char * const  ATTR_CREAM_ATTRIBUTES;
 extern const char * const  ATTR_CRON_MINUTES;
 extern const char * const  ATTR_CRON_HOURS;
 extern const char * const  ATTR_CRON_DAYS_OF_MONTH;
