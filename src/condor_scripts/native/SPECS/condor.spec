@@ -76,6 +76,7 @@ rm -rf $PREFIX
 #Extract binaries and remove tar file
 cd %_builddir
 cp %{SOURCE0} .
+r
 source_file=%{SOURCE0}
 tar xzf ${source_file##*/}
 rm ${source_file##*/}
@@ -281,6 +282,7 @@ if [ $? = 0 ]; then
    semanage fcontext -a -t unconfined_execmem_exec_t $USR/sbin/condor_startd 2>&1| grep -v "already defined"
    restorecon  $USR/sbin/condor_startd
 fi
+exit 0
 
 
 %preun -n condor
