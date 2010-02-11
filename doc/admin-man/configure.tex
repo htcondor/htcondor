@@ -1275,6 +1275,22 @@ File System Configuration File Entries''.
   page~\pageref{sec:windows-scripts-as-executables} for a more complete
   description.
 
+\label{param:TargetJobAttrs}
+\item[\Macro{TARGET\_JOB\_ATTRS}]
+Condor will rewrite machine ad expressions so that known job attributes
+will have a 'Target.' prefix, allowing proper evaluation when using new
+ClassAds. This parameter is a comma-separated list of additional job
+attributes that should be checked. It is useful if you have custom
+attributes in your job ads that are used for matchmaking.
+
+\label{param:TargetMachineAttrs}
+\item[\Macro{TARGET\_MACHINE\_ATTRS}]
+Condor will rewrite job ad expressions so that known machine attributes
+will have a 'Target.' prefix, allowing proper evaluation when using new
+ClassAds. This parameter is a comma-separated list of additional machine
+attributes that should be checked. It is useful if you have custom
+attributes in your machine ads that are used for matchmaking.
+
 \end{description}
 
 
