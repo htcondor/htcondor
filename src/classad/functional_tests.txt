@@ -9,6 +9,28 @@ same $x, 6
 eval x = (8 / 2)
 same $x, 4
 
+echo Testing implicit conversion to boolean
+eval x = true && 1
+same $x, true
+eval x = true && 0
+same $x, false
+eval x = false || 1
+same $x, true
+eval x = false || 0
+same $x, false
+eval x = (1 ? true : false)
+same $x, true
+eval x = (0 ? true : false)
+same $x, false
+eval x = 1 + true
+same $x, 2
+eval x = 1 + false
+same $x, 1
+eval x = true * 2
+same $x, 2
+eval x = false * 2
+same $x, 0
+
 echo Testing extreme numbers...
 same string(real("INF")), "real(\"INF\")"
 same string(real("-INF")), "real(\"-INF\")"

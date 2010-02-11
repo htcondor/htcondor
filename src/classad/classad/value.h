@@ -156,6 +156,14 @@ class Value
 			@return true iff the value is boolean.
 		*/	
 		inline bool IsBooleanValue() const;
+
+		/** Checks if the value is boolean or something considered
+			equivalent by implicit conversion (e.g. a number).
+			@param b The boolean value if return is true.
+			@return true iff the value is boolean or equivalent
+		 */
+		bool IsBooleanValueEquiv(bool &b) const;
+
 		/** Checks if the value is integral.
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
