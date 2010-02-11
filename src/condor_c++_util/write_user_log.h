@@ -179,6 +179,16 @@ class WriteUserLog
     bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL,
 					 bool *written = NULL );
 
+	/**Control whether writeEvent() calls fsync.  This overrides the
+	   configured default ENABLE_USERLOG_FSYNC.  This only applies to
+	   the user log, not the global event log.
+	   @param enabled If true, enable fsync in writeEvent()
+	 */
+	void setEnableFsync(bool enabled);
+
+	/**@return false if disabled, true if enabled*/
+	bool getEnableFsync();
+
 	/** APIs for testing */
 	int getGlobalSequence( void ) const { return m_global_sequence; };
 
