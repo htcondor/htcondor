@@ -64,6 +64,13 @@ getent group condor >/dev/null || groupadd -r condor
 getent passwd condor >/dev/null || \
   useradd -r -g condor -d %_var/lib/condor -s /sbin/nologin \
     -c "Owner of Condor Daemons" condor
+
+if [ "$1" -ge "2" ]; then
+  #Stopping condor if there is existing version
+  /sbin/service condor stop >/dev/null 2>&1 || :
+fi
+
+
 exit 0
 
 
@@ -268,8 +275,8 @@ if [ $ETC != "/etc" ] ; then
   perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/init.d/condor 
   perl -p -i -e "s:^LOCAL_CONFIG_FILE(\s*)=\s*/etc(.*):LOCAL_CONFIG_FILE\$1= $ETC\$2:" $ETC/condor/condor_config 
   
-  #Install links
-  ln -sf $ETC/init.d/condor /etc/init.d/condor  
+  #Install init.d script
+  cp -f $ETC/init.d/condor /etc/init.d/condor  
 fi
 
 
@@ -285,11 +292,14 @@ exit 0
 
 
 %preun -n condor
+
+#Stop condor
+/sbin/service condor stop >/dev/null 2>&1 || :
 if [ $1 = 0 ]; then
-  /sbin/service condor stop >/dev/null 2>&1 || :
+  
   /sbin/chkconfig --del condor
   
-  #Remove softlink if relocated
+  #Remove init.d if relocated
   ETC=$RPM_INSTALL_PREFIX0
   if [ $ETC != "/etc" ] ; then    
     rm /etc/init.d/condor
@@ -299,17 +309,19 @@ fi
 
 
 %postun -n condor
-if [ "$1" -ge "1" ]; then
-  /sbin/service condor restart >/dev/null 2>&1 || :
-fi
+#if [ "$1" -ge "1" ]; then
+  #Upgrading or remove but other version existed 
+  #/sbin/service condor restart >/dev/null 2>&1 || :
+#fi
 /sbin/ldconfig
 
 
 %changelog
+* _DATE_  <condor-users@cs.wisc.edu> - _VERSION_-_REVISION_
+- Please see version history at http://www.cs.wisc.edu/condor/manual/v_VERSION_/8_Version_History.html
+
 * Sun Jan 24 2010  <kooburat@cs.wisc.edu> - 7.5.0-2
-- Upgrade to 7.5.0 release
-- Make RPM relocatable
+- Make RPM relocatable and support multiple version install
 
 * Fri Nov 13 2009  <kooburat@cs.wisc.edu> - 7.4.0-1
-- Upgrade to 7.4.0 release
-- Initial release based on Fedora's spec file by <matt@redhat>
+- Initial release based on Fedora's RPM by <matt@redhat>

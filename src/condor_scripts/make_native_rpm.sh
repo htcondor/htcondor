@@ -33,10 +33,12 @@ cp $CONDOR_TARFILE $BUILD_DIR/SOURCES/
 ls -l $BUILD_DIR/SOURCES/
 
 echo "Updating SPEC file"
+RPM_DATE=`date +"%a %b %d %Y"`
 #Replace VERSION and SOURCE file in original spec file
 sed < $BUILD_DIR/SPECS/condor.spec \
      "s|_VERSION_|$CONDOR_VERSION|g; \
      s|_REVISION_|$REVISION|g; \
+     s|_DATE_|$RPM_DATE|g; \
      s|_TARFILE_|$CONDOR_TARFILE|g" > $BUILD_DIR/SPECS/condor.spec.new
 
 mv $BUILD_DIR/SPECS/condor.spec.new $BUILD_DIR/SPECS/condor.spec
