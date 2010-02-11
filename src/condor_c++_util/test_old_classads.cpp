@@ -1681,7 +1681,7 @@ static void test_functions(
 		test_function_int(results);
 		test_function_real(results);
 		test_function_string(results);
-//		test_function_stringlists(results);
+		test_function_stringlists(results);
 
 		test_function_floor(results);
 		test_function_ceiling(results);
@@ -1696,7 +1696,7 @@ static void test_functions(
 		test_function_strcmp(results);
 		test_function_attrnm(results);
 		test_function_regexp(results);
-//		test_function_stringlists_regexpmember(results);
+		test_function_stringlists_regexpmember(results);
         delete classad;
 	}
 	return;
@@ -1987,7 +1987,6 @@ static void test_function_ifthenelse(
 	return;
 }
 
-#if 0
 static void test_function_stringlists(
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
@@ -2179,7 +2178,7 @@ static void test_function_stringlists(
 			results->AddResult(false);
 		}
 
-		if (classad->EvalInteger("P1", NULL, integer) && (integer == 0)) {
+		if (classad->EvalFloat("P1", NULL, real) && (real == 0.0)) {
 			printf("Passed: Evaluating stringlistsum gives: %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
@@ -2503,7 +2502,6 @@ static void test_function_stringlists(
 	}
 	return;
 }
-#endif
 
 static void test_function_real(
 	TestResults  *results)     // OUT: Modified to reflect result of test
@@ -4094,7 +4092,6 @@ static void test_function_regexp(
 	return;
 }
 
-#if 0
 static void test_function_stringlists_regexpmember(
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
@@ -4269,7 +4266,6 @@ static void test_function_stringlists_regexpmember(
 	}
 	return;
 }
-#endif
 
 static void test_function_XXX(
 	TestResults  *results)     // OUT: Modified to reflect result of test

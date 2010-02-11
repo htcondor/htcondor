@@ -143,6 +143,7 @@ const char * const ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLi
 const char * const ATTR_CONSOLE_IDLE			 = "ConsoleIdle";
 const char * const ATTR_CONTINUE                 = "Continue";
 const char * const ATTR_CORE_SIZE				 = "CoreSize";
+const char * const ATTR_CREAM_ATTRIBUTES		 = "CreamAttributes";
 const char * const ATTR_CRON_MINUTES			 = "CronMinute";
 const char * const ATTR_CRON_HOURS				 = "CronHour";
 const char * const ATTR_CRON_DAYS_OF_MONTH		 = "CronDayOfMonth";
