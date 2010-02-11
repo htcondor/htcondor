@@ -24,13 +24,13 @@
 #include "condor_string.h" // for strnewp()
 #include "tmp_dir.h"
 #include "stat_wrapper.h"
-#ifdef HAVE_EXT_CLASSADS
+
 #ifndef WANT_CLASSAD_NAMESPACE
 #define WANT_CLASSAD_NAMESPACE
 #endif
 #include <iostream>
 #include "classad/classad_distribution.h"
-#endif
+
 #include "fs_util.h"
 
 #ifdef WIN32
@@ -477,8 +477,6 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef HAVE_EXT_CLASSADS
-
 // Skip whitespace in a std::string buffer.
 void
 MultiLogFiles::skip_whitespace(std::string const &s,int &offset) {
@@ -625,7 +623,6 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 
 	return rtnVal;
 }
-#endif /* HAVE_EXT_CLASSADS */
 
 ///////////////////////////////////////////////////////////////////////////////
 

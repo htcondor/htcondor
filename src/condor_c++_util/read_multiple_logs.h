@@ -75,7 +75,6 @@ public:
 		 */
 	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
 
-#ifdef HAVE_EXT_CLASSADS
 	    /** Gets the log files from a Stork submit file.
 		 * @param The submit file name.
 		 * @param The directory containing the submit file.
@@ -86,7 +85,6 @@ public:
 		const MyString &strSubFilename,
 		const MyString &directory,
 		StringList &listLogFilenames);
-#endif
 
 		/** Gets the number of job procs queued by a submit file
 			@param The submit file name
@@ -160,7 +158,6 @@ private:
 	static MyString CombineLines(StringList &listIn, char continuation,
 			const MyString &filename, StringList &listOut);
 
-#ifdef HAVE_EXT_CLASSADS
 		/**
 		 * Skip whitespace in a std::string buffer.  This is a helper function
 		 * for loadLogFileNamesFromStorkSubFile().  When the new ClassAds
@@ -180,7 +177,6 @@ private:
 		 * @return "" if okay, or else an error message.
 		 */
 	static MyString readFile(char const *filename,std::string& buf);
-#endif
 
 };
 

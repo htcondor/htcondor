@@ -4,9 +4,6 @@
 #define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o compat_classad.o compat_classad_list.o compat_classad_util.o
 #endif
 
-#define New_classads_dc_obj	dc_credd.o dc_lease_manager.o dc_lease_manager_lease.o
-#define New_classads_lib	-lclassad_ns
-
 #if HAVE_DLOPEN
 PLUGIN_OBJ = ClassAdLogPluginManager.o LoadPlugins.o
 #endif
@@ -215,7 +212,8 @@ CONLIBAPI_OBJ = \
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o \
-	New_classads_dc_obj dc_message.o dc_master.o dc_transferd.o \
+	dc_credd.o dc_lease_manager.o dc_lease_manager_lease.o \
+	dc_message.o dc_master.o dc_transferd.o \
 	dc_transfer_queue.o
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
@@ -325,8 +323,8 @@ c_plus_nowrap_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
 c_plus_nowrap_target(test_libcondorapi_shared,test_libcondorapi.o,libcondorapi.so)
 #endif
 
-c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
-c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
+c_plus_target(test_check_events,test_check_events.o,$(LIB))
+c_plus_target(test_multi_log,test_multi_log.o,$(LIB))
 c_plus_target(test_stat_wrapper,test_stat_wrapper.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
