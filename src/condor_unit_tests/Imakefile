@@ -7,7 +7,8 @@ LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 OBJ = FTEST_string_to_sin.o FTEST_sin_to_string.o FTEST_getHostFromAddr.o \
 	  FTEST_getPortFromAddr.o FTEST_host_in_domain.o FTEST_is_ipaddr.o \
 	  FTEST_is_valid_network.o FTEST_is_valid_sinful.o FTEST_string_to_port.o \
-	  FTEST_string_to_hostname.o FTEST_string_to_ip.o OTEST_HashTable.o
+	  FTEST_string_to_hostname.o FTEST_string_to_ip.o OTEST_HashTable.o \
+	  FTEST_strupr.o
 
 UNIT_TEST_DEPENDENCY_OBJ = emit.o function_test_driver.o unit_tests.o \
 	unit_test_utils.o 

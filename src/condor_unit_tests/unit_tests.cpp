@@ -39,6 +39,7 @@ bool FTEST_string_to_hostname(void);
 bool FTEST_string_to_ip(void);
 bool FTEST_string_to_sin(void);
 bool FTEST_string_to_port(void);
+bool FTEST_strupr(void);
 bool OTEST_HashTable(void);
 
 int main() {
@@ -56,6 +57,7 @@ int main() {
 	driver.register_function(FTEST_string_to_ip);
 	driver.register_function(FTEST_string_to_sin);
 	driver.register_function(FTEST_string_to_port);
+	driver.register_function(FTEST_strupr);
 	driver.register_function(OTEST_HashTable);
 
 		// run all the functions and return the result
