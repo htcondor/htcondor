@@ -1248,7 +1248,12 @@ sub writeCommonInfo
 		$tag = "origin\/" . $opt_src_tag;
 		print "****** split fetch tag now <$tag> ******\n";
     } elsif( defined $tag ) {
-		if(defined $opt_desc) {
+		if (defined($opt_desc) && defined($opt_nightly)) {
+			# --desc gets appended to the $desc the nightlies want to use
+        	($desc, @vers) = parseTag( $tag );
+			$desc .= " - $opt_desc";
+        	$vers_string = join( ',', @vers );
+		} elsif (defined $opt_desc) {
 			# --desc overrides --tag value starting the description
 			$desc = $opt_desc;
 		} else {
