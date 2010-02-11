@@ -31,8 +31,8 @@ The details of each version are described below.
 % gittrac #221
 \item The configuration variable
 \MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
-delegations done between Condor daemons and tools.  The value is a boolean
-and defaults to False,
+delegations done between Condor daemons and tools.
+The value is a boolean and defaults to \Expr{False},
 which means that when doing delegation Condor will now create a limited proxy
 instead of a full proxy.
 
@@ -49,9 +49,10 @@ instead of a full proxy.
 
 % gittrac #1144
 \item In the grid universe, Condor can now automatically distinguish
-between GRAM2 and GRAM5 servers (i.e. grid-types 'gt2' and 'gt5').
-Users can submit jobs using a grid-type of 'gt2' or 'gt5' for either
-type of server.
+between GRAM2 and GRAM5 servers, that is grid types \SubmitCmd{gt2} and
+\SubmitCmd{gt5}.
+Users can submit jobs using a grid type of \SubmitCmd{gt2} or \SubmitCmd{gt5}
+for either type of server.
 
 % gittrac #938
 \item Grid universe jobs using the CREAM grid system now batch up
@@ -61,13 +62,17 @@ the Condor can handle at once, and reduces the load on the remote
 gatekeeper.
 
 % gittrac #1100
-\item Added new submit file attribute \Macro{cream\_attributes}. When
-submitting a grid universe job destined for the CREAM grid system, this
-attribute can be used to add addtional attribute/value pairs to the CREAM
-job description that Condor creates.
+\index{submit commands!cream\_attributes}
+\item The new submit description file command \SubmitCmd{cream\_attributes}
+sets additional attribute/value pairs for the CREAM job description
+that Condor creates when submitting a grid universe job 
+destined for the CREAM grid system.
 
 % gittrac #1138
-\item The -analyze option to \Condor{q} is now identical to -better-analyze.  -better-analyze includes the same information as -analyze but also includes more specific information on a job's Requirements.
+\item The \Condor{q} command with option \Opt{-analyze} is now identical to
+the option \Opt{-better-analyze}.
+The \Opt{-better-analyze} option includes a superset of information,
+and also includes more specific information on a job's \SubmitCmd{requirements}.
 
 % gittrack #1169
 \item Security sessions that are not used for longer than an hour are
@@ -75,7 +80,7 @@ now removed from the security session cache to limit memory usage.
 
 % gittrack #1169
 \item The number of security sessions in the cache is now advertised in
-the daemon ad as \Attr{MonitorSelfSecuritySessions}.
+the daemon ClassAd as \Attr{MonitorSelfSecuritySessions}.
 
 % gittrac #1078
 \item \Condor{dagman} now has the capability to run DAGs containing nodes
@@ -83,13 +88,14 @@ that are declared to be NOOPs -- for these nodes, a job is never actually
 submitted.  See section~\ref{dagman:NOOP} for for information.
 
 % gittrac #1128
-\item The submit file attribute \Macro{vm\_macaddr} can now be used to set
+\index{submit commands!vm\_macaddr}
+\item The submit file attribute \SubmitCmd{vm\_macaddr} can now be used to set
 the MAC address for vm universe jobs that use VMware. The range of valid
 MAC addresses is constrained by limits imposed by VMware.
 
 % gittrac #1173
-\item \Macro{condor\_q -globus} is now much more efficient in its
-communication with the \Condor{schedd}.
+\item The \Condor{q} command with option \Opt{-globus}
+is now much more efficient in its communication with the \Condor{schedd}.
 
 \end{itemize}
 
@@ -128,7 +134,7 @@ communication with the \Condor{schedd}.
   be used and input is fully validated.
 
 % gittrac #1196
-\item Configuration parameter \Macro{LOCAL\_CONFIG\_DIR} is no longer
+\item The configuration variable \MacroNI{LOCAL\_CONFIG\_DIR} is no longer
 ignored if defined in a local configuration file.
 
 \end{itemize}
