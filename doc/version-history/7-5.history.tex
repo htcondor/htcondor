@@ -19,7 +19,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The Condor release is now available as a proper RPM or Debian
+package.
+
+\item Condor now uses the version of ClassAds that we provide as a stand-alone 
+library (\URL{http://www.cs.wisc.edu/condor/classad/}). Previously, Condor 
+used an older version of ClassAds that was heavily tied to the Condor 
+development libraries. This change should be largely transparent in the 
+current development series. In the next development series (7.7.x), we  
+will start to use features of ClassAds that were unavailable in the 
+older library. See ??? for details.
 
 \end{itemize}
 
@@ -109,6 +118,14 @@ is now much more efficient in its communication with the \Condor{schedd}.
   session cache before being removed to save memory.  The default is 3600.
   If the server and client have different configurations, the smaller
   one will be used.
+
+\item The new configuration parameter \MacroNI{TARGET\_MACHINE\_ATTRS}
+specifies a list of machine ad attributes that should have 'Target.'
+prepended to them in any job ad expressions.
+
+\item The new configuration parameter \MacroNI{TARGET\_JOB\_ATTRS}
+specifies a list of job ad attributes that should have 'Target.'
+prepended to them in any machine ad expressions.
 
 \end{itemize}
 
