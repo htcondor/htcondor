@@ -300,6 +300,23 @@ bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
 {
+		// The collector relies on this function to check the target type.
+		// Eventually, we should move that check either into the collector
+		// or into the requirements expression.
+	char const *my_target_type = my->GetTargetTypeName();
+	char const *target_type = target->GetMyTypeName();
+	if( !my_target_type ) {
+		my_target_type = "";
+	}
+	if( !target_type ) {
+		target_type = "";
+	}
+	if( stricmp(target_type,my_target_type) &&
+		stricmp(my_target_type,ANY_ADTYPE) )
+	{
+		return false;
+	}
+
 	classad::MatchClassAd *mad = getTheMatchAd();
 	mad->ReplaceLeftAd( my );
 	mad->ReplaceRightAd( target );
