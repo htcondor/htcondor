@@ -231,11 +231,11 @@ printOutput( ClassAd* reply, DCStartd* startd )
 void
 fillRequirements( ClassAd* req )
 {
-	MyString jic_req;
+	MyString jic_req = "TARGET.";
 	if (jobad_path) {
-		jic_req = ATTR_HAS_JIC_LOCAL_STDIN;
+		jic_req += ATTR_HAS_JIC_LOCAL_STDIN;
 	} else {
-		jic_req = ATTR_HAS_JIC_LOCAL_CONFIG;
+		jic_req += ATTR_HAS_JIC_LOCAL_CONFIG;
 	}
 	jic_req += "==TRUE";
 
@@ -254,6 +254,7 @@ fillRequirements( ClassAd* req )
 		}
 	}
 	if (slot_id > 0) {
+		require += "TARGET.";
 		require += ATTR_SLOT_ID;
 		require += "==";
 		require += slot_id;
@@ -267,6 +268,7 @@ fillRequirements( ClassAd* req )
 			}
 		}
 		if (vm_id > 0) {
+			require += "TARGET.";
 			require += ATTR_VIRTUAL_MACHINE_ID;
 			require += "==";
 			require += vm_id;
@@ -282,6 +284,13 @@ fillRequirements( ClassAd* req )
 				 requirements );
 		exit( 1 );
 	}
+
+#if !defined(WANT_OLD_CLASSADS)
+		// The user may have entered some references to machine attributes
+		// without explicitly specifying the TARGET scope.
+	req->AddTargetRefs( TargetMachineAttrs );
+#endif
+
 }
 
 
@@ -359,6 +368,13 @@ dumpAdIntoRequest( ClassAd* req )
 		}
     }
 	fclose( JOBAD_PATH );
+
+#if !defined(WANT_OLD_CLASSADS)
+		// The user may have entered some references to machine attributes
+		// without explicitly specifying the TARGET scope.
+	req->AddTargetRefs( TargetMachineAttrs );
+#endif
+
 	return read_something;
 }
 
