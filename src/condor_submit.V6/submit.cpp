@@ -6862,6 +6862,11 @@ log_submit()
 								j, 0, NULL) ) {
 						fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 					} else {
+							// for efficiency, only fsync on the final event
+							// being written to this log
+						bool enable_fsync = j == SubmitInfo[i].lastjob;
+						usr_log.setEnableFsync( enable_fsync );
+
 						if( ! usr_log.writeEvent(&jobSubmit,job) ) {
 							fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 						}

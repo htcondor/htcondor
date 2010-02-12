@@ -1338,3 +1338,13 @@ WriteUserLog::GenerateGlobalId( MyString &id )
 ### tab-width:4 ***
 ### End: ***
 */
+
+void
+WriteUserLog::setEnableFsync(bool enabled) {
+	m_enable_fsync = enabled;
+}
+
+bool
+WriteUserLog::getEnableFsync() {
+	return m_enable_fsync;
+}
