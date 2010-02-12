@@ -317,7 +317,7 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 		Starter* tmp_starter;
 		ClassAd fake_ad;
 		MyString fake_req;
-		fake_req.sprintf( "%s = %s", ATTR_REQUIREMENTS,
+		fake_req.sprintf( "%s = TARGET.%s", ATTR_REQUIREMENTS,
 						  ATTR_HAS_JIC_LOCAL_CONFIG );
 		fake_ad.Insert( fake_req.Value() );
 		tmp_starter = resmgr->starter_mgr.findStarter( &fake_ad, NULL );
