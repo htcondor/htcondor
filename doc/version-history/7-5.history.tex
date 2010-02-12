@@ -53,7 +53,7 @@ instead of a full proxy.
 % gittrac #1104
 \item The \Condor{master} no longer pauses for 3 seconds after starting
   the \Condor{collector}.  However, if the configuration variable
-  \MacroNI{COLLECTOR\_ADDRESS\_FILE} is defines a file, 
+  \MacroNI{COLLECTOR\_ADDRESS\_FILE} defines a file, 
   the \Condor{master} will wait for that file to be created
   before starting other daemons.
 
@@ -154,6 +154,17 @@ prepended to them in any machine ad expressions.
 % gittrac #1196
 \item The configuration variable \MacroNI{LOCAL\_CONFIG\_DIR} is no longer
 ignored if defined in a local configuration file.
+
+% gittrack #767
+\item As of 7.5.0, the following warning was logged in the
+  \Condor{starter}'s log even when the deprecated configuration
+  variable \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED} was not defined.
+
+\begin{verbatim}
+WARNING: EXECUTE_LOGIN_IS_DEDICATED is deprecated.
+Please use DEDICATED_EXECUTE_ACCOUNT_REGEXP instead.
+\end{verbatim}
+
 
 \end{itemize}
 
