@@ -594,13 +594,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) *** Processing callback ad\n",procID.cluster, procI
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-//				if ( jobContact != NULL ) {
-//					free( jobContact );
-//					jobContact = NULL;
-//					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-//									   NULL_JOB_CONTACT );
-//					requestScheddUpdate( this, false );
-//				}
+//				SetRemoteJobId( NULL );
 //				gmState = GM_CLEAR_REQUEST;
 				gmState = GM_HOLD;
 			}

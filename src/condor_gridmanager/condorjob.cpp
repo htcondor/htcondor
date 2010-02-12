@@ -1379,8 +1379,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_PROC_ID );
 	submit_ad->Delete( ATTR_USER );
 	submit_ad->Delete( ATTR_OWNER );
-	submit_ad->Delete( ATTR_REMOTE_SCHEDD );
-	submit_ad->Delete( ATTR_REMOTE_POOL );
 	submit_ad->Delete( ATTR_GRID_RESOURCE );
 	submit_ad->Delete( ATTR_JOB_MATCHED );
 	submit_ad->Delete( ATTR_JOB_MANAGED );
@@ -1401,7 +1399,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( "CondorPlatform" );
 	submit_ad->Delete( "CondorVersion" );
-	submit_ad->Delete( ATTR_JOB_GRID_TYPE );
 	submit_ad->Delete( ATTR_WANT_CLAIMING );
 	submit_ad->Delete( ATTR_WANT_MATCHING );
 	submit_ad->Delete( ATTR_HOLD_REASON );

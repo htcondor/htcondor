@@ -230,7 +230,6 @@ const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
 
 const char	*Universe		= "universe";
-const char	*Grid_Type		= "grid_type";
 const char	*MachineCount	= "machine_count";
 const char	*NotifyUser		= "notify_user";
 const char	*EmailAttributes = "email_attributes";
@@ -242,17 +241,11 @@ const char	*NiceUser		= "nice_user";
 
 const char	*GridResource	= "grid_resource";
 const char	*X509UserProxy	= "x509userproxy";
-const char	*GlobusScheduler = "globusscheduler";
-const char	*GlobusJobmanagerType = "jobmanager_type";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
 const char	*GlobusXML = "globus_xml";
 const char	*NordugridRSL = "nordugrid_rsl";
-const char	*RemoteSchedd = "remote_schedd";
-const char	*RemotePool = "remote_pool";
 const char	*RendezvousDir	= "rendezvousdir";
-const char	*UnicoreUSite = "unicore_u_site";
-const char 	*UnicoreVSite = "unicore_v_site";
 const char	*KeystoreFile = "keystore_file";
 const char	*KeystoreAlias = "keystore_alias";
 const char	*KeystorePassphraseFile = "keystore_passphrase_file";
@@ -1205,10 +1198,6 @@ SetRemoteAttrs()
 	};
 
 	ExprItem tostringize[] = {
-		{ Grid_Type, 0, ATTR_JOB_GRID_TYPE },
-		{ RemoteSchedd, 0, ATTR_REMOTE_SCHEDD },
-		{ RemotePool, 0, ATTR_REMOTE_POOL },
-		{ GlobusScheduler, "globus_scheduler", ATTR_GLOBUS_RESOURCE },
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
 		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
 		{ NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
@@ -1225,19 +1214,6 @@ SetRemoteAttrs()
 		while(strincmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
 			remote_depth++;
 			key += REMOTE_PREFIX_LEN;
-		}
-
-		if(remote_depth == 0) {
-			continue;
-		}
-
-		// remote_schedd and remote_pool have remote_ in front of them. :-/
-		// Special case to detect them. 
-		char * possible_key = key - REMOTE_PREFIX_LEN;
-		if(stricmp(possible_key, RemoteSchedd) == 0 ||
-			stricmp(possible_key, RemotePool) == 0) {
-			remote_depth--;
-			key = possible_key;
 		}
 
 		if(remote_depth == 0) {
@@ -1707,13 +1683,9 @@ SetUniverse()
 		free(univ);
 		univ = 0;
 	
-		// Set Grid_Type
-		// Check both grid_type and grid_resource. If the latter one starts
+		// Set JobGridType
+		// Check grid_resource. If it starts
 		// with '$$(', then we're matchmaking and don't know the grid-type.
-		// If both are blank, check globus_scheduler and its variants. If
-		// one of them exists, then this is an old gt2 submit file.
-		// Otherwise, we matchmaking and don't know the grid-type.
-		// If grid_resource exists, we ignore grid_type.
 		if ( JobGridType != NULL ) {
 			free( JobGridType );
 			JobGridType = NULL;
@@ -1730,23 +1702,15 @@ SetUniverse()
 				}
 			}
 		} else {
-			JobGridType = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
-			if ( !JobGridType ) {
-				char *tmp = condor_param( GlobusScheduler,
-										  "globus_scheduler" );
-				if ( tmp == NULL ) {
-					tmp = condor_param( ATTR_GLOBUS_RESOURCE, NULL );
-				}
-				if ( tmp ) {
-					JobGridType = strdup( "gt2" );
-					free( tmp );
-				}
-			}
+			fprintf( stderr, "ERROR: %s attribute not defined for grid "
+					 "universe job\n", GridResource );
+			exit( 1 );
 		}
 		if ( JobGridType ) {
 			// Validate
-			// Valid values are (as of 6.7): nordugrid, globus,
-			//    gt2, infn, condor
+			// Valid values are (as of 7.5.1): nordugrid, globus,
+			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
+			//    amazon, unicore, cream
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1774,14 +1738,12 @@ SetUniverse()
 				JobGridType = strdup( "gt2" );
 			} else {
 
-				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", JobGridType );
-				fprintf( stderr, "Must be one of: globus, gt2, gt4, condor, nordugrid, unicore, or cream\n" );
+				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
+				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
+						 "nqs, condor, nordugrid, unicore, amazon, or cream\n" );
 				exit( 1 );
 			}
 		}			
-		
-			// Setting ATTR_JOB_GRID_TYPE in the job ad has been moved to
-			// SetGlobusParams().
 		
 		return;
 	};
@@ -4804,40 +4766,17 @@ SetForcedAttributes()
 }
 
 void
-SetGlobusParams()
+SetGridParams()
 {
 	char *tmp;
-	bool unified_syntax;
 	MyString buffer;
 	FILE* fp;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return;
 
-		// If we are dumping to a file we can't call
-		// MySchedd->version(), because MySchedd is NULL. Instead we
-		// assume we'd be talking to a Schedd just as current as we
-		// are.
-	if ( DumpClassAdToFile ) {
-		unified_syntax = true;
-	} else {
-			// Does the schedd support the new unified syntax for grid universe
-			// jobs (i.e. GridResource and GridJobId used for all types)?
-		CondorVersionInfo vi( MySchedd->version() );
-		unified_syntax = vi.built_since_version(6,7,11);
-	}
-
 	tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 	if ( tmp ) {
-			// If we find grid_resource, then just toss it into the job ad
-
-		if ( !unified_syntax ) {
-				fprintf( stderr, "ERROR: Attribute %s cannot be used with "
-						 "schedds older than 6.7.11\n", GridResource );
-				DoCleanup( 0, 0, NULL );
-				exit( 1 );
-		}
-
 			// TODO validate number of fields in grid_resource?
 
 		buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE, tmp );
@@ -4856,238 +4795,12 @@ SetGlobusParams()
 
 		free( tmp );
 
-	} else if ( JobGridType ) {
-			// If we don't find grid_resource but we know the grid-type,
-			// then the user is using the old syntax (with grid_type).
-			// Deal with all the attributes that go into GridResource.
-
-		buffer.sprintf( "%s = \"%s\"", ATTR_JOB_GRID_TYPE, JobGridType );
-		InsertJobExpr( buffer, false );
-
-		if ( stricmp (JobGridType, "gt2") == MATCH ||
-			 stricmp (JobGridType, "gt4") == MATCH ||
-			 stricmp (JobGridType, "gt5") == MATCH ) {
-
-			char * jobmanager_type;
-			jobmanager_type = condor_param ( GlobusJobmanagerType );
-			if (jobmanager_type) {
-				if (stricmp (JobGridType, "gt4") != MATCH ) {
-					fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
-				}
-				if ( !unified_syntax ) {
-					buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
-							 jobmanager_type );
-					InsertJobExpr (buffer, false );
-				}
-			} else if (stricmp (JobGridType, "gt4") == MATCH ) {
-				jobmanager_type = strdup ("Fork");
-			}
-
-			char *globushost;
-			globushost = condor_param( GlobusScheduler, "globus_scheduler" );
-			if( !globushost ) {
-					// this is stupid, the "GlobusScheduler" global
-					// variable doesn't follow our usual conventions, so
-					// its value is "globusscheduler". *sigh* so, our
-					// first condor_param() uses the "old-style" format as
-					// the alternate.  if we don't have a value, we want
-					// to try again with the actual job classad value:
-				globushost = condor_param( ATTR_GLOBUS_RESOURCE, NULL );
-				if( ! globushost ) { 
-					fprintf( stderr, "Globus/gt4 universe jobs require a "
-							 "\"GlobusScheduler\" parameter\n" );
-					DoCleanup( 0, 0, NULL );
-					exit( 1 );
-				}
-			}
-
-			if ( unified_syntax ) {
-					// GT4 jobs need the extra jobmanager_type field.
-				buffer.sprintf( "%s = \"%s %s%s%s\"", ATTR_GRID_RESOURCE,
-						 JobGridType, globushost,
-						 stricmp( JobGridType, "gt4" ) == MATCH ? " " : "",
-						 stricmp(JobGridType, "gt4") == MATCH ?
-						 jobmanager_type : "" );
-				InsertJobExpr( buffer );
-			} else {
-				buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
-				InsertJobExpr (buffer);
-			}
-
-			if ( strstr(globushost,"$$") ) {
-					// We need to perform matchmaking on the job in order
-					// to find the GlobusScheduler.
-				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
-				InsertJobExpr (buffer);
-			}
-
-			free( globushost );
-			if ( jobmanager_type ) {
-				free( jobmanager_type );
-			}
-		}
-
-		if ( stricmp ( JobGridType, "condor" ) == MATCH ) {
-
-			char *remote_schedd;
-			char *remote_pool;
-
-			if ( !(remote_schedd = condor_param( RemoteSchedd,
-												 ATTR_REMOTE_SCHEDD ) ) ) {
-				fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" "
-						"parameter\n", RemoteSchedd );
-				DoCleanup( 0, 0, NULL );
-				exit( 1 );
-			}
-
-			remote_pool = condor_param( RemotePool, ATTR_REMOTE_POOL );
-			if ( remote_pool == NULL ) {
-				DCCollector collector;
-				remote_pool = collector.name();
-				if ( remote_pool ) {
-					remote_pool = strdup( remote_pool );
-				}
-			}
-			if ( remote_pool == NULL && unified_syntax ) {
-
-				fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" "
-						"parameter\n", RemotePool );
-				DoCleanup( 0, 0, NULL );
-				exit( 1 );
-			}
-
-			if ( unified_syntax ) {
-				buffer.sprintf( "%s = \"condor %s %s\"", ATTR_GRID_RESOURCE,
-						 remote_schedd, remote_pool );
-				InsertJobExpr( buffer );
-			} else {
-				buffer.sprintf( "%s = \"%s\"", ATTR_REMOTE_SCHEDD,
-						 remote_schedd );
-				InsertJobExpr (buffer);
-
-				if ( remote_pool ) {
-					buffer.sprintf( "%s = \"%s\"", ATTR_REMOTE_POOL,
-							 remote_pool );
-					InsertJobExpr ( buffer );
-				}
-			}
-
-			if ( strstr(remote_schedd,"$$") ) {
-
-				// We need to perform matchmaking on the job in order to find
-				// the RemoteSchedd.
-				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
-				InsertJobExpr (buffer);
-			}
-
-			free( remote_schedd );
-			free( remote_pool );
-		}
-
-		if ( stricmp (JobGridType, "nordugrid") == MATCH ) {
-
-			char *host;
-			host = condor_param( "nordugrid_resource", "nordugridresource" );
-			if( !host ) {
-				fprintf( stderr, "Nordugrid jobs require a "
-						 "\"nordugrid_resource\" parameter\n" );
-				DoCleanup( 0, 0, NULL );
-				exit( 1 );
-			}
-
-				// nordugrid is only supported in versions that use the
-				// unified grid resource syntax
-			buffer.sprintf( "%s = \"nordugrid %s\"", ATTR_GRID_RESOURCE, 
-					 host );
-			InsertJobExpr( buffer );
-
-			if ( strstr(host,"$$") ) {
-					// We need to perform matchmaking on the job in order
-					// to find the nordugrid_resource.
-				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
-				InsertJobExpr (buffer);
-			}
-
-			free( host );
-		}
-
-		if ( stricmp ( JobGridType, "unicore" ) == MATCH ) {
-
-			char *u_site = NULL;
-			char *v_site = NULL;
-
-			if ( !(u_site = condor_param( UnicoreUSite, "UnicoreUSite" )) ) {
-				fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
-						"parameter\n", UnicoreUSite );
-				DoCleanup( 0, 0, NULL );
-				exit( 1 );
-			}
-
-			if ( !(v_site = condor_param( UnicoreVSite, "UnicoreVSite" )) ) {
-				fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
-						"parameter\n", UnicoreVSite );
-				DoCleanup( 0, 0, NULL );
-				exit( 1 );
-			}
-
-			if ( unified_syntax ) {
-				buffer.sprintf( "%s = \"unicore %s %s\"", ATTR_GRID_RESOURCE,
-						 u_site, v_site );
-				InsertJobExpr( buffer );
-			} else {
-				buffer.sprintf( "%s = \"%s\"", "UnicoreUSite", u_site );
-				InsertJobExpr (buffer);
-
-				buffer.sprintf( "%s = \"%s\"", "UnicoreVSite", v_site );
-				InsertJobExpr ( buffer );
-			}
-
-			if ( strstr(u_site,"$$") || strstr(v_site,"$$") ) {
-
-				// We need to perform matchmaking on the job in order to find
-				// the remote resource.
-				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
-				InsertJobExpr (buffer);
-				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
-				InsertJobExpr (buffer);
-			}
-
-			free( u_site );
-			free( v_site );
-
-		}
-
 	} else {
 			// TODO Make this allowable, triggering matchmaking for
 			//   GridResource
 		fprintf(stderr, "\nERROR: No resource identifier was found.\n" );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
-	}
-
-	if ( !unified_syntax && JobGridType &&
-		 ( stricmp (JobGridType, "gt2") == MATCH ||
-		   stricmp (JobGridType, "gt4") == MATCH ||
-		   stricmp (JobGridType, "gt5") == MATCH ||
-		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
-
-		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
-				 NULL_JOB_CONTACT );
-		InsertJobExpr (buffer);
 	}
 
 	if ( JobGridType == NULL ||
@@ -6022,7 +5735,7 @@ queue(int num)
 		SetNoopJobExitCode();
 		SetLeaveInQueue();
 		SetArguments();
-		SetGlobusParams();
+		SetGridParams();
 		SetGSICredentials();
 		SetMatchListLen();
 		SetDAGNodeName();

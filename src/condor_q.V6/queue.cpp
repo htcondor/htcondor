@@ -1731,7 +1731,6 @@ format_globusHostAndJM( char *, AttrList *ad )
 	int	p;
 	char *attr_value = NULL;
 	char *resource_name = NULL;
-	bool new_syntax;
 	char *grid_type = NULL;
 
 	if ( ad->LookupString( ATTR_GRID_RESOURCE, &attr_value ) ) {
@@ -1743,14 +1742,6 @@ format_globusHostAndJM( char *, AttrList *ad )
 			grid_type = strdup( attr_value );
 			resource_name++;
 		}
-		new_syntax = true;
-	} else {
-			// ATTR_GRID_RESOURCE doesn't exist, try ATTR_GLOBUS_RESOURCE
-		ad->LookupString( ATTR_GLOBUS_RESOURCE, &attr_value );
-		resource_name = attr_value;
-		new_syntax = false;
-
-		ad->LookupString( ATTR_JOB_GRID_TYPE, &grid_type );
 	}
 
 	if ( resource_name != NULL ) {
@@ -1780,23 +1771,15 @@ format_globusHostAndJM( char *, AttrList *ad )
 
 			strcpy( jm, "Fork" );
 
-			if ( new_syntax ) {
-					// GridResource is of the form '<service url> <jm type>'
-					// Find the space, zero it out, and grab the jm type from
-					// the end (if it's non-empty).
-				tmp = strchr( resource_name, ' ' );
-				if ( tmp ) {
-					*tmp = '\0';
-					if ( tmp[1] != '\0' ) {
-						strcpy( jm, &tmp[1] );
-					}
+				// GridResource is of the form '<service url> <jm type>'
+				// Find the space, zero it out, and grab the jm type from
+				// the end (if it's non-empty).
+			tmp = strchr( resource_name, ' ' );
+			if ( tmp ) {
+				*tmp = '\0';
+				if ( tmp[1] != '\0' ) {
+					strcpy( jm, &tmp[1] );
 				}
-			} else {
-					// No ATTR_GRID_RESOURCE, so the jm type is stored as
-					// a separate attribute.
-				ad->LookupString( ATTR_GLOBUS_JOBMANAGER_TYPE, jm,
-								  sizeof(jm) );
-				jm[sizeof(jm)-1] = '\0';
 			}
 
 				// Pick the hostname out of the URL
@@ -2938,14 +2921,10 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
         }
     }
 
-	/* Attributes to check for grid universe matchmaking */ 
-	const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,
-									ATTR_REMOTE_SCHEDD,
-									ATTR_GRID_RESOURCE };
-
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	bool uses_matchmaking = false;
 	unsigned int i;
+	MyString resource;
 	switch(universe) {
 			// Known valid
 		case CONDOR_UNIVERSE_STANDARD:
@@ -2964,17 +2943,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		case CONDOR_UNIVERSE_GRID:
 			/* We may be able to detect when it's valid.  Check for existance
 			 * of "$$(FOO)" style variables in the classad. */
-			for (i = 0;   
-				     i < sizeof(ads_to_check)/sizeof(ads_to_check[0]);
-					 i++) {
-				char resource[500];
-				resource[0] = '\0';
-				request->LookupString(ads_to_check[i], resource);
-				if ( strstr(resource,"$$") ) {
-					uses_matchmaking = true;
-					break;
-				}  
-			}
+			request->LookupString(ATTR_GRID_RESOURCE, resource);
+			if ( strstr(resource.Value(),"$$") ) {
+				uses_matchmaking = true;
+				break;
+			}  
 			if (!uses_matchmaking) {
 				sprintf( return_buff, "%s\nWARNING: Analysis is only meaningful for Grid universe jobs using matchmaking.\n", return_buff);
 			}
