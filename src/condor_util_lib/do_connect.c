@@ -79,9 +79,6 @@ do_connect_with_timeout( const char* host, const char* service,
     } else {
 		hostentp = condor_gethostbyname( host );
 		if( hostentp == NULL ) {
-		#if defined(vax) && !defined(ultrix)
-			herror( "gethostbyname" );
-		#endif
 			dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
 								host );
 			close(fd);
@@ -139,9 +136,6 @@ udp_connect( char* host, u_short port )
 
 	hostentp = condor_gethostbyname( host );
 	if( hostentp == NULL ) {
-#if defined(vax) && !defined(ultrix)
-		herror( "gethostbyname" );
-#endif
 		printf( "Can't find host \"%s\" (Nameserver down?)\n",
 							host );
 		return( -1 );

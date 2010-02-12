@@ -156,13 +156,7 @@ func()
 #endif
 
 
-#if defined(ULTRIX43)
-#	define SETJMP _setjmp
-#	define LONGJMP _longjmp
-#	define StackGrowsDown TRUE
-#	define JMP_BUF_SP_INDEX 32
-
-#elif defined(SUNOS41)
+#if defined(SUNOS41)
 #   define SETJMP _setjmp
 #   define LONGJMP _longjmp
 #	define StackGrowsDown TRUE

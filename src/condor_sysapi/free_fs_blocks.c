@@ -171,65 +171,6 @@ int sysapi_disk_space_raw( const char *filename);
 int sysapi_disk_space_raw();
 #endif
 
-#if defined(ULTRIX42) || defined(ULTRIX43)
-int
-sysapi_disk_space_raw(filename)
-const char *filename;
-{
-	struct fs_data statfsbuf;
-	struct fs_data_req *fs;
-	int free_kbytes;
-
-	sysapi_internal_reconfig();
-
-	if(statfs(filename, &statfsbuf) < 0) {
-		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,0x%x) failed\n",
-													filename, &statfsbuf );
-		return(0);
-	}
-
-	fs = &statfsbuf.fd_req;
-
-	/* bfreen is in kbytes */
-	free_kbytes = fs->bfreen;
-
-	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %d\n", 
-			filename, free_kbytes);
-
-	return(free_kbytes);
-}
-#endif /* MIPS && ULTRIX */
-
-#if defined(VAX) && defined(ULTRIX)
-/* statfs() did not work on our VAX_ULTRIX machine.  use getmnt() instead. */
-int
-sysapi_disk_space_raw(filename)
-char *filename;
-{
-	struct fs_data mntdata;
-	int start;
-	struct fs_data_req *fs_req;
-	int free_kbytes;
-
-	sysapi_internal_reconfig();
-
-	if( getmnt(&start, &mntdata, sizeof(mntdata), NOSTAT_ONE, filename) < 0) {
-		dprintf(D_ALWAYS, "sysapi_disk_space_raw(): getmnt failed");
-		return(0);
-	}
-	
-	fs_req = &mntdata.fd_req;
-
-	/* bfreen is in kbytes. */
-	free_kbytes = fs_req->bfreen;
-
-	dprintf(D_FULLDEBUG, "number of kbytes available for filename: %d\n", 
-			free_kbytes);
-
-	return(free_kbytes);
-}
-#endif /* VAX && ULTRIX */
-
 #if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(Solaris) || defined(IRIX) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>

@@ -20,11 +20,7 @@
 #ifndef _CONDOR_GETMNT_H
 #define _CONDOR_GETMNT_H
 
-#if defined(ULTRIX42) || defined(ULTRIX43)
-#	include <sys/mount.h>
-#endif
-
-#if !defined(ULTRIX42) && !defined(ULTRIX43) && !defined(AIX32) && !defined(Solaris) && !defined(WIN32) && !defined(Darwin) && !defined(CONDOR_FREEBSD)
+#if !defined(AIX32) && !defined(Solaris) && !defined(WIN32) && !defined(Darwin) && !defined(CONDOR_FREEBSD)
 #	include <mntent.h>
 #endif
 
@@ -43,7 +39,9 @@
 #define NMOUNT 256
 #endif
 
-#if !defined(ULTRIX42) && !defined(ULTRIX43)
+/* These are structs used by the Ultrix-specific getmnt() call, which
+ * we simulate on other platforms.
+ */
 struct fs_data_req {
 	dev_t	dev;
 	char	*devname;
@@ -53,7 +51,6 @@ struct fs_data {
 	struct fs_data_req fd_req;
 };
 #define NOSTAT_MANY 0
-#endif
 
 #if NMOUNT < 256
 #undef  NMOUNT

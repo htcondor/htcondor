@@ -30,19 +30,6 @@
 **	with separate text and data (ZMAGIC).
 */
 
-#if defined(vax)
-#define PAGSIZ		1024
-#define SEGSIZE		PAGSIZ
-/*
-**	When the stack is grown, the system allocates 4 pages more
-**	than actually needed.  Hopefully, this value can be found
-**	in an include file somewhere (when pokey comes back up).
-*/
-#define STACKGROW	(ctob(4))
-
-#define TXTOFF		PAGSIZ		/* Offset in a.out */
-#endif defined(vax)
-
 #if defined(MC68020) && defined(BSD43)
 #define PAGSIZ		NBPG
 #define SEGSIZE		PAGSIZ
@@ -105,16 +92,16 @@
 
 #ifdef notdef
 
-#if !defined(vax) && !defined(ntohl) && !defined(lint)
+#if !defined(ntohl) && !defined(lint)
 #define ntohl(x)	(x)
 #define ntohs(x)	(x)
 #define htonl(x)	(x)
 #define htons(x)	(x)
-#endif !defined(vax) && !defined(ntohl) && !defined(lint)
+#endif !defined(ntohl) && !defined(lint)
 
-#if !defined(ntohl) && (defined(vax) || defined(lint))
+#if !defined(ntohl) && defined(lint)
 u_short ntohs(), htons();
 u_long  ntohl(), htonl();
-#endif !defined(ntohl) && (defined(vax) || defined(lint))
+#endif !defined(ntohl) && defined(lint)
 
 #endif notdef

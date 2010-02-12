@@ -34,11 +34,7 @@
  simulation.
 */
 
-#if defined(ULTRIX42) || defined(ULTRIX43) 
-
-	/* Nothing needed on ULTRIX systems - getmnt() is native*/
-
-#elif defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <sys/stat.h>
 #include <sys/mount.h>

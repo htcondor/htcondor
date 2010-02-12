@@ -26,7 +26,7 @@
 #include <sys/types.h>
 #include <sys/param.h>
 
-#if defined(SUNOS41) || defined(ULTRIX42) || defined(ULTRIX43)
+#if defined(SUNOS41)
 #include <sys/time.h>
 #endif
 
