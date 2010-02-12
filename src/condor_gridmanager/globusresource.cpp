@@ -780,7 +780,7 @@ GlobusResource::SubmitMonitorJob()
 	contact.sprintf( "%s/jobmanager-fork", resourceName );
 
 	rc = monitorGahp->globus_gram_client_job_request( contact.Value(),
-													  RSL.Value(), 0, 
+													  RSL.Value(), 1,
 													  monitorGahp->getGt2CallbackContact(),
 													  NULL );
 
