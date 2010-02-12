@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /*
-	This code tests the strupr() function implementation.
+	This code tests the strlwr() function implementation.
  */
 
 #include "condor_common.h"
@@ -32,9 +32,9 @@
 static bool test_normal_case(void);
 static bool test_return_value(void);
 
-bool FTEST_strupr(void) {
-	e.emit_function("char* strupr(char* src)");
-	e.emit_comment("Convert a string, in place, to the uppercase version of it.");
+bool FTEST_strlwr(void) {
+	e.emit_function("char* strlwr(char* src)");
+	e.emit_comment("Convert a string, in place, to the lowercase version of it.");
 	e.emit_problem("Function does no error checking on the size of string");
 	
 		// driver to run the tests and all required setup
@@ -50,17 +50,17 @@ bool FTEST_strupr(void) {
 
 static bool test_normal_case() {
 	char *up = NULL;
-	e.emit_test("Does a lowercase string get converted to upper in place?");
+	e.emit_test("Does a uppercase string get converted to lower in place?");
 	char input[1024];
-	sprintf(input, "%s", "lower");
+	sprintf(input, "%s", "UPPER");
 	e.emit_input_header();
 	e.emit_param("STRING", input);
-	up = strupr(input);
+	up = strlwr(input);
 	e.emit_output_expected_header();
-	e.emit_retval("LOWER");
+	e.emit_retval("upper");
 	e.emit_output_actual_header();
 	e.emit_retval("%s", input);
-	if(strcmp(input, "LOWER") != 0) {
+	if(strcmp(input, "upper") != 0) {
 		e.emit_result_failure(__LINE__);
 		return false;
 	}
@@ -72,7 +72,7 @@ static bool test_return_value() {
 	char *up = NULL;
 	e.emit_test("Does the function return correct pointer to input parameter?");
 	char input[1024];
-	sprintf(input, "%s", "lower");
+	sprintf(input, "%s", "UPPER");
 	e.emit_input_header();
 	e.emit_param("STRING", input);
 	up = strupr(input);
