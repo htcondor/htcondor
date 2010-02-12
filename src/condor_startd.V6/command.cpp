@@ -2070,12 +2070,16 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	int cmd = 0;
 	char* cmd_str = NULL;
 
-
 	if( dc_cmd == CA_AUTH_CMD ) {
 		cmd = getCmdFromReliSock( rsock, &ad, true );
 	} else {
 		cmd = getCmdFromReliSock( rsock, &ad, false );
 	}
+
+#if !defined(WANT_OLD_CLASSADS)
+	ad.AddTargetRefs( TargetMachineAttrs );
+#endif
+
 		// since we really care about the command string for a lot of
 		// things, let's just grab it out of the classad once right
 		// here.
