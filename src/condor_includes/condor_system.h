@@ -58,8 +58,6 @@
 
 #if defined(LINUX)
 #	include "condor_sys_linux.h"
-#elif defined(IRIX)
-#	include "condor_sys_irix.h"
 #elif defined(HPUX)
 #	include "condor_sys_hpux.h"
 #elif defined(Solaris)

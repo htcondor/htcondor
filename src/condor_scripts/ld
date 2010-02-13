@@ -51,8 +51,8 @@ if [ "X$CONDOR_LD_IN_USE_FILE" != "X" ]; then
 	chmod 600 $CONDOR_LD_IN_USE_FILE
 fi
 
-# Call uname to get the OS. IRIX sometimes reports as IRIX64, strip it.
-os=`uname -s | sed 's/IRIX.*/IRIX/'`
+# Call uname to get the OS.
+os=`uname -s`
 osver=`uname -r`
 
 # Get the major version number for this Unix
@@ -90,36 +90,7 @@ if [ $is_gcc3 = 1 ]; then
 	CONDOR_CLIB=`echo $CONDOR_CLIB $libcomp_libstdcpp`
 fi
 
-#abi is needed throughout for IRIX
-abi="" 
-abiisa=""
-
 case $os in
-	IRIX )
-		abi="-o32"
-		abiisa="-mips2"
-		osld="/usr/lib/old_ld"
-		if [ $osver = "6.5" ]; then
-			abi="-n32"
-			abiisa="-mips3"
-			osld="/usr/lib32/cmplrs/ld32"
-		fi
-		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
-			CONDOR_FULLINSTALL=true
-		fi
-	 	# Strip off any pathnames and see which linker was called
-     	brokenbase=`basename /stupidbasename/$0`
-     	if [ A$brokenbase = A ]; then
-       		brokenbase=$0
-     	fi
-		if [ $CONDOR_FULLINSTALL = true ]; then
-			if [ $brokenbase = "old_ld" -o $brokenbase = "uld" ]; then
-				osld="/usr/lib/condor/$brokenbase"
-			else
-				osld="/usr/lib/ld.real"
-			fi
-		fi
-		;;
 	HP-UX )
 		if [ $osmajver = "10" ]; then
 			if [ -x /usr/ccs/bin/ld.real ]; then
@@ -209,16 +180,6 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	Linux )
 				oscrt0="crt1.o"
 				ldargs="-Bstatic" 
-	;;
-
-	IRIX )		
-		oscrt0="crt1.o"
-		if [ $osver = "6.5" ]; then
-			ldargs="-rpath /usr/lib32/mips3 -LD_MSG:verbose=131,84,85 $abi $abiisa "
-		else
-			ldargs="$abi $abiisa "
-		fi
-
 	;;
 
 	* ) 		echo "ERROR: condor_compile: I do not know how to link for this operating system"
@@ -415,22 +376,6 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # If the binary is stripped, then Condor complains that a STANDARD
 	 # universe job was not linked with condor_syscall_lib.
      -s ) ;;
-
-	# if using IRIX, skip these, either old_ld can't handle these, or 
-	# we already set em the way we want em.
-	  -n32|-64|-32|-o32|-mips2|-mips3|-mips4|-dont_warn_unused|-warn_unused )
-			if [ $os != "IRIX" ]; then
-				ldargs=`echo $ldargs $argument`
-		  	fi ;;
-
-	# Throw out the woff options on IRIX for old_ld.  woff is only 
-	#understood  by the new linker
-	 -woff ) 			
-			if [ $os = "IRIX" -a X$abi = X-o32 ]; then
-		 		ignore=true
-		  	else
-				ldargs=`echo $ldargs $argument`
-		  	fi ;;
 
 	 # Throw out options that ask for shared libs on HPUX
 	 -a ) 			

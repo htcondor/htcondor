@@ -44,11 +44,7 @@ static FILE *email_open_implementation(char *Mailer,char *const final_args[]);
 static FILE *email_open_implementation(char *const final_args[]);
 #endif
 
-#if defined(IRIX)
-extern char **_environ;
-#else
 extern DLL_IMPORT_MAGIC char **environ;
-#endif
 
 extern int Termlog;
 

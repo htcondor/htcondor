@@ -235,12 +235,6 @@ between I386 and X86_64 detection on macosx. */
 	else if( !strcmp(machine, "amd64") ) {
 		sprintf( tmp, "X86_64" );
 	}
-	else if( !strncmp( sysname, "IRIX", 4 ) ) {
-		sprintf( tmp, "SGI" );
-	}
-	else if( !strcmp(machine, "mips") ) { //LDAP entry
-		sprintf( tmp, "SGI" );
-	}
 	else if( !strcmp(machine, "sun4u") ) {
 		sprintf( tmp, "SUN4u" );
 	}
@@ -349,19 +343,6 @@ sysapi_translate_opsys( const char *sysname,
 		}
 		else {
 			sprintf( tmp, "HPUX%s", release );
-		}
-	}
-	else if( !strncmp(sysname, "IRIX", 4 )
-		|| !strcmp( sysname, "irix" ))  //LDAP entry
-	{
-		if( !strcmp( release, "6.5" ) ) {
-			sprintf( tmp, "IRIX65" );
-		}
-		else if( !strcmp( release, "6.2" ) ) {
-			sprintf( tmp, "IRIX62" );
-		}
-		else {
-			sprintf( tmp, "IRIX%s", release );
 		}
 	}
 	else if ( !strncmp(sysname, "Darwin", 6) ) {

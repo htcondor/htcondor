@@ -240,8 +240,6 @@ elif test $os = "Linux" ; then
     _cv_arch="CONDOR_PPC"
   elif test $arch = "x86_64" ; then
     _cv_arch="X86_64"
-  elif test $arch = "mips64" ; then
-    _cv_arch="MIPS64"
   fi
 
   # next, figure out what linux distribution this is

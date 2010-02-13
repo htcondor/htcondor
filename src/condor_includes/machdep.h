@@ -48,10 +48,6 @@
 #define TXTOFF		0
 #endif sun
 
-#ifdef MIPS
-#define STACKGROW	0
-#endif MIPS
-
 #ifdef sequent
 #define PAGSIZ		NBPG
 #define SEGSIZ		PAGSIZ

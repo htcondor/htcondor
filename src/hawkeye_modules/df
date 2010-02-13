@@ -37,23 +37,6 @@ my $Hawkeye;
 my $OsInfo = ();
 my $OS;
 my @OsInfo = (
-	      # Any version of IRIX
-	      { ostype => "IRIX.*", osrev => ".*",
-		df =>
-		{
-		 Command => "df",
-		 BlockSize => 512,
-		 Fields =>
-		 {
-		  fs => 0,
-		  size => 2,
-		  used => 3,
-		  avail => 4,
-		  pused => 5,
-		  mnt => 6,
-		 },
-		},
-	      },
 	      # Any version of HP-UX
 	      { ostype => "HP-UX", osrev => ".*",
 		df =>

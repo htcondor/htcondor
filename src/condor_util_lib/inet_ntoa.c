@@ -19,26 +19,7 @@
 
 #include "condor_common.h"
 
-#if defined(IRIX)
-#include <arpa/inet.h>
-#include <sys/socket.h>
-
-/* defined in <netinet/in.h> on some systems ifdef INET6 */
-#ifndef INET_ADDRSTRLEN
-#define INET_ADDRSTRLEN 16 
-#endif
-
-/* inet_ntoa is broken in current version of gcc in IRIX for n32 ABI and
-	also in the current version of 64-bit gcc under HPUX11 */
-char *
-inet_ntoa( struct in_addr inaddr ) {
-	static char buffer[INET_ADDRSTRLEN];
-
-	return( inet_ntop( AF_INET, (void *) &inaddr, buffer, 
-			(size_t) INET_ADDRSTRLEN ) );
-}
-
-#elif defined(HPUX11)
+#if defined(HPUX11)
 
 /* 64-bit gcc has a problem where it can't return by value a struct of a
 	certain size when linking against system libraries. This function, plus

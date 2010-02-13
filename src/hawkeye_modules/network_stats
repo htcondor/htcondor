@@ -43,10 +43,6 @@ my @Fields = qw( Name MTU RxOk RxErr TxOk TxErr );
 my @OsInfo =
 (
  {
-  ostype => "IRIX.*", osrev => ".*",
-  cmd => "",
- },
- {
   ostype => "HP-UX", osrev => ".*",
   cmd => "",
  },

@@ -147,13 +147,7 @@ func()
 #undef FALSE
 #define FALSE 0
 
-/* IRIX can use 64 bit numbers for the elements if the jump buf, while 
-	long is defined to be 32 bits. */
-#if defined(IRIX)
-#define JMP_BUF_SP(env) (((env))[JMP_BUF_SP_INDEX])
-#else
 #define JMP_BUF_SP(env) (((long *)(env))[JMP_BUF_SP_INDEX])
-#endif
 
 
 #if defined(SUNOS41)
@@ -195,18 +189,6 @@ func()
 #   define JMP_BUF_SP_INDEX 4
 #   define SETJMP setjmp
 #   define LONGJMP longjmp
-
-#elif defined(IRIX62)
-#	define SETJMP setjmp
-#	define LONGJMP longjmp
-#	define StackGrowsDown TRUE
-#	define JMP_BUF_SP_INDEX 39
-
-#elif defined(IRIX65)
-#	define SETJMP setjmp
-#	define LONGJMP longjmp
-#	define StackGrowsDown TRUE
-#	define JMP_BUF_SP_INDEX 34
 
 #else
 #   error UNKNOWN PLATFORM

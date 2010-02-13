@@ -111,8 +111,8 @@ ProcAPI::~ProcAPI() {
 // Each platform gets its own function unless two are so similar that you can
 // ifdef between them.
 
-// this version works for Solaris 2.5.1, IRIX
-#if ( defined(Solaris251) || defined(IRIX) )
+// this version works for Solaris 2.5.1
+#if ( defined(Solaris251) )
 int
 ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 
 {
@@ -159,20 +159,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		( procRaw.sys_time_1 + 
 		  ( procRaw.sys_time_2 * 1.0e-9 ) );
 	
-		/* The bastard os lies to us and can return a negative number for stime.
-		   ps returns the wrong number in its listing, so this is an IRIX bug
-		   that we cannot work around except this way */
-#if defined(IRIX)
-	if (pi->user_time < 0)
-		pi->user_time = 0;
-	
-	if (pi->sys_time < 0)
-		pi->sys_time = 0;
-
-	if(cpu_time < 0)
-		cpu_time = 0.0;	
-#endif	
-
 		// copy the remainder of the fields
 	pi->pid     = procRaw.pid;
 	pi->ppid    = procRaw.ppid;
@@ -274,7 +260,7 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	procRaw.owner = getFileOwner(fd);			
 
     // PIOCUSAGE is used for page fault info
-    // solaris 2.5.1 and Irix only
+    // solaris 2.5.1 only
 	if ( ioctl( fd, PIOCUSAGE, &pru ) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "ProcAPI: PIOCUSAGE Error occurred for pid %d\n", 
@@ -291,13 +277,8 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	procRaw.majfault = pru.pr_majf;  
 #endif // Solaris251
 
-#ifdef IRIX   // dang things named differently in irix.
-	procRaw.minfault = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
-	procRaw.majfault = pru.pu_majf;
-#endif // IRIX
-	
    // PIOCSTATUS gets process user & sys times
-   // this following bit works for Sol 2.5.1, Irix,
+   // this following bit works for Sol 2.5.1
 	if ( ioctl( fd, PIOCSTATUS, &prs ) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "ProcAPI: PIOCSTATUS Error occurred for pid %d\n", 

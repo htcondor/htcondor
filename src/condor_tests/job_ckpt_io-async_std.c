@@ -32,9 +32,6 @@
 #define _POSIX_SOURCE
 #define _CONDOR_ALLOW_OPEN 1
 
-#if defined(IRIX)
-#include "condor_common.h"
-#else
 /*#include "condor_common.h"*/
 #include <stdio.h>
 #include <fcntl.h>
@@ -42,7 +39,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#endif
 
 int		Data[ 4096 ];
 

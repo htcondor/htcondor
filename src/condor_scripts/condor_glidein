@@ -101,9 +101,6 @@ sub do_submit() {
 	elsif ( $arch =~ /solaris/ ) {
 		$mail_arch = "/usr/ucb/mail";
 	}
-	elsif ( $arch =~ /irix/ ) {
-		$mail_arch = "/usr/sbin/mailx";
-	}
 	else {
 		$mail_arch = "/bin/mail";
 	}

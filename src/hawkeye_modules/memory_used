@@ -37,8 +37,6 @@ my $Hawkeye;
 my $OsInfo = ();
 my $OS;
 my @OsInfo = (
-	      { ostype => "IRIX.*", osrev => ".*",
-		cmd => "" },
 	      { ostype => "HP-UX", osrev => ".*",
 		cmd => "" },
 	      { ostype => "SunOS", osrev => "5",
@@ -135,8 +133,6 @@ sub RunIt
     } elsif ($OS->{"ostype"} eq "SunOS") {
 	# Do nothing
     } elsif ($OS->{"ostype"} eq "HP-UX") {
-	# Do nothing
-    } elsif ($OS->{"ostype"} eq "IRIX.*") {
 	# Do nothing
     }
 

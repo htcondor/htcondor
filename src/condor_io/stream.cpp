@@ -689,7 +689,7 @@ Stream::code(struct statfs &s)
 	STREAM_ASSERT(code(s.f_files));
 	STREAM_ASSERT(code(s.f_ffree));
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris)
 	STREAM_ASSERT(code(s.f_bfree));
 #else
 	STREAM_ASSERT(code(s.f_bavail));
@@ -820,28 +820,6 @@ Stream::code(struct utsname &n)
 	
 	#if defined(LINUX)
 		n.domainname[0] = 0;
-	#elif defined(IRIX)
-		#if defined(IRIX62)
-			#if defined(m_type)
-				n.__m_type[0] = 0;
-			#else
-				n.m_type[0] = 0;
-			#endif
-			#if defined(base_rel)
-				n.__base_rel[0] = 0;
-			#else
-				n.base_rel[0] = 0;
-			#endif
-		#endif
-		#if defined(IRIX65)
-			#if defined(_ABIAPI)
-				n.__m_type[0] = 0;
-				n.__base_rel[0] = 0;
-			#else
-				n.m_type[0] = 0;
-				n.base_rel[0] = 0;
-			#endif
-		#endif
 	#elif defined(HPUX)
 		n.__idnumber[0] = 0;
 	#endif

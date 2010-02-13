@@ -49,41 +49,6 @@ sysapi_phys_memory_raw_no_param(void)
 	}
 }
 
-#elif defined(IRIX62) || defined(IRIX65)
-
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/sysmp.h>
-
-int
-sysapi_phys_memory_raw_no_param(void)
-{
-	struct rminfo rmstruct;
-	long pages, pagesz;
-	double size;
-
-	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
-	
-	if( (sysmp(MP_SAGET,MPSA_RMINFO,&rmstruct,sizeof(rmstruct)) < 0) ||
-		(pagesz == -1) ) { 
-		return -1;
-	}
-		/* Correct what appears to be some kind of rounding error */
-	if( rmstruct.physmem % 2 ) {
-		pages = rmstruct.physmem + 1;
-	} else {
-		pages = rmstruct.physmem;
-	}
-
-	/* Return the answer in megs */
-	size = (double)pages * (double)pagesz;
-	size /= 1024.0;
-	if (size > INT_MAX){
-		return INT_MAX;
-	}
-	return (int)size;
-}
-
 #elif defined(Solaris) 
 
 /*

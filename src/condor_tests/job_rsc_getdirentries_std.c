@@ -63,7 +63,7 @@ typedef struct kernel_dirent
 
 int main() {
 /* HPUX should work, but it doesn't currently with the given code */
-#if !defined(Solaris) && !defined( IRIX ) && !defined( HPUX )
+#if !defined(Solaris) && !defined( HPUX )
 	int results;
 	off_t basep;
 	int fd;

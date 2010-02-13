@@ -21,15 +21,10 @@
 This program opens, closes, and deletes a long series of files in sequence.  It is meant to aggravate the file instrumenting code which should stop leaking memory after about 100 files have been opened.  Perhaps it will be useful for tracking down fd leaks as well.
 */
 
-#ifndef IRIX62
 #define _POSIX_C_SOURCE 1
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
-#if defined(IRIX)
-#include <sys/select.h>
-#endif
 #include <limits.h>
 #include <string.h>
 #include <fcntl.h>

@@ -128,9 +128,6 @@ char	*default_daemon_list[] = {
 	"MASTER",
 	"STARTD",
 	"SCHEDD",
-#if defined(IRIX)    // Only need KBDD on alpha and sgi
-	"KBDD",
-#endif
 	0};
 
 // NOTE: When adding something here, also add it to the various condor_config

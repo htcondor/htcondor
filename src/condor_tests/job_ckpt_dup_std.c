@@ -26,7 +26,7 @@
 #include <unistd.h>
 
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

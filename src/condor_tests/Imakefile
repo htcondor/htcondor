@@ -842,7 +842,7 @@ TESTCLASS(job_dagman_stork-remove,quicknolink)
 ****************** Tests being readied for prime time **********************
 */
 
-#if !defined( IS_DARWIN ) && !defined(IS_HPUX10) && !defined(IS_PPC_AIX) && !defined(IS_SOLARIS28) && !defined(IS_SOLARIS29) && !defined(IS_IRIX) && !defined(IS_HPUX11) && !defined(IS_CONDOR_FREEBSD)
+#if !defined( IS_DARWIN ) && !defined(IS_HPUX10) && !defined(IS_PPC_AIX) && !defined(IS_SOLARIS28) && !defined(IS_SOLARIS29) && !defined(IS_HPUX11) && !defined(IS_CONDOR_FREEBSD)
 /* 
    Gnats 545 this procapi test of pid tracking not working MacOsX
    Gnats 547 this procapi test of pid tracking not working IS_HPUX10 IS_PPC_AIX SOLARIS28 SOLARIS29 

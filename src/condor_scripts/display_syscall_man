@@ -34,9 +34,6 @@
 ######################################################################
 
 $uname = `uname`;
-if( $uname =~ /IRIX.*/ ) {
-    $irix = 1;
-}
 
 if( -d "/usr/man" ) {
     $mandir = "/usr/man";
@@ -78,17 +75,10 @@ sub find_file {
     my( $sys ) = $_[0];
     my( $file, $i );
 
-    if( $irix ) {
-	foreach $i ("2", "3", "3c", "3b", "3t", "3s", "3n", "3t", "3p" ) {
-	    $file = "$mandir/cat$i/standard/$sys$manext";
-	    if( -f $file ) { return $file; }
-	}
-    } else {
 	foreach $i ("2", "3", "3c", "3b", "3t", "3s", "3n", "3r" ) {
 	    $file = "$mandir/man$i/$sys.$i$manext";
 	    if( -f $file ) { return $file; }
 	}
-    }
     return "";
 }
 
@@ -137,21 +127,12 @@ sub display_line {
     undef $/;
     $_ = <MAN>;
 
-    if( $irix ) {
-	if( /(.|\n)*?-(.*)/ ) {
-	    print $2;
-	}
-	# Don't bother with alternates on IRIX, since alternates are
-	# handled with soft links instead of nroff.
-	return 1;
-    } else {
 	if( /.*SH NAME(.|\n)*?\\-(.*)/ ) {
 	    print $2;
 	    return 1;
 	} else {
 	    return 0;
 	}
-    }
 }
 
 

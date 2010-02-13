@@ -34,9 +34,7 @@ SYSCALL_LIB='../condor_syscall_lib/libcondorsyscall.a'
 # Figure out the platform-specific junk:
 ######################################################################
 
-# Don't forget that IRIX's uname might be "IRIX64" on 64 bit
-# machines.  Just convert to "IRIX" if it begins with IRIX
-UNAME=`uname | sed 's/IRIX.*/IRIX/'`
+UNAME=`uname`
 
 if [ -f /lib/libc.a ]; then
 	LIBC=/lib/libc.a
@@ -62,11 +60,7 @@ else
 	exit 1
 fi
 
-if [ $UNAME = "IRIX" ]; then
-	NM="/usr/gnu/bin/nm -P"
-else 
-	NM="nm -P"
-fi
+NM="nm -P"
 
 ######################################################################
 ## Real work begins
@@ -194,15 +188,7 @@ END { if ( i != 0 )
 ' -
 
 echo "*** ALL UNDERSCORE SYSTEM CALLS FOUND IN LIBC"
-if [ $UNAME = "IRIX" ]; then
-# We've got to use /bin/nm on IRIX since libc is really a dynamic
-# library and the /usr/gnu/bin/nm doesn't handle those.
-# Also, for /bin/nm, we want to use -v to get the easily parse-able
-# output, and we need the third column, which has the symbol names.
-	/bin/nm -v /lib/libc.so.1 | awk '{print $3}' | sort | uniq > /tmp/asc5.$$
-else 
-	$NM $LIBC | awk '{print $1}' -  | sort | uniq > /tmp/asc5.$$
-fi
+$NM $LIBC | awk '{print $1}' -  | sort | uniq > /tmp/asc5.$$
 awk '{printf "_%s\n__%s\n__libc_%s\n___%s\n____%s\n",$0,$0,$0,$0,$0}' /tmp/asc1.$$  |\
    cat - /tmp/asc5.$$ | sort | uniq -d  | tee /tmp/asc6.$$ | awk \
 '{ printf "%20.20s",sprintf("%s()",$0)

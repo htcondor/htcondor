@@ -27,10 +27,6 @@
 /* Calculate how many cpus a machine has using the various method each OS
 	allows us */
 
-#if defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
-#include <sys/sysmp.h>
-#endif
-
 #ifdef HPUX
 #include <sys/pstat.h>
 #endif
@@ -77,10 +73,6 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 	}
 #elif defined(Solaris)
 	int cpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
-	if( num_cpus ) *num_cpus = cpus;
-	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
-#elif defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
-	int cpus = sysmp(MP_NPROCS);
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(WIN32)

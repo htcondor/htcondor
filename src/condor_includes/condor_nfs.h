@@ -33,9 +33,9 @@
 #	include <dirent.h>
     typedef struct fhandle fhandle_t;
 
-#elif !defined(IRIX)
+#else
 
-    /* ALL platforms except Linux and IRIX */
+    /* ALL platforms except Linux */
 #	include <rpc/rpc.h>
 
 #	if defined(Darwin) || defined(CONDOR_FREEBSD)
@@ -56,7 +56,7 @@
 #		include <nfs/nfs.h>
 
 #   endif /* FreeBSDFreeBSD4 */
-#endif /* ! defined(LINUX || IRIX) */ 
+#endif /* ! defined(LINUX) */ 
 
 #if defined(HPUX10) 
 #	include <nfs/export.h>

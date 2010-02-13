@@ -21,30 +21,6 @@
 
 #define _FIX_SETJMP
 
-#ifdef IRIX
-/* #define _save_posix _POSIX90 - **WRONG** */
-/* Now, technically, this might cause some problems because _POSIX90
-   is generally defined to be something like defined(FOO) || (defined...
-   but as we don't go changing what those defines are, we can safely
-   reset these to be true or false. */
-#if _POSIX90 /* Right! */
-#	define _save_posix 1
-#else
-#	define _save_posix 0
-#endif
-
-/* #define _save_ansi _NO_ANSIMODE - **WRONG** */
-#if _NO_ANSIMODE /* Right! */
-#	define _save_ansi 1
-#else
-#	define _save_ansi 0
-#endif
-#undef _POSIX90
-#undef _NO_ANSIMODE
-#define _POSIX90 1
-#define _NO_ANSIMODE 1
-#endif
-
 #if !defined(AIX32)
 
 #if defined(LINUX) && defined(__FAVOR_BSD)
@@ -57,15 +33,6 @@
 #if defined(LINUX) && defined(CONDOR_FAVOR_BSD)
 #	undef CONDOR_FAVOR_BSD
 #	define __FAVOR_BSD
-#endif
-
-#ifdef IRIX
-#undef _POSIX90
-#undef _NO_ANSIMODE
-#define _POSIX90 _save_posix
-#define _NO_ANSIMODE _save_ansi
-#undef _save_posix
-#undef _save_ansi
 #endif
 
 #else	/* AIX32 fixups */

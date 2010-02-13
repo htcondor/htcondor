@@ -64,10 +64,6 @@
 #include <sys/user.h>
 #endif 
 
-#ifdef IRIX              // this is the include for memory info in Irix.
-#include <sys/sysmp.h>
-#endif
-
 #ifdef AIX
 #include <procinfo.h>
 #include <sys/types.h>
@@ -194,7 +190,7 @@ typedef long birthday_t;
     calls don't have to be made.  All OS's support the given information,
     WITH THE EXCEPTION OF MAJ/MIN FAULTS:
     <ul>
-     <li> Linux, Irix, and Hpux all return a reasonable-looking number.
+     <li> Linux and Hpux return a reasonable-looking number.
      <li> Solaris 2.5.1 and 2.6 *Sometimes* returns small number of major 
         faults, and I've only seen a 0 for minor faults.  The documentation
         claims that they are inexact values, anyway.

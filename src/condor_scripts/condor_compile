@@ -237,9 +237,7 @@ PATH=$PATH:/bin:/usr/bin:/usr/bsd
 
 # Figure out what architecture we're running on 
 
-# Make sure if we get back something that begins with "IRIX" that we
-# strip off anything after it (e.g. "IRIX64", etc).
-os=`uname -s | sed 's/IRIX.*/IRIX/'`
+os=`uname -s`
 
 osver=`uname -r`
 if [ $os = "HP-UX" ]; then
@@ -256,20 +254,6 @@ abi=""
 CONDOR_FULLINSTALL=false
 
 case $os in
-	IRIX )
-		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
-			CONDOR_FULLINSTALL=true
-		fi
-		
-		abi="-32"
-		if [ $osver = "6.5" ]; then
-			abi="-n32"
-		fi
-
-
-		SGI_ABI=$abi
-		export SGI_ABI
-		;;
 	HP-UX )
 		if [ $osmajver = "10" ]; then
 			if [ -x /usr/ccs/bin/ld.real ]; then
@@ -418,57 +402,6 @@ fi
 
 case $os in 
 
-	IRIX )
-		# IRIX has some special cases with the compiler taking different
-		# flags depending what version yout have, this tries to sort that out
-
-		if [ $myname = "cc" ]; then
-			VCCRET=`cc -tul 2>&1 | head -1 | grep 'WARNING'`
-			if [ "X$VCCRET" = "X" ]; then
-				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
-			else
-				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
-			fi
-		fi
-
-		if [ $myname = "CC" ]; then
-			VCPPRET=`CC -tul 2>&1 | head -1 | grep 'WARNING'`
-			if [ "X$VCPPRET" = "X" ]; then
-				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
-			else
-				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
-			fi
-		fi
-
-		if [ $myname = "c89" ]; then
-			VC89RET=`c89 -tul 2>&1 | head -1 | grep 'WARNING'`
-			if [ "X$VC89RET" = "X" ]; then
-				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
-			else
-				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
-			fi
-		fi
-
-		if [ $myname = "f77" ]; then
-			VF77RET=`f77 -tul 2>&1 | head -1 | grep 'WARNING'`
-			if [ "X$VF77RET" = "X" ]; then
-				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
-			else
-				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
-			fi
-		fi 
-	
-		if [ $myname = "f90" ]; then	
-			VF90RET=`f90 -tul 2>&1 | head -1 | grep 'WARNING'`
-			if [ "X$VF90RET" = "X" ]; then
-				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
-			else
-				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
-			fi
-		fi 
-
-		;;
-	
 	HP-UX )
 		if [ $myname = "cc" ]; then
 			invoke_linker $ARGS -tl,$CONDOR_LD_DIR/ld

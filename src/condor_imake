@@ -36,7 +36,7 @@ fi
 # Determine operating system flavors
 ##################################################
 
-os=`uname -s | sed 's/IRIX.*/IRIX/'`
+os=`uname -s`
 if [ $os = "Darwin" ] ; then
 	Imakecppflags="gcc -E -w  -no-cpp-precomp \$*"
 else

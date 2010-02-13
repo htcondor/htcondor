@@ -25,24 +25,6 @@
 ** included on various platforms. 
 **********************************************************************/
 
-#if defined(IRIX)
-#if !defined(_SYS_SELECT_H)
-typedef struct fd_set fd_set;
-#endif
-#define _save_SGIAPI _SGIAPI
-#undef _SGIAPI
-#define _SGIAPI 1
-#define _save_XOPEN4UX _XOPEN4UX
-#undef _XOPEN4UX
-#define _XOPEN4UX 1
-#define _save_XOPEN4 _XOPEN4
-#undef _XOPEN4
-#define _XOPEN4 1
-#define __vfork fork
-#define _save_BSD_COMPAT _BSD_COMPAT
-#undef _BSD_COMPAT
-#endif /* IRIX */
-
 #if defined(LINUX)
 #	define idle _hide_idle
 #	if ! defined(_BSD_SOURCE)
@@ -66,23 +48,6 @@ typedef struct fd_set fd_set;
 /**********************************************************************
 ** Clean-up
 **********************************************************************/
-
-#if defined(IRIX)
-#	undef _SGIAPI
-#	define _SGIAPI _save_SGIAPI
-#	undef _save_SGIAPI
-#	undef _XOPEN4UX
-#	define _XOPEN4UX _save_XOPEN4UX
-#	undef _save_XOPEN4UX
-#	undef _XOPEN4
-#	define _XOPEN4 _save_XOPEN4
-#	undef _save_XOPEN4
-#	undef __vfork
-#	undef _BSD_COMPAT
-#	define _BSD_COMPAT _save_BSD_COMPAT
-#	undef _save_BSD_COMPAT
-#endif
-
 
 #if defined(LINUX)
 #   undef idle

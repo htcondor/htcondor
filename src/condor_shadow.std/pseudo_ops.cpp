@@ -2135,7 +2135,7 @@ pseudo_statfs( const char *path, struct statfs *buf )
 		 me. */
 	str = strdup(path);
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris)
 	ret = statfs( str, buf, 0, 0);
 #else
 	ret = statfs( str, buf );

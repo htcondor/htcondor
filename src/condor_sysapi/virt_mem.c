@@ -165,34 +165,6 @@ sysapi_swap_space_raw ()
   }
 }
 
-#elif defined(IRIX)
-
-#include <sys/stat.h>
-#include <sys/swap.h>
-#include <sys/types.h>
-
-close_kmem() {}
-
-int
-sysapi_swap_space_raw()
-{
-	off_t freeswap;
-	sysapi_internal_reconfig();
-	if( swapctl(SC_GETFREESWAP, &freeswap) == -1 ) {
-		dprintf(D_ALWAYS, 
-			"sysapi_swap_space_raw(): swapctl failed. Errno = %d\n", errno);
-		return -1;
-	}
-	/* freeswap is in 512 byte blocks, so convert it to 1K blocks */
-	freeswap /= 2;
-
-	/* check it for overflow of an int */
-	if (freeswap > INT_MAX)
-		return INT_MAX;
-
-	return (int)freeswap;
-}
-
 #elif defined(Solaris)
 
 #include <sys/types.h>

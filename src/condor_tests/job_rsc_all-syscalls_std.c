@@ -25,7 +25,6 @@
 	Whenever you add a system call please place a test for it in here.
 
 	Make sure to compile it with the correct define flags: e.g.,
-	-DIRIX
 	-DSolaris
 	-DLINUX
 
@@ -62,7 +61,7 @@
 #include <sys/vfs.h>
 #endif
 
-#if defined(IRIX) || defined(Solaris)
+#if defined(Solaris)
 #include <sys/statfs.h>
 #endif
 
@@ -1459,7 +1458,7 @@ int statfs_test(char *path, struct statfs *buf)
 	printf("statfs(): path=%s\n", STR(path)); 
 	fflush(NULL);
 
-#if defined(IRIX) || defined(Solaris)
+#if defined(Solaris)
 	passed = handle_zng(ret = statfs(path, buf, sizeof(struct statfs), 0));
 #else
 	passed = handle_zng(ret = statfs(path, buf));
@@ -1486,7 +1485,7 @@ int statfs_test(char *path, struct statfs *buf)
 				"\t\tFree Inodes: %ld\n"
 				"\t\tTotal Inodes: %ld\n",
 				STR(path),
-				#if defined(Solaris) || defined(IRIX)
+				#if defined(Solaris)
 					buf->f_bfree,
 				#else
 					buf->f_bavail,
@@ -1523,7 +1522,7 @@ int fstatfs_test(int fd, struct statfs *buf)
 	printf("fstatfs(): fd=%d\n", fd); 
 	fflush(NULL);
 
-#if defined(IRIX) || defined(Solaris)
+#if defined(Solaris)
 	passed = handle_zng(ret = fstatfs(fd, buf, sizeof(struct statfs), 0));
 #else
 	passed = handle_zng(ret = fstatfs(fd, buf));
@@ -1549,7 +1548,7 @@ int fstatfs_test(int fd, struct statfs *buf)
 					"\t\tFree Inodes: %ld\n"
 					"\t\tTotal Inodes: %ld\n",
 					fd,
-					#if defined(Solaris) || defined(IRIX)
+					#if defined(Solaris)
 						buf->f_bfree,
 					#else
 						buf->f_bavail,
@@ -1592,9 +1591,6 @@ int getdomainname_test(char *name, int namelen)
 
 	switch(passed) {
 		case FAILURE:
-			#if defined(IRIX65)
-				is_errno_valid(save_errno, EFAULT, EPERM, ENDLIST);
-			#endif
 			/* FALL THROUGH */
 		case SUCCESS:
 			/* good return value */
@@ -4166,7 +4162,7 @@ int BasicTruncation(void)
 	return block;
 }
 
-#if defined(Solaris) || defined(IRIX65)
+#if defined(Solaris)
 int BasicFcntlTruncation(void)
 {
 	char tf[NAMEBUF] = {0};
@@ -4594,7 +4590,7 @@ int main(int argc, char **argv)
 		{BasicRename, "BasicRename: Does rename() work?"},
 		{BasicTruncation, "BasicTruncation: Does f?truncate() work?"},
 
-#if defined(Solaris) || defined(IRIX65)
+#if defined(Solaris)
 		{BasicFcntlTruncation, "BasicFcntlTruncation: Does F_FREESP work?"},
 #endif
 		{BasicUmask, "BasicUmask: Does umask() work?"},

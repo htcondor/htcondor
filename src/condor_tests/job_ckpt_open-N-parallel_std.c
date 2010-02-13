@@ -27,12 +27,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#if defined(IRIX)
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#endif
-
 #include "x_fake_ckpt.h"
 
 #if defined(Solaris)

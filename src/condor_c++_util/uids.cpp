@@ -975,17 +975,6 @@ init_nobody_ids( int is_quiet )
 	}
 #endif
 
-#ifdef IRIX
-		// Same weirdness on IRIX.  60001 is the default uid for
-		// nobody, lets hope that works.
-	if( (nobody_uid >= UID_MAX ) || (nobody_uid <= 0) ) {
-		nobody_uid = 60001;
-	}
-	if( (nobody_gid >= UID_MAX) || (nobody_gid <= 0) ) {
-		nobody_gid = 60001;
-	}
-#endif
-
 	/* WARNING: At the top of this function, we initialized 
 	   nobody_uid and nobody_gid to 0, so if for some terrible 
 	   reason we haven't set them to a valid nobody uid/gid

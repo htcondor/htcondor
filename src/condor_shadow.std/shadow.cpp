@@ -635,7 +635,7 @@ HandleSyscalls()
 
 		unblock_signal(SIGCHLD);
 		unblock_signal(SIGUSR1);
-#if defined(LINUX) || defined(IRIX) || defined(Solaris)
+#if defined(LINUX) || defined(Solaris)
 		cnt = select(nfds, &readfds, (fd_set *)0, (fd_set *)0, ptimer);
 #else
 		cnt = select(nfds, &readfds, 0, 0, ptimer);

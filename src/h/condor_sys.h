@@ -20,12 +20,6 @@
 
  
 
-#if defined(IRIX)
-#	undef SYSVoffset
-#	undef __SYS_S__
-#	include <sys.s>
-#endif
-
 /* Solaris specific change ..dhaval 6/23
 */
 #if defined(Solaris)

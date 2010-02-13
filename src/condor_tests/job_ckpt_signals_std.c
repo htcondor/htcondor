@@ -30,10 +30,6 @@
 #define SENT 1
 #define RECEIVED 2
 
-#ifdef IRIX
-#define NSIG 65
-#endif
-
 #include "x_fake_ckpt.h"
 
 extern int SetSyscalls(int);
@@ -192,15 +188,7 @@ void catch_sig( int sig, void (*handler)(int) )
 	struct sigaction vec;
 	memset(&vec, 0, sizeof(struct sigaction));
 
-#ifndef IRIX65
 	vec.sa_handler = handler;
-#else
-#if defined(__cplusplus) && defined(__GNUC__)
-	vec.sa_handler = (void (*)())handler;
-#else
-	vec.sa_handler = handler;
-#endif
-#endif
 
 	sigfillset(&vec.sa_mask); 
 	if ( sigaction(sig,&vec,NULL) < 0 ) {

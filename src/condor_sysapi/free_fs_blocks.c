@@ -171,19 +171,14 @@ int sysapi_disk_space_raw( const char *filename);
 int sysapi_disk_space_raw();
 #endif
 
-#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(Solaris) || defined(IRIX) || defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>
 
-#if defined(AIX) || defined(IRIX65)
+#if defined(AIX)
 #include <sys/statfs.h>
 #elif defined(Solaris)
 #include <sys/statvfs.h>
-#endif
-
-#if defined(IRIX)
-/* There is no f_bavail on IRIX */
-#define f_bavail f_bfree
 #endif
 
 int
@@ -200,9 +195,7 @@ const char *filename;
 
 	sysapi_internal_reconfig();
 
-#if defined(IRIX331) || defined(IRIX53) || defined(IRIX65) || defined(IRIX62)
-	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
-#elif defined(Solaris)
+#if defined(Solaris)
 	if(statvfs(filename, &statfsbuf) < 0) {
 #else
 	if(statfs(filename, &statfsbuf) < 0) {

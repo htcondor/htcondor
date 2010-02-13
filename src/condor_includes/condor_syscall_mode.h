@@ -24,10 +24,6 @@
 #	include "syscall.aix.h"
 #elif defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
 #	include <sys/syscall.h>
-#elif defined(IRIX)
-#	undef SYSVoffset
-#	undef __SYS_S__
-#	include <sys.s>
 #elif defined(WIN32)
 #else
 #	include <syscall.h>
@@ -58,7 +54,7 @@ BOOL LocalSysCalls( void );
 BOOL RemoteSysCalls( void );
 BOOL MappingFileDescriptors( void );
 
-#if defined(HPUX) || defined(IRIX) || defined(Solaris)
+#if defined(HPUX) || defined(Solaris)
 	int syscall( int, ... );
 #endif
 
