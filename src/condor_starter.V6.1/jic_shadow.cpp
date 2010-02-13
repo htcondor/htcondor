@@ -741,25 +741,10 @@ JICShadow::registerStarterInfo( void )
 		EXCEPT( "registerStarterInfo called with NULL DCShadow object" );
 	}
 
-		// CRUFT!
-		// If the shadow is older than 6.3.3, we need to use the
-		// CONDOR_register_machine_info method, which sends a bunch of
-		// strings over the wire.  If we're 6.3.3 or later, we can use
-		// CONDOR_register_starter_info, which just sends a ClassAd
-		// with all the relevent info.
-	if( shadow_version && shadow_version->built_since_version(6,3,3) ) {
-		ClassAd starter_info;
-		publishStarterInfo( &starter_info );
-		rval = REMOTE_CONDOR_register_starter_info( &starter_info );
+	ClassAd starter_info;
+	publishStarterInfo( &starter_info );
+	rval = REMOTE_CONDOR_register_starter_info( &starter_info );
 
-	} else {
-			// We've got to use the old method.
-		char *mfhn = strnewp ( my_full_hostname() );
-		rval = REMOTE_CONDOR_register_machine_info( uid_domain,
-			     fs_domain, daemonCore->InfoCommandSinfulString(), 
-				 mfhn, 0 );
-		delete [] mfhn;
-	}
 	if( rval < 0 ) {
 		return false;
 	}

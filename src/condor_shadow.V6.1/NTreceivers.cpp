@@ -46,7 +46,6 @@ static const char * shadow_syscall_name(int condor_sysnum)
 {
 	switch(condor_sysnum) {
         case CONDOR_register_job_info: return "register_job_info";
-        case CONDOR_register_machine_info: return "register_machine_info";
         case CONDOR_register_starter_info: return "register_starter_info";
         case CONDOR_get_job_info: return "get_job_info";
         case CONDOR_get_user_info: return "get_user_info";
@@ -133,61 +132,6 @@ do_REMOTE_syscall()
 		shadow_syscall_name(condor_sysnum), condor_sysnum);
 
 	switch( condor_sysnum ) {
-
-	case CONDOR_register_machine_info:
-	{
-		char *uiddomain = NULL;
-		char *fsdomain = NULL;
-		char *address = NULL;
-		char *fullHostname = NULL;
-		int key = -1;
-
-		
-		result = ( syscall_sock->code(uiddomain) );
-		ASSERT( result );
-		dprintf( D_SYSCALLS, "  uiddomain = %s\n", uiddomain);
-
-		result = ( syscall_sock->code(fsdomain) );
-		ASSERT( result );
-		dprintf( D_SYSCALLS, "  fsdomain = %s\n", fsdomain);
-
-		result = ( syscall_sock->code(address) );
-		ASSERT( result );
-		dprintf( D_SYSCALLS, "  address = %s\n", address);
-
-		result = ( syscall_sock->code(fullHostname) );
-		ASSERT( result );
-		dprintf( D_SYSCALLS, "  fullHostname = %s\n", fullHostname );
-
-		result = ( syscall_sock->code(key) );
-		ASSERT( result );
-			// key is never used, so don't bother printing it.  we
-			// just have to read it off the wire for compatibility.
-			// newer versions of the starter don't even use this RSC,
-			// so they don't send it...
-		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
-		errno = 0;
-		rval = pseudo_register_machine_info(uiddomain, fsdomain, 
-											address, fullHostname);
-		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		result = ( syscall_sock->code(rval) );
-		ASSERT( result );
-		if( rval < 0 ) {
-			result = ( syscall_sock->code( terrno ) );
-			ASSERT( result );
-		}
-		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
-		free(uiddomain);
-		free(fsdomain);
-		free(address);
-		free(fullHostname);
-		return 0;
-	}
 
 	case CONDOR_register_starter_info:
 	{
