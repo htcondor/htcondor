@@ -513,7 +513,6 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 	// eventually called in all code paths.
 
 	StartCommandResult start_command_result = StartCommandFailed;
-	bool other_side_can_negotiate = true; //default assumption
 
 	ASSERT(sock);
 
@@ -526,19 +525,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 		sock->timeout( timeout );
 	}
 
-	// look at the version if it is available.  we must disable
-	// negotiation when talking to pre-6.3.3.
-	if (version) {
-		dprintf(D_SECURITY, "DAEMON: talking to a %s daemon.\n", version);
-		CondorVersionInfo vi(version);
-		if ( !vi.built_since_version(6,3,3) ) {
-			dprintf( D_SECURITY, "DAEMON: "
-					 "security negotiation not possible, disabling.\n" );
-			other_side_can_negotiate = false;
-		}
-	}
-
-	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, raw_protocol, errstack, 0, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
+	start_command_result = sec_man->startCommand(cmd, sock, raw_protocol, errstack, 0, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
 
 	if(callback_fn) {
 		// SecMan::startCommand() called the callback function, so we just return here

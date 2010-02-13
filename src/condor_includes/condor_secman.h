@@ -106,7 +106,7 @@ public:
 		// spawn off a non-blocking attempt to create a security
 		// session so that in the future, a UDP command could succeed
 		// without StartCommandWouldBlock.
-	StartCommandResult startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id);
+	StartCommandResult startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id);
 
 		// Authenticate a socket using whatever authentication methods
 		// have been configured for the specified perm level.
@@ -125,7 +125,7 @@ public:
 
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
-									ClassAd* ad, bool peer_can_neg=true,
+									ClassAd* ad,
 									bool raw_protocol=false,
 									bool use_tmp_sec_session=false,
 									bool force_authentication=false);
