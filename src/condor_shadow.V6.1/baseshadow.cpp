@@ -180,12 +180,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		EXCEPT("Could not cd to initial working directory");
 	}
 
-		// CRUFT
-		// we want this *after* we clear the dirty flags so that if we
-		// change anything, we consider that change dirty so it'll get
-		// updated the next time we connect to the job queue...
-	checkFileTransferCruft();
-
 		// check to see if this invocation of the shadow is just to write
 		// a terminate event and exit since this job had been recorded as
 		// pending termination, but somehow the job didn't leave the queue
@@ -198,82 +192,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			this->terminateJob(US_TERMINATE_PENDING);
 		}
 	}
-}
-
-
-void
-BaseShadow::checkFileTransferCruft()
-{
-		/*
-		  If this job was a) submitted by a pre-6.3.3 condor_submit,
-		  b) unix and c) vanilla, it was submitted with an incorrect
-		  default value of "ON_EXIT" for ATTR_TRANSFER_FILES.  So, if
-		  all of those conditions are met, we want to change the value
-		  to be "NEVER" instead, so that we treat this like the old
-		  shadow would treat it and rely on a shared file system.
-		*/
-#ifndef WIN32
-	int universe; 
-	char* version = NULL;
-	bool is_old = false;
-	if( ! jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) ) {
-		universe = CONDOR_UNIVERSE_VANILLA;
-	}
-	if( universe != CONDOR_UNIVERSE_VANILLA ) {
-			// nothing to do
-		return;
-	}
-	jobAd->LookupString( ATTR_VERSION, &version );
-	if( version ) {
-		CondorVersionInfo ver( version, "JOB" );
-		if( ! ver.built_since_version(6,3,3) ) {
-			is_old = true;
-		}
-		free( version );
-		version = NULL;
-	} else {
-		dprintf( D_FULLDEBUG, "Job has no %s, assuming pre version 6.3.3\n",
-				 ATTR_VERSION ); 
-		is_old = true;
-	}	
-	if( ! is_old ) {
-			// if we're new enough, nothing else to do
-		return;
-	}
-
-		// see if ATTR_TRANSFER_FILES is already set to "NEVER"... 
-	bool already_never;
-	char* tmp = NULL;
-	jobAd->LookupString( ATTR_TRANSFER_FILES, &tmp );
-	if( tmp ) {
-		already_never = ( stricmp(tmp, "NEVER") == 0 );
-		free( tmp );
-		if( already_never ) {
-				// already have the right value, don't bother changing
-				// it and updating the job queue, etc.
-			return;
-		}
-	}
-
-		// if we're still here, we've hit the nasty case, so change
-		// the value...
-	MyString new_attr;
-	new_attr += ATTR_TRANSFER_FILES;
-	new_attr += " = \"NEVER\"";
-
-	dprintf( D_FULLDEBUG, "Unix Vanilla job is pre version 6.3.3, "
-			 "setting '%s'\n", new_attr.Value() );
-
-	if( ! jobAd->Insert(new_attr.Value()) ) {
-		EXCEPT( "Insert of '%s' into job ad failed!", new_attr.Value() );
-	}
-
-		// also, add it to the list of attributes we want to update,
-		// so we change it in the job queue, too.
-	job_updater->watchAttribute( ATTR_TRANSFER_FILES );
-
-#endif /* ! WIN32 */
-
 }
 
 
