@@ -973,17 +973,9 @@ JICShadow::initUserPriv( void )
 		}
 		else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
-			bool shadow_is_old = true;
 			bool try_soft_uid = param_boolean( "SOFT_UID_DOMAIN", false );
 
-			if( try_soft_uid ) {
-					// first, see if the shadow is new enough to
-					// support the RSC we need to do...
-				if( shadow_version && 
-					shadow_version->built_since_version(6,3,3) ) {
-						shadow_is_old = false;
-				}
-			} else {
+			if( !try_soft_uid ) {
 					// No soft_uid_domain or it's set to False.  No
 					// need to do the RSC, we can just fail.
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
@@ -992,24 +984,10 @@ JICShadow::initUserPriv( void )
 				return false;
             }
 
-				// if the shadow is old, we have to just print an error
-				// message and fail, since we can't do the RSC we need
-				// to find out the right uid/gid.
-			if( shadow_is_old ) {
-				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
-						 "passwd file, SOFT_UID_DOMAIN is True, but the "
-						 "condor_shadow on the submitting host is too old "
-						 "to support SOFT_UID_DOMAIN.  You must upgrade "
-						 "Condor on the submitting host to at least "
-						 "version 6.3.3.\n", owner.Value() ); 
-				return false;
-			}
-
 				// if we're here, it means that 1) the owner we want
-				// isn't in the passwd file, 2) SOFT_UID_DOMAIN is
-				// True, and 3) the shadow we're talking to can
-				// support the CONDOR_REMOTE_get_user_info RSC.  So,
-				// we'll do that call to get the uid/gid pair we need
+				// isn't in the passwd file, and 2) SOFT_UID_DOMAIN is
+				// True. So, we'll do a CONDOR_REMOTE_get_user_info RSC
+				// to get the uid/gid pair we need
 				// and initialize user priv with that. 
 
 			ClassAd user_info;
@@ -1018,10 +996,8 @@ JICShadow::initUserPriv( void )
 						 "REMOTE_CONDOR_get_user_info() failed\n" );
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 						 "passwd file, SOFT_UID_DOMAIN is True, but the "
-						 "condor_shadow on the submitting host cannot "
-						 "support SOFT_UID_DOMAIN.  You must upgrade "
-						 "Condor on the submitting host to at least "
-						 "version 6.3.3.\n", owner.Value() );
+						 "condor_shadow failed to send the required Uid.\n",
+						 owner.Value() );
 				return false;
 			}
 
