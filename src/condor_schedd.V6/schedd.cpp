@@ -4726,12 +4726,13 @@ Scheduler::negotiate(int command, Stream* s)
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
 	// since this is the socket from the negotiator, the only command that can
-	// come in at this point is NEGOTIATE.  If we get something else, something
-	// goofy in going on.
-	if (command != NEGOTIATE && command != NEGOTIATE_WITH_SIGATTRS)
+	// come in at this point is NEGOTIAT_WITH_SIGATTRSE.  If we get something
+	// else, something goofy is going on.
+	if (command != NEGOTIATE_WITH_SIGATTRS)
 	{
 		dprintf(D_ALWAYS,
-				"Negotiator command was %d (not NEGOTIATE) --- aborting\n", command);
+				"Negotiator command was %d (not NEGOTIATE_WITH_SIGATTRS) "
+				"--- aborting\n", command);
 		return (!(KEEP_STREAM));
 	}
 
@@ -4861,12 +4862,9 @@ Scheduler::negotiate(int command, Stream* s)
 		dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
 		return (!(KEEP_STREAM));
 	}
-	if ( command == NEGOTIATE_WITH_SIGATTRS ) {
-		if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
-			dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
-			return (!(KEEP_STREAM));
-		}
-
+	if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
+		dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
+		return (!(KEEP_STREAM));
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
@@ -10619,9 +10617,6 @@ void
 Scheduler::Register()
 {
 	 // message handlers for schedd commands
-	 daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
-		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
-		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( NEGOTIATE_WITH_SIGATTRS, 
 		 "NEGOTIATE_WITH_SIGATTRS", 
 		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 

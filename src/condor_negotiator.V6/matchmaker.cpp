@@ -2049,7 +2049,6 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
 	char		remoteUser[128];
-	int negotiate_command = NEGOTIATE;
 
 	numMatched = 0;
 
@@ -2061,13 +2060,6 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 	if( !scheddAd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) ) {
 		dprintf( D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", scheddName);
 		return MM_ERROR;
-	}
-
-		// Starting w/ ver 6.7.15, the schedd supports the 
-		// NEGOTIATE_WITH_SIGATTRS command that expects a
-		// list of significant attributes.  
-	if ( job_attr_references && scheddVersion.built_since_version(6,7,15) ) {
-		negotiate_command = NEGOTIATE_WITH_SIGATTRS;
 	}
 
 	// Used for log messages to identify the schedd.
@@ -2089,8 +2081,8 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			dprintf( D_ALWAYS, "    Failed to connect to %s\n", schedd_id.Value() );
 			return MM_ERROR;
 		}
-		if( ! schedd.startCommand(negotiate_command, sock, NegotiatorTimeout) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
+		if( ! schedd.startCommand(NEGOTIATE_WITH_SIGATTRS, sock, NegotiatorTimeout) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE_WITH_SIGATTRS to %s\n",
 					 schedd_id.Value() );
 			delete sock;
 			return MM_ERROR;
@@ -2103,18 +2095,19 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			// this address is already in our socket cache.  since
 			// we've already got a TCP connection, we do *NOT* want to
 			// use a Daemon::startCommand() to create a new security
-			// session, we just want to encode the NEGOTIATE int on
-			// the socket...
+			// session, we just want to encode the NEGOTIATE_WITH_SIGATTRS
+			// int on the socket...
 		sock->encode();
-		if( ! sock->put(negotiate_command) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
+		if( ! sock->put(NEGOTIATE_WITH_SIGATTRS) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE_WITH_SIGATTRS to %s\n",
 					 schedd_id.Value() );
 			sockCache->invalidateSock( scheddAddr.Value() );
 			return MM_ERROR;
 		}
 	}
 
-	// 1.  send NEGOTIATE command, followed by the scheddName (user@uiddomain)
+	// 1.  send NEGOTIATE_WITH_SIGATTRS command, followed by the
+	//     scheddName (user@uiddomain)
 	sock->encode();
 	if (!sock->put(scheddName))
 	{
@@ -2123,15 +2116,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		sockCache->invalidateSock(scheddAddr.Value());
 		return MM_ERROR;
 	}
-	// send the significant attributes if the schedd can understand it
-	if ( negotiate_command == NEGOTIATE_WITH_SIGATTRS ) {
-		if (!sock->put(job_attr_references)) 
-		{
-			dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
+	// send the significant attributes
+	if (!sock->put(job_attr_references)) 
+	{
+		dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
 				schedd_id.Value() );
-			sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
+		sockCache->invalidateSock(scheddAddr.Value());
+		return MM_ERROR;
 	}
 	if (!sock->end_of_message())
 	{
