@@ -64,7 +64,6 @@ our %build_and_test_sets = (
 		'x86_suse_10.0',
 		'ia64_sles_9',
 		'x86_64_sles_9',
-		'ia64_sles_8',
 		'x86_sles_9',
 		'ppc_macos_10.4',
 		'hppa_hpux_11',
