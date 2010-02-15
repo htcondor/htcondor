@@ -1,6 +1,5 @@
 # Change this to the schedd's name ("condor_status -f %s Name") 
-remote_schedd = user@machine
-remote_pool = machine:9999
+grid_resource = condor user@machine machine:9999
 universe = grid 
 grid_type = condor 
 executable = job_condorc_xxx_van.pl
@@ -14,11 +13,8 @@ when_to_transfer_output=on_exit
 notification = never
 # Bside
 +Remote_JobUniverse = 9
-+Remote_JobGridType = "condor"
-+Remote_requirements = TRUE
-+Remote_RemoteSchedd = "user@machine"
++Remote_GridResource = "condor user@machine machine:9999"
 # Cside
-+Remote_RemotePool = "machine:9999"
 +Remote_Remote_JobUniverse = 5
 +Remote_Remote_requirements = TRUE
 
