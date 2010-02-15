@@ -22,14 +22,16 @@ The details of each version are described below.
 \item The Condor release is now available as a proper RPM or Debian
 package.
 
-\item Condor now uses the version of ClassAds that we provide as a stand-alone 
-library (\URL{http://www.cs.wisc.edu/condor/classad/}). Previously, Condor 
+\item Condor now internally uses the version of (New) ClassAds provided
+as a stand-alone library (\URL{http://www.cs.wisc.edu/condor/classad/}).
+Previously, Condor 
 used an older version of ClassAds that was heavily tied to the Condor 
-development libraries. This change should be largely transparent in the 
-current development series. In the next development series (7.7.x), we  
-will start to use features of ClassAds that were unavailable in the 
+development libraries. This change should be mostly transparent in the 
+current development series. In the next development series (7.7.x),
+Condor  will start to use features of ClassAds that were unavailable in the 
 older library. 
-See section~\ref{sec:classad-differences} for details.
+Read section~\ref{sec:classad-differences} for details on the user-visible
+differences.
 
 \end{itemize}
 
@@ -37,14 +39,6 @@ See section~\ref{sec:classad-differences} for details.
 \noindent New Features:
 
 \begin{itemize}
-
-% gittrac #221
-\item The configuration variable
-\MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
-delegations done between Condor daemons and tools.
-The value is a boolean and defaults to \Expr{False},
-which means that when doing delegation Condor will now create a limited proxy
-instead of a full proxy.
 
 % gittrac #1102
 \item A port number defined within \Macro{CONDOR\_VIEW\_HOST} may now use 
@@ -113,6 +107,14 @@ is now much more efficient in its communication with the \Condor{schedd}.
 
 \begin{itemize}
 
+% gittrac #221
+\item The configuration variable
+\MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
+delegations done between Condor daemons and tools.
+The value is a boolean and defaults to \Expr{False},
+which means that when doing delegation Condor will now create a limited proxy
+instead of a full proxy.
+
 \item The new configuration variable
   \MacroNI{SEC\_<access-level>\_SESSION\_LEASE} specifies the maximum
   number of seconds an unused security session will be kept in a daemon's
@@ -120,13 +122,13 @@ is now much more efficient in its communication with the \Condor{schedd}.
   If the server and client have different configurations, the smaller
   one will be used.
 
-\item The new configuration parameter \MacroNI{TARGET\_MACHINE\_ATTRS}
-specifies a list of machine ad attributes that should have 'Target.'
-prepended to them in any job ad expressions.
+\item The new configuration variable \Macro{TARGET\_MACHINE\_ATTRS}
+specifies a list of machine ClassAd attributes for which \Expr{Target.} should
+be prepended to these attributes appearing in any job ClassAd expressions.
 
-\item The new configuration parameter \MacroNI{TARGET\_JOB\_ATTRS}
-specifies a list of job ad attributes that should have 'Target.'
-prepended to them in any machine ad expressions.
+\item The new configuration variable \Macro{TARGET\_JOB\_ATTRS}
+specifies a list of job ClassAd attributes for which \Expr{Target.} should
+be prepended to these attributes appearing in any machine ClassAd expressions.
 
 \end{itemize}
 
@@ -135,29 +137,34 @@ prepended to them in any machine ad expressions.
 \begin{itemize}
 
 % gittrack #1141
-\item The default value for \MacroNI{SEC\_DEFAULT\_SESSION\_DURATION}
-  was effectively 3600 in 7.5.0.  This produced longer than desired
-  cached sessions for short-lived tools such as \Condor{status}.  It
-  also produced shorter than possibly desired cached sessions for
-  long-lived daemons such as \Condor{startd}.  The default has been
-  restored to what it was before 7.5.0, with the exception of
-  \Condor{submit}, which has been changed from 1 hour to 60s.  For
-  command-line tools, the default is 60s and for daemons it is 1 day.
+\item The default value for \Macro{SEC\_DEFAULT\_SESSION\_DURATION}
+  was effectively 3600 in Condor version 7.5.0.
+  This produced longer than desired
+  cached sessions for short-lived tools such as \Condor{status}.
+  It also produced shorter than possibly desired cached sessions for
+  long-lived daemons such as \Condor{startd}.  
+  The default has been restored to what it was before Condor version 7.5.0,
+  with the exception of \Condor{submit},
+  which has been changed from 1 hour to 60 seconds.
+  For command line tools, the default is 60 seconds,
+  and for daemons it is 1 day.
 
 % gittrack #1142
 \item \MacroNI{SEC\_<access-level>\_SESSION\_DURATION} previously did
   not support integer expressions, but it did not detect invalid
   input, so the use of an expression could produce unexpected results.
-  Now, like other integer configuration settings, a constant expression can
-  be used and input is fully validated.
+  Now, like other integer configuration variables,
+  a constant expression can be used and input is fully validated.
 
 % gittrac #1196
 \item The configuration variable \MacroNI{LOCAL\_CONFIG\_DIR} is no longer
 ignored if defined in a local configuration file.
 
 % gittrack #767
-\item As of 7.5.0, the following warning was logged in the
-  \Condor{starter}'s log even when the deprecated configuration
+\item Removed the incorrect issuing of the following Condor version 7.5.0 
+  warning to the
+  \Condor{starter}'s log, even when the outdated, and no longer used
+  configuration
   variable \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED} was not defined.
 
 \begin{verbatim}
