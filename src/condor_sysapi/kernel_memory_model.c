@@ -63,7 +63,7 @@ sysapi_kernel_memory_model_raw(void)
 			_sysapi_kernel_memory_model = strdup("0xFFC00000");
 #		elif defined(Solaris27) || defined(Solaris28) 
 			_sysapi_kernel_memory_model = strdup("0xFFBF0000");
-#		elif defined(Solaris251) || defined(Solaris26)
+#		elif defined(Solaris26)
 			_sysapi_kernel_memory_model = strdup("0xF0000000");
 #		else
 #			error Please port sysapi_kernel_memory_model_raw() to this OS/ARCH!

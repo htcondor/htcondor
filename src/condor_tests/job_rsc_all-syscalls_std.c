@@ -70,23 +70,6 @@
 #include <nfs/nfs.h>
 #endif
 
-/* These are here because compilers are stupid... */
-#if defined (Solaris251)
-#ifdef __cplusplus
-extern "C" int getrusage(int who, struct rusage *rusage);
-extern "C" int gethostname(char *name, size_t len);
-extern "C" int utimes(char *filename, struct timeval *tvp);
-extern "C" int setregid(gid_t rgid, gid_t egid);
-extern "C" int setreuid(uid_t ruid, uid_t euid);
-#else
-int getrusage(int who, struct rusage *rusage);
-int gethostname(char *name, size_t len);
-int utimes(char *filename, struct timeval *tvp);
-int setregid(gid_t rgid, gid_t egid);
-int setreuid(uid_t ruid, uid_t euid);
-#endif
-#endif
-
 #if defined(Solaris26)
 #ifdef __cplusplus
 extern "C" int utimes(char *filename, struct timeval *tvp);

@@ -54,14 +54,6 @@ extern int getrusage(int, struct rusage * );
 #endif
 #endif
 
-#ifdef Solaris251
-#ifdef __cplusplus
-extern "C" int getrusage(int who, struct rusage *rusage);
-#else
-int getrusage(int who, struct rusage *rusage);
-#endif
-#endif
-
 #include "x_fake_ckpt.h"
 #include "x_waste_second.h"
 

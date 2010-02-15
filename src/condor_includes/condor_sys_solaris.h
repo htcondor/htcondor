@@ -100,13 +100,11 @@ END_C_DECLS
 	#define HAS_64BIT_SYSCALLS	1
 	#define HAS_64BIT_STRUCTS	1
 	#define HAS_F_DUP2FD		1
-#elif defined(Solaris251)
-	typedef long long off64_t;
 #endif
 
 typedef void* MMAP_T;
 
-#if defined(Solaris251) || defined(Solaris26)
+#if defined(Solaris26)
 	typedef int socklen_t;
 #endif
 
