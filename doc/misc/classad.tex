@@ -114,27 +114,33 @@ Moo = Foo isnt Undefined;
 
 Condor will convert to and from old ClassAd syntax as needed.
 
-The evaluation of expressions is also slightly different.
+An important, and visible distinction between New and Old is
+that the evaluation of expressions is slightly different.
 In New ClassAds,
 when evaluating an expression in the context of two ClassAds,
 for example when matching a job ad with a machine ad,
-if an attribute name appears without a
-the prefix \Expr{Target.} or \Expr{My.},
+if an attribute name appears without the prefix \Expr{TARGET.} or \Expr{MY.},
 it is only looked up in the local ClassAd.
 In Old ClassAds,
-if the attribute is not in the local ClassAd,
-it will then be looked up in the target ClassAd.
-In New ClassAds, if to refer to an attribute in the target ad,
-its name must be preceded with \Expr{Target.} in the expression.
+that attribute is first looked up in the local ClassAd.
+If not present in the local ClassAd, 
+it is then further looked up in the target ClassAd.
 
+As Condor now uses New ClassAds internally,
+to refer to an attribute in the target ad,
+its name \emph{must} be preceded with \Expr{TARGET.} in the expression.
+
+To aid in the transition,
 Condor contains a routine that scans job ClassAd expressions,
-adding \Expr{Target.} to attribute names that normally occur
-in machine ClassAds,
- and vice versa. 
-If a job or machine ClassAds contain additional attributes
-that this routine is to look for,
-use the \Macro{TARGET\_MACHINE\_ATTRS}
-and \Macro{TARGET\_JOB\_ATTRS} configuration variables.
+adding \Expr{TARGET.} to attribute names that normally occur
+in machine ClassAds.
+This routine also does the reverse:
+it scans machine ClassAd expressions,
+adding \Expr{TARGET.} to attribute names that normally occur
+in job ClassAds.
+To extend this injection of \Expr{TARGET.} as needed for additional attributes,
+the attributes are specified with the configuration variables
+\Macro{TARGET\_MACHINE\_ATTRS} and \Macro{TARGET\_JOB\_ATTRS}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Old ClassAd Syntax}
