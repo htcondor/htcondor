@@ -70,15 +70,11 @@ while(<TPLATE>)
 {
 	CondorTest::fullchomp($_);
 	$line = $_;
-	if( $line =~ /^\s*remote_pool\s*=.*$/ )
-	{
-		CondorTest::debug("remote pool is $currenthost:$remport\n",$debuglevel);
-		print CSUB "remote_pool = $currenthost:$remport\n";
-	}
-	elsif( $line =~ /^\s*remote_schedd\s*=.*$/ )
+	if( $line =~ /^\s*grid_resource\s*=.*$/ )
 	{
 		my $schedd = "schedd$mypid" . "remote\@$currenthost";
-		print CSUB "remote_schedd = $schedd\n";
+		CondorTest::debug("grid_resource is condor $schedd $currenthost:$remport\n",$debuglevel);
+		print CSUB "grid_resource = condor $schedd $currenthost:$remport\n";
 	}
 	elsif( $line =~ /^\s*log\s*= .*$/)
 	{

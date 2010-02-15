@@ -1,6 +1,5 @@
 # Change this to the schedd's name ("condor_status -f %s Name") 
-remote_schedd = user@machine
-remote_pool = machine:99999
+grid_resource = condor user@machine machine:99999
 universe = grid 
 grid_type = condor 
 executable = job_condorc_xxx_van.pl
