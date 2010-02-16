@@ -1424,7 +1424,7 @@ void Accountant::ReportLimits(AttrList *attrList)
  	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		attr.sprintf("ConcurrencyLimit.%s = %f\n", limit.Value(), count);
+		attr.sprintf("ConcurrencyLimit_%s = %f\n", limit.Value(), count);
 		attrList->Insert(attr.Value());
 	}
 }
