@@ -191,6 +191,14 @@ ERROR: master has exited
   for example, the failure to put a job on hold when \AdAttr{periodic\_hold}
   becomes \Expr{True}.
 
+% gittrac #1209
+\item Fixed a bug introduced in Condor 7.3.2 that caused Grid Monitor
+jobs to receive a full X.509 proxy. Now, it always receives a limited
+proxy, which was the previous behavior.
+
+% gittrac #1070
+\item Fixed a bug that could cause the nordugrid\_gahp to crash.
+
 \end{itemize}
 
 \noindent Known Bugs:
