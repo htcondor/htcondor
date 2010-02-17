@@ -719,6 +719,15 @@ Insert( const char *str )
 }
 
 int ClassAd::
+Insert(char const *expr,bool /*unused*/)
+{
+	dprintf(D_ALWAYS,"WARNING: Insert(expr,bool) called!\n");
+	dprintf_dump_stack();
+
+	return Insert( expr );
+}
+
+int ClassAd::
 AssignExpr(char const *name,char const *value)
 {
 	classad::ClassAdParser par;
