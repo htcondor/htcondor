@@ -7463,22 +7463,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,StarterHookMgr
 id=432
 
-[EXECUTE_LOGIN_IS_DEDICATED]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Execute Login Is Dedicated
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=starter,tool_daemon_proc
-id=433
-
 [JAVA_BENCHMARK_TIME]
 aliases=
 default=2

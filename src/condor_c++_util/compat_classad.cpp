@@ -719,6 +719,15 @@ Insert( const char *str )
 }
 
 int ClassAd::
+Insert(char const *expr,bool /*unused*/)
+{
+	dprintf(D_ALWAYS,"WARNING: Insert(expr,bool) called!\n");
+	dprintf_dump_stack();
+
+	return Insert( expr );
+}
+
+int ClassAd::
 AssignExpr(char const *name,char const *value)
 {
 	classad::ClassAdParser par;
@@ -2253,6 +2262,11 @@ static const char *machine_attrs_list[] = {
 	ATTR_JAVA_VERSION,
 	"JavaSpecificationVersion",
 	ATTR_JAVA_MFLOPS,
+	ATTR_MATCHED_CONCURRENCY_LIMITS,
+	ATTR_REMOTE_USER_PRIO,
+	ATTR_REMOTE_USER_RESOURCES_IN_USE,
+	ATTR_REMOTE_GROUP_RESOURCES_IN_USE,
+	ATTR_REMOTE_GROUP_QUOTA,
 	NULL		// list must end with NULL
 };
 
@@ -2452,6 +2466,13 @@ static const char *job_attrs_list[]  = {
 	ATTR_ON_EXIT_SIGNAL,
 	ATTR_RELEASE_REASON,
 	ATTR_GRID_JOB_ID,
+	ATTR_WANT_MATCH_DIAGNOSTICS,
+	ATTR_AUTO_CLUSTER_ID,
+	ATTR_SUBMITTER_USER_PRIO,
+	ATTR_SUBMITTOR_PRIO,
+	ATTR_SUBMITTER_USER_RESOURCES_IN_USE,
+	ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,
+	ATTR_SUBMITTER_GROUP_QUOTA,
 	NULL		// list must end with NULL
 };
 

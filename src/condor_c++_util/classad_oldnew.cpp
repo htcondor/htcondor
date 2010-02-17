@@ -145,6 +145,9 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	    free( secret_line );
         }
 
+		if ( strncmp( inputLine.Value(), "ConcurrencyLimit.", 17 ) == 0 ) {
+			inputLine.setChar( 16, '_' );
+		}
 		buffer += string(inputLine.Value()) + ";";
 	}
 	buffer += "]";
