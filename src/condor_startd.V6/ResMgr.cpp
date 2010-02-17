@@ -374,7 +374,7 @@ ResMgr::init_resources( void )
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
-	if (param_boolean("ALLOW_VM_CRUFT", true)) {
+	if (param_boolean("ALLOW_VM_CRUFT", false)) {
 		max_types = param_integer("MAX_SLOT_TYPES",
 								  param_integer("MAX_VIRTUAL_MACHINE_TYPES",
 												10));
@@ -698,7 +698,7 @@ ResMgr::initTypes( bool except )
 		buf.sprintf("SLOT_TYPE_%d", i);
 		tmp = param(buf.Value());
 		if (!tmp) {
-			if (param_boolean("ALLOW_VM_CRUFT", true)) {
+			if (param_boolean("ALLOW_VM_CRUFT", false)) {
 				buf.sprintf("VIRTUAL_MACHINE_TYPE_%d", i);
 				if (!(tmp = param(buf.Value()))) {
 					continue;
@@ -733,7 +733,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 
 	for( i=1; i<max_types; i++ ) {
 		param_name.sprintf("NUM_SLOTS_TYPE_%d", i);
-		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		if (param_boolean("ALLOW_VM_CRUFT", false)) {
 			cruft_name.sprintf("NUM_VIRTUAL_MACHINES_TYPE_%d", i);
 			my_type_nums[i] = param_integer(param_name.Value(),
 											 param_integer(cruft_name.Value(),
@@ -754,7 +754,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 			// We haven't found any special types yet.  Therefore,
 			// we're evenly dividing things, so we only have to figure
 			// out how many nodes to advertise.
-		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		if (param_boolean("ALLOW_VM_CRUFT", false)) {
 			my_type_nums[0] = param_integer("NUM_SLOTS",
 										  param_integer("NUM_VIRTUAL_MACHINES",
 														num_cpus()));
@@ -1620,7 +1620,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 {
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
 		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		if (param_boolean("ALLOW_VM_CRUFT", false)) {
 			cp->Assign(ATTR_TOTAL_VIRTUAL_MACHINES, numSlots());
 		}
 	}

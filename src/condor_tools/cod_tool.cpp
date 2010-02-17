@@ -260,7 +260,7 @@ fillRequirements( ClassAd* req )
 		require += slot_id;
 		require += ")&&(";
 	}
-	else if (param_boolean("ALLOW_VM_CRUFT", true)) {
+	else if (param_boolean("ALLOW_VM_CRUFT", false)) {
 		int vm_id = 0;
 		if (name) {
 			if (sscanf(name, "vm%d@", &vm_id) != 1) { 

@@ -1252,7 +1252,7 @@ id=39
 
 [ALLOW_VM_CRUFT]
 aliases=
-default=true
+default=false
 version=0.0.0
 range=.*
 state=default

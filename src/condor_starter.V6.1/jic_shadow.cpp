@@ -1134,7 +1134,7 @@ JICShadow::initUserPriv( void )
 		if( nobody_user == NULL ) {
 			snprintf( nobody_param, 20, "SLOT%d_USER", slot );
 			nobody_user = param(nobody_param);
-			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", true)) {
+			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", false)) {
 				snprintf( nobody_param, 20, "VM%d_USER", slot );
 				nobody_user = param(nobody_param);
 			}

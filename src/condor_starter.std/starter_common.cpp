@@ -349,7 +349,7 @@ setSlotEnv( Env* env_obj ) {
 	MyString slot_env;
 	slot_env.sprintf("_CONDOR_SLOT=%s", SlotName.Value());
 	env_obj->SetEnv(slot_env.Value());
-	if (param_boolean("ALLOW_VM_CRUFT", true)) {
+	if (param_boolean("ALLOW_VM_CRUFT", false)) {
 		slot_env.sprintf("CONDOR_VM=%s", SlotName.Value());
 		env_obj->SetEnv(slot_env.Value());
 	}

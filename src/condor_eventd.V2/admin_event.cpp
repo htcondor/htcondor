@@ -1216,7 +1216,7 @@ AdminEvent::standardUProcess( int batchsz, bool vacate )
 		ad->LookupInteger( ATTR_JOB_START, jobstart ); 
 		ad->LookupInteger( ATTR_JOB_UNIVERSE, jobuniverse ); 
 		ad->LookupInteger( ATTR_IMAGE_SIZE, imagesize ); 
-		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		if (param_boolean("ALLOW_VM_CRUFT", false)) {
 			if (!ad->LookupInteger(ATTR_SLOT_ID, slotid)) {
 				ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slotid);
 			}

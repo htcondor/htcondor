@@ -196,7 +196,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 			hk.name += ":";
 			hk.name += slot;
 		}
-		else if (param_boolean("ALLOW_VM_CRUFT", true) &&
+		else if (param_boolean("ALLOW_VM_CRUFT", false) &&
 				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
 			hk.name += ":";
 			hk.name += slot;

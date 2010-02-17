@@ -3446,7 +3446,7 @@ addRemoteUserPrios( ClassAd	*ad )
 	if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
 		total_slots = 0;
 	}
-	if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", true))) {
+	if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", false))) {
 		if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
 			total_slots = 0;
 		}

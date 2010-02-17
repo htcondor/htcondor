@@ -508,7 +508,7 @@ init_params( int /* first_time */)
 	if (!tmp) {
 		tmp = param( "STARTD_SLOT_EXPRS" );
 	}
-	if (param_boolean("ALLOW_VM_CRUFT", true) && !tmp) {
+	if (param_boolean("ALLOW_VM_CRUFT", false) && !tmp) {
 		tmp = param( "STARTD_VM_ATTRS" );
 		if (!tmp) {
 			tmp = param( "STARTD_VM_EXPRS" );
