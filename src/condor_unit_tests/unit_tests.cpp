@@ -41,12 +41,14 @@ bool FTEST_string_to_sin(void);
 bool FTEST_string_to_port(void);
 bool FTEST_strupr(void);
 bool FTEST_strlwr(void);
+bool FTEST_basename(void);
+bool FTEST_dirname(void);
 bool OTEST_HashTable(void);
 
 int main() {
 	e.init();
 		// set up the function driver
-	FunctionDriver driver(15);
+	FunctionDriver driver(16);
 	driver.register_function(FTEST_host_in_domain);
 	driver.register_function(FTEST_getHostFromAddr);
 	driver.register_function(FTEST_getPortFromAddr);
@@ -60,6 +62,8 @@ int main() {
 	driver.register_function(FTEST_string_to_port);
 	driver.register_function(FTEST_strupr);
 	driver.register_function(FTEST_strlwr);
+	driver.register_function(FTEST_basename);
+	driver.register_function(FTEST_dirname);
 	driver.register_function(OTEST_HashTable);
 
 		// run all the functions and return the result
