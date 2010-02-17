@@ -1010,38 +1010,38 @@ AttrList* Accountant::ReportState() {
 
     CustomerName=key+CustomerRecord.Length();
     sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
     sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
     sprintf(tmp,"WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
     sprintf(tmp,"AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
     sprintf(tmp,"WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
     sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
     sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
     sprintf(tmp,"PriorityFactor%d = %f",OwnerNum,PriorityFactor);
-    ad->Insert(tmp, false);
+    ad->Insert(tmp);
 
     OwnerNum++;
   }
@@ -1049,7 +1049,7 @@ AttrList* Accountant::ReportState() {
   ReportLimits(ad);
 
   sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
-  ad->Insert(tmp, false);
+  ad->Insert(tmp);
   return ad;
 }
 
@@ -1424,7 +1424,7 @@ void Accountant::ReportLimits(AttrList *attrList)
  	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		attr.sprintf("ConcurrencyLimit.%s = %f\n", limit.Value(), count);
+		attr.sprintf("ConcurrencyLimit_%s = %f\n", limit.Value(), count);
 		attrList->Insert(attr.Value());
 	}
 }
