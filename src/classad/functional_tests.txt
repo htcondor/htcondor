@@ -295,3 +295,65 @@ same eval("1+"), ERROR
 eval x = [ A = 1; B = 2; C = eval("A+B"); ]
 same $x.C, 3
 
+echo Testing boolean expressions
+echo Testing && operator
+same false, false && false
+same false, false && undefined
+same false, false && true
+same false, false && error
+
+same false, undefined && false
+same undefined, undefined && undefined
+same undefined, undefined && true
+same error, undefined && error
+
+same false, true && false
+same undefined, true && undefined
+same true, true && true
+same error, true && error
+
+same error, error && false
+same error, error && undefined
+same error, error && true
+same error, error && error
+
+
+echo Testing || operator
+same false, false || false
+same undefined, false || undefined
+same true, false || true
+same error, false || error
+
+same undefined, undefined || false
+same undefined, undefined || undefined
+same true, undefined || true
+same error, undefined || error
+
+same true, true || false
+same true, true || undefined
+same true, true || true
+same true, true || error
+
+same error, error || false
+same error, error || undefined
+same error, error || true
+same error, error || error
+
+
+echo Testing ! operator
+same true, !false
+same undefined, !undefined
+same false, !true
+same error, !error
+
+
+echo Testing ? operator
+same false, false ? true : false
+same true, false ? false : true
+same undefined, false ? true : undefined
+same true, false ? undefined : true
+
+same true, true ? true : false
+same false, true ? false : true
+same true, true ? true : undefined
+same undefined, true ? undefined : true
