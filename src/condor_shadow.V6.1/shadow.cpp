@@ -382,7 +382,7 @@ UniShadow::logDisconnectedEvent( const char* reason )
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
-	if( !uLog.writeEvent(&event,getJobAd()) ) {
+	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 	}
 }
@@ -406,7 +406,7 @@ UniShadow::logReconnectedEvent( void )
 	delete [] starter;
 	starter = NULL;
 
-	if( !uLog.writeEvent(&event,getJobAd()) ) {
+	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
 	}
 }
@@ -425,7 +425,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	}
 	event.setStartdName( dc_startd->name() );
 
-	if( !uLog.writeEvent(&event,getJobAd()) ) {
+	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
 	}
 }

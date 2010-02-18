@@ -5851,7 +5851,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		event.setStartdAddr( startd_addr );
 		event.setStartdName( startd_name );
 
-		if( !ULog->writeEvent(&event,GetJobAd(cluster,proc)) ) {
+		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 		}
 		delete ULog;
