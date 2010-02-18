@@ -641,8 +641,8 @@ characters within the delimiter string.
     the return value is \Expr{ERROR}.
 
 
-  \index{ClassAd functions!stringListAve()}
-  \item[\Code{Real stringListAve(String list \Lbr\ , String delimiter \Rbr)}]
+  \index{ClassAd functions!stringListAvg()}
+  \item[\Code{Real stringListAvg(String list \Lbr\ , String delimiter \Rbr)}]
     Sums and returns the real-valued average of all items in the 
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -691,6 +691,17 @@ characters within the delimiter string.
   \item[\Code{Boolean stringListIMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
     Same as \Code{stringListMember()}, but comparison is done
     with \Expr{stricmp()}, so letter case is not relevant.
+
+  \index{ClassAd functions!stringList\_regexpMember()}
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr) \Lbr, String options \Rbr}]
+    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
+    that matches an item in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    String \Expr{options} modifies how the match is performed.
+    Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
+    \Expr{list}.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings, or if \Expr{pattern} is not a valid regular expression.
 
 \end{description}
 
