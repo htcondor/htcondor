@@ -16,6 +16,60 @@ New features will be added in the 7.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-4-3}Version 7.4.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-4-2}Version 7.4.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -137,6 +191,14 @@ ERROR: master has exited
   for example, the failure to put a job on hold when \AdAttr{periodic\_hold}
   becomes \Expr{True}.
 
+% gittrac #1209
+\item Fixed a bug introduced in Condor 7.3.2 that caused Grid Monitor
+jobs to receive a full X.509 proxy. Now, it always receives a limited
+proxy, which was the previous behavior.
+
+% gittrac #1070
+\item Fixed a bug that could cause the nordugrid\_gahp to crash.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -151,7 +213,9 @@ ERROR: master has exited
 
 \begin{itemize}
 
-\item None.
+\item Descriptions of all the commands that may be placed into a
+submit description file are now located within the \Condor{submit}
+manual page, instead of within Chapter 2, the Users' Manual.
 
 \end{itemize}
 

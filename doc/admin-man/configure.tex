@@ -1275,10 +1275,26 @@ File System Configuration File Entries''.
   page~\pageref{sec:windows-scripts-as-executables} for a more complete
   description.
 
+\label{param:TargetJobAttrs}
+\item[\Macro{TARGET\_JOB\_ATTRS}]
+  A comma separated list of additional job ClassAd attributes for which
+  Condor will rewrite machine ClassAd expressions,
+  such that known job attributes will have a \Expr{Target.} prefix,
+  allowing proper evaluation when using new ClassAds. 
+  It will be useful for custom attributes in the job ClassAds that are 
+  used for matchmaking.
+
+\label{param:TargetMachineAttrs}
+\item[\Macro{TARGET\_MACHINE\_ATTRS}]
+  A comma separated list of additional machine ClassAd attributes for which
+  Condor will rewrite job ClassAd expressions,
+  such that known machine attributes will have a \Expr{Target.} prefix, 
+  allowing proper evaluation when using new ClassAds.
+  It will be useful for custom attributes in the machine ClassAds that are 
+  used for matchmaking.
+
 \end{description}
 
-
-% Default value check end here: PKK 8 Jan 2004
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon Logging Configuration File Entries} 
@@ -8256,8 +8272,8 @@ section~\ref{sec:Security} on Security.
 \label{param:DelegateFullJobGSICredentials} 
 \item[\Macro{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS}]
   A boolean value that controls whether Condor will delegate a full or limited
-  GSI X509 proxy.  The default value is
-  \Expr{False}.
+  GSI X.509 proxy.  
+  The default value of \Expr{False} indicates the limited GSI X.509 proxy.
 
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]

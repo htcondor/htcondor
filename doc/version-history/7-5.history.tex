@@ -73,7 +73,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item All bug fixes and features which are in Condor version 7.4.2
+are in this 7.5.1 release.
+
+\item The Condor release is now available as a proper RPM or Debian
+package.
+
+\item Condor now internally uses the version of (New) ClassAds provided
+as a stand-alone library (\URL{http://www.cs.wisc.edu/condor/classad/}).
+Previously, Condor 
+used an older version of ClassAds that was heavily tied to the Condor 
+development libraries. This change should be mostly transparent in the 
+current development series. In the next development series (7.7.x),
+Condor  will start to use features of ClassAds that were unavailable in the 
+older library. 
+Read section~\ref{sec:classad-differences} for details on the user-visible
+differences.
+
+\item HPUX 11.00 is no longer a supported platform.
 
 \end{itemize}
 
@@ -82,13 +99,6 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gittrac #221
-\item The configuration variable
-\MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
-delegations done by Condor.  The value is a boolean and defaults to False,
-which means that when doing delegation Condor will now create a limited proxy
-instead of a full proxy.
-
 % gittrac #1102
 \item A port number defined within \Macro{CONDOR\_VIEW\_HOST} may now use 
   a shared port.
@@ -96,9 +106,16 @@ instead of a full proxy.
 % gittrac #1104
 \item The \Condor{master} no longer pauses for 3 seconds after starting
   the \Condor{collector}.  However, if the configuration variable
-  \MacroNI{COLLECTOR\_ADDRESS\_FILE} is defines a file, 
+  \MacroNI{COLLECTOR\_ADDRESS\_FILE} defines a file, 
   the \Condor{master} will wait for that file to be created
   before starting other daemons.
+
+% gittrac #1144
+\item In the grid universe, Condor can now automatically distinguish
+between GRAM2 and GRAM5 servers, that is grid types \SubmitCmd{gt2} and
+\SubmitCmd{gt5}.
+Users can submit jobs using a grid type of \SubmitCmd{gt2} or \SubmitCmd{gt5}
+for either type of server.
 
 % gittrac #938
 \item Grid universe jobs using the CREAM grid system now batch up
@@ -107,8 +124,18 @@ reduces network traffic, increases the number of parallel tasks
 the Condor can handle at once, and reduces the load on the remote
 gatekeeper.
 
+% gittrac #1100
+\index{submit commands!cream\_attributes}
+\item The new submit description file command \SubmitCmd{cream\_attributes}
+sets additional attribute/value pairs for the CREAM job description
+that Condor creates when submitting a grid universe job 
+destined for the CREAM grid system.
+
 % gittrac #1138
-\item The -analyze option to \Condor{q} is now identical to -better-analyze.  -better-analyze includes the same information as -analyze but also includes more specific information on a job's Requirements.
+\item The \Condor{q} command with option \Opt{-analyze} is now identical to
+the option \Opt{-better-analyze}.
+The \Opt{-better-analyze} option includes a superset of information,
+and also includes more specific information on a job's \SubmitCmd{requirements}.
 
 % gittrack #1169
 \item Security sessions that are not used for longer than an hour are
@@ -116,18 +143,36 @@ now removed from the security session cache to limit memory usage.
 
 % gittrack #1169
 \item The number of security sessions in the cache is now advertised in
-the daemon ad as \Attr{MonitorSelfSecuritySessions}.
+the daemon ClassAd as \Attr{MonitorSelfSecuritySessions}.
 
 % gittrac #1078
 \item \Condor{dagman} now has the capability to run DAGs containing nodes
 that are declared to be NOOPs -- for these nodes, a job is never actually
-submitted.  See section~\ref{dagman:NOOP} for for information.
+submitted.  See section~\ref{dagman:NOOP} for information.
+
+% gittrac #1128
+\index{submit commands!vm\_macaddr}
+\item The submit file attribute \SubmitCmd{vm\_macaddr} can now be used to set
+the MAC address for vm universe jobs that use VMware. The range of valid
+MAC addresses is constrained by limits imposed by VMware.
+
+% gittrac #1173
+\item The \Condor{q} command with option \Opt{-globus}
+is now much more efficient in its communication with the \Condor{schedd}.
 
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+% gittrac #221
+\item The configuration variable
+\MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
+delegations done between Condor daemons and tools.
+The value is a boolean and defaults to \Expr{False},
+which means that when doing delegation Condor will now create a limited proxy
+instead of a full proxy.
 
 \item The new configuration variable
   \MacroNI{SEC\_<access-level>\_SESSION\_LEASE} specifies the maximum
@@ -136,6 +181,14 @@ submitted.  See section~\ref{dagman:NOOP} for for information.
   If the server and client have different configurations, the smaller
   one will be used.
 
+\item The new configuration variable \Macro{TARGET\_MACHINE\_ATTRS}
+specifies a list of machine ClassAd attributes for which \Expr{Target.} should
+be prepended to these attributes appearing in any job ClassAd expressions.
+
+\item The new configuration variable \Macro{TARGET\_JOB\_ATTRS}
+specifies a list of job ClassAd attributes for which \Expr{Target.} should
+be prepended to these attributes appearing in any machine ClassAd expressions.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -143,21 +196,41 @@ submitted.  See section~\ref{dagman:NOOP} for for information.
 \begin{itemize}
 
 % gittrack #1141
-\item The default value for \MacroNI{SEC\_DEFAULT\_SESSION\_DURATION}
-  was effectively 3600 in 7.5.0.  This produced longer than desired
-  cached sessions for short-lived tools such as \Condor{status}.  It
-  also produced shorter than possibly desired cached sessions for
-  long-lived daemons such as \Condor{startd}.  The default has been
-  restored to what it was before 7.5.0, with the exception of
-  \Condor{submit}, which has been changed from 1 hour to 60s.  For
-  command-line tools, the default is 60s and for daemons it is 1 day.
+\item The default value for \Macro{SEC\_DEFAULT\_SESSION\_DURATION}
+  was effectively 3600 in Condor version 7.5.0.
+  This produced longer than desired
+  cached sessions for short-lived tools such as \Condor{status}.
+  It also produced shorter than possibly desired cached sessions for
+  long-lived daemons such as \Condor{startd}.  
+  The default has been restored to what it was before Condor version 7.5.0,
+  with the exception of \Condor{submit},
+  which has been changed from 1 hour to 60 seconds.
+  For command line tools, the default is 60 seconds,
+  and for daemons it is 1 day.
 
 % gittrack #1142
 \item \MacroNI{SEC\_<access-level>\_SESSION\_DURATION} previously did
   not support integer expressions, but it did not detect invalid
   input, so the use of an expression could produce unexpected results.
-  Now, like other integer configuration settings, a constant expression can
-  be used and input is fully validated.
+  Now, like other integer configuration variables,
+  a constant expression can be used and input is fully validated.
+
+% gittrac #1196
+\item The configuration variable \MacroNI{LOCAL\_CONFIG\_DIR} is no longer
+ignored if defined in a local configuration file.
+
+% gittrack #767
+\item Removed the incorrect issuing of the following Condor version 7.5.0 
+  warning to the
+  \Condor{starter}'s log, even when the outdated, and no longer used
+  configuration
+  variable \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED} was not defined.
+
+\begin{verbatim}
+WARNING: EXECUTE_LOGIN_IS_DEDICATED is deprecated.
+Please use DEDICATED_EXECUTE_ACCOUNT_REGEXP instead.
+\end{verbatim}
+
 
 \end{itemize}
 

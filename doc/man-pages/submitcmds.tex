@@ -1,8 +1,3 @@
-%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:submit-cmds}Submit Description File Commands}  
-%%%%%%%%%%%%%%%%%%%%
-\index{submit commands}
-
 Each submit description file describes one cluster of jobs to be
 placed in the Condor execution pool. All jobs in a cluster must share
 the same executable, but they may have different input and output files,
@@ -1352,6 +1347,17 @@ A file containing data that can be accessed
 by the virtual machine job inside Amazon EC2.
 
 %%%%%%%%%%%%%%%%%%%
+%% cream_attributes
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!cream\_attributes}
+\item[cream\_attributes = $<$name=value;\Dots;name=value$>$]
+Provides a list of attribute/value pairs to be set in a CREAM job description
+of a grid universe job destined for the CREAM grid system.
+The pairs are separated by semicolons, and written in New ClassAd syntax.
+
+
+%%%%%%%%%%%%%%%%%%%
 %% globus_rematch
 %%%%%%%%%%%%%%%%%%%
 
@@ -2069,7 +2075,6 @@ a core file, \SubmitCmd{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \SubmitCmd{coresize} is not
 specified in the command file, the system's user resource limit
 \mbox{``coredumpsize''} is used.
-This limit is not used in HP-UX and DUX operating systems. 
 
 %%%%%%%%%%%%%%%%%%
 % cron_day_of_month

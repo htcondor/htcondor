@@ -58,7 +58,92 @@ to \texttt{ERROR} if any of their operands are \texttt{ERROR}.  Similarly,
 most operators are strict with respect to \texttt{UNDEFINED}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Syntax}
+\subsection{\label{classad-newandold}
+ClassAds: Old and New}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:classad-differences}
+
+ClassAds have existed for quite some time in two forms:
+Old and New.
+Old ClassAds were the original form and were used in Condor
+until Condor version 7.5.0.
+They were heavily tied to the Condor development libraries.
+New ClassAds added new features
+and were designed as a stand-alone library that could be used apart
+from Condor.
+
+In Condor version 7.5.1, Condor switched the internal usage of
+ClassAds from Old to New.
+All user interaction with tools (such as \Condor{q}) as well as
+output of tools is still done as Old ClassAds.
+Before Condor version 7.5.1, New ClassAds were used in just a few places 
+within Condor, for example
+the Job Router and  \Condor{q} \Opt{-better-analyze}.
+There are some syntax and behavior differences between new and old
+ClassAds,
+most of which will remain invisible to users of Condor.
+A complete description of New ClassAds can be found at
+\URL{http://www.cs.wisc.edu/condor/classad/},
+and in the ClassAd Language Reference Manual found on this web page.
+
+Some of the features of New ClassAds that are not in Old ClassAds are
+lists, nested ads, time values, and matching groups of ads.
+Condor will
+avoid using these features until the 7.7.x development series, as using
+them makes it difficult to interact with older versions of Condor.
+
+The syntax varies slightly between Old and New ClassAds.
+Here is an example ClassAd presented both forms.
+The Old form:
+
+\begin{verbatim}
+Foo = 3
+Bar = "ab\"cd\ef"
+Moo = Foo =!= Undefined
+\end{verbatim}
+
+The New form:
+
+\begin{verbatim}
+[
+Foo = 3;
+Bar = "ab\"cd\\ef";
+Moo = Foo isnt Undefined;
+]
+\end{verbatim}
+
+Condor will convert to and from old ClassAd syntax as needed.
+
+An important, and visible distinction between New and Old is
+that the evaluation of expressions is slightly different.
+In New ClassAds,
+when evaluating an expression in the context of two ClassAds,
+for example when matching a job ad with a machine ad,
+if an attribute name appears without the prefix \Expr{TARGET.} or \Expr{MY.},
+it is only looked up in the local ClassAd.
+In Old ClassAds,
+that attribute is first looked up in the local ClassAd.
+If not present in the local ClassAd, 
+it is then further looked up in the target ClassAd.
+
+As Condor now uses New ClassAds internally,
+to refer to an attribute in the target ad,
+its name \emph{must} be preceded with \Expr{TARGET.} in the expression.
+
+To aid in the transition,
+Condor contains a routine that scans job ClassAd expressions,
+adding \Expr{TARGET.} to attribute names that normally occur
+in machine ClassAds.
+This routine also does the reverse:
+it scans machine ClassAd expressions,
+adding \Expr{TARGET.} to attribute names that normally occur
+in job ClassAds.
+To extend this injection of \Expr{TARGET.} as needed for additional attributes,
+the attributes are specified with the configuration variables
+\Macro{TARGET\_MACHINE\_ATTRS} and \Macro{TARGET\_JOB\_ATTRS}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Old ClassAd Syntax}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd!expression syntax}
 ClassAd expressions are formed by composing literals, attribute references and 
@@ -556,8 +641,8 @@ characters within the delimiter string.
     the return value is \Expr{ERROR}.
 
 
-  \index{ClassAd functions!stringListAve()}
-  \item[\Code{Real stringListAve(String list \Lbr\ , String delimiter \Rbr)}]
+  \index{ClassAd functions!stringListAvg()}
+  \item[\Code{Real stringListAvg(String list \Lbr\ , String delimiter \Rbr)}]
     Sums and returns the real-valued average of all items in the 
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -606,6 +691,17 @@ characters within the delimiter string.
   \item[\Code{Boolean stringListIMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
     Same as \Code{stringListMember()}, but comparison is done
     with \Expr{stricmp()}, so letter case is not relevant.
+
+  \index{ClassAd functions!stringList\_regexpMember()}
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr) \Lbr, String options \Rbr}]
+    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
+    that matches an item in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    String \Expr{options} modifies how the match is performed.
+    Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
+    \Expr{list}.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings, or if \Expr{pattern} is not a valid regular expression.
 
 \end{description}
 
@@ -674,7 +770,7 @@ Inclusion of characters other than these as options are ignored.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Evaluation Semantics}
+\subsection{Old ClassAd Evaluation Semantics}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{ClassAd:evaluation}
 The ClassAd mechanism's primary purpose is for matching entities that supply
@@ -817,7 +913,7 @@ if either of their operands have these exceptional values.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{ClassAds in the Condor System}
+\subsection{Old ClassAds in the Condor System}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The simplicity and flexibility of ClassAds is heavily exploited in the Condor
 system.  ClassAds are not only used to represent machines and jobs in the 
