@@ -28,7 +28,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1231
+\item The \Condor{schedd} daemon uses less disk bandwidth when logging
+updates to job ClassAds from running jobs and also when removing jobs
+from the queue.  This should improve performance in situations where
+disk bandwidth is a limiting factor.  Updates to the job queue log
+have also been optimized in a number of cases to be less disk intensive.
 
 \end{itemize}
 
