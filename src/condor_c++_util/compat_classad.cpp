@@ -178,6 +178,32 @@ void EvalResult::toString(bool force)
 	}
 }
 
+static classad::MatchClassAd *the_match_ad;
+static bool the_match_ad_in_use;
+classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
+									  classad::ClassAd *target )
+{
+	ASSERT( !the_match_ad_in_use );
+	the_match_ad_in_use = true;
+
+	if( !the_match_ad ) {
+		the_match_ad = new classad::MatchClassAd( );
+	}
+	the_match_ad->ReplaceLeftAd( source );
+	the_match_ad->ReplaceRightAd( target );
+
+	return the_match_ad;
+}
+
+void releaseTheMatchAd()
+{
+	ASSERT( the_match_ad_in_use );
+
+	the_match_ad->RemoveLeftAd();
+	the_match_ad->RemoveRightAd();
+	the_match_ad_in_use = false;
+}
+
 static bool strlist_functions_registered = false;
 
 static
@@ -923,7 +949,7 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 		return 0;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
@@ -935,8 +961,7 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 			rc = 1;
 		}
 	}
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -964,7 +989,7 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 		return 0;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 
     if( this->Lookup(name) ) {
 
@@ -982,14 +1007,12 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
         *value = (char *)malloc(strlen(strVal.c_str()) + 1);
         if(*value != NULL) {
             strcpy( *value, strVal.c_str( ) );
-            mad.RemoveLeftAd( );
-            mad.RemoveRightAd( );
+			releaseTheMatchAd();
             return 1;
         }
     }
 
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return 0;
 }
 
@@ -1019,7 +1042,7 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 		return 0;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrInt( name, tmp_val ) ) {
 			value = tmp_val;
@@ -1031,8 +1054,7 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 			rc = 1;
 		}
 	}
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -1058,7 +1080,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 		return 0;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
@@ -1082,8 +1104,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 		}
 	}
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -1114,7 +1135,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 		return 0;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
@@ -1147,8 +1168,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 		}
 	}
 
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 

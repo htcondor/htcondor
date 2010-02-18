@@ -491,6 +491,9 @@ class ClassAd : public classad::ClassAd
 						StringList &external_refs);
 };
 
+classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
+									  classad::ClassAd *target );
+void releaseTheMatchAd();
 
 
 classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,
