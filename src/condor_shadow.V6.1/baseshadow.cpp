@@ -967,7 +967,7 @@ BaseShadow::log_except(const char *msg)
 		event.sent_bytes = 0.0;
 	}
 
-	if (!exception_already_logged && !uLog.writeEvent (&event,NULL))
+	if (!exception_already_logged && !uLog.writeEventNoFsync (&event,NULL))
 	{
 		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}
