@@ -1511,7 +1511,9 @@ int DestroyProc(int cluster_id, int proc_id)
   // save job ad to the log
 	bool already_in_transaction = InTransaction();
 	if( !already_in_transaction ) {
-		BeginTransaction(); // for performance
+			// For performance, wrap the myproxy attribute change and
+			// job deletion into one transaction.
+		BeginTransaction();
 	}
 
 	// ckireyev: Destroy MyProxyPassword
@@ -1522,7 +1524,15 @@ int DestroyProc(int cluster_id, int proc_id)
 	DecrementClusterSize(cluster_id);
 
 	if( !already_in_transaction ) {
-		CommitTransaction();
+			// For performance, use a NONDURABLE transaction.  If we crash
+			// before this makes it to the disk, on restart we will
+			// attempt removing it again.  Yes, this means we may
+			// generate a duplicate history entry and redo other
+			// cleanup tasks, but that is possible even if this
+			// transaction is marked DURABLE, since all of those tasks
+			// are not atomic with respect to this transaction anyway.
+
+		CommitTransaction(NONDURABLE);
 	}
 
 		// remove any match (startd) ad stored w/ this job
