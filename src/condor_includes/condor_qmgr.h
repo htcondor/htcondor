@@ -169,17 +169,26 @@ int SetMyProxyPassword (int cluster, int proc, const char * pwd);
 	@return -1 on failure; 0 on success
 */
 int CloseSocket();
-/** Commit the current transaction, but keep the network connection open.
-	@return -1 on failure; 0 on success
-*/
-int CloseConnection();
+
 bool InTransaction();
 /** Begin a new transaction over an existing network connection to the
 	schedd.
 	@return -1 on failurer; 0 on success
 */
 void BeginTransaction();
+
+/** This didn't exist as a remote qmgmt call until 7.5.2.  Prior to that,
+    the poorly named CloseConnection() call was used.
+	@return -1 on failure: 0 on success
+*/
+int RemoteCommitTransaction(SetAttributeFlags_t flags=0);
+
+/** The difference between this and RemoteCommitTransaction is that
+	this function never returns if there is a failure.  This function
+	should only be called from the schedd.
+*/
 void CommitTransaction(SetAttributeFlags_t flags=0);
+
 void AbortTransaction();
 void AbortTransactionAndRecomputeClusters();
 
