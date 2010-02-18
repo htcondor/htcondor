@@ -1280,6 +1280,17 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	return true;
 }
 
+bool
+WriteUserLog::writeEventNoFsync (ULogEvent *event, ClassAd *jobad,
+								 bool *written )
+{
+	bool saved_fsync_setting = getEnableFsync();
+	setEnableFsync( false );
+	bool retval = writeEvent( event, jobad, written );
+	setEnableFsync( saved_fsync_setting );
+	return retval;
+}
+
 // Generate the uniq global ID "base"
 const char *
 WriteUserLog::GetGlobalIdBase( void )

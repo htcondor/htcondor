@@ -179,6 +179,12 @@ class WriteUserLog
     bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL,
 					 bool *written = NULL );
 
+	/** This function is just like writeEvent(), but it ensures
+		that no call to fsync is made on the user log.
+	*/
+	bool writeEventNoFsync (ULogEvent *event, ClassAd *jobad = NULL,
+							bool *written = NULL );
+
 	/**Control whether writeEvent() calls fsync.  This overrides the
 	   configured default ENABLE_USERLOG_FSYNC.  This only applies to
 	   the user log, not the global event log.
