@@ -80,7 +80,8 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 	if (cur_image != prev_image) {
 		JobImageSizeEvent event;
 		event.size = cur_image;
-		if (!uLog.writeEvent(&event, job_ad)) {
+			// for performance, do not bother fsyncing this event
+		if (!uLog.writeEventNoFsync(&event, job_ad)) {
 			dprintf(D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");
 		}
 	}
