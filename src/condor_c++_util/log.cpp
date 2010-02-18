@@ -88,14 +88,12 @@ LogRecord::readline(FILE *fp, char * &str)
 	int		i, bufsize = 1024;
 	signed char	*buf = (signed char *)malloc(bufsize);
 
-	// ignore leading whitespace but don't pass newline
-	do {
-		buf[0] = fgetc( fp );
-		if( buf[0] == EOF && !feof( fp ) ) {
-			free( buf );
-			return( -1 );
-		}
-	} while( isspace(buf[0]) && buf[0] != EOF && buf[0] != '\n' );
+	// ignore one leading whitespace character but don't pass newline
+	buf[0] = fgetc( fp );
+	if( buf[0] == EOF && !feof( fp ) ) {
+		free( buf );
+		return( -1 );
+	}
 
 	// read until newline
 	for (i = 1; buf[i-1]!='\n' && buf[i-1] != '\0' && buf[i-1] != EOF; i++) {

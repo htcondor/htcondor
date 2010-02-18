@@ -55,6 +55,11 @@ StringList::StringList(const char *s, const char *delim )
 void
 StringList::initializeFromString (const char *s)
 {
+	if(!s) 
+	{
+		EXCEPT("StringList::initializeFromString passed a null pointer");
+	}
+
 	/* If initializeFromString is called on an existing string_list,
      * it appends to that list, and does not reinitialize the list
      * if you change that, please check all hte call sites, some things

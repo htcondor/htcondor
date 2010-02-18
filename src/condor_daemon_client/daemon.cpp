@@ -1325,6 +1325,13 @@ Daemon::getCmInfo( const char* subsys )
 
 			// this is just a fancy wrapper for param()...
 		char *hostnames = getCmHostFromConfig( subsys );
+		if(!hostnames) {
+			buf.sprintf("%s address or hostname not specified in config file",
+					 subsys ); 
+			newError( CA_LOCATE_FAILED, buf.Value() );
+			_is_configured = false;
+			return false;
+		}
 		char *itr, *full_name, *host_name, *local_name;
 		StringList host_list;
 
@@ -1335,6 +1342,7 @@ Daemon::getCmInfo( const char* subsys )
 		itr = NULL;
 		while ((itr = host_list.next()) != NULL) {
 			host_name = getHostFromAddr( itr );
+			if(!host_name) { continue; }
 			if ((strlen(full_name) == strlen(host_name) ||
 				(strlen(local_name) == strlen(host_name))) &&
 				((strcmp(full_name, host_name) == 0) ||
