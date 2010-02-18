@@ -1197,7 +1197,7 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	event.sent_bytes = recv_bytes - last_recv_bytes;
 	last_recv_bytes = recv_bytes;
 
-	if( !writeULogEvent(&event) ) {
+	if( !shadow->uLog.writeEventNoFsync(&event, jobAd) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_CHECKPOINTED event\n" );
 		rval = false;
 	}
