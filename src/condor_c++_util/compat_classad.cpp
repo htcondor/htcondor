@@ -1762,20 +1762,22 @@ NextDirtyExpr(const char *&name, classad::ExprTree *&expr)
 
 	name = NULL;
     expr = NULL;
-    
-    //get the next dirty attribute if we aren't past the end.
-    if( m_dirtyItr == dirtyEnd() )
-    {
-        return false;
-    }
-    
-    //figure out what exprtree it is related to
-	name = m_dirtyItr->c_str();
-    expr = classad::ClassAd::Lookup(*m_dirtyItr);
-    m_dirtyItr++;
 
-    return true;
+	// get the next dirty attribute if we aren't past the end.
+	// Removed attributes appear in the list, but we don't want
+	// to return them in the old ClassAd API, so skip them.
+	while ( m_dirtyItr != dirtyEnd() ) {
+		name = m_dirtyItr->c_str();
+		expr = classad::ClassAd::Lookup(*m_dirtyItr);
+		m_dirtyItr++;
+		if ( expr ) {
+			break;
+		} else {
+			name = NULL;
+		}
+	}
 
+    return expr != NULL;
 }
 
 void ClassAd::
