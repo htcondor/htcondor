@@ -6529,8 +6529,8 @@ These macros affect the \Condor{negotiator}.
   user-supplied rank in the job ClassAd, then by
   \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
   \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption and
-  there are still any ties in the top choice).  \verb@MY@ refers to
-  attributes of the machine ClassAd and \verb@TARGET@ refers to the
+  there are still any ties in the top choice).  \Expr{MY.} refers to
+  attributes of the machine ClassAd and \Expr{TARGET.} refers to the
   job ClassAd.  The purpose of the post job rank is to allow the pool
   administrator to choose between machines that the job ranks equally.
   The default value is undefined, which causes this rank to have no
@@ -6543,7 +6543,7 @@ These macros affect the \Condor{negotiator}.
 
 \begin{verbatim}
   UWCS_NEGOTIATOR_POST_JOB_RANK = \
-   (RemoteOwner =?= UNDEFINED) * (KFlops - VirtualMachineID)
+   (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID)
 \end{verbatim}
 
 
