@@ -904,7 +904,7 @@ contact_schedd_next_add_job:
 		dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
 	}
 
-	if ( CloseConnection() < 0 ) {
+	if ( RemoteCommitTransaction() < 0 ) {
 		failure_line_num = __LINE__;
 		commit_transaction = false;
 		goto contact_schedd_disconnect;
@@ -1007,7 +1007,7 @@ contact_schedd_next_add_job:
 
 	}
 
-	if ( CloseConnection() < 0 ) {
+	if ( RemoteCommitTransaction() < 0 ) {
 		failure_line_num = __LINE__;
 		commit_transaction = false;
 		goto contact_schedd_disconnect;
@@ -1046,7 +1046,7 @@ contact_schedd_next_add_job:
 
 	}
 
-	if ( CloseConnection() < 0 ) {
+	if ( RemoteCommitTransaction() < 0 ) {
 		failure_line_num = __LINE__;
 		commit_transaction = false;
 		goto contact_schedd_disconnect;

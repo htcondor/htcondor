@@ -4422,7 +4422,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				if( ! sec_man->FillInSecurityPolicyAd(
 					comTable[cmd_index].perm,
 					&our_policy,
-					true,
 					false,
 					false,
 					comTable[cmd_index].force_authentication ) )
@@ -4869,7 +4868,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				if( ! sec_man->FillInSecurityPolicyAd(
 					comTable[index].perm,
 					&our_policy,
-					true,
 					false,
 					false,
 					comTable[index].force_authentication ) )

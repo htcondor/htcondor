@@ -26,6 +26,7 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "condor_daemon_core.h"
+#include "condor_qmgr.h"
 
 
 // What kind of update to the job queue are we performing?
@@ -54,9 +55,10 @@ public:
 			classad to find any dirty attributes, and compares them
 			against the lists of attribute names we care about.  
 			@param type What kind of update we want to do
+			@param commit_flags flags to pass to RemoteCommitTransaction()
 			@return true on success, false on failure
 		*/
-	bool updateJob( update_t type );
+	bool updateJob( update_t type, SetAttributeFlags_t commit_flags = 0 );
 
 		/** Connect to the job queue and update one attribute.
 			WARNING: This method is BAD NEWS for schedd scalability.

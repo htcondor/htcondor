@@ -188,7 +188,7 @@ DisconnectQ(Qmgr_connection *,bool commit_transactions)
 
 	if( !qmgmt_sock ) return( false );
 	if ( commit_transactions ) {
-		rval = CloseConnection();
+		rval = RemoteCommitTransaction();
 	}
 	CloseSocket();
 	delete qmgmt_sock;

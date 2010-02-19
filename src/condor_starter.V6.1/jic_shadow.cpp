@@ -652,37 +652,8 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 						  user_proc )
 {
 	static bool wrote_local_log_event = false;
-	bool job_exit_wants_ad = true;
-
-		// protocol changed w/ v6.3.0 so the Update Ad is sent
-		// with the final REMOTE_CONDOR_job_exit system call.
-		// to keep things backwards compatible, do not send the 
-		// ad with this system call if the shadow is older.
-
-		// However, b/c the shadow didn't start sending it's version
-		// to the starter until 6.3.2, we confuse 6.3.0 and 6.3.1
-		// shadows with 6.2.X shadows that don't support the new
-		// protocol.  Luckily, we never released 6.3.0 or 6.3.1 for
-		// windoze, and we never released any part of the new
-		// shadow/starter for Unix until 6.3.0.  So, we only have to
-		// do this compatibility check on windoze, and we don't have
-		// to worry about it not being able to tell the difference
-		// between 6.2.X, 6.3.0, and 6.3.1, since we never released
-		// 6.3.0 or 6.3.1. :) Derek <wright@cs.wisc.edu> 1/25/02
-
-#ifdef WIN32		
-	job_exit_wants_ad = false;
-
-
-	if( shadow_version && shadow_version->built_since_version(6,3,0) ) {
-
-		job_exit_wants_ad = true;	// new shadow; send ad
-
-	}
-#endif		
 
 	ClassAd ad;
-	ClassAd *ad_to_send;
 
 		// We want the update ad anyway, in case we want it for the
 		// LocalUserLog
@@ -700,16 +671,8 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 
 	updateStartd(&ad, true);
 
-	if ( job_exit_wants_ad ) {
-		ad_to_send = &ad;
-	} else {
-		dprintf( D_FULLDEBUG,
-				 "Shadow is pre-v6.3.0 - not sending final update ad\n" ); 
-		ad_to_send = NULL;
-	}
-			
 	if( !had_hold ) {
-		if( REMOTE_CONDOR_job_exit(exit_status, reason, ad_to_send) < 0 ) {    
+		if( REMOTE_CONDOR_job_exit(exit_status, reason, &ad) < 0 ) {    
 			dprintf( D_ALWAYS, "Failed to send job exit status to shadow\n" );
 			job_cleanup_disconnected = true;
 			return false;
@@ -778,25 +741,10 @@ JICShadow::registerStarterInfo( void )
 		EXCEPT( "registerStarterInfo called with NULL DCShadow object" );
 	}
 
-		// CRUFT!
-		// If the shadow is older than 6.3.3, we need to use the
-		// CONDOR_register_machine_info method, which sends a bunch of
-		// strings over the wire.  If we're 6.3.3 or later, we can use
-		// CONDOR_register_starter_info, which just sends a ClassAd
-		// with all the relevent info.
-	if( shadow_version && shadow_version->built_since_version(6,3,3) ) {
-		ClassAd starter_info;
-		publishStarterInfo( &starter_info );
-		rval = REMOTE_CONDOR_register_starter_info( &starter_info );
+	ClassAd starter_info;
+	publishStarterInfo( &starter_info );
+	rval = REMOTE_CONDOR_register_starter_info( &starter_info );
 
-	} else {
-			// We've got to use the old method.
-		char *mfhn = strnewp ( my_full_hostname() );
-		rval = REMOTE_CONDOR_register_machine_info( uid_domain,
-			     fs_domain, daemonCore->InfoCommandSinfulString(), 
-				 mfhn, 0 );
-		delete [] mfhn;
-	}
 	if( rval < 0 ) {
 		return false;
 	}
@@ -1025,17 +973,9 @@ JICShadow::initUserPriv( void )
 		}
 		else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
-			bool shadow_is_old = true;
 			bool try_soft_uid = param_boolean( "SOFT_UID_DOMAIN", false );
 
-			if( try_soft_uid ) {
-					// first, see if the shadow is new enough to
-					// support the RSC we need to do...
-				if( shadow_version && 
-					shadow_version->built_since_version(6,3,3) ) {
-						shadow_is_old = false;
-				}
-			} else {
+			if( !try_soft_uid ) {
 					// No soft_uid_domain or it's set to False.  No
 					// need to do the RSC, we can just fail.
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
@@ -1044,24 +984,10 @@ JICShadow::initUserPriv( void )
 				return false;
             }
 
-				// if the shadow is old, we have to just print an error
-				// message and fail, since we can't do the RSC we need
-				// to find out the right uid/gid.
-			if( shadow_is_old ) {
-				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
-						 "passwd file, SOFT_UID_DOMAIN is True, but the "
-						 "condor_shadow on the submitting host is too old "
-						 "to support SOFT_UID_DOMAIN.  You must upgrade "
-						 "Condor on the submitting host to at least "
-						 "version 6.3.3.\n", owner.Value() ); 
-				return false;
-			}
-
 				// if we're here, it means that 1) the owner we want
-				// isn't in the passwd file, 2) SOFT_UID_DOMAIN is
-				// True, and 3) the shadow we're talking to can
-				// support the CONDOR_REMOTE_get_user_info RSC.  So,
-				// we'll do that call to get the uid/gid pair we need
+				// isn't in the passwd file, and 2) SOFT_UID_DOMAIN is
+				// True. So, we'll do a CONDOR_REMOTE_get_user_info RSC
+				// to get the uid/gid pair we need
 				// and initialize user priv with that. 
 
 			ClassAd user_info;
@@ -1070,10 +996,8 @@ JICShadow::initUserPriv( void )
 						 "REMOTE_CONDOR_get_user_info() failed\n" );
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 						 "passwd file, SOFT_UID_DOMAIN is True, but the "
-						 "condor_shadow on the submitting host cannot "
-						 "support SOFT_UID_DOMAIN.  You must upgrade "
-						 "Condor on the submitting host to at least "
-						 "version 6.3.3.\n", owner.Value() );
+						 "condor_shadow failed to send the required Uid.\n",
+						 owner.Value() );
 				return false;
 			}
 

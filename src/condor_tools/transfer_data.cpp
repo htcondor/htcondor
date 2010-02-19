@@ -341,20 +341,6 @@ main(int argc, char *argv[])
 		exit( 1 );
 	}
 
-		// If this schedd doesn't support the new protocol, give a
-		// useful error message.
-	CondorVersionInfo ver_info( schedd->version(), "SCHEDD" );
-	if( ! ver_info.built_since_version(6, 7, 0) ) {
-		fprintf( stderr, "The version of the condor_schedd you want to "
-				 "communicate with is:\n%s\n", schedd->version() );
-		fprintf( stderr, "It is too old to support this version of "
-				 "%s:\n%s\n", MyName, CondorVersion() );
-		fprintf( stderr, "To use this version of %s you must upgrade "
-				 "the\n%s to at least version 6.7.1.\nAborting.\n",
-				 MyName, schedd->idStr() ); 
-		exit( 1 );
-	}
-
 		// Process the args.
 	if( All ) {
 		handleAll();

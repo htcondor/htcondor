@@ -4726,12 +4726,13 @@ Scheduler::negotiate(int command, Stream* s)
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
 	// since this is the socket from the negotiator, the only command that can
-	// come in at this point is NEGOTIATE.  If we get something else, something
-	// goofy in going on.
-	if (command != NEGOTIATE && command != NEGOTIATE_WITH_SIGATTRS)
+	// come in at this point is NEGOTIAT_WITH_SIGATTRSE.  If we get something
+	// else, something goofy is going on.
+	if (command != NEGOTIATE_WITH_SIGATTRS)
 	{
 		dprintf(D_ALWAYS,
-				"Negotiator command was %d (not NEGOTIATE) --- aborting\n", command);
+				"Negotiator command was %d (not NEGOTIATE_WITH_SIGATTRS) "
+				"--- aborting\n", command);
 		return (!(KEEP_STREAM));
 	}
 
@@ -4831,7 +4832,7 @@ Scheduler::negotiate(int command, Stream* s)
 	// figure out the number of active shadows. we do this by
 	// adding the number of existing shadows + the number of shadows
 	// queued up to run in the future.
-	CurNumActiveShadows = numShadows + RunnableJobQueue.Length();
+	CurNumActiveShadows = numShadows + RunnableJobQueue.Length() + num_pending_startd_contacts + startdContactQueue.Length();
 
 	SwapSpaceExhausted = FALSE;
 	if( ShadowSizeEstimate ) {
@@ -4861,12 +4862,9 @@ Scheduler::negotiate(int command, Stream* s)
 		dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
 		return (!(KEEP_STREAM));
 	}
-	if ( command == NEGOTIATE_WITH_SIGATTRS ) {
-		if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
-			dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
-			return (!(KEEP_STREAM));
-		}
-
+	if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
+		dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
+		return (!(KEEP_STREAM));
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
@@ -5853,7 +5851,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		event.setStartdAddr( startd_addr );
 		event.setStartdName( startd_name );
 
-		if( !ULog->writeEvent(&event,GetJobAd(cluster,proc)) ) {
+		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 		}
 		delete ULog;
@@ -6628,30 +6626,11 @@ Scheduler::spawnShadow( shadow_rec* srec )
 #else
 		// UNIX
 
-	bool old_resource = true;
 	bool nt_resource = false;
  	char* match_opsys = NULL;
- 	char* match_version = NULL;
-
-		// Until we're restorting the match ClassAd on reconnected, we
-		// wouldn't know if the startd we want to talk to supports the
-		// DC shadow or not.  so, for now, we can just assume that if
-		// we're trying to reconnect, it *must* be a DC shadow/starter 
-	if( wants_reconnect ) {
-		old_resource = false;
-	}
 
  	if( mrec->my_match_ad ) {
  		mrec->my_match_ad->LookupString( ATTR_OPSYS, &match_opsys );
-		mrec->my_match_ad->LookupString( ATTR_VERSION, &match_version );
-	}
-	if( match_version ) {
-		CondorVersionInfo ver_info( match_version );
-		if( ver_info.built_since_version(6, 3, 3) ) {
-			old_resource = false;
-		}
-		free( match_version );
-		match_version = NULL;
 	}
 
 	if( match_opsys ) {
@@ -6691,24 +6670,13 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			}
 			break;
 		case CONDOR_UNIVERSE_VANILLA:
-			if( old_resource ) {
-				shadow_obj = shadow_mgr.findShadow( ATTR_HAS_OLD_VANILLA );
-				if( ! shadow_obj ) {
-					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
-							 "pre-6.3.3 resource, but you do not have a "
-							 "condor_shadow that will work, aborting.\n" );
-					noShadowForJob( srec, NO_SHADOW_OLD_VANILLA );
-					return;
-				}
-			} else {
-				shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE ); 
-				if( ! shadow_obj ) {
-					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
-							 "6.3.3 or later resource, but you do not have "
-							 "condor_shadow that will work, aborting.\n" );
-					noShadowForJob( srec, NO_SHADOW_DC_VANILLA );
-					return;
-				}
+			shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE ); 
+			if( ! shadow_obj ) {
+				dprintf( D_ALWAYS, "Trying to run a VANILLA job, but you "
+						 "do not have a daemon-core-based shadow, "
+						 "aborting.\n" );
+				noShadowForJob( srec, NO_SHADOW_DC_VANILLA );
+				return;
 			}
 			break;
 		case CONDOR_UNIVERSE_JAVA:
@@ -6751,19 +6719,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	sh_is_dc = (int)shadow_obj->isDC();
 	bool sh_reads_file = shadow_obj->provides( ATTR_HAS_JOB_AD_FROM_FILE );
 	shadow_path = strdup( shadow_obj->path() );
-
-	if (universe == CONDOR_UNIVERSE_STANDARD 
-		&& !shadow_obj->builtSinceVersion(6, 8, 5)
-		&& !shadow_obj->builtSinceDate(5, 15, 2007)) {
-		dprintf(D_ALWAYS, "Your version of the condor_shadow is older than "
-			  "6.8.5, is incompatible with this version of the condor_schedd, "
-			  "and will not be able to run jobs.  "
-			  "Please upgrade your condor_shadow.  Aborting.\n");
-		noShadowForJob(srec, NO_SHADOW_PRE_6_8_5_STD);
-		delete( shadow_obj );
-		free( shadow_path );
-		return;
-	}
 
 	if ( shadow_obj ) {
 		delete( shadow_obj );
@@ -7200,7 +7155,6 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	static bool notify_win32 = true;
 	static bool notify_dc_vanilla = true;
 	static bool notify_old_vanilla = true;
-	static bool notify_pre_6_8_5_std = true;
 
 	static char std_reason [] = 
 		"No condor_shadow installed that supports standard universe jobs";
@@ -7214,8 +7168,6 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	static char old_vanilla_reason [] = 
 		"No condor_shadow installed that supports vanilla jobs on "
 		"resources older than V6.3.3";
-	static char pre_6_8_5_std_reason [] = 
-		"No condor_shadow installed that is at least version 6.8.5";
 
 	PROC_ID job_id;
 	char* hold_reason;
@@ -7247,10 +7199,6 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	case NO_SHADOW_OLD_VANILLA:
 		hold_reason = old_vanilla_reason;
 		notify_admin = &notify_old_vanilla;
-		break;
-	case NO_SHADOW_PRE_6_8_5_STD:
-		hold_reason = pre_6_8_5_std_reason;
-		notify_admin = &notify_pre_6_8_5_std;
 		break;
 	case NO_SHADOW_RECONNECT:
 			// this is a special case, since we're not going to email
@@ -9895,28 +9843,6 @@ SetCkptServerHost(const char *)
 }
 #endif // of ifdef WIN32
 
-/*
-**  Starting with version 6.2.0, we store checkpoints on the checkpoint
-**  server using "owner@scheddName" instead of just "owner".  If the job
-**  was submitted before this change, we need to check to see if its
-**  checkpoint was stored using the old naming scheme.
-*/
-bool
-JobPreCkptServerScheddNameChange(int cluster, int proc)
-{
-	char *job_version = NULL;
-	
-	if (GetAttributeStringNew(cluster, proc, ATTR_VERSION, &job_version) >= 0) {
-		CondorVersionInfo ver(job_version, "JOB");
-		free(job_version);
-		if (ver.built_since_version(6,2,0) &&
-			ver.built_since_date(11,16,2000)) {
-			return false;
-		}
-	}
-	return true;				// default to version compat. mode
-}
-
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
 {
@@ -9986,9 +9912,6 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		} else {
 			if (universe == CONDOR_UNIVERSE_STANDARD) {
 				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
-				if (JobPreCkptServerScheddNameChange(cluster, proc)) {
-					RemoveLocalOrRemoteFile(owner,NULL,ckpt_name);
-				}
 			} else {
 				unlink(ckpt_name);
 			}
@@ -10013,9 +9936,6 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		} else {
 			if (universe == CONDOR_UNIVERSE_STANDARD) {
 				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
-				if (JobPreCkptServerScheddNameChange(cluster, proc)) {
-					RemoveLocalOrRemoteFile(owner,NULL,ckpt_name);
-				}
 			} else {
 				unlink(ckpt_name);
 			}
@@ -10697,9 +10617,6 @@ void
 Scheduler::Register()
 {
 	 // message handlers for schedd commands
-	 daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
-		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
-		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( NEGOTIATE_WITH_SIGATTRS, 
 		 "NEGOTIATE_WITH_SIGATTRS", 
 		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 

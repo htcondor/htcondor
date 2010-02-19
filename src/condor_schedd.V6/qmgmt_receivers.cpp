@@ -420,17 +420,26 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		return 0;
 	}
 
-
-	case CONDOR_CloseConnection:
+	case CONDOR_CommitTransactionNoFlags:
+	case CONDOR_CommitTransaction:
 	  {
 		int terrno;
+		int flags;
 
+		if( request_num == CONDOR_CommitTransaction ) {
+			assert( syscall_sock->code(flags) );
+		}
+		else {
+			flags = 0;
+		}
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = CloseConnection( );
+		CommitTransaction( flags );
+			// CommitTransaction() never returns on failure
+		rval = 0;
 		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );

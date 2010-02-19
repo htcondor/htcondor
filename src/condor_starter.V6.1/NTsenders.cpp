@@ -36,52 +36,6 @@ extern CStarter *Starter;
 
 extern "C" {
 int
-REMOTE_CONDOR_register_machine_info(char *uiddomain, char *fsdomain,
-	char const *address, char *fullHostname, int key)
-{
-	condor_errno_t		terrno;
-	int		rval=-1;
-	int result = 0;
-
-	dprintf ( D_SYSCALLS, "Doing CONDOR_register_machine_info\n" );
-
-	CurrentSysCall = CONDOR_register_machine_info;
-
-	syscall_sock->encode();
-	result = syscall_sock->code(CurrentSysCall);
-	ASSERT( result );
-	result = syscall_sock->code(uiddomain);
-	ASSERT( result );
-	result = syscall_sock->code(fsdomain);
-	ASSERT( result );
-	result = syscall_sock->put(address);
-	ASSERT( result );
-	result = syscall_sock->code(fullHostname);
-	ASSERT( result );
-	result = syscall_sock->code(key);
-	ASSERT( result );
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
-
-	syscall_sock->decode();
-	result = syscall_sock->code(rval);
-	ASSERT( result );
-
-	if( rval < 0 ) {
-		result = syscall_sock->code(terrno);
-		ASSERT( result );
-		result = syscall_sock->end_of_message();
-		ASSERT( result );
-		errno = terrno;
-		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
-		return rval;
-	}
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
-	return rval;
-}
-
-int
 REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 {
 	condor_errno_t		terrno;

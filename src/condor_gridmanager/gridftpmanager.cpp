@@ -716,7 +716,7 @@ bool GridftpServer::SubmitServerJob()
 		}
 	}
 
-	if ( CloseConnection() < 0 ) {
+	if ( RemoteCommitTransaction() < 0 ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to "
 				 "commit job submission\n" );
 		goto error_exit;

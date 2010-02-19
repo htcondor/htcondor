@@ -249,7 +249,7 @@ QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster )
 
 
 bool
-QmgrJobUpdater::updateJob( update_t type )
+QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 {
 	ExprTree* tree = NULL;
 	bool is_connected = false;
@@ -327,7 +327,13 @@ QmgrJobUpdater::updateJob( update_t type )
 		free( value );
 	}
 	if( is_connected ) {
-		DisconnectQ(NULL);
+		if( !had_error) {
+			if( RemoteCommitTransaction(commit_flags)!=0 ) {
+				dprintf(D_ALWAYS,"Failed to commit job update.\n");
+				had_error = true;
+			}
+		}
+		DisconnectQ(NULL,false);
 	} 
 	if( had_error ) {
 		return false;
@@ -340,7 +346,8 @@ QmgrJobUpdater::updateJob( update_t type )
 void
 QmgrJobUpdater::periodicUpdateQ( void )
 {
-	updateJob( U_PERIODIC );	
+		// For performance, use a NONDURABLE transaction.
+	updateJob( U_PERIODIC, NONDURABLE );
 }
 
 

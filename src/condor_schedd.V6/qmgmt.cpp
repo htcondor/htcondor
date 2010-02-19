@@ -1511,7 +1511,9 @@ int DestroyProc(int cluster_id, int proc_id)
   // save job ad to the log
 	bool already_in_transaction = InTransaction();
 	if( !already_in_transaction ) {
-		BeginTransaction(); // for performance
+			// For performance, wrap the myproxy attribute change and
+			// job deletion into one transaction.
+		BeginTransaction();
 	}
 
 	// ckireyev: Destroy MyProxyPassword
@@ -1522,7 +1524,15 @@ int DestroyProc(int cluster_id, int proc_id)
 	DecrementClusterSize(cluster_id);
 
 	if( !already_in_transaction ) {
-		CommitTransaction();
+			// For performance, use a NONDURABLE transaction.  If we crash
+			// before this makes it to the disk, on restart we will
+			// attempt removing it again.  Yes, this means we may
+			// generate a duplicate history entry and redo other
+			// cleanup tasks, but that is possible even if this
+			// transaction is marked DURABLE, since all of those tasks
+			// are not atomic with respect to this transaction anyway.
+
+		CommitTransaction(NONDURABLE);
 	}
 
 		// remove any match (startd) ad stored w/ this job
@@ -2346,68 +2356,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 		JobQueue->CommitTransaction();
 	}
 
-	xact_start_time = 0;
-}
-
-
-void
-AbortTransaction()
-{
-	JobQueue->AbortTransaction();
-}
-
-void
-AbortTransactionAndRecomputeClusters()
-{
-	if ( JobQueue->AbortTransaction() ) {
-		/*	If we made it here, a transaction did exist that was not
-			committed, and we now aborted it.  This would happen if 
-			somebody hit ctrl-c on condor_rm or condor_status, etc,
-			or if any of these client tools bailed out due to a fatal error.
-			Because the removal of ads from the queue has been backed out,
-			we need to "back out" from any changes to the ClusterSizeHashTable,
-			since this may now contain incorrect values.  Ideally, the size of
-			the cluster should just be kept in the cluster ad -- that way, it 
-			gets committed or aborted as part of the transaction.  But alas, 
-			it is not; same goes a bunch of other stuff: removal of ckpt and 
-			ickpt files, appending to the history file, etc.  Sigh.  
-			This should be cleaned up someday, probably with the new schedd.
-			For now, to "back out" from changes to the ClusterSizeHashTable, we
-			use brute force and blow the whole thing away and recompute it. 
-			-Todd 2/2000
-		*/
-		ClusterSizeHashTable->clear();
-		ClassAd *ad;
-		HashKey key;
-		const char *tmp;
-		int 	*numOfProcs = NULL;	
-		int cluster_num;
-		JobQueue->StartIterateAllClassAds();
-		while (JobQueue->IterateAllClassAds(ad,key)) {
-			tmp = key.value();
-			if ( *tmp == '0' ) continue;	// skip cluster & header ads
-			if ( (cluster_num = atoi(tmp)) ) {
-				// count up number of procs in cluster, update ClusterSizeHashTable
-				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
-					// First proc we've seen in this cluster; set size to 1
-					ClusterSizeHashTable->insert(cluster_num,1);
-				} else {
-					// We've seen this cluster_num go by before; increment proc count
-					(*numOfProcs)++;
-				}
-
-			}
-		}
-	}	// end of if JobQueue->AbortTransaction == True
-}
-
-int
-CloseConnection()
-{
-
-	JobQueue->CommitTransaction();
-		// If this failed, the schedd will EXCEPT.  So, if we got this
-		// far, we can always return success.  -Derek Wright 4/2/99
+	// If the commit failed, we should never get here.
 
 	// Now that the transaction has been commited, we need to chain proc
 	// ads to cluster ads if any new clusters have been submitted.
@@ -2465,12 +2414,60 @@ CloseConnection()
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
 	old_cluster_num = next_cluster_num;
-					
-	xact_start_time = 0;
 
-	return 0;
+	xact_start_time = 0;
 }
 
+void
+AbortTransaction()
+{
+	JobQueue->AbortTransaction();
+}
+
+void
+AbortTransactionAndRecomputeClusters()
+{
+	if ( JobQueue->AbortTransaction() ) {
+		/*	If we made it here, a transaction did exist that was not
+			committed, and we now aborted it.  This would happen if 
+			somebody hit ctrl-c on condor_rm or condor_status, etc,
+			or if any of these client tools bailed out due to a fatal error.
+			Because the removal of ads from the queue has been backed out,
+			we need to "back out" from any changes to the ClusterSizeHashTable,
+			since this may now contain incorrect values.  Ideally, the size of
+			the cluster should just be kept in the cluster ad -- that way, it 
+			gets committed or aborted as part of the transaction.  But alas, 
+			it is not; same goes a bunch of other stuff: removal of ckpt and 
+			ickpt files, appending to the history file, etc.  Sigh.  
+			This should be cleaned up someday, probably with the new schedd.
+			For now, to "back out" from changes to the ClusterSizeHashTable, we
+			use brute force and blow the whole thing away and recompute it. 
+			-Todd 2/2000
+		*/
+		ClusterSizeHashTable->clear();
+		ClassAd *ad;
+		HashKey key;
+		const char *tmp;
+		int 	*numOfProcs = NULL;	
+		int cluster_num;
+		JobQueue->StartIterateAllClassAds();
+		while (JobQueue->IterateAllClassAds(ad,key)) {
+			tmp = key.value();
+			if ( *tmp == '0' ) continue;	// skip cluster & header ads
+			if ( (cluster_num = atoi(tmp)) ) {
+				// count up number of procs in cluster, update ClusterSizeHashTable
+				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
+					// First proc we've seen in this cluster; set size to 1
+					ClusterSizeHashTable->insert(cluster_num,1);
+				} else {
+					// We've seen this cluster_num go by before; increment proc count
+					(*numOfProcs)++;
+				}
+
+			}
+		}
+	}	// end of if JobQueue->AbortTransaction == True
+}
 
 int
 GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val)

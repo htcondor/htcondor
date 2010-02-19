@@ -645,7 +645,7 @@ update_report_result:
 				error_msg.Value() };
 
 
-			//CloseConnection();
+			//RemoteCommitTransaction();
 			enqueue_result (current_command->request_id, result, 2);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 			if ( qmgr_connection != NULL ) {
@@ -658,7 +658,7 @@ update_report_result:
 				}
 			}
 		} else {
-			if ( CloseConnection() < 0 ) {
+			if ( RemoteCommitTransaction() < 0 ) {
 				failure_line_num = __LINE__;
 				failure_errno = errno;
 				goto contact_schedd_disconnect;
@@ -751,7 +751,7 @@ update_report_result:
 			};
 
 
-			//CloseConnection();
+			//RemoteCommitTransaction();
 			enqueue_result (current_command->request_id, result, 3);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 			if ( qmgr_connection != NULL ) {
@@ -764,7 +764,7 @@ update_report_result:
 				}
 			}
 		} else {
-			if ( CloseConnection() < 0 ) {
+			if ( RemoteCommitTransaction() < 0 ) {
 				failure_line_num = __LINE__;
 				failure_errno = errno;
 				goto contact_schedd_disconnect;
@@ -945,7 +945,7 @@ submit_report_result:
 			}
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} else {
-			if ( CloseConnection() < 0 ) {
+			if ( RemoteCommitTransaction() < 0 ) {
 				failure_line_num = __LINE__;
 				failure_errno = errno;
 				goto contact_schedd_disconnect;
@@ -1057,7 +1057,7 @@ submit_report_result:
 				GAHP_RESULT_FAILURE,
 				error_msg.Value(),
 				"0" };
-			//CloseConnection();
+			//RemoteCommitTransaction();
 			enqueue_result (current_command->request_id, result, 3);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		}

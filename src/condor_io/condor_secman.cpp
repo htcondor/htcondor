@@ -372,7 +372,7 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 
 bool
 SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
-								bool peer_can_negotiate, bool raw_protocol,
+								bool raw_protocol,
 								bool use_tmp_sec_session,
 								bool force_authentication )
 {
@@ -432,15 +432,6 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 				SecMan::sec_req_rev[sec_encryption]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_INTEGRITY=\"%s\"\n", 
 				SecMan::sec_req_rev[sec_integrity]);
-		return false;
-	}
-
-	// if we require negotiation and we know the other side can't speak
-	// security negotiation, may as well fail now (as opposed to later)
-	if( sec_negotiation == SEC_REQ_REQUIRED && 
-		peer_can_negotiate == FALSE ) {
-		dprintf (D_SECURITY, "SECMAN: failure! SEC_NEGOTIATION "
-				"is REQUIRED and other daemon is pre 6.3.3.\n");
 		return false;
 	}
 
@@ -846,14 +837,13 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool peer_can_negotiate,bool raw_protocol,
+		int cmd,Sock *sock,bool raw_protocol,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
 		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,SecMan *sec_man):
 
 		m_cmd(cmd),
 		m_subcmd(subcmd),
 		m_sock(sock),
-		m_peer_can_negotiate(peer_can_negotiate),
 		m_raw_protocol(raw_protocol),
 		m_errstack(errstack),
 		m_callback_fn(callback_fn),
@@ -938,7 +928,6 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	int m_subcmd;
 	MyString m_cmd_description;
 	Sock *m_sock;
-	bool m_peer_can_negotiate;
 	bool m_raw_protocol;
 	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
 	CondorError m_internal_errstack;
@@ -1018,7 +1007,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 };
 
 StartCommandResult
-SecMan::startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id_hint)
+SecMan::startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id_hint)
 {
 	// This function is simply a convenient wrapper around the
 	// SecManStartCommand class, which does the actual work.
@@ -1027,7 +1016,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_pro
 	// The blocking case could avoid use of the heap, but for simplicity,
 	// we just do the same in both cases.
 
-	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,peer_can_negotiate, raw_protocol,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,sec_session_id_hint,this);
+	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,raw_protocol,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,sec_session_id_hint,this);
 
 	ASSERT(sc.get());
 
@@ -1305,7 +1294,7 @@ SecManStartCommand::sendAuthInfo_inner()
 		m_new_session = false;
 	} else {
 		if( !m_sec_man.FillInSecurityPolicyAd(
-				CLIENT_PERM, &m_auth_info, m_peer_can_negotiate,
+				CLIENT_PERM, &m_auth_info,
 				m_raw_protocol,	m_use_tmp_sec_session) )
 		{
 				// security policy was invalid.  bummer.
@@ -1490,8 +1479,8 @@ SecManStartCommand::sendAuthInfo_inner()
 		// talking to.  in that case, send the command the old way, as long
 		// as that is permitted
 
-		dprintf ( D_SECURITY, "SECMAN: UDP, m_have_session == %i, peer_can_negotiate == %i\n",
-				(m_have_session?1:0), (m_peer_can_negotiate?1:0));
+		dprintf ( D_SECURITY, "SECMAN: UDP, m_have_session == %i\n",
+				(m_have_session?1:0) );
 
 		if (m_have_session) {
 			// UDP w/ session
@@ -2132,7 +2121,6 @@ SecManStartCommand::DoTCPAuth_inner()
 	m_tcp_auth_command = new SecManStartCommand(
 		DC_AUTHENTICATE,
 		tcp_auth_sock,
-		m_peer_can_negotiate,
 		m_raw_protocol,
 		m_errstack,
 		m_cmd,
@@ -2169,8 +2157,6 @@ SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errs
 StartCommandResult
 SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock )
 {
-	// in case we discovered anything new about security negotiation
-	m_peer_can_negotiate = m_tcp_auth_command->m_peer_can_negotiate;
 	m_tcp_auth_command = NULL;
 
 		// close the TCP socket, the rest will be UDP.
@@ -2826,7 +2812,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		return false;
 	}
 
-	FillInSecurityPolicyAd( auth_level, &policy, true, false );
+	FillInSecurityPolicyAd( auth_level, &policy, false );
 
 	ClassAd *auth_info = ReconcileSecurityPolicyAds(policy,policy);
 	if(!auth_info) {
