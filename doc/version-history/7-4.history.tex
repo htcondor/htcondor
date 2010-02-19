@@ -49,7 +49,8 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrack 1217
-\item The \Condor{schedd} would sometimes negotiate for and try to run
+\item Fixed a bug in which the \Condor{schedd} would sometimes negotiate 
+  for and try to run
   more jobs than specified by \MacroNI{MAX\_RUNNING\_JOBS}.  Once the
   jobs started running, it would then kill them off to get back below
   the limit.  This was more likely to happen with slow preemption
