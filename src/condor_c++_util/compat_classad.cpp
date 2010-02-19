@@ -216,6 +216,9 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 	the_match_ad->ReplaceLeftAd( source );
 	the_match_ad->ReplaceRightAd( target );
 
+	source->alternateScope = target;
+	target->alternateScope = source;
+
 	return the_match_ad;
 }
 
@@ -223,8 +226,12 @@ void releaseTheMatchAd()
 {
 	ASSERT( the_match_ad_in_use );
 
-	the_match_ad->RemoveLeftAd();
-	the_match_ad->RemoveRightAd();
+	classad::ClassAd *ad;
+	ad = the_match_ad->RemoveLeftAd();
+	ad->alternateScope = NULL;
+	ad = the_match_ad->RemoveRightAd();
+	ad->alternateScope = NULL;
+
 	the_match_ad_in_use = false;
 }
 
