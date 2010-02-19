@@ -23,7 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor version 7.4.3 released on Month Date, 2010.
 
 \end{itemize}
 
@@ -48,7 +48,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1217
+\item Fixed a bug in which the \Condor{schedd} would sometimes negotiate 
+  for and try to run
+  more jobs than specified by \MacroNI{MAX\_RUNNING\_JOBS}.  Once the
+  jobs started running, it would then kill them off to get back below
+  the limit.  This was more likely to happen with slow preemption
+  caused by \MacroNI{MaxJobRetirementTime} or by a large timeout
+  imposed by \MacroNI{KILL}.  This problem has existed since before
+  Condor 6.5.  When this problem happened, the following message
+  appeared in the \Condor{schedd} log:
+
+\begin{verbatim}
+Preempting X jobs due to MAX_JOBS_RUNNING change
+\end{verbatim}
 
 \end{itemize}
 
@@ -77,7 +90,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor version 7.4.2 released on Month Date, 2010.
 
 \end{itemize}
 
