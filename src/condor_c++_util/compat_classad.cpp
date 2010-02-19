@@ -1533,6 +1533,9 @@ void ClassAd::RemoveExplicitTargetRefs( )
 void ClassAd:: 
 AddTargetRefs( TargetAdType target_type, bool do_version_check )
 {
+	// Disable AddTargetRefs for now
+	return;
+
 	MyString ver_str;
 	if ( do_version_check && this->LookupString( ATTR_VERSION, ver_str ) ) {
 		CondorVersionInfo ver( ver_str.Value() );
@@ -2677,6 +2680,9 @@ static void InitTargetAttrLists()
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
 {
+	// Disable AddTargetRefs for now
+	return tree->Copy();
+
 	if ( !target_attrs_init ) {
 		InitTargetAttrLists();
 	}
