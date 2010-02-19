@@ -491,6 +491,9 @@ class ClassAd : public classad::ClassAd
 						StringList &external_refs);
 };
 
+void getTheMyRef( classad::ClassAd *ad );
+void releaseTheMyRef( classad::ClassAd *ad );
+
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 									  classad::ClassAd *target );
 void releaseTheMatchAd();

@@ -178,8 +178,32 @@ void EvalResult::toString(bool force)
 	}
 }
 
-static classad::MatchClassAd *the_match_ad;
-static bool the_match_ad_in_use;
+static classad::AttributeReference *the_my_ref = NULL;
+static bool the_my_ref_in_use = false;
+void getTheMyRef( classad::ClassAd *ad )
+{
+	ASSERT( !the_my_ref_in_use );
+	the_my_ref_in_use = true;
+
+	if( !the_my_ref ) {
+		the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+	}
+
+	ad->Insert( "my", the_my_ref );
+}
+
+void releaseTheMyRef( classad::ClassAd *ad )
+{
+	ASSERT( the_my_ref_in_use );
+
+	ad->Remove( "my" );
+	ad->MarkAttributeClean( "my" );
+
+	the_my_ref_in_use = false;
+}
+
+static classad::MatchClassAd *the_match_ad = NULL;
+static bool the_match_ad_in_use = false;
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 									  classad::ClassAd *target )
 {
@@ -942,12 +966,15 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	string strVal;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
-			return 1;
+			rc = 1;
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
+
 
 	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
@@ -974,19 +1001,22 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
     
 	string strVal;
     bool foundAttr = false;
+	int rc = 0;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 
             *value = (char *)malloc(strlen(strVal.c_str()) + 1);
             if(*value != NULL) {
                 strcpy( *value, strVal.c_str( ) );
-                return 1;
+                rc = 1;
             } else {
-                return 0;
+                rc = 0;
             }
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
 	classad::MatchClassAd *mad = getTheMatchAd( this, target );
@@ -1007,13 +1037,12 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
         *value = (char *)malloc(strlen(strVal.c_str()) + 1);
         if(*value != NULL) {
             strcpy( *value, strVal.c_str( ) );
-			releaseTheMatchAd();
-            return 1;
+            rc = 1;
         }
     }
 
 	releaseTheMatchAd();
-	return 0;
+	return rc;
 }
 
 int ClassAd::
@@ -1035,11 +1064,13 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 	int tmp_val;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttrInt( name, tmp_val ) ) { 
 			value = tmp_val;
-			return 1;
+			rc = 1;
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
 	classad::MatchClassAd *mad = getTheMatchAd( this, target );
@@ -1067,17 +1098,19 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	int intVal;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
 				value = ( float )doubleVal;
-				return 1;
+				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
-				return 1;
+				rc = 1;
 			}
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
 	classad::MatchClassAd *mad = getTheMatchAd( this, target );
@@ -1118,21 +1151,21 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
 				value = boolVal ? 1 : 0;
-				return 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
+				rc = 1;
+			} else if( val.IsIntegerValue( intVal ) ) {
 				value = intVal ? 1 : 0;
-				return 1;
-			}
-			if( val.IsRealValue( doubleVal ) ) {
+				rc = 1;
+			} else if( val.IsRealValue( doubleVal ) ) {
 				value = doubleVal ? 1 : 0;
-				return 1;
+				rc = 1;
 			}
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
 	classad::MatchClassAd *mad = getTheMatchAd( this, target );
