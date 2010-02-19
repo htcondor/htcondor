@@ -31,7 +31,8 @@ extern "C" {
   and dirname().  For example, if the path is "foo/bar/",
   condor_basename() and condor_dirname() return "" and "foo/bar", while
   the default basename() and dirname() return "bar" and "foo".
-  (See test_basename.c for examples of how things work.)
+  (See condor_unit_tests/FTEST_basename/dirname/fullpath for examples of how 
+  things work.)
 */
 
 /*
