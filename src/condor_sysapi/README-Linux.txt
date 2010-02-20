@@ -7214,7 +7214,7 @@ END
 UNAME:Linux aplay2.usatlas.bnl.gov 2.6.18-164.6.1.el5 #1 SMP Tue Nov 3 23:02:51 EST 2009 x86_64 x86_64 x86_64 GNU/Linux
 PROCESSORS: 16
 # HTHREADS: 8
-HTHREADS_CORE: 1
+HTHREADS_CORE: 2
 START
 
 processor	: 0

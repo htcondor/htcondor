@@ -681,7 +681,7 @@ ncpus_linux(int *num_cpus,int *num_hyperthread_cpus)
 		*num_cpus = cpuinfo.num_cpus;
 	}
 	if( num_hyperthread_cpus ) {
-		*num_hyperthread_cpus = cpuinfo.num_cpus + cpuinfo.num_hthreads;
+		*num_hyperthread_cpus = cpuinfo.num_processors;
 	}
 }
 
