@@ -81,7 +81,7 @@ within Condor, for example
 the Job Router and  \Condor{q} \Opt{-better-analyze}.
 There are some syntax and behavior differences between new and old
 ClassAds,
-most of which will remain invisible to users of Condor.
+all of which will remain invisible to users of Condor for this version.
 A complete description of New ClassAds can be found at
 \URL{http://www.cs.wisc.edu/condor/classad/},
 and in the ClassAd Language Reference Manual found on this web page.
@@ -113,34 +113,6 @@ Moo = Foo isnt Undefined;
 \end{verbatim}
 
 Condor will convert to and from old ClassAd syntax as needed.
-
-An important, and visible distinction between New and Old is
-that the evaluation of expressions is slightly different.
-In New ClassAds,
-when evaluating an expression in the context of two ClassAds,
-for example when matching a job ad with a machine ad,
-if an attribute name appears without the prefix \Expr{TARGET.} or \Expr{MY.},
-it is only looked up in the local ClassAd.
-In Old ClassAds,
-that attribute is first looked up in the local ClassAd.
-If not present in the local ClassAd, 
-it is then further looked up in the target ClassAd.
-
-As Condor now uses New ClassAds internally,
-to refer to an attribute in the target ad,
-its name \emph{must} be preceded with \Expr{TARGET.} in the expression.
-
-To aid in the transition,
-Condor contains a routine that scans job ClassAd expressions,
-adding \Expr{TARGET.} to attribute names that normally occur
-in machine ClassAds.
-This routine also does the reverse:
-it scans machine ClassAd expressions,
-adding \Expr{TARGET.} to attribute names that normally occur
-in job ClassAds.
-To extend this injection of \Expr{TARGET.} as needed for additional attributes,
-the attributes are specified with the configuration variables
-\Macro{TARGET\_MACHINE\_ATTRS} and \Macro{TARGET\_JOB\_ATTRS}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Old ClassAd Syntax}
