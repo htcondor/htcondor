@@ -53,7 +53,7 @@ system("chmod -R 777 .");
 ####################################################################
 
 # seed log with 1 runs
-system("$writelog $flowlog submit 6");
+system("$writelog $flowlog submit 6") == 0 || die "$writelog failed\n";
 print "Drop a submit into log.\n";
 
 # Start condor_wait
@@ -63,10 +63,10 @@ CondorTest::spawn_cmd($spawncmd, $resultfile);
 
 sleep(5);
 # start 1 runs
-system("$writelog $flowlog execute 6");
+system("$writelog $flowlog execute 6") == 0 || die "$writelog failed\n";
 
 # end 1 runs
-system("$writelog $flowlog terminated 6");
+system("$writelog $flowlog terminated 6") == 0 || die "$writelog failed\n";
 print "Drop execute and terminate events into log.\n";
 
 print "Wait for results - ";
