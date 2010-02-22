@@ -80,10 +80,11 @@ that Condor creates when submitting a grid universe job
 destined for the CREAM grid system.
 
 % gittrac #1138
-\item The \Condor{q} command with option \Opt{-analyze} is now identical to
-the option \Opt{-better-analyze}.
-The \Opt{-better-analyze} option includes a superset of information,
-and also includes more specific information on a job's \SubmitCmd{requirements}.
+\item The \Condor{q} command with option \Opt{-analyze} is now performs
+the same analysis as previously occurred with the \Opt{-better-analyze} option.
+Therefore, the output of \Condor{q} with the \Opt{-analyze} option
+has different output than before,
+and the \Opt{-better-analyze} option no longer exists.
 
 % gittrack #1169
 \item Security sessions that are not used for longer than an hour are
