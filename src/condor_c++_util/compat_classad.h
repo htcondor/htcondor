@@ -471,6 +471,10 @@ class ClassAd : public classad::ClassAd
                 StringList &internal_refs,
                 StringList &external_refs);
 
+	static void Reconfig();
+	static bool m_initConfig;
+	static bool m_strictEvaluation;
+
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );

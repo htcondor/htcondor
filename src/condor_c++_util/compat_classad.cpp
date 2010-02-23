@@ -178,6 +178,15 @@ void EvalResult::toString(bool force)
 	}
 }
 
+bool ClassAd::m_initConfig = false;
+bool ClassAd::m_strictEvaluation = false;
+
+void ClassAd::
+Reconfig()
+{
+	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
+}
+
 static classad::AttributeReference *the_my_ref = NULL;
 static bool the_my_ref_in_use = false;
 void getTheMyRef( classad::ClassAd *ad )
@@ -189,15 +198,19 @@ void getTheMyRef( classad::ClassAd *ad )
 		the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
 	}
 
-	ad->Insert( "my", the_my_ref );
+	if ( !ClassAd::m_strictEvaluation ) {
+		ad->Insert( "my", the_my_ref );
+	}
 }
 
 void releaseTheMyRef( classad::ClassAd *ad )
 {
 	ASSERT( the_my_ref_in_use );
 
-	ad->Remove( "my" );
-	ad->MarkAttributeClean( "my" );
+	if ( !ClassAd::m_strictEvaluation ) {
+		ad->Remove( "my" );
+		ad->MarkAttributeClean( "my" );
+	}
 
 	the_my_ref_in_use = false;
 }
@@ -216,8 +229,10 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 	the_match_ad->ReplaceLeftAd( source );
 	the_match_ad->ReplaceRightAd( target );
 
-	source->alternateScope = target;
-	target->alternateScope = source;
+	if ( !ClassAd::m_strictEvaluation ) {
+		source->alternateScope = target;
+		target->alternateScope = source;
+	}
 
 	return the_match_ad;
 }
@@ -234,8 +249,6 @@ void releaseTheMatchAd()
 
 	the_match_ad_in_use = false;
 }
-
-static bool strlist_functions_registered = false;
 
 static
 bool stringListSize_func( const char *name,
@@ -535,9 +548,6 @@ bool stringListRegexpMember_func( const char *name,
 static
 void registerStrlistFunctions()
 {
-	if ( strlist_functions_registered ) {
-		return;
-	}
 	std::string name;
 	name = "stringListSize";
 	classad::FunctionCall::RegisterFunction( name,
@@ -563,14 +573,14 @@ void registerStrlistFunctions()
 	name = "stringList_regexpMember";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListRegexpMember_func );
-
-	strlist_functions_registered = true;
 }
 
 ClassAd::ClassAd()
 {
-	if ( !strlist_functions_registered ) {
+	if ( !m_initConfig ) {
+		this->Reconfig();
 		registerStrlistFunctions();
+		m_initConfig = true;
 	}
 
 	m_privateAttrsAreInvisible = false;
@@ -589,6 +599,12 @@ ClassAd::ClassAd()
 
 ClassAd::ClassAd( const ClassAd &ad )
 {
+	if ( !m_initConfig ) {
+		this->Reconfig();
+		registerStrlistFunctions();
+		m_initConfig = true;
+	}
+
 	CopyFrom( ad );
 
 		// Compatibility ads are born with this to emulate the special
@@ -607,6 +623,12 @@ ClassAd::ClassAd( const ClassAd &ad )
 
 ClassAd::ClassAd( const classad::ClassAd &ad )
 {
+	if ( !m_initConfig ) {
+		this->Reconfig();
+		registerStrlistFunctions();
+		m_initConfig = true;
+	}
+
 	CopyFrom( ad );
 
 		// Compatibility ads are born with this to emulate the special
@@ -630,6 +652,12 @@ ClassAd::~ClassAd()
 ClassAd::
 ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 {
+	if ( !m_initConfig ) {
+		this->Reconfig();
+		registerStrlistFunctions();
+		m_initConfig = true;
+	}
+
 	m_privateAttrsAreInvisible = false;
 
 	nodeKind = CLASSAD_NODE;

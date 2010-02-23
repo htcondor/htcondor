@@ -2561,6 +2561,10 @@ DaemonCore::reconfig(void) {
 	// by the time we get here, because it needs to be called early
 	// in the process.
 
+#if !defined(WANT_OLD_CLASSADS)
+	ClassAd::Reconfig();
+#endif
+
 	m_dirty_sinful = true; // refresh our address in case config changes it
 
 	SecMan *secman = getSecMan();
