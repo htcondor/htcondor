@@ -688,6 +688,7 @@ JobQueueDBManager::buildJobQueue(JobQueueCollection *jobQueue)
 	FileOpErrCode st;
 	
 	st = caLogParser->readLogEntry(op_type);
+	assert(st != FILE_FATAL_ERROR);
 
 	while(st == FILE_READ_SUCCESS) {	   
 		if (processLogEntry(op_type, jobQueue) == QUILL_FAILURE) {
@@ -695,6 +696,7 @@ JobQueueDBManager::buildJobQueue(JobQueueCollection *jobQueue)
 			return QUILL_FAILURE;
 		}
 		st = caLogParser->readLogEntry(op_type);
+		assert(st != FILE_FATAL_ERROR);
 	}
 
 	return QUILL_SUCCESS;
@@ -952,6 +954,7 @@ JobQueueDBManager::readAndWriteLogEntries(ClassAdLogParser *parser)
 	FileOpErrCode st;
 	
 	st = parser->readLogEntry(op_type);
+	assert(st != FILE_FATAL_ERROR);
 	while(st == FILE_READ_SUCCESS) {	   
 		if (processLogEntry(op_type, false, parser) == QUILL_FAILURE) {
 				// process each ClassAd Log Entry
@@ -960,6 +963,7 @@ JobQueueDBManager::readAndWriteLogEntries(ClassAdLogParser *parser)
 	   	lastBatchSqlProcessed++;
 		
 		st = parser->readLogEntry(op_type);
+		assert(st != FILE_FATAL_ERROR);
 	}
 
 	return QUILL_SUCCESS;

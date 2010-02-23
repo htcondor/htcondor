@@ -373,6 +373,7 @@ JobQueueDBManager::buildJobQueue(JobQueueCollection *jobQueue)
 	FileOpErrCode st;
 
 	st = caLogParser->readLogEntry(op_type);
+	assert(st != FILE_FATAL_ERROR);
 	if(st == FILE_OPEN_ERROR) {
 		return QUILL_FAILURE;
 	}
@@ -383,6 +384,7 @@ JobQueueDBManager::buildJobQueue(JobQueueCollection *jobQueue)
 			return QUILL_FAILURE;
 		}
 		st = caLogParser->readLogEntry(op_type);
+		assert(st != FILE_FATAL_ERROR);
 	}
 
 	return QUILL_SUCCESS;
@@ -481,6 +483,7 @@ JobQueueDBManager::readAndWriteLogEntries()
 		*/
 
 	st = caLogParser->readLogEntry(op_type);
+	assert(st != FILE_FATAL_ERROR);
 
 		// Process ClassAd Log Entry
 	while (st == FILE_READ_SUCCESS) {
@@ -488,6 +491,7 @@ JobQueueDBManager::readAndWriteLogEntries()
 			return QUILL_FAILURE; 
 		}
 		st = caLogParser->readLogEntry(op_type);
+		assert(st != FILE_FATAL_ERROR);
 	}
 
 		// turn on sequential scan again
