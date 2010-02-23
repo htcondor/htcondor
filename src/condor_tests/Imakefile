@@ -1672,7 +1672,6 @@ DEPS(cmd_wait_shows-timeout,x_write_joblog_events.exe)
 RUN(cmd_wait_shows-timeout)
 TESTCLASS(cmd_wait_shows-timeout,quick)
 TESTCLASS(cmd_wait_shows-timeout,full)
-TESTCLASS(cmd_wait_shows-timeout,quicknolink)
 
 /* Dagman Tests */
 
