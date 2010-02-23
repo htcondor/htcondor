@@ -52,6 +52,7 @@ enum QuillErrCode {	    QUILL_FAILURE,
 
 
 enum ProbeResultType {  PROBE_ERROR, 
+						PROBE_FATAL_ERROR, 
 						NO_CHANGE, 
 						INIT_QUILL, 
 						ADDITION, 
