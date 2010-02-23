@@ -213,7 +213,8 @@ ClassAdLogParser::readLogEntry(int &op_type)
 		int		op;
 
 		if( !log_fp ) {
-			EXCEPT("Failed fdopen() when recovering corrupt log file");
+			dprintf(D_ALWAYS, "Failed fdopen() when recovering corrupt log file");
+			return FILE_FATAL_ERROR;
 		}
 
 		while( line.readLine( log_fp ) ) {
@@ -223,16 +224,20 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			}
 			if( op == CondorLogOp_EndTransaction ) {
 					// aargh!  bad record in transaction.  abort!
-				EXCEPT("Bad record with op=%d in corrupt logfile",
-					   op_type);
+				dprintf(D_ALWAYS,
+						"Bad record with op=%d in corrupt logfile",
+						op_type);
+				return FILE_FATAL_ERROR;
 			}
 		}
 		
 		if( !feof( log_fp ) ) {
 			fclose(log_fp);
             log_fp = NULL;
-			EXCEPT("Failed recovering from corrupt file, errno=%d",
-				   errno );
+			dprintf(D_ALWAYS,
+					"Failed recovering from corrupt file, errno=%d",
+					errno);
+			return FILE_FATAL_ERROR;
 		}
 
 			// there wasn't an error in reading the file, and the bad log 
@@ -520,9 +525,7 @@ ClassAdLogParser::readword(FILE *fp, char * &str)
 	for (i = 1; !isspace(buf[i-1]) && buf[i-1]!='\0' && buf[i-1]!=EOF; i++) {
 		if (i == bufsize) {
 			buf = (char *)realloc(buf, bufsize*2);
-			if(!buf) {
-				EXCEPT("Call to realloc failed\n");
-			}
+			assert(buf);
 			bufsize *= 2;
 		} 
 		buf[i] = fgetc( fp );
@@ -569,9 +572,7 @@ ClassAdLogParser::readline(FILE *fp, char * &str)
 	for (i = 1; buf[i-1]!='\n' && buf[i-1] != '\0' && buf[i-1] != EOF; i++) {
 		if (i == bufsize) {
 			buf = (char *)realloc(buf, bufsize*2);
-			if(!buf) {
-				EXCEPT("Call to realloc failed\n");
-			}
+			assert(buf);
 			bufsize *= 2;
 		} 
 		buf[i] = fgetc( fp );
