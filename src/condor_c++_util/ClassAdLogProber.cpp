@@ -147,7 +147,7 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 	caLogParser.setNextOffset(0);
 	st = caLogParser.readLogEntry(op_type);
 
-	if (st == FILE_FATAL_ERROR) {
+	if (FILE_FATAL_ERROR == st) {
 		return PROBE_FATAL_ERROR;
 	}
 	if (st != FILE_READ_SUCCESS) {
@@ -186,7 +186,7 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 	caLogParser.setNextOffset(curCALogEntry->offset);
 	st = caLogParser.readLogEntry(op_type);
 	
-	if (st == FILE_FATAL_ERROR) {
+	if (FILE_FATAL_ERROR == st) {
 		return PROBE_FATAL_ERROR;
 	}
 	if (st != FILE_READ_EOF && st != FILE_READ_SUCCESS) {
