@@ -237,19 +237,19 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classadlogentry.cpp"
+			RelativePath="..\src\condor_c++_util\ClassAdLogEntry.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classadlogentry.h"
+			RelativePath="..\src\condor_c++_util\ClassAdLogEntry.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classadlogparser.cpp"
+			RelativePath="..\src\condor_c++_util\ClassAdLogParser.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classadlogparser.h"
+			RelativePath="..\src\condor_c++_util\ClassAdLogParser.h"
 			>
 		</File>
 		<File
@@ -1124,11 +1124,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\prober.cpp"
+			RelativePath="..\src\condor_c++_util\ClassAdLogProber.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\prober.h"
+			RelativePath="..\src\condor_c++_util\ClassAdLogProber.h"
 			>
 		</File>
 		<File
