@@ -24,6 +24,11 @@
 #include "ClassAdLogParser.h"
 #include "ClassAdLogProber.h"
 
+enum PollResultType {
+	POLL_SUCCESS,
+	POLL_FAIL,
+	POLL_ERROR
+};
 
 class ClassAdLogConsumer;
 
@@ -31,7 +36,7 @@ class ClassAdLogReader {
 public:
 	ClassAdLogReader(ClassAdLogConsumer *consumer);
 	~ClassAdLogReader();
-	void Poll();
+	PollResultType Poll();
 	void SetClassAdLogFileName(char const *fname);
 	char const *GetClassAdLogFileName();
 private:
