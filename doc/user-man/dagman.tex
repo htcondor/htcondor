@@ -133,7 +133,7 @@ DAGMan input file and in output messages.
 Note that the name for each node within the DAG
 must be unique.
 
-The key words \Arg{JOB} and \Arg{DONE}
+The key words \Arg{JOB}, \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}
 are not case sensitive.
 Therefore, \Arg{DONE}, \Arg{Done}, and \Arg{done} are all equivalent.
 The values defined for \Arg{JobName} and \Arg{SubmitDescriptionFileName}
@@ -143,7 +143,7 @@ The \Arg{JobName} can be any string that contains no white space, except
 for the strings \Arg{PARENT} and \Arg{CHILD} (in upper, lower, or mixed
 case).
 
-Note that \Opt{DIR}, \Opt{NOOP}, and \Opt{DONE}, if used, must appear
+Note that \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}, if used, must appear
 in the order shown above.
 
 The \Arg{DIR} option specifies a working directory
