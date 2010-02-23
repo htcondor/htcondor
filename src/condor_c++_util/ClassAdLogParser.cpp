@@ -21,8 +21,8 @@
 #include "condor_common.h"
 #include "condor_io.h"
 
-#include "classadlogentry.h"
-#include "classadlogparser.h"
+#include "ClassAdLogEntry.h"
+#include "ClassAdLogParser.h"
 
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in

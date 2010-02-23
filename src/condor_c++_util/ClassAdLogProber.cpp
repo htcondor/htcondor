@@ -20,12 +20,12 @@
 
 #include "condor_common.h"
 
-#include "classadlogentry.h"
-#include "prober.h"
-#include "classadlogparser.h"
+#include "ClassAdLogEntry.h"
+#include "ClassAdLogProber.h"
+#include "ClassAdLogParser.h"
 
 //! constructor
-Prober::Prober()
+ClassAdLogProber::ClassAdLogProber()
 {
 	last_mod_time = 0;
 	last_size = 0;
@@ -39,14 +39,14 @@ Prober::Prober()
 }
 
 //! destructor
-Prober::~Prober()
+ClassAdLogProber::~ClassAdLogProber()
 {}
 
 //**************************************************************************
 // Accessors
 //**************************************************************************
 void
-Prober::setJobQueueName(const char* jqn)
+ClassAdLogProber::setJobQueueName(const char* jqn)
 {
 	if(!jqn) {
 		EXCEPT("Expecting jqn to be not null here\n");
@@ -55,68 +55,68 @@ Prober::setJobQueueName(const char* jqn)
 }
 
 char*
-Prober::getJobQueueName()
+ClassAdLogProber::getJobQueueName()
 {
 	return job_queue_name;
 }
 
 void
-Prober::setLastModifiedTime(time_t t)
+ClassAdLogProber::setLastModifiedTime(time_t t)
 {
 	last_mod_time = t;
 }
 
 
 time_t
-Prober::getLastModifiedTime()
+ClassAdLogProber::getLastModifiedTime()
 {
 	return last_mod_time;
 }
 
 void
-Prober::setLastSize(size_t s)
+ClassAdLogProber::setLastSize(size_t s)
 {
 	last_size = s;
 }
 
 
 size_t
-Prober::getLastSize()
+ClassAdLogProber::getLastSize()
 {
 	return last_size;
 }
 
 long int
-Prober::getLastSequenceNumber() 
+ClassAdLogProber::getLastSequenceNumber() 
 {
 	return last_seq_num;
 }
 
 void
-Prober::setLastSequenceNumber(long int seq_num) 
+ClassAdLogProber::setLastSequenceNumber(long int seq_num) 
 {
 	last_seq_num = seq_num;
 }
 
 time_t
-Prober::getLastCreationTime() 
+ClassAdLogProber::getLastCreationTime() 
 {
 	return last_creation_time;
 }
 
 void
-Prober::setLastCreationTime(time_t ctime) 
+ClassAdLogProber::setLastCreationTime(time_t ctime) 
 {
 	last_creation_time = ctime;
 }
 
 long int
-Prober::getCurProbedSequenceNumber() {
+ClassAdLogProber::getCurProbedSequenceNumber() {
 	return cur_probed_seq_num;
 }
 
 long int
-Prober::getCurProbedCreationTime() {
+ClassAdLogProber::getCurProbedCreationTime() {
 	return cur_probed_creation_time;
 }
 
@@ -124,7 +124,7 @@ Prober::getCurProbedCreationTime() {
 
 //! probe job_queue.log file
 ProbeResultType
-Prober::probe(ClassAdLogEntry *curCALogEntry,
+ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 			  int job_queue_fd)
 {
 	FileOpErrCode   st;
@@ -204,7 +204,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 }
 
 void
-Prober::incrementProbeInfo() {
+ClassAdLogProber::incrementProbeInfo() {
 	// store the currently probed stat
 	last_mod_time = cur_probed_mod_time;
 	last_size = cur_probed_size;

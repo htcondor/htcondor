@@ -17,26 +17,26 @@
  *
  ***************************************************************/
 
-#ifndef _JOBLOGREADER_H_
-#define _JOBLOGREADER_H_
+#ifndef _CLASSADLOGREADER_H_
+#define _CLASSADLOGREADER_H_
 
-#include "classadlogentry.h"
-#include "classadlogparser.h"
-#include "prober.h"
+#include "ClassAdLogEntry.h"
+#include "ClassAdLogParser.h"
+#include "ClassAdLogProber.h"
 
 
-class JobLogConsumer;
+class ClassAdLogConsumer;
 
-class JobLogReader {
+class ClassAdLogReader {
 public:
-	JobLogReader(JobLogConsumer *consumer);
-	~JobLogReader();
+	ClassAdLogReader(ClassAdLogConsumer *consumer);
+	~ClassAdLogReader();
 	void Poll();
-	void SetJobLogFileName(char const *fname);
-	char const *GetJobLogFileName();
+	void SetClassAdLogFileName(char const *fname);
+	char const *GetClassAdLogFileName();
 private:
-	JobLogConsumer *m_consumer;
-	Prober prober;
+	ClassAdLogConsumer *m_consumer;
+	ClassAdLogProber prober;
 	ClassAdLogParser parser;
 
 	bool BulkLoad();
@@ -46,7 +46,7 @@ private:
 };
 
 
-class JobLogConsumer
+class ClassAdLogConsumer
 {
 public:
 
@@ -84,7 +84,7 @@ public:
 
 		/**
 		 * Called to clear the entire memory of the consumer. This
-		 * happens when the JobLogReader encounters a problem in the
+		 * happens when the ClassAdLogReader encounters a problem in the
 		 * log, on startup, or when the log is compressed. It should
 		 * invalidate all previous knowledge of the consumer.
 		 */
@@ -131,10 +131,10 @@ public:
 								 const char */*name*/) { return true; }
 
 		/**
-		 * Simple helpful way for the JobLogConsumer to learn about
-		 * who it is working for, set by the JobLogReader.
+		 * Simple helpful way for the ClassAdLogConsumer to learn about
+		 * who it is working for, set by the ClassAdLogReader.
 		 */
-	virtual void SetJobLogReader(JobLogReader */*reader*/) { }
+	virtual void SetClassAdLogReader(ClassAdLogReader */*reader*/) { }
 };
 
 #endif
