@@ -23,7 +23,7 @@
 #include "condor_config.h"
 #include "subsystem_info.h"
 
-#include "JobLogReader.h"
+#include "ClassAdLogReader.h"
 #include "Scheduler.h"
 #include "JobRouter.h"
 

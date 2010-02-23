@@ -27,11 +27,11 @@
 //for the collectorlist::create call
 #include "dc_collector.h" 
 
-#include "classadlogentry.h"
+#include "ClassAdLogEntry.h"
 #include "jobqueuecollection.h"
 #include "quill_enums.h"
 
-class Prober;
+class ClassAdLogProber;
 class ClassAdLogParser;
 class JobQueueDatabase;
 
@@ -154,7 +154,7 @@ class JobQueueDBManager : public Service
 		//
 		// members
 		//
-	Prober*	            prober;			//!< Prober
+	ClassAdLogProber*   prober;			//!< ClassAd Log Prober
 	ClassAdLogParser*	caLogParser;	//!< ClassAd Log Parser
 	JobQueueDatabase*	DBObj;		//!< Database obj
 	XactState	xactState;		    //!< current XACT state

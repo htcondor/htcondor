@@ -35,8 +35,8 @@
 #include <time.h>
 
 #include "jobqueuedbmanager.h"
-#include "prober.h"
-#include "classadlogparser.h"
+#include "ClassAdLogProber.h"
+#include "ClassAdLogParser.h"
 #include "jobqueuedatabase.h"
 #include "pgsqldatabase.h"
 #include "jobqueuecollection.h"
@@ -157,7 +157,7 @@ JobQueueDBManager::config(bool reconfig)
 		// this function is also called when condor_reconfig is issued
 		// and so we dont want to recreate all essential objects
 	if(!reconfig) {
-		prober = new Prober();
+		prober = new ClassAdLogProber();
 		caLogParser = new ClassAdLogParser();
 
 		switch (dt) {				

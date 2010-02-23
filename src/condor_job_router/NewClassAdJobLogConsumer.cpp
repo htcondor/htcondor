@@ -83,7 +83,7 @@ NewClassAdJobLogConsumer::NewClassAd(const char *key,
 				dprintf(D_ALWAYS,
 						"error processing %s: failed to add '%s' to "
 						"ClassAd collection.\n",
-						m_reader->GetJobLogFileName(), cluster_key);
+						m_reader->GetClassAdLogFileName(), cluster_key);
 				return true; // XXX: why is this ok?
 			}
 		}
@@ -96,7 +96,7 @@ NewClassAdJobLogConsumer::NewClassAd(const char *key,
 			dprintf(D_ALWAYS,
 					"error processing %s: failed to add '%s' to "
 					"ClassAd collection.\n",
-					m_reader->GetJobLogFileName(),
+					m_reader->GetClassAdLogFileName(),
 					key);
 				// XXX: why is this ok?
 		}
@@ -122,7 +122,7 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 	if (!ad) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
-				m_reader->GetJobLogFileName(), key);
+				m_reader->GetClassAdLogFileName(), key);
 		return false;
 	}
 	MyString new_classad_value, err_msg;
@@ -132,7 +132,7 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 		dprintf(D_ALWAYS,
 				"error reading %s: failed to convert expression from "
 				"old to new ClassAd format: %s\n",
-				m_reader->GetJobLogFileName(), err_msg.Value());
+				m_reader->GetClassAdLogFileName(), err_msg.Value());
 		return false;
 	}
 
@@ -143,7 +143,7 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 	if (!expr) {
 		dprintf(D_ALWAYS,
 				"error reading %s: failed to parse expression: %s\n",
-				m_reader->GetJobLogFileName(), value);
+				m_reader->GetClassAdLogFileName(), value);
 		ASSERT(expr);
 		return false;
 	}
@@ -160,7 +160,7 @@ NewClassAdJobLogConsumer::DeleteAttribute(const char *key,
 	if (!ad) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
-				m_reader->GetJobLogFileName(), key);
+				m_reader->GetClassAdLogFileName(), key);
 		return false;
 	}
 	ad->Delete(name);
