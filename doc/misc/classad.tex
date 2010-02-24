@@ -92,6 +92,10 @@ Condor will
 avoid using these features until the 7.7.x development series, as using
 them makes it difficult to interact with older versions of Condor.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{New ClassAd Syntax}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 The syntax varies slightly between Old and New ClassAds.
 Here is an example ClassAd presented in both forms.
 The Old form:
@@ -113,6 +117,10 @@ Moo = Foo isnt Undefined;
 \end{verbatim}
 
 Condor will convert to and from old ClassAd syntax as needed.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{New ClassAd Attribute References}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Attribute references work differently between old and new ClassAds. In
 new ClassAds, an unscoped reference (i.e. with no \texttt{MY.} or
