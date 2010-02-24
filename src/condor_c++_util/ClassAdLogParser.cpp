@@ -268,83 +268,83 @@ ClassAdLogParser::readLogEntry(int &op_type)
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getNewClassAdBody(char*& key, 
 									char*& mytype, 
 									char*& targettype)
 {
 	if (curCALogEntry.op_type != CondorLogOp_NewClassAd) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 	key = strdup(curCALogEntry.key);
 	mytype = strdup(curCALogEntry.mytype);
 	targettype = strdup(curCALogEntry.targettype);
 	
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getDestroyClassAdBody(char*& key)
 {
 	if (curCALogEntry.op_type != CondorLogOp_DestroyClassAd) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getSetAttributeBody(char*& key, char*& name, char*& value)
 {
 	if (curCALogEntry.op_type != CondorLogOp_SetAttribute) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 	name = strdup(curCALogEntry.name);
 	value = strdup(curCALogEntry.value);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getDeleteAttributeBody(char*& key, char*& name)
 {
 	if (curCALogEntry.op_type != CondorLogOp_DeleteAttribute) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 	name = strdup(curCALogEntry.name);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getLogHistoricalSNBody(char*& seqnum, char*& timestamp)
 {
 	if (curCALogEntry.op_type != CondorLogOp_LogHistoricalSequenceNumber) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	seqnum = strdup(curCALogEntry.key);
 	timestamp = strdup(curCALogEntry.value);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 int

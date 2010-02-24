@@ -22,7 +22,9 @@
 
 #include "condor_common.h"
 #include "condor_io.h"
-#include "quill_enums.h"
+
+enum ParserErrCode {    PARSER_FAILURE,
+						PARSER_SUCCESS};
 
 enum FileOpErrCode {    FILE_OPEN_ERROR,
 						FILE_READ_ERROR,
@@ -77,20 +79,20 @@ public:
 	//!	set a current file offset
 	void 	setCurOffset(long offset);
 	//!	get a current classad log entry data as a New ClassAd command
-	QuillErrCode 	getNewClassAdBody(char*& key, 
+	ParserErrCode 	getNewClassAdBody(char*& key, 
 									  char*& mytype, 
 									  char*& targettype);
 	//!	get a current classad log entry data as a Destroy ClassAd command
-	QuillErrCode 	getDestroyClassAdBody(char*& key);
+	ParserErrCode 	getDestroyClassAdBody(char*& key);
 	//!	get a current classad log entry data as a Set Attribute command
-	QuillErrCode 	getSetAttributeBody(char*& key, 
+	ParserErrCode 	getSetAttributeBody(char*& key, 
 										char*& name, 
 										char*& value);
 	//!	get a current classad log entry data as a Delete Attribute command
-	QuillErrCode 	getDeleteAttributeBody(char*& key, char*& name);
+	ParserErrCode 	getDeleteAttributeBody(char*& key, char*& name);
 
 	//!	get the body of a historical sequence number command
-	QuillErrCode	getLogHistoricalSNBody(char*& seqnum, char*& timestamp);
+	ParserErrCode	getLogHistoricalSNBody(char*& seqnum, char*& timestamp);
 
 	//! read a classad log entry in the current offset of a file
 	FileOpErrCode readLogEntry(int &op_type);
