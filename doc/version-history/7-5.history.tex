@@ -115,6 +115,12 @@ is now much more efficient in its communication with the \Condor{schedd}.
 
 \begin{itemize}
 
+% gittrac #1242
+\item The new configuration variable \MacroNI{STRICT\_CLASSAD\_EVALUATION}
+controls whether new or old ClassAd expression evaluation semantics are
+used. In new ClassAd semantics, an unscoped attribute reference is only
+looked up in the local ad. The default is False (use old ClassAd semantics).
+
 % gittrac #221
 \item The configuration variable
 \MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
