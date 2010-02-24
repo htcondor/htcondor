@@ -208,7 +208,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			// check if this bogus record is in the midst of a transaction
 			// (try to find a CloseTransaction log record)
 		
-		char	*line; /// XXX: leaked?
+		char	*line;
 
 		int		op;
 
@@ -218,7 +218,9 @@ ClassAdLogParser::readLogEntry(int &op_type)
 		}
 
 		while( -1 != readline( log_fp, line ) ) {
-			if( sscanf( line, "%d ", &op ) != 1 ) {
+			int rv = sscanf( line, "%d ", &op );
+			free(line);
+			if( rv != 1 ) {
 					// no op field in line; more bad log records...
 				continue;
 			}
