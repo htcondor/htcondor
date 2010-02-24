@@ -24,6 +24,15 @@
 #include "condor_io.h"
 #include "quill_enums.h"
 
+enum FileOpErrCode {    FILE_OPEN_ERROR,
+						FILE_READ_ERROR,
+						FILE_WRITE_ERROR,
+						FILE_FATAL_ERROR,
+						FILE_READ_EOF,
+                        FILE_READ_SUCCESS,
+                        FILE_OP_SUCCESS};
+
+
 //used to distinguish between first and successive calls
 #define IMPOSSIBLE_OFFSET -10000
 
