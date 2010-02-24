@@ -239,6 +239,16 @@
 		<File
 			RelativePath="..\src\condor_c++_util\ClassAdLogEntry.cpp"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+					PrecompiledHeaderThrough=""
+					PrecompiledHeaderFile=""
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\ClassAdLogEntry.h"
@@ -247,6 +257,16 @@
 		<File
 			RelativePath="..\src\condor_c++_util\ClassAdLogParser.cpp"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+					PrecompiledHeaderThrough=""
+					PrecompiledHeaderFile=""
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\ClassAdLogParser.h"
@@ -1126,6 +1146,16 @@
 		<File
 			RelativePath="..\src\condor_c++_util\ClassAdLogProber.cpp"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+					PrecompiledHeaderThrough=""
+					PrecompiledHeaderFile=""
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\ClassAdLogProber.h"
