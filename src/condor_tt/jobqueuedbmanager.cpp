@@ -757,6 +757,7 @@ JobQueueDBManager::processLogEntry(int op_type)
 	char *key, *mytype, *targettype, *name, *value;
 	key = mytype = targettype = name = value = NULL;
 	QuillErrCode	st = QUILL_SUCCESS;
+	ParserErrCode	pst = PARSER_SUCCESS;
 
 		// REMEMBER:
 		//	each get*ClassAdBody() funtion allocates the memory of 
@@ -767,29 +768,33 @@ JobQueueDBManager::processLogEntry(int op_type)
 	case CondorLogOp_LogHistoricalSequenceNumber: 
 		break;
 	case CondorLogOp_NewClassAd:
-		st = caLogParser->getNewClassAdBody(key, mytype, targettype);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getNewClassAdBody(key, mytype, targettype);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}
 		st = processNewClassAd(key, mytype, targettype);
 		break;
 	case CondorLogOp_DestroyClassAd:
-		st = caLogParser->getDestroyClassAdBody(key);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getDestroyClassAdBody(key);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}		
 		st = processDestroyClassAd(key);
 		break;
 	case CondorLogOp_SetAttribute:
-		st = caLogParser->getSetAttributeBody(key, name, value);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getSetAttributeBody(key, name, value);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}
 		st = processSetAttribute(key, name, value);
 		break;
 	case CondorLogOp_DeleteAttribute:
-		st = caLogParser->getDeleteAttributeBody(key, name);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getDeleteAttributeBody(key, name);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}
 		st = processDeleteAttribute(key, name);
