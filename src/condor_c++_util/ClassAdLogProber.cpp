@@ -26,6 +26,7 @@
 #include <stdlib.h> // for atol
 #include <assert.h> // for assert
 #include <errno.h> // for errno
+#include <syslog.h> // for syslog, LOG_ERR, LOG_DEBUG
 #else
 #include "condor_common.h"
 #endif
@@ -141,11 +142,20 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 
 	//TODO: should use condor's StatInfo instead.
 	if (fstat(job_queue_fd, &filestat) == -1)
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR, "ERROR: calling stat(): errno=%d (%m)", errno);
+	
+	syslog(LOG_DEBUG, "=== Current Probing Information ===");
+	syslog(LOG_DEBUG,
+		   "fsize: %ld\t\tmtime: %ld", 
+		   (long)filestat.st_size, (long)filestat.st_mtime);
+#else
 		dprintf(D_ALWAYS,"ERROR: calling stat()\n");
 	
 	dprintf(D_FULLDEBUG, "=== Current Probing Information ===\n");
 	dprintf(D_FULLDEBUG, "fsize: %ld\t\tmtime: %ld\n", 
 				(long)filestat.st_size, (long)filestat.st_mtime);
+#endif
 
 	// get the new state
 	cur_probed_mod_time = filestat.st_mtime;
@@ -167,18 +177,34 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 	if ( caLogParser.getCurCALogEntry()->op_type !=
 		 CondorLogOp_LogHistoricalSequenceNumber )
 	{
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "ERROR: prober expects first classad log entry to be "
+			   "type %d, but sees %d instead.",
+			   CondorLogOp_LogHistoricalSequenceNumber,
+			   caLogParser.getCurCALogEntry()->op_type);
+#else
 		dprintf(D_ALWAYS,
 				"ERROR: quill prober expects first classad log entry to be "
 				"type %d, but sees %d instead.",
 				CondorLogOp_LogHistoricalSequenceNumber,
 				caLogParser.getCurCALogEntry()->op_type);
+#endif
 		return PROBE_FATAL_ERROR;
 	}
 
+#ifdef _NO_CONDOR_
+	syslog(LOG_DEBUG,
+		   "first log entry: %s %s %s", 
+		   ((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key,
+		   ((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->name,
+		   ((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
+#else
 	dprintf(D_FULLDEBUG, "first log entry: %s %s %s\n", 
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key,
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->name,
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
+#endif
 	cur_probed_seq_num = 
 		atol(((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key);
 	cur_probed_creation_time = 
