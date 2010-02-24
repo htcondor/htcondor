@@ -114,6 +114,35 @@ Moo = Foo isnt Undefined;
 
 Condor will convert to and from old ClassAd syntax as needed.
 
+Attribute references work differently between old and new ClassAds. In
+new ClassAds, an unscoped reference (i.e. with no \texttt{MY.} or
+\texttt{TARGET.}
+prefix) is looked for only in the local ad. The \texttt{MY.} and
+\texttt{TARGET.}
+scoping prefixes only work when evaluating an expression in the context
+of two ClassAds (e.g. during matchmaking or machine policy evaluation).
+When evaluating an expression in the context of a single ad (e.g. during
+user job policy evaluation or with the -constraint option to the command-line
+tools), \texttt{MY.} and \texttt{TARGET.} are not defined and using them will result
+in a value of \texttt{Undefined}. You can forgo the use of \texttt{MY.} entirely, as
+when the evaluation context contains two ads, an unscoped reference can
+only refer to the local ad.
+
+New ClassAds have no special \texttt{CurrentTime} attribute. You can use the 
+\texttt{time()} function instead. In order to mimic old ClassAd semantics, all 
+ads have an explicit \texttt{CurrentTime} attribute, with a value of \texttt{time()}.
+
+The above describes the normal evaluation behavior of new ClassAds.
+In current versions of Condor, new ClassAds will mimic the evaluation 
+behavior of old ClassAds. You shouldn't have to change any configuration 
+parameters or submit description files. You can switch new ClassAds to
+use their normal evaluation behavior by setting the configuration
+parameter \texttt{STRICT\_CLASSAD\_EVALUATION} to \texttt{True}.
+In a future version of Condor, we may make the normal new ClassAds
+evaluation behavior the default or only option. If we do, then you can
+set \texttt{STRICT\_CLASSAD\_EVALUATION} to \texttt{True} before an upgrade to see if your
+pool needs any adjustment to its expressions.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Old ClassAd Syntax}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
