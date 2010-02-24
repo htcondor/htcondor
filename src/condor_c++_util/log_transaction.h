@@ -33,6 +33,7 @@
 */
 
 #include <list>
+#include <string>
 #include "log.h"
 #include "list.h"
 #include "HashTable.h"
