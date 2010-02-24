@@ -375,9 +375,9 @@ bool SSHToJob::execute_ssh()
 	}
 
 	MyString remote_host;
-	int at_pos = slot_name.FindChar('@');
-	if( at_pos >= 0 ) {
-		remote_host = slot_name.Value() + at_pos + 1;
+	char const *at_pos = strrchr(slot_name.Value(),'@');
+	if( at_pos ) {
+		remote_host = at_pos + 1;
 	}
 	else {
 		remote_host = slot_name;
