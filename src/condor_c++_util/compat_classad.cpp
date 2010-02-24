@@ -2213,10 +2213,8 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 			classad::ExprTree *exp = NULL;
 			abs = false;
 			( ( classad::AttributeReference * )expr )->GetComponents(exp,newAttr,abs);
-			if (strcmp(newAttr.c_str(), "target") == 0){
-				classad::AttributeReference *noTarget = NULL;
-				noTarget = classad::AttributeReference::MakeAttributeReference(exp,"",abs);
-				return classad::AttributeReference::MakeAttributeReference(noTarget,attr);
+			if (strcasecmp(newAttr.c_str(), "target") == 0){
+				return classad::AttributeReference::MakeAttributeReference(NULL,attr);
 			}	 
 		} 
 		return tree->Copy();
