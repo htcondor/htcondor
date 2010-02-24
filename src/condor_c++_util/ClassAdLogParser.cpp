@@ -23,6 +23,7 @@
 #include <ctype.h> // for isspace
 #include <assert.h> // for assert
 #include <errno.h> // for errno
+#include <syslog.h> // for syslog, LOG_ERR
 #else
 #include "condor_common.h"
 #include "condor_io.h"
@@ -115,10 +116,13 @@ ClassAdLogParser::setNextOffset(long offset)
 FileOpErrCode 
 ClassAdLogParser::openFile() {
     // open a job_queue.log file
+#ifdef _NO_CONDOR_
+    log_fp = fopen(job_queue_name, "r");
+#else
     log_fp = safe_fopen_wrapper(job_queue_name, "r");
+#endif
 
     if (log_fp == NULL) {
-        dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
         return FILE_OPEN_ERROR;
     }
 	return FILE_OP_SUCCESS;
@@ -220,7 +224,11 @@ ClassAdLogParser::readLogEntry(int &op_type)
 		int		op;
 
 		if( !log_fp ) {
+#ifdef _NO_CONDOR_
+			syslog(LOG_ERR, "Failed fdopen() when recovering corrupt log file");
+#else
 			dprintf(D_ALWAYS, "Failed fdopen() when recovering corrupt log file");
+#endif
 			return FILE_FATAL_ERROR;
 		}
 
@@ -233,9 +241,11 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			}
 			if( op == CondorLogOp_EndTransaction ) {
 					// aargh!  bad record in transaction.  abort!
-				dprintf(D_ALWAYS,
-						"Bad record with op=%d in corrupt logfile",
-						op_type);
+#ifdef _NO_CONDOR_
+				syslog(LOG_ERR, "Bad record with op=%d in corrupt logfile", op_type);
+#else
+				dprintf(D_ALWAYS, "Bad record with op=%d in corrupt logfile", op_type);
+#endif
 				return FILE_FATAL_ERROR;
 			}
 		}
@@ -243,9 +253,15 @@ ClassAdLogParser::readLogEntry(int &op_type)
 		if( !feof( log_fp ) ) {
 			fclose(log_fp);
             log_fp = NULL;
+#ifdef _NO_CONDOR_
+			syslog(LOG_ERR,
+				   "Failed recovering from corrupt file, errno=%d (%m)",
+				   errno);
+#else
 			dprintf(D_ALWAYS,
 					"Failed recovering from corrupt file, errno=%d",
 					errno);
+#endif
 			return FILE_FATAL_ERROR;
 		}
 
