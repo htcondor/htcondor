@@ -29,9 +29,9 @@
 
 #include "jobqueuedbmanager.h"
 #include "quill_dbschema_def.h"
-#include "classadlogentry.h"
-#include "prober.h"
-#include "classadlogparser.h"
+#include "ClassAdLogEntry.h"
+#include "ClassAdLogProber.h"
+#include "ClassAdLogParser.h"
 #include "jobqueuedatabase.h"
 #include "pgsqldatabase.h"
 #include "requestservice.h"
