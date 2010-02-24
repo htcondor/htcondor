@@ -589,7 +589,9 @@ ClassAd::ClassAd()
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	ResetName();
     ResetExpr();
@@ -611,7 +613,9 @@ ClassAd::ClassAd( const ClassAd &ad )
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	m_privateAttrsAreInvisible = false;
 
@@ -635,7 +639,9 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	m_privateAttrsAreInvisible = false;
 
@@ -721,7 +727,9 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	ResetName();
     ResetExpr();
@@ -1250,7 +1258,9 @@ initFromString( char const *str,MyString *err_msg )
 
 		// Reinsert CurrentTime, emulating the special version in old
 		// ClassAds
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	char *exprbuf = new char[strlen(str)+1];
 	ASSERT( exprbuf );
@@ -1305,7 +1315,9 @@ initFromStream(Stream& s)
 
 		// Reinsert CurrentTime, emulating the special version in old
 		// ClassAds
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	return TRUE;
 }
@@ -1328,7 +1340,9 @@ initAttrListFromStream(Stream& s)
 
 		// Reinsert CurrentTime, emulating the special version in old
 		// ClassAds
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	return TRUE;
 }
