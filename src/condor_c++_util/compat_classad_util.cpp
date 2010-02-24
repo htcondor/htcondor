@@ -195,24 +195,6 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 	return ! found_diff;
 }
 
-static classad::MatchClassAd *the_match_ad;
-static bool the_match_ad_in_use;
-static classad::MatchClassAd *getTheMatchAd() {
-	ASSERT( !the_match_ad_in_use );
-	the_match_ad_in_use = true;
-
-	if( !the_match_ad ) {
-		the_match_ad = new classad::MatchClassAd( );
-	}
-	return the_match_ad;
-}
-
-static void releaseTheMatchAd() {
-	ASSERT( the_match_ad_in_use );
-
-	the_match_ad_in_use = false;
-}
-
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 				  compat_classad::ClassAd *target, compat_classad::EvalResult *result )
 {
@@ -227,10 +209,9 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
-		mad = getTheMatchAd();
-
-		mad->ReplaceLeftAd( source );
-		mad->ReplaceRightAd( target );
+		mad = compat_classad::getTheMatchAd( source, target );
+	} else {
+		compat_classad::getTheMyRef( source );
 	}
 	if ( source->EvaluateExpr( expr, val ) ) {
 		switch ( val.GetType() ) {
@@ -273,10 +254,9 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	}
 
 	if ( mad ) {
-		mad->RemoveLeftAd();
-		mad->RemoveRightAd();
-
-		releaseTheMatchAd();
+		compat_classad::releaseTheMatchAd();
+	} else {
+		compat_classad::releaseTheMyRef( source );
 	}
 	expr->SetParentScope( old_scope );
 
@@ -285,16 +265,11 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 {
-	classad::MatchClassAd *mad = getTheMatchAd();
-	mad->ReplaceLeftAd( ad1 );
-	mad->ReplaceRightAd( ad2 );
+	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( ad1, ad2 );
 
 	bool result = mad->symmetricMatch();
 
-	mad->RemoveLeftAd();
-	mad->RemoveRightAd();
-
-	releaseTheMatchAd();
+	compat_classad::releaseTheMatchAd();
 	return result;
 }
 
@@ -317,16 +292,11 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 		return false;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd();
-	mad->ReplaceLeftAd( my );
-	mad->ReplaceRightAd( target );
+	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( my, target );
 
 	bool result = mad->rightMatchesLeft();
 
-	mad->RemoveLeftAd();
-	mad->RemoveRightAd();
-
-	releaseTheMatchAd();
+	compat_classad::releaseTheMatchAd();
 	return result;
 }
 

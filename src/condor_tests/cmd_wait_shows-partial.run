@@ -56,7 +56,7 @@ system("chmod -R 777 .");
 ####################################################################
 
 # seed log with 1 runs
-system("$writelog $flowlog submit 4");
+system("$writelog $flowlog submit 4") == 0 || die "$writelog failed\n";
 print "Drop 4 submits into the log\n";
 
 # Start condor_wait
@@ -67,10 +67,10 @@ print "Have condor_wait wait for 2\n";
 
 sleep(5);
 # start 1 runs
-system("$writelog $flowlog execute 2");
+system("$writelog $flowlog execute 2") == 0 || die "$writelog failed\n";
 
 # end 1 runs
-system("$writelog $flowlog terminated 2");
+system("$writelog $flowlog terminated 2") == 0 || die "$writelog failed\n";
 print "Add log entries to complete 2 jobs\n";
 
 print "Wait for results - ";

@@ -48,7 +48,7 @@ CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 ####################################################################
 
 # seed log with 1 runs
-system("$writelog $flowlog submit 1");
+system("$writelog $flowlog submit 1") == 0 || die "$writelog failed\n";
 print "Drop a submit event\n";
 
 # Start condor_wait
@@ -59,10 +59,10 @@ print "Call condor_wait with 10 second timeout\n";
 print "Sleep 20\n";
 sleep(20);
 # start 1 runs
-system("$writelog $flowlog execute 1");
+system("$writelog $flowlog execute 1") == 0 || die "$writelog failed\n";
 
 # end 1 runs
-system("$writelog $flowlog terminated 1");
+system("$writelog $flowlog terminated 1") == 0 || die "$writelog failed\n";
 print "Drop execute and terminate event into the log\n";
 
 print "Waiting for rersults - ";

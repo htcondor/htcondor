@@ -316,12 +316,12 @@ ClassAdLog::TruncLog()
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
 
-		int log_fd = safe_open_wrapper(logFilename(), O_RDWR | O_LARGEFILE, 0600);
+		int log_fd = safe_open_wrapper(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
 		if (log_fd < 0) {
 			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}
 
-		log_fp = fdopen(log_fd, "r+");
+		log_fp = fdopen(log_fd, "a+");
 		if (log_fp == NULL) {
 			EXCEPT("failed to refdopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}

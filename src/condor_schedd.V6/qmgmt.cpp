@@ -1905,6 +1905,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
 	}
 #if !defined(WANT_OLD_CLASSADS)
+/* Disable AddTargetRefs() for now
 	else if ( stricmp( attr_name, ATTR_REQUIREMENTS ) == 0 ||
 			  stricmp( attr_name, ATTR_RANK ) ) {
 		// Check Requirements and Rank for proper TARGET scoping of
@@ -1918,6 +1919,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			delete tree2;
 		}
 	}
+*/
 #endif
 
 	// If any of the attrs used to create the signature are
