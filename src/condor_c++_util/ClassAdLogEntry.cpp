@@ -17,8 +17,13 @@
  *
  ***************************************************************/
 
+#ifdef _NO_CONDOR_
+#include <stdlib.h> // for free
+#include <string.h> // for strdup, strcmp
+#else
 #include "condor_common.h"
 #include "condor_io.h"
+#endif
 
 #include "ClassAdLogEntry.h"
 #include "ClassAdLogParser.h"

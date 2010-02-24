@@ -17,8 +17,18 @@
  *
  ***************************************************************/
 
-
+#ifdef _NO_CONDOR_
+#include <sys/types.h> // for fstat, struct stat
+#include <sys/stat.h> // for fstat, struct stat
+#include <unistd.h> // for fstat, struct stat
+#include <limits.h> // for _POSIX_PATH_MAX
+#include <string.h> // for strcpy
+#include <stdlib.h> // for atol
+#include <assert.h> // for assert
+#include <errno.h> // for errno
+#else
 #include "condor_common.h"
+#endif
 
 #include "ClassAdLogEntry.h"
 #include "ClassAdLogProber.h"

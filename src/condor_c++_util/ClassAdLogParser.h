@@ -20,8 +20,13 @@
 #ifndef _CLASSADLOGPARSER_H_
 #define _CLASSADLOGPARSER_H_
 
+#ifdef _NO_CONDOR_
+#include <limits.h> // for _POSIX_PATH_MAX
+#include <stdio.h> // for FILE*
+#else
 #include "condor_common.h"
 #include "condor_io.h"
+#endif
 
 enum ParserErrCode {    PARSER_FAILURE,
 						PARSER_SUCCESS};

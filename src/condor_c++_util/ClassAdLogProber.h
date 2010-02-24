@@ -20,7 +20,12 @@
 #ifndef _CLASSADLOGPROBER_H_
 #define _CLASSADLOGPROBER_H_
 
+#ifdef _NO_CONDOR_
+#include <time.h> // for time_t
+#include <unistd.h> // for size_t
+#else
 #include "condor_common.h"
+#endif
 
 enum ProbeResultType {  PROBE_ERROR, 
 						PROBE_FATAL_ERROR,

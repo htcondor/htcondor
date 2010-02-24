@@ -17,9 +17,16 @@
  *
  ***************************************************************/
 
-
+#ifdef _NO_CONDOR_
+#include <stdlib.h> // for free, atoi, malloc, realloc
+#include <string.h> // for strcpy, strdup
+#include <ctype.h> // for isspace
+#include <assert.h> // for assert
+#include <errno.h> // for errno
+#else
 #include "condor_common.h"
 #include "condor_io.h"
+#endif
 
 #include "ClassAdLogEntry.h"
 #include "ClassAdLogParser.h"
