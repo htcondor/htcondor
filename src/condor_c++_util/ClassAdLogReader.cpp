@@ -63,7 +63,13 @@ ClassAdLogReader::Poll() {
 
 	fst = parser.openFile();
 	if(fst == FILE_OPEN_ERROR) {
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "Failed to open %s: errno=%d (%m)",
+			   parser.getJobQueueName(), errno);
+#else
 		dprintf(D_ALWAYS,"Failed to open %s: errno=%d\n",parser.getJobQueueName(),errno);
+#endif
 		return POLL_FAIL;
 	}
 
@@ -115,16 +121,27 @@ ClassAdLogReader::IncrementalLoad()
 		err = parser.readLogEntry(op_type);
 		assert(err != FILE_FATAL_ERROR); // XXX
 		if (err == FILE_READ_SUCCESS) {
-			//dprintf(D_ALWAYS, "Read op_type %d\n",op_type);
 			bool processed = ProcessLogEntry(parser.getCurCALogEntry(), &parser);
 			if(!processed) {
+#ifdef _NO_CONDOR_
+				syslog(LOG_ERR,
+					   "error reading %s: Failed to process log entry.",
+					   GetClassAdLogFileName());
+#else
 				dprintf(D_ALWAYS, "error reading %s: Failed to process log entry.\n",GetClassAdLogFileName());
+#endif
 				return false;
 			}
 		}
 	}while(err == FILE_READ_SUCCESS);
 	if (err != FILE_READ_EOF) {
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "error reading from %s: %d, errno=%d",
+			   GetClassAdLogFileName(), err, errno);
+#else
 		dprintf(D_ALWAYS, "error reading from %s: %d, %d\n",GetClassAdLogFileName(),err,errno);
+#endif
 		return false;
 	}
 	return true;
@@ -163,7 +180,13 @@ ClassAdLogReader::ProcessLogEntry(ClassAdLogEntry *log_entry,
 	case CondorLogOp_LogHistoricalSequenceNumber:
 		break;
 	default:
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "error reading %s: Unsupported Job Queue Command",
+			   GetClassAdLogFileName());
+#else
 		dprintf(D_ALWAYS, "error reading %s: Unsupported Job Queue Command\n",GetClassAdLogFileName());
+#endif
 		return false;
 	}
 	return true;
