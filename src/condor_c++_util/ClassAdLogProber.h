@@ -21,7 +21,13 @@
 #define _CLASSADLOGPROBER_H_
 
 #include "condor_common.h"
-#include "quill_enums.h"
+
+enum ProbeResultType {  PROBE_ERROR, 
+						PROBE_FATAL_ERROR,
+						NO_CHANGE, 
+						INIT_QUILL, 
+						ADDITION, 
+						COMPRESSED};
 
 //! ClassAdLogProber
 /*! this polls and probes Job Qeueue Log (job_queue.log) file.
