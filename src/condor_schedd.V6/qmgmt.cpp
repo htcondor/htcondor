@@ -86,7 +86,6 @@ static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
-static int old_cluster_num = -1;	// next_cluster_num at start of transaction
 static bool JobQueueDirty = false;
 static int in_walk_job_queue = 0;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
@@ -412,7 +411,6 @@ QmgmtPeer::unset()
 
 	next_proc_num = 0;
 	active_cluster_num = -1;	
-	old_cluster_num = -1;	// next_cluster_num at start of transaction
 	xact_start_time = 0;	// time at which the current transaction was started
 }
 
@@ -1061,7 +1059,6 @@ getQmgmtConnectionInfo()
 	if ( Q_SOCK ) {
 		Q_SOCK->next_proc_num = next_proc_num;
 		Q_SOCK->active_cluster_num = active_cluster_num;	
-		Q_SOCK->old_cluster_num = old_cluster_num;
 		Q_SOCK->xact_start_time = xact_start_time;
 			// our call to getActiveTransaction will clear it out
 			// from the lower layers after returning the handle to us
@@ -1089,13 +1086,6 @@ setQmgmtConnectionInfo(QmgmtPeer *peer)
 	Q_SOCK = peer;
 	next_proc_num = peer->next_proc_num;
 	active_cluster_num = peer->active_cluster_num;	
-	if ( peer->old_cluster_num == -1 ) {
-		// if old_cluster_num is uninitialized (-1), then
-		// store the cluster num so when we commit the transaction, we can easily
-		// see if new clusters have been submitted and thus make links to cluster ads
-		peer->old_cluster_num = next_cluster_num;
-	}
-	old_cluster_num = peer->old_cluster_num;
 	xact_start_time = peer->xact_start_time;
 		// Note: if setActiveTransaction succeeds, then peer->transaction
 		// will be set to NULL.   The JobQueue does this to prevent anyone
@@ -1120,7 +1110,6 @@ unsetQmgmtConnection()
 
 	next_proc_num = reset.next_proc_num;
 	active_cluster_num = reset.active_cluster_num;	
-	old_cluster_num = reset.old_cluster_num;
 	xact_start_time = reset.xact_start_time;
 }
 
@@ -1208,7 +1197,7 @@ handle_q(Service *, int, Stream *sock)
 	}
 	ASSERT(Q_SOCK);
 
-	JobQueue->BeginTransaction();
+	BeginTransaction();
 
 	bool may_fork = false;
 	ForkStatus fork_status = FORK_FAILED;
@@ -2348,6 +2337,10 @@ BeginTransaction()
 void
 CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 {
+	std::list<std::string> new_ad_keys;
+		// get a list of all new ads being created in this transaction
+	JobQueue->ListNewAdsInTransaction( new_ad_keys );
+
 	if( flags & NONDURABLE ) {
 		JobQueue->CommitNondurableTransaction();
 		ScheduleJobQueueLogFlush();
@@ -2362,10 +2355,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	// ads to cluster ads if any new clusters have been submitted.
 	// Also, if EVENT_LOG is defined in condor_config, we will write
 	// submit events into the EVENT_LOG here.
-	if ( old_cluster_num != next_cluster_num ) {
+	if ( !new_ad_keys.empty() ) {
 		int cluster_id;
-		int 	*numOfProcs = NULL;	
-		int i;
+		int proc_id;
 		ClassAd *procad;
 		ClassAd *clusterad;
 		bool write_submit_events = false;
@@ -2384,36 +2376,40 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			free(eventlog);
 		}
 
-		for ( cluster_id=old_cluster_num; cluster_id < next_cluster_num; cluster_id++ ) {
+		std::list<std::string>::iterator it;
+		for( it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
+			char const *key = it->c_str();
+			StrToId(key,cluster_id,proc_id);
+
+			if( proc_id == -1 ) {
+				continue; // skip over cluster ads
+			}
+
 			char cluster_key[PROC_ID_STR_BUFLEN];
 			IdToStr(cluster_id,-1,cluster_key);
-			if ( (JobQueue->LookupClassAd(cluster_key, clusterad)) &&
-			     (ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1) )
+
+			if ( JobQueue->LookupClassAd(cluster_key, clusterad) &&
+				 JobQueue->LookupClassAd(key,procad))
 			{
-				for ( i = 0; i < *numOfProcs; i++ ) {
-					char key[PROC_ID_STR_BUFLEN];
-					IdToStr(cluster_id,i,key);
-					if (JobQueue->LookupClassAd(key,procad)) {
-							// chain proc ads to cluster ad
-						procad->ChainToAd(clusterad);
+				dprintf(D_FULLDEBUG,"New job: %s",key);
 
-							// convert any old attributes for backwards compatbility
-						ConvertOldJobAdAttrs(procad, false);
+					// chain proc ads to cluster ad
+				procad->ChainToAd(clusterad);
 
-							// write submit event to global event log
-						if ( write_submit_events ) {
-							SubmitEvent jobSubmit;
-							jobSubmit.initFromClassAd(procad);
-							usr_log.setGlobalCluster(cluster_id);
-							usr_log.setGlobalProc(i);
-							usr_log.writeEvent(&jobSubmit,procad);
-						}
-					}
-				}	// end of loop thru all proc in cluster cluster_id
+					// convert any old attributes for backwards compatbility
+				ConvertOldJobAdAttrs(procad, false);
+
+					// write submit event to global event log
+				if ( write_submit_events ) {
+					SubmitEvent jobSubmit;
+					jobSubmit.initFromClassAd(procad);
+					usr_log.setGlobalCluster(cluster_id);
+					usr_log.setGlobalProc(proc_id);
+					usr_log.writeEvent(&jobSubmit,procad);
+				}
 			}	
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
-	old_cluster_num = next_cluster_num;
 
 	xact_start_time = 0;
 }
@@ -3678,14 +3674,14 @@ int mark_idle(ClassAd *job)
 		float wall_clock = 0.0;
 		GetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK,&wall_clock);
 		wall_clock += wall_clock_ckpt;
-		JobQueue->BeginTransaction();
+		BeginTransaction();
 		SetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock);
 		DeleteAttribute(cluster,proc,ATTR_JOB_WALL_CLOCK_CKPT);
 			// remove shadow birthdate so if CkptWallClock()
 			// runs before a new shadow starts, it won't
 			// potentially double-count
 		DeleteAttribute(cluster,proc,ATTR_SHADOW_BIRTHDATE);
-		JobQueue->CommitTransaction();
+		CommitTransaction();
 	}
 
 	return 1;

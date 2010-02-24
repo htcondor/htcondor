@@ -66,7 +66,7 @@ class QmgmtPeer {
 		ReliSock *sock; 
 
 		Transaction *transaction;
-		int next_proc_num, active_cluster_num, old_cluster_num;
+		int next_proc_num, active_cluster_num;
 		time_t xact_start_time;
 
 	private:

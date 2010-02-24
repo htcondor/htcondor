@@ -1074,3 +1074,12 @@ InstantiateLogEntry(FILE *fp, int type)
 		// record was good
 	return log_rec;
 }
+
+void ClassAdLog::ListNewAdsInTransaction( std::list<std::string> &new_keys )
+{
+	if( !active_transaction ) {
+		return;
+	}
+
+	active_transaction->InTransactionListKeysWithOpType( CondorLogOp_NewClassAd, new_keys );
+}
