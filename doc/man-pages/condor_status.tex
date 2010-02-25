@@ -39,28 +39,30 @@ options} may be specified.
 \begin{Options}
     \ToolDebugDesc
     \OptItem{\Opt{-help}}{(Help option) Display usage information}
-    \OptItem{\Opt{-diagnose}}{(Help option) Print out query ad without 
+    \OptItem{\Opt{-diagnose}}{(Help option) Print out query ClassAd without 
       performing query}
-    \OptItem{\Opt{-any}}{(Query option) Query all ads and display their type,
+    \OptItem{\Opt{-any}}{(Query option) Query all ClassAds and display their type,
       target type, and name}
-    \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ads and identify
+    \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ClassAds and identify
       resources which are available}
-    \OptItem{\Opt{-ckptsrvr}}{(Query option) Query \Condor{ckpt\_server} ads
+    \OptItem{\Opt{-ckptsrvr}}{(Query option) Query \Condor{ckpt\_server} ClassAds
       and display checkpoint server attributes}
-    \OptItem{\Opt{-claimed}}{(Query option) Query \Condor{startd} ads and print 
+    \OptItem{\Opt{-claimed}}{(Query option) Query \Condor{startd} ClassAds and print 
       information about claimed resources}
     \OptItem{\Opt{-cod}}{(Query option) Display only machine ClassAds
       that have COD claims. Information displayed includes
       the claim ID, the owner of the claim, and the state
       of the COD claim.}
+    \OptItem{\Opt{-collector}}{(Query option) Query \Condor{collector} ClassAds
+      and display attributes}
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
-      the given host name to get the ads to display}
+      the given host name to get the ClassAds to display}
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-license}}{(Query option) Display license attributes.}
-    \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ads and display
-      daemon master attributes}
-    \OptItem{\Opt{-negotiator}}{(Query option) Query \Condor{negotiator} ads
-      and display attributes}
+    \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ClassAds 
+      and display daemon master attributes}
+    \OptItem{\Opt{-negotiator}}{(Query option) Query \Condor{negotiator} 
+      ClassAds and display attributes}
     \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
       {(Query option) Query the specified central manager using an
       optional port number. 
@@ -70,16 +72,16 @@ options} may be specified.
       running Quill.}
     \OptItem{\Opt{-run}}{(Query option) Display information about machines
       currently running jobs.}
-    \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ads and display
+    \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ClassAds and display
       attributes}
-    \OptItem{\Opt{-server}}{(Query option) Query \Condor{startd} ads and 
+    \OptItem{\Opt{-server}}{(Query option) Query \Condor{startd} ClassAds and 
       display resource attributes}
-    \OptItem{\Opt{-startd}}{(Query option) Query \Condor{startd} ads} 
-    \OptItem{\Opt{-state}}{(Query option) Query \Condor{startd} ads and display 
+    \OptItem{\Opt{-startd}}{(Query option) Query \Condor{startd} ClassAds} 
+    \OptItem{\Opt{-state}}{(Query option) Query \Condor{startd} ClassAds and display 
       resource state information}
     \OptItem{\Opt{-storage}}{(Query option) Display attributes of machines
       with network storage resources.}
-    \OptItem{\Opt{-submitters}}{(Query option) Query ads sent by submitters and
+    \OptItem{\Opt{-submitters}}{(Query option) Query ClassAds sent by submitters and
       display important submitter attributes}
     \OptItem{\OptArg{-subsystem}{type}}{(Query option) If \Arg{type} is
       one of \Arg{collector}, \Arg{negotiator}, \Arg{master},
