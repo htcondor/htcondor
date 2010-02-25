@@ -65,7 +65,19 @@ Preempting X jobs due to MAX_JOBS_RUNNING change
 
 % gittrack 1250
 \item Fixed a problem that caused \Condor{ssh\_to\_job} to fail to connect
-to a job running on a slot with multiple '@' signs in its name.
+to a job running on a slot with multiple '@' signs in its name.  This bug
+has existed since the introduction of \Condor{ssh\_to\_job} in 7.3.2.
+
+% gittrack 116
+\item In all previous versions of Condor, \Condor{status} refused to
+  accept \Opt{-long}, \Opt{-xml}, and \Opt{-format} when followed by
+  an argument such as \Opt{-master} that specified which type of
+  daemon to look at.  The order of the arguments had to be reversed or
+  it would produce a message such as the following:
+
+\begin{verbatim}
+Error:  arg 4 (-master) contradicts arg 1 (-format)
+\end{verbatim}
 
 % gittrac #1201
 \item Fixed a bug which caused the \Condor{master} to crash if
