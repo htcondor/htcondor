@@ -1,10 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{classad-reference}
+\section{\label{sec:classad-reference}
 Condor's ClassAd Mechanism}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\label{sec:classadref}
-
 \index{ClassAd|(}
+
 ClassAds are a flexible mechanism for representing the characteristics and
 constraints of machines and jobs in the Condor system.  ClassAds are used
 extensively in the Condor system to represent jobs, resources, submitters
@@ -58,10 +57,9 @@ to \texttt{ERROR} if any of their operands are \texttt{ERROR}.  Similarly,
 most operators are strict with respect to \texttt{UNDEFINED}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{classad-newandold}
+\subsection{\label{sec:classad-newandold}
 ClassAds: Old and New}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\label{sec:classad-differences}
 
 ClassAds have existed for quite some time in two forms:
 Old and New.
@@ -77,24 +75,19 @@ ClassAds from Old to New.
 All user interaction with tools (such as \Condor{q}) as well as
 output of tools is still done as Old ClassAds.
 Before Condor version 7.5.1, New ClassAds were used in just a few places 
-within Condor, for example
-the Job Router and  \Condor{q} \Opt{-better-analyze}.
-There are some syntax and behavior differences between new and old
+within Condor, 
+for example, in the Job Router and  in \Condor{q} \Opt{-better-analyze}.
+There are some syntax and behavior differences between Old and New
 ClassAds,
 all of which will remain invisible to users of Condor for this version.
 A complete description of New ClassAds can be found at
 \URL{http://www.cs.wisc.edu/condor/classad/},
 and in the ClassAd Language Reference Manual found on this web page.
 
-Some of the features of New ClassAds that are not in Old ClassAds are
+Some of the features of New ClassAds that are \emph{not} in Old ClassAds are
 lists, nested ads, time values, and matching groups of ads.
-Condor will
-avoid using these features until the 7.7.x development series, as using
-them makes it difficult to interact with older versions of Condor.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{New ClassAd Syntax}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Condor will avoid using these features until the 7.7.x development series,
+as using them makes it difficult to interact with older versions of Condor.
 
 The syntax varies slightly between Old and New ClassAds.
 Here is an example ClassAd presented in both forms.
@@ -116,45 +109,62 @@ Moo = Foo isnt Undefined;
 ]
 \end{verbatim}
 
-Condor will convert to and from old ClassAd syntax as needed.
+Condor will convert to and from Old ClassAd syntax as needed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{New ClassAd Attribute References}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Attribute references work differently between old and new ClassAds. In
-new ClassAds, an unscoped reference (i.e. with no \texttt{MY.} or
-\texttt{TARGET.}
-prefix) is looked for only in the local ad. The \texttt{MY.} and
-\texttt{TARGET.}
-scoping prefixes only work when evaluating an expression in the context
-of two ClassAds (e.g. during matchmaking or machine policy evaluation).
-When evaluating an expression in the context of a single ad (e.g. during
-user job policy evaluation or with the -constraint option to the command-line
-tools), \texttt{MY.} and \texttt{TARGET.} are not defined and using them will result
-in a value of \texttt{Undefined}. You can forgo the use of \texttt{MY.} entirely, as
-when the evaluation context contains two ads, an unscoped reference can
-only refer to the local ad.
+Expressions often refer to ClassAd attributes.
+These attribute references work differently in Old ClassAds as compared
+with New ClassAds.
+In New ClassAds, 
+an unscoped reference is looked for only in the local ClassAd. 
+An \Term{unscoped reference} is an attribute that does not have a
+\Attr{MY.} or \Attr{TARGET.} prefix.
+The \Term{local ClassAd} may be described by an example.
+Matchmaking uses two ClassAds: the job ClassAd and the machine ClassAd. 
+The job ClassAd is evaluated to see if it is a match for the machine ClassAd.
+The job ClassAd is the local ClassAd.
+Therefore, in the \Attr{Requirements} attribute of the job ClassAd,
+any attribute without the prefix \Attr{TARGET.} is looked up only
+in the job ClassAd.
+With New ClassAd evaluation, the use of the prefix \Attr{MY.} is eliminated,
+as an unscoped reference can only refer to the local ClassAd.
 
-New ClassAds have no special \texttt{CurrentTime} attribute. You can use the 
-\texttt{time()} function instead. In order to mimic old ClassAd semantics, all 
-ads have an explicit \texttt{CurrentTime} attribute, with a value of \texttt{time()}.
+The \Attr{MY.} and \Attr{TARGET.} scoping prefixes
+only apply when evaluating an expression within the context of two ClassAds.
+Two examples that exemplify this are matchmaking and machine policy evaluation.
+When evaluating an expression within the context of a single ClassAd,
+\Attr{MY.} and \Attr{TARGET.} are not defined.
+Using them within the context of a single ClassAd will result
+in a value of \Expr{Undefined}.
+Two examples that exemplify evaluating an expression 
+within the context of a single ClassAd are 
+during user job policy evaluation,
+and with the \Opt{-constraint} option to command-line tools.
 
-The above describes the normal evaluation behavior of new ClassAds.
-In current versions of Condor, new ClassAds will mimic the evaluation 
-behavior of old ClassAds. You shouldn't have to change any configuration 
-parameters or submit description files. You can switch new ClassAds to
-use their normal evaluation behavior by setting the configuration
-parameter \texttt{STRICT\_CLASSAD\_EVALUATION} to \texttt{True}.
-In a future version of Condor, we may make the normal new ClassAds
-evaluation behavior the default or only option. If we do, then you can
-set \texttt{STRICT\_CLASSAD\_EVALUATION} to \texttt{True} before an upgrade to see if your
-pool needs any adjustment to its expressions.
+New ClassAds have no \Attr{CurrentTime} attribute.
+If needed, use the \Procedure{time} function instead.
+In order to mimic Old ClassAd semantics in this Condor version 7.5.1 release,
+all ClassAds have an explicit \Attr{CurrentTime} attribute,
+with a value of \Procedure{time}.
+
+In this Condor version 7.5.1 release, 
+New ClassAds will mimic the evaluation behavior of Old ClassAds.
+No configuration variables or submit description file contents should
+need to be changed.
+To eliminate this behavior and use only the semantics of New ClassAds, 
+set the configuration variable
+\Macro{STRICT\_CLASSAD\_EVALUATION} to \Expr{True}.
+This permits testing expressions to see if any adjustment is required,
+before a future version of Condor potentially makes New ClassAds
+evaluation behavior the default or the only option. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Old ClassAd Syntax}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{ClassAd!expression syntax}
+\index{ClassAd!expression syntax of Old ClassAds}
 ClassAd expressions are formed by composing literals, attribute references and 
 other sub-expressions with operators and functions. 
 \subsubsection{Literals}

@@ -1277,13 +1277,14 @@ File System Configuration File Entries''.
 
 \label{param:StrictClassadEvaluation}
 \item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
-  A boolean value that controls how ClassAd expressions are evaluated. If
-  set to True, then normal new ClassAd evaluation semantics are used.
-  This means that attribute references without a \texttt{MY.} or
-  \texttt{TARGET.} prefix are only looked up in the local ad.
-  If set to False, old ClassAd evaluation semantics are used. The default
-  is False. See section~\ref{sec:classad-differences}  on
-  page~\pageref{sec:classad-differences} for details.
+  A boolean value that controls how ClassAd expressions are evaluated. 
+  If set to \Expr{True}, then New ClassAd evaluation semantics are used.
+  This means that attribute references without a \Attr{MY.} or
+  \Attr{TARGET.} prefix are only looked up in the local ClassAd.
+  If set to the default value of \Expr{False}, 
+  Old ClassAd evaluation semantics are used.
+  See section~\ref{sec:classad-newandold}  on
+  page~\pageref{sec:classad-newandold} for details.
 
 \end{description}
 
