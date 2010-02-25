@@ -441,7 +441,7 @@ usage ()
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
 		"\t-cod\t\t\tDisplay Computing On Demand (COD) jobs\n"
-//		"\t-collector\t\tSame as -world\n"
+		"\t-collector\t\tDisplay collector daemon attributes\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
 		"\t-java\t\t\tDisplay Java-capable hosts\n"
