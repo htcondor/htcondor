@@ -22,7 +22,53 @@ The details of each version are described below.
 \item Condor version 7.5.1 released on Month Date, 2010.
 
 \item All bug fixes and features which are in Condor version 7.4.2
-are in this 7.5.1 release.
+are in this 7.5.1 release. The following changes targeted for version
+7.4.3 are also included:
+
+\begin{itemize}
+
+% gittrack 1217
+\item Fixed a bug in which the \Condor{schedd} would sometimes negotiate 
+  for and try to run
+  more jobs than specified by \MacroNI{MAX\_RUNNING\_JOBS}.  Once the
+  jobs started running, it would then kill them off to get back below
+  the limit.  This was more likely to happen with slow preemption
+  caused by \MacroNI{MaxJobRetirementTime} or by a large timeout
+  imposed by \MacroNI{KILL}.  This problem has existed since before
+  Condor 6.5.  When this problem happened, the following message
+  appeared in the \Condor{schedd} log:
+
+\begin{verbatim}
+Preempting X jobs due to MAX_JOBS_RUNNING change
+\end{verbatim}
+
+% gittrack 1250
+\item Fixed a problem that caused \Condor{ssh\_to\_job} to fail to connect
+to a job running on a slot with multiple '@' signs in its name.
+
+% gittrac #1201
+\item Fixed a bug which caused the \Condor{master} to crash if
+\MacroNI{VIEW\_SERVER} was included in \MacroNI{DAEMON\_LIST} and
+\MacroNI{CONDOR\_VIEW\_HOST} was unset.
+
+% gittrac #1196
+\item Fixed a bug that caused configuration parameter
+\MacroNI{LOCAL\_CONFIG\_DIR} to be ignored if it was set in a local
+configuration file (as opposed to the top-level configuration file).
+
+% gittrac #1202
+\item Fixed a bug that could cause the \Condor{schedd} to behave
+incorrectly when reading an invalid job queue log on startup.
+
+% gittrac #1238
+\item Fixed a bug that caused Condor to miscount the number of CPUs and
+hyper-threads on some modern machines.
+
+% gittrac #1215
+\item Fixed a bug that could corrupt the job queue log
+if the \Condor{schedd}'s attempt to compact it fails.
+
+\end{itemize}
 
 \item The Condor release is now available as a proper RPM or Debian
 package.
