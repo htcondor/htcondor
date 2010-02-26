@@ -452,6 +452,23 @@ The changes are substantial enough that you want v5 to now become v6
 and you will run it as v6(Soar does that for you).
 </p>
 <li>
+whitelist = "comma separated list of jobs"
+<p>
+If, when doing a code update, one wants to run a few jobs they can
+be separated by commas. If the jobs are not in a dataset then they would
+be listed like this:<br>
+whitelist = job1,job2,job3,job4<br><br>
+If the jobs are in a dataset, it would be like this:<br>
+whitelist = dataset_XXXXXXX-job1,dataset_XXXXXXX-job2
+</p>
+<li>
+dataset = dataset_XXXXXXX
+<p>
+This will fire off one job for each job in the dataset.
+<b>(USING WHITELIST AND DATASET AT THE SAME TIME WILL
+BRING UNEXPECTED RESULTS. USE ONE OR THE OTHER)</B>
+</p>
+<li>
 matlabtarg = main.m,another.m
 <p>
 So we don't build software but the update works because we replace a binary
@@ -487,7 +504,10 @@ Control.pl
 <li>
 	-h/--help - See this
 <li>
-	-k/--kind=s - install, nightly, new else a label for web
+	-k/--kind=s - install, nightly, new, DATASET else a label for web
+	<p>DATASET: A file is located in the input location for the project called
+	DATASET. The dataset named in this file will be entered as if "--datasets=name"
+	had been entered and --kind will be set to "new".</p>
 <li>
 	-l/--limit=N - start this number of nodes in a Dag(acts like run)
 <li>
@@ -754,12 +774,42 @@ These two files make it possible to have links created from the file
 described above.
 </p>
 <h2>Release Notes</h2>
+<h3>Version 0.7.7</h3>
+<ul>
+<li>
+New systematic controls for storing, accessing and initializing 
+Completed Jobs and Running Jobs since last --kind=oneoff
+which resets to allow rerun of all jobs. In 7.6 and older
+we could loose track and run extra jobs already completed
+when running --kind=new in out automatic sweeps for new jobs
+on 15 minute intervals
+<li>
+Profiling understands new Dagman dagman.ou format where
+dates now have a 2 digit year at the beginning of each line
+which had profiling broken for a bit.
+</ul>
+
 <h3>Version 0.7.6</h3>
 <ul>
+<li>
+	Two new options add added to the automatic code updates.
+	Look in that section for use of <b>whitelist</b> and 
+	<b>dataset</b>.
+<li>
+	Projects running with datasets which have input data shared
+	across all of the jobs in one dataset, but different from
+	the contents of the same file for a different dataset can now
+	be run routinely for updates and have the automatics look
+	at only one dataset at a time. See "<b>--kind=DATASET</b> above.
+<li>
+	SOAR now uses a unique JOBID instead of the complicated
+	run name.
 <li> 
 	SOAR will now look for new code and will replace it and if it is matlab
 	re-compile a specified list of programs to make use of the new matlab files.
 	See "<b>Automatic Code Replacement</b> above.
+<li> 
+	We no longer will place Matlab source files into runtime directory(*.m);
 </ul>
 <h3>Version 0.7.5</h3>
 <ul>
@@ -791,18 +841,6 @@ described above.
 <li>
 	Allow a project specific timeout after which time the still remaining
 	jobs could be restarted with a --kind=new. Most have storage location.
-<li>
-	Remove unused analysis node. This node can be included in the per
-	job portion of the dag if needed. This removes a file descriptor 
-	for each job. Started with the splice work but halted waiting for
-	more then 100 dag splices.
-<li>
-	Use dag splicing to put the dag together thus allowing a simpler script to
-	make a jobs portion of the dag and remove the pre and post nodes used to tie it
-	together. Freeing up 2 more file descriptors per job. Started with the splice 
-	work but halted waiting for more then 100 dag splices.
-
-	see --splice changes to control and project jobs scripts.
 </ul>
 </body>
 </html>
