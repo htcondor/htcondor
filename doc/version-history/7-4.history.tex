@@ -23,7 +23,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.4.3 released on Month Date, 2010.
+\item Condor version 7.4.3 not yet released.
+%\item Condor version 7.4.3 released on Month Date, 2010.
 
 \end{itemize}
 
@@ -65,7 +66,41 @@ Preempting X jobs due to MAX_JOBS_RUNNING change
 
 % gittrack 1250
 \item Fixed a problem that caused \Condor{ssh\_to\_job} to fail to connect
-to a job running on a slot with multiple '@' signs in its name.
+to a job running on a slot with multiple '@' signs in its name.  This bug
+has existed since the introduction of \Condor{ssh\_to\_job} in 7.3.2.
+
+% gittrack 116
+\item In all previous versions of Condor, \Condor{status} refused to
+  accept \Opt{-long}, \Opt{-xml}, and \Opt{-format} when followed by
+  an argument such as \Opt{-master} that specified which type of
+  daemon to look at.  The order of the arguments had to be reversed or
+  it would produce a message such as the following:
+
+\begin{verbatim}
+Error:  arg 4 (-master) contradicts arg 1 (-format)
+\end{verbatim}
+
+% gittrac #1201
+\item Fixed a bug which caused the \Condor{master} to crash if
+\MacroNI{VIEW\_SERVER} was included in \MacroNI{DAEMON\_LIST} and
+\MacroNI{CONDOR\_VIEW\_HOST} was unset.
+
+% gittrac #1196
+\item Fixed a bug that caused configuration parameter
+\MacroNI{LOCAL\_CONFIG\_DIR} to be ignored if it was set in a local
+configuration file (as opposed to the top-level configuration file).
+
+% gittrac #1202
+\item Fixed a bug that could cause the \Condor{schedd} to behave
+incorrectly when reading an invalid job queue log on startup.
+
+% gittrac #1238
+\item Fixed a bug that caused Condor to miscount the number of CPUs and
+hyper-threads on some modern machines.
+
+% gittrac #1215
+\item Fixed a bug that could corrupt the job queue log
+if the \Condor{schedd}'s attempt to compact it fails.
 
 \end{itemize}
 
