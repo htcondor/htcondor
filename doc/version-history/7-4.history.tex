@@ -23,7 +23,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.4.2 released on Month Date, 2010.
+\item Condor version 7.4.2 not yet released.
+%\item Condor version 7.4.2 released on Month Date, 2010.
 
 \end{itemize}
 
@@ -47,6 +48,12 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrac #1238
+\item Fixed a bug which caused the \Condor{startd} to incorrectly
+  count the number of processors on some machines with
+  Hyper-threading enabled.  This bug was introduced in
+  Condor version 7.3.2, and exists in 7.4.0 and 7.4.1.
 
 % gittrack #1167
 \item Fixed a problem with GSI authentication in Condor that would cause
