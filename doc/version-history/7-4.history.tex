@@ -250,6 +250,12 @@ proxy, which was the previous behavior.
 % gittrac #1070
 \item Fixed a bug that could cause the nordugrid\_gahp to crash.
 
+% gittrac #1238
+\item Fixed a bug which caused the \Condor{startd} to incorrectly
+  count the number of procesors on some machies with ``hyper
+  threading'' enabled.  This bug was introduced in
+  Condor version 7.3.2, and exists in 7.4.0 and 7.4.1.
+
 \end{itemize}
 
 \noindent Known Bugs:
