@@ -94,10 +94,6 @@ configuration file (as opposed to the top-level configuration file).
 \item Fixed a bug that could cause the \Condor{schedd} to behave
 incorrectly when reading an invalid job queue log on startup.
 
-% gittrac #1238
-\item Fixed a bug that caused Condor to miscount the number of CPUs and
-hyper-threads on some modern machines.
-
 % gittrac #1215
 \item Fixed a bug that could corrupt the job queue log
 if the \Condor{schedd}'s attempt to compact it fails.
@@ -129,7 +125,8 @@ if the \Condor{schedd}'s attempt to compact it fails.
 
 \begin{itemize}
 
-\item Condor version 7.4.2 released on Month Date, 2010.
+\item Condor version 7.4.2 not yet released.
+%\item Condor version 7.4.2 released on Month Date, 2010.
 
 \end{itemize}
 
@@ -153,6 +150,12 @@ if the \Condor{schedd}'s attempt to compact it fails.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrac #1238
+\item Fixed a bug which caused the \Condor{startd} to incorrectly
+  count the number of processors on some machines with
+  Hyper-threading enabled.  This bug was introduced in
+  Condor version 7.3.2, and exists in 7.4.0 and 7.4.1.
 
 % gittrack #1167
 \item Fixed a problem with GSI authentication in Condor that would cause
