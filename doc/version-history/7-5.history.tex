@@ -78,7 +78,8 @@ have also been optimized in a number of cases to be less disk intensive.
 
 \begin{itemize}
 
-\item Condor version 7.5.1 released on Month Date, 2010.
+\item Condor version 7.5.1 not yet released.
+%\item Condor version 7.5.1 released on Month Date, 2010.
 
 \item All bug fixes and features which are in Condor version 7.4.2
 are in this 7.5.1 release.
@@ -86,16 +87,15 @@ are in this 7.5.1 release.
 \item The Condor release is now available as a proper RPM or Debian
 package.
 
-\item Condor now internally uses the version of (New) ClassAds provided
+\item Condor now internally uses the version of New ClassAds provided
 as a stand-alone library (\URL{http://www.cs.wisc.edu/condor/classad/}).
 Previously, Condor 
 used an older version of ClassAds that was heavily tied to the Condor 
-development libraries. This change should be mostly transparent in the 
+development libraries. This change should be transparent in the 
 current development series. In the next development series (7.7.x),
-Condor  will start to use features of ClassAds that were unavailable in the 
-older library. 
-Read section~\ref{sec:classad-differences} for details on the user-visible
-differences.
+Condor  will begin to use features of New ClassAds that were unavailable in 
+Old ClassAds. 
+Section~\ref{sec:classad-newandold} details the differences.
 
 \item HPUX 11.00 is no longer a supported platform.
 
@@ -139,10 +139,11 @@ that Condor creates when submitting a grid universe job
 destined for the CREAM grid system.
 
 % gittrac #1138
-\item The \Condor{q} command with option \Opt{-analyze} is now identical to
-the option \Opt{-better-analyze}.
-The \Opt{-better-analyze} option includes a superset of information,
-and also includes more specific information on a job's \SubmitCmd{requirements}.
+\item The \Condor{q} command with option \Opt{-analyze} is now performs
+the same analysis as previously occurred with the \Opt{-better-analyze} option.
+Therefore, the output of \Condor{q} with the \Opt{-analyze} option
+has different output than before,
+and the \Opt{-better-analyze} option no longer exists.
 
 % gittrack #1169
 \item Security sessions that are not used for longer than an hour are
@@ -173,6 +174,12 @@ is now much more efficient in its communication with the \Condor{schedd}.
 
 \begin{itemize}
 
+% gittrac #1242
+\item The new configuration variable \MacroNI{STRICT\_CLASSAD\_EVALUATION}
+controls whether new or old ClassAd expression evaluation semantics are
+used. In new ClassAd semantics, an unscoped attribute reference is only
+looked up in the local ad. The default is False (use old ClassAd semantics).
+
 % gittrac #221
 \item The configuration variable
 \MacroNI{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS} now applies to all proxy
@@ -187,14 +194,6 @@ instead of a full proxy.
   session cache before being removed to save memory.  The default is 3600.
   If the server and client have different configurations, the smaller
   one will be used.
-
-\item The new configuration variable \Macro{TARGET\_MACHINE\_ATTRS}
-specifies a list of machine ClassAd attributes for which \Expr{Target.} should
-be prepended to these attributes appearing in any job ClassAd expressions.
-
-\item The new configuration variable \Macro{TARGET\_JOB\_ATTRS}
-specifies a list of job ClassAd attributes for which \Expr{Target.} should
-be prepended to these attributes appearing in any machine ClassAd expressions.
 
 \end{itemize}
 

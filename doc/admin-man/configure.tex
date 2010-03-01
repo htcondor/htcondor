@@ -1275,23 +1275,16 @@ File System Configuration File Entries''.
   page~\pageref{sec:windows-scripts-as-executables} for a more complete
   description.
 
-\label{param:TargetJobAttrs}
-\item[\Macro{TARGET\_JOB\_ATTRS}]
-  A comma separated list of additional job ClassAd attributes for which
-  Condor will rewrite machine ClassAd expressions,
-  such that known job attributes will have a \Expr{Target.} prefix,
-  allowing proper evaluation when using new ClassAds. 
-  It will be useful for custom attributes in the job ClassAds that are 
-  used for matchmaking.
-
-\label{param:TargetMachineAttrs}
-\item[\Macro{TARGET\_MACHINE\_ATTRS}]
-  A comma separated list of additional machine ClassAd attributes for which
-  Condor will rewrite job ClassAd expressions,
-  such that known machine attributes will have a \Expr{Target.} prefix, 
-  allowing proper evaluation when using new ClassAds.
-  It will be useful for custom attributes in the machine ClassAds that are 
-  used for matchmaking.
+\label{param:StrictClassadEvaluation}
+\item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
+  A boolean value that controls how ClassAd expressions are evaluated. 
+  If set to \Expr{True}, then New ClassAd evaluation semantics are used.
+  This means that attribute references without a \Attr{MY.} or
+  \Attr{TARGET.} prefix are only looked up in the local ClassAd.
+  If set to the default value of \Expr{False}, 
+  Old ClassAd evaluation semantics are used.
+  See section~\ref{sec:classad-newandold}  on
+  page~\pageref{sec:classad-newandold} for details.
 
 \end{description}
 
