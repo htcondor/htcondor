@@ -18,6 +18,7 @@ strip_target($(NAME),sbin,EXECUTABLE_MODE)
 
 html:
 testbin:: all
+static::
 
 release::
 stripped::
