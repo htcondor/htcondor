@@ -136,26 +136,6 @@ IsNumber (double &r) const
 	}
 }
 
-bool Value::
-IsBooleanValueEquiv(bool &b) const
-{
-	switch (valueType) {
-		case BOOLEAN_VALUE:
-			b = booleanValue;
-			return true;
-
-		case INTEGER_VALUE:
-			b = ( integerValue ) ? true : false;
-			return true;
-
-		case REAL_VALUE:
-			b = ( realValue ) ? true : false;
-			return true;
-	}
-
-	return false;
-}
-
 
 void Value::
 CopyFrom( const Value &val )

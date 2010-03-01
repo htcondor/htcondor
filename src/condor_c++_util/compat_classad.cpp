@@ -178,7 +178,77 @@ void EvalResult::toString(bool force)
 	}
 }
 
-static bool strlist_functions_registered = false;
+bool ClassAd::m_initConfig = false;
+bool ClassAd::m_strictEvaluation = false;
+
+void ClassAd::
+Reconfig()
+{
+	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
+}
+
+static classad::AttributeReference *the_my_ref = NULL;
+static bool the_my_ref_in_use = false;
+void getTheMyRef( classad::ClassAd *ad )
+{
+	ASSERT( !the_my_ref_in_use );
+	the_my_ref_in_use = true;
+
+	if( !the_my_ref ) {
+		the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+	}
+
+	if ( !ClassAd::m_strictEvaluation ) {
+		ad->Insert( "my", the_my_ref );
+	}
+}
+
+void releaseTheMyRef( classad::ClassAd *ad )
+{
+	ASSERT( the_my_ref_in_use );
+
+	if ( !ClassAd::m_strictEvaluation ) {
+		ad->Remove( "my" );
+		ad->MarkAttributeClean( "my" );
+	}
+
+	the_my_ref_in_use = false;
+}
+
+static classad::MatchClassAd *the_match_ad = NULL;
+static bool the_match_ad_in_use = false;
+classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
+									  classad::ClassAd *target )
+{
+	ASSERT( !the_match_ad_in_use );
+	the_match_ad_in_use = true;
+
+	if( !the_match_ad ) {
+		the_match_ad = new classad::MatchClassAd( );
+	}
+	the_match_ad->ReplaceLeftAd( source );
+	the_match_ad->ReplaceRightAd( target );
+
+	if ( !ClassAd::m_strictEvaluation ) {
+		source->alternateScope = target;
+		target->alternateScope = source;
+	}
+
+	return the_match_ad;
+}
+
+void releaseTheMatchAd()
+{
+	ASSERT( the_match_ad_in_use );
+
+	classad::ClassAd *ad;
+	ad = the_match_ad->RemoveLeftAd();
+	ad->alternateScope = NULL;
+	ad = the_match_ad->RemoveRightAd();
+	ad->alternateScope = NULL;
+
+	the_match_ad_in_use = false;
+}
 
 static
 bool stringListSize_func( const char *name,
@@ -478,9 +548,6 @@ bool stringListRegexpMember_func( const char *name,
 static
 void registerStrlistFunctions()
 {
-	if ( strlist_functions_registered ) {
-		return;
-	}
 	std::string name;
 	name = "stringListSize";
 	classad::FunctionCall::RegisterFunction( name,
@@ -506,14 +573,14 @@ void registerStrlistFunctions()
 	name = "stringList_regexpMember";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListRegexpMember_func );
-
-	strlist_functions_registered = true;
 }
 
 ClassAd::ClassAd()
 {
-	if ( !strlist_functions_registered ) {
+	if ( !m_initConfig ) {
+		this->Reconfig();
 		registerStrlistFunctions();
+		m_initConfig = true;
 	}
 
 	m_privateAttrsAreInvisible = false;
@@ -522,7 +589,9 @@ ClassAd::ClassAd()
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	ResetName();
     ResetExpr();
@@ -532,13 +601,21 @@ ClassAd::ClassAd()
 
 ClassAd::ClassAd( const ClassAd &ad )
 {
+	if ( !m_initConfig ) {
+		this->Reconfig();
+		registerStrlistFunctions();
+		m_initConfig = true;
+	}
+
 	CopyFrom( ad );
 
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	m_privateAttrsAreInvisible = false;
 
@@ -550,13 +627,21 @@ ClassAd::ClassAd( const ClassAd &ad )
 
 ClassAd::ClassAd( const classad::ClassAd &ad )
 {
+	if ( !m_initConfig ) {
+		this->Reconfig();
+		registerStrlistFunctions();
+		m_initConfig = true;
+	}
+
 	CopyFrom( ad );
 
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	m_privateAttrsAreInvisible = false;
 
@@ -573,6 +658,12 @@ ClassAd::~ClassAd()
 ClassAd::
 ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 {
+	if ( !m_initConfig ) {
+		this->Reconfig();
+		registerStrlistFunctions();
+		m_initConfig = true;
+	}
+
 	m_privateAttrsAreInvisible = false;
 
 	nodeKind = CLASSAD_NODE;
@@ -636,7 +727,9 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
 		// trying to shoot themselves in the foot.
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	ResetName();
     ResetExpr();
@@ -716,6 +809,15 @@ Insert( const char *str )
 	}
 	delete newAd;
 	return TRUE;
+}
+
+int ClassAd::
+Insert(char const *expr,bool /*unused*/)
+{
+	dprintf(D_ALWAYS,"ERROR: Insert(expr,bool) called!\n");
+	dprintf_dump_stack();
+
+	return Insert( expr );
 }
 
 int ClassAd::
@@ -907,14 +1009,17 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	string strVal;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
-			return 1;
+			rc = 1;
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
-	classad::MatchClassAd mad( this, target );
+
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
@@ -926,8 +1031,7 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 			rc = 1;
 		}
 	}
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -940,22 +1044,25 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
     
 	string strVal;
     bool foundAttr = false;
+	int rc = 0;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 
             *value = (char *)malloc(strlen(strVal.c_str()) + 1);
             if(*value != NULL) {
                 strcpy( *value, strVal.c_str( ) );
-                return 1;
+                rc = 1;
             } else {
-                return 0;
+                rc = 0;
             }
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 
     if( this->Lookup(name) ) {
 
@@ -973,15 +1080,12 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
         *value = (char *)malloc(strlen(strVal.c_str()) + 1);
         if(*value != NULL) {
             strcpy( *value, strVal.c_str( ) );
-            mad.RemoveLeftAd( );
-            mad.RemoveRightAd( );
-            return 1;
+            rc = 1;
         }
     }
 
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
-	return 0;
+	releaseTheMatchAd();
+	return rc;
 }
 
 int ClassAd::
@@ -1003,14 +1107,16 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 	int tmp_val;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttrInt( name, tmp_val ) ) { 
 			value = tmp_val;
-			return 1;
+			rc = 1;
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrInt( name, tmp_val ) ) {
 			value = tmp_val;
@@ -1022,8 +1128,7 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 			rc = 1;
 		}
 	}
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -1036,20 +1141,22 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	int intVal;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
 				value = ( float )doubleVal;
-				return 1;
+				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
-				return 1;
+				rc = 1;
 			}
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
@@ -1073,8 +1180,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 		}
 	}
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -1088,24 +1194,24 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
+		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
 				value = boolVal ? 1 : 0;
-				return 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
+				rc = 1;
+			} else if( val.IsIntegerValue( intVal ) ) {
 				value = intVal ? 1 : 0;
-				return 1;
-			}
-			if( val.IsRealValue( doubleVal ) ) {
+				rc = 1;
+			} else if( val.IsRealValue( doubleVal ) ) {
 				value = doubleVal ? 1 : 0;
-				return 1;
+				rc = 1;
 			}
 		}
-		return 0;
+		releaseTheMyRef( this );
+		return rc;
 	}
 
-	classad::MatchClassAd mad( this, target );
+	classad::MatchClassAd *mad = getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
@@ -1138,8 +1244,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 		}
 	}
 
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -1153,7 +1258,9 @@ initFromString( char const *str,MyString *err_msg )
 
 		// Reinsert CurrentTime, emulating the special version in old
 		// ClassAds
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	char *exprbuf = new char[strlen(str)+1];
 	ASSERT( exprbuf );
@@ -1208,7 +1315,9 @@ initFromStream(Stream& s)
 
 		// Reinsert CurrentTime, emulating the special version in old
 		// ClassAds
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	return TRUE;
 }
@@ -1231,7 +1340,9 @@ initAttrListFromStream(Stream& s)
 
 		// Reinsert CurrentTime, emulating the special version in old
 		// ClassAds
-	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
 
 	return TRUE;
 }
@@ -1464,6 +1575,9 @@ void ClassAd::RemoveExplicitTargetRefs( )
 void ClassAd:: 
 AddTargetRefs( TargetAdType target_type, bool do_version_check )
 {
+	// Disable AddTargetRefs for now
+	return;
+
 	MyString ver_str;
 	if ( do_version_check && this->LookupString( ATTR_VERSION, ver_str ) ) {
 		CondorVersionInfo ver( ver_str.Value() );
@@ -1733,20 +1847,22 @@ NextDirtyExpr(const char *&name, classad::ExprTree *&expr)
 
 	name = NULL;
     expr = NULL;
-    
-    //get the next dirty attribute if we aren't past the end.
-    if( m_dirtyItr == dirtyEnd() )
-    {
-        return false;
-    }
-    
-    //figure out what exprtree it is related to
-	name = m_dirtyItr->c_str();
-    expr = classad::ClassAd::Lookup(*m_dirtyItr);
-    m_dirtyItr++;
 
-    return true;
+	// get the next dirty attribute if we aren't past the end.
+	// Removed attributes appear in the list, but we don't want
+	// to return them in the old ClassAd API, so skip them.
+	while ( m_dirtyItr != dirtyEnd() ) {
+		name = m_dirtyItr->c_str();
+		expr = classad::ClassAd::Lookup(*m_dirtyItr);
+		m_dirtyItr++;
+		if ( expr ) {
+			break;
+		} else {
+			name = NULL;
+		}
+	}
 
+    return expr != NULL;
 }
 
 void ClassAd::
@@ -2097,10 +2213,8 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 			classad::ExprTree *exp = NULL;
 			abs = false;
 			( ( classad::AttributeReference * )expr )->GetComponents(exp,newAttr,abs);
-			if (strcmp(newAttr.c_str(), "target") == 0){
-				classad::AttributeReference *noTarget = NULL;
-				noTarget = classad::AttributeReference::MakeAttributeReference(exp,"",abs);
-				return classad::AttributeReference::MakeAttributeReference(noTarget,attr);
+			if (strcasecmp(newAttr.c_str(), "target") == 0){
+				return classad::AttributeReference::MakeAttributeReference(NULL,attr);
 			}	 
 		} 
 		return tree->Copy();
@@ -2253,6 +2367,11 @@ static const char *machine_attrs_list[] = {
 	ATTR_JAVA_VERSION,
 	"JavaSpecificationVersion",
 	ATTR_JAVA_MFLOPS,
+	ATTR_MATCHED_CONCURRENCY_LIMITS,
+	ATTR_REMOTE_USER_PRIO,
+	ATTR_REMOTE_USER_RESOURCES_IN_USE,
+	ATTR_REMOTE_GROUP_RESOURCES_IN_USE,
+	ATTR_REMOTE_GROUP_QUOTA,
 	NULL		// list must end with NULL
 };
 
@@ -2452,6 +2571,13 @@ static const char *job_attrs_list[]  = {
 	ATTR_ON_EXIT_SIGNAL,
 	ATTR_RELEASE_REASON,
 	ATTR_GRID_JOB_ID,
+	ATTR_WANT_MATCH_DIAGNOSTICS,
+	ATTR_AUTO_CLUSTER_ID,
+	ATTR_SUBMITTER_USER_PRIO,
+	ATTR_SUBMITTOR_PRIO,
+	ATTR_SUBMITTER_USER_RESOURCES_IN_USE,
+	ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,
+	ATTR_SUBMITTER_GROUP_QUOTA,
 	NULL		// list must end with NULL
 };
 
@@ -2594,6 +2720,9 @@ static void InitTargetAttrLists()
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
 {
+	// Disable AddTargetRefs for now
+	return tree->Copy();
+
 	if ( !target_attrs_init ) {
 		InitTargetAttrLists();
 	}

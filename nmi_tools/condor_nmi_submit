@@ -1248,7 +1248,13 @@ sub writeCommonInfo
 		$tag = "origin\/" . $opt_src_tag;
 		print "****** split fetch tag now <$tag> ******\n";
     } elsif( defined $tag ) {
-		if(defined $opt_desc) {
+		if (defined($opt_desc) && defined($opt_nightly)) {
+			# --desc gets merged with the $desc so it shows up properly
+			# on our Condor NMI build and test display pages.
+        	($desc, @vers) = parseTag( $tag );
+			$desc = "$opt_desc - $desc";
+        	$vers_string = join( ',', @vers );
+		} elsif (defined $opt_desc) {
 			# --desc overrides --tag value starting the description
 			$desc = $opt_desc;
 		} else {

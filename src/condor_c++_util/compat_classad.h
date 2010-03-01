@@ -151,6 +151,13 @@ class ClassAd : public classad::ClassAd
 		 */
 	int Insert(const char *str);
 
+		/** This function should never be used.  Use Insert(char const *str)
+		 *  instead.  The second bool argument is deprecated but necessary to
+		 *  prevent implicit casting of false to NULL and therefore
+		 *  calling of the totally wrong Insert() method!
+		 */
+	int Insert(const char *str,bool unused);
+
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param expr A string of the form "Attribute = Value"
 		 */
@@ -464,6 +471,10 @@ class ClassAd : public classad::ClassAd
                 StringList &internal_refs,
                 StringList &external_refs);
 
+	static void Reconfig();
+	static bool m_initConfig;
+	static bool m_strictEvaluation;
+
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
@@ -484,6 +495,12 @@ class ClassAd : public classad::ClassAd
 						StringList &external_refs);
 };
 
+void getTheMyRef( classad::ClassAd *ad );
+void releaseTheMyRef( classad::ClassAd *ad );
+
+classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
+									  classad::ClassAd *target );
+void releaseTheMatchAd();
 
 
 classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,

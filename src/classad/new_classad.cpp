@@ -45,7 +45,7 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "1.0.5";
+    version_string = "1.0.6";
     return;
 }
 
@@ -55,6 +55,7 @@ ClassAd ()
 	nodeKind = CLASSAD_NODE;
 	EnableDirtyTracking();
 	chained_parent_ad = NULL;
+	alternateScope = NULL;
 }
 
 
@@ -89,6 +90,7 @@ CopyFrom( const ClassAd &ad )
 		Clear( );
         ExprTree::CopyFrom(ad);
 		chained_parent_ad = ad.chained_parent_ad;
+		alternateScope = ad.alternateScope;
 		
 		DisableDirtyTracking();
 		for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {

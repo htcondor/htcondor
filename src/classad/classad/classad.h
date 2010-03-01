@@ -643,6 +643,15 @@ e		*/
 		dirtyIterator dirtyEnd() { return dirtyAttrList.end(); }
         //@}
 
+		/* This data member is intended for transitioning Condor from
+		 * old to new ClassAds. It allows unscoped attribute references
+		 * in expressions that can't be found in the local scope to be
+		 * looked for in an alternate scope. In Condor, the alternate
+		 * scope is the Target ad in matchmaking.
+		 * Expect alternateScope to be removed from a future release.
+		 */
+		ClassAd *alternateScope;
+
   	private:
 		friend 	class AttributeReference;
 		friend 	class ExprTree;

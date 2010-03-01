@@ -9,28 +9,6 @@ same $x, 6
 eval x = (8 / 2)
 same $x, 4
 
-echo Testing implicit conversion to boolean
-eval x = true && 1
-same $x, true
-eval x = true && 0
-same $x, false
-eval x = false || 1
-same $x, true
-eval x = false || 0
-same $x, false
-eval x = (1 ? true : false)
-same $x, true
-eval x = (0 ? true : false)
-same $x, false
-eval x = 1 + true
-same $x, 2
-eval x = 1 + false
-same $x, 1
-eval x = true * 2
-same $x, 2
-eval x = false * 2
-same $x, 0
-
 echo Testing extreme numbers...
 same string(real("INF")), "real(\"INF\")"
 same string(real("-INF")), "real(\"-INF\")"
@@ -295,3 +273,65 @@ same eval("1+"), ERROR
 eval x = [ A = 1; B = 2; C = eval("A+B"); ]
 same $x.C, 3
 
+echo Testing boolean expressions
+echo Testing && operator
+same false, false && false
+same false, false && undefined
+same false, false && true
+same false, false && error
+
+same false, undefined && false
+same undefined, undefined && undefined
+same undefined, undefined && true
+same error, undefined && error
+
+same false, true && false
+same undefined, true && undefined
+same true, true && true
+same error, true && error
+
+same error, error && false
+same error, error && undefined
+same error, error && true
+same error, error && error
+
+
+echo Testing || operator
+same false, false || false
+same undefined, false || undefined
+same true, false || true
+same error, false || error
+
+same undefined, undefined || false
+same undefined, undefined || undefined
+same true, undefined || true
+same error, undefined || error
+
+same true, true || false
+same true, true || undefined
+same true, true || true
+same true, true || error
+
+same error, error || false
+same error, error || undefined
+same error, error || true
+same error, error || error
+
+
+echo Testing ! operator
+same true, !false
+same undefined, !undefined
+same false, !true
+same error, !error
+
+
+echo Testing ? operator
+same false, false ? true : false
+same true, false ? false : true
+same undefined, false ? true : undefined
+same true, false ? undefined : true
+
+same true, true ? true : false
+same false, true ? false : true
+same true, true ? true : undefined
+same undefined, true ? undefined : true

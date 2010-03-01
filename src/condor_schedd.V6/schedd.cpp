@@ -4831,7 +4831,7 @@ Scheduler::negotiate(int command, Stream* s)
 	// figure out the number of active shadows. we do this by
 	// adding the number of existing shadows + the number of shadows
 	// queued up to run in the future.
-	CurNumActiveShadows = numShadows + RunnableJobQueue.Length();
+	CurNumActiveShadows = numShadows + RunnableJobQueue.Length() + num_pending_startd_contacts + startdContactQueue.Length();
 
 	SwapSpaceExhausted = FALSE;
 	if( ShadowSizeEstimate ) {

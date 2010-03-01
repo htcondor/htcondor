@@ -248,7 +248,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	/* Allocate the array to hold 8 to start with; we'll realloc() it
 	 * bigger if we find more cpus
 	 */
-	array_size			= 8;
+	array_size			= 32;
 	array = (Processor *) malloc( array_size * sizeof(Processor) );
 
 	/* Did we get the array we need? */
@@ -264,9 +264,13 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 			return -1;
 		}
 		fseek( fp, _SysapiProcCpuinfo.offset, SEEK_SET );
+		dprintf( D_FULLDEBUG,
+				 "Reading from %s, offset %ld\n",
+				 _SysapiProcCpuinfo.file, _SysapiProcCpuinfo.offset );
 	}
 	else {
 		fp = safe_fopen_wrapper( "/proc/cpuinfo", "r", 0644 );
+		dprintf( D_FULLDEBUG, "Reading from /proc/cpuinfo\n" );
 	}
 	if( !fp ) {
 		free( array );
@@ -299,8 +303,9 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 		if( strlen( buf ) < 2 ) {
 			if( _SysapiProcCpuinfo.debug && cur_processor ) {
 				dprintf( D_FULLDEBUG,
-						 "Processor %d:  "
-						 "Proc#:%d PhysID:%d CoreID:%d Sibs:%d Cores:%d\n",
+						 "Processor #%-3d:  "
+						 "Proc#:%-3d PhysID:%-3d CoreID:%-3d "
+						 "Sibs:%d Cores:%-3d\n",
 						 cur_processor_num,
 						 cur_processor->processor,
 						 cur_processor->physical_id,
@@ -334,11 +339,12 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 
 			/* If the array is no longer big enough, grow it */
 			if ( cur_processor_num >= array_size ) {
-				int		new_size = array_size * 2;
+				int			 new_size = array_size * 2;
+				Processor	*new_array;
+
 				dprintf( D_FULLDEBUG, "Growing processor array to %d\n",
 						 new_size );
-				{
-				Processor	*new_array = (Processor *)
+				new_array = (Processor *)
 					realloc( array, new_size * sizeof(Processor) );
 				if ( ! new_array ) {
 					dprintf( D_ALWAYS, "Error growing processor array to %d\n",
@@ -348,7 +354,6 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 				}
 				array = new_array;
 				array_size = new_size;
-				}
 			}
 
 			/* Now, point at the new array element */
@@ -452,12 +457,12 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	
 /* For intel-ish CPUs, count the # of CPUs using the physical/core IDs */
 static int
-count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 {
 	int			pnum;					/* Current processor # */
 
 	dprintf( D_FULLDEBUG,
-			 "Analyzing %d processors with IDs\n",
+			 "Analyzing %d processors using IDs...\n",
 			 cpuinfo->num_processors );
 		
 	/* Loop through the processor records, find matching IDs */
@@ -467,6 +472,9 @@ count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 
 		/* Current processor record */
 		Processor		*proc = &cpuinfo->processors[pnum];
+		dprintf( D_FULLDEBUG,
+				 "Looking at processor #%d (PID:%d, CID:%d):\n",
+				 pnum, proc->physical_id, proc->core_id );
 
 		/* Temp processor pointer */
 		Processor		*tproc;
@@ -486,12 +494,12 @@ count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 
 		/* Look ahead through the list for matches */
 		if (  ( proc->physical_id >= 0 ) || ( proc->core_id >= 0 )  ) {
-			int		tnum;	/* Temp PROC # */
+			int		tpnum;	/* Temp PROC # */
 
 			Processor	*prev_match = proc;		/* Previous match is myself */
 
-			for( tnum = pnum+1;  tnum < cpuinfo->num_processors; tnum++ ) {
-				tproc = &cpuinfo->processors[tnum];
+			for( tpnum = pnum+1;  tpnum < cpuinfo->num_processors; tpnum++ ) {
+				tproc = &cpuinfo->processors[tpnum];
 
 				/* If it doesn't match, skip it */
 				if (  ( ( proc->physical_id >= 0 ) &&
@@ -499,9 +507,9 @@ count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 					  ( ( proc->core_id >= 0 ) &&
 						( proc->core_id != tproc->core_id ) )  ) {
 					dprintf( D_FULLDEBUG,
-							 "Comparing P%d and P%d: "
-							 "%d!=%d or  %d!=%d (! match)\n",
-							 pnum, tnum,
+							 "Comparing P#%-3d and P#%-3d: "
+							 "pid:%d!=%d or  cid:%d!=%d (match=No)\n",
+							 pnum, tpnum,
 							 proc->physical_id, tproc->physical_id,
 							 proc->core_id, tproc->core_id );
 					continue;
@@ -518,13 +526,14 @@ count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 				}
 
 				dprintf( D_FULLDEBUG,
-						 "Comparing P%d and P%d: "
-						 "%d==%d and %d==%d (match=%d)\n",
-						 pnum, tnum,
+						 "Comparing P#%-3d and P#%-3d: "
+						 "pid:%d==%d and cid:%d==%d (match=%d)\n",
+						 pnum, tpnum,
 						 proc->physical_id, tproc->physical_id,
 						 proc->core_id, tproc->core_id, match_count );
 			}
 		}
+		dprintf( D_FULLDEBUG, "ncpus = %d\n", cpuinfo->num_cpus );
 
 		/* Now, walk through the list of matches, store match count */
 		for( tproc = proc; tproc != NULL;  tproc = tproc->next_match ) {
@@ -539,13 +548,13 @@ count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 /* For intel-ish CPUS, count the # of CPUs using siblings */
 static int
-count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 {
 	int		pnum;				/* Current processor # */
 	int		np_siblings = 0;	/* Non-primary siblings */
 
 	dprintf( D_FULLDEBUG,
-			 "Analyzing %d processors with siblings\n",
+			 "Analyzing %d processors using siblings\n",
 			 cpuinfo->num_processors );
 		
 	/* Loop through the processor records, count sibling processors */
@@ -581,8 +590,9 @@ count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 /* For intel-ish CPUS, let's look at the number of processor records */
 static int
-count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 {
+	const	char	*ana_type = "";
 
 	/* Did we find a "cpus detected" record?  If so, run with it. */
 	if ( cpuinfo->cpus_detected > 0 ) {
@@ -597,47 +607,45 @@ count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 	/* Otherwise, let's go through and try to analyze what we have.
 	 */
-	dprintf( D_FULLDEBUG, "Found have_phsy %d, have_core %d\n",
-			 cpuinfo->have_physical_id, cpuinfo->have_core_id );
+	dprintf( D_FULLDEBUG, "Found: Physical-IDs:%s; Core-IDs:%s\n",
+			 cpuinfo->have_physical_id ? "True":"False",
+			 cpuinfo->have_core_id ? "True":"False" );
 
 	/* If we have physical ID or core ID, use that */
-	{
-		const	char	*ana_type = "";
-		if (  ( cpuinfo->flag_ht ) &&
-			  ( cpuinfo->num_cpus <= 0 ) &&
-			  ( cpuinfo->have_physical_id || cpuinfo->have_core_id )  ) {
-			count_cpus_id( cpuinfo, count_hthreads );
-			ana_type = "IDs";
-		}
-
-		/* Still no answer?  Try using the # of siblings */
-		if (  ( cpuinfo->num_cpus <= 0 ) &&
-			  ( cpuinfo->flag_ht ) &&
-			  ( cpuinfo->have_siblings )  ) {
-			count_cpus_siblings( cpuinfo, count_hthreads );
-			ana_type = "siblings";
-		}
-
-		/* No HT flag?  Don't bother counting 'em */
-		if (  cpuinfo->num_cpus <= 0 ) {
-			cpuinfo->num_cpus = cpuinfo->num_processors;
-			ana_type = "processor count";
-		}
-
-		/* Final sanity check -- make sure we return at least 1 CPU */
-		if( cpuinfo->num_cpus <= 0 ) {
-			dprintf( D_ALWAYS, "Unable to determine CPU count -- using 1\n" );
-			ana_type = "none";
-			cpuinfo->num_cpus = 1;
-		}
-
-		dprintf( D_FULLDEBUG, "Using %s: %d processors, %d CPUs, %d HTs\n",
-				 ana_type,
-				 cpuinfo->num_processors,
-				 cpuinfo->num_cpus,
-				 cpuinfo->num_hthreads );
-
+	if (  ( cpuinfo->flag_ht ) &&
+		  ( cpuinfo->num_cpus <= 0 ) &&
+		  ( cpuinfo->have_physical_id || cpuinfo->have_core_id )  ) {
+		linux_count_cpus_id( cpuinfo, count_hthreads );
+		ana_type = "IDs";
 	}
+
+	/* Still no answer?  Try using the # of siblings */
+	if (  ( cpuinfo->num_cpus <= 0 ) &&
+		  ( cpuinfo->flag_ht ) &&
+		  ( cpuinfo->have_siblings )  ) {
+		linux_count_cpus_siblings( cpuinfo, count_hthreads );
+		ana_type = "siblings";
+	}
+
+	/* No HT flag?  Don't bother counting 'em */
+	if ( cpuinfo->num_cpus <= 0 ) {
+		cpuinfo->num_cpus = cpuinfo->num_processors;
+		ana_type = "processor count";
+	}
+
+	/* Final sanity check -- make sure we return at least 1 CPU */
+	if( cpuinfo->num_cpus <= 0 ) {
+		dprintf( D_ALWAYS, "Unable to determine CPU count -- using 1\n" );
+		ana_type = "none";
+		cpuinfo->num_cpus = 1;
+	}
+
+	dprintf( D_FULLDEBUG, "Using %s: %d processors, %d CPUs, %d HTs\n",
+			 ana_type,
+			 cpuinfo->num_processors,
+			 cpuinfo->num_cpus,
+			 cpuinfo->num_hthreads );
+
 	return cpuinfo->num_cpus;
 }
 
@@ -656,7 +664,7 @@ ncpus_linux(int *num_cpus,int *num_hyperthread_cpus)
 	}
 	/* Otherwise, count the CPUs */
 	else {
-		count_cpus( &cpuinfo, _sysapi_count_hyperthread_cpus );
+		linux_count_cpus( &cpuinfo, _sysapi_count_hyperthread_cpus );
 	}
 
 	/* Free up the processors array */
@@ -669,8 +677,12 @@ ncpus_linux(int *num_cpus,int *num_hyperthread_cpus)
 	_SysapiProcCpuinfo.found_hthreads = cpuinfo.num_hthreads;
 	_SysapiProcCpuinfo.found_ncpus = cpuinfo.num_cpus;
 
-	if( num_cpus ) *num_cpus = cpuinfo.num_cpus;
-	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpuinfo.num_cpus + cpuinfo.num_hthreads;
+	if( num_cpus ) {
+		*num_cpus = cpuinfo.num_cpus;
+	}
+	if( num_hyperthread_cpus ) {
+		*num_hyperthread_cpus = cpuinfo.num_processors;
+	}
 }
 
 #endif		/* defined(LINUX) */
