@@ -27,14 +27,7 @@ my $testname = basename( $0, ".run" );
 # This sets the environment variable CONDOR_CONFIG.
 my $condor_info = CondorTest::StartPersonal( $testname, "$testname.boot", "local");
 
-my @condor_info = split /\+/, $condor_info;
-my $condor_config = shift @condor_info;
-my $collector_port = shift @condor_info;
-CondorTest::debug("Started personal condor with config $condor_config and collector port $collector_port\n",1);
-
 my $test_status = CondorTest::verbose_system("./$testname.pl");
-
-CondorTest::KillPersonal($condor_config);
 
 if( $test_status != 0 )
 {

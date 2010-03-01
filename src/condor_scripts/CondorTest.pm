@@ -87,6 +87,9 @@ my $errexempts = "ErrorExemptions";
 my %exemptions;
 my $failed_coreERROR = 0;
 
+my %personal_condors = ();
+my $CondorTestPid = $$;
+
 BEGIN
 {
     # disable command buffering so output is flushed immediately
@@ -101,6 +104,21 @@ BEGIN
 	$lastconfig = "";
 
     Condor::DebugOn();
+}
+
+END
+{
+    # When a forked child exits, do not do CondorTest cleanup.
+    # Only do the cleanup from the main process.
+    return if $CondorTestPid != $$;
+
+    KillAllPersonalCondors();
+    if($failed_coreERROR != 0) {
+
+	print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
+	print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
+	exit(1);
+    }
 }
 
 sub Reset
@@ -1553,13 +1571,55 @@ sub debug
 	Condor::debug($newstring,$level);
 }
 
-##############################################################################
-#
-# Lets stash the test name which will be consistent even
-# with multiple personal condors being used by the test
-#
-##############################################################################
+# PersonalCondorInstance is used to keep track of each personal
+# condor that is launched.
+{ package PersonalCondorInstance;
+  sub new
+  {
+      my $class = shift;
+      my $self = {
+          name => shift,
+          condor_config => shift,
+          collector_port => shift,
+          is_running => shift
+      };
+      bless $self, $class;
+      return $self;
+  }
+}
 
+sub ListAllPersonalCondors
+{
+    print "Personal Condors:\n";
+    for my $name ( keys %personal_condors ) {
+        my $condor = $personal_condors{$name};
+        print "$name: {\n"
+            . "  is_running=$condor->{is_running}\n"
+            . "  condor_config=$condor->{condor_config}\n"
+            . "}\n";
+    }
+}
+
+sub KillAllPersonalCondors
+{
+    for my $name ( keys %personal_condors ) {
+        my $condor = $personal_condors{$name};
+        if ( $condor->{is_running} == 1 ) {
+            KillPersonal($condor->{condor_config});
+        }
+    }
+}
+
+sub GetPersonalCondorWithConfig
+{
+    my $condor_config  = shift;
+    for my $name ( keys %personal_condors ) {
+        my $condor = $personal_condors{$name};
+        if ( $condor->{condor_config} eq $condor_config ) {
+            return $condor;
+        }
+    }
+}
 
 sub StartPersonal
 {
@@ -1570,8 +1630,15 @@ sub StartPersonal
 	$handle = $testname;
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
-    my $configloc = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
-    return($configloc);
+    my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
+
+    my @condor_info = split /\+/, $condor_info;
+    my $condor_config = shift @condor_info;
+    my $collector_port = shift @condor_info;
+
+    $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_port, 1 );
+
+    return($condor_info);
 }
 
 sub KillPersonal
@@ -1588,6 +1655,11 @@ sub KillPersonal
 	debug("Doing core ERROR check in  KillPersonal\n",2);
 	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	CondorPersonal::KillDaemonPids($personal_config);
+
+	my $condor = GetPersonalCondorWithConfig( $personal_config );
+	if ( $condor ) {
+	    $condor->{is_running} = 0;
+	}
 }
 
 ##############################################################################
