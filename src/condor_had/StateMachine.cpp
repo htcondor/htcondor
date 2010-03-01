@@ -215,12 +215,10 @@ HADStateMachine::softReconfigure(void)
 	char		*buffer = NULL;
 	const char	*tmp;
 
-    // 'my_username' allocates dynamic string
-    buffer = my_username();
-	tmp = buffer ? buffer : "UNKNOWN";
-    m_name.sprintf( "%s@%s -p %d",
-					tmp, my_full_hostname( ),
-					daemonCore->InfoCommandPort( ) );
+        // 'my_username' allocates dynamic string
+        buffer = my_username();
+        tmp = buffer ? buffer : "UNKNOWN";
+        m_name.sprintf( "%s@%s", tmp, my_full_hostname( ) );
 	if ( buffer ) {
 		free( buffer );
 	}

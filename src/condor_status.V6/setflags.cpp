@@ -75,6 +75,16 @@ setPPstyle (ppOption pps, int i, char *argv)
 	if (setBy != 0 && i == 0)
 		return;
 
+	// If -long or -xml or -format are specified, do not reset to
+	// "normal" style when followed by a flag such as -startd.
+	if( ppStyle == PP_XML || ppStyle == PP_VERBOSE || ppStyle == PP_CUSTOM )
+	{
+		if( pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM ) {
+				// ignore this style setting and keep our existing setting
+			return;
+		}
+	}
+
     if ( (PP_XML == pps) || PP_VERBOSE == pps || (ppStyle <= pps || setBy == 0) ) {
         ppStyle = pps;
         setBy = i;
