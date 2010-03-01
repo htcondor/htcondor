@@ -74,5 +74,6 @@ clean::
 
 html:
 testbin:: all
+static::
 
 gen_soapfiles(kbdd,condorKbdd)
