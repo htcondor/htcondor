@@ -471,6 +471,10 @@ class ClassAd : public classad::ClassAd
                 StringList &internal_refs,
                 StringList &external_refs);
 
+	static void Reconfig();
+	static bool m_initConfig;
+	static bool m_strictEvaluation;
+
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
@@ -491,6 +495,12 @@ class ClassAd : public classad::ClassAd
 						StringList &external_refs);
 };
 
+void getTheMyRef( classad::ClassAd *ad );
+void releaseTheMyRef( classad::ClassAd *ad );
+
+classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
+									  classad::ClassAd *target );
+void releaseTheMatchAd();
 
 
 classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,

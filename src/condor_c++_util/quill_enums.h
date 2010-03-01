@@ -51,20 +51,6 @@ enum QuillErrCode {	    QUILL_FAILURE,
 						QUILL_SUCCESS};
 
 
-enum ProbeResultType {  PROBE_ERROR, 
-						NO_CHANGE, 
-						INIT_QUILL, 
-						ADDITION, 
-						COMPRESSED};
-
-enum FileOpErrCode {    FILE_OPEN_ERROR,
-						FILE_READ_ERROR,
-						FILE_WRITE_ERROR,
-						FILE_READ_EOF,
-                        FILE_READ_SUCCESS,
-                        FILE_OP_SUCCESS};
-
-
 typedef enum
 	{
 //		T_ORACLE, /* Once had code, never compiled */

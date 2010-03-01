@@ -35,8 +35,8 @@
 #include <time.h>
 
 #include "jobqueuedbmanager.h"
-#include "prober.h"
-#include "classadlogparser.h"
+#include "ClassAdLogProber.h"
+#include "ClassAdLogParser.h"
 #include "jobqueuedatabase.h"
 #include "pgsqldatabase.h"
 #include "jobqueuecollection.h"
@@ -157,7 +157,7 @@ JobQueueDBManager::config(bool reconfig)
 		// this function is also called when condor_reconfig is issued
 		// and so we dont want to recreate all essential objects
 	if(!reconfig) {
-		prober = new Prober();
+		prober = new ClassAdLogProber();
 		caLogParser = new ClassAdLogParser();
 
 		switch (dt) {				
@@ -373,6 +373,7 @@ JobQueueDBManager::buildJobQueue(JobQueueCollection *jobQueue)
 	FileOpErrCode st;
 
 	st = caLogParser->readLogEntry(op_type);
+	assert(st != FILE_FATAL_ERROR);
 	if(st == FILE_OPEN_ERROR) {
 		return QUILL_FAILURE;
 	}
@@ -383,6 +384,7 @@ JobQueueDBManager::buildJobQueue(JobQueueCollection *jobQueue)
 			return QUILL_FAILURE;
 		}
 		st = caLogParser->readLogEntry(op_type);
+		assert(st != FILE_FATAL_ERROR);
 	}
 
 	return QUILL_SUCCESS;
@@ -481,6 +483,7 @@ JobQueueDBManager::readAndWriteLogEntries()
 		*/
 
 	st = caLogParser->readLogEntry(op_type);
+	assert(st != FILE_FATAL_ERROR);
 
 		// Process ClassAd Log Entry
 	while (st == FILE_READ_SUCCESS) {
@@ -488,6 +491,7 @@ JobQueueDBManager::readAndWriteLogEntries()
 			return QUILL_FAILURE; 
 		}
 		st = caLogParser->readLogEntry(op_type);
+		assert(st != FILE_FATAL_ERROR);
 	}
 
 		// turn on sequential scan again
@@ -753,6 +757,7 @@ JobQueueDBManager::processLogEntry(int op_type)
 	char *key, *mytype, *targettype, *name, *value;
 	key = mytype = targettype = name = value = NULL;
 	QuillErrCode	st = QUILL_SUCCESS;
+	ParserErrCode	pst = PARSER_SUCCESS;
 
 		// REMEMBER:
 		//	each get*ClassAdBody() funtion allocates the memory of 
@@ -763,29 +768,33 @@ JobQueueDBManager::processLogEntry(int op_type)
 	case CondorLogOp_LogHistoricalSequenceNumber: 
 		break;
 	case CondorLogOp_NewClassAd:
-		st = caLogParser->getNewClassAdBody(key, mytype, targettype);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getNewClassAdBody(key, mytype, targettype);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}
 		st = processNewClassAd(key, mytype, targettype);
 		break;
 	case CondorLogOp_DestroyClassAd:
-		st = caLogParser->getDestroyClassAdBody(key);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getDestroyClassAdBody(key);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}		
 		st = processDestroyClassAd(key);
 		break;
 	case CondorLogOp_SetAttribute:
-		st = caLogParser->getSetAttributeBody(key, name, value);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getSetAttributeBody(key, name, value);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}
 		st = processSetAttribute(key, name, value);
 		break;
 	case CondorLogOp_DeleteAttribute:
-		st = caLogParser->getDeleteAttributeBody(key, name);
-		if (st == QUILL_FAILURE) {
+		pst = caLogParser->getDeleteAttributeBody(key, name);
+		if (pst == PARSER_FAILURE) {
+			st = QUILL_FAILURE;
 			break;
 		}
 		st = processDeleteAttribute(key, name);

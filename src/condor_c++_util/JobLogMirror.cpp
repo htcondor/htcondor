@@ -21,7 +21,7 @@
 #include "JobLogMirror.h"
 #include "condor_config.h"
 
-JobLogMirror::JobLogMirror(JobLogConsumer *consumer):
+JobLogMirror::JobLogMirror(ClassAdLogConsumer *consumer):
 	job_log_reader(consumer)
 {
 	log_reader_polling_timer = -1;
@@ -47,7 +47,7 @@ JobLogMirror::config() {
 	else {
 		std::string job_log_fname(spool);
 		job_log_fname += "/job_queue.log";
-		job_log_reader.SetJobLogFileName(job_log_fname.c_str());
+		job_log_reader.SetClassAdLogFileName(job_log_fname.c_str());
 		free(spool);
 	}	
 
@@ -76,5 +76,5 @@ JobLogMirror::config() {
 void
 JobLogMirror::TimerHandler_JobLogPolling() {
 	dprintf(D_FULLDEBUG, "TimerHandler_JobLogPolling() called\n");
-	job_log_reader.Poll();
+	assert(job_log_reader.Poll() != POLL_ERROR);
 }

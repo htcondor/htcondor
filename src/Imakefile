@@ -292,7 +292,6 @@ condor_object_target(transferd)
 condor_object_target(starter.std)
 
 #ifdef HAVE_EXT_POSTGRESQL
-condor_object_target(quill)
 condor_object_target(tt)
 condor_object_target(dbmsd)
 #endif

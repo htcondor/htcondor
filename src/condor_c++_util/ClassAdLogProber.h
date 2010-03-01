@@ -17,24 +17,35 @@
  *
  ***************************************************************/
 
-#ifndef _PROBER_H_
-#define _PROBER_H_
+#ifndef _CLASSADLOGPROBER_H_
+#define _CLASSADLOGPROBER_H_
 
+#ifdef _NO_CONDOR_
+#include <time.h> // for time_t
+#include <unistd.h> // for size_t
+#else
 #include "condor_common.h"
-#include "quill_enums.h"
+#endif
 
-//! Prober
+enum ProbeResultType {  PROBE_ERROR, 
+						PROBE_FATAL_ERROR,
+						NO_CHANGE, 
+						INIT_QUILL, 
+						ADDITION, 
+						COMPRESSED};
+
+//! ClassAdLogProber
 /*! this polls and probes Job Qeueue Log (job_queue.log) file.
  *  So, it returns the result of polling: INIT_DB, ADDITION, 
  *  COMPRESSION, and so on.
  */
-class Prober
+class ClassAdLogProber
 {
 public:
 	//! constructor	
-	Prober();
+	ClassAdLogProber();
 	//! destructor	
-	~Prober();
+	~ClassAdLogProber();
 	
 	//! initialization
 	void			Init();
@@ -83,4 +94,4 @@ private:
 
 };
 
-#endif /* _PROBER_H_ */
+#endif /* _CLASSADLOGPROBER_H_ */

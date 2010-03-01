@@ -17,12 +17,20 @@
  *
  ***************************************************************/
 
-
+#ifdef _NO_CONDOR_
+#include <stdlib.h> // for free, atoi, malloc, realloc
+#include <string.h> // for strcpy, strdup
+#include <ctype.h> // for isspace
+#include <assert.h> // for assert
+#include <errno.h> // for errno
+#include <syslog.h> // for syslog, LOG_ERR
+#else
 #include "condor_common.h"
 #include "condor_io.h"
+#endif
 
-#include "classadlogentry.h"
-#include "classadlogparser.h"
+#include "ClassAdLogEntry.h"
+#include "ClassAdLogParser.h"
 
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in
@@ -108,10 +116,13 @@ ClassAdLogParser::setNextOffset(long offset)
 FileOpErrCode 
 ClassAdLogParser::openFile() {
     // open a job_queue.log file
+#ifdef _NO_CONDOR_
+    log_fp = fopen(job_queue_name, "r");
+#else
     log_fp = safe_fopen_wrapper(job_queue_name, "r");
+#endif
 
     if (log_fp == NULL) {
-        dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
         return FILE_OPEN_ERROR;
     }
 	return FILE_OP_SUCCESS;
@@ -208,31 +219,50 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			// check if this bogus record is in the midst of a transaction
 			// (try to find a CloseTransaction log record)
 		
-		MyString	line;
+		char	*line;
 
 		int		op;
 
 		if( !log_fp ) {
-			EXCEPT("Failed fdopen() when recovering corrupt log file");
+#ifdef _NO_CONDOR_
+			syslog(LOG_ERR, "Failed fdopen() when recovering corrupt log file");
+#else
+			dprintf(D_ALWAYS, "Failed fdopen() when recovering corrupt log file");
+#endif
+			return FILE_FATAL_ERROR;
 		}
 
-		while( line.readLine( log_fp ) ) {
-			if( sscanf( line.Value(), "%d ", &op ) != 1 ) {
+		while( -1 != readline( log_fp, line ) ) {
+			int rv = sscanf( line, "%d ", &op );
+			free(line);
+			if( rv != 1 ) {
 					// no op field in line; more bad log records...
 				continue;
 			}
 			if( op == CondorLogOp_EndTransaction ) {
 					// aargh!  bad record in transaction.  abort!
-				EXCEPT("Bad record with op=%d in corrupt logfile",
-					   op_type);
+#ifdef _NO_CONDOR_
+				syslog(LOG_ERR, "Bad record with op=%d in corrupt logfile", op_type);
+#else
+				dprintf(D_ALWAYS, "Bad record with op=%d in corrupt logfile", op_type);
+#endif
+				return FILE_FATAL_ERROR;
 			}
 		}
 		
 		if( !feof( log_fp ) ) {
 			fclose(log_fp);
             log_fp = NULL;
-			EXCEPT("Failed recovering from corrupt file, errno=%d",
-				   errno );
+#ifdef _NO_CONDOR_
+			syslog(LOG_ERR,
+				   "Failed recovering from corrupt file, errno=%d (%m)",
+				   errno);
+#else
+			dprintf(D_ALWAYS,
+					"Failed recovering from corrupt file, errno=%d",
+					errno);
+#endif
+			return FILE_FATAL_ERROR;
 		}
 
 			// there wasn't an error in reading the file, and the bad log 
@@ -261,83 +291,83 @@ ClassAdLogParser::readLogEntry(int &op_type)
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getNewClassAdBody(char*& key, 
 									char*& mytype, 
 									char*& targettype)
 {
 	if (curCALogEntry.op_type != CondorLogOp_NewClassAd) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 	key = strdup(curCALogEntry.key);
 	mytype = strdup(curCALogEntry.mytype);
 	targettype = strdup(curCALogEntry.targettype);
 	
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getDestroyClassAdBody(char*& key)
 {
 	if (curCALogEntry.op_type != CondorLogOp_DestroyClassAd) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getSetAttributeBody(char*& key, char*& name, char*& value)
 {
 	if (curCALogEntry.op_type != CondorLogOp_SetAttribute) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 	name = strdup(curCALogEntry.name);
 	value = strdup(curCALogEntry.value);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getDeleteAttributeBody(char*& key, char*& name)
 {
 	if (curCALogEntry.op_type != CondorLogOp_DeleteAttribute) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 	name = strdup(curCALogEntry.name);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 /*!
 	\warning each pointer must be freed by a calling funtion
 */
-QuillErrCode
+ParserErrCode
 ClassAdLogParser::getLogHistoricalSNBody(char*& seqnum, char*& timestamp)
 {
 	if (curCALogEntry.op_type != CondorLogOp_LogHistoricalSequenceNumber) {
-		return QUILL_FAILURE;
+		return PARSER_FAILURE;
 	}
 
 	seqnum = strdup(curCALogEntry.key);
 	timestamp = strdup(curCALogEntry.value);
 
-	return QUILL_SUCCESS;
+	return PARSER_SUCCESS;
 }
 
 int
@@ -520,9 +550,7 @@ ClassAdLogParser::readword(FILE *fp, char * &str)
 	for (i = 1; !isspace(buf[i-1]) && buf[i-1]!='\0' && buf[i-1]!=EOF; i++) {
 		if (i == bufsize) {
 			buf = (char *)realloc(buf, bufsize*2);
-			if(!buf) {
-				EXCEPT("Call to realloc failed\n");
-			}
+			assert(buf);
 			bufsize *= 2;
 		} 
 		buf[i] = fgetc( fp );
@@ -569,9 +597,7 @@ ClassAdLogParser::readline(FILE *fp, char * &str)
 	for (i = 1; buf[i-1]!='\n' && buf[i-1] != '\0' && buf[i-1] != EOF; i++) {
 		if (i == bufsize) {
 			buf = (char *)realloc(buf, bufsize*2);
-			if(!buf) {
-				EXCEPT("Call to realloc failed\n");
-			}
+			assert(buf);
 			bufsize *= 2;
 		} 
 		buf[i] = fgetc( fp );

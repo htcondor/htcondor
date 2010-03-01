@@ -429,7 +429,19 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		return EVAL_OK;
 	}
 		// lookup with scope; this may side-affect state		
-	return( current->LookupInScope( attributeStr, tree, state ) );
+
+		/* ClassAd::alternateScope is intended for transitioning Condor from
+		 * old to new ClassAds. It allows unscoped attribute references
+		 * in expressions that can't be found in the local scope to be
+		 * looked for in an alternate scope. In Condor, the alternate
+		 * scope is the Target ad in matchmaking.
+		 * Expect alternateScope to be removed from a future release.
+		 */
+	int rc = current->LookupInScope( attributeStr, tree, state );
+	if ( !expr && rc == EVAL_UNDEF && current->alternateScope ) {
+		rc = current->alternateScope->LookupInScope( attributeStr, tree, state );
+	}
+	return rc;
 }
 
 

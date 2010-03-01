@@ -32,6 +32,8 @@
    so they can be defined as deemed appropriate by the user.
 */
 
+#include <list>
+#include <string>
 #include "log.h"
 #include "list.h"
 #include "HashTable.h"
@@ -48,6 +50,7 @@ public:
 	LogRecord *FirstEntry(char const *key);
 	LogRecord *NextEntry();
 	bool EmptyTransaction() { return m_EmptyTransaction; }
+	void InTransactionListKeysWithOpType( int op_type, std::list<std::string> &new_keys );
 private:
 	HashTable<YourSensitiveString,LogRecordList *> op_log;
 	LogRecordList ordered_op_log;

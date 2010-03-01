@@ -688,12 +688,11 @@ tokenizePunctOperator (void)
 
 				case '!':
 					extra_lookahead = lexSource->ReadCharacter();
+					lexSource->UnreadCharacter();
 					if (extra_lookahead == '=') {
 						tokenType = LEX_META_NOT_EQUAL;
 						wind();
 						wind();
-					} else {
-						lexSource->UnreadCharacter();
 					}
 					break;
 

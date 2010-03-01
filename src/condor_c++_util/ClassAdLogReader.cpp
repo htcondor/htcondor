@@ -17,22 +17,24 @@
  *
  ***************************************************************/
 
-
+#ifdef _NO_CONDOR_
+#include <assert.h> // for assert
+#include <errno.h> // for errno
+#include <syslog.h> // for syslog, LOG_ERR
+#else
 #include "condor_common.h"
 #include "condor_debug.h"
+#endif
 
-#include "JobLogReader.h"
+#include "ClassAdLogReader.h"
 
-#include <string>
-
-
-JobLogReader::JobLogReader(JobLogConsumer *consumer):
+ClassAdLogReader::ClassAdLogReader(ClassAdLogConsumer *consumer):
 	m_consumer(consumer)
 {
-	m_consumer->SetJobLogReader(this);
+	m_consumer->SetClassAdLogReader(this);
 }
 
-JobLogReader::~JobLogReader()
+ClassAdLogReader::~ClassAdLogReader()
 {
 	if (m_consumer) {
 		delete m_consumer;
@@ -41,28 +43,34 @@ JobLogReader::~JobLogReader()
 }
 
 void
-JobLogReader::SetJobLogFileName(char const *fname)
+ClassAdLogReader::SetClassAdLogFileName(char const *fname)
 {
 	parser.setJobQueueName(fname);
 }
 
 
 char const *
-JobLogReader::GetJobLogFileName()
+ClassAdLogReader::GetClassAdLogFileName()
 {
 	return parser.getJobQueueName();
 }
 
 
-void
-JobLogReader::Poll() {
+PollResultType
+ClassAdLogReader::Poll() {
 	ProbeResultType probe_st;
 	FileOpErrCode fst;
 
 	fst = parser.openFile();
 	if(fst == FILE_OPEN_ERROR) {
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "Failed to open %s: errno=%d (%m)",
+			   parser.getJobQueueName(), errno);
+#else
 		dprintf(D_ALWAYS,"Failed to open %s: errno=%d\n",parser.getJobQueueName(),errno);
-		return;
+#endif
+		return POLL_FAIL;
 	}
 
 	probe_st = prober.probe(parser.getLastCALogEntry(),parser.getFileDescriptor());
@@ -79,6 +87,8 @@ JobLogReader::Poll() {
 		break;
 	case NO_CHANGE:
 		break;
+	case PROBE_FATAL_ERROR:
+		return POLL_ERROR;
 	}
 
 	parser.closeFile();
@@ -87,11 +97,13 @@ JobLogReader::Poll() {
 		// update prober to most recent observations about the job log file
 		prober.incrementProbeInfo();
 	}
+
+	return POLL_SUCCESS;
 }
 
 
 bool
-JobLogReader::BulkLoad()
+ClassAdLogReader::BulkLoad()
 {
 	parser.setNextOffset(0);
 	m_consumer->Reset();
@@ -100,24 +112,36 @@ JobLogReader::BulkLoad()
 
 
 bool
-JobLogReader::IncrementalLoad()
+ClassAdLogReader::IncrementalLoad()
 {
 	FileOpErrCode err;
 	do {
 		int op_type;
 
 		err = parser.readLogEntry(op_type);
+		assert(err != FILE_FATAL_ERROR); // XXX
 		if (err == FILE_READ_SUCCESS) {
-			//dprintf(D_ALWAYS, "Read op_type %d\n",op_type);
 			bool processed = ProcessLogEntry(parser.getCurCALogEntry(), &parser);
 			if(!processed) {
-				dprintf(D_ALWAYS, "error reading %s: Failed to process log entry.\n",GetJobLogFileName());
+#ifdef _NO_CONDOR_
+				syslog(LOG_ERR,
+					   "error reading %s: Failed to process log entry.",
+					   GetClassAdLogFileName());
+#else
+				dprintf(D_ALWAYS, "error reading %s: Failed to process log entry.\n",GetClassAdLogFileName());
+#endif
 				return false;
 			}
 		}
 	}while(err == FILE_READ_SUCCESS);
 	if (err != FILE_READ_EOF) {
-		dprintf(D_ALWAYS, "error reading from %s: %d, %d\n",GetJobLogFileName(),err,errno);
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "error reading from %s: %d, errno=%d",
+			   GetClassAdLogFileName(), err, errno);
+#else
+		dprintf(D_ALWAYS, "error reading from %s: %d, %d\n",GetClassAdLogFileName(),err,errno);
+#endif
 		return false;
 	}
 	return true;
@@ -127,7 +151,7 @@ JobLogReader::IncrementalLoad()
 /*! read the body of a log Entry.
  */
 bool
-JobLogReader::ProcessLogEntry(ClassAdLogEntry *log_entry,
+ClassAdLogReader::ProcessLogEntry(ClassAdLogEntry *log_entry,
 							  ClassAdLogParser */*caLogParser*/)
 {
 
@@ -156,7 +180,13 @@ JobLogReader::ProcessLogEntry(ClassAdLogEntry *log_entry,
 	case CondorLogOp_LogHistoricalSequenceNumber:
 		break;
 	default:
-		dprintf(D_ALWAYS, "error reading %s: Unsupported Job Queue Command\n",GetJobLogFileName());
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "error reading %s: Unsupported Job Queue Command",
+			   GetClassAdLogFileName());
+#else
+		dprintf(D_ALWAYS, "error reading %s: Unsupported Job Queue Command\n",GetClassAdLogFileName());
+#endif
 		return false;
 	}
 	return true;

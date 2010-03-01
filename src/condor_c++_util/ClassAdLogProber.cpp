@@ -17,15 +17,26 @@
  *
  ***************************************************************/
 
-
+#ifdef _NO_CONDOR_
+#include <sys/types.h> // for fstat, struct stat
+#include <sys/stat.h> // for fstat, struct stat
+#include <unistd.h> // for fstat, struct stat
+#include <limits.h> // for _POSIX_PATH_MAX
+#include <string.h> // for strcpy
+#include <stdlib.h> // for atol
+#include <assert.h> // for assert
+#include <errno.h> // for errno
+#include <syslog.h> // for syslog, LOG_ERR, LOG_DEBUG
+#else
 #include "condor_common.h"
+#endif
 
-#include "classadlogentry.h"
-#include "prober.h"
-#include "classadlogparser.h"
+#include "ClassAdLogEntry.h"
+#include "ClassAdLogProber.h"
+#include "ClassAdLogParser.h"
 
 //! constructor
-Prober::Prober()
+ClassAdLogProber::ClassAdLogProber()
 {
 	last_mod_time = 0;
 	last_size = 0;
@@ -39,84 +50,82 @@ Prober::Prober()
 }
 
 //! destructor
-Prober::~Prober()
+ClassAdLogProber::~ClassAdLogProber()
 {}
 
 //**************************************************************************
 // Accessors
 //**************************************************************************
 void
-Prober::setJobQueueName(const char* jqn)
+ClassAdLogProber::setJobQueueName(const char* jqn)
 {
-	if(!jqn) {
-		EXCEPT("Expecting jqn to be not null here\n");
-	}
+	assert(jqn);
 	strcpy(job_queue_name, jqn);
 }
 
 char*
-Prober::getJobQueueName()
+ClassAdLogProber::getJobQueueName()
 {
 	return job_queue_name;
 }
 
 void
-Prober::setLastModifiedTime(time_t t)
+ClassAdLogProber::setLastModifiedTime(time_t t)
 {
 	last_mod_time = t;
 }
 
 
 time_t
-Prober::getLastModifiedTime()
+ClassAdLogProber::getLastModifiedTime()
 {
 	return last_mod_time;
 }
 
 void
-Prober::setLastSize(size_t s)
+ClassAdLogProber::setLastSize(size_t s)
 {
 	last_size = s;
 }
 
 
 size_t
-Prober::getLastSize()
+ClassAdLogProber::getLastSize()
 {
 	return last_size;
 }
 
 long int
-Prober::getLastSequenceNumber() 
+ClassAdLogProber::getLastSequenceNumber() 
 {
 	return last_seq_num;
 }
 
 void
-Prober::setLastSequenceNumber(long int seq_num) 
+ClassAdLogProber::setLastSequenceNumber(long int seq_num) 
 {
 	last_seq_num = seq_num;
 }
 
 time_t
-Prober::getLastCreationTime() 
+ClassAdLogProber::getLastCreationTime() 
 {
 	return last_creation_time;
 }
 
 void
-Prober::setLastCreationTime(time_t ctime) 
+ClassAdLogProber::setLastCreationTime(time_t ctime) 
 {
 	last_creation_time = ctime;
 }
 
 long int
-Prober::getCurProbedSequenceNumber() {
+ClassAdLogProber::getCurProbedSequenceNumber() {
 	return cur_probed_seq_num;
 }
 
 long int
-Prober::getCurProbedCreationTime() {
+ClassAdLogProber::getCurProbedCreationTime() {
 	return cur_probed_creation_time;
 }
 
@@ -124,7 +133,7 @@ Prober::getCurProbedCreationTime() {
 
 //! probe job_queue.log file
 ProbeResultType
-Prober::probe(ClassAdLogEntry *curCALogEntry,
+ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 			  int job_queue_fd)
 {
 	FileOpErrCode   st;
@@ -133,11 +142,20 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 
 	//TODO: should use condor's StatInfo instead.
 	if (fstat(job_queue_fd, &filestat) == -1)
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR, "ERROR: calling stat(): errno=%d (%m)", errno);
+	
+	syslog(LOG_DEBUG, "=== Current Probing Information ===");
+	syslog(LOG_DEBUG,
+		   "fsize: %ld\t\tmtime: %ld", 
+		   (long)filestat.st_size, (long)filestat.st_mtime);
+#else
 		dprintf(D_ALWAYS,"ERROR: calling stat()\n");
 	
 	dprintf(D_FULLDEBUG, "=== Current Probing Information ===\n");
 	dprintf(D_FULLDEBUG, "fsize: %ld\t\tmtime: %ld\n", 
 				(long)filestat.st_size, (long)filestat.st_mtime);
+#endif
 
 	// get the new state
 	cur_probed_mod_time = filestat.st_mtime;
@@ -148,7 +166,10 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	caLogParser.setFileDescriptor(job_queue_fd);
 	caLogParser.setNextOffset(0);
 	st = caLogParser.readLogEntry(op_type);
-	
+
+	if (FILE_FATAL_ERROR == st) {
+		return PROBE_FATAL_ERROR;
+	}
 	if (st != FILE_READ_SUCCESS) {
 		return PROBE_ERROR;
 	}
@@ -156,16 +177,34 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	if ( caLogParser.getCurCALogEntry()->op_type !=
 		 CondorLogOp_LogHistoricalSequenceNumber )
 	{
-		EXCEPT("ERROR: quill prober expects first classad log entry to be "
+#ifdef _NO_CONDOR_
+		syslog(LOG_ERR,
+			   "ERROR: prober expects first classad log entry to be "
+			   "type %d, but sees %d instead.",
+			   CondorLogOp_LogHistoricalSequenceNumber,
+			   caLogParser.getCurCALogEntry()->op_type);
+#else
+		dprintf(D_ALWAYS,
+				"ERROR: quill prober expects first classad log entry to be "
 				"type %d, but sees %d instead.",
 				CondorLogOp_LogHistoricalSequenceNumber,
 				caLogParser.getCurCALogEntry()->op_type);
+#endif
+		return PROBE_FATAL_ERROR;
 	}
 
+#ifdef _NO_CONDOR_
+	syslog(LOG_DEBUG,
+		   "first log entry: %s %s %s", 
+		   ((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key,
+		   ((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->name,
+		   ((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
+#else
 	dprintf(D_FULLDEBUG, "first log entry: %s %s %s\n", 
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key,
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->name,
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
+#endif
 	cur_probed_seq_num = 
 		atol(((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key);
 	cur_probed_creation_time = 
@@ -183,6 +222,9 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	caLogParser.setNextOffset(curCALogEntry->offset);
 	st = caLogParser.readLogEntry(op_type);
 	
+	if (FILE_FATAL_ERROR == st) {
+		return PROBE_FATAL_ERROR;
+	}
 	if (st != FILE_READ_EOF && st != FILE_READ_SUCCESS) {
 		return PROBE_ERROR;
 	}
@@ -204,7 +246,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 }
 
 void
-Prober::incrementProbeInfo() {
+ClassAdLogProber::incrementProbeInfo() {
 	// store the currently probed stat
 	last_mod_time = cur_probed_mod_time;
 	last_size = cur_probed_size;

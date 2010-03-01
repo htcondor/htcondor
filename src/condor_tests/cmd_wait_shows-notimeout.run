@@ -49,7 +49,7 @@ CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 ####################################################################
 
 # seed log with 1 runs
-system("$writelog $flowlog submit 1");
+system("$writelog $flowlog submit 1") == 0 || die "$writelog failed\n";
 print "Drop a submit event into the log.\n";
 
 
@@ -84,13 +84,13 @@ CondorTest::debug("Slept 5, about to drop execute event\n",$debuglevel);
 print scalar localtime() . "\n";
 
 # start 1 runs
-system("$writelog $flowlog execute 1");
+system("$writelog $flowlog execute 1") == 0 || die "$writelog failed\n";
 
 CondorTest::debug("droped execute event, about to drop terminated event\n",$debuglevel);
 print scalar localtime() . "\n";
 
 # end 1 runs
-system("$writelog $flowlog terminated 1");
+system("$writelog $flowlog terminated 1") == 0 || die "$writelog failed\n";
 print "Droped execute and terminate events\n";
 
 CondorTest::debug("droped terminate event, about to check results\n",$debuglevel);

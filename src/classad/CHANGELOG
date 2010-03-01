@@ -1,3 +1,15 @@
+Changes for version 1.0.6 (Released 2010-02-25)
+* Fixed bug in MatchClassAd::OptimizeAdForMatchmaking() that broke
+  references to the right ad from the left ad.
+* Fixed bug in FlattenAndInline() that caused all function calls to fail.
+* Added short-circuiting for &&, ||, and ?: operators.
+* Added symmetricMatch(), rightMatchesLeft(), and leftMatchesRight()
+  methods to MatchClassAd.
+* Fixed bug that caused ClassAdParser to drop the character immediately
+  following the old ClassAd =!= operator.
+* Added ClassAd::alternateScope, which allows optional mimicking of old
+  ClassAd evaluation semantics for use in Condor.
+
 Changes for version 1.0.5 (Released 2010-02-09)
 * Significant performance optimizations. This includes restoring use of
   the non-standard STL hash_map.

@@ -23,18 +23,18 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 
-#include "JobLogReader.h"
+#include "ClassAdLogReader.h"
 
 class JobLogMirror: public Service {
 public:
-	JobLogMirror(JobLogConsumer *consumer);
+	JobLogMirror(ClassAdLogConsumer *consumer);
 	void init();
 	void config();
 	void stop();
 
 
 private:
-	JobLogReader job_log_reader;
+	ClassAdLogReader job_log_reader;
 
 	int log_reader_polling_timer;
 	int log_reader_polling_period;

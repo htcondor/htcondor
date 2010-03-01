@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "classad_newold.h"
 
-#include "JobLogReader.h"
+#include "ClassAdLogReader.h"
 
 #include <string>
 
@@ -30,12 +30,12 @@
 #undef open
 #include "classad/classad_distribution.h"
 
-class NewClassAdJobLogConsumer: public JobLogConsumer
+class NewClassAdJobLogConsumer: public ClassAdLogConsumer
 {
 private:
 
 	classad::ClassAdCollection m_collection;
-	JobLogReader *m_reader;
+	ClassAdLogReader *m_reader;
 
 public:
 
@@ -58,5 +58,5 @@ public:
 	bool DeleteAttribute(const char *key,
 						 const char *name);
 
-	void SetJobLogReader(JobLogReader *_reader) { m_reader = _reader; }
+	void SetJobLogReader(ClassAdLogReader *_reader) { m_reader = _reader; }
 };

@@ -109,6 +109,13 @@ public:
 
   bool InTransaction() { return ClassAdLog::InTransaction(); }
 
+  /** Get a list of all new keys created in this transaction
+	  @param new_keys List object to populate
+   */
+  void ListNewAdsInTransaction( std::list<std::string> &new_keys ) {
+	  return ClassAdLog::ListNewAdsInTransaction( new_keys );
+  }
+
 	  // increase non-durable commit level
 	  // if > 0, begin non-durable commits
 	  // return old level

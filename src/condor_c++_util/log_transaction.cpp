@@ -593,3 +593,16 @@ Transaction::NextEntry()
 	ASSERT( op_log_iterating );
 	return op_log_iterating->Next();
 }
+
+void
+Transaction::InTransactionListKeysWithOpType( int op_type, std::list<std::string> &new_keys )
+{
+	LogRecord *log;
+
+	ordered_op_log.Rewind();
+	while( (log = ordered_op_log.Next()) ) {
+		if( log->get_op_type() == op_type ) {
+			new_keys.push_back( log->get_key() );
+		}
+	}
+}
