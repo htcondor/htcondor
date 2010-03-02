@@ -1,60 +1,66 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Condor-AFS}Using Condor with AFS}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{file system!AFS}
 
-If you are using AFS at your site, be sure to read
-section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
-Filesystem Config Files Entries'' for details on configuring your
-machines to interact with and use shared filesystems, AFS in
-particular.
+Configuration variables that allow machines to interact with and
+use a shared file system are given at
+section~\ref{sec:Shared-Filesystem-Config-File-Entries}.
 
-Condor does not currently have a way to authenticate itself to AFS.
+Limitations with AFS occur because
+ Condor does not currently have a way to authenticate itself to AFS.
 This is true of the Condor daemons that would like to authenticate as
-AFS user Condor, and the \Condor{shadow}, which would like to
-authenticate as the user who submitted the job it is serving.  Since
-neither of these things can happen yet, there are a number of special
-things people who use AFS with Condor must do.  Some of this must be
-done by the administrator(s) installing Condor.  Some of this must be
-done by Condor users who submit jobs.
+the AFS user \Login{condor}, and of the \Condor{shadow} which would like to
+authenticate as the user who submitted the job it is serving.
+Since neither of these things can happen yet, there are special
+things to do when interacting with AFS.
+Some of this must be done by the administrator(s) installing Condor.
+Other things must be done by Condor users who submit jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Condor-AFS-Admin}AFS and Condor for Administrators}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The most important thing is that since the Condor daemons can't
-authenticate to AFS, the \MacroNI{LOCAL\_DIR} (and it's subdirectories
-like ``log'' and ``spool'') for each machine must be either writable
-to unauthenticated users, or must not be on AFS.  The first option is
-a \textbf{VERY} bad security hole so you should \textbf{NOT} have your
-local directory on AFS.  If you've got NFS installed as well and want
-to have your \MacroNI{LOCAL\_DIR} for each machine on a shared file
-system, use NFS.  Otherwise, you should put the \MacroNI{LOCAL\_DIR} on
-a local partition on each machine in your pool.  This means that you
-should run \Condor{configure} to install your release directory and
-configure your pool, setting the \MacroNI{LOCAL\_DIR} parameter to some
-local partition.  When that's complete, log into each machine in your
-pool and run \Condor{init} to set up the local Condor directory.
+The largest result from the lack of authentication with AFS is that
+the directory defined by the configuration variable \MacroNI{LOCAL\_DIR}
+and its subdirectories \File{log} and \File{spool} on each machine
+must be either writable to unauthenticated users, or must not be on AFS.
+Making these directories writable a \emph{very} bad security hole,
+so it is \emph{not} a viable solution.
+Placing \MacroNI{LOCAL\_DIR} onto NFS is acceptable.
+To avoid AFS, place the directory defined for \MacroNI{LOCAL\_DIR} on
+a local partition on each machine in the pool.
+This implies running \Condor{configure} to install the release directory and
+configure the pool,
+setting the \MacroNI{LOCAL\_DIR} variable to a local partition.
+When that is complete, log into each machine in the pool,
+and run \Condor{init} to set up the local Condor directory.
 
-The \MacroNI{RELEASE\_DIR}, which holds all the Condor binaries,
-libraries and scripts can and probably should be on AFS.  None of the
-Condor daemons need to write to these files, they just need to read
-them.  So, you just have to make your \MacroNI{RELEASE\_DIR} world
-readable and Condor will work just fine.  This makes it easier to
-upgrade your binaries at a later date, which means that your users can find
-the Condor tools in a consistent location on all the machines in your
-pool, and that you can have the Condor config files in a centralized
-location.  This is what we do at UW-Madison's CS department Condor
-pool and it works quite well.
+The directory defined by \MacroNI{RELEASE\_DIR},
+which holds all the Condor binaries,
+libraries, and scripts, can be on AFS.
+None of the Condor daemons need to write to these files.
+They only need to read them.
+So, the directory defined by \MacroNI{RELEASE\_DIR} only needs to be
+world readable in order to let Condor function.
+This makes it easier to
+upgrade the binaries to a newer version at a later date,
+and means that users can find the Condor tools in a consistent location
+on all the machines in the pool. 
+Also, the Condor configuration files may be placed in a centralized location.
+This is what we do for the UW-Madison's CS department Condor pool,
+and it works quite well.
 
-Finally, you might want to setup some special AFS groups to help your
-users deal with Condor and AFS better (you'll want to read the section
-below anyway, since you're probably going to have to explain this
-stuff to your users).  Basically, if you can, create an AFS group that
-contains all unauthenticated users but that is restricted to a given
-host or subnet.  You're supposed to be able to make these host-based
-ACLs with AFS, but we've had some trouble getting that working here at
-UW-Madison.  What we have instead is a special group for all machines
-in our department.  So, the users here just have to make their output
+Finally, consider setting up some targeted AFS groups to help 
+users deal with Condor and AFS better.
+This is discussed in the following manual subsection.
+In short, create an AFS group that
+contains all users, authenticated or not,
+but which is restricted to a given host or subnet.
+These should be made as host-based ACLs with AFS,
+but here at UW-Madison, we have had some trouble getting that working.
+Instead, we have a special group for all machines in our department.
+The users here are required to make their output
 directories on AFS writable to any process running on any of our
 machines, instead of any process on any machine with AFS on the
 Internet.
@@ -63,41 +69,42 @@ Internet.
 \subsubsection{\label{sec:Condor-AFS-Users}AFS and Condor for Users}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The \Condor{shadow} process runs on the machine where you submitted
-your Condor jobs and performs all file system access for your jobs.
-Because this process isn't authenticated to AFS as the user who
-submitted the job, it will not normally be able to write any output.
-So, when you submit jobs, any directories where your job will be
-creating output files will need to be world writable (to
-non-authenticated AFS users).  In addition, if your program writes to
-\File{stdout} or \File{stderr}, or you're using a user log for your
-jobs, those files will need to be in a directory that's
-world-writable.
+The \Condor{shadow} daemon runs on the machine where jobs are submitted.
+It performs all file system access on behalf of the jobs.
+Because the \Condor{shadow} daemon is not authenticated to AFS
+as the user who submitted the job, the \Condor{shadow} daemon
+will not normally be able to write any output.
+Therefore the directories in which the job will be creating output files
+will need to be world writable; they need to be writable by
+non-authenticated AFS users.
+In addition, the program's \File{stdout}, \File{stderr}, log file,
+and any file the program explicitly opens
+will need to be in a directory that is world-writable.
 
-Any input for your job, either the file you specify as input in your
-submit file, or any files your program opens explicitly, needs to be
-world-readable.
-
-Some sites may have special AFS groups set up that can make this
-unauthenticated access to your files less scary.  For example, there's
-supposed to be a way with AFS to grant access to any unauthenticated
-process on a given host.  That way, you only have to grant write
-access to unauthenticated processes on your submit machine, instead of
-any unauthenticated process on the Internet.  Similarly,
+An administrator may be able to set up special AFS groups that can make 
+unauthenticated access to the program's files less scary.
+For example, there is
+supposed to be a way for AFS to grant access to any unauthenticated
+process on a given host. 
+If set up,
+write access need only be granted to unauthenticated processes 
+on the submit machine,
+as opposed to any unauthenticated process on the Internet.
+Similarly,
 unauthenticated read access could be granted only to processes running
-on your submit machine.  Ask your AFS administrators about the existence
-of such AFS groups and details of how to use them.
+on the submit machine.
 
-The other solution to this problem is to just not use AFS at all.  If
-you have disk space on your submit machine in a partition that is not
-on AFS, you can submit your jobs from there.  While the \Condor{shadow}
-is not authenticated to AFS, it does run with the effective UID of the
-user who submitted the jobs.  So, on a local (or NFS) file system, the
-\Condor{shadow} will be able to access your files normally, and you
-won't have to grant any special permissions to anyone other than
-yourself.  If the Condor daemons are not started as root however, the
-shadow will not be able to run with your effective UID, and you'll
-have a similar problem as you would with files on AFS.  See the
-section on ``Running Condor as Non-Root'' for details.
-    
+A solution to this problem is to not use AFS for output files.
+If disk space on the submit machine is available in a partition not on AFS,
+submit the jobs from there.
+While the \Condor{shadow} daemon is not authenticated to AFS,
+it does run with the effective UID of the user who submitted the jobs.
+So, on a local (or NFS) file system,
+the \Condor{shadow} daemon will be able to access the files,
+and no special permissions need be granted to anyone other than the job
+submitter.
+If the Condor daemons are not invoked as root however,
+the \Condor{shadow} daemon will not be able to run with the submitter's
+effective UID, leading to
+a similar problem as with files on AFS.
 

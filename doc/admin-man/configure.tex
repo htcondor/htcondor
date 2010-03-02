@@ -3662,11 +3662,10 @@ WANT_HOLD_REASON = \
   need to put it in (you will be glad you did), or change this
   macro to point to the right device. 
   
-  Unfortunately, there are no such devices on Digital Unix
-  (don't be fooled by \File{/dev/keyboard0}; the kernel does not
-  update the access times on these devices), so this macro is not
-  useful in these cases, and we must use the \Condor{kbdd} to get this
-  information by connecting to the X server.
+  Unfortunately, modern versions of Linux do not update the access time of
+  device files for USB devices. Thus, these files cannot be be used to
+  determine when the console is in use. Instead, use the \Condor{kbdd} daemon,
+  which gets this information by connecting to the X server.
   
 \label{param:StartdJobExprs}
 \item[\Macro{STARTD\_JOB\_EXPRS}]
@@ -4672,6 +4671,9 @@ Power Management for more details.
   unless there is an instance of \Condor{rooster} running,
   or another program that evaluates the
   \Attr{Unhibernate} expression of offline machine ClassAds.
+  In addition, the collecting of offline machine ClassAds must be enabled
+  for this expression to work.  The variable \Macro{OFFLINE\_LOG}, as
+  detailed on page~\pageref{param:OfflineLog} explains this.
   The special attribute
   \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
   when a job would have been matched to the machine if it had been online.
@@ -9710,7 +9712,12 @@ In the typical case, a pool runs a single instance of
 However, if the network topology requires that 
 Wake On LAN packets be sent to specific machines from different locations,
 \Condor{rooster} can be run on any
-machine that can read from the pool's \Condor{collector} daemon.
+machine(s) that can read from the pool's \Condor{collector} daemon.
+
+For \Condor{rooster} to wake up hibernating machines, the collecting
+of offline machine ClassAds must be enabled.  See variable
+\Macro{OFFLINE\_LOG} on page~\pageref{param:OfflineLog} for details on
+how to do this.
 
 \begin{description}
 

@@ -170,8 +170,9 @@ Appropriate protections on this file guarantee secure access to the database.
 This file must be created and protected by the site administrator;
 if this file does not exist as and where expected, the \Condor{quill}
 and \Condor{dbmsd} daemons log an error and exit.
-The \File{.pgpass} file contains exactly one line.
-The line has fields separated by colons.
+The \File{.pgpass} file contains a single line that
+has fields separated by colons and is properly terminated by
+an operating system specific newline character (Unix) or CRLF (Windows).
 The first field may be either the machine name and fully qualified domain,
 or it may be a dotted quad IP address.
 This is followed by four fields containing:

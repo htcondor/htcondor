@@ -121,6 +121,8 @@ To automatically call \Condor{power} under specific conditions,
 
 A pool's \Condor{collector} daemon can be configured to keep a 
 persistent ClassAd entry for each machine, once it has entered hibernation.
+This is required by \Condor{rooster} so that it can evaluate the
+\Macro{UNHIBERNATE} expression of the offline machines.
 
 To do this, define a log file using the \Macro{OFFLINE\_LOG}
 configuration variable.
