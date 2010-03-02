@@ -70,45 +70,28 @@ daemon. See the FAQ entry in section~\ref{sec:xen-jiffies-bug} for
 details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-rh9}Red Hat Version 9.x}
+\subsection{\label{sec:platform-linux-redhat}Red Hat}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{platform-specific information!Red Hat 9.x}
+\index{platform-specific information!Red Hat}
 
-Red Hat version 9.x is fully supported in Condor \VersionNotice.
-\Condor{compile} works to link user jobs for the Standard universe
-with the versions of gcc and glibc that come with Red Hat 9.x.
+Modern versions of Red Hat and Fedora include a feature called
+\Bold{Exec Shield} that, among other things, randomizes the memory
+layout of a process
+to reduce the possibility of security exploits. This makes it impossible
+for the Standard universe to resume a checkpointed job. When starting
+or resuming a Standard universe job, Condor disables the memory
+randomization portion of \Bold{Exec Shield}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-fed}Red Hat Fedora 1, 2, and 3}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{platform-specific information!Red Hat Fedora 1, 2, and 3}
-
-Redhat Fedora Core 1, 2, and 3 now support the checkpointing of statically
-linked executables just like previous revisions of Condor for Red Hat.
-\Condor{compile} works to link user jobs for the Standard universe with
-the versions of gcc that are distributed with Red Hat Fedora Core 1, 2,
-and 3.
-
-However, there are some caveats: A) You must install and use the dynamic
-Red Hat 9.x binaries on the Fedora machine and B) if you wish to do
-run a \Condor{compile}d binary in standalone mode(either initially
-or in resumption mode), then you must prepend the execution of said
-binary with \Bold{setarch i386}. Here is an example: suppose we have a
-Condor-linked binary called \Bold{myapp}, running this application as a
+If you wish to run a \Condor{compile}d binary in standalone mode
+(either initially or in resumption mode), you must manually disable
+\Bold{Exec Shield}'s memory randomization by prepending the execution
+of your binary with \Bold{setarch i386}.
+Here is an example: suppose we have a
+Condor-linked binary called \Bold{myapp}. Running this application as a
 standalone executable will result in this command: \Bold{setarch i386
 myapp}. The subsequent resumption command will be: 
 \Bold{setarch i386 myapp -\_condor\_restart myapp.ckpt}.
 
-When standard universe executables \Condor{compile}d under any currently
-supported Linux architecture of the same kind (including Fedora 1,
-2, and 3) are running inside Condor, they will automatically execute
-in the i386 execution domain. This means that the \Bold{exec\_shield}
-functionality (if available) will be turned off and the shared segment
-layout will default to Red Hat 9 style. There is no need to do the
-above instructions concerning \Bold{setarch} if the executables are
-being submitted directly into Condor via \Condor{submit}.
 
-
-
-
-
+% TODO Need section talking about standard universe, CheckpointPlatform
+%   and incompatible process memory layouts.

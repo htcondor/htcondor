@@ -3631,11 +3631,11 @@ WANT_HOLD_REASON = \
   need to put it in (you will be glad you did), or change this
   macro to point to the right device. 
   
-  Unfortunately, there are no such devices on Digital Unix
-  (don't be fooled by \File{/dev/keyboard0}; the kernel does not
-  update the access times on these devices), so this macro is not
-  useful in these cases, and we must use the \Condor{kbdd} to get this
-  information by connecting to the X server.
+  Unfortunately, modern versions of Linux don't update the access time of
+  device files for USB devices. Thus, these files can't be be used to
+  determine when the console is in use. Instead, you can use the
+  \Condor{kbdd}, which gets this information by connecting to the X
+  server.
   
 \label{param:StartdJobExprs}
 \item[\Macro{STARTD\_JOB\_EXPRS}]
