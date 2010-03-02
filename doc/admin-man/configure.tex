@@ -4641,9 +4641,9 @@ Power Management for more details.
   unless there is an instance of \Condor{rooster} running,
   or another program that evaluates the
   \Attr{Unhibernate} expression of offline machine ClassAds.
-  In addition, collection of offline machine ClassAds must be enabled
-  for this expression to work.  See \Macro{OFFLINE\_LOG} on
-  page~\pageref{param:OfflineLog}.
+  In addition, the collecting of offline machine ClassAds must be enabled
+  for this expression to work.  The variable \Macro{OFFLINE\_LOG}, as
+  detailed on page~\pageref{param:OfflineLog} explains this.
   The special attribute
   \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
   when a job would have been matched to the machine if it had been online.
@@ -9693,9 +9693,10 @@ Wake On LAN packets be sent to specific machines from different locations,
 \Condor{rooster} can be run on any
 machine(s) that can read from the pool's \Condor{collector} daemon.
 
-For \Condor{rooster} to wake up hibernating machines, the collection
-of offline machine ClassAds must be enabled.  See
-\Macro{OFFLINE\_LOG} on page~\pageref{param:OfflineLog}.
+For \Condor{rooster} to wake up hibernating machines, the collecting
+of offline machine ClassAds must be enabled.  See variable
+\Macro{OFFLINE\_LOG} on page~\pageref{param:OfflineLog} for details on
+how to do this.
 
 \begin{description}
 
