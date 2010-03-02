@@ -19,20 +19,14 @@
 ##**************************************************************
 
 use CondorTest;
-use File::Basename;
+use Check::SimpleJob;
 
-my $testname = basename( $0, ".run" );
+my $testname = CondorTest::GetDefaultTestName();
 
 # Start personal condor.
 # This sets the environment variable CONDOR_CONFIG.
 my $condor_info = CondorTest::StartPersonal( $testname, "$testname.boot", "local");
 
-my $test_status = CondorTest::verbose_system("./$testname.pl");
+SimpleJob::RunTest();
 
-if( $test_status != 0 )
-{
-	exit(1);
-}
-
-CondorTest::debug("$testname SUCCESS\n",1);
-exit(0);
+CondorTest::EndTest();

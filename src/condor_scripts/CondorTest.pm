@@ -37,6 +37,7 @@ use Cwd;
 use Time::Local;
 use strict;
 use warnings;
+use File::Basename;
 
 my %securityoptions =
 (
@@ -89,6 +90,11 @@ my $failed_coreERROR = 0;
 
 my %personal_condors = ();
 my $CondorTestPid = $$;
+my $CleanedUp = 0;
+
+my $test_failure_count = 0;
+my $test_success_count = 0;
+
 
 BEGIN
 {
@@ -112,13 +118,127 @@ END
     # Only do the cleanup from the main process.
     return if $CondorTestPid != $$;
 
+    if ( !Cleanup() ) {
+	# Set exit status to non-zero
+	$? = 1;
+    }
+
+}
+
+sub Cleanup()
+{
+    if( $CleanedUp ) {
+	# Avoid doing this twice (e.g. once in EndTest and once in END).
+	return 1;
+    }
+    $CleanedUp = 1;
+
     KillAllPersonalCondors();
     if($failed_coreERROR != 0) {
 
 	print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
 	print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
-	exit(1);
+	return 0;
     }
+    return 1;
+}
+
+# This function never returns.
+# It should be the last thing that a test program does,
+# (but be aware that some older tests do not call it).
+# All personal condors are shut down and the final exit status
+# of the test is determined.
+sub EndTest
+{
+    my $extra_notes = "";
+
+    my $exit_status = 0;
+    if( Cleanup() == 0 ) {
+	$exit_status = 1;
+    }
+    if($failed_coreERROR != 0) {
+	$exit_status = 1;
+	$extra_notes = "$extra_notes, found cores or ERROR in logs";
+    }
+
+    if( $test_failure_count > 0 ) {
+	$exit_status = 1;
+    }
+
+    if( $test_failure_count == 0 && $test_success_count == 0 ) {
+	$extra_notes = "$extra_notes, CondorTest::RegisterResult() was never called!";
+	$exit_status = 1;
+    }
+
+    my $result_str = $exit_status == 0 ? "SUCCESS" : "FAILURE";
+
+    my $testname = GetDefaultTestName();
+
+    debug( "Final status for $testname: $result_str ($test_success_count check(s) passed, $test_failure_count check(s) failed$extra_notes)\n", 1 );
+
+    exit($exit_status);
+}
+
+# This should be called in each check function to register the pass/fail result
+sub RegisterResult
+{
+    my $testname = shift;
+    my $checkname = shift;
+    my $result = shift;
+
+    my $result_str = $result == 1 ? "PASSED" : "FAILED";
+    debug( " $result_str check $checkname in test $testname\n", 1 );
+    if( $result != 1 ) {
+	$test_failure_count += 1;
+    }
+    else {
+	$test_success_count += 1;
+    }
+}
+
+sub GetDefaultTestName
+{
+    return basename( $0, ".run" );
+}
+
+sub GetCheckName
+{
+    my $filename = shift; # module file containing the check
+    my %args = @_;        # named arguments to the check function
+
+    if( exists $args{check_name} ) {
+	return $args{check_name};
+    }
+
+    my $check_name = basename( $filename, ".pm" );
+
+    my $arg_str = "";
+    for my $name ( keys %args ) {
+        my $value = $args{$name};
+	if( $arg_str ne "" ) {
+	    $arg_str = $arg_str . ",";
+	}
+	$arg_str = $arg_str . "$name=$value";
+    }
+    if( $arg_str ne "" ) {
+	$check_name = $check_name . "($arg_str)";
+    }
+    return $check_name;
+}
+
+# return a file name that did not exist at the time this function was called
+sub TempFileName
+{
+    my $base = shift;
+
+    $base = $base . ".$$";
+    my $fname = $base;
+    my $num = 0;
+    while( -e $fname ) {
+	$num = $num + 1;
+	$fname = $base . ".$num";
+    }
+    return $fname;
 }
 
 sub Reset
