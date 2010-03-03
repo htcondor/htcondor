@@ -61,7 +61,7 @@ static const char *errmsgs[] = {
   /* E_OPTION   -4 */  "unknown option -%c.\n",
   /* E_OPTARG   -5 */  "missing option argument.\n",
   /* E_ARGCNT   -6 */  "wrong number of arguments.\n",
-  /* E_NOWAKE   -7 */  "failed to sent wake packet.\n",
+  /* E_NOWAKE   -7 */  "failed to send wake packet.\n",
   /* E_NOREST   -8 */  "failed to switch the machine's power state.\n",
   /* E_CLASSAD  -9 */  "error in class-ad (errno = %d).\n",
   /* E_UNKNOWN -10 */  "unknown error.\n"
