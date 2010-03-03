@@ -271,7 +271,7 @@ condor_object_target(tools)
 condor_object_target(power)
 
 #if HAVE_EXT_GSOAP
-condor_object_target(SoapShell)
+condor_object_target(soapshell)
 #endif
 
 #if HAVE_SHARED_PORT
