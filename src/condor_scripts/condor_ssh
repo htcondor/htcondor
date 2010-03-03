@@ -19,7 +19,7 @@
 ##
 ##**************************************************************
 
-
+set -x
 
 # condor_ssh wrapper
 # This script assumes the existance of a contact file
@@ -134,8 +134,8 @@ p=`/bin/pwd`
 prog=${prog##$p/}
 
 # with cd 
-/usr/bin/ssh -q $hasn -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host cd "$dir" \; $prog "$@"
+/usr/bin/ssh -q $hasn -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host cd "$dir" \; PATH=$PATH \; $prog "$@"
 
 # this one without
-#/usr/bin/ssh -q -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host $prog "$@"
+#/usr/bin/ssh -q -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host PATH=$PATH \; $prog "$@"
 
