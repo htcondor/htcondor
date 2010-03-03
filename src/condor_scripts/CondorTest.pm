@@ -158,7 +158,7 @@ sub EndTest
     }
     if($failed_coreERROR != 0) {
 	$exit_status = 1;
-	$extra_notes = "$extra_notes, found cores or ERROR in logs";
+	$extra_notes = "$extra_notes\n  found cores or ERROR in logs";
     }
 
     if( $test_failure_count > 0 ) {
@@ -166,7 +166,7 @@ sub EndTest
     }
 
     if( $test_failure_count == 0 && $test_success_count == 0 ) {
-	$extra_notes = "$extra_notes, CondorTest::RegisterResult() was never called!";
+	$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
 	$exit_status = 1;
     }
 
@@ -174,7 +174,7 @@ sub EndTest
 
     my $testname = GetDefaultTestName();
 
-    debug( "Final status for $testname: $result_str ($test_success_count check(s) passed, $test_failure_count check(s) failed$extra_notes)\n", 1 );
+    debug( "\n\nFinal status for $testname: $result_str\n  $test_success_count check(s) passed\n  $test_failure_count check(s) failed$extra_notes\n", 1 );
 
     exit($exit_status);
 }
@@ -182,12 +182,16 @@ sub EndTest
 # This should be called in each check function to register the pass/fail result
 sub RegisterResult
 {
-    my $testname = shift;
-    my $checkname = shift;
     my $result = shift;
+    my %args = @_;
+
+    my ($caller_package, $caller_file, $caller_line) = caller();
+    my $checkname = GetCheckName($caller_file,%args);
+
+    my $testname = $args{test_name} || GetDefaultTestName();
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
-    debug( " $result_str check $checkname in test $testname\n", 1 );
+    debug( "\n\n$result_str check $checkname in test $testname\n\n", 1 );
     if( $result != 1 ) {
 	$test_failure_count += 1;
     }
@@ -1533,33 +1537,29 @@ sub getFqdnHost
 
 ##############################################################################
 #
-# PersonalSearchLog
+# SearchCondorLog
 #
-# Serach a log for a pattern
+# Serach a log for a regexp pattern
 #
 ##############################################################################
 
-sub PersonalSearchLog
+sub SearchCondorLog
 {
-    my $pid = shift;
-    my $personal = shift;
-    my $searchfor = shift;
-    my $logname = shift;
+    my $daemon = shift;
+    my $regexp = shift;
 
-	my $logdir = `condor_config_val log`;
-	fullchomp($logdir);
+    my $logloc = `condor_config_val ${daemon}_log`;
+    fullchomp($logloc);
 
-    #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
-    my $logloc = $logdir . "/" . $logname;
-    CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",2);
+    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
-        if( $_ =~ /$searchfor/) {
+        if( $_ =~ /$regexp/) {
             CondorTest::debug("FOUND IT! $_",2);
-            return(0);
+            return(1);
         }
     }
-    return(1);
+    return(0);
 }
 
 ##############################################################################

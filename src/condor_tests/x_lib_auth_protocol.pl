@@ -134,8 +134,8 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	my $stat = CondorTest::PersonalSearchLog( $piddir, $subdir, "Authentication was a Success", "SchedLog");
-	if( $stat == 0 ) {
+	my $stat = CondorTest::SearchCondorLog( "SCHEDD", "Authentication was a Success" );
+	if( $stat == 1 ) {
 		CondorTest::debug("Good completion!!!\n",1);
 	} else {
 		die "Expected match for Authentication is a Success and could not find it in SchedLog\n";

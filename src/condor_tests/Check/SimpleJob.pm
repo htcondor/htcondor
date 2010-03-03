@@ -42,7 +42,6 @@ $ExitSuccess = sub {
 sub RunTest
 {
     my %args = @_;
-    my $checkname = CondorTest::GetCheckName(__FILE__,%args);
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
@@ -63,7 +62,7 @@ sub RunTest
     close( SUBMIT );
 
     my $result = CondorTest::RunTest($testname, $submit_fname, 0);
-    CondorTest::RegisterResult( $testname, $checkname, $result);
+    CondorTest::RegisterResult( $result, %args );
     return $result;
 }
 
