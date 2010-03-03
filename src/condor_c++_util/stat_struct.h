@@ -53,7 +53,12 @@ typedef uid_t StatStructUID;
 typedef gid_t StatStructGID;
 typedef off_t StatStructOff;
 #define STAT_STRUCT_HAVE_BLOCK_SIZE		1
-typedef blksize_t StatStructBlockSize;
+#if defined(HPUX11)
+	/* type gotten from /usr/include/sys/_stat.h on an hpux 11 machine */
+	typedef long StatStructBlockSize;
+#else
+	typedef blksize_t StatStructBlockSize;
+#endif
 #define STAT_STRUCT_HAVE_BLOCK_COUNT	0
 typedef blkcnt_t StatStructBlockCount;
 typedef time_t StatStructTime;
