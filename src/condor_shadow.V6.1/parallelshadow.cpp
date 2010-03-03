@@ -383,6 +383,7 @@ ParallelShadow::spawnNode( MpiResource* rr )
 			// First, contact the startd to spawn the job
 		if( rr->activateClaim() != OK ) {
 			shutDown( JOB_NOT_STARTED );
+			
 		}
 	}
 
@@ -499,6 +500,25 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 void 
 ParallelShadow::shutDown( int exitReason )
 {
+	if (exitReason != JOB_NOT_STARTED) {
+		if (shutdownPolicy == WAIT_FOR_ALL) {
+			for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
+				RemoteResource *r = ResourceList[i];
+				// If the policy is wait for all nodes to exit
+				// see if any are still running.  If so,
+				// just return, and wait for them all to go
+				if (r->getResourceState() != RR_FINISHED) {
+					return;
+				}
+			}
+			
+		}
+			// If node0 is still running, don't really shut down
+		RemoteResource *r =  ResourceList[0];
+		if (r->getResourceState() != RR_FINISHED) {
+			return;
+		}
+	}
 		/* With many resources, we have to figure out if all of
 		   them are done, and we have to figure out if we need
 		   to kill others.... */
@@ -512,23 +532,6 @@ ParallelShadow::shutDown( int exitReason )
 	}
 */
 
-	if (shutdownPolicy == WAIT_FOR_ALL) {
-    	for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
-			RemoteResource *r = ResourceList[i];
-			// If the policy is wait for all nodes to exit
-			// see if any are still running.  If so,
-			// just return, and wait for them all to go
-			if (r->getResourceState() != RR_FINISHED) {
-				return;
-			}
-		}
-		
-	}
-		// If node0 is still running, don't really shut down
-	RemoteResource *r =  ResourceList[0];
-	if (r->getResourceState() != RR_FINISHED) {
-		return;
-	}
 	handleJobRemoval(0);
 
 		/* if we're still here, we can call BaseShadow::shutDown() to
