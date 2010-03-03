@@ -98,6 +98,11 @@ incorrectly when reading an invalid job queue log on startup.
 \item Fixed a bug that could corrupt the job queue log
 if the \Condor{schedd}'s attempt to compact it fails.
 
+% gittrac #1256
+\item Fixed a problem that in rare cases caused \Condor{schedd} to
+crash shortly after \Condor{gridmanager} exited.  This bug has existed since
+before Condor 6.8.
+
 \end{itemize}
 
 \noindent Known Bugs:
