@@ -8,6 +8,7 @@ FILES = README condor_config.local.central.manager \
 	lamscript \
 	mp1script \
 	mp2script \
+	openmpiscript \
 	condor.init
 
 all::
