@@ -4,7 +4,7 @@ type = jobs
 
 condor = nightlies
 localpostsrc = x_gcb_locconfigpostsrc
-condordaemons = master,schedd
+daemon_list = master,schedd
 collector = 198.51.254.85:9618
 
 ports = dynamic

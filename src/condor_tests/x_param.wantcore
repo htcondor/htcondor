@@ -5,5 +5,5 @@ type = jobs
 ports = dynamic
 condor = nightlies
 localpostsrc = x_wantcore_configpostsrc
-condordaemons = master,schedd,collector,negotiator,startd
+daemon_list = master,schedd,collector,negotiator,startd
 slots	= 2

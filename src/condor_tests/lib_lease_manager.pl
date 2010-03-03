@@ -433,7 +433,7 @@ print PARAMS <<ENDPARAMS;
 ports = dynamic
 condor = nightlies
 localpostsrc = $config_tmp
-condordaemons = MASTER,COLLECTOR,LEASEMANAGER,ADVERTISER
+daemon_list = MASTER,COLLECTOR,LEASEMANAGER,ADVERTISER
 personaldir = $fulldir
 ENDPARAMS
 close(PARAMS);

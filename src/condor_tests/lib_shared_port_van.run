@@ -23,9 +23,19 @@ use Check::SimpleJob;
 
 my $testname = CondorTest::GetDefaultTestName();
 
-# Start personal condor.
-# This sets the environment variable CONDOR_CONFIG.
-my $condor_info = CondorTest::StartPersonal( $testname, "$testname.boot", "local");
+my $append_condor_config = '
+  USE_SHARED_PORT = True
+  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+
+  # named sockets cannot have very long paths (~100 chars), so put them
+  # in /tmp to avoid problems
+  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
+';
+
+CondorTest::StartCondorWithParams(
+    condor_name => "local",
+    append_condor_config => $append_condor_config
+);
 
 SimpleJob::RunTest();
 

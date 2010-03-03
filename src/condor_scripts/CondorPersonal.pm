@@ -60,6 +60,7 @@ use strict;
 #	condorlocalsrc	Name for condor local config src 								$personal_local_src
 #   daemonwait      Wait for startd/schedd to be seen	true						$personal_startup_wait
 #   localpostsrc    New end of local config file                                    $personal_local_post_src
+#   append_condor_config    Text to append to end of local config file
 #   secprepostsrc	New security settings 											$personal_sec_prepost_src
 #	condordaemon	daemon list to start				contents of config template $personal_daemons
 #	condorconfig	Name for condor config file			condor_config				$personal_config
@@ -246,6 +247,27 @@ sub StartCondor
 		$mpid = shift; # assign process id
 	}
 
+	CondorPersonal::ParsePersonalCondorParams($paramfile);
+
+	# Insert the positional arguments into the new-style named-argument
+	# hash and call the version of this function which handles it.
+	$personal_condor_params{"test_name"} = $testname;
+	$personal_condor_params{"condor_name"} = $version;
+	$personal_condor_params{"owner_pid"} = $mpid;
+
+	return StartCondorWithParams(%personal_condor_params);
+}
+
+sub StartCondorWithParams
+{
+	%personal_condor_params = @_;
+
+	my $testname = $personal_condor_params{"test_name"} || die "Missing test_name\n";
+	$version = $personal_condor_params{"condor_name"} || die "Missing condor_name!\n";
+	my $mpid = $personal_condor_params{"owner_pid"} || $pid;
+	my $config_and_port = "";
+	my $winpath = "";
+
 	runcmd("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/$testname" . ".saveme";
 	runcmd("mkdir -p $topleveldir");
@@ -256,8 +278,6 @@ sub StartCondor
 
 	$procdaddress = $mpid . $version;
 
-
-	CondorPersonal::ParsePersonalCondorParams($paramfile);
 
 	if(exists $personal_condor_params{"personaldir"}) {
 		$topleveldir = $personal_condor_params{"personaldir"};
@@ -425,7 +445,7 @@ sub ParsePersonalCondorParams
 	    	}
 
 	    	debug( "(CondorPersonal.pm) $variable = $value\n" ,$debuglevel);
-	    
+
 	    	# save the variable/value pair
 	    	$personal_condor_params{$variable} = $value;
 		} else {
@@ -492,6 +512,26 @@ sub WhichCondorConfig
 			return("matched not running");
 		}
 	}
+}
+
+##################################################################
+#
+# Run condor_config_val using the specified configuration file.
+#
+
+sub CondorConfigVal
+{
+    my $config_file = shift;
+    my $param_name = shift;
+
+    my $oldconfig = $ENV{CONDOR_CONFIG};
+    $ENV{CONDOR_CONFIG} = $config_file;
+
+    my $result = `condor_config_val $param_name`;
+
+    chomp $result;
+    $ENV{CONDOR_CONFIG} = $oldconfig;
+    return $result;
 }
 
 #################################################################
@@ -685,25 +725,6 @@ sub InstallPersonalCondor
 
 	debug( "InstallPersonalCondor returning $sbinloc for LOCAL_DIR setting\n",$debuglevel);
 
-	# I hate to do this but....
-    # The quill daemon really wants to see the passwd file .pgpass
-    # when it starts and IF this is a quill test, then quill is within
-    # $personal_daemons AND $topleveldir/../pgpass wants to  be
-    # $topleveldir/spool/.pgpass
-    #my %control = %personal_condor_params;
-    # was a special daemon list called out?
-    if( exists $control{"condordaemons"} )
-    {
-        $personal_daemons = $control{"condordaemons"};
-    }
-
-    debug( "Looking to see if this is a quill test..........\n",$debuglevel);
-    debug( "Daemonlist requested is <<$personal_daemons>>\n",$debuglevel);
-    if($personal_daemons =~ /.*quill.*/) {
-        debug( "Yup it is a quill test..........copy in .pgpass file\n",$debuglevel);
-        my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
-        runcmd("$cmd");
-    }
 	return($sbinloc);
 }
 
@@ -795,9 +816,9 @@ sub TunePersonalCondor
 	}
 
 	# was a special daemon list called out?
-	if( exists $control{"condordaemons"} )
+	if( exists $control{"daemon_list"} )
 	{
-		$personal_daemons = $control{"condordaemons"};
+		$personal_daemons = $control{"daemon_list"};
 	}
 
 	# was a special local config file name called out?
@@ -1064,7 +1085,38 @@ sub TunePersonalCondor
 		print NEW "# Done Adding changes requested from $personal_local_post_src\n";
 	}
 
+	if( exists $control{append_condor_config} ) {
+	    print NEW "# Appending from 'append_condor_config'\n";
+	    print NEW "$control{append_condor_config}\n";
+	    print NEW "# Done appending from 'append_condor_config'\n";
+	}
+
 	close(NEW);
+
+	PostTunePersonalCondor($personal_config_file);
+}
+
+
+#################################################################
+#
+#   PostTunePersonalCondor() is called after TunePersonalCondor.
+#   It assumes that the configuration file is all set up and
+#   ready to use.
+
+sub PostTunePersonalCondor
+{
+    my $config_file = shift;
+
+    # If this is a quill test, then quill is within
+    # $personal_daemons AND $topleveldir/../pgpass wants to  be
+    # $topleveldir/spool/.pgpass
+
+    my $configured_daemon_list = CondorConfigVal($config_file,"daemon_list");
+    if($configured_daemon_list =~ m/quill/i ) {
+        debug( "This is a quill test (because DAEMON_LIST=$configured_daemon_list)\n", $debuglevel );
+        my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
+        runcmd("$cmd");
+    }
 }
 
 #################################################################

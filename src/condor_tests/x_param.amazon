@@ -4,5 +4,5 @@ ports = dynamic
 condor = nightlies
 localpostsrc = x_amazon_configpostsrc
 nameschedd = parent;
-condordaemons = master,collector,schedd
+daemon_list = master,collector,schedd
 slots	= 1

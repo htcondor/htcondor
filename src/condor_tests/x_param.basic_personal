@@ -8,5 +8,5 @@
 
 ports = dynamic
 condor = nightlies
-condordaemons = master,collector,negotiator,startd,schedd
+daemon_list = master,collector,negotiator,startd,schedd
 slots	= 3

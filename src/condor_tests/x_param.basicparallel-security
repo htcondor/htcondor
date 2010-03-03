@@ -9,5 +9,5 @@ type = jobs
 ports = dynamic
 condor = nightlies
 localpostsrc = x_basicparallel-security_locconfigpostsrc
-condordaemons = master,schedd,collector,negotiator,startd
+daemon_list = master,schedd,collector,negotiator,startd
 slots	= 8

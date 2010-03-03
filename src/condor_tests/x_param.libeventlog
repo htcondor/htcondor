@@ -5,5 +5,5 @@ type = jobs
 ports = dynamic
 condor = nightlies
 localpostsrc = x_lib_eventlog_config_postsrc
-condordaemons = master,schedd,collector,negotiator,startd
+daemon_list = master,schedd,collector,negotiator,startd
 slots	= 2

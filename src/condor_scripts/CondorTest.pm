@@ -1706,6 +1706,16 @@ sub debug
       bless $self, $class;
       return $self;
   }
+  sub GetCondorConfig
+  {
+      my $self = shift;
+      return $self->{condor_config};
+  }
+  sub GetCollectorAddress
+  {
+      my $self = shift;
+      return "localhost:" . $self->{collector_port};
+  }
 }
 
 sub ListAllPersonalCondors
@@ -1746,7 +1756,7 @@ sub StartPersonal
     my $testname = shift;
     my $paramfile = shift;
     my $version = shift;
-	
+
 	$handle = $testname;
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
@@ -1759,6 +1769,43 @@ sub StartPersonal
     $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_port, 1 );
 
     return($condor_info);
+}
+
+########################
+## StartCondorWithParams
+##
+## Starts up a personal condor that is configured as specified in
+## the named arguments to this function.  The personal condor will
+## be automatically shut down in this module's END handler.
+##
+## Arguments:
+##  See arguments to CondorPersonal::StartCondorWithParams().
+##
+## Returns:
+##  A PersonalCondorInstance object that may be used to get such things
+##  as the location of the config file and the collector address.
+##  Sets CONDOR_CONFIG to point to the condor config file.
+########################
+
+sub StartCondorWithParams
+{
+    my %condor_params = @_;
+    my $condor_name = $condor_params{condor_name} || die "missing condor_name";
+
+    if( ! exists $condor_params{test_name} ) {
+	$condor_params{test_name} = GetDefaultTestName();
+    }
+
+    my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
+
+    my @condor_info = split /\+/, $condor_info;
+    my $condor_config = shift @condor_info;
+    my $collector_port = shift @condor_info;
+
+    my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_port, 1 );
+    $personal_condors{$condor_name} = $new_condor;
+
+    return $new_condor;
 }
 
 sub KillPersonal

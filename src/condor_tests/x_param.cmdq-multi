@@ -5,5 +5,5 @@ ports = dynamic
 condor = nightlies
 localpostsrc = x_condorc_locconfigpostsrc
 nameschedd = parent;
-condordaemons = master,collector,negotiator,schedd,startd
+daemon_list = master,collector,negotiator,schedd,startd
 slots	= 1
