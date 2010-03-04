@@ -6190,8 +6190,6 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 
 
 
-//************* Added for Amazon Jobs by fangcao ***************************//
-
 //  Start VM
 int GahpClient::amazon_vm_start( const char * publickeyfile,
 								 const char * privatekeyfile,
@@ -6415,6 +6413,7 @@ int GahpClient::amazon_vm_stop( const char * publickeyfile, const char * private
 }							
 
 
+#if 0
 // Restart VM
 int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * privatekeyfile, 
 								  const char * instance_id, char* & error_code )		
@@ -6497,6 +6496,7 @@ int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * priva
 	// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;
 }	
+#endif
 
 
 // Check VM status
@@ -6629,6 +6629,7 @@ int GahpClient::amazon_vm_status( const char * publickeyfile, const char * priva
 }
 
 
+#if 0
 // List the status of all VMs
 int GahpClient::amazon_vm_status_all( const char * publickeyfile, const char * privatekeyfile, 
 									  StringList &returnStatus, char* & error_code )		
@@ -7304,6 +7305,7 @@ int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char 
 	// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;	
 }
+#endif
 
 
 // Ping to check if the server is alive
@@ -7536,6 +7538,7 @@ int GahpClient::amazon_vm_destroy_keypair( const char * publickeyfile, const cha
 }
 
 
+#if 0
 //  List all existing SSH Keypair name
 int GahpClient::amazon_vm_keypair_names( const char * publickeyfile, const char * privatekeyfile, 
 										 StringList &keypair_names, char* & error_code )
@@ -8647,6 +8650,7 @@ int GahpClient::amazon_vm_s3_download_bucket( const char* publickeyfile, const c
 	return GAHPCLIENT_COMMAND_PENDING;
 	
 }
+#endif
 
 
 // Check all the running VM instances and their corresponding keypair name
@@ -8746,6 +8750,4 @@ int GahpClient::amazon_vm_vm_keypair_all( const char* publickeyfile, const char*
 	return GAHPCLIENT_COMMAND_PENDING;	
 
 }
-				
-//************* End of changes for Amamzon Jobs by fangcao *****************//
 	

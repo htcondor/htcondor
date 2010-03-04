@@ -612,17 +612,8 @@ class GahpClient : public Service {
 		int cream_ping(const char * service);
 		
 		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
-		
-		//************* Added for Amazon Jobs by fangcao ***************************//
-		
-		/* Phase II work for Amazon jobs (EC2 Part) */
-		
-		/* 
-		** Currently in order to distinguish a job which is submitted from Condor, we will set
-		** is belong to the 'Condor' group. This requires us to create a 'Condor' group before
-		** the start of gahp_server/gahp_client or Condor will create a temporary group name.
-		*/
-		
+
+
 		// 1. Start VM:
 		// AMAZON_COMMAND_VM_START <req_id> <publickeyfile> <privatekeyfile> <ami-id> <keypair> <groupname> <groupname> ...
 		// <keypair> and <groupname> are optional ones.
@@ -655,6 +646,7 @@ class GahpClient : public Service {
 							const char * instance_id,
 							char* & error_code );
 							
+#if 0
 		// 3. Reboot VM:
 		// AMAZON_COMMAND_VM_REBOOT <req_id> <publickeyfile> <privatekeyfile> <instance-id>
 		// return: success/failed
@@ -666,6 +658,7 @@ class GahpClient : public Service {
 							  const char * privatekeyfile,
 							  const char * instance_id,
 							  char* & error_code );		
+#endif
 		
 		// 4. Status VM:
 		// AMAZON_COMMAND_VM_STATUS <req_id> <publickeyfile> <privatekeyfile> <instance-id>
@@ -691,6 +684,7 @@ class GahpClient : public Service {
 							  StringList & returnStatus,
 							  char* & error_code );
 				
+#if 0
 		// 5. Status ALL VM:
 		// AMAZON_COMMAND_VM_STATUS_ALL <req_id> <publickeyfile> <privatekeyfile>
 		// return: success/failed + <instance_id> <status> <ami_id> <instance_id> <status> <ami_id>     NULL
@@ -788,6 +782,7 @@ class GahpClient : public Service {
 								   	  const char * end_port,
 								   	  const char * ip_range,
 								   	  char* & error_code );		
+#endif
 		
 		// 12. Ping
 		// we also need to define a ping function, which will be used by amazon_resource
@@ -864,6 +859,7 @@ class GahpClient : public Service {
 								   	   const char * keyname,
 								   	   char* & error_code );
 								   	   
+#if 0
 		// 15. List all existing SSH Keypair name
 		// AMAZON_COMMAND_VM_KEYPAIR_NAMES <req_id> <publickeyfile> <privatekeyfile>
 		// return: success/failed
@@ -1016,6 +1012,7 @@ class GahpClient : public Service {
 										  const char* bucketname,
 										  const char* localdirname,
 										  char* & error_code );
+#endif
 		
 		// 27. check all the running VM instances and their corresponding keypair name								  
 		// AMAZON_COMMAND_VM_KEYPAIR_ALL <req_id> <publickeyfile> <privatekeyfile>
@@ -1028,8 +1025,6 @@ class GahpClient : public Service {
 									  const char* privatekeyfile,
 									  StringList & returnStatus,
 								  	  char* & error_code );
-		
-		//************* End of changes for Amamzon Jobs by fangcao *****************//
 			
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC

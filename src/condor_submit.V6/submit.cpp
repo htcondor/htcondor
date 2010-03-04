@@ -1727,7 +1727,7 @@ SetUniverse()
 				(stricmp (JobGridType, "naregi") == MATCH) ||
 				(stricmp (JobGridType, "condor") == MATCH) ||
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
-				(stricmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
+				(stricmp (JobGridType, "amazon") == MATCH) ||
 				(stricmp (JobGridType, "unicore") == MATCH) ||
 				(stricmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
