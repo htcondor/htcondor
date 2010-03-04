@@ -45,6 +45,7 @@ sub RunTest
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
+    my $append_submit_commands = $args{append_submit_commands} || "";
 
     CondorTest::RegisterAbort( $testname, $aborted );
     CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
@@ -58,6 +59,9 @@ sub RunTest
     print SUBMIT "log = $user_log\n";
     print SUBMIT "arguments = 1\n";
     print SUBMIT "notification = never\n";
+    if( $append_submit_commands ne "" ) {
+        print SUBMIT "\n" . $append_submit_commands . "\n";
+    }
     print SUBMIT "queue\n";
     close( SUBMIT );
 

@@ -2039,6 +2039,14 @@ TESTCLASS(lib_ccb_schedd,quick)
 TESTCLASS(lib_ccb_schedd,full)
 TESTCLASS(lib_ccb_schedd,quicknolink)
 
+DESC(lib_job_router_local,"Test of JobRouter routing to local universe.")
+DEPS(lib_job_router_local,x_sleep.pl)
+RUN(lib_job_router_local)
+TESTCLASS(lib_job_router_local,core)
+TESTCLASS(lib_job_router_local,quick)
+TESTCLASS(lib_job_router_local,full)
+TESTCLASS(lib_job_router_local,quicknolink)
+
 /** 
 	Shadow bloat test, only run on linux systems
 */
