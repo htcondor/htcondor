@@ -120,7 +120,7 @@ The configuration variables that are truly platform-specific are:
 \item[\Macro{DAEMON\_LIST}] Which daemons the \Condor{master} should
   start up.  The reason this setting is platform-specific is
   to distinguish the \Condor{kbdd}.
-  On Alphas running Digital Unix, it was needed,
+  It is needed on many Linux and Windows machines,
   and it is not needed on other platforms.
   See section~\ref{sec:Master-Config-File-Entries} on
   for details.
@@ -153,7 +153,7 @@ For example, if an installed mail program understands the
 \Opt{-s} option in \File{/usr/local/bin/mail} on all platforms,
 the \MacroNI{MAIL} macro may be set to that in the global configuration
 file, and not define it anywhere else.
-For a pool with only Digital Unix,
+For a pool with only Linux or Windows machines,
 the \MacroNI{DAEMON\_LIST} will be the same for each, so there is no
 reason not to put that in the global configuration file.
 

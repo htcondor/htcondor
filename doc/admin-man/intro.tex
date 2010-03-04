@@ -260,11 +260,16 @@ worse as this number grows.
 \index{daemon!condor\_kbdd@\Condor{kbdd}}
 \index{condor\_kbdd daemon}
 \item[\Condor{kbdd}] This daemon
-is only needed on Digital Unix.
-On that platforms, the \Condor{startd} cannot determine
-console (keyboard or mouse) activity directly from the system.  The
+is used on Linux and Windows.
+On those platforms, the \Condor{startd} frequently cannot determine
+console (keyboard or mouse) activity directly from the system, and
+requires a separate process to do so.
+On Linux, the
 \Condor{kbdd} connects to the X Server and periodically checks to see
-if there has been any activity.  If there has, the kbdd sends a
+if there has been any activity.
+On Windows, the \Condor{kbdd} runs as the logged-in user and registers
+with the system to receive keyboard and mouse events.
+When it detects console activity, the \Condor{kbdd} sends a
 command to the startd.  That way, the startd knows the machine owner
 is using the machine again and can perform whatever actions are
 necessary, given the policy it has been configured to enforce.

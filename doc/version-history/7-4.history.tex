@@ -88,7 +88,7 @@ Error:  arg 4 (-master) contradicts arg 1 (-format)
 % gittrac #1196
 \item Fixed a bug that caused configuration parameter
 \MacroNI{LOCAL\_CONFIG\_DIR} to be ignored if it was set in a local
-configuration file (as opposed to the top-level configuration file).
+configuration file, as opposed to the top-level configuration file.
 
 % gittrac #1202
 \item Fixed a bug that could cause the \Condor{schedd} to behave
@@ -96,7 +96,12 @@ incorrectly when reading an invalid job queue log on startup.
 
 % gittrac #1215
 \item Fixed a bug that could corrupt the job queue log
-if the \Condor{schedd}'s attempt to compact it fails.
+if the \Condor{schedd} daemon's attempt to compact it fails.
+
+% gittrac #1256
+\item Fixed a problem that in rare cases caused the \Condor{schedd} to
+crash shortly after the \Condor{gridmanager} exited.
+This bug has existed since before Condor version 6.8.
 
 \end{itemize}
 
