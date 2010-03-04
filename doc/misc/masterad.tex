@@ -18,6 +18,33 @@
 \item[\AdAttr{MasterIpAddr}:] String with the IP and port address of the
 \Condor{master} daemon which is publishing this DaemonMaster ClassAd.
 
+\index{ClassAd DaemonMaster attribute!MonitorSelfAge}
+\item[\AdAttr{MonitorSelfAge}:] The number of seconds that this daemon
+  has been running.
+
+\index{ClassAd DaemonMaster attribute!MonitorSelfCPUUsage}
+\item[\AdAttr{MonitorSelfCPUUsage}:] The fraction of recent CPU time utilized
+  by this daemon. 
+
+\index{ClassAd DaemonMaster attribute!MonitorSelfImageSize}
+\item[\AdAttr{MonitorSelfImageSize}:] The amount of virtual memory consumed by
+  this daemon in Kbytes.
+
+\index{ClassAd DaemonMaster attribute!MonitorSelfRegisteredSocketCount}
+\item[\AdAttr{MonitorSelfRegisteredSocketCount}:] The current number of sockets
+  registered by this daemon.
+
+\index{ClassAd DaemonMaster attribute!MonitorSelfResidentSetSize}
+\item[\AdAttr{MonitorSelfResidentSetSize}:] The amount of resident memory
+  used by this daemon in Kbytes.
+
+\index{ClassAd DaemonMaster attribute!MonitorSelfTime}
+\item[\AdAttr{MonitorSelfTime}:] The  time, represented as the number of
+  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  at which this daemon last checked and set the attributes with names that
+  begin with the string \Attr{MonitorSelf}.
+  
+
 \index{ClassAd DaemonMaster attribute!MyAddress}
 \item[\AdAttr{MyAddress}:] Description is not yet written.
 

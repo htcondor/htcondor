@@ -140,6 +140,34 @@ average.
 \item[\AdAttr{Mips}:] Relative integer performance as determined via a Dhrystone
 benchmark.
 %
+
+\index{ClassAd machine attribute!MonitorSelfAge}
+\item[\AdAttr{MonitorSelfAge}:] The number of seconds that this daemon
+  has been running.
+
+\index{ClassAd machine attribute!MonitorSelfCPUUsage}
+\item[\AdAttr{MonitorSelfCPUUsage}:] The fraction of recent CPU time utilized
+  by this daemon. 
+
+\index{ClassAd machine attribute!MonitorSelfImageSize}
+\item[\AdAttr{MonitorSelfImageSize}:] The amount of virtual memory consumed by
+  this daemon in Kbytes.
+
+\index{ClassAd machine attribute!MonitorSelfRegisteredSocketCount}
+\item[\AdAttr{MonitorSelfRegisteredSocketCount}:] The current number of sockets
+  registered by this daemon.
+
+\index{ClassAd machine attribute!MonitorSelfResidentSetSize}
+\item[\AdAttr{MonitorSelfResidentSetSize}:] The amount of resident memory
+  used by this daemon in Kbytes.
+
+\index{ClassAd machine attribute!MonitorSelfTime}
+\item[\AdAttr{MonitorSelfTime}:] The  time, represented as the number of
+  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  at which this daemon last checked and set the attributes with names that
+  begin with the string \Attr{MonitorSelf}.
+  
+
 \index{ClassAd machine attribute!MyType}
 \item[\AdAttr{MyType}:] The ClassAd type; always set to the literal string \AdStr{Machine}.
 %
