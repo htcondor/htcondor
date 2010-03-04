@@ -2023,6 +2023,22 @@ TESTCLASS(lib_shared_port_van,full)
 TESTCLASS(lib_shared_port_van,quicknolink)
 #endif
 
+DESC(lib_ccb_startd,"Test of execute daemons using CCB.")
+DEPS(lib_ccb_startd,x_sleep.pl)
+RUN(lib_ccb_startd)
+TESTCLASS(lib_ccb_startd,core)
+TESTCLASS(lib_ccb_startd,quick)
+TESTCLASS(lib_ccb_startd,full)
+TESTCLASS(lib_ccb_startd,quicknolink)
+
+DESC(lib_ccb_schedd,"Test of submit daemons using CCB.")
+DEPS(lib_ccb_schedd,x_sleep.pl)
+RUN(lib_ccb_schedd)
+TESTCLASS(lib_ccb_schedd,core)
+TESTCLASS(lib_ccb_schedd,quick)
+TESTCLASS(lib_ccb_schedd,full)
+TESTCLASS(lib_ccb_schedd,quicknolink)
+
 /** 
 	Shadow bloat test, only run on linux systems
 */
