@@ -311,6 +311,10 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 			remoteJobId = strdup( token );
 		}
 	}
+
+	if ( !m_key_pair.IsEmpty() ) {
+		myResource->AlreadySubmitted( this );
+	}
 	
 	jobAd->LookupString( ATTR_GRID_JOB_STATUS, remoteJobState );
 
