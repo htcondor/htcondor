@@ -1470,7 +1470,7 @@ sub IsRunningYet
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			print "Want collector to see startd - ";
 			$loopcount = 0;
-			while( $done eq "no") {
+			TRY: while( $done eq "no") {
 				$loopcount += 1;
 				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
 
@@ -1480,6 +1480,7 @@ sub IsRunningYet
         			{
             			$done = "yes";
 						print "ok\n";
+						last TRY;
         			}
     			}
 				if($loopcount == $runlimit) { 
@@ -1500,7 +1501,7 @@ sub IsRunningYet
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			print "Want collector to see schedd - ";
 			$loopcount = 0;
-			while( $done eq "no") {
+			TRY: while( $done eq "no") {
 				$loopcount += 1;
 				my @cmd = `condor_status -schedd -format \"%s\\n\" name`;
 
@@ -1510,6 +1511,7 @@ sub IsRunningYet
         			{
 						print "ok\n";
             			$done = "yes";
+						last TRY;
         			}
     			}
 				if($loopcount == $runlimit) { 
