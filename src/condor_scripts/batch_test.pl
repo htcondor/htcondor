@@ -868,9 +868,13 @@ sub WhereIsInstallDir
 	CondorTest::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
+	    $tmp =~ s|//|/|g;
 		if($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) {
 			$installdir = $1;
 			print "Testing This Install Directory: \"$installdir\"\n";
+		}
+		else {
+		    die "'$tmp' didn't match path RE\n";
 		}
 	} else {
 		if($tmp =~ /^(.*)\/bin\/condor_master\s*$/) {
@@ -1229,8 +1233,7 @@ sub IsPersonalRunning
 		$pathtoconfig =~ s/\\/\\\\/g;
 	}
 
-    open(CONFIG, "condor_config_val -config -master log 2>&1 |") || die "condor_config_val: $
-!\n";
+    open(CONFIG, "condor_config_val -config -master log 2>&1 |") || die "condor_config_val: $!\n";
     while(<CONFIG>) {
         CondorTest::fullchomp($_);
         $line = $_;
