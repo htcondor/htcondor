@@ -20,13 +20,17 @@
 #ifndef SYSAPI_TEST_H
 #define SYSAPI_TEST_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /*
  * arch_test(int) tests sysapi_arch for consistency (making sure it is valid
  * over n trials), and to be sure that the returned string is not null or empty.
  *    PARAMS:
  *    int trials - how many times to check sysapi_arch for consistency.
  */
-extern "C" int arch_test(int trials);
+int arch_test(int trials);
 
 /*
  * free_fs_blocks_test(int, int, double) tests sysapi_free_fs_blocks against
@@ -36,14 +40,16 @@ extern "C" int arch_test(int trials);
  * If it does not, warnings are issued. If more than some percentage of the
  * tests yield warnings, this whole test fails.
  *    PARAMS:
+ *    const char *dir - directory to use
  *    int trials - how many times to check sysapi_free_fs_blocks for consistency.
  *    int tolerance - how many KB discrepency to allow in consistency check
  *        without issuing a warning.
  *    double warn_ok_ratio - what ratio (0=none,1=all) of the test performed can issue
  *        warnings without the test failing.
  */
-extern "C" int free_fs_blocks_test(int trials, double tolerance, double
-				warn_ok_ratio);
+int free_fs_blocks_test( const char *dir,
+						 int trials, double tolerance, double
+						 warn_ok_ratio);
 
 /*
  * idle_time_test(int, int, double) tests sysapi_idle_time against
@@ -59,8 +65,8 @@ extern "C" int free_fs_blocks_test(int trials, double tolerance, double
  *    double warn_ok_ratio - what ratio of the test performed can issue
  *        warnings without the test failing.
  */
-extern "C" int idle_time_test(int trials, int interval, int tolerance, double
-				warn_ok_ratio);
+int idle_time_test(int trials, int interval, int tolerance, double
+				   warn_ok_ratio);
 
 /*
  * load_avg_test(int, int, int, double) tests sysapi_load_avg against negative
@@ -75,8 +81,8 @@ extern "C" int idle_time_test(int trials, int interval, int tolerance, double
  *    double warn_ok_ratio - what ratio of the test performed can issue
  *        warnings without the test failing.
  */
-extern "C" int load_avg_test(int trials, int interval, int num_children, double
-				warn_ok_ratio);
+int load_avg_test(int trials, int interval, int num_children, double
+				  warn_ok_ratio);
 
 /*
  * phys_memory_test(int, int, double) tests sysapi_phys_mem against negative
@@ -90,7 +96,7 @@ extern "C" int load_avg_test(int trials, int interval, int num_children, double
  *        warnings without the test failing.
  *
  */
-extern "C" int phys_memory_test(int trials, double warn_ok_ratio);
+int phys_memory_test(int trials, double warn_ok_ratio);
 
 /*
  * ncpus_test(int, double) tests sysapi_ncpus against negative
@@ -104,7 +110,7 @@ extern "C" int phys_memory_test(int trials, double warn_ok_ratio);
  *        warnings without the test failing.
  *
  */
-extern "C" int ncpus_test(int trials, double warn_ok_ratio);
+int ncpus_test(int trials, double warn_ok_ratio);
 
 /*
  * These three tests all have the same structure: they perform n^2 function
@@ -120,11 +126,15 @@ extern "C" int ncpus_test(int trials, double warn_ok_ratio);
  *    double max_failed_test_ratio - range: 0-1. Percentage of test_blocksize.
  *           Used to determine whether the test as a whole fails.
  */
-extern "C" int virt_memory_test(int test_blocksize, double
-				max_sd_variation_ratio, double max_failed_test_ratio);
-extern "C" int mips_test(int test_blocksize, double max_sd_variation_ratio,
+int virt_memory_test(int test_blocksize, double
+					 max_sd_variation_ratio, double max_failed_test_ratio);
+int mips_test(int test_blocksize, double max_sd_variation_ratio,
+			  double max_failed_test_ratio);
+int kflops_test(int test_blocksize, double max_sd_variation_ratio,
 				double max_failed_test_ratio);
-extern "C" int kflops_test(int test_blocksize, double max_sd_variation_ratio,
-				double max_failed_test_ratio);
+
+#if defined(__cplusplus)
+}		/* End of 'extern "C"' declaration block */
+#endif
 
 #endif
