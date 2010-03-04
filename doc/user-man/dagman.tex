@@ -312,14 +312,24 @@ node  & S & F & F       & S & F & S & F & S & F & S & S & F & F  \\
 \end{table}
 \end{center}
 
-Two variables may be used within the DAG input file,
-and may ease script writing.
-The variables are often utilized in the arguments passed
-to a PRE or POST script.
+Four variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY}, and
+\Env{\$RETURN}) can be used within the DAG input file
+as arguments passed to a PRE or POST script.
+
 The variable \Env{\$JOB} evaluates to the (case sensitive) string
 defined for \Arg{JobName}.
+
+The variable \Env{\$RETRY} evaluates to the "retry number" for the
+node.  The first time a node is run, the value will be zero, and
+it will be incremented for each retry.
+
+For use as an argument to POST scripts only, the variable \Env{\$JOBID}
+evaluates to the Condor ID of the node job (cluster and proc only).
+(For example, 1234.0.)  For nodes with multiple jobs in the same
+cluster, the proc value is the proc ID of the last job in the cluster.
+
 \index{DAGMan!Return@\verb^$RETURN^ value}
-For use as an argument to POST scripts,
+For use as an argument to POST scripts only,
 the \Env{\$RETURN} variable evaluates to the return value of the 
 Condor or Stork job, if there is a single job within a cluster.
 With multiple jobs within the same cluster,
