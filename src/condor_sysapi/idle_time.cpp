@@ -164,10 +164,13 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	m_idle = MIN( now - _sysapi_last_x_event, m_idle );
 
 		// If last_x_event != 0, then condor_kbdd told us someone did
-		// something on the console, but always believe a /dev device
-		// over the kbdd, so if console_idle is set, leave it alone.
-	if( (m_console_idle == -1) && (_sysapi_last_x_event != 0) ) {
-		m_console_idle = now - _sysapi_last_x_event;
+		// something on the console.
+	if ( _sysapi_last_x_event ) {
+		if( m_console_idle != -1 ) {
+			m_console_idle = MIN( now - _sysapi_last_x_event, m_console_idle );
+		}else {
+			m_console_idle = now - _sysapi_last_x_event;
+		}
 	}
 
 #if defined(LINUX)
