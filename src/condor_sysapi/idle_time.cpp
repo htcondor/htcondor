@@ -78,7 +78,7 @@ static int is_number(const char *str);
 
 /* we must now use the kstat interface to get this information under later
 	releases of Solaris */
-#if defined(Solaris28) || defined(Solaris29)
+#if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 static time_t solaris_kbd_idle(void);
 static time_t solaris_mouse_idle(void);
 #endif
@@ -211,7 +211,7 @@ static char *AltUtmpName = "/var/adm/utmp";
 #elif defined(CONDOR_FREEBSD)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "";
-#elif defined(Solaris28) || defined(Solaris29)
+#elif defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 #include <utmpx.h>
 static char *UtmpName = "/etc/utmpx";
 static char *AltUtmpName = "/var/adm/utmpx";
@@ -417,9 +417,9 @@ dev_idle_time( const char *path, time_t now )
 {
 	struct stat	buf;
 	time_t answer;
-	#if defined(Solaris28) || defined(Solaris29)
+#  if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 	time_t kstat_answer;
-	#endif
+#  endif
 	static char pathname[100] = "/dev/";
 	static int null_major_device = -1;
 
@@ -481,7 +481,7 @@ dev_idle_time( const char *path, time_t now )
 		solaris 8 update 6+ or solaris 9. stat() will return 0
 		for the access time no matter what. */
 
-	#if defined(Solaris28) || defined(Solaris29)
+#  if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 	
 		/* if I happen not to be dealing with a console device, we better 
 			choose what the stat() answer would have been, so initialize this
@@ -503,7 +503,7 @@ dev_idle_time( const char *path, time_t now )
 		then, well, someone is using it */
 	answer = MAX(answer, kstat_answer);
 
-	#endif
+#  endif
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
         dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
@@ -894,7 +894,7 @@ extract_idle_time(
 	actual kbd or mouse device no longer returns(by design according to 
 	solaris) the access time. These are localized functions static to this
 	object file. */
-#if defined(Solaris28) || defined(Solaris29)
+#if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 static time_t solaris_kbd_idle(void)
 {
 	kstat_ctl_t     *kc = NULL;  /* libkstat cookie */ 

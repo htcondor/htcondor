@@ -401,8 +401,10 @@ elif test $os = "SunOS" ; then
   _cv_opsys="SOLARIS"
   if test $arch = "sun4m" -o $arch = "sun4u" ; then
     _cv_arch="SUN4X"
+  elif test $arch = "i86pc" ; then
+    _cv_arch="X86_64"
   else
-    AC_MSG_ERROR([Condor only supports Sparc Solaris (not $arch)])
+    AC_MSG_ERROR([Condor only supports SPARC and X86/64 Solaris (not $arch)])
   fi
   if test "$osrelease" = "5.6" ; then
     _cv_opsys_vers="SOLARIS26"
@@ -416,6 +418,16 @@ elif test $os = "SunOS" ; then
   elif test "$osrelease" = "5.9" ; then
     _cv_opsys_vers="SOLARIS29"
     _cv_sysname="sun4x_59"
+  elif test "$osrelease" = "5.10" ; then
+    _cv_opsys_vers="SOLARIS10"
+    _cv_sysname="sun4x_solaris10"
+  elif test "$osrelease" = "5.11" ; then
+    _cv_opsys_vers="SOLARIS11"
+    if test "$arch" = "i86pc" ; then
+      _cv_sysname="x86_64_solaris11"
+    else
+      _cv_sysname="sun4x_solaris11"
+    fi
   fi
 
   # now figure out the kernel revision. Under solaris this will have
@@ -575,6 +587,9 @@ if test "$KERNEL"  != "" ; then
   AC_MSG_NOTICE([Using kernel version \"$OSVER\" from command line])
   _cv_kernel_rev="$KERNEL"
 fi
+
+echo "opsys_ver:${_cv_opsys_vers}"
+echo "sysname:${_cv_sysname}"
 
 if test "$LIBC" != "" ; then
   AC_MSG_NOTICE([Using libc \"$LIBC\" from command line])
@@ -1159,7 +1174,7 @@ else
   rm -f static_test.c static_test.o static_test > /dev/null 2>&1
   if test "x$gcc_static_ld_flag" = "x" ; then
     msg="can not find appropriate flags for $gcc_ld_prog!"
-    if test $os = "SunOS" ; then
+    if test $os = "SunOS" && test "$arch" != "i86pc" ; then
       # on Solaris, this is fatal, since we depend on this info
       AC_MSG_ERROR([$msg])
     else
@@ -1649,6 +1664,8 @@ fi
 case "$_cv_opsys_vers" in
   SOLARIS28 ) AC_DEFINE([Solaris28], [Solaris28], [Define if on Solaris28]) ;;
   SOLARIS29 ) AC_DEFINE([Solaris29], [Solaris29], [Define if on Solaris29]) ;;
+  SOLARIS10 ) AC_DEFINE([Solaris10], [Solaris10], [Define if on Solaris10]) ;;
+  SOLARIS11 ) AC_DEFINE([Solaris11], [Solaris11], [Define if on Solaris11]) ;;
 esac
 
 # Old FREEBSD*.cf files contained -DCONDOR_FREEBSD*=CONDOR_FREEBSD*,
@@ -2390,6 +2407,8 @@ AC_CHECK_HEADERS([net/if.h],[],[],[
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
+AC_CHECK_HEADERS([procfs.h])
+AC_CHECK_HEADERS([sys/procfs.h])
 AC_CHECK_HEADERS([inttypes.h])
 AC_CHECK_HEADERS([os_types.h])
 AC_CHECK_HEADERS([sys/syscall.h])

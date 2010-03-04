@@ -23,6 +23,13 @@
 #include "procapi.h"
 #include "procapi_internal.h"
 
+#if HAVE_PROCFS_H
+# include <procfs.h>
+#endif
+#if HAVE_SYS_PROCFS_H
+# include <sys/procfs.h>
+#endif
+
 // Ugly hack: stat64 prototyps are wacked on HPUX
 // These are cut & pasted from the HPUX man pages...                            
 #if defined( HPUX )
@@ -331,7 +338,7 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	return PROCAPI_SUCCESS;
 }
 
-#elif defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#elif defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 // This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8 and 2.9
 
 int

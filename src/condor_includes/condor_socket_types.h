@@ -28,7 +28,7 @@ details.  Ideally, we would collect all these little details about
 _all_ the calls and put them in one standard place.
 */
 
-#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE unsigned int
 	#define SOCKET_ALTERNATE_LENGTH_TYPE socklen_t
