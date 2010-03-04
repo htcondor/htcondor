@@ -136,12 +136,6 @@ average.
 \item[\AdAttr{Mips}:] Relative integer performance as determined via a Dhrystone
 benchmark.
 
-\index{ClassAd machine attribute!MyAddress}
-\item[\AdAttr{MyAddress}:] String with the IP and port address of the
-\Condor{startd} daemon which is publishing this machine ClassAd.
-When using CCB, \Condor{shared\_port}, and/or an additional private
-network interface, that information will be included here as well.
-
 \index{ClassAd machine attribute!MonitorSelfAge}
 \item[\AdAttr{MonitorSelfAge}:] The number of seconds that this daemon
   has been running.
@@ -162,12 +156,22 @@ network interface, that information will be included here as well.
 \item[\AdAttr{MonitorSelfResidentSetSize}:] The amount of resident memory
   used by this daemon in Kbytes.
 
+\index{ClassAd machine attribute!MonitorSelfSecuritySessions}
+\item[\AdAttr{MonitorSelfSecuritySessions}:] The number of open (cached)
+  security sessions for this daemon.
+
 \index{ClassAd machine attribute!MonitorSelfTime}
 \item[\AdAttr{MonitorSelfTime}:] The  time, represented as the number of
   second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
   at which this daemon last checked and set the attributes with names that
   begin with the string \Attr{MonitorSelf}.
   
+\index{ClassAd machine attribute!MyAddress}
+\item[\AdAttr{MyAddress}:] String with the IP and port address of the
+\Condor{startd} daemon which is publishing this machine ClassAd.
+When using CCB, \Condor{shared\_port}, and/or an additional private
+network interface, that information will be included here as well.
+
 \index{ClassAd machine attribute!MyType}
 \item[\AdAttr{MyType}:] The ClassAd type; always set to the literal string \AdStr{Machine}.
 %
