@@ -8367,7 +8367,13 @@ DaemonCore::Kill_Family(pid_t pid)
 	ASSERT(m_proc_family != NULL);
 	return m_proc_family->kill_family(pid);
 }
-
+int
+DaemonCore::Signal_Children(pid_t pid, int sig)
+{
+	ASSERT(m_proc_family != NULL);
+	dprintf(D_ALWAYS, "sending signal %d to children of family with root %u\n",sig,pid);
+	return m_proc_family->signal_children(pid,sig);
+}
 void
 DaemonCore::Proc_Family_Init()
 {

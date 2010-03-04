@@ -63,6 +63,8 @@ public:
 	virtual bool continue_family(pid_t) = 0;
 
 	virtual bool kill_family(pid_t) = 0;
+	
+	virtual bool signal_children(pid_t, int) = 0;
 
 	virtual bool unregister_family(pid_t) = 0;
 

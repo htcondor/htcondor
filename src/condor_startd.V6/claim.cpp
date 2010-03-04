@@ -1515,7 +1515,7 @@ Claim::starterKillHard( void )
 {
 	if( c_starter ) {
 		changeState( CLAIM_KILLING );
-		return c_starter->killHard();
+		return c_starter->killHard(USER_DEFINED);
 	}
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  

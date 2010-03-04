@@ -246,6 +246,18 @@ void ProcFamilyServer::kill_family()
 	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
+void ProcFamilyServer::signal_children()
+{
+	pid_t pid;
+	read_from_client(&pid, sizeof(pid_t));
+	int sig;
+	read_from_client(&sig, sizeof(int));
+
+	proc_family_error_t err = m_monitor.signal_children(pid, sig);
+
+	write_to_client(&err, sizeof(proc_family_error_t));
+}
+
 void
 ProcFamilyServer::unregister_family()
 {
@@ -421,7 +433,12 @@ ProcFamilyServer::wait_loop()
 				dprintf(D_ALWAYS, "PROC_FAMILY_KILL_FAMILY\n");
 				kill_family();
 				break;
-
+				
+			case PROC_FAMILY_SIGNAL_CHILDREN:
+				dprintf(D_ALWAYS, "PROC_FAMILY_SIGNAL_CHILDREN\n");
+				signal_children();
+				break;
+				
 			case PROC_FAMILY_GET_USAGE:
 				dprintf(D_ALWAYS, "PROC_FAMILY_GET_USAGE\n");
 				get_usage();

@@ -29,6 +29,9 @@
 
 #include "../condor_procapi/procapi.h"
 #include "../condor_procd/proc_family_io.h"
+
+enum level_t {USER_DEFINED, SIG_QUIT, SIG_KILL};
+
 class Claim;
 
 class Starter : public Service
@@ -62,7 +65,7 @@ public:
 		// of EXECUTE that is passed to the starter
 	char const *executeDir();
 
-	bool	killHard( void );
+	bool	killHard( level_t );
 	bool	killSoft( void );
 	bool	suspend( void );
 	bool	resume( void );
@@ -72,7 +75,9 @@ public:
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
 	void	sigkillStarter( void );
-
+	bool	sigkillStarterSIGKILL( void );
+	bool	sigkillStarterSIGQUIT( void );
+	
 	void	publish( ClassAd* ad, amask_t mask, StringList* list );
 
 	bool	satisfies( ClassAd* job_ad, ClassAd* mach_ad );
@@ -127,7 +132,10 @@ private:
 
 	void	initRunData( void );
 
-	int		startKillTimer( void );	    // Timer for how long we're willing 
+	// Timer for how long we're willing 
+	// to "hardkill" before we SIGKILL
+	int	startKillTimer( level_t );	   
+
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
 
 		// choose EXECUTE directory for starter

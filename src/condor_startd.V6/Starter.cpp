@@ -35,6 +35,7 @@
 #include "basename.h"
 #include "dc_starter.h"
 #include "classadHistory.h"
+#include "classad_helpers.h"
 
 #if defined(LINUX)
 #include "glexec_starter.h"
@@ -1191,19 +1192,54 @@ Starter::getIpAddr( void )
 
 
 bool
-Starter::killHard( void )
+Starter::killHard( level_t level )
 {
+	ClassAd *jobAd = NULL;
+	jobAd = s_claim->ad();
+	int kill_sig = -1;
+ 
 	if( ! active() ) {
 		return true;
 	}
-	if( ! kill(DC_SIGHARDKILL) ) {
-		killpg( SIGKILL );
-		return false;
+	cancelKillTimer();
+	
+	kill_sig = findRmKillSig( jobAd );
+	
+	if (kill_sig==-1) kill_sig = findSoftKillSig( jobAd );
+	
+	if (level==SIG_KILL || kill_sig==-1){
+		if( ! kill(DC_SIGHARDKILL) ) {
+			killpg( SIGKILL );
+			return false;
+		}
+		dprintf(D_FULLDEBUG, "in starter:killHard starting kill timer\n");
+		startKillTimer(SIG_KILL);	
+	} else if (level==SIG_QUIT) {
+		kill_sig=3; //SIGQUIT
+		if (daemonCore->Signal_Children(s_pid, kill_sig) == FALSE) {
+			dprintf(D_ALWAYS,
+			        "error killing children of starter with pid %u\n",
+				s_pid);
+				return false;
+		} else {
+			dprintf(D_FULLDEBUG, "in starter:killHard  starting kill timer\n");
+			startKillTimer(SIG_QUIT);
+		}
+	} else {
+		//using user defined signal
+		if (daemonCore->Signal_Children(s_pid, kill_sig) == FALSE) {
+			dprintf(D_ALWAYS,
+			        "error killing children of starter with pid %u\n",
+				s_pid);
+				return false;
+		} else {
+			dprintf(D_FULLDEBUG, "in starter:killHard  starting kill timer\n");
+			startKillTimer(USER_DEFINED);
+		}
+	
 	}
-	startKillTimer();
 	return true;
 }
-
 
 bool
 Starter::killSoft( void )
@@ -1248,7 +1284,7 @@ Starter::resume( void )
 
 
 int
-Starter::startKillTimer( void )
+Starter::startKillTimer( level_t level )
 {
 	if( s_kill_tid >= 0 ) {
 			// Timer already started.
@@ -1266,11 +1302,29 @@ Starter::startKillTimer( void )
 
 		// Create a periodic timer so that if the kill attempt fails,
 		// we keep trying.
-	s_kill_tid = 
-		daemonCore->Register_Timer( tmp_killing_timeout,
+		
+	switch (level) {
+		case USER_DEFINED: //just sent a user defined signal so now we set a timer to send SIGQUIT
+			s_kill_tid = 
+			daemonCore->Register_Timer( tmp_killing_timeout,
+						tmp_killing_timeout, 
+						(TimerHandlercpp)&Starter::sigkillStarterSIGQUIT,
+						"sigkillStarterSIGQUIT", this );
+			break;
+		case SIG_QUIT:  //sent SIGQUIT, set a timer to send SIGKILL
+			s_kill_tid = 
+			daemonCore->Register_Timer( tmp_killing_timeout,
+						tmp_killing_timeout, 
+						(TimerHandlercpp)&Starter::sigkillStarterSIGKILL,
+						"sigkillStarterSIGKILL", this );
+			break;
+		default: //SIGKILL
+			s_kill_tid = 
+			daemonCore->Register_Timer( tmp_killing_timeout,
 						tmp_killing_timeout, 
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
+		}								
 	if( s_kill_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );
 	}
@@ -1315,6 +1369,41 @@ Starter::sigkillStarter( void )
 			// Kill the starter's entire process group.
 		killpg( SIGKILL );
 	}
+}
+
+bool
+Starter::sigkillStarterSIGKILL( void )
+{
+		// In case the kill fails for some reason, we are on a periodic
+		// timer that will keep trying.
+
+	if( active() ) {
+		dprintf( D_ALWAYS, "Children of starter (pid %d) are not "
+				 "terminating on SIGQUIT. The startd will now "
+				 "send SIGKILL to the children "
+				 "of starter.\n", s_pid );
+
+		killHard(SIG_KILL);
+	}
+	return true;
+}
+
+bool
+Starter::sigkillStarterSIGQUIT( void )
+{
+		// In case the kill fails for some reason, we are on a periodic
+		// timer that will keep trying.
+
+	if( active() ) {
+		dprintf( D_ALWAYS, "Children of starter (pid %d) are not "
+				 "terminating on remove or kill_sig signal. The startd will now "
+				 "send SIGQUIT to the children "
+				 "of starter.\n", s_pid );
+
+			// Kill all of the starter's children.
+		killHard(SIG_QUIT);
+	}
+	return true;
 }
 
 bool

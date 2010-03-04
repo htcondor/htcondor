@@ -5245,9 +5245,14 @@ SetKillSig()
 			sig_name = strdup( "SIGTERM" );
 			break;
 		}
-	}
-	buffer.sprintf( "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
-	InsertJobExpr( buffer );
+		if (JobUniverse != CONDOR_UNIVERSE_VANILLA) {
+			buffer.sprintf( "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
+			InsertJobExpr( buffer );
+		}
+	} else {
+		buffer.sprintf( "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
+		InsertJobExpr( buffer );
+		}
 	free( sig_name );
 
 	sig_name = findKillSigName( RmKillSig, ATTR_REMOVE_KILL_SIG );

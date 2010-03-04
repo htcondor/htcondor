@@ -1058,7 +1058,8 @@ class DaemonCore : public Service
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
-
+    int Signal_Children(pid_t,int);
+    
 	/** Used to explicitly initialize our ProcFamilyInterface object.
 	    Calling this is not required - if not called, the object
 	    will be initialized on-demand: the first time Create_Process
