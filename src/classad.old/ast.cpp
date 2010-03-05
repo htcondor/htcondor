@@ -18,7 +18,7 @@
  ***************************************************************/
 
 //******************************************************************************
-// ast.C
+// ast.cpp
 //
 // Implementation of the AST module with an interface to the AttrList module.
 //
@@ -33,12 +33,12 @@
 
 #include "Regex.h"
 
-// gcc 4.3.4 doesn't seem to define FLT_MIN on OpenSolaris 2009.06
+// gcc doesn't seem to define FLT_MIN on OpenSolaris 2009.06
 #if !defined(FLT_MIN) && defined(__FLT_MIN__)
   #define FLT_MIN	__FLT_MIN__
 #endif
 #if !defined(FLT_MAX) && defined(__FLT_MAX__)
-  #define FLT_MIN	__FLT_MAX__
+  #define FLT_MAX	__FLT_MAX__
 #endif
 
 extern char * format_time(int);
