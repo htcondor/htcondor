@@ -160,7 +160,7 @@ GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
 	}
 
 	// start timer to signal gridmanager if we haven't already
-	if ( node->add_timer_id == -1 ) {  // == -1 means no timer set
+	if ( node->remove_timer_id == -1 ) {  // == -1 means no timer set
 		node->remove_timer_id = daemonCore->Register_Timer(job_removed_delay,
 			GridUniverseLogic::SendRemoveSignal,
 			"GridUniverseLogic::SendRemoveSignal");
