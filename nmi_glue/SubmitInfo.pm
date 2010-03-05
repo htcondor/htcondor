@@ -275,7 +275,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				@default_prereqs, 
 				'binutils-2.16', 'coreutils-5.2.1', 'gcc-3.4.3', 
-				'gzip-1.2.4', 'wget-1.9.1',
+				'gzip-1.3.3', 'wget-1.9.1',
 			],
 			'xtests'	=> undef,
 		},
@@ -284,7 +284,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs,
 				'binutils-2.16', 'coreutils-5.2.1', 'gcc-3.4.3',
-				'gzip-1.2.4', 'wget-1.9.1',
+				'gzip-1.3.3', 'wget-1.9.1',
 				'java-1.5.0_03' ],
 			'testclass'	=> [ @default_testclass ],
 		},
