@@ -374,6 +374,18 @@ class RemoteResource : public Service {
 		// Try to send an updated X509 proxy down to the starter
 	bool updateX509Proxy(const char * filename);
 
+	// return true if job should be allowed to read from filename
+	bool allowRemoteReadFileAccess( char const * filename );
+
+	// return true if job should be allowed to write to filename
+	bool allowRemoteWriteFileAccess( char const * filename );
+
+	// return true if job should be allowed to read from attribute
+	bool allowRemoteReadAttributeAccess( char const * name );
+
+	// return true if job should be allowed to write to attribute
+	bool allowRemoteWriteAttributeAccess( char const * name );
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -396,6 +408,9 @@ class RemoteResource : public Service {
 	bool claim_is_closing;
 	int exit_value;
 	bool exited_by_signal;
+
+	bool m_want_chirp;
+	bool m_want_streaming_io;
 
 		// If we specially create a security session for file transfer,
 		// this records all the information we need to know about it.
@@ -475,6 +490,8 @@ private:
 
 	bool already_killed_graceful;
 	bool already_killed_fast;
+
+	void logRemoteAccessCheck(bool allow,char const *op,char const *name);
 };
 
 
