@@ -1,0 +1,1 @@
+%defattr(-,root,root,-)
