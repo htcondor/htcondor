@@ -42,8 +42,8 @@ REM a trailing backslash.  We need to do this before calling
 REM gmake below, since gmake will invoke bison, and bison
 REM requires TEMP w/ trailing backslash.
 REM Try to create a c:\temp if no TEMP env var defined
-if not defined TEMP ( if not exist c:\TEMP (mkdir c:\windows\toddy || ( echo No TEMP env var and failed to make c:\TEMP && goto :FAIL) ) )
-if not defined TEMP (set TEMP=c:\temp)
+if not defined TEMP ( if not exist c:\TEMP (mkdir c:\TEMP || ( echo No TEMP env var and failed to make c:\TEMP && goto :FAIL) ) )
+if not defined TEMP (set TEMP=c:\TEMP)
 REM Be sure to have a trailing backslash
 TEMP=%TEMP%\
 
