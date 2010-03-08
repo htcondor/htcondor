@@ -86,6 +86,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
+	m_want_chirp = false;
+	m_want_streaming_io = false;
 }
 
 
@@ -924,6 +926,21 @@ RemoteResource::setJobAd( ClassAd *jA )
 
 	if( jA->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, int_value) ) {
 		last_job_lease_renewal = (time_t)int_value;
+	}
+
+	jA->LookupBool( ATTR_WANT_IO_PROXY, m_want_chirp );
+
+	bool stream_input=false, stream_output=false, stream_error=false;
+	jA->LookupBool(ATTR_STREAM_INPUT,stream_input);
+	jA->LookupBool(ATTR_STREAM_OUTPUT,stream_output);
+	jA->LookupBool(ATTR_STREAM_ERROR,stream_error);
+
+	m_want_streaming_io = stream_input || stream_output || stream_error;
+	if( m_want_chirp || m_want_streaming_io ) {
+		dprintf(D_FULLDEBUG,
+			"Enabling remote IO syscalls (want chirp=%s,want streaming=%s).\n",
+			m_want_chirp ? "true" : "false",
+			m_want_streaming_io ? "true" : "false");
 	}
 }
 
@@ -1900,4 +1917,46 @@ RemoteResource::getSecSessionInfo(
 	filetrans_session_key = m_filetrans_session.secSessionKey();
 
 	return true;
+}
+
+bool
+RemoteResource::allowRemoteReadFileAccess( char const * filename )
+{
+	bool response = m_want_chirp || m_want_streaming_io;
+	logRemoteAccessCheck(response,"read access to file",filename);
+	return response;
+}
+
+bool
+RemoteResource::allowRemoteWriteFileAccess( char const * filename )
+{
+	bool response = m_want_chirp || m_want_streaming_io;
+	logRemoteAccessCheck(response,"write access to file",filename);
+	return response;
+}
+
+bool
+RemoteResource::allowRemoteReadAttributeAccess( char const * name )
+{
+	bool response = m_want_chirp;
+	logRemoteAccessCheck(response,"read access to attribute",name);
+	return response;
+}
+
+bool
+RemoteResource::allowRemoteWriteAttributeAccess( char const * name )
+{
+	bool response = m_want_chirp;
+	logRemoteAccessCheck(response,"write access to attribute",name);
+	return response;
+}
+
+void
+RemoteResource::logRemoteAccessCheck(bool allow,char const *op,char const *name)
+{
+	int debug_level = allow ? D_FULLDEBUG : D_ALWAYS;
+	dprintf(debug_level,"%s remote request for %s %s\n",
+			allow ? "ALLOWING" : "DENYING",
+			op,
+			name);
 }

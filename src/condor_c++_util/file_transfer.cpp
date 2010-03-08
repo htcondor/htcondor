@@ -1600,6 +1600,36 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		free( tmp_buf );
 		tmp_buf = NULL;
 
+		char const *basename = condor_basename( filename.Value() );
+		if( !basename ) {
+			basename = "";
+		}
+		if( strcmp(basename,filename.Value()) != 0 ) {
+			// Our peer sent us a filename that is not a basename.  Bad!
+			// We check this for two reasons:
+			//  1. paranoia: our peer might inject .. to escape the sandbox
+			//  2. future: our peer might think we can support sub-directories
+			//     in the sandbox, but we can't
+			download_success = false;
+			try_again = false;
+			hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+			hold_subcode = EPERM;
+
+			error_buf.sprintf_cat(
+				"Path information in download filename not supported: %s",
+				filename.Value());
+
+			dprintf(D_ALWAYS,"DoDownload: received invalid filename (contains path info) from our peer %s: %s.\n",
+					s->peer_description(),
+					filename.Value());
+
+			// Just truncate the path and go ahead with the download.
+			// This allows us to consume the rest of the downloads and
+			// propagate the error message, put the job on hold, etc.
+			MyString b = basename;
+			filename = b;
+		}
+
 			/*
 			  if we want to change priv states but haven't done so
 			  yet, set it now.  we only need to do this once since

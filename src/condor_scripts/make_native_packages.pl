@@ -166,7 +166,9 @@ if ($type eq "RPM") {
 	
 	if ( !defined ($rpm_file)) {
 		die "RPM package not found";
-    } else {
+        } else {
+		!system ("mv", "$rpm_file", "$binaries_dir") or die "Cannot move package to public folder";
+
 		print "************************************************************\n";
 		print "All done. Result package: $rpm_file \n";
 		print "************************************************************\n";
@@ -188,12 +190,13 @@ if ($type eq "RPM") {
 	
 	#Debian file should be in native folder by now.
 	chdir "$binaries_dir/native";
-	my $deb_file = glob "condor*.deb";
-	
+	my $deb_file = glob "condor*.deb";	
+
 	if ( !defined ($deb_file)) {
 		die "Debian package not found";
-    } else {
-		
+        } else {
+		!system ("mv", "$deb_file", "$binaries_dir") or die "Cannot move package to public folder";
+
 		print "************************************************************\n";
 		print "All done. Result package: $deb_file \n";
 		print "************************************************************\n";
