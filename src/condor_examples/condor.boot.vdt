@@ -1,0 +1,454 @@
+#! /bin/sh
+##**************************************************************
+##
+## Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+
+#
+# chkconfig: 2345 98 10
+# description: Condor HTC computing platform
+#
+# condor script for SysV-style init boot scripts.  
+#
+# Usually this would be installed as /etc/init.d/condor with soft
+# links put in from /etc/rc*.d to point back to /etc/init.d/condor to
+# determine when Condor should be started and stopped.  Exact
+# directories or details of the links you should use will vary from
+# platform to platform. 
+#
+
+# This script strives for portability, and thus may be inelegant
+# on any given system.  Users on Fedora or Red Hat systems should
+# also consider "condor.init", which is more native and should
+# integrate better with the rest of the system.
+
+### BEGIN INIT INFO
+# Provides:          condor
+# Required-Start:    $network $local_fs
+# Required-Stop:
+# Should-Start:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Manage condor daemons
+# Description: Condor HTC computing platform
+### END INIT INFO
+
+# Ensure that the settings below are correct for your Condor
+# installation.
+
+# Path to your primary condor configuration file.
+CONDOR_CONFIG=/etc/condor/condor_config
+
+# Path to condor_config_val
+CONDOR_CONFIG_VAL=/usr/bin/condor_config_val
+
+# A file used to track the running instance. Needs to be writable
+# and deletable.  If left blank, defaults to $RUN/master.pid,
+# where $RUN is the RUN directory in your CONDOR_CONFIG, will be
+# used.
+PIDFILE=
+
+
+# Number of seconds to wait for the condor_master to exit.
+#
+# You might want to set this to 5 seconds longer than
+# SHUTDOWN_FAST_TIMEOUT as set in your CONDOR_CONFIG to give
+# Condor as much chance as possible to shut itself and its children
+# down before we give up.  SHUTDOWN_FAST_TIMEOUT timeout defaults
+# to 300 (5 minutes), as of 2008.
+MAX_STOP_WAIT=30
+
+
+# Assuming a typical Condor installation, the following settings
+# will be automatically detected.
+
+# The ps command to dump all running processes.  The PID should be
+# the second field in the output, and the full command name should
+# be present.  Likely options are "/bin/ps auwx" and "/bin/ps -ef".  
+# If blank, this script will try to automatically detect it.
+PS=
+
+
+# Paths to various Condor directories.  If blank, default
+# to the matching setting in the Condor configuration file
+#
+# condor_config_val LOG
+CONDOR_LOG=
+# condor_config_val SBIN
+CONDOR_SBIN=
+
+# Paths to various Condor binaries.  If blank, default to
+# the location given.
+#
+# condor_off - defaults to $CONDOR_SBIN/condor_off
+CONDOR_OFF=
+# condor_reconfig - defaults to $CONDOR_SBIN/condor_reconfig
+CONDOR_RECONFIG=
+# condor_master - defaults to `condor_config_val MASTER`
+CONDOR_MASTER=
+
+
+
+# There are no settings beyond this point.
+
+
+
+################################################################################
+
+# A key goal of this script is portability.  As a result,
+# there are is awkward syntax.  For example: the -e test
+# for file existance isn't available in Solaris 9 /bin/sh
+# so "\( -f "$1" -o -L "$1" \)" is used as a rough equivalent.
+# stop is not an acceptable function name on AIX and HPUX,
+# so the function is called xstop.
+
+# Equivalent to "echo -n", but portable.
+echon() {
+	if [ "`echo -n`" = "-n" ]; then
+		echo "$@""\c"
+	else
+		echo -n "$@"
+	fi
+}
+
+# Emits error with a "FATAL: " prefix. Exits.  Never returns
+fatal_error() {
+        echo "FATAL: $1"
+        exit 1
+}
+
+# Is the executable in $1 potentially runnable?
+# Exit if no.
+verify_executable() {
+    if [ ! \( -f "$1" -o -L "$1" \) ]; then
+        fatal_error "Required executable $1 does not exist."
+    fi
+    if [ -d "$1" ]; then
+        fatal_error "Required executable $1 is a directory instead of a file."
+    fi
+    if [ ! -x "$1" ]; then
+        fatal_error "Required executable $1 is not executable."
+    fi
+	return 0
+}
+
+# Is the path in $1 a potentially readable directory?
+# Exit if no.
+verify_readable_directory() {
+    if [ ! -d "$1" ]; then
+        fatal_error "Required directory $1 does not exist, or is not a directory."
+    fi
+    if [ ! -r "$1" ]; then
+        fatal_error "Required executable $1 is not readable."
+    fi
+	return 0
+}
+
+# Returns a setting from the CONDOR_CONFIG configuration
+# file.  Exits if the value cannot be found!
+get_condor_config_val() {
+	TMPVAL=`"$CONDOR_CONFIG_VAL" $1`
+	if [ "$TMPVAL" = "" ]; then
+		fatal_error "Unable to locate $1 in $CONDOR_CONFIG"
+	fi
+	echo "$TMPVAL"
+}
+
+# Ensure CONDOR_SBIN holds path to SBIN as defined in the 
+# CONDOR_CONFIG file
+init_condor_sbin() {
+	if [ "$CONDOR_SBIN" != "" ]; then
+		return 0;
+	fi
+	CONDOR_SBIN=`get_condor_config_val SBIN`
+	verify_readable_directory "$CONDOR_SBIN"
+	return 0;
+}
+
+# Ensure CONDOR_RUN holds path to a plausible run directory.
+# Exit on failure.
+init_condor_run() {
+	if [ "$CONDOR_RUN" != "" ]; then
+		return 0
+	fi
+	CONDOR_RUN=`get_condor_config_val RUN`
+	verify_readable_directory "$CONDOR_RUN"
+	return 0
+}
+
+
+# Ensure CONDOR_MASTER holds path to a plausible condor_master.
+# Exit on failure.
+init_condor_master() {
+	if [ "$CONDOR_MASTER" = "" ]; then
+		CONDOR_MASTER=`get_condor_config_val MASTER`
+	fi
+	verify_executable "$CONDOR_MASTER"
+	return 0
+}
+
+# Ensure CONDOR_RECONFIG holds path to a plausible condor_reconfig.
+# Exit on failure.
+init_condor_reconfig() {
+	if [ "$CONDOR_RECONFIG" = "" ]; then
+		init_condor_sbin
+		CONDOR_RECONFIG="$CONDOR_SBIN/condor_reconfig"
+	fi
+	verify_executable "$CONDOR_RECONFIG"
+	return 0
+}
+
+# Ensure CONDOR_OFF holds path to a plausible condor_off.
+# Exit on failure.
+init_condor_off() {
+	if [ "$CONDOR_OFF" = "" ]; then
+		init_condor_sbin
+		CONDOR_OFF="$CONDOR_SBIN/condor_off"
+	fi
+	verify_executable "$CONDOR_OFF"
+	return 0
+}
+
+# Try to detect a working ps, if not done already
+init_ps() {
+	if [ "$PS" != "" ]; then
+		return 0;
+	fi
+
+	PS="/bin/ps -efwwww"
+	$PS > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+
+	PS="/bin/ps auwx"
+	$PS > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+
+	PS="/bin/ps -ef"
+	$PS > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+
+	fatal_error "Could not determine how to call ps. Edit this script to explicitly set PS as documented there."
+}
+
+
+# To the best of its ability, finds the active condor_master's PID.
+# echos the result, or an empty string if none was found.
+# You can call this repeatedly to check for updates.
+condor_pid() {
+	if [ ! -f "$PIDFILE" ]; then return 1; fi # Isn't a file
+	if [ ! -r "$PIDFILE" ]; then return 1; fi # Isn't readable
+	if [ ! -s "$PIDFILE" ]; then return 1; fi # Is empty
+	masterpid=`cat "$PIDFILE"`
+	if [ "$masterpid" = "" ]; then return 1; fi # Empty? Unreadable?
+		init_ps
+		foundpid=`$PS | grep condor_master | grep -v grep | awk '{print $2}' | grep "^$masterpid$"`
+	if [ "$foundpid" = "" ]; then return 1; fi # No longer running.
+	echo "$masterpid"
+	return 0
+}
+
+# Wait for condor_master to exit.
+#
+# Only reliably detects condor_masters started by this script
+#
+# Sleeps $1 seconds between checks
+# After approximately $2 seconds, gives up
+#
+# $?=0 - condor_master is gone
+# $?=1 - timed out
+wait_for_exit() {
+	max_wait=$2
+	sleep_time=$1
+	stop_duration=0
+	while [ "`condor_pid`" != "" -a $stop_duration -lt $max_wait ]; do
+		sleep $sleep_time
+		stop_duration=`expr $stop_duration + $sleep_time`
+	done
+
+	if [ "`condor_pid`" = "" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+
+
+# Start condor.
+start() {
+	init_condor_master
+	echon "Starting up Condor..."
+	"$CONDOR_MASTER" -pidfile "$PIDFILE"
+	echo "done."
+	return 0
+}
+
+
+# Tries to stop the condor_master
+#
+# If we have a valid PIDFILE, uses "kill -QUIT".
+# Failing that, uses "condor_off -fast -master"
+#
+# We prefer the "kill -QUIT", as the master might refuse
+# the condor_off request because of security configuration.
+# We still try condor_off in case the PIDFILE is missing,
+# say because someone started condor_master by hand.
+#
+# The two options are nearly identical from the condor_master's
+# point of view; it will end up executing the same shutdown
+# code either way.
+#
+# named xstop because stop causes problems on AIX and HPUX.
+xstop() {
+	echon "Shutting down Condor (fast-shutdown mode)..."
+	master_pid=`condor_pid`
+	if [ "$master_pid" != "" ]; then
+		echon "using kill..."
+        kill -QUIT "$master_pid"
+	else
+		init_condor_off
+		echon "using condor_off..."
+		"$CONDOR_OFF" -fast -master | grep -v 'Sent "Kill-Daemon-Fast" command'
+		if [ $? -gt 0 ]; then
+			echo "Failed to stop Condor (non-0 exit)."
+			return 1
+		fi
+	fi
+
+	wait_for_exit 1 $MAX_STOP_WAIT
+	if [ $? -gt 0 ]; then
+		echo "Failed to stop Condor (timed out)."
+		return 1
+	fi
+
+	if [ -f "$PIDFILE" ]; then
+		rm "$PIDFILE"
+	fi
+
+	echo "done."
+
+	return 0
+}
+
+
+# Ask Condor to re-read its configuration files
+#
+# This can fail for any number of reasons, and we wouldn't
+# detect it.
+#
+# As a possible improvement, we might send SIGHUP if `condor_pid`
+# is non-empty, only falling back on condor_reconfig if it is.
+#
+# Also, detect the return code from CONDOR_RECONFIG; non-zero
+# indicates aproblem. (At the moment that never happens, but
+# may in the future.)
+reload() {
+	init_condor_reconfig
+	echon "Reloading Condor configuration..."
+	"$CONDOR_RECONFIG" | grep -v 'Sent "Reconfig" command to local master'
+	echo "done."
+	return 0
+}
+
+
+# Report Condor's status
+#
+# If condor was started by directly running condor_master,
+# this will erroneously report that it is not running.
+#
+# Return codes (from Linux Standards Base)
+# (Not all of these are currently implemented)
+# 0 running 
+# 1 dead and /var/run pid file exists
+# 2 dead and /var/lock lock file exists
+# 3 not running
+# 4 unknown
+status() {
+	master_pid=`condor_pid`
+	if [ "$master_pid" != "" ]; then
+		echo "Condor is running (pid $master_pid)"
+		return 0
+	else
+		echo "Condor is not running"
+		return 3; 
+	fi
+}
+
+################################################################################
+
+# Back up only relevant argument, as function calls may stomp it. 
+INIT_COMMAND=$1
+
+verify_executable "$CONDOR_CONFIG_VAL"
+
+# We don't use CONDOR_CONFIG directly, it's used by the
+# Condor tools.
+if [ "$CONDOR_CONFIG" != "" ]; then
+	export CONDOR_CONFIG
+fi
+
+
+if [ "$PIDFILE" = "" ]; then
+	init_condor_run
+	PIDFILE="$CONDOR_RUN/master.pid"
+fi
+
+
+case $INIT_COMMAND in
+'start')
+	start
+    ;;
+
+'stop')
+	xstop
+    ;;
+
+'restart')
+	xstop
+	start
+    ;;
+
+'try-restart')
+	if [ "`condor_pid`" = "" ]; then exit 0; fi # Not running
+	xstop
+	start
+	;;
+
+'reload')
+	reload
+	;;
+
+'force-reload')
+	reload
+	;;
+
+'status')
+	status
+	;;
+
+*)
+    echo "Usage: $0 {start|stop|restart|try-restart|reload|force-reload|status}"
+    ;;
+
+esac
