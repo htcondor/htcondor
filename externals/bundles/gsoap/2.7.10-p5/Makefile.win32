@@ -4,6 +4,7 @@
 #	Requires Flex (or Lex) and Bison
 #
 # Set in the environment:
+# TEMP (to a temp dir that ends in a backslash - needed by bison)
 # PACKAGE_NAME
 # PACKAGE_BUILD_DIR
 # PACKAGE_INSTALL_DIR
@@ -27,8 +28,7 @@ CIFLAGS=
 #	use -DWITH_FLEX or -DWITH_LEX
 CMFLAGS=/DWITH_BISON /DWITH_FLEX /DWIN32 /DHAVE_CONFIG_H /nologo
 CFLAGS= $(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
-# set TEMP for bison, and make sure it has a trailing slash
-TEMP = C:\temp\\
+
 soapcpp2:	soapcpp2.h soapcpp2_yacc.o symbol2.o error2.o lex.yy.o init2.o soapcpp2.o
 		$(CC) symbol2.obj error2.obj soapcpp2_yacc.obj lex.yy.obj init2.obj soapcpp2.obj $(LIBS) -o $@
 soapcpp2_yacc.c:	soapcpp2_yacc.y soapcpp2.h error2.h
