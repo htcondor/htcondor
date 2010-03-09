@@ -47,13 +47,7 @@ set JDK_DIR="E:\Program Files\Java\jdk1.6.0_16"
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
 
-REM Set up environment variables for the MSI installer. This overrides the
-REM variables in your current environment, so watch out! It is needed here
-REM to allow building the MSI package in NMI.
-set MAKEMSI_DB_COMPARE_TEMPLATE.MSI=E:\Program Files\MakeMsi\UiSample.MSI
-set MAKEMSI_DIR=E:\Program Files\MakeMsi\
-set MAKEMSI_MSIVAL2_DIR=E:\Program Files\MSIVAL2
-set MAKEMSI_WILOGUTL_EXE=E:\Program Files\Microsoft Platform SDK\Bin\WiLogUtl.EXE
+REM Set up environment variables for the MSI installer. 
 set TMP=%HOME%\TEMP
 set TEMP=%HOME%\TEMP
 REM Make the temporary directories we will be using if not present. This is
