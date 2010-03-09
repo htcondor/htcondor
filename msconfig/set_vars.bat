@@ -54,8 +54,8 @@ set MAKEMSI_DB_COMPARE_TEMPLATE.MSI=E:\Program Files\MakeMsi\UiSample.MSI
 set MAKEMSI_DIR=E:\Program Files\MakeMsi\
 set MAKEMSI_MSIVAL2_DIR=E:\Program Files\MSIVAL2
 set MAKEMSI_WILOGUTL_EXE=E:\Program Files\Microsoft Platform SDK\Bin\WiLogUtl.EXE
-set TMP=%SystemRoot%\TEMP\%USERNAME%
-set TEMP=%SystemRoot%\TEMP\%USERNAME%
+set TMP=%HOME%\TEMP
+set TEMP=%HOME%\TEMP
 REM Make the temporary directories we will be using if not present. This is
 REM to help out if in NMI multiple slots are building Condor at the same time.
 if not exist %TMP% mkdir %TMP%
