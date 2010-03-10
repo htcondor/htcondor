@@ -76,7 +76,7 @@ BOOL InitService()
 // complete
 VOID StopService() 
 {	
-	if( daemonCore->Send_Signal(daemonCore->getpid(), SIGTERM) ) {
+	if( daemonCore->Send_Signal(daemonCore->getpid(), SIGQUIT) ) {
 		runningService=FALSE;
 	}
 }
