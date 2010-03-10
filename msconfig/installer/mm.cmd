@@ -6,6 +6,10 @@ set MAKEMSI_MSIVAL2_DIR=
 set MAKEMSI_WILOGUTL_EXE=
 set REGINA_MACROS=%cd%\MakeMSI
 set PPWIZARD_INCLUDE=%cd%\MakeMsi\
+set TMP=%HOME%\TEMP
+set TEMP=%HOME%\TEMP
+if not exist "%TMP%" mkdir "%TMP%"
+if not exist "%TEMP%" mkdir "%TEMP%"
 setlocal
 if A%CONDORRELEASEDIR%==A set CONDORRELEASEDIR=%cd%\..\..\release-dir
 set PATH=%PATH%;"%cd%\MakeMSI";%SystemRoot%\system32

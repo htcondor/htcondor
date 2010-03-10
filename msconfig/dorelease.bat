@@ -141,4 +141,7 @@ copy src\*.* %1\src\drmaa
 popd
 
 :end
+
+echo. & echo *** Done. Windows release finished. Congrats! Go drink whiskey.
+
 exit %INTERACTIVE% 0
