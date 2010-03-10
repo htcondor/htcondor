@@ -47,14 +47,6 @@ set JDK_DIR="E:\Program Files\Java\jdk1.6.0_16"
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
 
-REM Set up environment variables for the MSI installer. 
-set TMP=%HOME%\TEMP
-set TEMP=%HOME%\TEMP
-REM Make the temporary directories we will be using if not present. This is
-REM to help out if in NMI multiple slots are building Condor at the same time.
-if not exist "%TMP%" mkdir "%TMP%"
-if not exist "%TEMP%" mkdir "%TEMP%"
-
 REM Specify symbol image path for debugging
 if "A%_NT_SYMBOL_PATH%"=="A" set _NT_SYMBOL_PATH=SRV*%SystemDrive%\Symbols*http://msdl.microsoft.com/download/symbols
 

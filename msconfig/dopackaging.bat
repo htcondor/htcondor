@@ -77,3 +77,5 @@ REM (%%~nf expands %1 to a file name with no extension)
 pushd %CONDOROUTPUTDIR%
 for %%f in (*.msi) do move /y condor.zip %%~nf.zip
 popd
+
+echo. & echo *** Done. MSI package created. Congrats! Go drink absinthe.
