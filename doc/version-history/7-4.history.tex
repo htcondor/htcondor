@@ -103,6 +103,13 @@ if the \Condor{schedd} daemon's attempt to compact it fails.
 crash shortly after the \Condor{gridmanager} exited.
 This bug has existed since before Condor version 6.8.
 
+% gittrack #1270
+\item Fixed a problem that was resulting in messages such as the following:
+
+\begin{verbatim}
+ERROR: receiving new UDP message but found a long message still waiting to be closed (consumed=0). Closing it now.
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
