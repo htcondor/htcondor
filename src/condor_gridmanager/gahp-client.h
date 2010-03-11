@@ -1027,6 +1027,46 @@ class GahpClient : public Service {
 								  	  char* & error_code );
 			
 
+		int
+		dcloud_submit( const char *service_url,
+					   const char *username,
+					   const char *password,
+					   const char *image_id,
+					   const char *instance_name,
+					   const char *realm_id,
+					   const char *flavor_id,
+					   StringList &attrs );
+
+		int
+		dcloud_status_all( const char *service_url,
+						   const char *username,
+						   const char *password,
+						   StringList &instance_ids,
+						   StringList &statuses );
+
+		int
+		dcloud_action( const char *service_url,
+					   const char *username,
+					   const char *password,
+					   const char *instance_id,
+					   const char *action );
+
+		int
+		dcloud_info( const char *service_url,
+					 const char *username,
+					 const char *password,
+					 const char *instance_id,
+					 StringList &attrs );
+
+		int
+		dcloud_find( const char *service_url,
+					 const char *username,
+					 const char *password,
+					 const char *instance_name,
+					 char **instance_id );
+
+
+
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
 	globus_duroc_control_barrier_release();
