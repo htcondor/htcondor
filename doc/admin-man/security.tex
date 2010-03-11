@@ -2450,9 +2450,6 @@ The command which \Condor{reschedule} sends to
   the \Condor{schedd} to get it to update the \Condor{collector} with a current ClassAd
   and begin a negotiation cycle.
 
-  The commands that a \Condor{startd} sends to the \Condor{schedd} when it must vacate
-  its jobs and release the \Condor{schedd's} claim.
-
   The commands which write information into the job queue (such as
   \Condor{submit} and \Condor{hold}).  
   Note that for most commands which attempt to write to the job queue, Condor
@@ -2463,6 +2460,23 @@ The command which \Condor{reschedule} sends to
 \item[\DCPerm{READ}]
 The command from any
   tool to view the status of the job queue.  
+
+ The commands that a \Condor{startd} sends to the \Condor{schedd} when
+ the \Condor{schedd's} claim is being preempted and also when the
+ lease on the claim is renewed.  These operations only require
+ \DCPerm{READ} access rather than say \DCPerm{DAEMON} in order to
+ limit the level of trust that the \Condor{schedd} must have for the
+ \Condor{startd}.  Success of these commands is only possible if the
+ startd knows the secret claim id, so effectively, authorization for
+ these commands is more specific than Condor's general security model
+ implies.  The \Condor{schedd} \emph{automatically} grants the
+ \Condor{startd} \DCPerm{READ} access for the duration of the claim.
+ Therefore, if one desires to only authorize specific execute
+ machines to run jobs, one must either limit which machines are
+ allowed to advertise themselves to the pool (most common) or
+ configure the \Condor{schedd}'s \Macro{ALLOW\_CLIENT} setting to only
+ allow connections from the schedd to the trusted execute machines.
+
 \end{description}
 
 MASTER:  All commands are registered with \DCPerm{ADMINISTRATOR}

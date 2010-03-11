@@ -36,6 +36,18 @@ from the queue.  This should improve performance in situations where
 disk bandwidth is a limiting factor.  Updates to the job queue log
 have also been optimized in a number of cases to be less disk intensive.
 
+% gittrack 1266
+\item The \Condor{schedd} automatically grants the \Condor{startd}
+  authority to renew leases on claims and to evict claims.
+  Previously, this required that the \Condor{startd} be trusted for
+  general \DCPerm{DAEMON}-level command access.  Now this only
+  requires \DCPerm{READ}-level command access.  The specific commands
+  that the \Condor{startd} sends to the \Condor{schedd} can
+  effectively only operate on the claims associated with that startd,
+  so this change does not open up these operations to access by anyone
+  with \DCPerm{READ} access.  It just reduces the level of trust that
+  the \Condor{schedd} must have in the \Condor{startd}.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
