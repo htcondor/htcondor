@@ -5618,9 +5618,8 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 	match->setStatus( M_CLAIMED );
 
-	// now that we've completed authentication (if enabled), punch a hole
-	// in our DAEMON authorization level for the execute machine user/IP
-	// (if we're flocking, which is why we check match->pool)
+	// now that we've completed authentication (if enabled),
+	// authorize this startd for READ operations
 	//
 	if ((match->auth_hole_id == NULL)) {
 		match->auth_hole_id = new MyString;
@@ -5634,7 +5633,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			*match->auth_hole_id = msg->startd_ip_addr();
 		}
 		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-		if (!ipv->PunchHole(DAEMON, *match->auth_hole_id)) {
+		if (!ipv->PunchHole(READ, *match->auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job %d.%d may fail to execute\n",
@@ -5869,14 +5868,13 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	match_rec *mrec = AddMrec( claim_id, startd_addr, job, match_ad, 
 							   owner, pool );
 
-		// if we need to punch an authorization hole in our DAEMON
-		// level for this StartD (to support flocking), do it now
+		// authorize this startd for READ access
 	if (startd_principal != NULL) {
 		mrec->auth_hole_id = new MyString(startd_principal);
 		ASSERT(mrec->auth_hole_id != NULL);
 		free(startd_principal);
 		IpVerify* ipv = daemonCore->getIpVerify();
-		if (!ipv->PunchHole(DAEMON, *mrec->auth_hole_id)) {
+		if (!ipv->PunchHole(READ, *mrec->auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job %d.%d may fail to execute\n",
@@ -10626,9 +10624,6 @@ Scheduler::Register()
 			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
 			(CommandHandler)&dc_reconfig, "reconfig", 0, OWNER );
-	 daemonCore->Register_Command(RELEASE_CLAIM, "RELEASE_CLAIM", 
-			(CommandHandlercpp)&Scheduler::release_claim, 
-			"release_claim", this, WRITE);
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)&Scheduler::abort_job, 
 			"abort_job", this, WRITE);
@@ -10668,9 +10663,20 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
 			"requestSandboxLocation", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
+
+		 // Commands used by the startd are registered at READ
+		 // level rather than something like DAEMON or WRITE in order
+		 // to reduce the level of authority that the schedd must
+		 // grant the startd.  In order for these commands to
+		 // succeed, the startd must present the secret claim id,
+		 // so it is deemed safe to open these commands up to READ
+		 // access.
+	daemonCore->Register_Command(RELEASE_CLAIM, "RELEASE_CLAIM", 
+			(CommandHandlercpp)&Scheduler::release_claim, 
+			"release_claim", this, READ);
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
-			"receive_startd_alive", this, DAEMON,
+			"receive_startd_alive", this, READ,
 			D_PROTOCOL ); 
 
 	// Command handler for testing file access.  I set this as WRITE as we
@@ -11300,7 +11306,7 @@ Scheduler::DelMrec(match_rec* match)
 		// fill any authorization hole we made for this match
 	if (match->auth_hole_id != NULL) {
 		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-		if (!ipv->FillHole(DAEMON, *match->auth_hole_id)) {
+		if (!ipv->FillHole(READ, *match->auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::FillHole error for %s\n",
 			        match->auth_hole_id->Value());
