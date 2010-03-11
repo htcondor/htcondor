@@ -6,18 +6,18 @@
 \index{daemon!condor\_job\_router@\Condor{job\_router}}
 \index{condor\_job\_router daemon}
 
-The Condor Job Router is an add-on to \condor{schedd} that transforms
+The Condor Job Router is an add-on to the \Condor{schedd} that transforms
 jobs from one type into another according to a configurable policy.
 This process of transforming the jobs is called \emph{job routing}.
 
-One example of how the Job Router can be used is the task of sending
-excess vanilla universe jobs to one or more remote grid sites.  The
-Job Router can transform the vanilla universe jobs into grid universe
+One example of how the Job Router can be used is for the task of sending
+excess vanilla universe jobs to one or more remote grid sites.
+The Job Router can transform the vanilla universe jobs into grid universe
 jobs that use any of the grid types supported by Condor.  The rate at
 which jobs are routed can be matched roughly to the rate at which the
 site is able to start running them.  This makes it possible to balance
-a large work flow across multiple grid sites, a local condor pool, and
-any flocked condor pools, without having to guess in advance how quickly
+a large work flow across multiple grid sites, a local Condor pool, and
+any flocked Condor pools, without having to guess in advance how quickly
 jobs will run and complete in each of the different sites.
 
 Job Routing is most appropriate for high throughput work flows, 
@@ -67,7 +67,7 @@ The \Condor{job\_router} daemon utilizes a \Term{routing table},
 in which a ClassAd describes each site to where jobs may be sent.
 The routing table is given using \Term{New ClassAds},
 a re-implementation of the current ClassAd language,
-as currently used by Condor.
+as currently used by Condor internally.
 A good place to learn about the syntax of New ClassAds
 is the Informal Language Description in the C++ ClassAds
 tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.

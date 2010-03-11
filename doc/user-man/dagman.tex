@@ -73,7 +73,7 @@ based upon the return values of a PRE script, the job(s)
 within the cluster, and/or a POST script.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Input File Describing the DAG}
+\subsection{Input File Describing the DAG: the JOB, DATA, SCRIPT and PARENT...CHILD Key Words}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!DAG input file}
@@ -312,14 +312,35 @@ node  & S & F & F       & S & F & S & F & S & F & S & S & F & F  \\
 \end{table}
 \end{center}
 
-Two variables may be used within the DAG input file,
-and may ease script writing.
-The variables are often utilized in the arguments passed
-to a PRE or POST script.
+Four variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY}, and
+\Env{\$RETURN}) can be used within the DAG input file
+as arguments passed to a PRE or POST script.
+
+\index{DAGMan!JOB@\verb^$JOB^ value}
 The variable \Env{\$JOB} evaluates to the (case sensitive) string
 defined for \Arg{JobName}.
+
+\index{DAGMan!RETRY@\verb^$RETRY^ value}
+The variable \Env{\$RETRY} evaluates to an 
+integer value set to 0 first time a node is run,
+and is  incremented each time the node is retried. 
+See section~\ref{dagman:retry} for the description of how to cause
+nodes to be retried. 
+
+\index{DAGMan!JOBID@\verb^$JOBID^ value}
+\index{job ID!defined for a DAGMan node job}
+\index{job!job ID!defined for a DAGMan node job}
+For use as an argument to POST scripts only, the variable \Env{\$JOBID}
+evaluates to a representation of the Condor job ID of the node job.
+It is the value of the job ClassAd attribute \Attr{ClusterId},
+followed by a period,
+and then followed by the value of the job ClassAd attribute \Attr{ProcId}.
+An example of a job ID might be 1234.0.
+For nodes with multiple jobs in the same cluster,
+the \Attr{ProcId} value is the one of the last job within the cluster.
+
 \index{DAGMan!Return@\verb^$RETURN^ value}
-For use as an argument to POST scripts,
+For use as an argument to POST scripts only,
 the \Env{\$RETURN} variable evaluates to the return value of the 
 Condor or Stork job, if there is a single job within a cluster.
 With multiple jobs within the same cluster,
@@ -414,7 +435,7 @@ produces four dependencies:
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Submit Description File}
+\subsection{Submit Description File Contents and Usage of Log Files}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!submit description file with}
@@ -561,7 +582,7 @@ will pass the string ``B,C'' as the command line argument when invoking
 the job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{dagman:submitdag}Job Submission}
+\subsection{\label{dagman:submitdag}DAG Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A DAG is submitted using the program \Condor{submit\_dag}.
@@ -699,7 +720,7 @@ in Condor's queue.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Retrying Failed Nodes}
+\subsubsection{\label{dagman:retry}Retrying Failed Nodes}
 
 \index{DAGMan input file!RETRY key word}
 \index{DAGMan!RETRY of failed nodes}
@@ -749,6 +770,11 @@ integer exit value).
 If the node exits with the specified integer exit value,
 then no further processing will be done
 on the node. 
+
+The variable \Env{\$RETRY} evaluates to an 
+integer value set to 0 first time a node is run,
+and is  incremented each time for each  time the node is retried. 
+
 
 The \Arg{ABORT-DAG-ON} key word provides a way
 to abort the entire DAG if a given node returns a specific exit
@@ -1010,8 +1036,8 @@ at the same time will be submitted.  Note that node priority does
 
 Node priority is mainly relevant if
 node submission is throttled via the \Arg{-maxjobs} or \Arg{-maxidle}
-command-line flags or the \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} or
-\MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} configuration macros.  Note that PRE
+command-line arguments or the \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} or
+\MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} configuration variables.  Note that PRE
 scripts can affect the order in which jobs run, so DAGs containing
 PRE scripts may not run the nodes in exact priority order, even if
 doing so would satisfy the DAG dependencies.
