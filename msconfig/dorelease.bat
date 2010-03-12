@@ -140,8 +140,7 @@ copy lib\*.* %1\lib
 copy src\*.* %1\src\drmaa
 popd
 
-:end
-
 echo. & echo *** Done. Windows release finished. Congrats! Go drink whiskey.
 
+:end
 exit %INTERACTIVE% 0
