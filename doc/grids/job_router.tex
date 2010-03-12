@@ -65,26 +65,11 @@ the routed copy is removed.
 
 The \Condor{job\_router} daemon utilizes a \Term{routing table},
 in which a ClassAd describes each site to where jobs may be sent.
-The routing table is given using \Term{New ClassAds},
-a re-implementation of the current ClassAd language,
+The routing table is given in the New ClassAd language,
 as currently used by Condor internally.
 A good place to learn about the syntax of New ClassAds
 is the Informal Language Description in the C++ ClassAds
 tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
-With the exception of a few ClassAd functions,
-everything in the current ClassAd language is
-supported by the New ClassAd language.
-A job that requires the unsupported ClassAd functions
-(those with names beginning with \Code{stringList})
-cannot be considered for Job Routing.
-
-Entries in the routing table are described with the New ClassAd language,
-but the \Condor{job\_router} daemon must interact with the
-remainder of Condor which utilizes the current ClassAd language.
-A \Attr{requirements} attribute in the routing table is given
-with the New ClassAd language.
-An attribute for a job, as represented in the job queue
-uses the current ClassAd language.
 
 Two essential differences distinguish the New ClassAd language
 from the current one.
