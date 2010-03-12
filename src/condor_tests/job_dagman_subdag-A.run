@@ -40,6 +40,9 @@ $dagman_args = "-verbose";
   "job_dagman_subdag-A-lower2.dag.dagman.out",
   "job_dagman_subdag-A-upper.dag.dagman.out");
 
+@submitfiles = ("job_dagman_subdag-A-lower1.dag.condor.sub",
+	"job_dagman_subdag-A-lower2.dag.condor.sub",
+	"job_dagman_subdag-A-upper.dag.condor.sub");
 
 my $killedchosen = 0;
 
@@ -55,7 +58,12 @@ foreach $name (@logfiles) {
 	}
 }
 
-#TEMPTEMP -- get rid of any existing .condor.sub files here...
+# Get rid of any existing submit files.
+foreach $name (@submitfiles) {
+	if (-e $name) {
+		system("rm -f $name");
+	}
+}
 
 $abnormal = sub 
 {
