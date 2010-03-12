@@ -18,11 +18,18 @@ void dcloudprintf_internal(const char *function, const char *fmt, ...)
     pthread_mutex_unlock(&dcloudprintf_mutex);
 }
 
-MyString create_failure(int req_id, const char *err_msg)
+const char *itoa( int i )
 {
-    MyString buffer;
+    static char buf[20];
+    snprintf( buf, sizeof(buf), "%d", i );
+    return buf;
+}
 
-    buffer += req_id;
+std::string create_failure(int req_id, const char *err_msg)
+{
+    std::string buffer;
+
+    buffer += itoa(req_id);
     buffer += ' ';
 
     buffer += err_msg;
@@ -31,3 +38,54 @@ MyString create_failure(int req_id, const char *err_msg)
     return buffer;
 }
 
+Gahp_Args::Gahp_Args()
+{
+	argv = NULL;
+	argc = 0;
+	argv_size = 0;
+}
+
+Gahp_Args::~Gahp_Args()
+{
+	reset();
+}
+
+/* Restore the object to its fresh, clean state. This means that argv is
+ * completely freed and argc and argv_size are set to zero.
+ */
+void
+Gahp_Args::reset()
+{
+	if ( argv == NULL ) {
+		return;
+	}
+
+	for ( int i = 0; i < argc; i++ ) {
+		free( argv[i] );
+		argv[i] = NULL;
+	}
+
+	free( argv );
+	argv = NULL;
+	argv_size = 0;
+	argc = 0;
+}
+
+/* Add an argument to the end of the args array. argv is extended
+ * automatically if required. The string passed in becomes the property
+ * of the Gahp_Args object, which will deallocate it with free(). Thus,
+ * you would typically give add_arg() a strdup()ed string.
+ */
+void
+Gahp_Args::add_arg( char *new_arg )
+{
+	if ( new_arg == NULL ) {
+		return;
+	}
+	if ( argc >= argv_size ) {
+		argv_size += 60;
+		argv = (char **)realloc( argv, argv_size * sizeof(char *) );
+	}
+	argv[argc] = new_arg;
+	argc++;
+}

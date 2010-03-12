@@ -17,9 +17,9 @@
  *
  ***************************************************************/
 
-#include "condor_common.h"
-#include "condor_debug.h"
+#include <errno.h>
 #include "PipeBuffer.h"
+#include "dcloudgahp_common.h"
 
 PipeBuffer::PipeBuffer (int _pipe_end) {
 	pipe_end = _pipe_end;
@@ -39,7 +39,7 @@ PipeBuffer::PipeBuffer() {
 	readahead_length = 0;
 }
 
-MyString *
+std::string *
 PipeBuffer::GetNextLine () {
 
 	if (readahead_length == 0) {
@@ -50,12 +50,12 @@ PipeBuffer::GetNextLine () {
 		readahead_length = read(pipe_end, readahead_buffer, PIPE_BUFFER_READAHEAD_SIZE);
 		if (readahead_length < 0) {
 			error = true;
-			dprintf (D_ALWAYS, "error reading from pipe %d\n", pipe_end);
+			dcloudprintf ("error reading from pipe %d\n", pipe_end);
 			return NULL;
 		}
 		if (readahead_length == 0) {
 			eof = true;
-			dprintf(D_ALWAYS, "EOF reached on pipe %d\n", pipe_end);
+			dcloudprintf("EOF reached on pipe %d\n", pipe_end);
 			return NULL;
 		}
 
@@ -69,7 +69,7 @@ PipeBuffer::GetNextLine () {
 
 		if (c == '\n' && !last_char_was_escape) {
 					// We got a completed line!
-			MyString* result = new MyString(buffer);
+			std::string* result = new std::string(buffer);
 			buffer = "";
 			return result;
 		} else if (c == '\r' && !last_char_was_escape) {
@@ -97,15 +97,15 @@ PipeBuffer::Write (const char * towrite) {
 	if (towrite)
 		buffer += towrite;
 
-	int len = buffer.Length();
+	int len = buffer.length();
 	if (len == 0)
 		return 0;
 
-	int numwritten = write(pipe_end, buffer.Value(), len);
+	int numwritten = write(pipe_end, buffer.c_str(), len);
 
 	if (numwritten > 0) {
 			// shorten the buffer
-		buffer = buffer.Substr (numwritten, len);
+		buffer = buffer.substr (numwritten, len);
 		return numwritten;
 	} else if ( numwritten == 0 ) {
 		return 0;
@@ -113,7 +113,7 @@ PipeBuffer::Write (const char * towrite) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return 0;
 
-		dprintf (D_ALWAYS, "Error %d writing to pipe %d\n", errno, pipe_end);
+		dcloudprintf ("Error %d writing to pipe %d\n", errno, pipe_end);
 		error = true;
 		return -1;
 	}
@@ -121,5 +121,5 @@ PipeBuffer::Write (const char * towrite) {
 
 int
 PipeBuffer::IsEmpty() {
-	return (buffer.Length() == 0);
+	return (buffer.length() == 0);
 }

@@ -1,12 +1,11 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
-#include "condor_common.h"
-#include "condor_debug.h"
+#include <set>
+#include <queue>
 #include "PipeBuffer.h"
-#include "gahp_common.h"
-#include "simplelist.h"
-#include "string_list.h"
 #include "dcloudgahp_commands.h"
 #include "dcloudgahp_common.h"
 
@@ -31,14 +30,14 @@
 
 const char * version = "$GahpVersion " DCLOUD_GAHP_VERSION " Feb 4 2010 Condor\\ DCLOUDGAHP $";
 
-static SimpleList<DcloudGahpCommand*> dcloud_gahp_commands;
+static std::set<DcloudGahpCommand*> dcloud_gahp_commands;
 
 FILE *logfp;
 
 static pthread_mutex_t async_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool async_mode = false;
 static bool async_results_signalled = false;
-static StringList results_list;
+static std::queue<std::string> results_list;
 static pthread_mutex_t results_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_mutex_t stdout_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -137,18 +136,15 @@ static void gahp_output_return_error(void)
 
 static void unregisterAllDcloudCommands(void)
 {
-    DcloudGahpCommand *one_cmd;
+    std::set<DcloudGahpCommand*>::iterator itr;
 
-    dcloud_gahp_commands.Rewind();
-    while (dcloud_gahp_commands.Next(one_cmd)) {
-        delete one_cmd;
+    for (itr = dcloud_gahp_commands.begin(); itr != dcloud_gahp_commands.end(); itr++) {
+        delete *itr;
     }
 }
 
 static void handle_command_results(Gahp_Args *args)
 {
-    char *next = NULL;
-
     // Print number of results
     if (args->argc != 1) {
         dcloudprintf("Expected 1 argument, saw %d\n", args->argc);
@@ -157,12 +153,11 @@ static void handle_command_results(Gahp_Args *args)
     }
 
     pthread_mutex_lock(&results_list_mutex);
-    safe_printf("%s %d\n", GAHP_RESULT_SUCCESS, results_list.number());
+    safe_printf("%s %d\n", GAHP_RESULT_SUCCESS, results_list.size());
 
-    results_list.rewind();
-    while ((next = results_list.next()) != NULL) {
-        safe_printf("%s", next);
-        results_list.deleteCurrent();
+    while (!results_list.empty()) {
+        safe_printf("%s", results_list.front().c_str());
+        results_list.pop();
     }
     pthread_mutex_unlock(&results_list_mutex);
     async_results_signalled = false;
@@ -213,7 +208,6 @@ static void handle_command_async_off(Gahp_Args *args)
 static void handle_command_commands(Gahp_Args *args)
 {
     const char **commands;
-    DcloudGahpCommand *one_cmd = NULL;
     int i = 0;
     const char **tmp;
 
@@ -237,8 +231,9 @@ static void handle_command_commands(Gahp_Args *args)
     commands[i++] = GAHP_COMMAND_VERSION;
     commands[i++] = GAHP_COMMAND_COMMANDS;
 
-    dcloud_gahp_commands.Rewind();
-    while (dcloud_gahp_commands.Next(one_cmd)) {
+    std::set<DcloudGahpCommand*>::iterator itr;
+    for (itr = dcloud_gahp_commands.begin(); itr != dcloud_gahp_commands.end();
+         itr++ ) {
         tmp = (const char **)realloc(commands, (i+1) * sizeof(char *));
         if (tmp == NULL) {
             dcloudprintf("failed to realloc memory\n");
@@ -247,7 +242,7 @@ static void handle_command_commands(Gahp_Args *args)
             return;
         }
         commands = tmp;
-        commands[i++] = one_cmd->command.Value();
+        commands[i++] = (*itr)->command.c_str();
     }
 
     gahp_output_return(commands, i);
@@ -263,7 +258,7 @@ static void *worker_function(void *ptr)
 {
     struct workerdata *data = (struct workerdata *)ptr;
     Gahp_Args args;
-    MyString output_string;
+    std::string output_string = "";
 
     if (!parse_gahp_command(data->fullcommand, &args)) {
         /* this should really never happen; we successfully parsed it
@@ -285,7 +280,7 @@ static void *worker_function(void *ptr)
 
 cleanup:
     pthread_mutex_lock(&results_list_mutex);
-    results_list.append(output_string.Value());
+    results_list.push(output_string);
     pthread_mutex_unlock(&results_list_mutex);
     pthread_mutex_lock(&async_mutex);
     if (async_mode && !async_results_signalled) {
@@ -302,13 +297,13 @@ cleanup:
 
 static void handle_dcloud_commands(const char *cmd, const char *fullcommand)
 {
-    DcloudGahpCommand *one_cmd = NULL;
     pthread_t thread;
     struct workerdata *data;
 
-    dcloud_gahp_commands.Rewind();
-    while (dcloud_gahp_commands.Next(one_cmd)) {
-        if (STRCASEEQ(one_cmd->command.Value(), cmd)) {
+    std::set<DcloudGahpCommand*>::iterator itr;
+    for (itr = dcloud_gahp_commands.begin(); itr != dcloud_gahp_commands.end();
+         itr++ ) {
+        if (STRCASEEQ((*itr)->command.c_str(), cmd)) {
             data = (struct workerdata *)malloc(sizeof(struct workerdata));
             if (data == NULL) {
                 dcloudprintf("Failed to allocate memory for new thread\n");
@@ -322,7 +317,7 @@ static void handle_dcloud_commands(const char *cmd, const char *fullcommand)
                 free(data);
                 return;
             }
-            data->worker = one_cmd->workerfunction;
+            data->worker = (*itr)->workerfunction;
             if (pthread_create(&thread, NULL, worker_function, data) < 0) {
                 dcloudprintf("Failed to create new thread\n");
                 gahp_output_return_error();
@@ -342,13 +337,13 @@ static void handle_dcloud_commands(const char *cmd, const char *fullcommand)
 
 static void handlePipe(int stdin_pipe)
 {
-    MyString *line;
+    std::string *line;
     PipeBuffer m_stdin_buffer;
 
     m_stdin_buffer.setPipeEnd(stdin_pipe);
 
     while ((line = m_stdin_buffer.GetNextLine()) != NULL) {
-        const char *command = line->Value();
+        const char *command = line->c_str();
         Gahp_Args args;
 
         dcloudprintf("Handling line %s\n", command);
@@ -403,14 +398,14 @@ static void registerDcloudGahpCommand(const char *command, workerfn workerfunc)
 
     newcommand = new DcloudGahpCommand(command, workerfunc);
 
-    dcloud_gahp_commands.Append(newcommand);
+    dcloud_gahp_commands.insert(newcommand);
 }
 
 static void registerAllDcloudCommands(void)
 {
     dcloudprintf("\n");
 
-    if (dcloud_gahp_commands.Number() > 0) {
+    if (dcloud_gahp_commands.size() > 0) {
         dcloudprintf("already called\n");
         return;
     }
@@ -433,7 +428,7 @@ static void registerAllDcloudCommands(void)
 
 int main(int argc, char *argv[])
 {
-    logfp = safe_fopen_wrapper("/tmp/dcloud_gahp.debug", "a");
+    logfp = fopen("/tmp/dcloud_gahp.debug", "a");
     if (!logfp) {
         fprintf(stderr, "Could not open log file /tmp/dcloud_gahp.debug: %s\n",
                 strerror(errno));

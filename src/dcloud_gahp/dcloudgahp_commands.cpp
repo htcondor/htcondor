@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <dcloudapi/dcloudapi.h>
-#include "condor_common.h"
-#include "MyString.h"
+#include <string>
 #include "dcloudgahp_commands.h"
 #include "dcloudgahp_common.h"
 
@@ -21,14 +20,14 @@ static int verify_number_args(const int want, const int actual)
     return TRUE;
 }
 
-static MyString create_instance_output(int reqid,
+static std::string create_instance_output(int reqid,
                                        struct deltacloud_instance *inst)
 {
     struct deltacloud_action *act;
     struct deltacloud_address *addr;
-    MyString output_string;
+    std::string output_string;
 
-    output_string += reqid;
+    output_string += itoa(reqid);
     output_string += " NULL ";
 
     output_string += "id=";
@@ -76,7 +75,7 @@ static MyString create_instance_output(int reqid,
  *  should either be the string "NULL" to let deltacloud pick, or a particular
  *  name, realm_id, or flavor_id to specify.
  */
-bool dcloud_start_worker(int argc, char **argv, MyString &output_string)
+bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 {
     char *url, *user, *password, *image_id, *name, *realm_id, *flavor_id;
     struct deltacloud_api api;
@@ -159,7 +158,7 @@ bool dcloud_start_worker(int argc, char **argv, MyString &output_string)
  * DCLOUD_VM_ACTION <reqid> <url> <user> <password> <instance_id> <action>
  *  where reqid, url, user, password, instance_id, and action have to be non-NULL
  */
-bool dcloud_action_worker(int argc, char **argv, MyString &output_string)
+bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
 {
     char *url, *user, *password, *instance_id, *action;
     struct deltacloud_api api;
@@ -237,7 +236,7 @@ bool dcloud_action_worker(int argc, char **argv, MyString &output_string)
         goto cleanup_instance;
     }
 
-    output_string += reqid;
+    output_string += itoa(reqid);
     output_string += " NULL\n";
 
     ret = TRUE;
@@ -255,7 +254,7 @@ cleanup_library:
  * DCLOUD_VM_INFO <reqid> <url> <user> <password> <instance_id>
  *  where reqid, url, user, password, and instance_id have to be non-NULL
  */
-bool dcloud_info_worker(int argc, char **argv, MyString &output_string)
+bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
 {
     char *url, *user, *password, *instance_id;
     struct deltacloud_api api;
@@ -324,7 +323,7 @@ cleanup_library:
  * DCLOUD_VM_STATUS_ALL <reqid> <url> <user> <password>
  *  where reqid, url, user, and password have to be non-NULL.
  */
-bool dcloud_statusall_worker(int argc, char **argv, MyString &output_string)
+bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
 {
     char *url, *user, *password;
     struct deltacloud_api api;
@@ -372,7 +371,7 @@ bool dcloud_statusall_worker(int argc, char **argv, MyString &output_string)
         goto cleanup_library;
     }
 
-    output_string += reqid;
+    output_string += itoa(reqid);
     output_string += " NULL";
 
     curr = instances;
@@ -399,7 +398,7 @@ cleanup_library:
  * DCLOUD_VM_FIND <reqid> <url> <user> <password> <name>
  *  where reqid, url, user, password, and name have to be non-NULL.
  */
-bool dcloud_find_worker(int argc, char **argv, MyString &output_string)
+bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
 {
     char *url, *user, *password, *name;
     int reqid;
@@ -452,7 +451,7 @@ bool dcloud_find_worker(int argc, char **argv, MyString &output_string)
         goto cleanup_library;
     }
 
-    output_string += reqid;
+    output_string += itoa(reqid);
     output_string += " NULL ";
     output_string += inst.id;
     output_string += '\n';
