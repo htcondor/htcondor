@@ -38,13 +38,16 @@ the value of the configuration variable named \Arg{subsystem}\_LOG
 defines the log file's name.
 When specified, the \Arg{.extension} is appended to this value.
 
-Acceptable strings for the argument \Arg{subsystem} are as given as
+Typical strings for the argument \Arg{subsystem} are as given as
 possible values of the predefined configuration
 variable \MacroUNI{SUBSYSTEM}.
 See the definition in
-section~\ref{sec:Condor-Subsystem-Names}.
+section~\ref{sec:Condor-Subsystem-Names}.  Note that access to any
+additional logs can be enabled by simply specifying the path to
+each log in the configuration file with a configuration parameter named
+\MacroNI{<NAME>\_LOG}, choosing an arbitrary unique name for each case.
 
-A value for the optional \Arg{.extension} argument may be one of
+A value for the optional \Arg{.extension} argument is typically one of
 the three strings:
 \begin{enumerate}
 \item{\File{.old}}
