@@ -165,7 +165,6 @@ doRecursion( SubmitDagOptions &opts )
 				}
 
 					// Now figure out whether JOB line is a nested DAG.
-				const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
 				MyString submitFile( subFile );
 
 					// If submit file ends in ".condor.sub", we assume it
@@ -277,7 +276,7 @@ setUpOptions( SubmitDagOptions &opts )
 	opts.strDebugLog += ".dagman.out";
 
 	opts.strSchedLog = opts.primaryDagFile + ".dagman.log";
-	opts.strSubFile = opts.primaryDagFile + ".condor.sub";
+	opts.strSubFile = opts.primaryDagFile + DAG_SUBMIT_FILE_SUFFIX;
 
 	MyString	rescueDagBase;
 

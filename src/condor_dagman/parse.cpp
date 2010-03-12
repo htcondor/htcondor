@@ -1,4 +1,3 @@
-//TEMPTEMP -- need to recognize ".condor.sub" nodes as subdags so recursion can work...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -41,6 +40,7 @@
 #include "basename.h"
 #include "extArray.h"
 #include "condor_string.h"  /* for strnewp() */
+#include "dagman_recursive_submit.h"
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
@@ -463,8 +463,15 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 			// Generate the "real" submit file name (append ".condor.sub"
 			// to the DAG file name).
 		dagSubmitFile = submitFile;
-		dagSubmitFile += ".condor.sub";
+		dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
 		submitFile = dagSubmitFile.Value();
+	}
+
+	// If the submit file name ends in ".condor.sub", we assume that
+	// this node is a nested DAG, and set the DAG filename accordingly.
+	if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
+		nestedDagFile = submitFile;
+		nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
 	}
 
 	// looks ok, so add it

@@ -25,6 +25,8 @@
 #include "string_list.h"
 #include "condor_config.h"
 
+static const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
+
 struct SubmitDagOptions
 {
 	// these options come from the command line
