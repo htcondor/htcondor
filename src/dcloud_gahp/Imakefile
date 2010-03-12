@@ -1,0 +1,24 @@
+DCLOUD_GAHP = dcloud_gahp
+
+PROGRAMS = $(DCLOUD_GAHP)
+
+all_target( $(PROGRAMS) )
+
+CFLAGS = $(STD_C_FLAGS)
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB = $(STD_LIBS) -ldcloudapi
+
+DCLOUD_GAHP_OBJ = dcloudgahp_main.o dcloudgahp_commands.o PipeBuffer.o dcloudgahp_common.o
+
+public_c_plus_target($(DCLOUD_GAHP),sbin,$(DCLOUD_GAHP_OBJ),$(LIB))
+
+html:
+
+IMPORT_LINKS = ../../config/import_links
+import_objs(../condor_util_lib, setsyscalls.o)
+
+clean::
+	rm -f *~ Makefile
+
+testbin::
