@@ -78,7 +78,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
-		  const char *defaultNodeLog, bool isSplice) :
+		  const char *defaultNodeLog, bool generateSubdagSubmits,
+		  bool isSplice) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -112,6 +113,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst),
 	_defaultNodeLog		  (defaultNodeLog),
+	_generateSubdagSubmits (generateSubdagSubmits),
 	_isSplice			  (isSplice),
 	_recoveryMaxfakeID	  (0)
 {
@@ -3033,7 +3035,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 							node->GetLogFile(), node->GetLogFileIsXml() );
 
 			} else {
-				if ( node->GetDagFile() != NULL ) {
+				if ( node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 					SubmitDagOptions opts;
 					//TEMPTEMP -- need to figure out submit options...
 

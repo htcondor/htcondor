@@ -1,4 +1,4 @@
-//TEMPTEMP -- make sure -recurse option works! -- maybe make a test that uses the existing subdag test but runs it with the recurse option
+//TEMPTEMP -- need to pass -recurse down for multiple levels -- hmm -- I should add multiple levels to the subdag test
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -970,7 +970,7 @@ parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 			{
 				opts.recurse = false;
 			}
-			else if (strArg.find("-recurse") != -1) // -recurse
+			else if (strArg.find("-do_rec") != -1) // -do_recurse
 			{
 				opts.recurse = true;
 			}
@@ -1127,7 +1127,7 @@ int printUsage()
 	printf("    -AllowVersionMismatch (allow version mismatch between the\n");
 	printf("         .condor.sub file and the condor_dagman binary)\n");
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
-	printf("    -recurse            (do recurse in nested DAGs)\n");
+	printf("    -do_recurse         (do recurse in nested DAGs)\n");
 	printf("    -update_submit      (update submit file if it exists)\n");
 	printf("    -import_env         (explicitly import env into submit file)\n");
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");

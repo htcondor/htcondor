@@ -1786,6 +1786,13 @@ TESTCLASS(job_dagman_subdag-A,quick)
 TESTCLASS(job_dagman_subdag-A,full)
 TESTCLASS(job_dagman_subdag-A,quicknolink)
 
+DESC(job_dagman_subdag-AE,"Test condor_submit_dag recursion on nested DAGs, SUBDAG EXTERNAL keyword, eager .condor.sub generation")
+RUN(job_dagman_subdag-AE)
+TESTCLASS(job_dagman_subdag-AE,dagman)
+TESTCLASS(job_dagman_subdag-AE,quick)
+TESTCLASS(job_dagman_subdag-AE,full)
+TESTCLASS(job_dagman_subdag-AE,quicknolink)
+
 DESC(job_dagman_splice-cat,"Test DAG splice/node category")
 RUN(job_dagman_splice-cat)
 TESTCLASS(job_dagman_splice-cat,dagman)

@@ -127,7 +127,8 @@ class Dag {
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 const char *defaultNodeLog, bool isSplice = false );
+		 const char *defaultNodeLog, bool generateSubdagSubmits,
+		 bool isSplice = false );
 
     ///
     ~Dag();
@@ -504,6 +505,8 @@ class Dag {
 	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
 
 	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
+
+	const bool GenerateSubdagSubmits(void) { return _generateSubdagSubmits; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
@@ -906,6 +909,10 @@ class Dag {
 		// The user log file to be used for nodes whose submit files do
 		// not specify a log file.
 	const char *_defaultNodeLog;
+
+		// Whether to generate the .condor.sub files for sub-DAGs
+		// at run time (just before the node is submitted).
+	bool	_generateSubdagSubmits;
 
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel

@@ -1461,6 +1461,7 @@ parse_splice(
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),
 							dag->DefaultNodeLog(),
+							dag->GenerateSubdagSubmits(),
 							true); /* we are a splice! */
 	
 	// initialize whatever the DIR line was, or defaults to, here.

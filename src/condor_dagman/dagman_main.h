@@ -178,6 +178,10 @@ class Dagman {
 		// log file.
 	char * _defaultNodeLog;
 
+		// Whether to generate the .condor.sub files for sub-DAGs
+		// at run time (just before the node is submitted).
+	bool _generateSubdagSubmits;
+
     bool Config();
 };
 

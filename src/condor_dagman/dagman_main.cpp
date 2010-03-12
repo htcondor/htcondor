@@ -122,7 +122,8 @@ Dagman::Dagman() :
 	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
 	rescueFileToRun(""),
 	dumpRescueDag(false),
-	_defaultNodeLog(NULL)
+	_defaultNodeLog(NULL),
+	_generateSubdagSubmits(true)
 {
 }
 
@@ -330,6 +331,11 @@ Dagman::Config()
 	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n",
 				_defaultNodeLog ? _defaultNodeLog : "null" );
+
+	_generateSubdagSubmits = 
+		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n",
+				_generateSubdagSubmits ? "True" : "False" );
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
@@ -857,7 +863,9 @@ int main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog, false ); /* toplevel dag! */
+						  dagman._defaultNodeLog,
+						  dagman._generateSubdagSubmits,
+						  false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
