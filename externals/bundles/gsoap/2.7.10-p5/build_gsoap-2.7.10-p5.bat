@@ -45,7 +45,7 @@ REM Try to create a c:\temp if no TEMP env var defined
 if not defined TEMP ( if not exist c:\TEMP (mkdir c:\TEMP || ( echo No TEMP env var and failed to make c:\TEMP && goto :FAIL) ) )
 if not defined TEMP (set TEMP=c:\TEMP)
 REM Be sure to have a trailing backslash
-TEMP=%TEMP%\
+set TEMP=%TEMP%\
 
 REM First, build soapcpp2.exe
 copy config.WINDOWS.h %PACKAGE_SRC_NAME%\gsoap\src\config.h
