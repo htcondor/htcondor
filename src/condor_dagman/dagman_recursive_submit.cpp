@@ -17,21 +17,9 @@
  *
  ***************************************************************/
 
-//TEMPTEMP -- eliminate some of these...
 #include "condor_common.h"
 #include "dagman_recursive_submit.h"
 #include "MyString.h"
-#include "which.h"
-#include "string_list.h"
-#include "condor_distribution.h"
-#include "condor_config.h"
-#include "env.h"
-#include "dagman_multi_dag.h"
-#include "basename.h"
-#include "read_multiple_logs.h"
-#include "condor_getcwd.h"
-#include "condor_string.h" // for getline()
-#include "condor_version.h"
 #include "tmp_dir.h"
 
 //---------------------------------------------------------------------------
@@ -121,22 +109,19 @@ runSubmit( const SubmitDagOptions &opts, const char *dagFile,
 
 	cmdLine += dagFile;
 
-	//TEMPTEMP dprintf( D_FULLDEBUG, "Recursive submit command: <%s>\n",
-	dprintf( D_ALWAYS, "Recursive submit command: <%s>\n",//TEMPTEMP
+	dprintf( D_FULLDEBUG, "Recursive submit command: <%s>\n",
 				cmdLine.Value() );
 
 		// Now actually run the command.
 	int retval = system( cmdLine.Value() );
 	if ( retval != 0 ) {
-		//TEMPTEMP -- change to dprintf!
-		fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
+		dprintf( D_ALWAYS, "ERROR: condor_submit failed; aborting.\n" );
 		result = 1;
 	}
 
 		// Change back to the directory we started from.
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
-		//TEMPTEMP -- change to dprintf!
-		fprintf( stderr, "Error (%s) changing back to original directory\n",
+		dprintf( D_ALWAYS, "Error (%s) changing back to original directory\n",
 					errMsg.Value() );
 	}
 
