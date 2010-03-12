@@ -5024,12 +5024,13 @@ finalize:
         free(who);
     }
 	if ( result != KEEP_STREAM ) {
-		stream->encode();	// we wanna "flush" below in the encode direction
 		if ( is_tcp ) {
+			stream->encode();	// we wanna "flush" below in the encode direction
 			stream->end_of_message();  // make certain data flushed to the wire
 			if ( insock != stream )	   // delete the stream only if we did an accept; if we
 				delete stream;		   //     did not do an accept, Driver() will delete the stream.
 		} else {
+			stream->decode();
 			stream->end_of_message();
 
 			// we need to reset the crypto keys
@@ -5044,6 +5045,7 @@ finalize:
 		}
 	} else {
 		if (!is_tcp) {
+			stream->decode();
 			stream->end_of_message();
 			stream->set_MD_mode(MD_OFF);
 			stream->set_crypto_key(false, NULL);
