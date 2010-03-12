@@ -48,6 +48,7 @@
 #include "extArray.h"
 #include "HashTable.h"
 #include <set>
+#include "dagman_recursive_submit.h"
 
 using namespace std;
 
@@ -988,6 +989,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 					job->GetJobName() );
 		_dagFiles.rewind();
 		char *dagFile = _dagFiles.next();
+		//TEMPTEMP -- change this message
 		debug_printf( DEBUG_QUIET, "This may indicate log file corruption; "
 					"you may want to check the log files and re-run the "
 					"DAG in recovery mode by giving the command "
@@ -3031,6 +3033,17 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 							node->GetLogFile(), node->GetLogFileIsXml() );
 
 			} else {
+				if ( node->GetDagFile() != NULL ) {
+					SubmitDagOptions opts;
+					//TEMPTEMP -- need to figure out submit options...
+
+					if ( runSubmit( opts, node->GetDagFile(),
+								node->GetDirectory() ) != 0 ) {
+						fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
+						return SUBMIT_RESULT_NO_SUBMIT;
+					}
+				}
+
 				const char *logFile = node->UsingDefaultLog() ?
 							node->GetLogFile() : NULL;
 					// Note: assigning the ParentListString() return value

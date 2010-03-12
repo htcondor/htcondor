@@ -55,6 +55,8 @@ foreach $name (@logfiles) {
 	}
 }
 
+#TEMPTEMP -- get rid of any existing .condor.sub files here...
+
 $abnormal = sub 
 {
 

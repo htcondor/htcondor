@@ -1,3 +1,4 @@
+//TEMPTEMP -- need to recognize ".condor.sub" nodes as subdags so recursion can work...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

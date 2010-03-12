@@ -1,3 +1,4 @@
+//TEMPTEMP -- make sure -recurse option works! -- maybe make a test that uses the existing subdag test but runs it with the recurse option
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,6 +19,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "dagman_recursive_submit.h"
 #include "MyString.h"
 #include "which.h"
 #include "string_list.h"
@@ -41,81 +43,6 @@ const char* dagman_exe = "condor_dagman";
 const char* valgrind_exe = "valgrind";
 #endif
 
-struct SubmitDagOptions
-{
-	// these options come from the command line
-	bool bSubmit;
-	bool bVerbose;
-	bool bForce;
-	MyString strNotification;
-	int iMaxIdle;
-	int iMaxJobs;
-	int iMaxPre;
-	int iMaxPost;
-	MyString strRemoteSchedd;
-	bool bNoEventChecks;
-	bool bAllowLogError;
-	int iDebugLevel;
-	MyString primaryDagFile;
-	StringList	dagFiles;
-	MyString strDagmanPath; // path to dagman binary
-	bool useDagDir;
-	MyString strDebugDir;
-	MyString strConfigFile;
-	MyString appendFile; // append to .condor.sub file before queue
-	StringList appendLines; // append to .condor.sub file before queue
-	bool oldRescue;
-	bool autoRescue;
-	int doRescueFrom;
-	bool allowVerMismatch;
-	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
-	bool updateSubmit; // allow updating submit file w/o -force
-	bool copyToSpool;
-	bool importEnv; // explicitly import environment into .condor.sub file
-	bool dumpRescueDag;
-	bool runValgrind;
-	
-	// non-command line options
-	MyString strLibOut;
-	MyString strLibErr;
-	MyString strDebugLog;
-	MyString strSchedLog;
-	MyString strSubFile;
-	MyString strRescueFile;
-	MyString strLockFile;
-
-	SubmitDagOptions() 
-	{ 
-		bSubmit = true;
-		bVerbose = false;
-		bForce = false;
-		strNotification = "";
-		iMaxIdle = 0;
-		iMaxJobs = 0;
-		iMaxPre = 0;
-		iMaxPost = 0;
-		strRemoteSchedd = "";
-		bNoEventChecks = false;
-		bAllowLogError = false;
-		iDebugLevel = 3;
-		primaryDagFile = "";
-		useDagDir = false;
-		strConfigFile = "";
-		appendFile = param("DAGMAN_INSERT_SUB_FILE");
-		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
-		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
-		doRescueFrom = 0; // 0 means no rescue DAG specified
-		allowVerMismatch = false;
-		recurse = true;
-		updateSubmit = false;
-		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
-		importEnv = false;
-		dumpRescueDag = false;
-		runValgrind = false;
-	}
-
-};
-
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagOptions &opts, int argc,
 			const char * const argv[]);
@@ -125,8 +52,6 @@ int doRecursion( SubmitDagOptions &opts );
 int parseJobOrDagLine( const char *dagLine, StringList &tokens,
 			const char *fileType, const char *&submitOrDagFile,
 			const char *&directory );
-int runSubmit( const SubmitDagOptions &opts, const char *dagFile,
-			const char *directory );
 int setUpOptions( SubmitDagOptions &opts );
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
 int getOldSubmitFlags( SubmitDagOptions &opts );
@@ -330,109 +255,6 @@ parseJobOrDagLine( const char *dagLine, StringList &tokens,
 	}
 
 	return 0;
-}
-
-//---------------------------------------------------------------------------
-/** Run condor_submit_dag on the given DAG file.
-	@param opts: the condor_submit_dag options
-	@param dagFile: the DAG file to process
-	@param directory: the directory from which the DAG file should
-		be processed (ignored if NULL)
-	@return 0 if successful, 1 if failed
-*/
-int
-runSubmit( const SubmitDagOptions &opts, const char *dagFile,
-			const char *directory )
-{
-	int result = 0;
-
-		// Change to the appropriate directory if necessary.
-	TmpDir tmpDir;
-	MyString errMsg;
-	if ( directory ) {
-		if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
-			fprintf( stderr, "Error (%s) changing to node directory\n",
-						errMsg.Value() );
-			result = 1;
-			return result;
-		}
-	}
-
-		// Build up the command line for the recursive run of
-		// condor_submit_dag.  We need -no_submit so we don't
-		// actually run the subdag now; we need -update_submit
-		// so the lower-level .condor.sub file will get
-		// updated, in case it came from an earlier version
-		// of condor_submit_dag.
-	MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
-
-		// Add in arguments we're passing along.
-	if ( opts.bVerbose ) {
-		cmdLine += "-verbose ";
-	}
-
-	if ( opts.bForce ) {
-		cmdLine += "-force ";
-	}
-
-	if ( opts.strNotification != "" ) {
-		cmdLine += MyString( "-notification " ) +
-					opts.strNotification.Value() + " ";
-	}
-
-	if ( opts.strDagmanPath != "" ) {
-		cmdLine += MyString( "-dagman " ) +
-				opts.strDagmanPath.Value() + " ";
-	}
-
-	cmdLine += MyString( "-debug " ) + opts.iDebugLevel + " ";
-
-	if ( opts.bAllowLogError ) {
-		cmdLine += "-allowlogerror ";
-	}
-
-	if ( opts.useDagDir ) {
-		cmdLine += "-usedagdir ";
-	}
-
-	if ( opts.strDebugDir != "" ) {
-		cmdLine += MyString( "-outfile_dir " ) + 
-				opts.strDebugDir.Value() + " ";
-	}
-
-	cmdLine += MyString( "-oldrescue " ) + opts.oldRescue + " ";
-
-	cmdLine += MyString( "-autorescue " ) + opts.autoRescue + " ";
-
-	if ( opts.doRescueFrom != 0 ) {
-		cmdLine += MyString( "-dorescuefrom " ) +
-				opts.doRescueFrom + " ";
-	}
-
-	if ( opts.allowVerMismatch ) {
-		cmdLine += "-allowver ";
-	}
-
-	if ( opts.importEnv ) {
-		cmdLine += "-import_env ";
-	}
-
-	cmdLine += dagFile;
-
-		// Now actually run the command.
-	int retval = system( cmdLine.Value() );
-	if ( retval != 0 ) {
-		fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
-		result = 1;
-	}
-
-		// Change back to the directory we started from.
-	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
-		fprintf( stderr, "Error (%s) changing back to original directory\n",
-					errMsg.Value() );
-	}
-
-	return result;
 }
 
 //---------------------------------------------------------------------------
@@ -1148,6 +970,10 @@ parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 			{
 				opts.recurse = false;
 			}
+			else if (strArg.find("-recurse") != -1) // -recurse
+			{
+				opts.recurse = true;
+			}
 			else if (strArg.find("-updat") != -1) // -update_submit
 			{
 				opts.updateSubmit = true;
@@ -1301,6 +1127,7 @@ int printUsage()
 	printf("    -AllowVersionMismatch (allow version mismatch between the\n");
 	printf("         .condor.sub file and the condor_dagman binary)\n");
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
+	printf("    -recurse            (do recurse in nested DAGs)\n");
 	printf("    -update_submit      (update submit file if it exists)\n");
 	printf("    -import_env         (explicitly import env into submit file)\n");
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");

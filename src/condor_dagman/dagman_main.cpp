@@ -1,3 +1,6 @@
+//TEMPTEMP -- doing gittrac #507 (lazy submit files) here
+//TEMPTEMP -- make a config knob for whether dagman itself does condor_submit_dag -no_submit on nested dags -- then I won't have to mess with the -no_recurse option in condor_submit_dag
+//TEMPTEMP -- I need to pass a bunch more parameters to dagman, just so it can pass them to condor_submit_dag...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
