@@ -72,7 +72,6 @@ private:
 	void suspend_family();
 	void continue_family();
 	void kill_family();
-	void signal_children();
 	void unregister_family();
 	void snapshot();
 	void quit();

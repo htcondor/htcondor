@@ -420,9 +420,8 @@ ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)
 	return true;
 }
 
-
 bool
-ProcFamilyClient::signal_process(pid_t pid, int sig, proc_family_command_t command, bool& response )
+ProcFamilyClient::signal_process(pid_t pid, int sig, bool& response)
 {
 	ASSERT(m_initialized);
 
@@ -438,7 +437,7 @@ ProcFamilyClient::signal_process(pid_t pid, int sig, proc_family_command_t comma
 	ASSERT(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = command;
+	*(proc_family_command_t*)ptr = PROC_FAMILY_SIGNAL_PROCESS;
 	ptr += sizeof(proc_family_command_t);
 
 	*(pid_t*)ptr = pid;
@@ -467,28 +466,6 @@ ProcFamilyClient::signal_process(pid_t pid, int sig, proc_family_command_t comma
 	log_exit("signal_process", err);
 	response = (err == PROC_FAMILY_ERROR_SUCCESS);
 	return true;
-}
-
-bool
-ProcFamilyClient::signal_process(pid_t pid, int sig, bool& response)
-{
-	ASSERT(m_initialized);
-
-	dprintf(D_PROCFAMILY,
-	        "About to signal process %u using the ProcD\n",
-	        pid);
-	return signal_process ( pid, sig, PROC_FAMILY_SIGNAL_PROCESS, response);
-}
-
-bool
-ProcFamilyClient::signal_children(pid_t pid, int sig, bool& response)
-{
-	ASSERT(m_initialized);
-
-	dprintf(D_PROCFAMILY,
-	        "About to signal children of process %u using the ProcD\n",
-	        pid);
-	return signal_process ( pid, sig, PROC_FAMILY_SIGNAL_CHILDREN, response);
 }
 
 bool

@@ -96,11 +96,6 @@ public:
 	//
 	proc_family_error_t signal_family(pid_t, int);
 	
-	// send a signal to all sub processes in the family with the given
-	// root pid
-	//
-	proc_family_error_t signal_children(pid_t, int);
-	
 	// get resource usage information about a family (and all
 	// subfamilies)
 	//

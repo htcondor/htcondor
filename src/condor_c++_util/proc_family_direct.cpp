@@ -193,14 +193,6 @@ ProcFamilyDirect::kill_family(pid_t pid)
 }
 
 bool
-ProcFamilyDirect::signal_children(pid_t pid, int sig)
-{
-
-	EXCEPT("ProcFamilyDirect::signal_children should never be called");
-	return false;
-
-}
-bool
 ProcFamilyDirect::unregister_family(pid_t pid)
 {
 	ProcFamilyDirectContainer* container;

@@ -446,32 +446,6 @@ ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 }
 
 proc_family_error_t
-ProcFamilyMonitor::signal_children(pid_t pid, int sig)
-{ 
-	// get as up to date as possible
-	//
-	snapshot();
-	// find the family
-	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
-		dprintf(D_ALWAYS,
-		        "signal_children error: family with root %u not found\n",
-		        pid);
-		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
-	}
-	
-	// now send the signal and return
-	//
-	dprintf(D_ALWAYS, "ProcFamilyMonitor::signal_children sending signal %d to family with root %u\n", sig, pid);
-	Tree<ProcFamily*>* child = tree->get_child();
-	signal_family(child, sig);
-
-	return PROC_FAMILY_ERROR_SUCCESS;
-}
-
-proc_family_error_t
 ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 {
 	// find the family

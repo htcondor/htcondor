@@ -347,7 +347,7 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 bool
 BOINC_BackfillMgr::killClient( void )
 {
-	bool rval = m_boinc_starter->killHard(SIG_KILL);
+	bool rval = m_boinc_starter->killHard();
 	if( ! rval ) {
 		dprintf( D_ALWAYS, "BOINC_BackfillMgr::killClient(): "
 				 "ERROR telling BOINC starter (pid %d) to hardkill\n",

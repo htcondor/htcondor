@@ -366,6 +366,7 @@ const char * const ATTR_KEYSTORE_PASSPHRASE_FILE = "KeystorePassphraseFile";
 const char * const ATTR_KFLOPS                   = "KFlops";
 const char * const ATTR_KILL                     = "Kill";
 const char * const ATTR_KILL_SIG				 = "KillSig";
+const char * const ATTR_KILL_SIG_TIMEOUT		 = "KillSigTimeout";
 const char * const ATTR_LAST_AVAIL_INTERVAL		 = "LastAvailInterval";
 const char * const ATTR_LAST_BENCHMARK			 = "LastBenchmark";
 const char * const ATTR_LAST_CKPT_SERVER		 = "LastCkptServer";

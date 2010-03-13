@@ -80,9 +80,6 @@ public:
 	//
 	bool kill_family(pid_t);
 	
-	// tell the procd to signal all subfamilies of family)	
-        bool signal_children(pid_t, int);
-
 	// tell the procd we don't care about this family any
 	// more
 	//

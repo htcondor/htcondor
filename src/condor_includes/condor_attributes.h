@@ -304,6 +304,7 @@ extern const char * const  ATTR_KEYSTORE_PASSPHRASE_FILE;
 extern const char * const  ATTR_KFLOPS;
 extern const char * const  ATTR_KILL;
 extern const char * const  ATTR_KILL_SIG;
+extern const char * const  ATTR_KILL_SIG_TIMEOUT;
 extern const char * const  ATTR_LAST_AVAIL_INTERVAL;
 extern const char * const  ATTR_LAST_BENCHMARK;
 extern const char * const  ATTR_LAST_CKPT_SERVER;

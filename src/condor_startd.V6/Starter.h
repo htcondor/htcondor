@@ -30,7 +30,7 @@
 #include "../condor_procapi/procapi.h"
 #include "../condor_procd/proc_family_io.h"
 
-enum level_t {USER_DEFINED, SIG_QUIT, SIG_KILL};
+//enum signal_level_t {UNDEFINED, USER_DEFINED, SIG_QUIT, SIG_KILL};
 
 class Claim;
 
@@ -65,7 +65,7 @@ public:
 		// of EXECUTE that is passed to the starter
 	char const *executeDir();
 
-	bool	killHard( level_t );
+	bool	killHard( void );
 	bool	killSoft( void );
 	bool	suspend( void );
 	bool	resume( void );
@@ -132,12 +132,8 @@ private:
 
 	void	initRunData( void );
 
-	// Timer for how long we're willing 
-	// to "hardkill" before we SIGKILL
-	int	startKillTimer( level_t );	   
-
+	int	startKillTimer( void );	        // Timer for how long we're willing
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
-
 		// choose EXECUTE directory for starter
 	void    finalizeExecuteDir( void );
 

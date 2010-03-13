@@ -380,6 +380,7 @@ const char * REMOTE_PREFIX="Remote_";
 const char	*KillSig			= "kill_sig";
 const char	*RmKillSig			= "remove_kill_sig";
 const char	*HoldKillSig		= "hold_kill_sig";
+const char	*KillSigTimeout		= "kill_sig_timeout";
 #endif
 
 void    SetSimpleJobExprs();
@@ -5233,6 +5234,7 @@ void
 SetKillSig()
 {
 	char* sig_name;
+	char* timeout;
 	MyString buffer;
 
 	sig_name = findKillSigName( KillSig, ATTR_KILL_SIG );
@@ -5268,6 +5270,14 @@ SetKillSig()
 		buffer.sprintf( "%s=\"%s\"", ATTR_HOLD_KILL_SIG, sig_name );
 		InsertJobExpr( buffer );
 		free( sig_name );
+		sig_name = NULL;
+	}
+
+	timeout = condor_param( KillSigTimeout, ATTR_KILL_SIG_TIMEOUT );
+	if( timeout ) {
+		buffer.sprintf( "%s=%d", ATTR_KILL_SIG_TIMEOUT, atoi(timeout) );
+		InsertJobExpr( buffer );
+		free( timeout );
 		sig_name = NULL;
 	}
 }

@@ -66,8 +66,6 @@ public:
 
 	bool kill_family(pid_t);
 	
-	bool signal_children(pid_t, int);
-	
 	bool unregister_family(pid_t);
 
 	// this class currently doesn't support GLEXEC_JOB

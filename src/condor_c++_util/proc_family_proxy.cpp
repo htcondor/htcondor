@@ -264,17 +264,6 @@ ProcFamilyProxy::kill_family(pid_t pid)
 }
 
 bool
-ProcFamilyProxy::signal_children(pid_t pid, int sig)
-{
-	bool response;
-	while (!m_client->signal_children(pid, sig, response)) {
-		dprintf(D_ALWAYS, "ProcFamilyProxy::signal_children: ProcD communication error\n");
-		recover_from_procd_error();
-	}
-	return response;
-}
-
-bool
 ProcFamilyProxy::suspend_family(pid_t pid)
 {
 	bool response;
