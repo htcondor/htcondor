@@ -2934,6 +2934,32 @@ These macros control the \Condor{master}.
   with the appropriate subsystem string as defined in
   section~\ref{sec:Condor-Subsystem-Names}.
 
+\label{param:SubsysUserid}
+\item[\MacroB{<SUBSYS>\_USERID}] \index{SUBSYS\_USERID
+  macro@\texttt{<SUBSYS>\_USERID} macro} This setting specifies the
+  account name that should be used to run the \MacroNI{SUBSYS} process
+  spawned by the \Condor{master}.  When not defined, the process is
+  spawned as the same user that is running \Condor{master}.  When
+  defined, the real user id of the spawned process will be set to the
+  specified account, so if this account is not root, the process will
+  not have root priviledges.  The \Condor{master} must be running as
+  root in order to start processes as other users.  Example configuration:
+
+\begin{verbatim}
+COLLECTOR_USERID = condor
+NEGOTIATOR_USERID = condor
+\end{verbatim}
+
+The above example runs the \Condor{collector} and \Condor{negotiator}
+as the condor user with no root priviledges.  If we had specified some
+account other than the condor user (\MacroNI{CONDOR\_IDS}), then we
+would need to configure the log files for these daemons to be in a
+directory that they can write to.  When using GSI security or any
+other security method in which the daemon credential is owned by root,
+it is also necessary to make a copy of the credential, make it be
+owned by the account the daemons are using, and configure the daemons
+to use that copy.
+
 \label{param:Preen}
 \item[\Macro{PREEN}]
   In addition to the daemons
