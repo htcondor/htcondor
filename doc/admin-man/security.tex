@@ -262,6 +262,145 @@ a \DCPerm{READ} or both a
 
 \end{description}
 
+
+The following is a list of registered commands that daemons will
+accept.  The list is ordered by daemon.
+For each daemon, the commands are grouped by the access level
+required for a daemon to accept the command from a
+given machine.
+
+ALL DAEMONS:
+
+\begin{description}
+\item[\DCPerm{WRITE}]
+
+  The command sent as a result of \Condor{reconfig} to reconfigure a daemon.
+
+\item[\DCPerm{ADMINISTRATOR}]
+
+  The command sent as a result of \Code{reconfig -full}
+  to perform a full reconfiguration on a daemon. 
+\end{description}
+
+STARTD:
+
+\begin{description}
+\item[\DCPerm{WRITE}] 
+
+All commands that relate to a \Condor{schedd} daemon claiming
+  a machine, starting jobs there, or stopping those jobs.
+
+The command that \Condor{checkpoint} sends to periodically checkpoint
+  all running jobs.
+
+\item[\DCPerm{READ}]
+
+The command that \Condor{preen} sends to request the
+  current state of the \Condor{startd} daemon.
+
+\item[\DCPerm{OWNER}]
+The command that \Condor{vacate} sends to cause
+  any running jobs to stop running.
+
+\item[\DCPerm{NEGOTIATOR}]
+The command that the \Condor{negotiator} daemon sends to
+  match a machine's \Condor{startd} daemon with a given \Condor{schedd}
+  daemon.
+\end{description}
+
+NEGOTIATOR:
+
+\begin{description}
+\item[\DCPerm{WRITE}]
+The command that initiates a new negotiation
+  cycle. It is sent by the \Condor{schedd} when new jobs are submitted
+  or a \Condor{reschedule} command is issued.
+
+\item[\DCPerm{READ}]
+The command that can retrieve the current state
+  of user priorities in the pool (sent by the \Condor{userprio} command).
+
+\item[\DCPerm{ADMINISTRATOR}]
+The command that can set the current
+  values of user priorities (sent as a result of the \Code{userprio -set}
+  command).
+\end{description}
+
+COLLECTOR:
+
+\begin{description}
+
+\item[\DCPerm{ADVERTISE\_MASTER}]
+Commands that update the \Condor{collector} daemon with new \Condor{master} ClassAds.
+
+\item[\DCPerm{ADVERTISE\_SCHEDD}]
+Commands that update the \Condor{collector} daemon with new \Condor{schedd} ClassAds.
+
+\item[\DCPerm{ADVERTISE\_STARTD}]
+Commands that update the \Condor{collector} daemon with new \Condor{startd} ClassAds.
+
+\item[\DCPerm{DAEMON}]
+All other commands that update the \Condor{collector} daemon with new
+ClassAds.  Note that the specific access levels such as
+\DCPerm{ADVERTISE\_STARTD} default to the \DCPerm{DAEMON} settings,
+which in turn defaults to \DCPerm{WRITE}.
+
+\item[\DCPerm{READ}]
+All commands that query the \Condor{collector} daemon for ClassAds.
+\end{description}
+
+SCHEDD: 
+
+\begin{description}
+\item[\DCPerm{NEGOTIATOR}]
+The command that the \Condor{negotiator} sends to
+  begin negotiating with this \Condor{schedd} to match its jobs with available
+  \Condor{startds}.
+
+\item[\DCPerm{WRITE}]
+The command which \Condor{reschedule} sends to
+  the \Condor{schedd} to get it to update the \Condor{collector} with a current ClassAd
+  and begin a negotiation cycle.
+
+  The commands which write information into the job queue (such as
+  \Condor{submit} and \Condor{hold}).  
+  Note that for most commands which attempt to write to the job queue, Condor
+  will perform an additional user-level authentication step.  
+  This additional user-level authentication prevents, for example, an
+  ordinary user from removing a different user's jobs.
+
+\item[\DCPerm{READ}]
+The command from any
+  tool to view the status of the job queue.  
+
+ The commands that a \Condor{startd} sends to the \Condor{schedd} when
+ the \Condor{schedd} daemon's claim is being preempted and also when the
+ lease on the claim is renewed.  These operations only require
+ \DCPerm{READ} access, rather than \DCPerm{DAEMON} in order to
+ limit the level of trust that the \Condor{schedd} must have for the
+ \Condor{startd}.  Success of these commands is only possible if the
+ \Condor{startd} knows the secret claim id, so effectively, authorization for
+ these commands is more specific than Condor's general security model
+ implies.  The \Condor{schedd} \emph{automatically} grants the
+ \Condor{startd} \DCPerm{READ} access for the duration of the claim.
+ Therefore, if one desires to only authorize specific execute
+ machines to run jobs, one must either limit which machines are
+ allowed to advertise themselves to the pool (most common) or
+ configure the \Condor{schedd}'s \Macro{ALLOW\_CLIENT} setting to only
+ allow connections from the \Condor{schedd} to the trusted execute machines.
+
+\end{description}
+
+MASTER:  All commands are registered with \DCPerm{ADMINISTRATOR}
+access:
+
+\begin{description}
+\item[restart] : Master restarts itself (and all its children)	
+\item[off] : Master shuts down all its children
+\item[off -master] : Master shuts down all its children and exits
+\item[on] : Master spawns all the daemons it is configured to spawn
+\end{description}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Negotiation}Security Negotiation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2350,144 +2489,6 @@ For example, to grant different read access for the \Condor{schedd}:
 HOSTALLOW_READ_SCHEDD = <list of machines>
 \end{verbatim}
 \normalsize
-
-The following is a list of registered commands that daemons will
-accept.  The list is ordered by daemon.
-For each daemon, the commands are grouped by the access level
-required for a daemon to accept the command from a
-given machine.
-
-ALL DAEMONS:
-
-\begin{description}
-\item[\DCPerm{WRITE}]
-
-  The command sent as a result of \Condor{reconfig} to reconfigure a daemon.
-
-\item[\DCPerm{ADMINISTRATOR}]
-
-  The command sent as a result of \Code{reconfig -full}
-  to perform a full reconfiguration on a daemon. 
-\end{description}
-
-STARTD:
-
-\begin{description}
-\item[\DCPerm{WRITE}] 
-
-All commands that relate to a \Condor{schedd} daemon claiming
-  a machine, starting jobs there, or stopping those jobs.
-
-The command that \Condor{checkpoint} sends to periodically checkpoint
-  all running jobs.
-
-\item[\DCPerm{READ}]
-
-The command that \Condor{preen} sends to request the
-  current state of the \Condor{startd} daemon.
-
-\item[\DCPerm{OWNER}]
-The command that \Condor{vacate} sends to cause
-  any running jobs to stop running.
-
-\item[\DCPerm{NEGOTIATOR}]
-The command that the \Condor{negotiator} daemon sends to
-  match a machine's \Condor{startd} daemon with a given \Condor{schedd}
-  daemon.
-\end{description}
-
-NEGOTIATOR:
-
-\begin{description}
-\item[\DCPerm{WRITE}]
-The command that initiates a new negotiation
-  cycle. It is sent by the \Condor{schedd} when new jobs are submitted
-  or a \Condor{reschedule} command is issued.
-
-\item[\DCPerm{READ}]
-The command that can retrieve the current state
-  of user priorities in the pool (sent by the \Condor{userprio} command).
-
-\item[\DCPerm{ADMINISTRATOR}]
-The command that can set the current
-  values of user priorities (sent as a result of the \Code{userprio -set}
-  command).
-\end{description}
-
-COLLECTOR:
-
-\begin{description}
-
-\item[\DCPerm{ADVERTISE\_MASTER}]
-Commands that update the \Condor{collector} daemon with new \Condor{master} ClassAds.
-
-\item[\DCPerm{ADVERTISE\_SCHEDD}]
-Commands that update the \Condor{collector} daemon with new \Condor{schedd} ClassAds.
-
-\item[\DCPerm{ADVERTISE\_STARTD}]
-Commands that update the \Condor{collector} daemon with new \Condor{startd} ClassAds.
-
-\item[\DCPerm{DAEMON}]
-All other commands that update the \Condor{collector} daemon with new
-ClassAds.  Note that the specific access levels such as
-\DCPerm{ADVERTISE\_STARTD} default to the \DCPerm{DAEMON} settings,
-which in turn defaults to \DCPerm{WRITE}.
-
-\item[\DCPerm{READ}]
-All commands that query the \Condor{collector} daemon for ClassAds.
-\end{description}
-
-SCHEDD: 
-
-\begin{description}
-\item[\DCPerm{NEGOTIATOR}]
-The command that the \Condor{negotiator} sends to
-  begin negotiating with this \Condor{schedd} to match its jobs with available
-  \Condor{startds}.
-
-\item[\DCPerm{WRITE}]
-The command which \Condor{reschedule} sends to
-  the \Condor{schedd} to get it to update the \Condor{collector} with a current ClassAd
-  and begin a negotiation cycle.
-
-  The commands which write information into the job queue (such as
-  \Condor{submit} and \Condor{hold}).  
-  Note that for most commands which attempt to write to the job queue, Condor
-  will perform an additional user-level authentication step.  
-  This additional user-level authentication prevents, for example, an
-  ordinary user from removing a different user's jobs.
-
-\item[\DCPerm{READ}]
-The command from any
-  tool to view the status of the job queue.  
-
- The commands that a \Condor{startd} sends to the \Condor{schedd} when
- the \Condor{schedd's} claim is being preempted and also when the
- lease on the claim is renewed.  These operations only require
- \DCPerm{READ} access rather than say \DCPerm{DAEMON} in order to
- limit the level of trust that the \Condor{schedd} must have for the
- \Condor{startd}.  Success of these commands is only possible if the
- startd knows the secret claim id, so effectively, authorization for
- these commands is more specific than Condor's general security model
- implies.  The \Condor{schedd} \emph{automatically} grants the
- \Condor{startd} \DCPerm{READ} access for the duration of the claim.
- Therefore, if one desires to only authorize specific execute
- machines to run jobs, one must either limit which machines are
- allowed to advertise themselves to the pool (most common) or
- configure the \Condor{schedd}'s \Macro{ALLOW\_CLIENT} setting to only
- allow connections from the schedd to the trusted execute machines.
-
-\end{description}
-
-MASTER:  All commands are registered with \DCPerm{ADMINISTRATOR}
-access:
-
-\begin{description}
-\item[restart] : Master restarts itself (and all its children)	
-\item[off] : Master shuts down all its children
-\item[off -master] : Master shuts down all its children and exits
-\item[on] : Master spawns all the daemons it is configured to spawn
-\end{description}
 
 
 This section provides examples of configuration settings.
