@@ -935,6 +935,11 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 	MyString full_filename = filename;
 	if(ext) {
 		full_filename += ext;
+
+		if( strchr(ext,DIR_DELIM_CHAR) ) {
+			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			return FALSE;
+		}
 	}
 
 	int fd = safe_open_wrapper(full_filename.Value(),O_RDONLY);

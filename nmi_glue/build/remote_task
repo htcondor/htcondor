@@ -38,9 +38,14 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $SrcDir = "$BaseDir\\src";
     $msconfigDir = "$BaseDir\\msconfig";
     $PublicDir = "$BaseDir\\public";
+    $MsiDir = "$BaseDir\\msipackage";
     $ENV{USERPROFILE} = "$BaseDir";
     $ENV{TMP} = "$BaseDir";
+    $ENV{TEMP} = "$BaseDir";
     $ENV{PATH} .= ";$msconfigDir";
+
+    print "remote_task: Setting windows specific environment variables\n";
+    print "remote_task: USERPROFILE, TMP, TEMP, and PATH\n\n";
 }
 
 # autoflush our STDOUT
@@ -80,8 +85,24 @@ if ($taskname eq "win_make") {
 }
 elsif ($taskname eq "win_release") {
     mkdir("$PublicDir", 0777) || c_die ("Can't mkdir($PublicDir): $!\n");
+    mkdir("$MsiDir", 0777) || c_die ("Can't mkdir($MsiDir): $!\n");
     chdir("$msconfigDir") || c_die("Can't chdir($msconfigDir): $!\n");
+
+	print "\n";
+	print "***********************\n";
+	print "Making Windows release.\n";
+	print "***********************\n";
     system("dorelease $PublicDir");
+
+    # It'll be nice once this works. See gittrac #1267.
+    #print "\n";
+    #print "***************************\n";
+    #print "Making Windows MSI package.\n";
+    #print "***************************\n";
+    #system("dopackaging $PublicDir $MsiDir");
+    #chdir("$MsiDir") || c_die("Can't chdir($MsiDir): $!\n");
+    #system("mv * $PublicDir");
+    #chdir("$msconfigDir") || c_die("Can't chdir($msconfigDir): $!\n");
 }
 else {
     chdir("$SrcDir") || c_die("Can't chdir($SrcDir): $!\n");

@@ -45,7 +45,15 @@ condor_setup: condor_setup.c
 condor_set_acls: condor_set_acls.c
 	cl /nologo condor_set_acls.c /link /nologo advapi32.lib user32.lib 
 
-# build the actual MSI package
+# build the actual MSI package.
+# This regedit line is a *possible* requirement for running makemsi
+# (specifically cscript) under such restricted user accounts as found on NMI's
+# build and test farm. Since it didn't appear to have an effect, I'm removing
+# it from the build step, but leaving it and the msikeys.reg file in this
+# directory just in case when we figure out what's wrong it is needed.
+#
+# Put this line just before the call to mm condor.mm if you'd like to use it.
+#	cmd /c regedit /s msikeys.reg
 msi: condor_setup condor.mm
 	cmd /c if not exist MakeMSI ..\\tar xf makemsi.tar
 	cmd /c mm condor.mm

@@ -81,7 +81,7 @@ lsa_mgr::purgeAllData() {
 		);
 
 	if (ntsResult != ERROR_SUCCESS) {
-		wprintf(L"OpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
+		wprintf(L"LsaOpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
 		return NULL;
 	}
 
@@ -293,7 +293,7 @@ lsa_mgr::loadDataFromRegistry() {
 		);
 
 	if (ntsResult != ERROR_SUCCESS) {
-		wprintf(L"OpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
+		wprintf(L"LsaOpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
 		return NULL;
 	}
 
@@ -390,7 +390,7 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 		);
 
 	if (ntsResult != ERROR_SUCCESS) {
-		dprintf(D_ALWAYS, "OpenPolicy returned %lu\n", 
+		dprintf(D_ALWAYS, "LsaOpenPolicy returned %lu\n", 
 			LsaNtStatusToWinError(ntsResult));
 		return NULL;
 	}
