@@ -202,7 +202,8 @@ which means that when doing delegation Condor will now create a limited proxy
 instead of a full proxy.
 
 \item The new configuration variable
-  \MacroNI{SEC\_<access-level>\_SESSION\_LEASE} specifies the maximum
+  \MacroIndex{SEC\_DEFAULT\_SESSION\_LEASE}
+  \Macro{SEC\_<access-level>\_SESSION\_LEASE} specifies the maximum
   number of seconds an unused security session will be kept in a daemon's
   session cache before being removed to save memory.  The default is 3600.
   If the server and client have different configurations, the smaller
