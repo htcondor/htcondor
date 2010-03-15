@@ -399,25 +399,28 @@ VanillaProc::finishShutdownFast()
 bool
 VanillaProc::startEscalationTimer()
 {
+	int job_kill_time = 0;
+	int killing_timeout = param_integer( "KILLING_TIMEOUT", 30 );
 	int escalation_delay;
 
 	if ( m_escalation_tid >= 0 ) {
 		return true;
 	}
 
-	if ( !JobAd->LookupInteger(ATTR_KILL_SIG_TIMEOUT, escalation_delay) )
-	{
-		// If no timeout is set, use half of KILLING_TIMEOUT
-		escalation_delay = param_integer( "KILLING_TIMEOUT", 30 ) / 2;
+	if ( !JobAd->LookupInteger(ATTR_KILL_SIG_TIMEOUT, job_kill_time) ) {
+		job_kill_time = 0;
 	}
 
+	escalation_delay = std::max(std::min(killing_timeout-1, job_kill_time), 0);
+
+	dprintf(D_FULLDEBUG, "Using escalation delay %d for Escalation Timer\n", escalation_delay);
 	m_escalation_tid = daemonCore->Register_Timer(escalation_delay,
 						escalation_delay,
 						(TimerHandlercpp)&VanillaProc::EscalateSignal,
 						"EscalateSignal", this);
 
 	if ( m_escalation_tid < 0 ) {
-		EXCEPT ( "Can't register DaemonCore timer" );
+		dprintf(D_ALWAYS, "Error: Unable to register signal esclation timer.  timeout attmepted: %d\n", escalation_delay);
 	}
 	return true;
 }
@@ -444,6 +447,7 @@ VanillaProc::EscalateSignal()
 {
 	cancelEscalationTimer();
 
+	dprintf(D_FULLDEBUG, "Esclation Timer fired.  Killing job\n");
 	finishShutdownFast();
 
 	return true;

@@ -89,8 +89,6 @@ Starter::initRunData( void )
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_birthdate = 0;
 	s_kill_tid = -1;
-//	s_quit_tid = -1;
-//	s_user_tid = -1;
 	s_port1 = -1;
 	s_port2 = -1;
 	s_reaper_id = -1;
@@ -114,10 +112,7 @@ Starter::initRunData( void )
 
 Starter::~Starter()
 {
-dprintf (D_FULLDEBUG, "Starter::~Starter() called\n");
 	cancelKillTimer();
-//	cancelUserTimer();
-//	cancelQuitTimer();
 
 	if (s_path) {
 		delete [] s_path;
@@ -648,8 +643,7 @@ Starter::exited(int status)
 
 		// Make sure our time isn't going to go off.
 	cancelKillTimer();
-//	cancelUserTimer();
-//	cancelQuitTimer();
+
 		// Just for good measure, try to kill what's left of our whole
 		// pid family.
 	if (daemonCore->Kill_Family(s_pid) == FALSE) {
@@ -822,13 +816,6 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;
 		s_job_update_sock = NULL;
-//		if( s_kill_tid < 0 ) {
-			/* Tell the Starter to exit if it hasn't been told
-			 to do so. Cancel the timers*/
-//			cancelQuitTimer();
-//			cancelUserTimer();
-//			killHard();
-//		}
 	}
 	return KEEP_STREAM;
 }
@@ -1221,6 +1208,7 @@ Starter::killHard( void )
 	return true;
 }
 
+
 bool
 Starter::killSoft( void )
 {
@@ -1266,27 +1254,12 @@ Starter::resume( void )
 int
 Starter::startKillTimer( void )
 {
-	ClassAd *jobAd = NULL;
-	int tmp_killing_timeout;
-        int job_kill_timeout;
-
 	if( s_kill_tid >= 0 ) {
-		// Timer already started.
+			// Timer already started.
 		return TRUE;
 	}
  
-#if !defined(WIN32)
-	jobAd = s_claim->ad();
-	if( jobAd->LookupInteger(ATTR_KILL_SIG_TIMEOUT, job_kill_timeout) ) {
-		tmp_killing_timeout = killing_timeout + job_kill_timeout;
-	
-	}
-	else {
-#endif
-		tmp_killing_timeout = killing_timeout;
-#if !defined(WIN32)
-	}
-#endif
+	int tmp_killing_timeout = killing_timeout;
 	if( s_claim && (s_claim->universe() == CONDOR_UNIVERSE_VM) ) {
 		// For vm universe, we need longer killing_timeout
 		int vm_killing_timeout = param_integer( "VM_KILLING_TIMEOUT", 60);
@@ -1297,13 +1270,11 @@ Starter::startKillTimer( void )
 
 		// Create a periodic timer so that if the kill attempt fails,
 		// we keep trying.
-		
 	s_kill_tid = 
 		daemonCore->Register_Timer( tmp_killing_timeout,
-					tmp_killing_timeout, 
-					(TimerHandlercpp)&Starter::sigkillStarter,
-					"sigkillStarter", this );
-
+						tmp_killing_timeout, 
+						(TimerHandlercpp)&Starter::sigkillStarter,
+						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );
 	}

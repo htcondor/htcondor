@@ -30,8 +30,6 @@
 #include "../condor_procapi/procapi.h"
 #include "../condor_procd/proc_family_io.h"
 
-//enum signal_level_t {UNDEFINED, USER_DEFINED, SIG_QUIT, SIG_KILL};
-
 class Claim;
 
 class Starter : public Service
@@ -132,7 +130,7 @@ private:
 
 	void	initRunData( void );
 
-	int	startKillTimer( void );	        // Timer for how long we're willing
+	int	startKillTimer( void );		// Timer for how long we're willing
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
 		// choose EXECUTE directory for starter
 	void    finalizeExecuteDir( void );

@@ -5243,19 +5243,21 @@ SetKillSig()
 		case CONDOR_UNIVERSE_STANDARD:
 			sig_name = strdup( "SIGTSTP" );
 			break;
+		case CONDOR_UNIVERSE_VANILLA:
+			// Don't define sig_name for Vanilla Universe
+			sig_name = NULL;
+			break;
 		default:
 			sig_name = strdup( "SIGTERM" );
 			break;
 		}
-		if (JobUniverse != CONDOR_UNIVERSE_VANILLA) {
-			buffer.sprintf( "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
-			InsertJobExpr( buffer );
-		}
-	} else {
+	}
+
+	if ( sig_name ) {
 		buffer.sprintf( "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
 		InsertJobExpr( buffer );
-		}
-	free( sig_name );
+		free( sig_name );
+	}
 
 	sig_name = findKillSigName( RmKillSig, ATTR_REMOVE_KILL_SIG );
 	if( sig_name ) {

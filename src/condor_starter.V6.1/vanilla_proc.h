@@ -66,8 +66,8 @@ public:
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
-#if !defined(WIN32)
 	bool finishShutdownFast();
+#if !defined(WIN32)
 	bool startEscalationTimer();
 	void cancelEscalationTimer();
 	bool EscalateSignal();
