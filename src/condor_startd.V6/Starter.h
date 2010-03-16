@@ -73,8 +73,6 @@ public:
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
 	void	sigkillStarter( void );
-	bool	sigkillStarterSIGKILL( void );
-	bool	sigkillStarterSIGQUIT( void );
 	
 	void	publish( ClassAd* ad, amask_t mask, StringList* list );
 
