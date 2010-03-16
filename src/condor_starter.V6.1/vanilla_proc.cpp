@@ -408,7 +408,7 @@ VanillaProc::startEscalationTimer()
 	}
 
 	if ( !JobAd->LookupInteger(ATTR_KILL_SIG_TIMEOUT, job_kill_time) ) {
-		job_kill_time = 0;
+		job_kill_time = killing_timeout;
 	}
 
 	escalation_delay = std::max(std::min(killing_timeout-1, job_kill_time), 0);
