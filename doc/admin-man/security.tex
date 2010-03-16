@@ -2392,12 +2392,6 @@ Condor can be registered with:
 
 \end{description}
 
-Condor provides a mechanism for more
-fine-grained control over the configuration settings that can be
-modified remotely with \Condor{config\_val}.  
-Host-based security access
-permissions are specified in configuration files.
-
 \DCPerm{ADMINISTRATOR} and \DCPerm{NEGOTIATOR} access default to 
 the central manager machine.
 \DCPerm{OWNER} access defaults to the local machine, as well as
@@ -2413,38 +2407,41 @@ By granting machines \DCPerm{ADMINISTRATOR} access, they
 will automatically have \DCPerm{OWNER} access, given how
 \DCPerm{OWNER} access is set within the configuration.
 
-The default access configuration is
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Example-Sec-Config}Examples of Security Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!configuration examples} 
+
+Here is a sample security configuration:
 \footnotesize
 \begin{verbatim}
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
-HOSTALLOW_READ = *
-HOSTALLOW_WRITE = *
-HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
-HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
-HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
-HOSTALLOW_CLIENT = *
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+ALLOW_READ = *
+ALLOW_WRITE = *
+ALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
+ALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM)
+ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
+ALLOW_CLIENT = *
 \end{verbatim}
 \normalsize
 
-% NEGOTIATOR_HOST is no longer used since ports are dynamically
-% allocated, so suggest COLLECTOR_HOST instead
 This example configuration presumes that the \Condor{collector}
 and \Condor{negotiator} daemons are running on the same machine.
 
 For each access level, an ALLOW or a DENY may be added.
 \begin{itemize}
 
-\item If you have an ALLOW, it means "only allow these machines".  No
+\item If there is an ALLOW, it means "only allow these machines".  No
     ALLOW means allow anyone.
 
-\item If you have a DENY, it means "deny these machines".  No DENY
-    means to deny nobody.
+\item If there is a DENY, it means "deny these machines".  No DENY
+    means deny nobody.
 
-\item If you have both an ALLOW and a DENY, it means allow the
+\item If there is both an ALLOW and a DENY, it means allow the
     machines listed in ALLOW except for the machines listed in DENY.
 
 \item Exclusively for the \DCPerm{CONFIG} access,
@@ -2462,11 +2459,13 @@ may be separated by either a space or a comma.
 The machines may be listed by
 
 \begin{itemize}
-\item Individual host names - for example: condor.cs.wisc.edu
-\item Individual IP address - for example: 128.105.67.29
-\item IP subnets (use a trailing ``*'') - for example: 144.105.*, 128.105.67.*
-\item Host names with a wild card ``*'' character (only one ``*'' is
-    allowed per name) - for example: *.cs.wisc.edu, sol*.cs.wisc.edu
+\item Individual host names, for example: \Expr{condor.cs.wisc.edu}
+\item Individual IP address, for example: \Expr{128.105.67.29}
+\item IP subnets (use a trailing \Expr{*}),
+ for example: \Expr{144.105.*, 128.105.67.*}
+\item Host names with a wild card \Expr{*} character
+ (only one \Expr{*} is allowed per name),
+ for example: \Expr{*.cs.wisc.edu, sol*.cs.wisc.edu}
 \end{itemize}
 
 To resolve an entry that falls into both allow and deny:
@@ -2475,36 +2474,36 @@ machines have a higher order of precedence than wild card entries, and
 host names with a wild card have a higher order of precedence than IP
 subnets.
 Otherwise, DENY has a higher order of precedence than ALLOW.
-(this is how most people would intuitively expect it to work).  
+This is how most people would intuitively expect it to work.  
 
 In addition, the above access levels may be specified on a
 per-daemon basis, instead of machine-wide for all daemons.
 Do this with the subsystem string (described in
 section~\ref{sec:Condor-Subsystem-Names} on Subsystem Names),
-which is one of: STARTD, SCHEDD, MASTER, NEGOTIATOR,
-or COLLECTOR.
+which is one of: \Expr{STARTD}, \Expr{SCHEDD}, \Expr{MASTER}, \Expr{NEGOTIATOR},
+or \Expr{COLLECTOR}.
 For example, to grant different read access for the \Condor{schedd}:
 \footnotesize
 \begin{verbatim}
-HOSTALLOW_READ_SCHEDD = <list of machines>
+ALLOW_READ_SCHEDD = <list of machines>
 \end{verbatim}
 \normalsize
 
 
-This section provides examples of configuration settings.
+Here are more examples of configuration settings.
 Notice that \DCPerm{ADMINISTRATOR} access is
-only granted through a HOSTALLOW setting to explicitly grant access to
+only granted through an \Expr{ALLOW} setting to explicitly grant access to
 a small number of machines.  We recommend this.
 
 \begin{itemize}
 
-\item Let any machine join your pool.
+\item Let any machine join the pool.
 Only the central manager has
-administrative access (this is the default that ships with Condor)
+administrative access.
 \footnotesize
 \begin{verbatim}
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 \end{verbatim}
 \normalsize
 
@@ -2512,44 +2511,44 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 The central manager is the only machine with \DCPerm{ADMINISTRATOR} access.
 \footnotesize
 \begin{verbatim}
-HOSTALLOW_READ = *.ncsa.uiuc.edu
-HOSTALLOW_WRITE = *.ncsa.uiuc.edu
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_READ = *.ncsa.uiuc.edu
+ALLOW_WRITE = *.ncsa.uiuc.edu
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 \end{verbatim}
 \normalsize
 
 \item Only allow machines at NCSA and the U of I Math department join the
-pool, EXCEPT do \textbf{not} allow lab machines to do so.
+pool, \emph{except do not} allow lab machines to do so.
 Also, do not
 allow the 177.55 subnet (perhaps this is the dial-in subnet).
 Allow anyone to view pool statistics.  The machine named
 bigcheese administers the pool (not the central manager).
 \footnotesize
 \begin{verbatim}
-HOSTALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
-HOSTDENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
-HOSTALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
+DENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
+ALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 \end{verbatim}
 \normalsize
 
 \item Only allow machines at NCSA and UW-Madison's CS department to
 view the pool.  Only NCSA machines and the machine raven.cs.wisc.edu can join
 the pool.
-(Note: the machine raven has the read access it needs through the
-wild card setting in \Macro{HOSTALLOW\_READ}).
+Note: the machine raven.cs.wisc.edu has the read access it needs through the
+wild card setting in \MacroNI{ALLOW\_READ}).
 This example also shows
-how to use ``\verb@\@'' to continue a long list of machines
-onto multiple lines, making it more readable (this works for all
-configuration file entries, not just host access entries)
+how to use the continuation character, \verb@\@, to continue a long list of 
+machines onto multiple lines, making it more readable.
+This works for all configuration file entries, not just host access entries.
 \footnotesize
 \begin{verbatim}
-HOSTALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu
-HOSTALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
+ALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu
+ALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
                           biggercheese.uiuc.edu
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 \end{verbatim}
 \normalsize
 
@@ -2561,13 +2560,13 @@ biggercheese can perform most administrative functions.
 However, only biggercheese can update user priorities.
 \footnotesize
 \begin{verbatim}
-HOSTDENY_READ = *.mil
-HOSTALLOW_READ_SCHEDD = *.ncsa.uiuc.edu 
-HOSTALLOW_WRITE = *.ncsa.uiuc.edu
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
+DENY_READ = *.mil
+ALLOW_READ_SCHEDD = *.ncsa.uiuc.edu 
+ALLOW_WRITE = *.ncsa.uiuc.edu
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
                           biggercheese.uiuc.edu
-HOSTALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 \end{verbatim}
 \normalsize
 
