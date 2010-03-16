@@ -2935,14 +2935,14 @@ These macros control the \Condor{master}.
   section~\ref{sec:Condor-Subsystem-Names}.
 
 \label{param:SubsysUserid}
-\item[\MacroB{<SUBSYS>\_USERID}] \index{SUBSYS\_USERID
-  macro@\texttt{<SUBSYS>\_USERID} macro} This setting specifies the
-  account name that should be used to run the \MacroNI{SUBSYS} process
+\item[\MacroB{<SUBSYS>\_USERID}]
+  \index{SUBSYS\_USERID macro@\texttt{<SUBSYS>\_USERID} macro}
+  The account name that should be used to run the \MacroNI{SUBSYS} process
   spawned by the \Condor{master}.  When not defined, the process is
   spawned as the same user that is running \Condor{master}.  When
   defined, the real user id of the spawned process will be set to the
-  specified account, so if this account is not root, the process will
-  not have root priviledges.  The \Condor{master} must be running as
+  specified account, so if this account is not \Login{root}, the process will
+  not have \Login{root} privileges.  The \Condor{master} must be running as
   root in order to start processes as other users.  Example configuration:
 
 \begin{verbatim}
@@ -2950,15 +2950,16 @@ COLLECTOR_USERID = condor
 NEGOTIATOR_USERID = condor
 \end{verbatim}
 
-The above example runs the \Condor{collector} and \Condor{negotiator}
-as the condor user with no root priviledges.  If we had specified some
-account other than the condor user (\MacroNI{CONDOR\_IDS}), then we
-would need to configure the log files for these daemons to be in a
-directory that they can write to.  When using GSI security or any
-other security method in which the daemon credential is owned by root,
-it is also necessary to make a copy of the credential, make it be
-owned by the account the daemons are using, and configure the daemons
-to use that copy.
+  The above example runs the \Condor{collector} and \Condor{negotiator}
+  as the \Login{condor} user with no \Login{root} privileges.
+  If we specified some account other than the \Login{condor} user,
+  as set by the (\MacroNI{CONDOR\_IDS}) configuration variable, then we
+  would need to configure the log files for these daemons to be in a
+  directory that they can write to.  When using GSI security or any
+  other security method in which the daemon credential is owned by \Login{root},
+  it is also necessary to make a copy of the credential, make it be
+  owned by the account the daemons are using, and configure the daemons
+  to use that copy.
 
 \label{param:Preen}
 \item[\Macro{PREEN}]
