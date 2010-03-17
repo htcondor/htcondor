@@ -1,4 +1,3 @@
-//TEMPTEMP -- need to pass -recurse down for multiple levels -- hmm -- I should add multiple levels to the subdag test
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

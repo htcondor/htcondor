@@ -107,6 +107,10 @@ runSubmitDag( const SubmitDagOptions &opts, const char *dagFile,
 		cmdLine += "-import_env ";
 	}
 
+	if ( opts.recurse ) {
+		cmdLine += "-do_recurse ";
+	}
+
 	cmdLine += dagFile;
 
 	dprintf( D_FULLDEBUG, "Recursive submit command: <%s>\n",

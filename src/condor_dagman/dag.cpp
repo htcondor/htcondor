@@ -991,7 +991,6 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 					job->GetJobName() );
 		_dagFiles.rewind();
 		char *dagFile = _dagFiles.next();
-		//TEMPTEMP -- change this message
 		debug_printf( DEBUG_QUIET, "This may indicate log file corruption; "
 					"you may want to check the log files and re-run the "
 					"DAG in recovery mode by giving the command "
