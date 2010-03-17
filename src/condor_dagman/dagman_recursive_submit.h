@@ -108,7 +108,7 @@ struct SubmitDagOptions
 		be processed (ignored if NULL)
 	@return 0 if successful, 1 if failed
 */
-int runSubmit( const SubmitDagOptions &opts, const char *dagFile,
+int runSubmitDag( const SubmitDagOptions &opts, const char *dagFile,
 			const char *directory );
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H

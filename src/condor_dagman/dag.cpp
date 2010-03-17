@@ -2034,7 +2034,6 @@ Dag::RestartNode( Job *node, bool recovery )
 	}
 }
 
-
 //-------------------------------------------------------------------------
 // Number the nodes according to DFS order 
 void 
@@ -2995,6 +2994,21 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		sleep( dm.submit_delay );
 	}
 
+		// Do condor_submit_dag -no_submit if this is a nested DAG node
+		// and lazy submit file generation is enabled (this must be
+		// done before we try to monitor the log file).
+   	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
+				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
+		SubmitDagOptions opts;
+		//TEMPTEMP -- need to figure out submit options...
+
+		if ( runSubmitDag( opts, node->GetDagFile(),
+					node->GetDirectory() ) != 0 ) {
+			fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
+			return SUBMIT_RESULT_NO_SUBMIT;
+		}
+	}
+
 	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
 				_recovery, _defaultNodeLog ) ) {
 		return SUBMIT_RESULT_NO_SUBMIT;
@@ -3035,17 +3049,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 							node->GetLogFile(), node->GetLogFileIsXml() );
 
 			} else {
-				if ( node->GetDagFile() != NULL && _generateSubdagSubmits ) {
-					SubmitDagOptions opts;
-					//TEMPTEMP -- need to figure out submit options...
-
-					if ( runSubmit( opts, node->GetDagFile(),
-								node->GetDirectory() ) != 0 ) {
-						fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
-						return SUBMIT_RESULT_NO_SUBMIT;
-					}
-				}
-
 				const char *logFile = node->UsingDefaultLog() ?
 							node->GetLogFile() : NULL;
 					// Note: assigning the ParentListString() return value

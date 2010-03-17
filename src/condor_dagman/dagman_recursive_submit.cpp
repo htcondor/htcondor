@@ -31,7 +31,7 @@
 	@return 0 if successful, 1 if failed
 */
 int
-runSubmit( const SubmitDagOptions &opts, const char *dagFile,
+runSubmitDag( const SubmitDagOptions &opts, const char *dagFile,
 			const char *directory )
 {
 	int result = 0;

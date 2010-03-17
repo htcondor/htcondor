@@ -178,7 +178,7 @@ doRecursion( SubmitDagOptions &opts )
 					submitFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
 
 						// Now run condor_submit_dag on the DAG file.
-					if ( runSubmit( opts, submitFile.Value(),
+					if ( runSubmitDag( opts, submitFile.Value(),
 								directory ) != 0 ) {
 						result = 1;
 					}
@@ -203,7 +203,7 @@ doRecursion( SubmitDagOptions &opts )
 				}
 
 					// Now run condor_submit_dag on the DAG file.
-				if ( runSubmit( opts, nestedDagFile, directory ) != 0 ) {
+				if ( runSubmitDag( opts, nestedDagFile, directory ) != 0 ) {
 					result = 1;
 				}
 			}

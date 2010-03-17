@@ -30,8 +30,7 @@ $testname = "job_dagman_subdag-AE";
 $dagman_args = "-verbose -do_recurse";
 $ENV{_CONDOR_DAGMAN_GENERATE_SUBDAG_SUBMITS} = 0;
 
-@outfiles = ("job_dagman_subdag-A-lower1-node.A",
-  "job_dagman_subdag-A-lower1-node.B", 
+@outfiles = ("job_dagman_subdag-A-lower1-node.B", 
   "job_dagman_subdag-A-lower1-node.C", 
   "job_dagman_subdag-A-lower1-node.D", 
   "job_dagman_subdag-A-lower2-node.A", 
@@ -39,7 +38,11 @@ $ENV{_CONDOR_DAGMAN_GENERATE_SUBDAG_SUBMITS} = 0;
   "job_dagman_subdag-A-lower2-node.C", 
   "job_dagman_subdag-A-lower2-node.D", 
   "job_dagman_subdag-A-upper-node.A", 
-  "job_dagman_subdag-A-upper-node.D");
+  "job_dagman_subdag-A-upper-node.D",
+  "job_dagman_subdag-A-lowerlower1-node.A",
+  "job_dagman_subdag-A-lowerlower1-node.B",
+  "job_dagman_subdag-A-lowerlower1-node.C",
+  "job_dagman_subdag-A-lowerlower1-node.D");
 
 @logfiles = ("job_dagman_subdag-A-lower1.dag.dagman.out",
   "job_dagman_subdag-A-lower2.dag.dagman.out",
@@ -47,7 +50,8 @@ $ENV{_CONDOR_DAGMAN_GENERATE_SUBDAG_SUBMITS} = 0;
 
 @submitfiles = ("job_dagman_subdag-A-lower1.dag.condor.sub",
 	"job_dagman_subdag-A-lower2.dag.condor.sub",
-	"job_dagman_subdag-A-upper.dag.condor.sub");
+	"job_dagman_subdag-A-upper.dag.condor.sub",
+	"job_dagman_subdag-A-lowerlower1.dag.condor.sub");
 
 my $killedchosen = 0;
 
