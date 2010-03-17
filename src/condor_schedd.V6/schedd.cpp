@@ -7518,9 +7518,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	if( ! rval ) {
 		dprintf( D_ALWAYS|D_FAILURE, "Can't spawn local starter for "
 				 "job %d.%d\n", job_id->cluster, job_id->proc );
-		BeginTransaction();
 		mark_job_stopped( job_id );
-		CommitTransaction();
 			// TODO: we're definitely leaking shadow recs in this case
 			// (and have been for a while).  must fix ASAP.
 		return;
@@ -8547,6 +8545,8 @@ _mark_job_stopped(PROC_ID* job_id)
 	int		orig_max;
 	int		had_orig;
 
+		// NOTE: This function is wrapped in a NONDURABLE transaction.
+
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
 								ATTR_ORIG_MAX_HOSTS, &orig_max);
 
@@ -8625,6 +8625,11 @@ mark_job_running(PROC_ID* job_id)
 void
 mark_job_stopped(PROC_ID* job_id)
 {
+	bool already_in_transaction = InTransaction();
+	if( !already_in_transaction ) {
+		BeginTransaction();
+	}
+
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
@@ -8644,6 +8649,14 @@ mark_job_stopped(PROC_ID* job_id)
 		}
 	} else {
 		_mark_job_stopped(job_id);
+	}
+
+	if( !already_in_transaction ) {
+			// It is ok to use a NONDURABLE transaction here.
+			// The worst that can happen if this transaction is
+			// lost is that we will try to reconnect to the job
+			// and find that it is no longer running.
+		CommitTransaction( NONDURABLE );
 	}
 }
 
@@ -9560,7 +9573,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 						ATTR_NUM_SHADOW_EXCEPTIONS, &num_excepts);
 		num_excepts++;
 		SetAttributeInt(job_id.cluster, job_id.proc,
-						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts);
+						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts, NONDURABLE);
 
 		if (!srec->removed && srec->match) {
 				// Record that we had an exception.  This function will
