@@ -9328,9 +9328,18 @@ Scheduler::child_exit(int pid, int status)
 
 		// If we're not trying to shutdown, now that either an agent
 		// or a shadow (or both) have exited, we should try to
-		// activate all our claims and start jobs on them.
+		// start another job.
 	if( ! ExitWhenDone && StartJobsFlag ) {
-		this->StartJobs();
+		if( !claim_id.IsEmpty() ) {
+				// Try finding a new job for this claim.
+			match_rec *mrec = scheduler.FindMrecByClaimID( claim_id.Value() );
+			if( mrec ) {
+				this->StartJob( mrec );
+			}
+		}
+		else {
+			this->StartJobs();
+		}
 	}
 	else if( !keep_claim ) {
 		if( !claim_id.IsEmpty() ) {
