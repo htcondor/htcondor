@@ -4399,7 +4399,7 @@ static bool sensitive_string_hash_function_non_empty(void) {
 
 static bool sensitive_string_hash_function_empty(void) {
 	e.emit_test("Test hashFunction() on an empty sensitive string.");
-	e.emit_alert("Causes segfault!");
+	e.emit_alert("Causes segfault! See ticket #1296");
 /*
 	YourSensitiveString a;
 	unsigned int hash = YourSensitiveString::hashFunction(a);
