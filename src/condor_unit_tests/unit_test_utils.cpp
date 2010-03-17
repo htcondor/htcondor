@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "unit_test_utils.h"
 #include "emit.h"
+#include "MyString.h"
 
 class Emitter e;
 
@@ -52,4 +53,26 @@ const char* tfstr( int var ) {
 const char* tfnze( int var ) {
 	if(var != -1) return "TRUE";
 	return "FALSE";
+}
+
+bool vsprintfHelper(MyString* str, char* format, ...) {
+	va_list args;
+	bool toReturn;
+
+	va_start(args, format);
+	toReturn = str->vsprintf(format, args);
+	va_end(args);
+
+	return toReturn;
+}
+
+bool vsprintf_catHelper(MyString* str, char* format, ...) {
+	va_list args;
+	bool toReturn;
+
+	va_start(args, format);
+	toReturn = str->vsprintf_cat(format, args);
+	va_end(args);
+
+	return toReturn;
 }

@@ -21,6 +21,8 @@
 	This file contains functions used by the rest of the unit_test suite.
  */
 
+#include "MyString.h"
+
 // Global emitter declaration
 extern class Emitter e;
 
@@ -32,3 +34,9 @@ const char* tfstr(int);
 
 /*  tfstr() for ints where -1 indicates failure and 0 indicates success */
 const char* tfnze(int);
+
+/* For MyString, calls vsprintf on the given str */
+bool vsprintfHelper(MyString* str, char* format, ...);
+
+/* For MyString, calls vsprintf_cat on the given str */
+bool vsprintf_catHelper(MyString* str, char* format, ...);
