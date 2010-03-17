@@ -215,8 +215,7 @@ ShadowMgr::init( void )
 	if( ! tmp ) {
 			// Not defined, give them a default
 		new_config = false;
-		tmp = strdup( "SHADOW, SHADOW_NT, SHADOW_MPI, SHADOW_PVM, "
-					  "SHADOW_JAVA" );
+		tmp = strdup( "SHADOW, SHADOW_STANDARD" );
 	}
 	shadow_list.initializeFromString( tmp );
 	free( tmp );
