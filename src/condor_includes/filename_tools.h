@@ -48,6 +48,8 @@ void filename_url_parse_malloc( char const *input, char **method, char **server,
 
 void canonicalize_dir_delimiters( char *path );
 
+char *alternate_exec_pathname( const char *path );
+
 /*
 Returns true if path is a relative path; false if it is not.
 
