@@ -934,7 +934,7 @@ TESTCLASS(job_core_plus_java,quicknolink)
 Gnats bugs 723 and 724
 Gnats bug 790 for john memory failings
 */
-#if !defined( IS_CONDOR_PPC_LINUX_SLES9 ) && !defined(IS_IA64_LINUX_SLES81) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_CONDOR_PPC_LINUX_YD50 ) && !defined( IS_SUN4X_SOLARIS28 )
+#if !defined( IS_CONDOR_PPC_LINUX_SLES9 ) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_CONDOR_PPC_LINUX_YD50 ) && !defined( IS_SUN4X_SOLARIS28 )
 DESC(soap_job_tests,"Soap: currently 10 different interface tests")
 RUN(soap_job_tests)
 TESTCLASS(soap_job_tests,core)
@@ -958,7 +958,7 @@ TESTCLASS(job_filexfer_streamerr_van,quick)
 TESTCLASS(job_filexfer_streamerr_van,full)
 TESTCLASS(job_filexfer_streamerr_van,quicknolink)
 
-#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10) && !defined(IS_HPUX11) && !defined(IS_IA64_LINUX_SLES81) && !defined(IS_IA64_LINUX_RHEL3) 
+#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10) && !defined(IS_HPUX11) && !defined(IS_IA64_LINUX_RHEL3) 
 /* 
    NOTE: this is an unfortunate way to do this selection.  we should
    have reliable HAVE_GLOBUS, HAVE_CONDOR_C, and HAVE_CONDOR_G macros
