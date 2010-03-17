@@ -2374,6 +2374,7 @@ static bool hash_non_empty(void) {
 static bool find_empty(void) {
 	e.emit_test("Does find() return -1 when looking for the empty string within"
 		" an empty MyString?");
+	e.emit_comment("See ticket #1291");
 	MyString a("");
 	int loc = a.find("");
 	e.emit_input_header();
