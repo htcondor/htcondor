@@ -1633,6 +1633,7 @@ static bool concatenation_my_string_multiple(void) {
 
 static bool concatenation_my_string_itself(void) {
 	e.emit_test("Test concatenating a non-empty MyString with itself.");
+	e.emit_comment("See ticket #1290");
 	MyString a("foo");
 	a += a;
 	e.emit_input_header();
@@ -3041,7 +3042,7 @@ static bool append_to_list_mystring_non_empty_empty(void) {
 	e.emit_input_header();
 	e.emit_param("MyString", "%s", "");
 	e.emit_output_expected_header();
-	e.emit_retval("%s", "ABC,");
+	e.emit_retval("%s", "ABC");
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "ABC") != MATCH) {
