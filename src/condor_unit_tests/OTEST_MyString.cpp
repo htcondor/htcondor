@@ -3038,6 +3038,7 @@ static bool append_to_list_mystring_empty_non_empty(void) {
 static bool append_to_list_mystring_non_empty_empty(void) {
 	e.emit_test("Test append_to_list() on a non-empty MyString when passed an "
 		"empty MyString.");
+	e.emit_comment("See ticket #1293");
 	MyString a("ABC");
 	MyString b;
 	a.append_to_list(b);
