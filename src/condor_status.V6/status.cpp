@@ -323,8 +323,14 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
+        // Address (host:port) is taken from requested pool, if given.
+	char* addr = (NULL != pool) ? pool->addr() : NULL;
+        Daemon* requested_daemon = pool;
 
-	char* addr = pool ? pool->addr() : NULL;
+        // If we're in "direct" mode, then we attempt to locate the daemon
+	// associated with the requested subsystem (here encoded by value of mode)
+        // In this case the host:port of pool (if given) denotes which
+        // pool is being consulted
 	if( direct ) {
 		Daemon *d = NULL;
 		switch( mode ) {
@@ -367,40 +373,71 @@ main (int argc, char *argv[])
 			exit( 1 );
 			break;
 		}
-		if( d ) {
+
+                // Here is where we actually override 'addr', if we can obtain
+                // address of the requested daemon/subsys.  If it can't be
+                // located, then fail with error msg.
+                // 'd' will be null (unset) if mode is one of above that must go to
+                // collector (MODE_ANY_NORMAL, MODE_COLLECTOR_NORMAL, etc)
+		if (NULL != d) {
 			if( d->locate() ) {
 				addr = d->addr();
+				requested_daemon = d;
 			} else {
-				fprintf( stderr, "%s: %s\n", myName, d->error() );
+			        char* id = const_cast<char*>(d->idStr());
+                                if (NULL == id) id = const_cast<char*>(d->name());
+				if (NULL == id) id = "daemon";
+           	                fprintf(stderr, "Error: Failed to locate %s\n", id);
+                                fprintf(stderr, "%s\n", d->error());
 				exit( 1 );
 			}
 		}
 	}
 
-	CondorError errstack;	
-	if (addr) {
+	CondorError errstack;
+	if (NULL != addr) {
+	        // this case executes if pool was provided, or if in "direct" mode with
+	        // subsystem that corresponds to a daemon (above).
+                // Here 'addr' represents either the host:port of requested pool, or
+                // alternatively the host:port of daemon associated with requested subsystem (direct mode)
 		q = query->fetchAds (result, addr, &errstack);
 	} else {
+                // otherwise obtain list of collectors and submit query that way
 		CollectorList * collectors = CollectorList::create();
 		q = collectors->query (*query, result, &errstack);
 		delete collectors;
 	}
 		
 
-	if (q != Q_OK) {
-		if (q == Q_COMMUNICATION_ERROR) {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
-				// if we're not an expert, we want verbose output
-			if (errstack.code(0) == CEDAR_ERR_CONNECT_FAILED) {
-				printNoCollectorContact( stderr, addr, !expert );
-			}
+	// if any error was encountered during the query, report it and exit 
+        if (Q_OK != q) {
+                // we can always provide these messages:
+	        fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+
+	        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) || (requested_daemon->type() == DT_COLLECTOR))) {
+                        // Specific long message if connection to collector failed.
+		        char* fullhost = requested_daemon->fullHostname();
+                        if (NULL == fullhost) fullhost = "<unknown_host>";
+                        char* daddr = requested_daemon->addr();
+                        if (NULL == daddr) daddr = "<unknown>";
+                        char info[1000];
+                        sprintf(info, "%s (%s)", fullhost, daddr);
+		        printNoCollectorContact( stderr, info, !expert );                        
+	        } else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
+                        // more helpful message for failure to connect to some daemon/subsys
+			char* id = const_cast<char*>(requested_daemon->idStr());
+                        if (NULL == id) id = const_cast<char*>(requested_daemon->name());
+			if (NULL == id) id = "daemon";
+                        char* daddr = requested_daemon->addr();
+                        if (NULL == daddr) daddr = "<unknown>";
+           	        fprintf(stderr, "Error: Failed to contact %s at %s\n", id, daddr);
 		}
-		else {
-			fprintf (stderr, "Error:  Could not fetch ads --- %s\n",
-					 getStrQueryResult(q));
-		}
-		exit (1);
+
+                // fail
+                exit (1);
 	}
+
 
 	// sort the ad
 	if( sortLessThanExprs.getlast() > -1 ) {

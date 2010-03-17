@@ -353,9 +353,6 @@ elif test $os = "Linux" ; then
   elif test -f "/etc/SuSE-release" ; then
     _suse_vers=`cat /etc/SuSE-release | grep VERSION | $AWK '{print $3}'`
     case "$_suse_vers" in
-     "8.1" )
-       _cv_linux_distro="SLES81"
-       ;;
      "9" )
        _cv_linux_distro="SLES9"
        ;;

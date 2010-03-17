@@ -42,7 +42,9 @@ extern CStarter *Starter;
 
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd)
 {
+#if !defined(WIN32)
 	m_escalation_tid = -1;
+#endif
 }
 
 int
@@ -253,7 +255,9 @@ VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::JobReaper()\n");
 
+#if !defined(WIN32)
 	cancelEscalationTimer();
+#endif
 
 	if (pid == JobPid) {
 			// Make sure that nothing was left behind.

@@ -36,21 +36,25 @@ in a range the '-' must be proceeded by whitespace.  Multiple entries can be
 specified in the same value be using a ':' seperated list or ids or ranges.
 
 As an example 
-    
-    real-uid = condor
-    real-gid = condor
+    # required
+    valid-caller-uids = condor
+    valid-caller-gids = condor
 
 	# comment
-    valid-user-uids = bob : 1000 - *
-    valid-user-gids = 100-110 : 200 - *:bob
+    #required
+    valid-target-uids = bob : 1000 - *
+    valid-target-gids = 100-110 : 200 - *:bob
 
+    #optional
     # use 3 user dirs /var/sandbox, /var/sandbox2 and /2345
-    valid-user-dirs = /var/sandbox
-    valid-user-dirs = /var/sandbox2
-    valid-user-dirs <5>
+    valid-dirs = /var/sandbox
+    valid-dirs = /var/sandbox2
+    valid-dirs <5>
     /2345
 
+    #required
     procd-executable = /opt/condor/bin/procd
+    #optional
     transferd-executable = /opt/condor/bin/transferd
 
 
@@ -85,29 +89,37 @@ CMD_CONF_FD
 main configuration file:
 ------------------------
 
-real-uid			uid list
+valid-caller-uids=uid_list_values	string
+    (required)
     the real user id of the caller must be in the list.
 
-real-gid			uid list
+valid-caller-gids=gid_list_values	string
+    (required)
     the real group id of the caller must be in the list.
 
-valid-user-uids			uid list
+valid-target-uids=uid_list_values	string
+    (required)
     the user id for the transferd, directory and job execution commands
     must be in the list.
 
-valid-user-gids			uid list
+valid-target-gids=gid_list_values	string
+    (required)
     the group id for the transferd, directory and job execution commands
     must be in the list.
 
-valid-user-dirs			string list
+valid-dirs=path			string list
+    (optional, but needed for directory commands)
     The parent directory of the user directory to perform directory
-    commands must be in this list.  Their path must be secure.
+    commands must be in this list.  Their path must be secure 
+     (i.e owned by CONF_SAFE_UIDS, which defaults to root only).
 
-transferd-executable		string
+transferd-executable=path	string
+    (optional)
     The path to transferd executable.
 
-procd-executable		string
-    The path to the procd executable.  This path must be secure..
+procd-executable=path		string
+    (required)
+    The path to the procd executable.  This path must be secure.
 
 valid-user-exectuables		string list
     not implemented.
@@ -116,9 +128,13 @@ valid-user-exectuable-dirs	string list
     not implemented.
 
 
+Command line arguments (exactly 3 required):
+-------------------------------------------
+command controlFD errorFD
 
-Valid command line argument (exactly 1 is allowed):
----------------------------------------------------
+
+Valid commands:
+--------------
 pd
 td
 mkdir
@@ -126,6 +142,16 @@ rmdir
 chowndir
 exec
 
+
+controlFD:
+---------
+The command options are read from the controlFD and are described below.
+If controlFD==0, then the options are read from the stdin.
+
+errorFD:
+-------
+Any error will be written here.
+Use errorFD==2 to redirect to stderr.
 
 
 procd executable command:  pd
@@ -136,52 +162,75 @@ NO OPTIONS
 
 transferd executable command:  td
 ---------------------------------
-user-uid			uid
+user-uid=uid			string
     uid to start the transferd executable as.
 
 
 
-directory command:  mkdir rmdir chowndir
-----------------------------------------
-user-uid			uid
-    uid to mkdir, remove contents as, and chown contents to.
+create directory command:  mkdir
+--------------------------------
+user-uid=uid			string
+    uid of the created dir
 
-user-dir			string
+user-dir=path			string
+    directory to be created.  Must be directory contained in a valid-user-dirs
+
+remove directory tree command:  rmdir
+-------------------------------------
+user-dir=path			string
+    directory to be removed.  Must be directory contained in a valid-user-dirs
+
+change ownership of a directory tree command:  chowndir
+-------------------------------------------------------
+chown-source-uid=uid		string
+    current uid of the directory tree to chown
+
+user-uid=uid			string
+    uid to which to chown the directory tree
+
+user-dir=path			string
     directory to act upon.  Must be directory contained in a valid-user-dirs
 
 
 
 execute user job command:  exec
 -------------------------------
-user-uid			uid
+user-uid=uid			string
     uid to start job as.
 
-exec-arg			string list
+exec-arg<length>\narg		explicit length string list
     arguments to job (must include executable name as first value if you
     want to follow normal conventions.
 
-exec-env			string list
-    environment (key=value) string.
+exec-env<length>\nkey=value	explicit length string list
+    environment (key=value) strings.
 
-exec-path			string
+exec-path=path			string
     path to the executable to start.
 
-exec-init-dir			string
+exec-init-dir=path		string
     initial working directory for the process.
 
-exec-stdin			string
+exec-stdin=path			string
     filename to open for stdin for the process.  If not set /dev/null is used.
 
-exec-stdout			string
+exec-stdout=path		string
     filename to open for stdout for the process.  If not set /dev/null is used.
 
-exec-stderr			string
+exec-stderr=pth			string
     filename to open for stderr for the process.  If not set /dev/null is used.
 
-exec-is-std-univ		boolean
+exec-is-std-univ=bool		boolean
     not implemented.  will configure the process to do special things for
     standard universe jobs.
 
-exec-keep-open-fds		id list
-    file descriptor not in this list will be close.  All other file descriptors
+exec-keep-open-fd=nr		id list
+    file descriptor t be kept open.  All other file descriptors
     will be closed.  This value overrides exec-std{in,out,err} options.
+
+
+
+Simple one line example
+-----------------------
+echo "user-dir=/var/sandbox/work123" | /opt/condor/sbin/condor_root_switchboard rmdir 0 2
+
