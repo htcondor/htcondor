@@ -4307,7 +4307,7 @@ static bool sensitive_string_equality_false(void) {
 static bool sensitive_string_equality_default_constructor(void) {
 	e.emit_test("Does the == operator return false after using the default "
 		"YourSensitiveString constructor?");
-	e.emit_alert("Causes segfault!");
+	e.emit_alert("Causes segfault! See ticket #1295");
 /*
 	YourSensitiveString a;
 	bool res = (a == "foo");
