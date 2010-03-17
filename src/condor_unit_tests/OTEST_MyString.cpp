@@ -3966,7 +3966,7 @@ static bool read_line_empty(void) {
 
 static bool read_line_null_file(void) {
 	e.emit_test("Test readLine() when passed a null file pointer.");
-	e.emit_alert("Causes segfault!");
+	e.emit_alert("Causes segfault! See ticket #1294");
 /*
 	MyString a("foo");
 	FILE* tmp = NULL;
