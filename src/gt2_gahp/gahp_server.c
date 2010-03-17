@@ -1024,7 +1024,7 @@ handle_gram_get_jobmanager_version(void * user_arg)
 	char **input_line = (char **) user_arg;
 	int result;
 	char *output, *req_id, *resource_contact;
-	globus_hashtable_t extensions;
+	globus_hashtable_t extensions = NULL;
 	globus_gram_protocol_extension_t *entry;
 	char *esc_str;
 
@@ -1048,20 +1048,24 @@ handle_gram_get_jobmanager_version(void * user_arg)
 
 	globus_libc_sprintf(output, "%s %d", req_id, result);
 
-	entry = globus_hashtable_first( &extensions );
-	while ( entry ) {
-		strcat( output, " " );
-		strcat( output, entry->attribute );
-		strcat( output, "=" );
-		esc_str = escape_spaces( entry->value );
-		strcat( output, esc_str );
-		free( esc_str );
-		entry = globus_hashtable_next( &extensions );
+	if ( result == GLOBUS_SUCCESS ) {
+		entry = globus_hashtable_first( &extensions );
+		while ( entry ) {
+			strcat( output, " " );
+			strcat( output, entry->attribute );
+			strcat( output, "=" );
+			esc_str = escape_spaces( entry->value );
+			strcat( output, esc_str );
+			free( esc_str );
+			entry = globus_hashtable_next( &extensions );
+		}
 	}
 
 	enqueue_results(output);	
 
-	globus_gram_protocol_hash_destroy( &extensions );
+	if ( extensions ) {
+		globus_gram_protocol_hash_destroy( &extensions );
+	}
 
 	all_args_free( user_arg );
 	return 0;
