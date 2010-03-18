@@ -25,6 +25,7 @@
 */
 
 #include "condor_common.h"
+#include "filename_tools.h"
 
 #define EXCEPTION( x ) case EXCEPTION_##x: return 0;
 
@@ -75,3 +76,31 @@ index( const char *s, int c )
 {
 	return strchr( s, c );
 }
+
+int
+access(const char *path, int mode)
+{
+	int result, len;
+	char *buf;
+
+	result = _access(path,mode);
+
+		/* If we are testing for executable (X_OK), and failed because file
+		   not found (ENOENT), then try again after making certain directories
+		   delimiters are backslahes and adding a file extention of .exe if no 
+		   extention exists.  Note this is the same algorithm used by 
+		   DaemonCore::Create_Process().
+	    */		
+	if ( (result == -1) && (errno == ENOENT) && 
+		 (mode & X_OK) && path && path[0] ) 
+	{
+		buf = alternate_exec_pathname( path );
+		if ( buf ) {
+			result = _access(buf,mode);
+			free(buf);
+		}
+	}
+
+	return result;
+}
+

@@ -107,6 +107,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_threads.h"
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
+#include "filename_tools.h"
 
 #include "valgrind.h"
 
@@ -6872,6 +6873,7 @@ int DaemonCore::Create_Process(
 	CHAR interpreter[MAX_PATH+1];
 	MyString description;
 	BOOL ok;
+	MyString executable_with_exe;	// buffer for executable w/ .exe appended
 
 #else
 	int inherit_handles;
@@ -7339,7 +7341,7 @@ int DaemonCore::Create_Process(
 			dprintf ( 
 				D_ALWAYS, 
 				"Create_Process(): Failed to extract "
-				"the file's extension.\n" );
+				"the extension from file %s.\n", executable );
 
 			/** don't fail here, since we want executables to run
 				as usual.  That is, some condor jobs submit 
@@ -7432,6 +7434,22 @@ int DaemonCore::Create_Process(
 	BOOL cp_result, gbt_result;
 	DWORD binType;
 	gbt_result = GetBinaryType(executable, &binType);
+
+	// if GetBinaryType() failed,
+	// try an alternate exec pathname (aka perhaps append .exe etc) and 
+	// try again. if there is an alternate exec pathname, stash the name
+	// in a C++ MyString buffer (so it is deallocated automagically) and
+	// change executable to point into that buffer.
+	if ( !gbt_result ) {
+		char *alt_name = alternate_exec_pathname( executable );
+		if ( alt_name ) {
+			executable_with_exe = alt_name;
+			executable = executable_with_exe.Value();
+			free(alt_name);
+				// try GetBinaryType again...
+			gbt_result = GetBinaryType(executable, &binType);
+		}
+	}
 
 	// test if the executable is either unexecutable, or if GetBinaryType()
 	// thinks its a DOS 16-bit app, but in reality the actual binary

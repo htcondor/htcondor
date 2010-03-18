@@ -420,7 +420,17 @@ TimerManager::Timeout()
 		} else if ( !did_reset ) {
 			// here we remove the timer we just serviced, or renew it if it is 
 			// periodic.
-			RemoveTimer( in_timeout, NULL );
+
+			// If a new timer was added at a time in the past
+			// (possible when resetting a timeslice timer), then
+			// it may have landed before the timer we just processed,
+			// meaning that we cannot assume prev==NULL in the call
+			// to RemoveTimer() below.
+
+			Timer *prev = NULL;
+			ASSERT( GetTimer(in_timeout->id,&prev) == in_timeout );
+			RemoveTimer( in_timeout, prev );
+
 			if ( in_timeout->period > 0 || in_timeout->timeslice ) {
 				in_timeout->period_started = time(NULL);
 				in_timeout->when = in_timeout->period_started;
@@ -631,4 +641,20 @@ void TimerManager::DeleteTimer( Timer *timer )
 
 	delete timer->timeslice;
 	delete timer;
+}
+
+Timer *TimerManager::GetTimer( int id, Timer **prev )
+{
+	Timer *timer_ptr = timer_list;
+	if( prev ) {
+		*prev = NULL;
+	}
+	while ( timer_ptr && timer_ptr->id != id ) {
+		if( prev ) {
+			*prev = timer_ptr;
+		}
+		timer_ptr = timer_ptr->next;
+	}
+
+	return timer_ptr;
 }

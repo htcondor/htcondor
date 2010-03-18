@@ -213,6 +213,13 @@ class TimerManager
 	void InsertTimer( Timer *new_timer );
 	void DeleteTimer( Timer *timer );
 
+	/*
+	  @param id The id of the timer to find
+	  @param prev If not NULL, this will be set to previous timer in list
+	  @return pointer to timer with specified id or NULL if not found
+	 */
+	Timer *GetTimer( int id, Timer **prev );
+
     Timer*  timer_list;
 	Timer*  list_tail;
     int     timer_ids;
