@@ -1327,10 +1327,6 @@ dc_reconfig( bool is_full )
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
 
-	if( DynamicDirs ) {
-		handle_dynamic_dirs();
-	}
-
 		// If we're supposed to be using our own log file, reset that here. 
 	if( logDir ) {
 		set_log_dir();
