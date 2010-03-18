@@ -912,6 +912,21 @@ class DaemonCore : public Service
         @return 0 on success
     */
     int Reset_Timer_Period ( int id, unsigned period );
+
+    /** Change a timer's timeslice settings.
+        @param id The timer's ID
+        @param new_timeslice New timeslice settings to use.
+        @return 0 on success
+    */
+    int ResetTimerTimeslice ( int id, Timeslice const &new_timeslice );
+
+    /** Get a timer's timeslice settings.
+        @param id The timer's ID
+        @param timeslice Object to receive a copy of the timeslice settings.
+        @return false if no timeslice associated with this timer
+    */
+    bool GetTimerTimeslice ( int id, Timeslice &timeslice );
+
 	//@}
 
     /** Not_Yet_Documented

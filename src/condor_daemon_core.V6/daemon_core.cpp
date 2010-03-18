@@ -871,6 +871,16 @@ int DaemonCore::Reset_Timer_Period ( int id, unsigned period )
 	return( t.ResetTimerPeriod(id,period) );
 }
 
+int DaemonCore::ResetTimerTimeslice ( int id, Timeslice const &new_timeslice )
+{
+	return t.ResetTimerTimeslice(id,new_timeslice);
+}
+
+bool DaemonCore::GetTimerTimeslice( int id, Timeslice &timeslice )
+{
+	return t.GetTimerTimeslice( id, timeslice );
+}
+
 /************************************************************************/
 
 

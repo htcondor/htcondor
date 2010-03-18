@@ -320,6 +320,7 @@ class Scheduler : public Service
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
 	int				AlreadyMatched(PROC_ID*);
+	void			ExpediteStartJobs();
 	void			StartJobs();
 	void			StartJob(match_rec *rec);
 	void			StartLocalJobs();

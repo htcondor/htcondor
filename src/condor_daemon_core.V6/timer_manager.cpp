@@ -154,7 +154,22 @@ int TimerManager::ResetTimerPeriod(int id,unsigned period)
 	return ResetTimer(id,0,period,true);
 }
 
-int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recompute_when)
+bool TimerManager::ResetTimerTimeslice(int id, Timeslice const &new_timeslice)
+{
+	return ResetTimer(id,0,0,false,&new_timeslice)==0;
+}
+
+bool TimerManager::GetTimerTimeslice(int id, Timeslice &timeslice)
+{
+	Timer *timer_ptr = GetTimer( id, NULL );
+	if( !timer_ptr || !timer_ptr->timeslice ) {
+		return false;
+	}
+	timeslice = *timer_ptr->timeslice;
+	return true;
+}
+
+int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recompute_when, Timeslice const *new_timeslice)
 {
 	Timer*			timer_ptr;
 	Timer*			trail_ptr;
@@ -176,7 +191,17 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recomp
 		dprintf( D_ALWAYS, "Timer %d not found\n",id );
 		return -1;
 	}
-	if ( timer_ptr->timeslice ) {
+	if ( new_timeslice ) {
+		if( timer_ptr->timeslice == NULL ) {
+			timer_ptr->timeslice = new Timeslice( *new_timeslice );
+		}
+		else {
+			*timer_ptr->timeslice = *new_timeslice;
+		}
+
+		timer_ptr->when = timer_ptr->timeslice->getNextStartTime();
+	}
+	else if ( timer_ptr->timeslice ) {
 		dprintf( D_DAEMONCORE, "Timer %d with timeslice can't be reset\n",
 				 id );
 		return 0;

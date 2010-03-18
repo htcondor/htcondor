@@ -6137,6 +6137,23 @@ find_idle_local_jobs( ClassAd *job )
 	return 0;
 }
 
+void
+Scheduler::ExpediteStartJobs()
+{
+	if( startjobsid == -1 ) {
+		return;
+	}
+
+	Timeslice timeslice;
+	ASSERT( daemonCore->GetTimerTimeslice( startjobsid, timeslice ) );
+
+	if( !timeslice.isNextRunExpedited() ) {
+		timeslice.expediteNextRun();
+		ASSERT( daemonCore->ResetTimerTimeslice( startjobsid, timeslice ) );
+		dprintf(D_FULLDEBUG,"Expedited call to StartJobs()\n");
+	}
+}
+
 /*
  * Weiru
  * This function iterate through all the match records, for every match do the
@@ -6177,9 +6194,6 @@ Scheduler::StartJobs()
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
 		StartLocalJobs();
 	}
-
-	/* Reset our Timer */
-	daemonCore->Reset_Timer(startjobsid,(int)SchedDInterval.getDefaultInterval());
 
 	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
 }
@@ -6934,7 +6948,7 @@ Scheduler::tryNextJob()
 							(TimerHandlercpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
 	} else {
-		StartJobs();
+		ExpediteStartJobs();
 	}
 }
 
@@ -9338,7 +9352,7 @@ Scheduler::child_exit(int pid, int status)
 			}
 		}
 		else {
-			this->StartJobs();
+			this->ExpediteStartJobs();
 		}
 	}
 	else if( !keep_claim ) {
@@ -10772,13 +10786,29 @@ Scheduler::RegisterTimers()
 	// Note: aliveid is a data member of the Scheduler class
 	static int oldQueueCleanInterval = -1;
 
+	Timeslice start_jobs_timeslice;
+
 	// clear previous timers
 	if (timeoutid >= 0) {
 		daemonCore->Cancel_Timer(timeoutid);
 	}
+
 	if (startjobsid >= 0) {
+		daemonCore->GetTimerTimeslice(startjobsid,start_jobs_timeslice);
 		daemonCore->Cancel_Timer(startjobsid);
 	}
+	else {
+		start_jobs_timeslice.setInitialInterval(10);
+	}
+		// Copy settings for start jobs timeslice from schedDInterval,
+		// since we currently don't have any reason to want them to
+		// be configured independently.  We do _not_ currently copy
+		// the minimum interval, so frequent calls are allowed as long
+		// as the timeslice is within the limit.
+	start_jobs_timeslice.setDefaultInterval( SchedDInterval.getDefaultInterval() );
+	start_jobs_timeslice.setMaxInterval( SchedDInterval.getMaxInterval() );
+	start_jobs_timeslice.setTimeslice( SchedDInterval.getTimeslice() );
+
 	if (aliveid >= 0) {
 		daemonCore->Cancel_Timer(aliveid);
 	}
@@ -10789,7 +10819,7 @@ Scheduler::RegisterTimers()
 	 // timer handlers
 	timeoutid = daemonCore->Register_Timer(10,
 		(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
-	startjobsid = daemonCore->Register_Timer(10,
+	startjobsid = daemonCore->Register_Timer( start_jobs_timeslice,
 		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
 		(TimerHandlercpp)&Scheduler::sendAlives,"sendAlives", this);
