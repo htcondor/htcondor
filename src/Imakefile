@@ -260,7 +260,7 @@ condor_object_target(tools)
 condor_object_target(power)
 
 #ifdef WANT_SOAP_SHELL
-  condor_object_target(SoapShell)
+  condor_object_target(soapshell)
 #endif
 
 condor_object_target(examples)
