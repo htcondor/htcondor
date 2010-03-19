@@ -1578,6 +1578,9 @@ AddTargetRefs( TargetAdType target_type, bool do_version_check )
 	// Disable AddTargetRefs for now
 	return;
 
+	// Remove use of CondorVersionInfo, which would require several
+	// additional files in libcondorapi.
+#if 0
 	MyString ver_str;
 	if ( do_version_check && this->LookupString( ATTR_VERSION, ver_str ) ) {
 		CondorVersionInfo ver( ver_str.Value() );
@@ -1592,6 +1595,7 @@ AddTargetRefs( TargetAdType target_type, bool do_version_check )
 						  compat_classad::AddTargetRefs( a->second, target_type ) );
 		}
 	}
+#endif
 }
 
 classad::ExprTree *ClassAd::
