@@ -553,6 +553,10 @@ public:
 	/// For stream types that support it, this returns the ip address we are connecting to.
 	virtual char const *peer_ip_str() = 0;
 
+	/// For stream types that support it, test if peer is a local interface, aka did this connection 
+	/// originate from a local process?
+	virtual bool peer_is_local() = 0;
+
 	/// For stream types that support it, this is the sinful address of peer.
 	virtual char const *default_peer_description() = 0;
 
