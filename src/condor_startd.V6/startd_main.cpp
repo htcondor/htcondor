@@ -296,7 +296,7 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  (CommandHandler)command_x_event,
-								  "command_x_event", 0, DAEMON,
+								  "command_x_event", 0, ALLOW,
 								  D_FULLDEBUG ); 
 	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
 								  (CommandHandler)command_pckpt_all,

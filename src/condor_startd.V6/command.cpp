@@ -221,7 +221,18 @@ command_x_event( Service*, int, Stream* s )
 {
 	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
 
-	sysapi_last_xevent();
+		// Only trust events over the network if the network message
+		// originated from our local machine.
+	if ( !s ||							// trust calls from within the startd
+		 (s && s->peer_is_local())		// trust only sockets from local machine
+	   ) 
+	{
+		sysapi_last_xevent();
+	} else {
+		dprintf( D_ALWAYS, 
+			"ERROR command_x_event received from %s is not local - discarded\n",
+			s->peer_ip_str() );
+	}
 
 	if( s ) {
 		s->end_of_message();

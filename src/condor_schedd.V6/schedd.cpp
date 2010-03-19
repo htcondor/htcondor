@@ -6299,6 +6299,9 @@ Scheduler::StartJob(match_rec *rec)
 void
 Scheduler::StartLocalJobs()
 {
+	if ( ExitWhenDone ) {
+		return;
+	}
 	WalkJobQueue( (int(*)(ClassAd *))find_idle_local_jobs );
 }
 
