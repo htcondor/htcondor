@@ -116,6 +116,13 @@ to be closed (consumed=0). Closing it now.
 \item The file extension specified to \Condor{fetch\_log} can no longer
 contain a path delimiter.
 
+% gittrack 1299
+\item When in graceful shutdown mode, the \Condor{schedd} was
+  sometimes starting idle scheduler universe jobs.  With a large
+  enough number of scheduler universe jobs, this could lead to a cycle
+  of stopping and restarting jobs until the graceful shutdown time
+  expired.
+
 \end{itemize}
 
 \noindent Known Bugs:
