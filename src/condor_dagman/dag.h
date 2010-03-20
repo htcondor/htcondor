@@ -35,6 +35,7 @@
 #include "prioritysimplelist.h"
 #include "throttle_by_category.h"
 #include "MyString.h"
+#include "dagman_recursive_submit.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -128,6 +129,7 @@ class Dag {
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
+		 const SubmitDagOptions *dagOptions,
 		 bool isSplice = false );
 
     ///
@@ -914,6 +916,9 @@ class Dag {
 		// at run time (just before the node is submitted).
 	bool	_generateSubdagSubmits;
 
+		// Options for running condor_submit_dag on nested DAGs.
+	const SubmitDagOptions *_dagOptions;
+
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel
 		// dag will have this be false, and any included splices will be true.
@@ -926,7 +931,6 @@ class Dag {
 		// initialize the ID for subsequent fake events so IDs don't
 		// collide).
 	int _recoveryMaxfakeID;
-
 };
 
 #endif /* #ifndef DAG_H */

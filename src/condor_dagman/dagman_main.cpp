@@ -855,6 +855,9 @@ int main_init (int argc, char ** const argv) {
     // Create the DAG
     //
 
+	//TEMPTEMP -- need to figure out submit options...
+	SubmitDagOptions dagOptions;
+
     dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.allowLogError, dagman.useDagDir,
@@ -864,6 +867,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
 						  dagman._defaultNodeLog,
 						  dagman._generateSubdagSubmits,
+						  &dagOptions,
 						  false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {

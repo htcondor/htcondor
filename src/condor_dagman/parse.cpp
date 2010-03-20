@@ -1469,6 +1469,7 @@ parse_splice(
 							dag->SubmitDepthFirst(),
 							dag->DefaultNodeLog(),
 							dag->GenerateSubdagSubmits(),
+							NULL/*TEMPTEMP?*/,
 							true); /* we are a splice! */
 	
 	// initialize whatever the DIR line was, or defaults to, here.

@@ -79,7 +79,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
-		  bool isSplice) :
+		  const SubmitDagOptions *dagOptions, bool isSplice ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -114,6 +114,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_submitDepthFirst	  (submitDepthFirst),
 	_defaultNodeLog		  (defaultNodeLog),
 	_generateSubdagSubmits (generateSubdagSubmits),
+	_dagOptions			  (dagOptions),
 	_isSplice			  (isSplice),
 	_recoveryMaxfakeID	  (0)
 {
@@ -2998,10 +2999,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// done before we try to monitor the log file).
    	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
-		SubmitDagOptions opts;
-		//TEMPTEMP -- need to figure out submit options...
-
-		if ( runSubmitDag( opts, node->GetDagFile(),
+		if ( runSubmitDag( *_dagOptions, node->GetDagFile(),
 					node->GetDirectory() ) != 0 ) {
 			fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
 			return SUBMIT_RESULT_NO_SUBMIT;
