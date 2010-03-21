@@ -62,7 +62,6 @@ if not exist %1\include\NUL mkdir %1\include
 if not exist %1\examples\NUL mkdir %1\examples
 if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
 if not exist %1\examples\printname\NUL mkdir %1\examples\printname
-if not exist %1\examples\rc5\NUL mkdir %1\examples\rc5
 if not exist %1\hdfs\NUL mkdir %1\hdfs
 
 echo. & echo Copying root Condor files...
@@ -100,7 +99,6 @@ echo. & echo Copying example submit files...
 copy installer\examples\*.* %1\examples
 copy installer\examples\cpusoak\*.* %1\examples\cpusoak
 copy installer\examples\printname\*.* %1\examples\printname
-copy installer\examples\rc5\*.* %1\examples\rc5
 
 echo. & echo Copying SQL files...
 copy ..\src\condor_tt\*.sql %1\sql
@@ -141,6 +139,8 @@ copy include\*.* %1\include
 copy lib\*.* %1\lib
 copy src\*.* %1\src\drmaa
 popd
+
+echo. & echo *** Done. Windows release finished. Congrats! Go drink whiskey.
 
 :end
 exit %INTERACTIVE% 0

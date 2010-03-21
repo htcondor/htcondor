@@ -1,0 +1,7 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows Script Host\Settings]
+"DisplayLogo"="1"
+"ActiveDebugging"="1"
+"SilentTerminate"="0"
+"UseWINSAFER"="1"
