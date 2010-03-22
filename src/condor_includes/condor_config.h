@@ -143,6 +143,9 @@ class ParamValue {
 	/* A convenience function that calls param() with a MyString buffer. */
 	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
 
+	/* A convenience function that calls param() with a std::string buffer. */
+	bool param(std::string &buf,char const *param_name,char const *default_value=NULL);
+
 /* here we provide C linkage to C++ defined functions. This seems a bit
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
