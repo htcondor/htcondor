@@ -38,6 +38,7 @@
 #include "classad_newold.h"
 #include "user_job_policy.h"
 #include "get_daemon_name.h"
+#include "filename_tools.h"
 
 
 
@@ -134,43 +135,11 @@ void
 JobRouter::GetInstanceLock() {
 	std::string lock_fullname;
 	std::string lock_basename;
-	char *lock_dir;
-
-	// Since JobRouterName() may contain characters that are not allowed
-	// (or not portable) in a filename, use an MD5 hash of it for the
-	// lock file name.
-	Condor_MD_MAC MD5;
-	std::string router_name = JobRouterName();
-	unsigned char *md5_str;
-	MD5.addMD((const unsigned char *)router_name.c_str(),router_name.size());
-	md5_str = MD5.computeMD();
-	if(md5_str) {
-		int i;
-		for(i=0;i<MAC_SIZE;i++) {
-			char buf[10];
-			sprintf(buf,"%x",md5_str[i]);
-			lock_basename += buf;
-		}
-		free(md5_str);
-	}
-	else {
-		// MD5 may not be supported in all ports of Condor.  Fake it.
-		unsigned long n = 0;
-		char const *s = router_name.c_str();
-		while(*s) {
-			n += (unsigned char)*s;
-		}
-		char n_buf[100];
-		sprintf(n_buf,"%lu",n);
-		lock_basename = n_buf;
-	}
-	lock_basename += ".JobRouter.lock";
 
 	// We may be an ordinary user, so cannot lock in $(LOCK)
-	lock_dir = "/tmp";
-	lock_fullname = lock_dir;
-	lock_fullname += DIR_DELIM_CHAR;
-	lock_fullname += lock_basename;
+	param(lock_fullname,"JOB_ROUTER_LOCK");
+	ASSERT( !lock_fullname.empty() );
+	canonicalize_dir_delimiters((char *)lock_fullname.c_str());
 
 	m_router_lock_fd = safe_open_wrapper(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
 	if(m_router_lock_fd == -1) {
@@ -372,16 +341,12 @@ JobRouter::config() {
 		// JobRouter's ability to adopt jobs ("orphans") left behind
 		// by the previous version of JobRouter.  At least a warning
 		// in the release notes is warranted.
-	char *name = param("JOB_ROUTER_NAME");
-	if(name) {
-		m_job_router_name = name;
-		free(name);
-	}
+	param(m_job_router_name,"JOB_ROUTER_NAME");
 		// In order not to get confused by jobs belonging to
 		// gridmanager in AdoptOphans(), the job router name must not
 		// be empty.
-	if( m_job_router_name.size() == 0 ) {
-		m_job_router_name = "jobrouter";
+	if( m_job_router_name.empty() ) {
+		EXCEPT("JOB_ROUTER_NAME must not be empty");
 	}
 
 	InitPublicAd();
