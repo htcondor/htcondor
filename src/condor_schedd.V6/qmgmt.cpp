@@ -91,6 +91,7 @@ static int in_walk_job_queue = 0;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
 static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
+static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
 
 static void AddOwnerHistory(const MyString &user);
 
@@ -545,6 +546,7 @@ InitQmgmt()
 
 	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
 	cluster_increment_val = param_integer("SCHEDD_CLUSTER_INCREMENT_VALUE",1,1);
+    cluster_maximum_val = param_integer("SCHEDD_CLUSTER_MAXIMUM_VALUE",0,0);
 
 	flush_job_queue_log_delay = param_integer("SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY",5,0);
 }
@@ -603,6 +605,12 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// computed value 
 		stored_cluster_num = 0;
 	}
+
+    // If a stored cluster id exceeds a configured maximum, tag it for re-computation
+    if ((cluster_maximum_val > 0) && (stored_cluster_num > cluster_maximum_val)) {
+        dprintf(D_ALWAYS, "Stored cluster id %d exceeds configured max %d.  Flagging for reset.\n", stored_cluster_num, cluster_maximum_val);
+        stored_cluster_num = 0;
+    }
 
 		// Figure out what the correct ATTR_SCHEDULER is for any
 		// dedicated jobs in this queue.  Since it'll be the same for
@@ -757,6 +765,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 		}
 	} // WHILE
+
+    // We defined a candidate next_cluster_num above, as (current-max-clust) + (increment).
+    // If the candidate exceeds the configured max, then wrap it.  Default maximum is zero,
+    // which signals 'no maximum'
+    if ((cluster_maximum_val > 0) && (next_cluster_num > cluster_maximum_val)) {
+        dprintf(D_ALWAYS, "Next cluster id exceeded configured max %d: wrapping to %d\n", cluster_maximum_val, cluster_initial_val);
+        next_cluster_num = cluster_initial_val;
+    }
 
 	if ( stored_cluster_num == 0 ) {
 		snprintf(cluster_str, PROC_ID_STR_BUFLEN, "%d", next_cluster_num);
@@ -1339,6 +1355,22 @@ NewCluster()
 	next_proc_num = 0;
 	active_cluster_num = next_cluster_num;
 	next_cluster_num += cluster_increment_val;
+
+    // check for wrapping if a maximum cluster id is set
+    if ((cluster_maximum_val > 0) && (next_cluster_num > cluster_maximum_val)) {
+        dprintf(D_ALWAYS, "NewCluster(): Next cluster id %d exceeded configured max %d.  Wrapping to %d.\n", next_cluster_num, cluster_maximum_val, cluster_initial_val);
+        next_cluster_num = cluster_initial_val;
+    }
+
+    // check for collision with an existing cluster id
+    char test_cluster_key[PROC_ID_STR_BUFLEN];
+    ClassAd* test_cluster_ad;
+	IdToStr(active_cluster_num,-1,test_cluster_key);
+    if (JobQueue->LookupClassAd(test_cluster_key, test_cluster_ad)) {
+        dprintf(D_ALWAYS, "NewCluster(): collision with existing cluster id %d\n", active_cluster_num);
+        return -3;
+    }
+
 	snprintf(cluster_str, PROC_ID_STR_BUFLEN, "%d", next_cluster_num);
 //	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 //	JobQueue->AppendLog(log);
@@ -2468,6 +2500,85 @@ AbortTransactionAndRecomputeClusters()
 		}
 	}	// end of if JobQueue->AbortTransaction == True
 }
+
+int
+CloseConnection()
+{
+
+	JobQueue->CommitTransaction();
+		// If this failed, the schedd will EXCEPT.  So, if we got this
+		// far, we can always return success.  -Derek Wright 4/2/99
+
+	// Now that the transaction has been commited, we need to chain proc
+	// ads to cluster ads if any new clusters have been submitted.
+	// Also, if EVENT_LOG is defined in condor_config, we will write
+	// submit events into the EVENT_LOG here.
+	if ( old_cluster_num != next_cluster_num ) {
+		int cluster_id;
+		int 	*numOfProcs = NULL;	
+		int i;
+		ClassAd *procad;
+		ClassAd *clusterad;
+		bool write_submit_events = false;
+			// keep usr_log in outer scope so we don't open/close the 
+			// event log over and over.
+		WriteUserLog usr_log;
+		usr_log.setCreatorName( Name );
+
+		char *eventlog = param("EVENT_LOG");
+		if ( eventlog ) {
+			write_submit_events = true;
+				// don't write to the user log here, since
+				// hopefully condor_submit already did.
+			usr_log.setEnableUserLog(false);
+			usr_log.initialize(0,0,0,NULL);
+			free(eventlog);
+		}
+
+        // loop from [old_cluster_num, next_cluster_num), *but* wrap values if
+        // cluster_maximum_val is set.
+		for (cluster_id=old_cluster_num;  true;  ++cluster_id) {
+            if ((cluster_maximum_val > 0) && (cluster_id > cluster_maximum_val)) 
+                cluster_id = cluster_initial_val;
+            // important for loop halting test to be *after* wrapping logic
+            if (cluster_id == next_cluster_num) break;
+
+            // body of loop starts here
+			char cluster_key[PROC_ID_STR_BUFLEN];
+			IdToStr(cluster_id,-1,cluster_key);
+			if ( (JobQueue->LookupClassAd(cluster_key, clusterad)) &&
+			     (ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1) )
+			{
+				for ( i = 0; i < *numOfProcs; i++ ) {
+					char key[PROC_ID_STR_BUFLEN];
+					IdToStr(cluster_id,i,key);
+					if (JobQueue->LookupClassAd(key,procad)) {
+							// chain proc ads to cluster ad
+						procad->ChainToAd(clusterad);
+
+							// convert any old attributes for backwards compatbility
+						ConvertOldJobAdAttrs(procad, false);
+
+							// write submit event to global event log
+						if ( write_submit_events ) {
+							SubmitEvent jobSubmit;
+							jobSubmit.initFromClassAd(procad);
+							usr_log.setGlobalCluster(cluster_id);
+							usr_log.setGlobalProc(i);
+							usr_log.writeEvent(&jobSubmit,procad);
+						}
+					}
+				}	// end of loop thru all proc in cluster cluster_id
+			}	
+		}	// end of loop thru clusters
+	}	// end of if a new cluster(s) submitted
+	old_cluster_num = next_cluster_num;
+					
+	xact_start_time = 0;
+
+	return 0;
+}
+
 
 int
 GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val)

@@ -78,9 +78,11 @@ bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true);
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
-	@return -1 on failure; the new cluster id on success
+	@return the new cluster id on success, < 0 on failure: -1 == "owner check failed"
+    -2 == "MAX_JOBS_SUBMITTED exceeded", -3 == "cluster id collision"
 */
 int NewCluster(void);
+
 /** Signal the start of a new job description (a new job process).
 	@param cluster_id cluster id of the active job cluster (from NewCluster())
 	@return -1 on failure; the new proc id on success
