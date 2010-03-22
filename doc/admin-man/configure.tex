@@ -3520,6 +3520,13 @@ WANT_HOLD_REASON = \
   spawn.
   It is normally defined relative to \MacroUNI{SBIN}.
   
+\label{param:KillingTimeout}
+\item[\Macro{KILLING\_TIMEOUT}]
+  The amount of time in seconds that the \Condor{startd} should wait after 
+  sending a job-defined signal and before forcibly killing the job.  
+  Applies to all job universes other than the standard universe.
+  The default value is 30 seconds. 
+
 \label{param:PollingInterval}
 \item[\Macro{POLLING\_INTERVAL}]
   When a
