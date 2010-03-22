@@ -169,7 +169,8 @@ CPP_UTIL_OBJ = \
 	condor_version.o condor_ver_info.o \
 	stat_wrapper.o stat_wrapper_internal.o \
 	condor_open.o selector.o \
-	MyString.o subsystem_info.o
+	MyString.o subsystem_info.o \
+	HashTable.o
 
 CONDOR_TYPE_OBJ = sig_num.o open_flags.o fcntl_cmd.o errno_num.o
 
