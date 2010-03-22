@@ -1555,7 +1555,7 @@ param_with_default_abort(const char *name, int abort) {
 	}
 
 	// Ok, now expand it out...
-	val = expand_macro( val, ConfigTab, TABLESIZE );
+	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, true );
 
 	// If it returned an empty string, free it before returning NULL
 	if( val == NULL ) {
