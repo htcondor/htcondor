@@ -418,11 +418,29 @@ MyString::Hash() const
 int 
 MyString::find(const char *pszToFind, int iStartPos) const
 { 
-	if (!Data || iStartPos >= Len || iStartPos < 0)
+	ASSERT(pszToFind != NULL);
+
+	if (pszToFind[0] == '\0') {
+		/* the operator[] will return 0 (which is also '\0') if someone 
+			uses this value to index into a MyString that is empty (or a
+			MyString which returns "" as the result of its Value()), so we
+			retain a consistent API into this object. This is the
+			same behavior as strstr() if passed a "" as the needle when the
+			haystack is "". */
+
+		return 0;
+	}
+
+	if (!Data || iStartPos >= Len || iStartPos < 0) {
 		return -1;
+	}
+
 	const char *pszFound = strstr(Data + iStartPos, pszToFind);
-	if (!pszFound)
+
+	if (!pszFound) {
 		return -1;
+	}
+
 	return pszFound - Data;
 }
   

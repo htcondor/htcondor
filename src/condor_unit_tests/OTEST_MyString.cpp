@@ -2372,10 +2372,9 @@ static bool hash_non_empty(void) {
 
 //in test_mystring.cpp 598
 static bool find_empty(void) {
-	e.emit_test("Does find() return -1 when looking for the empty string within"
+	e.emit_test("Does find() return 0 when looking for the empty string within"
 		" an empty MyString?");
-	e.emit_comment("See ticket #1291");
-	MyString a("");
+	MyString a;
 	int loc = a.find("");
 	e.emit_input_header();
 	e.emit_param("STRING", "%s", "");
