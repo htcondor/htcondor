@@ -306,8 +306,11 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 
 	char* x509_fqan_delimiter = NULL;
 
+	// calling this function on something that doesn't have VOMS attributes
+	// should return error 1.  when the config knob disables VOMS, behave the
+	// same way.
 	if (!param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
-		return 0;
+		return 1;
 	}
 
 	ret = globus_gsi_cred_get_cert_chain(cred_handle, &chain);
