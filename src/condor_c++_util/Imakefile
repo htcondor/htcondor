@@ -22,6 +22,8 @@ param_info_init.c: param_info.in param_info_c_generator.pl
 	chmod u+x param_info_c_generator.pl
 	./param_info_c_generator.pl
 
+c_plus_target(test_open_files,test_open_files.o,$(LIB))
+
 testbin_target(test_libcondorapi,755)
 testbin_target(test_condor.log,644)
 
@@ -274,7 +276,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_threads.o \
 	classad_newold.o \
 	historyFileFinder.o \
-	socket_proxy.o condor_timeslice.o
+	socket_proxy.o condor_timeslice.o open_files_in_pid.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
