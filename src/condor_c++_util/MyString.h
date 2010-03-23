@@ -366,6 +366,8 @@ public:
 		m_str = str;
 	}
 	bool operator ==(const YourSensitiveString &rhs) {
+		if (m_str == rhs.m_str) return true;
+		if ((!m_str) || (!rhs.m_str)) return false;
 		return strcmp(m_str,rhs.m_str) == 0;
 	}
 	void operator =(char const *str) {
