@@ -377,6 +377,7 @@ public:
 		// hash function for strings
 		// Chris Torek's world famous hashing function
 		unsigned int hash = 0;
+		if (!s.m_str) return 7; // Least random number
 
 		const char *p = s.m_str;
 		while (*p) {

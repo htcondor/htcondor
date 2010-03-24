@@ -4396,8 +4396,6 @@ static bool sensitive_string_hash_function_non_empty(void) {
 
 static bool sensitive_string_hash_function_empty(void) {
 	e.emit_test("Test hashFunction() on an empty sensitive string.");
-	e.emit_alert("Causes segfault! See ticket #1296");
-/*
 	YourSensitiveString a;
 	unsigned int hash = YourSensitiveString::hashFunction(a);
 	e.emit_input_header();
@@ -4411,8 +4409,6 @@ static bool sensitive_string_hash_function_empty(void) {
 		return false;
 	}
 	e.emit_result_success(__LINE__);
-*/
-	e.emit_result_failure(__LINE__);
 	return false;
 }
 
