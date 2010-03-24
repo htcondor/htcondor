@@ -213,6 +213,7 @@ MyString::reserve_at_least(const int sz)
 MyString& 
 MyString::operator+=(const MyString& S) 
 {
+	
     append_str( S.Value(), S.Len );
     return *this;
 }
@@ -231,11 +232,21 @@ MyString::operator+=(const char *s)
 void
 MyString::append_str( const char *s, int s_len )
 {
-    if( s_len + Len > capacity || !Data ) {
+	bool bCopySelf=false;
+
+	if (s == Data)
+		bCopySelf = true;
+	
+    if( s_len + Len > capacity || !Data )
+    {
 		reserve_at_least( Len + s_len );
     }
-    //strcat( Data, s );
-	strcpy( Data + Len, s);
+
+	if (bCopySelf)
+		strcpy( Data + Len, Data); // b/c you invalided s w/reserve_at_least
+	else
+		strcpy( Data + Len, s);
+
 	Len += s_len;
 }
 
