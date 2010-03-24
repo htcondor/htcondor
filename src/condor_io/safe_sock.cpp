@@ -509,7 +509,7 @@ int SafeSock::peek(char &c)
 int SafeSock::handle_incoming_packet()
 {
 
-#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 	/* SOCKET_ALTERNATE_LENGTH_TYPE is void on this platform, and
 		since noone knows what that void* is supposed to point to
 		in recvfrom, I'm going to predict the "fromlen" variable

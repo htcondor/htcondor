@@ -34,10 +34,10 @@
 #ifndef WIN32
 #if (!defined(HPUX) && !defined(Darwin) && !defined(CONDOR_FREEBSD))	 // neither of these are in hpux.
 
-#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
-#include <procfs.h>		// /proc stuff for Solaris 2.6, 2.7, 2.8, 2.9
+#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
+# include <procfs.h>		// /proc stuff for Solaris 2.6, 2.7, 2.8, 2.9
 #else
-#include <sys/procfs.h>	// /proc stuff for everything else and
+# include <sys/procfs.h>	// /proc stuff for everything else and
 #endif
 
 #endif /* ! HPUX && Darwin && CONDOR_FREEBSD */
