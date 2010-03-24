@@ -4208,7 +4208,7 @@ This set is to be used for all new applications.
 \item[\Macro{STARTD\_CRON\_<ModuleName>\_EXECUTABLE}]
   Used to specify the full path to the
   executable to run for this module.  Note that multiple modules may
-  specify the same executable (although they need to have different
+  specify the same executable (although the modules need to have different
   names).
 
   If \MacroNI{STARTD\_CRON\_NAME}
@@ -4227,7 +4227,7 @@ This set is to be used for all new applications.
   or in hours (append value with the character 'h').
   As an example, 5m starts the execution of the module every five minutes.
   If no character is appended to the value, seconds are used as a default.
-  In \Expr{Wait For Exit} mode, the value has a different meaning; in
+  In \Expr{WaitForExit} mode, the value has a different meaning; in
   this case 
   the period specifies the length of time after the module ceases execution
   before it is restarted.
@@ -4256,14 +4256,14 @@ This set is to be used for all new applications.
   exit.
 
   The \Expr{WaitForExit} mode is used to specify a module
-  which runs in the \Expr{Wait For Exit} mode.
+  which runs in the \Expr{WaitForExit} mode.
   In this mode, the \Condor{startd} daemon interprets the period as defined by 
   \MacroNI{STARTD\_CRON\_<ModuleName>\_PERIOD} differently.
   In this case, it refers to the amount of time to wait after the module exits
   before restarting it.  With a value of 1, the module is kept
   running nearly continuously.
 
-  In general, \Expr{Wait For Exit} mode is for modules that produce
+  In general, \Expr{WaitForExit} mode is for modules that produce
   a periodic stream of updated data, but it can be used for other
   purposes, as well.
 
