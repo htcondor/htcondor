@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,7 @@
  ***************************************************************/
 
 //******************************************************************************
-// ast.C
+// ast.cpp
 //
 // Implementation of the AST module with an interface to the AttrList module.
 //
@@ -32,6 +32,14 @@
 #include "condor_string.h"
 
 #include "Regex.h"
+
+// gcc doesn't seem to define FLT_MIN on OpenSolaris 2009.06
+#if !defined(FLT_MIN) && defined(__FLT_MIN__)
+  #define FLT_MIN	__FLT_MIN__
+#endif
+#if !defined(FLT_MAX) && defined(__FLT_MAX__)
+  #define FLT_MAX	__FLT_MAX__
+#endif
 
 extern char * format_time(int);
 extern void evalFromEnvironment (const char *, EvalResult *);
@@ -319,7 +327,7 @@ int Float::operator <=(ExprTree& tree)
 //------tw 11/16/95
 // add one more overloaded evaluation function, it takes two AttrLists,
 // one AttrList for "MY." variable valuation and the other AttrList for "TARGET." variable
-// evaluation. 
+// evaluation.
 //----------
 
 int ExprTree::EvalTree(const AttrList* l, EvalResult* r)
@@ -342,15 +350,15 @@ int ExprTree::EvalTree(const AttrList* l1, const AttrList* l2, EvalResult* r)
 	evalFlag = true;
 	rval = _EvalTree(l1, l2, r);
 	evalFlag = false;
-	
+
 	return rval;
 }
 
 int Variable::_EvalTree(const AttrList* classad, EvalResult* val)
 {
     ExprTree* tmp = NULL;
-    
-    if(!val || !classad) 
+
+    if(!val || !classad)
     {
 	return FALSE;
     }
@@ -374,7 +382,7 @@ int Variable::_EvalTree( const AttrList* my_classad, const AttrList* target_clas
 }
 
 /*
-Split a variable name into scope.target 
+Split a variable name into scope.target
 If there is no scope, evaluate it simply.
 Otherwise, identify the ClassAd corresponding to the scope, and re-evaluate.
 */
@@ -386,7 +394,7 @@ int Variable::_EvalTreeRecursive( const char *adName, const AttrList* my_classad
 	MyString n(adName);
 	MyString prefix;
 	MyString rest;
-	
+
 	int dotPos = n.FindChar('.');
 
 	if (dotPos == -1) {
@@ -397,10 +405,10 @@ int Variable::_EvalTreeRecursive( const char *adName, const AttrList* my_classad
 		rest   = n.Substr(dotPos + 1, n.Length());
 	}
 
-	if(prefix.Length() > 0) {	
-        // Note that we use restrict_search=true instead of simply 
+	if(prefix.Length() > 0) {
+        // Note that we use restrict_search=true instead of simply
         // passing NULL for the other ClassAd. This is because we might
-        // still need to refer to the other ClassAd. For example, evaluating 
+        // still need to refer to the other ClassAd. For example, evaluating
         // A in ClassAd 1 should give 3
         // ClassAd 1: A = TARGET.B; C = 3
         // ClassAd 2: B = TARGET.C
@@ -413,7 +421,7 @@ int Variable::_EvalTreeRecursive( const char *adName, const AttrList* my_classad
 		return this->_EvalTreeSimple(rest.Value(),my_classad,target_classad,val, restrict_search);
 	}
 
-	val->type = LX_UNDEFINED;	
+	val->type = LX_UNDEFINED;
 	return TRUE;
 }
 
@@ -453,7 +461,7 @@ int Variable::_EvalTreeSimple( const char *adName, const AttrList *my_classad, c
 
 int Integer::_EvalTree(const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -467,13 +475,13 @@ int Integer::_EvalTree(const AttrList*, EvalResult* val)
 	val->i = value;
     }
 
-    return TRUE; 
+    return TRUE;
 }
 
 //-------tw-------------
 int Integer::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -487,13 +495,13 @@ int Integer::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 	val->i = value;
     }
 
-    return TRUE; 
+    return TRUE;
 }
 
 //--------------------
 int Float::_EvalTree(const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -514,7 +522,7 @@ int Float::_EvalTree(const AttrList*, EvalResult* val)
 //-------tw-------------
 int Float::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -534,7 +542,7 @@ int Float::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 //--------------------------------
 int String::_EvalTree(const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -546,7 +554,7 @@ int String::_EvalTree(const AttrList*, EvalResult* val)
 
 int ISOTime::_EvalTree(const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -560,7 +568,7 @@ int ISOTime::_EvalTree(const AttrList*, EvalResult* val)
 
 int String::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -572,7 +580,7 @@ int String::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 
 int ISOTime::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -585,7 +593,7 @@ int ISOTime::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 //-----------------------------------
 int ClassadBoolean::_EvalTree(const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -599,7 +607,7 @@ int ClassadBoolean::_EvalTree(const AttrList*, EvalResult* val)
 
 int ClassadBoolean::_EvalTree(const AttrList*, const AttrList*, EvalResult* val)
 {
-    if(!val) 
+    if(!val)
     {
 	return FALSE;
     }
@@ -664,7 +672,7 @@ void ExprTree::GetReferences(const AttrList * /* base_attlrist */,
 
 void BinaryOpBase::GetReferences(const AttrList *base_attrlist,
 								 StringList &internal_references,
-								 StringList &external_references) const 
+								 StringList &external_references) const
 {
 	if (lArg != NULL) {
 		lArg->GetReferences(base_attrlist, internal_references, external_references);
@@ -694,7 +702,7 @@ void VariableBase::GetReferences(const AttrList *base_attrlist,
 	bool is_external_reference; // otherwise, internal
 	char *simplified_name;
 
-	is_external_reference = base_attrlist->IsExternalReference(name, 
+	is_external_reference = base_attrlist->IsExternalReference(name,
 													  &simplified_name);
 	if (is_external_reference) {
 		if (!name_in_list(simplified_name, external_references)) {
@@ -707,7 +715,7 @@ void VariableBase::GetReferences(const AttrList *base_attrlist,
 		}
 	}
 	// We added simplified_name to the list, but it was copied
-	// when we did the append, so we need to free it now. 
+	// when we did the append, so we need to free it now.
 	free(simplified_name);
 
 	return;
@@ -749,7 +757,7 @@ int String::CalcPrintToStr(void)
 	int   length;
 	char  *p;
 	length = 0;
-	
+
 	// Unfortunately, we have to walk the string to find the length.
 	// This is because it contain quote marks
 	for (p = value; p && *p != 0; p++) {
@@ -888,25 +896,25 @@ int NeqOp::CalcPrintToStr(void)
 int GtOp::CalcPrintToStr(void)
 {
 	// 3 for " > "
-	return calculate_math_op_length(lArg, rArg, 3);	
+	return calculate_math_op_length(lArg, rArg, 3);
 }
 
 int GeOp::CalcPrintToStr(void)
 {
 	// 4 for " >= "
-	return calculate_math_op_length(lArg, rArg, 4);	
+	return calculate_math_op_length(lArg, rArg, 4);
 }
 
 int LtOp::CalcPrintToStr(void)
 {
 	// 3 for " < "
-	return calculate_math_op_length(lArg, rArg, 3);	
+	return calculate_math_op_length(lArg, rArg, 3);
 }
 
 int LeOp::CalcPrintToStr(void)
 {
 	// 4 for " <= "
-	return calculate_math_op_length(lArg, rArg, 4);	
+	return calculate_math_op_length(lArg, rArg, 4);
 }
 
 int AndOp::CalcPrintToStr(void)
@@ -1037,7 +1045,7 @@ void SubOp::PrintToStr(char* str)
     if(rArg) {
 		((ExprTree*)rArg)->PrintToStr(str);
 	}
-    if(unit == 'k') strcat(str, " k"); 
+    if(unit == 'k') strcat(str, " k");
 }
 
 
@@ -1132,7 +1140,7 @@ void AssignOp::PrintToStr(char* str)
 
 
 
-static void 
+static void
 printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
 {
     if(lArg) {
@@ -1160,91 +1168,91 @@ calculate_math_op_length(ExprTree *lArg, ExprTree *rArg, int op_length)
 	return length;
 }
 
-ExprTree*  
+ExprTree*
 Variable::DeepCopy(void) const
 {
 	Variable *copy;
 
 	copy = new Variable(name);
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
-ExprTree*  
+ExprTree*
 Integer::DeepCopy(void) const
 {
 	Integer *copy;
 
 	copy = new Integer(value);
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
-ExprTree*  
+ExprTree*
 Float::DeepCopy(void) const
 {
 	Float *copy;
 
 	copy = new Float(value);
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
-ExprTree*  
+ExprTree*
 ClassadBoolean::DeepCopy(void) const
 {
 	ClassadBoolean *copy;
 
 	copy = new ClassadBoolean(value);
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
-ExprTree*  
+ExprTree*
 String::DeepCopy(void) const
 {
 	String *copy;
 
 	copy = new String(value);
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
-ExprTree*  
+ExprTree*
 ISOTime::DeepCopy(void) const
 {
 	ISOTime *copy;
 
 	copy = new ISOTime(time);
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
-ExprTree*  
+ExprTree*
 Undefined::DeepCopy(void) const
 {
 	Undefined *copy;
 
 	copy = new Undefined();
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
-ExprTree*  
+ExprTree*
 Error::DeepCopy(void) const
 {
 	Error *copy;
 
 	copy = new Error();
 	CopyBaseExprTree(copy);
-	
+
 	return copy;
 }
 
@@ -1511,7 +1519,7 @@ int Function::CalcPrintToStr(void)
 		}
 	}
 	length += 1; // for right paren
-	
+
 	return length;
 }
 
@@ -1589,14 +1597,14 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 		successful_eval = FunctionIfThenElse(attrlist1,attrlist2,result);
 		done = true;
 	} else
-	if ( 
+	if (
 		 !strcasecmp(name,"strcat") ||
 		 !strcasecmp(name,"strcmp") ||
 		 !strcasecmp(name,"stricmp") ||
 		 !strcasecmp(name,"toUpper") ||
 		 !strcasecmp(name,"toLower") ||
 		 !strcasecmp(name,"size") ||
-		 !strcasecmp(name,"eval") ) 
+		 !strcasecmp(name,"eval") )
 	{
 		must_eval_to_strings = true;
 	}
@@ -1604,7 +1612,7 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 	if (!done) {
 		number_of_args = arguments->Length();
 		evaluated_args = new EvalResult[number_of_args];
-		
+	
 		ListIterator<ExprTree> iter(*arguments);
 		ExprTree *arg;
 
@@ -1615,7 +1623,7 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 				if (!EvaluateArgumentToString(arg, attrlist1,attrlist2,
 											  &evaluated_args[i++]))
 				{
-					// if all args must be converted to strings, and we 
+					// if all args must be converted to strings, and we
 					// fail to convert an arg to a string, then fail.
 					result->type = LX_ERROR;
 					done = true;
@@ -1625,8 +1633,8 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 				EvaluateArgument( arg, attrlist1, attrlist2, &evaluated_args[i++] );
 			}
 		}
-	
-		if ( !done ) {	
+
+		if ( !done ) {
         if (!strcasecmp(name, "gettime")) {
 			successful_eval = FunctionGetTime(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "time")) {
@@ -1705,7 +1713,7 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 		}
 #ifdef HAVE_DLOPEN
         else {
-			successful_eval = FunctionSharedLibrary(number_of_args, 
+			successful_eval = FunctionSharedLibrary(number_of_args,
 													evaluated_args, result);
 		}
 #else
@@ -1741,13 +1749,13 @@ void EvalResult::toString(bool force)
 			type = LX_STRING;
 			break;
 		}
-		case LX_BOOL:	
+		case LX_BOOL:
 			type = LX_STRING;
 			if (i) {
 				s = strnewp("TRUE");
 			} else {
 				s = strnewp("FALSE");
-			}	
+			}
 			break;
 		case LX_INTEGER: {
 			MyString buf;
@@ -1820,7 +1828,7 @@ int Function::FunctionSharedLibrary(
 	if ((shared_library_location = param("CLASSAD_LIB_PATH")) != NULL){
 		void *dl_handle;
 		ClassAdSharedFunction function;
-		
+	
 		dl_handle = dlopen(shared_library_location, RTLD_LAZY);
 		if (dl_handle) {
 			function = (ClassAdSharedFunction) dlsym(dl_handle, name);
@@ -1829,7 +1837,7 @@ int Function::FunctionSharedLibrary(
 				ClassAdSharedValue  *function_args;
 
 				// Prepare the arguments for passing to the external library
-				// Note that we don't just use EvalResult, because we 
+				// Note that we don't just use EvalResult, because we
 				// want to give the DZero folks a header file that is completely
 				// independent of anything else in Condor.
 				if (number_of_args > 0) {
@@ -1879,7 +1887,7 @@ int Function::FunctionSharedLibrary(
 				case ClassAdSharedType_Undefined:
 					result->type = LX_UNDEFINED;
 					break;
-				default: 
+				default:
 					result->type = LX_ERROR;
 					break;
 				}
@@ -1955,7 +1963,7 @@ int Function::FunctionRandom(
 			result->type = LX_INTEGER;
             result->i = get_random_int() % evaluated_args[0].i;
             success = true;
-        } 
+        }
 		if (evaluated_args[0].type == LX_FLOAT) {
 			result->type = LX_FLOAT;
             result->f = get_random_float() * evaluated_args[0].f;
@@ -2135,12 +2143,12 @@ int Function::FunctionReal(
 			result->f = (float)(evaluated_args[0].i);
 			break;
 		case LX_BOOL:
-			if ( evaluated_args[0].i ) 
+			if ( evaluated_args[0].i )
 				result->f = 1.0;
 			else
 				result->f = 0.0;
 			break;
-		case LX_STRING: 
+		case LX_STRING:
 			// convert string to Real, or return error if string
 			// does not represent a Real.
 			if (!evaluated_args[0].s) {
@@ -2260,7 +2268,7 @@ int Function::FunctionStrcat(
 {
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
-	
+
 	int i;
 	MyString tempStr;
 
@@ -2301,12 +2309,12 @@ int Function::FunctionInt(
 			result->i = (int)(evaluated_args[0].f);
 			break;
 		case LX_BOOL:
-			if ( evaluated_args[0].i ) 
+			if ( evaluated_args[0].i )
 				result->i = 1;
 			else
 				result->i = 0;
 			break;
-		case LX_STRING: 
+		case LX_STRING:
 			// convert string to int, or return error if string
 			// does not represent an int.
 			if (!evaluated_args[0].s) {
@@ -2317,13 +2325,13 @@ int Function::FunctionInt(
 			if ( result->i == 0 ) {
 				// this sucks.  atoi returns 0 on error, so
 				// here we try to figure out if we have a 0
-				// because that is what the string has, or 
+				// because that is what the string has, or
 				// we have a 0 due to an error.
 				int c;
 				int i=0;
 				while ( (c=evaluated_args[0].s[i++]) ) {
 					if ( (!isspace(c)) && c!='0' &&
-						 c!='+' && c!='-' && c!='.' ) 
+						 c!='+' && c!='-' && c!='.' )
 					{
 						result->type = LX_ERROR;
 						return false;
@@ -2366,7 +2374,7 @@ int Function::FunctionIfThenElse(
 
 	if ( number_of_args != 3 ) {
 		// we must have three arguments
-		result->type = LX_ERROR;	
+		result->type = LX_ERROR;
 		return false;
 	}
 
@@ -2392,7 +2400,7 @@ int Function::FunctionIfThenElse(
 			result->type = LX_UNDEFINED;
 			return true;
 		default:  // will catch types null, error, string
-			result->type = LX_ERROR;	
+			result->type = LX_ERROR;
 			return false;
 	}	// end of switch
 
@@ -2400,22 +2408,22 @@ int Function::FunctionIfThenElse(
 			// Condition is true - we want to return the second argument
 		iter.Next(arg);		// arg now has the second argument (then clause)
 			// evaluate the second argument (then clause), store in result
-		EvaluateArgument( arg, attrlist1, attrlist2, result );	
+		EvaluateArgument( arg, attrlist1, attrlist2, result );
 	} else {
 			// Condition is false - we want to return the third argument
 		iter.Next(arg);		// arg now has the second argument (then clause)
 		iter.Next(arg);		// arg now has the third argument (else clause)
 			// evaluate the third argument (else clause), store in result
-		EvaluateArgument( arg, attrlist1, attrlist2, result );	
+		EvaluateArgument( arg, attrlist1, attrlist2, result );
 	}
 
 	return true;
 }
 
 int Function::FunctionClassadDebugFunction(
-	int /* number_of_args */,         
-	EvalResult * /* evaluated_args */, 
-	EvalResult *result)         
+	int /* number_of_args */,
+	EvalResult * /* evaluated_args */,
+	EvalResult *result)
 {
     classad_debug_function_run = true;
     result->i    = 1;
@@ -2430,7 +2438,7 @@ int Function::FunctionSubstr(
 	EvalResult *result)         // OUT: the result of calling the function
 {
 
-	/* 
+	/*
 	substr(string s, int offset [, int length ]) returns string.
 
 	The result is the substring of s starting at the position indicated by
@@ -2442,7 +2450,7 @@ int Function::FunctionSubstr(
 	the resulting substring lies partially outside the limits of s, the part
 	that lies within s is returned. If the substring lies entirely outside s or
 	has negative length (because of a negative length argument), the result is
-	the null string. 
+	the null string.
 	*/
 	int length;
 	int offset;
@@ -2453,7 +2461,7 @@ int Function::FunctionSubstr(
 		return FALSE;
 	}
 
-	if( (evaluated_args[0].type != LX_STRING) || 
+	if( (evaluated_args[0].type != LX_STRING) ||
 		(evaluated_args[1].type != LX_INTEGER)) {
 		result->type = LX_ERROR;
 		return FALSE;
@@ -2501,7 +2509,7 @@ int Function::FunctionSubstr(
 	result->s[length] = '\0';
 	return TRUE;
 }
-	
+
 int Function::FunctionStrcmp(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2518,7 +2526,7 @@ int Function::FunctionStrcmp(
 
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
-	
+
 	if ( number_of_args != 2 ) {
 		result->type = LX_ERROR;
 		return FALSE;
@@ -2529,7 +2537,7 @@ int Function::FunctionStrcmp(
 
 	return TRUE;
 }
-	
+
 int Function::FunctionStricmp(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2544,7 +2552,7 @@ int Function::FunctionStricmp(
 
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
-	
+
 	if ( number_of_args != 2 ) {
 		result->type = LX_ERROR;
 		return FALSE;
@@ -2555,7 +2563,7 @@ int Function::FunctionStricmp(
 
 	return TRUE;
 }
-	
+
 int Function::FunctionToUpper(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2571,7 +2579,7 @@ int Function::FunctionToUpper(
 
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
-	
+
 	if ( number_of_args != 1 ) {
 		result->type = LX_ERROR;
 		return FALSE;
@@ -2587,7 +2595,7 @@ int Function::FunctionToUpper(
 
 	return TRUE;
 }
-	
+
 int Function::FunctionToLower(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2600,10 +2608,10 @@ int Function::FunctionToLower(
 	result is a String that is identical to s except that all uppercase letters
 	in s are converted to lowercase.
 	*/
-		
+	
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
-	
+
 	if ( number_of_args != 1 ) {
 		result->type = LX_ERROR;
 		return FALSE;
@@ -2619,7 +2627,7 @@ int Function::FunctionToLower(
 
 	return TRUE;
 }
-	
+
 int Function::FunctionSize(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2630,7 +2638,7 @@ int Function::FunctionSize(
 
     Returns the number of characters of the string s.
 	*/
-	 
+
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
 	if ( number_of_args != 1 ) {
@@ -2640,10 +2648,10 @@ int Function::FunctionSize(
 
 	result->type = LX_INTEGER;
 	result->i = strlen( evaluated_args[0].s);
-	
+
 	return TRUE;
 }
-	
+
 int Function::FunctionStringlistSize(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2651,12 +2659,12 @@ int Function::FunctionStringlistSize(
 {
 	/*
 	stringlistSize(string l [, string d]) returns int.
-    
+
 	If any of the arguments is not of type String, the result is an error.
 	Returns the number of elements in the string list l. The characters
 	specified in optional argument d are treated as the delimiters for the
 	string list.  If not specified, d defaults to " ," (space and comma
-	characters). 
+	characters).
 	*/
 
 	char *d;
@@ -2686,7 +2694,7 @@ int Function::FunctionStringlistSize(
 	result->i = sl.number();
 	return TRUE;
 }
-	
+
 static int StringListNumberIterator(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2740,7 +2748,7 @@ static int StringListNumberIterator(
 		}
 		func(temp, accumulator);
 	}
-	
+
 	if (result->type == LX_INTEGER) {
 			result->i = (int)*accumulator;
 	} else {
@@ -2768,7 +2776,7 @@ int Function::FunctionStringlistSum(
 	the result is 0. In other cases, the result is ERROR.  The characters
 	specified in optional argument d are treated as the delimiters for the
 	string list.  If not specified, d defaults to " ," (space and comma
-	characters). 
+	characters).
 	*/
 
 	double accumulator = 0.0;;
@@ -2782,7 +2790,7 @@ int Function::FunctionStringlistSum(
 	}
 	return r;
 }
-	
+
 static void avg(double entry, double *pair) {
 	pair[0] += entry;
 	pair[1]++;
@@ -2801,7 +2809,7 @@ int Function::FunctionStringlistAvg(
 	Real. If the list is empty, the result is 0. In other cases, the result is
 	ERROR.  The characters specified in optional argument d are treated as the
 	delimiters for the string list.  If not specified, d defaults to " ,"
-	(space and comma characters). 
+	(space and comma characters).
 	*/
 
 	// array[0] is the sum of all the entries, array[1] is the number of entries
@@ -2824,7 +2832,7 @@ int Function::FunctionStringlistAvg(
 	result->type = LX_FLOAT;
 	return TRUE;
 }
-	
+
 static void minner(double entry, double *best) {
 	if (entry < *best) {
 		*best = entry;
@@ -2845,14 +2853,14 @@ int Function::FunctionStringlistMin(
 	empty, the result is UNDEFINED. In other cases, the result is ERROR. The
 	characters specified in optional argument d are treated as the delimiters
 	for the string list.  If not specified, d defaults to " ," (space and comma
-	characters). 
+	characters).
 	*/
 
 	double lowest = FLT_MAX;
 	return StringListNumberIterator(
 		number_of_args, evaluated_args, result, minner, &lowest);
 }
-	
+
 static void maxer(double entry, double *best) {
 	if (entry > *best) {
 		*best = entry;
@@ -2866,21 +2874,21 @@ int Function::FunctionStringlistMax(
 {
 	/*
 	stringlistMax(string l [, string d]) returns number.
- 
+
 	If any of the arguments is not of type String, the result is an error. If l
 	is composed only of numbers, the result is the maximum of the values, as a
 	Real if any value is Real, and as an Integer otherwise. If the list is
 	empty, the result is UNDEFINED. In other cases, the result is ERROR.  The
 	characters specified in optional argument d are treated as the delimiters
 	for the string list.  If not specified, d defaults to " ," (space and comma
-	characters). 
+	characters).
 	*/
 
 	double maxest = FLT_MIN;
 	return StringListNumberIterator(
 		number_of_args, evaluated_args, result, maxer, &maxest);
 }
-	
+
 static int stringlistmember(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2943,12 +2951,12 @@ int Function::FunctionStringlistMember(
 	strcmp() function, then the result is true, otherwise it is false.  The
 	characters specified in optional argument d are treated as the delimiters
 	for the string list.  If not specified, d defaults to " ," (space and comma
-	characters). 
+	characters).
 	*/
 
 	return stringlistmember(number_of_args, evaluated_args, result, false);
 }
-	
+
 int Function::FunctionStringlistIMember(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2967,7 +2975,7 @@ int Function::FunctionStringlistIMember(
 
 	return stringlistmember(number_of_args, evaluated_args, result, true);
 }
-	
+
 static int regexp_str_to_options(char *option_str) {
 	int options = 0;
 	while (*option_str) {
@@ -2989,7 +2997,7 @@ static int regexp_str_to_options(char *option_str) {
 				options |= Regex::extended;
 				break;
 			default:
-				// Ignore for forward compatibility 
+				// Ignore for forward compatibility
 				break;
 		}
 		option_str++;
@@ -3003,12 +3011,12 @@ int Function::FunctionStringlistRegexpMember(
 	EvalResult *result)         // OUT: the result of calling the function
 {
 	/*
-	stringlistRegexpMember(string pattern, string l 
+	stringlistRegexpMember(string pattern, string l
 			[, string d] [, string options]) returns boolean.
 
-	If l is not a stringlist or any of the other arguments is not of type 
+	If l is not a stringlist or any of the other arguments is not of type
 	String, the result is an error. If any of the values in string list do
-	not eveluate to a string it returns an error. Otherwise, if any of the 
+	not eveluate to a string it returns an error. Otherwise, if any of the
 	values in the list matches the pattern accoring to the regexp function,
 	the result is true. If there is no match the result is false.
 
@@ -3044,7 +3052,7 @@ int Function::FunctionStringlistRegexpMember(
 		option_str = evaluated_args[3].s;
 	}
 
-	if ((evaluated_args[0].type != LX_STRING) || 
+	if ((evaluated_args[0].type != LX_STRING) ||
 		(evaluated_args[1].type != LX_STRING)) {
 		result->type = LX_ERROR;
 		return FALSE;
@@ -3082,26 +3090,29 @@ int Function::FunctionStringlistRegexpMember(
 	result->i = 0;
 	return TRUE;
 }
-	
+
 int Function::FunctionRegexp(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
 	EvalResult *result)         // OUT: the result of calling the function
 {
 	/*
-	regexp(string pattern, string target , string output[, string options ]) returns boolean.
+	regexp(string pattern, string target , string output[, string
+	options ]) returns boolean.
 
-	If any of the arguments is not of type String or if pattern is not a valid
-	regular expression, the result is an error. Otherwise, if pattern matches
-	target, the result is string, otherwise error.  The resultant string is the
-	string "output", with backticks references (e.g. \1 \2) replaced by the captured
-	regexps inside the pattern.
+	If any of the arguments is not of type String or if pattern is not
+	a valid regular expression, the result is an error. Otherwise, if
+	pattern matches target, the result is string, otherwise error.
+	The resultant string is the string "output", with backticks
+	references (e.g. \1 \2) replaced by the captured regexps inside
+	the pattern.
 
-	The details of the syntax and semantics of the regular expressions follows
-	the perl-compatible regular expression format as supported by the PCRE
-	library (see http://www.pcre.org/).   The options argument, if present, may
-	contain the following characters to alter the exact details. Unrecognized
-	options are silently ignored. 
+	The details of the syntax and semantics of the regular expressions
+	follows the perl-compatible regular expression format as supported
+	by the PCRE library (see http://www.pcre.org/).  The options
+	argument, if present, may contain the following characters to
+	alter the exact details. Unrecognized options are silently
+	ignored.
 
     i or I
 
@@ -3109,7 +3120,9 @@ int Function::FunctionRegexp(
 
     m or M
 
-        Multi-line: A carat (^) matches not only the start of the subject string, but also after each newline. Similarly, dollar ($) matches before a newline. 
+        Multi-line: A carat (^) matches not only the start of the
+        subject string, but also after each newline. Similarly, dollar
+        ($) matches before a newline.
 
     s or S
 
@@ -3117,7 +3130,8 @@ int Function::FunctionRegexp(
 
     x or X
 
-        Extended: Whitespace and comments (from # to the next newline) in the pattern are ignored.
+        Extended: Whitespace and comments (from # to the next newline)
+        in the pattern are ignored.
 	*/
 
 	if (( number_of_args < 2) || ( number_of_args > 3 )) {
@@ -3164,7 +3178,8 @@ int Function::FunctionRegexps(
 	EvalResult *result)         // OUT: the result of calling the function
 {
 	/*
-	regexps(string pattern, string target, string substitute [, string options ]) returns string.
+	regexps(string pattern, string target, string substitute [, string
+	options ]) returns string.
 
 	Like regexp except that it returns the string substitute as modified by
 	matches from regexp.
@@ -3177,7 +3192,7 @@ int Function::FunctionRegexps(
 	the perl-compatible regular expression format as supported by the PCRE
 	library (see http://www.pcre.org/).   The options argument, if present, may
 	contain the following characters to alter the exact details. Unrecognized
-	options are silently ignored. 
+	options are silently ignored.
 
     i or I
 
@@ -3185,7 +3200,9 @@ int Function::FunctionRegexps(
 
     m or M
 
-        Multi-line: A carat (^) matches not only the start of the subject string, but also after each newline. Similarly, dollar ($) matches before a newline. 
+        Multi-line: A carat (^) matches not only the start of the
+        subject string, but also after each newline. Similarly, dollar
+        ($) matches before a newline.
 
     s or S
 
@@ -3193,7 +3210,8 @@ int Function::FunctionRegexps(
 
     x or X
 
-        Extended: Whitespace and comments (from # to the next newline) in the pattern are ignored.
+        Extended: Whitespace and comments (from # to the next newline)
+        in the pattern are ignored.
 	*/
 
 	if (( number_of_args < 3) || ( number_of_args > 4 )) {
@@ -3211,7 +3229,7 @@ int Function::FunctionRegexps(
 		option_str = evaluated_args[3].s;
 	}
 
-	if ((evaluated_args[0].type != LX_STRING) || 
+	if ((evaluated_args[0].type != LX_STRING) ||
 		(evaluated_args[1].type != LX_STRING) ||
 		(evaluated_args[2].type != LX_STRING)) {
 		result->type = LX_ERROR;
@@ -3266,23 +3284,23 @@ int Function::FunctionFormatTime(
 	EvalResult *result)         // OUT: the result of calling the function
 {
 
-	/* 
+	/*
 	formatTime([int t], [string s]) returns string.
 
     This function creates a formatted string that is a representation of time t.
 
-	The argument t is interpreted as an epoch time (seconds since 1/1/1970 GMT). 
-    The argument s is interpreted similarly to the format argument of 
-	the ANSI C strftime function. It consists of arbitary text plus placeholders 
-	for elements of the time. These placeholders are percent signs (%) followed 
-	by a single letter. To have a percent sign in your output, you must use a 
-	double percent sign (%%).  
+	The argument t is interpreted as an epoch time (seconds since 1/1/1970 GMT).
+    The argument s is interpreted similarly to the format argument of
+	the ANSI C strftime function. It consists of arbitary text plus placeholders
+	for elements of the time. These placeholders are percent signs (%) followed
+	by a single letter. To have a percent sign in your output, you must use a
+	double percent sign (%%).
 	If t is not specified, it defaults to the current time as reported by the OS.
 	If s is not specified, it defaults to "%c".
 	*/
 
 	time_t epoch_time;		// parameter one
-	char *format_string;	// parameter two		
+	char *format_string;	// parameter two	
 
 	if ( number_of_args >  2 ) {
 		result->type = LX_ERROR;
@@ -3293,20 +3311,20 @@ int Function::FunctionFormatTime(
 	if ( number_of_args > 0 ) {
 			// caller provided a time
 		if( (evaluated_args[0].type != LX_INTEGER) ||
-			(evaluated_args[0].i < 0) ) 
+			(evaluated_args[0].i < 0) )
 		{
 			result->type = LX_ERROR;
 			return FALSE;
 		}
 		epoch_time = evaluated_args[0].i;
 	} else {
-			// no time specified, default to current time		
+			// no time specified, default to current time	
 		time(&epoch_time);	// yuck.
 	}
 
 		// grab optional paramter 2, the format string
 	if( number_of_args == 2 ) {
-			// caller provided a format string 
+			// caller provided a format string
 		if ( evaluated_args[1].type != LX_STRING ) {
 			result->type = LX_ERROR;
 			return FALSE;
@@ -3357,7 +3375,7 @@ int Function::FunctionEval(
 	}
 
 	if( (evaluated_args[0].type != LX_STRING) ||
-		(evaluated_args[0].i < 0) ) 
+		(evaluated_args[0].i < 0) )
 	{
 		result->type = LX_ERROR;
 		return FALSE;

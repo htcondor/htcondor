@@ -41,18 +41,21 @@ $worked = "yes";
 
 $execute = sub
 {
-	CondorTest::debug( "Goood, job is running so we'll start the timer....\n",1);
+	CondorTest::debug(
+		"Goood, job is running so we'll start the timer....\n", 1);
 	CondorTest::RegisterTimed($testname, $timed, 300); # give it 5 minutes
 };
 
 $timed = sub
 {
-        print scalar localtime() . "\n";
-        CondorTest::debug("lib_procapi_pidtracking-byenv HUNG !!!!!!!!!!!!!!!!!!\n",1);
-        exit(1);
+	print scalar localtime() . "\n";
+	CondorTest::debug(
+		"lib_procapi_pidtracking-byenv HUNG !!!!!!!!!!!!!!!!!!\n", 1);
+	exit(1);
 };
 
-$ExitSuccess = sub {
+$ExitSuccess = sub
+{
 	my %info = @_;
 	my $line;
 	my $pidline;
@@ -72,7 +75,8 @@ $ExitSuccess = sub {
 		CondorTest::debug( "$line\n",1);
 	}
 	close(PIN);
-	open(PIN, "<$kiddatafile") or die "Could not open data file '$kiddatafile': $?";
+	open(PIN, "<$kiddatafile") or
+		die "Could not open data file '$kiddatafile': $?";
 	while(<PIN>)
 	{
 		CondorTest::fullchomp();
@@ -85,44 +89,45 @@ $ExitSuccess = sub {
 		CondorTest::debug( "$line\n",1);
 	}
 	close(PIN);
-	my $pscmd = "ps -ef";
-	system("which ps");
-	open(PULL, "$pscmd | wc -l 2>&1 |") || die "ps -eo pid failed: $!\n";
-	while(<PULL>)
-	{
-		my $outputlines;
-		CondorTest::fullchomp();
-		$outputlines = $_;
-		my $linesoftext = 0;
-		$linesoftext = $outputlines;
-		if($linesoftext == 0)
-		{
-			CondorTest::debug("Wrong ps options!\n",1);
-			$pscmd = "ps -ax";
-		}
-		else
-		{
-			CondorTest::debug("Ps delivered $linesoftext too check!\n",1);
-		}
+	my $ps = `which ps`;
+	CondorTest::fullchomp( $ps );
+	my $psflags = "-ef";
+	open( PULL, "$ps $psflags | wc -l 2>&1 |" )
+		or die "'$ps $psflags' pid failed: $!\n";
+	$_ = <PULL>;
+	my $ps_lines = 0;
+	if ( /^(\d+)/ ) {
+		$ps_lines = $1;
 	}
+	if($ps_lines == 0) {
+		CondorTest::debug("Wrong ps options '$psflags', trying 'ax'\n",1);
+		$psflags = "ax";
+	}
+	else {
+		CondorTest::debug("ps delivered $ps_lines too check!\n",1);
+	}
+	close( PULL );
 
-	open(PULL, "$pscmd 2>&1 |") || die "$pscmd failed: $!\n";
+	open(PULL, "$ps $psflags 2>&1 |") || die "'$ps $psflags' failed: $!\n";
 	while(<PULL>)
 	{
 		my $thispid;
 		CondorTest::fullchomp();
 		$pidline = $_;
-		if( $pscmd eq "ps -ax") # with pid first
+		if( $psflags eq "ax") # with pid first
 		{
 			if($pidline =~ /\s*(\d+)\s*.*$/ )
 			{
 				$thispid = $1;
-				CondorTest::debug( "Checking againt list of removed pids --$thispid--\n",1);
+				CondorTest::debug(
+					"Checking againt list of removed pids --$thispid--\n", 1);
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
 					{
-						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
+						CondorTest::debug(
+							"Test fails because pid $pidcheck should have ".
+							"been removed\n", 1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -131,7 +136,9 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
+						CondorTest::debug(
+							"Test fails because pid $pidcheck should have ".
+							"been removed\n", 1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -143,12 +150,15 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*[A-Za-z]+\s*(\d+).*$/ )
 			{
 				$thispid = $1;
-				CondorTest::debug( "Checking againt list of removed pids --$thispid--\n",1);
+				CondorTest::debug(
+					"Checking againt list of removed pids --$thispid--\n", 1);
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
 					{
-						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
+						CondorTest::debug(
+							"Test fails because pid $pidcheck should have ".
+							"been removed\n", 1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -157,7 +167,9 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
+						CondorTest::debug(
+							"Test fails because pid $pidcheck should have ".
+							"been removed\n", 1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}

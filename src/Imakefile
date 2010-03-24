@@ -85,9 +85,11 @@
 #endif
 
 #if HAVE_EXT_GSOAP
-#define SoapShell soapshell
+# define SoapShell soapshell
+# define WANT_SOAP_SHELL
 #else
-#define SoapShell
+# define SoapShell
+# undef WANT_SOAP_SHELL
 #endif
 
 #define Programs \
@@ -270,8 +272,8 @@ condor_object_target(unit_tests)
 condor_object_target(tools)
 condor_object_target(power)
 
-#if HAVE_EXT_GSOAP
-condor_object_target(soapshell)
+#ifdef WANT_SOAP_SHELL
+  condor_object_target(soapshell)
 #endif
 
 #if HAVE_SHARED_PORT

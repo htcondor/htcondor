@@ -208,6 +208,7 @@ sysapi_test_dump_all(int argc, char** argv)
 #endif
 	int ncpus_trials = NCPUS_TRIALS;
 	int skip = 0;
+	const char *free_fs_dir = "/tmp";
 
 	if (argc <= 1)
 		tests = TEST_ALL;
@@ -226,8 +227,14 @@ sysapi_test_dump_all(int argc, char** argv)
 			tests |= CKPTPLTFRM;
 		else if (strcmp(argv[i], "--dump") == 0)
 			tests |= DUMP;
-		else if (strcmp(argv[i], "--free_fs_blocks") == 0)
+		else if (strcmp(argv[i], "--free_fs_blocks") == 0) {
 			tests |= FREE_FS_BLOCKS;
+			if (  ( i+1 < argc ) &&
+				  ( (*argv[i+1] == '/') || (*argv[i+1] == '.') )  ) {
+				skip = 1;
+				free_fs_dir = argv[i+1];
+			}
+		}
 		else if (strcmp(argv[i], "--idle_time") == 0)
 			tests |= IDLE_TIME;
 		else if (strcmp(argv[i], "--kflops") == 0)
@@ -283,7 +290,7 @@ sysapi_test_dump_all(int argc, char** argv)
 			printf("--kern_memmod\n");
 			printf("--ckptpltfrm\n");
 			printf("--dump\n");
-			printf("--free_fs_blocks\n");
+			printf("--free_fs_blocks [dir]\n");
 			printf("--idle_time\n");
 			printf("--kflops\n");
 			printf("--last_x_event\n");
@@ -353,7 +360,8 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & FREE_FS_BLOCKS) == FREE_FS_BLOCKS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN FREE_FS_BLOCKS_TEST:\n");
 		foo = 0;
-		foo = free_fs_blocks_test(FREEBLOCKS_TRIALS,
+		foo = free_fs_blocks_test(free_fs_dir,
+								  FREEBLOCKS_TRIALS,
 								  FREEBLOCKS_TOLERANCE,
 								  FREEBLOCKS_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END FREE_FS_BLOCKS_TEST:\n");
