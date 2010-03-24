@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "filename_tools.h"
+#include "basename.h"
 
 void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path )
 {
@@ -144,7 +145,7 @@ alternate_exec_pathname( const char *path )
 		ASSERT(buf);
 		strcpy(buf,path);
 		canonicalize_dir_delimiters(buf);
-		if (!strrchr(path,'.')) {
+		if (!strchr(condor_basename(buf),'.')) {
 			strcat(buf,".exe");
 		}
 	}

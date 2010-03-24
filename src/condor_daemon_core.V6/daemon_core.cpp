@@ -7258,7 +7258,7 @@ int DaemonCore::Create_Process(
 
 	// Define a some short-hand variables for use bellow
 	namelen				= strlen(executable);
-	extension			= namelen > 0 ? &(executable[namelen-4]) : NULL;
+	extension			= namelen > 3 ? &(executable[namelen-4]) : NULL;
 	batch_file			= ( extension && 
 							( MATCH == strcasecmp ( ".bat", extension ) || 
 							  MATCH == strcasecmp ( ".cmd", extension ) ) ),
