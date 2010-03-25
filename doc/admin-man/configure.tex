@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-Condor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -6207,6 +6207,13 @@ These macros affect the \Condor{collector}.
   explicitly set this macro to \Expr{NONE}. 
   If undefined (commented out) in the configuration file, Condor follows
   its default behavior.
+
+\label{param:CollectorUpdateInterval}
+\item[\Macro{COLLECTOR\_UPDATE\_INTERVAL}]
+  This parameter is defined in seconds and defaults to 900 (every 15
+  minutes). This parameter controls the frequency of the the periodic
+  updates to a central \Condor{collector} at UW-Madison with (see
+  \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} above).
 
 \label{param:CollectorSocketBufsize}
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
