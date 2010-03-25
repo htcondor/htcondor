@@ -27,6 +27,7 @@
 
 static const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
 
+//TEMPTEMP -- maybe split this into stuff that's passed down and stuff that's not -- maybe "deep" and "shallow"
 struct SubmitDagOptions
 {
 	// these options come from the command line

@@ -855,9 +855,49 @@ int main_init (int argc, char ** const argv) {
     // Create the DAG
     //
 
+//TEMPTEMP -- shit -- will the submitDagOpts object remain in scope the whole time????
 	//TEMPTEMP -- need to figure out submit options...
-	SubmitDagOptions dagOptions;
+	//TEMPTEMP -- need to check what is passed down and what is not...
+		// This object must remain in existance the whole time the DAG
+		// is running, since we're just passing the pointer to the
+		// DAG object, and we're not actually copying the SubmitDagOptions
+		// object.
+	SubmitDagOptions *submitDagOpts = new SubmitDagOptions();
+	submitDagOpts->bSubmit = false;
+	//TEMPTEMP submitDagOpts->bVerbose =
+	//TEMPTEMP submitDagOpts->bForce =
+	//TEMPTEMP submitDagOpts->strNotification =
+	//TEMP? submitDagOpts->iMaxIdle =
+	//TEMP? submitDagOpts->iMaxJobs =
+	//TEMP? submitDagOpts->iMaxPre =
+	//TEMP? submitDagOpts->iMaxPost =
+	//TEMPTEMP? submitDagOpts->strRemoteSchedd =
+	//TEMPTEMP? submitDagOpts->bNoEventChecks =
+	submitDagOpts->bAllowLogError = dagman.allowLogError;
+	//TEMPTEMP? submitDagOpts->iDebugLevel =
+	submitDagOpts->primaryDagFile = dagman.primaryDagFile;
+	//TEMPTEMP -- note may not need to set dagFiles here...
+	//TEMPTEMP? submitDagOpts->dagFiles = dagman.dagFiles;
+	//TEMPTEMP? submitDagOpts->strDagmanPath =
+	submitDagOpts->useDagDir = dagman.useDagDir;
+	//TEMPTEMP? submitDagOpts->strDebugDir =
+	//TEMPTEMP? submitDagOpts->strConfigFile =
+	//TEMPTEMP? submitDagOpts->appendFile = 
+	//TEMPTEMP? submitDagOpts->appendLines =
+	submitDagOpts->oldRescue = dagman.rescueFileToWrite != NULL;//TEMP?
+	submitDagOpts->autoRescue = dagman.autoRescue;
+	submitDagOpts->doRescueFrom = dagman.doRescueFrom;//TEMPTEMP?
+	//TEMPTEMP? submitDagOpts->allowVerMismatch =
+	submitDagOpts->recurse = false;
+	//TEMPTEMP? submitDagOpts->updateSubmit =
+	//TEMPTEMP? submitDagOpts->importEnv =
+	submitDagOpts->dumpRescueDag = dagman.dumpRescueDag;//TEMP?
+	//TEMPTEMP? submitDagOpts->runValgrind =
 
+	// Note: a bunch of the parameters we pass here duplicate things
+	// in submitDagOpts, but I'm keeping them separate so we don't have to
+	// bother to construct a new SubmitDagOtions object for splices.
+	// wenger 2010-03-25
     dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.allowLogError, dagman.useDagDir,
@@ -867,7 +907,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
 						  dagman._defaultNodeLog,
 						  dagman._generateSubdagSubmits,
-						  &dagOptions,
+						  submitDagOpts,
 						  false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {

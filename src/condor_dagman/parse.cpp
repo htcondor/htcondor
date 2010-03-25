@@ -1453,6 +1453,8 @@ parse_splice(
 	--_thisDagNum;
 
 	// This "copy" is tailored to be correct according to Dag::~Dag()
+	// We can pass in NULL for submitDagOpts because the splice DAG
+	// object will never actually do a submit.  wenger 2010-03-25
 	splice_dag = new Dag(	dag->DagFiles(),
 							dag->MaxJobsSubmitted(),
 							dag->MaxPreScripts(),
@@ -1469,7 +1471,7 @@ parse_splice(
 							dag->SubmitDepthFirst(),
 							dag->DefaultNodeLog(),
 							dag->GenerateSubdagSubmits(),
-							NULL/*TEMPTEMP?*/,
+							NULL,
 							true); /* we are a splice! */
 	
 	// initialize whatever the DIR line was, or defaults to, here.
