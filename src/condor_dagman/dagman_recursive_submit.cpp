@@ -111,6 +111,10 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		cmdLine += "-do_recurse ";
 	}
 
+	if ( deepOpts.updateSubmit ) {
+		cmdLine += "-update_submit ";
+	}
+
 	cmdLine += dagFile;
 
 	dprintf( D_FULLDEBUG, "Recursive submit command: <%s>\n",

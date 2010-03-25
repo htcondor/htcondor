@@ -34,13 +34,18 @@ static const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
 	//
 struct SubmitDagShallowOptions
 {
-	bool bSubmit;//TEMPTEMP -- this might be deep
-	MyString strRemoteSchedd;//TEMPTEMP?
+	bool bSubmit;
+	MyString strRemoteSchedd;
 	int iMaxIdle;
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
-	MyString strConfigFile;//TEMPTEMP?
+	bool bNoEventChecks;
+	MyString appendFile; // append to .condor.sub file before queue
+	StringList appendLines; // append to .condor.sub file before queue
+	MyString strConfigFile;
+	bool dumpRescueDag;
+	bool runValgrind;
 	MyString primaryDagFile;
 	StringList	dagFiles;
 
@@ -52,6 +57,7 @@ struct SubmitDagShallowOptions
 	MyString strSubFile;
 	MyString strRescueFile;
 	MyString strLockFile;
+	bool copyToSpool;
 
 	SubmitDagShallowOptions() 
 	{ 
@@ -61,8 +67,13 @@ struct SubmitDagShallowOptions
 		iMaxJobs = 0;
 		iMaxPre = 0;
 		iMaxPost = 0;
+		bNoEventChecks = false;
+		appendFile = param("DAGMAN_INSERT_SUB_FILE");
 		strConfigFile = "";
+		dumpRescueDag = false;
+		runValgrind = false;
 		primaryDagFile = "";
+		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 	}
 };
 
@@ -77,45 +88,34 @@ struct SubmitDagDeepOptions
 	bool bVerbose;
 	bool bForce;
 	MyString strNotification;
-	bool bNoEventChecks;//TEMPTEMP?
-	bool bAllowLogError;//TEMPTEMP?
-	int iDebugLevel;//TEMPTEMP?
+	bool bAllowLogError;
+	int iDebugLevel;
 	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strDebugDir;
-	MyString appendFile; // append to .condor.sub file before queue//TEMPTEMP?
-	StringList appendLines; // append to .condor.sub file before queue//TEMPTEMP?
 	bool oldRescue;
 	bool autoRescue;
 	int doRescueFrom;
-	bool allowVerMismatch;//TEMPTEMP?
+	bool allowVerMismatch;
 	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
-	bool updateSubmit; // allow updating submit file w/o -force//TEMPTEMP?
-	bool copyToSpool;//TEMPTEMP?
-	bool importEnv; // explicitly import environment into .condor.sub file//TEMPTEMP?
-	bool dumpRescueDag;//TEMPTEMP?
-	bool runValgrind;//TEMPTEMP?
+	bool updateSubmit; // allow updating submit file w/o -force
+	bool importEnv; // explicitly import environment into .condor.sub file
 	
 	SubmitDagDeepOptions() 
 	{ 
 		bVerbose = false;
 		bForce = false;
 		strNotification = "";
-		bNoEventChecks = false;
 		bAllowLogError = false;
 		iDebugLevel = 3;
 		useDagDir = false;
-		appendFile = param("DAGMAN_INSERT_SUB_FILE");
 		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		doRescueFrom = 0; // 0 means no rescue DAG specified
 		allowVerMismatch = false;
 		recurse = false;
 		updateSubmit = false;
-		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 		importEnv = false;
-		dumpRescueDag = false;
-		runValgrind = false;
 	}
 };
 

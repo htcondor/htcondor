@@ -855,34 +855,26 @@ int main_init (int argc, char ** const argv) {
     // Create the DAG
     //
 
-//TEMPTEMP -- shit -- will the submitDagOpts object remain in scope the whole time????
-	//TEMPTEMP -- need to figure out submit options...
-	//TEMPTEMP -- need to check what is passed down and what is not...
 		// This object must remain in existance the whole time the DAG
 		// is running, since we're just passing the pointer to the
 		// DAG object, and we're not actually copying the SubmitDagOptions
 		// object.
 	SubmitDagDeepOptions *submitDagDeepOpts = new SubmitDagDeepOptions();
-	//TEMPTEMP submitDagOpts->bVerbose =
-	//TEMPTEMP submitDagOpts->bForce =
-	//TEMPTEMP submitDagOpts->strNotification =
-	//TEMPTEMP? submitDagOpts->bNoEventChecks =
+	//TEMPTEMP submitDagDeepOpts->bVerbose =
+	//TEMPTEMP submitDagDeepOpts->bForce =
+	//TEMPTEMP submitDagDeepOpts->strNotification =
 	submitDagDeepOpts->bAllowLogError = dagman.allowLogError;
-	//TEMPTEMP? submitDagOpts->iDebugLevel =
-	//TEMPTEMP? submitDagOpts->strDagmanPath =
+	submitDagDeepOpts->iDebugLevel = debug_level;
+	//TEMPTEMP submitDagDeepOpts->strDagmanPath =
 	submitDagDeepOpts->useDagDir = dagman.useDagDir;
-	//TEMPTEMP? submitDagOpts->strDebugDir =
-	//TEMPTEMP? submitDagOpts->appendFile = 
-	//TEMPTEMP? submitDagOpts->appendLines =
+	//TEMPTEMP? submitDagDeepOpts->strDebugDir =
 	submitDagDeepOpts->oldRescue = dagman.rescueFileToWrite != NULL;//TEMP?
 	submitDagDeepOpts->autoRescue = dagman.autoRescue;
-	submitDagDeepOpts->doRescueFrom = dagman.doRescueFrom;//TEMPTEMP?
-	//TEMPTEMP? submitDagOpts->allowVerMismatch =
+	submitDagDeepOpts->doRescueFrom = dagman.doRescueFrom;
+	//TEMPTEMP? submitDagDeepOpts->allowVerMismatch =
 	submitDagDeepOpts->recurse = false;
-	//TEMPTEMP? submitDagOpts->updateSubmit =
-	//TEMPTEMP? submitDagOpts->importEnv =
-	submitDagDeepOpts->dumpRescueDag = dagman.dumpRescueDag;//TEMP?
-	//TEMPTEMP? submitDagOpts->runValgrind =
+	//TEMPTEMP? submitDagDeepOpts->updateSubmit =
+	//TEMPTEMP? submitDagDeepOpts->importEnv =
 
 	// Note: a bunch of the parameters we pass here duplicate things
 	// in submitDagOpts, but I'm keeping them separate so we don't have to

@@ -1,5 +1,3 @@
-//TEMPTEMP -- get rid of all opts, incl in comments
-//TEMPTEMP -- make sure we don't pass opts we don't need after getting everything into the right place
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -81,7 +79,8 @@ int main(int argc, char *argv[])
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.
 	myDistro->Init( argc, argv );
 
-		// Load command-line arguments into the opts structure.
+		// Load command-line arguments into the deepOpts and shallowOpts
+		// structures.
 	SubmitDagDeepOptions deepOpts;
 	SubmitDagShallowOptions shallowOpts;
 	parseCommandLine(deepOpts, shallowOpts, argc, argv);
@@ -100,7 +99,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-		// Further work to get the opts structure set up properly.
+		// Further work to get the shallowOpts structure set up properly.
 	tmpResult = setUpOptions( deepOpts, shallowOpts );
 	if ( tmpResult != 0 ) return tmpResult;
 
@@ -128,7 +127,7 @@ int main(int argc, char *argv[])
 
 //---------------------------------------------------------------------------
 /** Recursively call condor_submit_dag on nested DAGs.
-	@param opts: the condor_submit_dag options
+	@param deepOpts: the condor_submit_dag deep options
 	@return 0 if successful, 1 if failed
 */
 int
@@ -266,8 +265,10 @@ parseJobOrDagLine( const char *dagLine, StringList &tokens,
 }
 
 //---------------------------------------------------------------------------
-/** Set up things in opts that aren't directly specified on the command line.
-	@param opts: the condor_submit_dag options
+/** Set up things in deep and shallow options that aren't directly specified
+	on the command line.
+	@param deepOpts: the condor_submit_dag deep options
+	@param shallowOpts: the condor_submit_dag shallow options
 	@return 0 if successful, 1 if failed
 */
 int
@@ -339,7 +340,7 @@ setUpOptions( SubmitDagDeepOptions &deepOpts,
 
 //---------------------------------------------------------------------------
 /** Submit the DAGMan submit file unless the -no_submit option was given.
-	@param opts: the condor_submit_dag options
+	@param shallowOpts: the condor_submit_dag shallow options
 	@return 0 if successful, 1 if failed
 */
 int
@@ -497,9 +498,9 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 
 //---------------------------------------------------------------------------
 /** Get the command-line options we want to preserve from the .condor.sub
-    file we're overwriting, and plug them into the opts structure.  Note
-	that it's *not* an error for the .condor.sub file to not exist.
-	@param opts: the condor_submit_dag options
+    file we're overwriting, and plug them into the shallowOpts structure.
+	Note that it's *not* an error for the .condor.sub file to not exist.
+	@param shallowOpts: the condor_submit_dag shallow options
 	@return 0 if successful, 1 if failed
 */
 int
@@ -537,7 +538,7 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 /** Parse the arguments line of an existing .condor.sub file, extracing
     the arguments we want to preserve when updating the .condor.sub file.
 	@param subLine: the arguments line from the .condor.sub file
-	@param opts: the condor_submit_dag options
+	@param shallowOpts: the condor_submit_dag shallow options
 	@return 0 if successful, 1 if failed
 */
 int
@@ -607,7 +608,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 
 	const char *executable = NULL;
 	MyString valgrindPath; // outside if so executable is valid!
-	if ( deepOpts.runValgrind ) {
+	if ( shallowOpts.runValgrind ) {
 		valgrindPath = which( valgrind_exe );
 		if ( valgrindPath == "" ) {
 			fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
@@ -657,7 +658,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
     fprintf(pSubFile, "# is killed (e.g., during a reboot).\n");
     fprintf(pSubFile, "on_exit_remove\t= %s\n", removeExpr.Value() );
 
-    fprintf(pSubFile, "copy_to_spool\t= %s\n", deepOpts.copyToSpool ?
+    fprintf(pSubFile, "copy_to_spool\t= %s\n", shallowOpts.copyToSpool ?
 				"True" : "False" );
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -667,7 +668,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ArgList args;
 
-	if ( deepOpts.runValgrind ) {
+	if ( shallowOpts.runValgrind ) {
 		args.AppendArg("--tool=memcheck");
 		args.AppendArg("--leak-check=yes");
 		args.AppendArg("--show-reachable=yes");
@@ -716,7 +717,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg("-MaxPost");
 		args.AppendArg(shallowOpts.iMaxPost);
     }
-	if(deepOpts.bNoEventChecks)
+	if(shallowOpts.bNoEventChecks)
 	{
 		// strArgs += " -NoEventChecks";
 		printf( "Warning: -NoEventChecks is ignored; please use "
@@ -736,7 +737,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	if(deepOpts.allowVerMismatch) {
 		args.AppendArg("-AllowVersionMismatch");
 	}
-	if(deepOpts.dumpRescueDag) {
+	if(shallowOpts.dumpRescueDag) {
 		args.AppendArg("-DumpRescue");
 	}
 
@@ -783,12 +784,12 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 
 		// Append user-specified stuff to submit file...
 		// ...first, the insert file, if any...
-	if (deepOpts.appendFile.Value() != "") {
-		FILE *aFile = safe_fopen_wrapper(deepOpts.appendFile.Value(), "r");
+	if (shallowOpts.appendFile.Value() != "") {
+		FILE *aFile = safe_fopen_wrapper(shallowOpts.appendFile.Value(), "r");
 		if (!aFile)
 		{
 			fprintf( stderr, "ERROR: unable to read submit append file (%s)\n",
-				 	deepOpts.appendFile.Value() );
+				 	shallowOpts.appendFile.Value() );
 			exit( 1 );
 		}
 
@@ -801,9 +802,9 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	}
 
 		// ...now things specified directly on the command line.
-	deepOpts.appendLines.rewind();
+	shallowOpts.appendLines.rewind();
 	char *command;
-	while ((command = deepOpts.appendLines.next()) != NULL) {
+	while ((command = shallowOpts.appendLines.next()) != NULL) {
     	fprintf(pSubFile, "%s\n", command);
 	}
 
@@ -896,7 +897,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			}
 			else if (strArg.find("-noev") != -1) // -noeventchecks
 			{
-				deepOpts.bNoEventChecks = true;
+				shallowOpts.bNoEventChecks = true;
 			}
 			else if (strArg.find("-allowlog") != -1) // -allowlogerror
 			{
@@ -936,7 +937,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-append argument needs a value\n");
 					printUsage();
 				}
-				deepOpts.appendLines.append(argv[++iArg]);
+				shallowOpts.appendLines.append(argv[++iArg]);
 			}
 			else if (strArg.find("-insert") != -1) // -insert_sub_file
 			{
@@ -945,12 +946,12 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					printUsage();
 				}
 				++iArg;
-				if (deepOpts.appendFile != "") {
+				if (shallowOpts.appendFile != "") {
 					printf("Note: -insert_sub_file value (%s) overriding "
 								"DAGMAN_INSERT_SUB_FILE setting (%s)\n",
-								argv[iArg], deepOpts.appendFile.Value());
+								argv[iArg], shallowOpts.appendFile.Value());
 				}
-				deepOpts.appendFile = argv[iArg];
+				shallowOpts.appendFile = argv[iArg];
 			}
 			else if (strArg.find("-oldr") != -1) // -oldrescue
 			{
@@ -998,11 +999,11 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			}			     
 			else if (strArg.find("-dumpr") != -1) // -DumpRescue
 			{
-				deepOpts.dumpRescueDag = true;
+				shallowOpts.dumpRescueDag = true;
 			}
 			else if (strArg.find("-valgrind") != -1) // -valgrind
 			{
-				deepOpts.runValgrind = true;
+				shallowOpts.runValgrind = true;
 			}
 				// This must come last, so we can have other arguments
 				// that start with -v.
@@ -1046,14 +1047,14 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 //---------------------------------------------------------------------------
 /** Parse arguments that are to be preserved when updating a .condor.sub
 	file.  If the given argument such an argument, parse it and update the
-	opts structure accordingly.  (This function is meant to be called both
-	when parsing "normal" command-line arguments, and when parsing the
+	shallowOpts structure accordingly.  (This function is meant to be called
+	both when parsing "normal" command-line arguments, and when parsing the
 	existing arguments line of a .condor.sub file we're overwriting.)
 	@param strArg: the argument we're parsing
 	@param argNum: the argument number of the current argument
 	@param argc: the argument count (passed to get value for flag)
 	@param argv: the argument vector (passed to get value for flag)
-	@param opts: the condor_submit_dag options
+	@param shallowOpts: the condor_submit_dag shallow options
 	@return true iff the argument vector contained any arguments
 		processed by this function
 */
