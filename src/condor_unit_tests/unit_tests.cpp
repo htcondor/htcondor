@@ -73,8 +73,19 @@ int main() {
 		// run all the functions and return the result
 	bool result = driver.do_all_functions();
 	e.emit_summary();
+	e.emit_function_break();
+
 	if(result) {
+		e.emit_comment("The actual return values of all tests have passed. "
+			"Good.\n");
 		return EXIT_SUCCESS;
 	}
+
+	e.emit_comment("The actual return values of some tests have failed. "
+		"Bad.\n");
 	return EXIT_FAILURE;
 }
+
+
+
+
