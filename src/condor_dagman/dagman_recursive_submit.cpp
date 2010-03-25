@@ -31,8 +31,8 @@
 	@return 0 if successful, 1 if failed
 */
 int
-runSubmitDag( const SubmitDagOptions &opts, const char *dagFile,
-			const char *directory )
+runSubmitDag( const SubmitDagDeepOptions &deepOpts,
+			const char *dagFile, const char *directory )
 {
 	int result = 0;
 
@@ -57,57 +57,57 @@ runSubmitDag( const SubmitDagOptions &opts, const char *dagFile,
 	MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
 
 		// Add in arguments we're passing along.
-	if ( opts.bVerbose ) {
+	if ( deepOpts.bVerbose ) {
 		cmdLine += "-verbose ";
 	}
 
-	if ( opts.bForce ) {
+	if ( deepOpts.bForce ) {
 		cmdLine += "-force ";
 	}
 
-	if ( opts.strNotification != "" ) {
+	if (deepOpts.strNotification != "" ) {
 		cmdLine += MyString( "-notification " ) +
-					opts.strNotification.Value() + " ";
+					deepOpts.strNotification.Value() + " ";
 	}
 
-	if ( opts.strDagmanPath != "" ) {
+	if ( deepOpts.strDagmanPath != "" ) {
 		cmdLine += MyString( "-dagman " ) +
-				opts.strDagmanPath.Value() + " ";
+				deepOpts.strDagmanPath.Value() + " ";
 	}
 
-	cmdLine += MyString( "-debug " ) + opts.iDebugLevel + " ";
+	cmdLine += MyString( "-debug " ) + deepOpts.iDebugLevel + " ";
 
-	if ( opts.bAllowLogError ) {
+	if ( deepOpts.bAllowLogError ) {
 		cmdLine += "-allowlogerror ";
 	}
 
-	if ( opts.useDagDir ) {
+	if ( deepOpts.useDagDir ) {
 		cmdLine += "-usedagdir ";
 	}
 
-	if ( opts.strDebugDir != "" ) {
+	if ( deepOpts.strDebugDir != "" ) {
 		cmdLine += MyString( "-outfile_dir " ) + 
-				opts.strDebugDir.Value() + " ";
+				deepOpts.strDebugDir.Value() + " ";
 	}
 
-	cmdLine += MyString( "-oldrescue " ) + opts.oldRescue + " ";
+	cmdLine += MyString( "-oldrescue " ) + deepOpts.oldRescue + " ";
 
-	cmdLine += MyString( "-autorescue " ) + opts.autoRescue + " ";
+	cmdLine += MyString( "-autorescue " ) + deepOpts.autoRescue + " ";
 
-	if ( opts.doRescueFrom != 0 ) {
+	if ( deepOpts.doRescueFrom != 0 ) {
 		cmdLine += MyString( "-dorescuefrom " ) +
-				opts.doRescueFrom + " ";
+				deepOpts.doRescueFrom + " ";
 	}
 
-	if ( opts.allowVerMismatch ) {
+	if ( deepOpts.allowVerMismatch ) {
 		cmdLine += "-allowver ";
 	}
 
-	if ( opts.importEnv ) {
+	if ( deepOpts.importEnv ) {
 		cmdLine += "-import_env ";
 	}
 
-	if ( opts.recurse ) {
+	if ( deepOpts.recurse ) {
 		cmdLine += "-do_recurse ";
 	}
 

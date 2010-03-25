@@ -27,41 +27,23 @@
 
 static const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
 
-//TEMPTEMP -- maybe split this into stuff that's passed down and stuff that's not -- maybe "deep" and "shallow"
-struct SubmitDagOptions
+	//
+	// These are options that are *not* passed to lower levels of
+	// condor_submit_dag when creating the submit files for nested
+	// DAGs.
+	//
+struct SubmitDagShallowOptions
 {
-	// these options come from the command line
-	bool bSubmit;
-	bool bVerbose;
-	bool bForce;
-	MyString strNotification;
+	bool bSubmit;//TEMPTEMP -- this might be deep
+	MyString strRemoteSchedd;//TEMPTEMP?
 	int iMaxIdle;
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
-	MyString strRemoteSchedd;
-	bool bNoEventChecks;
-	bool bAllowLogError;
-	int iDebugLevel;
+	MyString strConfigFile;//TEMPTEMP?
 	MyString primaryDagFile;
 	StringList	dagFiles;
-	MyString strDagmanPath; // path to dagman binary
-	bool useDagDir;
-	MyString strDebugDir;
-	MyString strConfigFile;
-	MyString appendFile; // append to .condor.sub file before queue
-	StringList appendLines; // append to .condor.sub file before queue
-	bool oldRescue;
-	bool autoRescue;
-	int doRescueFrom;
-	bool allowVerMismatch;
-	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
-	bool updateSubmit; // allow updating submit file w/o -force
-	bool copyToSpool;
-	bool importEnv; // explicitly import environment into .condor.sub file
-	bool dumpRescueDag;
-	bool runValgrind;
-	
+
 	// non-command line options
 	MyString strLibOut;
 	MyString strLibErr;
@@ -71,23 +53,58 @@ struct SubmitDagOptions
 	MyString strRescueFile;
 	MyString strLockFile;
 
-	SubmitDagOptions() 
+	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
-		bVerbose = false;
-		bForce = false;
-		strNotification = "";
+		strRemoteSchedd = "";
 		iMaxIdle = 0;
 		iMaxJobs = 0;
 		iMaxPre = 0;
 		iMaxPost = 0;
-		strRemoteSchedd = "";
+		strConfigFile = "";
+		primaryDagFile = "";
+	}
+};
+
+	//
+	// These are options that *are* passed to lower levels of
+	// condor_submit_dag when creating the submit files for nested
+	// DAGs.
+	//
+struct SubmitDagDeepOptions
+{
+	// these options come from the command line
+	bool bVerbose;
+	bool bForce;
+	MyString strNotification;
+	bool bNoEventChecks;//TEMPTEMP?
+	bool bAllowLogError;//TEMPTEMP?
+	int iDebugLevel;//TEMPTEMP?
+	MyString strDagmanPath; // path to dagman binary
+	bool useDagDir;
+	MyString strDebugDir;
+	MyString appendFile; // append to .condor.sub file before queue//TEMPTEMP?
+	StringList appendLines; // append to .condor.sub file before queue//TEMPTEMP?
+	bool oldRescue;
+	bool autoRescue;
+	int doRescueFrom;
+	bool allowVerMismatch;//TEMPTEMP?
+	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
+	bool updateSubmit; // allow updating submit file w/o -force//TEMPTEMP?
+	bool copyToSpool;//TEMPTEMP?
+	bool importEnv; // explicitly import environment into .condor.sub file//TEMPTEMP?
+	bool dumpRescueDag;//TEMPTEMP?
+	bool runValgrind;//TEMPTEMP?
+	
+	SubmitDagDeepOptions() 
+	{ 
+		bVerbose = false;
+		bForce = false;
+		strNotification = "";
 		bNoEventChecks = false;
 		bAllowLogError = false;
 		iDebugLevel = 3;
-		primaryDagFile = "";
 		useDagDir = false;
-		strConfigFile = "";
 		appendFile = param("DAGMAN_INSERT_SUB_FILE");
 		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
@@ -109,7 +126,7 @@ struct SubmitDagOptions
 		be processed (ignored if NULL)
 	@return 0 if successful, 1 if failed
 */
-int runSubmitDag( const SubmitDagOptions &opts, const char *dagFile,
-			const char *directory );
+int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
+			const char *dagFile, const char *directory );
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H

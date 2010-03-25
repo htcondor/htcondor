@@ -862,36 +862,26 @@ int main_init (int argc, char ** const argv) {
 		// is running, since we're just passing the pointer to the
 		// DAG object, and we're not actually copying the SubmitDagOptions
 		// object.
-	SubmitDagOptions *submitDagOpts = new SubmitDagOptions();
-	submitDagOpts->bSubmit = false;
+	SubmitDagDeepOptions *submitDagDeepOpts = new SubmitDagDeepOptions();
 	//TEMPTEMP submitDagOpts->bVerbose =
 	//TEMPTEMP submitDagOpts->bForce =
 	//TEMPTEMP submitDagOpts->strNotification =
-	//TEMP? submitDagOpts->iMaxIdle =
-	//TEMP? submitDagOpts->iMaxJobs =
-	//TEMP? submitDagOpts->iMaxPre =
-	//TEMP? submitDagOpts->iMaxPost =
-	//TEMPTEMP? submitDagOpts->strRemoteSchedd =
 	//TEMPTEMP? submitDagOpts->bNoEventChecks =
-	submitDagOpts->bAllowLogError = dagman.allowLogError;
+	submitDagDeepOpts->bAllowLogError = dagman.allowLogError;
 	//TEMPTEMP? submitDagOpts->iDebugLevel =
-	submitDagOpts->primaryDagFile = dagman.primaryDagFile;
-	//TEMPTEMP -- note may not need to set dagFiles here...
-	//TEMPTEMP? submitDagOpts->dagFiles = dagman.dagFiles;
 	//TEMPTEMP? submitDagOpts->strDagmanPath =
-	submitDagOpts->useDagDir = dagman.useDagDir;
+	submitDagDeepOpts->useDagDir = dagman.useDagDir;
 	//TEMPTEMP? submitDagOpts->strDebugDir =
-	//TEMPTEMP? submitDagOpts->strConfigFile =
 	//TEMPTEMP? submitDagOpts->appendFile = 
 	//TEMPTEMP? submitDagOpts->appendLines =
-	submitDagOpts->oldRescue = dagman.rescueFileToWrite != NULL;//TEMP?
-	submitDagOpts->autoRescue = dagman.autoRescue;
-	submitDagOpts->doRescueFrom = dagman.doRescueFrom;//TEMPTEMP?
+	submitDagDeepOpts->oldRescue = dagman.rescueFileToWrite != NULL;//TEMP?
+	submitDagDeepOpts->autoRescue = dagman.autoRescue;
+	submitDagDeepOpts->doRescueFrom = dagman.doRescueFrom;//TEMPTEMP?
 	//TEMPTEMP? submitDagOpts->allowVerMismatch =
-	submitDagOpts->recurse = false;
+	submitDagDeepOpts->recurse = false;
 	//TEMPTEMP? submitDagOpts->updateSubmit =
 	//TEMPTEMP? submitDagOpts->importEnv =
-	submitDagOpts->dumpRescueDag = dagman.dumpRescueDag;//TEMP?
+	submitDagDeepOpts->dumpRescueDag = dagman.dumpRescueDag;//TEMP?
 	//TEMPTEMP? submitDagOpts->runValgrind =
 
 	// Note: a bunch of the parameters we pass here duplicate things
@@ -907,7 +897,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
 						  dagman._defaultNodeLog,
 						  dagman._generateSubdagSubmits,
-						  submitDagOpts,
+						  submitDagDeepOpts,
 						  false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {
