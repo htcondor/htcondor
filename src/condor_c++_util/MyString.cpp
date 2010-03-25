@@ -777,6 +777,8 @@ MyString::readLine( FILE* fp, bool append )
 	char buf[1024];
 	bool first_time = true;
 
+	ASSERT( fp );
+
 	while( 1 ) {
 		if( ! fgets(buf, 1024, fp) ) {
 			if( first_time ) {
