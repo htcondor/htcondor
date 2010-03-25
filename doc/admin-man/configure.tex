@@ -6196,24 +6196,23 @@ These macros affect the \Condor{collector}.
 \item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
   By default, every pool sends
   periodic updates to a central \Condor{collector} at UW-Madison with
-  basic information about the status of your pool.  This includes only
+  basic information about the status of the pool.  Updates include only
   the number of total machines, the number of jobs submitted, the
-  number of machines running jobs, the host name of your central
-  manager, and the \MacroUNI{COLLECTOR\_NAME} specified above.  These
+  number of machines running jobs, the host name of the central
+  manager, and the \MacroUNI{COLLECTOR\_NAME}.  These
   updates help the Condor Team see how Condor is being used around the world.
   By default, they will be sent to \File{condor.cs.wisc.edu}.
-  If you do not want
-  these updates to be sent from your pool,
+  To discontinue sending updates,
   explicitly set this macro to \Expr{NONE}. 
-  If undefined (commented out) in the configuration file, Condor follows
+  If undefined or commented out in the configuration file, Condor follows
   its default behavior.
 
 \label{param:CollectorUpdateInterval}
 \item[\Macro{COLLECTOR\_UPDATE\_INTERVAL}]
-  This parameter is defined in seconds and defaults to 900 (every 15
-  minutes). This parameter controls the frequency of the the periodic
-  updates to a central \Condor{collector} at UW-Madison with (see
-  \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} above).
+  This variable is defined in seconds and defaults to 900 (every 15 minutes).
+  It controls the frequency of the periodic
+  updates sent to a central \Condor{collector} at UW-Madison as
+  defined by \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR}.
 
 \label{param:CollectorSocketBufsize}
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
