@@ -525,20 +525,6 @@ See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{My job starts but exits right away with signal 9.}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{job!exiting with signal 9 \(Unix\)}
-
-
-This can occur when the machine your job is running on is missing a
-shared library required by your program.
-One solution is to install the shared library on all machines the job
-may execute on.
-Another, easier, solution is to try to re-link your program statically
-so it contains all the routines it needs.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why does the \Attr{requirements} expression for the job I submitted\\
 have extra things that I did not put in my submit description file?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -620,97 +606,6 @@ for the list of supported compilers.
 For a Linux platform, the supported compiler
 is the default compiler that came with the distribution.
 It is often found in the directory \File{/usr/bin}.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why do my vanilla jobs keep cycling between suspended and unsuspended?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{vanilla jobs!cycling between suspended and unsuspended}
-
-Condor tries to provide a number, the ``Condor Load Average''
-(reported in the machine ClassAd as \AdAttr{CondorLoadAvg}), which is
-intended to represent the total load average on the system caused by
-any running Condor job(s).
-Unfortunately, it is impossible to get an accurate number for
-this without support from the operating system.
-This is not available.
-So, Condor does the best it can, and it mostly works in most cases.
-However, there are a number of ways this statistic can go wrong.
-
-The old default Condor policy was to suspend if the non-Condor load
-average went over a certain threshold.
-However, because of the problems providing accurate numbers for this
-(described below), some jobs would go into a cycle of getting
-suspended and resumed.
-The default suspend policy now shipped with Condor uses the
-solution explained here.
-
-While there are too many technical details of why
-\AdAttr{CondorLoadAvg} might be wrong for a short answer here, a brief
-explanation is presented.
-When a job has periodic behavior, and the load it places upon
-a machine is changing over time,
-the system load also changes over time.  
-However, Condor thinks that the job's share of the system load
-(what it uses to compute the CondorLoad) is also changing.
-So, when the job was running, and then stops, both the system load and
-the Condor load start falling.
-If it all worked correctly, they'd fall at the exact same rate, and
-\AdAttr{NonCondorLoad} would be constant.
-Unfortunately, \AdAttr{CondorLoadAvg} falls faster, since Condor
-thinks the job's share of the total load is falling, too.
-Therefore, \AdAttr{CondorLoadAvg} falls faster than the system load,
-\AdAttr{NonCondorLoad} goes up, and the old default \AdAttr{SUSPEND}
-expression becomes true.
-
-It appears that Condor should be able to avoid this problem, but for a
-host of reasons, it can not.  
-There is no good way (without help from the operating systems Condor runs on;
-the help does not exist) to get this right.
-The only way to compute these numbers more accurately
-without support from the operating system is to sample everything at
-such a high rate that Condor itself would create a large load average,
-just to try to compute the load average.
-This is Heisenberg's uncertainty principle in action.
-
-A similar sampling error can occur when Condor is starting a job
-within the vanilla universe with many processes and with a
-heavy initial load.
-Condor mistakenly decides that the load on the machine has gotten too
-high while the job is in the initialization phase and kicks the job off
-the machine.
-
-To correct this problem, Condor needs to check to see if the load of the
-machine has been high over an interval of time.
-There is an attribute, \AdAttr{CpuBusyTime} that can be used for
-this purpose.
-This macro returns the time \MacroUNI{CpuBusy} (defined in the default
-configuration file) has been true, or 0 if \MacroUNI{CpuBusy} is false.
-\MacroUNI{CpuBusy} is usually defined in terms of non-Condor load.
-These are the default settings:
-
-\footnotesize
-\begin{verbatim}
-NonCondorLoadAvg    = (LoadAvg - CondorLoadAvg)
-HighLoad            = 0.5
-CPUBusy             = ($(NonCondorLoadAvg) >= $(HighLoad))
-\end{verbatim}
-\normalsize
-
-To take advantage of \AdAttr{CpuBusyTime}, you can use it in your
-\Macro{SUSPEND}\ expression. 
-
-Here is an example:
-\footnotesize
-\begin{verbatim}
-SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
-\end{verbatim}
-\normalsize
-
-The above policy says to only suspend the job if the CPU has been busy
-with non-Condor load at least three minutes and it has been at least 90
-seconds since the start of the job.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why might my job be preempted (evicted)?}
