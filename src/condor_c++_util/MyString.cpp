@@ -252,7 +252,7 @@ MyString::append_str( const char *s, int s_len )
 
 void
 MyString::append_to_list(char const *str,char const *delim /* = "," */) {
-	if(str == NULL || str[0] == NULL) {
+	if(str == NULL || str[0] == 0) {
 		return;
 	}
 	if( Len ) {
