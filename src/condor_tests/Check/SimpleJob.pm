@@ -46,6 +46,7 @@ sub RunTest
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
     my $append_submit_commands = $args{append_submit_commands} || "";
+    my $grid_resource = $args{grid_resource} || "";
 
     CondorTest::RegisterAbort( $testname, $aborted );
     CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
@@ -59,6 +60,9 @@ sub RunTest
     print SUBMIT "log = $user_log\n";
     print SUBMIT "arguments = 1\n";
     print SUBMIT "notification = never\n";
+    if( $grid_resource ne "" ) {
+	print SUBMIT "GridResource = $grid_resource\n"
+    }
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
