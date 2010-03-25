@@ -21,10 +21,18 @@
 	The function driver code for unit_tests.
  */
 
+#include "condor_common.h"
 #include "function_test_driver.h"
 
 FunctionDriver::FunctionDriver(int size) {
+	int i;
+
 	pointers = new test_func_ptr[size];
+
+	for(i = 0; i < size; i++) {
+		pointers[i] = NULL;
+	}
+
 	max_functions = size;
 	used_functions = 0;
 }
@@ -44,10 +52,22 @@ void FunctionDriver::register_function(test_func_ptr function) {
 bool FunctionDriver::do_all_functions() {
 	bool test_passed = true;
 	int i;
+
+	// ensure that at least one test ran...
+	bool at_least_one = false;
+
 	for(i = 0; i < used_functions; i++) {
-		if(!(*pointers[i])()) {
-			test_passed = false;
+		at_least_one = true;
+
+		/* don't run an undefined test */
+		if (pointers[i] != NULL) {
+			if(!(*pointers[i])()) {
+				test_passed = false;
+			}
 		}
 	}
-	return test_passed;
+
+	return at_least_one && test_passed;
 }
+
+
