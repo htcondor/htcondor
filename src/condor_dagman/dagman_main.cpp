@@ -1,5 +1,5 @@
 //TEMPTEMP -- doing gittrac #507 (lazy submit files) here
-//TEMPTEMP -- I need to pass a bunch more parameters to dagman, just so it can pass them to condor_submit_dag...
+//TEMPTEMP -- make sure all args get passed down...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -77,6 +77,13 @@ static void Usage() {
             "\t\t[-DoRescueFrom <int N>]\n"
 			"\t\t[-AllowVersionMismatch]\n"
 			"\t\t[-DumpRescue]\n"
+			"\t\t[-Verbose]\n"
+			"\t\t[-Force]\n"
+			"\t\t[-Notification <never|always|complete|error>]\n"
+			"\t\t[-Dagman <dagman_executable>]\n"
+			"\t\t[-Outfile_dir <directory>]\n"
+			"\t\t[-Update_submit]\n"
+			"\t\t[-Import_env]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
@@ -523,6 +530,12 @@ int main_init (int argc, char ** const argv) {
 				MIN_SUBMIT_FILE_VERSION.subMinorVer );
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+		// This object must remain in existance the whole time the DAG
+		// is running, since we're just passing the pointer to the
+		// DAG object, and we're not actually copying the SubmitDagOptions
+		// object.
+	SubmitDagDeepOptions *submitDagDeepOpts = new SubmitDagDeepOptions();
+
     //
     // Process command-line arguments
     //
@@ -636,6 +649,42 @@ int main_init (int argc, char ** const argv) {
 
         } else if( !strcasecmp( "-DumpRescue", argv[i] ) ) {
 			dagman.dumpRescueDag = true;
+
+        } else if( !strcasecmp( "-verbose", argv[i] ) ) {
+			submitDagDeepOpts->bVerbose = true;
+
+        } else if( !strcasecmp( "-force", argv[i] ) ) {
+			submitDagDeepOpts->bForce = true;
+		
+        } else if( !strcasecmp( "-notification", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No notification value specified\n" );
+                Usage();
+            }
+			submitDagDeepOpts->strNotification = argv[i];
+
+        } else if( !strcasecmp( "-dagman", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No dagman value specified\n" );
+                Usage();
+            }
+			submitDagDeepOpts->strDagmanPath = argv[i];
+
+        } else if( !strcasecmp( "-outfile_dir", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No outfile_dir value specified\n" );
+                Usage();
+            }
+			submitDagDeepOpts->strDebugDir = argv[i];
+
+        } else if( !strcasecmp( "-update_submit", argv[i] ) ) {
+			submitDagDeepOpts->updateSubmit = true;
+
+        } else if( !strcasecmp( "-import_env", argv[i] ) ) {
+			submitDagDeepOpts->importEnv = true;
 
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
@@ -851,30 +900,22 @@ int main_init (int argc, char ** const argv) {
 		}
 	}
 
-    //
-    // Create the DAG
-    //
-
-		// This object must remain in existance the whole time the DAG
-		// is running, since we're just passing the pointer to the
-		// DAG object, and we're not actually copying the SubmitDagOptions
-		// object.
-	SubmitDagDeepOptions *submitDagDeepOpts = new SubmitDagDeepOptions();
-	//TEMPTEMP submitDagDeepOpts->bVerbose =
-	//TEMPTEMP submitDagDeepOpts->bForce =
-	//TEMPTEMP submitDagDeepOpts->strNotification =
+		//
+		// Fill in values in the deep submit options that we haven't
+		// already set.
+		//
 	submitDagDeepOpts->bAllowLogError = dagman.allowLogError;
 	submitDagDeepOpts->iDebugLevel = debug_level;
-	//TEMPTEMP submitDagDeepOpts->strDagmanPath =
 	submitDagDeepOpts->useDagDir = dagman.useDagDir;
-	//TEMPTEMP? submitDagDeepOpts->strDebugDir =
 	submitDagDeepOpts->oldRescue = dagman.rescueFileToWrite != NULL;//TEMP?
 	submitDagDeepOpts->autoRescue = dagman.autoRescue;
 	submitDagDeepOpts->doRescueFrom = dagman.doRescueFrom;
-	//TEMPTEMP? submitDagDeepOpts->allowVerMismatch =
+	submitDagDeepOpts->allowVerMismatch = allowVerMismatch;
 	submitDagDeepOpts->recurse = false;
-	//TEMPTEMP? submitDagDeepOpts->updateSubmit =
-	//TEMPTEMP? submitDagDeepOpts->importEnv =
+
+    //
+    // Create the DAG
+    //
 
 	// Note: a bunch of the parameters we pass here duplicate things
 	// in submitDagOpts, but I'm keeping them separate so we don't have to

@@ -741,6 +741,37 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg("-DumpRescue");
 	}
 
+	if(deepOpts.bVerbose) {
+		args.AppendArg("-Verbose");
+	}
+
+	if(deepOpts.bForce) {
+		args.AppendArg("-Force");
+	}
+
+	if(deepOpts.strNotification != "") {
+		args.AppendArg("-Notification");
+		args.AppendArg(deepOpts.strNotification);
+	}
+
+	if(deepOpts.strDagmanPath != "") {
+		args.AppendArg("-Dagman");
+		args.AppendArg(deepOpts.strDagmanPath);
+	}
+
+	if(deepOpts.strDebugDir != "") {
+		args.AppendArg("-Outfile_dir");
+		args.AppendArg(deepOpts.strDebugDir);
+	}
+
+	if(deepOpts.updateSubmit) {
+		args.AppendArg("-Update_submit");
+	}
+
+	if(deepOpts.importEnv) {
+		args.AppendArg("-Import_env");
+	}
+
 	MyString arg_str,args_error;
 	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
 		fprintf(stderr,"Failed to insert arguments: %s",args_error.Value());
