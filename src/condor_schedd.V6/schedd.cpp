@@ -343,6 +343,14 @@ match_rec::setStatus( int stat )
 			// release it later.
 		needs_release_claim = true;
 	}
+		// We do NOT send RELEASE_CLAIM while in M_STARTD_CONTACT_LIMBO,
+		// because then we could destroy a claim that some other schedd
+		// has a prior claim to (e.g. if the negotiator has a stale view
+		// of the world and hands out the same claim id to different schedds
+		// in different negotiation cycles).  When we are in limbo and the
+		// claim object is deleted, cleanup should happen automatically
+		// on the startd side anyway, because it will see our REQUEST_CLAIM
+		// socket disconnect.
 }
 
 
