@@ -361,6 +361,7 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 
 	if (shallowOpts.bSubmit)
 	{
+//TEMPTEMP -- use ArgList/my_system()?
 		MyString strCmdLine = "condor_submit " + shallowOpts.strRemoteSchedd +
 					" " + shallowOpts.strSubFile;
 		int retval = system(strCmdLine.Value());

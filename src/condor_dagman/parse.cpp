@@ -346,11 +346,11 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
 		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
-	} else {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
-					"EXTERNAL is supported at this time\n", dagFile, lineNum);
-		return false;
 	}
+
+	debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
+				"EXTERNAL is supported at this time\n", dagFile, lineNum);
+	return false;
 }
 
 static bool 
@@ -456,7 +456,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	// If this is a "SUBDAG" line, generate the real submit file name.
 	MyString nestedDagFile("");
 	MyString dagSubmitFile(""); // must be outside if so it stays in scope
-	if ( !strcasecmp( nodeTypeKeyword, "SUBDAG" ) ) {
+	if ( strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH ) {
 			// Save original DAG file name (needed for rescue DAG).
 		nestedDagFile = submitFile;
 
@@ -465,13 +465,15 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		dagSubmitFile = submitFile;
 		dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
 		submitFile = dagSubmitFile.Value();
-	}
-
-	// If the submit file name ends in ".condor.sub", we assume that
-	// this node is a nested DAG, and set the DAG filename accordingly.
-	if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
+	} else if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
+			// If the submit file name ends in ".condor.sub", we assume
+			// that this node is a nested DAG, and set the DAG filename
+			// accordingly.
 		nestedDagFile = submitFile;
 		nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
+					"keyword for nested DAGs is deprecated; please "
+					"use SUBDAG EXTERNAL instead" );
 	}
 
 	// looks ok, so add it
@@ -1471,7 +1473,7 @@ parse_splice(
 							dag->SubmitDepthFirst(),
 							dag->DefaultNodeLog(),
 							dag->GenerateSubdagSubmits(),
-							NULL,
+							NULL, // this Dag will never submit a job
 							true); /* we are a splice! */
 	
 	// initialize whatever the DIR line was, or defaults to, here.

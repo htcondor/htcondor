@@ -54,6 +54,8 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		// so the lower-level .condor.sub file will get
 		// updated, in case it came from an earlier version
 		// of condor_submit_dag.
+//TEMPTEMP -- change to use ArgList?
+//TEMPTEMP -- see my_system in condor_c++_util/my_popen.h
 	MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
 
 		// Add in arguments we're passing along.
@@ -123,7 +125,8 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		// Now actually run the command.
 	int retval = system( cmdLine.Value() );
 	if ( retval != 0 ) {
-		dprintf( D_ALWAYS, "ERROR: condor_submit failed; aborting.\n" );
+		dprintf( D_ALWAYS, "ERROR: condor_submit_dag -no_submit "
+					"failed on DAG file %s.\n", dagFile );
 		result = 1;
 	}
 

@@ -1,5 +1,6 @@
 //TEMPTEMP -- doing gittrac #507 (lazy submit files) here
-//TEMPTEMP -- make sure all args get passed down...
+//TEMPTEMP -- create test where PRE script writes DAG file
+//TEMPTEMP -- maybe create a test that makes sure that values get passed down correctly...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -530,12 +531,6 @@ int main_init (int argc, char ** const argv) {
 				MIN_SUBMIT_FILE_VERSION.subMinorVer );
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		// This object must remain in existance the whole time the DAG
-		// is running, since we're just passing the pointer to the
-		// DAG object, and we're not actually copying the SubmitDagOptions
-		// object.
-	SubmitDagDeepOptions *submitDagDeepOpts = new SubmitDagDeepOptions();
-
     //
     // Process command-line arguments
     //
@@ -651,10 +646,10 @@ int main_init (int argc, char ** const argv) {
 			dagman.dumpRescueDag = true;
 
         } else if( !strcasecmp( "-verbose", argv[i] ) ) {
-			submitDagDeepOpts->bVerbose = true;
+			dagman._submitDagDeepOpts.bVerbose = true;
 
         } else if( !strcasecmp( "-force", argv[i] ) ) {
-			submitDagDeepOpts->bForce = true;
+			dagman._submitDagDeepOpts.bForce = true;
 		
         } else if( !strcasecmp( "-notification", argv[i] ) ) {
             i++;
@@ -662,7 +657,7 @@ int main_init (int argc, char ** const argv) {
                 debug_printf( DEBUG_SILENT, "No notification value specified\n" );
                 Usage();
             }
-			submitDagDeepOpts->strNotification = argv[i];
+			dagman._submitDagDeepOpts.strNotification = argv[i];
 
         } else if( !strcasecmp( "-dagman", argv[i] ) ) {
             i++;
@@ -670,7 +665,7 @@ int main_init (int argc, char ** const argv) {
                 debug_printf( DEBUG_SILENT, "No dagman value specified\n" );
                 Usage();
             }
-			submitDagDeepOpts->strDagmanPath = argv[i];
+			dagman._submitDagDeepOpts.strDagmanPath = argv[i];
 
         } else if( !strcasecmp( "-outfile_dir", argv[i] ) ) {
             i++;
@@ -678,13 +673,13 @@ int main_init (int argc, char ** const argv) {
                 debug_printf( DEBUG_SILENT, "No outfile_dir value specified\n" );
                 Usage();
             }
-			submitDagDeepOpts->strDebugDir = argv[i];
+			dagman._submitDagDeepOpts.strDebugDir = argv[i];
 
         } else if( !strcasecmp( "-update_submit", argv[i] ) ) {
-			submitDagDeepOpts->updateSubmit = true;
+			dagman._submitDagDeepOpts.updateSubmit = true;
 
         } else if( !strcasecmp( "-import_env", argv[i] ) ) {
-			submitDagDeepOpts->importEnv = true;
+			dagman._submitDagDeepOpts.importEnv = true;
 
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
@@ -904,14 +899,14 @@ int main_init (int argc, char ** const argv) {
 		// Fill in values in the deep submit options that we haven't
 		// already set.
 		//
-	submitDagDeepOpts->bAllowLogError = dagman.allowLogError;
-	submitDagDeepOpts->iDebugLevel = debug_level;
-	submitDagDeepOpts->useDagDir = dagman.useDagDir;
-	submitDagDeepOpts->oldRescue = dagman.rescueFileToWrite != NULL;//TEMP?
-	submitDagDeepOpts->autoRescue = dagman.autoRescue;
-	submitDagDeepOpts->doRescueFrom = dagman.doRescueFrom;
-	submitDagDeepOpts->allowVerMismatch = allowVerMismatch;
-	submitDagDeepOpts->recurse = false;
+	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
+	dagman._submitDagDeepOpts.iDebugLevel = debug_level;
+	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
+	dagman._submitDagDeepOpts.oldRescue = (dagman.rescueFileToWrite != NULL);//TEMP?
+	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
+	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
+	dagman._submitDagDeepOpts.allowVerMismatch = allowVerMismatch;
+	dagman._submitDagDeepOpts.recurse = false;
 
     //
     // Create the DAG
@@ -930,7 +925,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
 						  dagman._defaultNodeLog,
 						  dagman._generateSubdagSubmits,
-						  submitDagDeepOpts,
+						  &dagman._submitDagDeepOpts,
 						  false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {
