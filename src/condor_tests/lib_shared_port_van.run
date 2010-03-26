@@ -34,7 +34,6 @@ my $append_condor_config = '
 ';
 
 CondorTest::StartCondorWithParams(
-    condor_name => "local",
     append_condor_config => $append_condor_config
 );
 

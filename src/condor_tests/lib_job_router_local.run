@@ -40,7 +40,6 @@ JOB_ROUTER_POLLING_PERIOD = 10
 ';
 
 CondorTest::StartCondorWithParams(
-    condor_name => "local",
     append_condor_config => $append_condor_config
 );
 

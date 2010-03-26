@@ -1740,6 +1740,16 @@ sub KillAllPersonalCondors
     }
 }
 
+sub GenUniqueCondorName
+{
+    my $name = "condor";
+    my $num = 1;
+    while( exists $personal_condors{ $name . $num } ) {
+	$num = $num + 1;
+    }
+    return $name . $num;
+}
+
 sub GetPersonalCondorWithConfig
 {
     my $condor_config  = shift;
@@ -1776,10 +1786,13 @@ sub StartPersonal
 ##
 ## Starts up a personal condor that is configured as specified in
 ## the named arguments to this function.  The personal condor will
-## be automatically shut down in this module's END handler.
+## be automatically shut down in this module's END handler or
+## when EndTest() is called.
 ##
 ## Arguments:
-##  See arguments to CondorPersonal::StartCondorWithParams().
+##  condor_name - optional name to be associated with this personal condor
+##                (used in naming directories)
+##  For other arguments, see CondorPersonal::StartCondorWithParams().
 ##
 ## Returns:
 ##  A PersonalCondorInstance object that may be used to get such things
@@ -1790,7 +1803,15 @@ sub StartPersonal
 sub StartCondorWithParams
 {
     my %condor_params = @_;
-    my $condor_name = $condor_params{condor_name} || die "missing condor_name";
+    my $condor_name = $condor_params{condor_name} || "";
+    if( $condor_name eq "" ) {
+	$condor_name = GenUniqueCondorName();
+	$condor_params{condor_name} = $condor_name;
+    }
+
+    if( exists $personal_condors{$condor_name} ) {
+	die "condor_name=$condor_name already exists!";
+    }
 
     if( ! exists $condor_params{test_name} ) {
 	$condor_params{test_name} = GetDefaultTestName();

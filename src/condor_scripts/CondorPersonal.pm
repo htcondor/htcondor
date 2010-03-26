@@ -258,6 +258,24 @@ sub StartCondor
 	return StartCondorWithParams(%personal_condor_params);
 }
 
+############################################
+## StartCondorWithParams
+##
+## Starts up a personal condor that is configured as specified in
+## the named arguments to this function.  If you are using the
+## CondorTest framework, do not call this function directly.
+## Call CondorTest::StartCondorWithParams().
+##
+## Required Arguments:
+##  condor_name      - a descriptive name, used when generating directory names
+##
+## Optional Arguments:
+##  test_name            - name of the test that is using this personal condor
+##  append_condor_config - lines to be added to the (local) configuration file
+##  daemon_list          - list of condor daemons to run
+##
+##
+############################################
 sub StartCondorWithParams
 {
 	%personal_condor_params = @_;
