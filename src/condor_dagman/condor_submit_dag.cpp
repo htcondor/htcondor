@@ -32,6 +32,7 @@
 #include "condor_string.h" // for getline()
 #include "condor_version.h"
 #include "tmp_dir.h"
+#include "my_popen.h"
 
 
 #ifdef WIN32
@@ -361,10 +362,15 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 
 	if (shallowOpts.bSubmit)
 	{
-//TEMPTEMP -- use ArgList/my_system()?
-		MyString strCmdLine = "condor_submit " + shallowOpts.strRemoteSchedd +
-					" " + shallowOpts.strSubFile;
-		int retval = system(strCmdLine.Value());
+		ArgList args;
+		args.AppendArg( "condor_submit" );
+		if( shallowOpts.strRemoteSchedd != "" ) {
+			args.AppendArg( "-r" );
+			args.AppendArg( shallowOpts.strRemoteSchedd );
+		}
+		args.AppendArg( shallowOpts.strSubFile );
+
+		int retval = my_system( args );
 		if( retval != 0 ) {
 			fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
 			return 1;
@@ -909,7 +915,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-r argument needs a value\n");
 					printUsage();
 				}
-				shallowOpts.strRemoteSchedd = MyString("-r ") + argv[++iArg];
+				shallowOpts.strRemoteSchedd = argv[++iArg];
 			}
 			else if (strArg.find("-dagman") != -1)
 			{

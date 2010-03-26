@@ -21,6 +21,8 @@
 #include "dagman_recursive_submit.h"
 #include "MyString.h"
 #include "tmp_dir.h"
+#include "condor_arglist.h"
+#include "my_popen.h"
 
 //---------------------------------------------------------------------------
 /** Run condor_submit_dag on the given DAG file.
@@ -54,76 +56,82 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		// so the lower-level .condor.sub file will get
 		// updated, in case it came from an earlier version
 		// of condor_submit_dag.
-//TEMPTEMP -- change to use ArgList?
-//TEMPTEMP -- see my_system in condor_c++_util/my_popen.h
-	MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
+	ArgList args;
+	args.AppendArg( "condor_submit_dag" );
+	args.AppendArg( "-no_submit" );
+	args.AppendArg( "-update_submit" );
 
 		// Add in arguments we're passing along.
 	if ( deepOpts.bVerbose ) {
-		cmdLine += "-verbose ";
+		args.AppendArg( "-verbose" );
 	}
 
 	if ( deepOpts.bForce ) {
-		cmdLine += "-force ";
+		args.AppendArg( "-force" );
 	}
 
 	if (deepOpts.strNotification != "" ) {
-		cmdLine += MyString( "-notification " ) +
-					deepOpts.strNotification.Value() + " ";
+		args.AppendArg( "-notification" );
+		args.AppendArg( deepOpts.strNotification.Value() );
 	}
 
 	if ( deepOpts.strDagmanPath != "" ) {
-		cmdLine += MyString( "-dagman " ) +
-				deepOpts.strDagmanPath.Value() + " ";
+		args.AppendArg( "-dagman" );
+		args.AppendArg( deepOpts.strDagmanPath.Value() );
 	}
 
-	cmdLine += MyString( "-debug " ) + deepOpts.iDebugLevel + " ";
+	args.AppendArg( "-debug" );
+	args.AppendArg( deepOpts.iDebugLevel );
 
 	if ( deepOpts.bAllowLogError ) {
-		cmdLine += "-allowlogerror ";
+		args.AppendArg( "-allowlogerror" );
 	}
 
 	if ( deepOpts.useDagDir ) {
-		cmdLine += "-usedagdir ";
+		args.AppendArg( "-usedagdir" );
 	}
 
 	if ( deepOpts.strDebugDir != "" ) {
-		cmdLine += MyString( "-outfile_dir " ) + 
-				deepOpts.strDebugDir.Value() + " ";
+		args.AppendArg( "-outfile_dir" );
+		args.AppendArg( deepOpts.strDebugDir.Value() );
 	}
 
-	cmdLine += MyString( "-oldrescue " ) + deepOpts.oldRescue + " ";
+	args.AppendArg( "-oldrescue" );
+	args.AppendArg( deepOpts.oldRescue );
 
-	cmdLine += MyString( "-autorescue " ) + deepOpts.autoRescue + " ";
+	args.AppendArg( "-autorescue" );
+	args.AppendArg( deepOpts.autoRescue );
 
 	if ( deepOpts.doRescueFrom != 0 ) {
-		cmdLine += MyString( "-dorescuefrom " ) +
-				deepOpts.doRescueFrom + " ";
+		args.AppendArg( "-dorescuefrom" );
+		args.AppendArg( deepOpts.doRescueFrom );
 	}
 
 	if ( deepOpts.allowVerMismatch ) {
-		cmdLine += "-allowver ";
+		args.AppendArg( "-allowver" );
 	}
 
 	if ( deepOpts.importEnv ) {
-		cmdLine += "-import_env ";
+		args.AppendArg( "-import_env" );
 	}
 
 	if ( deepOpts.recurse ) {
-		cmdLine += "-do_recurse ";
+		args.AppendArg( "-do_recurse" );
 	}
 
 	if ( deepOpts.updateSubmit ) {
-		cmdLine += "-update_submit ";
+		args.AppendArg( "-update_submit" );
 	}
 
-	cmdLine += dagFile;
+	args.AppendArg( dagFile );
 
-	dprintf( D_FULLDEBUG, "Recursive submit command: <%s>\n",
+	MyString cmdLine;
+	args.GetArgsStringForDisplay( &cmdLine );
+	dprintf( D_ALWAYS, "Recursive submit command: <%s>\n",
 				cmdLine.Value() );
 
 		// Now actually run the command.
-	int retval = system( cmdLine.Value() );
+	int retval = my_system( args );
 	if ( retval != 0 ) {
 		dprintf( D_ALWAYS, "ERROR: condor_submit_dag -no_submit "
 					"failed on DAG file %s.\n", dagFile );

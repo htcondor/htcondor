@@ -902,7 +902,7 @@ int main_init (int argc, char ** const argv) {
 	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
 	dagman._submitDagDeepOpts.iDebugLevel = debug_level;
 	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
-	dagman._submitDagDeepOpts.oldRescue = (dagman.rescueFileToWrite != NULL);//TEMP?
+	dagman._submitDagDeepOpts.oldRescue = (dagman.rescueFileToWrite != NULL);//TEMPTEMP?
 	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
 	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
 	dagman._submitDagDeepOpts.allowVerMismatch = allowVerMismatch;

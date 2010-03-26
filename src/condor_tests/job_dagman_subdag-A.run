@@ -23,6 +23,7 @@ use CondorTest;
 $cmd = 'job_dagman_subdag-A-upper.dag';
 $testdesc =  'Condor submit dag - basic splice test - scheduler U';
 $testname = "job_dagman_subdag-A";
+#TEMPTEMP -- pass all "deep" args here...
 $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_subdag-A-lower1-node.B", 
