@@ -1328,6 +1328,71 @@ daemon::Reconfig()
 	Kill( SIGHUP );
 }
 
+
+void
+daemon::InitParams()
+{
+	char* buf;
+	char* tmp = NULL;
+
+	if( process_name ) {
+		tmp = process_name;
+	}
+	process_name = param(name_in_config_file);
+	if( !process_name ) {
+		dprintf( D_ALWAYS, 
+				"%s from your DAEMON_LIST is not defined in the config files!\n", 
+				name_in_config_file ); 
+		EXCEPT( "Must have the path to %s defined.", name_in_config_file ); 
+	}
+	if( tmp && strcmp(process_name, tmp) ) {
+			// The path to this daemon has changed in the config
+			// file, we will need to start the new version.
+		newExec = TRUE;
+	}
+	if (tmp) {
+		free( tmp );
+		tmp = NULL;
+	}
+	if( watch_name ) {
+		tmp = watch_name;
+	}
+			
+	int length = strlen(name_in_config_file) + 32;
+	buf = (char *)malloc(length);
+	snprintf( buf, length, "%s_WATCH_FILE", name_in_config_file );
+	watch_name = param( buf );
+	free(buf);
+	if( !watch_name) {
+		watch_name = strdup(process_name);
+	} 
+
+	if( tmp && strcmp(watch_name, tmp) ) {
+		// tmp is what the old watch_name was 
+		// The path to what we're watching has changed in the 
+		// config file, we will need to start the new version.
+		timeStamp = 0;
+	}
+
+	if (tmp) {
+		free( tmp );
+		tmp = NULL;
+	}
+
+		// check that log file is necessary
+	if ( log_filename_in_config_file != NULL) {
+		if( log_name ) {
+			free( log_name );
+		}
+		log_name = param(log_filename_in_config_file);
+		if ( log_name == NULL && runs_here ) {
+			dprintf(D_ALWAYS, "Log file not found in config file: %s\n", 
+					log_filename_in_config_file);
+		}
+	}
+}
+
+
 int
 daemon::SetupHighAvailability( void )
 {
@@ -1505,9 +1570,6 @@ daemon::RegisterControllee( class daemon *controllee )
 
 Daemons::Daemons()
 {
-	daemon_ptr = NULL;
-	no_daemons  =  0;
-	daemon_list_size = 0;
 	check_new_exec_tid = -1;
 	update_tid = -1;
 	preen_tid = -1;
@@ -1523,38 +1585,25 @@ Daemons::Daemons()
 void
 Daemons::RegisterDaemon(class daemon *d)
 {
-	int i;
-	if( !daemon_ptr ) {
-		daemon_list_size = 10;
-		daemon_ptr = (class daemon **) malloc(daemon_list_size * sizeof(class daemon *));
-		for( i=0; i<daemon_list_size; i++ ) {
-			daemon_ptr[i] = NULL;
-		}
-	}
+	std::pair<std::map<std::string,class daemon*>::iterator,bool> ret;
 
-	if (no_daemons >= daemon_list_size) {
-		i = daemon_list_size;
-		daemon_list_size *= 2;
-		daemon_ptr = (class daemon **) realloc(daemon_ptr, 
-										daemon_list_size * sizeof(class daemon *));
-		for( ; i<daemon_list_size; i++ ) {
-			daemon_ptr[i] = NULL;
-		}
-
+	ret = daemon_ptr.insert( std::pair<char*, class daemon*>(d->name_in_config_file, d) );
+	if( ret.second == false ) {
+		EXCEPT( "Registering daemon %s failed", d->name_in_config_file );
 	}
-	daemon_ptr[no_daemons] = d;
-	no_daemons++;
 }
 
 int
 Daemons::SetupControllers( void )
 {
 	// Find controlling daemons
-	for( int i=0; i < no_daemons; i++ ) {
-		if ( daemon_ptr[i]->SetupController( ) < 0 ) {
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if ( iter->second->SetupController( ) < 0 ) {
 			dprintf( D_ALWAYS,
 					 "SetupControllers: Setup for daemon %s failed\n",
-					 daemon_ptr[i]->daemon_name );
+					 iter->first.c_str() );
 			return -1;
 		}
 	}
@@ -1564,89 +1613,25 @@ Daemons::SetupControllers( void )
 void
 Daemons::InitParams()
 {
-	char* buf;
-	char* tmp = NULL;
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->process_name ) {
-			tmp = daemon_ptr[i]->process_name;
-		}
-		daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
-		if( !daemon_ptr[i]->process_name ) {
-			dprintf( D_ALWAYS, 
-					 "%s from your DAEMON_LIST is not defined the config files!\n", 
-					 daemon_ptr[i]->name_in_config_file ); 
-			EXCEPT( "Must have the path to %s defined.", 
-					daemon_ptr[i]->name_in_config_file ); 
-		}
-		if( tmp && strcmp(daemon_ptr[i]->process_name, tmp) ) {
-				// The path to this daemon has changed in the config
-				// file, we will need to start the new version.
-			daemon_ptr[i]->newExec = TRUE;
-		}
-		if (tmp) {
-			free( tmp );
-			tmp = NULL;
-		}
-		if( daemon_ptr[i]->watch_name ) {
-			tmp = daemon_ptr[i]->watch_name;
-		}
-			
-		int length = strlen(daemon_ptr[i]->name_in_config_file) + 32;
-		buf = (char *)malloc(length);
-		snprintf( buf, length, "%s_WATCH_FILE", 
-				daemon_ptr[i]->name_in_config_file );
-		daemon_ptr[i]->watch_name = param( buf );
-		free(buf);
-		if( !daemon_ptr[i]->watch_name)	{
-			daemon_ptr[i]->watch_name = strdup(daemon_ptr[i]->process_name);
-		} 
+	std::map<std::string, class daemon*>::iterator iter;
 
-		if( tmp && strcmp(daemon_ptr[i]->watch_name, tmp) ) {
-			// tmp is what the old watch_name was 
-			// The path to what we're watching has changed in the 
-			// config file, we will need to start the new version.
-			daemon_ptr[i]->timeStamp = 0;
-		}
-
-		if (tmp) {
-			free( tmp );
-			tmp = NULL;
-		}
-
-			// check that log file is necessary
-		if ( daemon_ptr[i]->log_filename_in_config_file != NULL) {
-			if( daemon_ptr[i]->log_name ) {
-				free( daemon_ptr[i]->log_name );
-			}
-			daemon_ptr[i]->log_name = 
-					param(daemon_ptr[i]->log_filename_in_config_file);
-			if ( daemon_ptr[i]->log_name == NULL && daemon_ptr[i]->runs_here ) {
-				dprintf(D_ALWAYS, "Log file not found in config file: %s\n", 
-						daemon_ptr[i]->log_filename_in_config_file);
-			}
-		}
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		iter->second->InitParams();
 	}
-}
-
-
-int
-Daemons::GetIndex(const char* name)
-{
-	for ( int i=0; i < no_daemons; i++)
-		if ( strcmp(daemon_ptr[i]->name_in_config_file,name) == 0 )
-			return i;	
-	return -1;
 }
 
 
 class daemon *
 Daemons::FindDaemon( const char *name )
 {
-	int		index = GetIndex( name );
-	if ( index < 0 ) {
+	std::map<std::string, class daemon*>::iterator iter;
+
+	iter = daemon_ptr.find(name);
+	if( iter != daemon_ptr.end() ) {
+		return iter->second;
+	}
+	else {
 		return NULL;
-	} else {
-		return daemon_ptr[index];
 	}
 }
 
@@ -1655,36 +1640,36 @@ void
 Daemons::CheckForNewExecutable()
 {
 	int found_new = FALSE;
+	std::map<std::string, class daemon*>::iterator iter;
 
 	dprintf(D_FULLDEBUG, "enter Daemons::CheckForNewExecutable\n");
 
-	if( daemon_ptr[master]->newExec ) {
+	if( master->newExec ) {
 			// We already noticed the master has a new binary, so we
 			// already started to restart it.  There's nothing else to
 			// do here.
 		return;
 	}
-    if( NewExecutable( daemon_ptr[master]->watch_name,
-					   &daemon_ptr[master]->timeStamp ) ) {
+	if( NewExecutable( master->watch_name, &master->timeStamp ) ) {
 		dprintf( D_ALWAYS,"%s was modified, restarting %s.\n", 
-				 daemon_ptr[master]->watch_name, 
-				 daemon_ptr[master]->process_name );
-		daemon_ptr[master]->newExec = TRUE;
+				 master->watch_name, 
+				 master->process_name );
+		master->newExec = TRUE;
 			// Begin the master restart procedure.
 		
-        RestartMaster();
+		RestartMaster();
 		return;
-    }
+	}
 
-    for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->runs_here && !daemon_ptr[i]->newExec 
-			&& ! daemon_ptr[i]->OnHold()
-			&& !daemon_ptr[i]->OnlyStopWhenMasterStops())
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->runs_here && !iter->second->newExec 
+			&& !iter->second->OnHold()
+			&& !iter->second->OnlyStopWhenMasterStops() )
 		{
-			if( NewExecutable( daemon_ptr[i]->watch_name,
-							   &daemon_ptr[i]->timeStamp ) ) {
+			if( NewExecutable( iter->second->watch_name,
+						&iter->second->timeStamp ) ) {
 				found_new = TRUE;
-				daemon_ptr[i]->newExec = TRUE;				
+				iter->second->newExec = TRUE;
 				if( immediate_restart ) {
 						// If we want to avoid the new_binary_delay,
 						// we can just set the newExec flag to false,
@@ -1692,22 +1677,22 @@ Daemons::CheckForNewExecutable()
 						// When it gets restarted, the new binary will
 						// be used, but we won't think it's a new
 						// binary, so we won't use the new_bin_delay.
-					daemon_ptr[i]->newExec = FALSE;
-					daemon_ptr[i]->restarts = 0;
+					iter->second->newExec = FALSE;
+					iter->second->restarts = 0;
 				}
-				if( daemon_ptr[i]->pid ) {
+				if( iter->second->pid ) {
 					dprintf( D_ALWAYS,"%s was modified, killing %s.\n", 
-							 daemon_ptr[i]->watch_name,
-							 daemon_ptr[i]->process_name );
-					daemon_ptr[i]->Stop();
+							 iter->second->watch_name,
+							 iter->second->process_name );
+					iter->second->Stop();
 				} else {
 					if( immediate_restart ) {
 							// This daemon isn't running now, but
 							// there's a new binary.  Cancel the
 							// current start timer and restart it
 							// now. 
-						daemon_ptr[i]->CancelAllTimers();
-						daemon_ptr[i]->Restart();
+						iter->second->CancelAllTimers();
+						iter->second->Restart();
 					}
 				}
 			}
@@ -1789,9 +1774,17 @@ Daemons::RetryStartAllDaemons()
 void
 Daemons::StartAllDaemons()
 {
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid > 0 ) {
-			if( daemon_ptr[i]->WaitBeforeStartingOtherDaemons(false) ) {
+	char *name;
+	class daemon *daemon;
+
+	ordered_daemon_names.rewind();
+	while( (name = ordered_daemon_names.next()) ) {
+		daemon = FindDaemon( name );
+		if( daemon == NULL ) {
+			EXCEPT("Unable to start daemon %s", name);
+		}
+		if( daemon->pid > 0 ) {
+			if( daemon->WaitBeforeStartingOtherDaemons(false) ) {
 				ScheduleRetryStartAllDaemons();
 				return;
 			}
@@ -1799,11 +1792,11 @@ Daemons::StartAllDaemons()
 				// the daemon is already started
 			continue;
 		} 
-		if( ! daemon_ptr[i]->runs_here ) continue;
-		daemon_ptr[i]->Hold( FALSE );
-		daemon_ptr[i]->Start();
+		if( ! daemon->runs_here ) continue;
+		daemon->Hold( FALSE );
+		daemon->Start();
 
-		if( daemon_ptr[i]->WaitBeforeStartingOtherDaemons(true) ) {
+		if( daemon->WaitBeforeStartingOtherDaemons(true) ) {
 			ScheduleRetryStartAllDaemons();
 			return;
 		}
@@ -1817,11 +1810,13 @@ Daemons::StopAllDaemons()
 	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
-			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->pid && iter->second->runs_here &&
+			!iter->second->OnlyStopWhenMasterStops() )
 		{
-			daemon_ptr[i]->Stop();
+			iter->second->Stop();
 			running++;
 		}
 	}
@@ -1832,16 +1827,32 @@ Daemons::StopAllDaemons()
 
 
 void
+Daemons::StopDaemon( char* name )
+{
+	std::map<std::string, class daemon*>::iterator iter;
+
+	iter = daemon_ptr.find( name );
+	if( iter != daemon_ptr.end() ) {
+		exit_allowed.insert( std::pair<int, class daemon*>(iter->second->pid, iter->second) );
+		daemon_ptr.erase( iter );
+		iter->second->Stop();
+	}
+}
+
+
+void
 Daemons::StopFastAllDaemons()
 {
 	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
-			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->pid && iter->second->runs_here &&
+			!iter->second->OnlyStopWhenMasterStops() )
 		{
-			daemon_ptr[i]->StopFast();
+			iter->second->StopFast();
 			running++;
 		}
 	}
@@ -1856,11 +1867,13 @@ Daemons::StopPeacefulAllDaemons()
 	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
-			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->pid && iter->second->runs_here &&
+			!iter->second->OnlyStopWhenMasterStops() )
 		{
-			daemon_ptr[i]->StopPeaceful();
+			iter->second->StopPeaceful();
 			running++;
 		}
 	}
@@ -1876,11 +1889,13 @@ Daemons::HardKillAllDaemons()
 	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here &&
-			!daemon_ptr[i]->OnlyStopWhenMasterStops() )
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->pid && iter->second->runs_here &&
+			!iter->second->OnlyStopWhenMasterStops() )
 		{
-			daemon_ptr[i]->HardKill();
+			iter->second->HardKill();
 			running++;
 		}
 	}
@@ -1892,10 +1907,12 @@ Daemons::HardKillAllDaemons()
 void
 Daemons::ReconfigAllDaemons()
 {
+	std::map<std::string, class daemon*>::iterator iter;
 	dprintf( D_ALWAYS, "Reconfiguring all running daemons.\n" );
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
-			daemon_ptr[i]->Reconfig();
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->pid && iter->second->runs_here ) {
+			iter->second->Reconfig();
 		}
 	}
 }
@@ -1905,14 +1922,13 @@ void
 Daemons::InitMaster()
 {
 		// initialize master data structure
-	master = GetIndex("MASTER");
-	if ( master == -1 ) {
+	master = FindDaemon("MASTER");
+	if ( master == NULL ) {
 		EXCEPT("InitMaster: MASTER not Specified");
 	}
-	daemon_ptr[master]->timeStamp = 
-		GetTimeStamp(daemon_ptr[master]->watch_name);
-	daemon_ptr[master]->startTime = time(0);
-	daemon_ptr[master]->pid = daemonCore->getpid();
+	master->timeStamp = GetTimeStamp(master->watch_name);
+	master->startTime = time(0);
+	master->pid = daemonCore->getpid();
 }
 
 
@@ -1972,7 +1988,7 @@ Daemons::CleanupBeforeRestart()
 		// Release file lock on the log file.
 	if ( MasterLock->release() == FALSE ) {
 		dprintf( D_ALWAYS,
-				 "Can't remove lock on \"%s\"\n",daemon_ptr[master]->log_name);
+				 "Can't remove lock on \"%s\"\n",master->log_name);
 		EXCEPT( "file_lock(%d)", MasterLockFD );
 	}
 	(void)close( MasterLockFD );
@@ -2043,7 +2059,7 @@ Daemons::ExecMaster()
 	}
 	argv[i++] = NULL;
 
-	(void)execv(daemon_ptr[master]->process_name, argv);
+	(void)execv(master->process_name, argv);
 
 	free(argv);
 }
@@ -2086,7 +2102,7 @@ Daemons::FinalRestartMaster()
 #endif
 		} else {
 			dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
-				 daemon_ptr[master]->process_name);
+				 master->process_name);
 
 				// It is important to switch to ROOT_PRIV, in case we are
 				// executing a master wrapper script that expects to be
@@ -2097,12 +2113,12 @@ Daemons::FinalRestartMaster()
 
 			set_priv(saved_priv);
 		}
-		daemon_ptr[master]->restarts++;
-		if ( NT_ServiceFlag == TRUE && daemon_ptr[master]->restarts > 7 ) {
+		master->restarts++;
+		if ( NT_ServiceFlag == TRUE && master->restarts > 7 ) {
 			dprintf(D_ALWAYS,"Unable to restart Condor service, aborting.\n");
 			master_exit(1);
 		}
-		i = daemon_ptr[master]->NextStart();
+		i = master->NextStart();
 		dprintf( D_ALWAYS, 
 				 "Cannot execute condor_master (errno=%d), will try again in %d seconds\n", 
 				 errno, i );
@@ -2113,12 +2129,14 @@ Daemons::FinalRestartMaster()
 
 char* Daemons::DaemonLog( int pid )
 {
+	std::map<std::string, class daemon*>::iterator iter;
+
 	// be careful : a pointer to data in this class is returned
 	// posibility of getting tampered
-
-	for ( int i=0; i < no_daemons; i++)
-		if ( daemon_ptr[i]->pid == pid )
-			return (daemon_ptr[i]->log_name);
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if ( iter->second->pid == pid )
+			return (iter->second->log_name);
+	}
 	return "Unknown Program!!!";
 }
 
@@ -2143,9 +2161,11 @@ Daemons::SignalAll( int signal )
 int Daemons::NumberOfChildren()
 {
 	int result = 0;
-	for( int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here && daemon_ptr[i]->pid
-			&& !daemon_ptr[i]->OnlyStopWhenMasterStops() ) {
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->runs_here && iter->second->pid
+			&& !iter->second->OnlyStopWhenMasterStops() ) {
 			result++;
 		}
 	}
@@ -2157,16 +2177,30 @@ int Daemons::NumberOfChildren()
 int
 Daemons::AllReaper(int pid, int status)
 {
+	std::map<std::string, class daemon*>::iterator iter;
+	std::map<int, class daemon*>::iterator valid_iter;
+
 		// find out which daemon died
-	for( int i=0; i < no_daemons; i++) {
-		if( pid == daemon_ptr[i]->pid ) {
-			daemon_ptr[i]->Exited( status );
+	valid_iter = exit_allowed.find(pid);
+	if( valid_iter != exit_allowed.end() ) {
+		valid_iter->second->Exited( status );
+		exit_allowed.erase( valid_iter );
+		if( NumberOfChildren() == 0 ) {
+			AllDaemonsGone();
+		}
+		return TRUE;
+	}
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( pid == iter->second->pid ) {
+			iter->second->Exited( status );
 			if( NumberOfChildren() == 0 ) {
 				AllDaemonsGone();
 			}
 			return TRUE;
 		}
 	}
+
 	return TRUE;
 }
 
@@ -2174,13 +2208,23 @@ Daemons::AllReaper(int pid, int status)
 int
 Daemons::DefaultReaper(int pid, int status)
 {
-	for( int i=0; i < no_daemons; i++) {
-		if( pid == daemon_ptr[i]->pid ) {
-			daemon_ptr[i]->Exited( status );
+	std::map<std::string, class daemon*>::iterator iter;
+	std::map<int, class daemon*>::iterator valid_iter;
+
+	valid_iter = exit_allowed.find(pid);
+	if( valid_iter != exit_allowed.end() ) {
+		valid_iter->second->Exited( status );
+		exit_allowed.erase(valid_iter);
+		return TRUE;
+	}
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( pid == iter->second->pid ) {
+			iter->second->Exited( status );
 			if( PublishObituaries ) {
-				daemon_ptr[i]->Obituary( status );
+				iter->second->Obituary( status );
 			}
-			daemon_ptr[i]->Restart();
+			iter->second->Restart();
 			return TRUE;
 		}
 	}
@@ -2234,11 +2278,13 @@ Daemons::StopDaemonsBeforeMasterStops()
 		// now shut down all the daemons that should only stop right
 		// before the master stops
 	int running = 0;
-	for( int i=no_daemons; i--; ) {
-		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() )
-			&& daemon_ptr[i]->runs_here )
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( ( iter->second->pid || iter->second->IsHA() )
+			&& iter->second->runs_here )
 		{
-			daemon_ptr[i]->Stop();
+			iter->second->Stop();
 			running++;
 		}
 	}
@@ -2359,21 +2405,23 @@ void
 Daemons::Update( ClassAd* ca ) 
 {
 	char buf[128];
-	for( int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here || i == master ) {
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->runs_here || iter->second == master ) {
 			sprintf( buf, "%s_Timestamp = %ld", 
-					 daemon_ptr[i]->name_in_config_file, 	
-					 (long)daemon_ptr[i]->timeStamp );
+					 iter->second->name_in_config_file, 	
+					 (long)iter->second->timeStamp );
 			ca->Insert( buf );
-			if( daemon_ptr[i]->pid ) {
+			if( iter->second->pid ) {
 				sprintf( buf, "%s_StartTime = %ld", 
-						 daemon_ptr[i]->name_in_config_file, 	
-						 (long)daemon_ptr[i]->startTime );
+						 iter->second->name_in_config_file, 	
+						 (long)iter->second->startTime );
 				ca->Insert( buf );
 			} else {
 					// No pid, but daemon's supposed to be running.
 				sprintf( buf, "%s_StartTime = 0", 
-						 daemon_ptr[i]->name_in_config_file );
+						 iter->second->name_in_config_file );
 				ca->Insert( buf );
 			}
 		}
@@ -2414,9 +2462,11 @@ Daemons::UpdateCollector()
 class daemon*
 Daemons::FindDaemon( daemon_t dt )
 {
-	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->type == dt ) {
-			return daemon_ptr[i];
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->type == dt ) {
+			return iter->second;
 		}
 	}
 	return NULL;
@@ -2426,6 +2476,8 @@ Daemons::FindDaemon( daemon_t dt )
 void
 Daemons::CancelRestartTimers( void )
 {
+	std::map<std::string, class daemon*>::iterator iter;
+
 		// We don't need to be checking for new executables anymore. 
 	if( check_new_exec_tid != -1 ) {
 		daemonCore->Cancel_Timer( check_new_exec_tid );
@@ -2437,7 +2489,7 @@ Daemons::CancelRestartTimers( void )
 	}
 
 		// Finally, cancel the start/restart timers for each daemon.  
-	for( int i=0; i < no_daemons; i++ ) {
-		daemon_ptr[i]->CancelRestartTimers();
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		iter->second->CancelRestartTimers();
 	}
 }
