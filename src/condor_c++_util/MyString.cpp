@@ -232,18 +232,24 @@ MyString::operator+=(const char *s)
 void
 MyString::append_str( const char *s, int s_len )
 {
-	bool bCopySelf=false;
+	char * pCopy=0;
 
 	if (s == Data)
-		bCopySelf = true;
+	{
+		pCopy = (char *) new char[s_len+1];
+		strcpy(pCopy,s);
+	}
 	
     if( s_len + Len > capacity || !Data )
     {
 		reserve_at_least( Len + s_len );
     }
 
-	if (bCopySelf)
-		strcpy( Data + Len, Data); // b/c you invalided s w/reserve_at_least
+	if (pCopy)
+	{
+		strcpy( Data + Len, pCopy); // b/c you invalided s w/reserve_at_least
+		delete [] pCopy; 
+	}
 	else
 		strcpy( Data + Len, s);
 
@@ -252,7 +258,7 @@ MyString::append_str( const char *s, int s_len )
 
 void
 MyString::append_to_list(char const *str,char const *delim /* = "," */) {
-	if(str == NULL || str[0] == NULL) {
+	if(str == NULL || str[0] == 0) {
 		return;
 	}
 	if( Len ) {
