@@ -43,7 +43,7 @@ my $append_condor_config = '
 # Since it is started last, CONDOR_CONFIG points to it.
 CondorTest::StartCondorWithParams(
     condor_name => "poolA",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD, NEGOTIATOR",
+    daemon_list => "MASTER, COLLECTOR, SCHEDD",
     append_condor_config => $append_condor_config
 );
 
