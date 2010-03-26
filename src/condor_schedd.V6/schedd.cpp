@@ -4444,6 +4444,12 @@ Scheduler::actOnJobs(int, Stream* s)
 	for( i=0; i<num_matches; i++ ) {
 		enqueueActOnJobMyself( jobs[i], action, notify );
 	}
+
+		// In case we have removed jobs that were queued to run, scan
+		// our matches and either remove them or pick a different job
+		// to run on them.
+	ExpediteStartJobs();
+
 	return TRUE;
 }
 
