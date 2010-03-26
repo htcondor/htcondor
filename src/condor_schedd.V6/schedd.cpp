@@ -339,12 +339,19 @@ match_rec::setStatus( int stat )
 {
 	status = stat;
 	entered_current_status = (int)time(0);
-	if( status == M_CLAIMED ||
-		status == M_STARTD_CONTACT_LIMBO ) {
-			// We may have successfully claimed this startd, so we need to
+	if( status == M_CLAIMED ) {
+			// We have successfully claimed this startd, so we need to
 			// release it later.
 		needs_release_claim = true;
 	}
+		// We do NOT send RELEASE_CLAIM while in M_STARTD_CONTACT_LIMBO,
+		// because then we could destroy a claim that some other schedd
+		// has a prior claim to (e.g. if the negotiator has a stale view
+		// of the world and hands out the same claim id to different schedds
+		// in different negotiation cycles).  When we are in limbo and the
+		// claim object is deleted, cleanup should happen automatically
+		// on the startd side anyway, because it will see our REQUEST_CLAIM
+		// socket disconnect.
 }
 
 
@@ -5612,10 +5619,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	match->claim_requester = NULL;
 
 	if( !msg->claimed_startd_success() ) {
-			// If we were unsuccessful, we must avoid trying to
-			// release the claim as it may evict some other Schedd's
-			// job.
-		match->needs_release_claim = false;
 		scheduler.DelMrec(match);
 		return;
 	}
