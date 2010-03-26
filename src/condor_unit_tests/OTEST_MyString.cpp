@@ -4320,7 +4320,7 @@ static bool sensitive_string_equality_default_constructor(void) {
 		return false;
 	}
 	e.emit_result_success(__LINE__);
-	return false;
+	return true;
 }
 
 
@@ -4408,6 +4408,6 @@ static bool sensitive_string_hash_function_empty(void) {
 		return false;
 	}
 	e.emit_result_success(__LINE__);
-	return false;
+	return true;
 }
 
