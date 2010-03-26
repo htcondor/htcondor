@@ -1110,7 +1110,6 @@ static bool random_string_length_zero(void) {
 
 static bool random_string_negative_length(void) {
 	e.emit_test("Does randomlyGenerate() work when passed a negative length?");
-	e.emit_problem("Fails when passed smaller lengths!");
 	MyString rnd;
 	rnd.randomlyGenerate("0123", -1);
 	e.emit_input_header();

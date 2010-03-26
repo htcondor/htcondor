@@ -646,8 +646,9 @@ MyString::randomlyGenerate(const char *set, int len)
 	int idx;
 	int set_len;
 
-    if (!set) {
+    if (!set || len <= 0) {
 		// passed in NULL set, so automatically MyString is empty
+		// or told the string size is negative or nothing, again empty string.
 		if (Data) {
 			Data[0] = '\0';
 		}
