@@ -5606,10 +5606,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	match->claim_requester = NULL;
 
 	if( !msg->claimed_startd_success() ) {
-			// If we were unsuccessful, we must avoid trying to
-			// release the claim as it may evict some other Schedd's
-			// job.
-		match->needs_release_claim = false;
 		scheduler.DelMrec(match);
 		return;
 	}
