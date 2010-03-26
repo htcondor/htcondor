@@ -152,6 +152,15 @@ proxy, which was the previous behavior.
 % gittrac #1070
 \item Fixed a bug that could cause the nordugrid\_gahp to crash.
 
+% gittrac #742
+\item Fixed a problem introduced in 7.4.0 that could cause two schedds
+  with a match to the same slot to both fail to claim it, rather than
+  letting the first one to claim it succeed.  This sort of situation
+  can happen when the \Condor{negotiator} has a stale view of the pool,
+  either because the gap between negotiation cycles is configured to
+  be shorter than usual, or updates from \Condor{startd} to \Condor{collector}
+  are not reliably delivered and processed.
+
 \end{itemize}
 
 \noindent Known Bugs:
