@@ -929,6 +929,11 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 
 void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
+	if (param_boolean("IGNORE_INVALIDATE", false)) {
+		dprintf(D_ALWAYS, "Ignoring invalidate (IGNORE_INVALIDATE=TRUE)\n");
+		return;
+	}
+
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
