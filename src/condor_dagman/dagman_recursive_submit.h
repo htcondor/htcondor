@@ -92,7 +92,7 @@ struct SubmitDagDeepOptions
 	int iDebugLevel;
 	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
-	MyString strDebugDir;
+	MyString strOutfileDir;
 	bool oldRescue;
 	bool autoRescue;
 	int doRescueFrom;

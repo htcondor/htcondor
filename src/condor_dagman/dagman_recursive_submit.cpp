@@ -91,9 +91,9 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( "-usedagdir" );
 	}
 
-	if ( deepOpts.strDebugDir != "" ) {
+	if ( deepOpts.strOutfileDir != "" ) {
 		args.AppendArg( "-outfile_dir" );
-		args.AppendArg( deepOpts.strDebugDir.Value() );
+		args.AppendArg( deepOpts.strOutfileDir.Value() );
 	}
 
 	args.AppendArg( "-oldrescue" );

@@ -279,8 +279,8 @@ setUpOptions( SubmitDagDeepOptions &deepOpts,
 	shallowOpts.strLibOut = shallowOpts.primaryDagFile + ".lib.out";
 	shallowOpts.strLibErr = shallowOpts.primaryDagFile + ".lib.err";
 
-	if ( deepOpts.strDebugDir != "" ) {
-		shallowOpts.strDebugLog = deepOpts.strDebugDir + DIR_DELIM_STRING +
+	if ( deepOpts.strOutfileDir != "" ) {
+		shallowOpts.strDebugLog = deepOpts.strOutfileDir + DIR_DELIM_STRING +
 					condor_basename( shallowOpts.primaryDagFile.Value() );
 	} else {
 		shallowOpts.strDebugLog = shallowOpts.primaryDagFile;
@@ -766,9 +766,9 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(deepOpts.strDagmanPath);
 	}
 
-	if(deepOpts.strDebugDir != "") {
+	if(deepOpts.strOutfileDir != "") {
 		args.AppendArg("-Outfile_dir");
-		args.AppendArg(deepOpts.strDebugDir);
+		args.AppendArg(deepOpts.strOutfileDir);
 	}
 
 	if(deepOpts.updateSubmit) {
@@ -951,7 +951,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-outfile_dir argument needs a value\n");
 					printUsage();
 				}
-				deepOpts.strDebugDir = argv[++iArg];
+				deepOpts.strOutfileDir = argv[++iArg];
 			}
 			else if (strArg.find("-con") != -1) // -config
 			{

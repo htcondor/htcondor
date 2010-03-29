@@ -1,5 +1,3 @@
-//TEMPTEMP -- doing gittrac #507 (lazy submit files) here
-//TEMPTEMP -- maybe create a test that makes sure that values get passed down correctly...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -672,7 +670,7 @@ int main_init (int argc, char ** const argv) {
                 debug_printf( DEBUG_SILENT, "No outfile_dir value specified\n" );
                 Usage();
             }
-			dagman._submitDagDeepOpts.strDebugDir = argv[i];
+			dagman._submitDagDeepOpts.strOutfileDir = argv[i];
 
         } else if( !strcasecmp( "-update_submit", argv[i] ) ) {
 			dagman._submitDagDeepOpts.updateSubmit = true;
@@ -901,7 +899,8 @@ int main_init (int argc, char ** const argv) {
 	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
 	dagman._submitDagDeepOpts.iDebugLevel = debug_level;
 	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
-	dagman._submitDagDeepOpts.oldRescue = (dagman.rescueFileToWrite != NULL);//TEMPTEMP?
+	dagman._submitDagDeepOpts.oldRescue =
+				(dagman.rescueFileToWrite != NULL);
 	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
 	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
 	dagman._submitDagDeepOpts.allowVerMismatch = allowVerMismatch;
