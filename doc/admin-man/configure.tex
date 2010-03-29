@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-Condor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2965,6 +2965,33 @@ These macros control the \Condor{master}.
   with the appropriate subsystem string as defined in
   section~\ref{sec:Condor-Subsystem-Names}.
 
+\label{param:SubsysUserid}
+\item[\MacroB{<SUBSYS>\_USERID}]
+  \index{SUBSYS\_USERID macro@\texttt{<SUBSYS>\_USERID} macro}
+  The account name that should be used to run the \MacroNI{SUBSYS} process
+  spawned by the \Condor{master}.  When not defined, the process is
+  spawned as the same user that is running \Condor{master}.  When
+  defined, the real user id of the spawned process will be set to the
+  specified account, so if this account is not \Login{root}, the process will
+  not have \Login{root} privileges.  The \Condor{master} must be running as
+  root in order to start processes as other users.  Example configuration:
+
+\begin{verbatim}
+COLLECTOR_USERID = condor
+NEGOTIATOR_USERID = condor
+\end{verbatim}
+
+  The above example runs the \Condor{collector} and \Condor{negotiator}
+  as the \Login{condor} user with no \Login{root} privileges.
+  If we specified some account other than the \Login{condor} user,
+  as set by the (\MacroNI{CONDOR\_IDS}) configuration variable, then we
+  would need to configure the log files for these daemons to be in a
+  directory that they can write to.  When using GSI security or any
+  other security method in which the daemon credential is owned by \Login{root},
+  it is also necessary to make a copy of the credential, make it be
+  owned by the account the daemons are using, and configure the daemons
+  to use that copy.
+
 \label{param:Preen}
 \item[\Macro{PREEN}]
   In addition to the daemons
@@ -4219,7 +4246,7 @@ This set is to be used for all new applications.
 \item[\Macro{STARTD\_CRON\_<ModuleName>\_EXECUTABLE}]
   Used to specify the full path to the
   executable to run for this module.  Note that multiple modules may
-  specify the same executable (although they need to have different
+  specify the same executable (although the modules need to have different
   names).
 
   If \MacroNI{STARTD\_CRON\_NAME}
@@ -4238,7 +4265,7 @@ This set is to be used for all new applications.
   or in hours (append value with the character 'h').
   As an example, 5m starts the execution of the module every five minutes.
   If no character is appended to the value, seconds are used as a default.
-  In \Expr{Wait For Exit} mode, the value has a different meaning; in
+  In \Expr{WaitForExit} mode, the value has a different meaning; in
   this case 
   the period specifies the length of time after the module ceases execution
   before it is restarted.
@@ -4267,14 +4294,14 @@ This set is to be used for all new applications.
   exit.
 
   The \Expr{WaitForExit} mode is used to specify a module
-  which runs in the \Expr{Wait For Exit} mode.
+  which runs in the \Expr{WaitForExit} mode.
   In this mode, the \Condor{startd} daemon interprets the period as defined by 
   \MacroNI{STARTD\_CRON\_<ModuleName>\_PERIOD} differently.
   In this case, it refers to the amount of time to wait after the module exits
   before restarting it.  With a value of 1, the module is kept
   running nearly continuously.
 
-  In general, \Expr{Wait For Exit} mode is for modules that produce
+  In general, \Expr{WaitForExit} mode is for modules that produce
   a periodic stream of updated data, but it can be used for other
   purposes, as well.
 
@@ -6207,17 +6234,23 @@ These macros affect the \Condor{collector}.
 \item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
   By default, every pool sends
   periodic updates to a central \Condor{collector} at UW-Madison with
-  basic information about the status of your pool.  This includes only
+  basic information about the status of the pool.  Updates include only
   the number of total machines, the number of jobs submitted, the
-  number of machines running jobs, the host name of your central
-  manager, and the \MacroUNI{COLLECTOR\_NAME} specified above.  These
+  number of machines running jobs, the host name of the central
+  manager, and the \MacroUNI{COLLECTOR\_NAME}.  These
   updates help the Condor Team see how Condor is being used around the world.
   By default, they will be sent to \File{condor.cs.wisc.edu}.
-  If you do not want
-  these updates to be sent from your pool,
+  To discontinue sending updates,
   explicitly set this macro to \Expr{NONE}. 
-  If undefined (commented out) in the configuration file, Condor follows
+  If undefined or commented out in the configuration file, Condor follows
   its default behavior.
+
+\label{param:CollectorUpdateInterval}
+\item[\Macro{COLLECTOR\_UPDATE\_INTERVAL}]
+  This variable is defined in seconds and defaults to 900 (every 15 minutes).
+  It controls the frequency of the periodic
+  updates sent to a central \Condor{collector} at UW-Madison as
+  defined by \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR}.
 
 \label{param:CollectorSocketBufsize}
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 

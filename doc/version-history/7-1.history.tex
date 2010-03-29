@@ -74,11 +74,11 @@ for more details on the command line parameters.
 % PR 947
 \item \Condor{submit\_dag} is now automatically run recursively on
 nested DAGs (unless the new \Opt{-no\_recurse} option is specified).
-See \pageref{dagman:NestedRecursion} for details.
+See \pageref{sec:DAGsinDAGs} for details.
 
 % PR 947
 \item Added the new \MacroNI{SUBDAG EXTERNAL} keyword (for specifying nested
-DAGs) to \Condor{dagman}.  See \pageref{dagman:SUBDAG} for details.
+DAGs) to \Condor{dagman}.  See \pageref{sec:DAGsinDAGs} for details.
 
 \item It is now possible to have multiple rotations of the ``event
   log'' file, such as ``EventLog'', ``EventLog.1'', ``EventLog.2'', ...
@@ -889,7 +889,7 @@ configuration files can effectively run arbitrary programs as root.
 % PR 598/788
 \item \Condor{dagman} deals with rescue DAGs in a more sophisticated
 way; this is especially helpful for nested DAGs.
-See the rescue DAG subsection~\pageref{sec:DAGRescue} of the \Condor{dagman}
+See the rescue DAG subsection~\pageref{sec:DAGMan-rescue} of the \Condor{dagman}
 manual section for more information.
 
 \item Additional logging details for unusual error cases to help 

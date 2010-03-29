@@ -113,6 +113,20 @@ to be closed (consumed=0). Closing it now.
 \end{verbatim}
 \normalsize
 
+\item The file extension specified to \Condor{fetch\_log} can no longer
+contain a path delimiter.
+
+% gittrack 1299
+\item When in graceful shutdown mode, the \Condor{schedd} was
+  sometimes starting idle scheduler universe jobs.  With a large
+  enough number of scheduler universe jobs, this could lead to a cycle
+  of stopping and restarting jobs until the graceful shutdown time
+  expired.
+
+% gittrac #1259
+\item Fixed multiple bugs that prevented Condor from building on or
+  running correctly on OpenSolaris X86/64 version 2009.06.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -268,6 +282,15 @@ proxy, which was the previous behavior.
 
 % gittrac #1070
 \item Fixed a bug that could cause the nordugrid\_gahp to crash.
+
+% gittrac #742
+\item Fixed a problem introduced in 7.4.0 that could cause two schedds
+  with a match to the same slot to both fail to claim it, rather than
+  letting the first one to claim it succeed.  This sort of situation
+  can happen when the \Condor{negotiator} has a stale view of the pool,
+  either because the gap between negotiation cycles is configured to
+  be shorter than usual, or updates from \Condor{startd} to \Condor{collector}
+  are not reliably delivered and processed.
 
 \end{itemize}
 

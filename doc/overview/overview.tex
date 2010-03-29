@@ -318,8 +318,9 @@ Windows.
 \index{clipped platform!availability}
 In the table, \Term{clipped} means that Condor does not support
 checkpointing or remote system calls on the given platform. 
-This means that \Term{standard} jobs are not supported, only
-\Term{vanilla} jobs.
+This means that \Term{standard} universe jobs are not supported.
+Some clipped platforms will have further limitations with respect
+to supported universes.
 See section~\ref{sec:Choosing-Universe} on
 page~\pageref{sec:Choosing-Universe} for more details on job universes
 within Condor and their abilities and limitations.
@@ -363,22 +364,24 @@ Opteron x86\_64 & - Red Hat Enterprise Linux 3 \\
 \Note Other Linux distributions likely work, but are not tested
 or supported.
 
-Condor is also available, but is not currently distributed as
-tested binaries for the platforms shown in 
-Table~\ref{other-platforms}.
-
-\begin{center}
-\begin{table}[hbt]
-\begin{tabular}{|p{6cm}p{10cm}|} \hline
-\emph{Platform} & \emph{Notes} \\ \hline \hline
-FreeBSD 6, 7 (clipped) on Intel x86 
- &  Known to compile \\ \hline
-FreeBSD 7 (clipped) on Itanium IA64
- & Known to compile \\ \hline
-\end{tabular}
-\caption{\label{other-platforms}Other Condor \VersionNotice\ available platforms}
-\end{table}
-\end{center}
+%  only FreeBSD was listed in this table, but it is not available
+%  or supported anywhere, so the table and prose are commented out
+%Condor is also available, but is not currently distributed as
+%tested binaries for the platforms shown in 
+%Table~\ref{other-platforms}.
+%
+%\begin{center}
+%\begin{table}[hbt]
+%\begin{tabular}{|p{6cm}p{10cm}|} \hline
+%\emph{Platform} & \emph{Notes} \\ \hline \hline
+%FreeBSD 6, 7 (clipped) on Intel x86 
+ %&  Known to compile \\ \hline
+%FreeBSD 7 (clipped) on Itanium IA64
+ %& Known to compile \\ \hline
+%\end{tabular}
+%\caption{\label{other-platforms}Other Condor \VersionNotice\ available platforms}
+%\end{table}
+%\end{center}
 
 For more platform-specific information about Condor's support for
 various operating systems, see Chapter~\ref{platforms} on

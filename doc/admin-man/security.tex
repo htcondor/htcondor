@@ -2806,101 +2806,108 @@ The main problems of not running Condor daemons as \Login{root}
 appear when one Condor installation is shared by many users on a
 single machine, or if machines are set up to only execute
 Condor jobs.  With a submit-only installation for a
-single user, there is no need for (or benefit from) running as
+single user, there is no need for or benefit from running as
 \Login{root}.
 
 The effects of Condor of running both with and without root access
-are classified by daemon:
+are classified for each daemon:
 
 \begin{description}
 
 \item[\Condor{startd}] A Condor machine set up to execute jobs where the
-   \Condor{startd} is not started as the \Login{root}
-   basically relies on the goodwill of the Condor users to agree to the policy
-   configured for the \Condor{startd} to enforce as far as starting, suspending,
-   vacating, and killing Condor jobs under certain conditions. 
-   As \Login{root}, however, these policies may be enforced regardless of
+   \Condor{startd} is not started as \Login{root}
+   relies on the good will of the Condor users to agree to the policy
+   configured for the \Condor{startd} to enforce for starting, suspending,
+   vacating, and killing Condor jobs. 
+   When the \Condor{startd} is started
+   as \Login{root}, however, these policies may be enforced regardless of
    malicious users.  By running as \Login{root}, the Condor daemons run with a
-   different UID than the Condor job that gets started (since the
-   user's job is started as either the UID of the user who submitted
+   different UID than the Condor job. 
+   The user's job is started as either the UID of the user who submitted
    it, or as user \Login{nobody}, depending on the \Macro{UID\_DOMAIN}
-   settings).  Therefore, the Condor job cannot do anything to the
-   Condor daemons.  Without starting the daemons as \Login{root}, all
-   processes started by Condor, including the end user's job, run with
-   the same UID, since only \Login{root} can switch UIDs.
-   Therefore, a user's job could just kill the \Condor{startd} and
-   \Condor{starter} as soon as it starts up and by doing so, avoid
-   getting suspended or vacated when a user comes back to the machine.
-   This is nice for the job, since it gets unlimited access to the
-   machine, but awful for the machine owner or administrator.  If there is
-   trust of the users submitting jobs to Condor, this might not be a
-   concern.  To ensure, however, that the policy chosen is
-   effectively enforced by Condor, the \Condor{startd} should be
+   settings.
+   Therefore, the Condor job cannot do anything to the Condor daemons.
+   Without starting the daemons as \Login{root}, all
+   processes started by Condor, including the user's job, run with
+   the same UID. Only \Login{root} can switch UIDs.
+   Therefore, a user's job could kill the \Condor{startd} and
+   \Condor{starter}. By doing so, the user's job avoids
+   getting suspended or vacated.
+   This is nice for the job, as it obtains unlimited access to the
+   machine, but it is awful for the machine owner or administrator.
+   If there is trust of the users submitting jobs to Condor,
+   this might not be a concern.  
+   However, to ensure that the policy chosen is
+   enforced by Condor, the \Condor{startd} should be
    started as \Login{root}.
 
    In addition, some system information cannot be obtained without
-   \Login{root} access on some platforms (such as load average on IRIX).  As a
-   result, when running without \Login{root} access, the \Condor{startd} must
-   call other programs (for example, \Prog{uptime}) to get this
-   information.  This is much less efficient than getting the
-   information directly from the kernel (which is what we do if we're
-   running as \Login{root}).  On Linux and Solaris, we can get this
-   information directly without root access, so this is not a concern
-   on those platforms.
+   \Login{root} access on some platforms.
+   As a result, when running without \Login{root} access,
+   the \Condor{startd} must
+   call other programs such as \Prog{uptime},
+   to get this information.
+   This is much less efficient than getting the
+   information directly from the kernel,
+   as is done when running as \Login{root}.
+   On Linux and Solaris, this information is available without root access,
+   so it is not a concern on those platforms.
 
-   If you cannot have all of Condor running as \Login{root}, at least consider
-   whether you can install the \Condor{startd} as setuid root.  That
-   would solve both of these problems.  If you cannot do that, you
-   could also install it as a setgid sys or kmem program (depending on
-   whatever group has read access to \File{/dev/kmem} on your system),
-   and that would at least solve the system information problem.
+   If all of Condor cannot be run as \Login{root}, at least consider
+   installing the \Condor{startd} as setuid root.  That
+   would solve both problems.  Barring that,
+   install it as a setgid sys or kmem program,
+   depending on
+   whatever group has read access to \File{/dev/kmem} on the system.
+   That would solve the system information problem.
 
-\item[\Condor{schedd}] The biggest problem running the \Condor{schedd}
-    without root access is that the \Condor{shadow} processes which it
-    spawns are stuck with the same UID the \Condor{schedd} has.  This
-    means that users submitting their jobs must go out of their way
-    to grant write access to user or group \Login{condor} (or whoever the
-    \Condor{schedd} is running as) for any files or directories their jobs
-    write or create.  Similarly, read access must be granted to their
-    input files.
+\item[\Condor{schedd}] The biggest problem with running the \Condor{schedd}
+    without \Login{root} access is that the \Condor{shadow} processes which it
+    spawns are stuck with the same UID that the \Condor{schedd} has.
+    This requires users to go out of their way
+    to grant write access to user or group that the \Condor{schedd} is run as
+    for any files or directories their jobs write or create.
+    Similarly, read access must be granted to their input files.
 
-    Consider installing \Condor{submit} as a setgid condor
+    Consider installing \Condor{submit} as a setgid \Login{condor}
     program so that at least the \File{stdout}, \File{stderr} and
-    \File{UserLog} files get created with the right permissions.  If
+    user log files get created with the right permissions.  If
     \Condor{submit} is a setgid program, it will automatically set
-    it's umask to 002, and create group-writable files.  This
+    its umask to 002 and create group-writable files.  This
     way, the simple case of a job that only writes to \File{stdout}
     and \File{stderr} will work.  If users have programs that open
     their own files, they will need to know and set the proper permissions
     on the directories they submit from.
 
-\item[\Condor{master}] The \Condor{master} is what spawns the
-    \Condor{startd} and \Condor{schedd}. To have both running
+\item[\Condor{master}] The \Condor{master} spawns both the
+    \Condor{startd} and the \Condor{schedd}. To have both running
     as \Login{root}, have the \Condor{master} run as \Login{root}.
     This happens
-    automatically if you start the master from your boot scripts.
+    automatically if the \Condor{master} is started from boot scripts.
 
 \item[\Condor{negotiator} and \Condor{collector}]
     There is no need to have either of these daemons running as \Login{root}.
 
-\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd} (Linux)
+\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd},
     the \Condor{kbdd} must run as \Login{root}.  If it is
-    started as any other user, it will not work.  You might consider
-    installing this program as a setuid root binary if you cannot run
-    the \Condor{master} as \Login{root}.  Without the \Condor{kbdd}, the
-    \Condor{startd} has no way to monitor USB mouse or keyboard activity,
-    although it will notice keyboard activity on ttys (such as
-    xterms and remote logins).
+    started as any other user, it will not work.  Consider
+    installing this program as a setuid root binary if the \Condor{master} will
+    not be run as \Login{root}.
+    Without the \Condor{kbdd},
+    the \Condor{startd} has no way to monitor USB mouse or keyboard activity,
+    although it will notice keyboard activity on ttys such as
+    xterms and remote logins.
 
 \end{description}
 
-If you do choose to run Condor as non-root, then you may choose almost any
-user you like. A common choice is to use the \Login{condor} user; this
-simplifies the setup because Condor will look for its configuration
-files in the \Login{condor} user's directory. If you do not
-select the \Login{condor}
-user, then you will need to ensure that the configuration is set
-properly so that Condor can find its configuration files. 
+If Condor is not run as root, then choose almost any user name.
+A common choice is to set up and use the \Login{condor} user; this
+simplifies the setup,
+because Condor will look for its configuration
+files in the \Login{condor} user's directory.
+If \Login{condor} is not selected,
+then the configuration must be placed properly such that
+Condor can find its configuration files. 
 
 If users will be submitting jobs as a user different than the user
 Condor is running as (perhaps you are running as the \Login{condor} user and
@@ -2913,13 +2920,14 @@ submitted can alter the data, remove it, or do other undesirable
 things.  It is only acceptable in an environment where users can trust
 other users.
 
-Normally, users without root access who wish to use Condor on their
+Normally, users without \Login{root} access who wish to use Condor on their
 machines create a \File{condor} home directory somewhere within their
 own accounts and start up the daemons (to run with the UID of the
 user).  As in the case where the daemons run as user \Login{condor}, there is
 no ability to switch UIDs or GIDs.  The daemons run as the UID and GID
 of the user who started them.  On a machine where jobs are submitted,
-the \Condor{shadow} daemons all run as this same user. But if other
+the \Condor{shadow} daemons all run as this same user. 
+But, if other
 users are using Condor on the machine in this environment, the
 \Condor{shadow} daemons for these other users' jobs execute with the
 UID of the user who started the daemons.  This is a security risk,
@@ -2935,7 +2943,7 @@ executes with the UID of the user who started the \Condor{startd}
 daemon.  This is also potentially a security risk, which is why we do
 not recommend starting up the execution site daemons as a regular
 user.  Use either \Login{root} or a user
-(such as the user \Login{condor}) that exists
+such as \Login{condor} that exists
 only to run Condor jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
