@@ -48,6 +48,7 @@
 #include "extArray.h"
 #include "HashTable.h"
 #include <set>
+#include "dagman_recursive_submit.h"
 
 using namespace std;
 
@@ -77,7 +78,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
-		  const char *defaultNodeLog, bool isSplice) :
+		  const char *defaultNodeLog, bool generateSubdagSubmits,
+		  const SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -111,6 +113,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst),
 	_defaultNodeLog		  (defaultNodeLog),
+	_generateSubdagSubmits (generateSubdagSubmits),
+	_submitDagDeepOpts	  (submitDagDeepOpts),
 	_isSplice			  (isSplice),
 	_recoveryMaxfakeID	  (0)
 {
@@ -1718,8 +1722,8 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 		param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
 
 
-    fprintf (fp, "# Rescue DAG file, created after running\n");
-    fprintf (fp, "#   the %s DAG file\n", datafile);
+    fprintf(fp, "# Rescue DAG file, created after running\n");
+    fprintf(fp, "#   the %s DAG file\n", datafile);
 
 	time_t timestamp;
 	(void)time( &timestamp );
@@ -1729,29 +1733,29 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 				tm->tm_mday, tm->tm_year + 1900, tm->tm_hour, tm->tm_min,
 				tm->tm_sec );
 
-    fprintf (fp, "#\n");
-    fprintf (fp, "# Total number of Nodes: %d\n", NumNodes());
-    fprintf (fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
-    fprintf (fp, "# Nodes that failed: %d\n", _numNodesFailed);
+    fprintf(fp, "#\n");
+    fprintf(fp, "# Total number of Nodes: %d\n", NumNodes());
+    fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
+    fprintf(fp, "# Nodes that failed: %d\n", _numNodesFailed);
 
     //
     // Print the names of failed Jobs
     //
-    fprintf (fp, "#   ");
+    fprintf(fp, "#   ");
     ListIterator<Job> it (_jobs);
     Job * job;
     while (it.Next(job)) {
         if (job->GetStatus() == Job::STATUS_ERROR) {
-            fprintf (fp, "%s,", job->GetJobName());
+            fprintf(fp, "%s,", job->GetJobName());
         }
     }
-    fprintf (fp, "<ENDLIST>\n\n");
+    fprintf(fp, "<ENDLIST>\n\n");
 
 	//
 	// Print the CONFIG file, if any.
 	//
 	if ( _configFile ) {
-    	fprintf ( fp, "CONFIG %s\n\n", _configFile );
+    	fprintf( fp, "CONFIG %s\n\n", _configFile );
 		
 	}
 
@@ -1770,7 +1774,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
         } else {
 			EXCEPT( "Illegal node type (%d)\n", job->JobType() );
 		}
-        fprintf (fp, "%s %s %s ", keyword, job->GetJobName(),
+        fprintf(fp, "%s %s %s ", keyword, job->GetJobName(),
 					job->GetDagFile() ? job->GetDagFile() :
 					job->GetCmdFile());
 		if ( strcmp( job->GetDirectory(), "" ) ) {
@@ -1779,18 +1783,18 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 		if ( job->GetNoop() ) {
         	fprintf( fp, "NOOP " );
 		}
-		fprintf (fp, "%s\n",
+		fprintf(fp, "%s\n",
 				job->_Status == Job::STATUS_DONE ? "DONE" : "");
 
 			// Print the SCRIPT PRE line, if any.
         if (job->_scriptPre != NULL) {
-            fprintf (fp, "SCRIPT PRE  %s %s\n", 
+            fprintf(fp, "SCRIPT PRE  %s %s\n", 
                      job->GetJobName(), job->_scriptPre->GetCmd());
         }
 
 			// Print the SCRIPT POST line, if any.
         if (job->_scriptPost != NULL) {
-            fprintf (fp, "SCRIPT POST %s %s\n", 
+            fprintf(fp, "SCRIPT POST %s %s\n", 
                      job->GetJobName(), job->_scriptPost->GetCmd());
         }
 
@@ -1880,21 +1884,21 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
     //
     // Print Dependency Section
     //
-    fprintf (fp, "\n");
+    fprintf(fp, "\n");
     it.ToBeforeFirst();
     while (it.Next(job)) {
 
         set<JobID_t> & _queue = job->GetQueueRef(Job::Q_CHILDREN);
         if (!_queue.empty()) {
-            fprintf (fp, "PARENT %s CHILD", job->GetJobName());
+            fprintf(fp, "PARENT %s CHILD", job->GetJobName());
 
 			set<JobID_t>::const_iterator qit;
 			for (qit = _queue.begin(); qit != _queue.end(); qit++) {
                 Job * child = FindNodeByNodeID( *qit );
                 ASSERT( child != NULL );
-                fprintf (fp, " %s", child->GetJobName());
+                fprintf(fp, " %s", child->GetJobName());
 			}
-            fprintf (fp, "\n");
+            fprintf(fp, "\n");
         }
     }
 
@@ -2029,7 +2033,6 @@ Dag::RestartNode( Job *node, bool recovery )
 					_nfsLogIsError, recovery, _defaultNodeLog );
 	}
 }
-
 
 //-------------------------------------------------------------------------
 // Number the nodes according to DFS order 
@@ -2989,6 +2992,22 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					  "(DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
 					  dm.submit_delay );
 		sleep( dm.submit_delay );
+	}
+
+		// Do condor_submit_dag -no_submit if this is a nested DAG node
+		// and lazy submit file generation is enabled (this must be
+		// done before we try to monitor the log file).
+   	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
+				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
+		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
+					node->GetDirectory() ) != 0 ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: condor_submit_dag -no_submit failed "
+						"for node %s.\n", node->GetJobName() );
+				// Hmm -- should this be a node failure, since it probably
+				// won't work on retry?  wenger 2010-03-26
+			return SUBMIT_RESULT_NO_SUBMIT;
+		}
 	}
 
 	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,

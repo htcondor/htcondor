@@ -748,7 +748,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			bool recovery, const char *defaultNodeLog )
 {
 	debug_printf( DEBUG_DEBUG_2,
-				"Attempting to mononitor log file for node %s\n",
+				"Attempting to monitor log file for node %s\n",
 				GetJobName() );
 
 	if ( _logIsMonitored ) {
