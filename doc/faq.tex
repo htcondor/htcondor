@@ -34,223 +34,22 @@ download menus in order to give you the right version of Condor, but
 sometimes proxies block this information from reaching our web site.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What platforms do you support?}
+\subsection*{What platforms are supported?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-See Section~\ref{sec:Availability}, on
+Supported platforms are listed in section~\ref{sec:Availability}, on
 page~\pageref{sec:Availability}.
-Also, you might want to read the platform-specific information in
+There is also platform-specific information at
 Chapter~\ref{platforms} on page~\pageref{platforms}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What versions of Red Hat Linux does Condor support?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-See Section~\ref{sec:platform-linux} on
-page~\pageref{sec:platform-linux}. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Do you distribute source code?}
+\subsection*{Can I get the source code?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor!source code}
 
-For 7.0.0 and later releases, the Condor source code is available for 
-public download alongside the binary distributions.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How do I upgrade the Unix machines in my pool from 6.4.x to 6.6.x?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{upgrade!version 6.4.x to version 6.6.x}
-
-This series of steps explains how to upgrade a pool of machines
-from running Condor version 6.4.x to version 6.6.x.
-Read through the entire set of directions before following
-them.
-
-Briefly, the steps are to download the new version in
-order to replace your current binaries with the new binaries.
-Condor will notice that there are new binaries, since
-it checks for this every few minutes.
-The next time it checks, the new binaries will be used.
-
-\begin{description}
-\item[Step 1:  (Optional) Place test jobs in queue]
-This optional first step safeguards jobs currently in the
-queue when you upgrade.
-By completing this extra step, you will not lose any
-partially completed jobs, even if something goes wrong with
-your upgrade.
-
-Manufacture test jobs that utilize each universe you use in
-your Condor pool.
-Submit each job, and put the job in the hold state, 
-using \Condor{hold}.
-
-\item[Step 2:  Place all jobs on hold]
-Place all jobs into the hold state while replacing binaries.
-
-
-\item[Step 3:  Download Condor 6.6.x]
-To ensure that both new and current binaries are within
-the same volume,
-make a new directory within your current release
-directory where 6.6.x 
-will go. 
-Unix commands will be of the form
-\begin{verbatim}
-  cd <release-dir>
-  mkdir new
-  cd new
-\end{verbatim}
-
-Locate the correct version of the Condor
-binary, and download into this \File{new} directory.
-
-Do \emph{not} install the downloaded version.
-Do uncompress and then untar the downloaded version.
-Further untar the release directory (called \File{release.tar}).
-This will create the directories
-\begin{verbatim}
-      bin
-      etc
-      include
-      sbin
-      libexec
-      lib
-      man
-\end{verbatim}
-From this list of created directories, 
-\File{bin},
-\File{include},
-\File{sbin}, 
-\File{libexec}, and
-\File{lib} will be used to replace current directories. Note that
-older versions of Condor do not have a libexec directory.
-
-\item[Step 4:  Configuration files]
-The downloaded version 6.6.x
-configuration file will have extra, new suggestions
-for configuration macro settings,
-to go with new features in Condor.
-These extra configuration macros
-are not be required in order to run version Condor 6.6.x.
-
-Make a backup copy of the current configuration, to
-safeguard backing out of the upgrade, if something goes wrong.
-
-Work through the new
-example configuration file to see if there
-is anything useful and merge with your site-specific (current)
-configuration file.
-
-Note that starting in Condor 6.6.x, security sessions are turned on by
-default. If you will be retaining some 6.4.x series Condor installations
-in your pool, you must turn security sessions off in your 6.6.x
-configuration files. This can be accomplished by setting
-
-\begin{verbatim}
-SEC_DEFAULT_NEGOTIATION = NEVER
-\end{verbatim}
-
-Also in 6.6.x, the definition of Hawkeye / Startd Cron jobs has
-changed. The old syntax allowed the following
-
-\begin{verbatim}
-HAWKEYE_JOBS =\
-	job1:job1_:/path/to/job1:1h \
-	job2:job2_:/path/to/job2:5m \
-	...
-\end{verbatim}
-
-This is no longer supported, and must be replaced with the following
-
-\begin{verbatim}
-HAWKEYE_JOBS = job1:job1_:/path/to/job1:1h
-HAWKEYE_JOBS = $(HAWKEYE_JOBS) job2:job2_:/path/to/job2:5m
-HAWKEYE_JOBS = $(HAWKEYE_JOBS) ...
-\end{verbatim}
-
-It should also be noted that in 6.6.x, the \Condor{collector} and
-\Condor{negotiator} can be set to run on non-standard ports. This will
-cause older (6.4.x and earlier) Condor installations in that pool to no
-longer function.
-
-
-\item[Step 5:  Replace release directories]
-For each of the directories that is to be replaced,
-move the current one aside, and put the new one in its place.
-The Unix commands to do this will be of the form
-\begin{verbatim}
-  cd <release-dir>
-
-  mv bin bin.v64
-  mv new/bin bin
-
-  mv include include.v64
-  mv new/include include
-
-  mv sbin sbin.v64
-  mv new/sbin sbin
-
-  mv lib lib.v64
-  mv new/lib lib
-\end{verbatim}
-
-Do this series of directory moves at one
-sitting, especially avoiding a long time lag between the moves
-relating to the \File{sbin} directory.
-Condor imposes a delay by design, but it does not idly wait for the
-new binaries to be in place.
-
-\item[Step 6:  Observe propagation of new binaries]
-
-Use \Condor{status} to observe the propagation of the upgrade
-through the pool.
-As the machines notice and use the new binaries, their
-version number will change.
-Complete propagation should occur in five to ten minutes.
-
-The command
-\footnotesize
-\begin{verbatim}
-condor_status -format "%s" Machine -format " %s\n" CondorVersion
-\end{verbatim}
-\normalsize
-gives a single line of information about each machine in the pool,
-containing only the machine name and version of Condor it is
-running.
-
-\item[Step 7:  (Optional) Release test jobs]
-Release the test jobs that were placed into the hold state
-in Step 1.
-If these test jobs complete successfully, then the upgrade is
-successful.
-If these test jobs fail (possibly by leaving the queue before
-finishing), then the upgrade is unsuccessful.
-If unsuccessful, back out of the upgrade by
-replacing the new configuration file with the backup copy and
-moving the Version 6.4.x release directories back to their
-previous location.
-Also send e-mail to \Email{condor-admin@cs.wisc.edu},
-explaining the situation and we'll help you work through it.
-
-\item[Step 8:  Release all jobs]
-Release all jobs in the queue, but running \Condor{release}.
-
-\item[Step 9:  (Optional) Install manual pages]
-
-The \File{man} directory was new with Condor version 6.4.x.
-It contains manual pages.
-Note that installation of manual pages is optional;
-the chapter containing manual pages are in
-section~\ref{sec:command-reference}.
-
-To install the manual pages, move the \File{man} directory
-from \File{<release-dir>/new} to the desired location.
-Add the path name to this directory to the
-\Env{MANPATH}.
-
-\end{description}
+For Condor version 7.0.0 and later releases,
+the Condor source code is available for 
+public download with the binary distributions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What is Personal Condor?}
@@ -355,10 +154,11 @@ Where \verb@machine-ip-address@ is the IP address of the interface you wish
 Condor to use.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{After an installation of Condor, why do the daemons refuse to 
-	start, placing this message in the log files?}
+\subsection*{After an installation of Condor, why do the daemons refuse to start?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+This message appears in the log files:
+\footnotesize
 \begin{verbatim}
 ERROR "The following configuration macros appear to contain default values 
 that must be changed before Condor will run.  These macros are:
@@ -366,6 +166,7 @@ hostallow_write
 (found on line 1853 of /scratch/adesmet/TRUNK/work/src/localdir/condor_config)"
 at line 217 in file condor_config.C
 \end{verbatim}
+\normalsize
 
 As of Condor 6.8.0, if 
 Condor sees the bare key word: 
@@ -381,7 +182,7 @@ The Condor administrator must alter this value to be the correct domain
 or IP addresses that the administrator desires.
 The wild card character (\verb@*@) may be used to define this entry,
 but that allows anyone, from anywhere,
-to submit jobs into your pool.
+to submit jobs into the pool.
 A better value will be of the form \Expr{*.domainname.com}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -724,20 +525,6 @@ See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{My job starts but exits right away with signal 9.}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{job!exiting with signal 9 \(Unix\)}
-
-
-This can occur when the machine your job is running on is missing a
-shared library required by your program.
-One solution is to install the shared library on all machines the job
-may execute on.
-Another, easier, solution is to try to re-link your program statically
-so it contains all the routines it needs.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why does the \Attr{requirements} expression for the job I submitted\\
 have extra things that I did not put in my submit description file?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -819,97 +606,6 @@ for the list of supported compilers.
 For a Linux platform, the supported compiler
 is the default compiler that came with the distribution.
 It is often found in the directory \File{/usr/bin}.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why do my vanilla jobs keep cycling between suspended and unsuspended?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{vanilla jobs!cycling between suspended and unsuspended}
-
-Condor tries to provide a number, the ``Condor Load Average''
-(reported in the machine ClassAd as \AdAttr{CondorLoadAvg}), which is
-intended to represent the total load average on the system caused by
-any running Condor job(s).
-Unfortunately, it is impossible to get an accurate number for
-this without support from the operating system.
-This is not available.
-So, Condor does the best it can, and it mostly works in most cases.
-However, there are a number of ways this statistic can go wrong.
-
-The old default Condor policy was to suspend if the non-Condor load
-average went over a certain threshold.
-However, because of the problems providing accurate numbers for this
-(described below), some jobs would go into a cycle of getting
-suspended and resumed.
-The default suspend policy now shipped with Condor uses the
-solution explained here.
-
-While there are too many technical details of why
-\AdAttr{CondorLoadAvg} might be wrong for a short answer here, a brief
-explanation is presented.
-When a job has periodic behavior, and the load it places upon
-a machine is changing over time,
-the system load also changes over time.  
-However, Condor thinks that the job's share of the system load
-(what it uses to compute the CondorLoad) is also changing.
-So, when the job was running, and then stops, both the system load and
-the Condor load start falling.
-If it all worked correctly, they'd fall at the exact same rate, and
-\AdAttr{NonCondorLoad} would be constant.
-Unfortunately, \AdAttr{CondorLoadAvg} falls faster, since Condor
-thinks the job's share of the total load is falling, too.
-Therefore, \AdAttr{CondorLoadAvg} falls faster than the system load,
-\AdAttr{NonCondorLoad} goes up, and the old default \AdAttr{SUSPEND}
-expression becomes true.
-
-It appears that Condor should be able to avoid this problem, but for a
-host of reasons, it can not.  
-There is no good way (without help from the operating systems Condor runs on;
-the help does not exist) to get this right.
-The only way to compute these numbers more accurately
-without support from the operating system is to sample everything at
-such a high rate that Condor itself would create a large load average,
-just to try to compute the load average.
-This is Heisenberg's uncertainty principle in action.
-
-A similar sampling error can occur when Condor is starting a job
-within the vanilla universe with many processes and with a
-heavy initial load.
-Condor mistakenly decides that the load on the machine has gotten too
-high while the job is in the initialization phase and kicks the job off
-the machine.
-
-To correct this problem, Condor needs to check to see if the load of the
-machine has been high over an interval of time.
-There is an attribute, \AdAttr{CpuBusyTime} that can be used for
-this purpose.
-This macro returns the time \MacroUNI{CpuBusy} (defined in the default
-configuration file) has been true, or 0 if \MacroUNI{CpuBusy} is false.
-\MacroUNI{CpuBusy} is usually defined in terms of non-Condor load.
-These are the default settings:
-
-\footnotesize
-\begin{verbatim}
-NonCondorLoadAvg    = (LoadAvg - CondorLoadAvg)
-HighLoad            = 0.5
-CPUBusy             = ($(NonCondorLoadAvg) >= $(HighLoad))
-\end{verbatim}
-\normalsize
-
-To take advantage of \AdAttr{CpuBusyTime}, you can use it in your
-\Macro{SUSPEND}\ expression. 
-
-Here is an example:
-\footnotesize
-\begin{verbatim}
-SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
-\end{verbatim}
-\normalsize
-
-The above policy says to only suspend the job if the CPU has been busy
-with non-Condor load at least three minutes and it has been at least 90
-seconds since the start of the job.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why might my job be preempted (evicted)?}
