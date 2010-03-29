@@ -1,0 +1,18 @@
+
+How to create tests "wrapped" in a personal condor
+--------------------------------------------------
+
+Some tests need to start up specific condor components with some
+special configuration and then run some checks in that environment.
+An example of this sort of test is example_personal_condor_test.run.
+A more complicated example of this type of test, involving multiple
+personal condors, is job_condorc_abc_van.run.
+
+The basic idea is to start up one or more personal condors using
+CondorTest::StartCondorWithParams() and then execute one or more
+checks within that environment using check modules in
+condor_tests/Check/*.pm.  If any checks fail, then the test is marked
+as a failure.
+
+In addition to creating a .run file for your new test, remember to
+add it to the Imakefile.  Follow the example of some other working test.

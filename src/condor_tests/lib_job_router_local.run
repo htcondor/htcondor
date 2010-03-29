@@ -51,7 +51,7 @@ my $append_submit_commands = '
   requirements = false
 ';
 
-SimpleJob::RunTest(
+SimpleJob::RunCheck(
     append_submit_commands => $append_submit_commands
 );
 

@@ -36,10 +36,10 @@ CondorTest::StartCondorWithParams(
 );
 
 # verify that a job runs
-SimpleJob::RunTest();
+SimpleJob::RunCheck();
 
 # verify that at least one connection was made via CCB
-CondorLog::RunTest(
+CondorLog::RunCheck(
     daemon => "COLLECTOR",
     match_regexp => "CCB: received 'success' from target daemon"
 );

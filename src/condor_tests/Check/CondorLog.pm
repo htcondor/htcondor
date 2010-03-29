@@ -21,7 +21,7 @@ package CondorLog;
 
 use CondorTest;
 
-sub RunTest
+sub RunCheck
 {
     my %args = @_;
 

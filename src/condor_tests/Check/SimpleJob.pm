@@ -39,7 +39,7 @@ $ExitSuccess = sub {
 	CondorTest::debug("Job completed\n",1);
 };
 
-sub RunTest
+sub RunCheck
 {
     my %args = @_;
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();

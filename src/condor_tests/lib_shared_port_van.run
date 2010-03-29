@@ -38,10 +38,10 @@ CondorTest::StartCondorWithParams(
 );
 
 # verify that a job runs
-SimpleJob::RunTest();
+SimpleJob::RunCheck();
 
 # verify that at least one connection request was made via shared port server
-CondorLog::RunTest(
+CondorLog::RunCheck(
     daemon => "SHARED_PORT",
     match_regexp => "SharedPortServer: request from SCHEDD"
 );

@@ -67,7 +67,7 @@ my $append_submit_commands = "
 ";
 
 # verify that a job runs
-SimpleJob::RunTest(
+SimpleJob::RunCheck(
     universe => "grid",
     grid_resource => "condor $poolB_schedd_name $poolB_collector",
     append_submit_commands => $append_submit_commands
