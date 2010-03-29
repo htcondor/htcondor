@@ -25,7 +25,7 @@
 use CondorTest;
 
 $cmd = 'job_dagman_subdag-A-upper.dag';
-$testdesc =  'Condor submit dag - basic splice test - scheduler U';
+$testdesc =  'Condor submit dag - sub-DAG test with eager submit file generation - scheduler U';
 $testname = "job_dagman_subdag-AE";
 $dagman_args = "-verbose -do_recurse";
 $ENV{_CONDOR_DAGMAN_GENERATE_SUBDAG_SUBMITS} = 0;

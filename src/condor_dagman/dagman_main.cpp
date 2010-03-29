@@ -1,5 +1,4 @@
 //TEMPTEMP -- doing gittrac #507 (lazy submit files) here
-//TEMPTEMP -- create test where PRE script writes DAG file
 //TEMPTEMP -- maybe create a test that makes sure that values get passed down correctly...
 /***************************************************************
  *

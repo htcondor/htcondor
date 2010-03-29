@@ -1,0 +1,14 @@
+Job A job_dagman_pre_subdag-A-node.cmd
+Vars A nodename = "$(JOB)"
+
+Job B job_dagman_pre_subdag-A-node.cmd
+Vars B nodename = "$(JOB)"
+
+Subdag external C job_dagman_pre_subdag-A-lower.dag
+Script pre C job_dagman_pre_subdag-A-pre.pl
+
+Job D job_dagman_pre_subdag-A-node.cmd
+Vars D nodename = "$(JOB)"
+
+PARENT A CHILD B C
+PARENT B C CHILD D

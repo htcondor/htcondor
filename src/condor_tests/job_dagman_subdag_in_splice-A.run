@@ -20,6 +20,8 @@
 
 use CondorTest;
 
+# Note: this test will fail with eager submit file generation.
+
 $cmd = 'job_dagman_subdag_in_splice-A-upper.dag';
 $testdesc =  'Condor submit dag - sub-DAG in splice test - scheduler U';
 $testname = "job_dagman_subdag_in_splice-A";
