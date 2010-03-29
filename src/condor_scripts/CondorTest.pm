@@ -102,6 +102,12 @@ BEGIN
     STDOUT->autoflush();
     STDERR->autoflush();
 
+    # Attempt to clean up personal condors when killed.
+    # Unfortunately, this doesn't currently clean up personal condors
+    # that are in the middle of being started.
+    $SIG{'INT'} = 'CondorTest::Abort';
+    $SIG{'TERM'} = 'CondorTest::Abort';
+
     $MAX_CHECKPOINTS = 2;
     $MAX_VACATES = 3;
     $checkpoints = 0;
@@ -123,6 +129,17 @@ END
 	$? = 1;
     }
 
+}
+
+sub Abort()
+{
+    print "\nReceived kill signal in PID $$ (CondorTestPid = $CondorTestPid).\n";
+
+    exit(1) if $CondorTestPid != $$;
+
+    Cleanup();
+
+    exit(1);
 }
 
 sub Cleanup()
