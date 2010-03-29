@@ -1,4 +1,3 @@
-#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,32 +17,21 @@
 ##
 ##**************************************************************
 
+package CondorLog;
+
 use CondorTest;
-use Check::SimpleJob;
-use Check::CondorLog;
 
-my $append_condor_config = '
-  USE_SHARED_PORT = True
-  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+sub RunCheck
+{
+    my %args = @_;
 
-  SHARED_PORT_DEBUG = D_COMMAND D_FULLDEBUG
+    my $daemon = $args{daemon} || die("'daemon' not specified");
+    my $match_regexp = $args{match_regexp} || die("'match_regexp' not specified");
 
-  # named sockets cannot have very long paths (~100 chars), so put them
-  # in /tmp to avoid problems
-  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
-';
+    my $result = CondorTest::SearchCondorLog($daemon,$match_regexp);
 
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
+    CondorTest::RegisterResult( $result, %args );
+    return $result;
+}
 
-# verify that a job runs
-SimpleJob::RunCheck();
-
-# verify that at least one connection request was made via shared port server
-CondorLog::RunCheck(
-    daemon => "SHARED_PORT",
-    match_regexp => "SharedPortServer: request from SCHEDD"
-);
-
-CondorTest::EndTest();
+1;

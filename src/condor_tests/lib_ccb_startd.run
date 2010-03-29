@@ -20,38 +20,28 @@
 
 use CondorTest;
 use Check::SimpleJob;
-
-# This is the "remote" pool where the job will run.
-my $poolB = CondorTest::StartCondorWithParams(
-    condor_name => "poolB",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR"
-);
-
-my $poolB_collector = $poolB->GetCollectorAddress();
-my $poolB_schedd_name =
-    `condor_status -pool $poolB_collector -schedd -format "%s\n" Name`
-    || die "Failed to query schedd name.";
-chomp $poolB_schedd_name;
-
+use Check::CondorLog;
 
 my $append_condor_config = '
-  # reduce latency in test
-  CONDOR_JOB_POLL_INTERVAL = 10
+  # test with execute daemons using CCB
+  STARTD.CCB_ADDRESS = $(COLLECTOR_HOST)
+  STARTER.CCB_ADDRESS = $(COLLECTOR_HOST)
+
+  COLLECTOR_DEBUG = $(COLLECTOR_DEBUG) D_FULLDEBUG
 ';
 
-# This is the "local" pool where the job is submitted.
-# Since it is started last, CONDOR_CONFIG points to it.
 CondorTest::StartCondorWithParams(
-    condor_name => "poolA",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD",
+    condor_name => "local",
     append_condor_config => $append_condor_config
 );
 
-
 # verify that a job runs
-SimpleJob::RunCheck(
-    universe => "grid",
-    grid_resource => "condor $poolB_schedd_name $poolB_collector"
+SimpleJob::RunCheck();
+
+# verify that at least one connection was made via CCB
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "CCB: received 'success' from target daemon"
 );
 
 CondorTest::EndTest();

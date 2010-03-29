@@ -582,7 +582,7 @@ string_to_long( const char *s, long *valuep )
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 char *
-expand_macro( const char *value, BUCKET **table, int table_size, char *self )
+expand_macro( const char *value, BUCKET **table, int table_size, char *self, bool use_default_param_table )
 {
 	char *tmp = strdup( value );
 	char *left, *name, *tvalue, *right;
@@ -687,6 +687,13 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 		if( get_var(tmp, &left, &name, &right, self) ) {
 			all_done = false;
 			tvalue = lookup_macro( name, table, table_size );
+
+				// Note that if 'name' has been explicitly set to nothing,
+				// tvalue will _not_ be NULL so we will not call
+				// param_default_string().  See gittrack #1302
+			if( !self && use_default_param_table && tvalue == NULL ) {
+				tvalue = param_default_string(name);
+			}
 			if( tvalue == NULL ) {
 				tvalue = "";
 			}

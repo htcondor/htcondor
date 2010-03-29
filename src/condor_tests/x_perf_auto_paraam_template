@@ -7,8 +7,6 @@ duration = 20
 universe = vanilla
 type = jobs
 
-condorconfig = condor_config
-condorlocal = condor_config.local
 condortemplate = x_condor_config_template
 vms	= 10
 encryption = 3DES,BLOWFISH

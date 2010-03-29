@@ -21,37 +21,15 @@
 use CondorTest;
 use Check::SimpleJob;
 
-# This is the "remote" pool where the job will run.
-my $poolB = CondorTest::StartCondorWithParams(
-    condor_name => "poolB",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR"
-);
-
-my $poolB_collector = $poolB->GetCollectorAddress();
-my $poolB_schedd_name =
-    `condor_status -pool $poolB_collector -schedd -format "%s\n" Name`
-    || die "Failed to query schedd name.";
-chomp $poolB_schedd_name;
-
-
 my $append_condor_config = '
-  # reduce latency in test
-  CONDOR_JOB_POLL_INTERVAL = 10
+  DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 ';
 
-# This is the "local" pool where the job is submitted.
-# Since it is started last, CONDOR_CONFIG points to it.
 CondorTest::StartCondorWithParams(
-    condor_name => "poolA",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD",
     append_condor_config => $append_condor_config
 );
 
-
 # verify that a job runs
-SimpleJob::RunCheck(
-    universe => "grid",
-    grid_resource => "condor $poolB_schedd_name $poolB_collector"
-);
+SimpleJob::RunCheck();
 
 CondorTest::EndTest();

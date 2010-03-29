@@ -432,10 +432,8 @@ open( PARAMS, ">$param_file" ) or die "can't write to $param_file";
 print PARAMS <<ENDPARAMS;
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 localpostsrc = $config_tmp
-condordaemons = MASTER,COLLECTOR,LEASEMANAGER,ADVERTISER
+daemon_list = MASTER,COLLECTOR,LEASEMANAGER,ADVERTISER
 personaldir = $fulldir
 ENDPARAMS
 close(PARAMS);

@@ -1,0 +1,31 @@
+
+How to create check modules
+---------------------------
+
+A test may consist of one or more "checks".  All checks must pass for
+a test to be considered a success.  By defining each type of check
+in its own perl module, separate from the test code that sets up
+the environment to be tested, we hope to encourage code reuse among tests.
+
+The check modules are in condor_tests/Check/*.pm.  An example of a check
+is SimpleJob.pm.  It submits a job and verifies that it runs.
+
+Each check is typically invoked by calling its RunCheck() method.  In order
+to make the check adaptable to different situations, RunCheck() typically
+takes optional named arguments which control its behavior.
+
+
+List of check modules
+---------------------
+
+SimpleJob                  * submit a job and verify that it completes
+  optional arguments:
+    universe               - defaults to vanilla
+    user_log               - path and name of user log
+    grid_resource          - setting for GridResource in submit file
+    append_submit_commands - additional lines to append to submit file
+
+CondorLog                  * verify that expected output exists in log
+  required arguments:
+    daemon                 - condor daemon name (must match <NAME>_LOG in conf)
+    match_regexp           - regular expression to match

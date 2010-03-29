@@ -1,7 +1,5 @@
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 localpostsrc = x_ligo_x86-64-chkpttst_locconfigpostsrc
-condordaemons = master,schedd,collector,negotiator,startd
+daemon_list = master,schedd,collector,negotiator,startd
 slots	= 2

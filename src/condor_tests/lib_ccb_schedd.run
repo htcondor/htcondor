@@ -18,14 +18,30 @@
 ##
 ##**************************************************************
 
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
 
-open(IN,"<job_condorc_xxx_van.in") || die "can not open job_condorc_xxx_van.in:$!\n";
-open(OUT,">outfile1") || die "can not open outfile1:$!\n";
-while(<IN>) {
-	print OUT "$_\n";
-}
-close(IN);
-$cmd = `pwd`;
-print OUT "$cmd\n";
-print OUT "Done\n";
-close(OUT);
+my $append_condor_config = '
+  # test with execute daemons using CCB
+  SCHEDD.CCB_ADDRESS = $(COLLECTOR_HOST)
+  SHADOW.CCB_ADDRESS = $(COLLECTOR_HOST)
+
+  COLLECTOR_DEBUG = $(COLLECTOR_DEBUG) D_FULLDEBUG
+';
+
+CondorTest::StartCondorWithParams(
+    condor_name => "local",
+    append_condor_config => $append_condor_config
+);
+
+# verify that a job runs
+SimpleJob::RunCheck();
+
+# verify that at least one connection was made via CCB
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "CCB: received 'success' from target daemon"
+);
+
+CondorTest::EndTest();

@@ -19,150 +19,58 @@
 ##**************************************************************
 
 use CondorTest;
-use strict;
-use warnings;
+use Check::SimpleJob;
+
+# This is the "remote" pool where the job will run.
+my $poolC = CondorTest::StartCondorWithParams(
+    condor_name => "poolC",
+    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR"
+);
+
+my $poolC_collector = $poolC->GetCollectorAddress();
+my $poolC_schedd_name =
+    `condor_status -pool $poolC_collector -schedd -format "%s\n" Name`
+    || die "Failed to query schedd name.";
+chomp $poolC_schedd_name;
 
 
-my $cmd_template = "job_condorc_abc_van.template";
-my $testdesc =  'job_condorc_abc_van - Chained Condor-C A&B&C with Vanilla job';
-my $testname = "job_condorc_abc_van";
-my $corename = "job_condorc_abc_van";
-my $debuglevel = 2;
+my $append_condor_config = '
+  # reduce latency in test
+  CONDOR_JOB_POLL_INTERVAL = 10
+';
 
-# where are we running
-my $currenthost = CondorTest::getFqdnHost();
-CondorTest::fullchomp($currenthost);
-CondorTest::debug("Running on $currenthost\n",$debuglevel);
+# This is the "middle" pool where the job is resubmitted.
+my $poolB = CondorTest::StartCondorWithParams(
+    condor_name => "poolB",
+    daemon_list => "MASTER, COLLECTOR, SCHEDD",
+    append_condor_config => $append_condor_config
+);
 
-print scalar localtime() . "\n";
-
-my $mypid = $$;
-my $mysaveme = $corename . ".saveme";
-
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
-
-my $mysubmitnm = $corename . $mypid . ".cmd";
-my $mysubmitnmlog = $corename . $mypid . ".log";
-my $mycorenamecmd = $corename . ".cmd";
-my $mycorenamecmdout = $corename . ".cmd.out";
-my $mycorenamelog = $corename . ".log";
-
-print scalar localtime() . "\n";
-CondorTest::debug("Master PID is $mypid\n",$debuglevel);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
+my $poolB_collector = $poolB->GetCollectorAddress();
+my $poolB_schedd_name =
+    `condor_status -pool $poolB_collector -schedd -format "%s\n" Name`
+    || die "Failed to query schedd name.";
+chomp $poolB_schedd_name;
 
 
-# get a remote scheduler running (side c)
-my $configrem = CondorTest::StartPersonal( "job_condorc_abc_van", "x_param.condorcremote" ,"remote");
-my @remote = split /\+/, $configrem;
-my $remconfig = shift @remote;
-my $remport = shift @remote;
+# This is the "local" pool where the job is submitted.
+# Since it is started last, CONDOR_CONFIG points to it.
+CondorTest::StartCondorWithParams(
+    condor_name => "poolA",
+    daemon_list => "MASTER, COLLECTOR, SCHEDD",
+    append_condor_config => $append_condor_config
+);
 
-CondorTest::debug("---Remote config(c) is $remconfig and remote port is $remport---\n",$debuglevel);
+my $append_submit_commands = "
+  remote_universe = grid
+  remote_GridResource = condor $poolC_schedd_name $poolC_collector
+";
 
-print "Dropped a full pool to push Condor-C to\n";
+# verify that a job runs
+SimpleJob::RunCheck(
+    universe => "grid",
+    grid_resource => "condor $poolB_schedd_name $poolB_collector",
+    append_submit_commands => $append_submit_commands
+);
 
-# get a middle scheduler running (side b)
-my $configmid = CondorTest::StartPersonal( "job_condorc_abc_van", "x_param.condorcmiddle" ,"middle");
-my @middle = split /\+/, $configmid;
-my $midconfig = shift @middle;
-my $midport = shift @middle;
-
-print "Dropped a collector, schedd and master as an intermediary for Condor-C job.\n";
-
-CondorTest::debug("---Middle config(b) is $midconfig and remote port is $midport---\n",$debuglevel);
-
-# Edit submit file to submit to scheduler at remote (side b) schedd.
-my $line;
-open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
-open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
-while(<TPLATE>)
-{
-	CondorTest::fullchomp($_);
-	$line = $_;
-	if( $line =~ /^\s*grid_resource\s*=.*$/ )
-	{
-		my $schedd = "schedd$mypid" . "middle\@$currenthost";
-		CondorTest::debug("grid_resource is condor $schedd $currenthost:$midport\n",$debuglevel);
-		print CSUB "grid_resource = condor $schedd $currenthost:$midport\n";
-	}
-	elsif( $line =~ /^\s*\+Remote_GridResource\s*=.*$/ )
-	{
-		my $schedd = "schedd$mypid" . "remote\@$currenthost";
-		CondorTest::debug("remote GridResource is condor $schedd $currenthost:$remport\n",$debuglevel);
-		print CSUB "+Remote_GridResource = \"condor $schedd $currenthost:$remport\"\n";
-	}
-	# do not leave the log file name alone
-	# because we are always cluster 1 as we
-	# are always a fresh personal condor and we
-	# do not want to trip on it if we fire the test
-	# locally a number of times.
-	elsif( $line =~ /^\s*log\s*= .*$/)
-	{
-		my $lognm = $mysubmitnmlog;
-		CondorTest::debug("New log name: $lognm\n",$debuglevel);
-		print CSUB "log = $lognm\n";
-	}
-	else
-	{
-		CondorTest::debug("template: $line\n",$debuglevel);
-		print CSUB "$line\n";
-	}
-}
-close(TPLATE);
-close(CSUB);
-
-# get a local scheduler running (side a)
-my $configloc = CondorTest::StartPersonal( "job_condorc_abc_van", "x_param.condorclocal" ,"local");
-my @local = split /\+/, $configloc;
-my $locconfig = shift @local;
-my $locport = shift @local;
-
-print "Dropped a master and a schedd to send Condor-C job on its way\n";
-
-CondorTest::debug("---local config is $locconfig and local port is $locport---\n",$debuglevel);
-
-$ENV{CONDOR_CONFIG} = $locconfig;
-# submit into local schedd (side a)
-
-if( ! -e "job_condorc_xxx_van.in" )
-{
-	system("date > job_condorc_xxx_van.in");
-}
-
-print "Looking for schedds at B middle point of ABC - Condor-C\n";
-system("condor_status -pool $currenthost:$midport -schedd -format '%s\n' Name");
-print "Looking for schedds at C remote point of ABC - Condor-C\n";
-system("condor_status -pool $currenthost:$remport -schedd -format '%s\n' Name");
-
-my $result = system("./job_condorc_ab_van.pl $mysubmitnm job_condorc_abc_van");
-CondorTest::debug("Result of crafted Condor-C job is  $result\n",$debuglevel);
-
-system("cp *condorc* $mysaveme");
-
-if( -e "$mysubmitnm" )
-{
-	system("cp $mysubmitnm $mycorenamecmd");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	system("cp $mysubmitnmlog $mycorenamelog");
-}
-
-
-CondorTest::KillPersonal($locconfig);
-CondorTest::KillPersonal($midconfig);
-CondorTest::KillPersonal($remconfig);
-print scalar localtime() . "\n";
-
-if($result != 0)
-{
-	# actuaal job failed but we allowed cleanup
-	exit(1);
-}
-
-CondorTest::debug("job_condorc_abc_van SUCCESS\n",$debuglevel);
-exit(0);
+CondorTest::EndTest();

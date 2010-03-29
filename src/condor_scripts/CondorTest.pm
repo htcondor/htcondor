@@ -37,6 +37,7 @@ use Cwd;
 use Time::Local;
 use strict;
 use warnings;
+use File::Basename;
 
 my %securityoptions =
 (
@@ -87,11 +88,25 @@ my $errexempts = "ErrorExemptions";
 my %exemptions;
 my $failed_coreERROR = 0;
 
+my %personal_condors = ();
+my $CondorTestPid = $$;
+my $CleanedUp = 0;
+
+my $test_failure_count = 0;
+my $test_success_count = 0;
+
+
 BEGIN
 {
     # disable command buffering so output is flushed immediately
     STDOUT->autoflush();
     STDERR->autoflush();
+
+    # Attempt to clean up personal condors when killed.
+    # Unfortunately, this doesn't currently clean up personal condors
+    # that are in the middle of being started.
+    $SIG{'INT'} = 'CondorTest::Abort';
+    $SIG{'TERM'} = 'CondorTest::Abort';
 
     $MAX_CHECKPOINTS = 2;
     $MAX_VACATES = 3;
@@ -101,6 +116,150 @@ BEGIN
 	$lastconfig = "";
 
     Condor::DebugOn();
+}
+
+END
+{
+    # When a forked child exits, do not do CondorTest cleanup.
+    # Only do the cleanup from the main process.
+    return if $CondorTestPid != $$;
+
+    if ( !Cleanup() ) {
+	# Set exit status to non-zero
+	$? = 1;
+    }
+
+}
+
+sub Abort()
+{
+    print "\nReceived kill signal in PID $$ (CondorTestPid = $CondorTestPid).\n";
+
+    exit(1) if $CondorTestPid != $$;
+
+    Cleanup();
+
+    exit(1);
+}
+
+sub Cleanup()
+{
+    if( $CleanedUp ) {
+	# Avoid doing this twice (e.g. once in EndTest and once in END).
+	return 1;
+    }
+    $CleanedUp = 1;
+
+    KillAllPersonalCondors();
+    if($failed_coreERROR != 0) {
+
+	print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
+	print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
+	return 0;
+    }
+    return 1;
+}
+
+# This function never returns.
+# It should be the last thing that a test program does,
+# (but be aware that some older tests do not call it).
+# All personal condors are shut down and the final exit status
+# of the test is determined.
+sub EndTest
+{
+    my $extra_notes = "";
+
+    my $exit_status = 0;
+    if( Cleanup() == 0 ) {
+	$exit_status = 1;
+    }
+    if($failed_coreERROR != 0) {
+	$exit_status = 1;
+	$extra_notes = "$extra_notes\n  found cores or ERROR in logs";
+    }
+
+    if( $test_failure_count > 0 ) {
+	$exit_status = 1;
+    }
+
+    if( $test_failure_count == 0 && $test_success_count == 0 ) {
+	$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
+	$exit_status = 1;
+    }
+
+    my $result_str = $exit_status == 0 ? "SUCCESS" : "FAILURE";
+
+    my $testname = GetDefaultTestName();
+
+    debug( "\n\nFinal status for $testname: $result_str\n  $test_success_count check(s) passed\n  $test_failure_count check(s) failed$extra_notes\n", 1 );
+
+    exit($exit_status);
+}
+
+# This should be called in each check function to register the pass/fail result
+sub RegisterResult
+{
+    my $result = shift;
+    my %args = @_;
+
+    my ($caller_package, $caller_file, $caller_line) = caller();
+    my $checkname = GetCheckName($caller_file,%args);
+
+    my $testname = $args{test_name} || GetDefaultTestName();
+
+    my $result_str = $result == 1 ? "PASSED" : "FAILED";
+    debug( "\n\n$result_str check $checkname in test $testname\n\n", 1 );
+    if( $result != 1 ) {
+	$test_failure_count += 1;
+    }
+    else {
+	$test_success_count += 1;
+    }
+}
+
+sub GetDefaultTestName
+{
+    return basename( $0, ".run" );
+}
+
+sub GetCheckName
+{
+    my $filename = shift; # module file containing the check
+    my %args = @_;        # named arguments to the check function
+
+    if( exists $args{check_name} ) {
+	return $args{check_name};
+    }
+
+    my $check_name = basename( $filename, ".pm" );
+
+    my $arg_str = "";
+    for my $name ( keys %args ) {
+        my $value = $args{$name};
+	if( $arg_str ne "" ) {
+	    $arg_str = $arg_str . ",";
+	}
+	$arg_str = $arg_str . "$name=$value";
+    }
+    if( $arg_str ne "" ) {
+	$check_name = $check_name . "($arg_str)";
+    }
+    return $check_name;
+}
+
+# return a file name that did not exist at the time this function was called
+sub TempFileName
+{
+    my $base = shift;
+
+    $base = $base . ".$$";
+    my $fname = $base;
+    my $num = 0;
+    while( -e $fname ) {
+	$num = $num + 1;
+	$fname = $base . ".$num";
+    }
+    return $fname;
 }
 
 sub Reset
@@ -1395,33 +1554,29 @@ sub getFqdnHost
 
 ##############################################################################
 #
-# PersonalSearchLog
+# SearchCondorLog
 #
-# Serach a log for a pattern
+# Serach a log for a regexp pattern
 #
 ##############################################################################
 
-sub PersonalSearchLog
+sub SearchCondorLog
 {
-    my $pid = shift;
-    my $personal = shift;
-    my $searchfor = shift;
-    my $logname = shift;
+    my $daemon = shift;
+    my $regexp = shift;
 
-	my $logdir = `condor_config_val log`;
-	fullchomp($logdir);
+    my $logloc = `condor_config_val ${daemon}_log`;
+    fullchomp($logloc);
 
-    #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
-    my $logloc = $logdir . "/" . $logname;
-    CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",2);
+    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
-        if( $_ =~ /$searchfor/) {
+        if( $_ =~ /$regexp/) {
             CondorTest::debug("FOUND IT! $_",2);
-            return(0);
+            return(1);
         }
     }
-    return(1);
+    return(0);
 }
 
 ##############################################################################
@@ -1553,25 +1708,142 @@ sub debug
 	Condor::debug($newstring,$level);
 }
 
-##############################################################################
-#
-# Lets stash the test name which will be consistent even
-# with multiple personal condors being used by the test
-#
-##############################################################################
+# PersonalCondorInstance is used to keep track of each personal
+# condor that is launched.
+{ package PersonalCondorInstance;
+  sub new
+  {
+      my $class = shift;
+      my $self = {
+          name => shift,
+          condor_config => shift,
+          collector_port => shift,
+          is_running => shift
+      };
+      bless $self, $class;
+      return $self;
+  }
+  sub GetCondorConfig
+  {
+      my $self = shift;
+      return $self->{condor_config};
+  }
+  sub GetCollectorAddress
+  {
+      my $self = shift;
+      return "localhost:" . $self->{collector_port};
+  }
+}
 
+sub ListAllPersonalCondors
+{
+    print "Personal Condors:\n";
+    for my $name ( keys %personal_condors ) {
+        my $condor = $personal_condors{$name};
+        print "$name: {\n"
+            . "  is_running=$condor->{is_running}\n"
+            . "  condor_config=$condor->{condor_config}\n"
+            . "}\n";
+    }
+}
+
+sub KillAllPersonalCondors
+{
+    for my $name ( keys %personal_condors ) {
+        my $condor = $personal_condors{$name};
+        if ( $condor->{is_running} == 1 ) {
+            KillPersonal($condor->{condor_config});
+        }
+    }
+}
+
+sub GenUniqueCondorName
+{
+    my $name = "condor";
+    my $num = 1;
+    while( exists $personal_condors{ $name . $num } ) {
+	$num = $num + 1;
+    }
+    return $name . $num;
+}
+
+sub GetPersonalCondorWithConfig
+{
+    my $condor_config  = shift;
+    for my $name ( keys %personal_condors ) {
+        my $condor = $personal_condors{$name};
+        if ( $condor->{condor_config} eq $condor_config ) {
+            return $condor;
+        }
+    }
+}
 
 sub StartPersonal
 {
     my $testname = shift;
     my $paramfile = shift;
     my $version = shift;
-	
+
 	$handle = $testname;
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
-    my $configloc = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
-    return($configloc);
+    my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
+
+    my @condor_info = split /\+/, $condor_info;
+    my $condor_config = shift @condor_info;
+    my $collector_port = shift @condor_info;
+
+    $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_port, 1 );
+
+    return($condor_info);
+}
+
+########################
+## StartCondorWithParams
+##
+## Starts up a personal condor that is configured as specified in
+## the named arguments to this function.  The personal condor will
+## be automatically shut down in this module's END handler or
+## when EndTest() is called.
+##
+## Arguments:
+##  condor_name - optional name to be associated with this personal condor
+##                (used in naming directories)
+##  For other arguments, see CondorPersonal::StartCondorWithParams().
+##
+## Returns:
+##  A PersonalCondorInstance object that may be used to get such things
+##  as the location of the config file and the collector address.
+##  Sets CONDOR_CONFIG to point to the condor config file.
+########################
+
+sub StartCondorWithParams
+{
+    my %condor_params = @_;
+    my $condor_name = $condor_params{condor_name} || "";
+    if( $condor_name eq "" ) {
+	$condor_name = GenUniqueCondorName();
+	$condor_params{condor_name} = $condor_name;
+    }
+
+    if( exists $personal_condors{$condor_name} ) {
+	die "condor_name=$condor_name already exists!";
+    }
+
+    if( ! exists $condor_params{test_name} ) {
+	$condor_params{test_name} = GetDefaultTestName();
+    }
+
+    my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
+
+    my @condor_info = split /\+/, $condor_info;
+    my $condor_config = shift @condor_info;
+    my $collector_port = shift @condor_info;
+
+    my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_port, 1 );
+    $personal_condors{$condor_name} = $new_condor;
+
+    return $new_condor;
 }
 
 sub KillPersonal
@@ -1588,6 +1860,11 @@ sub KillPersonal
 	debug("Doing core ERROR check in  KillPersonal\n",2);
 	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	CondorPersonal::KillDaemonPids($personal_config);
+
+	my $condor = GetPersonalCondorWithConfig( $personal_config );
+	if ( $condor ) {
+	    $condor->{is_running} = 0;
+	}
 }
 
 ##############################################################################

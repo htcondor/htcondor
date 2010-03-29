@@ -8,7 +8,5 @@ type = jobs
 
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
-condordaemons = master,schedd,stork,collector,negotiator
+daemon_list = master,schedd,stork,collector,negotiator
 slots	= 1 

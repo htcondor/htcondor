@@ -1555,7 +1555,7 @@ param_with_default_abort(const char *name, int abort) {
 	}
 
 	// Ok, now expand it out...
-	val = expand_macro( val, ConfigTab, TABLESIZE );
+	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, true );
 
 	// If it returned an empty string, free it before returning NULL
 	if( val == NULL ) {
@@ -2560,6 +2560,21 @@ write_config_variable(param_info_t* value, void* file_desc) {
 /* End code for runtime support for modifying a daemon's config source. */
 
 bool param(MyString &buf,char const *param_name,char const *default_value)
+{
+	bool found = false;
+	char *param_value = param(param_name);
+	if( param_value ) {
+		buf = param_value;
+		found = true;
+	}
+	else if( default_value ) {
+		buf = default_value;
+	}
+	free( param_value );
+	return found;
+}
+
+bool param(std::string &buf,char const *param_name,char const *default_value)
 {
 	bool found = false;
 	char *param_value = param(param_name);

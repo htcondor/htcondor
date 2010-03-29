@@ -3,10 +3,8 @@ type = jobs
 
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 localpostsrc = x_condorc_locconfigpostsrc
-condordaemons = master,schedd,startd
+daemon_list = master,schedd,startd
 nameschedd = scheddone
 collector = xxxxxxxxxxxxxxxx
 vms	= 1

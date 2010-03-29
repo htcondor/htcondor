@@ -8313,7 +8313,7 @@ id=487
 
 [JOB_ROUTER_NAME]
 aliases=
-default=
+default=jobrouter
 version=0.0.0
 range=.*
 state=default
@@ -8325,6 +8325,22 @@ friendly_name=Job Router Name
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,JobRouter
+id=488
+
+[JOB_ROUTER_LOCK]
+aliases=
+default=$(LOCK)/$(JOB_ROUTER_NAME)Lock
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Job Router Lock
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=JobRouter
 id=488
 
 [POLLING_PERIOD]

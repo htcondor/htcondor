@@ -4,7 +4,5 @@ type = jobs
 
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 localpostsrc = x_fetch_configpostsrc
-condordaemons = master,startd
+daemon_list = master,startd

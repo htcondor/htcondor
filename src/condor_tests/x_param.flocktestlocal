@@ -4,7 +4,5 @@ type = jobs
 
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 localpostsrc = x_flockto_configpostsrc
-condordaemons = collector,negotiator,master,schedd
+daemon_list = collector,negotiator,master,schedd
