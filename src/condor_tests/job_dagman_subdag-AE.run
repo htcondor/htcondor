@@ -18,16 +18,22 @@
 ##
 ##**************************************************************
 
+# Note: this is the same thing as job_dagman_subdag-A.run, except
+# that it's eagerly generating the .condor.sub files for the nested
+# DAGs (hence the 'E').
+
 use CondorTest;
 
 $cmd = 'job_dagman_subdag-A-upper.dag';
-$testdesc =  'Condor submit dag - sub-DAG test with lazy submit file generation - scheduler U';
-$testname = "job_dagman_subdag-A";
+$testdesc =  'Condor submit dag - sub-DAG test with eager submit file generation - scheduler U';
+$testname = "job_dagman_subdag-AE";
 # Here we pass most arguments that should be passed down to lower-level
 # DAGs.  We're just passing in non-default values here so that we can
 # check that the get passed down properly and inserted into the generated
 # .condor.sub files.
-$dagman_args = "-verbose -notification never -allowlogerror -debug 2 -outfile_dir . -oldrescue 1 -autorescue 0 -allowversionmismatch -update_submit -import_env";
+$dagman_args = "-verbose -do_recurse -notification never -allowlogerror -debug 2 -outfile_dir . -oldrescue 1 -autorescue 0 -allowversionmismatch -update_submit -import_env";
+# Tell DAGMan to not generate the .condor.sub files for nested DAGs itself.
+$ENV{_CONDOR_DAGMAN_GENERATE_SUBDAG_SUBMITS} = 0;
 
 @outfiles = ("job_dagman_subdag-A-lower1-node.B", 
   "job_dagman_subdag-A-lower1-node.C", 

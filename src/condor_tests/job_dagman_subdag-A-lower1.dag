@@ -1,5 +1,6 @@
-Job A job_dagman_subdag-A-lower1-node.cmd
-Vars A nodename = "$(JOB)"
+Subdag External A job_dagman_subdag-A-lowerlower1.dag
+Script Pre A job_dagman_subdag-A-lower-nodeA-pre.pl
+Script Post A job_dagman_subdag-A-lower-nodeA-post.pl $RETURN
 Job B job_dagman_subdag-A-lower1-node.cmd
 Vars B nodename = "$(JOB)"
 Job C job_dagman_subdag-A-lower1-node.cmd
