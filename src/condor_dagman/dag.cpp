@@ -2999,8 +2999,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// done before we try to monitor the log file).
    	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
+		bool isRetry = node->GetRetries() > 0;
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
-					node->GetDirectory() ) != 0 ) {
+					node->GetDirectory(), isRetry ) != 0 ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: condor_submit_dag -no_submit failed "
 						"for node %s.\n", node->GetJobName() );

@@ -30,11 +30,12 @@
 	@param dagFile: the DAG file to process
 	@param directory: the directory from which the DAG file should
 		be processed (ignored if NULL)
+	@param isRetry: whether this is a retry of a sub-DAG node
 	@return 0 if successful, 1 if failed
 */
 int
 runSubmitDag( const SubmitDagDeepOptions &deepOpts,
-			const char *dagFile, const char *directory )
+			const char *dagFile, const char *directory, bool isRetry )
 {
 	int result = 0;
 
@@ -66,7 +67,7 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( "-verbose" );
 	}
 
-	if ( deepOpts.bForce ) {
+	if ( deepOpts.bForce && !isRetry ) {
 		args.AppendArg( "-force" );
 	}
 

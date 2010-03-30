@@ -127,6 +127,6 @@ struct SubmitDagDeepOptions
 	@return 0 if successful, 1 if failed
 */
 int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
-			const char *dagFile, const char *directory );
+			const char *dagFile, const char *directory, bool isRetry );
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H
