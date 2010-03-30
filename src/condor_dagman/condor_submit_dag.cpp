@@ -188,7 +188,7 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 
 						// Now run condor_submit_dag on the DAG file.
 					if ( runSubmitDag( deepOpts, submitFile.Value(),
-								directory ) != 0 ) {
+								directory, false ) != 0 ) {
 						result = 1;
 					}
 				}
@@ -212,7 +212,8 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 				}
 
 					// Now run condor_submit_dag on the DAG file.
-				if ( runSubmitDag( deepOpts, nestedDagFile, directory ) != 0 ) {
+				if ( runSubmitDag( deepOpts, nestedDagFile, directory,
+							false ) != 0 ) {
 					result = 1;
 				}
 			}
