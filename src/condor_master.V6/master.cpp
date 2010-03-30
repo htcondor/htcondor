@@ -975,22 +975,22 @@ main_config( bool /* is_full */ )
 		}
 	}
 
+	// Remove daemons that should no longer be running
+	old_daemon_list.rewind();
+	while( (daemon_name = old_daemon_list.next()) ) {
+		if( !daemons.ordered_daemon_names.contains(daemon_name) ) {
+			if( NULL != daemons.FindDaemon(daemon_name) ) {
+				daemons.StopDaemon(daemon_name);
+			}
+		}
+	}
+
 		// Re-read the paths to our executables.  If any paths
 		// changed, the daemons will be marked as having a new
 		// executable.
 	daemons.InitParams();
 
 	if( StartDaemons ) {
-
-		// Remove daemons that should no longer be running
-		old_daemon_list.rewind();
-		while( (daemon_name = old_daemon_list.next()) ) {
-			if( !daemons.ordered_daemon_names.contains(daemon_name) ) {
-				if( NULL != daemons.FindDaemon(daemon_name) ) {
-					daemons.StopDaemon(daemon_name);
-				}
-			}
-		}
 			// Restart any daemons who's executables are new or ones
 			// that the path to the executable has changed.  
 		daemons.immediate_restart = TRUE;

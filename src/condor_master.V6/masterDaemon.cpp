@@ -142,8 +142,9 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_h )
 	log_filename_in_config_file = strdup(buf);
 
 	// Check the process name (is it me?)
+	flag_in_config_file = NULL;
 	process_name = NULL;
-    watch_name = NULL;
+	watch_name = NULL;
 	log_name = NULL;
 	if( strcmp(name, "MASTER") == MATCH ) {
 		runs_here = FALSE;
@@ -172,6 +173,43 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_h )
 #endif
 	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
+}
+
+daemon::~daemon()
+{
+	if( name_in_config_file != NULL ) {
+		free( name_in_config_file );
+	}
+	if( daemon_name != NULL ) {
+		free( daemon_name );
+	}
+	if( log_filename_in_config_file != NULL ) {
+		free( log_filename_in_config_file );
+	}
+	if( flag_in_config_file != NULL ) {
+		free( flag_in_config_file );
+	}
+	if( process_name != NULL ) {
+		free( process_name );
+	}
+	if( watch_name != NULL ) {
+		free( watch_name );
+	}
+	if( log_name != NULL ) {
+		free( log_name );
+	}
+	if( ha_lock != NULL ) {
+		delete( ha_lock );
+	}
+	if( controller_name != NULL ) {
+		free( controller_name );
+	}
+	if( controller != NULL ) {
+		delete( controller );
+	}
+	for( int num = 0;  num < num_controllees;  num++ ) {
+		delete( controllees[num] );
+	}
 }
 
 int
@@ -1833,9 +1871,14 @@ Daemons::StopDaemon( char* name )
 
 	iter = daemon_ptr.find( name );
 	if( iter != daemon_ptr.end() ) {
-		exit_allowed.insert( std::pair<int, class daemon*>(iter->second->pid, iter->second) );
 		daemon_ptr.erase( iter );
-		iter->second->Stop();
+		if( iter->second->pid > 0 ) {
+			exit_allowed.insert( std::pair<int, class daemon*>(iter->second->pid, iter->second) );
+			iter->second->Stop();
+		}
+		else {
+			delete iter->second;
+		}
 	}
 }
 
@@ -2188,6 +2231,7 @@ Daemons::AllReaper(int pid, int status)
 		if( NumberOfChildren() == 0 ) {
 			AllDaemonsGone();
 		}
+ 		delete valid_iter->second;
 		return TRUE;
 	}
 
@@ -2215,6 +2259,7 @@ Daemons::DefaultReaper(int pid, int status)
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
 		exit_allowed.erase(valid_iter);
+ 		delete valid_iter->second;
 		return TRUE;
 	}
 

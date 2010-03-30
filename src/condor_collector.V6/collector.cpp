@@ -929,6 +929,11 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 
 void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
+	if (param_boolean("IGNORE_INVALIDATE", false)) {
+		dprintf(D_ALWAYS, "Ignoring invalidate (IGNORE_INVALIDATE=TRUE)\n");
+		return;
+	}
+
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
@@ -936,11 +941,15 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	__query__ = &query;
 	__numAds__ = 0;
 
-	// first set all the "LastHeardFrom" attributes to low values ...
-	collector.walkHashTable (whichAds, invalidation_scanFunc);
+	if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) {
+			// first set all the "LastHeardFrom" attributes to low values ...
+		collector.walkHashTable (whichAds, invalidation_scanFunc);
 
-	// ... then invoke the housekeeper
-	collector.invokeHousekeeper (whichAds);
+			// ... then invoke the housekeeper
+		collector.invokeHousekeeper (whichAds);
+	} else {
+		__numAds__ = collector.invalidateAds(whichAds, query);
+	}
 
 	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__);
 }	

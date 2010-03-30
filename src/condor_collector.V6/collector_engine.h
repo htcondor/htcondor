@@ -39,6 +39,7 @@ class CollectorEngine : public Service
 	// interval to clean out ads
 	int scheduleHousekeeper (int = 300);
 	int invokeHousekeeper (AdTypes);
+	int invalidateAds(AdTypes, ClassAd &);
 
 	// want collector to log messages?  Default: yes
 	void toggleLogging (void);
@@ -63,6 +64,10 @@ class CollectorEngine : public Service
 	bool setCollectorRequirements( char const *str, MyString &error_desc );
 
   private:
+	typedef bool (*HashFunc) (AdNameHashKey &, ClassAd *, sockaddr_in *);
+
+	bool LookupByAdType(AdTypes, CollectorHashTable *&, HashFunc &);
+ 
 	// the greater tables
 	enum {GREATER_TABLE_SIZE = 1024};
 	CollectorHashTable StartdAds;
@@ -104,8 +109,7 @@ class CollectorEngine : public Service
 
 	void  housekeeper ();
 	int  housekeeperTimerID;
-	void cleanHashTable (CollectorHashTable &, time_t,
-				bool (*) (AdNameHashKey &, ClassAd *,sockaddr_in *));
+	void cleanHashTable (CollectorHashTable &, time_t, HashFunc);
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
 						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
 						   const sockaddr_in * );
