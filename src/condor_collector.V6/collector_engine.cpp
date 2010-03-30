@@ -226,7 +226,7 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 	MyString hkString;
 	(*table).startIterations();
 	while ((*table).iterate (ad)) {
-		if ((*ad) >= query) {
+		if (IsAHalfMatch(&query, ad)) {
 			(*table).getCurrentKey(hk);
 			hk.sprint(hkString);
 			if ((*table).remove(hk) == -1) {
