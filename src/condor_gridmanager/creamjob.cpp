@@ -1556,7 +1556,7 @@ char *CreamJob::buildSubmitAd()
 		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
 		tmp_str = gridftp_url + tmp_str;
 		if ( gridftpServer->UseSelfCred() ) {
-			tmp_str.sprintf_cat( "?%s", jobProxy->subject->subject_name );
+			tmp_str.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
 		}
 		isb.insert(tmp_str.Value());
 
@@ -1598,7 +1598,7 @@ char *CreamJob::buildSubmitAd()
 				tmp_str2 = gridftp_url + tmp_str;
 
 			if ( gridftpServer->UseSelfCred() ) {
-				tmp_str2.sprintf_cat( "?%s", jobProxy->subject->subject_name );
+				tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
 			}
 
 			isb.insert(tmp_str2.Value());
@@ -1636,7 +1636,7 @@ char *CreamJob::buildSubmitAd()
 				tmp_str2 = gridftp_url + tmp_str;
 
 			if ( gridftpServer->UseSelfCred() ) {
-				tmp_str2.sprintf_cat( "?%s", jobProxy->subject->subject_name );
+				tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
 			}
 
 			isb.insert(tmp_str2.Value());
@@ -1667,7 +1667,7 @@ char *CreamJob::buildSubmitAd()
 							 condor_basename( filename ) );
 			}
 			if ( gridftpServer->UseSelfCred() ) {
-				buf.sprintf_cat( "?%s", jobProxy->subject->subject_name );
+				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
 			}
 			osb_url.insert( buf.Value() );
 		}
@@ -1693,7 +1693,7 @@ char *CreamJob::buildSubmitAd()
 						tmp_str.Value());
 
 			if ( gridftpServer->UseSelfCred() ) {
-				buf.sprintf_cat( "?%s", jobProxy->subject->subject_name );
+				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
 			}
 
 			osb_url.insert(buf.Value());
@@ -1721,7 +1721,7 @@ char *CreamJob::buildSubmitAd()
 						tmp_str.Value());
 
 			if ( gridftpServer->UseSelfCred() ) {
-				buf.sprintf_cat( "?%s", jobProxy->subject->subject_name );
+				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
 			}
 
 			osb_url.insert(buf.Value());
