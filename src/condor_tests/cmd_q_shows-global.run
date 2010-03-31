@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use strict;
 use warnings;
 
@@ -73,7 +74,7 @@ CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",$d
 
 my $saveconfig = $ENV{CONDOR_CONFIG};
 $ENV{CONDOR_CONFIG} = $locconfig;
-system("condor_config_val COLLECTOR_HOST");
+runcmd("condor_config_val COLLECTOR_HOST");
 $ENV{CONDOR_CONFIG} = $saveconfig;
 
 my $line;
@@ -187,21 +188,22 @@ CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",$debugleve
 	}
 }
 
-system("cp *cmd_q_shows-global* $mysaveme");
+# The pattern matches $mysaveme and causes it to always fail.
+runcmd("cp *cmd_q_shows-global* $mysaveme", {expect_result => \&ANY} );
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmout $mycorenmout");
+	runcmd("cp $mysubmitnmout $mycorenmout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($locconfig);
