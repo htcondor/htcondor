@@ -94,6 +94,10 @@
 #include "ClassAdLogPlugin.h"
 #endif
 
+#ifndef max
+#define max(x,y) (((x) < (y)) ? (y) : (x))
+#endif
+
 #define DEFAULT_SHADOW_SIZE 800
 #define DEFAULT_JOB_START_COUNT 1
 
@@ -5163,6 +5167,53 @@ Scheduler::negotiate(int command, Stream* s)
 						FREE( claim_id );
 						return (!(KEEP_STREAM));
 					}
+
+
+							// We want to avoid re-using a claim to a
+							// partitionable slot for jobs that do not
+							// fit the dynamicly created slot. Since
+							// we simply compare requirements in
+							// FindRunnableJob we need to make sure
+							// the my_match_ad accurately reflects the
+							// dynamic slot. So, Temporarily
+							// (Condor-style), we will massage
+							// my_match_ad to look like the dynamic
+							// slot will once the claim is requested.
+
+					int cpus, memory, disk;
+
+					cpus = 1;
+					cad->EvalInteger(ATTR_REQUEST_CPUS, my_match_ad, cpus);
+					my_match_ad->Assign(ATTR_CPUS, cpus);
+
+					memory = -1;
+					if (cad->EvalInteger(ATTR_REQUEST_MEMORY,
+										 my_match_ad,
+										 memory)) {
+						my_match_ad->Assign(ATTR_MEMORY, memory);
+					} else {
+						dprintf(D_ALWAYS, "Claim massaging: No memory request on Job ad, skipping...\n");
+						delete my_match_ad;
+						FREE( claim_id );
+						return (!(KEEP_STREAM));
+					}
+
+					if (cad->EvalInteger(ATTR_REQUEST_DISK,
+										 my_match_ad,
+										 disk)) {
+						float total_disk = disk;
+						my_match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
+						disk = (max((int) ceil((disk / total_disk) * 100), 1) / 100.0) * total_disk;
+						my_match_ad->Assign(ATTR_DISK, disk);
+					} else {
+						dprintf(D_ALWAYS, "Claim massaging: No disk request on Job ad, skipping...\n");
+						delete my_match_ad;
+						FREE( claim_id );
+						return (!(KEEP_STREAM));
+					}
+
+					dprintf(D_FULLDEBUG, "claim massaged: cpus = %d, memory = %d, disk = %d\n", cpus, memory, disk);
+
 
 					{
 						ClaimIdParser idp(claim_id);
