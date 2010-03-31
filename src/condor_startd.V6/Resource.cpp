@@ -997,15 +997,22 @@ Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
 	MyString line;
+	MyString escaped_name;
 
 		// Set the correct types
 	invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
 	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
 
-		// We only want to invalidate this slot.
-	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
-			 r_name );
-	invalidate_ad.Insert( line.Value() );
+	/*
+	 * NOTE: the collector depends on the data below for performance reasons
+	 * if you change here you will need to CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
+	 * the IP was added to allow the collector to create a hash key to delete in O(1).
+     */
+	 ClassAd::EscapeStringValue( r_name, escaped_name );
+     line.sprintf( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
+     invalidate_ad.Assign( ATTR_NAME, r_name );
+     invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
 #if HAVE_DLOPEN
 	StartdPluginManager::Invalidate(&invalidate_ad);

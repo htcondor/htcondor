@@ -51,6 +51,16 @@ class CollectorEngine : public Service
 	// lookup classad in the specified table with the given hashkey
 	ClassAd *lookup (AdTypes, AdNameHashKey &);
 
+	/**
+	* remove () - attempts to construct a hashkey from a query
+    * to remove in O(1) for INVALIDATE* vs. O(n). The query must contain
+    * TARGET.Name && TARGET.MyAddress
+	* @param t_AddType - the add type used to determine the hashtable to search
+    * @param c_query - classad query 
+    * @return - the number of records removed.
+	*/
+	int remove (AdTypes t_AddType, const ClassAd & c_query);
+
 	// remove classad in the specified table with the given hashkey
 	int remove (AdTypes, AdNameHashKey &);
 

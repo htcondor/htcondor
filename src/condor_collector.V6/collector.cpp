@@ -937,21 +937,27 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
-	// set up for hashtable scan
-	__query__ = &query;
-	__numAds__ = 0;
+    if ( 0 == ( __numAds__ = collector.remove( whichAds, query ) ) )
+	{
+		dprintf ( D_ALWAYS, "Walking tables to invalidate... O(n)\n" );
 
-	if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) {
+		// set up for hashtable scan
+		__query__ = &query;
+
+		if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) 
+		{
 			// first set all the "LastHeardFrom" attributes to low values ...
-		collector.walkHashTable (whichAds, invalidation_scanFunc);
+			collector.walkHashTable (whichAds, invalidation_scanFunc);
 
 			// ... then invoke the housekeeper
-		collector.invokeHousekeeper (whichAds);
-	} else {
-		__numAds__ = collector.invalidateAds(whichAds, query);
+			collector.invokeHousekeeper (whichAds);
+		} else 
+		{
+			__numAds__ = collector.invalidateAds(whichAds, query);
+		}
 	}
 
-	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__);
+	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__ );
 }	
 
 

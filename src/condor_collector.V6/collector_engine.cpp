@@ -899,6 +899,28 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 	return val;
 }
 
+int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
+{
+	int iRet = 0;
+	AdNameHashKey hk;
+	CollectorHashTable * table;  
+	HashFunc makeKey;
+	MyString hkString;
+
+	// making it generic so any would be invalid query can contain these params.
+	if ( LookupByAdType (t_AddType, table, makeKey) )
+	{
+		// try to create a hk from the query ad if it is possible.
+		if ( (*makeKey) (hk, (ClassAd*) &c_query, NULL) )
+		{
+			hk.sprint( hkString );
+			iRet = !table->remove(hk);
+			dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.Value() );
+		}
+	}
+
+	return ( iRet );
+}
 
 int CollectorEngine::
 remove (AdTypes adType, AdNameHashKey &hk)
