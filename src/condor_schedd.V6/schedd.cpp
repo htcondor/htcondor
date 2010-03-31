@@ -5168,7 +5168,11 @@ Scheduler::negotiate(int command, Stream* s)
 						return (!(KEEP_STREAM));
 					}
 
-
+					{
+					int is_partitionable = 0;
+					my_match_ad->LookupBool(ATTR_SLOT_PARTITIONABLE,
+											is_partitionable);
+					if (is_partitionable) {
 							// We want to avoid re-using a claim to a
 							// partitionable slot for jobs that do not
 							// fit the dynamicly created slot. Since
@@ -5213,6 +5217,8 @@ Scheduler::negotiate(int command, Stream* s)
 					}
 
 					dprintf(D_FULLDEBUG, "claim massaged: cpus = %d, memory = %d, disk = %d\n", cpus, memory, disk);
+					}
+					}
 
 
 					{
