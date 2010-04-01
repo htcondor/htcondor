@@ -82,6 +82,7 @@ struct ProcFamilyUsage {
 	double        percent_cpu;
 	unsigned long max_image_size;
 	unsigned long total_image_size;
+    unsigned long total_resident_set_size;
 	int           num_procs;
 };
 

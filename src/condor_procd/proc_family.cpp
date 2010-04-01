@@ -127,6 +127,7 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 		// current total image size
 		//
 		usage->total_image_size += member->m_proc_info->imgsize;
+		usage->total_resident_set_size += member->m_proc_info->rssize;
 
 		// number of alive processes
 		//

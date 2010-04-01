@@ -105,8 +105,10 @@ VMStarterInfo::getUsageOfVM(ProcFamilyUsage &usage)
 
 	if( updated ) {
 		usage.total_image_size = m_vm_alive_pinfo.imgsize;
+		usage.total_resident_set_size = m_vm_alive_pinfo.rssize;
 	}else {
 		usage.total_image_size = 0;
+        usage.total_resident_set_size = 0;
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
@@ -961,6 +963,7 @@ VMUniverseMgr::getUsageForVM(pid_t s_pid, ProcFamilyUsage &usage)
 		usage.max_image_size = vm_usage.max_image_size;
 	}
 	usage.total_image_size += vm_usage.total_image_size;
+	usage.total_resident_set_size += vm_usage.total_resident_set_size;
 	return true;
 }
 
