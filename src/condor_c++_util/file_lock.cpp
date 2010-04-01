@@ -69,7 +69,7 @@ FileLockBase::updateAllLockTimestamps(void)
 }
 
 void 
-FileLockBase::recordExistence(void)
+FileLockBase::recordExistence(void) 
 {
 	FileLockEntry *fle = new FileLockEntry;
 	
@@ -159,6 +159,7 @@ FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 	}
 }
 
+
 FileLock::FileLock( const char *path )
 		: FileLockBase( )
 {
@@ -170,8 +171,73 @@ FileLock::FileLock( const char *path )
 	updateLockTimestamp();
 }
 
+FileLock::FileLock( const char *path , bool deleteFile, bool useLiteralPath)
+		: FileLockBase( )
+{
+	Reset( );
+
+	ASSERT(path != NULL);
+#ifndef WIN32
+	if (deleteFile) {
+		char *hPath = NULL;
+		m_delete = 1;
+		if (useLiteralPath) {
+			SetPath(path);
+		} else {
+			hPath = CreateHashName(path);	
+			SetPath(hPath);
+			delete []hPath;
+		}
+			
+		m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );
+		if (m_fd < 0) {
+			if (!useLiteralPath) {
+				dprintf(D_FULLDEBUG, "Destination path for lock file %s does not seem to exist - trying to create.\n", m_path);
+				char *dPath = GetTempPath();
+				int mdir = mkdir(dPath, 0777);
+				delete []dPath;
+				if (mdir < 0) {
+					dprintf(D_FULLDEBUG, "Destination path directory %s cannot be created. Failure.\n", dPath);
+					EXCEPT("FileLock::FileLock(): You must have a valid or creatable directory path set as tmp path.");
+				}
+			// now let's try again.
+				m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );	 
+			} else {
+				EXCEPT("FileLock::FileLock(): You must have a valid file path as argument.");
+			}
+		}
+	} else {
+		SetPath(path);
+	} 
+	updateLockTimestamp();
+#else
+	SetPath(path);
+	updateLockTimestamp();
+#endif
+}
+
 FileLock::~FileLock( void )
 {
+	
+#ifndef WIN32  // let's only do that for non-Windows for now
+	if (m_delete == 1) { 
+		if (m_state != WRITE_LOCK) {
+			bool result = obtain(WRITE_LOCK);
+			if (!result) {
+				dprintf(D_ALWAYS, "Lock file %s cannot be deleted upon lock file object destruction. \n", m_path);
+				goto finish;
+			}
+		}	
+		int deleted = unlink(m_path);
+		if (deleted == 0){ 
+			dprintf(D_FULLDEBUG, "Lock file %s has been deleted. \n", m_path);
+		} else{
+			dprintf(D_FULLDEBUG, "Lock file %s cannot be deleted. \n", m_path);
+		}
+			
+	}
+	finish:
+#endif
 	if( m_state != UN_LOCK ) {
 		release();
 	}
@@ -184,11 +250,16 @@ FileLock::~FileLock( void )
 #endif
 
 	SetPath(NULL);
+	if (m_delete == 1) {
+		close(m_fd);
+	}
+	Reset();
 }
 
 void
 FileLock::Reset( void )
 {
+	m_delete = 0;
 	m_fd = -1;
 	m_fp = NULL;
 	m_blocking = true;
@@ -208,6 +279,7 @@ FileLock::Reset( void )
 void
 FileLock::SetPath(const char *path)
 {
+
 	if ( m_path ) {
 		free(m_path);
 	}
@@ -228,8 +300,7 @@ FileLock::SetPath(const char *path)
 			return;
 		}
 #endif
-	
-			// Either we are on Unix or _fullpath failed us, so strdup.
+		// or not, and therefore just call strdup
 		m_path = strdup(path);
 	}
 }
@@ -246,7 +317,21 @@ FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
 		EXCEPT("FileLock::SetFdFpFile(). You must supply a valid file argument "
 			"with a valid fd or fp_arg");
 	}
-
+#ifndef WIN32	
+	if (m_delete == 1) {
+		char *nPath = CreateHashName(file);	
+		SetPath(nPath);	
+		delete []nPath;
+		close(m_fd);	
+		m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );
+		if (m_fd < 0) {
+			dprintf(D_FULLDEBUG, "Lock File %s cannot be created.\n", m_path); 
+			return;
+		}
+		updateLockTimestamp(); 
+		return;
+	}
+#endif
 	m_fd = fd;
 	m_fp = fp;
 
@@ -364,6 +449,10 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 bool
 FileLock::obtain( LOCK_TYPE t )
 {
+	int counter = 0; 
+#if !defined(WIN32)
+	start: 
+#endif	
 // lock_file uses lseeks in order to lock the first 4 bytes of the file on NT
 // It DOES properly reset the lseek version of the file position, but that is
 // not the same (in some very inconsistent and weird ways) as the fseek one,
@@ -408,6 +497,31 @@ FileLock::obtain( LOCK_TYPE t )
 			// restore their FILE*-position
 			fseek(m_fp, lPosBeforeLock, SEEK_SET); 	
 		}
+
+#ifndef WIN32		
+			// if we deal with our own fd and are not unlocking
+		if (m_delete == 1 && t != UN_LOCK){
+			struct stat si; 
+			fstat(m_fd, &si);
+				// no more hard links ... it was deleted while we were waiting
+				// in that case we need to reopen and restart
+			if ( si.st_nlink < 1 ){
+				release();
+				close(m_fd);
+				m_fd = safe_open_wrapper(m_path, O_CREAT | O_RDWR , 0644);
+				if (m_fd < 0) {
+					dprintf(D_FULLDEBUG, "Reopening the lock file %s failed. \n", m_path);
+				}
+				++counter;
+					// let's retry at most 5 times
+				if (counter < 6) {
+					goto start;
+				}
+				else 
+					status = -1;
+			}		
+		}
+#endif		
 	}
 
 	if( status == 0 ) {
@@ -430,6 +544,7 @@ bool
 FileLock::release(void)
 {
 	return obtain( UN_LOCK );
+	
 }
 
 void
@@ -477,6 +592,71 @@ FileLock::updateLockTimestamp(void)
 		}
 		set_priv(p);
 
-		return;
+		return; 
 	}
+}
+
+
+// create a temporary lock path
+char * 
+FileLock::GetTempPath() 
+{
+	char *suffix = "condorLocks";
+	char *tmp = param("TEMP_DIR");
+	char *tempPath;	
+	
+	if (tmp == NULL) {
+		tmp = param("TMP_DIR");
+		if (tmp == NULL) {
+			tempPath = "/tmp";
+		}
+	}
+	
+	if (tmp != NULL)
+		tempPath = tmp;
+	
+	int len = strlen(tempPath) + strlen(suffix) + 3;
+	char *path = new char[len];
+	if (tempPath[strlen(tempPath)-1] == DIR_DELIM_CHAR)
+		snprintf(path, len-1, "%s%s%c", tempPath, suffix, DIR_DELIM_CHAR);
+	else 
+		snprintf(path, len, "%s%c%s%c", tempPath, DIR_DELIM_CHAR, suffix, DIR_DELIM_CHAR);
+	
+	if (tmp != NULL)
+		free(tmp);
+	return path;
+}
+
+char *
+FileLock::CreateHashName(const char *orig)
+{
+	char *path = GetTempPath();
+	
+	unsigned long hash = 0;
+	char *temp_filename;
+	int c;
+#if defined(_POSIX_PATH_MAX) && !defined(WIN32)
+	char *buffer = new char[_POSIX_PATH_MAX];
+	temp_filename = realpath(orig, buffer);
+	if (temp_filename == NULL) {
+		temp_filename = new char[strlen(orig)+1];
+		strcpy(temp_filename, orig);
+		delete []buffer;
+	}
+#else 
+	temp_filename = new char[strlen(orig)+1];
+	strcpy(temp_filename, orig);	
+#endif
+	int orig_size = strlen(temp_filename);
+	for (int i = 0 ; i < orig_size; i++){
+		c = temp_filename[i];
+		hash = c + (hash << 6) + (hash << 16) - hash;
+	}
+	hash = hash % 1000;
+	int len = strlen(path) + 10;
+	char *dest = new char[len];
+	sprintf(dest, "%s%u%s", path , hash, ".lockc");
+	delete []temp_filename; 
+	delete []path; 
+	return dest;
 }

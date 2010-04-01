@@ -46,6 +46,7 @@
 #include "extArray.h"
 #include "link.h"
 #include "shared_port_endpoint.h"
+#include "file_lock.h"
 
 State get_machine_state();
 
@@ -74,6 +75,7 @@ void init_params();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
+void check_tmp_dir();
 void check_daemon_sock_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
@@ -146,7 +148,7 @@ main( int argc, char *argv[] )
 	check_execute_dir();
 	check_log_dir();
 	check_daemon_sock_dir();
-
+	check_tmp_dir();
 
 		// Produce output, either on stdout or by mail
 	if( !BadFiles->isEmpty() ) {
@@ -602,6 +604,44 @@ check_daemon_sock_dir()
 		}
 	}
 }	
+
+void check_tmp_dir(){
+#if !defined(WIN32)
+	const char *file;
+	char *tmpDir = NULL;
+	bool newLock = param_boolean("NEW_LOCKING", false);
+	if (newLock) {
+				// create a dummy FileLock for TmpPath access
+		FileLock *lock = new FileLock(-1, NULL, NULL);
+		tmpDir = lock->GetTempPath();	
+		delete lock;
+		Directory *files = new Directory(tmpDir);
+		if(files == NULL) {
+			fprintf(stderr, "Cannot open %s\n", tmpDir);
+		} else {
+			int i = 0;
+			while( (file = files->Next()) && i < 65536) {
+				if(! files->IsDirectory() ) {
+					const char *path = files->GetFullPath();
+					int fd = safe_open_wrapper( path, O_WRONLY, 0664 );
+					lock = new FileLock(path, true, true);
+					bool result = lock->obtain(WRITE_LOCK);
+					if (!result) {
+							fprintf(stderr, "Cannot lock %s\n", path);
+					}
+					delete lock;
+				}
+			}
+			delete files;
+		}
+		if (tmpDir != NULL)
+			delete []tmpDir;
+		
+	}
+  
+#endif	
+}
+
 
 extern "C" int
 SetSyscalls( int foo ) { return foo; }
