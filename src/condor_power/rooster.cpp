@@ -83,19 +83,13 @@ void Rooster::config()
 				"seconds.\n", m_polling_interval);
 	}
 
-	MyString default_unhibernate_constraint;
-	default_unhibernate_constraint.sprintf("%s && %s",ATTR_OFFLINE,ATTR_UNHIBERNATE);
-	param(m_unhibernate_constraint,"ROOSTER_UNHIBERNATE",default_unhibernate_constraint.Value());
+	ASSERT( param(m_unhibernate_constraint,"ROOSTER_UNHIBERNATE") );
 
 
-	MyString error_msg;
-	if( !param(m_wakeup_cmd,"ROOSTER_WAKEUP_CMD") ) {
-		MyString bin;
-		if( param(bin,"BIN") ) {
-			m_wakeup_cmd.sprintf("\"%s/condor_power -d -i\"",bin.Value());
-		}
-	}
+	ASSERT( param(m_wakeup_cmd,"ROOSTER_WAKEUP_CMD") );
+
 	m_wakeup_args.Clear();
+	MyString error_msg;
 	if( !m_wakeup_args.AppendArgsV2Quoted(m_wakeup_cmd.Value(),&error_msg) ) {
 		EXCEPT("Invalid wakeup command %s: %s\n",
 			   m_wakeup_cmd.Value(), error_msg.Value());
