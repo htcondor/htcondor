@@ -23,9 +23,12 @@ SimpleJob                  * submit a job and verify that it completes
     universe               - defaults to vanilla
     user_log               - path and name of user log
     grid_resource          - setting for GridResource in submit file
+    should_transfer_files  - submit file command
+    when_to_transfer_output - submit file command
     append_submit_commands - additional lines to append to submit file
 
 CondorLog                  * verify that expected output exists in log
   required arguments:
     daemon                 - condor daemon name (must match <NAME>_LOG in conf)
     match_regexp           - regular expression to match
+    fail_if_found          - fail check if pattern found (defaults to false)
