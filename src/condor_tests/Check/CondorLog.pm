@@ -27,8 +27,13 @@ sub RunCheck
 
     my $daemon = $args{daemon} || die("'daemon' not specified");
     my $match_regexp = $args{match_regexp} || die("'match_regexp' not specified");
+    my $fail_if_found = $args{fail_if_found} || 0;
 
     my $result = CondorTest::SearchCondorLog($daemon,$match_regexp);
+
+    if( $fail_if_found ) {
+	$result = !$result;
+    }
 
     CondorTest::RegisterResult( $result, %args );
     return $result;
