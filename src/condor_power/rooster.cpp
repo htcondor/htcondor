@@ -100,6 +100,20 @@ void Rooster::config()
 		EXCEPT("Invalid wakeup command %s: %s\n",
 			   m_wakeup_cmd.Value(), error_msg.Value());
 	}
+
+	MyString rank;
+	param(rank,"ROOSTER_UNHIBERNATE_RANK");
+	if( rank.IsEmpty() ) {
+		m_rank_ad.Delete(ATTR_RANK);
+	}
+	else {
+		if( !m_rank_ad.AssignExpr(ATTR_RANK,rank.Value()) ) {
+			EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE_RANK: %s\n",
+				   rank.Value());
+		}
+	}
+
+	m_max_unhibernate = param_integer("ROOSTER_MAX_UNHIBERNATE",0,0);
 }
 
 void Rooster::stop()
@@ -110,12 +124,32 @@ void Rooster::stop()
 	}
 }
 
+static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
+{
+	ClassAd *rank_ad = (ClassAd *)data;
+
+	float rank1 = 0;
+	float rank2 = 0;
+	rank_ad->EvalFloat(ATTR_RANK,ad1,rank1);
+	rank_ad->EvalFloat(ATTR_RANK,ad2,rank2);
+
+	return rank1 > rank2;
+}
+
+
 void Rooster::poll()
 {
 	dprintf(D_FULLDEBUG,"Cock-a-doodle-doo! (Time to look for machines to wake up.)\n");
 
 	ClassAdList startdAds;
 	CondorQuery unhibernateQuery(STARTD_AD);
+	ExprTree *requirements = NULL;
+
+	if( ParseClassAdRvalExpr( m_unhibernate_constraint.Value(), requirements )!=0 || requirements==NULL )
+	{
+		EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE: %s\n",
+			   m_unhibernate_constraint.Value());
+	}
 
 	unhibernateQuery.addANDConstraint(m_unhibernate_constraint.Value());
 
@@ -135,7 +169,10 @@ void Rooster::poll()
 	dprintf(D_FULLDEBUG,"Got %d startd ads matching ROOSTER_UNHIBERNATE=%s\n",
 			startdAds.MyLength(), m_unhibernate_constraint.Value());
 
+	startdAds.Sort(StartdSortFunc,&m_rank_ad);
+
 	startdAds.Open();
+	int num_woken = 0;
 	ClassAd *startd_ad;
 	HashTable<MyString,bool> machines_done(MyStringHash);
 	while( (startd_ad=startdAds.Next()) ) {
@@ -151,11 +188,30 @@ void Rooster::poll()
 			continue;
 		}
 
+			// in case the unhibernate expression is time-sensitive,
+			// re-evaluate it now to make sure it still passes
+		if( !EvalBool(startd_ad,requirements) ) {
+			dprintf(D_ALWAYS,
+					"Skipping %s: ROOSTER_UNHIBERNATE is no longer true.\n",
+					name.Value());
+			continue;
+		}
+
 		if( wakeUp(startd_ad) ) {
 			machines_done.insert(machine,true);
+
+			if( ++num_woken >= m_max_unhibernate && m_max_unhibernate > 0 ) {
+				dprintf(D_ALWAYS,
+						"Reached ROOSTER_MAX_UNHIBERNATE=%d in this cycle.\n",
+						m_max_unhibernate);
+				break;
+			}
 		}
 	}
 	startdAds.Close();
+
+	delete requirements;
+	requirements = NULL;
 
 	if( startdAds.MyLength() ) {
 		dprintf(D_FULLDEBUG,"Done sending wakeup calls.\n");
