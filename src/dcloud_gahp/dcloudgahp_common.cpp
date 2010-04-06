@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include "dcloudgahp_common.h"
 
 static pthread_mutex_t dcloudprintf_mutex = PTHREAD_MUTEX_INITIALIZER;

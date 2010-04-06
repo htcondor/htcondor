@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <dcloudapi/dcloudapi.h>
 #include <string>
+#include <stdlib.h>
+#include <strings.h>
 #include "dcloudgahp_commands.h"
 #include "dcloudgahp_common.h"
 
