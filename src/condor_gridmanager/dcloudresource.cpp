@@ -188,7 +188,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 	DCloudJob *next_job;
 	List<DCloudJob> my_jobs;
 	registeredJobs.Rewind();
-	while ( (next_job = registeredJobs.Next()) ) {
+	while ( (next_job = (DCloudJob *)registeredJobs.Next()) ) {
 		my_jobs.Insert( next_job );
 	}
 
@@ -217,7 +217,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 	}
 
 	registeredJobs.Rewind();
-	while ( (next_job = registeredJobs.Next()) ) {
+	while ( (next_job = (DCloudJob *)registeredJobs.Next()) ) {
 		next_job->StatusUpdate( NULL );
 	}
 
