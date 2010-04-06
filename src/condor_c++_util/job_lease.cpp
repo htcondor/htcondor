@@ -30,7 +30,7 @@ void SetDefaultJobLeaseDuration( int duration )
 }
 
 bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
-						int default_duration )
+						int default_duration, time_t *renew_time )
 {
 	//int cluster,proc;
 	int expire_received = -1;
@@ -40,6 +40,10 @@ bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
 
 	if ( default_duration != -1 ) {
 		lease_duration = default_duration;
+	}
+
+	if ( renew_time ) {
+		*renew_time = (time_t)INT_MAX;
 	}
 
 	new_expiration = -1;
@@ -81,6 +85,9 @@ bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
 			new_expiration = now + lease_duration;
 		} else {
 			//dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: no new lease at present\n",cluster,proc);
+			if ( renew_time ) {
+				*renew_time = expire_sent - ( ( ( lease_duration * 2 ) / 3 ) + 10 );
+			}
 			return false;
 		}
 	}
