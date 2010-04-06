@@ -104,6 +104,84 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrack 1217
+\item Fixed a bug in which the \Condor{schedd} would sometimes negotiate
+  for and try to run
+  more jobs than specified by \MacroNI{MAX\_RUNNING\_JOBS}.  Once the
+  jobs started running, it would then kill them off to get back below
+  the limit.  This was more likely to happen with slow preemption
+  caused by \MacroNI{MaxJobRetirementTime} or by a large timeout
+  imposed by \MacroNI{KILL}.  This problem has existed since before
+  Condor 6.5.  When this problem happened, the following message
+  appeared in the \Condor{schedd} log:
+
+\begin{verbatim}
+Preempting X jobs due to MAX_JOBS_RUNNING change
+\end{verbatim}
+
+% gittrack 1250
+\item Fixed a problem that caused \Condor{ssh\_to\_job} to fail to connect
+to a job running on a slot with multiple '@' signs in its name.  This bug
+has existed since the introduction of \Condor{ssh\_to\_job} in 7.3.2.
+
+% gittrack 116
+\item In all previous versions of Condor, \Condor{status} refused to
+  accept \Opt{-long}, \Opt{-xml}, and \Opt{-format} when followed by
+  an argument such as \Opt{-master} that specified which type of
+  daemon to look at.  The order of the arguments had to be reversed or
+  it would produce a message such as the following:
+
+\begin{verbatim}
+Error:  arg 4 (-master) contradicts arg 1 (-format)
+\end{verbatim}
+
+% gittrac #1201
+\item Fixed a bug which caused the \Condor{master} to crash if
+\MacroNI{VIEW\_SERVER} was included in \MacroNI{DAEMON\_LIST} and
+\MacroNI{CONDOR\_VIEW\_HOST} was unset.
+
+% gittrac #1196
+\item Fixed a bug that caused configuration parameter
+\MacroNI{LOCAL\_CONFIG\_DIR} to be ignored if it was set in a local
+configuration file, as opposed to the top-level configuration file.
+
+% gittrac #1202
+\item Fixed a bug that could cause the \Condor{schedd} to behave
+incorrectly when reading an invalid job queue log on startup.
+
+% gittrac #1215
+\item Fixed a bug that could corrupt the job queue log
+if the \Condor{schedd} daemon's attempt to compact it fails.
+
+% gittrac #1256
+\item Fixed a problem that in rare cases caused the \Condor{schedd} to
+crash shortly after the \Condor{gridmanager} exited.
+This bug has existed since before Condor version 6.8.
+
+% gittrack #1270
+\item Fixed a problem that was resulting in messages such as the following:
+
+\footnotesize
+\begin{verbatim}
+ERROR: receiving new UDP message but found a long message still waiting
+to be closed (consumed=0). Closing it now.
+\end{verbatim}
+\normalsize
+
+\item The file extension specified to \Condor{fetch\_log} can no longer
+contain a path delimiter.
+
+% gittrack 1299
+\item When in graceful shutdown mode, the \Condor{schedd} was
+  sometimes starting idle scheduler universe jobs.  With a large
+  enough number of scheduler universe jobs, this could lead to a cycle
+  of stopping and restarting jobs until the graceful shutdown time
+  expired.
+
+% gittrac #1259
+\item Fixed multiple bugs that prevented Condor from building on or
+  running correctly on OpenSolaris X86/64 version 2009.06.
+
 % gittrac #1238
 \item Fixed a bug which caused the \Condor{startd} to incorrectly
   count the number of processors on some machines with
@@ -208,12 +286,14 @@ proxy, which was the previous behavior.
 \item Fixed a bug that could cause the nordugrid\_gahp to crash.
 
 % gittrac #742
-\item Fixed a problem introduced in 7.4.0 that could cause two schedds
+\item Fixed a problem introduced in 7.4.0 that could cause two 
+  \Condor{schedd} daemons
   with a match to the same slot to both fail to claim it, rather than
   letting the first one to claim it succeed.  This sort of situation
   can happen when the \Condor{negotiator} has a stale view of the pool,
   either because the gap between negotiation cycles is configured to
-  be shorter than usual, or updates from \Condor{startd} to \Condor{collector}
+  be shorter than usual, or because updates from the \Condor{startd}
+  to the \Condor{collector}
   are not reliably delivered and processed.
 
 \end{itemize}
