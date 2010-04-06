@@ -11227,7 +11227,7 @@ Scheduler::needReschedule()
 		// timeout() has internal logic to avoid doing its work too
 		// frequently, and we want to send the reschedule after
 		// updating our ad in the collector, not before.
-	timeout();
+	daemonCore->Reset_Timer(timeoutid,0,1);
 }
 
 void
