@@ -1,3 +1,6 @@
+Changes for version 1.0.7 (unreleased)
+* Stop escaping '?' in strings when unparsing.
+
 Changes for version 1.0.6 (Released 2010-02-25)
 * Fixed bug in MatchClassAd::OptimizeAdForMatchmaking() that broke
   references to the right ad from the left ad.
