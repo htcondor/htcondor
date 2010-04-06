@@ -363,17 +363,40 @@ This syntax does not permit distinguishing one from the other,
 so only one may be specified.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration change requiring a restart of Condor}
+When any of the following listed configuration variables are changed,
+Condor must be restarted.
+Reconfiguration using \Condor{reconfig} will not be enough.
+
+\begin{itemize}
+  \item \verb@BIND_ALL_INTERFACES@
+  \item \verb@DAEMON_LIST@
+  \item \verb@FetchWorkDelay@
+  \item \verb@MAX_NUM_CPUS@
+  \item \verb@NETWORK_INTERFACE@
+  \item \verb@NUM_CPUS@
+  \item \verb@PREEMPTION_REQUIREMENTS_STABLE@
+  \item \verb@PRIVSEP_ENABLED@
+  \item \verb@PROCD_ADDRESS@
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Pre-Defined-Macros}Pre-Defined Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!pre-defined macros}
+\index{configuration file!pre-defined macros}
 Condor provides pre-defined macros that help configure Condor.
 Pre-defined macros are listed as \MacroUNI{macro\_name}.
 
 This first set are entries whose values are determined at
 run time and cannot be overwritten.  These are inserted automatically by
 the library routine which parses the configuration files.
-\index{configuration file!pre-defined macros}
+This implies that a change to the underlying value of any of these
+variables will require a full restart of Condor in order to use
+the changed value.
 \begin{description}
   
 \label{param:FullHostname}
