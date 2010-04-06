@@ -123,6 +123,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_dagman\dagman_recursive_submit.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_dagman\dagman_recursive_submit.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\dc_stub.cpp"
 			>
 		</File>
