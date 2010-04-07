@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use strict;
 use warnings;
 
@@ -65,22 +66,22 @@ my $locport = shift @local;
 CondorTest::debug("---local config is $locconfig and local port is $locport---\n",$debuglevel);
 
 my $outcome = system("./job_core_niceuser_van.pl");
-
-system("cp *job_core_niceuser_van* $mysaveme");
+#fails due to directory matching pattern
+runcmd("cp *job_core_niceuser_van* $mysaveme",{expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmout $mycorenmout");
+	runcmd("cp $mysubmitnmout $mycorenmout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($locconfig);
