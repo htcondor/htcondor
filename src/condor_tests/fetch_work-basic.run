@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Cwd;
 use strict;
 use warnings;
@@ -69,25 +70,25 @@ my $results = $topdir . "/" . $mysaveme . "/" . "$mypid" . "/" . "results";
 my $scripts = "x_fetchwork_scripts.tar.gz";
 CondorTest::debug("Work fetch scripts here: $workfetchscripts\n",$debuglevel);
 
-system("mkdir -p $workfetchscripts");
-system("cp $scripts $workfetchscripts");
+runcmd("mkdir -p $workfetchscripts");
+runcmd("cp $scripts $workfetchscripts");
 
-system("mkdir -p $work");
-system("mkdir -p $results");
+runcmd("mkdir -p $work");
+runcmd("mkdir -p $results");
 
 my $here = getcwd();
 chdir("$workfetchscripts");
 ###### extract work fetch scripts ######
-system("tar -zxf $scripts");
+runcmd("tar -zxf $scripts");
 if( !(-f "job_fetch.pl")) {
 	CondorTest::debug("Failed to setup fetch scripts\n",$debuglevel);
-	system("pwd");
-	system("ls");
+	runcmd("pwd");
+	runcmd("ls");
 	exit(1);
 } else {
 	CondorTest::debug("Have setup fetch scripts\n",$debuglevel);
-	#system("pwd");
-	#system("ls");
+	#runcmd("pwd");
+	#runcmd("ls");
 }
 ###### tie to this unique test ######
 my $targetdir = '.';
@@ -116,9 +117,9 @@ foreach my $file (readdir DH)
 	}
 	close(NEW);
 	close(OLD);
-	system("mv $file $file.old");
-	system("mv $new $file");
-	system("chmod 755 $file");
+	runcmd("mv $file $file.old");
+	runcmd("mv $new $file");
+	runcmd("chmod 755 $file");
 }
 
 chdir("$here");
@@ -153,7 +154,7 @@ CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",$d
 
 $ENV{CONDOR_CONFIG} = $locconfig;
 CondorTest::debug("New collector is this:\n",$debuglevel);
-system("condor_config_val COLLECTOR_HOST");
+runcmd("condor_config_val COLLECTOR_HOST");
 
 my $bail = 0;
 
@@ -162,21 +163,22 @@ CondorTest::debug("Status of work fetch is \"$fetchstatus\"\n",$debuglevel);
 
 CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
-system("cp *fetch_work-basic* $mysaveme");
+#fails due to directory matching the pattern
+runcmd("cp *fetch_work-basic* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmout $mycorenmout");
+	runcmd("cp $mysubmitnmout $mycorenmout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($locconfig);
