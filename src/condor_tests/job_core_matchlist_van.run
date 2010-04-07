@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_core_matchlist_van.cmd';
 $testdesc =  'Test match_list_length - vanilla U';
@@ -151,8 +152,8 @@ $aborted = sub
 	}
 };
 
-system("rm job_core_matchlist.data");
-system("touch job_core_matchlist.data");
+runcmd("rm job_core_matchlist.data");
+runcmd("touch job_core_matchlist.data");
 
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterEvicted($testname, $evicted);
