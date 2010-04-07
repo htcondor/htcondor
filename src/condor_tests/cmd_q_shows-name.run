@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use strict;
 use warnings;
 
@@ -75,7 +76,7 @@ print "ok\n";
 
 my $saveconfig = $ENV{CONDOR_CONFIG};
 $ENV{CONDOR_CONFIG} = $locconfig;
-system("condor_config_val COLLECTOR_HOST");
+runcmd("condor_config_val COLLECTOR_HOST");
 $ENV{CONDOR_CONFIG} = $saveconfig;
 
 my $line;
@@ -204,21 +205,22 @@ if($bail != 1) {
 	print "ok\n";
 }
 
-system("cp *cmd_q_shows-name* $mysaveme");
+#fails due to omitting directory cmd_q_shows-name.saveme
+runcmd("cp *cmd_q_shows-name* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmout $mycorenmout");
+	runcmd("cp $mysubmitnmout $mycorenmout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($locconfig);
