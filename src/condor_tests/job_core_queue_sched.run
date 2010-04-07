@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Cwd;
 use Sys::Hostname;
 
@@ -29,7 +30,7 @@ $queuelog = "submit_queue_scheduler_log.log";
 
 
 my $pid = $$;
-system("mkdir $pid");
+runcmd("mkdir $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",1);
 
@@ -63,12 +64,12 @@ foreach $name (@filestoedit)
 	}
 	close(FF);
 	close(NEWFF);
-	system("mv $name.new $name");
+	runcmd("mv $name.new $name");
 }
 
 foreach $name (@filestochmod)
 {
-	system("chmod 755 $name");
+	runcmd("chmod 755 $name");
 }
 
 my $queuelength = 10;
@@ -93,7 +94,7 @@ while(<QUEUECMD>)
 close(QUEUECMD);
 close(NEWCMD);
 
-system("mv $cmd.new $cmd");
+runcmd("mv $cmd.new $cmd");
 
 $ExitSuccessBase = sub {
 	my %info = @_;
@@ -112,7 +113,7 @@ $success = sub
 	{
 		# kill server
 		#print "x_general_client.pl $newsocketname quit\n";
-		system("./x_general_client.pl $newsocketname quit");
+		runcmd("./x_general_client.pl $newsocketname quit");
 		# test for correct number of hellos from jobs in jog
 		open(FLOW,"./x_readqueuelog.pl $flowlog HELLO $queuelength | ") || die "Can not open flowlog: $!\n";
 		while(<FLOW>)
@@ -137,8 +138,8 @@ $submit = sub
 };
 
 # can not do this because we stick here as long as server runs
-#system("x_general_server.pl $queuelog");
-system("rm -f $queuelog");
+#runcmd("x_general_server.pl $queuelog");
+runcmd("rm -f $queuelog");
 defined(my $pid = fork) or die "Cannot fork: $!";
 unless ($pid)
 {
