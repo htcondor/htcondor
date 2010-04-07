@@ -98,6 +98,8 @@ fail_option_args(const char* option, int args_required)
 	exit(1);
 }
 
+extern int log_size;
+
 static void
 parse_command_line(int argc, char* argv[])
 {
@@ -151,7 +153,17 @@ parse_command_line(int argc, char* argv[])
 				index++;
 				log_file_name = argv[index];
 				break;
-
+			
+			// log file size till rotation
+			//
+			case 'R':
+				if (index + 1 >= argc) {
+					fail_option_args("-R", 1);
+				}
+				index++;
+				log_size = atoi(argv[index]);
+				break;
+				
 			// maximum snapshot interval
 			//
 			case 'S':
@@ -277,7 +289,10 @@ main(int argc, char* argv[])
 	// setup logging if a file was given
 	//
 	extern FILE* debug_fp;
+	extern char* debug_fn;
+	
 	if (log_file_name != NULL) {
+		debug_fn = log_file_name;
 		debug_fp = safe_fopen_wrapper(log_file_name, "a");
 		if (debug_fp == NULL) {
 			fprintf(stderr,

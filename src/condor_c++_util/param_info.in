@@ -9847,3 +9847,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
 id=555
+
+[MAX_PROCD_LOG]
+aliases=
+default=10000000
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Max Procd Log
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util,procd
+id=600
