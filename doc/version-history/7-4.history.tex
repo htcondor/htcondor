@@ -49,8 +49,63 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-4-2}Version 7.4.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.4.2 not yet released.
+%\item Condor version 7.4.2 released on Month Date, 2010.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
 % gittrack 1217
-\item Fixed a bug in which the \Condor{schedd} would sometimes negotiate 
+\item Fixed a bug in which the \Condor{schedd} would sometimes negotiate
   for and try to run
   more jobs than specified by \MacroNI{MAX\_RUNNING\_JOBS}.  Once the
   jobs started running, it would then kill them off to get back below
@@ -108,7 +163,7 @@ This bug has existed since before Condor version 6.8.
 
 \footnotesize
 \begin{verbatim}
-ERROR: receiving new UDP message but found a long message still waiting 
+ERROR: receiving new UDP message but found a long message still waiting
 to be closed (consumed=0). Closing it now.
 \end{verbatim}
 \normalsize
@@ -126,59 +181,6 @@ contain a path delimiter.
 % gittrac #1259
 \item Fixed multiple bugs that prevented Condor from building on or
   running correctly on OpenSolaris X86/64 version 2009.06.
-
-\end{itemize}
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Additions and Changes to the Manual:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-4-2}Version 7.4.2}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item Condor version 7.4.2 not yet released.
-%\item Condor version 7.4.2 released on Month Date, 2010.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
 
 % gittrac #1238
 \item Fixed a bug which caused the \Condor{startd} to incorrectly
@@ -284,12 +286,14 @@ proxy, which was the previous behavior.
 \item Fixed a bug that could cause the nordugrid\_gahp to crash.
 
 % gittrac #742
-\item Fixed a problem introduced in 7.4.0 that could cause two schedds
+\item Fixed a problem introduced in 7.4.0 that could cause two 
+  \Condor{schedd} daemons
   with a match to the same slot to both fail to claim it, rather than
   letting the first one to claim it succeed.  This sort of situation
   can happen when the \Condor{negotiator} has a stale view of the pool,
   either because the gap between negotiation cycles is configured to
-  be shorter than usual, or updates from \Condor{startd} to \Condor{collector}
+  be shorter than usual, or because updates from the \Condor{startd}
+  to the \Condor{collector}
   are not reliably delivered and processed.
 
 \end{itemize}
