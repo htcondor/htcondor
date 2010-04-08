@@ -188,16 +188,16 @@ invokeHousekeeper (AdTypes adType)
 	if (now == (time_t) -1)
 	{
 		dprintf (D_ALWAYS, "Error in reading system time --- aborting\n");
-		return FALSE;
+		return 0;
 	}
 
-	CollectorHashTable *table;
+	CollectorHashTable *table=0;
 	CollectorEngine::HashFunc func;
 	if (LookupByAdType(adType, table, func)) {
 		cleanHashTable(*table, now, func);
 	} else {
 		if (GENERIC_AD == adType) {
-			CollectorHashTable *cht;
+			CollectorHashTable *cht=0;
 			GenericAds.startIterations();
 			while (GenericAds.iterate(cht)) {
 				cleanHashTable (*cht, now, makeGenericAdHashKey);
@@ -213,7 +213,7 @@ invokeHousekeeper (AdTypes adType)
 int
 CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 {
-	CollectorHashTable *table;
+	CollectorHashTable *table=0;
 	CollectorEngine::HashFunc func;
 	if (!LookupByAdType(adType, table, func)) {
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
@@ -247,13 +247,6 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 }
 
 
-void CollectorEngine::
-toggleLogging (void)
-{
-	log = !log;
-}
-
-
 int (*CollectorEngine::genericTableScanFunction)(ClassAd *) = NULL;
 
 int CollectorEngine::
@@ -276,7 +269,7 @@ walkGenericTables(int (*scanFunction)(ClassAd *))
 int CollectorEngine::
 walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 {
-	int retval = 1;
+	//int retval = 1;
 
 	if (GENERIC_AD == adType) {
 		return walkGenericTables(scanFunction);
@@ -316,7 +309,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		// call scan function for each ad
 		if (!scanFunction (ad))
 		{
-			retval = 0;
+			//retval = 0;
 			break;
 		}
 	}
@@ -326,7 +319,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 
 CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 {
-	CollectorHashTable *table;
+	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {
 		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
 		table = new CollectorHashTable(LESSER_TABLE_SIZE , &adNameHashFunction);
@@ -1039,53 +1032,6 @@ mergeClassAd (CollectorHashTable &hashTable,
 	return old_ad;
 }
 
-#if 0
-void
-CollectorEngine::updateAd ( ClassAd *ad ) {
-
-
-
-    updateClassAd ( StartdAds)
-
-    const char      *label = "Start";
-    AdNameHashKey   hashKey;
-    MyString	    key;
-    ClassAd		    *old_ad;
-    time_t		    now;
-
-    /* get the current time */
-    time ( &now );
-
-    if ( (time_t) -1 == now ) {
-        EXCEPT ("Error reading system time!");
-    }
-
-    buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int) now );
-	ad->Insert ( buf.Value () );
-
-    /* update statistics */
-    collectorStats->update ( label, NULL, ad );
-
-    /* make a hash key for the ad */
-    if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
-
-        dprintf (
-            D_FULLDEBUG,
-            "OfflineCollectorPlugin::update: "
-            "failed to hash class ad. Ignoring.\n" );
-
-        return;
-
-    }
-
-    /* store it the ad */
-    hashKey.sprint ( key );
-    if ( -1 == StartdAds.insert ( key, ad ) ) {
-        EXCEPT ( "Error inserting ad (out of memory)" );
-	}
-
-}
-#endif
 
 void
 CollectorEngine::

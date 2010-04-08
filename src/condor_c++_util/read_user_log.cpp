@@ -519,7 +519,12 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		if ( ! m_lock ) {
 			dprintf( D_FULLDEBUG, "Creating file lock(%d,%p,%s)\n",
 					 m_fd, m_fp, m_state->CurPath() );
-			m_lock = new FileLock( m_fd, m_fp, m_state->CurPath() );
+			bool new_locking = param_boolean("NEW_LOCKING", false);
+			if (new_locking) {
+				m_lock = new FileLock(m_state->CurPath(), true, false);
+			} else {
+				m_lock = new FileLock( m_fd, m_fp, m_state->CurPath() );
+			}
 			if( ! m_lock ) {
 				CloseLogFile( true );
 				return ULOG_RD_ERROR;

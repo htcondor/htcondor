@@ -9863,3 +9863,83 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
 id=555
+
+[ROOSTER_INTERVAL]
+aliases=
+default=300
+version=7.4.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster interval
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=555
+
+[ROOSTER_UNHIBERNATE]
+aliases=
+default=Offline && Unhibernate
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster unhibernate
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=550
+
+[ROOSTER_WAKEUP_CMD]
+aliases=
+default="$(BIN)/condor_power -d -i"
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster wakeup command
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=550
+
+[ROOSTER_MAX_UNHIBERNATE]
+aliases=
+default=0
+version=7.5.3
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster max unhibernate per cycle
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=555
+
+[ROOSTER_UNHIBERNATE_RANK]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster unhibernate rank
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=550

@@ -47,6 +47,8 @@ sub RunCheck
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
     my $append_submit_commands = $args{append_submit_commands} || "";
     my $grid_resource = $args{grid_resource} || "";
+    my $should_transfer_files = $args{should_transfer_files} || "";
+    my $when_to_transfer_output = $args{when_to_transfer_output} || "";
 
     CondorTest::RegisterAbort( $testname, $aborted );
     CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
@@ -62,6 +64,12 @@ sub RunCheck
     print SUBMIT "notification = never\n";
     if( $grid_resource ne "" ) {
 	print SUBMIT "GridResource = $grid_resource\n"
+    }
+    if( $should_transfer_files ne "" ) {
+	print SUBMIT "ShouldTransferFiles = $should_transfer_files\n";
+    }
+    if( $when_to_transfer_output ne "" ) {
+	print SUBMIT "WhenToTransferOutput = $when_to_transfer_output\n";
     }
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";

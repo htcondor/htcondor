@@ -44,6 +44,8 @@ class Rooster: public Service {
 	MyString m_unhibernate_constraint;
 	MyString m_wakeup_cmd;
 	ArgList m_wakeup_args;
+	ClassAd m_rank_ad;
+	int m_max_unhibernate;
 };
 
 

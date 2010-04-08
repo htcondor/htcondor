@@ -27,6 +27,9 @@ my $append_condor_config = '
   SCHEDD.CCB_ADDRESS = $(COLLECTOR_HOST)
   SHADOW.CCB_ADDRESS = $(COLLECTOR_HOST)
 
+  # all daemons with same private network name
+  PRIVATE_NETWORK_NAME = MyPrivateNet
+
   COLLECTOR_DEBUG = $(COLLECTOR_DEBUG) D_FULLDEBUG
 ';
 
@@ -36,12 +39,19 @@ CondorTest::StartCondorWithParams(
 );
 
 # verify that a job runs
-SimpleJob::RunCheck();
+# Turn on file transfer, because there was once a problem with
+# file transfer not respecting private network settings.
+SimpleJob::RunCheck(
+    should_transfer_files => "yes",
+    when_to_transfer_output => "on_exit",
+);
 
-# verify that at least one connection was made via CCB
+# verify that no connections were made via CCB
+# (Because everything has same private network name)
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "CCB: received 'success' from target daemon"
+    match_regexp => "CCB: received 'success' from target daemon",
+    fail_if_found => 1
 );
 
 CondorTest::EndTest();

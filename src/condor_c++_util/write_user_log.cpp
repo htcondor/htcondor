@@ -241,6 +241,14 @@ WriteUserLog::Configure( bool force )
 	}
 	m_global_stat = new StatWrapper( m_global_path, StatWrapper::STATOP_NONE );
 	m_global_state = new WriteUserLogState( );
+
+#if !defined(WIN32)	
+	bool new_locking = param_boolean("NEW_LOCKING", false);
+	if (new_locking){
+		m_rotation_lock = new FileLock(m_global_path, true, false);
+			goto newLockingContinue;			
+	}
+#endif	
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
 	if ( NULL == m_rotation_lock_path ) {
 		int len = strlen(m_global_path) + 6;
@@ -266,6 +274,9 @@ WriteUserLog::Configure( bool force )
 				 m_rotation_lock_path, m_rotation_lock );
 	}
 
+#if !defined(WIN32)
+	newLockingContinue:
+#endif
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
@@ -502,6 +513,14 @@ WriteUserLog::openFile(
 
 	// prepare to lock the file.
 	if ( use_lock ) {
+#if !defined(WIN32)
+		bool new_locking = param_boolean("NEW_LOCKING", false);
+			
+		if (new_locking) {
+			lock = new FileLock(file, true, false);
+			return true;
+		}		
+#endif	
 		lock = new FileLock( fd, fp, file );
 	} else {
 		lock = new FakeFileLock( );

@@ -140,6 +140,7 @@ class FileLock : public FileLockBase
   public:
 	FileLock( int fd, FILE *fp = NULL, const char* path = NULL );
 	FileLock( const char* path );
+	FileLock( const char* filePath, bool doDelete , bool useLiteralPath = false ); // will set m_self_open to 1 
 	~FileLock(void);
 
 		// Not a fake lock
@@ -156,6 +157,7 @@ class FileLock : public FileLockBase
 	virtual void display(void) const;
 
 	void updateLockTimestamp(void);
+	char*		GetTempPath();	// get a temporary path from the local file system
 
   private:
 
@@ -169,10 +171,13 @@ class FileLock : public FileLockBase
 	char		*m_path;	// Path to the file being locked, must use
 							// method SetPath to set.
 	int			 m_use_kernel_mutex;	// -1=unitialized,0=false,1=true
+	int 		m_delete;  // delete file upon object destruction; 1= true, 0=false
+							// as another effect, this means that we create the lock file ourselves.
 
 	//
 	// Private methods
 	//
+	char* 		CreateHashName(const char *orig);
 	void		Reset( void );
 	void		SetPath(const char *);
 

@@ -136,7 +136,6 @@ Unparse( string &buffer, const Value &val )
 						case '\t': buffer += "\\t"; continue;
 						case '\v': buffer += "\\v"; continue;
 						case '\\': buffer += "\\\\"; continue;
-						case '\?': buffer += "\\?"; continue;
 						case '\'': buffer += "\'"; continue;
 						case '\"': buffer += "\""; continue;
 

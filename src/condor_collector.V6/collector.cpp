@@ -111,7 +111,7 @@ extern "C"
 	void install_sig_handler( int, SIGNAL_HANDLER );
 	void schedule_event ( int month, int day, int hour, int minute, int second, SIGNAL_HANDLER );
 }
-
+ 
 //----------------------------------------------------------------
 
 void computeProjection(ClassAd *shortAd, ClassAd *curr_ad, SimpleList<MyString> *projectionList);
@@ -129,6 +129,12 @@ void CollectorDaemon::Init()
 	updateCollectors = NULL;
 	updateRemoteCollector = NULL;
 	Config();
+
+	/* TODO: Eval notes and refactor when time permits.
+	 * 
+	 * per-review <tstclair> this is a really unintuive and I would consider unclean.
+	 * Maybe if we care about cron like events we should develop a clean mechanism
+	 * which doesn't indirectly hook into daemon-core timers. */
 
     // setup routine to report to condor developers
     // schedule reports to developers
@@ -982,30 +988,34 @@ int CollectorDaemon::reportSubmittorScanFunc( ClassAd *cad )
 int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
 {
     char buf[80];
+	int iRet = 0;
 
-    if ( !cad->LookupString( ATTR_STATE, buf ) )
-        return 0;
-    machinesTotal++;
-    switch ( buf[0] ) {
-        case 'C':
-            machinesClaimed++;
-            break;
-        case 'U':
-            machinesUnclaimed++;
-            break;
-        case 'O':
-            machinesOwner++;
-            break;
-    }
+	if ( cad && cad->LookupString( ATTR_STATE, buf ) )
+	{
+		machinesTotal++;
+		switch ( buf[0] )
+		{
+			case 'C':
+				machinesClaimed++;
+				break;
+			case 'U':
+				machinesUnclaimed++;
+				break;
+			case 'O':
+				machinesOwner++;
+				break;
+		}
 
-	// Count the number of jobs in each universe
-	int		universe;
-	if ( cad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
-		ustatsAccum.accumulate( universe );
+		// Count the number of jobs in each universe
+		int universe;
+		if ( cad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) )
+		{
+			ustatsAccum.accumulate( universe );
+		}
+		iRet = 1;
 	}
 
-	// Done
-    return 1;
+    return iRet;
 }
 
 void CollectorDaemon::reportToDevelopers (void)
@@ -1026,7 +1036,7 @@ void CollectorDaemon::reportToDevelopers (void)
     }
 
     // If we don't have any machines reporting to us, bail out early
-    if(machinesTotal == 0) 	
+    if(machinesTotal == 0)
         return;
 
 	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {

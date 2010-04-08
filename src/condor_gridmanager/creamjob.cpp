@@ -910,12 +910,15 @@ void CreamJob::doEvaluateState()
 				}
 
 				int new_lease;	// CalculateJobLease needs an int
+				time_t renew_time;
 				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION ) ) {
+										DEFAULT_LEASE_DURATION,
+										&renew_time ) ) {
 					jmLifetime = new_lease;
 					gmState = GM_EXTEND_LIFETIME;
 					break;
 				}
+				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
 
 				if ( probeNow || remoteState == CREAM_JOB_STATE_UNSET ) {
 					doActivePoll = true;

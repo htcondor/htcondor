@@ -3923,6 +3923,9 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 						// Prevent this job from being considered in any
 						// future iterations through the list.
 					PrioRec[i].owner[0] = '\0';
+					dprintf(D_FULLDEBUG,
+							"record for job %d.%d skipped until PrioRec rebuild\n",
+							jobid.cluster, jobid.proc);
 
 						// Ensure that PrioRecArray is rebuilt
 						// eventually, because changes in the status

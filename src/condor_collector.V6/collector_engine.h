@@ -41,8 +41,6 @@ class CollectorEngine : public Service
 	int invokeHousekeeper (AdTypes);
 	int invalidateAds(AdTypes, ClassAd &);
 
-	// want collector to log messages?  Default: yes
-	void toggleLogging (void);
 
 	// perform the collect operation of the given command
 	ClassAd *collect (int, Sock *, sockaddr_in *, int &);
@@ -80,6 +78,14 @@ class CollectorEngine : public Service
  
 	// the greater tables
 	enum {GREATER_TABLE_SIZE = 1024};
+
+	/**
+	* TODO<tstclair>: Eval notes and refactor when time permits.
+	* consider using std::map<AdTypes,CollectorHashTable>
+	* possibly create a new class with some queries and stats within it.
+	* this seems to be a sloppy encapsulation issue.
+	*/
+
 	CollectorHashTable StartdAds;
 	CollectorHashTable StartdPrivateAds;
 #ifdef HAVE_EXT_POSTGRESQL
@@ -114,8 +120,6 @@ class CollectorEngine : public Service
 	int	clientTimeout; 
 	int	machineUpdateInterval;
 
-	// should we log?
-	bool log;
 
 	void  housekeeper ();
 	int  housekeeperTimerID;
