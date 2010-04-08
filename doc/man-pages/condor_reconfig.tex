@@ -28,12 +28,10 @@ the policies stated in the configuration file(s).
 The main exception is with the \MacroNI{DAEMON\_LIST} variable,
 which will only be
 updated if the \Condor{restart} command is used.  
-There are a few other configuration settings that can only be changed
-if the Condor daemons are restarted.
-Whenever this is the case, it will be mentioned in
-section~\ref{sec:Configuring-Condor} on
-page~\pageref{sec:Configuring-Condor} which lists all of the settings
-used to configure Condor. 
+Other configuration variables that can only be changed
+if the Condor daemons are restarted are listed in
+section~\ref{sec:Macros-Requiring-Restart}
+on page~\pageref{sec:Macros-Requiring-Restart}.
 In general, \Condor{reconfig} should be used when making changes to
 the configuration files, since it is faster and more efficient than
 restarting the daemons.
