@@ -50,6 +50,20 @@ have also been optimized in a number of cases to be less disk intensive.
   with \DCPerm{READ} access.  It just reduces the level of trust that
   the \Condor{schedd} must have in the \Condor{startd}.
 
+% gittrac 834
+\item \Condor{procd}'s log does now rotate, if logging is activated. 
+  The standard maximum size is 10Mb. To change that, the config file 
+  needs to define the value for \MacroNI{MAX\_PROCD\_LOG}.  
+
+%gittrac 1310
+\item UserLog lock files can now optionally be created in a folder on a 
+  local drive by setting \MacroNI{NEW\_LOCKING} to \Expr{True}. They 
+  are written into \File{condorLocks} in the specified 
+  \MacroNI{TEMP\_DIR} or \MacroNI{TMP\_DIR} directory (defaults to \File{/tmp}).
+  This should solve known problems with locking on NFS. Windows versions
+  are not affected by this change.
+  
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
