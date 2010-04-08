@@ -50,6 +50,20 @@ have also been optimized in a number of cases to be less disk intensive.
   with \DCPerm{READ} access.  It just reduces the level of trust that
   the \Condor{schedd} must have in the \Condor{startd}.
 
+% gittrac 834
+\item \Condor{procd}'s log does now rotate, if logging is activated. 
+  The standard maximum size is 10Mb. To change that, the config file 
+  needs to define the value for \MacroNI{MAX\_PROCD\_LOG}.  
+
+%gittrac 1310
+\item UserLog lock files can now optionally be created in a folder on a 
+  local drive by setting \MacroNI{NEW\_LOCKING} to \Expr{True}. They 
+  are written into \File{condorLocks} in the specified 
+  \MacroNI{TEMP\_DIR} or \MacroNI{TMP\_DIR} directory (defaults to \File{/tmp}).
+  This should solve known problems with locking on NFS. Windows versions
+  are not affected by this change.
+  
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -103,8 +117,8 @@ and YDL 5 PowerPC due to a problem in how it detected EOF in the job queue log.
 
 \item Condor version 7.5.1 released on March 2, 2010.
 
-\item All bug fixes and features which are in Condor version 7.4.2
-are in this 7.5.1 release.
+\item Some, but not all of the bug fixes and features which are in
+Condor version 7.4.2, are in this 7.5.1 release.
 
 \item The Condor release is now available as a proper RPM or Debian
 package.
