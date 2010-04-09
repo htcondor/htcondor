@@ -1518,7 +1518,7 @@ do the following mappings, with some additional logic noted below:
 FS (.*) \1
 FS_REMOTE (.*) \1
 GSI (.*) GSS_ASSIST_GRIDMAP
-SSL (.*) ssl@unmappeduser
+SSL (.*) ssl@unmapped
 KERBEROS ([^/]*)/?[^@]*@(.*) \1@\2
 NTSSPI (.*) \1
 CLAIMTOBE (.*) \1
@@ -1529,13 +1529,18 @@ For GSI (or SSL), the special name \MacroNI{GSS\_ASSIST\_GRIDMAP} instructs
 Condor to use the GSI grid map file (configured with \Macro{GRIDMAP}
 as shown in section~\ref{sec:GSI-Authentication}) to do the mapping.
 If no mapping can be found for GSI (with or without the use of
-\MacroNI{GSS\_ASSIST\_GRIDMAP}), the user is mapped to \verb|gsi@unmappeduser|.
+\MacroNI{GSS\_ASSIST\_GRIDMAP}), the user is mapped to \verb|gsi@unmapped|.
 
 For Kerberos, if \Macro{KERBEROS\_MAP\_FILE} is specified, the domain portion
 of the name is obtained by mapping the Kerberos realm to the value specified
 in the map file, rather than just using the realm verbatim as the domain
 portion of the condor user name.  See section~\ref{sec:Kerberos-Authentication}
 for details.
+
+\index{unauthenticated}
+\index{unmapped}
+If authentication did not happen or failed and was not required, then
+the user is given the name \verb|unauthenticated@unmapped|.
 
 With the integration of VOMS for GSI authentication,
 the interpretation of the regular expression
@@ -2021,6 +2026,38 @@ the conflict is resolved by denying access.
 \item{2. }If macros are omitted, the default behavior is to grant
 authorization for every user.
 \end{description}
+
+In addition, there are some hard-coded authorization rules that
+ cannot be modified by configuration.
+\begin{enumerate}
+
+\index{unauthenticated}
+\item Connections with a name matching \verb|*@unmapped| are not
+ allowed to do any job management commands (e.g. submitting, removing,
+ or modifying jobs).  This prevents these operations from being done
+ by unauthenticated users and users who are authenticated but lacking
+ a name in the map file.
+
+\item To simplify flocking, the \Condor{schedd} automatically grants
+ the \Condor{startd} \DCPerm{READ} access for the duration of a claim
+ so that claim-related communications are possible.  The
+ \Condor{shadow} grants the \Condor{starter} \DCPerm{DAEMON} access so
+ that file transfers can be done.  The identity that is granted access
+ in both these cases is the authenticated name (if available) and IP
+ address of the \Condor{startd} when the \Condor{schedd} initially
+ connects to it to request the claim.  It is important that only trusted
+ \Condor{startd}s are allowed to publish themselves to the collector
+ or that the \Condor{schedd}'s \MacroNI{ALLOW\_CLIENT} setting prevent
+ it from allowing connections to \Condor{startd}s that it does not trust
+ to run jobs.
+
+\item When \Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} is
+ true, \verb|execute-side@matchsession| is automatically granted
+ \DCPerm{READ} access to the \Condor{schedd} and \DCPerm{DAEMON}
+ access to the \Condor{shadow}.
+
+\end{enumerate}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Security-sample2} Example of Authorization Security Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

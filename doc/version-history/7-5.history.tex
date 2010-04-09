@@ -30,7 +30,33 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1131
+\item Unauthenticated connections are now identified as
+  \verb|unauthenticated@unmapped|.  Previously, unauthenticated
+  connections were not assigned a name, so some authorization policies
+  that needed to distinguish between authenticated and unauthenticated
+  connections were not expressible.  Connections that are
+  authenticated but not mapped to a name by the mapfile used to be
+  given the name \verb|auth-method@unmappeduser|, where
+  \emph{auth-method} is the authentication method that was used.  Such
+  connections are now given the name \verb|auth-method@unmapped|.
+  Connections that match \verb|*@unmapped| are now forbidden from
+  doing operations that require a user id, regardless of configuration
+  settings.  Such operations include job submission, job removal, and
+  any other job management commands that modify jobs.
+
+% gittrack 1131
+\item There has been a change of behavior when authentication fails.
+  Previously, authentication failure always resulted in the command
+  being rejected, regardless of whether the ALLOW/DENY settings
+  permitted unauthenticated access or not.  This is still true if either
+  the client or server specifies that authentication is required.
+  However, if both sides specify that authentication is not required
+  (i.e. preferred or optional), then authentication failure only results
+  in the command being rejected if the ALLOW/DENY settings reject
+  unauthenticated access.  This change makes it possible to have some
+  commands accept unauthenticated users from some network addresses
+  while only allowing authenticated users from others.
 
 \end{itemize}
 
