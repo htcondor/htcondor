@@ -49,7 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1329
+\item Network connections for condor file transfers were ignoring
+  private network settings.  The connection from the execute node to
+  the submit node always attempted to use the public network address
+  of the submit machine.
 
 \end{itemize}
 
