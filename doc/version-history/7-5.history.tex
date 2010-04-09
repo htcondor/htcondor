@@ -86,7 +86,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1332
+\item Parameters with a default value of 0 that were not defined in
+  the config file were treated as though they were undefined by
+  \Condor{config\_val}.  Now it treats this case like any other: the
+  default value is displayed.
 
 \end{itemize}
 
