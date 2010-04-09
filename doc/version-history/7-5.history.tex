@@ -30,6 +30,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrack 1302
+\item The behavior of macro expansion in the configuration file has
+  changed.  Previously, most macros were effectively treated as
+  undefined unless explicitly assigned a value in the configuration
+  file.  Only a small number of special macros had pre-defined values
+  that could be referred to via macro expansion.  Examples include
+  \MacroNI{FULL\_HOSTNAME} and \MacroNI{DETECTED\_MEMORY}.  Now, most
+  configuration settings that have default values can be referred to
+  via macro expansion.  There are a small number of exceptions where
+  the default value is too complex to represent in the current
+  implementation of the configuration table.  Examples include the
+  security authorization settings. All such configuration settings
+  will also be reported as undefined by \Condor{config\_val} unless
+  they are explicitly set in the configuration file.
+
 % gittrack 1131
 \item Unauthenticated connections are now identified as
   \verb|unauthenticated@unmapped|.  Previously, unauthenticated
