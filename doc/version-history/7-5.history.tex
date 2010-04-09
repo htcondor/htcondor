@@ -38,7 +38,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added \MacroNI{JOB\_ROUTER\_LOCK}.  This lock file is used to
+  ensure that multiple instances of \condor{job\_router} never run
+  with the same \MacroNI{JOB\_ROUTER\_NAME}.  Multiple instances running
+  with the same name could lead to mismanagement of routed jobs.
 
 \end{itemize}
 

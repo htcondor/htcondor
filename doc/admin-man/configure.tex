@@ -7392,6 +7392,14 @@ These macros affect the \Condor{job\_router} daemon.
   when a \Condor{reconfig} command is invoked 
   or when the \Condor{job\_router} daemon restarts.
 
+\label{JobRouterLock}
+\item[\Macro{JOB\_ROUTER\_LOCK}] This specifies the name of a lock
+ file that is used to ensure that multiple instances of
+ \condor{job\_router} never run with the same
+ \MacroNI{JOB\_ROUTER\_NAME}.  Multiple instances running with the
+ same name could lead to mismanagement of routed jobs.  The default
+ value is \verb@$(LOCK)/$(JOB_ROUTER_NAME)Lock@.
+
 \label{JobRouterSourceJobConstraint}
 \item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
   Specifies a global \Attr{Requirements} expression that will be appended
