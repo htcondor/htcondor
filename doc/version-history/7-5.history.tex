@@ -69,6 +69,17 @@ The details of each version are described below.
   with the same \MacroNI{JOB\_ROUTER\_NAME}.  Multiple instances running
   with the same name could lead to mismanagement of routed jobs.
 
+\item Added \MacroNI{ROOSTER\_MAX\_UNHIBERNATE}.  This is an integer
+  specifying the maximum number of machines to wake up per cycle.  The
+  default value of 0 means no limit.
+
+\item Added \MacroNI{ROOSTER\_UNHIBERNATE\_RANK}.  This is a ClassAd
+  expression specifying which machines should be woken up first in a
+  given cycle.  Higher ranked machines are woken first.  If the number
+  of machines to be woken up is limited by
+  \Macro{ROOSTER\_MAX\_UNHIBERNATE}, the rank may be used for
+  determining which machines are woken before reaching the limit.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

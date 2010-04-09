@@ -9798,6 +9798,11 @@ how to do this.
   The integer number of seconds between checks for offline machines that
   should be woken.  The default value is 300.
 
+\label{param:RoosterMaxUnhibernate}
+\item[\Macro{ROOSTER\_MAX\_UNHIBERNATE}]
+  An integer specifying the maximum number of machines to wake up per
+  cycle.  The default value of 0 means no limit.
+
 \label{param:RoosterUnhibernate}
 \item[\Macro{ROOSTER\_UNHIBERNATE}]
   A boolean expression that specifies which machines should be woken up.
@@ -9809,6 +9814,14 @@ how to do this.
   different for the two instances of \Condor{rooster}.
   In this way, the different instances will only
   try to wake up their respective subset of the pool.
+
+\label{param:RoosterUnhibernateRank}
+\item[\Macro{ROOSTER\_UNHIBERNATE\_RANK}] A ClassAd expression
+ specifying which machines should be woken up first in a given cycle.
+  Higher ranked machines are woken first.  If the number of machines
+ to be woken up is limited by \Macro{ROOSTER\_MAX\_UNHIBERNATE}, the
+ rank may be used for determining which machines are woken before
+ reaching the limit.
 
 \label{param:RoosterWakeupCmd}
 \item[\Macro{ROOSTER\_WAKEUP\_CMD}]
