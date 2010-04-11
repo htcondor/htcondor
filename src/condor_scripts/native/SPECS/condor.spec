@@ -65,10 +65,10 @@ getent passwd condor >/dev/null || \
   useradd -r -g condor -d %_var/lib/condor -s /sbin/nologin \
     -c "Owner of Condor Daemons" condor
 
-if [ "$1" -ge "2" ]; then
-  #Stopping condor if there is existing version
-  /sbin/service condor stop >/dev/null 2>&1 || :
-fi
+#Stopping condor if there is existing version
+#if [ "$1" -ge "2" ]; then
+#  /sbin/service condor stop >/dev/null 2>&1 || :
+#fi
 
 
 exit 0
@@ -275,8 +275,10 @@ if [ $ETC != "/etc" ] ; then
   perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/init.d/condor 
   perl -p -i -e "s:^LOCAL_CONFIG_FILE(\s*)=\s*/etc(.*):LOCAL_CONFIG_FILE\$1= $ETC\$2:" $ETC/condor/condor_config 
   
-  #Install init.d script
-  cp -f $ETC/init.d/condor /etc/init.d/condor  
+  #Install init.d script only if this is the first instance
+  if [ $1 = 1 ]; then
+     cp -f $ETC/init.d/condor /etc/init.d/condor  
+  fi
 fi
 
 
@@ -294,10 +296,20 @@ exit 0
 %preun -n condor
 
 #Stop condor
-/sbin/service condor stop >/dev/null 2>&1 || :
+#/sbin/service condor stop >/dev/null 2>&1 || :
+
+#Stop and remove condor only when this is the last instance
 if [ $1 = 0 ]; then
-  
-  /sbin/chkconfig --del condor
+  #This should fail if it is unable to stop condor in timelimit
+  /sbin/service condor stop
+  if [ $? = 1 ]; then
+     echo "Abort uninstallation"
+     exit 1;
+  fi
+
+  if [ -e /etc/init.d/condor ]; then
+     /sbin/chkconfig --del condor
+  fi
   
   #Remove init.d if relocated
   ETC=$RPM_INSTALL_PREFIX0
@@ -309,9 +321,11 @@ fi
 
 
 %postun -n condor
-#if [ "$1" -ge "1" ]; then
-  #Upgrading or remove but other version existed 
-  #/sbin/service condor restart >/dev/null 2>&1 || :
+
+# We do not need to do anything, Condor will detec binary changes and restart itself automatically
+#Upgrading or remove but other version existed 
+#if [ "$1" -ge "1" ]; then  
+#  /sbin/service condor restart >/dev/null 2>&1 || :
 #fi
 /sbin/ldconfig
 
