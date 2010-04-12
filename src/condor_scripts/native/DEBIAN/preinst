@@ -20,8 +20,9 @@ GECOS="Condor Daemons"
 HOME=/var/lib/condor
 
 stop_service(){
-	set +e	
-	#Stop condor service
+	
+	# Stop condor service
+	# It will fail if condor is not stopped in time limit
 	if [ -x "/etc/init.d/condor" ]; then
 	  if which invoke-rc.d >/dev/null 2>&1; then
      		invoke-rc.d condor stop
@@ -29,7 +30,7 @@ stop_service(){
      		/etc/init.d/condor stop
      	  fi
 	fi
-	set -e	
+	
 }
 
 create_user(){
@@ -54,7 +55,7 @@ create_user(){
 
 case "$1" in
     install)
-        stop_service
+        #stop_service
 	create_user
     ;;
 

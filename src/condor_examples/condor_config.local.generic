@@ -1,7 +1,3 @@
-## For more detial please see
-## http://www.cs.wisc.edu/condor/manual/v7.4/3_3Configuration.html
-
-
 ##  What machine is your central manager?
 
 CONDOR_HOST = $(FULL_HOSTNAME)
