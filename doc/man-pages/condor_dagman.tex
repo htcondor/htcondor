@@ -17,6 +17,13 @@
 \OptArg{-csdversion}{version\_string}
 \oOpt{-allowversionmismatch}
 \oOpt{-DumpRescue}
+\oOpt{-verbose}
+\oOpt{-force}
+\oOptArg{-notification}{value}
+\oOptArg{-dagman}{DagmanExecutable}
+\oOptArg{-outfile\_dir}{directory}
+\oOpt{-update\_submit}
+\oOpt{-import\_env}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -161,9 +168,62 @@ Level values and what they produce is described as
        \Condor{dagman} to immediately dump a rescue DAG and then exit,
        as opposed to actually running the DAG.  (This feature is mainly
        intended for testing.)}
+    \OptItem{\Opt{-verbose}}{(This argument is included only to be passed
+       to \Condor{submit\_dag} if lazy submit file generation is used for
+       nested DAGs.)  Cause \Condor{submit\_dag} to give verbose error
+       messages.}
+    \OptItem{\Opt{-force}}{(This argument is included only to be passed
+       to \Condor{submit\_dag} if lazy submit file generation is used for
+       nested DAGs.)  Require \Condor{submit\_dag} to overwrite the files
+       that it produces, if the files already exist.  Note that
+       \File{dagman.out} will be appended to, not overwritten.  If
+       new-style rescue DAG mode is in effect, and any new-style rescue
+       DAGs exist, the \Opt{-force} flag will cause them to be renamed,
+       and the original DAG will be run.  If old-style rescue DAG mode
+       is in effect, any existing old-style rescue DAGs will be deleted,
+       and the original DAG will be run. Section~\ref{sec:DAGMan-rescue}
+       details rescue DAGs.}
+    \OptItem{\OptArg{-notification}{value}}{(This argument is only
+       included to be passed to \Condor{submit\_dag} if lazy submit file
+       generation is used for nested DAGs.)  Sets the e-mail notification
+       for DAGMan itself. This information will be used within the Condor
+       submit description file for DAGMan. This file is produced by
+       \Condor{submit\_dag}. See \Opt{notification}
+       within the section of submit description file commands in the
+       \Condor{submit} manual page on page~\pageref{man-condor-submit}
+       for specification of \Arg{value}.}
+    \OptItem{\OptArg{-dagman}{DagmanExecutable}}{(This argument is
+       included only to be passed to \Condor{submit\_dag} if lazy submit
+       file generation is used for nested DAGs.)  Allows the
+       specification of an alternate \Condor{dagman} executable to be
+       used instead of the one found in the user's path. This must be
+       a fully qualified path.}
+    \OptItem{\OptArg{-outfile\_dir}{directory}}{(This argument is included
+       only to be passed to \Condor{submit\_dag} if lazy submit file
+       generation is used for nested DAGs.)  Specifies the directory in
+       which the \File{.dagman.out} file will be written.  The
+       \Argnm{directory} may be specified relative to the current
+       working directory as \Condor{submit\_dag} is executed, or
+       specified with an absolute path.  Without this option, the
+       \File{.dagman.out} file is placed in the same directory as the
+       first DAG input file listed on the command line.}
+    \OptItem{\Opt{-update\_submit}}{(This argument is included only to
+       be passed to \Condor{submit\_dag} if lazy submit file generation
+       is used for nested DAGs.)  This optional argument causes an existing
+       \File{.condor.sub} file to not be treated as an error; rather, the
+       \File{.condor.sub} file will be overwritten, but the existing
+       values of \Opt{-maxjobs}, \Opt{-maxidle}, \Opt{-maxpre}, and
+       \Opt{-maxpost} will be preserved.}
+    \OptItem{\Opt{-import\_env}}{(This argument is included only to be
+       passed to \Condor{submit\_dag} if lazy submit file generation is
+       used for nested DAGs.)  This optional argument causes
+       \Condor{submit\_dag} to import the current environment into
+       the \Opt {environment} command of the \File{.condor.sub} file it
+       generates.}
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}
+
 \end{Options}
 
 

@@ -63,6 +63,21 @@ have also been optimized in a number of cases to be less disk intensive.
   This should solve known problems with locking on NFS. Windows versions
   are not affected by this change.
   
+%gittrac 507
+\item \Condor{dagman} and \Condor{submit\_dag} now default to lazy
+creation  of the \File{.condor.sub} files for nested DAGs --
+\Condor{submit\_dag} no longer creates them, and \Condor{dagman}
+itself creates the files as the DAG is run (the old "eager" behavior can
+be obtained with a combination of command-line and configuration settings).
+There are several advantages to the "lazy" submit file creation:
+\begin{itemize}
+\item The DAG file for a nested DAG does not have to exist until that node
+is ready to run, so the DAG file can be dynamically created by earlier
+parts of the top-level DAG (including by the PRE script of the nested
+DAG node).
+\item It is now possible to have nested DAGs within splices, which is not
+possible with "eager" submit file creation.
+\end{itemize}
 
 \end{itemize}
 
@@ -70,7 +85,13 @@ have also been optimized in a number of cases to be less disk intensive.
 
 \begin{itemize}
 
-\item None.
+%gittrac 507
+\item The new configuration variable
+\MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} controls whether
+\Condor{dagman} itself generates the \File{.condor.sub} files for
+nested DAGs (rather than relying on \Condor{submit\_dag} "eagerly"
+creating them).  See section~\ref{param:DAGManGenerateSubDagSubmits} for
+more information.
 
 \end{itemize}
 
