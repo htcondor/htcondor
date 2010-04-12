@@ -38,6 +38,12 @@ This should improve performance in situations where
 disk bandwidth is a limiting factor.  Updates to the job user log
 have also been optimized in a number of cases to be less disk intensive.
 
+% gittrack 1288
+\item The \Condor{schedd} daemon also uses less CPU when scheduling
+some types of job queues.  The case that is most likely to benefit is
+a large queue of short-running non-local and non-scheduler universe jobs
+with at least one idle local or scheduler universe job.
+
 % gittrack 1266
 \item The \Condor{schedd} automatically grants the \Condor{startd}
   authority to renew leases on claims and to evict claims.
