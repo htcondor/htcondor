@@ -2280,25 +2280,12 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		while (result == MM_BAD_MATCH) 
 		{
 			// 2e(i).  find a compatible offer
-			while( (offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
+			offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
 											 startdAds, priority,
 											 share, 
 											 limitUsed, submitterLimit,
 											 pieLeft,
-											 only_consider_startd_rank)))
-			{
-				int offline = false;
-				if( offer->EvalBool(ATTR_OFFLINE,NULL,offline) && offline )
-				{
-						// this startd is offline, so skip over it
-					RegisterAttemptedOfflineMatch( &request, offer );
-					startdAds.Remove( offer );
-				}
-				else {
-						// this startd is online, so go ahead and use it
-					break;
-				}
-			}
+											 only_consider_startd_rank);
 
 			if( !offer )
 			{
@@ -3055,13 +3042,20 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	int length;
 	char *tmp;
 
-
 	// these will succeed
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
-	// see if offer supports claiming or not
-	offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	int offline = false;
+	offer->EvalBool(ATTR_OFFLINE,NULL,offline);
+	if( offline ) {
+		want_claiming = 0;
+		RegisterAttemptedOfflineMatch( &request, offer );
+	}
+	else {
+			// see if offer supports claiming or not
+		offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	}
 
 	// if offer says nothing, see if request says something
 	if ( want_claiming == -1 ) {
@@ -3184,9 +3178,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 		startdAddr = "<0.0.0.0:0>";
 	}
-	dprintf(D_ALWAYS|D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s\n",
+	dprintf(D_ALWAYS|D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s%s\n",
 			cluster, proc, scheddName, scheddAddr, remoteUser,
-			startdAddr.Value(), startdName.Value() );
+			startdAddr.Value(), startdName.Value(),
+			offline ? " (offline)" : "");
 
 	/* CONDORDB Insert into matches table */
 	insert_into_matches(scheddName, request, *offer);
@@ -3196,7 +3191,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	accountant.AddMatch(scheddName, offer);
 
 	// done
-	dprintf (D_ALWAYS, "      Successfully matched with %s\n", startdName.Value());
+	dprintf (D_ALWAYS, "      Successfully matched with %s%s\n",
+			 startdName.Value(),
+			 offline ? " (offline)" : "");
 	return MM_GOOD_MATCH;
 }
 
