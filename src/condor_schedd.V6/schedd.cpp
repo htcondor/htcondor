@@ -5282,6 +5282,23 @@ Scheduler::negotiate(int command, Stream* s)
 						}
 					}
 
+					if( my_match_ad ) {
+						int offline = false;
+						my_match_ad->EvalBool(ATTR_OFFLINE,NULL,offline);
+
+						if( offline ) {
+							MyString name;
+							if( my_match_ad ) {
+								my_match_ad->LookupString(ATTR_NAME,name);
+							}
+							dprintf(D_ALWAYS,"Job %d.%d matched to offline machine %s.\n",id.cluster,id.proc,name.Value());
+							FREE( claim_id );
+							claim_id = NULL;
+							host_cnt++;
+							break;
+						}
+					}
+
 					if ( stricmp(claim_id,"null") == 0 ) {
 						// No ClaimId given by the matchmaker.  This means
 						// the resource we were matched with does not support
