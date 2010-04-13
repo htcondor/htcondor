@@ -5,17 +5,7 @@ FLAVOR=$GLOBUS_FLAVOR
 THR_FLAVOR=$GLOBUS_THR_FLAVOR
 cd $PACKAGE_BUILD_DIR
 
-SOURCE_DIR="gt5.0.0-all-source-installer"
-
-# Solaris and AIX don't define AF_LOCAL, use AF_UNIX instead
-if [ `uname` = "AIX" -o `uname` = "SunOS" ] ; then
-  patch -i af_unix.patch -p0
-  if [ $? -ne 0 ]
-  then
-    echo "patch af_unix.patch failed"
-    exit 1
-  fi
-fi
+SOURCE_DIR="gt5.0.1-all-source-installer"
 
 # Solaris doesn't have setenv(), just putenv()
 if [ `uname` = "SunOS" ] ; then
@@ -25,24 +15,6 @@ if [ `uname` = "SunOS" ] ; then
     echo "patch putenv.patch failed"
     exit 1
   fi
-fi
-
-# AIX doesn't like certain forms of pointer arithmetic, so we have to
-# fool it.
-if [ `uname` = "AIX" ] ; then
-  patch -i aix-ptr.patch -p0
-  if [ $? -ne 0 ]
-  then
-    echo "patch aix-ptr.patch failed"
-    exit 1
-  fi
-fi
-
-# Most gram client calls leak a globus_gram_client_job_info_t.
-patch -i gram-info-leak.patch -p0
-if [ $? -ne 0 ] ; then
-  echo "patch gram-info-leak.patch failed"
-  exit 1
 fi
 
 # The XIO module usually wants to dlopen its GSI and popen drivers at
@@ -89,16 +61,6 @@ if [ `uname` = "Darwin" ] ; then
         exit 1
     fi
  fi
-
-# Potential patch for gram client select() bug
-cd $PACKAGE_BUILD_DIR/$SOURCE_DIR/source-trees/gram/protocol/source
-patch -p0 -i $PACKAGE_BUILD_DIR/gram-reregister.patch
-if [ $? -ne 0 ]
-then
-    echo "patch gram-reregister.patch failed"
-    exit 1
-fi
-cd $PACKAGE_BUILD_DIR
 
 # These variables will make Globus link against our OpenSSL external,
 # rather than the system OpenSSL libraries.
