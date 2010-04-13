@@ -206,13 +206,9 @@ StarterMgr::findStarter( ClassAd* job_ad, ClassAd* mach_ad,
 			break;
 		case 1:
 				// non-dc pvm starter
-			if( tmp_starter->is_dc() ||
-				!(tmp_starter->provides(ATTR_HAS_PVM)) ) {
-				dprintf( D_FULLDEBUG, 
-						 "Job wants PVM starter, skipping %s\n",
-						 tmp_starter->path() );
-				continue;
-			}
+			dprintf( D_ALWAYS, "ERROR: PVM starter is not supported, "
+					 "returning failure\n" );
+			return NULL;
 			break;
 		case 2:
 				// dc starter (mpi, java, etc)

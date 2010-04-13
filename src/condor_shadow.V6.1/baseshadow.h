@@ -40,7 +40,7 @@ class RemoteResource;
 	make sure you know how these classes interact.  If it's a general
 	shadow thing, you very well may want to add it to this class.  
 	However, if it is specific to one remote resource, you want to
-	look at RemoteResource.  If it is single, MPI, or PVM (one day!)
+	look at RemoteResource.  If it is single, MPI
 	specific, make the change in that derived class. <p>
 
 	More to come...<p>

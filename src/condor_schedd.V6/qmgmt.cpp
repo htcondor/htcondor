@@ -1466,18 +1466,17 @@ int DestroyProc(int cluster_id, int proc_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 
-	if( (universe == CONDOR_UNIVERSE_PVM) || 
-		(universe == CONDOR_UNIVERSE_MPI) ||
+	if( (universe == CONDOR_UNIVERSE_MPI) ||
 		(universe == CONDOR_UNIVERSE_PARALLEL) ) {
-			// PVM jobs take up a whole cluster.  If we've been ask to
-			// destroy any of the procs in a PVM job cluster, we
+			// Parallel jobs take up a whole cluster.  If we've been ask to
+			// destroy any of the procs in a parallel job cluster, we
 			// should destroy the entire cluster.  This hack lets the
 			// schedd just destroy the proc associated with the shadow
-			// when a multi-class PVM job exits without leaving other
+			// when a multi-class parallel job exits without leaving other
 			// procs in the cluster around.  It also ensures that the
-			// user doesn't delete only some of the procs in the PVM
+			// user doesn't delete only some of the procs in the parallel
 			// job cluster, since that's going to really confuse the
-			// PVM shadow.
+			// shadow.
 		int ret = DestroyCluster(cluster_id);
 		if(ret < 0 ) { return DESTROYPROC_ERROR; }
 		return DESTROYPROC_SUCCESS;

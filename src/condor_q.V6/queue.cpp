@@ -1565,16 +1565,6 @@ format_remote_host (char *, AttrList *ad)
 		} else {
 			return unknownHost;
 		}
-	} else if (universe == CONDOR_UNIVERSE_PVM) {
-		int current_hosts;
-		if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
-			if (current_hosts == 1) {
-				sprintf(host_result, "1 host");
-			} else {
-				sprintf(host_result, "%d hosts", current_hosts);
-			}
-			return host_result;
-		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
 		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result) == 1 )
 			return host_result;
@@ -2933,8 +2923,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			break;
 
 			// Unknown
-		case CONDOR_UNIVERSE_PVM:
-		case CONDOR_UNIVERSE_PVMD:
 		case CONDOR_UNIVERSE_PARALLEL:
 		case CONDOR_UNIVERSE_VM:
 			break;
@@ -2972,6 +2960,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		//case CONDOR_UNIVERSE_LINDA:
 		//case CONDOR_UNIVERSE_MAX:
 		//case CONDOR_UNIVERSE_MIN:
+		//case CONDOR_UNIVERSE_PVM:
+		//case CONDOR_UNIVERSE_PVMD:
 		default:
 			sprintf( return_buff, "%s\nWARNING: Job universe unknown.  Analysis may not be meaningful.\n", return_buff );
 			break;

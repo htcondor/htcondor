@@ -254,12 +254,6 @@ initShadow( ClassAd* ad )
 	case CONDOR_UNIVERSE_MPI:
 		Shadow = new MPIShadow();
 		break;
-	case CONDOR_UNIVERSE_PVM:
-			// some day we'll support this.  for now, fall through and
-			// print out an error message that might mean something to
-			// our user, not "PVM...hopefully one day..."
-//		Shadow = new PVMShadow();
-//		break;
 	default:
 		dprintf( D_ALWAYS, "This version of the shadow cannot support "
 				 "universe %d (%s)\n", universe,

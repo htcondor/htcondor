@@ -1450,7 +1450,7 @@ SetExecutable()
 	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
-	if ( JobUniverse != CONDOR_UNIVERSE_MPI && JobUniverse != CONDOR_UNIVERSE_PVM ) {
+	if ( JobUniverse != CONDOR_UNIVERSE_MPI ) {
 		InsertJobExpr ("MinHosts = 1");
 		InsertJobExpr ("MaxHosts = 1");
 	} 
@@ -1469,7 +1469,6 @@ SetExecutable()
 		buffer.sprintf( "%s = TRUE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
-	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_SCHEDULER:
@@ -1645,35 +1644,6 @@ SetUniverse()
 		free( univ );
 		return;
 	};
-
-#if !defined(WIN32)
-	if( univ && stricmp(univ,"pvm") == MATCH ) 
-	{
-		char *pvmd = param("PVMD");
-
-		if (!pvmd || access(pvmd, R_OK|X_OK) != 0) {
-			fprintf(stderr, "\nERROR: Condor PVM support is not installed.\n"
-					"You must install the Condor PVM Contrib Module before\n"
-					"submitting PVM universe jobs\n");
-			if (!pvmd) {
-				fprintf(stderr, "PVMD parameter not defined in the Condor "
-						"configuration file.\n");
-			} else {
-				fprintf(stderr, "Can't access %s: %s\n", pvmd,
-						strerror(errno));
-			}
-			exit(1);
-		}
-
-		JobUniverse = CONDOR_UNIVERSE_PVM;
-		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PVM);
-		InsertJobExpr (buffer);
-
-		free(univ);
-		return;
-	};
-
-#endif // !defined(WIN32)
 
 	if( univ && 
 		((stricmp(univ,"globus") == MATCH) || (stricmp(univ,"grid") == MATCH))) {
@@ -1912,38 +1882,8 @@ SetMachineCount()
 		wantParallel = true;
 	}
  
-	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
-
-		mach_count = condor_param( MachineCount, "MachineCount" );
-
-		int tmp;
-		if (mach_count != NULL) {
-			for (ptr = mach_count; *ptr && *ptr != '.'; ptr++) ;
-			if (*ptr != '\0') {
-				*ptr = '\0';
-				ptr++;
-			}
-
-			tmp = atoi(mach_count);
-			buffer.sprintf( "%s = %d", ATTR_MIN_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			
-			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
-			if (*ptr != '\0') {
-				tmp = atoi(ptr);
-			}
-
-			buffer.sprintf( "%s = %d", ATTR_MAX_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			free(mach_count);
-		} else {
-			InsertJobExpr ("MinHosts = 1");
-			InsertJobExpr ("MaxHosts = 1");
-		}
-
-		request_cpus = 1;
-	} else if (JobUniverse == CONDOR_UNIVERSE_MPI ||
-			   JobUniverse == CONDOR_UNIVERSE_PARALLEL || wantParallel) {
+	if (JobUniverse == CONDOR_UNIVERSE_MPI ||
+		JobUniverse == CONDOR_UNIVERSE_PARALLEL || wantParallel) {
 
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( ! mach_count ) { 
@@ -5888,7 +5828,6 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
 	bool	checks_per_file_encryption = false;
-	bool	checks_pvm = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
 #if defined(WIN32)
@@ -5958,9 +5897,6 @@ check_requirements( char const *orig, MyString &answer )
 
 	if( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
 		checks_ckpt_arch = findClause( answer, ATTR_CKPT_ARCH );
-	}
-	if( JobUniverse == CONDOR_UNIVERSE_PVM ) {
-		checks_pvm = findClause( answer, ATTR_HAS_PVM );
 	}
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		checks_mpi = findClause( answer, ATTR_HAS_MPI );
@@ -6095,14 +6031,6 @@ check_requirements( char const *orig, MyString &answer )
 		answer += ATTR_HAS_TDP;
 		answer += ")";
 	}
-
-	if ( JobUniverse == CONDOR_UNIVERSE_PVM ) {
-		if( ! checks_pvm ) {
-			answer += "&& (TARGET.";
-			answer += ATTR_HAS_PVM;
-			answer += ")";
-		}
-	} 
 
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		if( ! checks_mpi ) {

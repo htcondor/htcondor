@@ -679,13 +679,6 @@ SegMap::Contains( void *addr )
 }
 
 
-#define USER_DATA_SIZE 256
-#if defined(PVM_CHECKPOINTING)
-extern "C" int user_restore_pre(char *, int);
-extern "C" int user_restore_post(char *, int);
-char	global_user_data[USER_DATA_SIZE];
-#endif
-
 /*
   Given an "image" object containing checkpoint information which we have
   just read in, this method actually effects the restart.
@@ -694,12 +687,7 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
-	char	user_data[USER_DATA_SIZE];
 
-
-#if defined(PVM_CHECKPOINTING)
-	user_restore_pre(user_data, sizeof(user_data));
-#endif
 
 #if defined(COMPRESS_CKPT)
 	// If the checkpoint header contains an alt heap pointer, then we must
@@ -755,10 +743,6 @@ Image::Restore()
 		// information in the cache after resumption. It will be resetup at
 		// the next gettimeofday() call.
 	_condor_gtodc_init(_condor_global_gtodc);
-
-#if defined(PVM_CHECKPOINTING)
-	memcpy(global_user_data, user_data, sizeof(user_data));
-#endif
 
 		// Now we're going to restore the stack, so we move our execution
 		// stack to a temporary area (in the data segment), then call
@@ -897,10 +881,6 @@ RestoreStack()
 	} else {
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	}
-
-#if defined(PVM_CHECKPOINTING)
-	user_restore_post(global_user_data, sizeof(global_user_data));
-#endif
 
 #if defined(COMPRESS_CKPT)
 	if (zstr) {
@@ -1562,20 +1542,6 @@ Checkpoint( int sig, int code, void *scp )
 
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
-#if !defined(PVM_CHECKPOINTING)
-		if ( MyImage.GetFd() != -1 ) {
-			// Here we make _certain_ that fd is -1.  on remote checkpoints,
-			// the fd is always new since we open a fresh TCP socket to the
-			// shadow.  I have detected some buggy behavior where the remote
-			// job prematurely exits with a status 4, and think that it is
-			// related to the fact that fd is _not_ -1 here, so we make
-			// certain.  Hopefully the real bug will be found someday and
-			// this "patch" can go away...  -Todd 11/95
-			
-		dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
-		MyImage.SetFd( -1 );
-		}
-#endif
 
 		/* now update shadow with CPU time info.  unfortunately, we need
 		 * to convert to struct rusage here in the user code, because
