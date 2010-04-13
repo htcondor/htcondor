@@ -730,12 +730,6 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	if(dirlist) { free(dirlist); dirlist = NULL; }
 	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
-		// Daemons should additionally call condor_auth_config()
-		// explicitly with the argument is_daemon=true.  Here, we just
-		// call with is_daemon=false, since that is fine for both daemons
-		// and non-daemons to do.
-	condor_auth_config( false );
-
 	// The following lines should be placed very carefully. Must be after
 	// global and local config sources being processed but before any
 	// call that may be interposed by GCB
@@ -824,6 +818,12 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	check_params();
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
+
+		// Daemons should additionally call condor_auth_config()
+		// explicitly with the argument is_daemon=true.  Here, we just
+		// call with is_daemon=false, since that is fine for both daemons
+		// and non-daemons to do.
+	condor_auth_config( false );
 
 	(void)SetSyscalls( scm );
 }
