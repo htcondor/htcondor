@@ -61,10 +61,10 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 
 // External protos
-extern int main_init(int argc, char *argv[]);	// old main()
-extern int main_config();
-extern int main_shutdown_fast();
-extern int main_shutdown_graceful();
+extern void main_init(int argc, char *argv[]);	// old main()
+extern void main_config();
+extern void main_shutdown_fast();
+extern void main_shutdown_graceful();
 extern void main_pre_dc_init(int argc, char *argv[]);
 extern void main_pre_command_sock_init();
 

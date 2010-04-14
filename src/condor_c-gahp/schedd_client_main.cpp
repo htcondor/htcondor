@@ -59,7 +59,7 @@ usage()
 
 void init_pipes();
 
-int
+void
 main_init( int argc, char ** const argv )
 {
 
@@ -124,10 +124,6 @@ main_init( int argc, char ** const argv )
 		   contact_schedd_interval,
 		   doContactSchedd,
 		  "doContactSchedD" );
-
-
-	
-	return TRUE;
 }
 
 void 
@@ -182,14 +178,13 @@ Reconfig()
 }
 
 
-int
+void
 main_config()
 {
 	Reconfig();
-	return TRUE;
 }
 
-int
+void
 main_shutdown_fast()
 {
 #ifndef WIN32
@@ -197,10 +192,9 @@ main_shutdown_fast()
 		kill(io_loop_pid, SIGKILL);
 #endif
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
-int
+void
 main_shutdown_graceful()
 {
 #ifndef WIN32
@@ -208,7 +202,6 @@ main_shutdown_graceful()
 		kill(io_loop_pid, SIGTERM);
 #endif
 	DC_Exit(0);
-	return TRUE;	// to satify c++
 }
 
 void

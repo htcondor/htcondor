@@ -138,30 +138,27 @@ PollActivity()
 #endif
 }
 
-int 
+void 
 main_shutdown_graceful()
 {
 #ifndef WIN32
     delete xinter;
 #endif
     DC_Exit(EXIT_SUCCESS);
-	return TRUE;
 }
 
-int 
+void 
 main_shutdown_fast()
 {
 	DC_Exit(EXIT_SUCCESS);
-	return TRUE;
 }
 
-int 
+void 
 main_config()
 {
-    return TRUE;
 }
 
-int
+void
 main_init(int, char *[])
 {
     int id;
@@ -171,8 +168,6 @@ main_init(int, char *[])
 #endif
     //Poll for X activity every second.
     id = daemonCore->Register_Timer(5, 5, PollActivity, "PollActivity");
-
-    return TRUE;
 }
 
 

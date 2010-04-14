@@ -494,7 +494,7 @@ process_request(const ClassAd *inputAd)
 
 //-------------------------------------------------------------
 
-int main_init(int  argc , char *  argv  [])
+void main_init(int  argc , char *  argv  [])
 {
 	char *testfile = NULL;
 	ClassAd *inputAd = NULL;
@@ -539,36 +539,30 @@ int main_init(int  argc , char *  argv  [])
 		resultAd->dPrint(D_ALWAYS);
 		DC_Exit( 0 );
 	}
-
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
+void 
 main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

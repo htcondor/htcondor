@@ -116,7 +116,7 @@ usage()
 	DC_Exit( 1 );
 }
 
-int
+void
 main_init( int argc, char ** const argv )
 {
 
@@ -219,7 +219,7 @@ main_init( int argc, char ** const argv )
 					      true	// read end registerable
 					     ) )
 		{
-			return -1;
+			return;
 		}
 
 		workers[i].request_buffer.setPipeEnd(workers[i].request_pipe[1]);
@@ -320,8 +320,6 @@ main_init( int argc, char ** const argv )
 	fflush(stdout);
 
 	dprintf (D_FULLDEBUG, "C-GAHP IO initialized\n");
-
-	return TRUE;
 }
 
 
@@ -732,21 +730,18 @@ void Register() {}
 void Reconfig() {}
 
 
-int
+void
 main_config()
 {
 	Reconfig();
-	return TRUE;
 }
 
-int
+void
 main_shutdown_fast()
 {
-
-	return TRUE;	// to satisfy c++
 }
 
-int
+void
 main_shutdown_graceful()
 {
 	daemonCore->Cancel_And_Close_All_Pipes();
@@ -754,8 +749,6 @@ main_shutdown_graceful()
 	for (int i=0; i<NUMBER_WORKERS; i++) {
 		daemonCore->Send_Signal (workers[i].pid, SIGKILL);
 	}
-
-	return TRUE;	// to satify c++
 }
 
 void

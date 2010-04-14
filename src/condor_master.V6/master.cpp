@@ -83,9 +83,9 @@ int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
 void	run_preen();
 void	usage(const char* );
-int	main_shutdown_graceful();
-int	main_shutdown_fast();
-int	main_config();
+void	main_shutdown_graceful();
+void	main_shutdown_fast();
+void	main_config();
 int	agent_starter(ReliSock *);
 int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(Service *, int, Stream *);
@@ -219,7 +219,7 @@ DoCleanup(int,int,char*)
 }
 
 
-int
+void
 main_init( int argc, char* argv[] )
 {
     extern int runfor;
@@ -231,7 +231,7 @@ main_init( int argc, char* argv[] )
 	if ( argc == -1 ) {
 		NT_ServiceFlag = TRUE;
 		register_service();
-		return TRUE;
+		return;
 	}
 #endif
 
@@ -372,7 +372,6 @@ main_init( int argc, char* argv[] )
 		daemons.StartAllDaemons();
 	}
 	daemons.StartTimers();
-	return TRUE;
 }
 
 
@@ -929,7 +928,7 @@ lock_or_except( const char* file_name )
  ** Re read the config file, and send all the daemons a signal telling
  ** them to do so also.
  */
-int
+void
 main_config()
 {
 	StringList old_daemon_list;
@@ -1007,13 +1006,12 @@ main_config()
 		// changed.
 	daemons.StartTimers();
 	daemons.UpdateCollector();
-	return TRUE;
 }
 
 /*
  ** Kill all daemons and go away.
  */
-int
+void
 main_shutdown_fast()
 {
 	MasterShuttingDown = TRUE;
@@ -1025,14 +1023,13 @@ main_shutdown_fast()
 
 	daemons.CancelRestartTimers();
 	daemons.StopFastAllDaemons();
-	return TRUE;
 }
 
 
 /*
  ** Cause job(s) to vacate, kill all daemons and go away.
  */
-int
+void
 main_shutdown_graceful()
 {
 	MasterShuttingDown = TRUE;
@@ -1044,7 +1041,6 @@ main_shutdown_graceful()
 
 	daemons.CancelRestartTimers();
 	daemons.StopAllDaemons();
-	return TRUE;
 }
 
 time_t

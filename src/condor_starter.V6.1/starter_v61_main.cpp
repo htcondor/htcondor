@@ -236,7 +236,7 @@ main_pre_dc_init( int argc, char* argv[] )
 }
 
 
-int
+void
 main_init(int argc, char *argv[])
 {
 	my_argc = argc;
@@ -277,8 +277,6 @@ main_init(int argc, char *argv[])
 		dprintf(D_ALWAYS, "Unable to start job.\n");
 		DC_Exit(1);
 	}
-
-	return 0;
 }
 
 
@@ -684,15 +682,14 @@ parseArgs( int argc, char* argv [] )
 }
 
 
-int
+void
 main_config()
 {
 	Starter->Config();
-	return 0;
 }
 
 
-int
+void
 main_shutdown_fast()
 {
 	if ( Starter->RemoteShutdownFast(0) ) {
@@ -700,11 +697,10 @@ main_shutdown_fast()
 		// no jobs to shutdown.  No need to stick around.
 		Starter->StarterExit(0);
 	}
-	return 0;
 }
 
 
-int
+void
 main_shutdown_graceful()
 {
 	if ( Starter->RemoteShutdownGraceful(0) ) {
@@ -712,7 +708,6 @@ main_shutdown_graceful()
 		// there are no jobs to shutdown.  No need to stick around.
 		Starter->StarterExit(0);
 	}
-	return 0;
 }
 
 extern "C" 

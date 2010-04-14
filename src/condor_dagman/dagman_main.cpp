@@ -366,7 +366,7 @@ Dagman::Config()
 
 
 // NOTE: this is only called on reconfig, not at startup
-int
+void
 main_config()
 {
 		// This is commented out because, even if we get new config
@@ -374,26 +374,23 @@ main_config()
 		// is where most of them actually take effect).  (See Gnats
 		// PR 808.)  wenger 2007-02-09
 	// dagman.Config();
-	return 0;
 }
 
 // this is called by DC when the schedd is shutdown fast
-int
+void
 main_shutdown_fast()
 {
     DC_Exit( EXIT_RESTART );
-    return FALSE;
 }
 
 // this can be called by other functions, or by DC when the schedd is
 // shutdown gracefully
-int main_shutdown_graceful() {
+void main_shutdown_graceful() {
     dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
-    return FALSE;
 }
 
-int main_shutdown_rescue( int exitVal ) {
+void main_shutdown_rescue( int exitVal ) {
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 	if( dagman.dag ) {
 			// we write the rescue DAG *before* removing jobs because
@@ -431,7 +428,6 @@ int main_shutdown_rescue( int exitVal ) {
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( exitVal );
-	return false;
 }
 
 // this gets called by DC when DAGMan receives a SIGUSR1 -- which,
@@ -440,7 +436,7 @@ int main_shutdown_rescue( int exitVal ) {
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	main_shutdown_rescue( EXIT_ABORT );
-	return false;
+	return FALSE;
 }
 
 void ExitSuccess() {
@@ -464,7 +460,7 @@ int main_testing_stub( Service *, int ) {
 ****** FOR TESTING ********/
 
 //---------------------------------------------------------------------------
-int main_init (int argc, char ** const argv) {
+void main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
 
@@ -988,7 +984,7 @@ int main_init (int argc, char ** const argv) {
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		ExitSuccess();
-		return 0;
+		return;
 	}
 
     //------------------------------------------------------------------------
@@ -1040,8 +1036,6 @@ int main_init (int argc, char ** const argv) {
 
 	dagman.dag->SetPendingNodeReportInterval(
 				dagman.pendingReportInterval );
-
-    return 0;
 }
 
 void

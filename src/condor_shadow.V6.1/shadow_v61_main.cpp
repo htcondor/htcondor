@@ -264,7 +264,7 @@ initShadow( ClassAd* ad )
 }
 
 
-int
+void
 main_init(int argc, char *argv[])
 {
 	_EXCEPT_Cleanup = ExceptCleanup;
@@ -310,31 +310,26 @@ main_init(int argc, char *argv[])
 	} else {
 		Shadow->spawn();
 	}		
-
-	return 0;
 }
 
 
-int
+void
 main_config()
 {
 	Shadow->config();
-	return 0;
 }
 
 
-int
+void
 main_shutdown_fast()
 {
 	Shadow->shutDown( JOB_NOT_CKPTED );
-	return 0;
 }
 
-int
+void
 main_shutdown_graceful()
 {
 	Shadow->gracefulShutDown();
-	return 0;
 }
 
 
