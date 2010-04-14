@@ -96,7 +96,7 @@ main_shutdown_fast()
  *                        $CONDOR_CONFIG without changing the state machine
  **/
 int
-main_config( bool /* is_full */ )
+main_config()
 {
 	int returnValue = 0;
 

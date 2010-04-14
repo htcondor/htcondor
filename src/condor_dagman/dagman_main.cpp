@@ -367,7 +367,7 @@ Dagman::Config()
 
 // NOTE: this is only called on reconfig, not at startup
 int
-main_config( bool )
+main_config()
 {
 		// This is commented out because, even if we get new config
 		// values here, they don't get passed to the Dag object (which

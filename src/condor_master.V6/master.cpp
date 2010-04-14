@@ -85,7 +85,7 @@ void	run_preen();
 void	usage(const char* );
 int	main_shutdown_graceful();
 int	main_shutdown_fast();
-int	main_config( bool is_full );
+int	main_config();
 int	agent_starter(ReliSock *);
 int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(Service *, int, Stream *);
@@ -930,7 +930,7 @@ lock_or_except( const char* file_name )
  ** them to do so also.
  */
 int
-main_config( bool /* is_full */ )
+main_config()
 {
 	StringList old_daemon_list;
 	char *list = daemons.ordered_daemon_names.print_to_string();

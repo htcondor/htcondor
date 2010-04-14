@@ -108,7 +108,7 @@ main_init( int argc, char ** const argv )
 }
 
 int
-main_config( bool )
+main_config()
 {
 	Reconfig();
 	return TRUE;

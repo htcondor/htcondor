@@ -102,7 +102,7 @@ void Reconfig()
 }
 
 int
-main_config( bool is_full )
+main_config()
 {
 	Reconfig();
 	return TRUE;

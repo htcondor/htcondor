@@ -66,7 +66,7 @@ int main_init(int argc, char *argv[])
 
 //-------------------------------------------------------------
 
-int main_config( bool is_full )
+int main_config()
 {
 	Daemon->Config();
 	return TRUE;

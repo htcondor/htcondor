@@ -316,7 +316,7 @@ main_init(int argc, char *argv[])
 
 
 int
-main_config( bool /* is_full */ )
+main_config()
 {
 	Shadow->config();
 	return 0;

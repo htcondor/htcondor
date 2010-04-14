@@ -154,7 +154,7 @@ main_shutdown_fast()
 	return TRUE;
 }
 int
-main_config( bool /*is_full*/ )
+main_config()
 {
 	printf("** IN MAIN_CONFIG\n");
 	return TRUE;

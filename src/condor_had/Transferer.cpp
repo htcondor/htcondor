@@ -218,7 +218,7 @@ main_shutdown_fast( )
 
 // no reconfigurations enabled
 int
-main_config( bool is_full )
+main_config()
 {
     return 1;
 }

@@ -74,7 +74,7 @@ main_shutdown_fast( )
 }
 
 int
-main_config( bool isFull )
+main_config()
 {
     // NOTE: restart functionality instead of reconfig
 	stateMachine->reinitialize( );

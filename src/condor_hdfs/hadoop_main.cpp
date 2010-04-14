@@ -42,7 +42,7 @@ int main_init(int /* argc */, char * /* argv */ [])
 //-------------------------------------------------------------
 
 int 
-main_config( bool /* is_full */ )
+main_config()
 {
         hadoop.initialize();
         return TRUE;

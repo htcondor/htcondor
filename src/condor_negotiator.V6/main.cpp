@@ -60,7 +60,7 @@ int main_shutdown_fast()
 }
 
 int
-main_config( bool /* is_full */ )
+main_config()
 {
 	return (matchMaker.reinitialize ());
 }

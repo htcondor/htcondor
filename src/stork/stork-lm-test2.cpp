@@ -215,7 +215,7 @@ int main_init(int /*argc*/, char * /*argv*/ [])
 //-------------------------------------------------------------
 
 int 
-main_config( bool /*is_full*/ )
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 	smt.config( true );

@@ -103,7 +103,7 @@ StartdCronMgr	*Cronmgr;
 void usage( char* );
 int main_init( int argc, char* argv[] );
 int init_params(int);
-int main_config( bool is_full );
+int main_config();
 int finish_main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
@@ -415,7 +415,7 @@ main_init( int, char* argv[] )
 
 
 int
-main_config( bool /* is_full */ )
+main_config()
 {
 	bool done_allocating;
 

@@ -270,9 +270,8 @@ int main_init(int argc, char **argv)
 /* ============================================================================
  * reconfigure reqex_daemon
  * ==========================================================================*/
-int main_config(bool v)
+int main_config()
 {
-	(void) v;
 	dprintf(D_ALWAYS,"RECONFIGURING ......\n");
 	read_config_file();
 	return TRUE;

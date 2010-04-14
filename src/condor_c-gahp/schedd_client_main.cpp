@@ -183,7 +183,7 @@ Reconfig()
 
 
 int
-main_config( bool )
+main_config()
 {
 	Reconfig();
 	return TRUE;
