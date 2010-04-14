@@ -62,6 +62,11 @@ wake up too many offline machines for the number of jobs available
 to run on them.  The fix for this problem requires updating both
 the \Condor{negotiator} and the \Condor{schedd}.
 
+% gittrack 1349
+\item Fixed a problem that caused the \Condor{startd} daemon to
+crash in some cases when \MacroNI{STARTD\_SENDS\_ALIVES} was true.
+This setting is false by default.
+
 \end{itemize}
 
 \noindent Known Bugs:
