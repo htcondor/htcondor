@@ -903,12 +903,14 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
 	// making it generic so any would be invalid query can contain these params.
 	if ( LookupByAdType (t_AddType, table, makeKey) )
 	{
+		ClassAd * pAd=0;
 		// try to create a hk from the query ad if it is possible.
-		if ( (*makeKey) (hk, (ClassAd*) &c_query, NULL) )
+		if ( (*makeKey) (hk, (ClassAd*) &c_query, NULL) && table->lookup(hk, pAd) != -1 )
 		{
 			hk.sprint( hkString );
 			iRet = !table->remove(hk);
 			dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.Value() );
+			delete pAd;
 		}
 	}
 
