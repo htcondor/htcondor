@@ -1039,6 +1039,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 		dprintf(D_FAILURE|D_ALWAYS,"State change: claim no longer recognized "
 			 "by the schedd - removing claim\n" );
 		finishKillClaim();	// get rid of the claim
+		c_alive_inprogress_sock = NULL;
 		return FALSE;
 	}
 
