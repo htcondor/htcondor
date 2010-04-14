@@ -25,6 +25,14 @@ The details of each version are described below.
 % gittrac 1003
 \item Removed support for SuSE 8 Linux on the Itanium 64 architecture.
 
+% gittrac #600
+\item The following submit file attributes are no longer recognized.
+\SubmitCmd{grid\_resource} should be used instead:
+\SubmitCmd{grid\_type}, \SubmitCmd{globusscheduler},
+\SubmitCmd{jobmanager\_type}, \SubmitCmd{remote\_schedd},
+\SubmitCmd{remote\_pool}, \SubmitCmd{unicore\_u\_site},
+\SubmitCmd{unicore\_v\_site}.
+
 \end{itemize}
 
 
@@ -40,6 +48,12 @@ from the queue and handling job eviction and \Condor{shadow} exceptions.
 This should improve performance in situations where
 disk bandwidth is a limiting factor.  Updates to the job user log
 have also been optimized in a number of cases to be less disk intensive.
+
+% gittrack 1288
+\item The \Condor{schedd} daemon also uses less CPU when scheduling
+some types of job queues.  The case that is most likely to benefit is
+a large queue of short-running non-local and non-scheduler universe jobs
+with at least one idle local or scheduler universe job.
 
 % gittrack 1266
 \item The \Condor{schedd} automatically grants the \Condor{startd}
@@ -111,6 +125,13 @@ and YDL 5 PowerPC due to a problem in how it detected EOF in the job queue log.
   quickly reschedule a different job to run on the slot to which the
   removed job had been matched.  Instead, it would take up to
   \MacroNI{SCHEDD\_INTERVAL} seconds to do so.
+
+% gittrac #1279
+% Not documenting gittrac #1280, as it was completely covered up by
+% #1279.
+\item Fixed a bug introduce in Condor 7.5.1 that caused the
+\MacroNI{gahp\_server} to crash when
+first communicating with most \MacroNI{gt2} or \MacroNI{gt5} GRAM servers.
 
 \end{itemize}
 
