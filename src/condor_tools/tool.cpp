@@ -121,10 +121,6 @@ usage( char *str )
 		fprintf( stderr, 
 				 "    -fast\t\tquickly vacate the jobs (no checkpointing)\n" );
 	}
-	if( cmd == DC_RECONFIG ) {
-		fprintf( stderr, 
-				 "    -full\t\tPerform a full reconfig\n" );
-	}
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 	fprintf( stderr, 
 			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
@@ -177,7 +173,7 @@ usage( char *str )
 				 "  If sent to the master, all daemons on that host will restart.\n" );
 		break;
 
-	case DC_RECONFIG:
+	case DC_RECONFIG_FULL:
 		fprintf( stderr, 
 				 "  %s causes the specified daemon to reconfigure itself.\n", 
 				 str );
@@ -286,10 +282,8 @@ cmdToStr( int c )
 		return "Checkpoint-All-Jobs";
 	case RESCHEDULE:
 		return "Reschedule";
-	case DC_RECONFIG:
-		return "Reconfig";
 	case DC_RECONFIG_FULL:
-		return "Full-Reconfig";
+		return "Reconfig";
 	case SQUAWK:
 		return "Squawk";
 	case SET_SHUTDOWN_PROGRAM:
@@ -372,10 +366,10 @@ main( int argc, char *argv[] )
 	if( !strncmp_auto( cmd_str, "_reconfig_schedd" ) ) {
 		fprintf( stderr, "WARNING: condor_reconfig_schedd is deprecated.\n" );
 		fprintf( stderr, "\t Use: \"condor_reconfig -schedd\" instead.\n" );
-		cmd = DC_RECONFIG;
+		cmd = DC_RECONFIG_FULL;
 		dt = DT_SCHEDD;
     } else if( !strncmp_auto( cmd_str, "_reconfig" ) ) {
-		cmd = DC_RECONFIG;
+		cmd = DC_RECONFIG_FULL;
 		takes_subsys = 1;
 	} else if( !strncmp_auto( cmd_str, "_restart" ) ) {
 		cmd = RESTART;
@@ -466,9 +460,9 @@ main( int argc, char *argv[] )
 			if( (*tmp)[2] ) {
 				switch( (*tmp)[2] ) {
 				case 'u':
-					if( cmd == DC_RECONFIG ) {
-						full = true;
-					} else {
+					// CRUFT: -full is a deprecated argument to
+					//   condor_reconfig. It was removed in 7.5.3.
+					if( cmd != DC_RECONFIG_FULL ) {
 						fprintf( stderr, "ERROR: \"-full\" "
 								 "is not valid with %s\n", MyName );
 						usage( NULL );
@@ -951,7 +945,7 @@ computeRealAction( void )
 	real_cmd = -1;
 	switch( cmd ) {
 
-	case DC_RECONFIG:
+	case DC_RECONFIG_FULL:
 			// no magic
 		break;
 
@@ -1416,11 +1410,8 @@ doCommand( Daemon* d )
 		}
 		break;
 
-	case DC_RECONFIG:
-			// if -full is used, we need to send a different command.
-		if( full ) {
-			my_cmd = DC_RECONFIG_FULL;
-		}
+	case DC_RECONFIG_FULL:
+			// Nothing to do
 		break;
 
 	case SET_SHUTDOWN_PROGRAM:
