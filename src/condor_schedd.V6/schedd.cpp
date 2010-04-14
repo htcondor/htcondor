@@ -201,13 +201,6 @@ struct job_data_transfer_t {
 	ExtArray<PROC_ID> *jobs;
 };
 
-int
-dc_reconfig()
-{
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
-	return TRUE;
-}
-
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
 					  const ClassAd *match, char *the_user, char *my_pool,
 					  bool is_dedicated_arg ):
@@ -10529,8 +10522,6 @@ Scheduler::Register()
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
 			"reschedule_negotiator", this, WRITE);
-	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
-			(CommandHandler)&dc_reconfig, "reconfig", 0, OWNER );
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)&Scheduler::abort_job, 
 			"abort_job", this, WRITE);

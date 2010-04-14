@@ -297,9 +297,6 @@ main_init( int argc, char* argv[] )
 #endif
 
 		// Register admin commands
-	daemonCore->Register_Command( RECONFIG, "RECONFIG",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( RESTART, "RESTART",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
@@ -391,9 +388,6 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	dprintf( D_FULLDEBUG, 
 			 "Got admin command (%d) and allowing it.\n", cmd );
 	switch( cmd ) {
-	case RECONFIG:
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
-		return TRUE;
 	case RESTART:
 		restart_everyone();
 		return TRUE;
