@@ -1862,7 +1862,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	Resource* rip;
 	Claim* claim;
 	MyString err_msg;
-	ExprTree *tree, *rhs;
+	ExprTree *tree;
 	ReliSock* rsock = (ReliSock*)s;
 	int lease_duration = 0;
 	const char* owner = rsock->getOwner();
