@@ -49,7 +49,7 @@
 # define LeaseManagerProgs
 #endif
 
-#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP && !IS_AIX
+#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP && HAVE_PTHREADS
 #define EC2 amazon
 #else
 #define EC2
@@ -333,7 +333,7 @@ condor_object_target(hdfs)
 condor_object_target(startd_factory)
 condor_object_target(vm-gahp)
 
-#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
+#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP && HAVE_PTHREADS
 condor_object_target(amazon)
 #endif
 
