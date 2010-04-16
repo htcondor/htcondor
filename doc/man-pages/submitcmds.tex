@@ -315,6 +315,21 @@ single log file, ensure that all of the jobs specify
 this option in the same way.
 
 %%%%%%%%%%%%%%%%%%%
+%% job_ad_information_attrs
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!job\_ad\_information\_attrs}
+\label{man-condor-submit-job-ad-information-attrs}
+\item[job\_ad\_information\_attrs]
+This specifies a comma-separated list of job ClassAd attribute names.
+The named attributes and their values are written in the user log
+whenever any event is being written to the log.
+This is the same as the configuration setting
+\MacroNI{EVENT\_LOG\_INFORMATION\_ATTRS} (see
+page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
+the user log instead of the system event log.
+
+%%%%%%%%%%%%%%%%%%%
 %% notification
 %%%%%%%%%%%%%%%%%%%
 

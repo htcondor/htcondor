@@ -307,6 +307,19 @@ in order to refresh a Condor job's initial working directory.
 The value will be \Expr{True}, unless a job explicitly adds this
 attribute, setting it to \Expr{False}.
 
+%%% ClassAd attriute: JobAdInformationAttrs
+\index{ClassAd job attribute!JobAdInformationAttrs}
+\index{JobAdInformationAttrs!job ClassAd attribute}
+\label{JobAdInformationAttrs-job-attribute}
+\item[\AdAttr{JobAdInformationAttrs}:] A comma-separated list
+of attribute names.  The named attributes and their values are written
+in the user log whenever any event is being written to the log.
+This is the same as the configuration setting
+\MacroNI{EVENT\_LOG\_INFORMATION\_ATTRS} (see
+page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
+the user log instead of the system event log.
+
+
 %%% ClassAd attribute: JobLeaseDuration
 \index{ClassAd job attribute!JobLeaseDuration}
 \index{JobLeaseDuration!job ClassAd attribute}
