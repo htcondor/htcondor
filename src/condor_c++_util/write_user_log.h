@@ -287,6 +287,8 @@ class WriteUserLog
 					   bool is_header_event,
 					   ClassAd *ad);
 
+	void writeJobAdInfoEvent(char const *attrsToWrite, ULogEvent *event, ClassAd *param_jobad, bool is_global_event );
+
 	bool doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
 	void GenerateGlobalId( MyString &id );
 

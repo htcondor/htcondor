@@ -766,6 +766,7 @@ extern const char * const ATTR_SHELL;
 extern const char * const ATTR_RETRY;
 extern const char * const ATTR_SSH_KEYGEN_ARGS;
 extern const char * const ATTR_SOCK;
+extern const char * const ATTR_JOB_AD_INFORMATION_ATTRS;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum
