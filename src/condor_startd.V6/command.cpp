@@ -41,6 +41,7 @@ command_handler( Service*, int cmd, Stream* stream )
 	int rval = FALSE;
 	Resource* rip;
 	if( ! (rip = stream_to_rip(stream)) ) {
+		dprintf(D_ALWAYS, "Error: problem finding resource for %d (%s)", cmd, getCommandString(cmd));
 		return FALSE;
 	}
 	State s = rip->state();
@@ -129,7 +130,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		free( id );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
@@ -293,7 +294,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		free( id );
 		refuse( stream );
 		return FALSE;
@@ -360,8 +361,8 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
-		dprintf( D_FULLDEBUG, 
-				 "Can't find resource with ClaimId (%s); perhaps this claim was removed already.\n", idp.publicClaimId() );
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with ClaimId (%s) for %d (%s); perhaps this claim was removed already.\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		free( id );
 		refuse( stream );
 		return FALSE;
