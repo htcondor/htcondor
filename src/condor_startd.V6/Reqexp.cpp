@@ -207,7 +207,7 @@ Reqexp::unavail()
 
 
 void
-Reqexp::publish( ClassAd* ca, amask_t how_much )
+Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 {
 	MyString tmp;
 
