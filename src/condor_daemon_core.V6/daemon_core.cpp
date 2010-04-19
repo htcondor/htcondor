@@ -403,6 +403,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 1);
+    if( m_iMaxAcceptsPerCycle != 1 ) {
+        dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    }
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
@@ -2603,6 +2607,11 @@ DaemonCore::reconfig(void) {
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
 
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 1);
+    if( m_iMaxAcceptsPerCycle != 1 ) {
+        dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    }
+
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
 
@@ -3472,46 +3481,70 @@ struct CallSocketHandler_args {
 void
 DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 {
-	bool set_service_tid = false;
+    unsigned int iAcceptCnt = ( m_iMaxAcceptsPerCycle > 0 ) ? m_iMaxAcceptsPerCycle: -1;
 
-	// Queue up the parameters and add to our thread pool.
-	struct CallSocketHandler_args *args;
-	args = new struct CallSocketHandler_args;
+    // if it is an accepting socket it will try for the connect
+    // up (n) elements
+    while ( iAcceptCnt )
+    {
+	    bool set_service_tid = false;
 
-	// If a tcp listen socket, do the accept now in the main thread
-	// so that we don't go back to the select loop with the listen
-	// socket still set.
-	args->accepted_sock = NULL;
-	Stream *insock = (*sockTable)[i].iosock;
-	ASSERT(insock);
-	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
-		 default_to_HandleCommand &&
-		 insock->type() == Stream::reli_sock &&
-		 ((ReliSock *)insock)->_state == Sock::sock_special &&
-		 ((ReliSock *)insock)->_special_state == ReliSock::relisock_listen 
-		 )
-	{
-		args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
+	    // Queue up the parameters and add to our thread pool.
+	    struct CallSocketHandler_args *args;
+	    args = new struct CallSocketHandler_args;
 
-		if ( !(args->accepted_sock) ) {
-				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
-				// no need to add to work pool if we fail to accept
-				free(args);
-				return;
-		}
-	} else {
-		set_service_tid = true;
-	}
-	args->i = i;
-	args->default_to_HandleCommand = default_to_HandleCommand;
-	int* pTid = NULL;
-	if ( set_service_tid ) {
-		// setup pointer (pTid) to pass to pool_add - thus servicing_tid will be
-		// set to the tid value BEFORE pool_add() yields.
-		pTid = &((*sockTable)[i].servicing_tid);
-	}
-	CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args,
-								pTid,(*sockTable)[i].handler_descrip);
+	    // If a tcp listen socket, do the accept now in the main thread
+	    // so that we don't go back to the select loop with the listen
+	    // socket still set.
+	    args->accepted_sock = NULL;
+	    Stream *insock = (*sockTable)[i].iosock;
+	    ASSERT(insock);
+	    if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
+		    default_to_HandleCommand &&
+		    insock->type() == Stream::reli_sock &&
+		    ((ReliSock *)insock)->_state == Sock::sock_special &&
+		    ((ReliSock *)insock)->_special_state == ReliSock::relisock_listen
+		    )
+	    {
+            // b/c we are now in a tight loop accepting, use select to check for more data and bail if none is there.
+            Selector selector;
+            selector.set_timeout( 0, 0 );
+            selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+            selector.execute();
+
+            if ( !selector.has_ready() ) {
+                // avoid unnecessary blocking simply poll with timeout 0, if no data then exit
+                free(args);
+                return;
+            }
+
+		    args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
+
+		    if ( !(args->accepted_sock) ) {
+		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
+		        // no need to add to work pool if we fail to accept
+		        free(args);
+		        return;
+		    }
+
+            iAcceptCnt --;
+
+	    } else {
+		    set_service_tid = true;
+            iAcceptCnt=0;
+	    }
+	    args->i = i;
+	    args->default_to_HandleCommand = default_to_HandleCommand;
+	    int* pTid = NULL;
+	    if ( set_service_tid ) {
+		    // setup pointer (pTid) to pass to pool_add - thus servicing_tid will be
+		    // set to the tid value BEFORE pool_add() yields.
+		    pTid = &((*sockTable)[i].servicing_tid);
+	    }
+	    CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args,
+								    pTid,(*sockTable)[i].handler_descrip);
+
+    }
 }
 
 void

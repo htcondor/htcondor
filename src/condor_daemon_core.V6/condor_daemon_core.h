@@ -1398,6 +1398,7 @@ class DaemonCore : public Service
 	bool m_invalidate_sessions_via_tcp;
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
+    int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()

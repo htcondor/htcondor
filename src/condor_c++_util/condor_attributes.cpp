@@ -818,6 +818,7 @@ const char * const ATTR_SHELL = "Shell";
 const char * const ATTR_RETRY = "Retry";
 const char * const ATTR_SSH_KEYGEN_ARGS = "SSHKeyGenArgs";
 const char * const ATTR_SOCK = "sock";
+const char * const ATTR_JOB_AD_INFORMATION_ATTRS = "JobAdInformationAttrs";
 
 
 //************* Added for Amazon Jobs ***************************//

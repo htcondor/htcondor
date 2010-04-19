@@ -167,6 +167,7 @@ bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
 bool xen_has_file_to_be_transferred = false;
 
+
 //
 // The default polling interval for the schedd
 //
@@ -1936,9 +1937,11 @@ SetMachineCount()
 }
 
 struct SimpleExprInfo {
+	char const *ad_attr_name;
 	char const *name1;
 	char const *name2;
 	char const *default_value;
+	bool quote_it;
 };
 
 /* This function is used to handle submit file commands that are inserted
@@ -1948,7 +1951,8 @@ void
 SetSimpleJobExprs()
 {
 	SimpleExprInfo simple_exprs[] = {
-		{next_job_start_delay, next_job_start_delay2, NULL},
+		{ATTR_NEXT_JOB_START_DELAY, next_job_start_delay, next_job_start_delay2, NULL, false},
+		{ATTR_JOB_AD_INFORMATION_ATTRS, "JobAdInformationAttrs", "job_ad_information_attrs", NULL, true},
 		{NULL,NULL,NULL}
 	};
 
@@ -1965,7 +1969,15 @@ SetSimpleJobExprs()
 		}
 
 		MyString buffer;
-		buffer.sprintf( "%s = %s", ATTR_NEXT_JOB_START_DELAY, expr);
+		if( i->quote_it ) {
+			MyString expr_buf;
+			ClassAd::EscapeStringValue( expr, expr_buf );
+			buffer.sprintf( "%s = \"%s\"", i->ad_attr_name, expr_buf.Value());
+		}
+		else {
+			buffer.sprintf( "%s = %s", i->ad_attr_name, expr);
+		}
+
 		InsertJobExpr (buffer);
 
 		free( expr );
