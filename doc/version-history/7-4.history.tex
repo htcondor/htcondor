@@ -50,7 +50,7 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrac 1329
-\item Network connections for condor file transfers were ignoring
+\item Network connections for Condor file transfers were ignoring
   private network settings.  The connection from the execute node to
   the submit node always attempted to use the public network address
   of the submit machine.
@@ -64,8 +64,8 @@ the \Condor{negotiator} and the \Condor{schedd}.
 
 % gittrac 1349
 \item Fixed a problem that caused the \Condor{startd} daemon to
-crash in some cases when \MacroNI{STARTD\_SENDS\_ALIVES} was true.
-This setting is false by default.
+crash in some cases when \MacroNI{STARTD\_SENDS\_ALIVES} was \Expr{True}.
+This setting is \Expr{False} by default.
 
 % gittrac #1337
 \item Fixed a problem where the \Condor{kbdd} has a chance of
@@ -331,7 +331,7 @@ proxy, which was the previous behavior.
 on platforms that use X-Windows.  Microsoft Windows and Mac OS X
 are not affected.  Removing KBDD from \MacroNI{DAEMON\_LIST} is a
 workaround, although this impairs Condor's ability to detect
-console usage.  This bug is fixed in 7.4.3.
+console usage.  This bug is fixed in Condor version 7.4.3.
 
 \end{itemize}
 
@@ -680,7 +680,7 @@ the controlled daemon if CCB was enabled.
 on platforms that use X-Windows.  Microsoft Windows and Mac OS X
 are not affected.  Removing KBDD from \MacroNI{DAEMON\_LIST} is a
 workaround, although this impairs Condor's ability to detect
-console usage.  This bug is fixed in 7.4.3.
+console usage.  This bug is fixed in Condor version 7.4.3.
 
 % gittrac #983
 \item \Condor{dagman} may fail on Windows if the set of node job log
@@ -1145,7 +1145,7 @@ crash on shutdown or reconfiguration.
 on platforms that use X-Windows.  Microsoft Windows and Mac OS X
 are not affected.  Removing KBDD from \MacroNI{DAEMON\_LIST} is a
 workaround, although this impairs Condor's ability to detect
-console usage.  This bug is fixed in 7.4.3.
+console usage.  This bug is fixed in Condor version 7.4.3.
 
 % gittrac #161, #935, #936, #1020
 \item There are multiple bugs related to using VOMS attributes.
