@@ -144,6 +144,22 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 \item Condor version 7.5.2 not yet released.
 %\item Condor version 7.5.2 released on Month Date, 2010.
 
+% gittrac 1003
+\item Condor no longer supports  SuSE 8 Linux on the Itanium 64 architecture.
+
+% gittrac #600
+\item The following submit description file commands are no longer recognized.
+Their functionality is replaced by the command \SubmitCmd{grid\_resource}.
+\begin{description}
+  \item{\SubmitCmd{grid\_type}}
+  \item{\SubmitCmd{globusscheduler}}
+  \item{\SubmitCmd{jobmanager\_type}}
+  \item{\SubmitCmd{remote\_schedd}}
+  \item{\SubmitCmd{remote\_pool}}
+  \item{\SubmitCmd{unicore\_u\_site}}
+  \item{\SubmitCmd{unicore\_v\_site}}
+\end{description}
+
 \end{itemize}
 
 
@@ -157,8 +173,15 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 updates to job ClassAds from running jobs and also when removing jobs
 from the queue and handling job eviction and \Condor{shadow} exceptions.
 This should improve performance in situations where
-disk bandwidth is a limiting factor.  Updates to the job user log
-have also been optimized in a number of cases to be less disk intensive.
+disk bandwidth is a limiting factor.
+Some cases of updates to the job user log
+have also been optimized to be less disk intensive.
+
+% gittrack 1288
+\item The \Condor{schedd} daemon uses less CPU when scheduling
+some types of job queues.  Most likely to benefit from this improvement is
+a large queue of short-running, non-local, and non-scheduler universe jobs,
+with at least one idle local or scheduler universe job.
 
 % gittrack 1266
 \item The \Condor{schedd} automatically grants the \Condor{startd}
@@ -167,15 +190,15 @@ have also been optimized in a number of cases to be less disk intensive.
   general \DCPerm{DAEMON}-level command access.  Now this only
   requires \DCPerm{READ}-level command access.  The specific commands
   that the \Condor{startd} sends to the \Condor{schedd} can
-  effectively only operate on the claims associated with that startd,
+  effectively only operate on the claims associated with that \Condor{startd},
   so this change does not open up these operations to access by anyone
-  with \DCPerm{READ} access.  It just reduces the level of trust that
+  with \DCPerm{READ} access.  It reduces the level of trust that
   the \Condor{schedd} must have in the \Condor{startd}.
 
 % gittrac 834
-\item \Condor{procd}'s log does now rotate, if logging is activated. 
-  The standard maximum size is 10Mb. To change that, the config file 
-  needs to define the value for \MacroNI{MAX\_PROCD\_LOG}.  
+\item The \Condor{procd}'s log now rotates if logging is activated. 
+  The default maximum size is 10Mbytes. To change the default,
+  use the configuration variable \MacroNI{MAX\_PROCD\_LOG}.  
 
 %gittrac 1310
 \item UserLog lock files can now optionally be created in a folder on a 
@@ -185,6 +208,22 @@ have also been optimized in a number of cases to be less disk intensive.
   This should solve known problems with locking on NFS. Windows versions
   are not affected by this change.
   
+%gittrac 507
+\item \Condor{dagman} and \Condor{submit\_dag} now default to lazy
+creation  of the \File{.condor.sub} files for nested DAGs.
+\Condor{submit\_dag} no longer creates them, and \Condor{dagman}
+itself creates the files as the DAG is run.
+The previous "eager" behavior can
+be obtained with a combination of command-line and configuration settings.
+There are several advantages to the "lazy" submit file creation:
+\begin{itemize}
+\item The DAG file for a nested DAG does not have to exist until that node
+is ready to run, so the DAG file can be dynamically created by earlier
+parts of the top-level DAG (including by the PRE script of the nested
+DAG node).
+\item It is now possible to have nested DAGs within splices, which is not
+possible with "eager" submit file creation.
+\end{itemize}
 
 \end{itemize}
 
@@ -192,7 +231,13 @@ have also been optimized in a number of cases to be less disk intensive.
 
 \begin{itemize}
 
-\item None.
+%gittrac 507
+\item The new configuration variable
+\MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} controls whether
+\Condor{dagman} itself generates the \File{.condor.sub} files for
+nested DAGs, rather than relying on \Condor{submit\_dag} "eagerly"
+creating them.  See section~\ref{param:DAGManGenerateSubDagSubmits} for
+more information.
 
 \end{itemize}
 
@@ -201,7 +246,8 @@ have also been optimized in a number of cases to be less disk intensive.
 \begin{itemize}
 
 % gittrack 1300
-\item \Condor{job\_router} failed to work on SLES 9 PowerPC, AIX 5.2 PowerPC,
+\item The \Condor{job\_router} failed to work on SLES 9 PowerPC,
+AIX 5.2 PowerPC,
 and YDL 5 PowerPC due to a problem in how it detected EOF in the job queue log.
 
 % gittrack 742
@@ -209,6 +255,13 @@ and YDL 5 PowerPC due to a problem in how it detected EOF in the job queue log.
   quickly reschedule a different job to run on the slot to which the
   removed job had been matched.  Instead, it would take up to
   \MacroNI{SCHEDD\_INTERVAL} seconds to do so.
+
+% gittrac #1279
+% Not documenting gittrac #1280, as it was completely covered up by
+% #1279.
+\item Fixed a bug introduced in Condor version 7.5.1 that caused the
+\Prog{gahp\_server} to crash when
+first communicating with most gt2 or gt5 GRAM servers.
 
 \end{itemize}
 

@@ -8235,6 +8235,19 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
   where \verb@<DagFile>@ is replaced by the command line argument
   to \Condor{submit\_dag} that specifies the DAG input file.
 
+\label{param:DAGManGenerateSubDagSubmits}
+\item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
+  A boolean value specifying whether \Condor{dagman} itself should
+  create the \File{.condor.sub} files for nested DAGs.  (If this
+  configuration value is set to \Expr{False}, nested DAGs will fail unless
+  the \File{.condor.sub} files are generated manually by running
+  \Condor{submit\_dag} \Arg{-no\_submit} on each nested DAG, or the
+  \Arg{-do\_recurse} flag is passed to the \Condor{submit\_dag} for the
+  top-level DAG.)  (DAG nodes specified with the
+  \MacroNI{SUBDAG EXTERNAL} keyword or with submit file names ending
+  in \File{.condor.sub} are considered nested DAGs.)
+  The default value if not defined is \Expr{True}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -9687,7 +9700,7 @@ section~\ref{man-condor-ssh-to-job}.
 \label{param:SSHToJobSSHClientCmd}
 \item[\Macro{SSH\_TO\_JOB\_<SSH-CLIENT>\_CMD}]
   A string read by the \Condor{ssh\_to\_job} tool.
-  It specifies the command and arguments to use when invoking the 
+  It specifies the command and arguments to use when invoking
   the program specified by \MacroNI{<SSH-CLIENT>}.
   Values substituted for the placeholder \MacroNI{<SSH-CLIENT>} may be
   \verb@SSH@, \verb@SFTP@, \verb@SCP@, or any other \Prog{ssh} client capable

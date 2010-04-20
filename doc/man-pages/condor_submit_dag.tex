@@ -28,6 +28,7 @@
 \oOptArg{-dorescuefrom}{number}
 \oOpt{-allowversionmismatch}
 \oOpt{-no\_recurse}
+\oOpt{-do\_recurse}
 \oOpt{-update\_submit}
 \oOpt{-import\_env}
 \oOpt{-DumpRescue}
@@ -217,12 +218,20 @@ description.
   }
   \OptItem{\Opt{-no\_recurse}}{This optional argument causes
      \Condor{submit\_dag} to \emph{not} run itself recursively on
-     nested DAGs (the default is that recursion is enabled).  (DAG
-     nodes specified with the \MacroNI{SUBDAG EXTERNAL} keyword or
-     with submit file names ending in \File{.condor.sub} are
-     considered nested DAGs, and, by default, \Condor{submit\_dag}
-     \emph{-no\_submit -update\_submit} is run on the corresponding
-     DAG files.)
+     nested DAGs (this is now the default; this flag has been kept
+     mainly for backwards compatibility).
+  }
+  \OptItem{\Opt{-do\_recurse}}{This optional argument causes
+     \Condor{submit\_dag} to run itself recursively on nested DAGs
+     (the default is now that it does \emph{not} run itself recursively;
+     instead the \File{.condor.sub} files for nested DAGs are generated
+     "lazily" by \Condor{dagman} itself).  (DAG nodes specified with
+     the \MacroNI{SUBDAG EXTERNAL} keyword or with submit file names
+     ending in \File{.condor.sub} are considered nested DAGs.)
+     (See also the
+     \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} configuration
+     variable in section~\ref{param:DAGManGenerateSubDagSubmits} for
+     more information.)
   }
   \OptItem{\Opt{-update\_submit}}{This optional argument causes an existing
      \File{.condor.sub} file to not be treated as an error; rather, the

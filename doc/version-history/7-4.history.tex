@@ -49,7 +49,32 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac 1329
+\item Network connections for Condor file transfers were ignoring
+  private network settings.  The connection from the execute node to
+  the submit node always attempted to use the public network address
+  of the submit machine.
+
+% gittrac 1346
+\item A single job could match multiple offline slots in a single
+negotiation cycle.  This problem could cause \Condor{rooster} to
+wake up too many offline machines for the number of jobs available
+to run on them.  The fix for this problem requires updating both
+the \Condor{negotiator} and the \Condor{schedd}.
+
+% gittrac 1349
+\item Fixed a problem that caused the \Condor{startd} daemon to
+crash in some cases when \MacroNI{STARTD\_SENDS\_ALIVES} was \Expr{True}.
+This setting is \Expr{False} by default.
+
+% gittrac #1337
+\item Fixed a problem where the \Condor{kbdd} has a chance of
+entering an infinite loop on platforms that use X-Windows.
+Microsoft Windows and Mac OS X were not affected.  This bug is
+present in all earlier 7.4.x Condor releases.
+
+\item The default path to \Prog{sftp-server} has been improved so that
+  \Condor{ssh\_to\_job} can use \Prog{sftp} out-of-the-box on RHEL 5.
 
 \end{itemize}
 
@@ -103,7 +128,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gittrack 1217
+% gittrac 1217
 \item Fixed a bug in which the \Condor{schedd} would sometimes negotiate
   for and try to run
   more jobs than specified by \MacroNI{MAX\_RUNNING\_JOBS}.  Once the
@@ -118,12 +143,12 @@ The details of each version are described below.
 Preempting X jobs due to MAX_JOBS_RUNNING change
 \end{verbatim}
 
-% gittrack 1250
+% gittrac 1250
 \item Fixed a problem that caused \Condor{ssh\_to\_job} to fail to connect
 to a job running on a slot with multiple '@' signs in its name.  This bug
 has existed since the introduction of \Condor{ssh\_to\_job} in 7.3.2.
 
-% gittrack 116
+% gittrac 116
 \item In all previous versions of Condor, \Condor{status} refused to
   accept \Opt{-long}, \Opt{-xml}, and \Opt{-format} when followed by
   an argument such as \Opt{-master} that specified which type of
@@ -157,7 +182,7 @@ if the \Condor{schedd} daemon's attempt to compact it fails.
 crash shortly after the \Condor{gridmanager} exited.
 This bug has existed since before Condor version 6.8.
 
-% gittrack #1270
+% gittrac #1270
 \item Fixed a problem that was resulting in messages such as the following:
 
 \footnotesize
@@ -170,7 +195,7 @@ to be closed (consumed=0). Closing it now.
 \item The file extension specified to \Condor{fetch\_log} can no longer
 contain a path delimiter.
 
-% gittrack 1299
+% gittrac 1299
 \item When in graceful shutdown mode, the \Condor{schedd} was
   sometimes starting idle scheduler universe jobs.  With a large
   enough number of scheduler universe jobs, this could lead to a cycle
@@ -187,7 +212,7 @@ contain a path delimiter.
   Hyper-threading enabled.  This bug was introduced in
   Condor version 7.3.2, and exists in 7.4.0 and 7.4.1.
 
-% gittrack #1167
+% gittrac #1167
 \item Fixed a problem with GSI authentication in Condor that would cause
 daemons to consume more and more memory over time.  The biggest source
 of trouble was introduced in Condor version 7.3.2.
@@ -202,14 +227,14 @@ existed in all previous versions of Condor has also been fixed.
 an error would be emitted,
 and \Condor{compile} would exit with a bad exit code.
 
-% gittrack #1093
+% gittrac #1093
 \item The sort based on \Condor{status} output accidentally changed in 
 Condor version 7.3,
 so that the output was based on the slot name first, then machine name.
 The behavior is now restored to the original sorting: first on machine name,
 then slot name.
 
-% gittrack #728
+% gittrac #728
 \item If one machine running a parallel job crashed,
 and job leases are enabled (which they are by default),
 the job would not exit until the job lease duration expired.
@@ -223,7 +248,7 @@ Now, if one node goes away, the whole computation is shut down immediately.
 \item Fixed the verbosity level of some \Condor{dagman} messages written to
 the \File{dagman.out} file.
 
-% gittrack #1137
+% gittrac #1137
 \item Fixed a bug introduced in Condor version 7.3.2 that resulted in
   messages such as the following even in cases where no problem in
   communicating with the \Condor{collector} had been encountered:
@@ -235,7 +260,7 @@ Collector <X> is still being avoided if an alternative succeeds.
 This problem was believed to be fixed in Condor 7.4.1, but some cases
 of the problem remained in that version.
 
-% gittrack 1160
+% gittrac 1160
 \item Fixed a bug from Condor version 6.1.14,
 that resulted in the \Condor{schedd} performing
 the operation scheduled via \MacroNI{WALL\_CLOCK\_CKPT\_INTERVAL} at the
@@ -246,8 +271,8 @@ This could lead to degraded performance,
 especially prior to Condor version 7.4.1,
 when this operation was more disk-intensive.
 
-% gittrack 1184
-% gittrack 1181
+% gittrac 1184
+% gittrac 1181
 \item 32-bit Linux versions of Condor running in a 64-bit environment would
 sometimes not detect the existence of some processes and sometimes
 wrongly detect that a tracked process belonged to root when it
@@ -268,7 +293,7 @@ it would exit with the following message in its log:
 ERROR: master has exited
 \end{verbatim}
 
-% gittrack 1186
+% gittrac 1186
 \item Fixed a problem in the \Condor{job\_router} daemon,
   introduced in Condor version 7.2.2,
   that could cause the daemon to crash when failing to carry out the change
@@ -295,13 +320,27 @@ proxy, which was the previous behavior.
   to the \Condor{collector}
   are not reliably delivered and processed.
 
+% gittrac #1251
+\item The \Condor{kbdd} is no longer ignored by the \Condor{startd}
+when the configuration variable \Macro{CONSOLE\_DEVICES} is defined.
+
+% gittrac #92
+\item When using the \Opt{-d} command line argument with a daemon,
+the values of \MacroNI{LOG}, \MacroNI{SPOOL}, and \MacroNI{EXECUTE}
+no longer change every time a \Condor{reconfig} command is received.
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+% gittrac #1337
+\item The \Condor{kbdd} has a chance of entering an infinite loop
+on platforms that use X-Windows.  Microsoft Windows and Mac OS X
+are not affected.  Removing KBDD from \MacroNI{DAEMON\_LIST} is a
+workaround, although this impairs Condor's ability to detect
+console usage.  This bug is fixed in Condor version 7.4.3.
 
 \end{itemize}
 
@@ -339,7 +378,7 @@ This flaw was discovered during the development process; no incidents
 have been reported.  Details of the problem will be made available on Feb 1st,
 2010.
 
-% gittrack #918
+% gittrac #918
 \item The default value of \MacroNI{JOB\_ROUTER\_NAME} has changed
   from an empty string to \verb|jobrouter| in order to address
   problems caused by the previous default.  Without special handling,
@@ -406,7 +445,7 @@ directory if it is not needed.
 authentication between Condor processes to fail with using a
 non-legacy format X.509 proxy.
 
-% gittrack #1028
+% gittrac #1028
 \item Fixed a problem with CCB under Windows platforms that has existed since
 Condor version 7.3.0.  
 This problem caused CCB-enabled daemons to become unresponsive
@@ -436,7 +475,7 @@ implicit memory allocation limit of the \Condor{dagman} process.
 \Attr{VirtualMemory} machine ClassAd attribute in the script
 \File{condor\_limits\_wrapper.sh}.
 
-% gittrack #899
+% gittrac #899
 \item Fixed a bug that caused \MacroNI{ALLOW\_CONFIG} and
   \MacroNI{HOSTALLOW\_CONFIG}, as well as the corresponding
   \MacroNI{DENY} configuration variables to incorrectly handle a
@@ -446,7 +485,7 @@ implicit memory allocation limit of the \Condor{dagman} process.
   a single \Expr{*} or the equivalent \Expr{*/*}.
   These bugs have existed since before Condor version 6.8.
 
-% gittrack #905
+% gittrac #905
 \item Fixed a bug introduced in Condor version 7.3.0 that could cause 
 Condor daemons to crash when reading malformed network addresses.
 
@@ -462,7 +501,7 @@ the configuration variable \MacroNI{EVENT\_LOG}.
 \item Fixed a bug that could cause the \Condor{startd} to segfault on shutdown
 when using dynamic slots.
 
-% gittrack #871
+% gittrac #871
 \item Fixed a problem introduced in Condor version 7.3.2 that changed 
   the behavior of
   an undocumented method for selecting attributes to be displayed in
@@ -482,7 +521,7 @@ expression of all desired attributes.  Although this is now fixed, the
 more straightforward way to select attributes since Condor version 7.3.2
 is to use the \Opt{-attributes} option.
 
-% gittrack #907
+% gittrac #907
 \item Fixed a bug introduced in Condor version 7.3.2 that resulted in 
   messages such
   as the following even in cases where no problem in communicating
@@ -492,7 +531,7 @@ is to use the \Opt{-attributes} option.
 Collector <X> is still being avoided if an alternative succeeds.
 \end{verbatim}
 
-% gittrack #859
+% gittrac #859
 \item Fixed a bug that has been in the \Condor{startd} since before
   Condor version 6.8.  If the \Condor{startd} ever failed to send signals to the
   \Condor{starter} process, it could fail to properly clean up the
@@ -507,7 +546,7 @@ Collector <X> is still being avoided if an alternative succeeds.
 slot1: Request to claim resource refused.
 \end{verbatim}
 
-%gittrack #908
+%gittrac #908
 \item Fixed a problem that resulted in the following message in the
   \Condor{startd} log:
 
@@ -515,7 +554,7 @@ slot1: Request to claim resource refused.
 Timer -1 not found
 \end{verbatim}
 
-%gittrack #937
+%gittrac #937
 \item Fixed a problem in which security sessions were not cached
   correctly when using CCB.  This resulted in re-authentication in
   some cases where a cached security session could have been used.
@@ -528,7 +567,7 @@ proxies.
 \item Fixed a bug that caused \Condor{dagman} to hang when running a
 DAG with POST scripts, if the global event log is turned on.
 
-% gittrack #973
+% gittrac #973
 \item Improved how the private network address is published when using
   the configuration variables \MacroNI{PRIVATE\_NETWORK\_NAME} and
   \MacroNI{PRIVATE\_NETWORK\_INTERFACE}.  In some cases, this
@@ -536,12 +575,12 @@ DAG with POST scripts, if the global event log is turned on.
   to the public address when they could have been made to the private
   address.
 
-%gittrac #801
+% gittrac #801
 \item Fixed a bug exhibited under Windows XP,
 where using \MacroNI{USE\_VISIBLE\_DESKTOP}
 would cause strange behavior after a job completed.
 
-% gittrack #713
+% gittrac #713
 \item CCB now works with \MacroNI{TCP\_FORWARDING\_HOST}.  Previously,
   the reverse connection was made to the private address rather than
   to the host defined by \MacroNI{TCP\_FORWARDING\_HOST}.
@@ -644,6 +683,13 @@ the controlled daemon if CCB was enabled.
 \noindent Known Bugs:
 
 \begin{itemize}
+
+% gittrac #1337
+\item The \Condor{kbdd} has a chance of entering an infinite loop
+on platforms that use X-Windows.  Microsoft Windows and Mac OS X
+are not affected.  Removing KBDD from \MacroNI{DAEMON\_LIST} is a
+workaround, although this impairs Condor's ability to detect
+console usage.  This bug is fixed in Condor version 7.4.3.
 
 % gittrac #983
 \item \Condor{dagman} may fail on Windows if the set of node job log
@@ -1102,6 +1148,13 @@ crash on shutdown or reconfiguration.
 \noindent Known Bugs:
 
 \begin{itemize}
+
+% gittrac #1337
+\item The \Condor{kbdd} has a chance of entering an infinite loop
+on platforms that use X-Windows.  Microsoft Windows and Mac OS X
+are not affected.  Removing KBDD from \MacroNI{DAEMON\_LIST} is a
+workaround, although this impairs Condor's ability to detect
+console usage.  This bug is fixed in Condor version 7.4.3.
 
 % gittrac #161, #935, #936, #1020
 \item There are multiple bugs related to using VOMS attributes.
