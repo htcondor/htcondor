@@ -6961,18 +6961,30 @@ Configuration File Macros}
 
 \label{param:ProcdLog}
 \item[\Macro{PROCD\_LOG}]
-  Specifies a log file
-  for the ProcD to use. Note that by design, the \Condor{procd} does not
+  Specifies a log file for the \Condor{procd} to use.
+  Note that by design, the \Condor{procd} does not
   include most of the other logic that is shared amongst the various
   Condor daemons. This is because the \Condor{procd} is a component of
   the PrivSep Kernel (see Section~\ref{sec:PrivSep} for more information
   regarding privilege separation). This means that the \Condor{procd}
-  does not include the normal Condor logging subsystem, and thus things
-  like multiple debug levels and log rotation are not
-  supported. Therefore, \MacroNI{PROCD\_LOG} is not set by default and
+  does not include the normal Condor logging subsystem, and thus 
+  multiple debug levels are not supported.
+  \MacroNI{PROCD\_LOG} is not set by default and
   is only intended to debug problems should they arise. Note, however,
   that enabling \Dflag{PROCFAMILY} in the debug level for any other
   daemon will cause it to log all interactions with the \Condor{procd}.
+
+
+\label{param:MaxProcdLog}
+\item[\Macro{MAX\_PROCD\_LOG}]
+  Controls the maximum length in bytes to which the \Condor{procd}
+  log will be allowed to grow.  The log file will grow to the
+  specified length, then be saved to a file with the suffix
+  \File{.old}.  The \File{.old}
+  file is overwritten each time the log is saved, thus the maximum
+  space devoted to logging will be twice the
+  maximum length of this log file.  A value of 0 specifies that the
+  file may grow without bounds.  The default is 10 Mbyte.
 
 \label{param:ProcdAddress}
 \item[\Macro{PROCD\_ADDRESS}]
