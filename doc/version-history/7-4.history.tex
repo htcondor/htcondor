@@ -320,6 +320,15 @@ proxy, which was the previous behavior.
   to the \Condor{collector}
   are not reliably delivered and processed.
 
+% gittrac #1251
+\item The \Condor{kbdd} is no longer ignored by the \Condor{startd}
+when the configuration variable \Macro{CONSOLE\_DEVICES} is defined.
+
+% gittrac #92
+\item When using the \Opt{-d} command line argument with a daemon,
+the values of \MacroNI{LOG}, \MacroNI{SPOOL}, and \MacroNI{EXECUTE}
+no longer change every time a \Condor{reconfig} command is received.
+
 \end{itemize}
 
 \noindent Known Bugs:
