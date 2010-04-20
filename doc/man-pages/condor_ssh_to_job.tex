@@ -90,10 +90,11 @@ able to make use of CCB in order to form the \Prog{ssh} connection.
 
 The login shell of the user id running the job is used to run the
 requested command, \Prog{sshd} subsystem, or interactive shell.  This
-is hard-coded behavior in \Prog{OpenSSH} and cannot be overriden by
+is hard-coded behavior in \Prog{OpenSSH} and cannot be overridden by
 configuration.  This means that \Condor{ssh\_to\_job} access is
-effectively disabled if the login shell disables access
-(e.g. \Prog{/bin/true} or \Prog{/sbin/nologin}).
+effectively disabled if the login shell disables access,
+as in the example programs
+\Prog{/bin/true} and \Prog{/sbin/nologin}.
 
 \Condor{ssh\_to\_job} is intended to work with \Prog{OpenSSH}
 as installed in typical environments.
