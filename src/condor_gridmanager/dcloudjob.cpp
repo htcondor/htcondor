@@ -33,7 +33,7 @@
   
 #define GM_INIT							0
 #define GM_UNSUBMITTED					1
-#define GM_START_VM						2
+#define GM_CREATE_VM					2
 #define GM_SAVE_INSTANCE_ID				3
 #define GM_SUBMITTED					4
 #define GM_DONE_SAVE					5
@@ -46,11 +46,12 @@
 #define GM_START						12
 #define GM_SAVE_INSTANCE_NAME			13
 #define GM_CHECK_VM						14
+#define GM_START_VM						15
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_UNSUBMITTED",
-	"GM_START_VM",
+	"GM_CREATE_VM",
 	"GM_SAVE_INSTANCE_ID",
 	"GM_SUBMITTED",
 	"GM_DONE_SAVE",
@@ -63,12 +64,13 @@ static const char *GMStateNames[] = {
 	"GM_START",
 	"GM_SAVE_INSTANCE_NAME",
 	"GM_CHECK_VM",
+	"GM_START_VM",
 };
 
 #define DCLOUD_VM_STATE_RUNNING			"running"
 #define DCLOUD_VM_STATE_PENDING			"pending"
 #define DCLOUD_VM_STATE_SHUTTINGDOWN	"shutting-down"
-#define DCLOUD_VM_STATE_TERMINATED		"terminated"
+#define DCLOUD_VM_STATE_STOPPED			"stopped"
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -391,7 +393,7 @@ void DCloudJob::doEvaluateState()
 						probeNow = true;
 						gmState = GM_SAVE_INSTANCE_ID;
 					} else {
-						gmState = GM_START_VM;
+						gmState = GM_CREATE_VM;
 					}
 				} else {
 					errorString = gahp->getErrorString();
@@ -442,10 +444,10 @@ void DCloudJob::doEvaluateState()
 					requestScheddUpdate( this, true );
 					break;
 				}
-				gmState = GM_START_VM;
+				gmState = GM_CREATE_VM;
 				break;
 
-			case GM_START_VM:
+			case GM_CREATE_VM:
 
 				if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 					gmState = GM_HOLD;
@@ -493,7 +495,11 @@ void DCloudJob::doEvaluateState()
 						ASSERT( m_instanceId );
 						WriteGridSubmitEventToUserLog(jobAd);
 
-						gmState = GM_SAVE_INSTANCE_ID;
+						if ( remoteJobState == DCLOUD_VM_STATE_STOPPED ) {
+							gmState = GM_START_VM;
+						} else {
+							gmState = GM_SAVE_INSTANCE_ID;
+						}
 
 					 } else {
 						errorString = gahp->getErrorString();
@@ -518,6 +524,30 @@ void DCloudJob::doEvaluateState()
 
 				break;
 
+
+			case GM_START_VM:
+
+				rc = gahp->dcloud_action( m_serviceUrl,
+										  m_username,
+										  m_password,
+										  m_instanceId,
+										  "start" );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				} 
+
+				if ( rc == 0 ) {
+					gmState = GM_SAVE_INSTANCE_ID;
+				} else {
+					// What to do about a failed start?
+					errorString = gahp->getErrorString();
+					dprintf( D_ALWAYS, "(%d.%d) job start failed: %s: %s\n",
+							 procID.cluster, procID.proc, gahp_error_code,
+							 errorString.Value() );
+					gmState = GM_HOLD;
+				}
+				break;
 
 			case GM_SAVE_INSTANCE_ID:
 
