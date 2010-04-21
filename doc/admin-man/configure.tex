@@ -1382,6 +1382,24 @@ This macro
   will be locked before being written to.
   If \Expr{False}, Condor will not lock the file before writing.
 
+\label{param:NewLocking}
+\item[\Macro{NEW\_LOCKING}]
+  A boolean value utilized only for Unix operating systems, 
+  that defaults to \Expr{False}. 
+  This variable is only relevant if \MacroNI{ENABLE\_USERLOG\_LOCKING}
+  is \Expr{True}.
+  When \Expr{True}, job user logs and the global job event log are
+  written to a directory named \File{condorLocks},
+  thereby using a local drive to avoid known problems with locking on NFS.
+  The location of the \File{condorLocks} directory is determined by
+  \begin{enumerate}
+  \item The value of \MacroNI{TEMP\_DIR}, if defined.
+  \item The value of \MacroNI{TMP\_DIR}, if defined and \MacroNI{TEMP\_DIR}
+  is not defined.
+  \item The default value of \File{/tmp}, if neither \MacroNI{TEMP\_DIR}
+  nor \MacroNI{TMP\_DIR} is defined.
+  \end{enumerate}
+
 \label{param:TouchLogInterval}
 \item[\Macro{TOUCH\_LOG\_INTERVAL}]
   The time interval in seconds between when daemons touch

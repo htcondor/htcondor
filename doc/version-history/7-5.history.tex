@@ -79,12 +79,12 @@ with at least one idle local or scheduler universe job.
   use the configuration variable \Macro{MAX\_PROCD\_LOG}.  
 
 %gittrac 1310
-\item UserLog lock files can now optionally be created in a folder on a 
-  local drive by setting \MacroNI{NEW\_LOCKING} to \Expr{True}. They 
-  are written into \File{condorLocks} in the specified 
-  \MacroNI{TEMP\_DIR} or \MacroNI{TMP\_DIR} directory (defaults to \File{/tmp}).
-  This should solve known problems with locking on NFS. Windows versions
-  are not affected by this change.
+\item For Unix systems only, 
+  user job log and global job event log lock files can now optionally 
+  be created in a directory on a 
+  local drive by setting \MacroNI{NEW\_LOCKING} to \Expr{True}. 
+  See section~\ref{param:NewLocking} for 
+  the details of this configuration variable.
   
 %gittrac 507
 \item \Condor{dagman} and \Condor{submit\_dag} now default to lazy
@@ -117,6 +117,12 @@ nested DAGs, rather than relying on \Condor{submit\_dag} "eagerly"
 creating them.  See section~\ref{param:DAGManGenerateSubDagSubmits} for
 more information.
 
+%gittrac 1310
+\item The new configuration variable \Macro{NEW\_LOCKING} can specify that
+  job user logs and the global job event log to be written to a local drive,
+  avoiding locking problems with NFS.
+  See section~\ref{param:NewLocking} for 
+  the details of this configuration variable.
 \end{itemize}
 
 \noindent Bugs Fixed:
