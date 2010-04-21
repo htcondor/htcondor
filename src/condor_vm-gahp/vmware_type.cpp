@@ -857,7 +857,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 						tmp_line.sprintf("%s = \"%s\"", name.Value(), 
 								tmp_fullname.Value());
 
-						if( check_vm_read_access_file(tmp_fullname.Value()) 
+						if( !(*dirpath) || check_vm_read_access_file(tmp_fullname.Value()) 
 								== false ) {
 							vmprintf(D_ALWAYS, "file(%s) in a vmx file cannot "
 									"be read\n", tmp_fullname.Value());
@@ -1723,12 +1723,8 @@ VMwareType::CreateConfigFile()
 	m_classAd.LookupBool(VMPARAM_VMWARE_SNAPSHOTDISK, m_vmware_snapshot_disk);
 
 	// Read the directory where vmware files are on a submit machine
-	if( m_classAd.LookupString(VMPARAM_VMWARE_DIR, m_vmware_dir) != 1 ) {
-		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
-							VMPARAM_VMWARE_DIR);
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_DIR_PARAM;
-		return false;
-	}
+	m_vmware_dir = "";
+	m_classAd.LookupString(VMPARAM_VMWARE_DIR, m_vmware_dir);
 	m_vmware_dir.trim();
 
 	// Read the parameter of vmware vmx file
