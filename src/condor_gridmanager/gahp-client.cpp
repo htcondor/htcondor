@@ -768,6 +768,14 @@ GahpServer::Startup()
 	if ( command_version() == false ) {
 		dprintf(D_ALWAYS,"Failed to read GAHP server version\n");
 		// consider this a bad situation...
+		daemonCore->Send_Signal( m_gahp_pid, SIGKILL );
+		m_gahp_pid = -1;
+		daemonCore->Close_Pipe( m_gahp_errorfd );
+		m_gahp_errorfd = -1;
+		daemonCore->Close_Pipe( m_gahp_readfd );
+		m_gahp_readfd = -1;
+		daemonCore->Close_Pipe( m_gahp_writefd );
+		m_gahp_writefd = -1;
 		return false;
 	} else {
 		dprintf(D_FULLDEBUG,"GAHP server version: %s\n",m_gahp_version);
@@ -775,6 +783,14 @@ GahpServer::Startup()
 
 		// Now see what commands this server supports.
 	if ( command_commands() == false ) {
+		daemonCore->Send_Signal( m_gahp_pid, SIGKILL );
+		m_gahp_pid = -1;
+		daemonCore->Close_Pipe( m_gahp_errorfd );
+		m_gahp_errorfd = -1;
+		daemonCore->Close_Pipe( m_gahp_readfd );
+		m_gahp_readfd = -1;
+		daemonCore->Close_Pipe( m_gahp_writefd );
+		m_gahp_writefd = -1;
 		return false;
 	}
 
