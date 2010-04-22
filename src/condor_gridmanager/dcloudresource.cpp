@@ -72,21 +72,18 @@ DCloudResource::DCloudResource( const char *resource_name,
 	gahp = NULL;
 	status_gahp = NULL;
 
-	MyString buff;
-	buff.sprintf( DCLOUD_RESOURCE_NAME );
-
 	char * gahp_path = param( "DCLOUD_GAHP" );
 	if ( gahp_path == NULL ) {
 		dprintf(D_ALWAYS, "DCLOUD_GAHP not defined! \n");
 		return;
 	}
 
-	gahp = new GahpClient( buff.Value(), gahp_path );
+	gahp = new GahpClient( DCLOUD_RESOURCE_NAME, gahp_path );
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( DCloudJob::gahpCallTimeout );
 
-	status_gahp = new GahpClient( buff.Value(), gahp_path );
+	status_gahp = new GahpClient( DCLOUD_RESOURCE_NAME, gahp_path );
 
 	StartBatchStatusTimer();
 
@@ -134,7 +131,7 @@ void DCloudResource::PublishResourceAd( ClassAd *resource_ad )
 // we will use amazon command "status_all" to do the Ping work
 void DCloudResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
-	if ( gahp->Startup() == false ) {
+	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
 		ping_delay = 5;		
 		return;

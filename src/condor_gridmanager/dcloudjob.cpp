@@ -67,10 +67,11 @@ static const char *GMStateNames[] = {
 	"GM_START_VM",
 };
 
-#define DCLOUD_VM_STATE_RUNNING			"running"
-#define DCLOUD_VM_STATE_PENDING			"pending"
-#define DCLOUD_VM_STATE_SHUTTINGDOWN	"shutting-down"
-#define DCLOUD_VM_STATE_STOPPED			"stopped"
+#define DCLOUD_VM_STATE_RUNNING			"RUNNING"
+#define DCLOUD_VM_STATE_PENDING			"PENDING"
+#define DCLOUD_VM_STATE_SHUTTINGDOWN	"SHUTTING-DOWN"
+#define DCLOUD_VM_STATE_STOPPED			"STOPPED"
+#define DCLOUD_VM_STATE_FINISH			"FINISH"
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -176,7 +177,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	gahp = new GahpClient( buff, gahp_path );
+	gahp = new GahpClient( DCLOUD_RESOURCE_NAME, gahp_path );
 	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -564,7 +565,7 @@ void DCloudJob::doEvaluateState()
 
 			case GM_SUBMITTED:
 
-				if ( remoteJobState == DCLOUD_VM_STATE_TERMINATED ) {
+				if ( remoteJobState == DCLOUD_VM_STATE_FINISH ) {
 					gmState = GM_DONE_SAVE;
 				} 
 
@@ -824,6 +825,29 @@ void DCloudJob::doEvaluateState()
 
 			case GM_STOPPED:
 
+				if ( remoteJobState != DCLOUD_VM_STATE_FINISH ) {
+					rc = gahp->dcloud_action( m_serviceUrl,
+											  m_username,
+											  m_password,
+											  m_instanceId,
+											  "destroy" );
+					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+						 rc == GAHPCLIENT_COMMAND_PENDING ) {
+						break;
+					}
+
+					if ( rc == 0 ) {
+						SetRemoteJobStatus( DCLOUD_VM_STATE_FINISH );
+					} else {
+						// What to do about a failed destroy?
+						errorString = gahp->getErrorString();
+						dprintf( D_ALWAYS, "(%d.%d) job destroy failed: %s: %s\n",
+								 procID.cluster, procID.proc, gahp_error_code,
+								 errorString.Value() );
+						gmState = GM_HOLD;
+						break;
+					}
+				}
 				myResource->CancelSubmit( this );
 				SetInstanceId( NULL );
 				SetInstanceName( NULL );
@@ -835,7 +859,6 @@ void DCloudJob::doEvaluateState()
 				}
 
 				break;
-
 
 			case GM_DELETE:
 
@@ -921,6 +944,19 @@ void DCloudJob::ProcessInstanceAttrs( StringList &attrs )
 	// TODO
 	// NOTE: If attrlist is empty, treat as completed job
 	// Call StatusUpdate() with status from list
+	const char *line;
+	attrs.rewind();
+	while ( (line = attrs.next()) ) {
+		if ( strncmp( line, "state=", 6 ) == 0 ) {
+			SetRemoteJobStatus( &line[6] );
+		} else if ( strncmp( line, "id=", 3 ) ) {
+			SetInstanceId( &line[3] );
+		}
+	}
+
+	if ( attrs.isEmpty() ) {
+		SetRemoteJobStatus( DCLOUD_VM_STATE_FINISH );
+	}
 }
 
 void DCloudJob::StatusUpdate( const char *new_status )
@@ -931,7 +967,10 @@ void DCloudJob::StatusUpdate( const char *new_status )
 		probeNow = true;
 		SetEvaluateState();
 	} else if ( SetRemoteJobStatus( new_status ) ) {
-			// TODO Check what Condor state to switch to.
+		// TODO Should 'shutting-down' be treated as running?
+		if ( strcasecmp( new_status, DCLOUD_VM_STATE_RUNNING ) == 0 ) {
+			JobRunning();
+		}
 		probeNow = true;
 		SetEvaluateState();
 	}
