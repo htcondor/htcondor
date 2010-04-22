@@ -359,7 +359,7 @@ void DCloudJob::doEvaluateState()
 
 				errorString = "";
 
-				if ( m_instanceName == "" ) {
+				if ( m_instanceName == NULL ) {
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( m_instanceId == NULL ) {
 					gmState = GM_CHECK_VM;
@@ -565,14 +565,18 @@ void DCloudJob::doEvaluateState()
 
 			case GM_SUBMITTED:
 
-				if ( remoteJobState == DCLOUD_VM_STATE_FINISH ) {
-					gmState = GM_DONE_SAVE;
-				} 
+				// TODO Make sure instances that begin in the 'stopped'
+				//   state aren't flagged here.
+				if ( remoteJobState == DCLOUD_VM_STATE_FINISH ||
+					 remoteJobState == DCLOUD_VM_STATE_STOPPED ) {
 
-				if ( condorState == REMOVED || condorState == HELD ) {
+					gmState = GM_DONE_SAVE;
+
+				} else if ( condorState == REMOVED || condorState == HELD ) {
+
 					gmState = GM_CANCEL;
-				} 
-				else {
+
+				} else {
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
 					}
@@ -739,6 +743,7 @@ void DCloudJob::doEvaluateState()
 
 			case GM_PROBE_JOB:
 
+				probeNow = false;
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
 				} else {
@@ -837,7 +842,7 @@ void DCloudJob::doEvaluateState()
 					}
 
 					if ( rc == 0 ) {
-						SetRemoteJobStatus( DCLOUD_VM_STATE_FINISH );
+						StatusUpdate( DCLOUD_VM_STATE_FINISH );
 					} else {
 						// What to do about a failed destroy?
 						errorString = gahp->getErrorString();
@@ -948,14 +953,14 @@ void DCloudJob::ProcessInstanceAttrs( StringList &attrs )
 	attrs.rewind();
 	while ( (line = attrs.next()) ) {
 		if ( strncmp( line, "state=", 6 ) == 0 ) {
-			SetRemoteJobStatus( &line[6] );
-		} else if ( strncmp( line, "id=", 3 ) ) {
+			StatusUpdate( &line[6] );
+		} else if ( strncmp( line, "id=", 3 ) == 0 ) {
 			SetInstanceId( &line[3] );
 		}
 	}
 
 	if ( attrs.isEmpty() ) {
-		SetRemoteJobStatus( DCLOUD_VM_STATE_FINISH );
+		StatusUpdate( DCLOUD_VM_STATE_FINISH );
 	}
 }
 
@@ -971,6 +976,7 @@ void DCloudJob::StatusUpdate( const char *new_status )
 		if ( strcasecmp( new_status, DCLOUD_VM_STATE_RUNNING ) == 0 ) {
 			JobRunning();
 		}
+		remoteJobState = new_status;
 		probeNow = true;
 		SetEvaluateState();
 	}

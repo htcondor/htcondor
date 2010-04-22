@@ -213,8 +213,8 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 		my_jobs.Delete( job );
 	}
 
-	registeredJobs.Rewind();
-	while ( (next_job = (DCloudJob *)registeredJobs.Next()) ) {
+	my_jobs.Rewind();
+	while ( (next_job = my_jobs.Next()) ) {
 		next_job->StatusUpdate( NULL );
 	}
 
