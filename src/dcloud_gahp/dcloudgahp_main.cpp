@@ -35,6 +35,8 @@ static std::set<DcloudGahpCommand*> dcloud_gahp_commands;
 
 FILE *logfp;
 
+static PipeBuffer m_stdin_buffer;
+
 static pthread_mutex_t async_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool async_mode = false;
 static bool async_results_signalled = false;
@@ -336,12 +338,9 @@ static void handle_dcloud_commands(const char *cmd, const char *fullcommand)
     gahp_output_return_error();
 }
 
-static void handlePipe(int stdin_pipe)
+static void handlePipe()
 {
     std::string *line;
-    PipeBuffer m_stdin_buffer;
-
-    m_stdin_buffer.setPipeEnd(stdin_pipe);
 
     while ((line = m_stdin_buffer.GetNextLine()) != NULL) {
         const char *command = line->c_str();
@@ -386,6 +385,12 @@ static void handlePipe(int stdin_pipe)
 
         delete line;
     }
+
+	// check if GetNextLine() returned NULL because of an error or EOF
+	if (m_stdin_buffer.IsError() || m_stdin_buffer.IsEOF()) {
+		dcloudprintf("stdin buffer closed, exiting\n");
+		exit(1);
+	}
 }
 
 static void registerDcloudGahpCommand(const char *command, workerfn workerfunc)
@@ -442,9 +447,11 @@ int main(int argc, char *argv[])
 
     safe_printf("%s\n", version);
 
+    m_stdin_buffer.setPipeEnd(0);
+
     while (1)
         /* handle input from stdin */
-        handlePipe(0);
+        handlePipe();
 
     return 0;
 }
