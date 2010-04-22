@@ -1886,6 +1886,16 @@ JICShadow::initIOProxy( void )
 	int want_io_proxy = 0;
 	MyString io_proxy_config_file;
 
+		// the admin should have the final say over whether
+		// chirp is enabled
+    bool enableIOProxy = true;
+	enableIOProxy = param_boolean("ENABLE_CHIRP", true);
+	
+	if (!enableIOProxy) {
+		dprintf(D_ALWAYS, "ENABLE_CHIRP is false in config file, not enabling chirp\n");
+		return false;
+	}
+
 	if( job_ad->LookupBool( ATTR_WANT_IO_PROXY, want_io_proxy ) < 1 ) {
 		dprintf( D_FULLDEBUG, "JICShadow::initIOProxy(): "
 				 "Job does not define %s\n", ATTR_WANT_IO_PROXY );
