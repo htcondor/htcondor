@@ -36,6 +36,10 @@ static std::string create_instance_output(int reqid,
     output_string += inst->id;
     output_string += ' ';
 
+	output_string += "state=";
+	output_string += inst->state;
+	output_string += ' ';
+
     output_string += "actions=";
     act = inst->actions;
     while (act != NULL) {
