@@ -45,16 +45,26 @@ static pthread_mutex_t results_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_mutex_t stdout_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static void lock_printf()
+{
+    pthread_mutex_lock(&stdout_mutex);
+}
+
+static void unlock_printf()
+{
+    fflush(stdout);
+    pthread_mutex_unlock(&stdout_mutex);
+}
+
 static void safe_printf(const char *fmt, ...)
 {
     va_list va_args;
 
-    pthread_mutex_lock(&stdout_mutex);
+	lock_printf();
     va_start(va_args, fmt);
     vprintf(fmt, va_args);
     va_end(va_args);
-    fflush(stdout);
-    pthread_mutex_unlock(&stdout_mutex);
+	unlock_printf();
 }
 
 static int parse_gahp_command(const char *raw, Gahp_Args *args)
@@ -116,13 +126,17 @@ static void gahp_output_return(const char **results, const int count)
 {
     int i;
 
+	lock_printf();
+
     for (i = 0; i < count; i++) {
-        safe_printf("%s", results[i]);
+        printf("%s", results[i]);
         if (i < (count - 1))
-            safe_printf(" ");
+            printf(" ");
     }
 
-    safe_printf("\n");
+    printf("\n");
+
+	unlock_printf();
 }
 
 static void gahp_output_return_success(void)
@@ -156,12 +170,14 @@ static void handle_command_results(Gahp_Args *args)
     }
 
     pthread_mutex_lock(&results_list_mutex);
-    safe_printf("%s %d\n", GAHP_RESULT_SUCCESS, results_list.size());
+	lock_printf();
+    printf("%s %d\n", GAHP_RESULT_SUCCESS, results_list.size());
 
     while (!results_list.empty()) {
-        safe_printf("%s", results_list.front().c_str());
+        printf("%s", results_list.front().c_str());
         results_list.pop();
     }
+	unlock_printf();
     pthread_mutex_unlock(&results_list_mutex);
     async_results_signalled = false;
 }
