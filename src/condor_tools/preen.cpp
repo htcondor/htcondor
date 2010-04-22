@@ -219,9 +219,9 @@ produce_output()
 void
 check_spool_dir()
 {
-    unsigned int	history_length;
+    unsigned int	history_length, startd_history_length;
 	const char  	*f;
-    const char      *history;
+    const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list, bad_spool_files;
 	Qmgr_connection *qmgr;
@@ -232,8 +232,12 @@ check_spool_dir()
 	}
 
     history = param("HISTORY");
-    history = condor_basename(history);
+    history = condor_basename(history); // condor_basename never returns NULL
     history_length = strlen(history);
+
+    startd_history = param("STARTD_HISTORY");
+   	startd_history = condor_basename(history);
+   	startd_history_length = strlen(history);
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 		// add some reasonable defaults that we never want to remove
@@ -281,6 +285,15 @@ check_spool_dir()
             good_file( Spool, f );
             continue;
         }
+
+			// if startd_history is defined, so if it's one of those
+		if ( startd_history_length > 0 &&
+			strlen(f) >= startd_history_length &&
+			strncmp(f, startd_history, startd_history_length) == 0) {
+
+            good_file( Spool, f );
+            continue;
+		}
 
 			// see it it's an in-use shared executable
 		if( is_valid_shared_exe(f) ) {
