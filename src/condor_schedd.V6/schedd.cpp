@@ -11102,6 +11102,25 @@ Scheduler::sendReschedule()
 	}
 }
 
+void
+Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
+{
+#if !defined(WANT_OLD_CLASSADS)
+		// The machine ad will be passed as the RIGHT ad during
+		// matchmaking (i.e. in the call to IsAMatch()), so
+		// optimize it accordingly.
+	std::string error_msg;
+	if( !classad::MatchClassAd::OptimizeRightAdForMatchmaking( ad, &error_msg ) ) {
+		MyString name;
+		ad->LookupString(ATTR_NAME,name);
+		dprintf(D_ALWAYS,
+				"Failed to optimize machine ad %s for matchmaking: %s\n",	
+			name.Value(),
+				error_msg.c_str());
+	}
+#endif
+}
+
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
@@ -11158,6 +11177,10 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 		if( rec->my_match_ad->EvalFloat(ATTR_RANK, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
+	}
+
+	if( rec->my_match_ad ) {
+		OptimizeMachineAdForMatchmaking( rec->my_match_ad );
 	}
 
 	return rec;

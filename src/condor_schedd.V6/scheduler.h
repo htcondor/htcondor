@@ -306,6 +306,7 @@ class Scheduler : public Service
 
 	// match managing
 	int 			publish( ClassAd *ad );
+	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*, match_rec **pre_existing=NULL);
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
