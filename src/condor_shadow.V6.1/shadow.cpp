@@ -37,6 +37,7 @@ UniShadow::UniShadow() {
 
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
+	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
 }
 
 

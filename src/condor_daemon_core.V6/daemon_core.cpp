@@ -964,11 +964,25 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	return(command);
 }
 
-int DaemonCore::Cancel_Command( int )
+int DaemonCore::Cancel_Command( int command )
 {
-	// stub
 
-	return TRUE;
+	int i;
+	for(i = 0; i<maxCommand; i++) {
+		if( comTable[i].num == command )
+		{
+			comTable[i].num = 0;
+			comTable[i].num = 0;
+			comTable[i].handler = 0;
+			comTable[i].handlercpp = 0;
+			free_descrip(comTable[i].command_descrip);
+			comTable[i].command_descrip = NULL;
+			free_descrip(comTable[i].handler_descrip);
+			comTable[i].handler_descrip = NULL;
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 int DaemonCore::InfoCommandPort()

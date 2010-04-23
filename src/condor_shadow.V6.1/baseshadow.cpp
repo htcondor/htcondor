@@ -151,11 +151,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		// Make sure we've got enough swap space to run
 	checkSwap();
 
-		// register SIGUSR1 (condor_rm) for shutdown...
-	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
-		(SignalHandlercpp)&BaseShadow::handleJobRemoval, "HandleJobRemoval", 
-		this);
-
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
 	if ( !init_user_ids(owner.Value(), domain.Value())) {
@@ -588,6 +583,11 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 			// this point.
 		dprintf(D_FULLDEBUG,"Startd is closing claim, so no more jobs can be run on it.\n");
 		reason = JOB_EXITED_AND_CLAIM_CLOSING;
+	}
+
+	// try to get a new job for this shadow
+	if( recycleShadow(reason) ) {
+		return;
 	}
 
 	// does not return.
@@ -1189,14 +1189,14 @@ int
 display_dprintf_header(FILE *fp)
 {
 	static pid_t mypid = 0;
-	static int mycluster = -1;
-	static int myproc = -1;
+	int mycluster = -1;
+	int myproc = -1;
 
 	if (!mypid) {
 		mypid = daemonCore->getpid();
 	}
 
-	if (mycluster == -1) {
+	if (Shadow) {
 		mycluster = Shadow->getCluster();
 		myproc = Shadow->getProc();
 	}

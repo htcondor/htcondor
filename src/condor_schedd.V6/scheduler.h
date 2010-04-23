@@ -94,6 +94,13 @@ struct shadow_rec
 		// This ensures that the job can reconnect when we come back up
 		//
 	bool			keepClaimAttributes;
+
+	PROC_ID			prev_job_id;
+	Stream*			recycle_shadow_stream;
+	bool			exit_already_handled;
+
+	shadow_rec();
+	~shadow_rec();
 }; 
 
 struct OwnerData {
@@ -301,6 +308,8 @@ class Scheduler : public Service
 	void			PeriodicExprHandler( void );
 	void			addCronTabClassAd( ClassAd* );
 	void			addCronTabClusterId( int );
+	int				RecycleShadow(int cmd, Stream *stream);
+	void			finishRecycleShadow(shadow_rec *srec);
 
 	int				requestSandboxLocation(int mode, Stream* s);
 

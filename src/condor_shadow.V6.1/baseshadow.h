@@ -442,6 +442,11 @@ class BaseShadow : public Service
 
 extern void dumpClassad( const char*, ClassAd*, int );
 
+// Register the shadow "exit status" for the previous job
+// and restart this shadow with a new job.
+// Returns false if no new job found.
+extern bool recycleShadow(int previous_job_exit_reason);
+
 extern BaseShadow *Shadow;
 
 #endif

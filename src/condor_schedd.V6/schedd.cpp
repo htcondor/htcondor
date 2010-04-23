@@ -154,6 +154,7 @@ void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
+void mark_serial_job_running( PROC_ID *job_id );
 int fixAttrUser( ClassAd *job );
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
@@ -2385,6 +2386,10 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 		return FALSE;
 	}
 
+	if( srec->recycle_shadow_stream ) {
+		scheduler.finishRecycleShadow( srec );
+		return TRUE;
+	}
 
 	return (int)scheduler.spawnJobHandler( cluster, proc, srec );
 }
@@ -7299,7 +7304,6 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	*notify_admin = false;
 }
 
-
 shadow_rec*
 Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 {
@@ -7307,12 +7311,7 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 	dprintf( D_FULLDEBUG, "Scheduler::start_std - job=%d.%d on %s\n",
 			job_id->cluster, job_id->proc, mrec->peer );
 
-	BeginTransaction();
-	mark_job_running(job_id);
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
-		// nothing that has been written in this transaction needs to
-		// be immediately synced to disk
-	CommitTransaction( NONDURABLE );
+	mark_serial_job_running(job_id);
 
 	// add job to run queue
 	shadow_rec* srec=add_shadow_rec( 0, job_id, univ, mrec, -1 );
@@ -7433,9 +7432,9 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 starter_path, argstring.Value() );
 	}
 
-	BeginTransaction();
-	mark_job_running( job_id );
+	mark_serial_job_running( job_id );
 
+	BeginTransaction();
 		// add CLAIM_ID to this job ad so schedd can be authorized by
 		// starter by virtue of this shared secret (e.g. for
 		// CREATE_JOB_OWNER_SEC_SESSION
@@ -7446,7 +7445,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	free( public_part );
 	free( private_part );
 
-	CommitTransaction();
+	CommitTransaction(NONDURABLE);
 
 	Env starter_env;
 	MyString execute_env;
@@ -7863,10 +7862,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
-	BeginTransaction();
-	mark_job_running(job_id);
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
-	CommitTransaction();
+	mark_serial_job_running(job_id);
 	WriteExecuteToUserLog( *job_id );
 
 		/* this is somewhat evil.  these values are absolutely
@@ -7918,6 +7914,30 @@ Scheduler::display_shadow_recs()
 				cur_hosts, status);
 	}
 	dprintf( D_FULLDEBUG, "..................\n\n" );
+}
+
+shadow_rec::shadow_rec():
+	pid(-1),
+	universe(0),
+    match(NULL),
+    preempted(FALSE),
+	conn_fd(-1),
+	removed(FALSE),
+	isZombie(FALSE),
+	is_reconnect(false),
+	keepClaimAttributes(false),
+	recycle_shadow_stream(NULL),
+	exit_already_handled(false)
+{
+}
+
+shadow_rec::~shadow_rec()
+{
+	if( recycle_shadow_stream ) {
+		dprintf(D_ALWAYS,"Failed to finish switching shadow %d to new job %d.%d\n",pid,job_id.cluster,job_id.proc);
+		delete recycle_shadow_stream;
+		recycle_shadow_stream = NULL;
+	}
 }
 
 struct shadow_rec *
@@ -8446,6 +8466,17 @@ mark_job_running(PROC_ID* job_id)
 		SetAttributeInt(job_id->cluster, job_id->proc,
 						ATTR_NUM_JOB_STARTS, num);
 	}
+}
+
+void
+mark_serial_job_running( PROC_ID *job_id )
+{
+	BeginTransaction();
+	mark_job_running(job_id);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
+		// nothing that has been written in this transaction needs to
+		// be immediately synced to disk
+	CommitTransaction( NONDURABLE );
 }
 
 /*
@@ -9093,6 +9124,16 @@ Scheduler::child_exit(int pid, int status)
 
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
+
+	if( srec->exit_already_handled ) {
+		if( srec->match ) {
+			DelMrec( srec->match );
+			srec->match = NULL;
+		}
+		delete_shadow_rec( srec );
+		return;
+	}
+
 	job_id.cluster = srec->job_id.cluster;
 	job_id.proc = srec->job_id.proc;
 
@@ -10560,6 +10601,11 @@ Scheduler::Register()
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
 			"requestSandboxLocation", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
+	 daemonCore->Register_Command(RECYCLE_SHADOW,
+			"RECYCLE_SHADOW",
+			(CommandHandlercpp)&Scheduler::RecycleShadow,
+			"RecycleShadow", this, DAEMON, D_COMMAND,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
@@ -13197,4 +13243,147 @@ WriteCompletionVisa(ClassAd* ad)
 	                   iwd.Value(),
 	                   NULL);
 	set_priv(prev_priv_state);
+}
+
+int
+Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
+{
+		// This is called by the shadow when it wants to get a new job.
+	int shadow_pid = 0;
+	int previous_job_exit_reason = 0;
+	shadow_rec *srec;
+	match_rec *mrec;
+	PROC_ID prev_job_id;
+	PROC_ID new_job_id;
+
+	stream->decode();
+	if( !stream->get( shadow_pid ) ||
+		!stream->get( previous_job_exit_reason ) ||
+		!stream->end_of_message() )
+	{
+		dprintf(D_ALWAYS,
+			"recycleShadow() failed to receive job exit reason from shadow\n");
+		return FALSE;
+	}
+
+	srec = FindSrecByPid( shadow_pid );
+	if( !srec ) {
+		dprintf(D_ALWAYS,"recycleShadow() called with unknown shadow pid %d\n",
+				shadow_pid);
+		return FALSE;
+	}
+	prev_job_id = srec->job_id;
+	mrec = srec->match;
+
+		// currently we only support serial jobs here
+	if( !mrec || 
+		srec->universe != CONDOR_UNIVERSE_VANILLA &&
+		srec->universe != CONDOR_UNIVERSE_JAVA &&
+		srec->universe != CONDOR_UNIVERSE_VM )
+	{
+		stream->encode();
+		stream->put((int)0);
+		return FALSE;
+	}
+
+	if( prev_job_id.cluster != -1 ) {
+		dprintf(D_ALWAYS,
+			"Shadow pid %d for job %d.%d reports job exit reason %d.\n",
+			shadow_pid, prev_job_id.cluster, prev_job_id.proc,
+			previous_job_exit_reason );
+
+		jobExitCode( prev_job_id, previous_job_exit_reason );
+		srec->exit_already_handled = true;
+	}
+
+	new_job_id.cluster = -1;
+	new_job_id.proc = -1;
+	if( mrec->my_match_ad && !ExitWhenDone ) {
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
+	}
+
+	if( new_job_id.proc == -1 ) {
+		stream->put((int)0);
+		stream->end_of_message();
+		return TRUE;
+	}
+
+	dprintf(D_ALWAYS,
+			"Shadow pid %d switching to job %d.%d.\n",
+			shadow_pid, new_job_id.cluster, new_job_id.proc );
+
+		// the add/delete_shadow_rec() functions update the job
+		// ads, so we need to do that here
+	delete_shadow_rec( srec );
+	srec = new shadow_rec;
+	srec->pid = shadow_pid;
+	srec->match = mrec;
+	mrec->shadowRec = srec;
+	srec->job_id = new_job_id;
+	srec->prev_job_id = prev_job_id;
+	srec->recycle_shadow_stream = stream;
+	add_shadow_rec( srec );
+
+	mark_serial_job_running(&new_job_id);
+
+	SetMrecJobID(mrec,new_job_id);
+	mrec->setStatus( M_ACTIVE );
+
+	callAboutToSpawnJobHandler(new_job_id.cluster, new_job_id.proc, srec);
+	return KEEP_STREAM;
+}
+
+void
+Scheduler::finishRecycleShadow(shadow_rec *srec)
+{
+	Stream *stream = srec->recycle_shadow_stream;
+	srec->recycle_shadow_stream = NULL;
+
+	int shadow_pid = srec->pid;
+	PROC_ID new_job_id = srec->job_id;
+	PROC_ID prev_job_id = srec->prev_job_id;
+
+	ASSERT( stream );
+
+	stream->encode();
+
+	ClassAd *new_ad = NULL;
+	if( new_job_id.proc >= 0 ) {
+		new_ad = GetJobAd(new_job_id.cluster, new_job_id.proc ,true, true);
+		if( !new_ad ) {
+			dprintf(D_ALWAYS,
+					"Failed to expand job ad when switching shadow %d "
+					"to new job %d.%d\n",
+					shadow_pid, new_job_id.cluster, new_job_id.proc);
+
+			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
+			srec->exit_already_handled = true;
+		}
+	}
+	if( new_ad ) {
+		stream->put((int)1);
+		new_ad->put(*stream);
+	}
+	else {
+		stream->put((int)0);
+	}
+	stream->end_of_message();
+
+	if( new_ad ) {
+		stream->decode();
+		int ok = 0;
+		if( !stream->get(ok) ||
+			!stream->end_of_message() ||
+			!ok )
+		{
+			dprintf(D_ALWAYS,
+				"Failed to get ok when switching shadow %d to a new job.\n",
+				shadow_pid);
+			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
+			srec->exit_already_handled = true;
+		}
+	}
+
+	delete new_ad;
+	delete stream;
 }

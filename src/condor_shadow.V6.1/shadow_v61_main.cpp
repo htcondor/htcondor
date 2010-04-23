@@ -29,6 +29,7 @@
 #include "condor_debug.h"
 #include "condor_version.h"
 #include "condor_attributes.h"
+#include "dc_schedd.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -41,6 +42,7 @@ static int cluster = -1;
 static int proc = -1;
 static const char * xfer_queue_contact_info = NULL;
 bool sendUpdatesToSchedd = true;
+static time_t shadow_worklife_expires = 0;
 
 static void
 usage( int argc, char* argv[] )
@@ -271,31 +273,8 @@ initShadow( ClassAd* ad )
 }
 
 
-void
-main_init(int argc, char *argv[])
+void startShadow( ClassAd *ad )
 {
-	_EXCEPT_Cleanup = ExceptCleanup;
-
-		/* Start up with condor.condor privileges. */
-	set_condor_priv();
-
-		// Register a do-nothing reaper.  This is just because the
-		// file transfer object, which could be instantiated later,
-		// registers its own reaper and does an EXCEPT if it gets
-		// a reaper ID of 1 (since lots of other daemons have a reaper
-		// ID of 1 hard-coded as special... this is bad).
-	daemonCore->Register_Reaper("dummy_reaper",
-							(ReaperHandler)&dummy_reaper,
-							"dummy_reaper",NULL);
-
-
-	parseArgs( argc, argv );
-
-	ClassAd* ad = readJobAd();
-	if( ! ad ) {
-		EXCEPT( "Failed to read job ad!" );
-	}
-
 		// see if the SchedD punched a DAEMON-level authorization
 		// hole for this job. if it did, we'll do the same here
 		//
@@ -330,6 +309,57 @@ main_init(int argc, char *argv[])
 	}		
 }
 
+int handleJobRemoval(Service*,int sig)
+{
+	if( Shadow ) {
+		Shadow->handleJobRemoval(sig);
+	}
+}
+
+
+void
+main_init(int argc, char *argv[])
+{
+	_EXCEPT_Cleanup = ExceptCleanup;
+
+		/* Start up with condor.condor privileges. */
+	set_condor_priv();
+
+		// Register a do-nothing reaper.  This is just because the
+		// file transfer object, which could be instantiated later,
+		// registers its own reaper and does an EXCEPT if it gets
+		// a reaper ID of 1 (since lots of other daemons have a reaper
+		// ID of 1 hard-coded as special... this is bad).
+	daemonCore->Register_Reaper("dummy_reaper",
+							(ReaperHandler)&dummy_reaper,
+							"dummy_reaper",NULL);
+
+
+		// register SIGUSR1 (condor_rm) for shutdown...
+	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
+		(SignalHandler)&handleJobRemoval,"handleJobRemoval");
+
+	int shadow_worklife = param_integer( "SHADOW_WORKLIFE", 0 );
+	if( shadow_worklife > 0 ) {
+		shadow_worklife_expires = time(NULL) + shadow_worklife;
+	}
+	else if( shadow_worklife == 0 ) {
+			// run one job and then exit
+		shadow_worklife_expires = time(NULL)-1;
+	}
+	else {
+		shadow_worklife_expires = 0;
+	}
+
+	parseArgs( argc, argv );
+
+	ClassAd* ad = readJobAd();
+	if( ! ad ) {
+		EXCEPT( "Failed to read job ad!" );
+	}
+
+	startShadow( ad );
+}
 
 void
 main_config()
@@ -399,4 +429,46 @@ main_pre_dc_init( int argc, char* argv[] )
 void
 main_pre_command_sock_init( )
 {
+}
+
+bool
+recycleShadow(int previous_job_exit_reason)
+{
+	if( previous_job_exit_reason != JOB_EXITED ) {
+		return false;
+	}
+	if( shadow_worklife_expires && time(NULL) > shadow_worklife_expires ) {
+		return false;
+	}
+
+	ASSERT( schedd_addr );
+
+	dprintf(D_ALWAYS,"Reporting job exit reason %d and attempting to fetch new job.\n",
+			previous_job_exit_reason );
+
+	DCSchedd schedd(schedd_addr);
+	ClassAd *new_job_ad = NULL;
+	MyString error_msg;
+	if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg ) )
+	{
+		dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.Value());
+		delete new_job_ad;
+		return false;
+	}
+
+	if( !new_job_ad ) {
+		dprintf(D_FULLDEBUG,"No new job found to run under this shadow.\n");
+		return false;
+	}
+
+	new_job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	new_job_ad->LookupInteger(ATTR_PROC_ID,proc);
+	dprintf(D_ALWAYS,"Switching to new job %d.%d\n",cluster,proc);
+
+	delete Shadow;
+	Shadow = NULL;
+	BaseShadow::myshadow_ptr = NULL;
+
+	startShadow( new_job_ad );
+	return true;
 }

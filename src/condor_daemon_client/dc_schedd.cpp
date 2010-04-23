@@ -1642,3 +1642,72 @@ bool DCSchedd::getJobConnectInfo(
 
 	return result;
 }
+
+bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, MyString &error_msg )
+{
+	int timeout = 300;
+	CondorError *errstack = NULL;
+
+	ReliSock sock;
+	if( !connectSock(&sock,timeout,errstack) ) {
+		error_msg = "Failed to connect to schedd";
+		return false;
+	}
+
+	if( !startCommand(RECYCLE_SHADOW, &sock, timeout, errstack) ) {
+		error_msg = "Failed to send RECYCLE_SHADOW to schedd";
+		return false;
+	}
+
+	if( !forceAuthentication(&sock, errstack) ) {
+		error_msg = "Failed to authenticate";
+		return false;
+	}
+
+	sock.encode();
+	int mypid = getpid();
+	if( !sock.put( mypid ) ||
+		!sock.put( previous_job_exit_reason ) ||
+		!sock.end_of_message() )
+	{
+		error_msg = "Failed to send job exit reason";
+		return false;
+	}
+
+	sock.decode();
+
+	int found_new_job = 0;
+	sock.get( found_new_job );
+
+	if( found_new_job ) {
+		*new_job_ad = new ClassAd();
+		if( !(*new_job_ad)->initFromStream( sock ) ) {
+			error_msg = "Failed to receive new job ClassAd";
+			delete *new_job_ad;
+			*new_job_ad = NULL;
+			return false;
+		}
+	}
+
+	if( !sock.end_of_message() ) {
+		error_msg = "Failed to receive end of message";
+		delete *new_job_ad;
+		*new_job_ad = NULL;
+		return false;
+	}
+
+	if( *new_job_ad ) {
+		sock.encode();
+		int ok=1;
+		if( !sock.put(ok) ||
+			!sock.end_of_message() )
+		{
+			error_msg = "Failed to send ok";
+			delete *new_job_ad;
+			*new_job_ad = NULL;
+			return false;
+		}
+	}
+
+	return true;
+}

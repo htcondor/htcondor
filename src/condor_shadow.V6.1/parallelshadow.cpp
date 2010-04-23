@@ -52,6 +52,7 @@ ParallelShadow::~ParallelShadow() {
     for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
         delete ResourceList[i];
     }
+	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
 }
 
 void 

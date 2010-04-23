@@ -155,8 +155,6 @@ class UniShadow : public BaseShadow
 	RemoteResource *remRes;
 };
 
-
-
 #endif
 
 
