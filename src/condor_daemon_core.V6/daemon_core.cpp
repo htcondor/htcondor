@@ -3514,7 +3514,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 
             if ( !selector.has_ready() ) {
                 // avoid unnecessary blocking simply poll with timeout 0, if no data then exit
-                free(args);
+                delete args;
                 return;
             }
 
@@ -3523,7 +3523,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 		    if ( !(args->accepted_sock) ) {
 		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
 		        // no need to add to work pool if we fail to accept
-		        free(args);
+		        delete args;
 		        return;
 		    }
 
