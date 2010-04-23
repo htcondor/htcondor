@@ -127,7 +127,7 @@ class ClaimIdParser {
 			if(!endptr || endptr < ptr) {
 				return NULL;
 			}
-			m_session_info.sprintf("%.*s",endptr+1-ptr,ptr);
+			m_session_info.sprintf("%.*s",(int)(endptr+1-ptr),ptr);
 		}
 
 		if( m_session_info.IsEmpty() ) {

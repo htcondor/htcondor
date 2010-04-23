@@ -274,6 +274,12 @@ RemoteResource::killStarter( bool graceful )
 				 graceful ? "graceful" : "fast", addr );
 	}
 
+	int wantReleaseClaim = 0;
+	jobAd->LookupBool(ATTR_RELEASE_CLAIM, wantReleaseClaim);
+	if (wantReleaseClaim) {
+		ClassAd replyAd;
+		dc_startd->releaseClaim(VACATE_FAST, &replyAd);
+	}
 	return true;
 }
 

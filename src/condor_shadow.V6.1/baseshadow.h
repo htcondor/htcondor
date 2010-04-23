@@ -391,6 +391,7 @@ class BaseShadow : public Service
 
 	virtual void emailTerminateEvent( int exitReason, update_style_t kind = US_NORMAL ) = 0;
 
+	void startdClaimedCB(DCMsgCallback *cb);
 	bool m_lazy_queue_update;
 
  private:

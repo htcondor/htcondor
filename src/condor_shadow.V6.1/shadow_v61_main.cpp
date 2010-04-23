@@ -40,6 +40,7 @@ static bool is_reconnect = false;
 static int cluster = -1;
 static int proc = -1;
 static const char * xfer_queue_contact_info = NULL;
+bool sendUpdatesToSchedd = true;
 
 static void
 usage( int argc, char* argv[] )
@@ -97,7 +98,7 @@ parseArgs( int argc, char *argv[] )
 		
 		if( opt[0] == '<' ) { 
 				// might be the schedd's address
-			if( is_valid_sinful(opt) ) {
+			if( is_valid_sinful(opt)) {
 				schedd_addr = opt;
 				args_handled++;
 				continue;
@@ -132,6 +133,12 @@ parseArgs( int argc, char *argv[] )
 		if (strncmp(opt, "--xfer-queue=", 13) == 0) {
 			xfer_queue_contact_info = opt+13;
 			args_handled++;
+			continue;
+		}
+
+		if (strcmp(opt, "--no-schedd-updates") == 0) {
+			args_handled++;
+			sendUpdatesToSchedd = false;
 			continue;
 		}
 
@@ -305,10 +312,21 @@ main_init(int argc, char *argv[])
 
 	initShadow( ad );
 
+	int wantClaiming = 0;
+	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
+
 	if( is_reconnect ) {
 		Shadow->reconnect();
 	} else {
-		Shadow->spawn();
+			// if the shadow is going to claim the startd,
+			// we need to asynchrously claim it.
+			
+			// Otherwise, in the usual case under the sched,
+			// call spawn here, which will activate the pre-claimed
+			// startd
+		if (!wantClaiming) {
+			Shadow->spawn();
+		}
 	}		
 }
 
