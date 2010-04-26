@@ -2386,7 +2386,7 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 		return FALSE;
 	}
 
-	if( srec->recycle_shadow_stream ) {
+	if( srec && srec->recycle_shadow_stream ) {
 		scheduler.finishRecycleShadow( srec );
 		return TRUE;
 	}
