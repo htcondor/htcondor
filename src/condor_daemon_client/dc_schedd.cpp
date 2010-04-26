@@ -1646,21 +1646,24 @@ bool DCSchedd::getJobConnectInfo(
 bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, MyString &error_msg )
 {
 	int timeout = 300;
-	CondorError *errstack = NULL;
+	CondorError errstack;
 
 	ReliSock sock;
-	if( !connectSock(&sock,timeout,errstack) ) {
-		error_msg = "Failed to connect to schedd";
+	if( !connectSock(&sock,timeout,&errstack) ) {
+		error_msg.sprintf("Failed to connect to schedd: %s",
+						  errstack.getFullText());
 		return false;
 	}
 
-	if( !startCommand(RECYCLE_SHADOW, &sock, timeout, errstack) ) {
-		error_msg = "Failed to send RECYCLE_SHADOW to schedd";
+	if( !startCommand(RECYCLE_SHADOW, &sock, timeout, &errstack) ) {
+		error_msg.sprintf("Failed to send RECYCLE_SHADOW to schedd: %s",
+						  errstack.getFullText());
 		return false;
 	}
 
-	if( !forceAuthentication(&sock, errstack) ) {
-		error_msg = "Failed to authenticate";
+	if( !forceAuthentication(&sock, &errstack) ) {
+		error_msg.sprintf("Failed to authenticate: %s",
+						  errstack.getFullText());
 		return false;
 	}
 

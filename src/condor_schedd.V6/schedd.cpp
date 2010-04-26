@@ -13259,6 +13259,20 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	PROC_ID new_job_id;
 	Sock *sock = (Sock *)stream;
 
+		// force authentication
+	sock->decode();
+	if( !sock->triedAuthentication() ) {
+		CondorError errstack;
+		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ||
+			! sock->getFullyQualifiedUser() )
+		{
+			dprintf( D_ALWAYS,
+					 "RecycleShadow(): authentication failed: %s\n", 
+					 errstack.getFullText() );
+			return FALSE;
+		}
+	}
+
 	stream->decode();
 	if( !stream->get( shadow_pid ) ||
 		!stream->get( previous_job_exit_reason ) ||
