@@ -13249,12 +13249,15 @@ int
 Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 {
 		// This is called by the shadow when it wants to get a new job.
+		// Two things are going on here: getting the exit reason for
+		// the existing job and getting a new job.
 	int shadow_pid = 0;
 	int previous_job_exit_reason = 0;
 	shadow_rec *srec;
 	match_rec *mrec;
 	PROC_ID prev_job_id;
 	PROC_ID new_job_id;
+	Sock *sock = (Sock *)stream;
 
 	stream->decode();
 	if( !stream->get( shadow_pid ) ||
@@ -13276,7 +13279,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	mrec = srec->match;
 
 		// currently we only support serial jobs here
-	if( !mrec || 
+	if( !mrec || !mrec->user ||
 		srec->universe != CONDOR_UNIVERSE_VANILLA &&
 		srec->universe != CONDOR_UNIVERSE_JAVA &&
 		srec->universe != CONDOR_UNIVERSE_VM )
@@ -13286,6 +13289,26 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		return FALSE;
 	}
 
+		// verify that whoever is running this command is either the
+		// queue super user or the owner of the claim
+	char const *cmd_user = sock->getOwner();
+	std::string match_owner;
+	char const *at_sign = strchr(mrec->user,'@');
+	if( at_sign ) {
+		match_owner.append(mrec->user,at_sign-mrec->user);
+	}
+	else {
+		match_owner = mrec->user;
+	}
+
+	if( !OwnerCheck2(NULL,cmd_user,match_owner.c_str()) ) {
+		dprintf(D_ALWAYS,
+				"RecycleShadow() called by %s failed authorization check!\n",
+				cmd_user ? cmd_user : "(unauthenticated)");
+		return FALSE;
+	}
+
+		// Now handle the exit reason specified for the existing job.
 	if( prev_job_id.cluster != -1 ) {
 		dprintf(D_ALWAYS,
 			"Shadow pid %d for job %d.%d reports job exit reason %d.\n",
@@ -13361,14 +13384,20 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 		}
 	}
 	if( new_ad ) {
+			// give the shadow the new job
 		stream->put((int)1);
 		new_ad->put(*stream);
 	}
 	else {
+			// tell the shadow, "no job found"
 		stream->put((int)0);
 	}
 	stream->end_of_message();
 
+		// Get final ACK from shadow if we gave it a new job.
+		// Without an ACK from the shadow, we could end up processing
+		// an exit reason from the shadow that was meant for the previous
+		// job rather than the new job.
 	if( new_ad ) {
 		stream->decode();
 		int ok = 0;
@@ -13379,6 +13408,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 			dprintf(D_ALWAYS,
 				"Failed to get ok when switching shadow %d to a new job.\n",
 				shadow_pid);
+
 			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
 		}

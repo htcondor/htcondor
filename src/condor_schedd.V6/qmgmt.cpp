@@ -969,11 +969,10 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 }
 
 
-// This code actually checks the owner, and doesn't do a Verify!
 bool
-OwnerCheck2(ClassAd *ad, const char *test_owner)
+OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 {
-	MyString	my_owner;
+	MyString	owner_buf;
 
 	// in the very rare event that the admin told us all users 
 	// can be trusted, let it pass
@@ -1022,26 +1021,29 @@ OwnerCheck2(ClassAd *ad, const char *test_owner)
 
 		// If we don't have an Owner attribute (or classad) and we've 
 		// gotten this far, how can we deny service?
-	if( !ad ) {
-		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no ad\n");
-		return true;
-	}
-	if( ad->LookupString(ATTR_OWNER, my_owner) == 0 ) {
-		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no owner\n");
-		return true;
+	if( !job_owner ) {
+		if( !ad ) {
+			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no ad\n");
+			return true;
+		}
+		else if( ad->LookupString(ATTR_OWNER, owner_buf) == 0 ) {
+			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no owner\n");
+			return true;
+		}
+		job_owner = owner_buf.Value();
 	}
 
 		// Finally, compare the owner of the ad with the entity trying
 		// to connect to the queue.
 #if defined(WIN32)
 	// WIN32: user names are case-insensitive
-	if (strcasecmp(my_owner.Value(), test_owner) != 0) {
+	if (strcasecmp(job_owner, test_owner) != 0) {
 #else
-	if (strcmp(my_owner.Value(), test_owner) != 0) {
+	if (strcmp(job_owner, test_owner) != 0) {
 #endif
 		errno = EACCES;
 		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
-				my_owner.Value(), test_owner );
+				job_owner, test_owner );
 		return false;
 	} 
 	else {
