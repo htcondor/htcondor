@@ -587,6 +587,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 	// try to get a new job for this shadow
 	if( recycleShadow(reason) ) {
+		// recycleShadow delete's this, so we must return immediately
 		return;
 	}
 

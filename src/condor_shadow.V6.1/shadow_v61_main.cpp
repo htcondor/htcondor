@@ -162,11 +162,11 @@ parseArgs( int argc, char *argv[] )
 }
 
 
+static FILE* fp = NULL;
 ClassAd* 
 readJobAd( void )
 {
 	ClassAd* ad = NULL;
-	FILE* fp = NULL;
 	bool is_stdin = false;
 	bool read_something = false;
 
@@ -176,10 +176,12 @@ readJobAd( void )
 		fp = stdin;
 		is_stdin = true;
 	} else {
-		fp = safe_fopen_wrapper( job_ad_file, "r" );
-		if( ! fp ) {
-			EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
-					job_ad_file, strerror(errno), errno );
+		if (fp == NULL) {
+			fp = safe_fopen_wrapper( job_ad_file, "r" );
+			if( ! fp ) {
+				EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
+						job_ad_file, strerror(errno), errno );
+			}
 		}
 	}
 
@@ -210,9 +212,6 @@ readJobAd( void )
 	if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {
 		ad->dPrint( D_JOB );
 	} 
-	if( ! is_stdin ) {
-		fclose( fp );
-	}
 
 	// For debugging, see if there's a special attribute in the
 	// job ad that sends us into an infinite loop, waiting for
@@ -441,19 +440,26 @@ recycleShadow(int previous_job_exit_reason)
 		return false;
 	}
 
-	ASSERT( schedd_addr );
-
 	dprintf(D_ALWAYS,"Reporting job exit reason %d and attempting to fetch new job.\n",
 			previous_job_exit_reason );
 
-	DCSchedd schedd(schedd_addr);
 	ClassAd *new_job_ad = NULL;
-	MyString error_msg;
-	if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg ) )
-	{
-		dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.Value());
-		delete new_job_ad;
-		return false;
+	if (sendUpdatesToSchedd) {
+		// If we're running under a schedd, get the next job ad
+		// from the schedd
+		ASSERT( schedd_addr );
+
+		DCSchedd schedd(schedd_addr);
+		MyString error_msg;
+		if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg ) )
+		{
+			dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.Value());
+			delete new_job_ad;
+			return false;
+		}
+	} else {
+		// if we are a free-running shadow
+		new_job_ad = readJobAd();
 	}
 
 	if( !new_job_ad ) {

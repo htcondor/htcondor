@@ -88,7 +88,7 @@ QmgrJobUpdater::~QmgrJobUpdater()
 		q_update_tid = -1;
 	}
 	if( schedd_addr ) { free(schedd_addr); }
-	free(schedd_ver);
+	if (schedd_ver)   {free(schedd_ver); }
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
