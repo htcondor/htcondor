@@ -329,11 +329,11 @@ static bool test_non_empty_simple_flattened_expression() {
 //This test segfaults!
 static bool test_null_expression() {
 	e.emit_test("Test FlattenAndInline when passing a null expression.");
-	e.emit_alert("Causes segfault!");
+	e.emit_alert("Causes segfault! See ticket #1379");
 /*
 	classad::ClassAd classad;
 	classad::ExprTree *expr;
-	Value value, value2;
+	Value value;
 	classad::ExprTree *fexpr;
 	
 	ClassAdParser parser;
