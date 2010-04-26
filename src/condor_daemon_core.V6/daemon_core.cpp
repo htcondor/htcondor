@@ -3924,6 +3924,7 @@ int DaemonCore::HandleReq(int socki, Stream* asock)
 int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 {
 	Stream				*stream = NULL;
+	Sock				*sock = NULL;
 
 	int					is_tcp;
 	int                 req = 0;
@@ -3973,6 +3974,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			} else {
 				stream = (Stream *) ((ReliSock *)insock)->accept();
 			}
+			sock = (Sock *)stream;
 			if ( !stream ) {
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
 				// return KEEP_STEAM cuz insock is a listen socket
@@ -3993,6 +3995,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// if the not a listen socket, then just assign stream to insock
 		else {
 			stream = insock;
+			sock = (Sock *)stream;
 		}
 
 	}
@@ -4002,6 +4005,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// our "listen sock" is also our "accept" sock, so just
 		// assign stream to the insock. UDP = connectionless, get it?
 		stream = insock;
+		sock = (Sock *)stream;
 		// in UDP we cannot display who the command is from until
 		// we read something off the socket, so we display who from
 		// after we read the command below...
@@ -4312,7 +4316,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// Allow thread to yield during all the authentication network round-trips
 		ScopedEnableParallel(true);
 
-		Sock* sock = (Sock*)stream;
 		sock->decode();
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->peer_addr()));
@@ -4930,13 +4933,26 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: Success.\n");
 	} else {
-
+		// we received some command other than DC_AUTHENTICATE
 		// get the handler function
 		reqFound = CommandNumToTableIndex(req,&index);
 
 			// There are two cases where we get here:
 			//  1. receiving unauthenticated command
 			//  2. receiving command on previously authenticated socket
+
+			// See if we should force authentication for this command.
+			// The client is expected to do the same.
+		if (reqFound &&
+			is_tcp &&
+			!sock->isAuthenticated() &&
+			comTable[index].force_authentication &&
+			!sock->triedAuthentication() )
+		{
+			SecMan::authenticate_sock(sock, WRITE, &errstack);
+				// we don't check the return value, because the code below
+				// handles what to do with unauthenticated connections
+		}
 
 		if (reqFound && !((Sock *)stream)->isAuthenticated()) {
 			// need to check our security policy to see if this is allowed.
