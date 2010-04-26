@@ -185,6 +185,7 @@ void ClassAd::
 Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
+	classad::_useOldClassAdSemantics = !m_strictEvaluation;
 }
 
 static classad::AttributeReference *the_my_ref = NULL;
