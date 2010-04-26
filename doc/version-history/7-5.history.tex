@@ -114,6 +114,13 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   \Condor{config\_val}.  Now it treats this case like any other: the
   default value is displayed.
 
+% gittrac #1203
+\item Starting in Condor 7.5.1, using numbers with a logical operator
+  in a ClassAd expression (e.g. \texttt{1 || 0}) caused the expression
+  to evaluate to value \texttt{ERROR}. The previous behavior has been
+  restored (i.e. zero values are treated as \texttt{False} and non-zero
+  values are treated as \texttt{True}).
+
 \end{itemize}
 
 \noindent Known Bugs:
