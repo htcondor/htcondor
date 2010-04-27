@@ -121,6 +121,11 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   restored (i.e. zero values are treated as \texttt{False} and non-zero
   values are treated as \texttt{True}).
 
+% gittrack 1378
+\item Starting in 7.5.0, the \Condor{schedd} no longer supported queue
+  management commands when security negotiation was disabled
+  (e.g. \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}).
+
 \end{itemize}
 
 \noindent Known Bugs:
