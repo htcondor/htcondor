@@ -1255,20 +1255,20 @@ to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
-There are cases when a DAG is easier to visualize and 
-construct hierarchically,
-in other words when a node within a DAG is also a DAG.
-Condor DAGMan handles this situation quite easily.
-(Note that DAGs can be nested to any depth.)
+Some DAGs are naturally constructed hierarchically,
+such that a node within a DAG is also a DAG.
+Condor DAGMan handles this situation easily.
+DAGs can be nested to any depth.
 
 Since more than one DAG is being discussed, 
-terminology is introduced to clarify which DAG is which. 
+here is terminology introduced to clarify which DAG is which. 
 Reuse the example diamond-shaped DAG as given in 
 Figure~\ref{fig:dagman-diamond}.
 Assume that node B of this diamond-shaped DAG
 will itself be a DAG.
-The DAG of node B is called the inner (or lower-level) DAG,
-and the diamond-shaped DAG is called the outer (or top-level) DAG.
+The DAG of node B is called the inner, or lower-level DAG;
+it is a SUBDAG.
+The diamond-shaped DAG is called the outer or top-level DAG.
 
 Work on the inner DAG first.
 Here is a very simple linear DAG input file used as
@@ -1283,11 +1283,15 @@ an example of the inner DAG.
     PARENT Y CHILD Z
 \end{verbatim}
 
-The Condor submit file corresponding to this DAG will be named
-\File{inner.dag.condor.sub}.  (The DAGMan submit file is always
-named \File{<DAG file name>.condor.sub}.)
+The Condor submit description file, used by \Condor{dagman},
+corresponding to this DAG will be named
+\File{inner.dag.condor.sub}.  The DAGMan submit description file is always
+named \File{<DAG file name>.condor.sub}.
+Each DAG or SUBDAG results in the submission of \Condor{dagman}
+as a Condor job, and \Condor{submit\_dag} creates this
+submit description file.
 
-A simple example of a DAG input file for the outer DAG is
+The preferred presentation of the DAG input file for the outer DAG is
 \begin{verbatim}
 # File name: diamond.dag
 #
@@ -1299,7 +1303,7 @@ A simple example of a DAG input file for the outer DAG is
     PARENT B C CHILD D
 \end{verbatim}
 
-This is equivalent, but the version above is now preferred:
+The preferred presentation is equivalent to
 \begin{verbatim}
 # File name: diamond.dag
 #
@@ -1311,10 +1315,11 @@ This is equivalent, but the version above is now preferred:
     PARENT B C CHILD D
 \end{verbatim}
 
-Within the DAG input file,
+Within the outer DAG's input file,
 the \Arg{SUBDAG} keyword specifies a special case of a \Opt{JOB}
-node, where the job is a DAG.  The syntax used for each \Arg{SUBDAG}
-entry is
+node, where the job is itself a DAG.
+
+The syntax for each SUBDAG entry is
 
 \Opt{SUBDAG} \Opt{EXTERNAL} \Arg{JobName} \Arg{DagFileName}
 \oOptArg{DIR}{directory} \oOpt{NOOP} \oOpt{DONE}
@@ -1322,12 +1327,11 @@ entry is
 (Note that \Opt{DIR}, \Opt{NOOP}, and \Opt{DONE}, if used, must appear
 in the order shown above.)
 
-A \Opt{SUBDAG} node is essentially the same as a "normal" node, except
-that the nested DAG file is specified instead of the Condor submit file.
-("SUBDAG EXTERNAL A foo.dag" is functionally equivalent to
-"JOB A foo.dag.condor.sub", but SUBDAG EXTERNAL is now the preferred
-syntax for specifying such a node.)  "EXTERNAL" means that the
-SUBDAG is run in its own instance of \Condor{dagman}.
+A \Opt{SUBDAG} node is essentially the same as any other node,
+except that the DAG input file for the inner DAG is specified,
+instead of the Condor submit file.
+The keyword \Opt{EXTERNAL} means that the
+SUBDAG is run within its own instance of \Condor{dagman}.
 
 \Opt{NOOP} and \Opt{DONE} for \Opt{SUBDAG} nodes have the same effect
 that they do for \Opt{JOB} nodes.
@@ -1444,7 +1448,7 @@ already-existing lower-level DAG submit files:
 Other command-line arguments are set to their defaults in any lower-level
 \Condor{submit\_dag}s.
 
-Note that the \Opt{-force} option will cause existing DAG submit files to
+The \Opt{-force} option will cause existing DAG submit files to
 be overwritten without preserving any existing values.
 
 \item{Submission of the outer (top-level) DAG}
@@ -1456,20 +1460,25 @@ The outer DAG is submitted as before, with the command
 
 \item{Interaction with Rescue DAGs}
 
-When using nested DAGs, it is strongly recommended that you use
-"new-style" rescue DAGs (this is the default).  Using "new-style"
+When using nested DAGs, we strongly recommend that you use
+"new-style" rescue DAGs. This is the default.  Using "new-style"
 rescue DAGs will automatically run the proper rescue DAG(s) if
-there is a failure in your workflow.  For example, if one of the
+there is a failure in the work flow.  For example, if one of the
 nodes in \File{inner.dag} fails, this will produce a rescue
-DAG for inner.dag (\File{inner.dag.rescue.001}, etc.).  Then,
+DAG for inner.dag (named \File{inner.dag.rescue.001}, etc.).  Then,
 since \File{inner.dag} failed, node B of \File{diamond.dag} will fail,
 producing a rescue DAG for \File{diamond.dag}
-(\File{diamond.dag.rescue.001}, etc.).  If you re-run
-\emph{condor\_submit\_dag diamond.dag} the most recent outer rescue
+(named \File{diamond.dag.rescue.001}, etc.).  
+If the command
+\begin{verbatim}
+condor_submit_dag diamond.dag
+\end{verbatim}
+is re-run, the most recent outer rescue
 DAG will be run, and this will re-run the inner DAG, which will
-actually run the most recent inner rescue DAG.  If you use
-"old-style" rescue DAGs, you would have to either rename the 
-inner rescue DAG or run it manually.
+in turn run the most recent inner rescue DAG.  
+The use of
+"old-style" rescue DAGs will require the renaming of the 
+inner rescue DAG or manually running it.
 
 \item{File Paths}
 
