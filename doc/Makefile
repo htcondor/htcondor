@@ -3,6 +3,11 @@ SUBVER = V7_5_3
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 LOCALDIR = ref-master
+
+# NOTE: older latex versions do not support -halt-on-error
+#       including /p/condor/workspaces/build/bin/latex, unfortunately
+LATEXARGS := -file-line-error-style $(shell latex --help | grep -o -- -halt-on-error)
+
 all:  ref.dvi
 #all:  man.ps
 
@@ -15,13 +20,13 @@ ref.pdf: clean
 	ln -s symbol-postscript.tex symbol.tex
 	ln -s figuresizing-latex.tex figuresizing.tex
 	make figures
-	latex ref.tex
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
 	makeindex ref
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS)  ref.tex
 	rm -f ref.ps
 	dvips ref.dvi -o ref.ps
 	rm -f ref.pdf
@@ -41,13 +46,13 @@ ref.dvi: clean
 	ln -s symbol-postscript.tex symbol.tex
 	ln -s figuresizing-latex.tex figuresizing.tex
 	make figures
-	latex ref.tex 
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
 	makeindex ref
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS) ref.tex
 
 ref.ps: ref.dvi
 	dvips ref.dvi -o ref.ps
@@ -69,13 +74,13 @@ ref.html: clean $(TARGETDIR)
 	ln -s symbol-html.tex symbol.tex
 	ln -s figuresizing-html.tex figuresizing.tex
 	make figures
-	latex ref.tex
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
 	makeindex ref
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS)  ref.tex
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	rm -f ref.dvi
 	mv ref condor-$(SUBVER)-Manual
@@ -102,13 +107,13 @@ local.html: $(wildcard *.tex) $(wildcard */*.tex)
 	ln -s symbol-html.tex symbol.tex
 	ln -s figuresizing-html.tex figuresizing.tex
 	make figures
-	latex ref.tex
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
 	makeindex ref
-	latex ref.tex -interaction=batchmode
+	latex $(LATEXARGS)  ref.tex
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	rm -rf $(LOCALDIR)
 	mv    ref $(LOCALDIR)
