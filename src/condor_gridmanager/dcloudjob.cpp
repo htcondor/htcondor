@@ -158,7 +158,6 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	remoteJobState = "";
 	gmState = GM_INIT;
 	probeNow = false;
-	lastProbeTime = 0;
 	enteredCurrentGmState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
@@ -575,32 +574,10 @@ void DCloudJob::doEvaluateState()
 
 					gmState = GM_CANCEL;
 
-				} else {
-					if ( lastProbeTime < enteredCurrentGmState ) {
-						lastProbeTime = enteredCurrentGmState;
-					}
-					
-					// TODO This setting of probe interval needs to be
-					//   corrected.
-					// if current state isn't "running", we should check its state
-					// every "funcRetryInterval" seconds. Otherwise the interval should
-					// be "probeInterval" seconds.  
-					int interval = probeInterval;
-					if ( remoteJobState != DCLOUD_VM_STATE_RUNNING ) {
-						interval = funcRetryInterval;
-					}
-
-					if ( probeNow || now >= lastProbeTime + interval ) {
-						gmState = GM_PROBE_JOB;
-						break;
-					}
-
-					unsigned int delay = 0;
-					if ( (lastProbeTime + interval) > now ) {
-						delay = (lastProbeTime + interval) - now;
-					}
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
-				}			
+				} else if ( probeNow ) {
+					gmState = GM_PROBE_JOB;
+					break;
+				}
 
 				break;
 
@@ -771,7 +748,6 @@ void DCloudJob::doEvaluateState()
 
 					ProcessInstanceAttrs( attrs );
 
-					lastProbeTime = now;
 					gmState = GM_SUBMITTED;
 				}
 
