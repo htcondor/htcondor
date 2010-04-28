@@ -830,11 +830,15 @@ void DCloudJob::doEvaluateState()
 			case GM_STOPPED:
 
 				if ( remoteJobState != DCLOUD_VM_STATE_FINISH ) {
+// destroy action currently not supported by gahp
+rc=0;
+/*
 					rc = gahp->dcloud_action( m_serviceUrl,
 											  m_username,
 											  m_password,
 											  m_instanceId,
 											  "destroy" );
+*/
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
