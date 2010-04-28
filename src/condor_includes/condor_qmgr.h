@@ -34,7 +34,12 @@ typedef struct {
 typedef int (*scan_func)(ClassAd *ad);
 
 typedef unsigned char SetAttributeFlags_t;
-const SetAttributeFlags_t NONDURABLE = 1;
+const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
+	// NoAck tells the remote version of SetAttribute to not send back a
+	// return code.  If the operation fails, the connection will be closed,
+	// so failure will be detected in CommitTransaction().  This is useful
+	// for improving performance when setting lots of attributes.
+const SetAttributeFlags_t SetAttribute_NoAck = (1<<1);
 
 #define SHADOW_QMGMT_TIMEOUT 300
 

@@ -330,14 +330,22 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		}
 
-		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-		}
 		free( (char *)attr_value );
 		free( (char *)attr_name );
-		assert( syscall_sock->end_of_message() );;
+
+		if( flags & SetAttribute_NoAck ) {
+			if( rval < 0 ) {
+				return -1;
+			}
+		}
+		else {
+			syscall_sock->encode();
+			assert( syscall_sock->code(rval) );
+			if( rval < 0 ) {
+				assert( syscall_sock->code(terrno) );
+			}
+			assert( syscall_sock->end_of_message() );
+		}
 		return 0;
 	}
 
