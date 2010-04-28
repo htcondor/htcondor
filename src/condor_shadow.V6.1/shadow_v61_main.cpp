@@ -311,8 +311,9 @@ void startShadow( ClassAd *ad )
 int handleJobRemoval(Service*,int sig)
 {
 	if( Shadow ) {
-		Shadow->handleJobRemoval(sig);
+		return Shadow->handleJobRemoval(sig);
 	}
+	return 0;
 }
 
 
