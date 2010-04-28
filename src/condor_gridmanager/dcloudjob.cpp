@@ -249,7 +249,6 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		}
 
 		token = str.GetNextToken( " ", false );
-		token = str.GetNextToken( " ", false );
 		if ( token ) {
 			SetInstanceName( token );
 		}
