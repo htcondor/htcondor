@@ -1382,6 +1382,24 @@ This macro
   will be locked before being written to.
   If \Expr{False}, Condor will not lock the file before writing.
 
+\label{param:NewLocking}
+\item[\Macro{NEW\_LOCKING}]
+  A boolean value utilized only for Unix operating systems, 
+  that defaults to \Expr{False}. 
+  This variable is only relevant if \MacroNI{ENABLE\_USERLOG\_LOCKING}
+  is \Expr{True}.
+  When \Expr{True}, job user logs and the global job event log are
+  written to a directory named \File{condorLocks},
+  thereby using a local drive to avoid known problems with locking on NFS.
+  The location of the \File{condorLocks} directory is determined by
+  \begin{enumerate}
+  \item The value of \MacroNI{TEMP\_DIR}, if defined.
+  \item The value of \MacroNI{TMP\_DIR}, if defined and \MacroNI{TEMP\_DIR}
+  is not defined.
+  \item The default value of \File{/tmp}, if neither \MacroNI{TEMP\_DIR}
+  nor \MacroNI{TMP\_DIR} is defined.
+  \end{enumerate}
+
 \label{param:TouchLogInterval}
 \item[\Macro{TOUCH\_LOG\_INTERVAL}]
   The time interval in seconds between when daemons touch
@@ -3469,10 +3487,10 @@ WANT_HOLD_REASON = \
   If not defined or if the expression evaluates to \Expr{Undefined},
   a default hold reason is provided.
 
-\label{param:WantHoldSubCode}
-\item[\Macro{WANT\_HOLD\_SUB\_CODE}]
+\label{param:WantHoldSubcode}
+\item[\Macro{WANT\_HOLD\_SUBCODE}]
   An expression that defines an integer value utilized to set the job ClassAd
-  attribute\AdAttr{HoldReasonSubCode}  when a job is put on hold due to
+  attribute \AdAttr{HoldReasonSubCode}  when a job is put on hold due to
   \MacroNI{WANT\_HOLD}.
   If not defined or if the expression evaluates to \Expr{Undefined},
   the value is set to 0.
@@ -6965,18 +6983,30 @@ Configuration File Macros}
 
 \label{param:ProcdLog}
 \item[\Macro{PROCD\_LOG}]
-  Specifies a log file
-  for the ProcD to use. Note that by design, the \Condor{procd} does not
+  Specifies a log file for the \Condor{procd} to use.
+  Note that by design, the \Condor{procd} does not
   include most of the other logic that is shared amongst the various
   Condor daemons. This is because the \Condor{procd} is a component of
   the PrivSep Kernel (see Section~\ref{sec:PrivSep} for more information
   regarding privilege separation). This means that the \Condor{procd}
-  does not include the normal Condor logging subsystem, and thus things
-  like multiple debug levels and log rotation are not
-  supported. Therefore, \MacroNI{PROCD\_LOG} is not set by default and
+  does not include the normal Condor logging subsystem, and thus 
+  multiple debug levels are not supported.
+  \MacroNI{PROCD\_LOG} is not set by default and
   is only intended to debug problems should they arise. Note, however,
   that enabling \Dflag{PROCFAMILY} in the debug level for any other
   daemon will cause it to log all interactions with the \Condor{procd}.
+
+
+\label{param:MaxProcdLog}
+\item[\Macro{MAX\_PROCD\_LOG}]
+  Controls the maximum length in bytes to which the \Condor{procd}
+  log will be allowed to grow.  The log file will grow to the
+  specified length, then be saved to a file with the suffix
+  \File{.old}.  The \File{.old}
+  file is overwritten each time the log is saved, thus the maximum
+  space devoted to logging will be twice the
+  maximum length of this log file.  A value of 0 specifies that the
+  file may grow without bounds.  The default is 10 Mbyte.
 
 \label{param:ProcdAddress}
 \item[\Macro{PROCD\_ADDRESS}]
@@ -8238,14 +8268,15 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManGenerateSubDagSubmits}
 \item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
   A boolean value specifying whether \Condor{dagman} itself should
-  create the \File{.condor.sub} files for nested DAGs.  (If this
-  configuration value is set to \Expr{False}, nested DAGs will fail unless
+  create the \File{.condor.sub} files for nested DAGs.  
+  If set to \Expr{False}, nested DAGs will fail unless
   the \File{.condor.sub} files are generated manually by running
   \Condor{submit\_dag} \Arg{-no\_submit} on each nested DAG, or the
-  \Arg{-do\_recurse} flag is passed to the \Condor{submit\_dag} for the
-  top-level DAG.)  (DAG nodes specified with the
-  \MacroNI{SUBDAG EXTERNAL} keyword or with submit file names ending
-  in \File{.condor.sub} are considered nested DAGs.)
+  \Arg{-do\_recurse} flag is passed to \Condor{submit\_dag} for the
+  top-level DAG.
+  DAG nodes specified with the
+  \MacroNI{SUBDAG EXTERNAL} keyword or with submit description file names ending
+  in \File{.condor.sub} are considered nested DAGs.
   The default value if not defined is \Expr{True}.
 
 \end{description}

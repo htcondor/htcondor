@@ -153,11 +153,10 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 
 \begin{itemize}
 
-\item Condor version 7.5.2 not yet released.
-%\item Condor version 7.5.2 released on Month Date, 2010.
+\item Condor version 7.5.2 released on April 26, 2010.
 
 % gittrac 1003
-\item Condor no longer supports  SuSE 8 Linux on the Itanium 64 architecture.
+\item Condor no longer supports SuSE 8 Linux on the Itanium 64 architecture.
 
 % gittrac #600
 \item The following submit description file commands are no longer recognized.
@@ -210,15 +209,15 @@ with at least one idle local or scheduler universe job.
 % gittrac 834
 \item The \Condor{procd}'s log now rotates if logging is activated. 
   The default maximum size is 10Mbytes. To change the default,
-  use the configuration variable \MacroNI{MAX\_PROCD\_LOG}.  
+  use the configuration variable \Macro{MAX\_PROCD\_LOG}.  
 
 %gittrac 1310
-\item UserLog lock files can now optionally be created in a folder on a 
-  local drive by setting \MacroNI{NEW\_LOCKING} to \Expr{True}. They 
-  are written into \File{condorLocks} in the specified 
-  \MacroNI{TEMP\_DIR} or \MacroNI{TMP\_DIR} directory (defaults to \File{/tmp}).
-  This should solve known problems with locking on NFS. Windows versions
-  are not affected by this change.
+\item For Unix systems only, 
+  user job log and global job event log lock files can now optionally 
+  be created in a directory on a 
+  local drive by setting \MacroNI{NEW\_LOCKING} to \Expr{True}. 
+  See section~\ref{param:NewLocking} for 
+  the details of this configuration variable.
   
 %gittrac 507
 \item \Condor{dagman} and \Condor{submit\_dag} now default to lazy
@@ -251,6 +250,12 @@ nested DAGs, rather than relying on \Condor{submit\_dag} "eagerly"
 creating them.  See section~\ref{param:DAGManGenerateSubDagSubmits} for
 more information.
 
+%gittrac 1310
+\item The new configuration variable \Macro{NEW\_LOCKING} can specify that
+  job user logs and the global job event log to be written to a local drive,
+  avoiding locking problems with NFS.
+  See section~\ref{param:NewLocking} for 
+  the details of this configuration variable.
 \end{itemize}
 
 \noindent Bugs Fixed:

@@ -1255,20 +1255,26 @@ to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
-There are cases when a DAG is easier to visualize and 
-construct hierarchically,
-in other words when a node within a DAG is also a DAG.
-Condor DAGMan handles this situation quite easily.
-(Note that DAGs can be nested to any depth.)
+Some DAGs are naturally constructed hierarchically,
+such that a node within a DAG is also a DAG.
+Condor DAGMan handles this situation easily.
+DAGs can be nested to any depth.
+
+One of the highlights of using the SUBDAG feature is that portions of a DAG
+may be constructed and modified during the execution of the DAG.
+A drawback may be that each SUBDAG causes its own distinct job submission
+of \Condor{dagman}, leading to a larger number of jobs,
+together with their potential need of carefully constructed policy configuration
+to throttle node submission or execution.
 
 Since more than one DAG is being discussed, 
-terminology is introduced to clarify which DAG is which. 
+here is terminology introduced to clarify which DAG is which. 
 Reuse the example diamond-shaped DAG as given in 
 Figure~\ref{fig:dagman-diamond}.
 Assume that node B of this diamond-shaped DAG
 will itself be a DAG.
-The DAG of node B is called the inner (or lower-level) DAG,
-and the diamond-shaped DAG is called the outer (or top-level) DAG.
+The DAG of node B is called a SUBDAG, inner DAG, or lower-level DAG.
+The diamond-shaped DAG is called the outer or top-level DAG.
 
 Work on the inner DAG first.
 Here is a very simple linear DAG input file used as
@@ -1283,11 +1289,15 @@ an example of the inner DAG.
     PARENT Y CHILD Z
 \end{verbatim}
 
-The Condor submit file corresponding to this DAG will be named
-\File{inner.dag.condor.sub}.  (The DAGMan submit file is always
-named \File{<DAG file name>.condor.sub}.)
+The Condor submit description file, used by \Condor{dagman},
+corresponding to \File{inner.dag} will be named
+\File{inner.dag.condor.sub}.  The DAGMan submit description file is always
+named \File{<DAG file name>.condor.sub}.
+Each DAG or SUBDAG results in the submission of \Condor{dagman}
+as a Condor job, and \Condor{submit\_dag} creates this
+submit description file.
 
-A simple example of a DAG input file for the outer DAG is
+The preferred presentation of the DAG input file for the outer DAG is
 \begin{verbatim}
 # File name: diamond.dag
 #
@@ -1299,7 +1309,7 @@ A simple example of a DAG input file for the outer DAG is
     PARENT B C CHILD D
 \end{verbatim}
 
-This is equivalent, but the version above is now preferred:
+The preferred presentation is equivalent to
 \begin{verbatim}
 # File name: diamond.dag
 #
@@ -1311,107 +1321,129 @@ This is equivalent, but the version above is now preferred:
     PARENT B C CHILD D
 \end{verbatim}
 
-Within the DAG input file,
-the \Arg{SUBDAG} keyword specifies a special case of a \Opt{JOB}
-node, where the job is a DAG.  The syntax used for each \Arg{SUBDAG}
-entry is
+Within the outer DAG's input file,
+the \Opt{SUBDAG} keyword specifies a special case of a \Opt{JOB}
+node, where the job is itself a DAG.
+
+The syntax for each SUBDAG entry is
 
 \Opt{SUBDAG} \Opt{EXTERNAL} \Arg{JobName} \Arg{DagFileName}
 \oOptArg{DIR}{directory} \oOpt{NOOP} \oOpt{DONE}
 
-(Note that \Opt{DIR}, \Opt{NOOP}, and \Opt{DONE}, if used, must appear
-in the order shown above.)
+The optional specifications of \Opt{DIR}, \Opt{NOOP}, and \Opt{DONE},
+if used, must appear in this order within the entry.
 
-A \Opt{SUBDAG} node is essentially the same as a "normal" node, except
-that the nested DAG file is specified instead of the Condor submit file.
-("SUBDAG EXTERNAL A foo.dag" is functionally equivalent to
-"JOB A foo.dag.condor.sub", but SUBDAG EXTERNAL is now the preferred
-syntax for specifying such a node.)  "EXTERNAL" means that the
-SUBDAG is run in its own instance of \Condor{dagman}.
+A \Opt{SUBDAG} node is essentially the same as any other node,
+except that the DAG input file for the inner DAG is specified,
+instead of the Condor submit file.
+The keyword \Opt{EXTERNAL} means that the
+SUBDAG is run within its own instance of \Condor{dagman}.
 
 \Opt{NOOP} and \Opt{DONE} for \Opt{SUBDAG} nodes have the same effect
 that they do for \Opt{JOB} nodes.
 
+Here are details that affect SUBDAGs:
 \begin{itemize}
-\item{Nested submit file generation}
+\item{Nested Submit Description File Generation}
 
-There are three ways that you can generate the \File{.condor.sub} files
-for nested DAGs:
+There are three ways to generate the \File{<DAG file name>.condor.sub} file
+of a SUBDAG:
 
 \begin{itemize}
-\item Lazily (the default in 7.5.2 and later versions).
-\item Eagerly (the default in versions 7.4.1 through 7.5.1).
-\item Manually (the only way prior to version 7.4.1).
+\item \Bold{Lazily} (the default in Condor version 7.5.2 and later versions)
+\item \Bold{Eagerly} (the default in Condor versions 7.4.1 through 7.5.1)
+\item \Bold{Manually} (the only way prior to version Condor version 7.4.1)
 \end{itemize}
 
-When the \File{.condor.sub} files are generated \Bold{lazily}, the
-\File{.condor.sub} file for each nested DAG is generated immediately
-before the nested DAG job is submitted (\Condor{dagman} runs
-\Condor{submit\_dag} \Arg{-no\_submit} on the nested DAG file).  This
-is now the default.
-There are several advantages to the "lazy" mode of nested DAG submit
-file creation:
+When the \File{<DAG file name>.condor.sub} file is generated \Bold{lazily},
+this file is generated immediately
+before the SUBDAG job is submitted.
+Generation is accomplished by running
+\begin{verbatim}
+condor_submit_dag -no_submit
+\end{verbatim}
+on the DAG input file specified in the \Opt{SUBDAG} entry.
+This is the default behavior.
+There are advantages to this lazy mode of submit description
+file creation for the SUBDAG:
 \begin{itemize}
-\item The DAG file for a nested DAG does not have to exist until that node
-is ready to run, so the nested DAG file can be dynamically created by earlier
-parts of the top-level DAG (including the PRE script of the nested
-DAG node itself).
-\item It is now possible to have nested DAGs within splices, which is not
-possible with "eager" submit file creation (because \Condor{submit\_dag}
-does not understand splices).
+\item The DAG input file for a SUBDAG does not have to exist until the SUBDAG
+is ready to run, so this file can be dynamically created by earlier
+parts of the outer DAG or by the PRE script of the node containing the SUBDAG.
+\item It is now possible to have SUBDAGs within splices. 
+That is not
+possible with eager submit description file creation,
+because \Condor{submit\_dag} does not understand splices.
 \end{itemize}
 
-The main disadvantage of lazy submit file generation is that if you have
-a syntax error in one of your lower-level DAG files, you won't find out
-about it until the upper-level DAG tries to run that lower-level DAG.
+The main disadvantage of lazy submit file generation is that 
+a syntax error in the DAG input file of a SUBDAG will not be discovered
+until the outer DAG tries to run the inner DAG.
 
-When the \File{.condor.sub} files are generated \Bold{eagerly},
+When \File{<DAG file name>.condor.sub} files are generated \Bold{eagerly},
 \Condor{submit\_dag} runs itself recursively (with the \Arg{-no\_submit}
-option) on each nested DAG, so all of the \File{.condor.sub} files
-are generated before the top-level DAG is actually submitted.  To
-generate the \File{.condor.sub} files eagerly, you must now pass the
-\Arg{-do\_recurse} flag to \Condor{submit\_dag}; you must also set
-the \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} configuration variable
-to \Expr{false} so that \Condor{dagman} does not re-run
-\Condor{submit\_dag} at run time (if, in fact, you don't want to regenerate
-the submit files).
+option) on each SUBDAG, so all of the \File{<DAG file name>.condor.sub} files
+are generated before the top-level DAG is actually submitted.
+To generate the \File{<DAG file name>.condor.sub} files eagerly, 
+pass the \Arg{-do\_recurse} flag to \Condor{submit\_dag}; 
+also set the \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} configuration variable
+to \Expr{False}, so that \Condor{dagman} does not re-run
+\Condor{submit\_dag} at run time thereby regenerating 
+the submit description files.
 
-To generate the \File{.condor.sub} files \Bold{manually}, you
-must run \Condor{submit\_dag} \Arg{-no\_submit} on each lower-level
-DAG file before running \Condor{submit\_dag} on the top-level DAG file;
-you must also set the \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}
-configuration variable to \Expr{false} so that \Condor{dagman} does
-not re-run \Condor{submit\_dag} at run time.  The main reason for
-generating the \File{.condor.sub} files manually is to set options
-for the lower-level DAG that you would not otherwise be able to set
-(for example, \Arg{-insert\_sub\_file}).  For instance,
-using the example in the previous section, you could do the
-following:
+To generate the \File{.condor.sub} files \Bold{manually}, 
+run
+\begin{verbatim}
+condor_submit_dag -no_submit
+\end{verbatim}
+on each lower-level DAG file,
+before running \Condor{submit\_dag} on the top-level DAG file;
+also set the \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}
+configuration variable to \Expr{False},
+so that \Condor{dagman} does not re-run \Condor{submit\_dag} at run time.
+The main reason for
+generating the \File{<DAG file name>.condor.sub} files manually is 
+to set options
+for the lower-level DAG that one would not otherwise be able to set
+An  example of this is the  \Arg{-insert\_sub\_file} option.
+For instance,
+using the given example do the following to manually generate
+Condor submit description files:
 
+\footnotesize
 \begin{verbatim}
   condor_submit_dag -no_submit -insert_sub_file fragment.sub inner.dag
   condor_submit_dag diamond.dag
 \end{verbatim}
+\normalsize
 
-(Note that most \Condor{submit\_dag} command-line flags have
+Note that most \Condor{submit\_dag} command-line flags have
 corresponding configuration variables, so we encourage the use of
 per-DAG configuration files, especially in the case of nested DAGs.
 This is the easiest way to set different options for different DAGs
-in an overall workflow.)
+in an overall workflow.
 
-Also note that you can combine more than one method of generating the
-\File{.condor.sub} files -- for example, you might pass the
-\Arg{-do\_recurse} flag to \Condor{submit\_dag}, but leave the
+It is possible to combine more than one method of generating the
+\File{<DAG file name>.condor.sub} files.
+For example, one might pass the \Arg{-do\_recurse} flag to 
+\Condor{submit\_dag},
+but leave the
 \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} configuration variable set
-to the default of \Expr{true}.  Doing this would give you the benefit
-of an immediate error message at submit time if you have a syntax error
-in one of your nested DAG files, but the lower-level \File{.condor.sub}
+to the default of \Expr{True}.
+Doing this would provide the benefit
+of an immediate error message at submit time,
+if there is a syntax error
+in one of the inner DAG input files,
+but the lower-level \File{<DAG file name>.condor.sub}
 files would still be regenerated before each nested DAG is submitted.
 
 % See SubmitDagDeepOptions in dagman_recursive_submit.h
 The values of the following command-line flags are passed from the
-top-level \Condor{submit\_dag} to any lower-level \Condor{submit\_dag}s
-(whether the lower-level submit files are generated lazily or eagerly):
+top-level \Condor{submit\_dag} instance to any lower-level
+\Condor{submit\_dag} instances.
+This occurs
+whether the lower-level submit description files are generated 
+lazily or eagerly:
 \begin{itemize}
 \item \Opt{-verbose}
 \item \Opt{-force}
@@ -1428,12 +1460,11 @@ top-level \Condor{submit\_dag} to any lower-level \Condor{submit\_dag}s
 \item \Opt{-no\_recurse/do\_recurse}
 \item \Opt{-update\_submit}
 \item \Opt{-import\_env}
-
 \end{itemize}
 
 % See parsePreservedArgs() in condor_submit_dag.cpp
 The values of the following command-line flags are preserved in any
-already-existing lower-level DAG submit files:
+already-existing lower-level DAG submit description files:
 \begin{itemize}
 \item \Opt{-maxjobs}
 \item \Opt{-maxidle}
@@ -1442,12 +1473,12 @@ already-existing lower-level DAG submit files:
 \end{itemize}
 
 Other command-line arguments are set to their defaults in any lower-level
-\Condor{submit\_dag}s.
+invocations of \Condor{submit\_dag}.
 
-Note that the \Opt{-force} option will cause existing DAG submit files to
+The \Opt{-force} option will cause existing DAG submit description files to
 be overwritten without preserving any existing values.
 
-\item{Submission of the outer (top-level) DAG}
+\item{Submission of the outer DAG}
 
 The outer DAG is submitted as before, with the command
 \begin{verbatim}
@@ -1456,27 +1487,33 @@ The outer DAG is submitted as before, with the command
 
 \item{Interaction with Rescue DAGs}
 
-When using nested DAGs, it is strongly recommended that you use
-"new-style" rescue DAGs (this is the default).  Using "new-style"
+When using nested DAGs, we strongly recommend that you use
+"new-style" rescue DAGs. This is the default.  Using "new-style"
 rescue DAGs will automatically run the proper rescue DAG(s) if
-there is a failure in your workflow.  For example, if one of the
+there is a failure in the work flow.  For example, if one of the
 nodes in \File{inner.dag} fails, this will produce a rescue
-DAG for inner.dag (\File{inner.dag.rescue.001}, etc.).  Then,
+DAG for inner.dag (named \File{inner.dag.rescue.001}, etc.).  Then,
 since \File{inner.dag} failed, node B of \File{diamond.dag} will fail,
 producing a rescue DAG for \File{diamond.dag}
-(\File{diamond.dag.rescue.001}, etc.).  If you re-run
-\emph{condor\_submit\_dag diamond.dag} the most recent outer rescue
+(named \File{diamond.dag.rescue.001}, etc.).  
+If the command
+\begin{verbatim}
+condor_submit_dag diamond.dag
+\end{verbatim}
+is re-run, the most recent outer rescue
 DAG will be run, and this will re-run the inner DAG, which will
-actually run the most recent inner rescue DAG.  If you use
-"old-style" rescue DAGs, you would have to either rename the 
-inner rescue DAG or run it manually.
+in turn run the most recent inner rescue DAG.  
+The use of
+"old-style" rescue DAGs will require the renaming of the 
+inner rescue DAG or manually running it.
 
 \item{File Paths}
 
-Remember that, unless you use the DIR keyword in your outer DAG,
-the inner DAG will be submitted from the directory in which you
-run the outer DAG.  Therefore, all paths in the inner DAG file
-(to submit files, etc.) must be specified accordingly.
+Remember that, unless the DIR keyword is used in the outer DAG,
+the inner DAG utilizes the current working directory when the outer DAG
+is submitted.
+Therefore, all paths utilized by the inner DAG file
+must be specified accordingly.
 
 \end{itemize}
 
