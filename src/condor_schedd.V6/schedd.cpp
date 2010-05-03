@@ -13339,6 +13339,20 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
 	}
 
+		// The standard universe shadow never calls this function,
+		// and the shadow that does call this function is not capable of
+		// running standard universe jobs, so if the job we are trying
+		// to run next is standard universe, tell this shadow we are
+		// out of work.
+	if( new_job_id.proc != -1 ) {
+		int new_universe = -1;
+		GetAttributeInt(new_job_id.cluster,new_job_id.proc,ATTR_JOB_UNIVERSE,&new_universe);
+		if( new_universe == CONDOR_UNIVERSE_STANDARD ) {
+			new_job_id.proc = -1;
+		}
+	}
+	
+
 	if( new_job_id.proc == -1 ) {
 		stream->put((int)0);
 		stream->end_of_message();
