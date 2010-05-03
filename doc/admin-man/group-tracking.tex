@@ -51,4 +51,6 @@ MAX_TRACKING_GID = 757
 
 GID-based process tracking requires use of the \Condor{procd}. If
 \MacroNI{USE\_GID\_PROCESS\_TRACKING} is true, the \Condor{procd} will
-be used regardless of the \Macro{USE\_PROCD} setting.
+be used regardless of the \Macro{USE\_PROCD} setting.  Changes to
+\MacroNI{MIN\_TRACKING\_GID} and \MacroNI{MAX\_TRACKING\_GID} require
+a full restart of Condor.
