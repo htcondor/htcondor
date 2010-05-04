@@ -365,6 +365,15 @@ ProcFamilyProxy::start_procd()
 		args.AppendArg(m_procd_log);
 	}
 	
+	// the (optional) procd log file size
+	//
+	char *procd_log_size = param("MAX_PROCD_LOG");
+	if (procd_log_size != NULL) {
+		args.AppendArg("-R");
+		args.AppendArg(procd_log_size);
+		free(procd_log_size);
+	}
+	
 	// the (optional) maximum snapshot interval
 	// (the procd will default to every minute)
 	//

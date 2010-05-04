@@ -129,7 +129,7 @@ ptr_ref_count * current_cred = NULL;
    to be escaped or the gahp server gets confused. :(
    !!! BEWARE !!!
 */ 
-static char *VersionString ="$GahpVersion: 1.1.2 " __DATE__ " UW\\ Gahp $";
+static char *VersionString ="$GahpVersion: 1.1.3 " __DATE__ " UW\\ Gahp $";
 
 volatile int ResultsPending;
 volatile int AsyncResults;
@@ -191,6 +191,10 @@ callback_gram_job_refresh_proxy(void *arg,
 								const char *job_contact,
 								globus_gram_protocol_job_state_t job_state,
 								globus_gram_protocol_error_t job_fc);
+void
+callback_gram_get_jobmanager_version(void *arg,
+									 const char *job_contact,
+									 globus_gram_client_job_info_t *job_info);
 
 /* These are all of the sync. command handlers */
 int handle_gram_callback_allow(void *);
@@ -1023,10 +1027,9 @@ handle_gram_get_jobmanager_version(void * user_arg)
 {
 	char **input_line = (char **) user_arg;
 	int result;
-	char *output, *req_id, *resource_contact;
-	globus_hashtable_t extensions = NULL;
-	globus_gram_protocol_extension_t *entry;
+	char *req_id, *resource_contact;
 	char *esc_str;
+	user_arg_t *gram_arg;
 
 	if( !process_string_arg(input_line[1], &req_id) ) {
 		HANDLE_SYNTAX_ERROR();
@@ -1038,18 +1041,48 @@ handle_gram_get_jobmanager_version(void * user_arg)
 		return 0;
 	}
 
+	gram_arg = new_gram_arg( req_id, current_cred );
+
+	globus_gram_client_attr_set_delegation_mode( gram_arg->gram_attr,
+												 GLOBUS_IO_SECURE_DELEGATION_MODE_LIMITED_PROXY );
+
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	result = globus_gram_client_get_jobmanager_version(resource_contact,
-													   &extensions);
+	result = globus_gram_client_register_get_jobmanager_version( resource_contact,
+																 gram_arg->gram_attr,
+																 callback_gram_get_jobmanager_version,
+																 (void *)gram_arg );
+
+	if (result != GLOBUS_SUCCESS) {
+		globus_gram_client_job_info_t client_info;
+		client_info.protocol_error_code = result;
+		callback_gram_get_jobmanager_version( (void *)gram_arg, NULL,
+											  &client_info );
+	}
+
+	all_args_free(user_arg);
+	return 0;
+}
+
+void
+callback_gram_get_jobmanager_version(void *arg,
+									 const char *job_contact,
+									 globus_gram_client_job_info_t *job_info)
+{
+	char *esc_str;
+	char *output;
+	user_arg_t * gram_arg;
+
+	gram_arg = (user_arg_t *)arg;
 
 	output = (char *)globus_libc_malloc(10240);
 
-	globus_libc_sprintf(output, "%s %d", req_id, result);
+	globus_libc_sprintf(output, "%s %d", gram_arg->req_id,
+						job_info->protocol_error_code);
 
-	if ( result == GLOBUS_SUCCESS ) {
-		entry = globus_hashtable_first( &extensions );
+	if ( job_info->protocol_error_code == GLOBUS_SUCCESS ) {
+		globus_gram_protocol_extension_t *entry = globus_hashtable_first( &job_info->extensions );
 		while ( entry ) {
 			strcat( output, " " );
 			strcat( output, entry->attribute );
@@ -1057,18 +1090,14 @@ handle_gram_get_jobmanager_version(void * user_arg)
 			esc_str = escape_spaces( entry->value );
 			strcat( output, esc_str );
 			free( esc_str );
-			entry = globus_hashtable_next( &extensions );
+			entry = globus_hashtable_next( &job_info->extensions );
 		}
 	}
 
 	enqueue_results(output);	
 
-	if ( extensions ) {
-		globus_gram_protocol_hash_destroy( &extensions );
-	}
-
-	all_args_free( user_arg );
-	return 0;
+	delete_gram_arg( gram_arg );
+	return;
 }
 
 int 
