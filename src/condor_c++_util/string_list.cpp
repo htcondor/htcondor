@@ -475,44 +475,6 @@ StringList::identical( const StringList &other, bool anycase ) const
 	return true;
 }
 
-bool
-StringList::similar( const StringList &other, bool anycase ) const
-{
-	char *this_str, *other_str;
-	ListIterator<char> this_iter;
-
-	// First, if they're different sizes, quit
-	if ( other.number() != this->number() ) {
-		return false;
-	}
-
-	// Walk through the other list, verify that everything is in my list
-	this_iter.Initialize ( m_strings );
-	this_iter.ToBeforeFirst ();
-	while ( this_iter.Next(this_str) ) {
-		bool	found = false;
-		ListIterator<char> other_iter;
-		other_iter.Initialize ( other.getList() );
-		other_iter.ToBeforeFirst ();
-		while ( !found && other_iter.Next(other_str) ) {
-			if ( anycase ) {
-				if ( strcasecmp( this_str, other_str ) != 0 ) {
-					found = true;
-				}
-			} else {
-				if ( strcmp( this_str, other_str ) != 0 ) {
-					found = true;
-				}
-			}
-		}
-		if( ! found ) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
 /* returns a malloc'ed string that contains a comma delimited list of
 the internals of the string list. */
 char*
