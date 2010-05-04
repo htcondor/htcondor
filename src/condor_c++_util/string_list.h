@@ -59,6 +59,8 @@ public:
 	void clearAll();
 	void remove_anycase (const char* str);
 	char *next (void) { return m_strings.Next(); }
+	
+	/** This is invalid when "current" points to NULL as stated in list.h*/
 	void deleteCurrent();
 	int number (void) const { return m_strings.Number(); };
 	bool isEmpty(void) const { return m_strings.IsEmpty(); };
