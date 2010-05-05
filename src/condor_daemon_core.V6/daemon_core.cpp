@@ -497,8 +497,8 @@ DaemonCore::~DaemonCore()
 	if (comTable != NULL )
 	{
 		for (i=0;i<maxCommand;i++) {
-			free_descrip( comTable[i].command_descrip );
-			free_descrip( comTable[i].handler_descrip );
+			free( comTable[i].command_descrip );
+			free( comTable[i].handler_descrip );
 		}
 		delete []comTable;
 	}
@@ -506,8 +506,8 @@ DaemonCore::~DaemonCore()
 	if (sigTable != NULL)
 	{
 		for (i=0;i<maxSig;i++) {
-			free_descrip( sigTable[i].sig_descrip );
-			free_descrip( sigTable[i].handler_descrip );
+			free( sigTable[i].sig_descrip );
+			free( sigTable[i].handler_descrip );
 		}
 		delete []sigTable;
 	}
@@ -527,8 +527,8 @@ DaemonCore::~DaemonCore()
 			// Todd, cleanup of DC command sockets by Derek on 2/26/01
 
 		for (i=0;i<nSock;i++) {
-			free_descrip( (*sockTable)[i].iosock_descrip );
-			free_descrip( (*sockTable)[i].handler_descrip );
+			free( (*sockTable)[i].iosock_descrip );
+			free( (*sockTable)[i].handler_descrip );
 		}
 		delete sockTable;
 	}
@@ -555,8 +555,8 @@ DaemonCore::~DaemonCore()
 	if (reapTable != NULL)
 	{
 		for (i=0;i<maxReap;i++) {
-			free_descrip( reapTable[i].reap_descrip );
-			free_descrip( reapTable[i].handler_descrip );
+			free( reapTable[i].reap_descrip );
+			free( reapTable[i].handler_descrip );
 		}
 		delete []reapTable;
 	}
@@ -941,16 +941,16 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
-	free_descrip(comTable[i].command_descrip);
+	free(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
 	else
-		comTable[i].command_descrip = EMPTY_DESCRIP;
-	free_descrip(comTable[i].handler_descrip);
+		comTable[i].command_descrip = strdup(EMPTY_DESCRIP);
+	free(comTable[i].handler_descrip);
 	if ( handler_descrip )
 		comTable[i].handler_descrip = strdup(handler_descrip);
 	else
-		comTable[i].handler_descrip = EMPTY_DESCRIP;
+		comTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries
 	nCommand++;
@@ -975,9 +975,9 @@ int DaemonCore::Cancel_Command( int command )
 			comTable[i].num = 0;
 			comTable[i].handler = 0;
 			comTable[i].handlercpp = 0;
-			free_descrip(comTable[i].command_descrip);
+			free(comTable[i].command_descrip);
 			comTable[i].command_descrip = NULL;
-			free_descrip(comTable[i].handler_descrip);
+			free(comTable[i].handler_descrip);
 			comTable[i].handler_descrip = NULL;
 			return TRUE;
 		}
@@ -1280,16 +1280,16 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 	sigTable[i].service = s;
 	sigTable[i].is_blocked = FALSE;
 	sigTable[i].is_pending = FALSE;
-	free_descrip(sigTable[i].sig_descrip);
+	free(sigTable[i].sig_descrip);
 	if ( sig_descrip )
 		sigTable[i].sig_descrip = strdup(sig_descrip);
 	else
-		sigTable[i].sig_descrip = EMPTY_DESCRIP;
-	free_descrip(sigTable[i].handler_descrip);
+		sigTable[i].sig_descrip = strdup(EMPTY_DESCRIP);
+	free(sigTable[i].handler_descrip);
 	if ( handler_descrip )
 		sigTable[i].handler_descrip = strdup(handler_descrip);
 	else
-		sigTable[i].handler_descrip = EMPTY_DESCRIP;
+		sigTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries
 	nSig++;
@@ -1337,7 +1337,7 @@ int DaemonCore::Cancel_Signal( int sig )
 	sigTable[found].num = 0;
 	sigTable[found].handler = NULL;
 	sigTable[found].handlercpp = (SignalHandlercpp)NULL;
-	free_descrip( sigTable[found].handler_descrip );
+	free( sigTable[found].handler_descrip );
 	sigTable[found].handler_descrip = NULL;
 
 	// Decrement the counter of total number of entries
@@ -1353,7 +1353,7 @@ int DaemonCore::Cancel_Signal( int sig )
 	dprintf(D_DAEMONCORE,
 					"Cancel_Signal: cancelled signal %d <%s>\n",
 					sig,sigTable[found].sig_descrip);
-	free_descrip( sigTable[found].sig_descrip );
+	free( sigTable[found].sig_descrip );
 	sigTable[found].sig_descrip = NULL;
 
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
@@ -1491,16 +1491,16 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	(*sockTable)[i].perm = perm;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
-	free_descrip((*sockTable)[i].iosock_descrip);
+	free((*sockTable)[i].iosock_descrip);
 	if ( iosock_descrip )
 		(*sockTable)[i].iosock_descrip = strdup(iosock_descrip);
 	else
-		(*sockTable)[i].iosock_descrip = EMPTY_DESCRIP;
-	free_descrip((*sockTable)[i].handler_descrip);
+		(*sockTable)[i].iosock_descrip = strdup(EMPTY_DESCRIP);
+	free((*sockTable)[i].handler_descrip);
 	if ( handler_descrip )
 		(*sockTable)[i].handler_descrip = strdup(handler_descrip);
 	else
-		(*sockTable)[i].handler_descrip = EMPTY_DESCRIP;
+		(*sockTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries if we
 	// just filled our last slot.
@@ -1607,9 +1607,9 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 		// Remove entry; mark it is available for next add via iosock=NULL
 		(*sockTable)[i].iosock = NULL;
-		free_descrip( (*sockTable)[i].iosock_descrip );
+		free( (*sockTable)[i].iosock_descrip );
 		(*sockTable)[i].iosock_descrip = NULL;
-		free_descrip( (*sockTable)[i].handler_descrip );
+		free( (*sockTable)[i].handler_descrip );
 		(*sockTable)[i].handler_descrip = NULL;
 		// If we just removed the last entry in the table, we can decrement nSock
 		if ( i == nSock - 1 ) {
@@ -1867,16 +1867,16 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	(*pipeTable)[i].perm = perm;
 	(*pipeTable)[i].service = s;
 	(*pipeTable)[i].data_ptr = NULL;
-	free_descrip((*pipeTable)[i].pipe_descrip);
+	free((*pipeTable)[i].pipe_descrip);
 	if ( pipe_descrip )
 		(*pipeTable)[i].pipe_descrip = strdup(pipe_descrip);
 	else
-		(*pipeTable)[i].pipe_descrip = EMPTY_DESCRIP;
-	free_descrip((*pipeTable)[i].handler_descrip);
+		(*pipeTable)[i].pipe_descrip = strdup(EMPTY_DESCRIP);
+	free((*pipeTable)[i].handler_descrip);
 	if ( handler_descrip )
 		(*pipeTable)[i].handler_descrip = strdup(handler_descrip);
 	else
-		(*pipeTable)[i].handler_descrip = EMPTY_DESCRIP;
+		(*pipeTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries
 	nPipe++;
@@ -1953,9 +1953,9 @@ int DaemonCore::Cancel_Pipe( int pipe_end )
 
 	// Remove entry, move the last one in the list into this spot
 	(*pipeTable)[i].index = -1;
-	free_descrip( (*pipeTable)[i].pipe_descrip );
+	free( (*pipeTable)[i].pipe_descrip );
 	(*pipeTable)[i].pipe_descrip = NULL;
-	free_descrip( (*pipeTable)[i].handler_descrip );
+	free( (*pipeTable)[i].handler_descrip );
 	(*pipeTable)[i].handler_descrip = NULL;
 
 #ifdef WIN32
@@ -2294,16 +2294,16 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].is_cpp = is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = NULL;
-	free_descrip(reapTable[i].reap_descrip);
+	free(reapTable[i].reap_descrip);
 	if ( reap_descrip )
 		reapTable[i].reap_descrip = strdup(reap_descrip);
 	else
-		reapTable[i].reap_descrip = EMPTY_DESCRIP;
-	free_descrip(reapTable[i].handler_descrip);
+		reapTable[i].reap_descrip = strdup(EMPTY_DESCRIP);
+	free(reapTable[i].handler_descrip);
 	if ( handler_descrip )
 		reapTable[i].handler_descrip = strdup(handler_descrip);
 	else
-		reapTable[i].handler_descrip = EMPTY_DESCRIP;
+		reapTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Update curr_regdataptr for SetDataPtr()
 	curr_regdataptr = &(reapTable[i].data_ptr);
@@ -9235,7 +9235,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	curr_dataptr = &(reaper->data_ptr);
 
 		// Log a message
-	char *hdescrip = reaper->handler_descrip;
+	const char *hdescrip = reaper->handler_descrip;
 	if ( !hdescrip ) {
 		hdescrip = EMPTY_DESCRIP;
 	}

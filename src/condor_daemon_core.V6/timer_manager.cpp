@@ -131,7 +131,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, TimerHandler handler,
 	if ( event_descrip ) 
 		new_timer->event_descrip = strdup(event_descrip);
 	else
-		new_timer->event_descrip = EMPTY_DESCRIP;
+		new_timer->event_descrip = strdup(EMPTY_DESCRIP);
 
 
 	new_timer->id = timer_ids++;		
@@ -656,7 +656,7 @@ void TimerManager::DeleteTimer( Timer *timer )
 	}
 
 	// free event_descrip
-	daemonCore->free_descrip( timer->event_descrip );
+	free( timer->event_descrip );
 
 	// set curr_dataptr to NULL if a handler is removing itself. 
 	if ( curr_dataptr == &(timer->data_ptr) )
