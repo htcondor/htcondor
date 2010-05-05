@@ -79,6 +79,11 @@ may be used to specify attributes from the job ad that should be saved
 in the user log whenever a new event is being written.  See
 page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 
+%gittrack 1391
+\item Administrative commands now support \Arg{-constraint}, which
+  accepts a ClassAd expression.  This applies to \Condor{checkpoint},
+  \Condor{off}, \Condor{on}, \Condor{reconfig}, \Condor{reschedule},
+  \Condor{restart}, \Condor{set\_shutdown}, and \Condor{vacate}.
 
 \end{itemize}
 
