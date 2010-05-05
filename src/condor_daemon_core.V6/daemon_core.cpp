@@ -4045,7 +4045,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
 				// but first, we should be nice and send a message back to
@@ -4065,7 +4065,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			session->renewLease();
 
 			if (!session->key()) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -4078,7 +4078,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			}
 
 			if (!sock->set_MD_mode(MD_ALWAYS_ON, session->key())) {
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator for session %s, failing; this session was requested by %s with return address %s\n",sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -4139,7 +4139,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
@@ -4158,7 +4158,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			session->renewLease();
 
 			if (!session->key()) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -4183,7 +4183,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			bool turn_encryption_on = will_enable_encryption == SecMan::SEC_FEAT_ACT_YES;
 
 			if (!sock->set_crypto_key(turn_encryption_on, session->key())) {
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption for session %s, failing; this session was requested by %s with return address %s\n",sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -4320,7 +4320,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		ClassAd auth_info;
 		if( !auth_info.initFromStream(*sock)) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-					   "receive auth_info!\n");
+					 "receive auth_info from %s!\n", sock->peer_description());
 			result = FALSE;
 			goto finalize;
 		}
@@ -4384,7 +4384,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				using_cookie = true;
 			} else {
 				// bad cookie!!!
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie!!!\n");
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie from %s!!!\n", sock->peer_description());
 				result = FALSE;
 				goto finalize;
 			}
@@ -4400,7 +4400,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 				if( ! auth_info.LookupString(ATTR_SEC_SID, &the_sid)) {
 					dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-							   "extract auth_info.%s!\n", ATTR_SEC_SID);
+							 "extract auth_info.%s from %s!\n", ATTR_SEC_SID,
+							 sock->peer_description());
 					result = FALSE;
 					goto finalize;
 				}
@@ -4411,11 +4412,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// the key id they sent was not in our cache.  this is a
 					// problem.
 
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-							   "invalid session %s, failing.\n", the_sid);
-
 					char * return_addr = NULL;
-					if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr)) {
+					auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
+							   "invalid session %s, failing; this session was requested by %s with return address %s\n", the_sid, sock->peer_description(), return_addr ? return_addr : "(none)");
+
+					if( return_addr ) {
 						send_invalidate_session( return_addr, the_sid );
 						free (return_addr);
 					}
@@ -4537,7 +4540,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 						char *crypto_method = NULL;
 						if (!the_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
-							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
+							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption for request from %s, but we have none!\n", sock->peer_description() );
 							result = FALSE;
 							goto finalize;
 						}
@@ -4550,7 +4553,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 							free (rkey);
 						} else {
 							memset (rbuf, 0, 24);
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");							
+							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", sock->peer_description() );							
 							free( crypto_method );
 							crypto_method = NULL;
 							result = FALSE;
@@ -4596,7 +4599,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					sock->encode();
 					if (!the_policy->put(*sock) ||
 						!sock->eom()) {
-						dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
+						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", sock->peer_description());
 						auth_info.dPrint (D_ALWAYS);
 						result = FALSE;
 						goto finalize;
@@ -4687,7 +4690,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
 
 					if (!auth_methods) {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad, failing!\n");
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad from %s, failing!\n", sock->peer_description());
 						result = FALSE;
 						goto finalize;
 					}
@@ -4755,7 +4758,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					sock->decode();
 					if (!sock->set_MD_mode(MD_ALWAYS_ON, the_key)) {
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing request from %s.\n", sock->peer_description());
 						result = FALSE;
 						goto finalize;
 					} else {
@@ -4777,7 +4780,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					sock->decode();
 					if (!sock->set_crypto_key(true, the_key) ) {
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", sock->peer_description());
 						result = FALSE;
 						goto finalize;
 					} else {
@@ -4852,7 +4855,9 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
 						! sock->eom() ) {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid);
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", the_sid, sock->peer_description());
+						result = FALSE;
+						goto finalize;
 					} else {
 						if (DebugFlags & D_FULLDEBUG) {
 							dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid);
@@ -4918,11 +4923,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 		sock->decode();
 		sock->allow_one_empty_message();
-
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: setting sock->decode()\n");
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: allowing an empty message for sock.\n");
-		}
 
 		// fill in the command info
 		reqFound = TRUE;
