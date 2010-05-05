@@ -67,6 +67,7 @@ bool fast = false;
 bool peaceful_shutdown = false;
 bool full = false;
 bool all = false;
+char* constraint = NULL;
 const char* subsys = NULL;
 const char* exec_program = NULL;
 int takes_subsys = 0;
@@ -129,6 +130,7 @@ usage( char *str )
 	fprintf( stderr,
 			 "  (for compatibility with other Condor tools, you can also use:)\n" );
 	fprintf( stderr, "    -name name\tgiven host\n" );
+	fprintf( stderr, "    -constraint constraint\tconstraint\n" );
 	fprintf( stderr, "    -addr <addr:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
 	if( takes_subsys ) {
@@ -623,9 +625,40 @@ main( int argc, char *argv[] )
 					}
 					break;
 				case 'o':
+				  if( (*tmp)[3] ) {
+				    switch( (*tmp)[3] ) {
+				    case 'n': 
+				      // We got a "-constraint", make sure we've got 
+				      // something else after it
+				      tmp++;
+				      if( tmp && *tmp ) {
+					constraint = *tmp;
+				      } else {
+					fprintf( stderr, "ERROR: -constraint requires another argument\n" );
+					usage( NULL );
+				      }
+
+				      break;
+				    case 'l':
 					subsys_check( MyName );
 					dt = DT_COLLECTOR;
 					break;
+				    default:
+				      fprintf( stderr, 
+					       "ERROR: unknown parameter: \"%s\"\n",
+					       *tmp );  
+				      usage( NULL );
+				      break;
+				    }
+				  } else {
+				    fprintf( stderr, 
+					     "ERROR: ambigous parameter: \"%s\"\n",
+					     *tmp );  
+				    fprintf( stderr, 
+					     "Please specify \"-collector\" or \"-constraint\"\n" );
+				    usage( NULL );
+				  }
+				  break;
 				default:
 					fprintf( stderr, 
 							 "ERROR: unknown parameter: \"%s\"\n",
@@ -634,17 +667,10 @@ main( int argc, char *argv[] )
 					break;
 				}
 			} else {
-					// Since -cmd is a developer-only, hidden
-					// option, just treat "-c" as "-collector". 
-#if 0
 				fprintf( stderr, 
 						 "ERROR: ambiguous parameter: \"%s\"\n",
 						 *tmp ); 
 				usage( NULL );
-#else
-				subsys_check( MyName );
-				dt = DT_COLLECTOR;
-#endif
 			}
 			break;
 		case 'k':
@@ -791,7 +817,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 	char *daemonname;
 	bool found_one = false;
 
-	if( all ) {
+	if( all || (constraint!=NULL) ) {
 			// If we were told -all, we can just ignore any other
 			// options and send the specifed command to every machine
 			// in the pool.
@@ -819,6 +845,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 				// with those again and skip over the arguments to
 				// options we've handled.  this includes:
 				//  -pool XXX    (but not "-peaceful")
+				//  -constraint XXX    (but not "-collector")
 				//  -cmd XXX     (but not "-collector")
 				//  -subsys XXX  (but not "-schedd" or "-startd")
 			switch( (*argv)[1] ) {
@@ -831,6 +858,9 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 			case 'c':
 				if( (*argv)[2] == 'm' ) {
 						// this is -cmd, skip the next one.
+					argv++;
+				} else if( (*argv)[3] == 'n' ) {
+						// this is -constraint, skip the next one.
 					argv++;
 				}
 				break;
@@ -1098,6 +1128,10 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		buffer.sprintf("TARGET.%s == \"%s\"", ATTR_TARGET_TYPE, subsys);
 		query.addANDConstraint(buffer.Value());
 	}
+	if (constraint!=NULL) {
+	  query.addANDConstraint(constraint);
+	}
+
 
 	if (pool_addr) {
 		q_result = query.fetchAds(ads, pool_addr, &errstack);
@@ -1122,8 +1156,13 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	}
 	if( had_error ) {
 		if( ! name_list ) {
-			fprintf( stderr, "Can't find addresses for %s's for -all\n", 
-					 real_dt ? daemonString(real_dt) : "daemon" );
+		  if ( constraint!=NULL ) {
+		    fprintf( stderr, "Can't find addresses for %s's for constraint '%s'\n", 
+			     real_dt ? daemonString(real_dt) : "daemon", constraint );
+		  } else {
+		    fprintf( stderr, "Can't find addresses for %s's for -all\n", 
+			     real_dt ? daemonString(real_dt) : "daemon" );
+		  }
 		} else {
 			name_list->rewind();
 			while( (name = name_list->next()) ) {
@@ -1486,15 +1525,20 @@ version()
 }
 
 
-// Want to send a command to all hosts in the pool.
+// Want to send a command to all hosts in the pool or
+// modulo the constraint, of course
 void
 handleAll()
 {
 	DaemonList daemons;
 
 	if( ! resolveNames(&daemons, NULL) ) {
-		fprintf( stderr, "ERROR: Failed to find daemons for -all\n" );
-		exit( 1 );
+	  if ( constraint!=NULL ) {
+	    fprintf( stderr, "ERROR: Failed to find daemons matching the constraint\n" );
+	  } else {
+	    fprintf( stderr, "ERROR: Failed to find daemons for -all\n" );
+	  }
+	  exit( 1 );
 	}
 
 		// Now, send commands to all the daemons we know about.
