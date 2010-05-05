@@ -46,7 +46,11 @@ StringList::isSeparator( char x )
 
 StringList::StringList(const char *s, const char *delim ) 
 {
-	m_delimiters = strnewp( delim );
+	if ( delim ) {
+		m_delimiters = strnewp( delim );
+	} else {
+		m_delimiters = strnewp( "" );
+	}
 	if ( s ) {
 		initializeFromString(s);
 	}

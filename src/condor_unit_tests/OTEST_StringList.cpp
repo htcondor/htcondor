@@ -572,10 +572,6 @@ static bool test_constructor_null_list() {
 static bool test_constructor_null_delim() {
 	e.emit_test("Test the StringList constructor when passed a null string for "
 		"the delimiter of the StringList.");
-	e.emit_alert("This test segfaults! See ticket #1388");
-	e.emit_result_failure(__LINE__);
-	return false;
-/*
 	StringList sl("abc", NULL);
 	char* expect = "abc";
 	char* retVal = sl.print_to_string();
@@ -594,7 +590,6 @@ static bool test_constructor_null_delim() {
 	e.emit_result_success(__LINE__);
 	niceFree(retVal);
 	return true;
-*/
 }
 
 static bool test_constructor_null_both() {
