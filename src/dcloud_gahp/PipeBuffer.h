@@ -38,13 +38,13 @@ const int PIPE_BUFFER_READAHEAD_SIZE = 1024;
 
 class PipeBuffer {
 public:
-	PipeBuffer();
+    PipeBuffer();
 
-	std::string *GetNextLine();
-	void setPipeEnd(const int _pipe_end) { pipe_end = _pipe_end; }
+    std::string *GetNextLine();
+    void setPipeEnd(const int _pipe_end) { pipe_end = _pipe_end; }
 
 protected:
-	int pipe_end;
+    int pipe_end;
 };
 
 #endif

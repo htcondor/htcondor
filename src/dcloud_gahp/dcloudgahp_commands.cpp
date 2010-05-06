@@ -36,9 +36,9 @@ static std::string create_instance_output(int reqid,
     output_string += inst->id;
     output_string += ' ';
 
-	output_string += "state=";
-	output_string += inst->state;
-	output_string += ' ';
+    output_string += "state=";
+    output_string += inst->state;
+    output_string += ' ';
 
     output_string += "actions=";
     act = inst->actions;
@@ -410,7 +410,7 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     int reqid;
     struct deltacloud_api api;
     struct deltacloud_instance inst;
-	int rc;
+    int rc;
     bool ret = FALSE;
 
     dcloudprintf("called\n");
@@ -453,7 +453,7 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     }
 
     rc = deltacloud_get_instance_by_name(&api, name, &inst);
-	if (rc < 0 && rc != DELTACLOUD_FIND_ERROR) {
+    if (rc < 0 && rc != DELTACLOUD_FIND_ERROR) {
         dcloudprintf("Could not get all instances\n");
         output_string = create_failure(reqid, "Instance_Fetch_Failure");
         goto cleanup_library;
@@ -461,16 +461,16 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
 
     output_string += itoa(reqid);
     output_string += " NULL ";
-	if (rc == 0) {
-		output_string += inst.id;
-	} else {
-		output_string += "NULL";
-	}
+    if (rc == 0) {
+        output_string += inst.id;
+    } else {
+        output_string += "NULL";
+    }
     output_string += '\n';
 
-	if (rc == 0) {
-		deltacloud_free_instance(&inst);
-	}
+    if (rc == 0) {
+        deltacloud_free_instance(&inst);
+    }
 
     ret = TRUE;
 

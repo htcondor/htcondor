@@ -60,11 +60,11 @@ static void safe_printf(const char *fmt, ...)
 {
     va_list va_args;
 
-	lock_printf();
+    lock_printf();
     va_start(va_args, fmt);
     vprintf(fmt, va_args);
     va_end(va_args);
-	unlock_printf();
+    unlock_printf();
 }
 
 static int parse_gahp_command(const char *raw, Gahp_Args *args)
@@ -90,7 +90,7 @@ static int parse_gahp_command(const char *raw, Gahp_Args *args)
     for (int i = 0; i<len; i++) {
 
         if ( raw[i] == '\\' ) {
-            i++; 			// skip this char
+            i++; // skip this char
             if (i<(len-1))
                 buff[buff_len++] = raw[i];
             continue;
@@ -104,7 +104,7 @@ static int parse_gahp_command(const char *raw, Gahp_Args *args)
              */
             buff[buff_len++] = '\0';
             args->add_arg( strdup(buff) );
-            buff_len = 0;	// re-set temporary buffer
+            buff_len = 0; // re-set temporary buffer
 
             beginning = i+1; // next char will be one after whitespace
         }
@@ -126,7 +126,7 @@ static void gahp_output_return(const char **results, const int count)
 {
     int i;
 
-	lock_printf();
+    lock_printf();
 
     for (i = 0; i < count; i++) {
         printf("%s", results[i]);
@@ -136,19 +136,19 @@ static void gahp_output_return(const char **results, const int count)
 
     printf("\n");
 
-	unlock_printf();
+    unlock_printf();
 }
 
 static void gahp_output_return_success(void)
 {
-	const char *result[] = {GAHP_RESULT_SUCCESS};
-	gahp_output_return(result, 1);
+    const char *result[] = {GAHP_RESULT_SUCCESS};
+    gahp_output_return(result, 1);
 }
 
 static void gahp_output_return_error(void)
 {
-	const char* result[] = {GAHP_RESULT_ERROR};
-	gahp_output_return(result, 1);
+    const char* result[] = {GAHP_RESULT_ERROR};
+    gahp_output_return(result, 1);
 }
 
 static void unregisterAllDcloudCommands(void)
@@ -170,14 +170,14 @@ static void handle_command_results(Gahp_Args *args)
     }
 
     pthread_mutex_lock(&results_list_mutex);
-	lock_printf();
+    lock_printf();
     printf("%s %d\n", GAHP_RESULT_SUCCESS, results_list.size());
 
     while (!results_list.empty()) {
         printf("%s", results_list.front().c_str());
         results_list.pop();
     }
-	unlock_printf();
+    unlock_printf();
     pthread_mutex_unlock(&results_list_mutex);
     async_results_signalled = false;
 }

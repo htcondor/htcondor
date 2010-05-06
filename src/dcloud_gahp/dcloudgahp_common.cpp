@@ -41,14 +41,14 @@ std::string create_failure(int req_id, const char *err_msg)
 
 Gahp_Args::Gahp_Args()
 {
-	argv = NULL;
-	argc = 0;
-	argv_size = 0;
+    argv = NULL;
+    argc = 0;
+    argv_size = 0;
 }
 
 Gahp_Args::~Gahp_Args()
 {
-	reset();
+    reset();
 }
 
 /* Restore the object to its fresh, clean state. This means that argv is
@@ -57,19 +57,19 @@ Gahp_Args::~Gahp_Args()
 void
 Gahp_Args::reset()
 {
-	if ( argv == NULL ) {
-		return;
-	}
+    if ( argv == NULL ) {
+        return;
+    }
 
-	for ( int i = 0; i < argc; i++ ) {
-		free( argv[i] );
-		argv[i] = NULL;
-	}
+    for ( int i = 0; i < argc; i++ ) {
+        free( argv[i] );
+        argv[i] = NULL;
+    }
 
-	free( argv );
-	argv = NULL;
-	argv_size = 0;
-	argc = 0;
+    free( argv );
+    argv = NULL;
+    argv_size = 0;
+    argc = 0;
 }
 
 /* Add an argument to the end of the args array. argv is extended
@@ -80,13 +80,13 @@ Gahp_Args::reset()
 void
 Gahp_Args::add_arg( char *new_arg )
 {
-	if ( new_arg == NULL ) {
-		return;
-	}
-	if ( argc >= argv_size ) {
-		argv_size += 60;
-		argv = (char **)realloc( argv, argv_size * sizeof(char *) );
-	}
-	argv[argc] = new_arg;
-	argc++;
+    if ( new_arg == NULL ) {
+        return;
+    }
+    if ( argc >= argv_size ) {
+        argv_size += 60;
+        argv = (char **)realloc( argv, argv_size * sizeof(char *) );
+    }
+    argv[argc] = new_arg;
+    argc++;
 }

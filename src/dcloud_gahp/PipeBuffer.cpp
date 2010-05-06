@@ -24,7 +24,7 @@
 
 PipeBuffer::PipeBuffer()
 {
-	pipe_end = -1;
+    pipe_end = -1;
 }
 
 std::string *
