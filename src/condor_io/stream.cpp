@@ -384,6 +384,26 @@ Stream::code( MyString	&s)
 
 
 int 
+Stream::code( std::string	&s)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(s);
+		case stream_decode:
+			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(std::string &s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(std::string &s)'s _coding is illegal!");
+			break;
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+int 
 Stream::code( char	*&s, int		&len)
 {
 	switch(_coding){
@@ -1312,6 +1332,12 @@ Stream::put( const MyString &s)
 	return put( s.Value() );
 }
 
+int 
+Stream::put( const std::string &s)
+{
+	return put( s.c_str() );
+}
+
 int
 Stream::put_secret( char const *s )
 {
@@ -1965,6 +1991,25 @@ Stream::get( MyString	&s)
 	}
 	else {
 		s = NULL;
+	}
+	return result;
+}
+
+int 
+Stream::get( std::string	&s)
+{
+	char const *ptr = NULL;
+	int result = get_string_ptr(ptr);
+	if( result == TRUE ) {
+		if( ptr ) {
+			s = ptr;
+		}
+		else {
+			s = "";
+		}
+	}
+	else {
+		s = "";
 	}
 	return result;
 }
