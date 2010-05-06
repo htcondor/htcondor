@@ -890,13 +890,13 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
     return (status == 0) ? FALSE : TRUE;
 }
 
-void Condor_Auth_X509::setFQAN(MyString fqan) {
-	dprintf (D_FULLDEBUG, "ZKM: setting FQAN: %s\n", fqan.Value());
+void Condor_Auth_X509::setFQAN(const char *fqan) {
+	dprintf (D_FULLDEBUG, "ZKM: setting FQAN: %s\n", fqan ? fqan : "");
 	m_fqan = fqan;
 }
 
-MyString Condor_Auth_X509::getFQAN() {
-	return m_fqan;
+const char *Condor_Auth_X509::getFQAN() {
+	return m_fqan.Value();
 }
 
 #endif
