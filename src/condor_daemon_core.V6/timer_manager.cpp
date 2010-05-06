@@ -131,7 +131,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, TimerHandler handler,
 	if ( event_descrip ) 
 		new_timer->event_descrip = strdup(event_descrip);
 	else
-		new_timer->event_descrip = strdup(EMPTY_DESCRIP);
+		new_timer->event_descrip = strdup("<NULL>");
 
 
 	new_timer->id = timer_ids++;		

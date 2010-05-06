@@ -73,7 +73,6 @@ template <class Key, class Value> class HashTable; // forward declaration
 static const int KEEP_STREAM = 100;
 static const int CLOSE_STREAM = 101;
 static const int MAX_SOCKS_INHERITED = 4;
-static const char* EMPTY_DESCRIP = "<NULL>";
 
 /**
    Magic fd to include in the 'std' array argument to Create_Process()

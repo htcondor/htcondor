@@ -115,6 +115,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include <sched.h>
 #endif
 
+static const char* EMPTY_DESCRIP = "<NULL>";
+
 // special errno values that may be returned from Create_Process
 const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
