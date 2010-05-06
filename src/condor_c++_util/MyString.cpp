@@ -50,6 +50,12 @@ MyString::MyString(const char* S)
     *this=S; // = operator is overloaded!
 };
 
+MyString::MyString(const std::string& S) 
+{
+	init();
+    *this=S; // = operator is overloaded!
+}
+
 MyString::MyString(const MyString& S) 
 {
 	init();
@@ -111,6 +117,13 @@ MyString& MyString::
 operator=(const MyString& S) 
 {
 	assign_str(S.Value(), S.Len);
+    return *this;
+}
+
+MyString& MyString::
+operator=(const std::string& S) 
+{
+	assign_str(S.c_str(), S.length());
     return *this;
 }
 

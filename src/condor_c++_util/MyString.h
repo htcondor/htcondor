@@ -24,6 +24,7 @@
 #include "condor_header_features.h"
 #include <string.h>
 #include <stdarg.h>
+#include <string>
 
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
@@ -55,6 +56,9 @@ class MyString
 
 	/** Constructor to make a copy of a null-terminated character string. */
 	MyString(const char* S);
+
+	/** Constructor to copy a std::string */
+	MyString(const std::string& S);
 
 	/** Copy constructor */
 	MyString(const MyString& S);
@@ -117,6 +121,9 @@ class MyString
 
 	/** Copies a MyString into the object */
 	MyString& operator=(const MyString& S);
+
+	/** Copies a std::string into the object */
+	MyString& operator=(const std::string& S);
 
 	/** Copies a null-terminated character string into the object */
 	MyString& operator=( const char *s );
