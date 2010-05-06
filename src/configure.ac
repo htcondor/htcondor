@@ -3238,6 +3238,11 @@ AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$enable_proper" = xyes],
   [AC_CHECK_HEADERS([openssl/ssl.h], [],
     [AC_MSG_ERROR([gsoap in proper mode requires openssl/ssl.h])])])
 
+CHECK_EXTERNAL([libdcloudapi],[0.2],[soft],
+               [libdcloudapi for deltacloud],
+               [MF_LIB_CHECK([libdcloudapi],
+                             [[dcloudapi deltacloud_initialize]], [libdcloudapi])])
+
 # Before the --unresolved-symbols flag was founded we needed to use
 # the following test. We will keep it around incase it is needed
 # again, for linkers that do not support --unresolved-symbols, or

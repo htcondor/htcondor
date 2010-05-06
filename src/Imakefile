@@ -66,6 +66,12 @@
 #define NordugridGahp
 #endif
 
+#if HAVE_EXT_LIBDCLOUDAPI
+#define DeltacloudGahp DELTACLOUD_GAHP
+#else
+#define DeltacloudGahp
+#endif
+
 #if HAVE_EXT_HADOOP
 #define hdfsProgs hdfs
 #else
@@ -100,7 +106,7 @@
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
 		JobRouterProgs GlobusGahps NordugridGahp startd_factory \
-		CreamGahp power SoapShell SHARED_PORT_PROGS
+		CreamGahp power SoapShell SHARED_PORT_PROGS DeltacloudGahp
 
 #define Libraries \
 	target-classad 						\
@@ -352,6 +358,10 @@ condor_object_target(vm-gahp)
 
 #if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
 condor_object_target(amazon)
+#endif
+
+#if HAVE_EXT_LIBDCLOUDAPI
+object_target(DELTACLOUD_GAHP,dcloud_gahp)
 #endif
 
 #if HAVE_EXT_DRMAA
