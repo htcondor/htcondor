@@ -298,15 +298,20 @@ static void *worker_function(void *ptr)
     dcloudprintf("Worker done!\n");
 
 cleanup:
-    pthread_mutex_lock(&results_list_mutex);
-    results_list.push(output_string);
-    pthread_mutex_unlock(&results_list_mutex);
-    pthread_mutex_lock(&async_mutex);
-    if (async_mode && !async_results_signalled) {
+    if (async_mode) {
+      pthread_mutex_lock(&results_list_mutex);
+      results_list.push(output_string);
+      pthread_mutex_unlock(&results_list_mutex);
+      pthread_mutex_lock(&async_mutex);
+      if (!async_results_signalled) {
         safe_printf("R\n");
         async_results_signalled = true;
+      }
+      pthread_mutex_unlock(&async_mutex);
     }
-    pthread_mutex_unlock(&async_mutex);
+    else {
+        safe_printf("%s", output_string.c_str());
+    }
 
     free(data->fullcommand);
     free(data);
@@ -344,8 +349,15 @@ static void handle_dcloud_commands(const char *cmd, const char *fullcommand)
                 free(data);
                 return;
             }
-            pthread_detach(thread);
-            gahp_output_return_success();
+
+            if (async_mode) {
+                pthread_detach(thread);
+                gahp_output_return_success();
+            }
+            else {
+                pthread_join(thread, NULL);
+            }
+
             return;
         }
     }
