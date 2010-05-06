@@ -171,7 +171,7 @@ static void handle_command_results(Gahp_Args *args)
 
     pthread_mutex_lock(&results_list_mutex);
     lock_printf();
-    printf("%s %d\n", GAHP_RESULT_SUCCESS, results_list.size());
+    printf("%s %zd\n", GAHP_RESULT_SUCCESS, results_list.size());
 
     while (!results_list.empty()) {
         printf("%s", results_list.front().c_str());
