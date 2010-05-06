@@ -402,11 +402,9 @@ static void handlePipe()
         delete line;
     }
 
-	// check if GetNextLine() returned NULL because of an error or EOF
-	if (m_stdin_buffer.IsError() || m_stdin_buffer.IsEOF()) {
-		dcloudprintf("stdin buffer closed, exiting\n");
-		exit(1);
-	}
+    /* if we broke out of the loop, then we either got an EOF or an error. */
+    dcloudprintf("stdin buffer closed, exiting\n");
+    exit(1);
 }
 
 static void registerDcloudGahpCommand(const char *command, workerfn workerfunc)
@@ -465,9 +463,7 @@ int main(int argc, char *argv[])
 
     m_stdin_buffer.setPipeEnd(0);
 
-    while (1)
-        /* handle input from stdin */
-        handlePipe();
+    handlePipe();
 
     return 0;
 }
