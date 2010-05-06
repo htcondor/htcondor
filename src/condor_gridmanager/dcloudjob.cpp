@@ -617,7 +617,7 @@ void DCloudJob::doEvaluateState()
 				// submission, in both the gridmanager and the schedd.
 
 				// If we are doing a rematch, we are simply waiting around
-				// for the schedd to be updated and subsequently this globus job
+				// for the schedd to be updated and subsequently this dcloud job
 				// object to be destroyed.  So there is nothing to do.
 				if ( wantRematch ) {
 					break;
@@ -640,13 +640,13 @@ void DCloudJob::doEvaluateState()
 
 				if ( wantResubmit ) {
 					wantResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus because %s==TRUE\n",
+					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to DCloud because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
 				}
 
 				if ( doResubmit ) {
 					doResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus (last submit failed)\n",
+					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to DCloud (last submit failed)\n",
 						procID.cluster, procID.proc );
 				}
 
