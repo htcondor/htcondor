@@ -230,6 +230,8 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
         action_ret = deltacloud_instance_reboot(&api, &instance);
     else if (STRCASEEQ(action, "START"))
         action_ret = deltacloud_instance_start(&api, &instance);
+    else if (STRCASEEQ(action, "DESTROY"))
+        action_ret = deltacloud_instance_destroy(&api, &instance);
     else {
         dcloudprintf("Invalid action %s\n", action);
         output_string = create_failure(reqid, "Invalid_Action");
