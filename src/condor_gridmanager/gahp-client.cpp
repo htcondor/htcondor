@@ -8928,11 +8928,18 @@ int GahpClient::dcloud_status_all( const char *service_url,
 		if ( result->argc < 2 || result->argc % 2 != 0 ) {
 			EXCEPT( "Bad %s result", command );
 		} else if ( result->argc == 2 ) {
-			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
-				EXCEPT( "Bad %s result", command );
+			// we could have one of:
+			// req_id NULL # meaning success, but nothing running
+			// req_id <error_string> # meaning failure
+			if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+				// OK, success; clear out the instance_ids and
+				// statuses, and then we are done
+				instance_ids.clearAll();
+				statuses.clearAll();
+			} else {
+				error_string = result->argv[1];
+				rc = 1;
 			}
-			error_string = result->argv[1];
-			rc = 1;
 		} else {
 			if ( strcmp( result->argv[1], NULLSTRING ) ) {
 				EXCEPT( "Bad %s result", command );
