@@ -61,9 +61,6 @@ sub SRC 	{ 0; };
 # Configurable settings
 ######################################################################
 
-# Location of the nightly build tag file
-my $tag_file = "/space/cvs/nwo-build-tags";
-
 # CVSROOT to use for checking out from CVS
 my $CVSROOT = "/space/cvs/CONDOR_SRC";
 
@@ -385,11 +382,6 @@ sub parseOptions
         printUsage( 0 );
     }
 
-    # Replace the default tag_file location if we're using git
-    if( defined $opt_git ) {
-		$tag_file = "/space/git/nwo-build-tags.git";
-    }
-
     if( defined $opt_build ) {
         if( defined $opt_test ) {
             print "ERROR: You cannot specify both --build and --test\n";
@@ -495,15 +487,22 @@ sub parseOptions
 	    print "You requested a split fetch from two branches\n";
         $tags{"$opt_other_tag"} = "split_fetch";
     } elsif ( defined $opt_nightly ) {
-        print "You specified --nightly, will fetch tags\n";
+        print "You specified --nightly, will munge tag name with --desc for " . 
+				"Condor's NMI pages\n";
     } elsif ( defined $opt_workspace ) {
 		print "Working from local workspace $opt_workspace\n";
 		$src_workspace = File::Spec->rel2abs($opt_workspace);
     } else {
         print "You need to define either --tag and --module, ";
-        print "or use --nightly, or use --workspace\n";
+        print "possibly with --nightly, or use --workspace\n";
         printUsage( 1 );
     }
+
+	if ( defined($opt_nightly) && !(defined($opt_tag) || defined($opt_module)))
+	{
+		print "ERROR: You need to specify --tag and --module with --nightly\n";
+		printUsage( 1 );
+	}
 
     if( defined($opt_externals) ) {
         if( defined($opt_nightly) ) {
@@ -521,8 +520,6 @@ sub parseOptions
 
     if( defined $opt_workspace ) {
         if( defined $opt_nightly ) {
-                # Notably, the %tags list can have a list of tags
-                # OR a dummy entry for a workspace build
             print "ERROR: You cannot use --workspace with --nightly\n";
             printUsage( 1 );
         }
@@ -609,9 +606,9 @@ Where [options] can be any of:
 					--src-tag>
 
 Where [build-options] can be any of:
---nightly          <Default for builds: pulls the nightly tags file from 
-                    http://www.cs.wisc.edu/condor/nwo-build-tags and submits
-                    builds for all the tags listed there>
+--nightly          <Munges the description of a build to be programmatically
+                    understood by the Condor NMI pages. You must still supply
+                    --tag and --module.>
 --externals=string <Module name to use for fetching externals (only needed 
                     if the tag defined with --tag doesn't define them)>
 --without-tests    <Submit a build job such that it will NOT submit
@@ -649,11 +646,6 @@ END_USAGE
 
 sub getTags
 {
-    if( defined $opt_nightly ) {
-        getNightlyTags();
-    }
-    # else nothing else to do?
-
     # Sanity checking 
     if( (scalar keys %tags > 1) && (exists $tags{'workspace'}) ) {
         # parseOptions should have caught this, but just in case.
@@ -661,18 +653,6 @@ sub getTags
     }
 }
 
-
-sub getNightlyTags
-{
-    open(TAGS, $tag_file) || 
-        die "Can't read nightly tag file $tag_file: $!\n";
-    while (<TAGS>) {
-        chomp($_);
-        my @tag = split /\s/, $_;
-        $tags{$tag[1]} = $tag[0]; 
-    }
-    close(TAGS);
-}
 
 sub getSubmitInfoNew
 {
@@ -754,12 +734,10 @@ sub loadModule
 	
 	$mpath = dirname($module_path);
 
-	# The --nightly code path expects to reload modules multiple times because
-	# they are different versions. Here we make the idempotency check fail so
+	# Here we make the idempotency check fail so
 	# the new module gets loaded and stomps on the old module's
-	# definitions--which is what we want. This is vile and ugly and is a result
-	# of the coupling between the nightlies and this script. See gittrac ticket
-	# #974 for details about this coupling.
+	# definitions--which is what we want. This is vile and ugly but does the
+	# thing people implicitly expect.
 	if (exists($INC{"$module_name.pm"})) {
 		print "Removing perl's module idempotency check to allow reloading " .
 				"of $module_name.pm with new definitions.\n";
