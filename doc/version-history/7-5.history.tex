@@ -134,6 +134,10 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   management commands when security negotiation was disabled
   (e.g. \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}).
 
+% gittrack 1395
+\item Fixed a bug introduced in 7.5.1.  ClassAd string literals containing
+characters with negative ascii values were not accepted.
+
 \end{itemize}
 
 \noindent Known Bugs:
