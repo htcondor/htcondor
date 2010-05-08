@@ -335,3 +335,8 @@ same true, true ? true : false
 same false, true ? false : true
 same true, true ? true : undefined
 same undefined, true ? undefined : true
+
+echo Testing characters with negative ascii values
+# the following used to not even parse on some systems
+same "–", "–"
+
