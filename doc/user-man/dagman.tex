@@ -1957,4 +1957,50 @@ progresses.
 
 If conflicting parameters are used in a DOT command, the last one
 listed is used.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGLotsaJobs}Utilizing the Power of DAGMan for Large Numbers of Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!large numbers of jobs}
+
+Using DAGMan is highly recommended when large numbers of jobs are
+to be submitted.
+The recommendation holds whether the jobs are represented by
+a DAG and therefore have dependencies, or all the jobs are
+independent of each other, such as they might be in a parameter sweep.
+DAGMan offers:
+\begin{itemize}
+\item{Throttling}
+  to limit the number of submitted job at any point in time.
+\item{Retry of jobs that fail.}
+  A useful tool when an intermittent error may cause a job to fail
+  or fail to run to completion when attempted at one point in time,
+  but not at another point in time.
+\item{Automatic generation of support administration, facilitating the
+  rerunning of only jobs that fail.}
+\item{The ability to run scripts before and/or after the execution of
+individual jobs.}
+\end{itemize}
+
+Each of these capabilities is described in detail (above)
+within this manual section about DAGMan.
+To make effective use of DAGMan, there is no way around reading the 
+appropriate subsections.
+
+To utilize DAGMan for large numbers of independent jobs,
+there are generally two ways of organizing and specifying the
+files that control the jobs.
+Both ways presume that programs or scripts will generate the files,
+because the files are either large and repetitive
+or because there are a large number of files similar files to be
+generated representing the large numbers of jobs.
+
+\begin{description}
+\item[Unique submit description files for each of the many jobs.]
+
+\item[Single submit description file.]
+\end{description}
+
+\MoreTodo
+
 \index{DAGMan|)}
