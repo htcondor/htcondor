@@ -1963,20 +1963,20 @@ listed is used.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!large numbers of jobs}
 
-Using DAGMan is highly recommended when large numbers of jobs are
-to be submitted.
+Using DAGMan is recommended when submitting large numbers of jobs.
 The recommendation holds whether the jobs are represented by
-a DAG and therefore have dependencies, or all the jobs are
+a DAG due to dependencies, or all the jobs are
 independent of each other, such as they might be in a parameter sweep.
 DAGMan offers:
 \begin{itemize}
 \item{Throttling}
-  to limit the number of submitted job at any point in time.
+  to limit the number of submitted jobs at any point in time.
 \item{Retry of jobs that fail.}
   A useful tool when an intermittent error may cause a job to fail
   or fail to run to completion when attempted at one point in time,
   but not at another point in time.
-\item{Automatic generation of support administration, facilitating the
+  And, note that what constitutes failure is user-defined.
+\item{Automatic generation of the administrative support that facilitates the
   rerunning of only jobs that fail.}
 \item{The ability to run scripts before and/or after the execution of
 individual jobs.}
@@ -1987,16 +1987,62 @@ within this manual section about DAGMan.
 To make effective use of DAGMan, there is no way around reading the 
 appropriate subsections.
 
-To utilize DAGMan for large numbers of independent jobs,
+To run DAGMan with large numbers of independent jobs,
 there are generally two ways of organizing and specifying the
 files that control the jobs.
 Both ways presume that programs or scripts will generate the files,
 because the files are either large and repetitive
-or because there are a large number of files similar files to be
+or because there are a large number of similar files to be
 generated representing the large numbers of jobs.
+The two file types needed are the DAG input file and the
+submit description file(s) for the Condor jobs represented.
+Each of the two ways is presented separately:
 
 \begin{description}
-\item[Unique submit description files for each of the many jobs.]
+\item[A unique submit description file for each of the many jobs.]
+A single DAG input file lists each of the jobs and specifies
+a distinct Condor submit description file for each job.
+The DAG input file is simple to generate, as it chooses an
+identifier for each job and names the submit description file.
+For example, the simplest DAG input file for a set of 1000 independent jobs,
+as might be part of a parameter sweep, appears as
+\begin{verbatim}
+  # file sweep.dag
+  JOB job0 job0.submit
+  JOB job1 job1.submit
+  JOB job2 job2.submit
+  .
+  .
+  .
+  JOB job999 job999.submit
+\end{verbatim}
+There are 1000 submit description files, with a unique one for
+each of the job<N> jobs.
+Assuming that all files associated with this set of jobs are in the
+same directory, and that files continue the same naming and numbering
+scheme, the submit description file for \File{job6.submit}
+might appear as
+\begin{verbatim}
+  # file job6.submit
+  universe = vanilla
+  executable = /path/to/executable
+  log = job6.log
+  output = job6.out
+  notification = Never
+  arguments = "-file job6.out"
+  queue
+\end{verbatim}
+
+Submission of the entire set of jobs is
+\begin{verbatim}
+  condor_submit_dag sweep.dag
+\end{verbatim}
+
+A benefit to having unique submit description files for each of the
+jobs is that they are available, if one of the jobs needs to be
+submitted individually.
+A drawback to having unique submit description files for each of the jobs
+is that there are lots of files, one for each job.
 
 \item[Single submit description file.]
 \end{description}
