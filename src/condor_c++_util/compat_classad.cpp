@@ -2262,6 +2262,7 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 	}
 }	
 
+#if 0
 static ClassAd job_attrs_ad;
 static ClassAd machine_attrs_ad;
 static ClassAd schedd_attrs_ad;
@@ -2722,12 +2723,14 @@ static void InitTargetAttrLists()
 
 	target_attrs_init = true;
 }
+#endif
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();
 
+#if 0
 	if ( !target_attrs_init ) {
 		InitTargetAttrLists();
 	}
@@ -2814,6 +2817,7 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 		return tree->Copy( );
 	}
 	}
+#endif
 }
 
 const char *ConvertEscapingOldToNew( const char *str )
