@@ -178,6 +178,8 @@ void EvalResult::toString(bool force)
 	}
 }
 
+static StringList ClassAdUserLibs;
+
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
 
@@ -186,6 +188,24 @@ Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+
+	char *new_libs = param( "CLASSAD_USER_LIBS" );
+	if ( new_libs ) {
+		StringList new_libs_list( new_libs );
+		free( new_libs );
+		new_libs_list.rewind();
+		char *new_lib;
+		while ( (new_lib = new_libs_list.next()) ) {
+			if ( !ClassAdUserLibs.contains( new_lib ) ) {
+				if ( classad::FunctionCall::RegisterSharedLibraryFunctions( new_lib ) ) {
+					ClassAdUserLibs.append( new_lib );
+				} else {
+					dprintf( D_ALWAYS, "Failed to load ClassAd user library %s: %s\n",
+							 new_lib, classad::CondorErrMsg.c_str() );
+				}
+			}
+		}
+	}
 }
 
 static classad::AttributeReference *the_my_ref = NULL;

@@ -506,9 +506,8 @@ GLIDEIN_SERVER_URLS = \
 ## just disable it).
 #NEGOTIATOR_IGNORE_USER_PRIORITIES = False
 
-## These are the directories used to locate classad plug-in functions
-#CLASSAD_SCRIPT_DIRECTORY =
-#CLASSAD_LIB_PATH =
+## This is a list of libraries containing ClassAd plug-in functions.
+#CLASSAD_USER_LIBS =
 
 ## This setting tells Condor whether to delegate or copy GSI X509
 ## credentials when sending them over the wire between daemons.
