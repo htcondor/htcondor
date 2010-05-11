@@ -4604,7 +4604,7 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	int command = -1;
 	int rval;
 
-	dprintf (D_ALWAYS, "Activity on stashed negotiator socket\n");
+	dprintf (D_ALWAYS, "Activity on stashed negotiator socket: %s\n", ((Sock *)stream)->get_sinful_peer());
 
 	// attempt to read a command off the stream
 	stream->decode();
