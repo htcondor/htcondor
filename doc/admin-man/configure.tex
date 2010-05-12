@@ -6972,6 +6972,34 @@ Configuration File Macros}
 %  \Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
   \verb@\\.\pipe\procd_pipe@ on Windows.
 
+\label{param:UseGIDProcessTracking}
+\item[\Macro{USE\_GID\_PROCESS\_TRACKING}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, a job's initial process is assigned a dedicated GID
+  which is further used by the \Condor{procd} to reliably track all
+  processes associated with a job.
+  When \Expr{True}, values for \MacroNI{MIN\_TRACKING\_GID} and 
+  \MacroNI{MAX\_TRACKING\_GID} must also be set, or Condor will abort,
+  logging an error message.
+  See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
+  a detailed description.
+
+\label{param:MinTrackingGID}
+\item[\Macro{MIN\_TRACKING\_GID}]
+  An integer value, that together with \MacroNI{MAX\_TRACKING\_GID}
+  specify a range of GIDs to be assigned on a per slot basis for
+  use by the \Condor{procd} in tracking processes associated with a job.
+  See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
+  a detailed description.
+
+\label{param:MaxTrackingGID}
+\item[\Macro{MAX\_TRACKING\_GID}]
+  An integer value, that together with \MacroNI{MIN\_TRACKING\_GID}
+  specify a range of GIDs to be assigned on a per slot basis for
+  use by the \Condor{procd} in tracking processes associated with a job.
+  See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
+  a detailed description.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
