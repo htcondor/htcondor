@@ -24,6 +24,7 @@
 #include "basename.h"
 #include "tmp_dir.h"
 #include "dagman_multi_dag.h"
+#include "condor_getcwd.h"
 
 // Just so we can link in the ReadMultipleUserLogs class.
 MULTI_LOG_HASH_INSTANCE;
@@ -128,11 +129,8 @@ MakePathAbsolute(MyString &filePath, MyString &errMsg)
 
 	if ( !fullpath( filePath.Value() ) ) {
 		MyString    currentDir;
-		char    tmpCwd[PATH_MAX];
-		if ( getcwd(tmpCwd, PATH_MAX) ) {
-			currentDir = tmpCwd;
-		} else {
-			errMsg = MyString( "getcwd() failed with errno " ) +
+		if ( ! condor_getcwd( currentDir ) ) {
+			errMsg = MyString( "condor_getcwd() failed with errno " ) +
 						errno + " (" + strerror(errno) + ") at " + __FILE__
 						+ ":" + __LINE__;
 			result = false;
