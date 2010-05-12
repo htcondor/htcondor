@@ -1,15 +1,18 @@
 #! /usr/bin/env perl
 
+# It may help you to read:
+# https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=1397
+
 # Perl script to prepare and submit the nightly Condor builds in NMI:
 # 0) Reads the nightly tags file.
 # 1) Checks out the latest copy of nmi_tools/condor_nmi_submit from the
 #	appropriate tag.
 # 2) Invokes condor_nmi_submit with the right arguments.
 
-# The authoritative copy of this script is in the origin/master of our
-# Condor repository. If you need to change what this script does, change it
-# there, commit it, then copy the script to ~cndrauto on nmi-s006 where
-# the cron job will pick it up.
+# The authoritative copy of this script is in the origin/master of our Condor
+# repository. If you need to change what this script does, change it there,
+# commit it, then copy the script to ~cndrauto/condor on nmi-s006 where the
+# cron job will pick it up.
 
 use Getopt::Long;
 use File::Path;
@@ -127,7 +130,7 @@ sub load_tags_file
 {
 	my %tags;
 	my $line;
-	my ($key, $value);
+	my ($key, $module);
 
 	logit "Processing nightly tags file: $tags_file\n";
 	open(FIN, "<$tags_file") || fail "Can't open tags file $tags_file: $!";
@@ -135,9 +138,9 @@ sub load_tags_file
 		chomp $line;
 		$line =~ s/^\s+//g;
 		$line =~ s/\s+/ /;
-		($value, $key) = ($line =~ m/(.*) (.*)/);
-		logit "\tFound a build $key using tag $value\n";
-		$tags{$key} = $value;
+		($module, $key) = ($line =~ m/(.*) (.*)/);
+		logit "\tFound a tag $key using module $module\n";
+		$tags{$key} = $module;
 	}
 	close(FIN);
 
