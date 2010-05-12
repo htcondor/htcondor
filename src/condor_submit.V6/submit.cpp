@@ -167,6 +167,7 @@ bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
 bool xen_has_file_to_be_transferred = false;
 
+
 //
 // The default polling interval for the schedd
 //
@@ -1450,7 +1451,7 @@ SetExecutable()
 	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
-	if ( JobUniverse != CONDOR_UNIVERSE_MPI && JobUniverse != CONDOR_UNIVERSE_PVM ) {
+	if ( JobUniverse != CONDOR_UNIVERSE_MPI ) {
 		InsertJobExpr ("MinHosts = 1");
 		InsertJobExpr ("MaxHosts = 1");
 	} 
@@ -1469,7 +1470,6 @@ SetExecutable()
 		buffer.sprintf( "%s = TRUE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
-	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_SCHEDULER:
@@ -1645,35 +1645,6 @@ SetUniverse()
 		free( univ );
 		return;
 	};
-
-#if !defined(WIN32)
-	if( univ && stricmp(univ,"pvm") == MATCH ) 
-	{
-		char *pvmd = param("PVMD");
-
-		if (!pvmd || access(pvmd, R_OK|X_OK) != 0) {
-			fprintf(stderr, "\nERROR: Condor PVM support is not installed.\n"
-					"You must install the Condor PVM Contrib Module before\n"
-					"submitting PVM universe jobs\n");
-			if (!pvmd) {
-				fprintf(stderr, "PVMD parameter not defined in the Condor "
-						"configuration file.\n");
-			} else {
-				fprintf(stderr, "Can't access %s: %s\n", pvmd,
-						strerror(errno));
-			}
-			exit(1);
-		}
-
-		JobUniverse = CONDOR_UNIVERSE_PVM;
-		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PVM);
-		InsertJobExpr (buffer);
-
-		free(univ);
-		return;
-	};
-
-#endif // !defined(WIN32)
 
 	if( univ && 
 		((stricmp(univ,"globus") == MATCH) || (stricmp(univ,"grid") == MATCH))) {
@@ -1912,38 +1883,8 @@ SetMachineCount()
 		wantParallel = true;
 	}
  
-	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
-
-		mach_count = condor_param( MachineCount, "MachineCount" );
-
-		int tmp;
-		if (mach_count != NULL) {
-			for (ptr = mach_count; *ptr && *ptr != '.'; ptr++) ;
-			if (*ptr != '\0') {
-				*ptr = '\0';
-				ptr++;
-			}
-
-			tmp = atoi(mach_count);
-			buffer.sprintf( "%s = %d", ATTR_MIN_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			
-			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
-			if (*ptr != '\0') {
-				tmp = atoi(ptr);
-			}
-
-			buffer.sprintf( "%s = %d", ATTR_MAX_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			free(mach_count);
-		} else {
-			InsertJobExpr ("MinHosts = 1");
-			InsertJobExpr ("MaxHosts = 1");
-		}
-
-		request_cpus = 1;
-	} else if (JobUniverse == CONDOR_UNIVERSE_MPI ||
-			   JobUniverse == CONDOR_UNIVERSE_PARALLEL || wantParallel) {
+	if (JobUniverse == CONDOR_UNIVERSE_MPI ||
+		JobUniverse == CONDOR_UNIVERSE_PARALLEL || wantParallel) {
 
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( ! mach_count ) { 
@@ -1996,9 +1937,11 @@ SetMachineCount()
 }
 
 struct SimpleExprInfo {
+	char const *ad_attr_name;
 	char const *name1;
 	char const *name2;
 	char const *default_value;
+	bool quote_it;
 };
 
 /* This function is used to handle submit file commands that are inserted
@@ -2008,7 +1951,8 @@ void
 SetSimpleJobExprs()
 {
 	SimpleExprInfo simple_exprs[] = {
-		{next_job_start_delay, next_job_start_delay2, NULL},
+		{ATTR_NEXT_JOB_START_DELAY, next_job_start_delay, next_job_start_delay2, NULL, false},
+		{ATTR_JOB_AD_INFORMATION_ATTRS, "JobAdInformationAttrs", "job_ad_information_attrs", NULL, true},
 		{NULL,NULL,NULL}
 	};
 
@@ -2025,7 +1969,15 @@ SetSimpleJobExprs()
 		}
 
 		MyString buffer;
-		buffer.sprintf( "%s = %s", ATTR_NEXT_JOB_START_DELAY, expr);
+		if( i->quote_it ) {
+			MyString expr_buf;
+			ClassAd::EscapeStringValue( expr, expr_buf );
+			buffer.sprintf( "%s = \"%s\"", i->ad_attr_name, expr_buf.Value());
+		}
+		else {
+			buffer.sprintf( "%s = %s", i->ad_attr_name, expr);
+		}
+
 		InsertJobExpr (buffer);
 
 		free( expr );
@@ -5888,7 +5840,6 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
 	bool	checks_per_file_encryption = false;
-	bool	checks_pvm = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
 #if defined(WIN32)
@@ -5958,9 +5909,6 @@ check_requirements( char const *orig, MyString &answer )
 
 	if( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
 		checks_ckpt_arch = findClause( answer, ATTR_CKPT_ARCH );
-	}
-	if( JobUniverse == CONDOR_UNIVERSE_PVM ) {
-		checks_pvm = findClause( answer, ATTR_HAS_PVM );
 	}
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		checks_mpi = findClause( answer, ATTR_HAS_MPI );
@@ -6095,14 +6043,6 @@ check_requirements( char const *orig, MyString &answer )
 		answer += ATTR_HAS_TDP;
 		answer += ")";
 	}
-
-	if ( JobUniverse == CONDOR_UNIVERSE_PVM ) {
-		if( ! checks_pvm ) {
-			answer += "&& (TARGET.";
-			answer += ATTR_HAS_PVM;
-			answer += ")";
-		}
-	} 
 
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		if( ! checks_mpi ) {
@@ -7710,82 +7650,64 @@ SetVMParams()
 		// vmware_dir is a directory that includes vmx file and vmdk files.
 		char *vmware_dir = NULL;
 		vmware_dir = condor_param("vmware_dir");
-		if( !vmware_dir ) {
-			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
-					"Please specify the directory including "
-					"vmx and vmdk files for vmware virtual machine "
-					"in your submit description file.\n",
-					"vmware_dir");
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
+		if ( vmware_dir ) {
+			MyString f_dirname = delete_quotation_marks(vmware_dir);
+			free(vmware_dir);
 
-		MyString f_dirname = delete_quotation_marks(vmware_dir);
-		free(vmware_dir);
+			f_dirname = full_path(f_dirname.Value(), false);
+			check_and_universalize_path(f_dirname);
 
-		f_dirname = full_path(f_dirname.Value(), false);
-		check_and_universalize_path(f_dirname);
-
-		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
-		InsertJobExpr( buffer, false );
-
-		// find vmx file in the given directory
-		StringList vmxfiles;
-		if( suffix_matched_files_in_dir(f_dirname.Value(), vmxfiles, 
-					".vmx", true) == false ) {
-			fprintf( stderr, "\nERROR: no vmx file for vmware can be found "
-					"in %s.\n", f_dirname.Value());
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}else {
-			if( vmxfiles.number() > 1 ) {
-				fprintf( stderr, "\nERROR: multiple vmx files exist. "
-						"Only one vmx file must be in %s.\n", 
-						f_dirname.Value());
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}
-			vmxfiles.rewind();
-			MyString vmxfile = vmxfiles.next();
-
-			// add vmx file to transfer_input_files
-			// vmx file will be always transfered to an execute machine
-			transfer_vm_file(vmxfile.Value());
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
-					condor_basename(vmxfile.Value()));
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
 			InsertJobExpr( buffer, false );
+
+			Directory dir( f_dirname.Value() );
+			dir.Rewind();
+			while ( dir.Next() ) {
+				if ( has_suffix( dir.GetFullPath(), ".vmx" ) ||
+					 vmware_should_transfer_files ) {
+					// The .vmx file is always transfered.
+					transfer_vm_file( dir.GetFullPath() );
+				}
+			}
 		}
 
-		// find vmdk files in the given directory
+		// Look for .vmx and .vmdk files in transfer_input_files
+		StringList vmx_files;
 		StringList vmdk_files;
-		if( suffix_matched_files_in_dir(f_dirname.Value(), vmdk_files, 
-					".vmdk", true) == true ) {
-			MyString vmdks;
-			vmdk_files.rewind();
-			const char *tmp_file = NULL;
-			while( (tmp_file = vmdk_files.next() ) != NULL ) {
-				if( vmware_should_transfer_files ) {
-					// add vmdk files to transfer_input_files
-					transfer_vm_file(tmp_file);
-				}
-				if( vmdks.Length() > 0 ) {
-					vmdks += ",";
-				}
-				// VMPARAM_VMWARE_VMDK_FILES will include 
-				// basenames for vmdks files
-				vmdks += condor_basename(tmp_file);
+		StringList input_files;
+		MyString input_files_str;
+		job->LookupString( ATTR_TRANSFER_INPUT_FILES, input_files_str );
+		input_files.initializeFromString( input_files_str.Value() );
+		input_files.rewind();
+		const char *file;
+		while ( (file = input_files.next()) ) {
+			if ( has_suffix( file, ".vmx" ) ) {
+				vmx_files.append( condor_basename( file ) );
+			} else if ( has_suffix( file, ".vmdk" ) ) {
+				vmdk_files.append( condor_basename( file ) );
 			}
-			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, 
-					vmdks.Value());
+		}
+
+		if ( vmx_files.number() == 0 ) {
+			fprintf( stderr, "\nERROR: no vmx file for vmware can be found.\n" );
+			DoCleanup(0,0,NULL);
+			exit(1);
+		} else if ( vmx_files.number() > 1 ) {
+			fprintf( stderr, "\nERROR: multiple vmx files exist. "
+					 "Only one vmx file should be present.\n" );
+			DoCleanup(0,0,NULL);
+			exit(1);
+		} else {
+			vmx_files.rewind();
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
+					condor_basename(vmx_files.next()));
 			InsertJobExpr( buffer, false );
 		}
 
-		// look for an nvram file in given directory; if present,
-		// transfer it
-		Directory d(f_dirname.Value());
-		if (d.Find_Named_Entry("nvram")) {
-			transfer_vm_file(d.GetFullPath());
-		}
+		tmp_ptr = vmdk_files.print_to_string();
+		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
+		InsertJobExpr( buffer, false );
+		free( tmp_ptr );
 	}
 
 	// Check if a job user defines 'Argument'.

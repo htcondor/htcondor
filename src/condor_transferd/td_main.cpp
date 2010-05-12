@@ -28,7 +28,7 @@ TransferD g_td;
 
 DECL_SUBSYSTEM( "TRANSFERD", SUBSYSTEM_TYPE_DAEMON );
 
-int main_init(int argc, char *argv[])
+void main_init(int argc, char *argv[])
 {
 	// parse the command line attributes
 	g_td.init(argc, argv);
@@ -38,44 +38,38 @@ int main_init(int argc, char *argv[])
 
 	dprintf(D_ALWAYS, "Registering handlers...\n");
 	g_td.register_handlers();
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool is_full )
+void 
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 
 	g_td.reconfig();
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 
 	g_td.shutdown_fast();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 
 	g_td.shutdown_graceful();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

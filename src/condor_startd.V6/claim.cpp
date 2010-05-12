@@ -253,7 +253,7 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 }
 
 void
-Claim::publishPreemptingClaim( ClassAd* cad, amask_t how_much )
+Claim::publishPreemptingClaim( ClassAd* cad, amask_t /*how_much*/ /*UNUSED*/ )
 {
 	MyString line;
 	char* tmp;
@@ -1039,6 +1039,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 		dprintf(D_FAILURE|D_ALWAYS,"State change: claim no longer recognized "
 			 "by the schedd - removing claim\n" );
 		finishKillClaim();	// get rid of the claim
+		c_alive_inprogress_sock = NULL;
 		return FALSE;
 	}
 
@@ -2136,7 +2137,7 @@ newIdString( char** id_str_ptr )
 }
 
 
-ClaimId::ClaimId( ClaimType claim_type, char const *slotname )
+ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 {
 	int num = newIdString( &c_id );
 	claimid_parser.setClaimId(c_id);

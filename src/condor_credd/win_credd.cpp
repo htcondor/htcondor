@@ -269,50 +269,44 @@ CredDaemon::nop_handler(int, Stream*)
 
 //-------------------------------------------------------------
 
-int
+void
 main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
 	credd = new CredDaemon;
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool is_full )
+void
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 
 	credd->reconfig();
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 
 	delete credd;
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 
 	delete credd;
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

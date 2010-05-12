@@ -67,6 +67,7 @@ bool fast = false;
 bool peaceful_shutdown = false;
 bool full = false;
 bool all = false;
+char* constraint = NULL;
 const char* subsys = NULL;
 const char* exec_program = NULL;
 int takes_subsys = 0;
@@ -121,10 +122,6 @@ usage( char *str )
 		fprintf( stderr, 
 				 "    -fast\t\tquickly vacate the jobs (no checkpointing)\n" );
 	}
-	if( cmd == DC_RECONFIG ) {
-		fprintf( stderr, 
-				 "    -full\t\tPerform a full reconfig\n" );
-	}
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 	fprintf( stderr, 
 			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
@@ -133,6 +130,7 @@ usage( char *str )
 	fprintf( stderr,
 			 "  (for compatibility with other Condor tools, you can also use:)\n" );
 	fprintf( stderr, "    -name name\tgiven host\n" );
+	fprintf( stderr, "    -constraint constraint\tconstraint\n" );
 	fprintf( stderr, "    -addr <addr:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
 	if( takes_subsys ) {
@@ -177,7 +175,7 @@ usage( char *str )
 				 "  If sent to the master, all daemons on that host will restart.\n" );
 		break;
 
-	case DC_RECONFIG:
+	case DC_RECONFIG_FULL:
 		fprintf( stderr, 
 				 "  %s causes the specified daemon to reconfigure itself.\n", 
 				 str );
@@ -286,10 +284,8 @@ cmdToStr( int c )
 		return "Checkpoint-All-Jobs";
 	case RESCHEDULE:
 		return "Reschedule";
-	case DC_RECONFIG:
-		return "Reconfig";
 	case DC_RECONFIG_FULL:
-		return "Full-Reconfig";
+		return "Reconfig";
 	case SQUAWK:
 		return "Squawk";
 	case SET_SHUTDOWN_PROGRAM:
@@ -372,10 +368,10 @@ main( int argc, char *argv[] )
 	if( !strncmp_auto( cmd_str, "_reconfig_schedd" ) ) {
 		fprintf( stderr, "WARNING: condor_reconfig_schedd is deprecated.\n" );
 		fprintf( stderr, "\t Use: \"condor_reconfig -schedd\" instead.\n" );
-		cmd = DC_RECONFIG;
+		cmd = DC_RECONFIG_FULL;
 		dt = DT_SCHEDD;
     } else if( !strncmp_auto( cmd_str, "_reconfig" ) ) {
-		cmd = DC_RECONFIG;
+		cmd = DC_RECONFIG_FULL;
 		takes_subsys = 1;
 	} else if( !strncmp_auto( cmd_str, "_restart" ) ) {
 		cmd = RESTART;
@@ -466,9 +462,9 @@ main( int argc, char *argv[] )
 			if( (*tmp)[2] ) {
 				switch( (*tmp)[2] ) {
 				case 'u':
-					if( cmd == DC_RECONFIG ) {
-						full = true;
-					} else {
+					// CRUFT: -full is a deprecated argument to
+					//   condor_reconfig. It was removed in 7.5.3.
+					if( cmd != DC_RECONFIG_FULL ) {
 						fprintf( stderr, "ERROR: \"-full\" "
 								 "is not valid with %s\n", MyName );
 						usage( NULL );
@@ -629,9 +625,40 @@ main( int argc, char *argv[] )
 					}
 					break;
 				case 'o':
+				  if( (*tmp)[3] ) {
+				    switch( (*tmp)[3] ) {
+				    case 'n': 
+				      // We got a "-constraint", make sure we've got 
+				      // something else after it
+				      tmp++;
+				      if( tmp && *tmp ) {
+					constraint = *tmp;
+				      } else {
+					fprintf( stderr, "ERROR: -constraint requires another argument\n" );
+					usage( NULL );
+				      }
+
+				      break;
+				    case 'l':
 					subsys_check( MyName );
 					dt = DT_COLLECTOR;
 					break;
+				    default:
+				      fprintf( stderr, 
+					       "ERROR: unknown parameter: \"%s\"\n",
+					       *tmp );  
+				      usage( NULL );
+				      break;
+				    }
+				  } else {
+				    fprintf( stderr, 
+					     "ERROR: ambigous parameter: \"%s\"\n",
+					     *tmp );  
+				    fprintf( stderr, 
+					     "Please specify \"-collector\" or \"-constraint\"\n" );
+				    usage( NULL );
+				  }
+				  break;
 				default:
 					fprintf( stderr, 
 							 "ERROR: unknown parameter: \"%s\"\n",
@@ -640,17 +667,10 @@ main( int argc, char *argv[] )
 					break;
 				}
 			} else {
-					// Since -cmd is a developer-only, hidden
-					// option, just treat "-c" as "-collector". 
-#if 0
 				fprintf( stderr, 
 						 "ERROR: ambiguous parameter: \"%s\"\n",
 						 *tmp ); 
 				usage( NULL );
-#else
-				subsys_check( MyName );
-				dt = DT_COLLECTOR;
-#endif
 			}
 			break;
 		case 'k':
@@ -797,7 +817,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 	char *daemonname;
 	bool found_one = false;
 
-	if( all ) {
+	if( all || (constraint!=NULL) ) {
 			// If we were told -all, we can just ignore any other
 			// options and send the specifed command to every machine
 			// in the pool.
@@ -825,6 +845,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 				// with those again and skip over the arguments to
 				// options we've handled.  this includes:
 				//  -pool XXX    (but not "-peaceful")
+				//  -constraint XXX    (but not "-collector")
 				//  -cmd XXX     (but not "-collector")
 				//  -subsys XXX  (but not "-schedd" or "-startd")
 			switch( (*argv)[1] ) {
@@ -837,6 +858,9 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 			case 'c':
 				if( (*argv)[2] == 'm' ) {
 						// this is -cmd, skip the next one.
+					argv++;
+				} else if( (*argv)[3] == 'n' ) {
+						// this is -constraint, skip the next one.
 					argv++;
 				}
 				break;
@@ -951,7 +975,7 @@ computeRealAction( void )
 	real_cmd = -1;
 	switch( cmd ) {
 
-	case DC_RECONFIG:
+	case DC_RECONFIG_FULL:
 			// no magic
 		break;
 
@@ -1104,6 +1128,10 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		buffer.sprintf("TARGET.%s == \"%s\"", ATTR_TARGET_TYPE, subsys);
 		query.addANDConstraint(buffer.Value());
 	}
+	if (constraint!=NULL) {
+	  query.addANDConstraint(constraint);
+	}
+
 
 	if (pool_addr) {
 		q_result = query.fetchAds(ads, pool_addr, &errstack);
@@ -1128,8 +1156,13 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	}
 	if( had_error ) {
 		if( ! name_list ) {
-			fprintf( stderr, "Can't find addresses for %s's for -all\n", 
-					 real_dt ? daemonString(real_dt) : "daemon" );
+		  if ( constraint!=NULL ) {
+		    fprintf( stderr, "Can't find addresses for %s's for constraint '%s'\n", 
+			     real_dt ? daemonString(real_dt) : "daemon", constraint );
+		  } else {
+		    fprintf( stderr, "Can't find addresses for %s's for -all\n", 
+			     real_dt ? daemonString(real_dt) : "daemon" );
+		  }
 		} else {
 			name_list->rewind();
 			while( (name = name_list->next()) ) {
@@ -1416,11 +1449,8 @@ doCommand( Daemon* d )
 		}
 		break;
 
-	case DC_RECONFIG:
-			// if -full is used, we need to send a different command.
-		if( full ) {
-			my_cmd = DC_RECONFIG_FULL;
-		}
+	case DC_RECONFIG_FULL:
+			// Nothing to do
 		break;
 
 	case SET_SHUTDOWN_PROGRAM:
@@ -1495,15 +1525,20 @@ version()
 }
 
 
-// Want to send a command to all hosts in the pool.
+// Want to send a command to all hosts in the pool or
+// modulo the constraint, of course
 void
 handleAll()
 {
 	DaemonList daemons;
 
 	if( ! resolveNames(&daemons, NULL) ) {
-		fprintf( stderr, "ERROR: Failed to find daemons for -all\n" );
-		exit( 1 );
+	  if ( constraint!=NULL ) {
+	    fprintf( stderr, "ERROR: Failed to find daemons matching the constraint\n" );
+	  } else {
+	    fprintf( stderr, "ERROR: Failed to find daemons for -all\n" );
+	  }
+	  exit( 1 );
 	}
 
 		// Now, send commands to all the daemons we know about.

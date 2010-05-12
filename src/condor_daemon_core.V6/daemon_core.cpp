@@ -115,6 +115,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include <sched.h>
 #endif
 
+static const char* EMPTY_DESCRIP = "<NULL>";
+
 // special errno values that may be returned from Create_Process
 const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
@@ -403,6 +405,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 1);
+    if( m_iMaxAcceptsPerCycle != 1 ) {
+        dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    }
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
@@ -493,8 +499,8 @@ DaemonCore::~DaemonCore()
 	if (comTable != NULL )
 	{
 		for (i=0;i<maxCommand;i++) {
-			free_descrip( comTable[i].command_descrip );
-			free_descrip( comTable[i].handler_descrip );
+			free( comTable[i].command_descrip );
+			free( comTable[i].handler_descrip );
 		}
 		delete []comTable;
 	}
@@ -502,8 +508,8 @@ DaemonCore::~DaemonCore()
 	if (sigTable != NULL)
 	{
 		for (i=0;i<maxSig;i++) {
-			free_descrip( sigTable[i].sig_descrip );
-			free_descrip( sigTable[i].handler_descrip );
+			free( sigTable[i].sig_descrip );
+			free( sigTable[i].handler_descrip );
 		}
 		delete []sigTable;
 	}
@@ -523,8 +529,8 @@ DaemonCore::~DaemonCore()
 			// Todd, cleanup of DC command sockets by Derek on 2/26/01
 
 		for (i=0;i<nSock;i++) {
-			free_descrip( (*sockTable)[i].iosock_descrip );
-			free_descrip( (*sockTable)[i].handler_descrip );
+			free( (*sockTable)[i].iosock_descrip );
+			free( (*sockTable)[i].handler_descrip );
 		}
 		delete sockTable;
 	}
@@ -551,8 +557,8 @@ DaemonCore::~DaemonCore()
 	if (reapTable != NULL)
 	{
 		for (i=0;i<maxReap;i++) {
-			free_descrip( reapTable[i].reap_descrip );
-			free_descrip( reapTable[i].handler_descrip );
+			free( reapTable[i].reap_descrip );
+			free( reapTable[i].handler_descrip );
 		}
 		delete []reapTable;
 	}
@@ -937,16 +943,16 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
-	free_descrip(comTable[i].command_descrip);
+	free(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
 	else
-		comTable[i].command_descrip = EMPTY_DESCRIP;
-	free_descrip(comTable[i].handler_descrip);
+		comTable[i].command_descrip = strdup(EMPTY_DESCRIP);
+	free(comTable[i].handler_descrip);
 	if ( handler_descrip )
 		comTable[i].handler_descrip = strdup(handler_descrip);
 	else
-		comTable[i].handler_descrip = EMPTY_DESCRIP;
+		comTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries
 	nCommand++;
@@ -960,11 +966,25 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	return(command);
 }
 
-int DaemonCore::Cancel_Command( int )
+int DaemonCore::Cancel_Command( int command )
 {
-	// stub
 
-	return TRUE;
+	int i;
+	for(i = 0; i<maxCommand; i++) {
+		if( comTable[i].num == command )
+		{
+			comTable[i].num = 0;
+			comTable[i].num = 0;
+			comTable[i].handler = 0;
+			comTable[i].handlercpp = 0;
+			free(comTable[i].command_descrip);
+			comTable[i].command_descrip = NULL;
+			free(comTable[i].handler_descrip);
+			comTable[i].handler_descrip = NULL;
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 int DaemonCore::InfoCommandPort()
@@ -1262,16 +1282,16 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 	sigTable[i].service = s;
 	sigTable[i].is_blocked = FALSE;
 	sigTable[i].is_pending = FALSE;
-	free_descrip(sigTable[i].sig_descrip);
+	free(sigTable[i].sig_descrip);
 	if ( sig_descrip )
 		sigTable[i].sig_descrip = strdup(sig_descrip);
 	else
-		sigTable[i].sig_descrip = EMPTY_DESCRIP;
-	free_descrip(sigTable[i].handler_descrip);
+		sigTable[i].sig_descrip = strdup(EMPTY_DESCRIP);
+	free(sigTable[i].handler_descrip);
 	if ( handler_descrip )
 		sigTable[i].handler_descrip = strdup(handler_descrip);
 	else
-		sigTable[i].handler_descrip = EMPTY_DESCRIP;
+		sigTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries
 	nSig++;
@@ -1319,7 +1339,7 @@ int DaemonCore::Cancel_Signal( int sig )
 	sigTable[found].num = 0;
 	sigTable[found].handler = NULL;
 	sigTable[found].handlercpp = (SignalHandlercpp)NULL;
-	free_descrip( sigTable[found].handler_descrip );
+	free( sigTable[found].handler_descrip );
 	sigTable[found].handler_descrip = NULL;
 
 	// Decrement the counter of total number of entries
@@ -1335,7 +1355,7 @@ int DaemonCore::Cancel_Signal( int sig )
 	dprintf(D_DAEMONCORE,
 					"Cancel_Signal: cancelled signal %d <%s>\n",
 					sig,sigTable[found].sig_descrip);
-	free_descrip( sigTable[found].sig_descrip );
+	free( sigTable[found].sig_descrip );
 	sigTable[found].sig_descrip = NULL;
 
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
@@ -1473,16 +1493,16 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	(*sockTable)[i].perm = perm;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
-	free_descrip((*sockTable)[i].iosock_descrip);
+	free((*sockTable)[i].iosock_descrip);
 	if ( iosock_descrip )
 		(*sockTable)[i].iosock_descrip = strdup(iosock_descrip);
 	else
-		(*sockTable)[i].iosock_descrip = EMPTY_DESCRIP;
-	free_descrip((*sockTable)[i].handler_descrip);
+		(*sockTable)[i].iosock_descrip = strdup(EMPTY_DESCRIP);
+	free((*sockTable)[i].handler_descrip);
 	if ( handler_descrip )
 		(*sockTable)[i].handler_descrip = strdup(handler_descrip);
 	else
-		(*sockTable)[i].handler_descrip = EMPTY_DESCRIP;
+		(*sockTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries if we
 	// just filled our last slot.
@@ -1589,9 +1609,9 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 		// Remove entry; mark it is available for next add via iosock=NULL
 		(*sockTable)[i].iosock = NULL;
-		free_descrip( (*sockTable)[i].iosock_descrip );
+		free( (*sockTable)[i].iosock_descrip );
 		(*sockTable)[i].iosock_descrip = NULL;
-		free_descrip( (*sockTable)[i].handler_descrip );
+		free( (*sockTable)[i].handler_descrip );
 		(*sockTable)[i].handler_descrip = NULL;
 		// If we just removed the last entry in the table, we can decrement nSock
 		if ( i == nSock - 1 ) {
@@ -1849,16 +1869,16 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	(*pipeTable)[i].perm = perm;
 	(*pipeTable)[i].service = s;
 	(*pipeTable)[i].data_ptr = NULL;
-	free_descrip((*pipeTable)[i].pipe_descrip);
+	free((*pipeTable)[i].pipe_descrip);
 	if ( pipe_descrip )
 		(*pipeTable)[i].pipe_descrip = strdup(pipe_descrip);
 	else
-		(*pipeTable)[i].pipe_descrip = EMPTY_DESCRIP;
-	free_descrip((*pipeTable)[i].handler_descrip);
+		(*pipeTable)[i].pipe_descrip = strdup(EMPTY_DESCRIP);
+	free((*pipeTable)[i].handler_descrip);
 	if ( handler_descrip )
 		(*pipeTable)[i].handler_descrip = strdup(handler_descrip);
 	else
-		(*pipeTable)[i].handler_descrip = EMPTY_DESCRIP;
+		(*pipeTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Increment the counter of total number of entries
 	nPipe++;
@@ -1935,9 +1955,9 @@ int DaemonCore::Cancel_Pipe( int pipe_end )
 
 	// Remove entry, move the last one in the list into this spot
 	(*pipeTable)[i].index = -1;
-	free_descrip( (*pipeTable)[i].pipe_descrip );
+	free( (*pipeTable)[i].pipe_descrip );
 	(*pipeTable)[i].pipe_descrip = NULL;
-	free_descrip( (*pipeTable)[i].handler_descrip );
+	free( (*pipeTable)[i].handler_descrip );
 	(*pipeTable)[i].handler_descrip = NULL;
 
 #ifdef WIN32
@@ -2276,16 +2296,16 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].is_cpp = is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = NULL;
-	free_descrip(reapTable[i].reap_descrip);
+	free(reapTable[i].reap_descrip);
 	if ( reap_descrip )
 		reapTable[i].reap_descrip = strdup(reap_descrip);
 	else
-		reapTable[i].reap_descrip = EMPTY_DESCRIP;
-	free_descrip(reapTable[i].handler_descrip);
+		reapTable[i].reap_descrip = strdup(EMPTY_DESCRIP);
+	free(reapTable[i].handler_descrip);
 	if ( handler_descrip )
 		reapTable[i].handler_descrip = strdup(handler_descrip);
 	else
-		reapTable[i].handler_descrip = EMPTY_DESCRIP;
+		reapTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Update curr_regdataptr for SetDataPtr()
 	curr_regdataptr = &(reapTable[i].data_ptr);
@@ -2602,6 +2622,11 @@ DaemonCore::reconfig(void) {
 	// Maximum number of bytes read from a stdout/stderr pipes.
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
+
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 1);
+    if( m_iMaxAcceptsPerCycle != 1 ) {
+        dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    }
 
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
@@ -3472,46 +3497,70 @@ struct CallSocketHandler_args {
 void
 DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 {
-	bool set_service_tid = false;
+    unsigned int iAcceptCnt = ( m_iMaxAcceptsPerCycle > 0 ) ? m_iMaxAcceptsPerCycle: -1;
 
-	// Queue up the parameters and add to our thread pool.
-	struct CallSocketHandler_args *args;
-	args = new struct CallSocketHandler_args;
+    // if it is an accepting socket it will try for the connect
+    // up (n) elements
+    while ( iAcceptCnt )
+    {
+	    bool set_service_tid = false;
 
-	// If a tcp listen socket, do the accept now in the main thread
-	// so that we don't go back to the select loop with the listen
-	// socket still set.
-	args->accepted_sock = NULL;
-	Stream *insock = (*sockTable)[i].iosock;
-	ASSERT(insock);
-	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
-		 default_to_HandleCommand &&
-		 insock->type() == Stream::reli_sock &&
-		 ((ReliSock *)insock)->_state == Sock::sock_special &&
-		 ((ReliSock *)insock)->_special_state == ReliSock::relisock_listen 
-		 )
-	{
-		args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
+	    // Queue up the parameters and add to our thread pool.
+	    struct CallSocketHandler_args *args;
+	    args = new struct CallSocketHandler_args;
 
-		if ( !(args->accepted_sock) ) {
-				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
-				// no need to add to work pool if we fail to accept
-				free(args);
-				return;
-		}
-	} else {
-		set_service_tid = true;
-	}
-	args->i = i;
-	args->default_to_HandleCommand = default_to_HandleCommand;
-	int* pTid = NULL;
-	if ( set_service_tid ) {
-		// setup pointer (pTid) to pass to pool_add - thus servicing_tid will be
-		// set to the tid value BEFORE pool_add() yields.
-		pTid = &((*sockTable)[i].servicing_tid);
-	}
-	CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args,
-								pTid,(*sockTable)[i].handler_descrip);
+	    // If a tcp listen socket, do the accept now in the main thread
+	    // so that we don't go back to the select loop with the listen
+	    // socket still set.
+	    args->accepted_sock = NULL;
+	    Stream *insock = (*sockTable)[i].iosock;
+	    ASSERT(insock);
+	    if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
+		    default_to_HandleCommand &&
+		    insock->type() == Stream::reli_sock &&
+		    ((ReliSock *)insock)->_state == Sock::sock_special &&
+		    ((ReliSock *)insock)->_special_state == ReliSock::relisock_listen
+		    )
+	    {
+            // b/c we are now in a tight loop accepting, use select to check for more data and bail if none is there.
+            Selector selector;
+            selector.set_timeout( 0, 0 );
+            selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+            selector.execute();
+
+            if ( !selector.has_ready() ) {
+                // avoid unnecessary blocking simply poll with timeout 0, if no data then exit
+                delete args;
+                return;
+            }
+
+		    args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
+
+		    if ( !(args->accepted_sock) ) {
+		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
+		        // no need to add to work pool if we fail to accept
+		        delete args;
+		        return;
+		    }
+
+            iAcceptCnt --;
+
+	    } else {
+		    set_service_tid = true;
+            iAcceptCnt=0;
+	    }
+	    args->i = i;
+	    args->default_to_HandleCommand = default_to_HandleCommand;
+	    int* pTid = NULL;
+	    if ( set_service_tid ) {
+		    // setup pointer (pTid) to pass to pool_add - thus servicing_tid will be
+		    // set to the tid value BEFORE pool_add() yields.
+		    pTid = &((*sockTable)[i].servicing_tid);
+	    }
+	    CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args,
+								    pTid,(*sockTable)[i].handler_descrip);
+
+    }
 }
 
 void
@@ -3876,7 +3925,7 @@ int DaemonCore::HandleReq(int socki, Stream* asock)
 
 int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 {
-	Stream				*stream = NULL;
+	Sock				*sock = NULL;
 
 	int					is_tcp;
 	int                 req = 0;
@@ -3922,11 +3971,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			((ReliSock *)insock)->_special_state == ReliSock::relisock_listen )
 		{
 			if ( asock ) {
-				stream = asock;
+				sock = (Sock *)asock;
 			} else {
-				stream = (Stream *) ((ReliSock *)insock)->accept();
+				sock = ((ReliSock *)insock)->accept();
 			}
-			if ( !stream ) {
+			if ( !sock ) {
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
 				// return KEEP_STEAM cuz insock is a listen socket
 				return KEEP_STREAM;
@@ -3936,16 +3985,16 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				// to read on this socket, we don't want to block here, so instead
 				// register it.  Also set a timer just in case nothing ever arrives, so 
 				// we can reclaim our socket.  
-			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 ) 
+			if ( ((ReliSock *)sock)->bytes_available_to_read() < 4 ) 
 			{
-				if( RegisterSocketForHandleReq( stream ) ) {
+				if( RegisterSocketForHandleReq( sock ) ) {
 					return KEEP_STREAM;
 				}
 			}
 		}
-		// if the not a listen socket, then just assign stream to insock
+		// if the not a listen socket, then just assign sock to insock
 		else {
-			stream = insock;
+			sock = (Sock *)insock;
 		}
 
 	}
@@ -3953,18 +4002,19 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	else {
 		// on UDP, we do not have a seperate listen and accept sock.
 		// our "listen sock" is also our "accept" sock, so just
-		// assign stream to the insock. UDP = connectionless, get it?
-		stream = insock;
+		// assign sock to the insock. UDP = connectionless, get it?
+		sock = (Sock *)insock;
 		// in UDP we cannot display who the command is from until
 		// we read something off the socket, so we display who from
 		// after we read the command below...
 
-		dprintf ( D_SECURITY, "DC_AUTHENTICATE: received UDP packet from %s.\n",
-				sin_to_string(((Sock*)stream)->peer_addr()));
+		dprintf ( D_SECURITY,
+				  "DC_AUTHENTICATE: received UDP packet from %s.\n",
+				  sock->peer_description());
 
 
 		// get the info, if there is any
-		const char * cleartext_info = ((SafeSock*)stream)->isIncomingDataMD5ed();
+		const char * cleartext_info = ((SafeSock*)sock)->isIncomingDataMD5ed();
 		char * sess_id = NULL;
 		char * return_address_ss = NULL;
 
@@ -3997,7 +4047,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
 				// but first, we should be nice and send a message back to
@@ -4017,7 +4067,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			session->renewLease();
 
 			if (!session->key()) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -4029,8 +4079,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				goto finalize;
 			}
 
-			if (!stream->set_MD_mode(MD_ALWAYS_ON, session->key())) {
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+			if (!sock->set_MD_mode(MD_ALWAYS_ON, session->key())) {
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator for session %s, failing; this session was requested by %s with return address %s\n",sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -4056,7 +4106,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 
 		// get the info, if there is any
-		cleartext_info = ((SafeSock*)stream)->isIncomingDataEncrypted();
+		cleartext_info = ((SafeSock*)sock)->isIncomingDataEncrypted();
 		sess_id = NULL;
 		return_address_ss = NULL;
 
@@ -4091,7 +4141,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
@@ -4110,7 +4160,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			session->renewLease();
 
 			if (!session->key()) {
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key! This session was requested by %s with return address %s\n", sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -4134,8 +4184,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*session->policy(), ATTR_SEC_ENCRYPTION);
 			bool turn_encryption_on = will_enable_encryption == SecMan::SEC_FEAT_ACT_YES;
 
-			if (!stream->set_crypto_key(turn_encryption_on, session->key())) {
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+			if (!sock->set_crypto_key(turn_encryption_on, session->key())) {
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption for session %s, failing; this session was requested by %s with return address %s\n",sess_id, sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -4157,7 +4207,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
             }
 			bool tried_authentication = false;
 			session->policy()->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
-			((SafeSock*)stream)->setTriedAuthentication(tried_authentication);
+			sock->setTriedAuthentication(tried_authentication);
 
 			free( sess_id );
 			if (return_address_ss) {
@@ -4166,13 +4216,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		}
 
         if (who != NULL) {
-            ((SafeSock*)stream)->setFullyQualifiedUser(who);
+            sock->setFullyQualifiedUser(who);
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: UDP message is from %s.\n", who);
         }
 	}
 
 
-	stream->decode();
+	sock->decode();
 
 		// Determine if incoming socket is HTTP over TCP, or if it is CEDAR.
 		// For better or worse, we figure this out by seeing if the socket
@@ -4184,32 +4234,32 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
-		condor_read(stream->peer_description(), ((Sock*)stream)->get_file_desc(),
+		condor_read(sock->peer_description(), sock->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 #ifdef HAVE_EXT_GSOAP
 	if ( strstr(tmpbuf,"GET") ) {
 		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
-			if ( Verify("HTTP GET", READ,((Sock*)stream)->peer_addr(),NULL) ) {
+			if ( Verify("HTTP GET", READ,sock->peer_addr(),NULL) ) {
 				is_http_get = true;
 			}
 		} else {
 			dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
 				             "DENIED because ENABLE_WEB_SERVER=FALSE\n",
-							 sin_to_string(((Sock*)stream)->peer_addr()));
+							 sock->peer_description());
 		}
 	} else {
 		if ( strstr(tmpbuf,"POST") ) {
 			if ( param_boolean("ENABLE_SOAP",false) ) {
 				// SOAP requires SOAP authorization.
-				if ( Verify("HTTP POST",SOAP_PERM,((Sock*)stream)->peer_addr(),NULL) ) {
+				if ( Verify("HTTP POST",SOAP_PERM,sock->peer_addr(),NULL) ) {
 					is_http_post = true;
 				}
 			} else {
 				dprintf(D_ALWAYS,"Received HTTP POST connection from %s -- "
 							 "DENIED because ENABLE_SOAP=FALSE\n",
-							 sin_to_string(((Sock*)stream)->peer_addr()));
+							 sock->peer_description());
 			}
 		}
 	}
@@ -4220,11 +4270,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			// Socket appears to be HTTP, so deal with it.
 		dprintf(D_ALWAYS, "Received HTTP %s connection from %s\n",
 			is_http_get ? "GET" : "POST",
-			sin_to_string(((Sock*)stream)->peer_addr()) );
+			sock->peer_description() );
 
 
 		ASSERT( soap );
-		cursoap = dc_soap_accept((Sock *)stream, soap);
+		cursoap = dc_soap_accept(sock, soap);
 
 			// Now, process the Soap RPC request and dispatch it
 		dprintf(D_ALWAYS,"About to serve HTTP request...\n");
@@ -4235,22 +4285,22 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			// gsoap already closed the socket.  so set the socket in
 			// the underlying CEDAR object to INVALID_SOCKET, so
 			// CEDAR won't close it again when we delete the object.
-		((Sock*)stream)->_sock = INVALID_SOCKET; 
+		sock->_sock = INVALID_SOCKET; 
 
 		result = TRUE;
 		goto finalize;
 	}
 #endif // HAVE_EXT_GSOAP
 
-	// read in the command from the stream with a timeout value of just 1 second,
+	// read in the command from the sock with a timeout value of just 1 second,
 	// since we know there is already some data waiting for us.
-	old_timeout = stream->timeout(1);
-	result = stream->code(req);
+	old_timeout = sock->timeout(1);
+	result = sock->code(req);
 	// For now, lets set a 20 second timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
-	stream->timeout(20);
+	sock->timeout(20);
 	if(!result) {
-		char const *ip = stream->peer_ip_str();
+		char const *ip = sock->peer_ip_str();
 		if(!ip) {
 			ip = "unknown address";
 		}
@@ -4265,15 +4315,14 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// Allow thread to yield during all the authentication network round-trips
 		ScopedEnableParallel(true);
 
-		Sock* sock = (Sock*)stream;
 		sock->decode();
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->peer_addr()));
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sock->peer_description());
 
 		ClassAd auth_info;
 		if( !auth_info.initFromStream(*sock)) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-					   "receive auth_info!\n");
+					 "receive auth_info from %s!\n", sock->peer_description());
 			result = FALSE;
 			goto finalize;
 		}
@@ -4337,7 +4386,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				using_cookie = true;
 			} else {
 				// bad cookie!!!
-				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie!!!\n");
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie from %s!!!\n", sock->peer_description());
 				result = FALSE;
 				goto finalize;
 			}
@@ -4353,7 +4402,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 				if( ! auth_info.LookupString(ATTR_SEC_SID, &the_sid)) {
 					dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-							   "extract auth_info.%s!\n", ATTR_SEC_SID);
+							 "extract auth_info.%s from %s!\n", ATTR_SEC_SID,
+							 sock->peer_description());
 					result = FALSE;
 					goto finalize;
 				}
@@ -4364,11 +4414,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// the key id they sent was not in our cache.  this is a
 					// problem.
 
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-							   "invalid session %s, failing.\n", the_sid);
-
 					char * return_addr = NULL;
-					if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr)) {
+					auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
+							   "invalid session %s, failing; this session was requested by %s with return address %s\n", the_sid, sock->peer_description(), return_addr ? return_addr : "(none)");
+
+					if( return_addr ) {
 						send_invalidate_session( return_addr, the_sid );
 						free (return_addr);
 					}
@@ -4426,7 +4478,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					bool tried_authentication=false;
 					the_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
-					((ReliSock*)stream)->setTriedAuthentication(tried_authentication);
+					sock->setTriedAuthentication(tried_authentication);
 				}
 				new_session = false;
 
@@ -4490,7 +4542,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 						char *crypto_method = NULL;
 						if (!the_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
-							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
+							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption for request from %s, but we have none!\n", sock->peer_description() );
 							result = FALSE;
 							goto finalize;
 						}
@@ -4503,7 +4555,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 							free (rkey);
 						} else {
 							memset (rbuf, 0, 24);
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");							
+							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", sock->peer_description() );							
 							free( crypto_method );
 							crypto_method = NULL;
 							result = FALSE;
@@ -4549,7 +4601,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					sock->encode();
 					if (!the_policy->put(*sock) ||
 						!sock->eom()) {
-						dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
+						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", sock->peer_description());
 						auth_info.dPrint (D_ALWAYS);
 						result = FALSE;
 						goto finalize;
@@ -4640,7 +4692,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
 
 					if (!auth_methods) {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad, failing!\n");
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad from %s, failing!\n", sock->peer_description());
 						result = FALSE;
 						goto finalize;
 					}
@@ -4708,7 +4760,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					sock->decode();
 					if (!sock->set_MD_mode(MD_ALWAYS_ON, the_key)) {
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing request from %s.\n", sock->peer_description());
 						result = FALSE;
 						goto finalize;
 					} else {
@@ -4730,7 +4782,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					sock->decode();
 					if (!sock->set_crypto_key(true, the_key) ) {
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", sock->peer_description());
 						result = FALSE;
 						goto finalize;
 					} else {
@@ -4750,7 +4802,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					ClassAd pa_ad;
 
 					// session user
-					const char *fully_qualified_user = ((ReliSock*)sock)->getFullyQualifiedUser();
+					const char *fully_qualified_user = sock->getFullyQualifiedUser();
 					if ( fully_qualified_user ) {
 						pa_ad.Assign(ATTR_SEC_USER,fully_qualified_user);
 					}
@@ -4805,7 +4857,9 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
 						! sock->eom() ) {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid);
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", the_sid, sock->peer_description());
+						result = FALSE;
+						goto finalize;
 					} else {
 						if (DebugFlags & D_FULLDEBUG) {
 							dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid);
@@ -4872,18 +4926,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		sock->decode();
 		sock->allow_one_empty_message();
 
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: setting sock->decode()\n");
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: allowing an empty message for sock.\n");
-		}
-
 		// fill in the command info
 		reqFound = TRUE;
 		index = cmd_index;
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: Success.\n");
 	} else {
-
+		// we received some command other than DC_AUTHENTICATE
 		// get the handler function
 		reqFound = CommandNumToTableIndex(req,&index);
 
@@ -4891,7 +4940,20 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			//  1. receiving unauthenticated command
 			//  2. receiving command on previously authenticated socket
 
-		if (reqFound && !((Sock *)stream)->isAuthenticated()) {
+			// See if we should force authentication for this command.
+			// The client is expected to do the same.
+		if (reqFound &&
+			is_tcp &&
+			!sock->isAuthenticated() &&
+			comTable[index].force_authentication &&
+			!sock->triedAuthentication() )
+		{
+			SecMan::authenticate_sock(sock, WRITE, &errstack);
+				// we don't check the return value, because the code below
+				// handles what to do with unauthenticated connections
+		}
+
+		if (reqFound && !sock->isAuthenticated()) {
 			// need to check our security policy to see if this is allowed.
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", req, comTable[index].command_descrip);
@@ -4936,7 +4998,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 						(is_tcp) ? "TCP" : "UDP",
 						!user.IsEmpty() ? " from " : "",
 						user.Value(),
-						sin_to_string(((Sock*)stream)->peer_addr()),
+						sock->peer_description(),
 						PermString(comTable[index].perm));
 
 					result = FALSE;
@@ -4954,13 +5016,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// When re-using security sessions, need to set the socket's
 		// authenticated user name from the value stored in the cached
 		// session.
-		if( user.Length() && !((Sock*)stream)->isAuthenticated() ) {
-			((Sock*)stream)->setFullyQualifiedUser(user.Value());
+		if( user.Length() && !sock->isAuthenticated() ) {
+			sock->setFullyQualifiedUser(user.Value());
 		}
 
 		// grab the user from the socket
         if (is_tcp) {
-            const char *u = ((ReliSock*)stream)->getFullyQualifiedUser();
+            const char *u = sock->getFullyQualifiedUser();
 			if (u) {
 				user = u;
 			}
@@ -4970,10 +5032,10 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		command_desc.sprintf("command %d (%s)",req,comTable[index].command_descrip);
 
 		if( comTable[index].force_authentication &&
-			!((Sock*)stream)->isMappedFQU() )
+			!sock->isMappedFQU() )
 		{
 			dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
-					((Sock*)stream)->peer_description(),
+					sock->peer_description(),
 					req,
 					comTable[index].command_descrip );
 
@@ -4983,7 +5045,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			perm = Verify(
 						  command_desc.Value(),
 						  comTable[index].perm,
-						  ((Sock*)stream)->peer_addr(),
+						  sock->peer_addr(),
 						  user.Value() );
 		}
 
@@ -4996,7 +5058,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 			// if UDP, consume the rest of this message to try to stay "in-sync"
 			if ( !is_tcp)
-				stream->end_of_message();
+				sock->end_of_message();
 
 		} else {
 			dprintf(comTable[index].dprintf_flag | D_COMMAND,
@@ -5005,7 +5067,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					req,
 					comTable[index].command_descrip,
 					user.Value(),
-					stream->peer_description(),
+					sock->peer_description(),
 					PermString(comTable[index].perm));
 		}
 
@@ -5016,18 +5078,18 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					req,
 					"UNREGISTERED COMMAND!",
 					user.Value(),
-					stream->peer_description());
+					sock->peer_description());
 		// make result != to KEEP_STREAM, so we blow away this socket below
 		result = 0;
 		// if UDP, consume the rest of this message to try to stay "in-sync"
 		if ( !is_tcp)
-			stream->end_of_message();
+			sock->end_of_message();
 	}
 /*
     // Send authorization message
     if (is_tcp) {
-        stream->encode();
-        if (!stream->code(perm) || !stream->end_of_message()) {
+        sock->encode();
+        if (!sock->code(perm) || !sock->end_of_message()) {
             dprintf(D_ALWAYS, "DaemonCore: Unable to send permission results\n");
         }
     }
@@ -5041,7 +5103,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
 
-		result = CallCommandHandler(req,stream,false /*do not delete stream*/);
+		result = CallCommandHandler(req,sock,false /*do not delete sock*/);
 
 		UtcTime handler_stop_time;
 		handler_stop_time.getTime();
@@ -5055,8 +5117,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 finalize:
 
 	// finalize; the handler is done with the command.  the handler will return
-	// with KEEP_STREAM if we should not touch the stream; otherwise, cleanup
-	// the stream.  On tcp, we just delete it since the stream is the one we got
+	// with KEEP_STREAM if we should not touch the sock; otherwise, cleanup
+	// the sock.  On tcp, we just delete it since the sock is the one we got
 	// from accept and our listen socket is still out there.  on udp,
 	// however, we cannot just delete it or we will not be "listening"
 	// anymore, so we just do an eom flush all buffers, etc.
@@ -5075,38 +5137,38 @@ finalize:
     }
 	if ( result != KEEP_STREAM ) {
 		if ( is_tcp ) {
-			stream->encode();	// we wanna "flush" below in the encode direction
-			stream->end_of_message();  // make certain data flushed to the wire
-			if ( insock != stream )	   // delete the stream only if we did an accept; if we
-				delete stream;		   //     did not do an accept, Driver() will delete the stream.
+			sock->encode();	// we wanna "flush" below in the encode direction
+			sock->end_of_message();  // make certain data flushed to the wire
+			if ( insock != sock )	   // delete the sock only if we did an accept; if we
+				delete sock;		   //     did not do an accept, Driver() will delete the sock.
 		} else {
-			stream->decode();
-			stream->end_of_message();
+			sock->decode();
+			sock->end_of_message();
 
 			// we need to reset the crypto keys
-			stream->set_MD_mode(MD_OFF);
-			stream->set_crypto_key(false, NULL);
+			sock->set_MD_mode(MD_OFF);
+			sock->set_crypto_key(false, NULL);
 
 			// we also need to reset the FQU
-			((Sock*)stream)->setFullyQualifiedUser(NULL);
+			sock->setFullyQualifiedUser(NULL);
 
 			result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
 									// in Condor so far are Initial command socks, so keep it.
 		}
 	} else {
 		if (!is_tcp) {
-			stream->decode();
-			stream->end_of_message();
-			stream->set_MD_mode(MD_OFF);
-			stream->set_crypto_key(false, NULL);
-			((Sock*)stream)->setFullyQualifiedUser(NULL);
+			sock->decode();
+			sock->end_of_message();
+			sock->set_MD_mode(MD_OFF);
+			sock->set_crypto_key(false, NULL);
+			sock->setFullyQualifiedUser(NULL);
 		}
 	}
 
 	// Now return KEEP_STREAM only if the user said to _OR_ if insock
 	// is a listen socket.  Why?  we always wanna keep a listen socket.
-	// Also, if we did an accept, we already deleted the stream socket above.
-	if ( result == KEEP_STREAM || insock != stream )
+	// Also, if we did an accept, we already deleted the sock socket above.
+	if ( result == KEEP_STREAM || insock != sock )
 		return KEEP_STREAM;
 	else
 		return TRUE;
@@ -9175,7 +9237,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	curr_dataptr = &(reaper->data_ptr);
 
 		// Log a message
-	char *hdescrip = reaper->handler_descrip;
+	const char *hdescrip = reaper->handler_descrip;
 	if ( !hdescrip ) {
 		hdescrip = EMPTY_DESCRIP;
 	}

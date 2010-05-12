@@ -191,11 +191,20 @@ CondorLockFile::GetLock( time_t lock_ht )
 		time_t	expire = statbuf.st_mtime;
 		time_t	now = time( NULL );
 
-			// If the lock has expired, kill it!
-		if ( now >= expire ) {
+		if ( -1 == now ) { // check for failure on time
+			dprintf( D_ALWAYS, "GetLock: Error obtaining time(): %d %s\n", errno, strerror( errno ) );
+			return -1;
+		}
+		else if ( 0 == expire ) { // check for anamoly in expire
+			dprintf( D_ALWAYS, "GetLock: Error expire = EPOCH, there appears to be a read/write inconsistency\n");
+			return -1;
+		}
+		else if ( now >= expire ) { // If the lock has expired, kill it!
 			dprintf( D_ALWAYS,
-					 "GetLock warning: Expired lock found '%s'\n",
-					 lock_file.Value( ) );
+					 "GetLock warning: Expired lock found '%s', current time='%s', expired time='%s'\n",
+					 lock_file.Value( ),
+					 ctime(&now),
+					 ctime(&expire));
 
 				// Expired lock found, remove it
 			status = unlink( lock_file.Value( ) );
@@ -212,7 +221,7 @@ CondorLockFile::GetLock( time_t lock_ht )
 
 		// ENOENT is ok, but other errors are bad
 	} else if ( ENOENT != errno ) {
-		dprintf( D_FULLDEBUG,
+		dprintf( D_ALWAYS,
 				 "GetLock: Error stating lock file '%s': %d %s\n",
 				 lock_file.Value( ), errno, strerror( errno ) );
 		return -1;

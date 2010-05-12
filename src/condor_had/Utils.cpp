@@ -40,7 +40,7 @@ using namespace std;
 // for MD5 blocks computation
 #define FILE_CHUNK_SIZE               (100)
 
-extern int main_shutdown_graceful();
+extern void main_shutdown_graceful();
 
 MyString
 utilNoParameterError( const char* parameter, const char* daemonName )

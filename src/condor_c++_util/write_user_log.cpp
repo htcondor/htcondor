@@ -1221,63 +1221,10 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 			dprintf( D_ALWAYS, "WriteUserLog: global doWriteEvent()!\n" );
 			return false;
 		}
-	}
-
-	char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
-	if ( !m_global_disable && m_global_path && attrsToWrite ) {
-		ExprTree *tree;
-		EvalResult result;
-		char *curr;
-
-		ClassAd *eventAd = event->toClassAd();
-
-		StringList attrs(attrsToWrite);
-		attrs.rewind();
-		while ( eventAd && param_jobad && (curr=attrs.next()) )
-		{
-			if ( (tree=param_jobad->LookupExpr(curr)) ) {
-				// found the attribute.  now evaluate it before
-				// we put it into the eventAd.
-				if ( EvalExprTree(tree,param_jobad,NULL,&result) ) {
-					// now inserted evaluated expr
-					switch (result.type) {
-					case LX_BOOL:
-					case LX_INTEGER:
-						eventAd->Assign( curr, result.i);
-						break;
-					case LX_FLOAT:
-						eventAd->Assign( curr, result.f);
-						break;
-					case LX_STRING:
-						eventAd->Assign( curr, result.s);
-						break;
-					default:
-						break;
-					}
-				}
-			}
+		char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
+		if( attrsToWrite && *attrsToWrite ) {
+			writeJobAdInfoEvent( attrsToWrite, event, param_jobad, true );
 		}
-
-		// The EventTypeNumber will get overwritten to be a
-		// JobAdInformationEvent, so preserve the event that triggered
-		// us to write out the info in another attribute name called
-		// TriggerEventTypeNumber.
-		if ( eventAd  ) {
-			eventAd->Assign("TriggerEventTypeNumber",event->eventNumber);
-			eventAd->Assign("TriggerEventTypeName",event->eventName());
-			// Now that the eventAd has everything we want, write it.
-			JobAdInformationEvent info_event;
-			eventAd->Assign("EventTypeNumber",info_event.eventNumber);
-			info_event.initFromClassAd(eventAd);
-			info_event.cluster = m_cluster;
-			info_event.proc = m_proc;
-			info_event.subproc = m_subproc;
-			doWriteEvent(&info_event, true, false, param_jobad);
-			delete eventAd;
-		}
-	}
-
-	if ( attrsToWrite ) {
 		free( attrsToWrite );
 	}
 
@@ -1291,12 +1238,79 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 			dprintf( D_ALWAYS, "WriteUserLog: user doWriteEvent()!\n" );
 			return false;
 		}
+
+		if( param_jobad ) {
+			// The following should match ATTR_JOB_AD_INFORMATION_ATTRS
+			// but cannot reference it directly because of what gets
+			// linked in libcondorapi
+			char *attrsToWrite = NULL;
+			param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
+			if( attrsToWrite && *attrsToWrite ) {
+				writeJobAdInfoEvent( attrsToWrite, event, param_jobad, false );
+			}
+			free( attrsToWrite );
+		}
 	}
 
 	if ( written ) {
 		*written = true;
 	}
 	return true;
+}
+
+void
+WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, ULogEvent *event, ClassAd *param_jobad, bool is_global_event )
+{
+	ExprTree *tree;
+	EvalResult result;
+	char *curr;
+
+	ClassAd *eventAd = event->toClassAd();
+
+	StringList attrs(attrsToWrite);
+	attrs.rewind();
+	while ( eventAd && param_jobad && (curr=attrs.next()) )
+	{
+		if ( (tree=param_jobad->LookupExpr(curr)) ) {
+				// found the attribute.  now evaluate it before
+				// we put it into the eventAd.
+			if ( EvalExprTree(tree,param_jobad,NULL,&result) ) {
+					// now inserted evaluated expr
+				switch (result.type) {
+				case LX_BOOL:
+				case LX_INTEGER:
+					eventAd->Assign( curr, result.i);
+					break;
+				case LX_FLOAT:
+					eventAd->Assign( curr, result.f);
+					break;
+				case LX_STRING:
+					eventAd->Assign( curr, result.s);
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+
+		// The EventTypeNumber will get overwritten to be a
+		// JobAdInformationEvent, so preserve the event that triggered
+		// us to write out the info in another attribute name called
+		// TriggerEventTypeNumber.
+	if ( eventAd  ) {
+		eventAd->Assign("TriggerEventTypeNumber",event->eventNumber);
+		eventAd->Assign("TriggerEventTypeName",event->eventName());
+			// Now that the eventAd has everything we want, write it.
+		JobAdInformationEvent info_event;
+		eventAd->Assign("EventTypeNumber",info_event.eventNumber);
+		info_event.initFromClassAd(eventAd);
+		info_event.cluster = m_cluster;
+		info_event.proc = m_proc;
+		info_event.subproc = m_subproc;
+		doWriteEvent(&info_event, is_global_event, false, param_jobad);
+		delete eventAd;
+	}
 }
 
 bool

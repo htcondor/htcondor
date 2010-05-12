@@ -75,7 +75,7 @@ void usage(char* name)
 }
 
 
-int
+void
 main_init(int argc, char* argv[])
 {
 	char**		ptr; 
@@ -187,39 +187,32 @@ main_init(int argc, char* argv[])
 		// Tell all plugins to initialize themselves
 	ClassAdLogPluginManager::Initialize();
 #endif
-
-	return 0;
 } 
 
-int
-main_config( bool /*is_full*/ )
+void
+main_config()
 {
 	GridUniverseLogic::reconfig();
 	scheduler.reconfig();
 	dedicated_scheduler.reconfig();
-	return 0;
 }
 
 
-int
+void
 main_shutdown_fast()
 {
 	dedicated_scheduler.shutdown_fast();
 	GridUniverseLogic::shutdown_fast();
 	scheduler.shutdown_fast();
-
-	return 0;
 }
 
 
-int
+void
 main_shutdown_graceful()
 {
 	dedicated_scheduler.shutdown_graceful();
 	GridUniverseLogic::shutdown_graceful();
 	scheduler.shutdown_graceful();
-
-	return 0;
 }
 
 

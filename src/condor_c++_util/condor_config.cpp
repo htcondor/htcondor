@@ -730,12 +730,6 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	if(dirlist) { free(dirlist); dirlist = NULL; }
 	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
-		// Daemons should additionally call condor_auth_config()
-		// explicitly with the argument is_daemon=true.  Here, we just
-		// call with is_daemon=false, since that is fine for both daemons
-		// and non-daemons to do.
-	condor_auth_config( false );
-
 	// The following lines should be placed very carefully. Must be after
 	// global and local config sources being processed but before any
 	// call that may be interposed by GCB
@@ -824,6 +818,12 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	check_params();
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
+
+		// Daemons should additionally call condor_auth_config()
+		// explicitly with the argument is_daemon=true.  Here, we just
+		// call with is_daemon=false, since that is fine for both daemons
+		// and non-daemons to do.
+	condor_auth_config( false );
 
 	(void)SetSyscalls( scm );
 }
@@ -1448,16 +1448,8 @@ param_without_default( const char *name )
 char*
 param(const char* name) 
 {
-	CondorVersionInfo cvi;
-
-	if (cvi.built_since_version(7,5,0) == true) {
-		/* This uses the new default table for the 7.5 series and beyond. */
 		/* The zero means return NULL on not found instead of EXCEPT */
-		return param_with_default_abort(name, 0);
-	}
-
-	/* This is the original behavior of param, for the 7.4 series. */
-	return param_without_default(name);
+	return param_with_default_abort(name, 0);
 }
 
 char *
@@ -1585,9 +1577,7 @@ param_integer( const char *name, int &value,
 			   ClassAd *me, ClassAd *target,
 			   bool use_param_table )
 {
-	CondorVersionInfo cvi;
-
-	if(use_param_table && cvi.built_since_version(7,5,0)) {
+	if(use_param_table) {
 		int tbl_default_valid;
 		int tbl_default_value = 
 			param_default_integer( name, &tbl_default_valid );
@@ -1737,9 +1727,7 @@ param_double( const char *name, double default_value,
 			  ClassAd *me, ClassAd *target,
 			  bool use_param_table )
 {
-	CondorVersionInfo cvi;
-
-	if(use_param_table && cvi.built_since_version(7,5,0)) {
+	if(use_param_table) {
 		int tbl_default_valid;
 		double tbl_default_value = 
 			param_default_double( name, &tbl_default_valid );
@@ -1833,9 +1821,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 			   ClassAd *me, ClassAd *target,
 			   bool use_param_table )
 {
-	CondorVersionInfo cvi;
-
-	if(use_param_table && cvi.built_since_version(7,5,0)) {
+	if(use_param_table) {
 		int tbl_default_valid;
 		bool tbl_default_value = 
 			param_default_boolean( name, &tbl_default_valid );

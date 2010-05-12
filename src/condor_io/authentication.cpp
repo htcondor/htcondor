@@ -430,8 +430,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 #if defined(HAVE_EXT_GLOBUS)
 	// if GSI, try first with the FQAN (dn plus voms attrs)
 	if (authentication_type == CAUTH_GSI) {
-		MyString fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
-		if (fqan != "") {
+		const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
+		if (fqan && fqan[0]) {
 			dprintf (D_ALWAYS, "ZKM: GSI was used, and FQAN is present.\n");
 			auth_name_to_map = fqan;
 			included_voms = true;

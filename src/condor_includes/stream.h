@@ -241,6 +241,8 @@ public:
     ///
 	int code(MyString &);
     ///
+	int code(std::string &);
+    ///
 	int code(char *&, int &);
     ///
 	int code_bytes(void *, int);
@@ -394,6 +396,7 @@ public:
 	int put(double);
 	int put(char const *);
 	int put(const MyString &);
+	int put(const std::string &);
 	int put(char const *, int);
 
 
@@ -416,6 +419,7 @@ public:
 	int get(double &);
 
 	int get(MyString &);
+	int get(std::string &);
 
 		// This function assigns the argument to a freshly mallocated string
 		// or NULL.  The caller should free the string.

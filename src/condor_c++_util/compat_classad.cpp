@@ -178,6 +178,8 @@ void EvalResult::toString(bool force)
 	}
 }
 
+static StringList ClassAdUserLibs;
+
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
 
@@ -185,6 +187,25 @@ void ClassAd::
 Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
+	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+
+	char *new_libs = param( "CLASSAD_USER_LIBS" );
+	if ( new_libs ) {
+		StringList new_libs_list( new_libs );
+		free( new_libs );
+		new_libs_list.rewind();
+		char *new_lib;
+		while ( (new_lib = new_libs_list.next()) ) {
+			if ( !ClassAdUserLibs.contains( new_lib ) ) {
+				if ( classad::FunctionCall::RegisterSharedLibraryFunctions( new_lib ) ) {
+					ClassAdUserLibs.append( new_lib );
+				} else {
+					dprintf( D_ALWAYS, "Failed to load ClassAd user library %s: %s\n",
+							 new_lib, classad::CondorErrMsg.c_str() );
+				}
+			}
+		}
+	}
 }
 
 static classad::AttributeReference *the_my_ref = NULL;
@@ -2261,6 +2282,7 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 	}
 }	
 
+#if 0
 static ClassAd job_attrs_ad;
 static ClassAd machine_attrs_ad;
 static ClassAd schedd_attrs_ad;
@@ -2721,12 +2743,14 @@ static void InitTargetAttrLists()
 
 	target_attrs_init = true;
 }
+#endif
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();
 
+#if 0
 	if ( !target_attrs_init ) {
 		InitTargetAttrLists();
 	}
@@ -2813,6 +2837,7 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 		return tree->Copy( );
 	}
 	}
+#endif
 }
 
 const char *ConvertEscapingOldToNew( const char *str )

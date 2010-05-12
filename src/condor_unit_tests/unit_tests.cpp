@@ -28,6 +28,7 @@
 #include "emit.h"
 
 	// prototypes for testing functions, each function here has its own file
+
 bool FTEST_host_in_domain(void);
 bool FTEST_getHostFromAddr(void);
 bool FTEST_getPortFromAddr(void);
@@ -44,13 +45,16 @@ bool FTEST_strlwr(void);
 bool FTEST_basename(void);
 bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
+bool FTEST_flatten_and_inline(void);
 bool OTEST_HashTable(void);
 bool OTEST_MyString(void);
+bool OTEST_StringList(void);
 
 int main() {
 	e.init();
 		// set up the function driver
-	FunctionDriver driver(18);
+	FunctionDriver driver(20);
+
 	driver.register_function(FTEST_host_in_domain);
 	driver.register_function(FTEST_getHostFromAddr);
 	driver.register_function(FTEST_getPortFromAddr);
@@ -67,25 +71,16 @@ int main() {
 	driver.register_function(FTEST_basename);
 	driver.register_function(FTEST_dirname);
 	driver.register_function(FTEST_fullpath);
+	driver.register_function(FTEST_flatten_and_inline);
 	driver.register_function(OTEST_HashTable);
 	driver.register_function(OTEST_MyString);
+	driver.register_function(OTEST_StringList);
 
 		// run all the functions and return the result
 	bool result = driver.do_all_functions();
 	e.emit_summary();
-	e.emit_function_break();
-
 	if(result) {
-		e.emit_comment("The actual return values of all tests have passed. "
-			"Good.\n");
 		return EXIT_SUCCESS;
 	}
-
-	e.emit_comment("The actual return values of some tests have failed. "
-		"Bad.\n");
 	return EXIT_FAILURE;
 }
-
-
-
-

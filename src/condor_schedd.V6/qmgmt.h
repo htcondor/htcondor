@@ -86,8 +86,17 @@ void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);
 void dirtyJobQueue( void );
 bool isQueueSuperUser( const char* user );
+
+// Verify that the user issuing a command (test_owner) is authorized
+// to modify the given job.  In addition to everything OwnerCheck2()
+// does, this also calls IPVerify to check for WRITE authorization.
 bool OwnerCheck( ClassAd *ad, const char *test_owner );
-bool OwnerCheck2( ClassAd *ad, const char *test_owner );
+
+// Verify that the user issuing a command (test_owner) is authorized
+// to modify the given job.  Either ad or job_owner should be given
+// but not both.  If job_owner is NULL, the owner is looked up in the ad.
+bool OwnerCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
+
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
@@ -98,8 +107,6 @@ int get_myproxy_password_handler(Service *, int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
 bool OwnerCheck(int,int);
-bool OwnerCheck(ClassAd *, const char *);
-bool OwnerCheck2(ClassAd *, const char *);
 
 // priority records
 extern prio_rec *PrioRec;

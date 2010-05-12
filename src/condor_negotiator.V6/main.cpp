@@ -31,38 +31,35 @@ DECL_SUBSYSTEM( "NEGOTIATOR", SUBSYSTEM_TYPE_NEGOTIATOR );
 // the matchmaker object
 Matchmaker matchMaker;
 
-int main_init (int, char *[])
+void main_init (int, char *[])
 {
 	// read in params
 	matchMaker.initialize ();
-	return TRUE;
 }
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	matchMaker.invalidateNegotiatorAd();
 #if HAVE_DLOPEN
 	NegotiatorPluginManager::Shutdown();
 #endif
 	DC_Exit(0);
-	return 0;
 }
 
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	matchMaker.invalidateNegotiatorAd();
 #if HAVE_DLOPEN
 	NegotiatorPluginManager::Shutdown();
 #endif
 	DC_Exit(0);
-	return 0;
 }
 
-int
-main_config( bool /* is_full */ )
+void
+main_config()
 {
-	return (matchMaker.reinitialize ());
+	matchMaker.reinitialize ();
 }
 
 

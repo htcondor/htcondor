@@ -41,47 +41,41 @@ DECL_SUBSYSTEM("LeaseManager", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
 LeaseManager	*lease_manager;
 
 //-------------------------------------------------------------
-int
+void
 main_init(int /*argc*/, char */*argv*/[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
 	lease_manager = new LeaseManager;
 	lease_manager->init( );
-
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
-int
-main_config( bool /*is_full*/ )
+void
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 	lease_manager->config( );
-	return TRUE;
 }
 
 //-------------------------------------------------------------
-int
+void
 main_shutdown_fast(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	lease_manager->shutdownFast();
 	delete lease_manager;
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
-int
+void
 main_shutdown_graceful(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	lease_manager->shutdownGraceful();
 	delete lease_manager;
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

@@ -59,6 +59,8 @@ public:
 	void clearAll();
 	void remove_anycase (const char* str);
 	char *next (void) { return m_strings.Next(); }
+	
+	/** This is invalid when "current" points to NULL as stated in list.h*/
 	void deleteCurrent();
 	int number (void) const { return m_strings.Number(); };
 	bool isEmpty(void) const { return m_strings.IsEmpty(); };
@@ -91,15 +93,6 @@ public:
 	*/
 	bool identical(const StringList & subset, bool anycase = true) const;
 
-	/** Checks to see if the given list is similar to the current list;
-			like ::identical(), but ignores order
-		@param other
-		@param anycase false for case sensitive comparison, true for case
-				in-sensitive.
-		@retval true if other is indeed similar, else false
-	*/
-	bool similar(const StringList & subset, bool anycase) const;
-
 	/* return a comma delimited list if the internals of the class. This will
 		rewind the string in order to construct this char array, and you
 		are responsible to release the memory allocated by this function
@@ -107,7 +100,7 @@ public:
 	char* print_to_string(void) const;
 	char* print_to_delimed_string(const char *delim = NULL) const;
 
-	/** Return the actual list -- used for ::identical() and ::similar()
+	/** Return the actual list -- used for ::identical()
 		@retval the list
 	*/
 	const List<char> &getList( void ) const { return m_strings; };

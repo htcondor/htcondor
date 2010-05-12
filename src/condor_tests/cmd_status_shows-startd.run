@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use CondorCmdStatusWorker;
 use strict;
 use warnings;
@@ -122,21 +123,22 @@ if($done == 0) {
 
 CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
-system("cp *cmd_status_shows-startd* $mysaveme");
+#fails due to directory that matches symbol
+runcmd("cp *cmd_status_shows-startd* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmout $mycorenmout");
+	runcmd("cp $mysubmitnmout $mycorenmout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($locconfig);

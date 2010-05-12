@@ -29,6 +29,7 @@
 #include "condor_debug.h"
 #include "condor_version.h"
 #include "condor_attributes.h"
+#include "dc_schedd.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -40,6 +41,8 @@ static bool is_reconnect = false;
 static int cluster = -1;
 static int proc = -1;
 static const char * xfer_queue_contact_info = NULL;
+bool sendUpdatesToSchedd = true;
+static time_t shadow_worklife_expires = 0;
 
 static void
 usage( int argc, char* argv[] )
@@ -97,7 +100,7 @@ parseArgs( int argc, char *argv[] )
 		
 		if( opt[0] == '<' ) { 
 				// might be the schedd's address
-			if( is_valid_sinful(opt) ) {
+			if( is_valid_sinful(opt)) {
 				schedd_addr = opt;
 				args_handled++;
 				continue;
@@ -135,6 +138,12 @@ parseArgs( int argc, char *argv[] )
 			continue;
 		}
 
+		if (strcmp(opt, "--no-schedd-updates") == 0) {
+			args_handled++;
+			sendUpdatesToSchedd = false;
+			continue;
+		}
+
 			// the only other argument we understand is the
 			// filename we should read our ClassAd from, "-" for
 			// STDIN.  There's no further checking we need to do 
@@ -153,11 +162,11 @@ parseArgs( int argc, char *argv[] )
 }
 
 
+static FILE* fp = NULL;
 ClassAd* 
 readJobAd( void )
 {
 	ClassAd* ad = NULL;
-	FILE* fp = NULL;
 	bool is_stdin = false;
 	bool read_something = false;
 
@@ -167,10 +176,12 @@ readJobAd( void )
 		fp = stdin;
 		is_stdin = true;
 	} else {
-		fp = safe_fopen_wrapper( job_ad_file, "r" );
-		if( ! fp ) {
-			EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
-					job_ad_file, strerror(errno), errno );
+		if (fp == NULL) {
+			fp = safe_fopen_wrapper( job_ad_file, "r" );
+			if( ! fp ) {
+				EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
+						job_ad_file, strerror(errno), errno );
+			}
 		}
 	}
 
@@ -201,9 +212,6 @@ readJobAd( void )
 	if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {
 		ad->dPrint( D_JOB );
 	} 
-	if( ! is_stdin ) {
-		fclose( fp );
-	}
 
 	// For debugging, see if there's a special attribute in the
 	// job ad that sends us into an infinite loop, waiting for
@@ -254,12 +262,6 @@ initShadow( ClassAd* ad )
 	case CONDOR_UNIVERSE_MPI:
 		Shadow = new MPIShadow();
 		break;
-	case CONDOR_UNIVERSE_PVM:
-			// some day we'll support this.  for now, fall through and
-			// print out an error message that might mean something to
-			// our user, not "PVM...hopefully one day..."
-//		Shadow = new PVMShadow();
-//		break;
 	default:
 		dprintf( D_ALWAYS, "This version of the shadow cannot support "
 				 "universe %d (%s)\n", universe,
@@ -270,7 +272,52 @@ initShadow( ClassAd* ad )
 }
 
 
-int
+void startShadow( ClassAd *ad )
+{
+		// see if the SchedD punched a DAEMON-level authorization
+		// hole for this job. if it did, we'll do the same here
+		//
+	MyString auth_hole_id;
+	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if (!ipv->PunchHole(DAEMON, auth_hole_id)) {
+			dprintf(D_ALWAYS,
+			        "WARNING: IpVerify::PunchHole error for %s: "
+			            "job may fail to execute\n",
+			        auth_hole_id.Value());
+		}
+	}
+
+	initShadow( ad );
+
+	int wantClaiming = 0;
+	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
+
+	if( is_reconnect ) {
+		Shadow->reconnect();
+	} else {
+			// if the shadow is going to claim the startd,
+			// we need to asynchrously claim it.
+			
+			// Otherwise, in the usual case under the sched,
+			// call spawn here, which will activate the pre-claimed
+			// startd
+		if (!wantClaiming) {
+			Shadow->spawn();
+		}
+	}		
+}
+
+int handleJobRemoval(Service*,int sig)
+{
+	if( Shadow ) {
+		return Shadow->handleJobRemoval(sig);
+	}
+	return 0;
+}
+
+
+void
 main_init(int argc, char *argv[])
 {
 	_EXCEPT_Cleanup = ExceptCleanup;
@@ -288,6 +335,22 @@ main_init(int argc, char *argv[])
 							"dummy_reaper",NULL);
 
 
+		// register SIGUSR1 (condor_rm) for shutdown...
+	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
+		(SignalHandler)&handleJobRemoval,"handleJobRemoval");
+
+	int shadow_worklife = param_integer( "SHADOW_WORKLIFE", 0 );
+	if( shadow_worklife > 0 ) {
+		shadow_worklife_expires = time(NULL) + shadow_worklife;
+	}
+	else if( shadow_worklife == 0 ) {
+			// run one job and then exit
+		shadow_worklife_expires = time(NULL)-1;
+	}
+	else {
+		shadow_worklife_expires = 0;
+	}
+
 	parseArgs( argc, argv );
 
 	ClassAd* ad = readJobAd();
@@ -295,52 +358,26 @@ main_init(int argc, char *argv[])
 		EXCEPT( "Failed to read job ad!" );
 	}
 
-		// see if the SchedD punched a DAEMON-level authorization
-		// hole for this job. if it did, we'll do the same here
-		//
-	MyString auth_hole_id;
-	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
-		IpVerify* ipv = daemonCore->getIpVerify();
-		if (!ipv->PunchHole(DAEMON, auth_hole_id)) {
-			dprintf(D_ALWAYS,
-			        "WARNING: IpVerify::PunchHole error for %s: "
-			            "job may fail to execute\n",
-			        auth_hole_id.Value());
-		}
-	}
-
-	initShadow( ad );
-
-	if( is_reconnect ) {
-		Shadow->reconnect();
-	} else {
-		Shadow->spawn();
-	}		
-
-	return 0;
+	startShadow( ad );
 }
 
-
-int
-main_config( bool /* is_full */ )
+void
+main_config()
 {
 	Shadow->config();
-	return 0;
 }
 
 
-int
+void
 main_shutdown_fast()
 {
 	Shadow->shutDown( JOB_NOT_CKPTED );
-	return 0;
 }
 
-int
+void
 main_shutdown_graceful()
 {
 	Shadow->gracefulShutDown();
-	return 0;
 }
 
 
@@ -392,4 +429,54 @@ main_pre_dc_init( int argc, char* argv[] )
 void
 main_pre_command_sock_init( )
 {
+}
+
+bool
+recycleShadow(int previous_job_exit_reason)
+{
+	if( previous_job_exit_reason != JOB_EXITED ) {
+		return false;
+	}
+	if( shadow_worklife_expires && time(NULL) > shadow_worklife_expires ) {
+		return false;
+	}
+
+	dprintf(D_ALWAYS,"Reporting job exit reason %d and attempting to fetch new job.\n",
+			previous_job_exit_reason );
+
+	ClassAd *new_job_ad = NULL;
+	if (sendUpdatesToSchedd) {
+		// If we're running under a schedd, get the next job ad
+		// from the schedd
+		ASSERT( schedd_addr );
+
+		DCSchedd schedd(schedd_addr);
+		MyString error_msg;
+		if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg ) )
+		{
+			dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.Value());
+			delete new_job_ad;
+			return false;
+		}
+	} else {
+		// if we are a free-running shadow
+		new_job_ad = readJobAd();
+	}
+
+	if( !new_job_ad ) {
+		dprintf(D_FULLDEBUG,"No new job found to run under this shadow.\n");
+		return false;
+	}
+
+	new_job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	new_job_ad->LookupInteger(ATTR_PROC_ID,proc);
+	dprintf(D_ALWAYS,"Switching to new job %d.%d\n",cluster,proc);
+
+	delete Shadow;
+	Shadow = NULL;
+	is_reconnect = false;
+	BaseShadow::myshadow_ptr = NULL;
+
+	startShadow( new_job_ad );
+	return true;
 }

@@ -44,7 +44,7 @@ void usage(char* name)
 
 //-------------------------------------------------------------
 
-int main_init(int argc, char *argv[])
+void main_init(int argc, char *argv[])
 {
 	// handle collector-specific command line args
 	if(argc > 2)
@@ -60,40 +60,35 @@ int main_init(int argc, char *argv[])
 
 	CollectorPluginManager::Initialize();
 #endif
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_config( bool is_full )
+void main_config()
 {
 	Daemon->Config();
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	Daemon->Exit();
 #if HAVE_DLOPEN
 	CollectorPluginManager::Shutdown();
 #endif
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	Daemon->Shutdown();
 #if HAVE_DLOPEN
 	CollectorPluginManager::Shutdown();
 #endif
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 

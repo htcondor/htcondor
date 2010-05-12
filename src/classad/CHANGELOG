@@ -1,5 +1,7 @@
 Changes for version 1.0.7 (unreleased)
 * Stop escaping '?' in strings when unparsing.
+* Added _useOldClassAdSemantics, which makes expression evaluation behave
+  more like the old ClassAds implementation. Meant for use in Condor only.
 
 Changes for version 1.0.6 (Released 2010-02-25)
 * Fixed bug in MatchClassAd::OptimizeAdForMatchmaking() that broke

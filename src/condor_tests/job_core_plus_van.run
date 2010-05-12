@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_core_plus_van.cmd';
 $testdesc =  'Condor_submit correctly places attributes into JobAd - vanilla U';
@@ -57,7 +58,7 @@ $submit = sub
 		$alreadydone = 1;
 	}
 
-	system("condor_config_val -config");
+	runcmd("condor_config_val -config");
 	CondorTest::debug("Checking Job Ads for $cluster\n",1);
 	my @adarray;
 	my $status = 1;

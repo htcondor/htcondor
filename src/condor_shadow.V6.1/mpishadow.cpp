@@ -51,7 +51,10 @@ MPIShadow::~MPIShadow() {
     for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
         delete ResourceList[i];
     }
-#if ! MPI_USES_RSH
+	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
+#if MPI_USES_RSH
+	daemonCore->Cancel_Command( MPI_START_COMRADE );
+#else
 	if( master_addr ) {
 		free( master_addr );
 	}

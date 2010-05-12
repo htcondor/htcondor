@@ -83,9 +83,9 @@ int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
 void	run_preen();
 void	usage(const char* );
-int	main_shutdown_graceful();
-int	main_shutdown_fast();
-int	main_config( bool is_full );
+void	main_shutdown_graceful();
+void	main_shutdown_fast();
+void	main_config();
 int	agent_starter(ReliSock *);
 int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(Service *, int, Stream *);
@@ -219,7 +219,7 @@ DoCleanup(int,int,char*)
 }
 
 
-int
+void
 main_init( int argc, char* argv[] )
 {
     extern int runfor;
@@ -231,7 +231,7 @@ main_init( int argc, char* argv[] )
 	if ( argc == -1 ) {
 		NT_ServiceFlag = TRUE;
 		register_service();
-		return TRUE;
+		return;
 	}
 #endif
 
@@ -297,9 +297,6 @@ main_init( int argc, char* argv[] )
 #endif
 
 		// Register admin commands
-	daemonCore->Register_Command( RECONFIG, "RECONFIG",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( RESTART, "RESTART",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
@@ -375,7 +372,6 @@ main_init( int argc, char* argv[] )
 		daemons.StartAllDaemons();
 	}
 	daemons.StartTimers();
-	return TRUE;
 }
 
 
@@ -391,9 +387,6 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	dprintf( D_FULLDEBUG, 
 			 "Got admin command (%d) and allowing it.\n", cmd );
 	switch( cmd ) {
-	case RECONFIG:
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
-		return TRUE;
 	case RESTART:
 		restart_everyone();
 		return TRUE;
@@ -935,8 +928,8 @@ lock_or_except( const char* file_name )
  ** Re read the config file, and send all the daemons a signal telling
  ** them to do so also.
  */
-int
-main_config( bool /* is_full */ )
+void
+main_config()
 {
 	StringList old_daemon_list;
 	char *list = daemons.ordered_daemon_names.print_to_string();
@@ -1013,13 +1006,12 @@ main_config( bool /* is_full */ )
 		// changed.
 	daemons.StartTimers();
 	daemons.UpdateCollector();
-	return TRUE;
 }
 
 /*
  ** Kill all daemons and go away.
  */
-int
+void
 main_shutdown_fast()
 {
 	MasterShuttingDown = TRUE;
@@ -1031,14 +1023,13 @@ main_shutdown_fast()
 
 	daemons.CancelRestartTimers();
 	daemons.StopFastAllDaemons();
-	return TRUE;
 }
 
 
 /*
  ** Cause job(s) to vacate, kill all daemons and go away.
  */
-int
+void
 main_shutdown_graceful()
 {
 	MasterShuttingDown = TRUE;
@@ -1050,7 +1041,6 @@ main_shutdown_graceful()
 
 	daemons.CancelRestartTimers();
 	daemons.StopAllDaemons();
-	return TRUE;
 }
 
 time_t

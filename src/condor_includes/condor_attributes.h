@@ -55,6 +55,7 @@ extern const char * const  ATTR_BYTES_RECVD;
 extern const char * const  ATTR_CAN_HIBERNATE;
 extern const char * const  ATTR_CAPABILITY;
 extern const char * const  ATTR_CKPT_SERVER;
+extern const char * const  ATTR_CLAIM_STARTD;
 extern const char * const  ATTR_COD_CLAIMS;
 extern const char * const  ATTR_COMMAND;
 extern const char * const  ATTR_COMPRESS_FILES;
@@ -409,6 +410,7 @@ extern const char * const  ATTR_PRIVATE_NETWORK_NAME;
 extern const char * const  ATTR_Q_DATE;
 extern const char * const  ATTR_RANK;
 extern const char * const  ATTR_REAL_UID;
+extern const char * const  ATTR_RELEASE_CLAIM;
 extern const char * const  ATTR_RELEASE_REASON;
 extern const char * const  ATTR_REMOTE_GROUP_RESOURCES_IN_USE;
 extern const char * const  ATTR_REMOTE_GROUP_QUOTA;
@@ -766,6 +768,7 @@ extern const char * const ATTR_SHELL;
 extern const char * const ATTR_RETRY;
 extern const char * const ATTR_SSH_KEYGEN_ARGS;
 extern const char * const ATTR_SOCK;
+extern const char * const ATTR_JOB_AD_INFORMATION_ATTRS;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

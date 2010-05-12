@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Cwd;
 #use Time::localtime;
 use strict;
@@ -28,8 +29,8 @@ my $cmd = "cmd_wait_shows.cmd";
 my $debuglevel = 2;
 
 my $pid = $$;
-system("rm -rf $pid");
-system("mkdir $pid");
+runcmd("rm -rf $pid");
+runcmd("mkdir $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 

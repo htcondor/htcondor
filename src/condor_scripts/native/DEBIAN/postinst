@@ -24,14 +24,12 @@ configure_condor(){
 	#Debian guarantee that this program is in PATH
 	ldconfig
 
-	#We don't want to start condor by default
-	#So that user can edit condor_config 
-
 }
 
 start_service(){
-	set +e	
-	#Start condor service
+	
+	# Stop condor service
+	# It will fail if condor is not stopped in time limit
 	if [ -x "/etc/init.d/condor" ]; then
 	  if which invoke-rc.d >/dev/null 2>&1; then
      		invoke-rc.d condor start
@@ -39,7 +37,7 @@ start_service(){
      		/etc/init.d/condor start
      	  fi
 	fi
-	set -e	
+	
 }
 
 
@@ -54,7 +52,11 @@ case "$1" in
     configure)
 	configure_condor
 	change_permission
-	start_service
+	
+	#We don't want to start condor by default
+	#So that user can edit condor_config 
+
+	#start_service
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

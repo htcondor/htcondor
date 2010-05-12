@@ -28,6 +28,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h"
+#include "condor_sys_types.h"
 
 #if HAVE_BACKTRACE
 #include "sig_install.h"
@@ -37,7 +38,7 @@ int		Termlog = 0;
 
 extern int		DebugFlags;
 extern FILE		*DebugFP;
-extern int		MaxLog[D_NUMLEVELS+1];
+extern uint64_t		MaxLog[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern char		*_condor_DebugFlagNames[];

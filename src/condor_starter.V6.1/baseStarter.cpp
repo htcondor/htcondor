@@ -52,7 +52,7 @@
 #include "my_username.h"
 
 extern "C" int get_random_int();
-extern int main_shutdown_fast();
+extern void main_shutdown_fast();
 
 /* CStarter class implementation */
 

@@ -94,6 +94,13 @@ struct shadow_rec
 		// This ensures that the job can reconnect when we come back up
 		//
 	bool			keepClaimAttributes;
+
+	PROC_ID			prev_job_id;
+	Stream*			recycle_shadow_stream;
+	bool			exit_already_handled;
+
+	shadow_rec();
+	~shadow_rec();
 }; 
 
 struct OwnerData {
@@ -301,11 +308,14 @@ class Scheduler : public Service
 	void			PeriodicExprHandler( void );
 	void			addCronTabClassAd( ClassAd* );
 	void			addCronTabClusterId( int );
+	int				RecycleShadow(int cmd, Stream *stream);
+	void			finishRecycleShadow(shadow_rec *srec);
 
 	int				requestSandboxLocation(int mode, Stream* s);
 
 	// match managing
 	int 			publish( ClassAd *ad );
+	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*, match_rec **pre_existing=NULL);
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
@@ -645,7 +655,6 @@ private:
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
-	shadow_rec*		start_pvm(match_rec*, PROC_ID*);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	shadow_rec*		start_local_universe_job(PROC_ID*);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,

@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "unit_test_utils.h"
 #include "emit.h"
-#include "MyString.h"
 
 class Emitter e;
 
@@ -75,4 +74,61 @@ bool vsprintf_catHelper(MyString* str, char* format, ...) {
 	va_end(args);
 
 	return toReturn;
+}
+
+/* Returns the empty string when the passed string is null */
+const char* nicePrint(const char* str) {
+	if(!str)
+		return "";
+	return str;
+}
+
+/* Exactly like strcmp, but treats NULL and "" as equal */
+int niceStrCmp(const char* str1, const char* str2) {
+	if(!str1)
+		if(!str2)
+			return 0;	//both NULL
+		else
+			return strcmp(str2, "");	//NULL, ""
+	if(!str2)
+		return strcmp(str1, "");	//"", NULL
+	return strcmp(str1, str2);
+}
+
+/* Exactly like free, but only frees when not null */
+void niceFree(char* str) {
+	if(str != NULL)
+		free(str);
+}
+
+/* Returns  a char** representation of the StringList starting at the string 
+   at index start
+*/
+char** string_compare_helper(StringList* sl, int start) {
+	if(start < 0 || start >= sl->number())
+		return NULL;
+
+	char** list = (char**)calloc(sl->number() - start, sizeof(char *));
+	char* str;
+	int i;
+	
+	for(i = 0, sl->rewind(); i < start; i++){ 
+		sl->next();		
+	}
+
+	for(i = 0; i < sl->number() - start; i++) {
+		str = sl->next();
+		list[i] = strdup(str);
+	}
+	return list;
+}
+
+/* Frees a char** */
+void free_helper(char** array) {
+	int j = sizeof(array)/sizeof(char*);
+	int i;
+	for(i = 0; i < j; i++) {
+		free(array[i]);		
+	}
+	free(array);
 }

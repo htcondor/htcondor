@@ -115,6 +115,7 @@ const char * const ATTR_BYTES_RECVD				 = "BytesRecvd";
 const char * const ATTR_CAN_HIBERNATE           = "CanHibernate";
 const char * const ATTR_CAPABILITY				 = "Capability";
 const char * const ATTR_CKPT_SERVER				 = "CkptServer";
+const char * const ATTR_CLAIM_STARTD               = "ClaimStartd";
 const char * const ATTR_COD_CLAIMS               = "CODClaims";
 const char * const ATTR_COMMAND					 = "Command";
 const char * const ATTR_COMPRESS_FILES		 = "CompressFiles";
@@ -672,6 +673,7 @@ const char * const ATTR_POST_EXIT_REASON		 = "PostExitReason";
 const char * const ATTR_PERIODIC_HOLD_CHECK		 = "PeriodicHold";
 const char * const ATTR_PERIODIC_RELEASE_CHECK	 = "PeriodicRelease";
 const char * const ATTR_PERIODIC_REMOVE_CHECK	 = "PeriodicRemove";
+const char * const ATTR_RELEASE_CLAIM			 = "ReleaseClaim";
 const char * const ATTR_TIMER_REMOVE_CHECK		 = "TimerRemove";
 const char * const ATTR_TIMER_REMOVE_CHECK_SENT	 = "TimerRemoveSent";
 const char * const ATTR_GLOBUS_RESUBMIT_CHECK	 = "GlobusResubmit";
@@ -818,6 +820,7 @@ const char * const ATTR_SHELL = "Shell";
 const char * const ATTR_RETRY = "Retry";
 const char * const ATTR_SSH_KEYGEN_ARGS = "SSHKeyGenArgs";
 const char * const ATTR_SOCK = "sock";
+const char * const ATTR_JOB_AD_INFORMATION_ATTRS = "JobAdInformationAttrs";
 
 
 //************* Added for Amazon Jobs ***************************//

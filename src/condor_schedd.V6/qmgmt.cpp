@@ -969,11 +969,10 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 }
 
 
-// This code actually checks the owner, and doesn't do a Verify!
 bool
-OwnerCheck2(ClassAd *ad, const char *test_owner)
+OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 {
-	MyString	my_owner;
+	MyString	owner_buf;
 
 	// in the very rare event that the admin told us all users 
 	// can be trusted, let it pass
@@ -1022,26 +1021,29 @@ OwnerCheck2(ClassAd *ad, const char *test_owner)
 
 		// If we don't have an Owner attribute (or classad) and we've 
 		// gotten this far, how can we deny service?
-	if( !ad ) {
-		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no ad\n");
-		return true;
-	}
-	if( ad->LookupString(ATTR_OWNER, my_owner) == 0 ) {
-		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no owner\n");
-		return true;
+	if( !job_owner ) {
+		if( !ad ) {
+			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no ad\n");
+			return true;
+		}
+		else if( ad->LookupString(ATTR_OWNER, owner_buf) == 0 ) {
+			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no owner\n");
+			return true;
+		}
+		job_owner = owner_buf.Value();
 	}
 
 		// Finally, compare the owner of the ad with the entity trying
 		// to connect to the queue.
 #if defined(WIN32)
 	// WIN32: user names are case-insensitive
-	if (strcasecmp(my_owner.Value(), test_owner) != 0) {
+	if (strcasecmp(job_owner, test_owner) != 0) {
 #else
-	if (strcmp(my_owner.Value(), test_owner) != 0) {
+	if (strcmp(job_owner, test_owner) != 0) {
 #endif
 		errno = EACCES;
 		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
-				my_owner.Value(), test_owner );
+				job_owner, test_owner );
 		return false;
 	} 
 	else {
@@ -1466,18 +1468,17 @@ int DestroyProc(int cluster_id, int proc_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 
-	if( (universe == CONDOR_UNIVERSE_PVM) || 
-		(universe == CONDOR_UNIVERSE_MPI) ||
+	if( (universe == CONDOR_UNIVERSE_MPI) ||
 		(universe == CONDOR_UNIVERSE_PARALLEL) ) {
-			// PVM jobs take up a whole cluster.  If we've been ask to
-			// destroy any of the procs in a PVM job cluster, we
+			// Parallel jobs take up a whole cluster.  If we've been ask to
+			// destroy any of the procs in a parallel job cluster, we
 			// should destroy the entire cluster.  This hack lets the
 			// schedd just destroy the proc associated with the shadow
-			// when a multi-class PVM job exits without leaving other
+			// when a multi-class parallel job exits without leaving other
 			// procs in the cluster around.  It also ensures that the
-			// user doesn't delete only some of the procs in the PVM
+			// user doesn't delete only some of the procs in the parallel
 			// job cluster, since that's going to really confuse the
-			// PVM shadow.
+			// shadow.
 		int ret = DestroyCluster(cluster_id);
 		if(ret < 0 ) { return DESTROYPROC_ERROR; }
 		return DESTROYPROC_SUCCESS;
@@ -3854,6 +3855,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		ad = GetNextJob(1);
 		while (ad != NULL) {
 			if ( Runnable(ad) ) {
+					// keep the order of arguments to IsAMatch() in sync
+					// with Scheduler::OptimizeMachineAdForMatchmaking()
 				if ( IsAMatch( my_match_ad, ad ) )
 				{
 					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
@@ -3911,7 +3914,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}
 
-			if ( ! IsAMatch( my_match_ad, ad ) )
+			if ( ! IsAMatch( ad, my_match_ad ) )
 				{
 						// Job and machine do not match.
 					PrioRecAutoClusterRejected->insert( PrioRec[i].auto_cluster_id, 1 );

@@ -88,7 +88,7 @@ QmgrJobUpdater::~QmgrJobUpdater()
 		q_update_tid = -1;
 	}
 	if( schedd_addr ) { free(schedd_addr); }
-	free(schedd_ver);
+	if (schedd_ver)   {free(schedd_ver); }
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
@@ -350,7 +350,6 @@ QmgrJobUpdater::periodicUpdateQ( void )
 	updateJob( U_PERIODIC, NONDURABLE );
 }
 
-
 bool
 QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
 {
@@ -377,7 +376,12 @@ QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
 		// and call SetAttribute(), so it was both a waste of effort
 		// here, and made this code needlessly more complex.  
 		// Derek Wright, 3/25/02
-	if( SetAttribute(cluster, proc, name, value) < 0 ) {
+
+		// We use SetAttribute_NoAck to improve performance, since this
+		// avoids a lot of round-trips between the schedd and shadow.
+		// This means we may not detect failure until CommitTransaction()
+		// or the next call to SetAttribute().
+	if( SetAttribute(cluster, proc, name, value, SetAttribute_NoAck) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
 				 name, value );

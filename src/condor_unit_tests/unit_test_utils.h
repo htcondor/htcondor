@@ -22,6 +22,7 @@
  */
 
 #include "MyString.h"
+#include "string_list.h"
 
 // Global emitter declaration
 extern class Emitter e;
@@ -40,3 +41,20 @@ bool vsprintfHelper(MyString* str, char* format, ...);
 
 /* For MyString, calls vsprintf_cat on the given str */
 bool vsprintf_catHelper(MyString* str, char* format, ...);
+
+/* Returns the empty string when the passed string is null */
+const char* nicePrint(const char* str);
+
+/* Exactly like strcmp, but treats NULL and "" as equal */
+int niceStrCmp(const char* str1, const char* str2);
+
+/* Exactly like free, but only frees when not null */
+void niceFree(char* str);
+
+/* Returns  a char** representation of the StringList starting at the string 
+   at index start
+*/
+char** string_compare_helper(StringList* list, int start);
+
+/* Frees a char** */
+void free_helper(char** array);

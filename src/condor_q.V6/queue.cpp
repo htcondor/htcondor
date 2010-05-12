@@ -220,7 +220,7 @@ static  ExtArray<PrioEntry> prioTable;
 	
 const int SHORT_BUFFER_SIZE = 8192;
 const int LONG_BUFFER_SIZE = 16384;	
-char return_buff[LONG_BUFFER_SIZE];
+char return_buff[LONG_BUFFER_SIZE * 100];
 
 char *quillName = NULL;
 char *quillAddr = NULL;
@@ -1565,16 +1565,6 @@ format_remote_host (char *, AttrList *ad)
 		} else {
 			return unknownHost;
 		}
-	} else if (universe == CONDOR_UNIVERSE_PVM) {
-		int current_hosts;
-		if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
-			if (current_hosts == 1) {
-				sprintf(host_result, "1 host");
-			} else {
-				sprintf(host_result, "%d hosts", current_hosts);
-			}
-			return host_result;
-		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
 		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result) == 1 )
 			return host_result;
@@ -2716,6 +2706,14 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	}
 
 	startdAds.Open();
+
+	std::string fReqConstraintStr("[");
+	std::string fOffConstraintStr("[");
+	std::string fOfflineStr("[");
+	std::string fPreemptPrioStr("[");
+	std::string fPreemptReqTestStr("[");
+	std::string fRankCondStr("[");
+
 	while( ( offer = startdAds.Next() ) ) {
 		// 0.  info from machine
 		remoteUser[0] = '\0';
@@ -2728,6 +2726,10 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			if( verbose ) sprintf( return_buff,
 				"%sFailed request constraint\n", return_buff );
 			fReqConstraint++;
+			if (fReqConstraint != 1) {
+				fReqConstraintStr += ", ";
+			} 
+			fReqConstraintStr += buffer;
 			continue;
 		} 
 
@@ -2735,12 +2737,20 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		if ( !IsAHalfMatch( offer, request ) ) {
 			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
 			fOffConstraint++;
+			if (fOffConstraint != 1) {
+				fOffConstraintStr += ", ";
+			}
+			fOffConstraintStr += buffer;
 			continue;
 		}	
 
 		int offline = 0;
 		if( offer->EvalBool( ATTR_OFFLINE, NULL, offline ) && offline ) {
 			fOffline++;
+			if (fOffline != 1) {
+				fOfflineStr += ", ";
+			}
+			fOfflineStr += buffer;
 			continue;
 		}
 
@@ -2756,6 +2766,10 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			} else {
 				// no remote user, but std rank condition failed
 				fRankCond++;
+				if (fRankCond != 1) {
+					fRankCondStr += ", ";
+				}
+				fRankCondStr += buffer;
 				if( verbose ) {
 					sprintf( return_buff,
 						"%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
@@ -2787,6 +2801,10 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 						eval_result.type == LX_INTEGER && eval_result.i == FALSE ) 
 					{
 						fPreemptReqTest++;
+						if (fPreemptReqTest != 1) {
+							fPreemptReqTestStr += ", ";
+						}
+						fPreemptReqTestStr += buffer;
 						if( verbose ) {
 							sprintf( return_buff,
 									"%sCan preempt %s, but failed "
@@ -2816,6 +2834,10 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		} else {
 			// failed 4
 			fPreemptPrioCond++;
+			if (fPreemptPrioCond != 1) {
+				fPreemptPrioStr += ", ";
+			}
+			fPreemptPrioStr += buffer;
 			if( verbose ) {
 				sprintf( return_buff,
 					"%sInsufficient priority to preempt %s\n" , 
@@ -2826,22 +2848,29 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	}
 	startdAds.Close();
 
+	fReqConstraintStr += "]";
+	fOffConstraintStr += "]";
+	fOfflineStr += "]";
+	fPreemptPrioStr += "]";
+	fPreemptReqTestStr += "]";
+	fRankCondStr += "]";
+
 	sprintf( return_buff, 
 		 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n"
-		 "  %5d are rejected by your job's requirements\n"
-		 "  %5d reject your job because of their own requirements\n"
-		 "  %5d match but are serving users with a better priority in the pool%s\n"
-		 "  %5d match but reject the job for unknown reasons\n"
-		 "  %5d match but will not currently preempt their existing job\n"
-         "  %5d match but are currently offline\n"
+		 "  %5d are rejected by your job's requirements %s\n"
+		 "  %5d reject your job because of their own requirements %s\n"
+		 "  %5d match but are serving users with a better priority in the pool%s %s\n"
+		 "  %5d match but reject the job for unknown reasons %s\n"
+		 "  %5d match but will not currently preempt their existing job %s\n"
+         "  %5d match but are currently offline %s\n"
 		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
-		fReqConstraint,
-		fOffConstraint,
-		fPreemptPrioCond, niceUser ? "(*)" : "",
-		fRankCond,
-		fPreemptReqTest,
-		fOffline,
+		fReqConstraint, verbose ? fReqConstraintStr.c_str() : "",
+		fOffConstraint, verbose ? fOffConstraintStr.c_str() : "",
+		fPreemptPrioCond, niceUser ? "(*)" : "", verbose ? fPreemptPrioStr.c_str() : "",
+		fRankCond, verbose ? fRankCondStr.c_str() : "",
+		fPreemptReqTest,  verbose ? fPreemptReqTestStr.c_str() : "",
+		fOffline, verbose ? fOfflineStr.c_str() : "",
 		available );
 
 	int last_match_time=0, last_rej_match_time=0;
@@ -2933,8 +2962,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			break;
 
 			// Unknown
-		case CONDOR_UNIVERSE_PVM:
-		case CONDOR_UNIVERSE_PVMD:
 		case CONDOR_UNIVERSE_PARALLEL:
 		case CONDOR_UNIVERSE_VM:
 			break;
@@ -2972,6 +2999,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		//case CONDOR_UNIVERSE_LINDA:
 		//case CONDOR_UNIVERSE_MAX:
 		//case CONDOR_UNIVERSE_MIN:
+		//case CONDOR_UNIVERSE_PVM:
+		//case CONDOR_UNIVERSE_PVMD:
 		default:
 			sprintf( return_buff, "%s\nWARNING: Job universe unknown.  Analysis may not be meaningful.\n", return_buff );
 			break;

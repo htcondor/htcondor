@@ -154,6 +154,7 @@ void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
+void mark_serial_job_running( PROC_ID *job_id );
 int fixAttrUser( ClassAd *job );
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
@@ -200,13 +201,6 @@ struct job_data_transfer_t {
 	char *peer_version;
 	ExtArray<PROC_ID> *jobs;
 };
-
-int
-dc_reconfig()
-{
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
-	return TRUE;
-}
 
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
 					  const ClassAd *match, char *the_user, char *my_pool,
@@ -1613,10 +1607,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		}
 	}
 
-	if( (job_universe == CONDOR_UNIVERSE_PVM) || 
-		(job_universe == CONDOR_UNIVERSE_MPI) || 
+	if( (job_universe == CONDOR_UNIVERSE_MPI) || 
 		(job_universe == CONDOR_UNIVERSE_PARALLEL) ) {
-		job_id.proc = 0;		// PVM and MPI shadow is always associated with proc 0
+		job_id.proc = 0;		// Parallel and MPI shadow is always associated with proc 0
 	} 
 
 	// If it is not a Globus Universe job (which has already been
@@ -1693,8 +1686,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			} else {
                 dprintf(D_FULLDEBUG, "Found shadow record for job %d.%d\n",
                         job_id.cluster, job_id.proc);
-				dprintf( D_FULLDEBUG, "This job does not have a match -- "
-						 "It may be a PVM job.\n");
+				dprintf( D_FULLDEBUG, "This job does not have a match\n");
             }
 			int shadow_sig;
 			const char* shadow_sig_str;
@@ -2103,7 +2095,7 @@ sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad )
   use both the regular sandbox and the tmp sandbox, so we need to
   handle those cases, too.  the new shadow initializes a FileTransfer
   object no matter what the job classad says, so in fact, the only way
-  we would *not* have a transfer sandbox is if we're a standard or PVM
+  we would *not* have a transfer sandbox is if we're a standard
   universe job...  --derek 2005-04-21
 */
 bool
@@ -2144,7 +2136,6 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_STANDARD:
-	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_GRID:
 		return false;
 		break;
@@ -2395,6 +2386,10 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 		return FALSE;
 	}
 
+	if( srec && srec->recycle_shadow_stream ) {
+		scheduler.finishRecycleShadow( srec );
+		return TRUE;
+	}
 
 	return (int)scheduler.spawnJobHandler( cluster, proc, srec );
 }
@@ -2522,7 +2517,7 @@ jobIsFinished( int cluster, int proc, void* )
 	MyString iwd;
 	MyString owner;
 	BOOLEAN is_nfs;
-	int want_flush = 1;
+	int want_flush = 0;
 
 	job_ad->EvalBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, NULL, want_flush );
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) &&
@@ -4609,7 +4604,7 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	int command = -1;
 	int rval;
 
-	dprintf (D_ALWAYS, "Activity on stashed negotiator socket\n");
+	dprintf (D_ALWAYS, "Activity on stashed negotiator socket: %s\n", ((Sock *)stream)->get_sinful_peer());
 
 	// attempt to read a command off the stream
 	stream->decode();
@@ -5006,26 +5001,11 @@ Scheduler::negotiate(int command, Stream* s)
 			// Figure out if this request would result in another shadow
 			// process if matched.
 			// If Grid, the answer is no.
-			// If PVM, perhaps yes or no.
 			// Otherwise, always yes.
 		shadow_num_increment = 1;
 		if(job_universe == CONDOR_UNIVERSE_GRID) {
 			shadow_num_increment = 0;
 		}
-		if( job_universe == CONDOR_UNIVERSE_PVM ) {
-			PROC_ID temp_id;
-
-				// For PVM jobs, the shadow record is keyed based
-				// upon cluster number only - so set proc to 0.
-			temp_id.cluster = id.cluster;
-			temp_id.proc = 0;
-
-			if ( find_shadow_rec(&temp_id) != NULL ) {
-					// A shadow already exists for this PVM job, so
-					// if we get a match we will not get a new shadow.
-				shadow_num_increment = 0;
-			}
-		}					
 
 			// Next, make sure we could start another
 			// shadow without violating some limit.
@@ -5090,8 +5070,7 @@ Scheduler::negotiate(int command, Stream* s)
 				 }
 					 // don't break: fall through to REJECTED case
 				 case REJECTED:
-						// Always negotiate for all PVM job classes! 
-					if ( job_universe != CONDOR_UNIVERSE_PVM && !NegotiateAllJobsInCluster ) {
+					if ( !NegotiateAllJobsInCluster ) {
 						PrioRecAutoClusterRejected->insert( cur_cluster, 1 );
 					}
 					host_cnt = max_hosts + 1;
@@ -5291,6 +5270,23 @@ Scheduler::negotiate(int command, Stream* s)
 						if( in_transaction ) {
 							in_transaction = false;
 							CommitTransaction(NONDURABLE);
+						}
+					}
+
+					if( my_match_ad ) {
+						int offline = false;
+						my_match_ad->EvalBool(ATTR_OFFLINE,NULL,offline);
+
+						if( offline ) {
+							MyString name;
+							if( my_match_ad ) {
+								my_match_ad->LookupString(ATTR_NAME,name);
+							}
+							dprintf(D_ALWAYS,"Job %d.%d matched to offline machine %s.\n",id.cluster,id.proc,name.Value());
+							FREE( claim_id );
+							claim_id = NULL;
+							host_cnt++;
+							break;
 						}
 					}
 
@@ -6383,17 +6379,12 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 
 	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
 							&universe);
-	if (universe == CONDOR_UNIVERSE_PVM) {
-		return start_pvm(mrec, job_id);
-	} else {
-		if (rval < 0) {
-			dprintf(D_ALWAYS, "Couldn't find %s Attribute for job "
-					"(%d.%d) assuming standard.\n",	ATTR_JOB_UNIVERSE,
-					job_id->cluster, job_id->proc);
-		}
-		return start_std( mrec, job_id, universe );
+	if (rval < 0) {
+		dprintf(D_ALWAYS, "Couldn't find %s Attribute for job "
+				"(%d.%d) assuming standard.\n",	ATTR_JOB_UNIVERSE,
+				job_id->cluster, job_id->proc);
 	}
-	return NULL;
+	return start_std( mrec, job_id, universe );
 }
 
 
@@ -6739,10 +6730,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 	if( ! shadow_obj ) {
 		switch( universe ) {
-		case CONDOR_UNIVERSE_PVM:
-			EXCEPT( "Trying to spawn a PVM job with StartJobHandler(), "
-					"not start_pvm()!" );
-			break;
 		case CONDOR_UNIVERSE_STANDARD:
 			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_CHECKPOINTING );
 			if( ! shadow_obj ) {
@@ -6856,10 +6843,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 				}
 				args.AppendArg("--transferd");
 				args.AppendArg(td->get_sinful());
-				break;
-
-			case CONDOR_UNIVERSE_PVM:
-				/* no transferd for this universe */
 				break;
 
 			case CONDOR_UNIVERSE_STANDARD:
@@ -7321,7 +7304,6 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	*notify_admin = false;
 }
 
-
 shadow_rec*
 Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 {
@@ -7329,138 +7311,12 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 	dprintf( D_FULLDEBUG, "Scheduler::start_std - job=%d.%d on %s\n",
 			job_id->cluster, job_id->proc, mrec->peer );
 
-	BeginTransaction();
-	mark_job_running(job_id);
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
-		// nothing that has been written in this transaction needs to
-		// be immediately synced to disk
-	CommitTransaction( NONDURABLE );
+	mark_serial_job_running(job_id);
 
 	// add job to run queue
 	shadow_rec* srec=add_shadow_rec( 0, job_id, univ, mrec, -1 );
 	addRunnableJob( srec );
 	return srec;
-}
-
-
-shadow_rec*
-Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
-{
-
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-	ArgList         args;
-	int				pid;
-	int				shadow_fd;
-	MyString		out_buf;
-	struct shadow_rec *srp;
-	int	 c;     	// current hosts
-	int	 old_proc;  // the class in the cluster.  
-                    // needed by the multi_shadow -Bin
-	char			hostname[MAXHOSTNAMELEN];
-	Shadow*			shadow_obj;
-	char* 			shadow_path;
-
-	mrec->my_match_ad->LookupString(ATTR_NAME, hostname);
-
-	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
-			job_id->cluster, job_id->proc, hostname);
-	
-	if(GetAttributeInt(job_id->cluster,job_id->proc,ATTR_CURRENT_HOSTS,&c)<0){
-		c = 1;
-	} else {
-		c++;
-	}
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, c);
-
-	old_proc = job_id->proc;  
-	
-	/* For PVM/CARMI, all procs in a cluster are considered part of the same
-		job, so just clear out the proc number */
-	job_id->proc = 0;
-
-	/* See if this job is already running */
-	srp = find_shadow_rec(job_id);
-
-	if (srp == 0) {
-		int pipes[2];
-		socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
-
-		shadow_obj = shadow_mgr.findShadow( ATTR_HAS_PVM );
-		if( ! shadow_obj ) {
-			dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
-					 "can't spawn PVM jobs, aborting\n", ATTR_HAS_PVM );
-			RemoveShadowRecFromMrec(srp);
-			holdJob( job_id->cluster, job_id->proc, 
-					 "No condor_shadow installed that supports PVM jobs", 
-                     true, true, true, true );
-			delete srp;
-			return NULL;
-		}
-		shadow_path = shadow_obj->path();
-		args.AppendArg("condor_shadow.pvm");
-		args.AppendArg(MyShadowSockName);
-
-		int fds[3];
-		fds[0] = pipes[0];  // the effect is to dup the pipe to stdin in child.
-	    fds[1] = fds[2] = -1;
-		{
-			MyString args_string;
-			args.GetArgsStringForDisplay(&args_string);
-			dprintf( D_ALWAYS, "About to Create_Process( %s, %s, ... )\n", 
-				 shadow_path, args_string.Value() );
-		}
-		
-		pid = daemonCore->Create_Process( shadow_path, args, PRIV_ROOT, 
-										  shadowReaperId,
-										  FALSE, NULL, NULL, NULL, 
-										  NULL, fds );
-
-		delete( shadow_obj );
-
-		if ( !pid ) {
-			dprintf ( D_FAILURE|D_ALWAYS, "Problem with Create_Process!\n" );
-			close(pipes[0]);
-			return NULL;
-		}
-
-		dprintf ( D_ALWAYS, "In parent, shadow pid = %d\n", pid );
-
-		close(pipes[0]);
-		mark_job_running(job_id);
-		srp = add_shadow_rec( pid, job_id, CONDOR_UNIVERSE_PVM, mrec,
-							  pipes[1] );
-		shadow_fd = pipes[1];
-		dprintf( D_ALWAYS, "shadow_fd = %d\n", shadow_fd);		
-	} else {
-		shadow_fd = srp->conn_fd;
-		dprintf( D_ALWAYS, "Existing shadow connected on fd %d\n", shadow_fd);
-	}
-	
-    dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
-             job_id->cluster, job_id->proc, srp->pid);
-
-    out_buf.sprintf("%d %d %d\n", job_id->cluster, job_id->proc, 1);
-
-		// Warning: the pvm shadow may close this pipe during a
-		// graceful shutdown.  We should consider than an indication
-		// that the shadow doesn't want any more machines.  We should
-		// not kill the shadow if it closes the pipe, though, since it
-		// has some useful cleanup to do (i.e., so we can't return
-		// NULL here when the pipe is closed, since our caller will
-		// consider that a fatal error for the shadow).
-	
-	dprintf( D_ALWAYS, "First Line: %s", out_buf.Value() );
-	write(shadow_fd, out_buf.Value(), out_buf.Length());
-
-	out_buf.sprintf("%s %s %d %s\n", mrec->peer, mrec->claimId(), old_proc,
-					hostname);
-	dprintf( D_ALWAYS, "sending %s %s %d %s",
-	         mrec->peer, mrec->publicClaimId(), old_proc, hostname);
-	write(shadow_fd, out_buf.Value(), out_buf.Length());
-	return srp;
-#else
-	return NULL;
-#endif /* !defined(WIN32) */
 }
 
 
@@ -7576,9 +7432,9 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 starter_path, argstring.Value() );
 	}
 
-	BeginTransaction();
-	mark_job_running( job_id );
+	mark_serial_job_running( job_id );
 
+	BeginTransaction();
 		// add CLAIM_ID to this job ad so schedd can be authorized by
 		// starter by virtue of this shared secret (e.g. for
 		// CREATE_JOB_OWNER_SEC_SESSION
@@ -7589,7 +7445,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	free( public_part );
 	free( private_part );
 
-	CommitTransaction();
+	CommitTransaction(NONDURABLE);
 
 	Env starter_env;
 	MyString execute_env;
@@ -8006,10 +7862,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
-	BeginTransaction();
-	mark_job_running(job_id);
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
-	CommitTransaction();
+	mark_serial_job_running(job_id);
 	WriteExecuteToUserLog( *job_id );
 
 		/* this is somewhat evil.  these values are absolutely
@@ -8061,6 +7914,30 @@ Scheduler::display_shadow_recs()
 				cur_hosts, status);
 	}
 	dprintf( D_FULLDEBUG, "..................\n\n" );
+}
+
+shadow_rec::shadow_rec():
+	pid(-1),
+	universe(0),
+    match(NULL),
+    preempted(FALSE),
+	conn_fd(-1),
+	removed(FALSE),
+	isZombie(FALSE),
+	is_reconnect(false),
+	keepClaimAttributes(false),
+	recycle_shadow_stream(NULL),
+	exit_already_handled(false)
+{
+}
+
+shadow_rec::~shadow_rec()
+{
+	if( recycle_shadow_stream ) {
+		dprintf(D_ALWAYS,"Failed to finish switching shadow %d to new job %d.%d\n",pid,job_id.cluster,job_id.proc);
+		delete recycle_shadow_stream;
+		recycle_shadow_stream = NULL;
+	}
 }
 
 struct shadow_rec *
@@ -8264,22 +8141,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		}
 	}
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
-	if (new_rec->universe == CONDOR_UNIVERSE_PVM) {
-		ClassAd *job_ad;
-		job_ad = GetNextJob(1);
-		while (job_ad != NULL) {
-			PROC_ID tmp_id;
-			job_ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
-			if (tmp_id.cluster == cluster) {
-				job_ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
-				add_shadow_birthdate(tmp_id.cluster, tmp_id.proc,
-									 new_rec->is_reconnect);
-			}
-			job_ad = GetNextJob(0);
-		}
-	} else {
-		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
-	}
+	add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 	CommitTransaction();
 	if( new_rec->pid ) {
 		dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
@@ -8444,23 +8306,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	int job_status = IDLE;
 	GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
 
-	if( rec->universe == CONDOR_UNIVERSE_PVM ) {
-		ClassAd *cad;
-		cad = GetNextJob(1);
-		while (cad != NULL) {
-			PROC_ID tmp_id;
-			cad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
-			if (tmp_id.cluster == cluster) {
-				cad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
-				update_remote_wall_clock(tmp_id.cluster, tmp_id.proc);
-			}
-			cad = GetNextJob(0);
-		}
-	} else {
-		if( pid ) {
-				// we only need to update this if we spawned a shadow.
-			update_remote_wall_clock(cluster, proc);
-		}
+	if( pid ) {
+			// we only need to update this if we spawned a shadow.
+		update_remote_wall_clock(cluster, proc);
 	}
 
 		/*
@@ -8577,11 +8425,10 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 }
 
 /*
-** Mark a job as running.  Do not call directly.  Call the non-underscore
-** version below instead.
+** Mark a job as running.
 */
 void
-_mark_job_running(PROC_ID* job_id)
+mark_job_running(PROC_ID* job_id)
 {
 	int status;
 	int orig_max = 1; // If it was not set this is the same default
@@ -8619,6 +8466,17 @@ _mark_job_running(PROC_ID* job_id)
 		SetAttributeInt(job_id->cluster, job_id->proc,
 						ATTR_NUM_JOB_STARTS, num);
 	}
+}
+
+void
+mark_serial_job_running( PROC_ID *job_id )
+{
+	BeginTransaction();
+	mark_job_running(job_id);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
+		// nothing that has been written in this transaction needs to
+		// be immediately synced to disk
+	CommitTransaction( NONDURABLE );
 }
 
 /*
@@ -8680,34 +8538,7 @@ _mark_job_stopped(PROC_ID* job_id)
 }
 
 
-/* 
-** Wrapper for _mark_job_running so we mark the whole cluster as running
-** for pvm jobs.
-*/
-void
-mark_job_running(PROC_ID* job_id)
-{
-	int universe = CONDOR_UNIVERSE_STANDARD;
-	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
-					&universe);
-	if( universe == CONDOR_UNIVERSE_PVM ) {
-		ClassAd *ad;
-		ad = GetNextJob(1);
-		while (ad != NULL) {
-			PROC_ID tmp_id;
-			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
-			if (tmp_id.cluster == job_id->cluster) {
-				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
-				_mark_job_running(&tmp_id);
-			}
-			ad = GetNextJob(0);
-		}
-	} else {
-		_mark_job_running(job_id);
-	}
-}
-
-/* PVM jobs may have many procs (job classes) in a cluster.  We should
+/* Parallel jobs may have many procs (job classes) in a cluster.  We should
    mark all of them stopped when the job stops. */
 void
 mark_job_stopped(PROC_ID* job_id)
@@ -8720,8 +8551,7 @@ mark_job_stopped(PROC_ID* job_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
-	if( (universe == CONDOR_UNIVERSE_PVM) || 
-        (universe == CONDOR_UNIVERSE_MPI) ||
+	if( (universe == CONDOR_UNIVERSE_MPI) || 
 		(universe == CONDOR_UNIVERSE_PARALLEL)){
 		ClassAd *ad;
 		ad = GetNextJob(1);
@@ -8836,12 +8666,6 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 			int kill_sig;
 
 			switch( rec->universe ) {
-			case CONDOR_UNIVERSE_PVM:
-				dprintf( D_ALWAYS, "Sending SIGTERM to shadow for PVM job "
-						 "%d.%d (pid: %d)\n", cluster, proc, rec->pid );
-				sendSignalToShadow(rec->pid,SIGTERM,rec->job_id);
-				break;
-
 			case CONDOR_UNIVERSE_LOCAL:
 				if( ! preempt_sched ) {
 					continue;
@@ -8924,7 +8748,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 				} else {
 						/*
 						   A shadow record without a match for any
-						   universe other than PVM, local, and
+						   universe other than local, and
 						   scheduler (which we already handled above)
 						   is a shadow for which the claim was
 						   relinquished (by the startd).  In this
@@ -9008,7 +8832,6 @@ Scheduler::shadow_prio_recs_consistent()
 			universe = srp->universe;
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
 			if (status != RUNNING &&
-				universe!=CONDOR_UNIVERSE_PVM &&
 				universe!=CONDOR_UNIVERSE_MPI &&
 				universe!=CONDOR_UNIVERSE_PARALLEL) {
 				// display_shadow_recs();
@@ -9244,7 +9067,7 @@ IsLocalUniverse( shadow_rec* srec )
 
 
 /*
-** Wrapper for setting the job status to deal with PVM jobs, which can 
+** Wrapper for setting the job status to deal with Parallel jobs, which can 
 ** contain multiple procs.
 */
 void
@@ -9255,8 +9078,7 @@ set_job_status(int cluster, int proc, int status)
 
 	BeginTransaction();
 
-	if( ( universe == CONDOR_UNIVERSE_PVM) || 
-		( universe == CONDOR_UNIVERSE_MPI) ||
+	if( ( universe == CONDOR_UNIVERSE_MPI) || 
 		( universe == CONDOR_UNIVERSE_PARALLEL) ) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
@@ -9302,6 +9124,16 @@ Scheduler::child_exit(int pid, int status)
 
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
+
+	if( srec->exit_already_handled ) {
+		if( srec->match ) {
+			DelMrec( srec->match );
+			srec->match = NULL;
+		}
+		delete_shadow_rec( srec );
+		return;
+	}
+
 	job_id.cluster = srec->job_id.cluster;
 	job_id.proc = srec->job_id.proc;
 
@@ -10731,8 +10563,6 @@ Scheduler::Register()
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
 			"reschedule_negotiator", this, WRITE);
-	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
-			(CommandHandler)&dc_reconfig, "reconfig", 0, OWNER );
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)&Scheduler::abort_job, 
 			"abort_job", this, WRITE);
@@ -10771,6 +10601,11 @@ Scheduler::Register()
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
 			"requestSandboxLocation", this, WRITE, D_COMMAND,
+			true /*force authentication*/);
+	 daemonCore->Register_Command(RECYCLE_SHADOW,
+			"RECYCLE_SHADOW",
+			(CommandHandlercpp)&Scheduler::RecycleShadow,
+			"RecycleShadow", this, DAEMON, D_COMMAND,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
@@ -11250,7 +11085,7 @@ Scheduler::needReschedule()
 		// timeout() has internal logic to avoid doing its work too
 		// frequently, and we want to send the reschedule after
 		// updating our ad in the collector, not before.
-	timeout();
+	daemonCore->Reset_Timer(timeoutid,0,1);
 }
 
 void
@@ -11313,6 +11148,25 @@ Scheduler::sendReschedule()
 	}
 }
 
+void
+Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
+{
+#if !defined(WANT_OLD_CLASSADS)
+		// The machine ad will be passed as the RIGHT ad during
+		// matchmaking (i.e. in the call to IsAMatch()), so
+		// optimize it accordingly.
+	std::string error_msg;
+	if( !classad::MatchClassAd::OptimizeRightAdForMatchmaking( ad, &error_msg ) ) {
+		MyString name;
+		ad->LookupString(ATTR_NAME,name);
+		dprintf(D_ALWAYS,
+				"Failed to optimize machine ad %s for matchmaking: %s\n",	
+			name.Value(),
+				error_msg.c_str());
+	}
+#endif
+}
+
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
@@ -11369,6 +11223,10 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 		if( rec->my_match_ad->EvalFloat(ATTR_RANK, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
+	}
+
+	if( rec->my_match_ad ) {
+		OptimizeMachineAdForMatchmaking( rec->my_match_ad );
 	}
 
 	return rec;
@@ -11545,8 +11403,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 		return FALSE;
 	}
 
-	if ( (universe == CONDOR_UNIVERSE_PVM) ||
-		 (universe == CONDOR_UNIVERSE_MPI) ||
+	if ( (universe == CONDOR_UNIVERSE_MPI) ||
 		 (universe == CONDOR_UNIVERSE_GRID) ||
 		 (universe == CONDOR_UNIVERSE_PARALLEL) )
 		return FALSE;
@@ -11947,7 +11804,6 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_SCHEDULER:
 		break; // these universes not supported
-	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_PARALLEL:
 	{
@@ -13387,4 +13243,205 @@ WriteCompletionVisa(ClassAd* ad)
 	                   iwd.Value(),
 	                   NULL);
 	set_priv(prev_priv_state);
+}
+
+int
+Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
+{
+		// This is called by the shadow when it wants to get a new job.
+		// Two things are going on here: getting the exit reason for
+		// the existing job and getting a new job.
+	int shadow_pid = 0;
+	int previous_job_exit_reason = 0;
+	shadow_rec *srec;
+	match_rec *mrec;
+	PROC_ID prev_job_id;
+	PROC_ID new_job_id;
+	Sock *sock = (Sock *)stream;
+
+		// force authentication
+	sock->decode();
+	if( !sock->triedAuthentication() ) {
+		CondorError errstack;
+		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ||
+			! sock->getFullyQualifiedUser() )
+		{
+			dprintf( D_ALWAYS,
+					 "RecycleShadow(): authentication failed: %s\n", 
+					 errstack.getFullText() );
+			return FALSE;
+		}
+	}
+
+	stream->decode();
+	if( !stream->get( shadow_pid ) ||
+		!stream->get( previous_job_exit_reason ) ||
+		!stream->end_of_message() )
+	{
+		dprintf(D_ALWAYS,
+			"recycleShadow() failed to receive job exit reason from shadow\n");
+		return FALSE;
+	}
+
+	srec = FindSrecByPid( shadow_pid );
+	if( !srec ) {
+		dprintf(D_ALWAYS,"recycleShadow() called with unknown shadow pid %d\n",
+				shadow_pid);
+		return FALSE;
+	}
+	prev_job_id = srec->job_id;
+	mrec = srec->match;
+
+		// currently we only support serial jobs here
+	if( !mrec || !mrec->user ||
+		srec->universe != CONDOR_UNIVERSE_VANILLA &&
+		srec->universe != CONDOR_UNIVERSE_JAVA &&
+		srec->universe != CONDOR_UNIVERSE_VM )
+	{
+		stream->encode();
+		stream->put((int)0);
+		return FALSE;
+	}
+
+		// verify that whoever is running this command is either the
+		// queue super user or the owner of the claim
+	char const *cmd_user = sock->getOwner();
+	std::string match_owner;
+	char const *at_sign = strchr(mrec->user,'@');
+	if( at_sign ) {
+		match_owner.append(mrec->user,at_sign-mrec->user);
+	}
+	else {
+		match_owner = mrec->user;
+	}
+
+	if( !OwnerCheck2(NULL,cmd_user,match_owner.c_str()) ) {
+		dprintf(D_ALWAYS,
+				"RecycleShadow() called by %s failed authorization check!\n",
+				cmd_user ? cmd_user : "(unauthenticated)");
+		return FALSE;
+	}
+
+		// Now handle the exit reason specified for the existing job.
+	if( prev_job_id.cluster != -1 ) {
+		dprintf(D_ALWAYS,
+			"Shadow pid %d for job %d.%d reports job exit reason %d.\n",
+			shadow_pid, prev_job_id.cluster, prev_job_id.proc,
+			previous_job_exit_reason );
+
+		jobExitCode( prev_job_id, previous_job_exit_reason );
+		srec->exit_already_handled = true;
+	}
+
+	new_job_id.cluster = -1;
+	new_job_id.proc = -1;
+	if( mrec->my_match_ad && !ExitWhenDone ) {
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
+	}
+
+		// The standard universe shadow never calls this function,
+		// and the shadow that does call this function is not capable of
+		// running standard universe jobs, so if the job we are trying
+		// to run next is standard universe, tell this shadow we are
+		// out of work.
+	if( new_job_id.proc != -1 ) {
+		int new_universe = -1;
+		GetAttributeInt(new_job_id.cluster,new_job_id.proc,ATTR_JOB_UNIVERSE,&new_universe);
+		if( new_universe == CONDOR_UNIVERSE_STANDARD ) {
+			new_job_id.proc = -1;
+		}
+	}
+	
+
+	if( new_job_id.proc == -1 ) {
+		stream->put((int)0);
+		stream->end_of_message();
+		return TRUE;
+	}
+
+	dprintf(D_ALWAYS,
+			"Shadow pid %d switching to job %d.%d.\n",
+			shadow_pid, new_job_id.cluster, new_job_id.proc );
+
+		// the add/delete_shadow_rec() functions update the job
+		// ads, so we need to do that here
+	delete_shadow_rec( srec );
+	srec = new shadow_rec;
+	srec->pid = shadow_pid;
+	srec->match = mrec;
+	mrec->shadowRec = srec;
+	srec->job_id = new_job_id;
+	srec->prev_job_id = prev_job_id;
+	srec->recycle_shadow_stream = stream;
+	add_shadow_rec( srec );
+
+	mark_serial_job_running(&new_job_id);
+
+	SetMrecJobID(mrec,new_job_id);
+	mrec->setStatus( M_ACTIVE );
+
+	callAboutToSpawnJobHandler(new_job_id.cluster, new_job_id.proc, srec);
+	return KEEP_STREAM;
+}
+
+void
+Scheduler::finishRecycleShadow(shadow_rec *srec)
+{
+	Stream *stream = srec->recycle_shadow_stream;
+	srec->recycle_shadow_stream = NULL;
+
+	int shadow_pid = srec->pid;
+	PROC_ID new_job_id = srec->job_id;
+	PROC_ID prev_job_id = srec->prev_job_id;
+
+	ASSERT( stream );
+
+	stream->encode();
+
+	ClassAd *new_ad = NULL;
+	if( new_job_id.proc >= 0 ) {
+		new_ad = GetJobAd(new_job_id.cluster, new_job_id.proc ,true, true);
+		if( !new_ad ) {
+			dprintf(D_ALWAYS,
+					"Failed to expand job ad when switching shadow %d "
+					"to new job %d.%d\n",
+					shadow_pid, new_job_id.cluster, new_job_id.proc);
+
+			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
+			srec->exit_already_handled = true;
+		}
+	}
+	if( new_ad ) {
+			// give the shadow the new job
+		stream->put((int)1);
+		new_ad->put(*stream);
+	}
+	else {
+			// tell the shadow, "no job found"
+		stream->put((int)0);
+	}
+	stream->end_of_message();
+
+		// Get final ACK from shadow if we gave it a new job.
+		// Without an ACK from the shadow, we could end up processing
+		// an exit reason from the shadow that was meant for the previous
+		// job rather than the new job.
+	if( new_ad ) {
+		stream->decode();
+		int ok = 0;
+		if( !stream->get(ok) ||
+			!stream->end_of_message() ||
+			!ok )
+		{
+			dprintf(D_ALWAYS,
+				"Failed to get ok when switching shadow %d to a new job.\n",
+				shadow_pid);
+
+			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
+			srec->exit_already_handled = true;
+		}
+	}
+
+	delete new_ad;
+	delete stream;
 }

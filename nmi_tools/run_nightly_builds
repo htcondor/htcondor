@@ -1,0 +1,225 @@
+#! /usr/bin/env perl
+
+# It may help you to read:
+# https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=1397
+
+# Perl script to prepare and submit the nightly Condor builds in NMI:
+# 0) Reads the nightly tags file.
+# 1) Checks out the latest copy of nmi_tools/condor_nmi_submit from the
+#	appropriate tag.
+# 2) Invokes condor_nmi_submit with the right arguments.
+
+# The authoritative copy of this script is in the origin/master of our Condor
+# repository. If you need to change what this script does, change it there,
+# commit it, then copy the script to ~cndrauto/condor on nmi-s006 where the
+# cron job will pick it up.
+
+use Getopt::Long;
+use File::Path;
+
+use strict;
+use warnings;
+
+$| = 1;
+
+my ($opt_platforms, $opt_desc);
+
+my $home = "/home/cndrauto/condor";
+# next line is used for testing out of the home directory...
+#$home = ".";
+
+my $logfh;
+my $log_file = "$home/nightly.log";
+my $CNS = "nmi_tools/condor_nmi_submit";
+my $tags_file = "/space/git/nwo-build-tags.git";
+my $GIT="/prereq/git-1.5.4/bin/git";
+my $GIT_SRC_ROOT="/space/git/CONDOR_SRC.git";
+my $GIT_DOC_ROOT="/space/git/CONDOR_DOC.git";
+# these next three are currently unused, but could be used for an older build
+my $GIT_EXT_ROOT="/space/git/CONDOR_EXT.git";
+my $GIT_TSTCNF_ROOT="/space/git/CONDOR_TEST_CNFDTL.git";
+my $GIT_TSTLRG_ROOT="/space/git/CONDOR_TEST_LRG.git";
+
+# emit a line of information into the log file.
+sub logit
+{
+	my ($line) = (@_);
+	print $logfh $line;
+}
+
+# Try the best we can to record a failure in a meaningful place.
+sub fail
+{
+	my ($msg) = @_;
+
+	if (defined($logfh)) {
+		logit "$msg\n";
+	}
+
+	die $msg;
+}
+
+sub parse_command_line
+{
+	GetOptions(
+            # specifies a set of platforms to pass on to condor_nmi_submit
+            'platforms=s' => \$opt_platforms,
+            # specifies a description for the builds to be passed 
+            # to condor_nmi_submit
+            'desc=s' => \$opt_desc);
+}
+
+sub open_log
+{
+	my $old_perlism;
+
+	unlink("$log_file.old");
+	rename("$log_file", "$log_file.old");
+	open(LOG, ">$log_file") || fail "Can't open $log_file: $!";
+
+	# make it act like fflush after every log write.
+	$old_perlism = select(LOG);
+	$| = 1;
+	select($old_perlism);
+
+	$logfh = *LOG;
+}
+
+sub close_log
+{
+	close($logfh);
+}
+
+# emit some information into the log file about the command, and then
+# run the command putting all of its output into the log file.
+sub log_cmd
+{
+	my ($cmd, $error) = (@_);
+	my $ret;
+
+	logit "$cmd\n";
+	open(OUT, "$cmd 2>&1|") || fail "ERROR: $error ($!)";
+
+	$ret = $?;
+
+	while (<OUT>) {
+		logit $_;
+	}
+	close(OUT);
+
+	return $ret;
+}
+
+# ensure that all of the clones are up to date with respect to where the
+# clone is cloned from. 
+sub update_clones
+{
+	my @roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT, $GIT_EXT_ROOT, 
+					$GIT_TSTCNF_ROOT, $GIT_TSTLRG_ROOT);
+	my $root;
+
+	foreach $root (@roots) {
+		logit "Updating clone: $root\n";
+		log_cmd("$GIT --git-dir=$root fetch",
+				"Can't fetch $root");
+	}
+}
+
+# Load the nightly tags file so we know what work to perform.
+sub load_tags_file
+{
+	my %tags;
+	my $line;
+	my ($key, $module);
+
+	logit "Processing nightly tags file: $tags_file\n";
+	open(FIN, "<$tags_file") || fail "Can't open tags file $tags_file: $!";
+	while(defined($line = <FIN>)) {
+		chomp $line;
+		$line =~ s/^\s+//g;
+		$line =~ s/\s+/ /;
+		($module, $key) = ($line =~ m/(.*) (.*)/);
+		logit "\tFound a tag $key using module $module\n";
+		$tags{$key} = $module;
+	}
+	close(FIN);
+
+	return \%tags;
+}
+
+
+# For all tags in the tag file, checkout the copy of the nmi_tools directory
+# associated with the tag and submit the builds for it.
+sub submit_builds
+{
+	my ($tagref) = @_;
+	my %tags = %{$tagref};
+	my $tag;
+	my $pwd;
+	my $cns_cmd =
+		# the --nightly flag here simply changes how the description
+		# of the build is created so our Condor specific NMI pages can
+		# show them to us in their own group. It does NOT anymore mean
+		# that the condor_nmi_submit file should find its own nightly
+		# tags file.
+
+		"./$CNS --build --nightly --use-externals-cache " .
+		"--clear-externals-cache-weekly --submit-xtests " .
+		"--notify=condor-builds\@cs.wisc.edu --notify-fail-only " . 
+		"--git " .
+		(defined $opt_platforms ? "--platforms=$opt_platforms " : "") .
+		(defined $opt_desc ? "--desc=\"$opt_desc\" " : "");
+
+	foreach $tag (sort keys %tags) {
+
+		##############
+		# Clean the sandbox for the correct revision of the nmi_tools.
+		##############
+		log_cmd("rm -rf ./nmi_tools",
+				"Couldn't remove nmi_tools directory!");
+
+		##############
+		# Check out the right revision of the nmi_tools directory.
+		##############
+		logit "Checking out nmi_tools from tag $tag\n";
+		log_cmd("$GIT archive --remote=$GIT_SRC_ROOT $tag nmi_tools | tar xv",
+				"Can't checkout cns from $tag");
+
+		##############
+		# Actually submit the build.
+		##############
+		logit "Submitting nightly build for tag: '$tag', " .
+			"module: '$tags{$tag}'\n";
+		# cnd_cmd already contains a huge command line!
+		log_cmd("$cns_cmd --tag=$tag --module=$tags{$tag}",
+				"Failure to submit build: $tag, $tags{$tag}.");
+		log_cmd("sync");
+	}
+}
+
+sub main
+{
+	my $tags;
+
+	chdir($home) || fail "Couldn't chdir to home: $home\n";
+	parse_command_line();
+	open_log();
+
+	logit "Starting: " . `date` . "\n";
+
+	update_clones();
+
+	$tags = load_tags_file();
+
+	submit_builds($tags);
+
+	logit "Finished: " . `date` . "\n";
+	close_log();
+
+	return 0;
+}
+
+exit main();
+
+
+

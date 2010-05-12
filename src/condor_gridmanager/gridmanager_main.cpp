@@ -45,7 +45,7 @@ usage( char *name )
 	DC_Exit( 1 );
 }
 
-int
+void
 main_init( int argc, char ** const argv )
 {
 
@@ -103,29 +103,24 @@ main_init( int argc, char ** const argv )
 
 	Init();
 	Register();
-
-	return TRUE;
 }
 
-int
-main_config( bool )
+void
+main_config()
 {
 	Reconfig();
-	return TRUE;
 }
 
-int
+void
 main_shutdown_fast()
 {
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
-int
+void
 main_shutdown_graceful()
 {
 	DC_Exit(0);
-	return TRUE;	// to satify c++
 }
 
 void

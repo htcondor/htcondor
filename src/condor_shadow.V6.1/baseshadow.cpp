@@ -32,6 +32,7 @@
 #include "condor_holdcodes.h"
 #include "classad_helpers.h"
 #include "classad_merge.h"
+#include "dc_startd.h"
 
 #include <math.h>
 
@@ -42,6 +43,7 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 // this appears at the bottom of this file:
 extern "C" int display_dprintf_header(FILE *fp);
+extern bool sendUpdatesToSchedd;
 
 // some helper functions
 int getJobAdExitCode(ClassAd *jad, int &exit_code);
@@ -83,10 +85,10 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 	jobAd = job_ad;
 
-	if( ! is_valid_sinful(schedd_addr) ) {
+	if (sendUpdatesToSchedd && ! is_valid_sinful(schedd_addr)) {
 		EXCEPT("schedd_addr not specified with valid address");
 	}
-	scheddAddr = strdup( schedd_addr );
+	scheddAddr = sendUpdatesToSchedd ? strdup( schedd_addr ) : strdup("noschedd");
 
 	m_xfer_queue_contact_info = xfer_queue_contact_info;
 
@@ -149,11 +151,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		// Make sure we've got enough swap space to run
 	checkSwap();
 
-		// register SIGUSR1 (condor_rm) for shutdown...
-	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
-		(SignalHandlercpp)&BaseShadow::handleJobRemoval, "HandleJobRemoval", 
-		this);
-
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
 	if ( !init_user_ids(owner.Value(), domain.Value())) {
@@ -173,7 +170,14 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		// permanent job queue.  this clears all the dirty bits on our
 		// copy of the classad, so anything we touch after this will
 		// be updated to the schedd when appropriate.
-	job_updater = new QmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
+
+		// Unless we got a command line arg asking us not to
+	if (sendUpdatesToSchedd) {
+		// the usual case
+		job_updater = new QmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
+	} else {
+		job_updater = new NullQmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
+	}
 
 		// change directory; hold on failure
 	if ( cdToIwd() == -1 ) {
@@ -192,13 +196,49 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			this->terminateJob(US_TERMINATE_PENDING);
 		}
 	}
+
+		// If we need to claim the startd before activating the claim
+	int wantClaiming = 0;
+	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
+	if (wantClaiming) {
+		MyString startdSinful;
+		MyString claimid;
+
+			// Pull startd addr and claimid out of the jobad
+		jobAd->LookupString(ATTR_STARTD_IP_ADDR, startdSinful);
+		jobAd->LookupString(ATTR_CLAIM_ID, claimid);
+
+		dprintf(D_ALWAYS, "%s is true, trying to claim startd %s\n", ATTR_CLAIM_STARTD, startdSinful.Value());
+
+		classy_counted_ptr<DCStartd> startd = new DCStartd("description", NULL, startdSinful.Value(), claimid.Value());
+	
+		classy_counted_ptr<DCMsgCallback> cb = 
+			new DCMsgCallback((DCMsgCallback::CppFunction)&BaseShadow::startdClaimedCB,
+			this, jobAd);
+																 
+			// this can't fail, will always call the callback
+		startd->asyncRequestOpportunisticClaim(jobAd, 
+											   "description", 
+											   daemonCore->InfoCommandSinfulString(), 
+											   1200 /*alive interval*/, 
+											   20 /* net timeout*/, 
+											   100 /*total timeout*/, 
+											   cb);
+	}
 }
 
+	// We land in this callback when we need to claim the startd
+	// when we get here, the claiming is finished, successful
+	// or not
+void BaseShadow::startdClaimedCB(DCMsgCallback *) {
+
+	// We've claimed the startd, the following kicks off the
+	// activation of the claim, and runs the job
+	this->spawn();
+}
 
 void BaseShadow::config()
 {
-	char *tmp;
-
 	if (spool) free(spool);
 	spool = param("SPOOL");
 	if (!spool) {
@@ -543,6 +583,12 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 			// this point.
 		dprintf(D_FULLDEBUG,"Startd is closing claim, so no more jobs can be run on it.\n");
 		reason = JOB_EXITED_AND_CLAIM_CLOSING;
+	}
+
+	// try to get a new job for this shadow
+	if( recycleShadow(reason) ) {
+		// recycleShadow delete's this, so we must return immediately
+		return;
 	}
 
 	// does not return.
@@ -1144,14 +1190,14 @@ int
 display_dprintf_header(FILE *fp)
 {
 	static pid_t mypid = 0;
-	static int mycluster = -1;
-	static int myproc = -1;
+	int mycluster = -1;
+	int myproc = -1;
 
 	if (!mypid) {
 		mypid = daemonCore->getpid();
 	}
 
-	if (mycluster == -1) {
+	if (Shadow) {
 		mycluster = Shadow->getCluster();
 		myproc = Shadow->getProc();
 	}

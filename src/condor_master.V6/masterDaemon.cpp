@@ -1379,7 +1379,7 @@ daemon::InitParams()
 	process_name = param(name_in_config_file);
 	if( !process_name ) {
 		dprintf( D_ALWAYS, 
-				"%s from your DAEMON_LIST is not defined in the config files!\n", 
+				"%s is in the DAEMON_LIST parameter, but there is no executable path for it defined in the config files!\n", 
 				name_in_config_file ); 
 		EXCEPT( "Must have the path to %s defined.", name_in_config_file ); 
 	}

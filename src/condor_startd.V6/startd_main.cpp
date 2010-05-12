@@ -101,12 +101,12 @@ StartdCronMgr	*Cronmgr;
  */
 
 void usage( char* );
-int main_init( int argc, char* argv[] );
+void main_init( int argc, char* argv[] );
 int init_params(int);
-int main_config( bool is_full );
-int finish_main_config();
-int main_shutdown_fast();
-int main_shutdown_graceful();
+void main_config();
+void finish_main_config();
+void main_shutdown_fast();
+void main_shutdown_graceful();
 extern "C" int do_cleanup(int,int,char*);
 int reaper( Service*, int pid, int status);
 int	shutdown_reaper( Service*, int pid, int status ); 
@@ -122,7 +122,7 @@ usage( char* MyName)
 }
 
 
-int
+void
 main_init( int, char* argv[] )
 {
 	int		skip_benchmarks = FALSE;
@@ -409,13 +409,11 @@ main_init( int, char* argv[] )
 
    StartdPluginManager::Initialize();
 #endif
-
-	return TRUE;
 }
 
 
-int
-main_config( bool /* is_full */ )
+void
+main_config()
 {
 	bool done_allocating;
 
@@ -424,13 +422,12 @@ main_config( bool /* is_full */ )
 		// Process any changes in the slot type specifications
 	done_allocating = resmgr->reconfig_resources();
 	if( done_allocating ) {
-		return finish_main_config();
+		finish_main_config();
 	}
-	return TRUE;
 }
 
 
-int
+void
 finish_main_config( void ) 
 {
 #if defined(WIN32)
@@ -456,7 +453,6 @@ finish_main_config( void )
 		// the special case version).
 		// This is now called by a timer registered by reset_timers()
 	//resmgr->update_all();
-	return TRUE;
 }
 
 
@@ -645,7 +641,7 @@ startd_exit()
 	DC_Exit(0);
 }
 
-int
+void
 main_shutdown_fast()
 {
 	dprintf( D_ALWAYS, "shutdown fast\n" );
@@ -672,11 +668,10 @@ main_shutdown_fast()
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
 								 "startd_check_free" );
-	return TRUE;
 }
 
 
-int
+void
 main_shutdown_graceful()
 {
 	dprintf( D_ALWAYS, "shutdown graceful\n" );
@@ -703,7 +698,6 @@ main_shutdown_graceful()
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
 								 "startd_check_free" );
-	return TRUE;
 }
 
 

@@ -93,6 +93,12 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 
 RemoteResource::~RemoteResource()
 {
+	if( syscall_sock == claim_sock ) {
+		syscall_sock = NULL;
+	}
+	if( thisRemoteResource == this ) {
+		thisRemoteResource = NULL;
+	}
 	if ( dc_startd     ) delete dc_startd;
 	if ( machineName   ) delete [] machineName;
 	if ( starterAddress) delete [] starterAddress;
@@ -101,8 +107,10 @@ RemoteResource::~RemoteResource()
 	if ( starter_version ) delete [] starter_version;
 	if ( uid_domain	   ) delete [] uid_domain;
 	if ( fs_domain     ) delete [] fs_domain;
-	if ( claim_sock    ) delete claim_sock;
-	if ( jobAd         ) delete jobAd;
+	closeClaimSock();
+	if ( jobAd && jobAd != shadow->getJobAd() ) {
+		delete jobAd;
+	}
 	if( proxy_check_tid != -1) {
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
@@ -274,6 +282,12 @@ RemoteResource::killStarter( bool graceful )
 				 graceful ? "graceful" : "fast", addr );
 	}
 
+	int wantReleaseClaim = 0;
+	jobAd->LookupBool(ATTR_RELEASE_CLAIM, wantReleaseClaim);
+	if (wantReleaseClaim) {
+		ClassAd replyAd;
+		dc_startd->releaseClaim(VACATE_FAST, &replyAd);
+	}
 	return true;
 }
 
@@ -326,8 +340,7 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
 			// we call our shadow's shutdown method:
 		shadow->shutDown( exit_reason );
-			// close sock on this end...the starter has gone away.
-		return TRUE;
+		return KEEP_STREAM;
 	}
 	hadContact();
 	return KEEP_STREAM;

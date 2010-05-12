@@ -44,8 +44,6 @@
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
 #define DEFAULT_HAD_UPDATE_INTERVAL  (5 * MINUTE)
 
-extern int main_shutdown_graceful(void);
-
 
 /***********************************************************
   Function :

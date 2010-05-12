@@ -29,6 +29,11 @@ extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 BEGIN_NAMESPACE( classad )
 
+// This flag is only meant for use in Condor, which is transitioning
+// from an older version of ClassAds with slightly different evaluation
+// semantics. It will be removed without warning in a future release.
+bool _useOldClassAdSemantics = false;
+
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 

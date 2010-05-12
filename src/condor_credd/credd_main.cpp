@@ -50,7 +50,7 @@ usage( char *name )
 	DC_Exit( 1 );
 }
 
-int
+void
 main_init( int argc, char ** const argv )
 {
 
@@ -83,10 +83,7 @@ main_init( int argc, char ** const argv )
 	Register();
 	if (!LoadCredentialList()) {
 	  dprintf (D_ALWAYS, "Unable to Load Credentials\n");
-	  return FALSE;
 	}
-
-	return TRUE;
 }
 
 
@@ -126,25 +123,22 @@ Reconfig()
 }
 
 
-int
-main_config( bool is_full )
+void
+main_config()
 {
 	Reconfig();
-	return TRUE;
 }
 
-int
+void
 main_shutdown_fast()
 {
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
-int
+void
 main_shutdown_graceful()
 {
 	DC_Exit(0);
-	return TRUE;	// to satify c++
 }
 
 void

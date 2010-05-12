@@ -163,6 +163,8 @@
 #define SET_SHUTDOWN_PROGRAM (SCHED_VERS+108) // Master: Run program at shutdown
 #define GET_JOB_CONNECT_INFO (SCHED_VERS+109) // schedd: get connection information for starter running a job
 
+#define RECYCLE_SHADOW (SCHED_VERS+110) // schedd: get a new job for a shadow
+
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 #define HAD_SEND_ID_CMD                 (HAD_COMMANDS_BASE + 1)

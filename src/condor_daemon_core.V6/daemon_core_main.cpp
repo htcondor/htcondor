@@ -61,15 +61,15 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 
 // External protos
-extern int main_init(int argc, char *argv[]);	// old main()
-extern int main_config(bool is_full);
-extern int main_shutdown_fast();
-extern int main_shutdown_graceful();
+extern void main_init(int argc, char *argv[]);	// old main()
+extern void main_config();
+extern void main_shutdown_fast();
+extern void main_shutdown_graceful();
 extern void main_pre_dc_init(int argc, char *argv[]);
 extern void main_pre_command_sock_init();
 
 // Internal protos
-void dc_reconfig( bool is_full );
+void dc_reconfig();
 void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
 int handle_fetch_log_history(ReliSock *s, char *name);
 int handle_fetch_log_history_dir(ReliSock *s, char *name);
@@ -856,11 +856,7 @@ handle_reconfig( Service*, int cmd, Stream* stream )
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
 		return FALSE;
 	}
-	if( cmd == DC_RECONFIG_FULL ) {
-		dc_reconfig( true );
-	} else {
-		dc_reconfig( false );
-	}		
+	dc_reconfig();
 	return TRUE;
 }
 
@@ -1304,7 +1300,7 @@ unix_sigusr2(int)
 
 
 void
-dc_reconfig( bool is_full )
+dc_reconfig()
 {
 		// do this first in case anything else depends on DNS
 	daemonCore->refreshDNS();
@@ -1345,9 +1341,7 @@ dc_reconfig( bool is_full )
 	daemonCore->reconfig();
 
 	// Clear out the passwd cache.
-	if( is_full ) {
-		clear_passwd_cache();
-	}
+	clear_passwd_cache();
 
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
@@ -1373,14 +1367,14 @@ dc_reconfig( bool is_full )
 	}
 
 	// call this daemon's specific main_config()
-	main_config( is_full );
+	main_config();
 }
 
 int
 handle_dc_sighup( Service*, int )
 {
 	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
-	dc_reconfig( true );
+	dc_reconfig();
 	return TRUE;
 }
 

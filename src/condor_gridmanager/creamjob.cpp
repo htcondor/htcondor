@@ -351,12 +351,14 @@ CreamJob::CreamJob( ClassAd *classad )
 		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
 	}
 
+/*
 	tmp = param( "GRIDFTP_URL_BASE" );
 	if ( !tmp ) {
 		error_string = "GRIDFTP_URL_BASE is not set in the configuration file";
 		goto error_exit;
 	}
 	free( tmp );
+*/
 
 	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy );
 
@@ -1555,18 +1557,17 @@ char *CreamJob::buildSubmitAd()
 		
 			//here, JOB_CMD = full path to executable
 		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
-		tmp_str = gridftp_url + tmp_str;
-		isb.insert(tmp_str.Value());
-
-			//CREAM only accepts absolute path | simple filename only
-		if (tmp_str[0] != '/') { //not absolute path
-
-				//get simple filename
-			StringList strlist(tmp_str.Value(), "/");
-			strlist.rewind();
-			for(int i = 0; i < strlist.number(); i++) 
-				tmp_str = strlist.next();
+		tmp_str2 = gridftp_url + tmp_str;
+		if ( gridftpServer->UseSelfCred() ) {
+			tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
 		}
+		isb.insert(tmp_str2.Value());
+
+			//get simple filename
+		StringList strlist(tmp_str.Value(), "/");
+		strlist.rewind();
+		for(int i = 0; i < strlist.number(); i++) 
+			tmp_str = strlist.next();
 
 		buf.sprintf("%s = \"%s\"", ATTR_EXECUTABLE, tmp_str.Value());
 		submitAd.Insert(buf.Value());
@@ -1594,7 +1595,11 @@ char *CreamJob::buildSubmitAd()
 				tmp_str2 = gridftp_url + iwd_str + tmp_str;
 			else 
 				tmp_str2 = gridftp_url + tmp_str;
-			
+
+			if ( gridftpServer->UseSelfCred() ) {
+				tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
+			}
+
 			isb.insert(tmp_str2.Value());
 			
 				//get simple filename
@@ -1629,6 +1634,10 @@ char *CreamJob::buildSubmitAd()
 			else 
 				tmp_str2 = gridftp_url + tmp_str;
 
+			if ( gridftpServer->UseSelfCred() ) {
+				tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
+			}
+
 			isb.insert(tmp_str2.Value());
 		}
 	}
@@ -1656,6 +1665,9 @@ char *CreamJob::buildSubmitAd()
 							 iwd_str.Value(),
 							 condor_basename( filename ) );
 			}
+			if ( gridftpServer->UseSelfCred() ) {
+				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
+			}
 			osb_url.insert( buf.Value() );
 		}
 
@@ -1678,6 +1690,10 @@ char *CreamJob::buildSubmitAd()
 			buf.sprintf("%s%s%s", gridftp_url.Value(),
 						tmp_str[0] == '/' ? "" : iwd_str.Value(),
 						tmp_str.Value());
+
+			if ( gridftpServer->UseSelfCred() ) {
+				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
+			}
 
 			osb_url.insert(buf.Value());
 		} else {
@@ -1702,6 +1718,10 @@ char *CreamJob::buildSubmitAd()
 			buf.sprintf("%s%s%s", gridftp_url.Value(),
 						tmp_str[0] == '/' ? "" : iwd_str.Value(),
 						tmp_str.Value());
+
+			if ( gridftpServer->UseSelfCred() ) {
+				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
+			}
 
 			osb_url.insert(buf.Value());
 		} else {
