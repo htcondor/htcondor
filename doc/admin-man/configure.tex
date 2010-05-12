@@ -2154,15 +2154,18 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:TcpForwardingHost}
 \item[\Macro{TCP\_FORWARDING\_HOST}]
   This specifies the host or IP address that should be used as the
-  public address of this daemon.  This is useful if Condor on this
-  host may be reached through a NAT or firewall by connecting to a
-  different IP address that forwards connections to this host.  It
+  public address of this daemon.  If a host name is specified, be aware
+  that it will be resolved to an IP address by this daemon, not by the clients
+  wishing to connect to it.  It is the IP address that is advertised, not
+  the host name.  This setting is useful if Condor on this
+  host may be reached through a NAT or firewall by connecting to an
+  IP address that forwards connections to this host.  It
   is assumed that the port number on the \MacroNI{TCP\_FORWARDING\_HOST}
   that forwards to this host is the same port number assigned to
   Condor on this host.  This option could also be used when ssh port
   forwarding is being used.  In this case, the incoming addresses
   of connections to this daemon will appear as though they are coming
-  from this host rather than from the real remote host, so any
+  from the forwarding host rather than from the real remote host, so any
   authorization settings that rely on host addresses should be
   considered accordingly.
 
