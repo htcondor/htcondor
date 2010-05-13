@@ -762,7 +762,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				// Now that we have the denominator, put the numerator back
 				// as the token. This makes it easier to parse later on
 				//
-			token = *new MyString( _numerator );
+			token = _numerator;
 		} // STEP
 		
 			// -------------------------------------------------
