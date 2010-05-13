@@ -1673,7 +1673,7 @@ but across all users and user's jobs.
   disables rotation).   The default is 1 Mbyte.
   For backwards compatibility, \MacroNI{MAX\_EVENT\_LOG} will be used if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} is not defined.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
 
 \label{param:MaxEventLog}
 \item[\Macro{MAX\_EVENT\_LOG}]
@@ -1691,7 +1691,7 @@ but across all users and user's jobs.
   parameter with a default value of 1.
   If \MacroNI{EVENT\_LOG} is not defined, or if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
-  event log rotation), this parameter has no affect.
+  event log rotation), this parameter has no effect.
 
 \label{param:EventLogRotationLock}
 \item[\Macro{EVENT\_LOG\_ROTATION\_LOCK}]
@@ -1701,7 +1701,7 @@ but across all users and user's jobs.
   event log itself, with a ``.lock'' appended.
   If \MacroNI{EVENT\_LOG} is not defined, or if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
-  event log rotation), this parameter has no affect.
+  event log rotation), this parameter has no effect.
 
 \label{param:EventLogFsync}
 \item[\Macro{EVENT\_LOG\_FSYNC}]
@@ -1726,14 +1726,14 @@ but across all users and user's jobs.
 \item[\Macro{EVENT\_LOG\_USE\_XML}]
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, events are logged in XML format.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
 
 \label{param:EventLogJobAdInformationAttrs}
 \item[\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS}]
   A comma-separated list of job ClassAd attributes,
   whose evaluated values form a new event, the JobAdInformationEvent.
   This new event is placed in the event log in addition to each logged event.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
 
 \end{description}
 
