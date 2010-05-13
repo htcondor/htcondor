@@ -317,7 +317,7 @@ Initialize( const ExprList *el )
 {
 	// initialize eval state
 	l = el;
-	state.curAd = (ClassAd*)l->parentScope;
+	state.curAd = l->parentScope;
 	state.SetRootScope( );
 
 	// initialize list iterator
@@ -398,9 +398,9 @@ GetValue( Value& val, const ExprTree *tree, EvalState *es )
 	currentState->depth_remaining--;
 
 	const ClassAd *tmpScope = currentState->curAd;
-	currentState->curAd = (ClassAd*) tree->GetParentScope();
+	currentState->curAd = tree->GetParentScope();
 	tree->Evaluate( *currentState, val );
-	currentState->curAd = (ClassAd*) tmpScope;
+	currentState->curAd = tmpScope;
 
 	currentState->depth_remaining++;
 
@@ -447,9 +447,9 @@ GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es )
 	currentState->depth_remaining--;
 
 	const ClassAd *tmpScope = currentState->curAd;
-	currentState->curAd = (ClassAd*) tree->GetParentScope();
+	currentState->curAd = tree->GetParentScope();
 	tree->Evaluate( *currentState, val, sig );
-	currentState->curAd = (ClassAd*) tmpScope;
+	currentState->curAd = tmpScope;
 
 	currentState->depth_remaining++;
 

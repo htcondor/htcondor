@@ -395,6 +395,10 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 				}
 			}
 		}
+		break;
+	default:
+		// no-op
+		break;
 	}
 	return false;
 }

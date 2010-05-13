@@ -387,7 +387,8 @@ bool convertValueToRealValue(const Value value, Value &realValue)
     bool                could_convert;
 	string	            buf;
 	const char	        *start;
-    char                *end;
+	const char          *end;
+	char                *end_tmp;
 	int		            ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
@@ -412,12 +413,13 @@ bool convertValueToRealValue(const Value value, Value &realValue)
             could_convert = true;
 			value.IsStringValue(buf);
             start = buf.c_str();
-			rvalue = strtod(start, &end);
+			rvalue = strtod(start, &end_tmp);
+			end = end_tmp;
 
 				// On HPUX11, an input value of "INF" fails in
 				// a strange way: end points beyond the null.
 			if( classad_isinf(rvalue) && end > start+strlen(start) ) {
-				end = (char *)start+strlen(start);
+				end = start+strlen(start);
 			}
 
 			if (end == start && rvalue == 0.0) {

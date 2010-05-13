@@ -38,7 +38,7 @@ ViewMember( )
 ViewMember::ViewMember(const ViewMember &other)
 {
 	key = other.key;
-	rank.CopyFrom( (Value&) other.rank );
+	rank.CopyFrom( other.rank );
 	return;
 }
 
@@ -52,7 +52,7 @@ ViewMember::
 void ViewMember::
 SetRankValue( const Value &rankValue )
 {
-	rank.CopyFrom( (Value&) rankValue );
+	rank.CopyFrom( rankValue );
 }
 
 
@@ -81,7 +81,7 @@ ViewMember ViewMember::
 operator=( const ViewMember &vm )
 {
 	key = vm.key;
-	rank.CopyFrom( (Value&) vm.rank );
+	rank.CopyFrom( vm.rank );
 	return( *this );
 }
 
