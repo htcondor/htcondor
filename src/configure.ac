@@ -3115,15 +3115,9 @@ fi
 
 # Figure out which postgresql we need.
 
-if test "$_cv_opsys" = "AIX" ; then
-  CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
-                 [use PostgreSQL (provides Quill and other support)],
-                 MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
-else
-  CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
-                 [use PostgreSQL (provides Quill and other support)],
-                 MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
-fi
+CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
+               [use PostgreSQL (provides Quill and other support)],
+               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
 AC_MSG_CHECKING([postgresql])
 AC_MSG_RESULT([$_cv_ext_postgresql_version])
 #AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)

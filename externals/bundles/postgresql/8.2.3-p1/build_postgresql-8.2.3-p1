@@ -3,7 +3,13 @@
 
 cd $PACKAGE_SRC_NAME
 
-./configure --prefix=$PACKAGE_INSTALL_DIR --with-ccopts=$PACKAGE_DEBUG --without-readline --without-zlib
+if [ `uname` = "AIX" ] ; then
+    SHARED_FLAG=--disable-shared
+else
+    SHARED_FLAG=
+fi
+
+./configure --prefix=$PACKAGE_INSTALL_DIR --with-ccopts=$PACKAGE_DEBUG --without-readline --without-zlib $SHARED_FLAG
 if [ $? -ne 0 ]
 then
     echo "configure failed"
