@@ -161,7 +161,7 @@ globus_hashtable_t ftp_cache_table;
    to be escaped or the gahp server gets confused. :(
    !!! BEWARE !!!
 */ 
-static char *VersionString ="$GahpVersion: 1.2.0 " __DATE__ " Nordugrid\\ Gahp $";
+static char *VersionString ="$GahpVersion: 1.2.1 " __DATE__ " Nordugrid\\ Gahp $";
 
 volatile int ResultsPending;
 volatile int AsyncResults;
@@ -367,8 +367,13 @@ gahp_printf(const char *format, ...)
 
 	if ( ret_val >= 0 ) {
 		va_start(ap, format);
-		vprintf(format, ap);
+		ret_val = vprintf(format, ap);
 		va_end(ap);
+	}
+
+	if ( ret_val < 0 && errno == EPIPE ) {
+		/* Exit if our stdout pipe has been closed on us. */
+		_exit(SIGPIPE);
 	}
 
 	fflush(stdout);
@@ -2807,6 +2812,9 @@ main(int argc, char **argv)
 	act.sa_handler = quit_on_signal;
 	sigaction(SIGTERM,&act,0);
 	sigaction(SIGQUIT,&act,0);
+
+	/* Signals we want to ignore */
+	act.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE,&act,0);
 
 #ifdef FORK_FOR_CORE
