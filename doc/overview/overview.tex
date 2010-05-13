@@ -94,7 +94,7 @@ It can checkpoint
 the job and move (migrate)
 \index{migration}
 the jobs to a different machine which would otherwise be idle.
-Condor continues job on the new machine from
+Condor continues the job on the new machine from
 precisely where it left off.
 
 In those cases where Condor can checkpoint and migrate a job,
@@ -180,11 +180,11 @@ the job can be check pointed.
 The job may continue after migrating 
 \index{migration}
 to another machine.
-Condor's periodic checkpoint feature 
+Condor's checkpoint feature 
 \index{checkpoint!periodic}
 periodically checkpoints a job even in lieu of migration in order to
 safeguard the accumulated computation time on a job from being lost in the
-event of a system failure such as the machine being shutdown or a crash.
+event of a system failure, such as the machine being shutdown or a crash.
 	\item[Remote System Calls.] 
 \index{remote system call}
 Despite running jobs on remote machines,
@@ -408,7 +408,7 @@ Other compilers may work, but are not supported.
 \textbf{Platform} & \textbf{Compiler} & \textbf{Notes}\\ \hline \hline
 Red Hat Enterprise Linux 3, 4, 5 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-Red Hat Debian Linux 5.0 (lenny) on x86 and x86\_64 & gcc, g++, gfortran as shipped &  \\ 
+Red Hat Debian Linux 5.0 (lenny) on x86 and x86\_64 & gcc, g++, gfortran & as shipped \\ 
 \hline
 Fedora Core 1 - 11 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
@@ -459,7 +459,7 @@ Condor questions, comments, pleas for help,
 and requests for commercial contract consultation or support 
 are all welcome;
 send Internet e-mail to
-\URL{mailto:condor-admin@cs.wisc.edu}.
+\Email{condor-admin@cs.wisc.edu}.
 Please include your name, organization, and telephone number in your message.
 If you are having trouble with Condor,
 please help us troubleshoot by including as much pertinent information
