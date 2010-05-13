@@ -35,7 +35,7 @@ BEGIN {
     initrd = ""
     kernel = ""
     kern_params = ""
-    print "Received attribute: " key "=" attrs[key] >debug_file
+    print "Received attribute: " key "=" attrs[key] >>debug_file
 }
 
 END {
@@ -62,7 +62,7 @@ END {
     }
     else
     {
-	print "Unknown VM type: " index(attrs["JobVMType"], "kvm") >debug_file;
+	print "Unknown VM type: " index(attrs["JobVMType"], "kvm") >>debug_file;
 	exit(-1);
     }
     print "<name>" attrs["VMPARAM_VM_NAME"] "</name>" ;
@@ -100,15 +100,29 @@ END {
     {
 	if(index(attrs["JobVMNetworkingType"],"nat") != 0)
 	{
-	    print "<interface type='network'><source network='default'/></interface>" ;
+	    print "<interface type='network'><source network='default'/>" ;
+            if(attrs["JobVM_MACADDR"] != "")
+            {
+		print"<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
+            }
+	    print "</interface>" ;
 	}
 	else
 	{
-	    print "<interface type='bridge'><mac address='" attrs["JobVM_MACADDR"] "'/><source bridge='br0'/></interface>" ;
+	    print "<interface type='bridge'>" ;
+            if(attrs["JobVM_MACADDR"] != "")
+            {
+		print"<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
+            }
+	    if(attrs["VMPARAM_Bridge_Interface"] != "")
+	    {
+		print "<source bridge='" attrs["VMPARAM_Bridge_Interface"] "'/>" ;
+	    }
+	    print "</interface>" ;
 	}
     }
     print "<disk type='file'>" ;
-	if(index(attrs["JobVMType"],"xen") != 0) 
+    if(index(attrs["JobVMType"],"xen") != 0) 
     {
 	 split(attrs["VMPARAM_Xen_Disk"], disk_string, ":");
     }

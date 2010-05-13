@@ -440,6 +440,12 @@ VMwareType::~VMwareType()
 }
 
 void
+VMwareType::Config()
+{
+	// Nothing to do
+}
+
+void
 VMwareType::adjustConfigDiskPath()
 {
 	if( m_configfile.IsEmpty() || 

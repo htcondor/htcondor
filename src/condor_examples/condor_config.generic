@@ -2298,17 +2298,6 @@ VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
 
 ## Networking parameters for Xen & KVM
 ##
-## This parameter is used only for virsh.
-##
-## A string specifying a script and its arguments that will be run to
-## setup a bridging network interface for guests. The interface should
-## provide direct access to the host system's LAN, i.e. not be NAT'd on the
-## host. 
-##
-## Example 
-##  VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
-#VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
-
 ## This is the path to the XML helper command; the libvirt_simple_script.awk
 ## script just reproduces what Condor already does for the kvm/xen VM
 ## universe
