@@ -375,6 +375,8 @@ Reconfiguration using \Condor{reconfig} will not be enough.
   \item \verb@DAEMON_LIST@
   \item \verb@FetchWorkDelay@
   \item \verb@MAX_NUM_CPUS@
+  \item \verb@MAX_TRACKING_GID@
+  \item \verb@MIN_TRACKING_GID@
   \item \verb@NETWORK_INTERFACE@
   \item \verb@NUM_CPUS@
   \item \verb@PREEMPTION_REQUIREMENTS_STABLE@
@@ -1701,7 +1703,7 @@ but across all users and user's jobs.
   disables rotation).   The default is 1 Mbyte.
   For backwards compatibility, \MacroNI{MAX\_EVENT\_LOG} will be used if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} is not defined.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
 
 \label{param:MaxEventLog}
 \item[\Macro{MAX\_EVENT\_LOG}]
@@ -1719,7 +1721,7 @@ but across all users and user's jobs.
   parameter with a default value of 1.
   If \MacroNI{EVENT\_LOG} is not defined, or if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
-  event log rotation), this parameter has no affect.
+  event log rotation), this parameter has no effect.
 
 \label{param:EventLogRotationLock}
 \item[\Macro{EVENT\_LOG\_ROTATION\_LOCK}]
@@ -1729,7 +1731,7 @@ but across all users and user's jobs.
   event log itself, with a ``.lock'' appended.
   If \MacroNI{EVENT\_LOG} is not defined, or if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
-  event log rotation), this parameter has no affect.
+  event log rotation), this parameter has no effect.
 
 \label{param:EventLogFsync}
 \item[\Macro{EVENT\_LOG\_FSYNC}]
@@ -1754,14 +1756,14 @@ but across all users and user's jobs.
 \item[\Macro{EVENT\_LOG\_USE\_XML}]
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, events are logged in XML format.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
 
 \label{param:EventLogJobAdInformationAttrs}
 \item[\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS}]
   A comma-separated list of job ClassAd attributes,
   whose evaluated values form a new event, the JobAdInformationEvent.
   This new event is placed in the event log in addition to each logged event.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
 
 \end{description}
 
@@ -2204,15 +2206,18 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:TcpForwardingHost}
 \item[\Macro{TCP\_FORWARDING\_HOST}]
   This specifies the host or IP address that should be used as the
-  public address of this daemon.  This is useful if Condor on this
-  host may be reached through a NAT or firewall by connecting to a
-  different IP address that forwards connections to this host.  It
+  public address of this daemon.  If a host name is specified, be aware
+  that it will be resolved to an IP address by this daemon, not by the clients
+  wishing to connect to it.  It is the IP address that is advertised, not
+  the host name.  This setting is useful if Condor on this
+  host may be reached through a NAT or firewall by connecting to an
+  IP address that forwards connections to this host.  It
   is assumed that the port number on the \MacroNI{TCP\_FORWARDING\_HOST}
   that forwards to this host is the same port number assigned to
   Condor on this host.  This option could also be used when ssh port
   forwarding is being used.  In this case, the incoming addresses
   of connections to this daemon will appear as though they are coming
-  from this host rather than from the real remote host, so any
+  from the forwarding host rather than from the real remote host, so any
   authorization settings that rely on host addresses should be
   considered accordingly.
 
@@ -5957,6 +5962,12 @@ These settings affect the \Condor{starter}.
   See section~\ref{sec:URL-transfer} for a description of the functionality
   required of a plug-in.
 
+\label{param:EnableChirp} 
+\item[\Macro{ENABLE\_CHIRP}]
+  A boolean value that defaults to \Expr{True}. An administrator
+  would set the value to \Expr{False} to disable Chirp remote file access 
+  from execute machines. 
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7015,6 +7026,34 @@ Configuration File Macros}
   \verb@$(LOCK)/procd_pipe@ on Unix and
 %  \Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
   \verb@\\.\pipe\procd_pipe@ on Windows.
+
+\label{param:UseGIDProcessTracking}
+\item[\Macro{USE\_GID\_PROCESS\_TRACKING}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, a job's initial process is assigned a dedicated GID
+  which is further used by the \Condor{procd} to reliably track all
+  processes associated with a job.
+  When \Expr{True}, values for \MacroNI{MIN\_TRACKING\_GID} and 
+  \MacroNI{MAX\_TRACKING\_GID} must also be set, or Condor will abort,
+  logging an error message.
+  See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
+  a detailed description.
+
+\label{param:MinTrackingGID}
+\item[\Macro{MIN\_TRACKING\_GID}]
+  An integer value, that together with \MacroNI{MAX\_TRACKING\_GID}
+  specify a range of GIDs to be assigned on a per slot basis for
+  use by the \Condor{procd} in tracking processes associated with a job.
+  See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
+  a detailed description.
+
+\label{param:MaxTrackingGID}
+\item[\Macro{MAX\_TRACKING\_GID}]
+  An integer value, that together with \MacroNI{MIN\_TRACKING\_GID}
+  specify a range of GIDs to be assigned on a per slot basis for
+  use by the \Condor{procd} in tracking processes associated with a job.
+  See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
+  a detailed description.
 
 \end{description}
 
