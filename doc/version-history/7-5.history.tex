@@ -31,8 +31,8 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrack 1274
-\item condor\_q -analyze now notices the -l option, and if both
-are given, then the analysis prints out the list of machine
+\item \Condor{q} \Opt{-analyze} now notices the \Opt{-l} option, and if both
+are given, then the analysis prints out the list of machines
 in each analysis category.
 
 % gittrack 1302
@@ -99,24 +99,29 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 
 \begin{itemize}
 
-\item Added \MacroNI{JOB\_ROUTER\_LOCK}.  This lock file is used to
-  ensure that multiple instances of \condor{job\_router} never run
-  with the same \MacroNI{JOB\_ROUTER\_NAME}.  Multiple instances running
+\item The new configuration variable \Macro{JOB\_ROUTER\_LOCK}  specifies a
+  lock file used to
+  ensure that multiple instances of \Condor{job\_router} never run
+  with the same values of \MacroNI{JOB\_ROUTER\_NAME}.
+  Multiple instances running
   with the same name could lead to mismanagement of routed jobs.
 
-\item Added \MacroNI{ROOSTER\_MAX\_UNHIBERNATE}.  This is an integer
-  specifying the maximum number of machines to wake up per cycle.  The
-  default value of 0 means no limit.
+\item The new configuration variable \Macro{ROOSTER\_MAX\_UNHIBERNATE}
+  is an integer
+  specifying the maximum number of machines to wake up per cycle.
+  The default value of 0 means no limit.
 
-\item Added \MacroNI{ROOSTER\_UNHIBERNATE\_RANK}.  This is a ClassAd
+\item The new configuration variable \Macro{ROOSTER\_UNHIBERNATE\_RANK}
+  is a ClassAd
   expression specifying which machines should be woken up first in a
-  given cycle.  Higher ranked machines are woken first.  If the number
-  of machines to be woken up is limited by
-  \Macro{ROOSTER\_MAX\_UNHIBERNATE}, the rank may be used for
+  given cycle.  Higher ranked machines are woken first.
+  If the number of machines to be woken up is limited by
+  \MacroNI{ROOSTER\_MAX\_UNHIBERNATE}, the rank may be used for
   determining which machines are woken before reaching the limit.
 
-% gittrac %1228
-\item Added \MacroNI{CLASSAD\_USER\_LIBS}. This is a list of libraries
+% gittrac 1228
+\item The new configuration variable \Macro{CLASSAD\_USER\_LIBS}
+  is a list of libraries
   containing additional ClassAd functions to be used during ClassAd
   evaluation.
 
@@ -127,26 +132,27 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 \begin{itemize}
 
 % gittrack 1332
-\item Parameters with a default value of 0 that were not defined in
-  the config file were treated as though they were undefined by
-  \Condor{config\_val}.  Now it treats this case like any other: the
-  default value is displayed.
+\item Configuration variables with a default value of 0
+  that were not defined in the configuration file
+  were treated as though they were undefined by \Condor{config\_val}.
+  Now Condor treats this case like any other:
+  the default value is displayed.
 
 % gittrac #1203
-\item Starting in Condor 7.5.1, using numbers with a logical operator
-  in a ClassAd expression (e.g. \texttt{1 || 0}) caused the expression
-  to evaluate to value \texttt{ERROR}. The previous behavior has been
-  restored (i.e. zero values are treated as \texttt{False} and non-zero
-  values are treated as \texttt{True}).
+\item Starting in Condor 7.5.1, using literals with a logical operator
+  in a ClassAd expression (for example, \Expr{1 || 0}) caused the expression
+  to evaluate to the value \Expr{ERROR}. The previous behavior has been
+  restored: zero values are treated as \Expr{False},
+  and non-zero values are treated as \Expr{True}.
 
 % gittrack 1378
 \item Starting in 7.5.0, the \Condor{schedd} no longer supported queue
   management commands when security negotiation was disabled
-  (e.g. \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}).
+  (for example, if \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}).
 
 % gittrack 1395
 \item Fixed a bug introduced in 7.5.1.  ClassAd string literals containing
-characters with negative ascii values were not accepted.
+characters with negative ASCII values were not accepted.
 
 \end{itemize}
 
