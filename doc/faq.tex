@@ -1526,6 +1526,52 @@ service gsigatekeeper
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Managing Large Workflows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I get meaningful output from \Condor{q} with so many jobs in the queue?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+There are several ways to constrain the output of \Condor{q} when there are
+lots and lots of jobs in the queue.
+To see only the jobs that are currently running:
+\begin{verbatim}
+  condor_q -run
+\end{verbatim}
+To see only the jobs that are currently on hold:
+\begin{verbatim}
+  condor_q -hold
+\end{verbatim}
+To see other output,  combine options.
+For example, to see only running jobs submitted by A. Einstein
+that belong to cluster 77:
+\begin{verbatim}
+  condor_q -run einstein 77
+\end{verbatim}
+Another example uses the \Opt{-constraint} option to \Condor{q}.
+To see only the jobs in the queue that started running,
+but were interrupted and then started again from the beginning,
+perhaps more than once: 
+\footnotesize
+\begin{verbatim}
+  condor_q -constraint 'NumJobStarts > 1'
+\end{verbatim}
+\normalsize
+Complete details of \Condor{q} are contained in the manual page
+at page~\pageref{man-condor-q}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What does Condor offer that can help with running
+a large number of jobs?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Many of the features of DAGMan are targeted at helping with the 
+administration and running of large numbers of jobs.
+See section~\ref{sec:DAGLotsaJobs} at page~\pageref{sec:DAGLotsaJobs}.
+ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Troubleshooting}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
