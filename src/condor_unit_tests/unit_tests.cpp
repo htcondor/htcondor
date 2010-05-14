@@ -46,6 +46,10 @@ bool FTEST_basename(void);
 bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
 bool FTEST_flatten_and_inline(void);
+bool FTEST_string_to_ip(void);
+bool FTEST_string_to_sin(void);
+bool FTEST_string_to_port(void);
+bool FTEST_stl_string_utils(void);
 bool OTEST_HashTable(void);
 bool OTEST_MyString(void);
 bool OTEST_StringList(void);
@@ -53,8 +57,7 @@ bool OTEST_StringList(void);
 int main() {
 	e.init();
 		// set up the function driver
-	FunctionDriver driver(20);
-
+	FunctionDriver driver(50);
 	driver.register_function(FTEST_host_in_domain);
 	driver.register_function(FTEST_getHostFromAddr);
 	driver.register_function(FTEST_getPortFromAddr);
@@ -72,6 +75,10 @@ int main() {
 	driver.register_function(FTEST_dirname);
 	driver.register_function(FTEST_fullpath);
 	driver.register_function(FTEST_flatten_and_inline);
+	driver.register_function(FTEST_string_to_ip);
+	driver.register_function(FTEST_string_to_sin);
+	driver.register_function(FTEST_string_to_port);
+	driver.register_function(FTEST_stl_string_utils);
 	driver.register_function(OTEST_HashTable);
 	driver.register_function(OTEST_MyString);
 	driver.register_function(OTEST_StringList);

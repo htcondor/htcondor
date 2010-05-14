@@ -121,7 +121,7 @@ Puke( ) const
 	PrettyPrint	unp;
 	string		buffer;
 
-	unp.Unparse( buffer, (ExprTree*)this );
+	unp.Unparse( buffer, this );
 	printf( "%s\n", buffer.c_str( ) );
 }
 
@@ -167,7 +167,7 @@ EvalState::
 void EvalState::
 SetScopes( const ClassAd *curScope )
 {
-	curAd = (ClassAd*)curScope;
+	curAd = curScope;
 	SetRootScope( );
 }
 
@@ -175,18 +175,18 @@ SetScopes( const ClassAd *curScope )
 void EvalState::
 SetRootScope( )
 {
-	ClassAd *prevScope = curAd;
+	const ClassAd *prevScope = curAd;
     if (curAd == NULL) {
         rootAd = NULL;
     } else {
-        ClassAd *curScope = (ClassAd*)(curAd->parentScope);
+        const ClassAd *curScope = curAd->parentScope;
         
         while( curScope ) {
             if( curScope == curAd ) {	// NAC - loop detection
                 return;					// NAC
             }							// NAC
             prevScope = curScope;
-            curScope  = (ClassAd*)(curScope->parentScope);
+            curScope  = curScope->parentScope;
         }
         
         rootAd = prevScope;

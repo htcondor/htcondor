@@ -46,6 +46,8 @@ public:
 
 	virtual ~VirshType();
 
+	virtual void Config();
+
 	virtual bool Start();
 
 	virtual bool Shutdown();
@@ -95,6 +97,7 @@ protected:
 	MyString m_xen_root;
 	MyString m_xen_kernel_params;
 	MyString m_xen_bootloader;
+	std::string m_vm_bridge_interface;
 
 	bool m_xen_hw_vt;
 	bool m_allow_hw_vt_suspend;

@@ -229,6 +229,7 @@ static bool sensitive_string_assignment_empty_non_empty(void);
 static bool sensitive_string_assignment_non_empty(void);
 static bool sensitive_string_hash_function_non_empty(void);
 static bool sensitive_string_hash_function_empty(void);
+static bool test_stl_string_casting(void);
 
 bool OTEST_MyString() {
 		// beginning junk
@@ -444,6 +445,7 @@ bool OTEST_MyString() {
 	driver.register_function(sensitive_string_assignment_non_empty);
 	driver.register_function(sensitive_string_hash_function_non_empty);
 	driver.register_function(sensitive_string_hash_function_empty);
+	driver.register_function(test_stl_string_casting);
 
 		// run the tests
 	bool test_result = driver.do_all_functions();
@@ -4411,3 +4413,28 @@ static bool sensitive_string_hash_function_empty(void) {
 	return true;
 }
 
+static bool test_stl_string_casting(void) {
+    e.emit_test("Test casting operations wrt std::string");
+        //e.emit_input_header();
+        //e.emit_output_expected_header();
+        //e.emit_output_actual_header();
+
+    // test casting ops provided via MyString
+    MyString str1 = "foo";
+    std::string str2 = "bar";
+    str2 = str1;
+    if (str2 != str1.Value()) {
+		e.emit_result_failure(__LINE__);
+		return false;
+    }
+
+    str2 = "bar";
+    str1 = str2;
+    if (str1 != str2.c_str()) {
+		e.emit_result_failure(__LINE__);
+		return false;
+    }
+
+    e.emit_result_success(__LINE__);
+    return true;
+}

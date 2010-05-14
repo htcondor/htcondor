@@ -825,6 +825,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		// and non-daemons to do.
 	condor_auth_config( false );
 
+	ConfigConvertDefaultIPToSocketIP();
+
 	(void)SetSyscalls( scm );
 }
 

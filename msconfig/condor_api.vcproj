@@ -245,6 +245,10 @@
 			>
 		</File>
 		<File
+			RelativePath="$(OutDir)\stl_string_utils.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\new_classad.obj"
 			>
 		</File>

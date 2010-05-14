@@ -43,8 +43,8 @@ class EvalState {
 
 		int depth_remaining; // max recursion depth - current depth
 
-		ClassAd		*rootAd;
-		ClassAd 	*curAd;
+		const ClassAd *rootAd;
+		const ClassAd *curAd;
 
 		bool		flattenAndInline;	// NAC
 
