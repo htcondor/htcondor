@@ -47,6 +47,8 @@ public:
 
 	virtual ~VMType();
 
+	virtual void Config() = 0;
+
 	virtual bool Start() = 0;
 
 	virtual bool Shutdown() = 0;
