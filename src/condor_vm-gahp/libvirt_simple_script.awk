@@ -96,6 +96,7 @@ END {
     print "<on_poweroff>destroy</on_poweroff><on_reboot>restart</on_reboot><on_crash>restart</on_crash>" ;
 
     print "<devices>" ;
+    print "<console type='pty'><source path='/dev/ptmx'/></console>" ;
     if(attrs["JobVMNetworking"] == "TRUE")
     {
 	if(index(attrs["JobVMNetworkingType"],"nat") != 0)

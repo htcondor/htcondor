@@ -853,6 +853,7 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 		m_xml += "</vcpu>";
 		m_xml += "<os><type>hvm</type></os>";
 		m_xml += "<devices>";
+		m_xml += "<console type='pty'><source path='/dev/ptmx'/></console>";
 		if( m_vm_networking )
 			{
 			vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
@@ -941,6 +942,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 			m_xml += "</bootloader>";
 		}
 		m_xml += "<devices>";
+		m_xml += "<console type='pty'><source path='/dev/ptmx'/></console>";
 		if( m_vm_networking ) {
 			if( m_vm_networking_type.find("nat") >= 0 ) {
 				m_xml += "<interface type='network'><source network='default'/></interface>";
