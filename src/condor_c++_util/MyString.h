@@ -67,6 +67,9 @@ class MyString
 	~MyString();
     //@}
 
+    /** Casting operator to std::string */
+    operator std::string();
+
 	// ----------------------------------------
 	//               Accessors
 	// ----------------------------------------

@@ -1056,6 +1056,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\stl_string_utils.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\stl_string_utils.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\net_string_list.cpp"
 			>
 		</File>

@@ -246,6 +246,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	metric_units.o condor_ver_info.o \
 	condor_md.o \
 	proc_id.o HashTable.o MyString.o \
+        stl_string_utils.o \
 	condor_new_classads.o condor_xml_classads.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
 	Regex.o my_distribution.o error_utils.o $(DH_OBJ) $(BASE64_OBJ) \

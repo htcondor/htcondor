@@ -71,6 +71,13 @@ MyString::~MyString()
 	init(); // for safety -- errors if you try to re-use this object
 }
 
+
+MyString::operator std::string()
+{
+    std::string r = this->Value();
+    return r;
+}
+
 /*--------------------------------------------------------------------
  *
  * Accessors. (More accessors in MyString.h)
