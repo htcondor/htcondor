@@ -35,6 +35,8 @@ static struct in_addr sin_addr;
 static bool has_sin_addr = false;
 static int hostnames_initialized = 0;
 static int ipaddr_initialized = 0;
+static bool enable_convert_default_IP_to_socket_IP = true;
+
 static void init_hostnames();
 
 extern "C" {
@@ -289,14 +291,9 @@ static bool is_sender_ip_attr(char const *attr_name)
     return false;
 }
 
-
-void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
+void ConfigConvertDefaultIPToSocketIP()
 {
-	*new_expr_string = NULL;
-
-    if(!is_sender_ip_attr(attr_name)) {
-		return;
-	}
+	enable_convert_default_IP_to_socket_IP = true;
 
 	/*
 	  Woe is us. If GCB is enabled, we should *NOT* be re-writing IP
@@ -307,17 +304,42 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 	  GCB_bind() and so we thought my_sock_ip below was the GCB
 	  broker's IP, and it all "worked".  Once we're not longer
 	  pounding the GCB broker for all outbound connections, this bug
-	  becomes visible.  Note that we use the optional 3rd argument to
-	  param_boolean() to get it to shut up, even if NET_REMAP_ENABLE
-	  isn't defined in the config file, since otherwise, this would
-	  completely FILL a log file at D_CONFIG or D_ALL, since we hit
-	  this for *every* potentially rewritten attribute in every ClassAd
-	  that's sent.
+	  becomes visible.
 	*/
-	if (param_boolean("NET_REMAP_ENABLE", false, false)) {
+	if (param_boolean("NET_REMAP_ENABLE", false)) {
+		enable_convert_default_IP_to_socket_IP = false;
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NET_REMAP_ENABLE is true.\n");
+	}
+
+	/*
+	  When using TCP_FORWARDING_HOST, if we rewrite addresses, we will
+	  insert the IP address of the local IP address in place of
+	  the forwarding IP address.
+	*/
+	char *str = param("TCP_FORWARDING_HOST");
+	if( str && *str ) {
+		enable_convert_default_IP_to_socket_IP = false;
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because TCP_FORWARDING_HOST is defined.\n");
+	}
+	free( str );
+
+	if( !param_boolean("ENABLE_ADDRESS_REWRITING",true) ) {
+		enable_convert_default_IP_to_socket_IP = false;
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because ENABLE_ADDRESS_REWRITING is true.\n");
+	}
+}
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
+{
+	*new_expr_string = NULL;
+
+	if( !enable_convert_default_IP_to_socket_IP ) {
 		return;
 	}
 
+    if(!is_sender_ip_attr(attr_name)) {
+		return;
+	}
 
 	char const *my_default_ip = my_ip_string();
 	char const *my_sock_ip = s.my_ip_str();
