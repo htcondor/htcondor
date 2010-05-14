@@ -713,6 +713,7 @@ VMGahp::executeStart(VMRequest *req)
 		return; 
 	}
 
+	new_vm->Config();
 	if( new_vm->CreateConfigFile() == false ) {
 		req->m_has_result = true;
 		req->m_is_success = false;

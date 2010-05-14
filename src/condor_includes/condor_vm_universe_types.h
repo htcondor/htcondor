@@ -76,6 +76,7 @@
 #define VMPARAM_NO_OUTPUT_VM			"VMPARAM_No_Output_VM"
 #define VMPARAM_CDROM_FILES				"VMPARAM_CDROM_Files"
 #define VMPARAM_TRANSFER_CDROM_FILES	"VMPARAM_Transfer_CDROM_Files"
+#define VMPARAM_BRIDGE_INTERFACE	"VMPARAM_Bridge_Interface"
 
 #endif
 
