@@ -1730,6 +1730,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	if(!t_buf->rb || !sk->kb || !sk->kb_len || !key) {
 			// shouldn't happen
 		dprintf(D_SECURITY, "Unexpected NULL.\n");
+		if (key) free(key);
 		return false;
 	}
 	
