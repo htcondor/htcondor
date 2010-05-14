@@ -46,6 +46,14 @@ defaults to \Expr{True}.
 An administrator may set it to \Expr{False}, which 
 disables Chirp remote file access from execute machines.
 
+\item The new configuration variable
+  \Macro{ENABLE\_ADDRESS\_REWRITING} defaults to \Expr{True}.  It may
+  be set to false to disable Condor's dynamic algorithm for chosing
+  which IP address to publish in multi-homed environments.  The dynamic
+  algorithm chooses the IP address associated with the network interface
+  used to make the publication (e.g. the network interface used to communicate
+  with the collector).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -57,6 +65,11 @@ disables Chirp remote file access from execute machines.
   private network settings.  The connection from the execute node to
   the submit node always attempted to use the public network address
   of the submit machine.
+
+% gittrack 1405
+\item \MacroNI{TCP\_FORWARDING\_HOST} did not work in some situations because
+of Condor's attempts to automatically rewrite published addresses to
+match the IP address of the network interface used to make the publication.
 
 % gittrac 1346
 \item A single job could match multiple offline slots in a single
