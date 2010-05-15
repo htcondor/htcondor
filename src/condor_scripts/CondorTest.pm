@@ -470,9 +470,128 @@ sub DefaultOutputTest
 	die "$handle: FAILURE (STDERR contains data)\n";
 }
 
+# You might consider RunTest2 instead.
 sub RunTest
 {
 	DoTest(@_);
+}
+
+# Submit a Condor job.
+#
+# Replacement for RunTest.
+#
+# Takes a hash of arguments:
+#
+# name => Name of the test. MANDATORY
+# submit_file => submit file to pass to condor_submit
+# submit_body => RunTest2 will automatically create a submit file
+#                filled with the contents of this and use that
+#                as the submit file.
+# submit_hash => RunTest2 will automatically create a submit file
+#                based on the contents of this hash reference.
+#                See below for details
+# want_checkpoint => If true (1), you want a checkpoint.
+#
+# One and only one of submit_file, submit_body, or submit_hash is MANDATORY.
+#
+# submit_hash builds a submit file from options.  It has a set of defaults
+# that can be overwritten.  An empty hash is valid, and just uses the defaults.
+#
+# The defaults are:
+#   universe   => "vanilla",
+#   _executable => sleep
+#   log => $name.log
+#   output => $name.out
+#   error => $name.err
+#   Notification => NEVER
+#   arguments  => 0
+#   _queue => 1
+#
+# Options without an underscore are directly passed into the submit
+# file.  You can passed in +Arguments this way ("+test" => '"Value"').
+# Options beginning with _ are special.
+#
+# _executable - An automatically created executable.  If "executable" 
+#               is also specified, this is ignored.  Choose from this list:
+#               sleep - Sleeps for $ARGV[0] seconds, or forever if 0
+# _queue - passed to the queue command as a count.
+sub RunTest2
+{
+	my(%args) = @_;
+
+	my(%TEST_SCRIPTS) = (
+		'sleep' => <<END,
+#! /usr/bin/env perl
+my \$request = \$ARGV[0];
+if(\$request eq "0") {
+        while(1) { sleep 1 };
+} else {
+        sleep \$request;
+}
+exit(0);
+END
+
+	);
+
+	my $name = $args{name};
+
+	if(not defined $name) {
+		croak "CondorTest::RunTest2 requires a 'name' argument";
+	}
+	my(@required) = qw(submit_body submit_hash submit_file);
+	my $num_submit_options = 0;
+	foreach my $r (@required) {
+		if(exists $args{$r}) { $num_submit_options++; }
+	}
+	if($num_submit_options != 1) {
+		croak "CondorTest::RunTest2 requires one and only one of the options @required";
+	}
+
+	my $submit_file = $args{submit_file};
+	my $submit_body = $args{submit_body};
+	if(defined $args{submit_hash}) {
+		my(%default) = (
+			universe   => "vanilla",
+			_executable => 'sleep',
+			'log' => "$name.log",
+			output => "$name.out",
+			error => "$name.err",
+			Notification => 'NEVER',
+			arguments  => '0',
+			_queue => '1',
+		);
+		my %choices = (%default, %{$args{submit_hash}});
+		if(exists $choices{'executable'}) {
+			delete $choices{'_executable'};
+		} else {
+			my $exe = $choices{'_executable'};
+			if(not exists $TEST_SCRIPTS{$exe}) {
+				croak "CondorTest::RunTest2 called with unknown _executable of '$exe'";
+			}
+			WriteFileOrDie('executable', $TEST_SCRIPTS{$exe});
+			$choices{'executable'} = 'executable';
+			my $queue = $choices{'_queue'};
+			delete $choices{'_queue'};
+			$submit_body = '';
+			foreach my $k (sort keys %choices) {
+				$submit_body .= "$k = $choices{$k}\n";
+			}
+			$submit_body .= "queue $queue\n";
+		}
+	}
+	if(defined $submit_body) {
+		$submit_file = "$name.cmd";
+		print STDERR "Writing body to $submit_file\n";
+		WriteFileOrDie($submit_file, $submit_body);
+	}
+
+	my $want_checkpoint = $args{want_checkpoint};
+	if(not defined $want_checkpoint) {
+		print STDERR "CondorTest::RunTest2: want_checkpoint not specified. Assuming no checkpoint is wanted.\n";
+		$want_checkpoint = 0;
+	}
+
+	return DoTest($name, $submit_file, $want_checkpoint, $args{dagman_args});
 }
  
 sub RunDagTest
@@ -2271,5 +2390,19 @@ sub IsThisNightly
 		return(0);
 	}
 }
+
+# Given a filename and the contents, writes the file to that name.
+# it is a fatal error to fail to do so.
+sub WriteFileOrDie
+{
+	my($filename, $body) = @_;
+	local *OUT;
+	open OUT, '>', $filename
+		or croak "CondorTest::WriteFileOrDie: Failed to open(>$filename): $!";
+	print OUT $body;
+	close OUT;
+}
+
+
 
 1;
