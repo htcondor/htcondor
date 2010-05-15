@@ -38,14 +38,16 @@ CondorLock::CondorLock( const char	*l_url,
 	real_lock = NULL;
 
 		// BuildLock does the real work of building the lock
-	BuildLock( l_url,
-			   l_name,
-			   app_service,
-			   lock_event_acquired,
-			   lock_event_lost,
-			   poll_period,
-			   lock_hold_time,
-			   auto_refresh );
+	if (BuildLock( l_url,
+				   l_name,
+				   app_service,
+				   lock_event_acquired,
+				   lock_event_lost,
+				   poll_period,
+				   lock_hold_time,
+				   auto_refresh )) {
+		EXCEPT("Failed to create lock at %s", l_url);
+	}
 }
 
 // Destructor
