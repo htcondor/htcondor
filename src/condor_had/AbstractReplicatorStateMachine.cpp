@@ -151,21 +151,12 @@ AbstractReplicatorStateMachine::reinitialize()
     }
 
 	buffer = param( "TRANSFERER" );
-	if ( NULL != buffer ) {
-		m_transfererPath = buffer;
-		free( buffer );
+	if (!buffer) {
+		utilCrucialError(utilConfigurationError("TRANSFERER",
+												"REPLICATION").Value());
 	}
-	else {
-		buffer = param( "SBIN" );
-		if( !buffer ) {
-			utilCrucialError(
-				utilConfigurationError("SBIN","REPLICATION").Value());
-		}
-		else {
-			m_transfererPath.sprintf( "%s/condor_transferer", buffer );
-			free( buffer );
-		}
-	}
+	m_transfererPath = buffer;
+	free( buffer );
 
 	char* spoolDirectory = param( "SPOOL" );
     
