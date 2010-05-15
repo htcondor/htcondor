@@ -66,23 +66,17 @@ StarterMgr::init( void )
 		delete( tmp_starter );
 		starters.DeleteCurrent();
 	}
-	bool new_config = true;
 
 	char *tmp, *starter_path = NULL;
 	tmp = param( "STARTER_LIST" );
 	if( ! tmp ) {
 			// Not defined, give them a default
-		new_config = false;
 		tmp = strdup( "STARTER, STARTER_1, STARTER_2, "
 					  "ALTERNATE_STARTER_1, ALTERNATE_STARTER_2" );
 		if( ! did_warning ) {
-			dprintf( D_ALWAYS, "WARNING: you have upgraded your version "
-					 "of Condor without changing your condor_config "
-					 "file.  You have no STARTER_LIST defined, which is "
-					 "the new way that Condor finds the various starter "
-					 "binaries it needs.  Please consider using the new "
-					 "condor_config shipped with Condor.  See the "
-					 "Condor manual for details.\n" );
+			dprintf(D_ALWAYS,
+					"WARNING: STARTER_LIST not defined in config file, "
+					"using default: %s\n", tmp);
 			did_warning = true;
 		}
 	}
@@ -93,19 +87,15 @@ StarterMgr::init( void )
 	while( (tmp = starter_list.next()) ) {
 		starter_path = param( tmp );
 		if( ! starter_path ) {
-			if( new_config ) {
-				dprintf( D_ALWAYS, "Starter specified in STARTER_LIST "
-						 "\"%s\" not found in config file, ignoring.\n",
-						 tmp ); 
-			}
+			dprintf( D_ALWAYS, "Starter specified in STARTER_LIST "
+					 "\"%s\" not found in config file, ignoring.\n",
+					 tmp ); 
 			continue;
 		}
 		if( checked_starter_list.contains(starter_path) ) {
-			if( new_config ) {
-				dprintf( D_ALWAYS, "Starter pointed to by \"%s\" (%s) is "
-						 "in STARTER_LIST more than once, ignoring.\n", 
-						 tmp, starter_path );
-			}
+			dprintf( D_ALWAYS, "Starter pointed to by \"%s\" (%s) is "
+					 "in STARTER_LIST more than once, ignoring.\n", 
+					 tmp, starter_path );
 			free(starter_path);
 			continue;
 		}
@@ -122,24 +112,6 @@ StarterMgr::init( void )
 			// starter, even if it failed to give us a classad. 
 		checked_starter_list.append( starter_path );
 		free( starter_path );
-	}
-	if( ! new_config ) {
-			// if we're reading an old config file, we've got to check
-			// for one more thing.  none of their old settings are
-			// going to reference "condor_starter.std", which is the
-			// new name for the non-dc standard universe starter.  So,
-			// try to find that ourselves.
-		char* sbin = param( "SBIN" );
-		if( sbin ) {
-			MyString std_path;
-			std_path += sbin;
-			free( sbin );
-			std_path += "/condor_starter.std";
-			tmp_starter = makeStarter( std_path.Value() );
-			if( tmp_starter ) {
-				starters.Append( tmp_starter );
-			}
-		}
 	}
 }
 
