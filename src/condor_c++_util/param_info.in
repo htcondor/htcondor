@@ -9623,3 +9623,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,procd
 id=600
+
+[ENABLE_ADDRESS_REWRITING]
+aliases=
+default=true
+version=7.4.3
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable Address Rewriting
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util
+id=600
