@@ -125,6 +125,15 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   containing additional ClassAd functions to be used during ClassAd
   evaluation.
 
+% gittrack 1375
+\item The new configuration variable \MacroNI{SHADOW\_WORKLIFE}
+  specifies how many seconds after which the \Condor{shadow} will exit
+  when the current job finishes instead of fetching a new job to
+  manage.  Having the \Condor{shadow} continue managing jobs helps
+  reduce overhead and can allow the \Condor{schedd} to achieve higher
+  job completion rates.  The default is 3600, one hour.  The value 0
+  causes \Condor{shadow} to exit after running a single job.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
