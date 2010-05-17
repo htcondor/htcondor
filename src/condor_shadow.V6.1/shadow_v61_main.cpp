@@ -339,7 +339,7 @@ main_init(int argc, char *argv[])
 	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
 		(SignalHandler)&handleJobRemoval,"handleJobRemoval");
 
-	int shadow_worklife = param_integer( "SHADOW_WORKLIFE", 0 );
+	int shadow_worklife = param_integer( "SHADOW_WORKLIFE", 3600 );
 	if( shadow_worklife > 0 ) {
 		shadow_worklife_expires = time(NULL) + shadow_worklife;
 	}

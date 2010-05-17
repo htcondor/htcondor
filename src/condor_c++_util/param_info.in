@@ -9639,3 +9639,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util
 id=600
+
+[SHADOW_WORKLIFE]
+aliases=
+default=3600
+version=7.5.3
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shadow Worklife
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=shadow
+id=600
