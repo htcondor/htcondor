@@ -30,12 +30,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gittrack 1274
+% gittrac 1274
 \item \Condor{q} \Opt{-analyze} now notices the \Opt{-l} option, and if both
 are given, then the analysis prints out the list of machines
 in each analysis category.
 
-% gittrack 1302
+% gittrac 1302
 \item The behavior of macro expansion in the configuration file has
   changed.  Previously, most macros were effectively treated as
   undefined unless explicitly assigned a value in the configuration
@@ -50,7 +50,7 @@ in each analysis category.
   will also be reported as undefined by \Condor{config\_val} unless
   they are explicitly set in the configuration file.
 
-% gittrack 1131
+% gittrac 1131
 \item Unauthenticated connections are now identified as
   \verb|unauthenticated@unmapped|.  Previously, unauthenticated
   connections were not assigned a name, so some authorization policies
@@ -65,7 +65,7 @@ in each analysis category.
   settings.  Such operations include job submission, job removal, and
   any other job management commands that modify jobs.
 
-% gittrack 1131
+% gittrac 1131
 \item There has been a change of behavior when authentication fails.
   Previously, authentication failure always resulted in the command
   being rejected, regardless of whether the ALLOW/DENY settings
@@ -81,13 +81,13 @@ in each analysis category.
 \item Improved log messages when failing to authenticate requests.  At
   least the IP address of the requester is identified in all cases.
 
-% gittrack 1357
+% gittrac 1357
 \item The new submit file command \SubmitCmd{job\_ad\_information\_attrs}
 may be used to specify attributes from the job ad that should be saved
 in the user log whenever a new event is being written.  See
 page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 
-%gittrack 1391
+%gittrac 1391
 \item Administrative commands now support the \Opt{-constraint} option, which
   accepts a ClassAd expression.  This applies to \Condor{checkpoint},
   \Condor{off}, \Condor{on}, \Condor{reconfig}, \Condor{reschedule},
@@ -125,10 +125,10 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   containing additional ClassAd functions to be used during ClassAd
   evaluation.
 
-% gittrack 1375
+% gittrac 1375
 \item The new configuration variable \MacroNI{SHADOW\_WORKLIFE}
-  specifies how many seconds after which the \Condor{shadow} will exit
-  when the current job finishes instead of fetching a new job to
+  specifies the number of seconds after which the \Condor{shadow} will exit,
+  when the current job finishes, instead of fetching a new job to
   manage.  Having the \Condor{shadow} continue managing jobs helps
   reduce overhead and can allow the \Condor{schedd} to achieve higher
   job completion rates.  The default is 3600, one hour.  The value 0
@@ -140,7 +140,7 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 
 \begin{itemize}
 
-% gittrack 1332
+% gittrac 1332
 \item Configuration variables with a default value of 0
   that were not defined in the configuration file
   were treated as though they were undefined by \Condor{config\_val}.
@@ -154,12 +154,12 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   restored: zero values are treated as \Expr{False},
   and non-zero values are treated as \Expr{True}.
 
-% gittrack 1378
+% gittrac 1378
 \item Starting in 7.5.0, the \Condor{schedd} no longer supported queue
   management commands when security negotiation was disabled
   (for example, if \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}).
 
-% gittrack 1395
+% gittrac 1395
 \item Fixed a bug introduced in 7.5.1.  ClassAd string literals containing
 characters with negative ASCII values were not accepted.
 
@@ -215,8 +215,8 @@ Their functionality is replaced by the command \SubmitCmd{grid\_resource}.
 
 \begin{itemize}
 
-% gittrack 1231
-% gittrack 1287
+% gittrac 1231
+% gittrac 1287
 \item The \Condor{schedd} daemon uses less disk bandwidth when logging
 updates to job ClassAds from running jobs and also when removing jobs
 from the queue and handling job eviction and \Condor{shadow} exceptions.
@@ -225,13 +225,13 @@ disk bandwidth is a limiting factor.
 Some cases of updates to the job user log
 have also been optimized to be less disk intensive.
 
-% gittrack 1288
+% gittrac 1288
 \item The \Condor{schedd} daemon uses less CPU when scheduling
 some types of job queues.  Most likely to benefit from this improvement is
 a large queue of short-running, non-local, and non-scheduler universe jobs,
 with at least one idle local or scheduler universe job.
 
-% gittrack 1266
+% gittrac 1266
 \item The \Condor{schedd} automatically grants the \Condor{startd}
   authority to renew leases on claims and to evict claims.
   Previously, this required that the \Condor{startd} be trusted for
@@ -299,12 +299,12 @@ more information.
 
 \begin{itemize}
 
-% gittrack 1300
+% gittrac 1300
 \item The \Condor{job\_router} failed to work on SLES 9 PowerPC,
 AIX 5.2 PowerPC,
 and YDL 5 PowerPC due to a problem in how it detected EOF in the job queue log.
 
-% gittrack 742
+% gittrac 742
 \item When jobs are removed, the \Condor{schedd} sometimes did not
   quickly reschedule a different job to run on the slot to which the
   removed job had been matched.  Instead, it would take up to
@@ -411,11 +411,11 @@ has different output than before.
 The \Opt{-better-analyze} option is still recognized and behaves the same
 as before, though it may be removed from a future version.
 
-% gittrack #1169
+% gittrac #1169
 \item Security sessions that are not used for longer than an hour are
 now removed from the security session cache to limit memory usage.
 
-% gittrack #1169
+% gittrac #1169
 \item The number of security sessions in the cache is now advertised in
 the daemon ClassAd as \Attr{MonitorSelfSecuritySessions}.
 
@@ -468,7 +468,7 @@ instead of a full proxy.
 
 \begin{itemize}
 
-% gittrack #1141
+% gittrac #1141
 \item The default value for \Macro{SEC\_DEFAULT\_SESSION\_DURATION}
   was effectively 3600 in Condor version 7.5.0.
   This produced longer than desired
@@ -481,7 +481,7 @@ instead of a full proxy.
   For command line tools, the default is 60 seconds,
   and for daemons it is 1 day.
 
-% gittrack #1142
+% gittrac #1142
 \item \MacroNI{SEC\_<access-level>\_SESSION\_DURATION} previously did
   not support integer expressions, but it did not detect invalid
   input, so the use of an expression could produce unexpected results.
@@ -492,7 +492,7 @@ instead of a full proxy.
 \item The configuration variable \MacroNI{LOCAL\_CONFIG\_DIR} is no longer
 ignored if defined in a local configuration file.
 
-% gittrack #767
+% gittrac #767
 \item Removed the incorrect issuing of the following Condor version 7.5.0 
   warning to the
   \Condor{starter}'s log, even when the outdated, and no longer used
@@ -541,7 +541,7 @@ Please use DEDICATED_EXECUTE_ACCOUNT_REGEXP instead.
 
 \begin{itemize}
 
-% gittrack #892
+% gittrac #892
 \item Added the new daemon \Condor{shared\_port} for Unix platforms 
   (except for HPUX).
   It allows Condor daemons to share a
@@ -550,32 +550,32 @@ Please use DEDICATED_EXECUTE_ACCOUNT_REGEXP instead.
   submit node by decreasing port usage. See
   section~\ref{sec:Config-shared-port} for more information.
 
-% gittrack #960
+% gittrac #960
 \item Improved CCB's handling of rude NAT/firewalls that silently drop
 TCP connections.
 
-% gittrack #968
+% gittrac #968
 \item Simplified the publication of daemon addresses.
   \Attr{PublicNetworkIpAddr} and \Attr{PrivateNetworkIpAddr} have been removed.
   \Attr{MyAddress} contains both public and private addresses.  For now,
   \Attr{<Subsys>IpAddr} contains the same information.  In a future release,
   the latter may be removed.
 
-% gittrack #975
+% gittrac #975
 \item Changes to \MacroNI{TCP\_FORWARDING\_HOST},
   \MacroNI{PRIVATE\_NETWORK\_ADDRESS}, and
   \MacroNI{PRIVATE\_NETWORK\_NAME} can now be made without requiring a
   full restart.  It may take up to one \Condor{collector} update interval 
   for the changes to become visible.
 
-% gittrack #1002
+% gittrac #1002
 \item Network compatibility with Condor prior to 6.3.3 is no longer
   supported unless \MacroNI{SEC\_CLIENT\_NEGOTIATION} is set to
   \Expr{NEVER}.  This change removes the risk of communication errors
   causing performance problems resulting from automatic fall-back to the
   old protocol.
 
-% gittrack #930
+% gittrac #930
 \item For efficiency, authentication between the \Condor{shadow} and
   \Condor{schedd} daemons is now able to be cached and reused in more
   cases.  Previously, authentication for updating job information was
@@ -601,7 +601,7 @@ remote server is now much more efficient.
 
 \begin{itemize}
 
-% gittrack #997
+% gittrac #997
 \item Removed the configuration variable 
   \MacroNI{COLLECTOR\_SOCKET\_CACHE\_SIZE}.
   Configuration of this parameter used to be mandatory to enable TCP updates
@@ -611,7 +611,7 @@ remote server is now much more efficient.
   efficient operation.  See section~\ref{sec:tcp-collector-update} for
   more information.
 
-% gittrack #892
+% gittrac #892
 \item The new configuration variable \MacroNI{USE\_SHARED\_PORT} 
   is a boolean value that specifies
   whether a Condor process should rely on the \Condor{shared\_port} daemon for
@@ -621,7 +621,7 @@ remote server is now much more efficient.
   should be added to \MacroNI{DAEMON\_LIST}.  See
   section~\ref{sec:Config-shared-port} for more information.
 
-% gittrack #960
+% gittrac #960
 \item Added the new configuration variable \MacroNI{CCB\_HEARTBEAT\_INTERVAL}.
   It is the maximum
   number of seconds of silence on a daemon's connection to the CCB server

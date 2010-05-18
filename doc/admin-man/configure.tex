@@ -5727,8 +5727,8 @@ These settings affect the \Condor{shadow}.
 
 \label{param:ShadowWorklife}
 \item[\Macro{SHADOW\_WORKLIFE}]
-  This specifies how many seconds after which the \Condor{shadow} will exit
-  when the current job finishes instead of fetching a new job to
+  The integer number of seconds after which the \Condor{shadow} will exit
+  when the current job finishes, instead of fetching a new job to
   manage.  Having the \Condor{shadow} continue managing jobs helps
   reduce overhead and can allow the \Condor{schedd} to achieve higher
   job completion rates.  The default is 3600, one hour.  The value 0
