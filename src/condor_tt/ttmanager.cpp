@@ -3500,6 +3500,7 @@ static int file_checksum(char *filePathName, int fileSize, char *sum) {
 
 
 	if (!filePathName || !sum) 
+		delete checker;
 		return FALSE;
 
 #if 0
