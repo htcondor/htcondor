@@ -2171,16 +2171,16 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:EnableAddressRewriting}
 \item[\Macro{ENABLE\_ADDRESS\_REWRITING}]
-  This is a boolean value that defaults to true.  When
+  A boolean value that defaults to \Expr{True}.  When
   \MacroNI{TCP\_FORWARDING\_HOST} is defined or
-  \MacroNI{NET\_REMAP\_ENABLE} is true, this setting has no effect and
-  the behavior is as though it had been set to false.  When true, IP
-  addresses published by Condor daemons are automatically rewritten to
+  \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
+  the behavior is as though it had been set to \Expr{False}.  When \Expr{True},
+  IP addresses published by Condor daemons are automatically rewritten to
   match the IP address of the network interface used to make the
-  publication.  For example, if \Condor{schedd} advertises itself to
-  two pools (via flocking), and the collector for one pool is reached
+  publication.  For example, if the \Condor{schedd} advertises itself to
+  two pools via flocking, and the \Condor{collector} for one pool is reached
   by the \Condor{schedd} through a private network interface, while
-  the collector for the other pool is reached through a different
+  the \Condor{collector} for the other pool is reached through a different
   network interface, the IP address published by the \Condor{schedd}
   daemon will match the address of the respective network interfaces
   used in the two cases.  The intention is to make it easier for

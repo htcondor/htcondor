@@ -48,11 +48,11 @@ disables Chirp remote file access from execute machines.
 
 \item The new configuration variable
   \Macro{ENABLE\_ADDRESS\_REWRITING} defaults to \Expr{True}.  It may
-  be set to false to disable Condor's dynamic algorithm for chosing
+  be set to \Expr{False} to disable Condor's dynamic algorithm for chosing
   which IP address to publish in multi-homed environments.  The dynamic
   algorithm chooses the IP address associated with the network interface
-  used to make the publication (e.g. the network interface used to communicate
-  with the collector).
+  used to make the publication, for example, the network interface used 
+  to communicate with the \Condor{collector}.
 
 \end{itemize}
 
