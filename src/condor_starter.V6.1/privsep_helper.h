@@ -51,7 +51,8 @@ public:
 	                           size_t*     core_size_ptr,
 	                           int         reaper_id,
 	                           int         dc_job_opts,
-	                           FamilyInfo* family_info) = 0;
+	                           FamilyInfo* family_info,
+							   int *       affinity_mask = 0) = 0;
 
 	virtual ~PrivSepHelper() { }
 };
