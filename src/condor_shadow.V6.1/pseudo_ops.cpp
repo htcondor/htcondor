@@ -474,6 +474,7 @@ static int access_via_afs( const char * /* file */ )
 	done:
 	dprintf(D_SYSCALLS,"\taccess_via_afs() returning %s\n", result ? "TRUE" : "FALSE" );
 	if(my_fs_domain) free(my_fs_domain);
+	if(remote_fs_domain) free(remote_fs_domain);
 	return result;
 }
 
@@ -544,6 +545,8 @@ static int access_via_nfs( const char * /* file */ )
 
 	done:
 	dprintf( D_SYSCALLS, "\taccess_via_NFS() returning %s\n", result ? "TRUE" : "FALSE" );
+	if (remote_fs_domain) free(remote_fs_domain);
+	if (remote_uid_domain) free(remote_uid_domain);
 	return result;
 }
 

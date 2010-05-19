@@ -41,7 +41,8 @@ privsep_create_process(const char* cmd,
                        int         reaper_id,
                        int         dc_job_opts,
                        FamilyInfo* family_info,
-                       uid_t       uid)
+                       uid_t       uid,
+					   int * 	   affinity_mask = 0)
 {
 	// if we're using privilege separation, we have to do a bit
 	// of extra work to do to launch processes as other UIDs
@@ -98,7 +99,8 @@ privsep_create_process(const char* cmd,
 		nice_inc,        // niceness (TODO: need switchboard?)
 		NULL,            // don't mess with the signal mask
 		dc_job_opts,     // DC job options
-		core_size_ptr);  // core size limit (TODO: need switchboard?)
+		core_size_ptr,  // core size limit (TODO: need switchboard?)
+		affinity_mask);  // Processor affinity mask
 	close(child_in_fd);
 	close(child_err_fd);
 	if (pid == FALSE) {
@@ -192,7 +194,8 @@ int privsep_launch_user_job(uid_t       uid,
                             size_t*     core_size_ptr,
                             int         reaper_id,
                             int         dc_job_opts,
-                            FamilyInfo* family_info)
+                            FamilyInfo* family_info,
+							int *       affinity_mask)
 {
 	return privsep_create_process("exec",
 	                              path,
@@ -206,5 +209,6 @@ int privsep_launch_user_job(uid_t       uid,
 	                              reaper_id,
 	                              dc_job_opts,
 	                              family_info,
-	                              uid);
+	                              uid,
+								  affinity_mask);
 }

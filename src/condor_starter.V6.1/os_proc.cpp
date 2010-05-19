@@ -452,7 +452,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                        core_size_ptr,
 		                                        1,
 		                                        job_opt_mask,
-		                                        family_info);
+		                                        family_info,
+												affinity_mask);
 	}
 	else {
 		JobPid = daemonCore->Create_Process( JobName.Value(),

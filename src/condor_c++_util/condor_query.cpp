@@ -610,9 +610,11 @@ getQueryAd (ClassAd &queryAd)
 
 	  case GENERIC_AD:
 		queryAd.SetTargetTypeName (GENERIC_ADTYPE);
+		break;
 
 	  case ANY_AD:
 		queryAd.SetTargetTypeName (genericQueryType);
+		break;
 
 	  default:
 		return Q_INVALID_QUERY;

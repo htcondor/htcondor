@@ -247,6 +247,7 @@ bool passwd_cache::cache_groups(const char* user) {
 		if ( initgroups(user, user_gid) != 0 ) {
 			dprintf(D_ALWAYS, "passwd_cache: initgroups() failed! errno=%s\n",
 					strerror(errno));
+			delete group_cache_entry;
 			return false;
 		}
 

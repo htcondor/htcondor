@@ -297,6 +297,7 @@ class MyString
 	/** Compare a MyString with a null-terminated C string to see if
         they are the same.  */
 	friend int operator==(const MyString& S1, const char     *S2);
+	friend int operator==(const char     *S1, const MyString& S2);
 
 	/** Compare two MyStrings to see if they are different. */
 	friend int operator!=(const MyString& S1, const MyString& S2);
@@ -304,6 +305,7 @@ class MyString
 	/** Compare a MyString with a null-terminated C string to see if
         they are different.  */
 	friend int operator!=(const MyString& S1, const char     *S2);
+	friend int operator!=(const char     *S1, const MyString& S2);
 
 	/** Compare two MyStrings to see if the first is less than the
         second.  */

@@ -34,6 +34,10 @@ public:
 
 	struct ThrottleInfo {
 		const MyString *_category;
+		// Note: MyString::FindChar() returns the index of the
+		// first instance of the character, if any (-1 if none).
+		bool			isGlobal() { return _category->FindChar('+') == 0; }
+		bool			isSet() { return _maxJobs != noThrottleSetting; }
 		int				_maxJobs;
 		int				_currentJobs;
 	};
