@@ -191,6 +191,7 @@ chirp_client_connect_url( const char *url, const char **path_part)
 		url = read_url_param(++url,param,sizeof(param));
 		if(!url) {
 			errno = EINVAL;
+			if (host) free(host);
 			return NULL;
 		}
 
@@ -198,6 +199,7 @@ chirp_client_connect_url( const char *url, const char **path_part)
 			url = read_url_param(++url,value,sizeof(value));
 			if(!url) {
 				errno = EINVAL;
+				if (host) free(host);
 				return NULL;
 			}
 		}
