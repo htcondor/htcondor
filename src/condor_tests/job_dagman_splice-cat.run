@@ -134,6 +134,11 @@ $success = sub
 				"MAXJOBS D0\\+D1\\+cat2D 22",
 				"MAXJOBS D0\\+E1\\+cat2 12",
 				"MAXJOBS D0\\+E1\\+cat2D 22",
+				"CATEGORY E0 \\+catS",
+				"CATEGORY D0\\+F1 \\+catS",
+				"CATEGORY D0\\+D1\\+F2 \\+catS",
+				"CATEGORY D0\\+E1\\+F2 \\+catS",
+				"MAXJOBS \\+catS 2"
 				);
 	$line = "";
 	$passed = 0;

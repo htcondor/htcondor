@@ -564,7 +564,8 @@ class Dag {
 	OwnedMaterials* RelinquishNodeOwnership(void);
 
 	// Take an array from RelinquishNodeOwnership) and store it in my self.
-	void AssumeOwnershipofNodes(OwnedMaterials *om);
+	void AssumeOwnershipofNodes(const MyString &spliceName,
+				OwnedMaterials *om);
 
 	// This must be called after the toplevel dag has been parsed and
 	// the splices lifted. It will resolve the use of $(JOB) in the value
