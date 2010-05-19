@@ -10,11 +10,11 @@ EC2 is an on-line commercial service that allows you to rent computers
 by the hour to run computational applications.
 EC2 runs virtual machine images that have been uploaded to Amazon's
 online storage service (S3).
-See the Amazon EC2 webpage at \URL{http://aws.amazon.com/ec2} for more
+See the Amazon EC2 web page at \URL{http://aws.amazon.com/ec2} for more
 information about EC2.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Amazon-submit}Amazon EC2 Job Submision}
+\subsubsection{\label{sec:Amazon-submit}Amazon EC2 Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor jobs are submitted to EC2
@@ -65,7 +65,7 @@ varying prices. You can select which configuration to use with the
 \SubmitCmd{m1.small}.
 % Other values: m1.large m1.xlarge c1.medium c1.xlarge
 
-Each virtual machine instance can be given up 16kB of unique data, 
+Each virtual machine instance can be given up 16Kb of unique data, 
 accessible by the instance by connecting to a well-known address. This
 makes it easy for many instances to share the same VM image but perform
 different work. This data can be specified to Condor in one of two ways.
@@ -80,19 +80,19 @@ expects on the data.
 \subsubsection{\label{sec:Amazon-config}Amazon EC2 Configuration Parameters}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The amazon grid type requires several parameters to be set in the Condor
-configuration file:
+The amazon grid type requires several configuration variables 
+to be set in the Condor configuration file:
 
 \footnotesize
 \begin{verbatim}
-AMAZON_GAHP=$(SBIN)/amazon-gahp
+AMAZON_GAHP=$(SBIN)/amazon_gahp
 AMAZON_GAHP_LOG=/tmp/AmazonGahpLog.$(USERNAME)
 \end{verbatim}
 \normalsize
 
-You can alter the URL used by Condor to contact the EC2 service using
-the \Macro{AMAZON\_EC2\_URL} parameter. The default value is
+Alter the URL used by Condor to contact the EC2 service using
+the \Macro{AMAZON\_EC2\_URL} variable. The default value is
 \MacroNI{https://ec2.amazonaws.com/}.
 
-If you need to use an HTTP proxy to reach EC2, you tell Condor to use it
-via the \Macro{AMAZON\_HTTP\_PROXY} paramater.
+If an HTTP proxy is needed to reach EC2, tell Condor to use it
+via the \Macro{AMAZON\_HTTP\_PROXY} configuration variable.
