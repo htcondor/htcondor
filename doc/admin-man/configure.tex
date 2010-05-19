@@ -2230,6 +2230,23 @@ limit above the hard limit (on maximum open files) that it inherits.
   authorization settings that rely on host addresses should be
   considered accordingly.
 
+\label{param:EnableAddressRewriting}
+\item[\Macro{ENABLE\_ADDRESS\_REWRITING}]
+  A boolean value that defaults to \Expr{True}.  When
+  \MacroNI{TCP\_FORWARDING\_HOST} is defined or
+  \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
+  the behavior is as though it had been set to \Expr{False}.  When \Expr{True},
+  IP addresses published by Condor daemons are automatically rewritten to
+  match the IP address of the network interface used to make the
+  publication.  For example, if the \Condor{schedd} advertises itself to
+  two pools via flocking, and the \Condor{collector} for one pool is reached
+  by the \Condor{schedd} through a private network interface, while
+  the \Condor{collector} for the other pool is reached through a different
+  network interface, the IP address published by the \Condor{schedd}
+  daemon will match the address of the respective network interfaces
+  used in the two cases.  The intention is to make it easier for
+  Condor daemons to operate in a multi-homed environment.
+
 \label{param:HighPort}
 \item[\Macro{HIGHPORT}]
   Specifies an upper limit of given port numbers for Condor to use,
@@ -7352,7 +7369,7 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{AMAZON\_GAHP}]
   The complete path and file name of the Amazon GAHP executable.
   There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/amazon-gahp}.
+  in the example configuration is \File{\MacroUNI{SBIN}/amazon\_gahp}.
 
 \label{param:GT2GAHP}
 \item[\Macro{GT2\_GAHP}]
