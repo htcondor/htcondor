@@ -430,15 +430,15 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ 
-				@default_prereqs,
-				'VMware-server-1.0.7',
+				@default_prereqs
 			],
 			'xtests'	=> [ 'x86_64_rhas_4' ],
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
+							'VMware-server-1.0.7' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -569,8 +569,7 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs,
-				'binutils-2.15', 'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59',
-				'VMware-server-1.0.7',
+				'binutils-2.15', 'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			# I've removed x86_64_rhas_3 for now, as per git trac #482
 			'xtests'	=> [ 
@@ -581,7 +580,8 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5'],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
+							'VMware-server-1.0.7' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
