@@ -60,6 +60,13 @@ disables Chirp remote file access from execute machines.
 
 \begin{itemize}
 
+\item
+  Fixed numerous small, rare memory leaks.
+
+\item 
+  Fixed a bug where processor affinity settings were ignored if
+  privilege separation was enabled.
+
 % gittrac 1329
 \item Network connections for Condor file transfers were ignoring
   private network settings.  The connection from the execute node to
