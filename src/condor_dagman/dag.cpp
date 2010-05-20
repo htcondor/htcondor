@@ -1322,8 +1322,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// Check for throttling by node category.
 		ThrottleByCategory::ThrottleInfo *catThrottle = job->GetThrottleInfo();
 		if ( catThrottle &&
-					catThrottle->_maxJobs !=
-					ThrottleByCategory::noThrottleSetting &&
+					catThrottle->isSet() &&
 					catThrottle->_currentJobs >= catThrottle->_maxJobs ) {
 			debug_printf( DEBUG_DEBUG_1,
 						"Node %s deferred by category throttle (%s, %d)\n",
@@ -3400,7 +3399,7 @@ Dag::LiftSplices(SpliceLayer layer)
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.Value());
 		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
-		AssumeOwnershipofNodes(om);
+		AssumeOwnershipofNodes(key, om);
 		delete om;
 	}
 
@@ -3441,7 +3440,7 @@ Dag::LiftChildSplices(void)
 // have true initial or final nodes, then those must move over the the
 // recorded inital and final nodes for 'here'.
 void
-Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
+Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 {
 	Job *job = NULL;
 	int i;
@@ -3469,20 +3468,38 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 	// DAG (which will be deleted soon).
 	for ( i = 0; i < nodes->length(); i++ ) {
 		Job *tmpNode = (*nodes)[i];
-		ThrottleByCategory::ThrottleInfo *catThrottle =
+		ThrottleByCategory::ThrottleInfo *spliceThrottle =
 					tmpNode->GetThrottleInfo();
-		if ( catThrottle != NULL ) {
+		if ( spliceThrottle != NULL ) {
 
 				// Copy the category throttle setting from the splice
 				// DAG to the upper DAG (creates the category if we don't
-				// already have it).
-			_catThrottles.SetThrottle( catThrottle->_category,
-						catThrottle->_maxJobs );
+				// already have it).  For global categories, the upper
+				// level overrides the lower level if specified in both
+				// places.  Note: if we have a name collision for a
+				// non-global (e.g., splice A foo.dag; category A+X 5;
+				// splice A has category X 10), the *lower* level
+				// currently overrides the upper level (maintaining
+				// pre-existing behavior).
+			ThrottleByCategory::ThrottleInfo *mainThrottle =
+						_catThrottles.GetThrottleInfo(
+						spliceThrottle->_category );
+			if ( spliceThrottle->isGlobal() && mainThrottle &&
+						mainThrottle->isSet() ) {
+				debug_printf( DEBUG_NORMAL, "Warning: higher-level maxjobs "
+							"value of %d for global category %s overrides "
+							"splice %s value of %d\n", mainThrottle->_maxJobs,
+							mainThrottle->_category->Value(),
+							spliceName.Value(), spliceThrottle->_maxJobs );
+			} else {
+				_catThrottles.SetThrottle( spliceThrottle->_category,
+							spliceThrottle->_maxJobs );
+			}
 
 				// Now re-set the category in the node, so that the
 				// category info points to the upper DAG rather than the
 				// splice DAG.
-			tmpNode->SetCategory( catThrottle->_category->Value(),
+			tmpNode->SetCategory( spliceThrottle->_category->Value(),
 						_catThrottles );
 		}
 	}

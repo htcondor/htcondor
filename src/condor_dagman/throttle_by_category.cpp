@@ -77,8 +77,8 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 		AddCategory( category, maxJobs );
 	} else {
 			// category is in table
-		if ( info->_maxJobs != noThrottleSetting &&
-					info->_maxJobs != maxJobs ) {
+
+		if ( info->isSet() && info->_maxJobs != maxJobs ) {
 			debug_printf( DEBUG_NORMAL, "Warning: new maxjobs value %d "
 						"for category %s overrides old value %d\n",
 						maxJobs, category->Value(), info->_maxJobs );
@@ -108,10 +108,15 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 	_throttles.startIterations();
 	ThrottleInfo	*info;
 	while ( _throttles.iterate( info ) ) {
-		MyString *newCat = new MyString( prefix );
-		*newCat += *(info->_category);
-		delete info->_category;
-		info->_category = newCat;
+			// Don't change category names for global categories (names
+			// starting with '+') (allows nodes in different splices to
+			// be in the same category).
+		if ( ! info->isGlobal() ) {
+			MyString *newCat = new MyString( prefix );
+			*newCat += *(info->_category);
+			delete info->_category;
+			info->_category = newCat;
+		}
 	}
 }
 
@@ -126,7 +131,7 @@ ThrottleByCategory::PrintThrottles( FILE *fp ) /* const */
 	_throttles.startIterations();
 	ThrottleInfo	*info;
 	while ( _throttles.iterate( info ) ) {
-		if ( info->_maxJobs != noThrottleSetting ) {
+		if ( info->isSet() ) {
 			fprintf( fp, "MAXJOBS %s %d\n", info->_category->Value(),
 						info->_maxJobs );
 		}
