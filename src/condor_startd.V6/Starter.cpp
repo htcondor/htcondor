@@ -453,6 +453,7 @@ Starter::reallykill( int signo, int type )
 		dprintf( D_FULLDEBUG, 
 				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
 				 s_pid, signo, signame );
+		break;
 	case 2:
 		dprintf( D_FULLDEBUG, 
 				 "In Starter::kill_kids() with pid %d, sig %d (%s)\n", 

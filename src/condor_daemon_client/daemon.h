@@ -684,7 +684,7 @@ protected:
 	char* New_name( char* );
 	char* New_version( char* );
 	char* New_platform( char* );
-	char* New_addr( char* );
+	void New_addr( char* );
 	char* New_pool( char* );
 
 		/**
