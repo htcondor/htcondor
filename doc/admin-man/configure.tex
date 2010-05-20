@@ -924,11 +924,18 @@ File System Configuration File Entries''.
 \label{param:CondorAdmin}
 \item[\Macro{CONDOR\_ADMIN}]
   The email address that Condor will send mail to if something goes wrong in
-  your pool.  For example, if a daemon crashes, the \Condor{master}
+  the pool.  For example, if a daemon crashes, the \Condor{master}
   can send an \Term{obituary} to this address with the last few lines
   of that daemon's log file and a brief message that describes what
   signal or exit status that daemon exited with.  There is no default
-  value for \Macro{CONDOR\_ADMIN}.
+  value for \MacroNI{CONDOR\_ADMIN}.
+
+\label{param:SubsysAdminEmail}
+\item[\MacroB{<SUBSYS>\_ADMIN\_EMAIL}]
+\index{SUBSYS\_ADMIN\_EMAIL macro@\texttt{<SUBSYS>\_ADMIN\_EMAIL} macro}
+  The email address that Condor will send mail to if something goes wrong
+  with the named \MacroNI{<SUBSYS>}.  Identical to \MacroNI{CONDOR\_ADMIN},
+  but done on a per subsystem basis. There is no default value.
   
 \label{param:CondorSupportEmail}
 \item[\Macro{CONDOR\_SUPPORT\_EMAIL}]
