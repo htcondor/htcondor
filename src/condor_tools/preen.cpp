@@ -243,8 +243,8 @@ check_spool_dir()
     history_length = strlen(history);
 
     startd_history = param("STARTD_HISTORY");
-   	startd_history = condor_basename(history);
-   	startd_history_length = strlen(history);
+   	startd_history = condor_basename(startd_history);
+   	startd_history_length = strlen(startd_history);
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 		// add some reasonable defaults that we never want to remove

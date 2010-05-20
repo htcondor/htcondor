@@ -1917,7 +1917,7 @@ Daemon::New_hostname( char* str )
 }
 
 
-char*
+void
 Daemon::New_addr( char* str )
 {
 	if( _addr ) {
@@ -1979,7 +1979,7 @@ Daemon::New_addr( char* str )
 		}
 	}
 
-	return str;
+	return;
 }
 
 char*
