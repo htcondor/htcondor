@@ -26,6 +26,9 @@
 #include <stdarg.h>
 #include <string>
 
+class MyString;
+#include "stl_string_utils.h"
+
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
  * For an example of how to use it, see test_mystring.C.
