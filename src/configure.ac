@@ -3014,7 +3014,9 @@ fi
 
 CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
-               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
+               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal],
+	       			     [k5crypto krb5_c_encrypt],
+				     [com_err error_message]]))
 
 CHECK_EXTERNAL([openssl], [0.9.8h-p2], [soft],
                [use OpenSSL (provides authentication and encryption support)],
