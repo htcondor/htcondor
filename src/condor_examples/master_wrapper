@@ -58,16 +58,20 @@ class Logger( object ) :
 
     def SetVerbose( self, v ) :
         self.__verbose = v
+        if logger is not None :
+            logger.Log( 2, "Verbose level now %d" % (v) )
 
     def ShouldLog( self, level ) :
         return self.__verbose >= level
 
-    def Log( self, level, text ) :
+    def Log( self, level, text, exitval=None ) :
         if level > self.__verbose :
             return
         assert self.__file is not None
         print >>self.__file, text
         self.__lines += 1
+        if exitval is not None :
+            sys.exit( exitval )
 
 
 # Condor configuration parameter class
@@ -85,10 +89,12 @@ class CondorConfig( object ) :
         cmd = [ ccv, self.__param ]
         logger.Log( 3, varname+": "+str(cmd) )
         try :
-            output = Popen(cmd, stdout=PIPE, stderr=PIPE).communicate()[0]
+            p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+            (output, err ) = p.communicate()
+            if len(err)  and not err.startswith( "Not defined:" ):
+                raise IOError(err)
         except Exception, e :
-            logger.Log( -1, "Error running '%s': %s"%(cmd, e) )
-            sys.exit( 1 )
+            logger.Log( -1, "Error running '%s': %s" % (cmd, e), 1 )
         if output is not None  and  output.strip() != ""  :
             output = output.strip()
             if self.__append is not None :
@@ -123,9 +129,8 @@ class Setting( object ) :
 
     def Get( self ) :
         if self._value is None :
-            return None
-        else :
-            return str(self._value)
+            raise AttributeError
+        return str(self._value)
 
     def Var( self ) :
         return self._var
@@ -155,10 +160,20 @@ class Setting( object ) :
             self._value = value
             self._level = level
 
+    def IsSysconfig( self, name ) :
+        return self._sysconfig == name
+
     def ReadCondorConfig( self, ccv ) :
         if self._condor_config is None :
+            logger.Log( 3, "Skipping %s for %s (no param)"%\
+                        (ccv, self._var) )
             return
         if self._level > self._condor_config.Level() :
+            logger.Log( 3,
+                        "Skipping %s for %s (%d > %d)"%\
+                        (ccv, self._var,
+                         self._level, self._condor_config.Level())
+                        )
             return
         s = self._condor_config.ReadConfig( ccv, self._var )
         if s is not None :
@@ -202,7 +217,7 @@ class Settings( object ) :
                      "Condor Master's PID file",
                      sysconfig="PIDFILE",
                      default="/var/run/condor.pid",
-                     condor_config=CondorConfig("MASTER_PIDFILE") ),
+                     condor_config=CondorConfig("RUN", append="/condor.pid") ),
             Setting( "REAL_MASTER_ARGS",
                      "Arguments to pass to the 'real' condor_master binary",
                      sysconfig="CONDOR_REAL_MASTER_ARGS",
@@ -214,7 +229,7 @@ class Settings( object ) :
 
     def Get( self, var ) :
         if var not in self._vars :
-            return None
+            raise KeyError
         return self._vars[var].Get( )
 
     def IsEmpty( self, var ) :
@@ -229,6 +244,13 @@ class Settings( object ) :
         if var not in self._vars :
             raise KeyError( var )
         self._vars[var].Set( value, via, level )
+        
+    def SetSysconfigVar( self, var, value, via, level ) :
+        for setting in self._vars.values() :
+            if setting.IsSysconfig( var ) :
+                setting.Set( value, via, level )
+                return
+        raise KeyError( var )
 
     def GetVarList( self ) :
         l = { }
@@ -241,7 +263,9 @@ class Settings( object ) :
             return
         logger.Log( level, "Variables:" )
         for var in sorted(self._vars.keys()) :
-            logger.Log( level, "  "+var+"="+str(self._vars[var].Get()) )
+            try: v = self._vars[var].Get()
+            except: v = None
+            logger.Log( level, "  "+var+"="+str(v) )
 
     def ReadCondorConfig( self ) :
         os.environ["CONDOR_CONFIG"] = self._vars["CONDOR_CONFIG"].Get()
@@ -273,11 +297,12 @@ class Main( object ) :
         setting = Setting( "EXPRS", "Condor master expression",
                            export="_CONDOR_MASTER_EXPRS" )
         self._settings.AddVar( setting )
-        exprs = os.environ.get( "_CONDOR_MASTER_EXPRS", None )
-        if exprs is None :
-            exprs = name
-        else :
+        try:
+            exprs  = os.environ.get( "_CONDOR_MASTER_EXPRS", None )
             exprs += ", "+name
+        except:
+            exprs = name
+            
         setting.Set( exprs, "Version", 10 )
 
         self._parser = OptionParser(
@@ -318,6 +343,7 @@ class Main( object ) :
 
     def Parse( self ) :
         (self._options, self._args) = self._parser.parse_args()
+        logger.SetVerbose( self._options.verbose )
         if self._options.list_vars :
             l = self._settings.GetVarList()
             for var in sorted(l.keys( )) :
@@ -325,7 +351,15 @@ class Main( object ) :
                 print "%-20s %s" % ( var+":", description )
             sys.exit( 0 )
         if self._options.sysconfig is not None :
-            self._settings.SetVar( "SYSCONFIG", self._options.sysconfig )
+            self._settings.SetVar( "SYSCONFIG", self._options.sysconfig,
+                                   "command line", 2 )
+
+    def ProcessArgs( self ) :
+        for arg in self._args :
+            a = arg.split( "=" )
+            if len(a) != 2 :
+                raise OptionValueError( "Invalid argument '"+str(arg)+"'" )
+            self._settings.SetVar( a[0], a[1], "command line", 3 )
 
     def ReadSysconfig( self ) :
         try :
@@ -343,17 +377,14 @@ class Main( object ) :
             if len(a) != 2 :
                 continue
             try :
-                self._settings.SetVar( a[0], a[1], self._options.sysconfig, 2 )
-            except :
+                self._settings.SetSysconfigVar( a[0], a[1],
+                                                self._options.sysconfig, 2 )
+            except KeyError :
+                logger.Log( 3,
+                            "Ignoring %s from sysconfig: param not found" % \
+                            ( a[0] ) )
                 pass
         sysconfig.close( )
-
-    def ProcessArgs( self ) :
-        for arg in self._args :
-            a = arg.split( "=" )
-            if len(a) != 2 :
-                raise OptionValueError( "Invalid argument '"+str(arg)+"'" )
-            self._settings.SetVar( a[0], a[1], "command line", 3 )
 
     def LogInit( self ) :
         tmp = self._settings.Get( "LOG" ) + "/MasterWrapper.log"
@@ -361,50 +392,52 @@ class Main( object ) :
             tmp = "/dev/stderr"
         assert tmp is not None
         logger.Setup( tmp )
-        logger.SetVerbose( self._options.verbose )
 
     def SwitchToUser( self ) :
-        user = self._settings.Get( "START_USER" )
-        if user is None :
+        try:
+            user = self._settings.Get( "START_USER_NAME" )
+        except:
             return
         try :
             pwent = pwd.getpwnam( user )
         except Exception, e :
-            logger.Log( -1, "START_USER "+user+":"+str(e) )
-            sys.exit( 1 )
+            logger.Log( -1, "START_USER "+user+":"+str(e), 1 )
         uid = pwent["pw_uid"]
         logger.Log( 1, "Attempting to switch to user %s (%d)" % (user, uid) )
         if os.getuid != 0  and  os.getuid != uid :
-            logger.Log( -1, "START_USER "+user+": not root" )
-            sys.exit( 1 )
+            logger.Log( -1, "START_USER "+user+": not root", 1 )
         if not self._options.excute:
             return
         try:
             os.seteuid( uid )
             os.setuid( uid )
         except Exception, e :
-            logger.Log( -1, "START_USER: %s (%d): %s" % (user, uid, str(e)) )
-            sys.exit( 1 )
+            logger.Log( -1, "START_USER: %s (%d): %s" % (user, uid, str(e)), 1 )
 
     def CopyMasterBinary( self ) :
-        master = self._settings.Get( "LOCAL_MASTER" )
+        try:
+            master = self._settings.Get( "LOCAL_MASTER" )
+        except:
+            logger.Log( -1, "Local master not specified!", 1 )
         new    = master + ".new"
         old    = master + ".old"
-        shared = self._settings.Get( "SHARED_MASTER" )
 
-        print "LOCAL: '"+master+"'"
-        print "SHARED: '"+shared+"'"
+        try:
+            shared = self._settings.Get( "SHARED_MASTER" )
+        except:
+            logger.Log( -1, "Shared master not specified!", 1 )
+
+        logger.Log( 2, "LOCAL: '"+master+"'" )
+        logger.Log( 2, "SHARED: '"+shared+"'" )
         try:
             shared_stat = os.stat( shared )
         except Exception, e:
-            logger.Log( -1, "Can't stat shared master '%s': %s"%(shared, e) )
-            sys.exit( 1 )
+            logger.Log( -1, "Can't stat shared master '%s': %s"%(shared, e), 1 )
 
         try:
             local_stat = os.stat( master )
         except Exception, e:
-            logger.Log( -1, "Can't stat local master '%s': %s"%(master, e) )
-            local_stat = None
+            logger.Log( -1, "Can't stat local master '%s': %s"%(master, e), 1 )
 
         if local_stat is not None and \
            local_stat.st_mtime == shared_stat.st_mtime and \
@@ -420,11 +453,9 @@ class Main( object ) :
             try:
                 os.makedirs( local, 0755 )
             except Exception, e :
-                logger.Log( -1, "Can't create local dir '%s': %s"%(local,e) )
-                sys.exit( 1 )
+                logger.Log( -1, "Can't create local dir '%s': %s"%(local,e), 1 )
         elif not os.path.isdir( local ) :
-            logger.Log( -1, "Local dir '%s' isn't a directory!: %s"%(local) )
-            sys.exit( 1 )
+            logger.Log( -1, "Local dir '%s' isn't a directory!: %s"%(local), 1 )
         
 
         op = None
@@ -437,8 +468,7 @@ class Main( object ) :
             op = "rename %s to %s" % ( new, master )
             os.rename( new, master )
         except Exception, e :
-            logger.Log( -1, "Failed to %s: %s" % ( op, str(e) )  )
-            sys.exit(1)
+            logger.Log( -1, "Failed to %s: %s" % (op, str(e)), 1  )
 
     def ExecMasterBinary( self ) :
         master = self._settings.Get( "LOCAL_MASTER" )
@@ -456,14 +486,14 @@ class Main( object ) :
         try :
             os.execv( cmd[0], cmd )
         except Exception, e :
-            logger.Log( -1, "Failed to exec %s: %s" % (str(cmd), e) )
-            sys.exit(1)
+            logger.Log( -1, "Failed to exec %s: %s" % (str(cmd), e, 1) )
 
 
     def Main( self ) :
         self.Setup( )
         self.Parse( )
         self.ProcessArgs( )
+        self.LogInit( )
         self.ReadSysconfig( )
         self.LogInit( )
         self._settings.ReadCondorConfig( )

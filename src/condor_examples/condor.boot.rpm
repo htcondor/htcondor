@@ -356,7 +356,7 @@ fi
 
 if [ "$PIDFILE" = "" ]; then
     init_condor_run
-    PIDFILE="$CONDOR_RUN/master.pid"
+    PIDFILE="$CONDOR_RUN/condor.pid"
 fi
 
 
