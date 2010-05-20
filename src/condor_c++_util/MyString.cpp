@@ -636,14 +636,11 @@ MyString::chomp( void )
 		Data[Len-1] = '\0';
 		Len--;
 		chomped = true;
+		if( ( Len > 0 ) && ( Data[Len-1] == '\r' ) ) {
+			Data[Len-1] = '\0';
+			Len--;
+		}
 	}
-#if defined(WIN32)
-	if( ( Len > 1 ) && ( Data[Len-2] == '\r' ) ) {
-		Data[Len-2] = '\0';
-		Len--;
-		chomped = true;
-	}
-#endif
 	return chomped;
 }
 

@@ -276,6 +276,7 @@ class MyString
 
 	/** If the last character in the string is a newline, remove
 		it (by setting it to '\0' and decrementing Len).
+		If the newline is preceeded by a '\r', remove that as well.
 		@return True if we removed a newline, false if not
 	*/  
 	bool chomp( void );
