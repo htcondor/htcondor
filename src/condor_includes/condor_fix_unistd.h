@@ -72,18 +72,6 @@
 extern "C" {
 #endif
 
-#if defined(SUNOS41) 
-	typedef unsigned long ssize_t;
-	ssize_t read( int, void *, size_t );
-	ssize_t write( int, const void *, size_t );
-#endif
-
-#if defined(SUNOS41)
-	int symlink( const char *, const char * );
-	void *sbrk( ssize_t );
-	int gethostname( char *, int );
-#endif
-
 #if defined(Solaris)
 	int gethostname( char *, int );
 	long gethostid();

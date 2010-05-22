@@ -25,11 +25,6 @@
 #if !defined(WIN32)
 #include <sys/types.h>
 #include <sys/param.h>
-
-#if defined(SUNOS41)
-#include <sys/time.h>
-#endif
-
 #include <sys/resource.h>
 #endif
 
