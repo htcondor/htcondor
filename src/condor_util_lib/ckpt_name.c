@@ -45,18 +45,18 @@ gen_ckpt_name( char *directory, int cluster, int proc, int subproc )
 
 	if( proc == ICKPT ) {
 		if( directory && directory[0] ) {
-			(void)sprintf( answer, "%s%ccluster%d.ickpt.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "%s%ccluster%d.ickpt.subproc%d",
 						directory, DIR_DELIM_CHAR, cluster, subproc );
 		} else {
-			(void)sprintf( answer, "cluster%d.ickpt.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "cluster%d.ickpt.subproc%d",
 						cluster, subproc );
 		}
 	} else {
 		if( directory && directory[0] ) {
-			(void)sprintf( answer, "%s%ccluster%d.proc%d.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "%s%ccluster%d.proc%d.subproc%d",
 						directory, DIR_DELIM_CHAR, cluster, proc, subproc );
 		} else {
-			(void)sprintf( answer, "cluster%d.proc%d.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "cluster%d.proc%d.subproc%d",
 						cluster, proc, subproc );
 		}
 	}
