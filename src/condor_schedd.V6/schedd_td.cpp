@@ -29,10 +29,7 @@
 #include "scheduler.h"
 #include "basename.h"
 #include "nullfile.h"
-
-extern "C" {
-	char* gen_ckpt_name(char*, int, int, int);
-}
+#include "condor_ckpt_name.h"
 
 /* In this service function, the client tells the schedd a bunch of jobs
 	it would like to perform a transfer for into/out of a sandbox. The
