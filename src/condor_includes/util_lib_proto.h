@@ -32,7 +32,6 @@
 extern "C" {
 #endif
 
-#ifndef __CEXTRACT__
 #if defined(HAS_PROTO) || defined(__STDC__) || defined(__cplusplus) || !defined(Solaris)
 
 int blankline ( char *str );
@@ -136,7 +135,6 @@ int sysapi_swap_space ();
 int sysapi_disk_space();
 
 #endif /* HAS_PROTO */
-#endif /* __CEXTRACT__ */
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */
