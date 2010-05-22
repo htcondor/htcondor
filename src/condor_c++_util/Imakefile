@@ -127,6 +127,7 @@ CLASSAD_OBJ = \
 	condor_xml_classads.o
 #else
 CLASSAD_OBJ = \
+	../classad/common.o \
 	../classad/new_classad.o \
 	../classad/matchClassad.o \
 	../classad/exprTree.o \

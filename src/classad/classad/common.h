@@ -117,32 +117,32 @@
 
 BEGIN_NAMESPACE( classad )
 
-static const char ATTR_AD					[]	= "Ad";
-static const char ATTR_CONTEXT				[] 	= "Context";
-static const char ATTR_DEEP_MODS			[] 	= "DeepMods";
-static const char ATTR_DELETE_AD			[] 	= "DeleteAd";
-static const char ATTR_DELETES				[] 	= "Deletes";
-static const char ATTR_KEY					[]	= "Key";
-static const char ATTR_NEW_AD				[]	= "NewAd";
-static const char ATTR_OP_TYPE				[]	= "OpType";
-static const char ATTR_PARENT_VIEW_NAME		[]	= "ParentViewName";
-static const char ATTR_PARTITION_EXPRS 		[]  = "PartitionExprs";
-static const char ATTR_PARTITIONED_VIEWS	[] 	= "PartitionedViews";
-static const char ATTR_PROJECT_THROUGH		[]	= "ProjectThrough";
-static const char ATTR_RANK_HINTS			[] 	= "RankHints";
-static const char ATTR_REPLACE				[] 	= "Replace";
-static const char ATTR_SUBORDINATE_VIEWS	[]	= "SubordinateViews";
-static const char ATTR_UPDATES				[] 	= "Updates";
-static const char ATTR_WANT_LIST			[]	= "WantList";
-static const char ATTR_WANT_PRELUDE			[]	= "WantPrelude";
-static const char ATTR_WANT_RESULTS			[]	= "WantResults";
-static const char ATTR_WANT_POSTLUDE		[]	= "WantPostlude";
-static const char ATTR_VIEW_INFO			[]	= "ViewInfo";
-static const char ATTR_VIEW_NAME			[]	= "ViewName";
-static const char ATTR_XACTION_NAME			[]	= "XactionName";
+extern const char * const ATTR_AD;
+extern const char * const ATTR_CONTEXT;
+extern const char * const ATTR_DEEP_MODS;
+extern const char * const ATTR_DELETE_AD;
+extern const char * const ATTR_DELETES;
+extern const char * const ATTR_KEY;
+extern const char * const ATTR_NEW_AD;
+extern const char * const ATTR_OP_TYPE;
+extern const char * const ATTR_PARENT_VIEW_NAME;
+extern const char * const ATTR_PARTITION_EXPRS;
+extern const char * const ATTR_PARTITIONED_VIEWS;
+extern const char * const ATTR_PROJECT_THROUGH;
+extern const char * const ATTR_RANK_HINTS;
+extern const char * const ATTR_REPLACE;
+extern const char * const ATTR_SUBORDINATE_VIEWS;
+extern const char * const ATTR_UPDATES;
+extern const char * const ATTR_WANT_LIST;
+extern const char * const ATTR_WANT_PRELUDE;
+extern const char * const ATTR_WANT_RESULTS;
+extern const char * const ATTR_WANT_POSTLUDE;
+extern const char * const ATTR_VIEW_INFO;
+extern const char * const ATTR_VIEW_NAME;
+extern const char * const ATTR_XACTION_NAME;
 
-static const char ATTR_REQUIREMENTS			[]	= "Requirements";
-static const char ATTR_RANK					[]	= "Rank";
+extern const char * const ATTR_REQUIREMENTS;
+extern const char * const ATTR_RANK;
 
 #if defined(__cplusplus)
 struct CaseIgnLTStr {
