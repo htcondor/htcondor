@@ -200,7 +200,6 @@ extern std::string       CondorErrMsg;
 #endif
 
 extern int 		CondorErrno;
-static const std::string NULL_XACTION = "";
 
 END_NAMESPACE // classad
 
