@@ -35,7 +35,6 @@ extern "C" {
 #if defined(__STDC__) || defined(__cplusplus) || !defined(Solaris)
 
 int blankline ( char *str );
-char * gen_exec_name ( int cluster, int proc, int subproc );
 
 char * getline ( FILE *fp );
 
@@ -88,7 +87,6 @@ int sysapi_disk_space(const char *filename);
 #else
 
 int blankline ();
-char * gen_exec_name ();
 
 char* getExecPath();
 

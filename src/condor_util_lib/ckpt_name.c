@@ -37,7 +37,6 @@
 
 #include "proc.h"
 #include "condor_ckpt_name.h"
-#include "util_lib_proto.h"
 
 char *
 gen_ckpt_name( char *directory, int cluster, int proc, int subproc )
@@ -61,14 +60,5 @@ gen_ckpt_name( char *directory, int cluster, int proc, int subproc )
 						cluster, proc, subproc );
 		}
 	}
-	return answer;
-}
-
-char *
-gen_exec_name( int cluster, int proc, int subproc )
-{
-	static char	answer[ MAXPATHLEN ];
-
-	(void)sprintf( answer, "condor_exec%d.%d.%d", cluster, proc, subproc );
 	return answer;
 }
