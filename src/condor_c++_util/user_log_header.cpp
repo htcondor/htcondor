@@ -243,7 +243,7 @@ ReadUserLogHeader::Read(
 
 // Write a header event
 int
-WriteUserLogHeader::Write( UserLog &writer, FILE *fp )
+WriteUserLogHeader::Write( WriteUserLog &writer, FILE *fp )
 {
 	GenericEvent	event;
 

@@ -117,7 +117,7 @@ char *strcpy();
 #endif
 
 #include "write_user_log.h"
-UserLog ULog;
+WriteUserLog ULog;
 
 char * My_Filesystem_Domain;
 char * My_UID_Domain;

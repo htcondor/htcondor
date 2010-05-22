@@ -41,7 +41,7 @@
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
 #endif
-extern UserLog		ULog;
+extern WriteUserLog		ULog;
 
 extern int JobStatus;
 extern "C" PROC  *Proc;

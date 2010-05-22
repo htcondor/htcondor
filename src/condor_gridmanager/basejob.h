@@ -129,7 +129,7 @@ class BaseJob : public Service
 	int jobLeaseReceivedExpiredTid;
 };
 
-UserLog *InitializeUserLog( ClassAd *job_ad );
+WriteUserLog *InitializeUserLog( ClassAd *job_ad );
 bool WriteExecuteEventToUserLog( ClassAd *job_ad );
 bool WriteAbortEventToUserLog( ClassAd *job_ad );
 bool WriteTerminateEventToUserLog( ClassAd *job_ad );

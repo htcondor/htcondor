@@ -712,7 +712,7 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 	return success;
 }
 
-bool InitializeUserLog( classad::ClassAd const &job_ad, UserLog *ulog, bool *no_ulog )
+bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool *no_ulog )
 {
 	int cluster, proc;
 	std::string owner;
@@ -873,7 +873,7 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 
 bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 {
-	UserLog ulog;
+	WriteUserLog ulog;
 	bool no_ulog = false;
 
 	if(!InitializeUserLog(ad,&ulog,&no_ulog)) {

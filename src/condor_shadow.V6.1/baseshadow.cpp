@@ -37,7 +37,7 @@
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
-UserLog BaseShadow::uLog;
+WriteUserLog BaseShadow::uLog;
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
