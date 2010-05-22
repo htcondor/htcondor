@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#if defined(HAS_PROTO) || defined(__STDC__) || defined(__cplusplus) || !defined(Solaris)
+#if defined(__STDC__) || defined(__cplusplus) || !defined(Solaris)
 
 int blankline ( char *str );
 char * gen_exec_name ( int cluster, int proc, int subproc );
@@ -85,7 +85,7 @@ void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 int sysapi_swap_space ( void );
 int sysapi_disk_space(const char *filename);
 
-#else /* HAS_PROTO */
+#else
 
 int blankline ();
 char * gen_exec_name ();
@@ -134,7 +134,7 @@ int update_rusage ();
 int sysapi_swap_space ();
 int sysapi_disk_space();
 
-#endif /* HAS_PROTO */
+#endif
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */
