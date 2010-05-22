@@ -331,7 +331,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	m_jobid.sprintf("%d.%d",Cluster,Proc);
 	if ( IsServer() && Spool ) {
 
-		SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
+		SpoolSpace = gen_ckpt_name(Spool,Cluster,Proc,0);
 		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 
@@ -371,10 +371,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// Note: This will break Condor-C jobs if the executable is ever
 		//   spooled the old-fashioned way (which doesn't happen currently).
 		if ( IsServer() && Spool ) {
-			char *source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
-			if ( access(source,F_OK | X_OK) >= 0 ) {
-				// we can access an executable in the spool dir
-				ExecFile = strdup(source);
+			ExecFile = gen_ckpt_name(Spool,Cluster,ICKPT,0);
+			if ( ! access(ExecFile,F_OK | X_OK) >= 0 ) {
+				free(ExecFile); ExecFile = NULL;
 			}
 		}
 

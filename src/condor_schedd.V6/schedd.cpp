@@ -2162,11 +2162,13 @@ jobIsSandboxed( ClassAd * ad )
 bool
 getSandbox( int cluster, int proc, MyString & path )
 {
-	const char * sandbox = gen_ckpt_name(Spool, cluster, proc, 0);
+	char * sandbox = gen_ckpt_name(Spool, cluster, proc, 0);
 	if( ! sandbox ) {
+		free(sandbox); sandbox = NULL;
 		return false;
 	}
 	path = sandbox;
+	free(sandbox); sandbox = NULL;
 	return true;
 }
 
@@ -3144,7 +3146,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			continue;
 		}
 		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = strdup( gen_ckpt_name(Spool,cluster,proc,0) );
+		SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
 		ASSERT(SpoolSpace);
 
 		BeginTransaction();
@@ -3788,7 +3790,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 
 		// Make certain this job has a x509 proxy, and that this 
 		// proxy is sitting in the SPOOL directory
-	char* SpoolSpace = strdup(gen_ckpt_name(Spool,jobid.cluster,jobid.proc,0));
+	char* SpoolSpace = gen_ckpt_name(Spool,jobid.cluster,jobid.proc,0);
 	ASSERT(SpoolSpace);
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
@@ -7583,6 +7585,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	priv_state priv;
 	int i;
 	size_t *core_size_ptr = NULL;
+	char *ckpt_name = NULL;
 
 	is_executable = false;
 
@@ -7632,7 +7635,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// executable probably is owned by Condor in most circumstances, we
 	// must ensure the user can at least execute it.
 
-	a_out_name = gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0);
+	ckpt_name = gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0);
+	a_out_name = ckpt_name;
+	free(ckpt_name); ckpt_name = NULL;
 	errno = 0;
 	filestat = new StatInfo(a_out_name.Value());
 	ASSERT(filestat);
@@ -9817,7 +9822,9 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		 * not know the owner, don't bother sending to the ckpt
 		 * server.
 		 */
-	ckpt_name_buf = gen_ckpt_name(Spool,cluster,proc,0);
+	char *ckpt_name_mem = gen_ckpt_name(Spool,cluster,proc,0);
+	ckpt_name_buf = ckpt_name_mem;
+	free(ckpt_name_mem); ckpt_name_mem = NULL;
 	ckpt_name = ckpt_name_buf.Value();
 	if ( owner ) {
 		if ( IsDirectory(ckpt_name) ) {

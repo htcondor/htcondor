@@ -797,7 +797,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		jad = GetJobAd(cluster,proc);
 
 		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = strdup( gen_ckpt_name(mySpool,cluster,proc,0) );
+		SpoolSpace = gen_ckpt_name(mySpool,cluster,proc,0);
 		ASSERT(SpoolSpace);
 
 		BeginTransaction();
@@ -1360,7 +1360,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			continue;
 		}
 		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = strdup( gen_ckpt_name(Spool,cluster,proc,0) );
+		SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
 		ASSERT(SpoolSpace);
 
 		BeginTransaction();

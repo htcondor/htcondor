@@ -83,9 +83,11 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	parallelMasterResource = rr;
 
 	char buffer[1024];
+	char *dir = gen_ckpt_name(0, getCluster(), 0, 0);
 	sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
 		param("SPOOL"), DIR_DELIM_CHAR, 
-		gen_ckpt_name(0, getCluster(), 0, 0));
+		dir);
+	free(dir); dir = NULL;
 	job_ad->Insert(buffer);
 
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
@@ -300,9 +302,11 @@ ParallelShadow::getResources( void )
 			job_ad->InsertOrUpdate( buf );
 
 			char buffer[1024];
+			char *dir = gen_ckpt_name(0, job_cluster, 0, 0);
 			sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
 				param("SPOOL"), DIR_DELIM_CHAR, 
-				gen_ckpt_name(0, job_cluster, 0, 0));
+				dir);
+			free(dir); dir = NULL;
 			job_ad->Insert(buffer);
 
 				// Put the correct claim id into this ad's ClaimId attribute.

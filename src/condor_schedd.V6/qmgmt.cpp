@@ -177,6 +177,7 @@ ClusterCleanup(int cluster_id)
 	// blow away the initial checkpoint file from the spool dir
 	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ckpt_file_name );
+	free(ckpt_file_name); ckpt_file_name = NULL;
 
 	// garbage collect the shared ickpt file if necessary
 	if (!hash.IsEmpty()) {
@@ -3356,7 +3357,9 @@ SendSpoolFile(char const *filename)
 		   of this is correct, we could even just ignore the passed-in 
 		   filename parameter completely. -Todd Tannenbaum, 2/2005
 		*/
-	path = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
+	char *path_mem = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
+	path = path_mem;
+	free(path_mem); path_mem = NULL;
 	if ( filename && strcmp(filename, condor_basename(path.Value())) ) {
 		dprintf(D_ALWAYS, 
 				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
@@ -3383,7 +3386,9 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	}
 	Q_SOCK->getReliSock()->encode();
 
-	MyString path = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
+	char *path_mem = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
+	MyString path = path_mem;
+	free(path_mem); path_mem = NULL;
 
 	// here we take advantage of ickpt sharing if possible. if a copy
 	// of the executable already exists we make a link to it and send

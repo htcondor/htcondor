@@ -36,7 +36,7 @@
 char *
 gen_ckpt_name( char *directory, int cluster, int proc, int subproc )
 {
-	static char	answer[ MAXPATHLEN ];
+	char *answer = (char *)malloc(MAXPATHLEN);
 
 	if( proc == ICKPT ) {
 		if( directory && directory[0] ) {

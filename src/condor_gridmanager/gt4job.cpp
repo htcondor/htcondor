@@ -1657,6 +1657,7 @@ MyString *GT4Job::buildSubmitRSL()
 					// we can access an executable in the spool dir
 				local_executable = source;
 			}
+			free(source); source = NULL;
 		}
 		if ( local_executable.IsEmpty() ) {
 				// didn't find any executable in the spool directory,
