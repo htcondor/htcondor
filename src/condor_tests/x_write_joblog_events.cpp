@@ -33,9 +33,9 @@ struct hostent *NameEnt;
 **#define NUL       "\0";
 */
 
-int writeSubmitEvent(UserLog *log);
-int writeExecuteEvent(UserLog *log);
-int writeJobTerminatedEvent(UserLog *log);
+int writeSubmitEvent(WriteUserLog *log);
+int writeExecuteEvent(WriteUserLog *log);
+int writeJobTerminatedEvent(WriteUserLog *log);
 /*
 int writeRemoteErrorEvent();
 int writeExecutableErrorEvent();
@@ -73,19 +73,19 @@ main(int argc, char **argv)
 	if( strcmp(argv[2],"submit") == 0) {
 		//printf("Drop submit events\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			UserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
+			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
 			writeSubmitEvent(&log);
 		}
 	} else if( strcmp(argv[2],"execute") == 0) {
 		//printf("Drop execute event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			UserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
+			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
 			writeExecuteEvent(&log);
 		}
 	} else if( strcmp(argv[2],"terminated") == 0) {
 		//printf("Drop terminated event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			UserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
+			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
 			writeJobTerminatedEvent(&log);
 		}
 	}
@@ -117,7 +117,7 @@ main(int argc, char **argv)
 	exit(0);
 }
 
-int writeSubmitEvent(UserLog *log)
+int writeSubmitEvent(WriteUserLog *log)
 {
 	SubmitEvent submit;
 	strcpy(submit.submitHost, "<128.105.165.12:32779>");
@@ -130,7 +130,7 @@ int writeSubmitEvent(UserLog *log)
 	return(0);
 }
 
-int writeExecuteEvent(UserLog *log)
+int writeExecuteEvent(WriteUserLog *log)
 {
 	ExecuteEvent execute;
 	strcpy(execute.executeHost, "<128.105.165.12:32779>");
@@ -141,7 +141,7 @@ int writeExecuteEvent(UserLog *log)
 	return(0);
 }
 
-int writeJobTerminatedEvent(UserLog *log)
+int writeJobTerminatedEvent(WriteUserLog *log)
 {
 	struct rusage ru;
 
@@ -164,7 +164,7 @@ int writeJobTerminatedEvent(UserLog *log)
 
 /*
 ***************************************************
-int writeExecutableErrorEvent(UserLog *log)
+int writeExecutableErrorEvent(WriteUserLog *log)
 {
 	ExecutableErrorEvent executeerror;
 	executeerror.errType = CONDOR_EVENT_BAD_LINK;

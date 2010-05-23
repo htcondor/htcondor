@@ -33,7 +33,7 @@ struct hostent *NameEnt;
 **#define NUL       "\0";
 */
 
-UserLog log("owner", NULL, "local.log", 0, 0, 0, (bool)0, NULL);
+WriteUserLog log("owner", NULL, "local.log", 0, 0, 0, (bool)0, NULL);
 
 int writeSubmitEvent();
 int writeRemoteErrorEvent();
