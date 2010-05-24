@@ -53,7 +53,6 @@ void VarTypeTable::PrintTable(FILE *fd)
   char *tmp;
 
   for( ; tmpEntry; tmpEntry = tmpEntry->next) {
-    tmp = tmpEntry->MyName();
     if(tmpEntry->MyType() == RANGE)
       fprintf(fd, "%s RANGE\n", tmpEntry->MyName());
     else

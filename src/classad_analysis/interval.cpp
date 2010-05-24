@@ -1110,7 +1110,7 @@ Intersect( Interval *i, bool undef, bool notString)
 		return false;
 	}
 	Interval *i_curr = NULL;
-	Interval *i_new = new Interval;
+	Interval *i_new = NULL;
 	switch( type ) {
 
 	case classad::Value::BOOLEAN_VALUE: {
