@@ -123,7 +123,6 @@ ParallelProc::addEnvVars()
 	new_path = bin;
 	new_path += ":";
 
-	free(bin);
 	if(env.GetEnv("PATH",path)) {
         // The user gave us a path in env.  Find & alter:
         dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
@@ -145,6 +144,7 @@ ParallelProc::addEnvVars()
 			new_path = bin;
         }
     }
+	free(bin);
 	env.SetEnv("PATH",new_path.Value());
 
 	char *condor_config = getenv( "CONDOR_CONFIG");
