@@ -160,6 +160,7 @@ Matchmaker::
 	if (publicAd) delete publicAd;
     if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
+	if (stashedAds) delete stashedAds;
 }
 
 
