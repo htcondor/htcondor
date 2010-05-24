@@ -61,10 +61,10 @@ class CondorLockFile : public CondorLockImpl
 					   const char *lock_name );
 
   private:
-	MyString		lock_url;
-	MyString		lock_name;
-	MyString		lock_file;
-	MyString		temp_file;
+	std::string		lock_url;
+	std::string		lock_name;
+	std::string		lock_file;
+	std::string		temp_file;
 
 	// Private member functions
 	int GetLock( time_t lock_hold_time );
