@@ -1,0 +1,46 @@
+--- condor.sysconfig	2010-05-19 18:57:29.000000000 -0500
++++ condor.sysconfig.drone	2010-05-19 19:14:29.000000000 -0500
+@@ -7,14 +7,14 @@
+ ## Default:     "/etc/condor/condor_config"
+ #
+ # Path to the Condor configuration file.
+-CONDOR_CONFIG="/etc/condor/condor_config"
++CONDOR_CONFIG="/share/condor/etc/condor/condor_config"
+ 
+ ## Description: Path to the condor_config_val program
+ ## Type:        string
+ ## Default:     "/usr/bin/condor_config_val"
+ #
+ # Path to the Condor configuration program
+-CONDOR_CONFIG_VAL="/usr/bin/condor_config_val"
++CONDOR_CONFIG_VAL="/share/condor/usr/bin/condor_config_val"
+ 
+ ## Description: Master's PID file
+ ## Type:        string
+@@ -79,7 +79,7 @@
+ # Path to the local Condor master wrapper.  This is for installs in which
+ # CONDOR_SBIN is on a shared file system (i.e. NFS).  If blank,
+ # the LOCAL_MASTER and SHARED_MASTER values will be ignored.
+-CONDOR_MASTER_WRAPPER=""
++CONDOR_MASTER_WRAPPER="/usr/sbin/condor_master_wrapper"
+ 
+ ## Description: Path to the Condor master binary on local disk.
+ ## Type:        string
+@@ -89,7 +89,7 @@
+ # CONDOR_SBIN is on a shared file system (i.e. NFS).  If blank,
+ # default to the matching setting in the Condor configuration file
+ # condor_config_val LOCAL_MASTER
+-CONDOR_LOCAL_MASTER=""
++CONDOR_LOCAL_MASTER="/var/lib/condor/condor_master"
+ 
+ ## Description: Path to the Condor master binary on shared disk
+ ## Type:        string
+@@ -99,7 +99,7 @@
+ # CONDOR_SBIN is on a shared file system (i.e. NFS).  If blank,
+ # default to the matching setting in the Condor configuration file
+ # $(CONDOR_SBIN)/condor_master
+-CONDOR_SHARED_MASTER=""
++CONDOR_SHARED_MASTER="/share/condor/usr/sbin/condor_master"
+ 
+ ## Description: User to start condor as
+ ## Type:        string

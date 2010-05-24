@@ -1464,8 +1464,8 @@ ReadUserLog:: getErrorInfo( ErrorType &error,
 
 	unsigned	eint = (unsigned) m_error;
 	unsigned	num = ( sizeof(strings) / sizeof(const char *) );
-	if ( eint > num ) {
-		error_str = "Unkown";
+	if ( eint >= num ) {
+		error_str = "Unknown";
 	}
 	else {
 		error_str = strings[eint];

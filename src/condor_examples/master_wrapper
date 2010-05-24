@@ -216,7 +216,7 @@ class Settings( object ) :
             Setting( "MASTER_PIDFILE",
                      "Condor Master's PID file",
                      sysconfig="PIDFILE",
-                     default="/var/run/condor.pid",
+                     default="/var/run/condor/condor.pid",
                      condor_config=CondorConfig("RUN", append="/condor.pid") ),
             Setting( "REAL_MASTER_ARGS",
                      "Arguments to pass to the 'real' condor_master binary",
@@ -437,7 +437,9 @@ class Main( object ) :
         try:
             local_stat = os.stat( master )
         except Exception, e:
-            logger.Log( -1, "Can't stat local master '%s': %s"%(master, e), 1 )
+	    # If this is the first time, stat will return error.
+	    local_stat = None
+            logger.Log( -1, "Can't stat local master '%s': %s"%(master, e), None )
 
         if local_stat is not None and \
            local_stat.st_mtime == shared_stat.st_mtime and \
