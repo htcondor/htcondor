@@ -24,12 +24,12 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 
-static MyString amazon_proxy_host;
+static std::string amazon_proxy_host;
 static int amazon_proxy_port;
-static MyString amazon_proxy_user;
-static MyString amazon_proxy_passwd;
+static std::string amazon_proxy_user;
+static std::string amazon_proxy_passwd;
 
-static MyString amazon_ec2_url(DEFAULT_AMAZON_EC2_URL);
+static std::string amazon_ec2_url(DEFAULT_AMAZON_EC2_URL);
 
 // List for all amazon commands
 static SimpleList<AmazonGahpCommand*> amazon_gahp_commands;
@@ -41,7 +41,7 @@ extern FILE *DebugFP;
 
 const char* get_ec2_url(void)
 {
-	return amazon_ec2_url.Value();
+	return amazon_ec2_url.c_str();
 }
 
 void set_ec2_url(const char* url)
@@ -110,44 +110,44 @@ void set_amazon_proxy_server(const char* url)
 	/* sateesh added code to even handle proxy username and password */
 	/* This code cannot handle passwords containing @ ? */
 	/* Exact format of AMAZON_HTTP_PROXY is -- http://userid:password@host:port */
-	if( -1 != (pos = amazon_proxy_host.FindChar('@')) ) {
-	  amazon_proxy_user = amazon_proxy_host.Substr(0, pos - 1);
+	if( std::string::npos != (pos = amazon_proxy_host.find('@')) ) {
+	  amazon_proxy_user = amazon_proxy_host.substr(0, pos);
 	  
-	  amazon_proxy_host = amazon_proxy_host.Substr(pos + 1,
-		  amazon_proxy_host.Length());
+	  amazon_proxy_host = amazon_proxy_host.substr(pos + 1,
+		  amazon_proxy_host.length());
 
 	  pos = -1;
-	  if( -1 != (pos = amazon_proxy_user.FindChar(':')) ) {
-		amazon_proxy_passwd = amazon_proxy_user.Substr(pos + 1,
-			amazon_proxy_user.Length());
-		amazon_proxy_user = amazon_proxy_user.Substr(0, pos - 1);
+	  if( std::string::npos != (pos = amazon_proxy_user.find(':')) ) {
+		amazon_proxy_passwd = amazon_proxy_user.substr(pos + 1,
+			amazon_proxy_user.length());
+		amazon_proxy_user = amazon_proxy_user.substr(0, pos);
 	  }
 	}
 
-	if( -1 != (pos = amazon_proxy_host.FindChar(':')) ) {
+	if( std::string::npos != (pos = amazon_proxy_host.find(':')) ) {
 		int port =
-			atoi(amazon_proxy_host.Substr(pos + 1,
-										  amazon_proxy_host.Length()).Value());
+			atoi(amazon_proxy_host.substr(pos + 1,
+										  amazon_proxy_host.length()).c_str());
 
 		if( port > 0 ) {
 			amazon_proxy_port = port;
 		}
 
-		amazon_proxy_host = amazon_proxy_host.Substr(0, pos - 1);
+		amazon_proxy_host = amazon_proxy_host.substr(0, pos);
 	}
          
 	dprintf(D_ALWAYS, "Using proxy server, host=%s, port=%d user=%s\n", 
-		amazon_proxy_host.Value(), amazon_proxy_port, 
-		amazon_proxy_user.Value());
+		amazon_proxy_host.c_str(), amazon_proxy_port, 
+		amazon_proxy_user.c_str());
 }
 
 bool get_amazon_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd )
 {
-	if( amazon_proxy_host.IsEmpty() == false ) {
-		host_name = amazon_proxy_host.Value();
+	if( amazon_proxy_host.empty() == false ) {
+		host_name = amazon_proxy_host.c_str();
 		port = amazon_proxy_port;
-		user_name = amazon_proxy_user.Value();
-		passwd = amazon_proxy_passwd.Value();
+		user_name = amazon_proxy_user.c_str();
+		passwd = amazon_proxy_passwd.c_str();
 		return true;
 	}
 
@@ -187,7 +187,7 @@ allAmazonCommands(StringList &output)
 
 	amazon_gahp_commands.Rewind();
 	while( amazon_gahp_commands.Next(one_cmd) ) {
-		output.append(one_cmd->command.Value());
+		output.append(one_cmd->command.c_str());
 	}
 
 	return amazon_gahp_commands.Number();
@@ -204,7 +204,7 @@ executeIOCheckFunc(const char* cmd, char **argv, int argc)
 
 	amazon_gahp_commands.Rewind();
 	while( amazon_gahp_commands.Next(one_cmd) ) {
-		if( !strcasecmp(one_cmd->command.Value(), cmd) && 
+		if( !strcasecmp(one_cmd->command.c_str(), cmd) && 
 		 	one_cmd->iocheckfunction ) {
 			return one_cmd->iocheckfunction(argv, argc);
 		}
@@ -215,7 +215,7 @@ executeIOCheckFunc(const char* cmd, char **argv, int argc)
 }
 
 bool
-executeWorkerFunc(const char* cmd, char **argv, int argc, MyString &output_string)
+executeWorkerFunc(const char* cmd, char **argv, int argc, std::string &output_string)
 {
 	if(!cmd) {
 		return false;
@@ -225,7 +225,7 @@ executeWorkerFunc(const char* cmd, char **argv, int argc, MyString &output_strin
 
 	amazon_gahp_commands.Rewind();
 	while( amazon_gahp_commands.Next(one_cmd) ) {
-		if( !strcasecmp(one_cmd->command.Value(), cmd) && 
+		if( !strcasecmp(one_cmd->command.c_str(), cmd) && 
 			one_cmd->workerfunction ) {
 			return one_cmd->workerfunction(argv, argc, output_string);
 		}
@@ -409,19 +409,19 @@ verify_number (const char * s) {
 	return TRUE;
 }
 
-bool check_access_and_secret_key_file(const char* accesskeyfile, const char* secretkeyfile, MyString &err_msg)
+bool check_access_and_secret_key_file(const char* accesskeyfile, const char* secretkeyfile, std::string &err_msg)
 {
 	// check the accesskeyfile
 	if( !check_read_access_file(accesskeyfile) ) {
-		err_msg.sprintf("Cannot_read_access_key_file(%s)", accesskeyfile? accesskeyfile:"");
-		dprintf (D_ALWAYS, "Error: %s\n", err_msg.Value());
+		sprintf(err_msg, "Cannot_read_access_key_file(%s)", accesskeyfile? accesskeyfile:"");
+		dprintf (D_ALWAYS, "Error: %s\n", err_msg.c_str());
 		return false;
 	}
 
 	// check the accesskeyfile and secretkeyfile
 	if( !check_read_access_file(secretkeyfile) ) {
-		err_msg.sprintf("Cannot_read_secret_key_file(%s)", secretkeyfile? secretkeyfile:"");
-		dprintf (D_ALWAYS, "Error: %s\n", err_msg.Value());
+		sprintf(err_msg, "Cannot_read_secret_key_file(%s)", secretkeyfile? secretkeyfile:"");
+		dprintf (D_ALWAYS, "Error: %s\n", err_msg.c_str());
 		return false;
 	}
 
@@ -441,12 +441,12 @@ get_ulong (const char * blah, unsigned long * s) {
 	return TRUE;
 }
 
-MyString
+std::string
 create_output_string (int req_id, const char ** results, const int argc)
 {
-	MyString buffer;
+	std::string buffer;
 
-	buffer += req_id;
+	sprintf( buffer, "%d", req_id );
 
 	for ( int i = 0; i < argc; i++ ) {
 		buffer += ' ';
@@ -471,7 +471,7 @@ create_output_string (int req_id, const char ** results, const int argc)
 	return buffer;
 }
 
-MyString
+std::string
 create_success_result( int req_id, StringList *result_list)
 {
 	int index_count = 1;
@@ -498,7 +498,7 @@ create_success_result( int req_id, StringList *result_list)
 	return create_output_string (req_id, tmp_result, i);
 }
 
-MyString 
+std::string
 create_failure_result( int req_id, const char *err_msg, const char* err_code)
 {
 	const char *tmp_result[3];

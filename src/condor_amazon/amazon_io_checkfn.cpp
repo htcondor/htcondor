@@ -23,7 +23,6 @@
 #include "condor_string.h"
 #include "string_list.h"
 #include "condor_arglist.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "internet.h"
 #include "basename.h"

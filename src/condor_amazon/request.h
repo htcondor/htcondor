@@ -21,7 +21,7 @@
 #define AMAZON_REQUEST_H
 
 #include "condor_common.h"
-#include "MyString.h"
+#include <string>
 #include "amazongahp_common.h"
 
 class Worker;
@@ -32,9 +32,9 @@ class Request {
 		int m_reqid;
 		Worker* m_worker;
 
-		MyString m_raw_cmd;
+		std::string m_raw_cmd;
 		Gahp_Args m_args;
-		MyString m_result;
+		std::string m_result;
 };
 
 #endif
