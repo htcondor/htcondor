@@ -61,6 +61,7 @@ main( int argc, char** argv )
 	char line[256];
 	Daemon Collector( DT_COLLECTOR);
 	ReliSock* coll_sock;
+	bool connect_error = true;
 
 	config();
 
@@ -96,8 +97,14 @@ main( int argc, char** argv )
     invalidate_ad.Insert( line );
 
 
-	coll_sock = (ReliSock*)Collector.startCommand( INVALIDATE_STARTD_ADS );
-	if( ! coll_sock ) {
+	do {
+		coll_sock = (ReliSock*)Collector.startCommand( INVALIDATE_STARTD_ADS );
+		if( coll_sock ) {
+			connect_error = false;
+			break;
+		}
+	} while( Collector.nextValidCm() == true );
+	if( connect_error == true ) {
 		fprintf( stderr, "%s: ERROR: can't create TCP socket to %s\n", 
 				 MyName, Collector.fullHostname() );
 		exit( 1 );
