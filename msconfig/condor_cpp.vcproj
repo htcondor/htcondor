@@ -1418,6 +1418,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\str_isxxx.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\subsystem_info.cpp"
 			>
 		</File>
