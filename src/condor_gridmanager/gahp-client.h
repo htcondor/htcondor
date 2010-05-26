@@ -555,6 +555,9 @@ class GahpClient : public Service {
 		int
 		nordugrid_ping(const char *hostname);
 
+		int
+		gridftp_transfer(const char *src_url, const char *dst_url);
+
 		///
 		int 
 		unicore_job_create(const char * description,
