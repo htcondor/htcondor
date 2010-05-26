@@ -103,6 +103,11 @@ present in all earlier 7.4.x Condor releases.
 \item A \Prog{nordugrid\_gahp} binary built on RHEL3 no longer crashes
 when run on a RHEL4 or Scientific Linux 4 machine.
 
+% gittrac #1418
+\item Fixed a bug in \Condor{rm} that caused it to misinterpret user names
+that start with a digit, such as "1abc", as specifying a
+cluster number. 
+
 \end{itemize}
 
 \noindent Known Bugs:
