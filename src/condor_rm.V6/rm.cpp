@@ -603,9 +603,8 @@ procArg(const char* arg)
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 		return;
 	}
-	else if(str_isalnum(arg))
 	// process by user name
-	{
+	else {
 		CondorError errstack;
 		constraint.sprintf("%s == \"%s\"", ATTR_OWNER, arg );
 		if( doWorkByConstraint(constraint.Value(), &errstack) ) {
@@ -621,8 +620,6 @@ procArg(const char* arg)
 					 "Couldn't find/%s all of user %s's job(s).\n",
 					 actionWord(mode,false), arg );
 		}
-	} else {
-		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );
 	}
 }
 
