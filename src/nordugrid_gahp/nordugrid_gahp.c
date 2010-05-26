@@ -95,6 +95,7 @@ static char *commands_list =
 "NORDUGRID_EXIT_INFO "
 "NORDUGRID_PING "
 "NORDUGRID_LDAP_QUERY "
+"GRIDFTP_TRANSFER "
 "INITIALIZE_FROM_FILE "
 "QUIT "
 "RESULTS "
@@ -177,6 +178,7 @@ int handle_nordugrid_stage_out(char **);
 int handle_nordugrid_stage_out2(char **);
 int handle_nordugrid_exit_info(char **);
 int handle_nordugrid_ping(char **);
+int handle_gridftp_transfer(char **);
 
 /* These are all of the callbacks for non-blocking async commands */
 void nordugrid_submit_start_callback( void *arg,
@@ -268,6 +270,26 @@ void nordugrid_ping_start_callback( void *arg,
 void nordugrid_ping_exists_callback( void *arg,
 								globus_ftp_client_handle_t *handle,
 								globus_object_t *error );
+void gridftp_transfer_start_callback( void *arg,
+									  globus_ftp_client_handle_t *handle,
+									  globus_object_t *error );
+void gridftp_transfer_write_callback( void *arg,
+									  globus_ftp_client_handle_t *handle,
+									  globus_object_t *error,
+									  globus_byte_t *buffer,
+									  globus_size_t length,
+									  globus_off_t offset,
+									  globus_bool_t eof );
+void gridftp_transfer_read_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error,
+									 globus_byte_t *buffer,
+									 globus_size_t length,
+									 globus_off_t offset,
+									 globus_bool_t eof );
+void gridftp_transfer_done_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error );
 
 /* These are all of the sync. command handlers */
 int handle_async_mode_on(char **);
@@ -2055,6 +2077,289 @@ handle_nordugrid_ldap_query( char **input_line )
 }
 
 int
+handle_gridftp_transfer( char **input_line )
+{
+	user_arg_t *user_arg;
+	globus_url_t url;
+
+	if ( input_line[1] == NULL || input_line[2] == NULL ||
+		 input_line[3] == NULL ) {
+		HANDLE_SYNTAX_ERROR();
+		return 0;
+	}
+	 
+	gahp_printf("S\n");
+	gahp_sem_up(&print_control);
+
+	user_arg = malloc_user_arg();
+	user_arg->cmd = input_line;
+	user_arg->cred = current_cred;
+	user_arg->server = NULL;
+	user_arg->first_callback = gridftp_transfer_start_callback;
+
+	if ( globus_url_parse( input_line[2], &url ) == GLOBUS_SUCCESS ) {
+		if ( url.host != NULL ) {
+			int len = strlen( url.host ) + 10;
+			user_arg->server = malloc( len * sizeof(char) );
+			if ( url.port != 0 ) {
+				sprintf( user_arg->server, "%s:%d", url.host, url.port );
+			} else {
+				sprintf( user_arg->server, "%s", url.host );
+			}
+		}
+		globus_url_destroy( &url );
+	}
+	if ( !user_arg->server &&
+		 globus_url_parse( input_line[3], &url ) == GLOBUS_SUCCESS ) {
+		if ( url.host != NULL ) {
+			int len = strlen( url.host ) + 10;
+			user_arg->server = malloc( len * sizeof(char) );
+			if ( url.port != 0 ) {
+				sprintf( user_arg->server, "%s:%d", url.host, url.port );
+			} else {
+				sprintf( user_arg->server, "%s", url.host );
+			}
+		}
+		globus_url_destroy( &url );
+	}
+	if ( !user_arg->server ) {
+		user_arg->server = strdup( "" );
+	}
+
+	begin_ftp_command( user_arg );
+
+	return 0;
+}
+
+void gridftp_transfer_start_callback( void *arg,
+										globus_ftp_client_handle_t *handle,
+										globus_object_t *error )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	globus_result_t result;
+
+	if ( error != GLOBUS_SUCCESS ) {
+		gridftp_transfer_done_callback( arg, handle, error );
+	}
+
+	if ( strncmp( user_arg->cmd[2], "file://", 7 ) == 0 ) {
+		// stage-in transfer
+		user_arg->fd = open( user_arg->cmd[2] + 7, O_RDONLY );
+		if ( user_arg->fd < 0 ) {
+			result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to open local file '%s'",
+											user_arg->cmd[2]+7 ) );
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+			return;
+		}
+
+		result = globus_ftp_client_put( user_arg->handle, user_arg->cmd[3],
+										user_arg->op_attr, NULL,
+										gridftp_transfer_done_callback, arg );
+		if ( result != GLOBUS_SUCCESS ) {
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+			return;
+		} else {
+			void *write_buff = malloc( TRANSFER_BUFFER_SIZE );
+			gridftp_transfer_write_callback( arg, handle, error, write_buff,
+											 0, 0, GLOBUS_FALSE );
+		}
+
+	} else if ( strncmp( user_arg->cmd[3], "file://", 7 ) == 0 ) {
+		// stage-out transfer
+		user_arg->fd = open( user_arg->cmd[3] + 7, O_CREAT|O_WRONLY|O_TRUNC, 0644 );
+		if ( user_arg->fd < 0 ) {
+			result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to open local file '%s'",
+											user_arg->cmd[3] + 7 ) );
+			gridftp_transfer_done_callback( arg, handle, globus_error_peek( result ) );
+			return;
+		}
+
+		result = globus_ftp_client_get( user_arg->handle, user_arg->cmd[2],
+										user_arg->op_attr, NULL,
+										gridftp_transfer_done_callback, arg );
+		if ( result != GLOBUS_SUCCESS ) {
+			gridftp_transfer_done_callback( arg, handle, globus_error_peek( result ) );
+			return;
+		} else {
+			void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
+			result = globus_ftp_client_register_read( user_arg->handle,
+													  read_buff,
+													  TRANSFER_BUFFER_SIZE,
+													  gridftp_transfer_read_callback,
+													  arg );
+			if ( result != GLOBUS_SUCCESS ) {
+					/* What to do? */
+				char *mesg = globus_error_print_friendly( globus_error_peek( result ) );
+				fprintf( stderr, "gridftp_transfer_start_callback: %s\n", mesg );
+				free( mesg );
+				free( read_buff );
+			}
+		}
+
+	} else {
+		// third-party transfer
+		result = globus_ftp_client_third_party_transfer( user_arg->handle,
+														 user_arg->cmd[2],
+														 user_arg->op_attr,
+														 user_arg->cmd[3],
+														 user_arg->op_attr,
+														 NULL,
+														 gridftp_transfer_done_callback,
+														 arg );
+		if ( result != GLOBUS_SUCCESS ) {
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+		}
+	}
+}
+
+/* This function can be called by gridftp_transfer_start_callback() before
+ * any data is actually written. It will pass 0 for both length and offset,
+ * and GLOBUS_FALSE for eof.
+ */
+void gridftp_transfer_write_callback( void *arg,
+									  globus_ftp_client_handle_t *handle,
+									  globus_object_t *error,
+									  globus_byte_t *buffer,
+									  globus_size_t length,
+									  globus_off_t offset,
+									  globus_bool_t eof )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	globus_result_t result;
+	int rc;
+
+	if ( error != GLOBUS_SUCCESS ) {
+			/* What to do? */
+		char *mesg = globus_error_print_friendly( error );
+		fprintf( stderr, "gridftp_transfer_write_callback: %s\n", mesg );
+		free( mesg );
+		return;
+	}
+
+	assert( offset + length == lseek( user_arg->fd, 0, SEEK_CUR ) );
+
+	if ( eof ) {
+		free( buffer );
+		return;
+	}
+
+	rc = read( user_arg->fd, buffer, TRANSFER_BUFFER_SIZE );
+	if ( rc < 0 ) {
+		result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to read local file" ) );
+		gridftp_transfer_done_callback( arg, handle,
+										globus_error_peek( result ) );
+		return;
+	}
+
+	result = globus_ftp_client_register_write( user_arg->handle,
+											   buffer,
+											   rc,
+											   offset + length,
+											   rc == 0,
+											   gridftp_transfer_write_callback,
+											   arg );
+	if ( result != GLOBUS_SUCCESS ) {
+			/* What to do? */
+		char *mesg = globus_error_print_friendly( globus_error_peek( result ) );
+		fprintf( stderr, "gridftp_transfer_write_callback: %s\n", mesg );
+		free( mesg );
+	}
+}
+
+void gridftp_transfer_read_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error,
+									 globus_byte_t *buffer,
+									 globus_size_t length,
+									 globus_off_t offset,
+									 globus_bool_t eof )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	globus_result_t result;
+	int written = 0;
+
+	if ( error != GLOBUS_SUCCESS ) {
+			/* What to do? */
+		char *mesg = globus_error_print_friendly( error );
+		fprintf( stderr, "gridftp_transfer_read_callback: %s\n", mesg );
+		free( mesg );
+		return;
+	}
+
+	assert( offset == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	while ( written < length ) {
+		int rc = write( user_arg->fd, buffer + written, length - written );
+		if ( rc < 0 ) {
+				/* TODO Bad! */
+			result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to write local file\n" ) );
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+			return;
+		}
+		written += rc;
+	}
+
+	if ( !eof ) {
+		result = globus_ftp_client_register_read( user_arg->handle,
+												  buffer,
+												  TRANSFER_BUFFER_SIZE,
+												  gridftp_transfer_read_callback,
+												  arg );
+		if ( result != GLOBUS_SUCCESS ) {
+				/* What to do? */
+			char *mesg = globus_error_print_friendly( globus_error_peek( result ) );
+			fprintf( stderr, "gridftp_transfer_read_callback: %s\n", mesg );
+			free( mesg );
+		}
+	} else {
+		free( buffer );
+	}
+}
+
+void gridftp_transfer_done_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	char *output;
+
+	if ( error == GLOBUS_SUCCESS ) {
+		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) );
+		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
+	} else {
+		char *err_str = globus_error_print_friendly( error );
+		char *esc = escape_spaces( err_str );
+		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+									 strlen( esc ) );
+		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		globus_libc_free( err_str );
+		globus_libc_free( esc );
+	}
+
+	enqueue_results(output);	
+
+	finish_ftp_command( user_arg );
+	free( user_arg->server );
+	free_user_arg( user_arg );
+	return;
+}
+
+int
 handle_commands( char **input_line )
 {
 	gahp_printf("S %s\n", commands_list);
@@ -2694,6 +2999,7 @@ service_commands(void *arg,globus_io_handle_t* gio_handle,globus_result_t rest)
 		HANDLE_SYNC( nordugrid_exit_info ) else
 		HANDLE_SYNC( nordugrid_ping ) else
 		HANDLE_SYNC( nordugrid_ldap_query ) else
+		HANDLE_SYNC( gridftp_transfer ) else
 		{
 			handle_bad_request(input_line);
 			result = 0;
