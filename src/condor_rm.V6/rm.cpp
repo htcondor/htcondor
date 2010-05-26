@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -36,6 +36,7 @@
 #include "dc_collector.h"
 #include "condor_distribution.h"
 #include "CondorError.h"
+#include "str_isxxx.h"
 
 
 char	*MyName;
@@ -535,7 +536,7 @@ procArg(const char* arg)
 
 	MyString constraint;
 
-	if(isdigit(*arg))
+	if( str_isint(arg) || str_isreal(arg,true) )
 	// process by cluster/proc #
 	{
 		c = strtol(arg, &tmp, 10);
@@ -588,7 +589,7 @@ procArg(const char* arg)
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 		return;
 	}
-	else if(isalpha(*arg))
+	else if(str_isalnum(arg))
 	// process by user name
 	{
 		CondorError errstack;
