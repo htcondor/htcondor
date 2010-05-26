@@ -24,7 +24,6 @@
 #include "classad/sink.h"
 
 using namespace std;
-using namespace classad;
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
