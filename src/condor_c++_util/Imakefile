@@ -223,6 +223,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o access.o subsystem_info.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
+	str_isxxx.o \
 	uids.o passwd_cache.o \
 	metric_units.o condor_ver_info.o \
 	condor_md.o \
@@ -305,6 +306,8 @@ c_plus_target(test_binarysearch,test_binarysearch.o,)
 c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
 c_plus_target(test_hibernation,test_hibernation.o,$(LIB))
 
+test_str_isxxx: str_isxxx.cpp
+	$(CPlusPlus) $(C_PLUS_FLAGS) -DSTR_ISXXX_TEST -o $@ $<
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
