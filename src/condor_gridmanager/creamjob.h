@@ -31,6 +31,7 @@
 #include "creamresource.h"
 #include "gahp-client.h"
 #include "gridftpmanager.h"
+#include "transferrequest.h"
 
 #define JM_COMMIT_TIMEOUT	600
 
@@ -94,6 +95,7 @@ class CreamJob : public BaseJob
 	char *resourceBatchSystemString;
 	char *resourceQueueString;
 	char *uploadUrl;
+	char *downloadUrl;
 	GridftpServer *gridftpServer;
 	int connectFailureCount;
 
@@ -119,11 +121,15 @@ class CreamJob : public BaseJob
 
 	char * delegatedCredentialURI;
 	char *leaseId;
+	TransferRequest *m_xfer_request;
 
 private:
 	// If true, we should poll for status ourselves, _once_
 	// instead of relying on CreamResource to handle it.
 	bool doActivePoll;
+
+	TransferRequest *MakeStageInRequest();
+	TransferRequest *MakeStageOutRequest();
 };
 
 #endif
