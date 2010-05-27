@@ -1,6 +1,6 @@
 diff -u -r org.glite.ce.blahp/config/Makefile.am org.glite.ce.blahp.patched/config/Makefile.am
---- org.glite.ce.blahp/config/Makefile.am	2009-01-08 03:28:44.000000000 -0600
-+++ org.glite.ce.blahp.patched/config/Makefile.am	2009-01-22 15:17:43.000000000 -0600
+--- org.glite.ce.blahp/config/Makefile.am	2009-01-26 03:10:54.000000000 -0600
++++ org.glite.ce.blahp.patched/config/Makefile.am	2010-05-26 16:40:58.000000000 -0500
 @@ -15,13 +15,13 @@
  #
  
@@ -17,20 +17,32 @@ diff -u -r org.glite.ce.blahp/config/Makefile.am org.glite.ce.blahp.patched/conf
 -EXTRA_DIST = blah.config.template \
 +EXTRA_DIST = batch_gahp.config.template \
               blparser.conf.template \
-              glite-ce-blparser 
+              glite-ce-blparser \
+              glite-ce-blahparser \
+diff -u -r org.glite.ce.blahp/config/glite-ce-blahparser org.glite.ce.blahp.patched/config/glite-ce-blahparser
+--- org.glite.ce.blahp/config/glite-ce-blahparser	2010-03-17 08:49:21.000000000 -0500
++++ org.glite.ce.blahp.patched/config/glite-ce-blahparser	2010-05-26 16:57:45.000000000 -0500
+@@ -26,7 +26,7 @@
+ GLITE_LOCATION=${GLITE_LOCATION:-/opt/glite}
+ GLITE_LOCATION_VAR=${GLITE_LOCATION_VAR:-${GLITE_LOCATION}/var}
  
+-[ -f $GLITE_LOCATION/etc/blah.config ] && . $GLITE_LOCATION/etc/blah.config
++[ -f $GLITE_LOCATION/etc/batch_gahp.config ] && . $GLITE_LOCATION/etc/batch_gahp.config
+ 
+ GLITE_CE_BUPDATER=$bnotifier_path
+ GLITE_CE_BNOTIFIER=$bupdater_path
 diff -u -r org.glite.ce.blahp/src/Makefile.am org.glite.ce.blahp.patched/src/Makefile.am
---- org.glite.ce.blahp/src/Makefile.am	2009-01-08 03:28:44.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/Makefile.am	2009-01-22 15:17:13.000000000 -0600
-@@ -24,18 +24,18 @@
+--- org.glite.ce.blahp/src/Makefile.am	2010-05-10 10:26:26.000000000 -0500
++++ org.glite.ce.blahp.patched/src/Makefile.am	2010-05-26 16:42:50.000000000 -0500
+@@ -41,18 +41,18 @@
  GLOBUS_EXECS =
  endif
  
--bin_PROGRAMS = blahpd blahpd_daemon BLClient BLParserLSF BLParserPBS BDlogger test_condor_logger blah_job_registry_add blah_job_registry_lkup BUpdaterCondor BNotifier BUpdaterLSF BUpdaterPBS $(GLOBUS_EXECS)
-+bin_PROGRAMS = batch_gahp batch_gahp_daemon BLClient BLParserLSF BLParserPBS BDlogger test_condor_logger blah_job_registry_add blah_job_registry_lkup BUpdaterCondor BNotifier BUpdaterLSF BUpdaterPBS $(GLOBUS_EXECS)
+-bin_PROGRAMS = blahpd blahpd_daemon BLClient BLParserLSF BLParserPBS test_condor_logger blah_job_registry_add blah_job_registry_lkup blah_job_registry_scan_by_subject BUpdaterCondor BNotifier BUpdaterLSF BUpdaterPBS BUpdaterSGE $(GLOBUS_EXECS)  blparser_master blah_check_config
++bin_PROGRAMS = batch_gahp batch_gahp_daemon BLClient BLParserLSF BLParserPBS test_condor_logger blah_job_registry_add blah_job_registry_lkup blah_job_registry_scan_by_subject BUpdaterCondor BNotifier BUpdaterLSF BUpdaterPBS BUpdaterSGE $(GLOBUS_EXECS)  blparser_master blah_check_config
  noinst_PROGRAMS = test_job_registry_create test_job_registry_purge test_job_registry_update test_job_registry_access
  
- common_sources = console.c job_status.c resbuffer.c server.c commands.c classad_binary_op_unwind.C classad_c_helper.C mtsafe_popen.c proxy_hashcontainer.c config.c job_registry.c Bfunctions.c
+ common_sources = console.c job_status.c resbuffer.c server.c commands.c classad_binary_op_unwind.C classad_c_helper.C proxy_hashcontainer.c config.c job_registry.c blah_utils.c env_helper.c mapped_exec.c md5.c 
  
 -blahpd_SOURCES = main.c $(common_sources)
 +batch_gahp_SOURCES = main.c $(common_sources)
@@ -47,9 +59,9 @@ diff -u -r org.glite.ce.blahp/src/Makefile.am org.glite.ce.blahp.patched/src/Mak
  BPRclient_SOURCES = BPRclient.c BPRcomm.c tokens.c
  
 diff -u -r org.glite.ce.blahp/src/config.h org.glite.ce.blahp.patched/src/config.h
---- org.glite.ce.blahp/src/config.h	2007-11-26 08:35:35.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/config.h	2009-01-22 15:17:13.000000000 -0600
-@@ -41,7 +41,7 @@
+--- org.glite.ce.blahp/src/config.h	2010-03-17 08:19:34.000000000 -0500
++++ org.glite.ce.blahp.patched/src/config.h	2010-05-26 16:43:23.000000000 -0500
+@@ -56,7 +56,7 @@
  int config_test_boolean(const config_entry *entry);
  void config_free(config_handle *handle);
  
@@ -59,19 +71,23 @@ diff -u -r org.glite.ce.blahp/src/config.h org.glite.ce.blahp.patched/src/config
  #define CONFIG_SKIP_WHITESPACE_FWD(c) while ((*(c) == ' ')  || (*(c) == '\t') || \
                                    (*(c) == '\n') || (*(c) == '\r') ) (c)++;
 diff -u -r org.glite.ce.blahp/src/scripts/blah_common_submit_functions.sh org.glite.ce.blahp.patched/src/scripts/blah_common_submit_functions.sh
---- org.glite.ce.blahp/src/scripts/blah_common_submit_functions.sh	2008-12-11 05:20:11.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/scripts/blah_common_submit_functions.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,4 +1,4 @@
+--- org.glite.ce.blahp/src/scripts/blah_common_submit_functions.sh	2010-05-26 10:48:28.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/blah_common_submit_functions.sh	2010-05-26 16:44:38.000000000 -0500
+@@ -21,7 +21,7 @@
+ # limitations under the License.
+ #
+ 
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
  
  #
  # Functions to handle the file mapping tables
 diff -u -r org.glite.ce.blahp/src/scripts/condor_cancel.sh org.glite.ce.blahp.patched/src/scripts/condor_cancel.sh
---- org.glite.ce.blahp/src/scripts/condor_cancel.sh	2008-02-26 08:51:58.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/scripts/condor_cancel.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/condor_cancel.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/condor_cancel.sh	2010-05-26 16:45:25.000000000 -0500
+@@ -24,7 +24,7 @@
+ #
+ 
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -79,10 +95,11 @@ diff -u -r org.glite.ce.blahp/src/scripts/condor_cancel.sh org.glite.ce.blahp.pa
  # The first and only argument is a JobId whose format is: Id/Queue/Pool
  
 diff -u -r org.glite.ce.blahp/src/scripts/condor_hold.sh org.glite.ce.blahp.patched/src/scripts/condor_hold.sh
---- org.glite.ce.blahp/src/scripts/condor_hold.sh	2008-01-24 10:24:04.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/scripts/condor_hold.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/condor_hold.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/condor_hold.sh	2010-05-26 16:45:49.000000000 -0500
+@@ -23,7 +23,7 @@
+ # limitations under the License.
+ #
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -90,10 +107,11 @@ diff -u -r org.glite.ce.blahp/src/scripts/condor_hold.sh org.glite.ce.blahp.patc
  # The first and only argument is a JobId whose format is: Id/Queue/Pool
  
 diff -u -r org.glite.ce.blahp/src/scripts/condor_resume.sh org.glite.ce.blahp.patched/src/scripts/condor_resume.sh
---- org.glite.ce.blahp/src/scripts/condor_resume.sh	2008-01-24 10:24:05.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/scripts/condor_resume.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/condor_resume.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/condor_resume.sh	2010-05-26 16:46:13.000000000 -0500
+@@ -23,7 +23,7 @@
+ # limitations under the License.
+ #
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -101,9 +119,9 @@ diff -u -r org.glite.ce.blahp/src/scripts/condor_resume.sh org.glite.ce.blahp.pa
  # The first and only argument is a JobId whose format is: Id/Queue/Pool
  
 diff -u -r org.glite.ce.blahp/src/scripts/condor_status.sh org.glite.ce.blahp.patched/src/scripts/condor_status.sh
---- org.glite.ce.blahp/src/scripts/condor_status.sh	2008-02-27 12:01:53.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/scripts/condor_status.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -2,7 +2,7 @@
+--- org.glite.ce.blahp/src/scripts/condor_status.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/condor_status.sh	2010-05-26 16:46:37.000000000 -0500
+@@ -26,7 +26,7 @@
  
  proxy_dir=~/.blah_jobproxy_dir
  
@@ -113,10 +131,10 @@ diff -u -r org.glite.ce.blahp/src/scripts/condor_status.sh org.glite.ce.blahp.pa
  FORMAT='-format "%d" ClusterId -format "," ALWAYS -format "%d" JobStatus -format "," ALWAYS -format "%f" RemoteSysCpu -format "," ALWAYS -format "%f" RemoteUserCpu -format "," ALWAYS -format "%f" BytesSent -format "," ALWAYS -format "%f" BytesRecvd -format "," ALWAYS -format "%f" RemoteWallClockTime -format "," ALWAYS -format "%d" ExitBySignal -format "," ALWAYS -format "%d" ExitCode -format "%d" ExitSignal -format "\n" ALWAYS'
  
 diff -u -r org.glite.ce.blahp/src/scripts/condor_submit.sh org.glite.ce.blahp.patched/src/scripts/condor_submit.sh
---- org.glite.ce.blahp/src/scripts/condor_submit.sh	2008-06-18 13:12:57.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/condor_submit.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -17,7 +17,7 @@
- #  	See http://grid.infn.it/grid/license.html for license details.
+--- org.glite.ce.blahp/src/scripts/condor_submit.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/condor_submit.sh	2010-05-26 16:47:12.000000000 -0500
+@@ -30,7 +30,7 @@
+ # limitations under the License.
  #
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
@@ -125,10 +143,11 @@ diff -u -r org.glite.ce.blahp/src/scripts/condor_submit.sh org.glite.ce.blahp.pa
  usage_string="Usage: $0 -c <command> [-i <stdin>] [-o <stdout>] [-e <stderr>] [-v <environment>] [-s <yes | no>] [-- command_arguments]"
  
 diff -u -r org.glite.ce.blahp/src/scripts/lsf_cancel.sh org.glite.ce.blahp.patched/src/scripts/lsf_cancel.sh
---- org.glite.ce.blahp/src/scripts/lsf_cancel.sh	2007-07-16 04:55:01.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/lsf_cancel.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/lsf_cancel.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/lsf_cancel.sh	2010-05-26 16:49:00.000000000 -0500
+@@ -24,7 +24,7 @@
+ #
+ 
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -136,10 +155,11 @@ diff -u -r org.glite.ce.blahp/src/scripts/lsf_cancel.sh org.glite.ce.blahp.patch
  conffile=$lsf_confpath/lsf.conf
  lsf_confdir=`cat $conffile|grep LSF_CONFDIR| awk -F"=" '{ print $2 }'`
 diff -u -r org.glite.ce.blahp/src/scripts/lsf_hold.sh org.glite.ce.blahp.patched/src/scripts/lsf_hold.sh
---- org.glite.ce.blahp/src/scripts/lsf_hold.sh	2007-07-16 04:55:01.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/lsf_hold.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/lsf_hold.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/lsf_hold.sh	2010-05-26 16:51:51.000000000 -0500
+@@ -24,7 +24,7 @@
+ #
+ 
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -147,10 +167,11 @@ diff -u -r org.glite.ce.blahp/src/scripts/lsf_hold.sh org.glite.ce.blahp.patched
  conffile=$lsf_confpath/lsf.conf
  lsf_confdir=`cat $conffile|grep LSF_CONFDIR| awk -F"=" '{ print $2 }'`
 diff -u -r org.glite.ce.blahp/src/scripts/lsf_resume.sh org.glite.ce.blahp.patched/src/scripts/lsf_resume.sh
---- org.glite.ce.blahp/src/scripts/lsf_resume.sh	2007-07-16 04:55:01.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/lsf_resume.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/lsf_resume.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/lsf_resume.sh	2010-05-26 16:52:16.000000000 -0500
+@@ -24,7 +24,7 @@
+ #
+ 
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -158,22 +179,23 @@ diff -u -r org.glite.ce.blahp/src/scripts/lsf_resume.sh org.glite.ce.blahp.patch
  conffile=$lsf_confpath/lsf.conf
  lsf_confdir=`cat $conffile|grep LSF_CONFDIR| awk -F"=" '{ print $2 }'`
 diff -u -r org.glite.ce.blahp/src/scripts/lsf_status.sh org.glite.ce.blahp.patched/src/scripts/lsf_status.sh
---- org.glite.ce.blahp/src/scripts/lsf_status.sh	2008-04-17 11:58:00.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/lsf_status.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -20,7 +20,7 @@
- #  See http://grid.infn.it/grid/license.html for license details.
+--- org.glite.ce.blahp/src/scripts/lsf_status.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/lsf_status.sh	2010-05-26 16:52:43.000000000 -0500
+@@ -32,7 +32,7 @@
+ # limitations under the License.
  #
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
  
- conffile=$lsf_confpath/lsf.conf
- lsf_confdir=`cat $conffile|grep LSF_CONFDIR| awk -F"=" '{ print $2 }'`
+ if [ "x$job_registry" != "x" ] ; then
+    ${GLITE_LOCATION:-/opt/glite}/bin/blah_job_registry_lkup $@
 diff -u -r org.glite.ce.blahp/src/scripts/pbs_cancel.sh org.glite.ce.blahp.patched/src/scripts/pbs_cancel.sh
---- org.glite.ce.blahp/src/scripts/pbs_cancel.sh	2006-06-26 06:58:04.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/pbs_cancel.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/pbs_cancel.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/pbs_cancel.sh	2010-05-26 16:53:22.000000000 -0500
+@@ -24,7 +24,7 @@
+ #
+ 
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -181,10 +203,11 @@ diff -u -r org.glite.ce.blahp/src/scripts/pbs_cancel.sh org.glite.ce.blahp.patch
  jnr=0
  jc=0
 diff -u -r org.glite.ce.blahp/src/scripts/pbs_hold.sh org.glite.ce.blahp.patched/src/scripts/pbs_hold.sh
---- org.glite.ce.blahp/src/scripts/pbs_hold.sh	2006-06-26 06:58:04.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/pbs_hold.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/pbs_hold.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/pbs_hold.sh	2010-05-26 16:53:40.000000000 -0500
+@@ -24,7 +24,7 @@
+ #
+ 
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -192,10 +215,11 @@ diff -u -r org.glite.ce.blahp/src/scripts/pbs_hold.sh org.glite.ce.blahp.patched
  requested=`echo $1 | sed 's/^.*\///'`
  requestedshort=`expr match "$requested" '\([0-9]*\)'`
 diff -u -r org.glite.ce.blahp/src/scripts/pbs_resume.sh org.glite.ce.blahp.patched/src/scripts/pbs_resume.sh
---- org.glite.ce.blahp/src/scripts/pbs_resume.sh	2006-06-26 06:58:04.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/pbs_resume.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -1,6 +1,6 @@
- #!/bin/bash
+--- org.glite.ce.blahp/src/scripts/pbs_resume.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/pbs_resume.sh	2010-05-26 16:54:16.000000000 -0500
+@@ -23,7 +23,7 @@
+ # limitations under the License.
+ #
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -203,11 +227,59 @@ diff -u -r org.glite.ce.blahp/src/scripts/pbs_resume.sh org.glite.ce.blahp.patch
  requested=`echo $1 | sed 's/^.*\///'`
  ${pbs_binpath}/qrls $requested >/dev/null 2>&1
 diff -u -r org.glite.ce.blahp/src/scripts/pbs_status.sh org.glite.ce.blahp.patched/src/scripts/pbs_status.sh
---- org.glite.ce.blahp/src/scripts/pbs_status.sh	2008-11-03 04:45:45.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/scripts/pbs_status.sh	2009-01-22 15:17:13.000000000 -0600
-@@ -20,7 +20,7 @@
- #  See http://grid.infn.it/grid/license.html for license details.
+--- org.glite.ce.blahp/src/scripts/pbs_status.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/pbs_status.sh	2010-05-26 16:54:31.000000000 -0500
+@@ -31,7 +31,7 @@
+ # limitations under the License.
  #
+ 
+-[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
++[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
+ 
+ if [ "x$job_registry" != "x" ] ; then
+    ${GLITE_LOCATION:-/opt/glite}/bin/blah_job_registry_lkup $@
+diff -u -r org.glite.ce.blahp/src/scripts/sge_cancel.sh org.glite.ce.blahp.patched/src/scripts/sge_cancel.sh
+--- org.glite.ce.blahp/src/scripts/sge_cancel.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/sge_cancel.sh	2010-05-26 16:55:12.000000000 -0500
+@@ -20,7 +20,7 @@
+ #
+ 
+ 
+-[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
++[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
+ 
+ if [ -z "$sge_root" ]; then sge_root="/usr/local/sge/pro"; fi
+ if [ -r "$sge_root/${sge_cell:-default}/common/settings.sh" ]
+diff -u -r org.glite.ce.blahp/src/scripts/sge_hold.sh org.glite.ce.blahp.patched/src/scripts/sge_hold.sh
+--- org.glite.ce.blahp/src/scripts/sge_hold.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/sge_hold.sh	2010-05-26 16:55:31.000000000 -0500
+@@ -20,7 +20,7 @@
+ #
+ 
+ 
+-[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
++[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
+ 
+ if [ -z "$sge_root" ]; then sge_root="/usr/local/sge/pro"; fi
+ if [ -r "$sge_root/${sge_cell:-default}/common/settings.sh" ]
+diff -u -r org.glite.ce.blahp/src/scripts/sge_resume.sh org.glite.ce.blahp.patched/src/scripts/sge_resume.sh
+--- org.glite.ce.blahp/src/scripts/sge_resume.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/sge_resume.sh	2010-05-26 16:55:44.000000000 -0500
+@@ -20,7 +20,7 @@
+ #
+ 
+ 
+-[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
++[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
+ 
+ if [ -z "$sge_root" ]; then sge_root="/usr/local/sge/pro"; fi
+ if [ -r "$sge_root/${sge_cell:-default}/common/settings.sh" ]
+diff -u -r org.glite.ce.blahp/src/scripts/sge_status.sh org.glite.ce.blahp.patched/src/scripts/sge_status.sh
+--- org.glite.ce.blahp/src/scripts/sge_status.sh	2010-03-17 05:48:17.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/sge_status.sh	2010-05-26 16:55:56.000000000 -0500
+@@ -20,7 +20,7 @@
+ #
+ 
  
 -[ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
 +[ -f ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config
@@ -215,9 +287,9 @@ diff -u -r org.glite.ce.blahp/src/scripts/pbs_status.sh org.glite.ce.blahp.patch
  usage_string="Usage: $0 [-w] [-n]"
  
 diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server.c
---- org.glite.ce.blahp/src/server.c	2008-10-17 11:11:42.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/server.c	2009-01-22 15:17:13.000000000 -0600
-@@ -305,7 +305,7 @@
+--- org.glite.ce.blahp/src/server.c	2010-04-28 07:37:32.000000000 -0500
++++ org.glite.ce.blahp.patched/src/server.c	2010-05-26 16:56:58.000000000 -0500
+@@ -313,7 +313,7 @@
  	blah_config_handle = config_read(NULL);
  	if (blah_config_handle == NULL)
  	{
