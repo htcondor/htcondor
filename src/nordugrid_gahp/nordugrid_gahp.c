@@ -313,6 +313,10 @@ void enqueue_results( char *result_line );
    The caller is responsible for freeing the memory returned by this func 
 */ 
 char *escape_spaces( const char *input_line );
+/* Behaves the same as escape_spaces(), but embedded newlines are
+   converted to spaces and trailing spaces are removed.
+ */
+char *escape_err_msg( const char *input_line );
 
 /* all_args_free frees all the memory passed into a command handler */
 void all_args_free( char ** );
@@ -503,6 +507,47 @@ escape_spaces( const char *input_line)
 		i++;
 	}
 	output_line[i] = '\0';
+	// the caller is responsible for freeing this memory, not us
+	return output_line;	
+}
+
+char *
+escape_err_msg( const char *input_line) 
+{
+	int i;
+	const char *temp;
+	char *output_line;
+
+	// first, count up the spaces
+	temp = input_line;
+	for(i = 0; *temp != '\0'; temp++) {
+		if( *temp == ' ' || *temp == '\\' ) {
+			i++;
+		}
+	}
+
+	// get enough space to store it.  	
+	output_line = globus_libc_malloc(strlen(input_line) + i + 200);
+
+	// now, blast across it
+	temp = input_line;
+	for(i = 0; *temp != '\0'; temp++) {
+		if ( *temp == '\r' || *temp == '\n' ) {
+			output_line[i] = ' ';
+			i++;
+		} else {
+			if( *temp == ' ' || *temp == '\\' ) {
+				output_line[i] = '\\'; 
+				i++;
+			}
+			output_line[i] = *temp;
+			i++;
+		}
+	}
+	do {
+		output_line[i] = '\0';
+		i--;
+	} while ( output_line[i] == ' ' );
 	// the caller is responsible for freeing this memory, not us
 	return output_line;	
 }
@@ -893,7 +938,7 @@ nordugrid_submit_cwd2_callback( void *arg,
 							 user_arg->buff );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
@@ -1034,7 +1079,7 @@ void nordugrid_status_get_callback( void *arg,
 							 (char *)user_arg->buff );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
@@ -1112,7 +1157,7 @@ nordugrid_cancel_rmdir_callback( void *arg,
 		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -1266,7 +1311,7 @@ void nordugrid_stage_in_start_file_callback( void *arg,
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -1318,7 +1363,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 		result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to read local file\n" ) );
+											"Failed to read local file" ) );
 		nordugrid_stage_in_put_callback( arg, handle,
 									   globus_error_peek( result ) );
 		return;
@@ -1351,7 +1396,7 @@ void nordugrid_stage_in_put_callback( void *arg,
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to close local file\n" ) );
+											"Failed to close local file" ) );
 			error = globus_error_peek( result );
 		}
 	}
@@ -1506,7 +1551,7 @@ void nordugrid_stage_out2_start_file_callback( void *arg,
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -1550,7 +1595,7 @@ void nordugrid_stage_out2_read_callback( void *arg,
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to write local file\n" ) );
+											"Failed to write local file" ) );
 			nordugrid_stage_out2_get_callback( arg, handle,
 											globus_error_peek( result ) );
 			return;
@@ -1587,7 +1632,7 @@ void nordugrid_stage_out2_get_callback( void *arg,
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to close local file\n" ) );
+											"Failed to close local file" ) );
 			error = globus_error_peek( result );
 		}
 	}
@@ -1759,7 +1804,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 			}
 		}
 		if ( file == NULL ) {
-			char *err_str = escape_spaces( "Failed to parse job usage info" );
+			char *err_str = escape_err_msg( "Failed to parse job usage info" );
 			output = globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
 										 strlen( err_str ) );
 			globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
@@ -1803,7 +1848,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 		if ( sscanf( file, "WallTime=%[0-9.]s\nKernelTime=%[0-9.]s\nUserTime=%[0-9.]s",
 					 wallclock, sys_cpu, user_cpu ) != 3 ) {
 
-			char *err_str = escape_spaces( "Failed to parse job usage info" );
+			char *err_str = escape_err_msg( "Failed to parse job usage info" );
 			output = globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
 										 strlen( err_str ) );
 			globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
@@ -1828,7 +1873,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
@@ -1907,7 +1952,7 @@ nordugrid_ping_exists_callback( void *arg,
 		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -2061,7 +2106,7 @@ handle_nordugrid_ldap_query( char **input_line )
 	if ( !err_str ) {
 		output = my_string_convert( reply );
 	} else {
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -2306,7 +2351,7 @@ void gridftp_transfer_read_callback( void *arg,
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to write local file\n" ) );
+											"Failed to write local file" ) );
 			gridftp_transfer_done_callback( arg, handle,
 											globus_error_peek( result ) );
 			return;
@@ -2343,7 +2388,7 @@ void gridftp_transfer_done_callback( void *arg,
 		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
