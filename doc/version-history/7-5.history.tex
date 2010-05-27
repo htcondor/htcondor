@@ -93,6 +93,12 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   \Condor{off}, \Condor{on}, \Condor{reconfig}, \Condor{reschedule},
   \Condor{restart}, \Condor{set\_shutdown}, and \Condor{vacate}.
 
+%gittrac #1298
+\item Removed the distinction between regular and full reconfiguration
+  of Condor daemons. Now, all reconfigurations are full and require the
+  WRITE authorization level. \Condor{reconfig} accepts but ignores the
+  -full command-line argument.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
