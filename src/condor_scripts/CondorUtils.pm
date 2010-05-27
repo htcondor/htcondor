@@ -125,6 +125,20 @@ sub runcmd {
 	}
 	$t0 = [Time::HiRes::gettimeofday];
 
+	my(%ACCEPTABLE_OPTIONS) = map {$_ => 1} qw(
+		cmnt
+		die_on_failed_expectation
+		emit_output
+		expect_result
+		use_system
+		);
+
+	foreach my $key (keys %{$options}) {
+		if(not exists $ACCEPTABLE_OPTIONS{$key}) {
+			print "WARNING: runcmd called with unknown option $key. It will be ignored.\n";
+		}
+	}
+
 	SetDefaults($options);
 	#foreach my $key (keys %{$options}) {
 		#print "${$options}{$key}\n";
@@ -393,7 +407,6 @@ sub Which
 		return "CP::Which called with no args\n";
 	}
 	my @paths;
-	my $path;
 
 	if( exists $ENV{PATH}) {
 		@paths = split /:/, $ENV{PATH};
