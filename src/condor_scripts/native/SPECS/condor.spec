@@ -95,9 +95,8 @@ mkdir -p -m0755 local/spool
 
 
 #Patching files
-#Use rpm init script, modify permission
-chmod 755 etc/examples/condor.boot.rpm
-chmod 755 etc/examples/condor.sysconfig
+#Use VDT init script, modify permission
+chmod 755 etc/examples/condor.boot.vdt
 
 #Prepare default configuration files
 mkdir -p -m0755 etc/condor
@@ -155,8 +154,7 @@ rm -f $PREFIX/condor_configure $PREFIX/condor_install
 # Relocate main path layout
 move $PREFIX/bin				/usr/bin			
 move $PREFIX/etc/condor				/etc/condor
-move $PREFIX/etc/examples/condor.sysconfig	/etc/sysconfig/condor
-move $PREFIX/etc/examples/condor.boot.rpm	/etc/init.d/condor
+move $PREFIX/etc/examples/condor.boot.vdt	/etc/init.d/condor
 move $PREFIX/include				/usr/include/condor	
 move $PREFIX/lib				/usr/$LIB/condor		
 move $PREFIX/libexec				/usr/libexec/condor	
@@ -209,10 +207,10 @@ mv $FILELIST.new $FILELIST
 %config(noreplace) %_sysconfdir/condor/condor_config
 %config(noreplace) %_sysconfdir/condor/condor_config.local
 
-#Init script and sysconfig
+#Init script
 %defattr(-,root,root,-)
-%config(noreplace) %_sysconfdir/init.d/condor
-%config(noreplace) %_sysconfdir/sysconfig/condor
+%_sysconfdir/init.d/condor
+
 
 #/usr/include/condor (_includedir/ = /usr/include)
 %dir %_includedir/condor/
@@ -265,15 +263,8 @@ VAR=$RPM_INSTALL_PREFIX2
 #Patch config file if relocated
 
 if [ $USR != "/usr" ] ; then
-  perl -p -i -e "s:^CONDOR_CONFIG_VAL=.*:CONDOR_CONFIG_VAL=$USR/bin/condor_config_val:" $ETC/sysconfig/condor 
+  perl -p -i -e "s:^CONDOR_CONFIG_VAL=.*:CONDOR_CONFIG_VAL=$USR/bin/condor_config_val:" $ETC/init.d/condor 
   perl -p -i -e "s:^RELEASE_DIR(\s*)=.*:RELEASE_DIR\$1= $USR:" $ETC/condor/condor_config   
-
-  #If man folder is in the same level as bin and sbin, man can find manpages without setting the manpath
-  #Add softlink to do achieve this
-  old_path=`pwd`
-  cd $USR
-  ln -sf share/man 
-  cd $old_path
 fi
 
 if [ $VAR != "/var" ] ; then
@@ -281,13 +272,12 @@ if [ $VAR != "/var" ] ; then
 fi
 
 if [ $ETC != "/etc" ] ; then
-  perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/sysconfig/condor 
+  perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/init.d/condor 
   perl -p -i -e "s:^LOCAL_CONFIG_FILE(\s*)=\s*/etc(.*):LOCAL_CONFIG_FILE\$1= $ETC\$2:" $ETC/condor/condor_config 
   
-  #Install init script and sysconfig only if this is the first instance
+  #Install init.d script only if this is the first instance
   if [ $1 = 1 ]; then
      cp -f $ETC/init.d/condor /etc/init.d/condor  
-     cp -f $ETC/sysconfig/condor /etc/sysconfig/condor  
   fi
 fi
 
@@ -325,7 +315,6 @@ if [ $1 = 0 ]; then
   ETC=$RPM_INSTALL_PREFIX0
   if [ $ETC != "/etc" ] ; then    
     rm /etc/init.d/condor
-    rm /etc/sysconfig/condor
   fi
 
 fi
