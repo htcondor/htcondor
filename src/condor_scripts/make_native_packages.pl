@@ -2,7 +2,7 @@
 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -32,12 +32,13 @@ use warnings;
 #
 ######################################################################
 
-#Package revision number
+#Main package revision number
 my $revision = 1;
 
 my $make_rpm = "make_native_rpm.sh";
 my $make_deb = "make_native_deb.sh";
 
+# Deb | RPM detect via os name
 my $type;
 
 #Store OS name - used for naming RPM file
@@ -115,8 +116,7 @@ chdir $vers_dir;
 
 my $binaries_dir="$root/public/$vers_dir";
 
-#!system("cp", "-r", "$root/src/condor_scripts/native", ".") or die "Cannot copy native folder from src/condor_scripts/native";
-
+#Create absolute path to script
 $make_rpm = "$root/src/condor_scripts/" . $make_rpm;
 $make_deb = "$root/src/condor_scripts/" . $make_deb;
 
@@ -149,7 +149,7 @@ if ($type eq "RPM") {
 	print "************************************************************\n";
 
 	#Populate build area
-	!system ("cp", "-r", "$root/src/condor_scripts/native/SPECS", ".") or die "Cannot SPEC file";
+	!system ("cp", "-r", "$root/src/condor_scripts/native/SPECS", ".") or die "Cannot copy SPEC file";
 	mkdir "BUILD", 0755;
 	mkdir "RPMS", 0755;
 	mkdir "SOURCES", 0755;
@@ -173,6 +173,58 @@ if ($type eq "RPM") {
 		print "All done. Result package: $rpm_file \n";
 		print "************************************************************\n";
 	}
+
+	############################################################################################
+
+	print "************************************************************\n";
+	print "Making drone RPM \n";
+	print "************************************************************\n";
+	
+	#Build area is already created by previous section	
+	#SPEC will clean the build area by itself 
+
+	chdir $build_area_path;
+
+	#Copy input files
+	!system ("cp", "$root/src/condor_examples/condor.boot.rpm", "SOURCES/") or die "Cannot copy condor.boot.rpm";
+	!system ("cp", "$root/src/condor_examples/condor.sh", "SOURCES/") or die "Cannot copy condor.sh";
+	!system ("cp", "$root/src/condor_examples/condor.csh", "SOURCES/") or die "Cannot copy condor.csh";
+	!system ("cp", "$root/src/condor_examples/condor.sysconfig", "SOURCES/") or die "Cannot copy condor.sysconfig";
+	!system ("cp", "$root/src/condor_examples/condor.sysconfig.drone.patch", "SOURCES/") or die "Cannot copy condor.sysconfig.drone.patch";
+	!system ("cp", "$root/src/condor_examples/master_wrapper", "SOURCES/") or die "Cannot copy master_wrapper";
+	# SPEC file is already copied in as part of last RPM build
+
+	print "Updating SPEC file\n";
+	chomp(my $rpm_date = `date +"%a %b %d %Y"`);
+
+	#Replace VERSION and SOURCE file in original spec file
+	$tarfile =~ /condor-(.*?)-.*/;
+	my $condor_ver = $1;
+
+	`perl -p -i -e "s|_VERSION_|$condor_ver|g; \
+					s|_REVISION_|$revision|g; \
+					s|_DATE_|$rpm_date|g;" $build_area_path/SPECS/condor_drone.spec`;
+
+
+	print "Building RPM\n";
+	`$rpm_cmd --define="_topdir $build_area_path" -bb $build_area_path/SPECS/condor_drone.spec`;
+
+	$rpm_file = glob "$build_area_path/RPMS/noarch/condor*";
+	
+	if (!defined ($rpm_file)) {
+		die "Drone RPM package not found";
+	}
+	
+	#Construct os-specific rpm name
+	$rpm_file =~ /.*(condor-drone.*?)(\.noarch.*)/;
+	my $rpm_name = "$1.$os$2";
+
+	print "Renamed RPM: $rpm_name\n";
+	!system ("mv", "$rpm_file", "$binaries_dir/$rpm_name") or die "Cannot move package to public folder";
+   
+	print "************************************************************\n";
+	print "All done. Result package: $rpm_name \n";
+	print "************************************************************\n";
 
 } else {
 
@@ -205,6 +257,8 @@ if ($type eq "RPM") {
 	
 }
 
-`rm -rf $build_area_path`;
+#Remove build area
+`rm -rf $binaries_dir/native`;
+
 exit 0;
 
