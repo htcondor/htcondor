@@ -23,7 +23,7 @@ CONDOR_CONFIG_VAL="/usr/bin/condor_config_val"
 # and deletable.  If left blank, defaults to $RUN/master.pid,
 # where $RUN is the RUN directory in your CONDOR_CONFIG, will be
 # used.
-PIDFILE="/var/run/condor.pid"
+PIDFILE=""
 
 ## Description: Number of seconds to wait for the condor_master to exit.
 ## Type:        integer
@@ -136,3 +136,5 @@ CONDOR_RECONFIG=""
 # to the matching setting in the Condor configuration file
 # defaults to $CONDOR_SBIN/condor_master
 CONDOR_MASTER=""
+
+
