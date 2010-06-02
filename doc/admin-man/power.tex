@@ -66,9 +66,10 @@ an auxiliary macro called \MacroNI{ShouldHibernate}.
 
 \footnotesize
 \begin{verbatim}
-ShouldHibernate = ((KeyboardIdle > $(StartIdleTime)) \
-                  && $(CPUIdle) \
-                  && ($(StateTimer) > (2 * $(HOUR)))
+TimeToWait 	= (2 * $(HOUR))
+ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
+                    && $(CPUIdle) \
+                    && ($(StateTimer) > $(TimeToWait)) )
 \end{verbatim}
 \normalsize
 
@@ -86,7 +87,8 @@ and remains in its current state otherwise is
 
 \footnotesize
 \begin{verbatim}
-HIBERNATE = ifThenElse($(ShouldHibernate), "RAM", "NONE" )
+HibernateState 	= "RAM"
+HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )
 \end{verbatim}
 \normalsize
 
