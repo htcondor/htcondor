@@ -46,6 +46,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
 bool test_EvalStringCharStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
 bool test_EvalStringCharStarStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
 bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
+bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
 
 bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose);
 bool test_EscapeStringValue(compat_classad::ClassAd *c1, int verbose);
@@ -646,6 +647,79 @@ bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassA
     passedTest[1] = c1->EvalString((*itr).first.c_str(), c2, tmpValue);
     
     if(strcmp(tmpValue.Value(), "hello"))
+    {
+        passedTest[1] = false;
+    }
+
+    if(verbose)
+        printf("EvalStringMyString w/ real attr, c2 target %s.\n", 
+            passedTest[1] ? "passed" : "failed");
+
+    esRetVal[0] = c1->EvalString("fred", c1, tmpValue);
+    
+    if(esRetVal[0] == 0)
+    {
+        passedTest[2] = true;
+    }
+
+    if(verbose)
+        printf("EvalStringMyString w/ fake attr, this target %s.\n", 
+            passedTest[2] ? "passed" : "failed");
+
+    esRetVal[1] = c1->EvalString("fred", c2, tmpValue);
+    
+    //it should fail
+    if(esRetVal[1] == 0)
+    {
+        passedTest[3] = true;
+    }
+
+    if(verbose)
+        printf("EvalStringMyString w/ fake attr, c2 target %s.\n", 
+            passedTest[3] ? "passed" : "failed");
+
+
+    passed = passedTest[0] && passedTest[1] && passedTest[2] &&
+                passedTest[3];
+
+    return passed;
+}
+//}}}
+
+//{{{test_EvalStringStdString
+bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+{
+    bool passed = false;
+    bool passedTest[4];
+    int esRetVal[2]; //evalstring return value
+
+    for(int i = 0; i < 4; i++)
+    {
+        passedTest[i] = false;
+    }
+
+    classad::AttrList::iterator itr;
+    itr = c1->begin();
+
+	std::string tmpValue; 
+
+    passedTest[0] = c1->EvalString((*itr).first.c_str(), c1, tmpValue);
+
+    //if it's not "hello", something bad happened.
+    if(strcmp(tmpValue.c_str(), "hello"))
+    {
+        passedTest[0] = false;
+    }
+
+    if(verbose)
+        printf("EvalStringMyString w/ real attr, this target %s.\n", 
+            passedTest[0] ? "passed" : "failed");
+
+    tmpValue = "";
+
+    passedTest[1] = c1->EvalString((*itr).first.c_str(), c2, tmpValue);
+    
+    if(strcmp(tmpValue.c_str(), "hello"))
     {
         passedTest[1] = false;
     }
@@ -1356,7 +1430,7 @@ void setAllFalse(bool* b)
 void setUpAndRun(int verbose)
 {
 
-    int numTests = 11;
+    int numTests = 12;
     bool passedTest[numTests];
 
 
@@ -1412,26 +1486,32 @@ void setUpAndRun(int verbose)
     printf("-------------\n");
 
 
+    printf("Testing EvalStringStdString...\n");
+    passedTest[6] = test_EvalStringStdString(compC4, compC2, verbose);
+    printf("EvalStringStdString %s.\n", passedTest[7] ? "passed" : "failed");
+    printf("-------------\n");
+
+
     printf("Testing NextDirtyExpr...\n");
     passedTest[7] = test_NextDirtyExpr(compC4, verbose);
-    printf("NextDirtyExpr %s.\n", passedTest[7] ? "passed" : "failed");
+    printf("NextDirtyExpr %s.\n", passedTest[8] ? "passed" : "failed");
     printf("-------------\n");
 
 
     printf("Testing EscapeStringValue...\n");
     passedTest[8] = test_EscapeStringValue(compC4, verbose);
-    printf("Escape String Value %s.\n", passedTest[8] ? "passed" : "failed");
+    printf("Escape String Value %s.\n", passedTest[9] ? "passed" : "failed");
     printf("-------------\n");
 
 
     printf("Testing EvalTree...\n");
     passedTest[9] = test_EvalTree(compC4,compC2, verbose);
-    printf("EvalTree %s.\n", passedTest[9] ? "passed" : "failed");
+    printf("EvalTree %s.\n", passedTest[10] ? "passed" : "failed");
     printf("-------------\n");
 
     printf("Testing GetInternalReferences...\n");
     passedTest[10] = test_GIR(verbose);
-    printf("GIR %s.\n", passedTest[10] ? "passed" : "failed");
+    printf("GIR %s.\n", passedTest[11] ? "passed" : "failed");
     printf("-------------\n");
 
     bool allPassed = passedTest[0];

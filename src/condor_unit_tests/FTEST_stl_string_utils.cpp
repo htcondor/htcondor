@@ -37,6 +37,20 @@ bool test_sprintf_cat_string();
 bool test_sprintf_cat_MyString();
 bool test_comparison_ops_lhs_string();
 bool test_comparison_ops_lhs_MyString();
+bool test_lower_case_empty(void);
+bool test_lower_case_non_empty(void);
+bool test_upper_case_empty(void);
+bool test_upper_case_non_empty(void);
+bool test_chomp_new_line_end(void);
+bool test_chomp_crlf_end(void);
+bool test_chomp_new_line_beginning(void);
+bool test_chomp_return_false(void);
+bool test_chomp_return_true(void);
+bool test_trim_beginning_and_end(void);
+bool test_trim_end(void);
+bool test_trim_none(void);
+bool test_trim_beginning(void);
+bool test_trim_empty(void);
 
 bool FTEST_stl_string_utils(void) {
 		// beginning junk for getPortFromAddr()
@@ -51,6 +65,20 @@ bool FTEST_stl_string_utils(void) {
 	driver.register_function(test_sprintf_MyString);
 	driver.register_function(test_sprintf_cat_string);
 	driver.register_function(test_sprintf_cat_MyString);
+	driver.register_function(test_lower_case_empty);
+	driver.register_function(test_lower_case_non_empty);
+	driver.register_function(test_upper_case_empty);
+	driver.register_function(test_upper_case_non_empty);
+	driver.register_function(test_chomp_new_line_end);
+	driver.register_function(test_chomp_crlf_end);
+	driver.register_function(test_chomp_new_line_beginning);
+	driver.register_function(test_chomp_return_false);
+	driver.register_function(test_chomp_return_true);
+	driver.register_function(test_trim_beginning_and_end);
+	driver.register_function(test_trim_end);
+	driver.register_function(test_trim_none);
+	driver.register_function(test_trim_beginning);
+	driver.register_function(test_trim_empty);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();
@@ -433,6 +461,236 @@ bool test_comparison_ops_lhs_MyString() {
 		return false;        
     }
 
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_lower_case_empty(void) {
+	e.emit_test("Test lower_case() on an empty std::string.");
+	std::string a;
+	lower_case(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_lower_case_non_empty(void) {
+	e.emit_test("Test lower_case() on a non-empty std::string.");
+	std::string a("lower UPPER");
+	lower_case(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "lower upper");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "lower upper") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_upper_case_empty(void) {
+	e.emit_test("Test upper_case() on an empty std::string.");
+	std::string a;
+	upper_case(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_upper_case_non_empty(void) {
+	e.emit_test("Test upper_case() on a non-empty std::string.");
+	std::string a("lower UPPER");
+	upper_case(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "LOWER UPPER");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "LOWER UPPER") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_chomp_new_line_end(void) {
+	e.emit_test("Does chomp() remove the newLine if its the last character in "
+		"the std::string?");
+	std::string a("stuff\n");
+	chomp(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "stuff");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "stuff") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_chomp_crlf_end(void) {
+	e.emit_test("Does chomp() remove CR and LF if they are the last characters"
+		" in the std::string?");
+	std::string a("stuff\r\n");
+	chomp(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "stuff");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "stuff") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_chomp_new_line_beginning(void) {
+	e.emit_test("Does chomp() do nothing if the newLine if it's not the last "
+		"character in the std::string?");
+	std::string a("stuff\nmore stuff");
+	chomp(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "stuff\nmore stuff");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "stuff\nmore stuff") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_chomp_return_false(void) {
+	e.emit_test("Does chomp() return false if the std::string doesn't have a "
+		"newLine?");
+	std::string a("stuff");
+	bool result = chomp(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%d", 0);
+	e.emit_output_actual_header();
+	e.emit_retval("%d", result);
+	if(result) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_chomp_return_true(void) {
+	e.emit_test("Does chomp() return true if the std::string has a newLine at the "
+		"end?");
+	std::string a("stuff\n");
+	bool result = chomp(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%d", 1);
+	e.emit_output_actual_header();
+	e.emit_retval("%d", result);
+	if(!result) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_trim_beginning_and_end(void) {
+	e.emit_test("Test trim on a std::string with white space at the beginning and "
+		"end.");
+	std::string a("  Miguel   ");
+	trim(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "Miguel");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "Miguel") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_trim_end(void) {
+	e.emit_test("Test trim() on a std::string with white space at the end.");
+	std::string a("Hinault   ");
+	trim(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "Hinault");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "Hinault") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_trim_none(void) {
+	e.emit_test("Test trim() on a std::string with no white space.");
+	std::string a("Indurain");
+	trim(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "Indurain");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "Indurain") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_trim_beginning(void) {
+	e.emit_test("Test trim() on a std::string with white space at the beginning.");
+	std::string a("   Merckx");
+	trim(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "Merckx");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "Merckx") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_trim_empty(void) {
+	e.emit_test("Test trim() on an empty std::string.");
+	std::string a;
+	trim(a);
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
 	e.emit_result_success(__LINE__);
 	return true;
 }

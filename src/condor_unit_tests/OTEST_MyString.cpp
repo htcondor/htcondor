@@ -33,6 +33,7 @@
 static bool default_constructor(void);
 static bool int_constructor(void);
 static bool char_constructor(void);
+static bool stdstring_constructor(void);
 static bool copy_constructor_value_check(void);
 static bool copy_constructor_pointer_check(void);
 static bool length_0(void);
@@ -97,6 +98,10 @@ static bool concatenation_string_non_empty_null(void);
 static bool concatenation_string_empty_empty(void);
 static bool concatenation_string_empty_non_empty(void);
 static bool concatenation_string_non_empty_non_empty(void);
+static bool concatenation_std_string_non_empty_empty(void);
+static bool concatenation_std_string_empty_empty(void);
+static bool concatenation_std_string_empty_non_empty(void);
+static bool concatenation_std_string_non_empty_non_empty(void);
 static bool concatenation_char_empty(void);
 static bool concatenation_char_non_empty(void);
 static bool concatenation_char_null(void);
@@ -170,6 +175,7 @@ static bool lower_case_non_empty(void);
 static bool upper_case_empty(void);
 static bool upper_case_non_empty(void);
 static bool chomp_new_line_end(void);
+static bool chomp_crlf_end(void);
 static bool chomp_new_line_beginning(void);
 static bool chomp_return_false(void);
 static bool chomp_return_true(void);
@@ -249,6 +255,7 @@ bool OTEST_MyString() {
 	driver.register_function(default_constructor);
 	driver.register_function(int_constructor);
 	driver.register_function(char_constructor);
+	driver.register_function(stdstring_constructor);
 	driver.register_function(copy_constructor_value_check);
 	driver.register_function(copy_constructor_pointer_check);
 	driver.register_function(length_0);
@@ -313,6 +320,10 @@ bool OTEST_MyString() {
 	driver.register_function(concatenation_string_empty_empty);
 	driver.register_function(concatenation_string_empty_non_empty);
 	driver.register_function(concatenation_string_non_empty_non_empty);
+	driver.register_function(concatenation_std_string_non_empty_empty);
+	driver.register_function(concatenation_std_string_empty_empty);
+	driver.register_function(concatenation_std_string_empty_non_empty);
+	driver.register_function(concatenation_std_string_non_empty_non_empty);
 	driver.register_function(concatenation_char_empty);
 	driver.register_function(concatenation_char_non_empty);
 	driver.register_function(concatenation_char_null);
@@ -386,6 +397,7 @@ bool OTEST_MyString() {
 	driver.register_function(upper_case_empty);
 	driver.register_function(upper_case_non_empty);
 	driver.register_function(chomp_new_line_end);
+	driver.register_function(chomp_crlf_end);
 	driver.register_function(chomp_new_line_beginning);
 	driver.register_function(chomp_return_false);
 	driver.register_function(chomp_return_true);
@@ -500,6 +512,24 @@ static bool char_constructor(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", s.Value());
 	if(strcmp(s.Value(), param) != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+static bool stdstring_constructor(void) {
+	e.emit_test("Test constructor to make a copy of a std::string");
+	std::string param = "foo";
+	MyString s(param);
+	e.emit_input_header();
+	e.emit_param("STRING", "%s", param.c_str());
+	e.emit_output_expected_header();
+	e.emit_retval("%s", param.c_str());
+	e.emit_output_actual_header();
+	e.emit_retval("%s", s.Value());
+	if(strcmp(s.Value(), param.c_str()) != MATCH) {
 		e.emit_result_failure(__LINE__);
 		return false;
 	}
@@ -1740,6 +1770,86 @@ static bool concatenation_string_non_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "blahbaz") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+static bool concatenation_std_string_non_empty_empty(void) {
+	e.emit_test("Test concatenating a non-empty MyString with an empty "
+		"std::string.");
+	MyString a("foo");
+	std::string b;
+	a += b;
+	e.emit_input_header();
+	e.emit_param("MyString", "%s", b.c_str());
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "foo");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.Value());
+	if(strcmp(a.Value(), "foo") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+static bool concatenation_std_string_empty_empty(void) {
+	e.emit_test("Test concatenating a empty MyString with an empty "
+		"std::string.");
+	MyString a;
+	std::string b;
+	a += b;
+	e.emit_input_header();
+	e.emit_param("MyString", "%s", b.c_str());
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.Value());
+	if(strcmp(a.Value(), "") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+static bool concatenation_std_string_empty_non_empty(void) {
+	e.emit_test("Test concatenating a empty MyString with a non-empty "
+		"std::string.");
+	MyString a;
+	std::string b("foo");
+	a += b;
+	e.emit_input_header();
+	e.emit_param("MyString", "%s", b.c_str());
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "foo");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.Value());
+	if(strcmp(a.Value(), "foo") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+static bool concatenation_std_string_non_empty_non_empty(void) {
+	e.emit_test("Test concatenating a non-empty MyString with a non-empty"
+		" std::string.");
+	MyString a("foo");
+	std::string b("bar");
+	a += b;
+	e.emit_input_header();
+	e.emit_param("MyString", "%s", b.c_str());
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "foobar");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.Value());
+	if(strcmp(a.Value(), "foobar") != MATCH) {
 		e.emit_result_failure(__LINE__);
 		return false;
 	}
@@ -3171,6 +3281,23 @@ static bool chomp_new_line_end(void) {
 	e.emit_test("Does chomp() remove the newLine if its the last character in "
 		"the MyString?");
 	MyString a("stuff\n");
+	a.chomp();
+	e.emit_output_expected_header();
+	e.emit_retval("%s", "stuff");
+	e.emit_output_actual_header();
+	e.emit_retval("%s", a.Value());
+	if(strcmp(a.Value(), "stuff") != MATCH) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+static bool chomp_crlf_end(void) {
+	e.emit_test("Does chomp() remove CR and LF if they are the last characters"
+		" in the MyString?");
+	MyString a("stuff\r\n");
 	a.chomp();
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "stuff");
