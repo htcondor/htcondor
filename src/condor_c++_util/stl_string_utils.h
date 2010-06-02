@@ -59,4 +59,9 @@ bool operator>=(const std::string& L, const MyString& R);
 void assign(std::string& dst, const MyString& src);
 void assign(MyString& dst, const std::string& src);
 
+bool chomp(std::string &str);
+void trim(std::string &str);
+void lower_case(std::string &str);
+void upper_case(std::string &str);
+
 #endif // _stl_string_utils_h_
