@@ -940,6 +940,15 @@ LookupString( const char *name, MyString &value ) const
 } 
 
 int ClassAd::
+LookupString( const char *name, std::string &value ) const 
+{
+	if( !EvaluateAttrString( string( name ), value ) ) {
+		return 0;
+	}
+	return 1;
+} 
+
+int ClassAd::
 LookupInteger( const char *name, int &value ) const 
 {
 	bool    boolVal;
@@ -1111,6 +1120,18 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 
 int ClassAd::
 EvalString(const char *name, classad::ClassAd *target, MyString & value)
+{
+    char * pvalue = NULL;
+    //this one makes sure length is good
+    int ret = EvalString(name, target, &pvalue); 
+    if(ret == 0) { return ret; }
+    value = pvalue;
+    free(pvalue);
+    return ret;
+}
+
+int ClassAd::
+EvalString(const char *name, classad::ClassAd *target, std::string & value)
 {
     char * pvalue = NULL;
     //this one makes sure length is good
@@ -1434,6 +1455,15 @@ sPrint( MyString &output, StringList *attr_white_list )
 	}
 
 	return TRUE;
+}
+
+int ClassAd::
+sPrint( std::string &output, StringList *attr_white_list )
+{
+	MyString myout = output;
+	int rc = sPrint( myout, attr_white_list );
+	output = myout;
+	return rc;
 }
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
@@ -1966,6 +1996,17 @@ sPrintAsXML(MyString &output, StringList *attr_white_list)
 	unparser.SetUseCompactSpacing(false);
 	unparser.Unparse(this, xml, attr_white_list);
 	output += xml;
+	return TRUE;
+}
+
+int ClassAd::
+sPrintAsXML(std::string &output, StringList *attr_white_list)
+{
+	ClassAdXMLUnparser  unparser;
+	MyString            xml;
+	unparser.SetUseCompactSpacing(false);
+	unparser.Unparse(this, xml, attr_white_list);
+	output += xml.Value();
 	return TRUE;
 }
 ///////////// end XML functions /////////

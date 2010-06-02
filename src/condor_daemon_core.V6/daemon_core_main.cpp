@@ -2198,7 +2198,7 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Command( DC_RECONFIG_FULL, "DC_RECONFIG_FULL",
 								  (CommandHandler)handle_reconfig,
-								  "handle_reconfig()", 0, ADMINISTRATOR );
+								  "handle_reconfig()", 0, WRITE );
 
 	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
 								  (CommandHandler)handle_config_val,

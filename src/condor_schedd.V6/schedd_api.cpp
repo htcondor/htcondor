@@ -62,7 +62,9 @@ Job::initialize(CondorError &errstack)
 	char * Spool = param("SPOOL");
 	ASSERT(Spool);
 
-	spoolDirectory = gen_ckpt_name(Spool, id.cluster, id.proc, 0);
+	char *ckpt_name = gen_ckpt_name(Spool, id.cluster, id.proc, 0);
+	spoolDirectory = ckpt_name;
+	free(ckpt_name); ckpt_name = NULL;
 
 	if (Spool) {
 		free(Spool);

@@ -350,9 +350,6 @@ class WriteUserLog
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 };
 
-// For backward compatibility, define UserLog
-typedef WriteUserLog UserLog;
-
 #endif /* __cplusplus */
 
 #endif /* _CONDOR_USER_LOG_CPP_H */

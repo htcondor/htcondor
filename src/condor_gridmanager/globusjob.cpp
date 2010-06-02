@@ -2920,6 +2920,7 @@ MyString *GlobusJob::buildSubmitRSL()
 				// we can access an executable in the spool dir
 			executable_path = source;
 		}
+		free(source); source = NULL;
 	}
 	if ( executable_path.IsEmpty() ) {
 			// didn't find any executable in the spool directory,

@@ -32,11 +32,7 @@
 extern "C" {
 #endif
 
-#ifndef __CEXTRACT__
-#if defined(HAS_PROTO) || defined(__STDC__) || defined(__cplusplus) || !defined(Solaris)
-
 int blankline ( char *str );
-char * gen_exec_name ( int cluster, int proc, int subproc );
 
 char * getline ( FILE *fp );
 
@@ -85,58 +81,6 @@ const char * substr ( char *string, char *pattern );
 void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 int sysapi_swap_space ( void );
 int sysapi_disk_space(const char *filename);
-
-#else /* HAS_PROTO */
-
-int blankline ();
-char * gen_exec_name ();
-
-char* getExecPath();
-
-int hash ();
-char * getline ();
-
-
-void schedule_event ();
-void event_mgr ();
-void StartRecording ();
-void CompleteRecording ();
-void ProcessLogging ();
-void detach ();
-int do_connect ();
-int udp_connect ();
-void dprintf ();
-FILE * debug_lock ();
-void debug_unlock ();
-void _EXCEPT_ ();
-int getdtablesize ();
-int getmnt ();
-/* int getpagesize (); */
-char * getwd ();
-char * ltrunc ();
-int set_machine_status ();
-int get_machine_status ();
-int mkargv ();
-int display_proc_short ();
-char * format_time ();
-int display_proc_long ();
-int display_v2_proc_long ();
-#ifndef HPUX9
-int setlinebuf ();
-#endif
-int display_status_line ();
-char * shorten ();
-int free_status_line ();
-int print_header ();
-char * format_seconds ();
-char * strdup ();
-char * substr ();
-int update_rusage ();
-int sysapi_swap_space ();
-int sysapi_disk_space();
-
-#endif /* HAS_PROTO */
-#endif /* __CEXTRACT__ */
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */

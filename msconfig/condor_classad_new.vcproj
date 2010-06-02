@@ -145,6 +145,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\classad\common.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\classad\classad\debug.h"
 			>
 		</File>

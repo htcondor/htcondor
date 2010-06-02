@@ -41,7 +41,7 @@ command_handler( Service*, int cmd, Stream* stream )
 	int rval = FALSE;
 	Resource* rip;
 	if( ! (rip = stream_to_rip(stream)) ) {
-		dprintf(D_ALWAYS, "Error: problem finding resource for %d (%s)", cmd, getCommandString(cmd));
+		dprintf(D_ALWAYS, "Error: problem finding resource for %d (%s)\n", cmd, getCommandString(cmd));
 		return FALSE;
 	}
 	State s = rip->state();

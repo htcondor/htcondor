@@ -210,6 +210,13 @@ XInterface::~XInterface()
 	if(_display_name != NULL) {
 	  free(_display_name);
 	}
+
+	if ( logged_on_users ) {
+		for (int foo =0; foo <= logged_on_users->getlast(); foo++) {
+			delete[] (*logged_on_users)[foo];
+		}
+		delete logged_on_users;
+	}
 }
 
 bool

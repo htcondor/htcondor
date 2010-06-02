@@ -122,7 +122,7 @@ int		ExtraLineNo;
 int		GotQueueCommand;
 SandboxTransferMethod	STMethod = STM_USE_SCHEDD_ONLY;
 
-MyString	IckptName;	/* Pathname of spooled initial ckpt file */
+char *	IckptName;	/* Pathname of spooled initial ckpt file */
 
 unsigned int TransferInputSize;	/* total size of files transfered to exec machine */
 const char	*MyName;
@@ -1577,16 +1577,18 @@ SetExecutable()
 				ret = SendSpoolFileIfNeeded(tmp_ad);
 			}
 			else {
-				ret = SendSpoolFile(IckptName.Value());
+				ret = SendSpoolFile(IckptName);
 			}
 
 			if (ret < 0) {
 				fprintf( stderr,
 				         "\nERROR: Request to transfer executable %s failed\n",
-				         IckptName.Value() );
+				         IckptName );
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 			}
+
+			free(IckptName); IckptName = NULL;
 
 			// ret will be 0 if the SchedD gave us the go-ahead to send
 			// the file. if it's not, the SchedD is using ickpt sharing

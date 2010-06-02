@@ -1741,7 +1741,7 @@ format_globusHostAndJM( char *, AttrList *ad )
 
 			// copy the hostname
 			p = strcspn( resource_name, ":/" );
-			if ( p > (int) sizeof(host) )
+			if ( p >= (int) sizeof(host) )
 				p = sizeof(host) - 1;
 			strncpy( host, resource_name, p );
 			host[p] = '\0';

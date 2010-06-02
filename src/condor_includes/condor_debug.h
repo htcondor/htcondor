@@ -21,10 +21,6 @@
 #ifndef CONDOR_DEBUG_H
 #define CONDOR_DEBUG_H
 
-#if !defined(__STDC__) && !defined(__cplusplus)
-#define const
-#endif
-
 /*
 **	Definitions for flags to pass to dprintf
 **  Note: this is a little confusing, since the flags specify both

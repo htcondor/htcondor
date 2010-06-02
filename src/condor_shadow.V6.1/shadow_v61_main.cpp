@@ -206,7 +206,7 @@ readJobAd( void )
         }
     }
 	if( ! read_something ) {
-		EXCEPT( "ERROR reading ClassAd from (%s): file is empty",
+		EXCEPT( "reading ClassAd from (%s): file is empty",
 				is_stdin ? "STDIN" : job_ad_file );
 	}
 	if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {

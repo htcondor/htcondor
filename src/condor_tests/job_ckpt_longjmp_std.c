@@ -150,13 +150,7 @@ func()
 #define JMP_BUF_SP(env) (((long *)(env))[JMP_BUF_SP_INDEX])
 
 
-#if defined(SUNOS41)
-#   define SETJMP _setjmp
-#   define LONGJMP _longjmp
-#	define StackGrowsDown TRUE
-#	define JMP_BUF_SP_INDEX 2
-
-#elif defined(SOLARIS2) || defined(Solaris)
+#if defined(SOLARIS2) || defined(Solaris)
 #   define SETJMP setjmp
 #   define LONGJMP longjmp
 #	define StackGrowsDown TRUE

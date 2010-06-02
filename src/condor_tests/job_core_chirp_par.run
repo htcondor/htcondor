@@ -124,7 +124,7 @@ my $result = system("./job_core_chirp_par.pl $mysubmitnm");
 CondorTest::debug("Result of chirp paarallel  job is  $result\n",$debuglevel);
 
 #fails due to directory matching pattern 
-runcmd("cp *job_core_chirp_par* $mysaveme", {expect_value=>\&ANY});
+runcmd("cp *job_core_chirp_par* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {

@@ -57,7 +57,7 @@ bool OTEST_StringList(void);
 int main() {
 	e.init();
 		// set up the function driver
-	FunctionDriver driver(50);
+	FunctionDriver driver;
 	driver.register_function(FTEST_host_in_domain);
 	driver.register_function(FTEST_getHostFromAddr);
 	driver.register_function(FTEST_getPortFromAddr);

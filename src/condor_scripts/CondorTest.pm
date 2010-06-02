@@ -120,6 +120,10 @@ BEGIN
 
 END
 {
+    # Store the old exit status so we can be sure to return it in the end
+    # as calls to `backticks` or system() can change it.
+    my $old_exit_status = $?;
+
     # When a forked child exits, do not do CondorTest cleanup.
     # Only do the cleanup from the main process.
     return if $CondorTestPid != $$;
@@ -127,8 +131,9 @@ END
     if ( !Cleanup() ) {
 	# Set exit status to non-zero
 	$? = 1;
+    } else {
+	$? = $old_exit_status;
     }
-
 }
 
 sub Abort()

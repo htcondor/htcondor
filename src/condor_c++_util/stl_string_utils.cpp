@@ -140,3 +140,61 @@ int sprintf_cat(MyString& s, const char* format, ...) {
     s += t.c_str();
     return r;
 }
+
+bool chomp(std::string &str)
+{
+	bool chomped = false;
+	if( str.empty() ) {
+		return chomped;
+	}
+	if( str[str.length()-1] == '\n' ) {
+		str.erase(str.length()-1);
+		chomped = true;
+		if( ( str.length() > 0 ) && ( str[str.length()-1] == '\r' ) ) {
+			str.erase(str.length()-1);
+		}
+	}
+	return chomped;
+}
+
+void trim( std::string &str )
+{
+	if( str.empty() ) {
+		return;
+	}
+	int		begin = 0;
+	while ( begin < str.length() && isspace(str[begin]) ) { ++begin; }
+
+	int		end = str.length() - 1;
+	while ( end >= 0 && isspace(str[end]) ) { --end; }
+
+	if ( begin != 0 || end != str.length() - 1 ) {
+		str = str.substr(begin, (end - begin) + 1);
+	}
+}
+
+#ifndef _tolower
+#define _tolower(c) ((c) + 'a' - 'A')
+#endif
+
+#ifndef _toupper
+#define _toupper(c) ((c) + 'A' - 'a')
+#endif
+
+void upper_case( std::string &str )
+{
+	for ( int i = 0; str[i]; i++ ) {
+		if ( str[i] >= 'a' && str[i] <= 'z' ) {
+			str[i] = _toupper( str[i] );
+		}
+	}
+}
+
+void lower_case( std::string &str )
+{
+	for ( int i = 0; str[i]; i++ ) {
+		if ( str[i] >= 'A' && str[i] <= 'Z' ) {
+			str[i] = _tolower( str[i] );
+		}
+	}
+}

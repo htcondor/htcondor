@@ -29,10 +29,7 @@
 #include "scheduler.h"
 #include "basename.h"
 #include "nullfile.h"
-
-extern "C" {
-	char* gen_ckpt_name(char*, int, int, int);
-}
+#include "condor_ckpt_name.h"
 
 /* In this service function, the client tells the schedd a bunch of jobs
 	it would like to perform a transfer for into/out of a sandbox. The
@@ -797,7 +794,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		jad = GetJobAd(cluster,proc);
 
 		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = strdup( gen_ckpt_name(mySpool,cluster,proc,0) );
+		SpoolSpace = gen_ckpt_name(mySpool,cluster,proc,0);
 		ASSERT(SpoolSpace);
 
 		BeginTransaction();
@@ -1360,7 +1357,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			continue;
 		}
 		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = strdup( gen_ckpt_name(Spool,cluster,proc,0) );
+		SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
 		ASSERT(SpoolSpace);
 
 		BeginTransaction();

@@ -117,7 +117,7 @@ char *strcpy();
 #endif
 
 #include "write_user_log.h"
-UserLog ULog;
+WriteUserLog ULog;
 
 char * My_Filesystem_Domain;
 char * My_UID_Domain;
@@ -1290,10 +1290,12 @@ start_job( char *cluster_id, char *proc_id )
 		tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
 		snprintf( CkptName, MAXPATHLEN, "%s", tmp );
 		sprintf( TmpCkptName, "%s.tmp", CkptName );
+		free(tmp); tmp = NULL;
 	}
 
 	tmp = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
 	snprintf( ICkptName, MAXPATHLEN, "%s", tmp );
+	free(tmp); tmp = NULL;
 
 	strcpy( RCkptName, CkptName );
 }
@@ -1606,7 +1608,8 @@ void RemoveNewShadowDroppings(char *cluster, char *proc)
 	strcpy(names[0], ckpt_name);
 	strcpy(names[1], ckpt_name);
 	strcat(names[1], ".tmp");
-	
+	free(ckpt_name); ckpt_name = NULL;
+
 	for (j = 0; j < 2; j++)
 	{
 		if (stat(names[j], &buf) == 0) {

@@ -4,10 +4,10 @@ set -e
 
 . $EXTERNALS_CONFIG
 
-# The source tarball was checked out on January 20, 2009 with the
+# The source tarball was checked out on May 26, 2010 with the
 # following command:
 #   cvs -d :pserver:anonymous@jra1mw.cvs.cern.ch:/cvs/jra1mw co -r \
-#      glite-ce-blahp_R_1_12_2_0 org.glite.ce.blahp
+#      glite-ce-blahp_R_1_16_0_0 org.glite.ce.blahp
 
 popt_install=/usr
 if [ ! -r /usr/lib/libpopt.a ]
@@ -29,12 +29,6 @@ patch -i classad.patch -p0
 
 # mtrace() isn't available on all platforms
 patch -i mtrace.patch -p0
-
-# Fix a double-free bug
-patch -i env_free.patch -p0
-
-# Fix a bad free of regbuf
-patch -i regbuf.patch -p0
 
 # Disable job registry, which requires extra configuration
 patch -i registry.patch -p0

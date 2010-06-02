@@ -83,12 +83,14 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	parallelMasterResource = rr;
 
 	char buffer[1024];
-	sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
+	char *dir = gen_ckpt_name(0, getCluster(), 0, 0);
+	snprintf (buffer, 1024, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
 		param("SPOOL"), DIR_DELIM_CHAR, 
-		gen_ckpt_name(0, getCluster(), 0, 0));
+		dir);
+	free(dir); dir = NULL;
 	job_ad->Insert(buffer);
 
-    sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
+    snprintf( buf, 256, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
     if( !job_ad->Insert(buf) ) {
         dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
         shutDown( JOB_NOT_STARTED );
@@ -96,7 +98,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 
 	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
-	sprintf( buf, "%s = 0", ATTR_NODE );
+	snprintf( buf, 256, "%s = 0", ATTR_NODE );
 	job_ad->InsertOrUpdate( buf );
     rr->setJobAd( job_ad );
 
@@ -293,16 +295,18 @@ ParallelShadow::getResources( void )
 
 			replaceNode ( job_ad, nodenum );
 			rr->setNode( nodenum );
-			sprintf( buf, "%s = %d", ATTR_NODE, nodenum );
+			snprintf( buf, 128, "%s = %d", ATTR_NODE, nodenum );
 			job_ad->InsertOrUpdate( buf );
-			sprintf( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
+			snprintf( buf, 128, "%s = \"%s\"", ATTR_MY_ADDRESS,
 					 daemonCore->InfoCommandSinfulString() );
 			job_ad->InsertOrUpdate( buf );
 
 			char buffer[1024];
-			sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
+			char *dir = gen_ckpt_name(0, job_cluster, 0, 0);
+			snprintf (buffer, 1024, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
 				param("SPOOL"), DIR_DELIM_CHAR, 
-				gen_ckpt_name(0, job_cluster, 0, 0));
+				dir);
+			free(dir); dir = NULL;
 			job_ad->Insert(buffer);
 
 				// Put the correct claim id into this ad's ClaimId attribute.
@@ -670,7 +674,7 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 	char node[9];
 	const char *lhstr, *rhstr;
 
-	sprintf( node, "%d", nodenum );
+	snprintf( node, 9, "%d", nodenum );
 
 	ad->ResetExpr();
 	while( ad->NextExpr(lhstr, tree) ) {

@@ -177,6 +177,7 @@ ClusterCleanup(int cluster_id)
 	// blow away the initial checkpoint file from the spool dir
 	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ckpt_file_name );
+	free(ckpt_file_name); ckpt_file_name = NULL;
 
 	// garbage collect the shared ickpt file if necessary
 	if (!hash.IsEmpty()) {
@@ -3326,17 +3327,17 @@ FreeJobAd(ClassAd *&ad)
 }
 
 static int
-RecvSpoolFileBytes(const MyString& path)
+RecvSpoolFileBytes(const char *path)
 {
 	filesize_t	size;
 	Q_SOCK->getReliSock()->decode();
-	if (Q_SOCK->getReliSock()->get_file(&size, path.Value()) < 0) {
+	if (Q_SOCK->getReliSock()->get_file(&size, path) < 0) {
 		dprintf(D_ALWAYS,
 		        "Failed to receive file from client in SendSpoolFile.\n");
 		Q_SOCK->getReliSock()->eom();
 		return -1;
 	}
-	chmod(path.Value(),00755);
+	chmod(path,00755);
 	Q_SOCK->getReliSock()->eom();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;
@@ -3345,7 +3346,7 @@ RecvSpoolFileBytes(const MyString& path)
 int
 SendSpoolFile(char const *filename)
 {
-	MyString path;
+	char * path;
 
 		/* We are passed in a filename to use to save the ICKPT file.
 		   However, we should NOT trust this filename since it comes from 
@@ -3357,7 +3358,7 @@ SendSpoolFile(char const *filename)
 		   filename parameter completely. -Todd Tannenbaum, 2/2005
 		*/
 	path = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
-	if ( filename && strcmp(filename, condor_basename(path.Value())) ) {
+	if ( filename && strcmp(filename, condor_basename(path)) ) {
 		dprintf(D_ALWAYS, 
 				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
 				filename);
@@ -3372,7 +3373,9 @@ SendSpoolFile(char const *filename)
 	Q_SOCK->getReliSock()->put(0);
 	Q_SOCK->getReliSock()->eom();
 
-	return RecvSpoolFileBytes(path);
+	int rv = RecvSpoolFileBytes(path);
+	free(path); path = NULL;
+	return rv;
 }
 
 int
@@ -3383,7 +3386,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	}
 	Q_SOCK->getReliSock()->encode();
 
-	MyString path = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
+	char *path = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
 
 	// here we take advantage of ickpt sharing if possible. if a copy
 	// of the executable already exists we make a link to it and send
@@ -3423,7 +3426,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 					hash = "";
 			}
 			if (!hash.empty() &&
-			    ickpt_share_try_sharing(owner.Value(), hash, path.Value()))
+			    ickpt_share_try_sharing(owner.Value(), hash, path))
 			{
 				Q_SOCK->getReliSock()->put(1);
 				Q_SOCK->getReliSock()->eom();
@@ -3437,13 +3440,15 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	Q_SOCK->getReliSock()->eom();
 
 	if (RecvSpoolFileBytes(path) == -1) {
+		free(path); path = NULL;
 		return -1;
 	}
 
 	if (!hash.empty()) {
-		ickpt_share_init_sharing(owner.Value(), hash, path.Value());
+		ickpt_share_init_sharing(owner.Value(), hash, path);
 	}
 
+	free(path); path = NULL;
 	return 0;
 }
 

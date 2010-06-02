@@ -243,7 +243,7 @@ bool OTEST_StringList(void) {
 		"with that may cause a problem in something else");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(205);
+	FunctionDriver driver;
 	driver.register_function(test_constructor);
 	driver.register_function(test_constructor_empty_list);
 	driver.register_function(test_constructor_empty_delim);

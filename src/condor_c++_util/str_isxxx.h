@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,17 +17,23 @@
  *
  ***************************************************************/
 
-#ifndef _CKPT_NAME
-#define _CKPT_NAME
+#ifndef _STR_ISXXX_H_
+#define _STR_ISXXX_H_
 
-#if defined(__cplusplus)
-extern "C" {
+#include "condor_common.h"
+#include "condor_header_features.h"
+
+// Like isdigit(), but for the whole string
+bool str_isint( const char *string );
+
+// Like str_isint(), but for "real" numbers (i.e. 1.2)
+//  strict: 1. or .1 are invalid
+bool str_isreal( const char *string, bool strict=false );
+
+// Like str_isalpha(), but the whole string
+bool str_isalpha( const char *string );
+
+// Like str_isalnum(), but the whole string
+bool str_isalnum( const char *string );
+
 #endif
-
-char *gen_ckpt_name ( char *dir, int cluster, int proc, int subproc );
-
-#if defined(__cplusplus)
-}
-#endif
-
-#endif /* _CKPT_NAME */

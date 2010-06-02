@@ -63,7 +63,7 @@ bool FTEST_basename(void) {
 	e.emit_comment("A basename() function that is happy on both Unix and NT. It returns a pointer to the last element of the path it was given, or the whole string, if there are no directory delimiters.  There's no memory allocated, overwritten or changed in anyway.");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(30);
+	FunctionDriver driver;
 	driver.register_function(test_null);
 	driver.register_function(test_empty_string);
 	driver.register_function(test_current_directory);
