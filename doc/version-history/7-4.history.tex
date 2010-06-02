@@ -48,7 +48,7 @@ disables Chirp remote file access from execute machines.
 
 \item The new configuration variable
   \Macro{ENABLE\_ADDRESS\_REWRITING} defaults to \Expr{True}.  It may
-  be set to \Expr{False} to disable Condor's dynamic algorithm for chosing
+  be set to \Expr{False} to disable Condor's dynamic algorithm for choosing
   which IP address to publish in multi-homed environments.  The dynamic
   algorithm chooses the IP address associated with the network interface
   used to make the publication, for example, the network interface used 
@@ -61,7 +61,7 @@ disables Chirp remote file access from execute machines.
 \begin{itemize}
 
 \item
-  Fixed numerous small, rare memory leaks.
+  Fixed numerous, small, rare memory leaks.
 
 \item 
   Fixed a bug where processor affinity settings were ignored if
@@ -105,8 +105,8 @@ when run on a RHEL4 or Scientific Linux 4 machine.
 
 % gittrac #1418
 \item Fixed a bug in \Condor{rm} that caused it to misinterpret user names
-that start with a digit, such as "1abc", as specifying a
-cluster number. 
+that begin with a digit, such as \Expr{1abc}.
+It incorrectly used them as cluster numbers. 
 
 \end{itemize}
 
