@@ -164,14 +164,14 @@ Reconfig()
 	if ( proxySubjectName ) {
 		char *daemon_subjects = param( "GSI_DAEMON_NAME" );
 		if ( daemon_subjects ) {
-			MyString buff;
-			buff.sprintf( "%s,%s", daemon_subjects, proxySubjectName );
+			std::string buff;
+			sprintf( buff, "%s,%s", daemon_subjects, proxySubjectName );
 			dprintf( D_ALWAYS, "Setting %s=%s\n", "GSI_DAEMON_NAME",
-					 buff.Value() );
+					 buff.c_str() );
 				// We must use our daemon subsystem prefix in case the
 				// admin used it in the config file.
 			config_insert( "C_GAHP_WORKER_THREAD.GSI_DAEMON_NAME",
-						   buff.Value() );
+						   buff.c_str() );
 			free( daemon_subjects );
 		}
 	}

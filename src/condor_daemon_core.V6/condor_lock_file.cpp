@@ -129,19 +129,19 @@ CondorLockFile::BuildLock( const char	*l_url,
 	this->lock_name = l_name;
 
 		// Create the lock file name from it
-	lock_file.sprintf( "%s/%s.lock", l_url + 5, l_name );
+	sprintf( lock_file, "%s/%s.lock", l_url + 5, l_name );
 
 		// Build a temporary file name
 	char	hostname[128];
 	if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 		sprintf( hostname, "unknown-%d", rand( ) );
 	}
-	temp_file.sprintf( "%s.%s-%d", lock_file.Value(), hostname, getpid( ) );
+	sprintf( temp_file, "%s.%s-%d", lock_file.c_str(), hostname, getpid( ) );
 
 	dprintf( D_FULLDEBUG, "HA Lock Init: lock file='%s'\n",
-			 lock_file.Value() );
+			 lock_file.c_str() );
 	dprintf( D_FULLDEBUG, "HA Lock Init: temp file='%s'\n",
-			 temp_file.Value() );
+			 temp_file.c_str() );
 
 		// Build the lock internals
 	return ImplementLock( );
@@ -159,7 +159,7 @@ CondorLockFile::ChangeUrlName( const char *l_url,
 {
 	// I don't handle any changes well, at least for now..
 	if ( this->lock_url != l_url ) {
-		dprintf( D_ALWAYS, "Lock URL Changed -> '%s'\n", l_name );
+		dprintf( D_ALWAYS, "Lock URL Changed -> '%s'\n", l_url );
 		return 1;
 	}
 	if ( this->lock_name != l_name ) {
@@ -186,7 +186,7 @@ CondorLockFile::GetLock( time_t lock_ht )
 
 		// Step 1: Stat the lock file
 	struct stat		statbuf;
-	status = stat( lock_file.Value( ), &statbuf );
+	status = stat( lock_file.c_str( ), &statbuf );
 	if ( 0 == status ) {
 		time_t	expire = statbuf.st_mtime;
 		time_t	now = time( NULL );
@@ -202,12 +202,12 @@ CondorLockFile::GetLock( time_t lock_ht )
 		else if ( now >= expire ) { // If the lock has expired, kill it!
 			dprintf( D_ALWAYS,
 					 "GetLock warning: Expired lock found '%s', current time='%s', expired time='%s'\n",
-					 lock_file.Value( ),
+					 lock_file.c_str( ),
 					 ctime(&now),
 					 ctime(&expire));
 
 				// Expired lock found, remove it
-			status = unlink( lock_file.Value( ) );
+			status = unlink( lock_file.c_str( ) );
 
 				// Ok if somebody else killed it
 			if ( status && ( ENOENT != errno ) ) {
@@ -223,7 +223,7 @@ CondorLockFile::GetLock( time_t lock_ht )
 	} else if ( ENOENT != errno ) {
 		dprintf( D_ALWAYS,
 				 "GetLock: Error stating lock file '%s': %d %s\n",
-				 lock_file.Value( ), errno, strerror( errno ) );
+				 lock_file.c_str( ), errno, strerror( errno ) );
 		return -1;
 	}
 
@@ -231,26 +231,26 @@ CondorLockFile::GetLock( time_t lock_ht )
 		// does not exist.  Proceed.
 
 		// Step 2: Create the temporary file
-	int		fd = creat( temp_file.Value( ), S_IRWXU );
+	int		fd = creat( temp_file.c_str( ), S_IRWXU );
 	if ( fd < 0 ) {
 		dprintf( D_ALWAYS,
 				 "GetLock: Error creating temp lock file '%s': %d %s\n",
-				 temp_file.Value( ), errno, strerror( errno ) );
+				 temp_file.c_str( ), errno, strerror( errno ) );
 		return -1;
 	}
 	close( fd );
 
 		// Step 3: Set the expiration time
-	status = SetExpireTime( temp_file.Value( ), lock_ht );
+	status = SetExpireTime( temp_file.c_str( ), lock_ht );
 	if ( status ) {
 		dprintf( D_ALWAYS, "GetLock: Error setting expiration time" );
-		unlink( temp_file.Value( ) );
+		unlink( temp_file.c_str( ) );
 		return -1;
 	}
 
 		// Step 4: Run the link race...
-	status = link( temp_file.Value( ), lock_file.Value( ) );
-	(void) unlink( temp_file.Value( ) );
+	status = link( temp_file.c_str( ), lock_file.c_str( ) );
+	(void) unlink( temp_file.c_str( ) );
 
 		// Now, let's see how our car finished
 	if ( 0 == status ) {				// We won!
@@ -261,7 +261,7 @@ CondorLockFile::GetLock( time_t lock_ht )
 	} else {							// Some other error occurred
 		dprintf( D_ALWAYS,
 				 "GetLock: Error linking '%s' to lock file '%s': %d %s\n",
-				 temp_file.Value(), lock_file.Value( ),
+				 temp_file.c_str(), lock_file.c_str( ),
 				 errno, strerror( errno ) );
 		return -1;
 	}
@@ -275,7 +275,7 @@ CondorLockFile::UpdateLock( time_t lock_ht )
 #ifdef WIN32
 	return -1;
 #else
-	return SetExpireTime( lock_file.Value( ), lock_ht );
+	return SetExpireTime( lock_file.c_str( ), lock_ht );
 #endif
 }
 
@@ -286,11 +286,11 @@ CondorLockFile::FreeLock( void )
 #ifdef WIN32
 	return -1;
 #else
-	int		status = unlink( lock_file.Value( ) );
+	int		status = unlink( lock_file.c_str( ) );
 
 	if ( status ) {
 		dprintf( D_ALWAYS, "FreeLock: Error unlink lock '%s': %d %s\n",
-				 lock_file.Value(), errno, strerror( errno ) );
+				 lock_file.c_str(), errno, strerror( errno ) );
 	} else {
 		dprintf( D_FULLDEBUG, "FreeLock: Lock unlinked ok\n" );
 	}
@@ -326,7 +326,7 @@ CondorLockFile::SetExpireTime( const char *file, time_t lock_ht )
 	if ( 0 != status ) {
 		dprintf( D_ALWAYS,
 				 "UpdateLock: Error stating lock file '%s': %d %s\n",
-				 lock_file.Value(), errno, strerror( errno ) );
+				 lock_file.c_str(), errno, strerror( errno ) );
 		return -1;
 	}
 	if ( statbuf.st_mtime != expire ) {

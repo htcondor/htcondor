@@ -40,7 +40,7 @@ PipeBuffer::PipeBuffer() {
 	readahead_length = 0;
 }
 
-MyString *
+std::string *
 PipeBuffer::GetNextLine () {
 
 	if (readahead_length == 0) {
@@ -72,7 +72,7 @@ PipeBuffer::GetNextLine () {
 
 		if (c == '\n' && !last_char_was_escape) {
 					// We got a completed line!
-			MyString* result = new MyString(buffer);
+			std::string* result = new std::string(buffer);
 			buffer = "";
 			return result;
 		} else if (c == '\r' && !last_char_was_escape) {
@@ -100,18 +100,18 @@ PipeBuffer::Write (const char * towrite) {
 	if (towrite)
 		buffer += towrite;
 
-	int len = buffer.Length();
+	int len = buffer.length();
 	if (len == 0)
 		return 0;
 
 		// write() could block, so let other threads run...
 	amazon_gahp_release_big_mutex();
-	int numwritten = write(pipe_end, buffer.Value(), len);
+	int numwritten = write(pipe_end, buffer.c_str(), len);
 	amazon_gahp_grab_big_mutex();
 
 	if (numwritten > 0) {
 			// shorten the buffer
-		buffer = buffer.Substr (numwritten, len);
+		buffer = buffer.erase (0, numwritten);
 		return numwritten;
 	} else if ( numwritten == 0 ) {
 		return 0;
@@ -127,5 +127,5 @@ PipeBuffer::Write (const char * towrite) {
 
 int
 PipeBuffer::IsEmpty() {
-	return (buffer.Length() == 0);
+	return (buffer.length() == 0);
 }

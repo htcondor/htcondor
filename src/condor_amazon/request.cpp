@@ -19,7 +19,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "amazongahp_common.h"
 #include "request.h"
 
