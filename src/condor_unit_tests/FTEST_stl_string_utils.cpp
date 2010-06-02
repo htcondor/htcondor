@@ -44,7 +44,7 @@ bool FTEST_stl_string_utils(void) {
 	e.emit_comment("Package of functions/operators to facilitate adoption of std::string");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(10);
+	FunctionDriver driver;
 	driver.register_function(test_comparison_ops_lhs_string);
 	driver.register_function(test_comparison_ops_lhs_MyString);
 	driver.register_function(test_sprintf_string);

@@ -20,13 +20,14 @@
 /*
 	A header file for the function driver code for unit_tests.
  */
+#include <list>
 
 typedef bool (*test_func_ptr)(void);
 
 class FunctionDriver {
 public:
 		// ctor/detor
-	FunctionDriver(int size=10);
+	FunctionDriver();
 	~FunctionDriver();
 	
 		// register a function with the driver
@@ -37,7 +38,5 @@ public:
 	bool do_all_functions();
 	
 private:
-	test_func_ptr *pointers;
-	int max_functions;
-	int used_functions;
+	std::list<test_func_ptr> pointers;
 };

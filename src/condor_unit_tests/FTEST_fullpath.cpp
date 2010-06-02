@@ -43,7 +43,7 @@ bool FTEST_fullpath(void) {
 	e.emit_comment("return TRUE if the given path is a full pathname, FALSE if not.  by full pathname, we mean it either begins with '/' or '\' or '*:\' (something like 'c:\\...' on windoze).");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(7);
+	FunctionDriver driver;
 	driver.register_function(test_forward_slash);
 	driver.register_function(test_name);
 	driver.register_function(test_drive_path_backslash);

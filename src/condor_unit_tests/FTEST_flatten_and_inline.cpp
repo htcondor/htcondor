@@ -70,7 +70,7 @@ bool FTEST_flatten_and_inline(void) {
 		"sufficient for testing the basics of FlattenAndInline");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(26);
+	FunctionDriver driver;
 	driver.register_function(test_empty_simple_return);
 	driver.register_function(test_empty_simple_value);
 	driver.register_function(test_empty_simple_flattened_expression);

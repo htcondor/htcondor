@@ -63,7 +63,7 @@ bool FTEST_dirname(void) {
 	e.emit_comment("A dirname() function that is happy on both Unix and NT. This allocates space for a new string that holds the path of the parent directory of the path it was given.  If the given path has no directory delimiters, or is NULL, we just return '.'.  In all cases, the string we return is new space, and must be deallocated with free().   Derek Wright 9/23/99");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(30);
+	FunctionDriver driver;
 	driver.register_function(test_null);
 	driver.register_function(test_empty_string);
 	driver.register_function(test_current_directory);

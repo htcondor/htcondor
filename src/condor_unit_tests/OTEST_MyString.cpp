@@ -245,7 +245,7 @@ bool OTEST_MyString() {
 		"behavior.");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(200);
+	FunctionDriver driver;
 	driver.register_function(default_constructor);
 	driver.register_function(int_constructor);
 	driver.register_function(char_constructor);

@@ -71,7 +71,7 @@ bool OTEST_HashTable() {
 	e.emit_comment("Index=int, Value=int, hash function returns its input");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(30);
+	FunctionDriver driver;
 	driver.register_function(insertlookup_normal);
 	driver.register_function(insertlookup_collision);
 	driver.register_function(test_walk_normal);

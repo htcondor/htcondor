@@ -24,46 +24,27 @@
 #include "condor_common.h"
 #include "function_test_driver.h"
 
-FunctionDriver::FunctionDriver(int size) {
-	int i;
-
-	pointers = new test_func_ptr[size];
-
-	for(i = 0; i < size; i++) {
-		pointers[i] = NULL;
-	}
-
-	max_functions = size;
-	used_functions = 0;
+FunctionDriver::FunctionDriver() {
 }
 
 FunctionDriver::~FunctionDriver() {
-	delete[] pointers;
 }
 
 void FunctionDriver::register_function(test_func_ptr function) {
-	if(used_functions >= max_functions) {
-		return;
-	}
-	pointers[used_functions] = function;
-	used_functions++;
+	pointers.push_back(function);
 }
 
 bool FunctionDriver::do_all_functions() {
 	bool test_passed = true;
-	int i;
 
 	// ensure that at least one test ran...
 	bool at_least_one = false;
 
-	for(i = 0; i < used_functions; i++) {
+	std::list<test_func_ptr>::iterator itr;
+	for ( itr = pointers.begin(); itr != pointers.end(); itr++ ) {
 		at_least_one = true;
-
-		/* don't run an undefined test */
-		if (pointers[i] != NULL) {
-			if(!(*pointers[i])()) {
-				test_passed = false;
-			}
+		if ( !(**itr)() ) {
+			test_passed = false;
 		}
 	}
 
