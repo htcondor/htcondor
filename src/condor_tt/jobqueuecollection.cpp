@@ -509,18 +509,8 @@ JobQueueCollection::loadAd(char* cid,
 					}
 
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					{
-							/* we need to use binded update for this col */
-						hor_bndcnt ++;
-						tmpVal.sprintf(":%d", hor_bndcnt);
-						
-							// since newvalue is a temp valuable, copy and 
-							// save the string value.
-						longmystr_arr[hor_bndcnt-1] = newvalue;
-						longstr_arr[hor_bndcnt-1] = longmystr_arr[hor_bndcnt-1].Value();
-						typ_arr[hor_bndcnt-1] = CONDOR_TT_TYPE_STRING;
-					}
-						
+					tmpVal.sprintf("'%s'", newvalue.Value());
+
 					break;
 				case CONDOR_TT_TYPE_STRING:	
 						// strip double quotes
@@ -589,17 +579,7 @@ JobQueueCollection::loadAd(char* cid,
 					}
 					
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					{
-							/* we need to use binded update for this col */
-						hor_bndcnt ++;
-						tmpVal.sprintf(":%d", hor_bndcnt);
-						
-							// since newvalue is a temp valuable, copy and 
-							// save the string value.
-						longmystr_arr[hor_bndcnt-1] = newvalue;
-						longstr_arr[hor_bndcnt-1] = longmystr_arr[hor_bndcnt-1].Value();
-						typ_arr[hor_bndcnt-1] = CONDOR_TT_TYPE_STRING;
-					}
+					tmpVal.sprintf("'%s'", newvalue.Value());
 						
 					break;					
 				case CONDOR_TT_TYPE_STRING:					
