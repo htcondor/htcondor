@@ -164,6 +164,9 @@ class MyString
 	/** Appends a MyString */
 	MyString& operator+=(const MyString& S);
 
+	/** Appends a std::string */
+	MyString& operator+=(const std::string& S);
+
 	/** Appends a null-termianted string */
 	MyString& operator+=(const char *s);
 

@@ -238,6 +238,14 @@ MyString::operator+=(const MyString& S)
     return *this;
 }
 
+MyString& 
+MyString::operator+=(const std::string& S) 
+{
+	
+    append_str( S.c_str(), S.length() );
+    return *this;
+}
+
 
 MyString& 
 MyString::operator+=(const char *s) 
