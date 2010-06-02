@@ -1247,7 +1247,12 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 						// should we print a warning?
 					continue;
 				}
-				if( ! stricmp(tmp, name) ) {
+				if( ! strchr(name, '@') ) {
+					host = get_host_part( tmp );
+				} else {
+					host = tmp;
+				}
+				if( ! stricmp(host, name) ) {
 					d = new Daemon( ad, real_dt, pool_addr );
 				}
 				free( tmp );
@@ -1279,12 +1284,20 @@ doCommand( Daemon* d )
 {
 	bool done = false;
 	int	my_cmd = real_cmd;
-
-		// Grab some info about the daemon which is frequently used.
-	char* name = d->name();
-	daemon_t d_type = d->type();
-	bool is_local = d->isLocal();
 	CondorError errstack;
+	bool error = true;
+	char* name;
+	bool is_local;
+	daemon_t d_type;
+
+	do {
+		// Grab some info about the daemon which is frequently used.
+		name = d->name();
+		d_type = d->type();
+		is_local = d->isLocal();
+		ReliSock sock;
+		done = false;
+		my_cmd = real_cmd;
 
 		// If we're trying to send either vacate or checkpoint we have
 		// two possible commands to send, the machine-wide version and
@@ -1295,14 +1308,14 @@ doCommand( Daemon* d )
 		// it's a local vacate, or if we only have a hostname but no
 		// "slotX@...", we want to send a machine-wide command, not the
 		// per-claim one.
-	bool is_per_claim_startd_cmd = false;
-	if( real_cmd == VACATE_CLAIM || real_cmd == PCKPT_JOB ) {
-		if( !all && d_type != DT_ANY && !is_local &&
-			(name && strchr(name, '@')) )
-		{
-			is_per_claim_startd_cmd = true;
+		bool is_per_claim_startd_cmd = false;
+		if( real_cmd == VACATE_CLAIM || real_cmd == PCKPT_JOB ) {
+			if( !all && d_type != DT_ANY && !is_local &&
+				(name && strchr(name, '@')) )
+			{
+				is_per_claim_startd_cmd = true;
+			}
 		}
-	}
 
 		// in general, we never want to send the same command to the
 		// same address.  the only exception is if we're doing a
@@ -1310,209 +1323,215 @@ doCommand( Daemon* d )
 		// the requests even though we're talking to the same address,
 		// since we'll send the claim-id after the command and it
 		// won't be duplication of effort.
-	if( ! is_per_claim_startd_cmd ) {
-		MyString hash_key = d->addr();
-		bool sent_it = false;
-		if( addresses_sent.lookup(hash_key, sent_it) >= 0 && sent_it ) {
+		if( ! is_per_claim_startd_cmd ) {
+			MyString hash_key = d->addr();
+			bool sent_it = false;
+			if( addresses_sent.lookup(hash_key, sent_it) >= 0 && sent_it ) {
+				return;
+			}
+			addresses_sent.insert( hash_key, true );
+		}
+
+			/* Squawking does its own connect... */
+		if( real_cmd == SQUAWK ) {
+			doSquawk( d->addr() );
+			printf ( "Bye!\n" );
 			return;
 		}
-		addresses_sent.insert( hash_key, true );
-	}
 
-		/* Squawking does its own connect... */
-	if( real_cmd == SQUAWK ) {
-		doSquawk( d->addr() );
-		printf ( "Bye!\n" );
-		return;
-	}
-
-	/* Connect to the daemon */
-	ReliSock sock;
-	if( !sock.connect(d->addr()) ) {
-		fprintf( stderr, "Can't connect to %s\n", d->idStr() );
-		return;
-	}
-
-	char	*psubsys = const_cast<char *>(subsys);
-	switch(real_cmd) {
-	case VACATE_CLAIM:
-		if( is_per_claim_startd_cmd ) {
-				// we've got a specific slot, so send the claim after
-				// the command.
-			if( fast ) {
-				my_cmd = VACATE_CLAIM_FAST;
-			}
-			if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
-				fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true));
-			}
-			if( !sock.code(name) || !sock.eom() ) {
-				fprintf( stderr, "Can't send %s command to %s\n", 
-							 cmdToStr(my_cmd), d->idStr() );
-				return;
-			} else {
-				done = true;
-			}
+		/* Connect to the daemon */
+		if( sock.connect(d->addr()) ) {
+			error = false;
+//			break;
 		} else {
-			if( fast ) {
-				my_cmd = VACATE_ALL_FAST;
-			} else {
-				my_cmd = VACATE_ALL_CLAIMS;
-			}
+			continue;
 		}
-		break;
 
-	case PCKPT_JOB:
-		if( is_per_claim_startd_cmd ) {
-				// we've got a specific slot, so send the claim after
-				// the command.
-			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
-				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true));
+		char	*psubsys = const_cast<char *>(subsys);
+		switch(real_cmd) {
+		case VACATE_CLAIM:
+			if( is_per_claim_startd_cmd ) {
+					// we've got a specific slot, so send the claim after
+					// the command.
+				if( fast ) {
+					my_cmd = VACATE_CLAIM_FAST;
+				}
+				if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
+					fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true));
+				}
+				if( !sock.code(name) || !sock.eom() ) {
+					fprintf( stderr, "Can't send %s command to %s\n", 
+								 cmdToStr(my_cmd), d->idStr() );
+					return;
+				} else {
+					done = true;
+				}
+			} else {
+				if( fast ) {
+					my_cmd = VACATE_ALL_FAST;
+				} else {
+					my_cmd = VACATE_ALL_CLAIMS;
+				}
 			}
-			if( !sock.code(name) || !sock.eom() ) {
+			break;
+
+		case PCKPT_JOB:
+			if( is_per_claim_startd_cmd ) {
+					// we've got a specific slot, so send the claim after
+					// the command.
+				if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+					fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true));
+				}
+				if( !sock.code(name) || !sock.eom() ) {
+					fprintf( stderr, "Can't send %s command to %s\n",
+								 cmdToStr(my_cmd), d->idStr() );
+					return;
+				} else {
+					done = true;
+				}
+			} else {
+				my_cmd = PCKPT_ALL_JOBS;
+			}
+			break;
+
+		case DAEMON_OFF:
+				// if -fast is used, we need to send a different command.
+			if( fast ) {
+				my_cmd = DAEMON_OFF_FAST;
+			} else if( peaceful_shutdown ) {
+				my_cmd = DAEMON_OFF_PEACEFUL;
+			}
+			if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+			}
+			if( !sock.code( psubsys ) || !sock.eom() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
-							 cmdToStr(my_cmd), d->idStr() );
+							cmdToStr(my_cmd), d->idStr() );
 				return;
 			} else {
 				done = true;
 			}
-		} else {
-			my_cmd = PCKPT_ALL_JOBS;
-		}
-		break;
+			break;
 
-	case DAEMON_OFF:
-			// if -fast is used, we need to send a different command.
-		if( fast ) {
-			my_cmd = DAEMON_OFF_FAST;
-		} else if( peaceful_shutdown ) {
-			my_cmd = DAEMON_OFF_PEACEFUL;
-		}
-		if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
-			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
-		}
-		if( !sock.code( psubsys ) || !sock.eom() ) {
-			fprintf( stderr, "Can't send %s command to %s\n",
-						cmdToStr(my_cmd), d->idStr() );
-			return;
-		} else {
-			done = true;
-		}
-		break;
+		case DAEMON_ON:
+			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+			}
+			if( !sock.code( psubsys ) || !sock.eom() ) {
+				fprintf( stderr, "Can't send %s command to %s\n",
+						 cmdToStr(my_cmd), d->idStr() );
+				return;
+			} else {
+				done = true;
+			}
+			break;
 
-	case DAEMON_ON:
-		if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
-			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
-		}
-		if( !sock.code( psubsys ) || !sock.eom() ) {
-			fprintf( stderr, "Can't send %s command to %s\n",
-					 cmdToStr(my_cmd), d->idStr() );
-			return;
-		} else {
-			done = true;
-		}
-		break;
+		case RESTART:
+			if( peaceful_shutdown ) {
+				my_cmd = RESTART_PEACEFUL;
+			}
+			break;
 
-	case RESTART:
-		if( peaceful_shutdown ) {
-			my_cmd = RESTART_PEACEFUL;
-		}
-		break;
+		case DAEMONS_OFF:
+				// if -fast is used, we need to send a different command.
+			if( fast ) {
+				my_cmd = DAEMONS_OFF_FAST;
+			} else if( peaceful_shutdown ) {
+				my_cmd = DAEMONS_OFF_PEACEFUL;
+			}
+			if( d_type != DT_MASTER ) {
+ 					// if we're trying to send this to anything other than
+ 					// a master (for example, if we were just given a
+ 					// sinful string and we don't know the daemon type)
+ 					// we've got to send a different command. 
+				if( fast ) {
+					my_cmd = DC_OFF_FAST;
+				} else if( peaceful_shutdown ) {
+					my_cmd = DC_OFF_PEACEFUL;
+				} else {
+					my_cmd = DC_OFF_GRACEFUL;
+				}
+			}
+			break;
 
-	case DAEMONS_OFF:
-			// if -fast is used, we need to send a different command.
-		if( fast ) {
-			my_cmd = DAEMONS_OFF_FAST;
-		} else if( peaceful_shutdown ) {
-			my_cmd = DAEMONS_OFF_PEACEFUL;
-		}
-		if( d_type != DT_MASTER ) {
- 				// if we're trying to send this to anything other than
- 				// a master (for example, if we were just given a
- 				// sinful string and we don't know the daemon type)
- 				// we've got to send a different command. 
+		case DC_OFF_GRACEFUL:
+				// if -fast is used, we need to send a different command.
 			if( fast ) {
 				my_cmd = DC_OFF_FAST;
 			} else if( peaceful_shutdown ) {
 				my_cmd = DC_OFF_PEACEFUL;
+			}
+			break;
+
+		case DC_RECONFIG_FULL:
+				// Nothing to do
+			break;
+		case SET_SHUTDOWN_PROGRAM:
+		{
+			char	*pexec = const_cast<char *>(exec_program); 
+			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+			}
+			if( !sock.code( pexec ) || !sock.eom() ) {
+				fprintf( stderr, "Can't send %s command to %s\n",
+						 cmdToStr(my_cmd), d->idStr() );
+				return;
 			} else {
-				my_cmd = DC_OFF_GRACEFUL;
+				done = true;
+			}
+			break;
+		}
+
+		default:
+			break;
+		}
+
+		if( !done ) {
+			if( !d->sendCommand(my_cmd, &sock, 0, &errstack) ) {
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "Can't send %s command to %s\n",
+							 cmdToStr(my_cmd), d->idStr() );
+				return;
 			}
 		}
-		break;
-
-	case DC_OFF_GRACEFUL:
-			// if -fast is used, we need to send a different command.
-		if( fast ) {
-			my_cmd = DC_OFF_FAST;
-		} else if( peaceful_shutdown ) {
-			my_cmd = DC_OFF_PEACEFUL;
-		}
-		break;
-
-	case DC_RECONFIG_FULL:
-			// Nothing to do
-		break;
-
-	case SET_SHUTDOWN_PROGRAM:
-	{
-		char	*pexec = const_cast<char *>(exec_program); 
-		if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
-			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
-		}
-		if( !sock.code( pexec ) || !sock.eom() ) {
-			fprintf( stderr, "Can't send %s command to %s\n",
-					 cmdToStr(my_cmd), d->idStr() );
-			return;
-		} else {
-			done = true;
-		}
-		break;
-	}
-
-	default:
-		break;
-	}
-
-	if( !done ) {
-		if( !d->sendCommand(my_cmd, &sock, 0, &errstack) ) {
-			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
-			fprintf( stderr, "Can't send %s command to %s\n",
-						 cmdToStr(my_cmd), d->idStr() );
-			return;
-		}
-	}
 	
-		// for the purposes of reporting, if what we're trying to do
-		// is a restart, we want to print that here.  so, set my_cmd
-		// back to RESTART.
-	if( cmd == RESTART ) {
-		my_cmd = RESTART;
-	}
-
-		// now, print out the right thing depending on what we did
-	if( my_cmd == DAEMON_ON || my_cmd == DAEMON_OFF || 
-		my_cmd == DAEMON_OFF_FAST || 
-		((my_cmd == DC_OFF_GRACEFUL || my_cmd == DC_OFF_FAST) && 
-		 real_dt == DT_MASTER) )
-	{
-		if( d_type == DT_ANY ) {
-			printf( "Sent \"%s\" command to %s\n",
-					cmdToStr(my_cmd), d->idStr() );
-		} else {
-			printf( "Sent \"%s\" command for \"%s\" to %s\n",
-					cmdToStr(my_cmd), 
-					subsys_arg ? subsys_arg : daemonString(dt),
-					d->idStr() );
+			// for the purposes of reporting, if what we're trying to do
+			// is a restart, we want to print that here.  so, set my_cmd
+			// back to RESTART.
+		if( cmd == RESTART ) {
+			my_cmd = RESTART;
 		}
-	} else if( d_type == DT_STARTD && all ) {
-			// we want to special case printing about this, since
-			// we're doing a machine-wide command...
-		printf( "Sent \"%s\" command to startd %s\n", cmdToStr(my_cmd),
-				d->fullHostname() );
-	} else if( cmd_set ) {
-		printf( "Sent command \"%d\" to %s\n", my_cmd, d->idStr() );
-	} else {
-		printf( "Sent \"%s\" command to %s\n", cmdToStr(my_cmd), d->idStr() );
+
+			// now, print out the right thing depending on what we did
+		if( my_cmd == DAEMON_ON || my_cmd == DAEMON_OFF || 
+			my_cmd == DAEMON_OFF_FAST || 
+			((my_cmd == DC_OFF_GRACEFUL || my_cmd == DC_OFF_FAST) && 
+			 real_dt == DT_MASTER) )
+		{
+			if( d_type == DT_ANY ) {
+				printf( "Sent \"%s\" command to %s\n",
+						cmdToStr(my_cmd), d->idStr() );
+			} else {
+				printf( "Sent \"%s\" command for \"%s\" to %s\n",
+						cmdToStr(my_cmd), 
+						subsys_arg ? subsys_arg : daemonString(dt),
+						d->idStr() );
+			}
+		} else if( d_type == DT_STARTD && all ) {
+				// we want to special case printing about this, since
+				// we're doing a machine-wide command...
+			printf( "Sent \"%s\" command to startd %s\n", cmdToStr(my_cmd),
+					d->fullHostname() );
+		} else if( cmd_set ) {
+			printf( "Sent command \"%d\" to %s\n", my_cmd, d->idStr() );
+		} else {
+			printf( "Sent \"%s\" command to %s\n", cmdToStr(my_cmd), d->idStr() );
+		}
+		sock.close();
+	} while(d->nextValidCm() == true);
+	if( error == true ) {
+		fprintf( stderr, "Can't connect to %s\n", d->idStr() );
+		return;
 	}
 }
 

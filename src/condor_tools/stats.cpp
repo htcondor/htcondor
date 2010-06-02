@@ -269,11 +269,19 @@ int main(int argc, char* argv[])
   int LineCount=0;
 
   ReliSock sock;
-  if (!sock.connect((char*) view_host.addr(), 0)) {
-    fprintf( stderr, "failed to connect to the CondorView server (%s)\n", 
+  bool connect_error = true;
+  do {
+    if (sock.connect((char*) view_host.addr(), 0)) {
+      connect_error = false;
+      break;
+    }
+  } while (view_host.nextValidCm() == true);
+
+  if (connect_error == true) {
+      fprintf( stderr, "failed to connect to the CondorView server (%s)\n", 
 			 view_host.fullHostname() );
-    fputs("No Data.\n",outfile);
-    exit(1);
+      fputs("No Data.\n",outfile);
+      exit(1);
   }
 
   view_host.startCommand(QueryType, &sock);
@@ -295,7 +303,8 @@ int main(int argc, char* argv[])
   sock.decode(); 
   while(1) {
     if (!sock.get(LinePtr,MaxLen)) {
-      fprintf(stderr, "failed to receive data from the CondorView server\n");
+      fprintf(stderr, "failed to receive data from the CondorView server %s\n",
+			view_host.fullHostname());
       if (LineCount==0) fputs("No Data.\n",outfile);
       exit(1);
     }
