@@ -2,9 +2,7 @@
 \section{\label{sec:install}Installation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section contains the instructions for installing Condor at your
-Unix site.
-
+This section contains the instructions for installing Condor.
 The installation will have a default configuration that can
 be customized.
 Sections of the manual that follow this one explain customization.
@@ -627,13 +625,20 @@ things you should check before you start up Condor.
     Condor.  See the section~\ref{sec:Config-Security} on
     page~\pageref{sec:Config-Security} to learn how to do this.
 
-\item Condor can monitor the activity of your mouse and keyboard,
+\item For Linux platforms, run the \Condor{kbdd} to monitor keyboard
+    and mouse activity on all machines within the pool that will
+    run a \Condor{startd}; these are machines that execute jobs.
+    To do this, the subsystem \Expr{KBDD} will need to be added to
+    the \MacroNI{DAEMON\_LIST} configuration variable definition.
+
+    For Unix platforms other than Linux,
+    Condor can monitor the activity of your mouse and keyboard,
     provided that you tell it where to look.  You do this with the
     \Macro{CONSOLE\_DEVICES} entry in the \condor{startd} section of
     the configuration file.  On most platforms, reasonable
     defaults are provided.
-    For example, the default device for the mouse on Linux
-    is 'mouse', since most Linux installations have a soft link from
+    For example, the default device for the mouse
+    is 'mouse', since most installations have a soft link from
     \File{/dev/mouse} that points to the right device (such as
     \File{tty00} if you have a serial mouse, \File{psaux} if you have
     a PS/2 bus mouse, etc).  If you do not have a \File{/dev/mouse}
