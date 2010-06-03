@@ -60,6 +60,8 @@
 #define GM_RECOVER_POLL			20
 #define GM_STAGE_IN				21
 #define GM_STAGE_OUT			22
+#define GM_EXTEND_LIFETIME_STAGE_IN	23
+#define GM_EXTEND_LIFETIME_STAGE_OUT	24
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -85,6 +87,8 @@ static const char *GMStateNames[] = {
 	"GM_RECOVER_POLL",
 	"GM_STAGE_IN",
 	"GM_STAGE_OUT",
+	"GM_EXTEND_LIFETIME_STAGE_IN",
+	"GM_EXTEND_LIFETIME_STAGE_OUT",
 };
 
 #define CREAM_JOB_STATE_UNSET			""
@@ -877,7 +881,6 @@ void CreamJob::doEvaluateState()
 				if ( m_xfer_request == NULL ) {
 					m_xfer_request = MakeStageInRequest();
 				}
-				// TODO: Add check for job lease renewal
 				if ( m_xfer_request->m_status == TransferRequest::TransferDone ) {
 					delete m_xfer_request;
 					m_xfer_request = NULL;
@@ -891,6 +894,17 @@ void CreamJob::doEvaluateState()
 					m_xfer_request = NULL;
 					gmState = GM_CLEAR_REQUEST;
 				}
+
+				int new_lease;	// CalculateJobLease needs an int
+				time_t renew_time;
+				if ( CalculateJobLease( jobAd, new_lease,
+										DEFAULT_LEASE_DURATION,
+										&renew_time ) ) {
+					jmLifetime = new_lease;
+					gmState = GM_EXTEND_LIFETIME_STAGE_IN;
+					break;
+				}
+				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
 			}
 		} break;
 		case GM_SUBMIT_COMMIT: {
@@ -969,6 +983,8 @@ void CreamJob::doEvaluateState()
 				
 			}
 			} break;
+		case GM_EXTEND_LIFETIME_STAGE_IN:
+		case GM_EXTEND_LIFETIME_STAGE_OUT:
 		case GM_EXTEND_LIFETIME: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
@@ -996,7 +1012,13 @@ void CreamJob::doEvaluateState()
 				jmLifetime = server_lease;
 
 				UpdateJobLeaseSent( jmLifetime );
-				gmState = GM_SUBMITTED;
+				if ( gmState == GM_EXTEND_LIFETIME_STAGE_IN ) {
+					gmState = GM_STAGE_IN;
+				} else if ( gmState == GM_EXTEND_LIFETIME_STAGE_OUT ) {
+					gmState = GM_STAGE_OUT;
+				} else {
+					gmState = GM_SUBMITTED;
+				}
 			}
 			} break;
 		case GM_POLL_JOB_STATE: {
@@ -1081,6 +1103,17 @@ void CreamJob::doEvaluateState()
 					m_xfer_request = NULL;
 					gmState = GM_CLEAR_REQUEST;
 				}
+
+				int new_lease;	// CalculateJobLease needs an int
+				time_t renew_time;
+				if ( CalculateJobLease( jobAd, new_lease,
+										DEFAULT_LEASE_DURATION,
+										&renew_time ) ) {
+					jmLifetime = new_lease;
+					gmState = GM_EXTEND_LIFETIME_STAGE_OUT;
+					break;
+				}
+				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
 			}
 		} break;
 		case GM_DONE_SAVE: {
@@ -1321,6 +1354,8 @@ void CreamJob::doEvaluateState()
 					evictLogged = true;
 				}
 			}
+			delete m_xfer_request;
+			m_xfer_request = NULL;
 			MyString val;
 			if ( jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, val ) ) {
 				jobAd->AssignExpr( ATTR_GRIDFTP_URL_BASE, "Undefined" );
