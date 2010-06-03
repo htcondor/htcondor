@@ -1145,8 +1145,11 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 			return false;
 		}
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
-		job->varNamesFromDag->Append(new MyString(varName));
-		job->varValsFromDag->Append(new MyString(varValue));
+		bool appendResult;
+		appendResult = job->varNamesFromDag->Append(new MyString(varName));
+		ASSERT( appendResult );
+		appendResult = job->varValsFromDag->Append(new MyString(varValue));
+		ASSERT( appendResult );
 	}
 
 	if(numPairs == 0) {

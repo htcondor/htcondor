@@ -105,6 +105,9 @@ ThrottleByCategory::GetThrottleInfo( const MyString *category )
 void
 ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 {
+	HashTable<MyString, ThrottleInfo *> tmpThrottles( CATEGORY_HASH_SIZE,
+				MyStringHash, rejectDuplicateKeys );
+
 	_throttles.startIterations();
 	ThrottleInfo	*info;
 	while ( _throttles.iterate( info ) ) {
@@ -112,7 +115,12 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 		*newCat += *(info->_category);
 		delete info->_category;
 		info->_category = newCat;
+		if ( tmpThrottles.insert( *(info->_category), info ) != 0 ) {
+			EXCEPT( "HashTable error" );
+		}
 	}
+	_throttles.clear();
+	_throttles = tmpThrottles;
 }
 
 //---------------------------------------------------------------------------

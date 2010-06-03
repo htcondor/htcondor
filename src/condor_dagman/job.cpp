@@ -70,8 +70,21 @@ Job::~Job() {
     // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
 	delete [] _jobName;
 	delete [] _logFile;
+
+	varNamesFromDag->Rewind();
+	MyString *name;
+	while ( (name = varNamesFromDag->Next()) ) {
+		delete name;
+	}
 	delete varNamesFromDag;
+
+	varValsFromDag->Rewind();
+	MyString *val;
+	while ( (val = varValsFromDag->Next()) ) {
+		delete val;
+	}
 	delete varValsFromDag;
+
 	delete _scriptPre;
 	delete _scriptPost;
 }
