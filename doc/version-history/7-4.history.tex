@@ -108,6 +108,12 @@ when run on a RHEL4 or Scientific Linux 4 machine.
 that begin with a digit, such as \Expr{1abc}.
 It incorrectly used them as cluster numbers. 
 
+% gittrac #1423
+\item Fixed a bug that caused the \Condor{startd} to invoke the
+  ``power\_state'' plug-in as the condor user.  This caused
+  hibernation to fail because power\_state requires root privileges
+  to function properly.
+
 \end{itemize}
 
 \noindent Known Bugs:
