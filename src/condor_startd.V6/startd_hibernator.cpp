@@ -163,7 +163,9 @@ StartdHibernator::enterState( SLEEP_STATE state, bool /*force*/ ) const
 	MyString	cmd;
 	args.GetArgsStringForDisplay( &cmd );
 
+	priv_state	priv = set_root_priv();
 	int status = my_system( args );
+	set_priv( priv );
 	if( status ) {
 		dprintf( D_ALWAYS,
 				 "Failed to run hibernation plugin '%s': status = %d\n",
