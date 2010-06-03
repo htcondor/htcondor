@@ -149,6 +149,12 @@ present in all earlier 7.4.x Condor releases.
 with Windows execute machines. Previously, creation of the ISO file
 would fail, causing job execution to be aborted.
 
+% gittrac #1423
+\item Fixed a bug that caused the \Condor{startd} to invoke the
+  ``power\_state'' plug-in as the condor user.  This caused
+  hibernation to fail because power\_state requires root privileges
+  to function properly.
+
 \end{itemize}
 
 \noindent Known Bugs:
