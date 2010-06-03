@@ -10,7 +10,8 @@ FILES = README condor_config.local.central.manager \
 	mp2script \
 	condor_config.generic.debian.patch\
 	condor_config.generic.rpm.patch\
-	condor.boot.vdt\
+	condor.boot.rpm\
+	condor.sysconfig\
 	condor_config.local.generic\
 	openmpiscript \
 	condor.init
