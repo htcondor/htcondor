@@ -19,8 +19,8 @@ HIBERNATE_CHECK_INTERVAL = 300
 ##
 # Enter hibernation level 3 (sleep) after 2 hours
 ##
-HibernateLevel 	= 3
-TimeToWait 	= (2 * $(HOUR))
+HibernateState 	= 3
+TimeToWait      = (2 * $(HOUR))
 
 ##
 # Enter hibernation if:
@@ -28,13 +28,13 @@ TimeToWait 	= (2 * $(HOUR))
 # 2) the cpu is idle, AND 
 # 3) we've been "Unclaimed" for more than $(TimeToWait) minutes
 ##
-ShouldHibernate = ((KeyboardIdle > $(StartIdleTime)) \
-			&& $(CPUIdle) \
-				&& ($(StateTimer) > $(TimeToWait)))
+ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
+                    && $(CPUIdle) \
+                    && ($(StateTimer) > $(TimeToWait)) )
 
 ##
 # Actual hibernation expression: if it should enter hibernation
 # it evaluates to the level of hibernation we defined above; 
 # otherwise, 0, which tells Condor to leave the machine up.
 ##
-HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateLevel), 0)
+HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), 0)
