@@ -853,7 +853,7 @@ File System Configuration File Entries''.
     LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
   \end{verbatim}
   
-  The value of \MacroUNI{LOCAL\_CONFIG\_FILE} is treated as a list of files,
+  The value of \MacroNI{LOCAL\_CONFIG\_FILE} is treated as a list of files,
   not a
   single file.  The items in the list are delimited by either commas
   or space characters.
@@ -877,6 +877,10 @@ File System Configuration File Entries''.
   section~\ref{sec:Multiple-Platforms} about Configuring Condor for
   Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
+  If all files in a directory are local configuration files to be processed,
+  then consider using \MacroNI{LOCAL\_CONFIG\_DIR}, defined at
+  section~\ref{param:LocalConfigDir}.
+
 \label{param:RequireLocalConfigFile}
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}]
   A boolean value that defaults to \Expr{True}.
@@ -891,9 +895,9 @@ File System Configuration File Entries''.
 
 \label{param:LocalConfigDir} 
 \item[\Macro{LOCAL\_CONFIG\_DIR}]
-  Beginning in Condor 6.7.18, a directory may be used as a container for 
-  local configuration files. 
-  The files found in the directory are sorted into lexicographical order, and 
+  A directory may be used as a container for local configuration files. 
+  The files found in the directory are sorted into lexicographical order 
+  by file name, and 
   then each file is treated as though it was listed in 
   \MacroNI{LOCAL\_CONFIG\_FILE}. 
   \MacroNI{LOCAL\_CONFIG\_DIR} is processed before any files listed in 
@@ -925,11 +929,18 @@ File System Configuration File Entries''.
 \label{param:CondorAdmin}
 \item[\Macro{CONDOR\_ADMIN}]
   The email address that Condor will send mail to if something goes wrong in
-  your pool.  For example, if a daemon crashes, the \Condor{master}
+  the pool.  For example, if a daemon crashes, the \Condor{master}
   can send an \Term{obituary} to this address with the last few lines
   of that daemon's log file and a brief message that describes what
   signal or exit status that daemon exited with.  There is no default
-  value for \Macro{CONDOR\_ADMIN}.
+  value for \MacroNI{CONDOR\_ADMIN}.
+
+\label{param:SubsysAdminEmail}
+\item[\MacroB{<SUBSYS>\_ADMIN\_EMAIL}]
+\index{SUBSYS\_ADMIN\_EMAIL macro@\texttt{<SUBSYS>\_ADMIN\_EMAIL} macro}
+  The email address that Condor will send mail to if something goes wrong
+  with the named \MacroNI{<SUBSYS>}.  Identical to \MacroNI{CONDOR\_ADMIN},
+  but done on a per subsystem basis. There is no default value.
   
 \label{param:CondorSupportEmail}
 \item[\Macro{CONDOR\_SUPPORT\_EMAIL}]
