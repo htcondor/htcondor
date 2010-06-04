@@ -195,11 +195,11 @@ FileLock::FileLock( const char *path , bool deleteFile, bool useLiteralPath)
 				dprintf(D_FULLDEBUG, "Destination path for lock file %s does not seem to exist - trying to create.\n", m_path);
 				char *dPath = GetTempPath();
 				int mdir = mkdir(dPath, 0777);
-				delete []dPath;
 				if (mdir < 0) {
 					dprintf(D_FULLDEBUG, "Destination path directory %s cannot be created. Failure.\n", dPath);
 					EXCEPT("FileLock::FileLock(): You must have a valid or creatable directory path set as tmp path.");
 				}
+				delete []dPath;
 			// now let's try again.
 				m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );	 
 			} else {
