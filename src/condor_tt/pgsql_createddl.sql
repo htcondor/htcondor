@@ -578,6 +578,7 @@ reindex table clusterads_vertical;
 reindex table procads_horizontal;
 reindex table procads_vertical;
 reindex table jobs_horizontal_history;
+reindex table jobs_vertical_history;
 reindex table runs;
 -- end timer
 select into end_time timeofday();
