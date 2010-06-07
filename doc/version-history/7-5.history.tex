@@ -93,6 +93,13 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   \Condor{off}, \Condor{on}, \Condor{reconfig}, \Condor{reschedule},
   \Condor{restart}, \Condor{set\_shutdown}, and \Condor{vacate}.
 
+%gittrac #1351
+\item File transfer plugins can be used for vm universe jobs. Notably,
+  \MacroNI{file://} URLs can be used to allow VM image files to be pre-staged
+  on the execute machine. The \Opt{vmware\_dir} submit file attribute is
+  now optional. If it's not given, then all relevant VMWare image files
+  must be listed in \Opt{transfer\_input\_files}, possibly as URLs.
+
 %gittrac #1298
 \item Removed the distinction between regular and full reconfiguration
   of Condor daemons. Now, all reconfigurations are full and require the
