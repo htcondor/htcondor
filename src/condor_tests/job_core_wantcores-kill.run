@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Cwd;
 
 
@@ -95,7 +96,7 @@ my $logdir = "";
 if($wantcoreconfig =~ /^(.*)\/condor_config.*$/) {
 	$logdir = $1 . "/log";
 	print "LOGDIR is $logdir\n";
-	system("ls -l $logdir");
+	runcmd("ls -l $logdir");
 }
 
 CondorTest::debug("---Parallel config is $wantcoreconfig and remote port is $wantcoreport---\n",1);
@@ -104,26 +105,27 @@ $ENV{CONDOR_CONFIG} = $wantcoreconfig;
 
 CondorTest::debug("Set config to $wantcoreconfig\n",1);
 
-system("ls -l $logdir");
+runcmd("ls -l $logdir");
 my $result = system("./job_core_wantcores-look.pl $logdir");
 CondorTest::debug("Result of core file test  job is  $result\n",1);
 
-
-system("cp *job_core_wantcores* $mysaveme");
+#fails due to directory matching pattern
+#system("cp *job_core_wantcores* $mysaveme");
+runcmd("cp *job_core_wantcores* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($wantcoreconfig);
