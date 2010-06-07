@@ -215,10 +215,10 @@ ReadEventsLazy()
 	printf("Testing writing and reading events...\n");
 	fflush(stdout);
 
-	UserLog		log1("test", file1, 1, 0, 0, false);
-	UserLog		log2("test", file2, 2, 0, 0, true);
-	UserLog		log3("test", file3, 3, 0, 0, false);
-	UserLog		log4("test", file4, 4, 0, 0, false);
+	WriteUserLog		log1("test", file1, 1, 0, 0, false);
+	WriteUserLog		log2("test", file2, 2, 0, 0, true);
+	WriteUserLog		log3("test", file3, 3, 0, 0, false);
+	WriteUserLog		log4("test", file4, 4, 0, 0, false);
 
 	SubmitEvent	subE;
 	strcpy(subE.submitHost, "<128.105.165.12:32779>");
@@ -443,7 +443,7 @@ ReadEventsLazy()
 		// monitoring the same file with two different paths.
 		//
 	unlink( file5 );
-	UserLog		log5("test", file5, 5, -1, -1, false);
+	WriteUserLog		log5("test", file5, 5, -1, -1, false);
 	if (!monitorLogFile( lazyReader, file5, false ) ) {
 		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
 		printf( "error unmonitoring log file %s\n", file5 );
