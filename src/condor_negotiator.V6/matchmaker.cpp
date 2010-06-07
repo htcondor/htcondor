@@ -134,6 +134,7 @@ Matchmaker ()
 	strcpy(MatchesTable, "matches");
 
 	prevLHF = 0;
+	Collectors = 0;
 }
 
 
@@ -1344,6 +1345,7 @@ SimpleGroupEntry()
 {
 	groupName = NULL;
 	prio = 0;
+	usage = 0.0f;
 	maxAllowed = (float) INT_MAX;
 }
 

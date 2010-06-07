@@ -41,7 +41,6 @@ class CollectorEngine : public Service
 	int invokeHousekeeper (AdTypes);
 	int invalidateAds(AdTypes, ClassAd &);
 
-
 	// perform the collect operation of the given command
 	ClassAd *collect (int, Sock *, sockaddr_in *, int &);
 	ClassAd *collect (int, ClassAd *, sockaddr_in *, int &, Sock* = NULL);
@@ -119,7 +118,6 @@ class CollectorEngine : public Service
 	// relevant variables from the config file
 	int	clientTimeout; 
 	int	machineUpdateInterval;
-
 
 	void  housekeeper ();
 	int  housekeeperTimerID;

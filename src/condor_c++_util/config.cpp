@@ -830,7 +830,8 @@ get_special_var( const char *prefix, bool only_id_chars, register char *value,
 	tvalue = value;
 	left = value;
 
-	for(;;) {
+		// Loop until we're done, helped with the magic of goto's
+	while (1) {
 tryagain:
 		if (tvalue) {
 			value = (char *)strstr( (const char *)tvalue, prefix );

@@ -60,13 +60,12 @@ extern char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
 
 Authentication::Authentication( ReliSock *sock )
 {
-#if !defined(SKIP_AUTHENTICATION)
+// Do this regardless of the state of SKIP_AUTHENTICATION)
+// even if SKIP_AUTHENTICATION is true, we call sock->Timeout later
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
 	method_used         = NULL;
 	authenticator_      = NULL;
-#endif
-
 }
 
 Authentication::~Authentication()
