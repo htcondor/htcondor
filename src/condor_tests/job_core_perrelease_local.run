@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 
 $testdesc =  'Condor PERIODIC_RELEASE policy test - local U';
@@ -67,8 +68,8 @@ if($willstatus != 0)
 {
 	CondorTest::debug("PERIODIC_RELEASE: failed trigger test\n",1);
 }
-
-system("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme");
+#fails due to directory matching pattern
+runcmd("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme",{expect_result=>\&ANY});
 
 CondorTest::KillPersonal($personalconfig);
 print scalar localtime() . "\n";
