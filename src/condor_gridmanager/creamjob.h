@@ -30,13 +30,11 @@
 #include "basejob.h"
 #include "creamresource.h"
 #include "gahp-client.h"
-#include "gridftpmanager.h"
 #include "transferrequest.h"
 
 #define JM_COMMIT_TIMEOUT	600
 
 class CreamResource;
-class GridftpServer;
 
 void CreamJobInit();
 void CreamJobReconfig();
@@ -96,7 +94,6 @@ class CreamJob : public BaseJob
 	char *resourceQueueString;
 	char *uploadUrl;
 	char *downloadUrl;
-	GridftpServer *gridftpServer;
 	int connectFailureCount;
 
 	Proxy *jobProxy;

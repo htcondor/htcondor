@@ -233,7 +233,6 @@ CreamJob::CreamJob( ClassAd *classad )
 	downloadUrl = NULL;
 	gahp = NULL;
 	delegatedCredentialURI = NULL;
-	gridftpServer = NULL;
 	leaseId = NULL;
 	connectFailureCount = 0;
 	doActivePoll = false;
@@ -356,27 +355,6 @@ CreamJob::CreamJob( ClassAd *classad )
 		myResource->AlreadySubmitted( this );
 	}
 
-	buff[0] = '\0';
-	if ( job_already_submitted ) {
-		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
-	}
-
-/*
-	tmp = param( "GRIDFTP_URL_BASE" );
-	if ( !tmp ) {
-		error_string = "GRIDFTP_URL_BASE is not set in the configuration file";
-		goto error_exit;
-	}
-	free( tmp );
-*/
-
-	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy );
-
-		// TODO It would be nice to register only after going through
-		//   GM_CLEAR_REQUEST, so that a ATTR_GRIDFTP_URL_BASE from a
-		//   previous submission isn't requested here.
-	gridftpServer->RegisterClient( evaluateStateTid, buff[0] ? buff : NULL );
-
 	if ( job_already_submitted &&
 		 jobAd->LookupString( ATTR_CREAM_DELEGATION_URI, buff ) ) {
 
@@ -459,9 +437,6 @@ CreamJob::CreamJob( ClassAd *classad )
 
 CreamJob::~CreamJob()
 {
-	if ( gridftpServer ) {
-		gridftpServer->UnregisterClient( evaluateStateTid );
-	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 	}
@@ -661,12 +636,7 @@ void CreamJob::doEvaluateState()
 			} else if ( condorState == HELD ) {
 				gmState = GM_DELETE;
 				break;
-			} else if ( gridftpServer->GetErrorMessage() ) {
-				errorString = gridftpServer->GetErrorMessage();
-				gmState = GM_HOLD;
-				break;
-			} else if ( gridftpServer->GetUrlBase() ) {
-				jobAd->Assign( ATTR_GRIDFTP_URL_BASE, gridftpServer->GetUrlBase() );
+			} else {
 				gmState = GM_DELEGATE_PROXY;
 			}
 		} break;
@@ -945,21 +915,6 @@ void CreamJob::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-					// Check that our gridftp server is healthy
-				if ( gridftpServer->GetErrorMessage() ) {
-					errorString = gridftpServer->GetErrorMessage();
-					gmState = GM_HOLD;
-					break;
-				}
-				MyString url_base;
-				jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, url_base );
-				if ( gridftpServer->GetUrlBase() &&
-					 strcmp( url_base.Value(),
-							 gridftpServer->GetUrlBase() ) ) {
-					gmState = GM_CANCEL;
-					break;
-				}
-
 				int new_lease;	// CalculateJobLease needs an int
 				time_t renew_time;
 				if ( CalculateJobLease( jobAd, new_lease,
@@ -1356,10 +1311,6 @@ void CreamJob::doEvaluateState()
 			}
 			delete m_xfer_request;
 			m_xfer_request = NULL;
-			MyString val;
-			if ( jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, val ) ) {
-				jobAd->AssignExpr( ATTR_GRIDFTP_URL_BASE, "Undefined" );
-			}
 			
 			if ( wantRematch ) {
 				dprintf(D_ALWAYS,
@@ -1605,7 +1556,6 @@ char *CreamJob::buildSubmitAd()
 	const char *ATTR_STD_ERROR = "StdError";
 	const char *ATTR_INPUT_SB = "InputSandbox";
 	const char *ATTR_OUTPUT_SB = "OutputSandbox";
-	const char *ATTR_OUTPUT_SB_DEST_URI = "OutputSandboxDestURI";
 	const char *ATTR_VIR_ORG = "VirtualOrganization";
 	const char *ATTR_BATCH_SYSTEM = "BatchSystem";
 	const char *ATTR_QUEUE_NAME = "QueueName";
@@ -1616,7 +1566,6 @@ char *CreamJob::buildSubmitAd()
 	MyString tmp_str2 = "";
 	MyString buf = "";
 	MyString iwd_str = "";
-	MyString gridftp_url = "";
 	StringList isb;
 	StringList osb;
 	bool result;
@@ -1636,12 +1585,6 @@ char *CreamJob::buildSubmitAd()
 		}
 	} else {
 		iwd_str = '/';
-	}
-	
-		//Gridftp server to use with CREAM
-	if(!jobAd->LookupString(ATTR_GRIDFTP_URL_BASE, gridftp_url)){
-		errorString.sprintf( "%s not defined", ATTR_GRIDFTP_URL_BASE );
-		return NULL;
 	}
 	
 		//EXECUTABLE can either be PRE-STAGED or TRANSFERED
