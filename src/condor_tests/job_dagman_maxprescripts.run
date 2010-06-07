@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use Cwd;
+use CondorUtils;
 use CondorTest;
 
 $cmd = 'job_dagman_maxprescripts.dag';
@@ -27,14 +28,14 @@ $flowlog = "job_dagman_maxprescripts-srvr-log.log";
 $serversubFile = "job_dagman_maxprescripts-srvr.cmd";
 
 my $pid = $$;
-system("mkdir $pid");
+runcmd("mkdir $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "maxpresock";
 my $newsocketname = $curcwd . "/" . $pid . "/maxpresock";
 
-system("rm -f $flowlog");
+runcmd("rm -f $flowlog");
 defined(my $pid = fork) or die "Cannot fork: $!";
 unless ($pid)
 {
@@ -82,7 +83,7 @@ my $checkin = "job_dagman_maxprescripts-checkin.pl";
 
 foreach $name (@filestochmod)
 {
-	system("chmod 755 $name");
+	runcmd("chmod 755 $name");
 }
 
 $testdesc =  'Condor submit dag - throttle prescripts test - scheduler U';
@@ -138,12 +139,12 @@ $success = sub
 		CondorTest::debug("$ret\n",1);
 		if( $ret ne "0" )
 		{
-			system("./x_general_client.pl $newsocketname quit");
+			runcmd("./x_general_client.pl $newsocketname quit");
 			die "MAXPRE of $maxjobs exceeded\n";
 		}
 	}
 	# shutdown the server we started
-	system("./x_general_client.pl $newsocketname quit");
+	runcmd("./x_general_client.pl $newsocketname quit");
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -158,7 +159,7 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	exit(0);
 } else {
 	# shutdown the server we started
-	system("./x_general_client.pl $newsocketname quit");
+	runcmd("./x_general_client.pl $newsocketname quit");
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 
