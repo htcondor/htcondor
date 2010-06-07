@@ -890,7 +890,7 @@ of the macro as a command-line argument to the job.
     executable = A.exe
     log        = A.log
     error      = A.err
-    arguments  = $(state)
+    arguments  = "$(state)"
     queue
 \end{verbatim}
 \normalsize
@@ -2045,6 +2045,48 @@ A drawback to having unique submit description files for each of the jobs
 is that there are lots of files, one for each job.
 
 \item[Single submit description file.]
+A single Condor submit description file might be used for all the many
+jobs of the parameter sweep.
+To distinguish the jobs and their associated distinct input and output files,
+the DAG input file assigns a unique identifier with the \Arg{VARS} keyword.
+\begin{verbatim}
+  # file sweep.dag
+  JOB job0 common.submit
+  VARS job0 runnumber="0"
+  JOB job1 common.submit
+  VARS job1 runnumber="1"
+  JOB job2 common.submit
+  VARS job2 runnumber="2"
+  .
+  .
+  .
+  JOB job999 common.submit
+  VARS job999 runnumber="999"
+\end{verbatim}
+
+The single submit description file for all these jobs utilizes the
+\Expr{runnumber} variable value in its identification of the job's
+files. 
+This submit description file might appear as
+\begin{verbatim}
+  # file common.submit
+  universe = vanilla
+  executable = /path/to/executable
+  log = job$(runnumber).log
+  input = job$(runnumber).in
+  output = job$(runnumber).out
+  notification = Never
+  arguments = "-$(runnumber)"
+  queue
+\end{verbatim}
+The job with \Expr{runnumber="8"} expects to find its input file \File{job8.in} 
+in the single, common directory, and it logs job events in \File{job8.log}
+and sends its output to \File{job8.out}.
+The executable is invoked with
+\begin{verbatim}
+  /path/to/executable -8
+\end{verbatim}
+
 \end{description}
 
 \MoreTodo
