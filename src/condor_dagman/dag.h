@@ -63,14 +63,15 @@ class OwnedMaterials
 	public:
 		// this structure owns the containers passed to it, but not the memory 
 		// contained in the containers...
-		OwnedMaterials(ExtArray<Job*> *a) :
-				nodes (a) {};
+		OwnedMaterials(ExtArray<Job*> *a, ThrottleByCategory *tr) :
+				nodes (a), throttles (tr) {};
 		~OwnedMaterials() 
 		{
 			delete nodes;
 		};
 
 	ExtArray<Job*> *nodes;
+	ThrottleByCategory *throttles;
 };
 
 //------------------------------------------------------------------------
@@ -118,6 +119,9 @@ class Dag {
 				wan't to allocate some regulated resources we won't need
 				if we are a splice. It is true for a top level dag, and false
 				for a splice.
+		@param spliceScope a string containing the names of all splices
+				on the "path" to the top-level DAG (e.g., "A+B+"), or
+				"root" for the top-level DAG.
     */
 
     Dag( /* const */ StringList &dagFiles,
@@ -130,7 +134,7 @@ class Dag {
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 const SubmitDagDeepOptions *submitDagDeepOpts,
-		 bool isSplice = false );
+		 bool isSplice = false, const MyString &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -927,6 +931,11 @@ class Dag {
 		// because we know we aren't going to have an "executing" dag object
 		// which is also a splice.
 	bool _isSplice;
+
+		// The splice "scope" for this DAG (e.g., "A+B+", or "root").
+		// This is currently just used for diagnostic messages
+		// (wenger 2010-06-07)
+	MyString _spliceScope;
 
 		// The maximum fake subprocID we see in recovery mode (needed to
 		// initialize the ID for subsequent fake events so IDs don't

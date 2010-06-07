@@ -105,6 +105,12 @@ ThrottleByCategory::GetThrottleInfo( const MyString *category )
 void
 ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 {
+		// We copy the ThrottleInfo objects into this hash table,
+		// and then copy this hash table over the one in this object
+		// so that the ThrottleInfo objects are indexed by their
+		// new names.  Note that we don't need to delete any
+		// ThrottleInfo objects because we're re-using the ones
+		// we already have.
 	HashTable<MyString, ThrottleInfo *> tmpThrottles( CATEGORY_HASH_SIZE,
 				MyStringHash, rejectDuplicateKeys );
 
@@ -124,7 +130,12 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 			EXCEPT( "HashTable error" );
 		}
 	}
-	_throttles.clear();
+
+		// Get rid of old hash buckets.
+	_throttles.clear();	// get rid of hash buckets
+
+		// Shallow copy here, as far as ThrottleInfo objects are
+		// concerned (we get new hash buckets).
 	_throttles = tmpThrottles;
 }
 
