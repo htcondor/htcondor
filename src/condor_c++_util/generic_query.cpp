@@ -37,6 +37,10 @@ GenericQuery ()
 	integerConstraints = 0;
 	floatConstraints = 0;
 	stringConstraints = 0;
+
+	floatKeywordList = NULL;
+	integerKeywordList = NULL;
+	stringKeywordList = NULL;
 }
 
 

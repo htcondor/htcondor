@@ -72,7 +72,9 @@ Stream :: Stream(stream_code c) :
 	decrypt_buf_len(0),
 	m_peer_description_str(NULL),
 	m_peer_version(NULL),
-	m_deadline_time(0)
+	m_deadline_time(0),
+	m_crypto_state_before_secret(false),
+	encrypt_(false)
 {
 }
 

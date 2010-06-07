@@ -1209,6 +1209,7 @@ ExprTree::ExprTree() : unit('\0'), evalFlag(FALSE)
 	}
 	string_space_references++;
 	invisible = false;
+	type = LX_UNDEFINED;
 	return;
 }
 

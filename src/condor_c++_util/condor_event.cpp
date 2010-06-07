@@ -223,6 +223,8 @@ ULogEvent::ULogEvent(void)
 	(void) time ((time_t *)&eventclock);
 	tm = localtime ((time_t *)&eventclock);
 	eventTime = *tm;
+	scheddname = NULL;
+	m_gjid = NULL;
 }
 
 
@@ -2943,6 +2945,7 @@ ShadowExceptionEvent::initFromClassAd(ClassAd* ad)
 JobSuspendedEvent::JobSuspendedEvent (void)
 {
 	eventNumber = ULOG_JOB_SUSPENDED;
+	num_pids = -1;
 }
 
 JobSuspendedEvent::~JobSuspendedEvent (void)
@@ -3537,6 +3540,7 @@ NodeExecuteEvent::NodeExecuteEvent(void)
 {
 	executeHost [0] = '\0';
 	eventNumber = ULOG_NODE_EXECUTE;
+	node = -1;
 }
 
 

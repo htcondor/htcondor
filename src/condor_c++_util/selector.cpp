@@ -105,6 +105,8 @@ Selector::reset()
 	_select_errno = 0;
 	state = VIRGIN;
 	timeout_wanted = FALSE;
+	timeout.tv_sec = timeout.tv_usec = 0;
+
 	max_fd = -1;
 #if defined(WIN32)
 	FD_ZERO( save_read_fds );
