@@ -263,13 +263,6 @@ invokeHousekeeper (AdTypes adtype)
 }
 
 
-void CollectorEngine::
-toggleLogging (void)
-{
-	log = !log;
-}
-
-
 int (*CollectorEngine::genericTableScanFunction)(ClassAd *) = NULL;
 
 int CollectorEngine::

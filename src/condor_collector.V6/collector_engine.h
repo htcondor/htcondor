@@ -40,9 +40,6 @@ class CollectorEngine : public Service
 	int scheduleHousekeeper (int = 300);
 	int invokeHousekeeper (AdTypes);
 
-	// want collector to log messages?  Default: yes
-	void toggleLogging (void);
-
 	// perform the collect operation of the given command
 	ClassAd *collect (int, Sock *, sockaddr_in *, int &);
 	ClassAd *collect (int, ClassAd *, sockaddr_in *, int &, Sock* = NULL);
@@ -98,9 +95,6 @@ class CollectorEngine : public Service
 	// relevant variables from the config file
 	int	clientTimeout; 
 	int	machineUpdateInterval;
-
-	// should we log?
-	bool log;
 
 	int  housekeeper ();
 	int  housekeeperTimerID;

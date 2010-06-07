@@ -91,6 +91,7 @@ SSHToJob::SSHToJob():
 	m_auto_retry(false),
 	m_retry_delay(30)
 {
+	m_jobid.cluster = m_jobid.proc = -1;
 }
 
 SSHToJob::~SSHToJob()

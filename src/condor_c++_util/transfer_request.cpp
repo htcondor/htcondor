@@ -63,6 +63,7 @@ TransferRequest::TransferRequest(ClassAd *ip)
 
 TransferRequest::TransferRequest()
 {
+	m_rejected = false;
 	m_ip = new ClassAd();
 }
 

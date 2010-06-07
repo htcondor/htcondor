@@ -1303,6 +1303,7 @@ JobActionResults::JobActionResults( action_result_type_t res_type )
 	ar_bad_status = 0;
 	ar_already_done = 0;
 	ar_error = 0;
+	action = JA_ERROR;
 }
 
 

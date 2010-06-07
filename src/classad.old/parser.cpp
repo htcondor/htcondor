@@ -400,6 +400,9 @@ ParseAddOp(const char *& s, ExprTree*& newTree, int& count)
     newTree = lArg;
     return FALSE;
     
+	/* Jim Pruyne added this code in 1996, but it never
+		executed due to the return above.  Let's just
+		be honest and comment it all out.
     t = LookToken(s);
     if(t->type == LX_VARIABLE)
     {
@@ -416,6 +419,7 @@ ParseAddOp(const char *& s, ExprTree*& newTree, int& count)
     }
 
     return TRUE;
+	*/
 }
 
 int 

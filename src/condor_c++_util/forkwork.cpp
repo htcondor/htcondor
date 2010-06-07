@@ -31,6 +31,8 @@
 ForkWorker::ForkWorker( void )
 {
 	valid = 0x5a5a;
+	pid = -1;
+	parent = -1;
 }
 
 // Fork worker class destructor
@@ -83,6 +85,7 @@ ForkWork::ForkWork( int max_workers )
 # endif
 	maxWorkers = max_workers;
 	reaperId = -1;
+	childExit = false;
 }
 
 // Finish initialization
