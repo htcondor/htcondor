@@ -28,7 +28,7 @@
 #include "my_popen.h"
 
 GLExecPrivSepHelper::GLExecPrivSepHelper() :
-	m_initialized(false)
+	m_sandbox_owned_by_user(false), m_initialized(false)
 {
 }
 
