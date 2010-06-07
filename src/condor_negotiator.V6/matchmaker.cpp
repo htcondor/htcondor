@@ -3233,6 +3233,7 @@ MatchListType(int maxlen)
 	m_rejPreemptForPolicy = 0; 
 	m_rejPreemptForRank = 0;
 	m_rejForSubmitterLimit = 0;
+	m_submitterLimit = 0.0f;
 }
 
 Matchmaker::MatchListType::

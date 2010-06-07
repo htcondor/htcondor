@@ -36,6 +36,7 @@ Prober::Prober()
 	cur_probed_size = 0;
 	cur_probed_seq_num = 0;
 	cur_probed_creation_time = 0;
+	job_queue_name[0] = '\0';
 }
 
 //! destructor

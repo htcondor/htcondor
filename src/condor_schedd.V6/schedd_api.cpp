@@ -154,6 +154,7 @@ JobFile::~JobFile()
 FileInfo::FileInfo()
 {
 	name = NULL;
+	size = 0;
 }
 
 FileInfo::~FileInfo()

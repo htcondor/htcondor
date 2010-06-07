@@ -64,6 +64,10 @@ AdminEvent::AdminEvent( void ) :
 
 	m_lastShutdown = 0;
 	m_spoolStorage = 0;
+
+	m_newshutdownAdminRate = 0.0f;
+	m_timeNow = 0;
+	m_timeSinceNow = 0;
 }
 
 AdminEvent::~AdminEvent( void )

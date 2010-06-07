@@ -86,6 +86,7 @@ ResMgr::ResMgr()
 	num_updates = 0;
 	startTime = 0;
 	type_strings = NULL;
+	m_startd_hook_shutdown_pending = false;
 }
 
 
