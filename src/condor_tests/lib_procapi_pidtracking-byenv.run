@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'lib_procapi_pidtracking-byenv.cmd';
 $testdesc =  'We cleanup correctly after our kids. - vanilla U';
@@ -129,7 +130,7 @@ $ExitSuccess = sub
 							"Test fails because pid $pidcheck should have ".
 							"been removed\n", 1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 				foreach my $pidcheck (@kidpids)
@@ -140,7 +141,7 @@ $ExitSuccess = sub
 							"Test fails because pid $pidcheck should have ".
 							"been removed\n", 1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 			}
@@ -160,7 +161,7 @@ $ExitSuccess = sub
 							"Test fails because pid $pidcheck should have ".
 							"been removed\n", 1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 				foreach my $pidcheck (@kidpids)
@@ -171,7 +172,7 @@ $ExitSuccess = sub
 							"Test fails because pid $pidcheck should have ".
 							"been removed\n", 1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 			}
