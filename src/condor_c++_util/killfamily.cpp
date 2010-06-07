@@ -38,6 +38,9 @@ KillFamily::KillFamily( pid_t pid, priv_state priv, int test_only )
 	exited_cpu_sys_time = 0;
 	max_image_size = 0;
 
+	alive_cpu_sys_time = 0;
+	alive_cpu_user_time = 0;
+
 	pidenvid_init(&m_penvid);
 	searchLogin = NULL;
 

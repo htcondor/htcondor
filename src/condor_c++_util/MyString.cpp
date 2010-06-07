@@ -721,6 +721,7 @@ MyString::init()
     capacity = 0;
 	tokenBuf = NULL;
 	nextToken = NULL;
+	dummy = '\0';
 }
 
 /*--------------------------------------------------------------------

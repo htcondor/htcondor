@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 
 $param_template = "x_param.protocol-fs.template";
@@ -95,21 +96,22 @@ if($mypid == 0) {
 	my $result = system($cmd);
 	CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
 
-	system("cp *$corename* $mysaveme");
+    #fails due to directory matching pattern
+	runcmd("cp *$corename* $mysaveme", {expect_result=>\&ANY});
 	
 	if( -e "$mysubmitnm" )
 	{
-		system("cp $mysubmitnm $mycorenm");
+		runcmd("cp $mysubmitnm $mycorenm");
 	}
 
 	if( -e "$mysubmitnmout" )
 	{
-		system("cp $mysubmitnmout $mycorenmout");
+		runcmd("cp $mysubmitnmout $mycorenmout");
 	}
 
 	if( -e "$mysubmitnmlog" )
 	{
-		system("cp $mysubmitnmlog $mycorenmlog");
+		runcmd("cp $mysubmitnmlog $mycorenmlog");
 	}
 
 CondorTest::KillPersonal($secconfig);

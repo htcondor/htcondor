@@ -29,6 +29,7 @@
 ## successfully run once.
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_recovery_event_check.dag';
 $testdesc =  'Condor submit dag - recovery event checking test - scheduler U';
@@ -49,13 +50,13 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 
 # Get rid of the first rescue DAG files if it exists.
 if (-e $rescue_file) {
-	system("rm -f $rescue_file");
+	runcmd("rm -f $rescue_file");
 }
 
 $abnormal = sub 

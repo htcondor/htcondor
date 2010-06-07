@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd      = 'job_filexfer_base-input1_van.cmd';
 $testdesc =  'Jobs run with imput when transfer_input = false - vanilla U';
@@ -81,11 +82,11 @@ my $inb = "$basefile"."b.txt";
 my $inc = "$basefile"."c.txt";
 my $inputdir = "job_"."$job"."_dir";
 
-system("mkdir -p $inputdir");
-system("touch $inputdir/$in");
-system("touch $inputdir/$ina");
-system("touch $inputdir/$inb");
-system("touch $inputdir/$inc");
+runcmd("mkdir -p $inputdir");
+runcmd("touch $inputdir/$in");
+runcmd("touch $inputdir/$ina");
+runcmd("touch $inputdir/$inb");
+runcmd("touch $inputdir/$inc");
 
 my $line = "";
 my $args = "--job=$job --noextrainput --failok";
@@ -117,7 +118,7 @@ while(<CMD>)
 }
 close(CMD);
 close(NEWCMD);
-system("mv $cmd.new $cmd");
+runcmd("mv $cmd.new $cmd");
 
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);

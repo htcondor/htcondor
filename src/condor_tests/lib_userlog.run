@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'lib_userlog.cmd';
 $testdesc =  'Test user log - write all events and expect to read the same';
@@ -53,7 +54,7 @@ my @expected_output =
 
 CondorTest::SetExpected(\@expected_output);
 
-system("rm -f local.log");
+runcmd("rm -f local.log");
 my $stats = system("./x_write_joblog.exe");
 if($stats != 0)
 {

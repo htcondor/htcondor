@@ -28,6 +28,7 @@
 ## the lower-level DAG should succeed.
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_rescue_recov-upper.dag';
 
@@ -49,14 +50,14 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 
 # Get rid of the rescue DAGs we should have at the end.
 foreach $name (@rescuedags) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 

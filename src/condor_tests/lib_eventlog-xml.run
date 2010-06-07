@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 
 $cmd_template = "lib_eventlog.template";
@@ -54,7 +55,7 @@ $mycorenmout = $corename . ".out";
 #print "Master PID is $mypid\n";
 #print "Master PID submit file is $mysubmitnm\n";
 
-system("cp x_lib_eventlog-xml_config_postsrc.template x_lib_eventlog-xml_config_postsrc");
+runcmd("cp x_lib_eventlog-xml_config_postsrc.template x_lib_eventlog-xml_config_postsrc");
 
 # get a remote scheduler running (side b)
 my $configrem = CondorTest::StartPersonal( "lib_eventlog-xml", "x_param.libeventlog-xml" ,"eventlog-xml");
@@ -70,7 +71,7 @@ CondorTest::debug("Set config to $parallelconfig\n",1);
 
 
 #print "Looking for schedd for Basic Parallel Test\n";
-system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
+runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
 
 # Edit submit file to submit to scheduler at remote (side b) schedd.
 my $line;
@@ -144,22 +145,22 @@ if( $result == 0 ) {
 	}
 	CondorTest::debug("Results all Match! Test is a success.\n",1);
 }
-
-system("cp *lib_eventlog* $mysaveme");
+#fails due to directory matching pattern
+runcmd("cp *lib_eventlog* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($parallelconfig);

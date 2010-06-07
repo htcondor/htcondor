@@ -114,7 +114,7 @@ struct OwnerData {
   int OldFlockLevel;
   time_t NegotiationTimestamp;
   OwnerData() { Name=NULL; Domain=NULL;
-  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
+  NegotiationTimestamp=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
 
 class match_rec: public ClaimIdParser

@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd      = 'job_filexfer_base_van.cmd';
 $testdesc =  'Base file transfer - vanilla U';
@@ -68,9 +69,9 @@ $timed = sub
 	die "Job should have ended by now. file transfer broken!\n";
 };
 
-system("mkdir -p ../ftjob");
-system("cp x_job_filexfer_testjob.pl ../ftjob");
-system("chmod 775 ../ftjob/x_job_filexfer_testjob.pl");
+runcmd("mkdir -p ../ftjob");
+runcmd("cp x_job_filexfer_testjob.pl ../ftjob");
+runcmd("chmod 775 ../ftjob/x_job_filexfer_testjob.pl");
 
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);
@@ -81,10 +82,10 @@ CondorTest::RegisterExitedSuccess($testname, $success);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	system("rm -rf ../ftjob");
+	runcmd("rm -rf ../ftjob");
 	exit(0);
 } else {
-	system("rm -rf ../ftjob");
+	runcmd("rm -rf ../ftjob");
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

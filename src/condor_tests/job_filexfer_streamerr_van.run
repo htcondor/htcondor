@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_filexfer_streamerr_van.cmd';
 $out = 'job_filexfer_streamerr_van.out';
@@ -29,7 +30,7 @@ $submitted = sub
 {
 	my %info = @_;
 	my $name = $info{"error"};
-	system("rm $name");
+	runcmd("rm $name");
 };
 
 $aborted = sub 

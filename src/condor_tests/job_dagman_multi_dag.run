@@ -22,6 +22,7 @@
 ## (multiple DAG files specified on the condor_submit_dag command line).
 
 use CondorTest;
+use CondorUtils;
 
 # $cmd is a reference to an array -- that's the way to pass multiple
 # DAG files to the subroutines in Condor.pm.
@@ -65,14 +66,14 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 
 # Get rid of any existing output files.
 foreach $name (@outfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 

@@ -55,6 +55,7 @@ ClassAdLogParser::ClassAdLogParser()
 {
 	log_fp = NULL;
 	nextOffset = 0;
+	job_queue_name[0] = '\0';
 }
 
 ClassAdLogParser::~ClassAdLogParser()

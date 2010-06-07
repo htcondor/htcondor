@@ -50,6 +50,7 @@ Buf::Buf(
 	_dta_pt = 0;
 	_next = NULL;
 	num_created++;
+	p_sock = NULL;
 }
 
 

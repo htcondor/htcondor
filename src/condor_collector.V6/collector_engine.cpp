@@ -246,7 +246,6 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 	return count;
 }
 
-
 int (*CollectorEngine::genericTableScanFunction)(ClassAd *) = NULL;
 
 int CollectorEngine::

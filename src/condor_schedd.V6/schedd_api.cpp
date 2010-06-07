@@ -145,6 +145,9 @@ Job::getClusterID()
 
 JobFile::JobFile()
 {
+	currentOffset = -1;
+	file = -1;
+	size = -1;
 }
 
 JobFile::~JobFile()
@@ -153,6 +156,8 @@ JobFile::~JobFile()
 
 FileInfo::FileInfo()
 {
+	name = NULL;
+	size = 0;
 }
 
 FileInfo::~FileInfo()

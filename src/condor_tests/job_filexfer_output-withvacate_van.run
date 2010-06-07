@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd      = 'job_filexfer_output-withvacate_van.cmd';
 $testdesc =  'file transfer - look for two sets of output files with a vacate test - vanilla U';
@@ -31,8 +32,8 @@ sub RUNNING{2};
 
 my $job = $$;
 CondorTest::debug("Process Id for this script is  $job\n",1);
-system("rm -f submit_filetrans_input*");
-system("rm -f submit_filetrans_output*");
+runcmd("rm -f submit_filetrans_input*");
+runcmd("rm -f submit_filetrans_output*");
 my $basefile = "submit_filetrans_input" . "$job";
 my $in = "$basefile".".txt";
 my $ina = "$basefile"."a.txt";
@@ -87,7 +88,7 @@ $execute = sub {
 	$outi = "$baseoutfile"."i.txt";
 	$outj = "$baseoutfile"."j.txt";
 
-	system("rm -f $baseoutfile*");
+	runcmd("rm -f $baseoutfile*");
 
 	CondorTest::debug("Looking for $oute, $outf, $outg ...\n",1);
 
@@ -124,10 +125,10 @@ $evicted = sub {
 	}
 	print "++++++++++++++++++++++++++++++++++++\n";
 	print "++++++++++++++++++++++++++++++++++++\n";
-	system("ls $baseoutfile*");
+	runcmd("ls $baseoutfile*");
 	print "++++++++++++++++++++++++++++++++++++\n";
 	sleep(15);
-	system("ls $baseoutfile*");
+	runcmd("ls $baseoutfile*");
 	print "++++++++++++++++++++++++++++++++++++\n";
 
 	if(!(-f "$oute")) { 
@@ -260,7 +261,7 @@ while(<CMD>)
 }
 close(CMD);
 close(NEWCMD);
-system("mv $cmd.new $cmd");
+runcmd("mv $cmd.new $cmd");
 
 CondorTest::RegisterHold($testname, $hold);
 CondorTest::RegisterExecute($testname, $execute);

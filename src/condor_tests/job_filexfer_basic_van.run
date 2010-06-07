@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_filexfer_basic_van.cmd';
 $testdesc =  'Do file transfers work - vanilla U';
@@ -36,7 +37,7 @@ $success = sub {
 	if($sent ne $got) {
 		die "Data was not preserved between file transfers\n";
 	}
-	system("rm submit_transferfile_vanilla.txtdata");
+	runcmd("rm submit_transferfile_vanilla.txtdata");
 };
 
 CondorTest::RegisterExitedSuccess($testname, $success);

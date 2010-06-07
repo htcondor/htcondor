@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_splice-E.dag';
 $testdesc =  'Condor submit dag - basic splice test - scheduler U';
@@ -105,7 +106,7 @@ $success = sub
 	}
 	# clean out old output files
 	foreach $name (@outfiles) {
-		system("rm -f $name.out $name.err");
+		runcmd("rm -f $name.out $name.err");
 	}
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
