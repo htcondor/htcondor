@@ -12294,6 +12294,12 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	tmp_id.proc = proc;
 	int system_holds = 0;
 
+	if ( cluster < 1 || proc < 0 ) {
+		dprintf(D_FULLDEBUG,"holdJobRaw failed, job id (%d.%d) is malformed\n",
+			cluster, proc);
+		return false;
+	}
+
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) < 0 ) {   
 		dprintf( D_ALWAYS, "Job %d.%d has no %s attribute.  Can't hold\n",
 				 cluster, proc, ATTR_JOB_STATUS );

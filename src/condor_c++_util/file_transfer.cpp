@@ -148,6 +148,7 @@ FileTransfer::FileTransfer()
 	simple_sock = NULL;
 	m_use_file_catalog = true;
 	m_sec_session_id = NULL;
+	I_support_filetransfer_plugins = false;
 }
 
 FileTransfer::~FileTransfer()

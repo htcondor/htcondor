@@ -91,7 +91,7 @@ class KeyInfo {
 
     unsigned char * keyData_;
     int             keyDataLen_;
-	int				keyBufferLen_;
+	//int				keyBufferLen_;
     Protocol        protocol_;
     int             duration_;
 };

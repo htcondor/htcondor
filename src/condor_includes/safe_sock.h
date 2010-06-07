@@ -158,7 +158,6 @@ protected:
     Condor_MD_MAC * mdChecker_;
 	int _tOutBtwPkts;
 	char* _fqu;  // fully qualified username
-    int   _authenticated;
 
 	// statistics variables
 	static unsigned long _noMsgs;
