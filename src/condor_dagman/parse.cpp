@@ -1477,7 +1477,8 @@ parse_splice(
 							dag->DefaultNodeLog(),
 							dag->GenerateSubdagSubmits(),
 							NULL, // this Dag will never submit a job
-							true); /* we are a splice! */
+							true, /* we are a splice! */
+							current_splice_scope() );
 	
 	// initialize whatever the DIR line was, or defaults to, here.
 	splice_dag->SetDirectory(directory);

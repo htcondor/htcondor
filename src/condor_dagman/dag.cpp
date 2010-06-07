@@ -79,7 +79,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
-		  const SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice ) :
+		  const SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
+		  const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -116,6 +117,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_generateSubdagSubmits (generateSubdagSubmits),
 	_submitDagDeepOpts	  (submitDagDeepOpts),
 	_isSplice			  (isSplice),
+	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0)
 {
 
@@ -3375,7 +3377,7 @@ Dag::RelinquishNodeOwnership(void)
 	}
 
 	// shove it into a packet and give it back
-	return new OwnedMaterials(nodes);
+	return new OwnedMaterials(nodes, &_catThrottles);
 }
 
 
@@ -3424,13 +3426,15 @@ Dag::LiftChildSplices(void)
 	MyString key;
 	Dag *splice = NULL;
 
-	debug_printf(DEBUG_DEBUG_1, "Lifting child splices...\n");
+	debug_printf(DEBUG_DEBUG_1, "Lifting child splices of %s...\n",
+				_spliceScope.Value());
 	_splices.startIterations();
 	while( _splices.iterate(key, splice) ) {
 		debug_printf(DEBUG_DEBUG_1, "Lifting child splice: %s\n", key.Value());
 		splice->LiftSplices(SELF);
 	}
-	debug_printf(DEBUG_DEBUG_1, "Done lifting child splices.\n");
+	debug_printf(DEBUG_DEBUG_1, "Done lifting child splices of %s.\n",
+				_spliceScope.Value());
 }
 
 
@@ -3448,6 +3452,34 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	JobID_t key_id;
 
 	ExtArray<Job*> *nodes = om->nodes;
+
+	// 0. Take ownership of the categories
+
+	// Merge categories from the splice into this DAG object.  If the
+	// same category exists in both (whether global or non-global) the
+	// higher-level value overrides the lower-level value.
+
+	// Note: by the time we get to here, all category names have already
+	// been prefixed with the proper scope.
+	om->throttles->StartIterations();
+	ThrottleByCategory::ThrottleInfo *spliceThrottle;
+	while ( om->throttles->Iterate( spliceThrottle ) ) {
+		ThrottleByCategory::ThrottleInfo *mainThrottle =
+					_catThrottles.GetThrottleInfo(
+					spliceThrottle->_category );
+		if ( mainThrottle && mainThrottle->isSet() &&
+					mainThrottle->_maxJobs != spliceThrottle->_maxJobs ) {
+			debug_printf( DEBUG_NORMAL, "Warning: higher-level (%s) "
+						"maxjobs value of %d for category %s overrides "
+						"splice %s value of %d\n", _spliceScope.Value(),
+						mainThrottle->_maxJobs,
+						mainThrottle->_category->Value(),
+						spliceName.Value(), spliceThrottle->_maxJobs );
+		} else {
+			_catThrottles.SetThrottle( spliceThrottle->_category,
+						spliceThrottle->_maxJobs );
+		}
+	}
 
 	// 1. Take ownership of the nodes
 
@@ -3468,34 +3500,8 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	// DAG (which will be deleted soon).
 	for ( i = 0; i < nodes->length(); i++ ) {
 		Job *tmpNode = (*nodes)[i];
-		ThrottleByCategory::ThrottleInfo *spliceThrottle =
-					tmpNode->GetThrottleInfo();
+		spliceThrottle = tmpNode->GetThrottleInfo();
 		if ( spliceThrottle != NULL ) {
-
-				// Copy the category throttle setting from the splice
-				// DAG to the upper DAG (creates the category if we don't
-				// already have it).  For global categories, the upper
-				// level overrides the lower level if specified in both
-				// places.  Note: if we have a name collision for a
-				// non-global (e.g., splice A foo.dag; category A+X 5;
-				// splice A has category X 10), the *lower* level
-				// currently overrides the upper level (maintaining
-				// pre-existing behavior).
-			ThrottleByCategory::ThrottleInfo *mainThrottle =
-						_catThrottles.GetThrottleInfo(
-						spliceThrottle->_category );
-			if ( spliceThrottle->isGlobal() && mainThrottle &&
-						mainThrottle->isSet() ) {
-				debug_printf( DEBUG_NORMAL, "Warning: higher-level maxjobs "
-							"value of %d for global category %s overrides "
-							"splice %s value of %d\n", mainThrottle->_maxJobs,
-							mainThrottle->_category->Value(),
-							spliceName.Value(), spliceThrottle->_maxJobs );
-			} else {
-				_catThrottles.SetThrottle( spliceThrottle->_category,
-							spliceThrottle->_maxJobs );
-			}
-
 				// Now re-set the category in the node, so that the
 				// category info points to the upper DAG rather than the
 				// splice DAG.

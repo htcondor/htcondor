@@ -20,3 +20,4 @@ parent D1 E1 child F1
 
 maxjobs cat1 11
 maxjobs +catS 3
+maxjobs D1+cat2 33
