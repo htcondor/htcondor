@@ -129,6 +129,7 @@ const char	*MyName;
 int		Quiet = 1;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
+int		JobDisableFileChecks = 0;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
@@ -384,6 +385,7 @@ const char	*HoldKillSig		= "hold_kill_sig";
 const char	*KillSigTimeout		= "kill_sig_timeout";
 #endif
 
+void    SetJobDisableFileChecks();
 void    SetSimpleJobExprs();
 void	SetRemoteAttrs();
 void 	reschedule();
@@ -1945,6 +1947,19 @@ struct SimpleExprInfo {
 	char const *default_value;
 	bool quote_it;
 };
+
+void
+SetJobDisableFileChecks()
+{
+	JobDisableFileChecks = 0;
+	char *dis_check = condor_param("skip_filechecks");
+	if ( dis_check ) {
+		if (dis_check[0]=='T' || dis_check[0]=='t') {
+			JobDisableFileChecks = 1;
+		}
+		free(dis_check);
+	}
+}
 
 /* This function is used to handle submit file commands that are inserted
  * into the job ClassAd verbatim, with no special treatment.
@@ -5654,6 +5669,10 @@ queue(int num)
 		SetEmailAttributes();
 		SetRemoteInitialDir();
 		SetExitRequirements();
+
+        // really a command, needs to happen before any calls to check_open
+		SetJobDisableFileChecks();
+
 		SetUserLog();
 		SetUserLogXML();
 		SetCoreSize();
@@ -6236,6 +6255,11 @@ check_open( const char *name, int flags )
 	MyString strPathname;
 	char *temp;
 	StringList *list;
+
+		/* The user can disable file checks on a per job basis, in such a
+		   case we avoid adding the files to CheckFilesWrite/Read.
+		*/
+	if ( JobDisableFileChecks ) return;
 
 	/* No need to check for existence of the Null file. */
 	if( strcmp(name, NULL_FILE) == MATCH ) {
