@@ -71,9 +71,7 @@ static bool test_normal_case() {
 		dprintf(D_ALWAYS, "I am a fish!\n");
 	}
 	if(strcmp(&expected[0], hostname) != 0) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

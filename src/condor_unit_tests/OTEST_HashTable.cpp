@@ -120,11 +120,9 @@ bool insertlookup_normal() {
 	e.emit_param("lookup()'s RETURN", "%s", tfnze(lookup_result));
 	e.emit_param("Value", "%d", value);
 	if(value != 37 || insert_result != 0 || lookup_result != 0) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool insertlookup_collision() {
@@ -144,11 +142,9 @@ bool insertlookup_collision() {
 	e.emit_param("lookup()'s RETURN", "%s", tfnze(lookup_result));
 	e.emit_param("Value", "%d", value);
 	if(value != 197 || insert_result != 0 || lookup_result != 0) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_walk_normal() {
@@ -161,11 +157,9 @@ bool test_walk_normal() {
 	int result = table->walk(isOdd);
 	e.emit_retval("%s", tfstr(result));
 	if(result != 1) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_walk_failed() {
@@ -179,11 +173,9 @@ bool test_walk_failed() {
 	int result = table->walk(isOdd);
 	e.emit_retval("%s", tfstr(result));
 	if(result != 0) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_iterate_first() {
@@ -198,11 +190,9 @@ bool test_iterate_first() {
 	e.emit_param("Value", "%d", value);
 	e.emit_retval("%s", tfstr(result));
 	if(result != 1 || (value != 37 && value != 197 && value != 42)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_get_current_key() {
@@ -216,11 +206,9 @@ bool test_get_current_key() {
 	e.emit_param("Value", "%d", value);
 	e.emit_retval("%s", tfnze(result));
 	if(result != 0 || (value != 150 && value != 30 && value != 4)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_iterate_other() {
@@ -235,11 +223,9 @@ bool test_iterate_other() {
 	e.emit_param("Value", "%d", value);
 	e.emit_retval("%s", tfstr(result));
 	if(result != 1 || (value != 37 && value != 197 && value != 42)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_iterate_null() {
@@ -251,11 +237,9 @@ bool test_iterate_null() {
 	int result = table->iterate(value);
 	e.emit_retval("%s", tfstr(result));
 	if(result != 0) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_remove_normal() {
@@ -264,7 +248,7 @@ bool test_remove_normal() {
 	if(remove_result != 0) {
 		e.emit_alert("Insert operation failed on the HashTable.");
 		e.emit_result_abort(__LINE__);
-		return false;
+		FAIL;
 	}
 	e.emit_input_header();
 	e.emit_param("Index", "30");
@@ -275,11 +259,9 @@ bool test_remove_normal() {
 	int lookup_result = table->lookup(30, value);
 	e.emit_retval("%s", tfnze(lookup_result));
 	if(lookup_result != -1) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_remove_failed() {
@@ -292,11 +274,9 @@ bool test_remove_failed() {
 	int lookup_result = table->remove(527);
 	e.emit_retval("%s", tfnze(lookup_result));
 	if(lookup_result != -1) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_copy_constructor_depth() {
@@ -311,11 +291,9 @@ bool test_copy_constructor_depth() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfnze(result));
 	if(result != -1) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_equals_depth() {
@@ -329,11 +307,9 @@ bool test_equals_depth() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfnze(result));
 	if(result != -1) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_num_elems_normal() {
@@ -344,11 +320,9 @@ bool test_num_elems_normal() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result != 2) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_num_elems_collision() {
@@ -357,7 +331,7 @@ bool test_num_elems_collision() {
 	if(result != 0) {
 		e.emit_alert("Inserting into the hash table failed, error in the unit test.");
 		e.emit_result_abort(__LINE__);
-		return false;
+		FAIL;
 	}
 	result = table->getNumElements();
 	e.emit_output_expected_header();
@@ -365,11 +339,9 @@ bool test_num_elems_collision() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result != 3) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_table_size_normal() {
@@ -380,11 +352,9 @@ bool test_table_size_normal() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result != 7) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_clear_normal() {
@@ -398,11 +368,9 @@ bool test_clear_normal() {
 	e.emit_param("clear()'s RETURN", "%d", result);
 	e.emit_param("getNumElements()'s RETURN", "%d", numElems);
 	if(result != 0 || numElems != 0) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_auto_resize_normal() {
@@ -429,11 +397,9 @@ bool test_auto_resize_normal() {
 	e.emit_param("lookup(237)'s RETURN", "%s", tfnze(lookup_result237));
 	e.emit_param("lookup(237)'s VALUE", "%d", value237);
 	if(!(insert_result == 0 && lookup_result500 == 0 && lookup_result237 == 0 && value500 == 500 && value237 == 237)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_auto_resize_sizes() {
@@ -447,11 +413,9 @@ bool test_auto_resize_sizes() {
 	e.emit_param("numElems", "%d", numElems);
 	e.emit_param("tableSize", "%d", tableSize);
 	if(!(numElems == 501 && tableSize == 1023)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_auto_resize_check_numelems() {
@@ -468,11 +432,9 @@ bool test_auto_resize_check_numelems() {
 	e.emit_output_actual_header();
 	e.emit_param("num_of_entries", "%d", num_of_entries);
 	if(!(numElems == num_of_entries)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_auto_resize_timing() {
@@ -507,11 +469,9 @@ bool test_auto_resize_timing() {
 	e.emit_param("Insert Time", "%f", insertdur);
 	e.emit_param("Lookup Time", "%f", lookupdur);
 	if(!(numElems == 5000001 && tableSize >= 1000000)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool test_iterate_timing() {
@@ -555,11 +515,9 @@ bool test_iterate_timing() {
 	e.emit_output_actual_header();
 	e.emit_param("numElems", "%d", numTableTwoElems);
 	if(!(numElems == numTableTwoElems)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 bool cleanup() {

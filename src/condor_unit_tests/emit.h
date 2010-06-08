@@ -20,6 +20,14 @@
 #ifndef EMIT_H
 #define EMIT_H
 
+#define FAIL \
+	e.emit_result_failure(__LINE__); \
+	return false
+
+#define PASS \
+	e.emit_result_success(__LINE__); \
+	return false
+
 #include "condor_common.h"
 
 class Emitter {
