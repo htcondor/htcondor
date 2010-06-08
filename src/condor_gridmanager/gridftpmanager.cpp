@@ -426,7 +426,7 @@ bool GridftpServer::ScanSchedd()
 		next_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, buff );
 		if ( m_serversByProxy.lookup( HashKey( buff.Value() ), server ) ) {
 
-			MyString error_str;
+			std::string error_str;
 			Proxy *proxy = AcquireProxy( next_ad, error_str );
 			server = new GridftpServer( proxy );
 			ASSERT(server);

@@ -145,7 +145,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path;
 
 	gahpAd = NULL;
@@ -173,7 +173,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	if ( buff[0] != '\0' ) {
 		batchType = strdup( buff );
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -191,7 +191,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	sprintf( buff, "%s_GAHP", batchType );
 	gahp_path = param(buff);
 	if ( gahp_path == NULL ) {
-		error_string.sprintf( "%s not defined", buff );
+		sprintf( error_string, "%s not defined", buff );
 		goto error_exit;
 	}
 	gahp = new GahpClient( batchType, gahp_path );
@@ -216,8 +216,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }

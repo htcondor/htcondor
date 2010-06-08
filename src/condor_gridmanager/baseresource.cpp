@@ -92,15 +92,15 @@ void BaseResource::Reconfig()
 {
 	int tmp_int;
 	char *param_value;
-	MyString param_name;
+	std::string param_name;
 
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	setProbeInterval( tmp_int );
 
 	jobLimit = -1;
-	param_name.sprintf( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
+	sprintf( param_name, "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
 						ResourceType() );
-	param_value = param( param_name.Value() );
+	param_value = param( param_name.c_str() );
 	if ( param_value == NULL ) {
 		param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
 	}
@@ -166,8 +166,8 @@ bool BaseResource::Invalidate () {
 
     /* We only want to invalidate this resource. Using the tuple
        (HashName,SchedName,Owner) as unique id. */
-    MyString line;
-    line.sprintf ( 
+	std::string line;
+    sprintf( line,
         "((%s =?= \"%s\") && (%s =?= \"%s\") && "
 		 "(%s =?= \"%s\") && (%s =?= \"%s\"))",
         "HashName", GetHashName (),
@@ -179,7 +179,7 @@ bool BaseResource::Invalidate () {
     dprintf (
         D_FULLDEBUG,
         "BaseResource::InvalidateResource: \n%s\n",
-        line.Value() );
+        line.c_str() );
     
 	return daemonCore->sendUpdates( INVALIDATE_GRID_ADS, &ad, NULL, true ) > 0;
 }
@@ -196,12 +196,12 @@ bool BaseResource::SendUpdate () {
 
 	daemonCore->publish( &ad );
 
-    MyString tmp;
+	std::string tmp;
     ad.sPrint ( tmp );
     dprintf (
         D_FULLDEBUG,
         "BaseResource::UpdateResource: \n%s\n",
-        tmp.Value() );
+        tmp.c_str() );
 
 	return daemonCore->sendUpdates( UPDATE_GRID_AD, &ad, NULL, true ) > 0;
 }
@@ -238,10 +238,10 @@ void BaseResource::UpdateCollector () {
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 {
-	MyString buff;
+	std::string buff;
 
-	buff.sprintf( "%s %s", ResourceType(), resourceName );
-	resource_ad->Assign( ATTR_NAME, buff.Value() );
+	sprintf( buff, "%s %s", ResourceType(), resourceName );
+	resource_ad->Assign( ATTR_NAME, buff.c_str() );
 	resource_ad->Assign( "HashName", GetHashName() );
 	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );
     resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
@@ -504,7 +504,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();
 		while ( registeredJobs.Next( curr_job ) ) {
 			int new_expire;
-			MyString  job_id;
+			std::string  job_id;
 				// Don't update the lease for a job that isn't submitted
 				// anywhere. The Job object will start the lease when it
 				// submits the job.
@@ -580,9 +580,9 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 
 update_succeeded.Rewind();
 PROC_ID id;
-MyString msg = "    update_succeeded:";
-while(update_succeeded.Next(id)) msg.sprintf_cat(" %d.%d", id.cluster, id.proc);
-dprintf(D_FULLDEBUG,"%s\n",msg.Value());
+std::string msg = "    update_succeeded:";
+ while(update_succeeded.Next(id)) sprintf_cat(msg, " %d.%d", id.cluster, id.proc);
+dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
 	BaseJob *curr_job;
 	leaseUpdates.Rewind();
 	while ( leaseUpdates.Next( curr_job ) ) {

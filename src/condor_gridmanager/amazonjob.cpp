@@ -114,12 +114,12 @@ void AmazonJobReconfig()
 bool AmazonJobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
-	MyString resource;
+	std::string resource;
 	
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
 
-	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.Value(), "amazon", 6 ) == 0) ) 
+	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.c_str(), "amazon", 6 ) == 0) ) 
 	{
 		return true;
 	}
@@ -145,7 +145,7 @@ AmazonJob::AmazonJob( ClassAd *classad )
 {
 dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n");
 	char buff[16385]; // user data can be 16K, this is 16K+1
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
 	int gahp_worker_cnt = 0;
@@ -296,8 +296,8 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "amazon" ) ) {
-			error_string.sprintf( "%s not of type amazon",
-								  ATTR_GRID_JOB_ID );
+			sprintf( error_string, "%s not of type amazon",
+					 ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
@@ -327,8 +327,8 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 
  error_exit:
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	
 	return;
@@ -520,7 +520,7 @@ void AmazonJob::doEvaluateState()
 					
 					// amazon_vm_start() will check the input arguments
 					rc = gahp->amazon_vm_start( m_public_key_file, m_private_key_file, 
-												m_ami_id.Value(), m_key_pair.Value(), 
+												m_ami_id.c_str(), m_key_pair.c_str(), 
 												m_user_data, m_user_data_file, m_instance_type, 
 												*m_group_names, instance_id, gahp_error_code);
 					
@@ -559,7 +559,7 @@ void AmazonJob::doEvaluateState()
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
 								procID.cluster, procID.proc, gahp_error_code,
-								errorString.Value() );
+								errorString.c_str() );
 						gmState = GM_HOLD;
 					}
 					
@@ -610,7 +610,7 @@ void AmazonJob::doEvaluateState()
 						instance_id = returnStatus.next();
 						keypair_name = returnStatus.next();
 
-						if (strcmp(m_key_pair.Value(), keypair_name) == 0) {
+						if (strcmp(m_key_pair.c_str(), keypair_name) == 0) {
 							is_running = true;
 							break;
 						}
@@ -635,7 +635,7 @@ void AmazonJob::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf(D_ALWAYS,"(%d.%d) VM check failed: %s: %s\n",
 							procID.cluster, procID.proc, gahp_error_code,
-							errorString.Value() );
+							errorString.c_str() );
 					gmState = GM_HOLD;
 				}
 
@@ -834,8 +834,8 @@ void AmazonJob::doEvaluateState()
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
 				} else {
-					MyString new_status;
-					MyString public_dns;
+					std::string new_status;
+					std::string public_dns;
 					StringList returnStatus;
 
 					// need to call amazon_vm_status(), amazon_vm_status() will check input arguments
@@ -852,7 +852,7 @@ void AmazonJob::doEvaluateState()
 						errorString = gahp->getErrorString();
 						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s\n",
 								 procID.cluster, procID.proc, gahp_error_code,
-								 errorString.Value() );
+								 errorString.c_str() );
 						gmState = GM_HOLD;
 						break;
 					} else {
@@ -865,12 +865,12 @@ void AmazonJob::doEvaluateState()
 
 						// VM Status is the second value in the return string list
 						returnStatus.rewind();
-						// jump to the value I need
-						for (int i=0; i<1; i++) {
+						if ( returnStatus.number() >= 2 ) {
+							// jump to the value I need
 							returnStatus.next();
+							new_status = returnStatus.next();
 						}
-						new_status = returnStatus.next();
-						
+
 						// if amazon VM's state is "running" or beyond,
 						// change condor job status to Running.
 						if ( new_status != remoteJobState &&
@@ -881,7 +881,7 @@ void AmazonJob::doEvaluateState()
 						}
 												
 						remoteJobState = new_status;
-						SetRemoteJobStatus( new_status.Value() );
+						SetRemoteJobStatus( new_status.c_str() );
 										
 						
 						returnStatus.rewind();
@@ -893,7 +893,7 @@ void AmazonJob::doEvaluateState()
 								returnStatus.next();							
 							}
 							public_dns = returnStatus.next();
-							SetRemoteVMName( public_dns.Value() );
+							SetRemoteVMName( public_dns.c_str() );
 						}
 					}
 
@@ -920,7 +920,7 @@ void AmazonJob::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
 							 procID.cluster, procID.proc, gahp_error_code,
-							 errorString.Value() );
+							 errorString.c_str() );
 					gmState = GM_HOLD;
 				}
 				
@@ -946,7 +946,7 @@ void AmazonJob::doEvaluateState()
 
 				// now create and register this keypair by using amazon_vm_create_keypair()
 				rc = gahp->amazon_vm_create_keypair(m_public_key_file, m_private_key_file, 
-													m_key_pair.Value(), m_key_pair_file.Value(), gahp_error_code);
+													m_key_pair.c_str(), m_key_pair_file.c_str(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -982,7 +982,7 @@ void AmazonJob::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf(D_ALWAYS,"(%d.%d) job create keypair failed: %s: %s\n",
 							procID.cluster, procID.proc, gahp_error_code,
-							errorString.Value() );
+							errorString.c_str() );
 					gmState = GM_HOLD;
 					break;
 				}
@@ -996,7 +996,7 @@ void AmazonJob::doEvaluateState()
 				{
 				// Something went wrong during the submit process and
 				// we need to destroy the keypair
-				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
+				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1004,7 +1004,7 @@ void AmazonJob::doEvaluateState()
 
 				if (rc == 0) {
 					// remove temporary keypair local output file
-					if ( !remove_keypair_file(m_key_pair_file.Value()) ) {
+					if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
 						dprintf(D_ALWAYS,"(%d.%d) job destroy temporary keypair local file failed.\n", procID.cluster, procID.proc);
 					}
 					if ( condorState == REMOVED || condorState == HELD ) {
@@ -1019,7 +1019,7 @@ void AmazonJob::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
 							 procID.cluster, procID.proc, gahp_error_code,
-							 errorString.Value() );
+							 errorString.c_str() );
 					gmState = GM_HOLD;
 				}
 									
@@ -1031,7 +1031,7 @@ void AmazonJob::doEvaluateState()
 			case GM_DESTROY_KEYPAIR:
 				{
 				// Yes, now let's destroy the temporary keypair 
-				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
+				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1039,7 +1039,7 @@ void AmazonJob::doEvaluateState()
 
 				if (rc == 0) {
 					// remove temporary keypair local output file
-					if ( remove_keypair_file(m_key_pair_file.Value()) ) {
+					if ( remove_keypair_file(m_key_pair_file.c_str()) ) {
 						gmState = GM_FAILED;
 					} else {
 						dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
@@ -1050,7 +1050,7 @@ void AmazonJob::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
 							 procID.cluster, procID.proc, gahp_error_code,
-							 errorString.Value() );
+							 errorString.c_str() );
 					gmState = GM_HOLD;
 				}
 									
@@ -1072,7 +1072,7 @@ void AmazonJob::doEvaluateState()
 					holdReason[sizeof(holdReason)-1] = '\0';
 					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) - 1 );
 					if ( holdReason[0] == '\0' && errorString != "" ) {
-						strncpy( holdReason, errorString.Value(), sizeof(holdReason) - 1 );
+						strncpy( holdReason, errorString.c_str(), sizeof(holdReason) - 1 );
 					} else if ( holdReason[0] == '\0' ) {
 						strncpy( holdReason, "Unspecified gridmanager error", sizeof(holdReason) - 1 );
 					}
@@ -1157,7 +1157,7 @@ void AmazonJob::SetKeypairId( const char *keypair_id )
 	} else {
 		m_key_pair = keypair_id;
 	}
-	SetRemoteJobId( m_key_pair.Value(), remoteJobId );
+	SetRemoteJobId( m_key_pair.c_str(), remoteJobId );
 }
 
 void AmazonJob::SetInstanceId( const char *instance_id )
@@ -1168,20 +1168,20 @@ void AmazonJob::SetInstanceId( const char *instance_id )
 	} else {
 		remoteJobId = NULL;
 	}
-	SetRemoteJobId( m_key_pair.Value(), remoteJobId );
+	SetRemoteJobId( m_key_pair.c_str(), remoteJobId );
 }
 
 // SetRemoteJobId() is used to set the value of global variable "remoteJobID"
 void AmazonJob::SetRemoteJobId( const char *keypair_id, const char *instance_id )
 {
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( keypair_id && keypair_id[0] ) {
-		full_job_id.sprintf( "amazon %s", keypair_id );
+		sprintf( full_job_id, "amazon %s", keypair_id );
 		if ( instance_id && instance_id[0] ) {
-			full_job_id.sprintf_cat( " %s", instance_id );
+			sprintf_cat( full_job_id, " %s", instance_id );
 		}
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 
@@ -1189,9 +1189,9 @@ void AmazonJob::SetRemoteJobId( const char *keypair_id, const char *instance_id 
 
 // if ami_id is empty, client must have assigned upload file name value
 // otherwise the condor_submit will report an error.
-MyString AmazonJob::build_ami_id()
+std::string AmazonJob::build_ami_id()
 {
-	MyString ami_id;
+	std::string ami_id;
 	char* buffer = NULL;
 	
 	if ( jobAd->LookupString( ATTR_AMAZON_AMI_ID, &buffer ) ) {
@@ -1202,7 +1202,7 @@ MyString AmazonJob::build_ami_id()
 }
 
 
-MyString AmazonJob::build_keypair()
+std::string AmazonJob::build_keypair()
 {
 	// Build a name for the ssh keypair that will be unique to this job.
 	// Our pattern is SSH_<collector name>_<GlobalJobId>
@@ -1220,11 +1220,11 @@ MyString AmazonJob::build_keypair()
 	}
 
 	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
-	MyString job_id;
+	std::string job_id;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
 
-	MyString key_pair;
-	key_pair.sprintf( "SSH_%s_%s", pool_name, job_id.Value() );
+	std::string key_pair;
+	sprintf( key_pair, "SSH_%s_%s", pool_name, job_id.c_str() );
 
 	free( pool_name );
 	return key_pair;

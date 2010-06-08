@@ -96,7 +96,7 @@ extern int minProxy_time;
 bool InitializeProxyManager( const char *proxy_dir );
 void ReconfigProxyManager();
 
-Proxy *AcquireProxy( const ClassAd *job_ad, MyString &error,
+Proxy *AcquireProxy( const ClassAd *job_ad, std::string &error,
 					 TimerHandlercpp func_ptr = NULL, Service *data = NULL );
 Proxy *AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
 void ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );

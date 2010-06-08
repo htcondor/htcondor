@@ -196,7 +196,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	MyString job_error;
 	MyString grid_resource;
 	bool job_already_submitted = false;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 	char *tmp = NULL;
 
@@ -241,10 +241,10 @@ CreamJob::CreamJob( ClassAd *classad )
 							 (TimerHandlercpp)&CreamJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			error_string.sprintf( "%s is not set in the job ad",
+			sprintf( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
-		dprintf(D_ALWAYS, "errorstring %s\n", error_string.Value());
+		dprintf(D_ALWAYS, "errorstring %s\n", error_string.c_str());
 		goto error_exit;
 	}
 
@@ -277,7 +277,7 @@ CreamJob::CreamJob( ClassAd *classad )
 
 		token = grid_resource.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "cream" ) ) {
-			error_string.sprintf( "%s not of type cream", ATTR_GRID_RESOURCE );
+			sprintf( error_string, "%s not of type cream", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
@@ -294,7 +294,7 @@ CreamJob::CreamJob( ClassAd *classad )
 				resourceManagerString = strdup( urlbuf.Value() );
 			}
 		} else {
-			error_string.sprintf( "%s missing CREAM Service URL",
+			sprintf( error_string, "%s missing CREAM Service URL",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -303,7 +303,7 @@ CreamJob::CreamJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceBatchSystemString = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing batch system (LRMS) type.",
+			sprintf( error_string, "%s missing batch system (LRMS) type.",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -312,13 +312,13 @@ CreamJob::CreamJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceQueueString = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing LRMS queue name.",
+			sprintf( error_string, "%s missing LRMS queue name.",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -440,8 +440,8 @@ CreamJob::CreamJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }

@@ -625,7 +625,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	MyString grid_job_id;
 	MyString grid_proxy_subject;
 	bool job_already_submitted = false;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 	ArgList gahp_args;
 	bool is_gt5 = false;
@@ -699,7 +699,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 							 (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			error_string.sprintf( "%s is not set in the job ad",
+			sprintf( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -738,7 +738,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 		token = grid_resource.GetNextToken( " ", false );
 		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
-			error_string.sprintf( "%s not of type gt2 or gt5",
+			sprintf( error_string, "%s not of type gt2 or gt5",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -750,13 +750,13 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing GRAM service name",
+			sprintf( error_string, "%s missing GRAM service name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -769,7 +769,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 		token = grid_job_id.GetNextToken( " ", false );
 		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
-			error_string.sprintf( "%s not of type gt2 or gt5",
+			sprintf( error_string, "%s not of type gt2 or gt5",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -780,7 +780,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		token = grid_job_id.GetNextToken( " ", false );
 		token = grid_job_id.GetNextToken( " ", false );
 		if ( !token ) {
-			error_string.sprintf( "%s missing job ID",
+			sprintf( error_string, "%s missing job ID",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -875,8 +875,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		free( gahp_path );
 	}
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }

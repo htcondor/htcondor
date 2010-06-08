@@ -264,7 +264,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	MyString gridftp_url_base;
 	MyString globus_delegation_uri;
 	bool job_already_submitted = false;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 
 	RSL = NULL;
@@ -307,7 +307,7 @@ GT4Job::GT4Job( ClassAd *classad )
 							 (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			error_string.sprintf( "%s is not set in the job ad",
+			sprintf( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -334,7 +334,7 @@ GT4Job::GT4Job( ClassAd *classad )
 
 		token = grid_resource.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "gt4" ) ) {
-			error_string.sprintf( "%s not of type gt4", ATTR_GRID_RESOURCE );
+			sprintf( error_string, "%s not of type gt4", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
@@ -350,7 +350,7 @@ GT4Job::GT4Job( ClassAd *classad )
 				resourceManagerString = strdup( urlbuf.Value() );
 			}
 		} else {
-			error_string.sprintf( "%s missing GRAM Service URL",
+			sprintf( error_string, "%s missing GRAM Service URL",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -359,13 +359,13 @@ GT4Job::GT4Job( ClassAd *classad )
 		if ( token && *token ) {
 			jobmanagerType = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing JobManager type",
+			sprintf( error_string, "%s missing JobManager type",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -475,8 +475,8 @@ GT4Job::GT4Job( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }

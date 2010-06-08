@@ -159,7 +159,7 @@ CondorJob::CondorJob( ClassAd *classad )
 {
 	char buff[4096];
 	ArgList args;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path;
 	bool job_already_submitted = false;
 
@@ -211,7 +211,7 @@ CondorJob::CondorJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "condor" ) ) {
-			error_string.sprintf( "%s not of type condor",
+			sprintf( error_string, "%s not of type condor",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -220,7 +220,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		if ( token && *token ) {
 			remoteScheddName = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing schedd name",
+			sprintf( error_string, "%s missing schedd name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -229,13 +229,13 @@ CondorJob::CondorJob( ClassAd *classad )
 		if ( token && *token ) {
 			remotePoolName = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing pool name",
+			sprintf( error_string, "%s missing pool name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -258,7 +258,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		}
 		submitterId = strdup( buff );
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GLOBAL_JOB_ID );
 		goto error_exit;
 	}
@@ -301,8 +301,8 @@ CondorJob::CondorJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }

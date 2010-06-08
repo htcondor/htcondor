@@ -167,7 +167,7 @@ class GahpServer : public Service {
 	int m_gahp_readfd;
 	int m_gahp_writefd;
 	int m_gahp_errorfd;
-	MyString m_gahp_error_buffer;
+	std::string m_gahp_error_buffer;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
 	bool use_prefix;
@@ -1071,7 +1071,7 @@ class GahpClient : public Service {
 		GahpProxyInfo *normal_proxy;
 		GahpProxyInfo *deleg_proxy;
 		GahpProxyInfo *pending_proxy;
-		MyString error_string;
+		std::string error_string;
 
 			// These data members all deal with the GAHP
 			// server.  Since there is only one instance of the GAHP
