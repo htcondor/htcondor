@@ -74,7 +74,7 @@ my $result = system("./job_core_time-deferral.pl van");
 CondorTest::debug("Result of job_core_time-deferral.pl local test  job is  $result\n",1);
 
 #fails due to directory matching pattern
-runcmd("cp *job_core_time-deferral_van* $mysaveme", {expect_value=>\&ANY});
+runcmd("cp *job_core_time-deferral_van* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
