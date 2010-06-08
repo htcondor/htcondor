@@ -29,7 +29,7 @@ $testdesc =  'Condor submit dag - log file path test - scheduler U';
 $testname = "job_dagman_log_path";
 $dagman_args = "-verbose";
 
-@logfiles = ("job_dagman_log_path.dag.dagman.out", "job_dagman_log_pathC.log");
+@logfiles = ("job_dagman_log_path.dag.dagman.out");
 
 my $killedchosen = 0;
 
