@@ -153,10 +153,14 @@ ProcFamilyDirect::get_usage(pid_t pid, ProcFamilyUsage& usage, bool full)
 }
 
 bool
-ProcFamilyDirect::signal_process(pid_t, int)
+ProcFamilyDirect::signal_process(pid_t pid, int sig)
 {
-	EXCEPT("ProcFamilyDirect::signal_process should never be called");
-	return false;
+	KillFamily* family = lookup(pid);
+	if (family == NULL) {
+		return false;
+	}
+	family->softkill(sig);
+	return true;
 }
 
 bool

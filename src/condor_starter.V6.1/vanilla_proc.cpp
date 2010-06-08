@@ -372,9 +372,9 @@ VanillaProc::ShutdownFast()
 	// job
 	if ( kill_sig != -1 ) {
 		if ( daemonCore->Signal_Process( JobPid, kill_sig ) == FALSE ) {
-                        dprintf(D_ALWAYS,
-                                "Error: Failed to send signal %d to job with "
-                                " pid %u\n", kill_sig, JobPid);
+			dprintf(D_ALWAYS,
+				"Error: Failed to send signal %d to "
+				"job with pid %u\n", kill_sig, JobPid);
 		}
 		else {
 			startEscalationTimer();
@@ -449,9 +449,8 @@ VanillaProc::cancelEscalationTimer()
 bool
 VanillaProc::EscalateSignal()
 {
-	cancelEscalationTimer();
-
 	dprintf(D_FULLDEBUG, "Esclation Timer fired.  Killing job\n");
+	cancelEscalationTimer();
 	finishShutdownFast();
 
 	return true;
