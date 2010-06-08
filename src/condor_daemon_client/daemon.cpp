@@ -692,7 +692,7 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack, char c
 	if( ! startCommand( cmd, sock, sec, errstack, cmd_description )) {
 		return false;
 	}
-	if( ! sock->eom() ) {
+	if( ! sock->end_of_message() ) {
 		MyString err_buf;
 		err_buf.sprintf( "Can't send eom for %d to %s", cmd,  
 				 idStr() );
@@ -710,7 +710,7 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errs
 	if( ! tmp ) {
 		return false;
 	}
-	if( ! tmp->eom() ) {
+	if( ! tmp->end_of_message() ) {
 		MyString err_buf;
 		err_buf.sprintf( "Can't send eom for %d to %s", cmd,  
 				 idStr() );

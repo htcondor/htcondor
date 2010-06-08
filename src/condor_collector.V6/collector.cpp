@@ -315,7 +315,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	sock->decode();
 	sock->timeout(ClientTimeout);
 	bool ep = CondorThreads::enable_parallel(true);
-	bool res = !cad.initFromStream(*sock) || !sock->eom();
+	bool res = !cad.initFromStream(*sock) || !sock->end_of_message();
 	CondorThreads::enable_parallel(ep);
     if( res )
     {
@@ -523,7 +523,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if( !cad.initFromStream(*sock) || !sock->eom() )
+    if( !cad.initFromStream(*sock) || !sock->end_of_message() )
     {
         dprintf( D_ALWAYS,
 				 "Failed to receive invalidation on %s: aborting\n",
@@ -806,7 +806,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
         }
 
-        if ( !socket->eom () ) {
+        if ( !socket->end_of_message () ) {
         
             dprintf ( 
                 D_FULLDEBUG, 

@@ -917,7 +917,7 @@ ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 		Daemon startd(DT_STARTD, startd_addr, NULL);
 		Sock *sock = startd.startCommand(cmd, Stream::reli_sock, 10);
 		if (!sock || !sock->put((char *)ShutdownAdminId) ||
-			!sock->code(config) || !sock->eom()) {
+			!sock->code(config) || !sock->end_of_message()) {
 			dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
 					"%s %s.\n", startd_name, startd_addr);
 			free(config);
@@ -946,7 +946,7 @@ ScheduledShutdownEvent::Vacate(char startd_name[], char startd_addr[])
 	if (!SimulateShutdowns) {
 		Daemon startd(DT_STARTD, startd_addr, NULL);
 		Sock *sock = startd.startCommand(VACATE_CLAIM, Stream::reli_sock, 10);
-		if (!sock || !sock->put(startd_name) || !sock->eom()) {
+		if (!sock || !sock->put(startd_name) || !sock->end_of_message()) {
 			dprintf(D_ALWAYS, "Failed to send VACATE_CLAIM to %s %s.\n",
 					startd_name, startd_addr);
 			delete sock;
@@ -1041,7 +1041,7 @@ CleanupShutdownModeConfig(const char startd_machine[],
 	Daemon startd(DT_STARTD, startd_addr, NULL);
 	Sock *sock = startd.startCommand(DC_CONFIG_PERSIST, Stream::safe_sock, 10);
 	if (!sock || !sock->put((char *)ShutdownAdminId) ||
-		!sock->put("") || !sock->eom()) {
+		!sock->put("") || !sock->end_of_message()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
 				"%s %s.\n", startd_machine, startd_addr);
 		delete sock;
@@ -1051,7 +1051,7 @@ CleanupShutdownModeConfig(const char startd_machine[],
 
 	sock = startd.startCommand(DC_CONFIG_RUNTIME, Stream::safe_sock, 10);
 	if (!sock || !sock->put((char *)ShutdownAdminId) ||
-		!sock->put("") || !sock->eom()) {
+		!sock->put("") || !sock->end_of_message()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_RUNTIME to "
 				"%s %s.\n", startd_machine, startd_addr);
 		delete sock;

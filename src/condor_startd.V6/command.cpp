@@ -88,7 +88,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 
 	ClassAd response_ad;
 	response_ad.Assign(ATTR_START,!claim_is_closing);
-	if( !response_ad.put(*stream) || !stream->eom() ) {
+	if( !response_ad.put(*stream) || !stream->end_of_message() ) {
 		dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
 			// Prior to 7.0.5, no response ClassAd was expected.
 			// Anyway, failure to send it is not (currently) critical
@@ -1398,7 +1398,7 @@ accept_request_claim( Resource* rip )
 		abort_accept_claim( rip, stream );
 		return false;
 	}
-	if( !stream->eom() ) {
+	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
 		abort_accept_claim( rip, stream );
 		return false;
@@ -1552,7 +1552,7 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 	if (!stream->end_of_message()) {
-		rip->dprintf( D_ALWAYS, "Can't receive eom() from shadow.\n" );
+		rip->dprintf( D_ALWAYS, "Can't receive end_of_message() from shadow.\n" );
 		ABORT;
 	}
 
@@ -1663,7 +1663,7 @@ activate_claim( Resource* rip, Stream* stream )
 			ABORT;
 		}
 
-		if (!stream->eom()) {
+		if (!stream->end_of_message()) {
 			ABORT;
 		}
 

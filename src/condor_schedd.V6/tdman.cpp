@@ -241,13 +241,13 @@ TransferDaemon::push_transfer_requests(void)
 		// Let's use the only encapsulation protocol we have at the moment.
 		m_treq_sock->encode();
 		m_treq_sock->code(encap);
-		m_treq_sock->eom();
+		m_treq_sock->end_of_message();
 
 		// This only puts a small amount of the treq onto the channel. The
 		// transferd doesn't need a lot of the info in the schedd's view of
 		// this information.
 		treq->put(m_treq_sock);
-		m_treq_sock->eom();
+		m_treq_sock->end_of_message();
 
 		/////////////////////////////////////////////////
 		// Now the transferd will do work on the request, assigning it a 
@@ -277,7 +277,7 @@ TransferDaemon::push_transfer_requests(void)
 		//	ATTR_TREQ_CAPABILITY
 		//
 		respad.initFromStream(*m_treq_sock);
-		m_treq_sock->eom();
+		m_treq_sock->end_of_message();
 
 		/////////////////////////////////////////////////
 		// Fix up the treq with what the transferd said.
@@ -776,7 +776,7 @@ TDMan::refuse(Stream *s)
 {
 	s->encode();
 	s->put( NOT_OK );
-	s->eom();
+	s->end_of_message();
 }
 
 // the reaper for when a transferd goes away or dies.
@@ -907,7 +907,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	//	ATTR_TD_SINFUL
 	//	ATTR_TD_ID
 	regad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 	regad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
 	regad.LookupString(ATTR_TREQ_TD_ID, td_id);
 
@@ -933,7 +933,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Did not request a transferd with that id for any user.");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
 		return CLOSE_STREAM;
@@ -950,7 +950,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Did not request a transferd with that id for this specific user.");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
 		return CLOSE_STREAM;
@@ -967,7 +967,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Transferd for user not in TD_PRE_INVOKED state.\n");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
 		return CLOSE_STREAM;
@@ -976,7 +976,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	// send back a good reply if all the above passed
 	respad.Assign(ATTR_TREQ_INVALID_REQUEST, FALSE);
 	respad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	///////////////////////////////////////////////////////////////
 	// Set up some parameters in the TD object which represent
@@ -1144,7 +1144,7 @@ TDMan::transferd_update(Stream *sock)
 		daemonCore->SetDataPtr(NULL);
 		return CLOSE_STREAM;
 	}
-	rsock->eom();
+	rsock->end_of_message();
 
 	update.LookupString(ATTR_TREQ_CAPABILITY, cap);
 	update.LookupString(ATTR_TREQ_UPDATE_STATUS, status);

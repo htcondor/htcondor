@@ -2577,7 +2577,7 @@ fetchSubmittorPrios()
 		exit( 1 );
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 

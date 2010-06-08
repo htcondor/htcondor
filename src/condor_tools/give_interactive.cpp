@@ -339,7 +339,7 @@ fetchSubmittorPrios()
 
 	// connect to negotiator
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 

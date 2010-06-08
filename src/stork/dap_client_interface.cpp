@@ -248,7 +248,7 @@ stork_submit (
 	}
 
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 
 	char *line = NULL;
@@ -257,7 +257,7 @@ stork_submit (
 		if (cleanup_sock) delete sock;
 		return FALSE;
 	}
-	sock->eom();
+	sock->end_of_message();
 
 	_error_reason = NULL;
 	id=line;
@@ -298,7 +298,7 @@ stork_rm (
 		return FALSE;
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 
 	int rc=0;
@@ -353,7 +353,7 @@ stork_status (
 		return FALSE;
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
  
 	int rc = 0;

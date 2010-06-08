@@ -418,7 +418,7 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 		msg->callMessageSendFailed( this );
 		doneWithSock(sock);
 	}
-	else if( !sock->eom() ) {
+	else if( !sock->end_of_message() ) {
 		msg->addError( CEDAR_ERR_EOM_FAILED, "failed to send EOM" );
 		msg->callMessageSendFailed( this );
 		doneWithSock(sock);
@@ -516,7 +516,7 @@ DCMessenger::readMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	else if( !msg->readMsg( this, sock ) ) {
 		msg->callMessageReceiveFailed( this );
 	}
-	else if( !sock->eom() ) {
+	else if( !sock->end_of_message() ) {
 		msg->addError( CEDAR_ERR_EOM_FAILED, "failed to read EOM" );
 		msg->callMessageReceiveFailed( this );
 	}

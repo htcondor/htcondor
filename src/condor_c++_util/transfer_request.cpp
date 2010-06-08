@@ -504,14 +504,14 @@ TransferRequest::put(Stream *sock)
 
 	// shove the internal header classad across
 	m_ip->put(*sock);
-	sock->eom();
+	sock->end_of_message();
 
 	// now dump all of the jobads through
 	m_todo_ads.Rewind();
 	while(m_todo_ads.Next(ad))
 	{
 		ad->put(*sock);
-		sock->eom();
+		sock->end_of_message();
 	}
 
 	return TRUE;

@@ -4600,7 +4600,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					}
 					sock->encode();
 					if (!the_policy->put(*sock) ||
-						!sock->eom()) {
+						!sock->end_of_message()) {
 						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", sock->peer_description());
 						auth_info.dPrint (D_ALWAYS);
 						result = FALSE;
@@ -4796,7 +4796,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				if (new_session) {
 					// clear the buffer
 					sock->decode();
-					sock->eom();
+					sock->end_of_message();
 
 					// ready a classad to send
 					ClassAd pa_ad;
@@ -4856,7 +4856,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
-						! sock->eom() ) {
+						! sock->end_of_message() ) {
 						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", the_sid, sock->peer_description());
 						result = FALSE;
 						goto finalize;

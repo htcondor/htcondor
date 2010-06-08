@@ -62,19 +62,19 @@ HandleClientRequest( int command, Sock *clientSock )
 	// if the operation is "connect", just keep the sock and return
 	if( command == ClassAdCollOp_Connect ) {
 		clientSock->decode( );
-		clientSock->eom( );
+		clientSock->end_of_message( );
 		return( 1 );
 	}
 
 	// if the operation is "disconnect", just close the client sock
 	if( command == ClassAdCollOp_Disconnect ) {
 		clientSock->decode( );
-		clientSock->eom( );
+		clientSock->end_of_message( );
 		return( 0 );
 	}
 
 	// read the classad off the wire
-	if( !clientSock->get( tmp ) || !clientSock->eom( ) ) {
+	if( !clientSock->get( tmp ) || !clientSock->end_of_message( ) ) {
 		CondorErrno = ERR_COMMUNICATION_ERROR;
 		CondorErrMsg = "failed to read client request";
 		return( -1 );
@@ -375,9 +375,9 @@ cleanup:
 		}
 	}
 
-	if( !clientSock->eom( ) ) {
+	if( !clientSock->end_of_message( ) ) {
 		CondorErrno = ERR_COMMUNICATION_ERROR;
-		CondorErrMsg = "failed to send eom() to client";
+		CondorErrMsg = "failed to send end_of_message() to client";
 		return( false );
 	}
 
@@ -579,7 +579,8 @@ HandleReadOnlyCommands( int command, ClassAd *rec, Sock *clientSock )
 	delete rec;
 	clientSock->encode( );
 	if( !clientSock->put((int)ClassAdCollOp_AckReadOp) || 
-			!clientSock->put((char*)buffer.c_str( )) || !clientSock->eom( ) ) {
+			!clientSock->put((char*)buffer.c_str( )) || 
+			!clientSock->end_of_message( ) ) {
 		CondorErrno = ERR_COMMUNICATION_ERROR;
 		CondorErrMsg = "unable to ack read command";
 		return( false );

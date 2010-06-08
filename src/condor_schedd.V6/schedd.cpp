@@ -3324,7 +3324,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		dprintf(D_FULLDEBUG, "Scheduler::generalJobFilesWorkerThread: "
 			"TRANSFER_DATA/WITH_PERMS: %d jobs to be sent\n", JobAdsArrayLen);
 		rsock->encode();
-		if ( !rsock->code(JobAdsArrayLen) || !rsock->eom() ) {
+		if ( !rsock->code(JobAdsArrayLen) || !rsock->end_of_message() ) {
 			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "failed to send JobAdsArrayLen (%d) \n",
 					 JobAdsArrayLen );
@@ -3387,7 +3387,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 					"failed to send job ad for job %d.%d \n",
 					cluster,proc );
 			} else {
-				rsock->eom();
+				rsock->end_of_message();
 				// and then upload the files
 				result = ftrans.UploadFiles();
 			}
@@ -3405,7 +3405,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	}	
 		
 		
-	rsock->eom();
+	rsock->end_of_message();
 
 	int answer;
 	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
@@ -3416,7 +3416,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		answer = -1;
 	}
 	rsock->code(answer);
-	rsock->eom();
+	rsock->end_of_message();
 	s->timeout(old_timeout);
 
 	/* for grid universe jobs there isn't a clear point
@@ -3542,7 +3542,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				refuse(s);
 				return FALSE;
 			}
-			rsock->eom();
+			rsock->end_of_message();
 			dprintf(D_FULLDEBUG,"spoolJobFiles(): read JobAdsArrayLen - %d\n",
 					JobAdsArrayLen);
 			break;
@@ -3643,7 +3643,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	unsetQSock();
 
-	rsock->eom();
+	rsock->end_of_message();
 
 		// DaemonCore will free the thread_arg for us when the thread
 		// exits, but we need to free anything pointed to by
@@ -3755,7 +3755,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 
 		// read the job id from the client
 	rsock->decode();
-	if ( !rsock->code(jobid) || !rsock->eom() ) {
+	if ( !rsock->code(jobid) || !rsock->end_of_message() ) {
 			dprintf( D_ALWAYS, "updateGSICred(%d): "
 					 "failed to read job id\n", cmd );
 			refuse(s);
@@ -3899,7 +3899,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// Send our reply back to the client
 	rsock->encode();
 	rsock->code(reply);
-	rsock->eom();
+	rsock->end_of_message();
 
 	dprintf(D_ALWAYS,"Refresh GSI cred for job %d.%d %s\n",
 		jobid.cluster,jobid.proc,reply ? "suceeded" : "failed");
@@ -3955,7 +3955,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	}
 
 		// read the command ClassAd + EOM
-	if( ! (command_ad.initFromStream(*rsock) && rsock->eom()) ) {
+	if( ! (command_ad.initFromStream(*rsock) && rsock->end_of_message()) ) {
 		dprintf( D_ALWAYS, "Can't read command ad from tool\n" );
 		refuse( s );
 		return FALSE;
@@ -4382,7 +4382,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			 isQueueSuperUser(rsock->getOwner()) ? true : false );
 	
 	rsock->encode();
-	if( ! (response_ad->put(*rsock) && rsock->eom()) ) {
+	if( ! (response_ad->put(*rsock) && rsock->end_of_message()) ) {
 			// Failed to send reply, the client might be dead, so
 			// abort our transaction.
 		dprintf( D_ALWAYS, 
@@ -4408,7 +4408,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// If we told them it's good, try to read the reply to make
 		// sure the tool is still there and happy...
 	rsock->decode();
-	if( ! (rsock->code(reply) && rsock->eom() && reply == OK) ) {
+	if( ! (rsock->code(reply) && rsock->end_of_message() && reply == OK) ) {
 			// we couldn't get the reply, or they told us to bail
 		dprintf( D_ALWAYS, "actOnJobs: client not responding: aborting\n" );
 		if( needs_transaction ) {
@@ -4437,7 +4437,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	rsock->encode();
 	int answer = OK;
 	rsock->code( answer );
-	rsock->eom();
+	rsock->end_of_message();
 
 		// Now that we know the events are logged and commited to
 		// the queue, we can do the final actions for these jobs,
@@ -4596,7 +4596,7 @@ Scheduler::refuse( Stream* s )
 {
 	s->encode();
 	s->put( NOT_OK );
-	s->eom();
+	s->end_of_message();
 }
 
 
@@ -11776,7 +11776,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 	}
 
-	if( !input.initFromStream(*s) || !s->eom() ) {
+	if( !input.initFromStream(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"Failed to receive input ClassAd for GET_JOB_CONNECT_INFO\n");
 		return FALSE;
@@ -11949,7 +11949,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	reply.Assign(ATTR_CLAIM_ID,starter_claim_id.Value());
 	reply.Assign(ATTR_VERSION,starter_version.Value());
 	reply.Assign(ATTR_REMOTE_HOST,startd_name.Value());
-	if( !reply.put(*s) || !s->eom() ) {
+	if( !reply.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"Failed to send response to GET_JOB_CONNECT_INFO\n");
 	}
@@ -11967,7 +11967,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	if( retry_is_sensible ) {
 		reply.Assign(ATTR_RETRY,retry_is_sensible);
 	}
-	if( !reply.put(*s) || !s->eom() ) {
+	if( !reply.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"Failed to send error response to GET_JOB_CONNECT_INFO\n");
 	}
@@ -11998,7 +11998,7 @@ Scheduler::dumpState(int, Stream* s) {
 	
 	int cmd = 0;
 	s->code( cmd );
-	s->eom();
+	s->end_of_message();
 
 	s->encode();
 	

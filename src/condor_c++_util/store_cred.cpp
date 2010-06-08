@@ -466,7 +466,7 @@ void store_cred_handler(void *, int i, Stream *s)
 		return;
 	}
 	
-	if( ! s->eom() ) {
+	if( ! s->end_of_message() ) {
 		dprintf( D_ALWAYS,
 			"store_cred: Failed to send end of message.\n");
 	}	
@@ -642,7 +642,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 		dprintf(D_ALWAYS, "store_pool_cred: Failed to send result.\n");
 		goto spch_cleanup;
 	}
-	if (!s->eom()) {
+	if (!s->end_of_message()) {
 		dprintf(D_ALWAYS, "store_pool_cred: Failed to send end of message.\n");
 	}
 

@@ -227,7 +227,7 @@ vmapi_sendCommand(char *addr, int cmd, void *data)
 		// According to command type, void data pointer should be type casted.
 	}
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to VM startd %s\n", addr );
 		free(buffer);
 		return FALSE;

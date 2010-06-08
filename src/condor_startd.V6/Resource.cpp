@@ -1088,7 +1088,7 @@ Resource::update_with_ack( void )
 
     }
 
-    if ( !socket->eom () ) {
+    if ( !socket->end_of_message() ) {
 
         dprintf (
             D_FULLDEBUG,
@@ -1123,7 +1123,7 @@ Resource::update_with_ack( void )
 
     }
 
-    socket->eom ();
+    socket->end_of_message();
 
     return success;
 

@@ -465,7 +465,7 @@ main(int argc, char* argv[])
     }
 
 	// ship it out
-	sock->eom();
+	sock->end_of_message();
 
     // get reply
     sock->decode();

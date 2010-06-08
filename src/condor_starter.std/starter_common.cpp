@@ -217,7 +217,7 @@ NewConnection( int id )
 	}
 
 		// Turn the stream around
-	SyscallStream->eom();
+	SyscallStream->end_of_message();
 	SyscallStream->decode();
 
 		// Read the port number
@@ -228,7 +228,7 @@ NewConnection( int id )
 		SyscallStream->code( errno );
 		EXCEPT( "Can't get port for new connection" );
 	}
-	SyscallStream->eom();
+	SyscallStream->end_of_message();
 
 		// Create the sinful string we want to connect back to.
 	sprintf( addr, "<%s:%d>", SyscallStream->peer_ip_str(), portno );

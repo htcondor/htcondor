@@ -1513,7 +1513,7 @@ refuse(ReliSock * s)
 	s->encode();
 	int i = 0; // == failure;
 	s->code(i); // == failure
-	s->eom();
+	s->end_of_message();
 }
 
 // Based on Scheduler::updateGSICred
@@ -1613,7 +1613,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		// Send our reply back to the client
 	rsock->encode();
 	rsock->code(reply);
-	rsock->eom();
+	rsock->end_of_message();
 
 	if(reply) {
 		dprintf(D_FULLDEBUG,
@@ -1633,7 +1633,7 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		s->encode();
 		int i = 2; // == success, but please don't call any more.
 		s->code(i); // == success, but please don't call any more.
-		s->eom();
+		s->end_of_message();
 		refuse(s);
 		return false;
 	}

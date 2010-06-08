@@ -536,7 +536,7 @@ AbstractReplicatorStateMachine::sendCommand(
     }
 
     char const* sinfulString = daemonCore->InfoCommandSinfulString();
-    if(! socket.put( sinfulString )/* || ! socket.eom( )*/) {
+    if(! socket.put( sinfulString )/* || ! socket.end_of_message( )*/) {
         dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand "
                             "unable to code the local sinful string or eom%s\n",
                    sinfulString );
@@ -557,7 +557,7 @@ AbstractReplicatorStateMachine::sendCommand(
 		return ;
 	}
 // End of Command-specific actions
-	if( ! socket.eom( ) ) {
+	if( ! socket.end_of_message( ) ) {
 		socket.close( );
        	dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand "
                             "unable to code the end of message\n" );
@@ -597,7 +597,7 @@ AbstractReplicatorStateMachine::versionAndStateCommand(ReliSock& socket)
     }
 	int stateAsInteger = int( m_state );
 
-    if( ! socket.code( stateAsInteger ) /*|| ! socket.eom( )*/ ) {
+    if( ! socket.code( stateAsInteger ) /*|| ! socket.end_of_message( )*/ ) {
         dprintf( D_NETWORK,
             "AbstractReplicatorStateMachine::versionAndStateCommand "
             "unable to code the state or eom%d\n", m_state );

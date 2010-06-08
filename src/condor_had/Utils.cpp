@@ -265,7 +265,7 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath )
     
 	if(	! socket.code_bytes( md, MAC_SIZE ) ||
         socket.put_file( &bytes, filePath.Value( ) ) < 0  ||
-	    ! socket.eom( ) ) {
+	    ! socket.end_of_message( ) ) {
         dprintf( D_ALWAYS,
                 "utilSafePutFile unable to send file %s, MAC "
                 "or to code the end of the message\n", filePath.Value( ) );
@@ -290,7 +290,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 
     if( ! socket.code_bytes( md, MAC_SIZE ) ||
 	    socket.get_file( &bytes, filePath.Value( ), true ) < 0 ||
-	    ! socket.eom( ) ) {
+	    ! socket.end_of_message( ) ) {
         dprintf( D_ALWAYS, "utilSafeGetFile unable to get file %s, MAC or the "
 							"end of the message\n", 
 				 filePath.Value( ) );

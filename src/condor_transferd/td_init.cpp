@@ -341,7 +341,7 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 	if (sock->code(str) == 0) {
 		EXCEPT("Schedd closed connection, I'm going away.");
 	}
-	sock->eom();
+	sock->end_of_message();
 
 	encapsulation_method_line = str; // makes a copy
 	free(str);
@@ -405,7 +405,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 		// XXX don't fail here, just go back to daemoncore
 		EXCEPT("XXX Couldn't init initial ad from stream!");
 	}
-	sock->eom();
+	sock->end_of_message();
 
 	dprintf(D_ALWAYS, "Read treq header.\n");
 
@@ -430,11 +430,11 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 			EXCEPT("Expected %d transfer job ads, got %d instead.", 
 				treq->get_num_transfers(), i);
 		}
-		sock->eom();
+		sock->end_of_message();
 		dprintf(D_ALWAYS, "Read treq job ad[%d].\n", i);
 		treq->append_task(ad);
 	}
-	sock->eom();
+	sock->end_of_message();
 
 	sock->encode();
 
@@ -460,7 +460,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 
 			// tell the schedd we don't want to do this request
 			respad.put(*sock);
-			sock->eom();
+			sock->end_of_message();
 			delete treq;
 
 			// wait for the next request to come in....
@@ -491,7 +491,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 	//	ATTR_TREQ_CAPABILITY
 	//
 	respad.put(*sock);
-	sock->eom();
+	sock->end_of_message();
 
 	dprintf(D_ALWAYS, "Reported capability back to schedd.\n");
 
