@@ -68,9 +68,11 @@ static bool test_normal_case() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_general_domain() {
@@ -88,9 +90,11 @@ static bool test_general_domain() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_two_hostname() {
@@ -108,9 +112,11 @@ static bool test_two_hostname() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_different_subdomain() {
@@ -128,7 +134,9 @@ static bool test_different_subdomain() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }

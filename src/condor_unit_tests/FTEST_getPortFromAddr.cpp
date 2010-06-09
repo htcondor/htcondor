@@ -70,9 +70,11 @@ static bool test_normal_case() {
 	free(input);
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_no_brackets() {
@@ -88,9 +90,11 @@ static bool test_no_brackets() {
 	free(input);
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_no_port() {
@@ -106,9 +110,11 @@ static bool test_no_port() {
 	free(input);
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_negative_port() {
@@ -124,9 +130,11 @@ static bool test_negative_port() {
 	free(input);
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_large_port_number() {
@@ -142,9 +150,11 @@ static bool test_large_port_number() {
 	free(input);
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_alpha_port() {
@@ -160,7 +170,9 @@ static bool test_alpha_port() {
 	free(input);
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }

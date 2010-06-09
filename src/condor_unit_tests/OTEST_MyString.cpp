@@ -473,9 +473,11 @@ static bool default_constructor() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", s.Value());
 	if(strcmp(s.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 655
@@ -491,9 +493,11 @@ static bool int_constructor(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", s.Value());
 	if(strcmp(s.Value(), expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool char_constructor(void) {
@@ -508,9 +512,11 @@ static bool char_constructor(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", s.Value());
 	if(strcmp(s.Value(), param) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool stdstring_constructor(void) {
@@ -524,9 +530,11 @@ static bool stdstring_constructor(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", s.Value());
 	if(strcmp(s.Value(), param.c_str()) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool copy_constructor_value_check(void) {
@@ -541,9 +549,11 @@ static bool copy_constructor_value_check(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", two.Value());
 	if(strcmp(one.Value(), two.Value()) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool copy_constructor_pointer_check(void) {
@@ -558,9 +568,11 @@ static bool copy_constructor_pointer_check(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%p", two.Value());
 	if(one.Value() == two.Value()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 
@@ -572,9 +584,11 @@ static bool length_0(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", zero.Length());
 	if(zero.Length() != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 94
@@ -587,9 +601,11 @@ static bool length_1(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", one.Length());
 	if(one.Length() != (signed)strlen(param)) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 102
@@ -602,9 +618,11 @@ static bool length_2(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", two.Length());
 	if(two.Length() != (signed)strlen(param)) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool length_after_change(void) {
@@ -618,9 +636,11 @@ static bool length_after_change(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", long_string.Length());
 	if(long_string.Length() != empty.Length()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool is_empty_initialized(void) {
@@ -631,9 +651,11 @@ static bool is_empty_initialized(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", empty.IsEmpty());
 	if(!empty.IsEmpty()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool is_empty_after_change(void) {
@@ -646,9 +668,11 @@ static bool is_empty_after_change(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", will_be_empty.IsEmpty());
 	if(!will_be_empty.IsEmpty()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool is_empty_false(void) {
@@ -659,9 +683,11 @@ static bool is_empty_false(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", not_empty.IsEmpty());
 	if(not_empty.IsEmpty()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool capacity_empty(void) {
@@ -675,9 +701,11 @@ static bool capacity_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", empty.Capacity());
 	if(empty.Capacity() != cap) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool capacity_greater_than_length(void) {
@@ -693,9 +721,11 @@ static bool capacity_greater_than_length(void) {
 	e.emit_param("Length", "%d", s.Length());
 	e.emit_retval("%d", s.Capacity() >= s.Length());
 	if(s.Capacity() < s.Length()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool str_dup_empty(void) {
@@ -708,11 +738,13 @@ static bool str_dup_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", dup);
 	if(strcmp(dup, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		free(dup);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	free(dup);
-	PASS;
+	return true;
 }
 
 static bool str_dup_empty_new(void) {
@@ -725,11 +757,13 @@ static bool str_dup_empty_new(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", dup);
 	if(empty.Value() == dup) {
+		e.emit_result_failure(__LINE__);
 		free(dup);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	free(dup);
-	PASS;
+	return true;
 }
 
 static bool str_dup_non_empty(void) {
@@ -742,11 +776,13 @@ static bool str_dup_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", dup);
 	if(strcmp(dup, "foo") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		free(dup);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	free(dup);
-	PASS;
+	return true;
 }
 
 static bool str_dup_non_empty_new(void) {
@@ -759,11 +795,13 @@ static bool str_dup_non_empty_new(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", dup);
 	if(s.Value() == dup) {
+		e.emit_result_failure(__LINE__);
 		free(dup);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	free(dup);
-	PASS;
+	return true;
 }
 
 static bool value_of_empty(void) {
@@ -775,9 +813,11 @@ static bool value_of_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", value);
 	if(strcmp(value, "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool value_of_non_empty(void) {
@@ -791,9 +831,11 @@ static bool value_of_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", value);
 	if(strcmp(value, param) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 369
@@ -808,9 +850,11 @@ static bool square_brackets_operator_invalid_negative(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%c", invalid);
 	if(invalid != '\0') {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 366
@@ -826,9 +870,11 @@ static bool square_brackets_operator_invalid_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%c", invalid);
 	if(invalid != '\0') {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool square_brackets_operator_invalid_past(void) {
@@ -843,9 +889,11 @@ static bool square_brackets_operator_invalid_past(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%c", invalid);
 	if(invalid != '\0') {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool square_brackets_operator_first_char(void) {
@@ -859,9 +907,11 @@ static bool square_brackets_operator_first_char(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%c", valid);
 	if(valid != 'f') {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool square_brackets_operator_last_char(void) {
@@ -875,9 +925,11 @@ static bool square_brackets_operator_last_char(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%c", valid);
 	if(valid != 'o') {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 391
@@ -895,9 +947,11 @@ static bool set_char_empty(void) {
 	e.emit_param("Value", "%s", empty.Value());
 	e.emit_param("Length", "%d", empty.Length());
 	if(strcmp(empty.Value(), "") != MATCH || empty.Length() != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 423
@@ -917,9 +971,11 @@ static bool set_char_truncate(void) {
 	e.emit_param("Value", "%s", s.Value());
 	e.emit_param("Length", "%d", s.Length());
 	if(strcmp(s.Value(), "Eddy ") != MATCH || s.Length() != 5) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool set_char_first(void) {
@@ -937,9 +993,11 @@ static bool set_char_first(void) {
 	e.emit_param("Value", "%s", s.Value());
 	e.emit_param("Length", "%d", s.Length());
 	if(strcmp(s.Value(), "too") != MATCH || s.Length() != 3) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool set_char_last(void) {
@@ -957,9 +1015,11 @@ static bool set_char_last(void) {
 	e.emit_param("Value", "%s", s.Value());
 	e.emit_param("Length", "%d", s.Length());
 	if(strcmp(s.Value(), "for") != MATCH || s.Length() != 3) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 578
@@ -975,9 +1035,11 @@ static bool random_string_one_char(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", rnd.Value());
 	if(strcmp(rnd.Value(), "11111") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 586
@@ -993,9 +1055,11 @@ static bool random_string_many_chars(void) {
 	e.emit_output_actual_header();
 	e.emit_param("Length", "%d", rnd.Length());
 	if(rnd.Length() != 64) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool random_string_existing(void) {
@@ -1010,9 +1074,11 @@ static bool random_string_existing(void) {
 	e.emit_output_actual_header();
 	e.emit_param("Length", "%d", rnd.Length());
 	if(rnd.Length() != 64) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool random_string_empty_set(void) {
@@ -1028,9 +1094,11 @@ static bool random_string_empty_set(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", rnd.Value());
 	if(strcmp(rnd.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool random_string_empty_set_existing(void) {
@@ -1046,9 +1114,11 @@ static bool random_string_empty_set_existing(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", rnd.Value());
 	if(strcmp(rnd.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool random_string_length_zero(void) {
@@ -1063,9 +1133,11 @@ static bool random_string_length_zero(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", rnd.Value());
 	if(strcmp(rnd.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool random_string_negative_length(void) {
@@ -1080,9 +1152,11 @@ static bool random_string_negative_length(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", rnd.Value());
 	if(strcmp(rnd.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool random_string_hex(void) {
@@ -1097,9 +1171,11 @@ static bool random_string_hex(void) {
 	e.emit_output_actual_header();
 	e.emit_param("Length", "%d", rnd.Length());
 	if(rnd.Length() != 10) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equals_operator_my_string_empty_non_empty(void) {
@@ -1115,9 +1191,11 @@ static bool equals_operator_my_string_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "bar") != MATCH || a.Value() == b.Value()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 412
@@ -1134,9 +1212,12 @@ static bool equals_operator_my_string_non_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Laurent Jalabert") != MATCH || a.Value() == b.Value())
-	
-		FAIL;
-	PASS;
+	{
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equals_operator_my_string_non_empty_empty(void) {
@@ -1152,9 +1233,11 @@ static bool equals_operator_my_string_non_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH || a.Value() == b.Value()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 114
@@ -1171,9 +1254,11 @@ static bool equals_operator_string_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "bar") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equals_operator_string_non_empty_non_empty(void) {
@@ -1189,9 +1274,11 @@ static bool equals_operator_string_non_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "bar") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equals_operator_string_non_empty_empty(void) {
@@ -1207,9 +1294,11 @@ static bool equals_operator_string_non_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 112
@@ -1225,9 +1314,11 @@ static bool equals_operator_string_null(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 292
@@ -1242,9 +1333,11 @@ static bool reserve_invalid_negative(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retval);
 	if(retval) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 302
@@ -1260,9 +1353,11 @@ static bool reserve_shortening_1(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retval);
 	if(!retval) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 325
@@ -1277,9 +1372,11 @@ static bool reserve_shortening_0(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retval);
 	if(!retval) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 434
@@ -1297,9 +1394,11 @@ static bool reserve_shortening_smaller(void) {
 	e.emit_param("MyString", "%s", a.Value());
 	e.emit_param("Length", "%d", a.Length());
 	if(strcmp(a.Value(), "Miguel") != MATCH || a.Length() != 6) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool reserve_no_changes(void) {
@@ -1316,9 +1415,11 @@ static bool reserve_no_changes(void) {
 	e.emit_param("MyString", "%s", a.Value());
 	e.emit_retval("%d", retval);
 	if(!retval || strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool reserve_empty_my_string(void) {
@@ -1332,9 +1433,11 @@ static bool reserve_empty_my_string(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retval);
 	if(!retval) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool reserve_larger_capacity(void) {
@@ -1350,9 +1453,11 @@ static bool reserve_larger_capacity(void) {
 	e.emit_output_actual_header();
 	e.emit_param("Capacity", "%d", a.Capacity());
 	if(a.Capacity() != size) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool reserve_smaller_capacity(void) {
@@ -1368,9 +1473,11 @@ static bool reserve_smaller_capacity(void) {
 	e.emit_output_actual_header();
 	e.emit_param("Capacity", "%d", a.Capacity());
 	if(a.Capacity() != size) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 348
@@ -1386,9 +1493,11 @@ static bool reserve_at_least_negative(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retval);
 	if(!retval) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 357
@@ -1403,9 +1512,11 @@ static bool reserve_at_least_zero(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retval);
 	if(!retval) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 447
@@ -1421,9 +1532,11 @@ static bool reserve_at_least_no_change(void) {
 	e.emit_output_actual_header();
 	e.emit_param("MyString", "%s", a.Value());
 	if(strcmp(a.Value(), "Jacques Anquetil") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool reserve_at_least_capacity(void) {
@@ -1438,9 +1551,11 @@ static bool reserve_at_least_capacity(void) {
 	e.emit_output_actual_header();
 	e.emit_param("MyString", "%d", a.Capacity());
 	if(a.Capacity() < 100) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 125
@@ -1457,9 +1572,11 @@ static bool concatenation_my_string_non_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 400
@@ -1476,9 +1593,11 @@ static bool concatenation_my_string_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_my_string_empty_non_empty(void) {
@@ -1494,9 +1613,11 @@ static bool concatenation_my_string_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 144
@@ -1513,9 +1634,11 @@ static bool concatenation_my_string_non_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foobar") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_my_string_multiple(void) {
@@ -1532,9 +1655,11 @@ static bool concatenation_my_string_multiple(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", c.Value());
 	if(strcmp(c.Value(), "Lance Armstrong") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_my_string_itself(void) {
@@ -1549,9 +1674,11 @@ static bool concatenation_my_string_itself(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foofoo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_my_string_itself_empty(void) {
@@ -1565,9 +1692,11 @@ static bool concatenation_my_string_itself_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_string_non_empty_null(void) {
@@ -1581,9 +1710,11 @@ static bool concatenation_string_non_empty_null(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 123
@@ -1598,9 +1729,11 @@ static bool concatenation_string_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_string_empty_non_empty(void) {
@@ -1616,9 +1749,11 @@ static bool concatenation_string_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 122
@@ -1635,9 +1770,11 @@ static bool concatenation_string_non_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "blahbaz") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_std_string_non_empty_empty(void) {
@@ -1653,9 +1790,11 @@ static bool concatenation_std_string_non_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_std_string_empty_empty(void) {
@@ -1671,9 +1810,11 @@ static bool concatenation_std_string_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_std_string_empty_non_empty(void) {
@@ -1689,9 +1830,11 @@ static bool concatenation_std_string_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_std_string_non_empty_non_empty(void) {
@@ -1707,9 +1850,11 @@ static bool concatenation_std_string_non_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foobar") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 135
@@ -1724,9 +1869,11 @@ static bool concatenation_char_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "!") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_char_non_empty(void) {
@@ -1740,9 +1887,11 @@ static bool concatenation_char_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "pow!") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_char_null(void) {
@@ -1760,9 +1909,11 @@ static bool concatenation_char_null(void) {
 	e.emit_retval("%s", a.Value());
 	e.emit_param("Length", "%d", a.Length());
 	if(strcmp(a.Value(), "pow") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_int_empty(void) {
@@ -1776,9 +1927,11 @@ static bool concatenation_int_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 170
@@ -1793,9 +1946,11 @@ static bool concatenation_int_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Lance Armstrong123") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_int_large(void) {
@@ -1811,9 +1966,11 @@ static bool concatenation_int_large(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_int_small(void) {
@@ -1829,9 +1986,11 @@ static bool concatenation_int_small(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_uint_empty(void) {
@@ -1847,9 +2006,11 @@ static bool concatenation_uint_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_uint_non_empty(void) {
@@ -1865,9 +2026,11 @@ static bool concatenation_uint_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo123") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_uint_large(void) {
@@ -1883,9 +2046,11 @@ static bool concatenation_uint_large(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_long_empty(void) {
@@ -1900,9 +2065,11 @@ static bool concatenation_long_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_long_non_empty(void) {
@@ -1917,9 +2084,11 @@ static bool concatenation_long_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo123") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_long_large(void) {
@@ -1935,9 +2104,11 @@ static bool concatenation_long_large(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_long_small(void) {
@@ -1953,9 +2124,11 @@ static bool concatenation_long_small(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 180
@@ -1970,9 +2143,11 @@ static bool concatenation_double_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strncmp(a.Value(), "12.3", 4) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool concatenation_double_non_empty(void) {
@@ -1986,9 +2161,11 @@ static bool concatenation_double_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strncmp(a.Value(), "foo12.3", 7) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 379
@@ -2004,9 +2181,11 @@ static bool substr_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 191
@@ -2022,9 +2201,11 @@ static bool substr_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "blah") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 200
@@ -2040,9 +2221,11 @@ static bool substr_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "baz!") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 218
@@ -2059,9 +2242,11 @@ static bool substr_outside_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "blahba") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 209
@@ -2078,9 +2263,11 @@ static bool substr_outside_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "az!") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 230
@@ -2096,9 +2283,11 @@ static bool escape_chars_length_1(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "\\z") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool escape_chars_empty(void) {
@@ -2113,9 +2302,11 @@ static bool escape_chars_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool escape_chars_multiple(void) {
@@ -2130,9 +2321,11 @@ static bool escape_chars_multiple(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "f*o*ob*ar") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool escape_chars_same(void) {
@@ -2148,9 +2341,11 @@ static bool escape_chars_same(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", b.Value());
 	if(strcmp(b.Value(), "*f*o*o*b*a*r") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool find_char_first(void) {
@@ -2165,9 +2360,11 @@ static bool find_char_first(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", pos);
 	if(pos != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool find_char_last(void) {
@@ -2182,9 +2379,11 @@ static bool find_char_last(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", pos);
 	if(pos != 2) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool find_char_not_found(void) {
@@ -2199,9 +2398,11 @@ static bool find_char_not_found(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", pos);
 	if(pos != -1) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool find_char_invalid_greater(void) {
@@ -2217,9 +2418,11 @@ static bool find_char_invalid_greater(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", pos);
 	if(pos != -1) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool find_char_invalid_less(void) {
@@ -2235,9 +2438,11 @@ static bool find_char_invalid_less(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", pos);
 	if(pos != -1) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool hash_empty(void) {
@@ -2251,9 +2456,11 @@ static bool hash_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", hash);
 	if(hash != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool hash_non_empty(void) {
@@ -2267,9 +2474,11 @@ static bool hash_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", hash);
 	if(hash == 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 598
@@ -2285,9 +2494,11 @@ static bool find_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", loc);
 	if(loc != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 607
@@ -2303,9 +2514,11 @@ static bool find_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", loc);
 	if(loc != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 614
@@ -2321,9 +2534,11 @@ static bool find_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", loc);
 	if(loc != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 621
@@ -2339,9 +2554,11 @@ static bool find_middle(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", loc);
 	if(loc != 5) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 628
@@ -2357,9 +2574,11 @@ static bool find_substring_not_found(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", loc);
 	if(loc != -1) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool find_invalid_start_less(void) {
@@ -2374,9 +2593,11 @@ static bool find_invalid_start_less(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", loc);
 	if(loc != -1) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool find_invalid_start_greater(void) {
@@ -2392,9 +2613,11 @@ static bool find_invalid_start_greater(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", loc);
 	if(loc != -1) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 240 
@@ -2411,9 +2634,11 @@ static bool replace_string_valid(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "1ab5") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 248 
@@ -2429,9 +2654,11 @@ static bool replace_string_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "15") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool replace_string_empty_my_string(void) {
@@ -2446,9 +2673,11 @@ static bool replace_string_empty_my_string(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool replace_string_beginning(void) {
@@ -2463,9 +2692,11 @@ static bool replace_string_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "012345") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool replace_string_end(void) {
@@ -2480,9 +2711,11 @@ static bool replace_string_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "123456") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool replace_string_return_false(void) {
@@ -2498,9 +2731,11 @@ static bool replace_string_return_false(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", found);
 	if(found) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool replace_string_return_true(void) {
@@ -2516,9 +2751,11 @@ static bool replace_string_return_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", found);
 	if(!found) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 260
@@ -2534,9 +2771,11 @@ static bool sprintf_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "happy 3") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 270
@@ -2552,9 +2791,11 @@ static bool sprintf_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "sad 5") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sprintf_return_true(void) {
@@ -2569,9 +2810,11 @@ static bool sprintf_return_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(!res) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool vsprintf_empty(void) {
@@ -2586,11 +2829,13 @@ static bool vsprintf_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a->Value());
 	if(strcmp(a->Value(), "happy 3") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		delete a;
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	delete a;
-	PASS;
+	return true;
 }
 
 static bool vsprintf_non_empty(void) {
@@ -2605,11 +2850,13 @@ static bool vsprintf_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a->Value());
 	if(strcmp(a->Value(), "happy 3") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		delete a;
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	delete a;
-	PASS;
+	return true;
 }
 
 static bool vsprintf_return_true(void) {
@@ -2624,11 +2871,13 @@ static bool vsprintf_return_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(!res) {
+		e.emit_result_failure(__LINE__);
 		delete a;
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	delete a;
-	PASS;
+	return true;
 }
 
 
@@ -2645,9 +2894,11 @@ static bool sprintf_cat_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "happy 3") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 279
@@ -2662,9 +2913,11 @@ static bool sprintf_cat_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "sad 5 Luis Ocana") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sprintf_cat_return_true(void) {
@@ -2679,9 +2932,11 @@ static bool sprintf_cat_return_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(!res) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool vsprintf_cat_empty(void) {
@@ -2696,11 +2951,13 @@ static bool vsprintf_cat_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a->Value());
 	if(strcmp(a->Value(), "happy 3") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		delete a;
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	delete a;
-	PASS;
+	return true;
 }
 
 static bool vsprintf_cat_non_empty(void) {
@@ -2715,11 +2972,13 @@ static bool vsprintf_cat_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a->Value());
 	if(strcmp(a->Value(), "foohappy 3") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		delete a;
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	delete a;
-	PASS;
+	return true;
 }
 
 static bool vsprintf_cat_return_true(void) {
@@ -2734,11 +2993,13 @@ static bool vsprintf_cat_return_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(!res) {
+		e.emit_result_failure(__LINE__);
 		delete a;
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	delete a;
-	PASS;
+	return true;
 }
 
 
@@ -2755,9 +3016,11 @@ static bool append_to_list_string_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 638
@@ -2773,9 +3036,11 @@ static bool append_to_list_string_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Armstrong") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool append_to_list_string_non_empty_empty(void) {
@@ -2791,9 +3056,11 @@ static bool append_to_list_string_non_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "ABC") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 
@@ -2808,9 +3075,11 @@ static bool append_to_list_string_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Armstrong, Pereiro") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool append_to_list_string_multiple(void) {
@@ -2829,9 +3098,11 @@ static bool append_to_list_string_multiple(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Armstrong, Pereiro; Contador, Sastre") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool append_to_list_mystring_empty_empty(void) {
@@ -2847,9 +3118,11 @@ static bool append_to_list_mystring_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool append_to_list_mystring_empty_non_empty(void) {
@@ -2865,9 +3138,11 @@ static bool append_to_list_mystring_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Armstrong") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool append_to_list_mystring_non_empty_empty(void) {
@@ -2884,9 +3159,11 @@ static bool append_to_list_mystring_non_empty_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "ABC") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 
@@ -2903,9 +3180,11 @@ static bool append_to_list_mystring_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Armstrong, Pereiro") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool append_to_list_mystring_multiple(void) {
@@ -2927,9 +3206,11 @@ static bool append_to_list_mystring_multiple(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Armstrong, Pereiro; Contador, Sastre") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool lower_case_empty(void) {
@@ -2941,9 +3222,11 @@ static bool lower_case_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool lower_case_non_empty(void) {
@@ -2955,9 +3238,11 @@ static bool lower_case_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "lower upper") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool upper_case_empty(void) {
@@ -2969,9 +3254,11 @@ static bool upper_case_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool upper_case_non_empty(void) {
@@ -2983,9 +3270,11 @@ static bool upper_case_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "LOWER UPPER") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool chomp_new_line_end(void) {
@@ -2998,9 +3287,11 @@ static bool chomp_new_line_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "stuff") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool chomp_crlf_end(void) {
@@ -3013,9 +3304,11 @@ static bool chomp_crlf_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "stuff") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool chomp_new_line_beginning(void) {
@@ -3028,9 +3321,11 @@ static bool chomp_new_line_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "stuff\nmore stuff") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool chomp_return_false(void) {
@@ -3043,9 +3338,11 @@ static bool chomp_return_false(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool chomp_return_true(void) {
@@ -3058,9 +3355,11 @@ static bool chomp_return_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 539
@@ -3074,9 +3373,11 @@ static bool trim_beginning_and_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Miguel") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 567
@@ -3089,9 +3390,11 @@ static bool trim_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Hinault") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 548
@@ -3104,9 +3407,11 @@ static bool trim_none(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Indurain") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 558
@@ -3119,9 +3424,11 @@ static bool trim_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Merckx") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool trim_empty(void) {
@@ -3133,9 +3440,11 @@ static bool trim_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 53
@@ -3153,9 +3462,11 @@ static bool equality_mystring_copied(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_mystring_one_char(void) {
@@ -3171,9 +3482,11 @@ static bool equality_mystring_one_char(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_mystring_two_char(void) {
@@ -3189,9 +3502,11 @@ static bool equality_mystring_two_char(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_mystring_substring(void) {
@@ -3207,9 +3522,11 @@ static bool equality_mystring_substring(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_mystring_one_empty(void) {
@@ -3225,9 +3542,11 @@ static bool equality_mystring_one_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_mystring_two_empty(void) {
@@ -3243,9 +3562,11 @@ static bool equality_mystring_two_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 36
@@ -3262,9 +3583,11 @@ static bool equality_string_one_char(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 44
@@ -3281,9 +3604,11 @@ static bool equality_string_two_char(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 62
@@ -3303,9 +3628,11 @@ static bool equality_string_copied_delete(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_string_substring(void) {
@@ -3322,9 +3649,11 @@ static bool equality_string_substring(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_string_one_empty(void) {
@@ -3341,9 +3670,11 @@ static bool equality_string_one_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool equality_string_two_empty(void) {
@@ -3359,9 +3690,11 @@ static bool equality_string_two_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool inequality_mystring_copy(void) {
@@ -3378,9 +3711,11 @@ static bool inequality_mystring_copy(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 78
@@ -3397,9 +3732,11 @@ static bool inequality_mystring_not_equal(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool inequality_string_equal(void) {
@@ -3415,9 +3752,11 @@ static bool inequality_string_equal(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 70
@@ -3434,9 +3773,11 @@ static bool inequality_string_not_equal(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 86
@@ -3453,9 +3794,11 @@ static bool less_than_mystring_less(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool less_than_mystring_equal(void) {
@@ -3471,9 +3814,11 @@ static bool less_than_mystring_equal(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool less_than_mystring_greater(void) {
@@ -3490,9 +3835,11 @@ static bool less_than_mystring_greater(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool less_than_or_equal_mystring_less(void) {
@@ -3508,9 +3855,11 @@ static bool less_than_or_equal_mystring_less(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool less_than_or_equal_mystring_equal(void) {
@@ -3526,9 +3875,11 @@ static bool less_than_or_equal_mystring_equal(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool less_than_or_equal_mystring_greater(void) {
@@ -3545,9 +3896,11 @@ static bool less_than_or_equal_mystring_greater(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool greater_than_mystring_less(void) {
@@ -3563,9 +3916,11 @@ static bool greater_than_mystring_less(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool greater_than_mystring_equal(void) {
@@ -3581,9 +3936,11 @@ static bool greater_than_mystring_equal(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool greater_than_mystring_greater(void) {
@@ -3600,9 +3957,11 @@ static bool greater_than_mystring_greater(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool greater_than_or_equal_mystring_less(void) {
@@ -3618,9 +3977,11 @@ static bool greater_than_or_equal_mystring_less(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool greater_than_or_equal_mystring_equal(void) {
@@ -3636,9 +3997,11 @@ static bool greater_than_or_equal_mystring_equal(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool greater_than_or_equal_mystring_greater(void) {
@@ -3655,9 +4018,11 @@ static bool greater_than_or_equal_mystring_greater(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool read_line_empty_file_return(void) {
@@ -3674,9 +4039,11 @@ static bool read_line_empty_file_return(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(res) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool read_line_empty_file_preserve(void) {
@@ -3694,9 +4061,11 @@ static bool read_line_empty_file_preserve(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool read_line_empty(void) {
@@ -3715,9 +4084,11 @@ static bool read_line_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool read_line_null_file(void) {
@@ -3736,10 +4107,13 @@ static bool read_line_null_file(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "foo") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 */
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 
@@ -3759,9 +4133,11 @@ static bool read_line_append(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Line of text") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool read_line_return(void) {
@@ -3780,9 +4156,11 @@ static bool read_line_return(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(!res) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool read_line_replace(void) {
@@ -3802,9 +4180,11 @@ static bool read_line_replace(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "bar")) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool read_line_multiple(void) {
@@ -3827,9 +4207,11 @@ static bool read_line_multiple(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Line 1\nLine 2\nLine 3\nLine 4")) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 460
@@ -3844,9 +4226,11 @@ static bool tokenize_null(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "NULL");
 	if(tok != NULL) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 471
@@ -3863,9 +4247,11 @@ static bool tokenize_skip(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tok);
 	if(strcmp(tok, "Ottavio") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 483
@@ -3928,9 +4314,11 @@ static bool tokenize_multiple_calls(void) {
 			strcmp(expectedTokens[9], resultToken9) != MATCH ||
 			strcmp(expectedTokens[10], resultToken10) != MATCH ||
 			strcmp(expectedTokens[11], resultToken11) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 491
@@ -3947,9 +4335,11 @@ static bool tokenize_end(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "NULL");
 	if(tok != NULL) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 519
@@ -3964,9 +4354,11 @@ static bool tokenize_empty(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "NULL");
 	if(tok != NULL) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 //in test_mystring.cpp 529
@@ -3981,9 +4373,11 @@ static bool tokenize_empty_delimiter(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "NULL");
 	if(tok != NULL) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_string_constructor(void) {
@@ -3993,9 +4387,11 @@ static bool sensitive_string_string_constructor(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "foo");
 	if(!(a == "foo")) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_equality_true(void) {
@@ -4010,9 +4406,11 @@ static bool sensitive_string_equality_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(!res) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_equality_false(void) {
@@ -4027,9 +4425,11 @@ static bool sensitive_string_equality_false(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(res) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_equality_default_constructor(void) {
@@ -4045,9 +4445,11 @@ static bool sensitive_string_equality_default_constructor(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", res);
 	if(res) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 
@@ -4061,9 +4463,11 @@ static bool sensitive_string_assignment_non_empty_empty(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "");
 	if(!(a == "")) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_assignment_empty_non_empty(void) {
@@ -4076,9 +4480,11 @@ static bool sensitive_string_assignment_empty_non_empty(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "foo");
 	if(!(a == "foo")) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_assignment_non_empty(void) {
@@ -4091,9 +4497,11 @@ static bool sensitive_string_assignment_non_empty(void) {
 	e.emit_output_expected_header();
 	e.emit_retval("%s", "b");
 	if(!(a == "b")) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_hash_function_non_empty(void) {
@@ -4107,9 +4515,11 @@ static bool sensitive_string_hash_function_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", hash);
 	if(hash == 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool sensitive_string_hash_function_empty(void) {
@@ -4123,9 +4533,11 @@ static bool sensitive_string_hash_function_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", hash);
 	if(hash == 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_stl_string_casting(void) {
@@ -4139,14 +4551,17 @@ static bool test_stl_string_casting(void) {
     std::string str2 = "bar";
     str2 = str1;
     if (str2 != str1.Value()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
     }
 
     str2 = "bar";
     str1 = str2;
     if (str1 != str2.c_str()) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
     }
 
-    PASS;
+    e.emit_result_success(__LINE__);
+    return true;
 }

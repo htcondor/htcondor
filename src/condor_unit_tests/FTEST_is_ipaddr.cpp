@@ -73,9 +73,11 @@ static bool test_normal_case() {
 	e.emit_param("IP", "%d.%d.%d.%d", *byte, *(byte+1), *(byte+2), *(byte+3));
 	e.emit_retval("%s", tfstr(result));
 	if(result != TRUE || *byte != 66 || *(byte+1) != 184 || *(byte+2) != 142 || *(byte+3) != 51) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_one_octet_wildcard() {
@@ -90,9 +92,11 @@ static bool test_one_octet_wildcard() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_upper_bound() {
@@ -107,9 +111,11 @@ static bool test_upper_bound() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_lower_bound() {
@@ -124,9 +130,11 @@ static bool test_lower_bound() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_only_wildcard() {
@@ -141,9 +149,11 @@ static bool test_only_wildcard() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_start_wildcard() {
@@ -158,7 +168,9 @@ static bool test_start_wildcard() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }

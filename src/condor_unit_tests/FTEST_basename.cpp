@@ -110,9 +110,11 @@ static bool test_null() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_empty_string() {
@@ -127,9 +129,11 @@ static bool test_empty_string() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_current_directory() {
@@ -144,9 +148,11 @@ static bool test_current_directory() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_simple_path_1() {
@@ -161,9 +167,11 @@ static bool test_simple_path_1() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_simple_path_2() {
@@ -178,9 +186,11 @@ static bool test_simple_path_2() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_simple_directory_1() {
@@ -195,9 +205,11 @@ static bool test_simple_directory_1() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_simple_directory_2() {
@@ -212,9 +224,11 @@ static bool test_simple_directory_2() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_directory_and_file_1() {
@@ -229,9 +243,11 @@ static bool test_directory_and_file_1() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_directory_and_file_2() {
@@ -246,9 +262,11 @@ static bool test_directory_and_file_2() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_root_directory() {
@@ -263,9 +281,11 @@ static bool test_root_directory() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_directory_and_directory() {
@@ -280,9 +300,11 @@ static bool test_directory_and_directory() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_directory_and_directory_in_root() {
@@ -297,9 +319,11 @@ static bool test_directory_and_directory_in_root() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_forward_slash() {
@@ -314,9 +338,11 @@ static bool test_forward_slash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_backslash() {
@@ -331,9 +357,11 @@ static bool test_backslash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_forward_slash_1() {
@@ -348,9 +376,11 @@ static bool test_period_and_forward_slash_1() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_backslash_1() {
@@ -365,9 +395,11 @@ static bool test_period_and_backslash_1() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_forward_slash_2() {
@@ -382,9 +414,11 @@ static bool test_period_and_forward_slash_2() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_backslash_2() {
@@ -399,9 +433,11 @@ static bool test_period_and_backslash_2() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_backslash_and_period() {
@@ -416,9 +452,11 @@ static bool test_backslash_and_period() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_forward_slash_and_file_extension() {
@@ -433,9 +471,11 @@ static bool test_forward_slash_and_file_extension() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_backslash_and_file_extension() {
@@ -450,9 +490,11 @@ static bool test_backslash_and_file_extension() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_forward_slash() {
@@ -467,9 +509,11 @@ static bool test_period_and_forward_slash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_backslash() {
@@ -484,9 +528,11 @@ static bool test_period_and_backslash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_forward_slash_with_special_file() {
@@ -501,9 +547,11 @@ static bool test_period_and_forward_slash_with_special_file() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_period_and_backslash_with_special_file() {
@@ -518,9 +566,11 @@ static bool test_period_and_backslash_with_special_file() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_double_forward_slash() {
@@ -535,9 +585,11 @@ static bool test_double_forward_slash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_double_backslash() {
@@ -552,7 +604,9 @@ static bool test_double_backslash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }

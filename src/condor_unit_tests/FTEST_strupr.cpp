@@ -61,9 +61,11 @@ static bool test_normal_case() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", input);
 	if(strcmp(input, "LOWER") != 0) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 static bool test_return_value() {
@@ -80,7 +82,9 @@ static bool test_return_value() {
 	e.emit_retval("%p", up);
 
 	if(up != input) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }

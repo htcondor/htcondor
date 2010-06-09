@@ -100,10 +100,12 @@ bool test_sprintf_string() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.c_str());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF - 1;
@@ -111,10 +113,12 @@ bool test_sprintf_string() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.c_str());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF;
@@ -122,10 +126,12 @@ bool test_sprintf_string() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.c_str());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF + 1;
@@ -133,10 +139,12 @@ bool test_sprintf_string() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.c_str());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF * 2;
@@ -144,13 +152,16 @@ bool test_sprintf_string() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.c_str());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_sprintf_MyString() {
@@ -166,10 +177,12 @@ bool test_sprintf_MyString() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.Value());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF - 1;
@@ -177,10 +190,12 @@ bool test_sprintf_MyString() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.Value());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF;
@@ -188,10 +203,12 @@ bool test_sprintf_MyString() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.Value());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF + 1;
@@ -199,10 +216,12 @@ bool test_sprintf_MyString() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.Value());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
     nchars = STL_STRING_UTILS_FIXBUF * 2;
@@ -210,13 +229,16 @@ bool test_sprintf_MyString() {
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
     rchars = sprintf(dst, "%s", src.Value());
     if (dst != src) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (rchars != nchars) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_sprintf_cat_string() {
@@ -225,13 +247,16 @@ bool test_sprintf_cat_string() {
     std::string s = "foo";
     int r = sprintf_cat(s, "%s", "bar");
     if (s != "foobar") {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (r != 3) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_sprintf_cat_MyString() {
@@ -240,13 +265,16 @@ bool test_sprintf_cat_MyString() {
     MyString s = "foo";
     int r = sprintf_cat(s, "%s", "bar");
     if (s != "foobar") {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if (r != 3) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }    
 
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_comparison_ops_lhs_string() {
@@ -259,69 +287,88 @@ bool test_comparison_ops_lhs_string() {
     lhs = "a";
     rhs = "a";
     if ((lhs == rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs != rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs < rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs > rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs <= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs >= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
         // test operators when lhs < rhs
     lhs = "a";
     rhs = "b";
     if ((lhs == rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs != rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs < rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs > rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs <= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs >= rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
         // test operators when lhs > rhs
     lhs = "b";
     rhs = "a";
     if ((lhs == rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs != rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs < rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs > rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs <= rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs >= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_comparison_ops_lhs_MyString() {
@@ -334,69 +381,88 @@ bool test_comparison_ops_lhs_MyString() {
     lhs = "a";
     rhs = "a";
     if ((lhs == rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs != rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs < rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs > rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs <= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs >= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
         // test operators when lhs < rhs
     lhs = "a";
     rhs = "b";
     if ((lhs == rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs != rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs < rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs > rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs <= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs >= rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
         // test operators when lhs > rhs
     lhs = "b";
     rhs = "a";
     if ((lhs == rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs != rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs < rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs > rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs <= rhs) != false) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
     if ((lhs >= rhs) != true) {
-		FAIL;        
+		e.emit_result_failure(__LINE__);
+		return false;        
     }
 
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_lower_case_empty(void) {
@@ -408,9 +474,11 @@ bool test_lower_case_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_lower_case_non_empty(void) {
@@ -422,9 +490,11 @@ bool test_lower_case_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "lower upper") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_upper_case_empty(void) {
@@ -436,9 +506,11 @@ bool test_upper_case_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_upper_case_non_empty(void) {
@@ -450,9 +522,11 @@ bool test_upper_case_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "LOWER UPPER") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_chomp_new_line_end(void) {
@@ -465,9 +539,11 @@ bool test_chomp_new_line_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "stuff") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_chomp_crlf_end(void) {
@@ -480,9 +556,11 @@ bool test_chomp_crlf_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "stuff") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_chomp_new_line_beginning(void) {
@@ -495,9 +573,11 @@ bool test_chomp_new_line_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "stuff\nmore stuff") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_chomp_return_false(void) {
@@ -510,9 +590,11 @@ bool test_chomp_return_false(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_chomp_return_true(void) {
@@ -525,9 +607,11 @@ bool test_chomp_return_true(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(!result) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_trim_beginning_and_end(void) {
@@ -540,9 +624,11 @@ bool test_trim_beginning_and_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Miguel") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_trim_end(void) {
@@ -554,9 +640,11 @@ bool test_trim_end(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Hinault") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_trim_none(void) {
@@ -568,9 +656,11 @@ bool test_trim_none(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Indurain") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_trim_beginning(void) {
@@ -582,9 +672,11 @@ bool test_trim_beginning(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Merckx") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
 
 bool test_trim_empty(void) {
@@ -596,7 +688,9 @@ bool test_trim_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "") != MATCH) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }

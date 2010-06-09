@@ -469,11 +469,13 @@ static bool test_constructor() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_constructor_empty_list() {
@@ -490,11 +492,13 @@ static bool test_constructor_empty_list() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_constructor_empty_delim() {
@@ -511,11 +515,13 @@ static bool test_constructor_empty_delim() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_constructor_empty_both() {
@@ -532,11 +538,13 @@ static bool test_constructor_empty_both() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_constructor_null_list() {
@@ -552,11 +560,13 @@ static bool test_constructor_null_list() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_constructor_null_delim() {
@@ -573,11 +583,13 @@ static bool test_constructor_null_delim() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_constructor_null_both() {
@@ -593,11 +605,13 @@ static bool test_constructor_null_both() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_copy_constructor_value() {
@@ -614,11 +628,13 @@ static bool test_copy_constructor_value() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_copy_constructor_empty() {
@@ -634,11 +650,13 @@ static bool test_copy_constructor_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_copy_constructor_pointer() {
@@ -654,11 +672,13 @@ static bool test_copy_constructor_pointer() {
 	e.emit_output_actual_header();
 	e.emit_retval("%x", &copy);
 	if(&sl == &copy) {	//compares pointers
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_initialize_from_string_empty_valid() {
@@ -675,11 +695,13 @@ static bool test_initialize_from_string_empty_valid() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_initialize_from_string_empty_empty() {
@@ -698,11 +720,13 @@ static bool test_initialize_from_string_empty_empty() {
 	e.emit_param("StringList", nicePrint(retVal));
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_initialize_from_string_empty_null() {
@@ -710,7 +734,8 @@ static bool test_initialize_from_string_empty_null() {
 		" a null string.");
 	e.emit_comment("initializeFromString() throws an exception for this test. "
 		"The test is commented out so that the unit testing can continue.");
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 /*
 	StringList sl("", ";");
 	sl.initializeFromString(NULL);
@@ -724,11 +749,13 @@ static bool test_initialize_from_string_empty_null() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(retVal);
-	PASS;
+	return true;
 */
 }
 
@@ -750,11 +777,13 @@ static bool test_initialize_from_string_non_empty_valid() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_initialize_from_string_non_empty_empty() {
@@ -773,11 +802,13 @@ static bool test_initialize_from_string_non_empty_empty() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_initialize_from_string_non_empty_null() {
@@ -785,7 +816,8 @@ static bool test_initialize_from_string_non_empty_null() {
 		"passed a null string.");
 	e.emit_comment("initializeFromString() throws an exception for this test. "
 		"The test is commented out so that the unit testing can continue.");
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 /*
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -800,11 +832,13 @@ static bool test_initialize_from_string_non_empty_null() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 */
 }
 
@@ -821,11 +855,13 @@ static bool test_clear_all_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_clear_all_non_empty_many() {
@@ -841,11 +877,13 @@ static bool test_clear_all_non_empty_many() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_clear_all_non_empty_one() {
@@ -862,11 +900,13 @@ static bool test_clear_all_non_empty_one() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_return_true() {
@@ -885,11 +925,13 @@ static bool test_create_union_return_true() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(add);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(add);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_return_false() {
@@ -909,11 +951,13 @@ static bool test_create_union_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(add);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);	niceFree(add);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_duplicates_all() {
@@ -935,11 +979,13 @@ static bool test_create_union_duplicates_all() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(add); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(add); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_duplicates_some() {
@@ -961,11 +1007,13 @@ static bool test_create_union_duplicates_some() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(add); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(add); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_duplicates_all_ignore() {
@@ -987,11 +1035,13 @@ static bool test_create_union_duplicates_all_ignore() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(add); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(add); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_duplicates_some_ignore() {
@@ -1013,11 +1063,13 @@ static bool test_create_union_duplicates_some_ignore() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(add); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(add); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_empty_current() {
@@ -1038,11 +1090,13 @@ static bool test_create_union_empty_current() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(add); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(add); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_create_union_empty_subset() {
@@ -1062,11 +1116,13 @@ static bool test_create_union_empty_subset() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(retVal);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(retVal);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_false() {
@@ -1086,11 +1142,13 @@ static bool test_contains_list_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_false_ignore() {
@@ -1110,11 +1168,13 @@ static bool test_contains_list_return_false_ignore() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_false_almost() {
@@ -1134,11 +1194,13 @@ static bool test_contains_list_return_false_almost() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_false_reverse() {
@@ -1158,11 +1220,13 @@ static bool test_contains_list_return_false_reverse() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_true_not() {
@@ -1182,11 +1246,13 @@ static bool test_contains_list_return_true_not() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_true_consecutive() {
@@ -1206,11 +1272,13 @@ static bool test_contains_list_return_true_consecutive() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_true_not_ignore() {
@@ -1230,11 +1298,13 @@ static bool test_contains_list_return_true_not_ignore() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_true_consecutive_ignore() {
@@ -1254,11 +1324,13 @@ static bool test_contains_list_return_true_consecutive_ignore() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_true_itself() {
@@ -1276,11 +1348,13 @@ static bool test_contains_list_return_true_itself() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_list_return_true_copy() {
@@ -1300,11 +1374,13 @@ static bool test_contains_list_return_true_copy() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_contains_return_false() {
@@ -1322,11 +1398,13 @@ static bool test_contains_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_return_false_substring() {
@@ -1344,11 +1422,13 @@ static bool test_contains_return_false_substring() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_return_false_case() {
@@ -1366,11 +1446,13 @@ static bool test_contains_return_false_case() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_return_true_one() {
@@ -1388,11 +1470,13 @@ static bool test_contains_return_true_one() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_return_true_many() {
@@ -1415,11 +1499,13 @@ static bool test_contains_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_current_single() {
@@ -1442,11 +1528,13 @@ static bool test_contains_current_single() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_current_multiple() {
@@ -1470,11 +1558,13 @@ static bool test_contains_current_multiple() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_return_false() {
@@ -1492,11 +1582,13 @@ static bool test_contains_anycase_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_return_false_substring() {
@@ -1514,11 +1606,13 @@ static bool test_contains_anycase_return_false_substring() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_return_true_one() {
@@ -1536,11 +1630,13 @@ static bool test_contains_anycase_return_true_one() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_return_true_many() {
@@ -1565,11 +1661,13 @@ static bool test_contains_anycase_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_current_single() {
@@ -1592,11 +1690,13 @@ static bool test_contains_anycase_current_single() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_current_multiple() {
@@ -1620,11 +1720,13 @@ static bool test_contains_anycase_current_multiple() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_invalid() {
@@ -1644,11 +1746,13 @@ static bool test_remove_invalid() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_case() {
@@ -1668,11 +1772,13 @@ static bool test_remove_case() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_substring() {
@@ -1693,11 +1799,13 @@ static bool test_remove_substring() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_empty() {
@@ -1715,11 +1823,13 @@ static bool test_remove_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_first() {
@@ -1738,11 +1848,13 @@ static bool test_remove_first() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_last() {
@@ -1761,11 +1873,13 @@ static bool test_remove_last() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_many() {
@@ -1790,11 +1904,13 @@ static bool test_remove_many() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_anycase_invalid() {
@@ -1814,11 +1930,13 @@ static bool test_remove_anycase_invalid() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 
@@ -1841,11 +1959,13 @@ static bool test_remove_anycase_substring() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_anycase_empty() {
@@ -1863,11 +1983,13 @@ static bool test_remove_anycase_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_anycase_first() {
@@ -1886,11 +2008,13 @@ static bool test_remove_anycase_first() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_anycase_last() {
@@ -1909,11 +2033,13 @@ static bool test_remove_anycase_last() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_remove_anycase_many() {
@@ -1941,11 +2067,13 @@ static bool test_remove_anycase_many() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_substring_return_false_invalid() {
@@ -1963,11 +2091,13 @@ static bool test_substring_return_false_invalid() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_substring_return_false_almost() {
@@ -1985,11 +2115,13 @@ static bool test_substring_return_false_almost() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_substring_return_false_reverse() {
@@ -2007,11 +2139,13 @@ static bool test_substring_return_false_reverse() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_substring_return_false_case() {
@@ -2029,11 +2163,13 @@ static bool test_substring_return_false_case() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 
@@ -2052,11 +2188,13 @@ static bool test_substring_return_true_identical() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_substring_return_true_many() {
@@ -2079,11 +2217,13 @@ static bool test_substring_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_substring_current_single() {
@@ -2106,11 +2246,13 @@ static bool test_substring_current_single() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_substring_current_multiple() {
@@ -2134,11 +2276,13 @@ static bool test_substring_current_multiple() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 
@@ -2157,11 +2301,13 @@ static bool test_contains_withwildcard_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_false_substring() {
@@ -2179,11 +2325,13 @@ static bool test_contains_withwildcard_return_false_substring() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_false_case() {
@@ -2201,11 +2349,13 @@ static bool test_contains_withwildcard_return_false_case() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_false_wild() {
@@ -2223,11 +2373,13 @@ static bool test_contains_withwildcard_return_false_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_no_wild() {
@@ -2245,11 +2397,13 @@ static bool test_contains_withwildcard_return_true_no_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_only_wild() {
@@ -2267,11 +2421,13 @@ static bool test_contains_withwildcard_return_true_only_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_start() {
@@ -2289,11 +2445,13 @@ static bool test_contains_withwildcard_return_true_start() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_mid() {
@@ -2311,11 +2469,13 @@ static bool test_contains_withwildcard_return_true_mid() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_end() {
@@ -2333,11 +2493,13 @@ static bool test_contains_withwildcard_return_true_end() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_same_wild() {
@@ -2355,11 +2517,13 @@ static bool test_contains_withwildcard_return_true_same_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_multiple() {
@@ -2377,11 +2541,13 @@ static bool test_contains_withwildcard_return_true_multiple() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_return_true_many() {
@@ -2405,11 +2571,13 @@ static bool test_contains_withwildcard_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_current_single() {
@@ -2432,11 +2600,13 @@ static bool test_contains_withwildcard_current_single() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_withwildcard_current_multiple() {
@@ -2460,11 +2630,13 @@ static bool test_contains_withwildcard_current_multiple() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_false() {
@@ -2482,11 +2654,13 @@ static bool test_contains_anycase_wwc_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_false_substring() {
@@ -2504,11 +2678,13 @@ static bool test_contains_anycase_wwc_return_false_substring() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_false_wild() {
@@ -2526,11 +2702,13 @@ static bool test_contains_anycase_wwc_return_false_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_no_wild() {
@@ -2548,11 +2726,13 @@ static bool test_contains_anycase_wwc_return_true_no_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_only_wild() {
@@ -2570,11 +2750,13 @@ static bool test_contains_anycase_wwc_return_true_only_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_start() {
@@ -2592,11 +2774,13 @@ static bool test_contains_anycase_wwc_return_true_start() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_mid() {
@@ -2615,11 +2799,13 @@ static bool test_contains_anycase_wwc_return_true_mid() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_end() {
@@ -2638,11 +2824,13 @@ static bool test_contains_anycase_wwc_return_true_end() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_same_wild() {
@@ -2660,11 +2848,13 @@ static bool test_contains_anycase_wwc_return_true_same_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_multiple() {
@@ -2682,11 +2872,13 @@ static bool test_contains_anycase_wwc_return_true_multiple() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_return_true_many() {
@@ -2710,11 +2902,13 @@ static bool test_contains_anycase_wwc_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_current_single() {
@@ -2737,11 +2931,13 @@ static bool test_contains_anycase_wwc_current_single() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_contains_anycase_wwc_current_multiple() {
@@ -2765,11 +2961,13 @@ static bool test_contains_anycase_wwc_current_multiple() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_false() {
@@ -2788,11 +2986,13 @@ static bool test_find_matches_any_wwc_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_false_substring() {
@@ -2811,11 +3011,13 @@ static bool test_find_matches_any_wwc_return_false_substring() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_false_wild() {
@@ -2834,11 +3036,13 @@ static bool test_find_matches_any_wwc_return_false_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_no_wild() {
@@ -2857,11 +3061,13 @@ static bool test_find_matches_any_wwc_return_true_no_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_only_wild() {
@@ -2880,11 +3086,13 @@ static bool test_find_matches_any_wwc_return_true_only_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_start() {
@@ -2903,11 +3111,13 @@ static bool test_find_matches_any_wwc_return_true_start() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_mid() {
@@ -2927,11 +3137,13 @@ static bool test_find_matches_any_wwc_return_true_mid() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_end() {
@@ -2951,11 +3163,13 @@ static bool test_find_matches_any_wwc_return_true_end() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_same_wild() {
@@ -2974,11 +3188,13 @@ static bool test_find_matches_any_wwc_return_true_same_wild() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_multiple() {
@@ -2997,11 +3213,13 @@ static bool test_find_matches_any_wwc_return_true_multiple() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_return_true_many() {
@@ -3028,11 +3246,13 @@ static bool test_find_matches_any_wwc_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_none() {
@@ -3053,11 +3273,13 @@ static bool test_find_matches_any_wwc_none() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, "") != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_one() {
@@ -3079,11 +3301,13 @@ static bool test_find_matches_any_wwc_one() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(matches);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(matches);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_one_exist() {
@@ -3106,11 +3330,13 @@ static bool test_find_matches_any_wwc_one_exist() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(list); niceFree(matches);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(list); niceFree(matches);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_wild_start() {
@@ -3133,11 +3359,13 @@ static bool test_find_matches_any_wwc_wild_start() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(matches);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(matches);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_wild_mid() {
@@ -3160,11 +3388,13 @@ static bool test_find_matches_any_wwc_wild_mid() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(matches);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(matches);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_wild_end() {
@@ -3187,11 +3417,13 @@ static bool test_find_matches_any_wwc_wild_end() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(matches);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(matches);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_multiple() {
@@ -3213,11 +3445,13 @@ static bool test_find_matches_any_wwc_multiple() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(matches);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(matches);
-	PASS;
+	return true;
 }
 
 static bool test_find_matches_any_wwc_multiple_exist() {
@@ -3241,11 +3475,13 @@ static bool test_find_matches_any_wwc_multiple_exist() {
 	e.emit_output_actual_header();
 	e.emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(list); niceFree(matches);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(list); niceFree(matches);
-	PASS;
+	return true;
 }
 
 static bool test_find_return_false() {
@@ -3264,11 +3500,13 @@ static bool test_find_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_return_false_substring() {
@@ -3287,11 +3525,13 @@ static bool test_find_return_false_substring() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_return_false_case() {
@@ -3310,11 +3550,13 @@ static bool test_find_return_false_case() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_return_true_one() {
@@ -3333,11 +3575,13 @@ static bool test_find_return_true_one() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_return_true_many() {
@@ -3363,11 +3607,13 @@ static bool test_find_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_anycase_return_false() {
@@ -3386,11 +3632,13 @@ static bool test_find_anycase_return_false() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_anycase_return_false_substring() {
@@ -3410,11 +3658,13 @@ static bool test_find_anycase_return_false_substring() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_anycase_return_true_one() {
@@ -3433,11 +3683,13 @@ static bool test_find_anycase_return_true_one() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_find_anycase_return_true_many() {
@@ -3466,11 +3718,13 @@ static bool test_find_anycase_return_true_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 
@@ -3491,11 +3745,13 @@ static bool test_identical_return_false_same() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_false_not_same() {
@@ -3515,11 +3771,13 @@ static bool test_identical_return_false_not_same() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_false_almost() {
@@ -3539,11 +3797,13 @@ static bool test_identical_return_false_almost() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_false_ignore() {
@@ -3563,11 +3823,13 @@ static bool test_identical_return_false_ignore() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_false_subset() {
@@ -3587,11 +3849,13 @@ static bool test_identical_return_false_subset() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_true_case() {
@@ -3611,11 +3875,13 @@ static bool test_identical_return_true_case() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_true_ignore() {
@@ -3635,11 +3901,13 @@ static bool test_identical_return_true_ignore() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_true_itself() {
@@ -3657,11 +3925,13 @@ static bool test_identical_return_true_itself() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_identical_return_true_copy() {
@@ -3681,11 +3951,13 @@ static bool test_identical_return_true_copy() {
 	e.emit_output_actual_header();
 	e.emit_retval(tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(check);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(check);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_string_empty() {
@@ -3702,11 +3974,13 @@ static bool test_print_to_string_empty() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_string_one() {
@@ -3721,11 +3995,13 @@ static bool test_print_to_string_one() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_string_many() {
@@ -3740,11 +4016,13 @@ static bool test_print_to_string_many() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_delimed_string_empty() {
@@ -3762,11 +4040,13 @@ static bool test_print_to_delimed_string_empty() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_delimed_string_one() {
@@ -3783,11 +4063,13 @@ static bool test_print_to_delimed_string_one() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_delimed_string_many_short() {
@@ -3805,11 +4087,13 @@ static bool test_print_to_delimed_string_many_short() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_delimed_string_many_long() {
@@ -3827,11 +4111,13 @@ static bool test_print_to_delimed_string_many_long() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_print_to_delimed_string_many_null() {
@@ -3851,11 +4137,13 @@ static bool test_print_to_delimed_string_many_null() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(ps);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(ps);
-	PASS;
+	return true;
 }
 
 static bool test_delete_current_before() {
@@ -3876,11 +4164,13 @@ static bool test_delete_current_before() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_delete_current_after_no_match() {
@@ -3907,11 +4197,13 @@ static bool test_delete_current_after_no_match() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_delete_current_one_first() {
@@ -3934,11 +4226,13 @@ static bool test_delete_current_one_first() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_delete_current_one_mid() {
@@ -3961,11 +4255,13 @@ static bool test_delete_current_one_mid() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_delete_current_one_last() {
@@ -3988,11 +4284,13 @@ static bool test_delete_current_one_last() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_delete_current_all() {
@@ -4021,11 +4319,13 @@ static bool test_delete_current_all() {
 	e.emit_output_actual_header();
 	e.emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_string_compare_equal_same_beg() {
@@ -4046,11 +4346,13 @@ static bool test_string_compare_equal_same_beg() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retVal);
 	if(retVal != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(list); free_helper(strs);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(list); free_helper(strs);
-	PASS;
+	return true;
 }
 
 static bool test_string_compare_equal_same_mid() {
@@ -4071,11 +4373,13 @@ static bool test_string_compare_equal_same_mid() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retVal);
 	if(retVal != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(list); free_helper(strs);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(list); free_helper(strs);
-	PASS;
+	return true;
 }
 
 static bool test_string_compare_equal_same_end() {
@@ -4096,11 +4400,13 @@ static bool test_string_compare_equal_same_end() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retVal);
 	if(retVal != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(list); free_helper(strs);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(list); free_helper(strs);
-	PASS;
+	return true;
 }
 
 static bool test_string_compare_equal_different_list() {
@@ -4125,13 +4431,15 @@ static bool test_string_compare_equal_different_list() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retVal);
 	if(retVal != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(list1); niceFree(list2); 
 		free_helper(strs1); free_helper(strs2); 
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(list1); niceFree(list2); 
 	free_helper(strs1); free_helper(strs2);
-	PASS;
+	return true;
 }
 
 static bool test_string_compare_copy() {
@@ -4155,13 +4463,15 @@ static bool test_string_compare_copy() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retVal);
 	if(retVal != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(list1); niceFree(list2); 
 		free_helper(strs1); free_helper(strs2);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(list1); niceFree(list2); 
 	free_helper(strs1); free_helper(strs2);
-	PASS;
+	return true;
 }
 
 static bool test_string_compare_not_equal_same() {
@@ -4183,11 +4493,13 @@ static bool test_string_compare_not_equal_same() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retVal);
 	if(retVal == MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(list); free_helper(strs1); free_helper(strs2);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(list); free_helper(strs1); free_helper(strs2);
-	PASS;
+	return true;
 }
 
 static bool test_string_compare_not_equal_different() {
@@ -4212,13 +4524,15 @@ static bool test_string_compare_not_equal_different() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", retVal);
 	if(retVal == MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(list1); niceFree(list2); 
 		free_helper(strs1); free_helper(strs2);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(list1); niceFree(list2); 
 	free_helper(strs1); free_helper(strs2);
-	PASS;
+	return true;
 }
 
 static bool test_qsort_empty() {
@@ -4235,11 +4549,13 @@ static bool test_qsort_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_qsort_one() {
@@ -4256,11 +4572,13 @@ static bool test_qsort_one() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
-	niceFree(orig); niceFree(changed);
-	PASS;
+	e.emit_result_success(__LINE__);
+	niceFree(orig);
+	return true;
 }
 
 static bool test_qsort_already() {
@@ -4277,11 +4595,13 @@ static bool test_qsort_already() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_qsort_multiple() {
@@ -4301,11 +4621,13 @@ static bool test_qsort_multiple() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed2));
 	if(niceStrCmp(changed2, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed1); niceFree(changed2);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed1); niceFree(changed2);
-	PASS;
+	return true;
 }
 
 static bool test_qsort_many() {
@@ -4322,11 +4644,13 @@ static bool test_qsort_many() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_qsort_many_shuffle() {
@@ -4345,11 +4669,13 @@ static bool test_qsort_many_shuffle() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_shuffle_empty() {
@@ -4366,11 +4692,13 @@ static bool test_shuffle_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_shuffle_one() {
@@ -4387,11 +4715,13 @@ static bool test_shuffle_one() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_shuffle_many() {
@@ -4410,11 +4740,13 @@ static bool test_shuffle_many() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, notExpect) == MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_rewind_empty() {
@@ -4433,11 +4765,13 @@ static bool test_rewind_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_rewind_non_empty() {
@@ -4456,11 +4790,13 @@ static bool test_rewind_non_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_rewind_after_contains_true() {
@@ -4481,11 +4817,13 @@ static bool test_rewind_after_contains_true() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_rewind_after_contains_false() {
@@ -4506,11 +4844,13 @@ static bool test_rewind_after_contains_false() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_append_empty() {
@@ -4528,11 +4868,13 @@ static bool test_append_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_append_one() {
@@ -4550,11 +4892,13 @@ static bool test_append_one() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_append_many() {
@@ -4576,11 +4920,13 @@ static bool test_append_many() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_append_contains() {
@@ -4600,11 +4946,13 @@ static bool test_append_contains() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_append_rewind() {
@@ -4625,11 +4973,13 @@ static bool test_append_rewind() {
 	e.emit_param("StringList", nicePrint(changed));
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_append_current() {
@@ -4650,11 +5000,13 @@ static bool test_append_current() {
 	e.emit_output_actual_header();
 	e.emit_param("StrinList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_insert_empty() {
@@ -4672,11 +5024,13 @@ static bool test_insert_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_insert_head() {
@@ -4698,11 +5052,13 @@ static bool test_insert_head() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_insert_middle() {
@@ -4726,11 +5082,13 @@ static bool test_insert_middle() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_insert_end() {
@@ -4757,11 +5115,13 @@ static bool test_insert_end() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_insert_current() {
@@ -4784,11 +5144,13 @@ static bool test_insert_current() {
 	e.emit_output_actual_header();
 	e.emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_insert_many() {
@@ -4821,11 +5183,13 @@ static bool test_insert_many() {
 	e.emit_output_actual_header();
 	e.emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig); niceFree(changed);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig); niceFree(changed);
-	PASS;
+	return true;
 }
 
 static bool test_next_empty() {
@@ -4841,11 +5205,13 @@ static bool test_next_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_next_beginning() {
@@ -4865,11 +5231,13 @@ static bool test_next_beginning() {
 	e.emit_output_actual_header();
 	e.emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_next_middle() {
@@ -4889,11 +5257,13 @@ static bool test_next_middle() {
 	e.emit_output_actual_header();
 	e.emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_next_end() {
@@ -4913,11 +5283,13 @@ static bool test_next_end() {
 	e.emit_output_actual_header();
 	e.emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_empty() {
@@ -4933,11 +5305,13 @@ static bool test_number_empty() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", num);
 	if(num != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_one() {
@@ -4953,11 +5327,13 @@ static bool test_number_one() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", num);
 	if(num != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_many() {
@@ -4973,11 +5349,13 @@ static bool test_number_many() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", num);
 	if(num != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_after_delete() {
@@ -5000,11 +5378,13 @@ static bool test_number_after_delete() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", num);
 	if(num != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_after_clear_all() {
@@ -5024,11 +5404,13 @@ static bool test_number_after_clear_all() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", num);
 	if(num != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_after_append() {
@@ -5049,11 +5431,13 @@ static bool test_number_after_append() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", num);
 	if(num != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_after_insert() {
@@ -5074,11 +5458,13 @@ static bool test_number_after_insert() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", num);
 	if(num != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_number_copy() {
@@ -5100,11 +5486,13 @@ static bool test_number_copy() {
 	e.emit_retval("%d", num1);
 	e.emit_retval("%d", num2);
 	if(num1 != expect || num2 != expect) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig1); niceFree(orig2);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig1); niceFree(orig2);
-	PASS;
+	return true;
 }
 
 static bool test_is_empty_empty() {
@@ -5120,11 +5508,13 @@ static bool test_is_empty_empty() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_is_empty_clear() {
@@ -5144,11 +5534,13 @@ static bool test_is_empty_clear() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_is_empty_one() {
@@ -5165,11 +5557,13 @@ static bool test_is_empty_one() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_is_empty_many() {
@@ -5186,11 +5580,13 @@ static bool test_is_empty_many() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_is_empty_append() {
@@ -5211,11 +5607,13 @@ static bool test_is_empty_append() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_is_empty_insert() {
@@ -5235,11 +5633,13 @@ static bool test_is_empty_insert() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(retVal));
 	if(retVal) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_get_list_empty() {
@@ -5257,11 +5657,13 @@ static bool test_get_list_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(!isEmpty) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_get_list_non_empty() {
@@ -5279,11 +5681,13 @@ static bool test_get_list_non_empty() {
 	e.emit_output_actual_header();
 	e.emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(isEmpty) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_get_delimiters_empty_no() {
@@ -5301,11 +5705,13 @@ static bool test_get_delimiters_empty_no() {
 	e.emit_output_actual_header();
 	e.emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_get_delimiters_empty_yes() {
@@ -5323,11 +5729,13 @@ static bool test_get_delimiters_empty_yes() {
 	e.emit_output_actual_header();
 	e.emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_get_delimiters_non_empty_no() {
@@ -5345,11 +5753,13 @@ static bool test_get_delimiters_non_empty_no() {
 	e.emit_output_actual_header();
 	e.emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }
 
 static bool test_get_delimiters_non_empty_yes() {
@@ -5367,9 +5777,11 @@ static bool test_get_delimiters_non_empty_yes() {
 	e.emit_output_actual_header();
 	e.emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
+		e.emit_result_failure(__LINE__);
 		niceFree(orig);
-		FAIL;
+		return false;
 	}
+	e.emit_result_success(__LINE__);
 	niceFree(orig);
-	PASS;
+	return true;
 }

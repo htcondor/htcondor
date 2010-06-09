@@ -59,7 +59,9 @@ static bool test_normal_case() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result != 35) {
-		FAIL;
+		e.emit_result_failure(__LINE__);
+		return false;
 	}
-	PASS;
+	e.emit_result_success(__LINE__);
+	return true;
 }
