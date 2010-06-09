@@ -44,6 +44,9 @@ StartdHibernator::StartdHibernator( void ) throw ()
 
 StartdHibernator::~StartdHibernator( void ) throw ()
 {
+	if (m_plugin_args) {
+		delete m_plugin_args;
+	}	
 }
 
 bool
