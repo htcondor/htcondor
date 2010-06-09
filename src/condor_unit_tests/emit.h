@@ -26,7 +26,7 @@
 
 #define PASS \
 	e.emit_result_success(__LINE__); \
-	return false
+	return true
 
 #include "condor_common.h"
 
