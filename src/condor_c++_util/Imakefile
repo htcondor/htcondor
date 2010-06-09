@@ -301,7 +301,6 @@ c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
 c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_classad_put,test_classad_put.o,$(LIB))
-c_plus_target(test_mystring,test_mystring.o,$(LIB))
 c_plus_target(test_condor_arglist,test_condor_arglist.o,$(LIB))
 c_plus_target(test_condor_crontab,test_condor_crontab.o,$(LIB))
 c_plus_target(test_spawn,test_spawn.o,$(LIB))
@@ -310,8 +309,6 @@ c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
 
 #if !defined(WANT_OLD_CLASSADS)
 c_plus_target(test_compat_classad,test_compat_classad.o,$(LIB))
-c_plus_target(test_old_classads,test_old_classads.o,$(LIB))
-testbin_target(test_old_classads,755)
 #endif
 
 
