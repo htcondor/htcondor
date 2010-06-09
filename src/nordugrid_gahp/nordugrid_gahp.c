@@ -84,6 +84,11 @@ char * __findenv(const char *name, int *offset);
 	all_args_free(input_line);		\
 	}
 
+#define MAX_ACTIVE_CTRL_CMDS	1
+#define MAX_ACTIVE_DATA_CMDS	10
+
+#define FTP_HANDLE_CACHE_TIME	30
+
 static char *commands_list = 
 "COMMANDS "
 "NORDUGRID_SUBMIT " 
@@ -95,6 +100,7 @@ static char *commands_list =
 "NORDUGRID_EXIT_INFO "
 "NORDUGRID_PING "
 "NORDUGRID_LDAP_QUERY "
+"GRIDFTP_TRANSFER "
 "INITIALIZE_FROM_FILE "
 "QUIT "
 "RESULTS "
@@ -121,6 +127,11 @@ typedef struct ptr_ref_count {
 	gss_cred_id_t cred;
 } ptr_ref_count;
 
+typedef enum {
+	FtpDataCmd,
+	FtpCtrlCmd
+} ftp_cmd_t;
+
 typedef struct user_arg_struct {
 	char **cmd;
 	int stage_idx;
@@ -133,7 +144,8 @@ typedef struct user_arg_struct {
 	int buff_filled;
 	int fd;
 	globus_ftp_client_complete_callback_t first_callback;
-	const char *server;
+	ftp_cmd_t cmd_type;
+	char *server;
 } user_arg_t;
 
 /* GLOBALS */
@@ -147,10 +159,21 @@ ptr_ref_count * current_cred = NULL;
 
 globus_ftp_client_handleattr_t ftp_handle_attr;
 
+typedef struct ftp_handle_struct {
+	ptr_ref_count *cred;
+	globus_ftp_client_handle_t *handle;
+	globus_ftp_client_operationattr_t *op_attr;
+	time_t last_use;
+} ftp_handle_t;
+
 typedef struct ftp_cache_entry_struct {
 	char *server;
-	globus_fifo_t cmd_queue;
-} ftp_cache_entry;
+	int num_active_ctrl_cmds;
+	int num_active_data_cmds;
+	globus_fifo_t queued_ctrl_cmds;		// list of user_arg_t*
+	globus_fifo_t queued_data_cmds;		// list of user_arg_t*
+	globus_list_t *cached_ftp_handles;	// list of ftp_handle_t*
+} ftp_cache_entry_t;
 
 globus_hashtable_t ftp_cache_table;
 
@@ -161,7 +184,7 @@ globus_hashtable_t ftp_cache_table;
    to be escaped or the gahp server gets confused. :(
    !!! BEWARE !!!
 */ 
-static char *VersionString ="$GahpVersion: 1.2.1 " __DATE__ " Nordugrid\\ Gahp $";
+static char *VersionString ="$GahpVersion: 1.3.0 " __DATE__ " Nordugrid\\ Gahp $";
 
 volatile int ResultsPending;
 volatile int AsyncResults;
@@ -177,6 +200,7 @@ int handle_nordugrid_stage_out(char **);
 int handle_nordugrid_stage_out2(char **);
 int handle_nordugrid_exit_info(char **);
 int handle_nordugrid_ping(char **);
+int handle_gridftp_transfer(char **);
 
 /* These are all of the callbacks for non-blocking async commands */
 void nordugrid_submit_start_callback( void *arg,
@@ -268,6 +292,26 @@ void nordugrid_ping_start_callback( void *arg,
 void nordugrid_ping_exists_callback( void *arg,
 								globus_ftp_client_handle_t *handle,
 								globus_object_t *error );
+void gridftp_transfer_start_callback( void *arg,
+									  globus_ftp_client_handle_t *handle,
+									  globus_object_t *error );
+void gridftp_transfer_write_callback( void *arg,
+									  globus_ftp_client_handle_t *handle,
+									  globus_object_t *error,
+									  globus_byte_t *buffer,
+									  globus_size_t length,
+									  globus_off_t offset,
+									  globus_bool_t eof );
+void gridftp_transfer_read_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error,
+									 globus_byte_t *buffer,
+									 globus_size_t length,
+									 globus_off_t offset,
+									 globus_bool_t eof );
+void gridftp_transfer_done_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error );
 
 /* These are all of the sync. command handlers */
 int handle_async_mode_on(char **);
@@ -291,6 +335,10 @@ void enqueue_results( char *result_line );
    The caller is responsible for freeing the memory returned by this func 
 */ 
 char *escape_spaces( const char *input_line );
+/* Behaves the same as escape_spaces(), but embedded newlines are
+   converted to spaces and trailing spaces are removed.
+ */
+char *escape_err_msg( const char *input_line );
 
 /* all_args_free frees all the memory passed into a command handler */
 void all_args_free( char ** );
@@ -485,6 +533,47 @@ escape_spaces( const char *input_line)
 	return output_line;	
 }
 
+char *
+escape_err_msg( const char *input_line) 
+{
+	int i;
+	const char *temp;
+	char *output_line;
+
+	// first, count up the spaces
+	temp = input_line;
+	for(i = 0; *temp != '\0'; temp++) {
+		if( *temp == ' ' || *temp == '\\' ) {
+			i++;
+		}
+	}
+
+	// get enough space to store it.  	
+	output_line = globus_libc_malloc(strlen(input_line) + i + 200);
+
+	// now, blast across it
+	temp = input_line;
+	for(i = 0; *temp != '\0'; temp++) {
+		if ( *temp == '\r' || *temp == '\n' ) {
+			output_line[i] = ' ';
+			i++;
+		} else {
+			if( *temp == ' ' || *temp == '\\' ) {
+				output_line[i] = '\\'; 
+				i++;
+			}
+			output_line[i] = *temp;
+			i++;
+		}
+	}
+	do {
+		output_line[i] = '\0';
+		i--;
+	} while ( output_line[i] == ' ' );
+	// the caller is responsible for freeing this memory, not us
+	return output_line;	
+}
+
 void
 all_args_free( char **input_line )
 {
@@ -508,22 +597,31 @@ all_args_free( char **input_line )
 	return;	
 }
 
-user_arg_t *malloc_user_arg()
+user_arg_t *malloc_user_arg( char **cmd, ptr_ref_count *cred,
+							 const char *server )
 {
 	user_arg_t *user_arg;
 
 	user_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	user_arg->cmd = NULL;
+	user_arg->cmd = cmd;
 	user_arg->buff = NULL;
 	user_arg->buff_len = 0;
 	user_arg->buff_filled = 0;
 	user_arg->stage_idx = 0;
 	user_arg->stage_last = 0;
 	user_arg->fd = -1;
-	user_arg->cred = NULL;
+	user_arg->cred = cred;
+	if ( cred ) {
+		cred->count++;
+	}
 	user_arg->op_attr = NULL;
-	user_arg->server = NULL;
+	if ( server ) {
+		user_arg->server = strdup( server );
+	} else {
+		user_arg->server = NULL;
+	}
 	user_arg->first_callback = NULL;
+	user_arg->cmd_type = FtpCtrlCmd;
 
 	return user_arg;
 }
@@ -539,122 +637,186 @@ void free_user_arg( user_arg_t *user_arg )
 	if ( user_arg->fd >= 0 ) {
 		close( user_arg->fd );
 	}
+	if ( user_arg->server ) {
+		globus_libc_free( user_arg->server );
+	}
+	if ( user_arg->cred ) {
+		unlink_ref_count( user_arg->cred, 1 );
+	}
 	globus_libc_free( user_arg );
 }
 
-void begin_ftp_command( user_arg_t *user_arg )
+void clean_ftp_handles( void *arg )
 {
-	globus_result_t result;
-	ftp_cache_entry *entry;
+	time_t now = time(NULL);
+	ftp_cache_entry_t *entry;
+	globus_list_t *curr_elem;
+	globus_list_t *next_elem;
+	ftp_handle_t *curr_handle;
+	int result;
 
-	entry = globus_hashtable_lookup( &ftp_cache_table, user_arg->server );
-	if ( entry == NULL ) {
-		entry = globus_libc_malloc( sizeof( ftp_cache_entry ) );
-		entry->server = strdup( user_arg->server );
-		globus_fifo_init( &entry->cmd_queue );
-		globus_hashtable_insert( &ftp_cache_table, entry->server, entry );
+	for ( entry = globus_hashtable_first( &ftp_cache_table ); entry;
+		  entry = globus_hashtable_next( &ftp_cache_table ) ) {
+
+		curr_elem = entry->cached_ftp_handles;
+		while ( curr_elem ) {
+			next_elem = globus_list_rest( curr_elem );
+			curr_handle = globus_list_first( curr_elem );
+			if ( curr_handle->last_use < now - FTP_HANDLE_CACHE_TIME ) {
+				// Remove cached handle from list and destroy it
+				globus_list_remove( &entry->cached_ftp_handles,
+									curr_elem );
+
+				result = globus_ftp_client_operationattr_destroy( curr_handle->op_attr );
+				assert( result == GLOBUS_SUCCESS );
+				globus_libc_free( curr_handle->op_attr );
+
+				result = globus_ftp_client_handle_destroy( curr_handle->handle );
+				assert( result == GLOBUS_SUCCESS );
+				globus_libc_free( curr_handle->handle );
+
+				if ( curr_handle->cred ) {
+					unlink_ref_count( curr_handle->cred, 1 );
+				}
+
+				globus_libc_free( curr_handle );
+			}
+
+			curr_elem = next_elem;
+		}
 	}
-
-	if ( globus_fifo_size( &entry->cmd_queue ) > 0 ) {
-		globus_fifo_enqueue( &entry->cmd_queue, user_arg );
-		return;
-	}
-
-	globus_fifo_enqueue( &entry->cmd_queue, user_arg );
-
-	user_arg->handle = globus_libc_malloc( sizeof(globus_ftp_client_handle_t) );
-
-	result = globus_ftp_client_handle_init( user_arg->handle,
-											&ftp_handle_attr );
-	assert( result == GLOBUS_SUCCESS );
-
-	user_arg->op_attr = globus_libc_malloc( sizeof(globus_ftp_client_operationattr_t) );
-
-	result = globus_ftp_client_operationattr_init( user_arg->op_attr );
-	assert( result == GLOBUS_SUCCESS );
-
-	if ( user_arg->cred ) {
-		result = globus_ftp_client_operationattr_set_authorization(
-														user_arg->op_attr,
-														user_arg->cred->cred,
-														NULL,
-														NULL,
-														NULL,
-														NULL );
-		assert( result == GLOBUS_SUCCESS );
-
-		user_arg->cred->count++;
-	}
-
-	(*(user_arg->first_callback))( user_arg, user_arg->handle, GLOBUS_SUCCESS );
 }
 
-void finish_ftp_command( user_arg_t *user_arg )
+void dispatch_ftp_command( ftp_cache_entry_t *entry )
 {
-	globus_result_t result;
-	ftp_cache_entry *entry;
-	user_arg_t *list_head;
+	user_arg_t *next_cmd = NULL;
+	globus_list_t *list_elem = NULL;
+	int found_it = 0;
+	int result;
 
-	entry = globus_hashtable_lookup( &ftp_cache_table, user_arg->server );
-	assert( entry );
+	if ( entry->num_active_ctrl_cmds < MAX_ACTIVE_CTRL_CMDS &&
+		 !globus_fifo_empty( &entry->queued_ctrl_cmds ) ) {
 
-	list_head = globus_fifo_dequeue( &entry->cmd_queue );
-	assert( list_head == user_arg );
+		next_cmd = globus_fifo_dequeue( &entry->queued_ctrl_cmds );
+		entry->num_active_ctrl_cmds++;
 
-	if ( globus_fifo_size( &entry->cmd_queue ) == 0 ) {
-		result = globus_ftp_client_operationattr_destroy( user_arg->op_attr );
-		assert( result == GLOBUS_SUCCESS );
-		globus_libc_free( user_arg->op_attr );
+	} else if ( entry->num_active_data_cmds < MAX_ACTIVE_DATA_CMDS &&
+				!globus_fifo_empty( &entry->queued_data_cmds ) ) {
 
-		result = globus_ftp_client_handle_destroy( user_arg->handle );
-		assert( result == GLOBUS_SUCCESS );
-		globus_libc_free( user_arg->handle );
+		next_cmd = globus_fifo_dequeue( &entry->queued_data_cmds );
+		entry->num_active_data_cmds++;
+	}
 
+	if ( next_cmd == NULL ) {
 		return;
 	}
 
-	list_head = globus_fifo_peek( &entry->cmd_queue );
-	if ( list_head->cred != user_arg->cred ) {
-		result = globus_ftp_client_handle_destroy( user_arg->handle );
-		assert( result == GLOBUS_SUCCESS );
+	for ( list_elem = entry->cached_ftp_handles; list_elem;
+		  list_elem = globus_list_rest( list_elem ) ) {
 
-		list_head->handle = user_arg->handle;
+		ftp_handle_t *next_handle = globus_list_first( list_elem );
+		if ( next_cmd->cred == next_handle->cred ) {
+			globus_list_remove( &entry->cached_ftp_handles, list_elem );
+			next_cmd->handle = next_handle->handle;
+			next_cmd->op_attr = next_handle->op_attr;	
+			if ( next_handle->cred ) {
+				unlink_ref_count( next_handle->cred, 1 );
+			}
+			globus_libc_free( next_handle );
+			found_it = 1;
+			break;
+		}
+	}
+	if ( !found_it ) {
+		next_cmd->handle = globus_libc_malloc( sizeof(globus_ftp_client_handle_t) );
 
-		result = globus_ftp_client_handle_init( list_head->handle,
+		result = globus_ftp_client_handle_init( next_cmd->handle,
 												&ftp_handle_attr );
 		assert( result == GLOBUS_SUCCESS );
 
-		result = globus_ftp_client_operationattr_destroy( user_arg->op_attr );
+		next_cmd->op_attr = globus_libc_malloc( sizeof(globus_ftp_client_operationattr_t) );
+
+		result = globus_ftp_client_operationattr_init( next_cmd->op_attr );
 		assert( result == GLOBUS_SUCCESS );
 
-		if ( user_arg->cred ) {
-			unlink_ref_count( user_arg->cred, 1 );
-		}
-
-		list_head->op_attr = user_arg->op_attr;
-
-		result = globus_ftp_client_operationattr_init( list_head->op_attr );
-		assert( result == GLOBUS_SUCCESS );
-
-		if ( list_head->cred ) {
+		if ( next_cmd->cred ) {
 			result = globus_ftp_client_operationattr_set_authorization(
-														list_head->op_attr,
-														list_head->cred->cred,
+														next_cmd->op_attr,
+														next_cmd->cred->cred,
 														NULL,
 														NULL,
 														NULL,
 														NULL );
 			assert( result == GLOBUS_SUCCESS );
-
-			list_head->cred->count++;
 		}
-	} else {
-		list_head->handle = user_arg->handle;
-		list_head->op_attr = user_arg->op_attr;
 	}
 
-	(*(list_head->first_callback))( list_head, list_head->handle,
-									GLOBUS_SUCCESS );
+	(*(next_cmd->first_callback))( next_cmd, next_cmd->handle, GLOBUS_SUCCESS );}
+
+void begin_ftp_command( user_arg_t *user_arg )
+{
+	globus_result_t result;
+	ftp_cache_entry_t *entry;
+
+	entry = globus_hashtable_lookup( &ftp_cache_table, (void *)user_arg->server );
+	if ( entry == NULL ) {
+		entry = globus_libc_malloc( sizeof( ftp_cache_entry_t ) );
+		entry->server = strdup( user_arg->server );
+		entry->num_active_ctrl_cmds = 0;
+		entry->num_active_data_cmds = 0;
+		globus_fifo_init( &entry->queued_ctrl_cmds );
+		globus_fifo_init( &entry->queued_data_cmds );
+		entry->cached_ftp_handles = NULL;
+		globus_hashtable_insert( &ftp_cache_table, entry->server, entry );
+	}
+
+	switch ( user_arg->cmd_type ) {
+	case FtpDataCmd:
+		globus_fifo_enqueue( &entry->queued_data_cmds, user_arg );
+		break;
+	case FtpCtrlCmd:
+		globus_fifo_enqueue( &entry->queued_ctrl_cmds, user_arg );
+		break;
+	default:
+		fprintf( stderr, "Unknown ftp command type: %d\n", user_arg->cmd_type );
+		exit( 1 );
+	}
+
+	dispatch_ftp_command( entry );
+}
+
+void finish_ftp_command( user_arg_t *user_arg )
+{
+	globus_result_t result;
+	ftp_cache_entry_t *entry;
+	ftp_handle_t *saved_handle;
+
+	entry = globus_hashtable_lookup( &ftp_cache_table, (void *)user_arg->server );
+	assert( entry );
+
+	switch ( user_arg->cmd_type ) {
+	case FtpCtrlCmd:
+		entry->num_active_ctrl_cmds--;
+		break;
+	case FtpDataCmd:
+		entry->num_active_data_cmds--;
+		break;
+	default:
+		fprintf( stderr, "Unknown ftp command type: %d\n", user_arg->cmd_type );
+		exit( 1 );
+	}
+
+	saved_handle = globus_libc_malloc( sizeof(ftp_handle_t) );
+	saved_handle->last_use = time(NULL);
+	saved_handle->handle = user_arg->handle;
+	saved_handle->op_attr = user_arg->op_attr;
+	saved_handle->cred = user_arg->cred;
+	if ( saved_handle->cred ) {
+		saved_handle->cred->count++;
+	}
+	globus_list_insert( &entry->cached_ftp_handles, saved_handle );
+
+	dispatch_ftp_command( entry );
 }
 
 int
@@ -680,10 +842,8 @@ handle_nordugrid_submit( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
-	user_arg->server = input_line[2];
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpCtrlCmd;
 	user_arg->first_callback = nordugrid_submit_start_callback;
 
 		/* modify the rsl */
@@ -871,7 +1031,7 @@ nordugrid_submit_cwd2_callback( void *arg,
 							 user_arg->buff );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
@@ -900,10 +1060,8 @@ handle_nordugrid_status( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
-	user_arg->server = input_line[2];
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpCtrlCmd;
 	user_arg->first_callback = nordugrid_status_start_callback;
 
 	begin_ftp_command( user_arg );
@@ -1012,7 +1170,7 @@ void nordugrid_status_get_callback( void *arg,
 							 (char *)user_arg->buff );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
@@ -1041,10 +1199,8 @@ handle_nordugrid_cancel( char **input_line)
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
-	user_arg->server = input_line[2];
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpCtrlCmd;
 	user_arg->first_callback = nordugrid_cancel_start_callback;
 
 	begin_ftp_command( user_arg );
@@ -1090,7 +1246,7 @@ nordugrid_cancel_rmdir_callback( void *arg,
 		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -1127,10 +1283,8 @@ handle_nordugrid_stage_in( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
-	user_arg->server = input_line[2];
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpDataCmd;
 	user_arg->first_callback = nordugrid_stage_in_start_callback;
 	user_arg->stage_idx = 5;
 	user_arg->stage_last = 4 + num_files;
@@ -1244,7 +1398,7 @@ void nordugrid_stage_in_start_file_callback( void *arg,
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -1296,7 +1450,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 		result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to read local file\n" ) );
+											"Failed to read local file" ) );
 		nordugrid_stage_in_put_callback( arg, handle,
 									   globus_error_peek( result ) );
 		return;
@@ -1329,7 +1483,7 @@ void nordugrid_stage_in_put_callback( void *arg,
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to close local file\n" ) );
+											"Failed to close local file" ) );
 			error = globus_error_peek( result );
 		}
 	}
@@ -1405,10 +1559,8 @@ handle_nordugrid_stage_out2( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
-	user_arg->server = input_line[2];
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpDataCmd;
 	user_arg->first_callback = nordugrid_stage_out2_start_file_callback;
 	user_arg->stage_idx = 5;
 	user_arg->stage_last = 4 + 2 * num_files;
@@ -1484,7 +1636,7 @@ void nordugrid_stage_out2_start_file_callback( void *arg,
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -1528,7 +1680,7 @@ void nordugrid_stage_out2_read_callback( void *arg,
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to write local file\n" ) );
+											"Failed to write local file" ) );
 			nordugrid_stage_out2_get_callback( arg, handle,
 											globus_error_peek( result ) );
 			return;
@@ -1565,7 +1717,7 @@ void nordugrid_stage_out2_get_callback( void *arg,
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
-											"Failed to close local file\n" ) );
+											"Failed to close local file" ) );
 			error = globus_error_peek( result );
 		}
 	}
@@ -1592,10 +1744,8 @@ handle_nordugrid_exit_info( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
-	user_arg->server = input_line[2];
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpCtrlCmd;
 	user_arg->first_callback = nordugrid_exit_info_start_callback;
 
 	begin_ftp_command( user_arg );
@@ -1737,7 +1887,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 			}
 		}
 		if ( file == NULL ) {
-			char *err_str = escape_spaces( "Failed to parse job usage info" );
+			char *err_str = escape_err_msg( "Failed to parse job usage info" );
 			output = globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
 										 strlen( err_str ) );
 			globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
@@ -1781,7 +1931,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 		if ( sscanf( file, "WallTime=%[0-9.]s\nKernelTime=%[0-9.]s\nUserTime=%[0-9.]s",
 					 wallclock, sys_cpu, user_cpu ) != 3 ) {
 
-			char *err_str = escape_spaces( "Failed to parse job usage info" );
+			char *err_str = escape_err_msg( "Failed to parse job usage info" );
 			output = globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
 										 strlen( err_str ) );
 			globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
@@ -1806,7 +1956,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
@@ -1837,10 +1987,8 @@ handle_nordugrid_ping( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
-	user_arg->server = input_line[2];
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpCtrlCmd;
 	user_arg->first_callback = nordugrid_ping_start_callback;
 
 	begin_ftp_command( user_arg );
@@ -1885,7 +2033,7 @@ nordugrid_ping_exists_callback( void *arg,
 		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -1919,9 +2067,7 @@ handle_nordugrid_ldap_query( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg();
-	user_arg->cmd = input_line;
-	user_arg->cred = NULL;
+	user_arg = malloc_user_arg( input_line, NULL, NULL );
 
 	int rc;
 	LDAP *hdl = NULL;
@@ -2039,7 +2185,7 @@ handle_nordugrid_ldap_query( char **input_line )
 	if ( !err_str ) {
 		output = my_string_convert( reply );
 	} else {
-		char *esc = escape_spaces( err_str );
+		char *esc = escape_err_msg( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
 		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
@@ -2052,6 +2198,289 @@ handle_nordugrid_ldap_query( char **input_line )
 
 	free_user_arg( user_arg );
 	return 0;
+}
+
+int
+handle_gridftp_transfer( char **input_line )
+{
+	user_arg_t *user_arg;
+	globus_url_t url;
+	char *server = NULL;
+
+	if ( input_line[1] == NULL || input_line[2] == NULL ||
+		 input_line[3] == NULL ) {
+		HANDLE_SYNTAX_ERROR();
+		return 0;
+	}
+	 
+	gahp_printf("S\n");
+	gahp_sem_up(&print_control);
+
+	if ( globus_url_parse( input_line[2], &url ) == GLOBUS_SUCCESS ) {
+		if ( url.host != NULL ) {
+			int len = strlen( url.host ) + 10;
+			server = malloc( len * sizeof(char) );
+			if ( url.port != 0 ) {
+				sprintf( server, "%s:%d", url.host, url.port );
+			} else {
+				sprintf( server, "%s", url.host );
+			}
+		}
+		globus_url_destroy( &url );
+	}
+	if ( !server &&
+		 globus_url_parse( input_line[3], &url ) == GLOBUS_SUCCESS ) {
+		if ( url.host != NULL ) {
+			int len = strlen( url.host ) + 10;
+			server = malloc( len * sizeof(char) );
+			if ( url.port != 0 ) {
+				sprintf( server, "%s:%d", url.host, url.port );
+			} else {
+				sprintf( server, "%s", url.host );
+			}
+		}
+		globus_url_destroy( &url );
+	}
+	if ( !server ) {
+		server = strdup( "" );
+	}
+
+	user_arg = malloc_user_arg( input_line, current_cred, server );
+	user_arg->cmd_type = FtpDataCmd;
+	user_arg->first_callback = gridftp_transfer_start_callback;
+
+	globus_libc_free( server );
+
+	begin_ftp_command( user_arg );
+
+	return 0;
+}
+
+void gridftp_transfer_start_callback( void *arg,
+										globus_ftp_client_handle_t *handle,
+										globus_object_t *error )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	globus_result_t result;
+
+	if ( error != GLOBUS_SUCCESS ) {
+		gridftp_transfer_done_callback( arg, handle, error );
+	}
+
+	if ( strncmp( user_arg->cmd[2], "file://", 7 ) == 0 ) {
+		// stage-in transfer
+		user_arg->fd = open( user_arg->cmd[2] + 7, O_RDONLY );
+		if ( user_arg->fd < 0 ) {
+			result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to open local file '%s'",
+											user_arg->cmd[2]+7 ) );
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+			return;
+		}
+
+		result = globus_ftp_client_put( user_arg->handle, user_arg->cmd[3],
+										user_arg->op_attr, NULL,
+										gridftp_transfer_done_callback, arg );
+		if ( result != GLOBUS_SUCCESS ) {
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+			return;
+		} else {
+			void *write_buff = malloc( TRANSFER_BUFFER_SIZE );
+			gridftp_transfer_write_callback( arg, handle, error, write_buff,
+											 0, 0, GLOBUS_FALSE );
+		}
+
+	} else if ( strncmp( user_arg->cmd[3], "file://", 7 ) == 0 ) {
+		// stage-out transfer
+		user_arg->fd = open( user_arg->cmd[3] + 7, O_CREAT|O_WRONLY|O_TRUNC, 0644 );
+		if ( user_arg->fd < 0 ) {
+			result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to open local file '%s'",
+											user_arg->cmd[3] + 7 ) );
+			gridftp_transfer_done_callback( arg, handle, globus_error_peek( result ) );
+			return;
+		}
+
+		result = globus_ftp_client_get( user_arg->handle, user_arg->cmd[2],
+										user_arg->op_attr, NULL,
+										gridftp_transfer_done_callback, arg );
+		if ( result != GLOBUS_SUCCESS ) {
+			gridftp_transfer_done_callback( arg, handle, globus_error_peek( result ) );
+			return;
+		} else {
+			void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
+			result = globus_ftp_client_register_read( user_arg->handle,
+													  read_buff,
+													  TRANSFER_BUFFER_SIZE,
+													  gridftp_transfer_read_callback,
+													  arg );
+			if ( result != GLOBUS_SUCCESS ) {
+					/* What to do? */
+				char *mesg = globus_error_print_friendly( globus_error_peek( result ) );
+				fprintf( stderr, "gridftp_transfer_start_callback: %s\n", mesg );
+				free( mesg );
+				free( read_buff );
+			}
+		}
+
+	} else {
+		// third-party transfer
+		result = globus_ftp_client_third_party_transfer( user_arg->handle,
+														 user_arg->cmd[2],
+														 user_arg->op_attr,
+														 user_arg->cmd[3],
+														 user_arg->op_attr,
+														 NULL,
+														 gridftp_transfer_done_callback,
+														 arg );
+		if ( result != GLOBUS_SUCCESS ) {
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+		}
+	}
+}
+
+/* This function can be called by gridftp_transfer_start_callback() before
+ * any data is actually written. It will pass 0 for both length and offset,
+ * and GLOBUS_FALSE for eof.
+ */
+void gridftp_transfer_write_callback( void *arg,
+									  globus_ftp_client_handle_t *handle,
+									  globus_object_t *error,
+									  globus_byte_t *buffer,
+									  globus_size_t length,
+									  globus_off_t offset,
+									  globus_bool_t eof )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	globus_result_t result;
+	int rc;
+
+	if ( error != GLOBUS_SUCCESS ) {
+			/* What to do? */
+		char *mesg = globus_error_print_friendly( error );
+		fprintf( stderr, "gridftp_transfer_write_callback: %s\n", mesg );
+		free( mesg );
+		return;
+	}
+
+	assert( offset + length == lseek( user_arg->fd, 0, SEEK_CUR ) );
+
+	if ( eof ) {
+		free( buffer );
+		return;
+	}
+
+	rc = read( user_arg->fd, buffer, TRANSFER_BUFFER_SIZE );
+	if ( rc < 0 ) {
+		result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to read local file" ) );
+		gridftp_transfer_done_callback( arg, handle,
+										globus_error_peek( result ) );
+		return;
+	}
+
+	result = globus_ftp_client_register_write( user_arg->handle,
+											   buffer,
+											   rc,
+											   offset + length,
+											   rc == 0,
+											   gridftp_transfer_write_callback,
+											   arg );
+	if ( result != GLOBUS_SUCCESS ) {
+			/* What to do? */
+		char *mesg = globus_error_print_friendly( globus_error_peek( result ) );
+		fprintf( stderr, "gridftp_transfer_write_callback: %s\n", mesg );
+		free( mesg );
+	}
+}
+
+void gridftp_transfer_read_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error,
+									 globus_byte_t *buffer,
+									 globus_size_t length,
+									 globus_off_t offset,
+									 globus_bool_t eof )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	globus_result_t result;
+	int written = 0;
+
+	if ( error != GLOBUS_SUCCESS ) {
+			/* What to do? */
+		char *mesg = globus_error_print_friendly( error );
+		fprintf( stderr, "gridftp_transfer_read_callback: %s\n", mesg );
+		free( mesg );
+		return;
+	}
+
+	assert( offset == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	while ( written < length ) {
+		int rc = write( user_arg->fd, buffer + written, length - written );
+		if ( rc < 0 ) {
+				/* TODO Bad! */
+			result = globus_error_put( globus_error_construct_string(
+											NULL,
+											NULL,
+											"Failed to write local file" ) );
+			gridftp_transfer_done_callback( arg, handle,
+											globus_error_peek( result ) );
+			return;
+		}
+		written += rc;
+	}
+
+	if ( !eof ) {
+		result = globus_ftp_client_register_read( user_arg->handle,
+												  buffer,
+												  TRANSFER_BUFFER_SIZE,
+												  gridftp_transfer_read_callback,
+												  arg );
+		if ( result != GLOBUS_SUCCESS ) {
+				/* What to do? */
+			char *mesg = globus_error_print_friendly( globus_error_peek( result ) );
+			fprintf( stderr, "gridftp_transfer_read_callback: %s\n", mesg );
+			free( mesg );
+		}
+	} else {
+		free( buffer );
+	}
+}
+
+void gridftp_transfer_done_callback( void *arg,
+									 globus_ftp_client_handle_t *handle,
+									 globus_object_t *error )
+{
+	user_arg_t *user_arg = (user_arg_t *)arg;
+	char *output;
+
+	if ( error == GLOBUS_SUCCESS ) {
+		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) );
+		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
+	} else {
+		char *err_str = globus_error_print_friendly( error );
+		char *esc = escape_err_msg( err_str );
+		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+									 strlen( esc ) );
+		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		globus_libc_free( err_str );
+		globus_libc_free( esc );
+	}
+
+	enqueue_results(output);	
+
+	finish_ftp_command( user_arg );
+	free_user_arg( user_arg );
+	return;
 }
 
 int
@@ -2694,6 +3123,7 @@ service_commands(void *arg,globus_io_handle_t* gio_handle,globus_result_t rest)
 		HANDLE_SYNC( nordugrid_exit_info ) else
 		HANDLE_SYNC( nordugrid_ping ) else
 		HANDLE_SYNC( nordugrid_ldap_query ) else
+		HANDLE_SYNC( gridftp_transfer ) else
 		{
 			handle_bad_request(input_line);
 			result = 0;
@@ -2902,6 +3332,15 @@ main(int argc, char **argv)
 					(globus_io_callback_t)NULL,(void*)NULL); /* except callback func and arg */
 	if ( err != GLOBUS_SUCCESS ) {
 		printf("ERROR %d Failed to globus_io_register_select stdin\n",result);
+		_exit(1);
+	}
+
+	globus_reltime_t delay;
+	GlobusTimeReltimeSet( delay, FTP_HANDLE_CACHE_TIME, 0 );
+	err = globus_callback_register_periodic( NULL, &delay, &delay,
+											 clean_ftp_handles, NULL );
+	if ( err != GLOBUS_SUCCESS ) {
+		printf("ERROR %d globus_callback_register_periodic() failed\n",result);
 		_exit(1);
 	}
 
