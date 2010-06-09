@@ -112,6 +112,10 @@ ResMgr::~ResMgr()
 
 #if HAVE_HIBERNATION
 	cancelHibernateTimer();
+	if (m_hibernation_manager) {
+		delete m_hibernation_manager;
+	}
+
 #endif /* HAVE_HIBERNATION */
 
 	if( resources ) {
