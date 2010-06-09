@@ -70,11 +70,9 @@ static bool test_forward_slash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_name() {
@@ -89,11 +87,9 @@ static bool test_name() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 static bool test_drive_path_backslash() {
 	e.emit_test("Does a path with a drive letter followed by a colon and backslash return true?");
@@ -107,11 +103,9 @@ static bool test_drive_path_backslash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_colon_backslash() {
@@ -126,11 +120,9 @@ static bool test_colon_backslash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_backslash() {
@@ -145,11 +137,9 @@ static bool test_backslash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_drive_path_forward_slash() {
@@ -164,11 +154,9 @@ static bool test_drive_path_forward_slash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_colon_forward_slash() {
@@ -183,9 +171,7 @@ static bool test_colon_forward_slash() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

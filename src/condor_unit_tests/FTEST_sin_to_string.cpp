@@ -53,7 +53,7 @@ static bool test_normal_case() {
 	if(inet_aton("192.168.0.2", &ip) == 0) {
 		e.emit_alert("inet_aton() returned failure.");
 		e.emit_result_abort(__LINE__);
-		return false;
+		FAIL;
 	}
 	unsigned int port = 47;
 	e.emit_input_header();
@@ -71,10 +71,8 @@ static bool test_normal_case() {
 	if(strcmp(expected, sinstring) != 0) {
 		free(expected);
 		free(sinstring);
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
 	free(expected);
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

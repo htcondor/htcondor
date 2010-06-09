@@ -79,11 +79,9 @@ static bool test_normal_case() {
 	if( expected_return != result ||
 		192 != *ipbyte || 168 != *(ipbyte + 1) || 3 != *(ipbyte + 2) || 4 != *(ipbyte + 3) ||
 		255 != *maskbyte || 255 != *(maskbyte + 1) || 255 != *(maskbyte + 2) || 0 != *(maskbyte + 3)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_slash_notation() {
@@ -109,11 +107,9 @@ static bool test_slash_notation() {
 	if( expected_return != result ||
 		192 != *ipbyte || 168 != *(ipbyte + 1) || 3 != *(ipbyte + 2) || 4 != *(ipbyte + 3) ||
 		255 != *maskbyte || 0 != *(maskbyte + 1) || 0 != *(maskbyte + 2) || 0 != *(maskbyte + 3)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_classless_mask() {
@@ -139,11 +135,9 @@ static bool test_classless_mask() {
 	if( expected_return != result ||
 		192 != *ipbyte || 168 != *(ipbyte + 1) || 3 != *(ipbyte + 2) || 4 != *(ipbyte + 3) ||
 		255 != *maskbyte || 255 != *(maskbyte + 1) || 252 != *(maskbyte + 2) || 0 != *(maskbyte + 3)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_wildcard() {
@@ -169,11 +163,9 @@ static bool test_wildcard() {
 	if( expected_return != result ||
 		192 != *ipbyte || 168 != *(ipbyte + 1) || 255 != *(ipbyte + 2) || 255 != *(ipbyte + 3) ||
 		255 != *maskbyte || 255 != *(maskbyte + 1) || 0 != *(maskbyte + 2) || 0 != *(maskbyte + 3)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_plain_ip() {
@@ -199,9 +191,7 @@ static bool test_plain_ip() {
 	if( expected_return != result ||
 		192 != *ipbyte || 168 != *(ipbyte + 1) || 4 != *(ipbyte + 2) || 3 != *(ipbyte + 3) ||
 		255 != *maskbyte || 255 != *(maskbyte + 1) || 255 != *(maskbyte + 2) || 255 != *(maskbyte + 3)) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

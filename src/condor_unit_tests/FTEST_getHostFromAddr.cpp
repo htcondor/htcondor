@@ -61,12 +61,10 @@ static bool test_normal_case() {
 	e.emit_retval(sinstring);
 	if(strcmp(expected, sinstring) != 0) {
 		free(sinstring);
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
 	free(sinstring);
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_hostname() {
@@ -84,10 +82,8 @@ static bool test_hostname() {
 	e.emit_retval(sinstring);
 	if(strcmp(expected, sinstring) != 0) {
 		free(sinstring);
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
 	free(sinstring);
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

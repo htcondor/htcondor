@@ -71,11 +71,9 @@ static bool test_normal_case() {
 	e.emit_output_actual_header();
 	e.emit_retval("%u (%d.%d.%d.%d)", result, *byte, *(byte+1), *(byte+2), *(byte+3));
 	if(result != expected) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_invalid_ip() {
@@ -100,9 +98,7 @@ static bool test_invalid_ip() {
 	e.emit_output_actual_header();
 	e.emit_retval("%u (%d.%d.%d.%d)", result, *byte, *(byte+1), *(byte+2), *(byte+3));
 	if(result != expected) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
