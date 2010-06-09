@@ -87,7 +87,9 @@ int main() {
 	bool result = driver.do_all_functions();
 	e.emit_summary();
 	if(result) {
+		printf ("Test suite has passed.\n");
 		return EXIT_SUCCESS;
 	}
+	printf ("Test suite has failed.\n");
 	return EXIT_FAILURE;
 }
