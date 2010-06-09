@@ -176,6 +176,7 @@ KeyCache::KeyCache(int nbuckets) {
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
+	m_index = new KeyCacheIndex(MyStringHash);
 	copy_storage(k);
 }
 
