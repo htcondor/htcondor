@@ -458,7 +458,6 @@ bool OTEST_MyString() {
 	driver.register_function(sensitive_string_hash_function_non_empty);
 	driver.register_function(sensitive_string_hash_function_empty);
 	driver.register_function(test_stl_string_casting);
-
 		// run the tests
 	bool test_result = driver.do_all_functions();
 	e.emit_function_break();
@@ -1134,8 +1133,9 @@ static bool equals_operator_my_string_non_empty_non_empty(void) {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), "Laurent Jalabert") != MATCH || a.Value() == b.Value())
-	
+	{
 		FAIL;
+	}
 	PASS;
 }
 
