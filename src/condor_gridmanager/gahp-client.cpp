@@ -118,6 +118,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	requestTable = NULL;
 	current_proxy = NULL;
 	skip_next_r = false;
+	m_deleteMeTid = TIMER_UNSET;
 
 	next_reqid = 1;
 	rotated_reqids = false;
@@ -160,6 +161,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 GahpServer::~GahpServer()
 {
 	GahpServersById.remove( HashKey( my_id ) );
+	if ( m_deleteMeTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( m_deleteMeTid );
+	}
 	free( m_buffer );
 	delete m_commands_supported;
 	if ( globus_gass_server_url != NULL ) {
@@ -211,6 +215,18 @@ GahpServer::~GahpServer()
 	}
 	if ( requestTable != NULL ) {
 		delete requestTable;
+	}
+}
+
+void
+GahpServer::DeleteMe()
+{
+	m_deleteMeTid = TIMER_UNSET;
+
+	if ( m_reference_count <= 0 ) {
+
+		delete this;
+		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
 	}
 }
 
@@ -588,6 +604,11 @@ void
 GahpServer::AddGahpClient()
 {
 	m_reference_count++;
+
+	if ( m_deleteMeTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( m_deleteMeTid );
+		m_deleteMeTid = TIMER_UNSET;
+	}
 }
 
 void
@@ -596,7 +617,9 @@ GahpServer::RemoveGahpClient()
 	m_reference_count--;
 
 	if ( m_reference_count <= 0 ) {
-		delete this;
+		m_deleteMeTid = daemonCore->Register_Timer( 30,
+								(TimerHandlercpp)&GahpServer::DeleteMe,
+								"GahpServer::DeleteMe", (Service*)this );
 	}
 }
 
