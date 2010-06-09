@@ -100,6 +100,11 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   now optional. If it's not given, then all relevant VMWare image files
   must be listed in \Opt{transfer\_input\_files}, possibly as URLs.
 
+%gittrac #1403
+\item File transfers for CREAM grid universe jobs are now initiated by
+  the \Condor{gridmanager}. This removes the need for a gridftp server
+  on the client machine.
+
 %gittrac #1298
 \item Removed the distinction between regular and full reconfiguration
   of Condor daemons. Now, all reconfigurations are full and require the
