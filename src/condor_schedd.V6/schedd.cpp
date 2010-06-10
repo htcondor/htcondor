@@ -6853,6 +6853,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 				 "condor_shadow that will work, aborting.\n" );
 		noShadowForJob( srec, NO_SHADOW_RECONNECT );
 		delete( shadow_obj );
+		free(shadow_path);
 		return;
 	}
 

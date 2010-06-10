@@ -640,6 +640,7 @@ ScheddTransaction::newJob(int clusterId, int &id, CondorError & /* errstack */)
 		ASSERT(job);
 		CondorError error_stack;
 		if (job->initialize(error_stack)) {
+			delete job;
 			return -2; // XXX: Cleanup? How do you undo NewProc?
 		} else {
 			if (this->jobs.insert(pid, job)) {

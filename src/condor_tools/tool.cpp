@@ -1768,6 +1768,7 @@ doSquawkReconnect( char *addr ) {
 	}
 	if( ! d.locate() ) {
 		printf ( "Failed to contact daemon.\n" );
+		delete [] hostname;
 		return FALSE;
 	}
 	strcpy ( addr, d.addr() );

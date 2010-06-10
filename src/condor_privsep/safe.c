@@ -1109,18 +1109,21 @@ int safe_reset_environment()
     /* clear the environment */
     r = clearenv();
     if (r != 0) {
+		free(tz);
         return -1;
     }
 
     /* set PATH and TZ */
     r = setenv(path_name, path_value, 1);
     if (r == -1) {
+		free(tz);
         return -1;
     }
 
     if (tz) {
         r = setenv(tz_name, tz, 1);
         if (r == -1) {
+			free(tz);
             return -1;
         }
 

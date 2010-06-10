@@ -592,10 +592,9 @@ set_dynamic_dir( char* param_name, const char* append_str )
 	env_str += param_name;
 	env_str += "=";
 	env_str += newdir;
-	char *env_cstr = strdup( env_str.Value() );
-	if( SetEnv(env_cstr) != TRUE ) {
+	if( SetEnv(env_str.Value()) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
-				 env_cstr );
+				 env_str.Value() );
 		exit( 4 );
 	}
 }
@@ -622,10 +621,9 @@ handle_dynamic_dirs()
 		// Final, evil hack.  Set the _condor_STARTD_NAME environment
 		// variable, so that the startd will have a unique name. 
 	sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
-	char* env_str = strdup( buf );
-	if( SetEnv(env_str) != TRUE ) {
+	if( SetEnv(buf) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
-				 env_str );
+				 buf );
 		exit( 4 );
 	}
 }
