@@ -611,6 +611,7 @@ Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) con
 		return true;
 	}
 	else {
+		result->setChar(0, '\0');
 		return getDelimitedStringV2Quoted(result,error_msg);
 	}
 }
