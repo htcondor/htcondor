@@ -301,7 +301,6 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		err += "ACTIVATE_CLAIM";
 		err += " to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
-		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if( ! tmp->put_secret(claim_id) ) {
@@ -596,7 +595,6 @@ DCStartd::delegateX509Proxy( const char* proxy )
 		               "DELEGATE_GSI_CRED_STARTD "
 		               "to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
-		delete tmp;
 		return CONDOR_ERROR;
 	}
 

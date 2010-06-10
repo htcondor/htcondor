@@ -765,18 +765,6 @@ Env::GetEnv(MyString const &var,MyString &val) const
 	return _envTable->lookup(var,val) == 0;
 }
 
-const char *
-Env::GetEnv(MyString const &var) const
-{
-	MyString val;
-	// lookup returns 0 on success
-	if ( _envTable->lookup(var,val) == 0 ) {
-		return val.Value();
-	} else {
-		return NULL;
-	}
-}
-
 bool
 Env::Import( void )
 {

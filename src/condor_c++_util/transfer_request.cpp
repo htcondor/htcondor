@@ -59,6 +59,8 @@ TransferRequest::TransferRequest(ClassAd *ip)
 	/* Since this schema check happens here I don't need to check the
 		existance of these attributes when I use them. */
 	ASSERT(check_schema() == INFO_PACKET_SCHEMA_OK);
+	m_client_sock = NULL;
+	m_procids = NULL;
 }
 
 TransferRequest::TransferRequest()

@@ -178,6 +178,7 @@ clusterProcString::
 clusterProcString() {
 	dagman_cluster_id = -1;
 	dagman_proc_id    = -1;
+	string = 0;
 	return;
 }
 

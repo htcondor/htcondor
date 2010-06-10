@@ -438,6 +438,10 @@ copyQueryObject (GenericQuery &from)
 	integerKeywordList = from.integerKeywordList;
 	stringKeywordList = from.stringKeywordList;
 	floatKeywordList = from.floatKeywordList;
+
+	floatConstraints = from.floatConstraints;
+	integerConstraints = from.integerConstraints;
+	stringConstraints = from.stringConstraints;
 }
 
 void GenericQuery::

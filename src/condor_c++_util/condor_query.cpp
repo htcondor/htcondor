@@ -283,6 +283,8 @@ CondorQuery (const CondorQuery & /* from */)
 {
 		// Unimplemented!
 		genericQueryType = 0;
+		command = 0;
+		queryType = NO_AD;
 }
 
 
