@@ -69,6 +69,13 @@ Accountant::Accountant():
   AcctLog=NULL;
   DiscountSuspendedResources = false;
   GroupNamesList = NULL;
+  UseSlotWeights = false;
+  DefaultPriorityFactor = 1.0f;
+  HalfLifePeriod = 1.0f;
+  LastUpdateTime = 0;
+  MaxAcctLogSize = 1000000;
+  NiceUserPriorityFactor = 100000;
+  RemoteUserPriorityFactor = 10000;
 }
 
 //------------------------------------------------------------------

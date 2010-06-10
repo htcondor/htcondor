@@ -30,6 +30,7 @@ StatWrapperIntBase::StatWrapperIntBase( const StatWrapperIntBase &other )
 	m_valid = other.IsValid( );
 	m_rc = other.GetRc( );
 	m_errno = other.GetErrno( );
+	m_buf_valid = other.m_buf_valid;
 }
 
 StatWrapperIntBase::StatWrapperIntBase( const char *name )

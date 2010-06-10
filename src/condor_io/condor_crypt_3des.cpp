@@ -109,4 +109,5 @@ bool Condor_Crypt_3des :: decrypt(unsigned char *  input,
 
 Condor_Crypt_3des :: Condor_Crypt_3des()
 {
+	resetState();
 }

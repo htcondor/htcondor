@@ -1368,8 +1368,12 @@ JICShadow::initWithFileTransfer()
 					 "ad, aborting\n" );
 			return false;
 		}
+
+		char firstCharOfTF = tmp[0];
+		free(tmp);
+
 			// if set to "ALWAYS", then set transfer_at_vacate to true
-		switch ( tmp[0] ) {
+		switch ( firstCharOfTF ) {
 		case 'a':
 		case 'A':
 			transfer_at_vacate = true;
@@ -1379,7 +1383,6 @@ JICShadow::initWithFileTransfer()
 			return initNoFileTransfer();
 			break;
 		}
-		free( tmp );
 	}
 
 		// if we're here, it means we're transfering files, so we need
