@@ -351,13 +351,6 @@ TESTCLASS(lib_auth_config,quick)
 TESTCLASS(lib_auth_config,full)
 TESTCLASS(lib_auth_config,quicknolink)
 
-DESC(lib_classads,"Run ClassAd Tests")
-RUN(lib_classads)
-TESTCLASS(lib_classads,core)
-TESTCLASS(lib_classads,quick)
-TESTCLASS(lib_classads,full)
-TESTCLASS(lib_classads,quicknolink)
-
 DESC(lib_auth_protocol-fs,"FS authentication test")
 RUN(lib_auth_protocol-fs)
 TESTCLASS(lib_auth_protocol-fs,core)
