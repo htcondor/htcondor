@@ -762,6 +762,9 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	if(waitpid(pid, &result, 0) < 0)
 	  {
 	    vmprintf(D_ALWAYS, "Unable to wait: %s\n", strerror(errno));
+		if ( cmd_out == NULL ) {
+			delete my_cmd_out;
+		}
 	   
 	    return -1;
 	  }
