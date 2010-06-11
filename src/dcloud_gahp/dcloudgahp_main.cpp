@@ -69,16 +69,17 @@ static void safe_printf(const char *fmt, ...)
 
 static int parse_gahp_command(const char *raw, Gahp_Args *args)
 {
-    int beginning = 0;
-    int len = strlen(raw);
+    int len;
     char *buff;
     int buff_len = 0;
+    bool in_escape;
 
     if (!raw) {
         dcloudprintf("NULL command!\n");
         return FALSE;
     }
 
+    len = strlen(raw);
     buff = (char *)malloc(len+1);
     if (buff == NULL) {
         dcloudprintf("Failed to allocate memory\n");
@@ -87,29 +88,22 @@ static int parse_gahp_command(const char *raw, Gahp_Args *args)
 
     args->reset();
 
+    in_escape = false;
     for (int i = 0; i<len; i++) {
-
-        if ( raw[i] == '\\' ) {
-            i++; // skip this char
-            if (i<(len-1))
-                buff[buff_len++] = raw[i];
+        if (in_escape) {
+            buff[buff_len++] = raw[i];
+            in_escape = false;
             continue;
         }
 
-        /* Check if character read was whitespace */
-        if ( raw[i]==' ' || raw[i]=='\t' || raw[i]=='\r' || raw[i] == '\n') {
-
-            /* Handle Transparency: we would only see these chars
-             * if they WEREN'T escaped, so treat them as arg separators
-             */
+        if (raw[i] == '\\') {
+            in_escape = true;
+        } else if (raw[i] == ' ' || raw[i] == '\t' || raw[i] == '\r' ||
+                   raw[i] == '\n') {
             buff[buff_len++] = '\0';
             args->add_arg( strdup(buff) );
             buff_len = 0; // re-set temporary buffer
-
-            beginning = i+1; // next char will be one after whitespace
-        }
-        else {
-            // It's just a regular character, save it
+        } else {
             buff[buff_len++] = raw[i];
         }
     }
