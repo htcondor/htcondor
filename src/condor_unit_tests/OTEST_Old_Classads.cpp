@@ -7408,7 +7408,7 @@ static bool test_interval_minute() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "  0+00:01:00";
+	char* expect = "1:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	e.emit_input_header();
 	e.emit_param("ClassAd", classad_string);
@@ -7437,7 +7437,7 @@ static bool test_interval_hour() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "  0+01:00:00";
+	char* expect = "1:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	e.emit_input_header();
 	e.emit_param("ClassAd", classad_string);
@@ -7466,7 +7466,7 @@ static bool test_interval_day() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "  1+00:00:00";
+	char* expect = "1+00:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	e.emit_input_header();
 	e.emit_param("ClassAd", classad_string);
