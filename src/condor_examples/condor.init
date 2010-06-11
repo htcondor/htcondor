@@ -209,7 +209,8 @@ case "$1" in
 	;;
     condrestart|try-restart)
 	[ $running -eq 0 ] || exit 0
-	restart
+	stop
+	start
 	RETVAL=$?
 	;;
     reload|force-reload)
