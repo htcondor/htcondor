@@ -3,6 +3,7 @@
 #include <string>
 #include <stdlib.h>
 #include <strings.h>
+#include <string.h>
 #include "dcloudgahp_commands.h"
 #include "dcloudgahp_common.h"
 
@@ -22,19 +23,55 @@ static int verify_number_args(const int want, const int actual)
     return TRUE;
 }
 
+/* an ID in deltacloud can be any combination of characters, including
+ * space.  Since condor uses spaces in the GAHP protocol to signify the
+ * end of arguments, we need to escape any spaces in ID's so GridManager
+ * handles them properly
+ */
+static char *escape_id(const char *id)
+{
+    int len;
+    char *ret;
+    int i, j;
+
+    len = strlen(id);
+
+    /* since we are only possibly adding \ characters, the most we can
+     * expand the string is by doubling it
+     */
+    ret = (char *)malloc(len * 2 + 1);
+    if (ret == NULL) {
+        dcloudprintf("Failed to allocate memory\n");
+        return NULL;
+    }
+
+    j = 0;
+    for (i = 0; i < len; i++) {
+        if (id[i] == ' ' || id[i] == '\\')
+            ret[j++] = '\\';
+        ret[j++] = id[i];
+    }
+    ret[j] ='\0';
+
+    return ret;
+}
+
 static std::string create_instance_output(int reqid,
                                        struct deltacloud_instance *inst)
 {
     struct deltacloud_action *act;
     struct deltacloud_address *addr;
     std::string output_string;
+    char *esc_id;
 
     output_string += itoa(reqid);
     output_string += " NULL ";
 
+    esc_id = escape_id(inst->id);
     output_string += "id=";
-    output_string += inst->id;
+    output_string += esc_id;
     output_string += ' ';
+    free(esc_id);
 
     output_string += "state=";
     output_string += inst->state;
@@ -339,6 +376,7 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
     struct deltacloud_instance *curr;
     int reqid;
     bool ret = FALSE;
+    char *esc_id;
 
     dcloudprintf("called\n");
 
@@ -384,10 +422,12 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
 
     curr = instances;
     while (curr != NULL) {
+        esc_id = escape_id(curr->id);
         output_string += " ";
-        output_string += curr->id;
+        output_string += esc_id;
         output_string += " ";
         output_string += curr->state;
+        free(esc_id);
         curr = curr->next;
     }
     output_string += "\n";
@@ -414,6 +454,7 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     struct deltacloud_instance inst;
     int rc;
     bool ret = FALSE;
+    char *esc_id;
 
     dcloudprintf("called\n");
 
@@ -464,7 +505,9 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     output_string += itoa(reqid);
     output_string += " NULL ";
     if (rc == 0) {
-        output_string += inst.id;
+        esc_id = escape_id(inst.id);
+        output_string += esc_id;
+        free(esc_id);
     } else {
         output_string += "NULL";
     }
