@@ -207,10 +207,9 @@ case "$1" in
 	start
 	RETVAL=$?
 	;;
-    try-restart)
+    condrestart|try-restart)
 	[ $running -eq 0 ] || exit 0
-	stop
-	start
+	restart
 	RETVAL=$?
 	;;
     reload|force-reload)
@@ -239,7 +238,7 @@ case "$1" in
 	RETVAL=$?
 	;;
     *)
-	echo $"Usage: $0 {start|stop|restart|try-restart|reload|force-reload|status}"
+	echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status}"
 	RETVAL=2
 esac
 
