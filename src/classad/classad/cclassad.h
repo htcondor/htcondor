@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __CCLASSAD_H_
-#define __CCLASSAD_H_
+#ifndef __CLASSAD_CCLASSAD_H_
+#define __CLASSAD_CCLASSAD_H_
 
 /*
 This is a C interface to the classad library.

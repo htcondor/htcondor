@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __LITERALS_H__
-#define __LITERALS_H__
+#ifndef __CLASSAD_LITERALS_H__
+#define __CLASSAD_LITERALS_H__
 
 #include <vector>
 
@@ -138,4 +138,4 @@ class Literal : public ExprTree
 
 END_NAMESPACE // classad
 
-#endif//__LITERALS_H__
+#endif//__CLASSAD_LITERALS_H__

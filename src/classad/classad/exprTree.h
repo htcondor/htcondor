@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __EXPR_TREE_H__
-#define __EXPR_TREE_H__
+#ifndef __CLASSAD_EXPR_TREE_H__
+#define __CLASSAD_EXPR_TREE_H__
 
 #include "classad/classad_stl.h"
 #include "classad/common.h"
@@ -194,4 +194,4 @@ END_NAMESPACE // classad
 #include "classad/classad.h"
 #include "classad/fnCall.h"
 
-#endif//__EXPR_TREE_H__
+#endif//__CLASSAD_EXPR_TREE_H__

@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __XACTION_H__
-#define __XACTION_H__
+#ifndef __CLASSAD_TRANSACTION_H__
+#define __CLASSAD_TRANSACTION_H__
 
 #include <list>
 #include <string>
@@ -106,4 +106,4 @@ private:
 
 END_NAMESPACE
 
-#endif /* __XACTION_H__ */
+#endif /* __CLASSAD_TRANSACTION_H__ */

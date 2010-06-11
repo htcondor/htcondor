@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __ATTRREFS_H__
-#define __ATTRREFS_H__
+#ifndef __CLASSAD_ATTRREFS_H__
+#define __CLASSAD_ATTRREFS_H__
 
 BEGIN_NAMESPACE( classad )
 
@@ -101,4 +101,4 @@ class AttributeReference : public ExprTree
 
 END_NAMESPACE // classad
 
-#endif//__ATTRREFS_H__
+#endif//__CLASSAD_ATTRREFS_H__

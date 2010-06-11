@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __XMLSINK_H__
-#define __XMLSINK_H__
+#ifndef __CLASSAD_XMLSINK_H__
+#define __CLASSAD_XMLSINK_H__
 
 #include "classad/common.h"
 #include "classad/exprTree.h"
@@ -69,4 +69,4 @@ class ClassAdXMLUnParser
 
 END_NAMESPACE // classad
 
-#endif /*__XMLSINK_H__ */
+#endif /*__CLASSAD_XMLSINK_H__ */
