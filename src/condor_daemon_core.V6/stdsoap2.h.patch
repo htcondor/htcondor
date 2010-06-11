@@ -44,12 +44,3 @@
  #  define __USE_STD_IOSTREAM
  #  define HAVE_WCTOMB
  #  define HAVE_MBTOWC
-@@ -571,7 +562,7 @@
- # define SOAP_SOCKLEN_T SOCKLEN_T
- #elif defined(__socklen_t_defined) || defined(_SOCKLEN_T) || defined(CYGWIN) || defined(FREEBSD) || defined(__FreeBSD__) || defined(__QNX__) || defined(QNX) || defined(_AIX)
- # define SOAP_SOCKLEN_T socklen_t
--#elif defined(IRIX) || defined(WIN32) || defined(__APPLE__) || defined(HP_UX) || defined(SUN_OS) || defined(OPENSERVER) || defined(TRU64) || defined(VXWORKS)
-+#elif defined(IRIX) || defined(WIN32) || defined(__APPLE__) || defined(HPUX10) || defined(SUN_OS) || defined(OPENSERVER) || defined(TRU64) || defined(VXWORKS)
- # define SOAP_SOCKLEN_T int
- #else
- # define SOAP_SOCKLEN_T size_t
