@@ -205,7 +205,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 		if ( rc != 0 ) {
 			// Job not found. Probably okay; we might see jobs
 			// submitted via other means, or jobs we've abandoned.
-			dprintf( D_FULLDEBUG, "Job %s on remote host is unknown. Skipping.\n", status );
+			dprintf( D_FULLDEBUG, "Job %s on remote host is unknown. Skipping.\n", hashname.Value() );
 			continue;
 		}
 		ASSERT( job );
