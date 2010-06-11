@@ -179,7 +179,10 @@ static void handle_command_results(Gahp_Args *args)
     }
     unlock_printf();
     pthread_mutex_unlock(&results_list_mutex);
+
+    pthread_mutex_lock(&async_mutex);
     async_results_signalled = false;
+    pthread_mutex_unlock(&async_mutex);
 }
 
 static void handle_command_version(Gahp_Args *args)
@@ -298,20 +301,23 @@ static void *worker_function(void *ptr)
     dcloudprintf("Worker done!\n");
 
 cleanup:
+    /* Taking the async_mutex is overkill in the !async case, but it
+     * doesn't harm anything.
+     */
+    pthread_mutex_lock(&async_mutex);
     if (async_mode) {
       pthread_mutex_lock(&results_list_mutex);
       results_list.push(output_string);
       pthread_mutex_unlock(&results_list_mutex);
-      pthread_mutex_lock(&async_mutex);
       if (!async_results_signalled) {
         safe_printf("R\n");
         async_results_signalled = true;
       }
-      pthread_mutex_unlock(&async_mutex);
     }
     else {
         safe_printf("%s", output_string.c_str());
     }
+    pthread_mutex_unlock(&async_mutex);
 
     free(data->fullcommand);
     free(data);
