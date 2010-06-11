@@ -151,7 +151,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	m_instanceName = NULL;
 	m_imageId = NULL;
 	m_realmId = NULL;
-	m_flavorId = NULL;
+	m_hwpId = NULL;
 	m_username = NULL;
 	m_password = NULL;
 
@@ -219,7 +219,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( token ) {
-			m_flavorId = strdup( token );
+			m_hwpId = strdup( token );
 		}
 
 		token = str.GetNextToken( " ", false );
@@ -294,7 +294,7 @@ DCloudJob::~DCloudJob()
 	free( m_instanceName );
 	free( m_imageId );
 	free( m_realmId );
-	free( m_flavorId );
+	free( m_hwpId );
 	free( m_username );
 	free( m_password );
 }
@@ -479,7 +479,7 @@ void DCloudJob::doEvaluateState()
 											  m_imageId,
 											  m_instanceName,
 											  m_realmId,
-											  m_flavorId,
+											  m_hwpId,
 											  instance_attrs );
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {

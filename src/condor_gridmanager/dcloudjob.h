@@ -88,7 +88,7 @@ private:
 	char *m_instanceName;
 	char *m_imageId;
 	char *m_realmId;
-	char *m_flavorId;
+	char *m_hwpId;
 	char *m_username;
 	char *m_password;
 
