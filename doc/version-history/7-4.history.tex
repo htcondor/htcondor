@@ -108,6 +108,15 @@ when run on a RHEL4 or Scientific Linux 4 machine.
 that begin with a digit, such as \Expr{1abc}.
 It incorrectly used them as cluster numbers. 
 
+% gittrac #1330
+\item Fixed a bug that could cause the \Condor{schedd} to crash if there
+were any idle scheduler universe jobs when files were staged into the
+\Condor{schedd} for a new job.
+
+% gittrac #1404
+\item Fixed a bug in the nordugrid\_gahp that could cause it to exit when
+connecting to a misconfigured LDAP server.
+
 \end{itemize}
 
 \noindent Known Bugs:
