@@ -1300,11 +1300,6 @@ void CollectorDaemon::sendCollectorAd()
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
 
-    // If we don't have any machines, then bail out. You oftentimes
-    // see people run a collector on each macnine in their pool. Duh.
-    if(machinesTotal == 0) {
-		return;
-	}
     // insert values into the ad
     char line[100];
     sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);
@@ -1336,6 +1331,11 @@ void CollectorDaemon::sendCollectorAd()
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 
+       // If we don't have any machines, then bail out. You oftentimes
+       // see people run a collector on each macnine in their pool. Duh.
+	if(machinesTotal == 0) {
+		return 1;
+	}
 	if ( updateRemoteCollector ) {
 		char *update_addr = updateRemoteCollector->addr();
 		if (!update_addr) update_addr = "(null)";
