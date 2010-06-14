@@ -1275,7 +1275,7 @@ int get_myproxy_password_handler(Service * /*service*/, int /*i*/, Stream *socke
 	}
 
 
-	socket->eom();
+	socket->end_of_message();
 	socket->encode();
 	if( ! socket->code(password) ) {
 		dprintf( D_ALWAYS,
@@ -1283,7 +1283,7 @@ int get_myproxy_password_handler(Service * /*service*/, int /*i*/, Stream *socke
 		return -1;
 	}
 
-	if( ! socket->eom() ) {
+	if( ! socket->end_of_message() ) {
 		dprintf( D_ALWAYS,
 			"get_myproxy_password_handler: Failed to send end of message.\n");
 		return -1;
@@ -3334,11 +3334,11 @@ RecvSpoolFileBytes(const char *path)
 	if (Q_SOCK->getReliSock()->get_file(&size, path) < 0) {
 		dprintf(D_ALWAYS,
 		        "Failed to receive file from client in SendSpoolFile.\n");
-		Q_SOCK->getReliSock()->eom();
+		Q_SOCK->getReliSock()->end_of_message();
 		return -1;
 	}
 	chmod(path,00755);
-	Q_SOCK->getReliSock()->eom();
+	Q_SOCK->getReliSock()->end_of_message();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;
 }
@@ -3371,7 +3371,7 @@ SendSpoolFile(char const *filename)
 	/* Tell client to go ahead with file transfer. */
 	Q_SOCK->getReliSock()->encode();
 	Q_SOCK->getReliSock()->put(0);
-	Q_SOCK->getReliSock()->eom();
+	Q_SOCK->getReliSock()->end_of_message();
 
 	int rv = RecvSpoolFileBytes(path);
 	free(path); path = NULL;
@@ -3402,13 +3402,13 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			        "SendSpoolFileIfNeeded: no %s attribute in ClassAd\n",
 			        ATTR_OWNER);
 			Q_SOCK->getReliSock()->put(-1);
-			Q_SOCK->getReliSock()->eom();
+			Q_SOCK->getReliSock()->end_of_message();
 			return -1;
 		}
 		if (!OwnerCheck(&ad, Q_SOCK->getOwner())) {
 			dprintf(D_ALWAYS, "SendSpoolFileIfNeeded: OwnerCheck failure\n");
 			Q_SOCK->getReliSock()->put(-1);
-			Q_SOCK->getReliSock()->eom();
+			Q_SOCK->getReliSock()->end_of_message();
 			return -1;
 		}
 		hash = ickpt_share_get_hash(ad);
@@ -3429,7 +3429,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			    ickpt_share_try_sharing(owner.Value(), hash, path))
 			{
 				Q_SOCK->getReliSock()->put(1);
-				Q_SOCK->getReliSock()->eom();
+				Q_SOCK->getReliSock()->end_of_message();
 				return 0;
 			}
 		}
@@ -3437,7 +3437,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 
 	/* Tell client to go ahead with file transfer. */
 	Q_SOCK->getReliSock()->put(0);
-	Q_SOCK->getReliSock()->eom();
+	Q_SOCK->getReliSock()->end_of_message();
 
 	if (RecvSpoolFileBytes(path) == -1) {
 		free(path); path = NULL;

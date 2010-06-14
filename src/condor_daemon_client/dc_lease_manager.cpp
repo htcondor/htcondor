@@ -64,7 +64,7 @@ DCLeaseManager::getLeases( const classad::ClassAd &request_ad,
 		return false;
 	}
 
-	rsock->eom();
+	rsock->end_of_message();
 
 		// Receive the return code
 	rsock->decode();
@@ -148,7 +148,7 @@ DCLeaseManager::renewLeases(
 		return false;
 	}
 
-	rsock->eom();
+	rsock->end_of_message();
 
 		// Receive the return code
 	int		rc;
@@ -190,7 +190,7 @@ DCLeaseManager::releaseLeases(
 		return false;
 	}
 
-	rsock->eom();
+	rsock->end_of_message();
 
 		// Receive the return code
 	int		rc;

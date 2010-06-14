@@ -21,7 +21,6 @@
 	This file contains functions used by the rest of the unit_test suite.
  */
 
-#include "condor_common.h"
 #include "unit_test_utils.h"
 #include "emit.h"
 
@@ -89,9 +88,9 @@ int niceStrCmp(const char* str1, const char* str2) {
 		if(!str2)
 			return 0;	//both NULL
 		else
-			return strcmp(str2, "");	//NULL, ""
+			return strcmp(str2, "");	//"", NULL
 	if(!str2)
-		return strcmp(str1, "");	//"", NULL
+		return strcmp(str1, "");	//NULL, ""
 	return strcmp(str1, str2);
 }
 
@@ -131,4 +130,59 @@ void free_helper(char** array) {
 		free(array[i]);		
 	}
 	free(array);
+}
+
+/* Create a string of a given length, and fill it with random stuff. If 
+   quoted_string is not NULL, we make it a copy of the big string, except with
+   quotes around it.
+*/
+void make_big_string(
+	int length,           // IN: The desired length
+	char **string,        // OUT: the big random string
+	char **quoted_string) // OUT: the string in quotes
+{
+	*string = (char *) malloc(length + 1);
+
+	for (int i = 0; i < length; i++) {
+		(*string)[i] = (rand() % 26) + 97;
+	}
+	(*string)[length] = 0;
+
+	if (quoted_string != NULL) {
+		*quoted_string = (char *) malloc(length	+ 3);
+		sprintf(*quoted_string,	"\"%s\"", *string);
+		}
+	return;
+}
+
+/* Returns a new compat_classad::ClassAd from a file */
+compat_classad::ClassAd* get_classad_from_file(){
+
+	FILE* classad_file;
+	ClassAd* classad_from_file;
+	char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
+		"MyType=\"foo\"\n TargetType=\"blah\"";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	classad_file = safe_fopen_wrapper("classad_file", "w");
+	classad.fPrint(classad_file);
+	fprintf(classad_file, "***\n");
+	fclose(classad_file);
+
+	int iseof, error, empty;
+	classad_file = safe_fopen_wrapper("classad_file", "r");
+	classad_from_file = new ClassAd(classad_file, "***", iseof, error, empty);
+	fclose(classad_file);
+
+	return classad_from_file;
+}
+
+/* Returns true if given floats differ by less than or equal to diff */
+bool floats_close( float one, float two, float diff) {
+	float ftmp = fabs(one) - fabs(two);
+	if(fabs(ftmp) <= diff) {
+		return(true);
+	} else {
+		return(true);
+	}
 }

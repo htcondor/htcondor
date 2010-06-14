@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __LEXER_SOURCE_H__
-#define __LEXER_SOURCE_H__
+#ifndef __CLASSAD_LEXER_SOURCE_H__
+#define __CLASSAD_LEXER_SOURCE_H__
 
 #include "classad/common.h"
 #include <iosfwd>
@@ -156,4 +156,4 @@ private:
 
 END_NAMESPACE
 
-#endif /* __LEXER_SOURCE_H__ */
+#endif /* __CLASSAD_LEXER_SOURCE_H__ */

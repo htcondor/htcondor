@@ -2082,7 +2082,7 @@ Client::vacate(char* id)
 	}
 	if( !sock->put_secret( id ) ) {
 		dprintf(D_ALWAYS, "Can't send ClaimId to client\n");
-	} else if( !sock->eom() ) {
+	} else if( !sock->end_of_message() ) {
 		dprintf(D_ALWAYS, "Can't send EOM to client\n");
 	}
 

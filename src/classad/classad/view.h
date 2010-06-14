@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __VIEW_H__
-#define __VIEW_H__
+#ifndef __CLASSAD_VIEW_H__
+#define __CLASSAD_VIEW_H__
 
 // STL includes
 #include <string>
@@ -170,4 +170,4 @@ private:
 
 END_NAMESPACE
 
-#endif // VIEW_H
+#endif // __CLASSAD_VIEW_H__

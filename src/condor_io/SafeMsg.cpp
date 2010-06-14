@@ -893,6 +893,8 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 	received = 1;
 	lastTime = time(NULL);
 	passed = 0;
+	curData = 0;
+	curPacket = 0;
 
 	// make directory entries as needed
 	headDir = curDir = new _condorDirPage(NULL, 0);

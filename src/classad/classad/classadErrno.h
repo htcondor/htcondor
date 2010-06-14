@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __CLASSAD_ERRNO_H__
-#define __CLASSAD_ERRNO_H__
+#ifndef __CLASSAD_CLASSAD_ERRNO_H__
+#define __CLASSAD_CLASSAD_ERRNO_H__
 
 #include "classad/common.h"
 

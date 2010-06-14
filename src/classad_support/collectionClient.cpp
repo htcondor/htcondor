@@ -179,7 +179,7 @@ Connect( const string &addr, int port, bool useTCP )
 		// if using TCP, send a "connect" command
 	serverSock->encode( );
 	if( useTCP && ( !serverSock->put( int(ClassAdCollOp_Connect) ) || 
-			!serverSock->eom( ) ) ) {
+			!serverSock->end_of_message( ) ) ) {
 		CondorErrno = ERR_COMMUNICATION_ERROR;
 		CondorErrMsg = "failed to send connect request to server";
 		delete serverSock;
@@ -222,7 +222,7 @@ Disconnect( )
 	if( serverSock->type( ) == Stream::reli_sock ) {
 		serverSock->encode( );
 		serverSock->put( (int)ClassAdCollOp_Disconnect );
-		serverSock->eom( );
+		serverSock->end_of_message( );
 		serverSock->close( );
 	}
 

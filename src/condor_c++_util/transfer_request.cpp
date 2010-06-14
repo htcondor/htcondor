@@ -59,10 +59,13 @@ TransferRequest::TransferRequest(ClassAd *ip)
 	/* Since this schema check happens here I don't need to check the
 		existance of these attributes when I use them. */
 	ASSERT(check_schema() == INFO_PACKET_SCHEMA_OK);
+	m_client_sock = NULL;
+	m_procids = NULL;
 }
 
 TransferRequest::TransferRequest()
 {
+	m_rejected = false;
 	m_ip = new ClassAd();
 }
 
@@ -503,14 +506,14 @@ TransferRequest::put(Stream *sock)
 
 	// shove the internal header classad across
 	m_ip->put(*sock);
-	sock->eom();
+	sock->end_of_message();
 
 	// now dump all of the jobads through
 	m_todo_ads.Rewind();
 	while(m_todo_ads.Next(ad))
 	{
 		ad->put(*sock);
-		sock->eom();
+		sock->end_of_message();
 	}
 
 	return TRUE;

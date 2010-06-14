@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __COLLECTION_H__
-#define __COLLECTION_H__
+#ifndef __CLASSAD_COLLECTION_H__
+#define __CLASSAD_COLLECTION_H__
 
 #include "classad/view.h"
 #include "classad/source.h"

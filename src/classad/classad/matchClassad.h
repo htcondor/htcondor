@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __MATCH_CLASSAD_H__
-#define __MATCH_CLASSAD_H__
+#ifndef __CLASSAD_MATCH_CLASSAD_H__
+#define __CLASSAD_MATCH_CLASSAD_H__
 
 #include "classad/classad.h"
 

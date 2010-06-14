@@ -547,7 +547,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	MyString error_msg;
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->eom() ) {
+	if( !input.initFromStream(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in createJobOwnerSecSession()\n");
 		return FALSE;
 	}
@@ -636,7 +636,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 				fqu.Value());
 	}
 
-	if( !response.put(*s) || !s->eom() ) {
+	if( !response.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"createJobOwnerSecSession failed to send response\n");
 	}
@@ -667,7 +667,7 @@ CStarter::vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args)
 	}
 
 	s->encode();
-	if( !response.put(*s) || !s->eom() ) {
+	if( !response.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
 	}
 
@@ -795,7 +795,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->eom() ) {
+	if( !input.initFromStream(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in START_SSHD.\n");
 		return FALSE;
 	}
@@ -1172,7 +1172,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
 
 	s->encode();
-	if( !response.put(*s) || !s->eom() ) {
+	if( !response.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
 		return FALSE;
 	}

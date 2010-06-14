@@ -111,7 +111,7 @@ testSocks( Daemon* d )
 		if( ! reli_p->put( GIVE_STATE ) ) {
 			dprintf( dflag, "Can't encode GIVE_STATE\n" );
 		}
-		if( ! reli_p->eom() ) {
+		if( ! reli_p->end_of_message() ) {
 			dprintf( dflag, "Can't send eom\n" );
 		}
 		reli_p->decode();
@@ -130,7 +130,7 @@ testSocks( Daemon* d )
 	dprintf( dflag, "Using ReliSock startCommand() method #1...\n" );
 	reli_p = (ReliSock*)d->startCommand( GIVE_STATE );
 	if( reli_p ) {
-		if( ! reli_p->eom() ) {
+		if( ! reli_p->end_of_message() ) {
 			dprintf( dflag, "Can't send eom\n" );
 		}
 		reli_p->decode();
@@ -152,7 +152,7 @@ testSocks( Daemon* d )
 	} else {
 		reli_p = (ReliSock*)d->startCommand( GIVE_STATE, &reli );
 		if( reli_p ) {
-			if( ! reli_p->eom() ) {
+			if( ! reli_p->end_of_message() ) {
 				dprintf( dflag, "Can't send eom\n" );
 			}
 			reli_p->decode();
@@ -203,7 +203,7 @@ testSocks( Daemon* d )
 		if( ! safe_p->put( GIVE_STATE ) ) {
 			dprintf( dflag, "Can't encode GIVE_STATE\n" );
 		}
-		if( ! safe_p->eom() ) {
+		if( ! safe_p->end_of_message() ) {
 			dprintf( dflag, "Can't send eom\n" );
 		}
 		safe_p->decode();
@@ -222,7 +222,7 @@ testSocks( Daemon* d )
 	dprintf( dflag, "Using SafeSock startCommand() method #1...\n" );
 	safe_p = (SafeSock*)d->startCommand( GIVE_STATE, Stream::safe_sock, 3 );
 	if( safe_p ) {
-		if( ! safe_p->eom() ) {
+		if( ! safe_p->end_of_message() ) {
 			dprintf( dflag, "Can't send eom\n" );
 		}
 		safe_p->decode();
@@ -244,7 +244,7 @@ testSocks( Daemon* d )
 	} else {
 		safe_p = (SafeSock*)d->startCommand( GIVE_STATE, &safe );
 		if( safe_p ) {
-			if( ! safe_p->eom() ) {
+			if( ! safe_p->end_of_message() ) {
 				dprintf( dflag, "Can't send eom\n" );
 			}
 			safe_p->decode();

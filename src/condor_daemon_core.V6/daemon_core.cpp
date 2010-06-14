@@ -4600,7 +4600,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					}
 					sock->encode();
 					if (!the_policy->put(*sock) ||
-						!sock->eom()) {
+						!sock->end_of_message()) {
 						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", sock->peer_description());
 						auth_info.dPrint (D_ALWAYS);
 						result = FALSE;
@@ -4796,7 +4796,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				if (new_session) {
 					// clear the buffer
 					sock->decode();
-					sock->eom();
+					sock->end_of_message();
 
 					// ready a classad to send
 					ClassAd pa_ad;
@@ -4856,7 +4856,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
-						! sock->eom() ) {
+						! sock->end_of_message() ) {
 						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", the_sid, sock->peer_description());
 						result = FALSE;
 						goto finalize;
@@ -7591,11 +7591,19 @@ int DaemonCore::Create_Process(
 	//
 	if ( priv == PRIV_USER_FINAL ) {
 		create_process_flags |= CREATE_NEW_CONSOLE;
-	}	
+	}
+
+	const char *cwdBackup;
+	if (cwd && (cwd[0] == '\0')) {
+		cwdBackup = NULL;
+	} else {
+		cwdBackup = cwd;
+	}
+		
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
-			NULL,inherit_handles, create_process_flags,newenv,cwd,&si,&piProcess);
+			NULL,inherit_handles, create_process_flags,newenv,cwdBackup,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
@@ -7645,7 +7653,7 @@ int DaemonCore::Create_Process(
 
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : executable,
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
-			create_process_flags, newenv,cwd,&si,&piProcess);
+			create_process_flags, newenv,cwdBackup,&si,&piProcess);
 
 		set_priv(s);
 	}

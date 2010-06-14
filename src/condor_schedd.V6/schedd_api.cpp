@@ -145,6 +145,9 @@ Job::getClusterID()
 
 JobFile::JobFile()
 {
+	currentOffset = -1;
+	file = -1;
+	size = -1;
 }
 
 JobFile::~JobFile()
@@ -153,6 +156,8 @@ JobFile::~JobFile()
 
 FileInfo::FileInfo()
 {
+	name = NULL;
+	size = 0;
 }
 
 FileInfo::~FileInfo()
@@ -638,6 +643,7 @@ ScheddTransaction::newJob(int clusterId, int &id, CondorError & /* errstack */)
 		ASSERT(job);
 		CondorError error_stack;
 		if (job->initialize(error_stack)) {
+			delete job;
 			return -2; // XXX: Cleanup? How do you undo NewProc?
 		} else {
 			if (this->jobs.insert(pid, job)) {

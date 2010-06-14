@@ -178,6 +178,7 @@ clusterProcString::
 clusterProcString() {
 	dagman_cluster_id = -1;
 	dagman_proc_id    = -1;
+	string = 0;
 	return;
 }
 
@@ -1894,7 +1895,6 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	const char *db_ipAddr;
 	const char *db_name;
 	const char *query_password;
-	char *dbconn=NULL;
 	int i;
 
 	output_buffer = new ExtArray<clusterProcString*>;
@@ -2003,6 +2003,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	if (useDB) {
 #ifdef HAVE_EXT_POSTGRESQL
 
+		char *dbconn=NULL;
 		dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
 		if( Q.fetchQueueFromDBAndProcess( dbconn,
@@ -2023,6 +2024,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 				free(lastUpdate);
 			}
 			return false;
+		}
+		if(dbconn) {
+			free(dbconn);
 		}
 #endif /* HAVE_EXT_POSTGRESQL */
 	} else {
@@ -2119,9 +2123,6 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	}
 	delete output_buffer;
 
-	if(dbconn) {
-		free(dbconn);
-	}
 	if(lastUpdate) {
 		free(lastUpdate);
 	}
@@ -2239,8 +2240,6 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	const char *db_name;
 	const char *query_password;
 
-	char *dbconn=NULL;
-
 	ClassAdList jobs; 
 	ClassAd		*job;
 	static bool	setup_mask = false;
@@ -2280,6 +2279,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		if (useDB) {
 #ifdef HAVE_EXT_POSTGRESQL
 
+			char *dbconn=NULL;
 			dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
 				// fetch queue from database
@@ -2296,6 +2296,9 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				return false;
 			}
 
+			if(dbconn) {
+				free(dbconn);
+			}
 #endif /* HAVE_EXT_POSTGRESQL */
 		} else {
 				// fetch queue from schedd	
@@ -2335,9 +2338,6 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 		jobs.Close();
 
-		if(dbconn) {
-			free(dbconn);
-		}
 		if(lastUpdate) {
 			free(lastUpdate);
 		}
@@ -2474,9 +2474,6 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 	}
 
-	if(dbconn) {
-		free(dbconn);
-	}
 	if(lastUpdate) {
 		free(lastUpdate);
 	}
@@ -2581,7 +2578,7 @@ fetchSubmittorPrios()
 		exit( 1 );
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 

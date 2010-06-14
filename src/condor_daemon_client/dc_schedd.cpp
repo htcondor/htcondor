@@ -315,7 +315,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	}
 	free( nc_constraint );
 
-	if ( !rsock.eom() ) {
+	if ( !rsock.end_of_message() ) {
 		MyString errmsg;
 		errmsg.sprintf(
 			"Can't send initial message (version + constraint) to schedd (%s)",
@@ -350,7 +350,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		return false;
 	}
 
-	rsock.eom();
+	rsock.end_of_message();
 
 	dprintf(D_FULLDEBUG,"DCSchedd:receiveJobSandbox: "
 		"%d jobs matched my constraint (%s)\n",
@@ -377,7 +377,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			return false;
 		}
 
-		rsock.eom();
+		rsock.end_of_message();
 
 			// translate the job ad by replacing the 
 			// saved SUBMIT_ attributes
@@ -432,13 +432,13 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		}
 	}	
 		
-	rsock.eom();
+	rsock.end_of_message();
 
 	rsock.encode();
 
 	reply = OK;
 	rsock.code(reply);
-	rsock.eom();
+	rsock.end_of_message();
 
 	if(numdone) { *numdone = JobAdsArrayLen; }
 
@@ -501,7 +501,7 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 	//	ATTR_TREQ_TD_SINFUL
 	//	ATTR_TREQ_TD_ID
 	regad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	// Get the response from the schedd.
 	rsock->decode();
@@ -515,7 +515,7 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 	//	ATTR_TREQ_INVALID_REQUEST
 	//	ATTR_TREQ_INVALID_REASON
 	respad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid_request);
 
@@ -713,7 +713,7 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 				"Can't send reqad to the schedd\n");
 		return false;
 	}
-	rsock.eom();
+	rsock.end_of_message();
 
 	rsock.decode();
 
@@ -739,7 +739,7 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 			"submission.\n");
 		return false;
 	}
-	rsock.eom();
+	rsock.end_of_message();
 
 	status_ad.LookupInteger(ATTR_TREQ_WILL_BLOCK, will_block);
 
@@ -777,7 +777,7 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 				"Can't receive respond ad from the schedd\n");
 		return false;
 	}
-	rsock.eom();
+	rsock.end_of_message();
 
 	return true;
 }
@@ -868,7 +868,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		return false;
 	}
 
-	if( !rsock.eom() ) {
+	if( !rsock.end_of_message() ) {
 		MyString errmsg;
 		errmsg.sprintf(
 			"Can't send initial message (version + count) to schedd (%s)",
@@ -901,7 +901,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		rsock.code(jobid);
 	}
 
-	if( !rsock.eom() ) {
+	if( !rsock.end_of_message() ) {
 		MyString errmsg;
 		errmsg.sprintf("Failed while sending job ids to schedd (%s)", _addr);
 
@@ -957,13 +957,13 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 	}	
 		
 		
-	rsock.eom();
+	rsock.end_of_message();
 
 	rsock.decode();
 
 	reply = 0;
 	rsock.code(reply);
-	rsock.eom();
+	rsock.end_of_message();
 
 	if ( reply == 1 ) 
 		return true;
@@ -1013,7 +1013,7 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	PROC_ID jobid;
 	jobid.cluster = cluster;
 	jobid.proc = proc;	
-	if ( !rsock.code(jobid) || !rsock.eom() ) {
+	if ( !rsock.code(jobid) || !rsock.end_of_message() ) {
 		dprintf(D_ALWAYS,"DCSchedd:updateGSIcredential: "
 				"Can't send jobid to the schedd\n");
 		return false;
@@ -1033,7 +1033,7 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	rsock.decode();
 	reply = 0;
 	rsock.code(reply);
-	rsock.eom();
+	rsock.end_of_message();
 
 	if ( reply == 1 ) 
 		return true;
@@ -1083,7 +1083,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 	PROC_ID jobid;
 	jobid.cluster = cluster;
 	jobid.proc = proc;	
-	if ( !rsock.code(jobid) || !rsock.eom() ) {
+	if ( !rsock.code(jobid) || !rsock.end_of_message() ) {
 		dprintf(D_ALWAYS,"DCSchedd::delegateGSIcredential: "
 				"Can't send jobid to the schedd\n");
 		return false;
@@ -1103,7 +1103,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 	rsock.decode();
 	reply = 0;
 	rsock.code(reply);
-	rsock.eom();
+	rsock.end_of_message();
 
 	if ( reply == 1 ) 
 		return true;
@@ -1215,7 +1215,7 @@ DCSchedd::actOnJobs( JobAction action,
 	}
 
 		// Now, put the command classad on the wire
-	if( ! (cmd_ad.put(rsock) && rsock.eom()) ) {
+	if( ! (cmd_ad.put(rsock) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: Can't send classad\n" );
 		return NULL;
 	}
@@ -1226,7 +1226,7 @@ DCSchedd::actOnJobs( JobAction action,
 		// and it should abort its transaction
 	rsock.decode();
 	ClassAd* result_ad = new ClassAd();
-	if( ! (result_ad->initFromStream(rsock) && rsock.eom()) ) {
+	if( ! (result_ad->initFromStream(rsock) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: "
 				 "Can't read response ad from %s\n", _addr );
 		delete( result_ad );
@@ -1248,7 +1248,7 @@ DCSchedd::actOnJobs( JobAction action,
 		// Tell the schedd we're still here and ready to go
 	rsock.encode();
 	int answer = OK;
-	if( ! (rsock.code(answer) && rsock.eom()) ) {
+	if( ! (rsock.code(answer) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: Can't send reply\n" );
 		delete( result_ad );
 		return NULL;
@@ -1257,7 +1257,7 @@ DCSchedd::actOnJobs( JobAction action,
 		// finally, make sure the schedd didn't blow up trying to
 		// commit these changes to the job queue...
 	rsock.decode();
-	if( ! (rsock.code(reply) && rsock.eom()) ) {
+	if( ! (rsock.code(reply) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: "
 				 "Can't read confirmation from %s\n", _addr );
 		delete( result_ad );
@@ -1284,6 +1284,7 @@ JobActionResults::JobActionResults( action_result_type_t res_type )
 	ar_bad_status = 0;
 	ar_already_done = 0;
 	ar_error = 0;
+	action = JA_ERROR;
 }
 
 
@@ -1603,14 +1604,14 @@ bool DCSchedd::getJobConnectInfo(
 	}
 
 	sock.encode();
-	if( !input.put(sock) || !sock.eom() ) {
+	if( !input.put(sock) || !sock.end_of_message() ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
 		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
 		return false;
 	}
 
 	sock.decode();
-	if( !output.initFromStream(sock) || !sock.eom() ) {
+	if( !output.initFromStream(sock) || !sock.end_of_message() ) {
 		error_msg = "Failed to get response from schedd";
 		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
 		return false;

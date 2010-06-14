@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __SOURCE_H__
-#define __SOURCE_H__
+#ifndef __CLASSAD_SOURCE_H__
+#define __CLASSAD_SOURCE_H__
 
 #include <vector>
 #include <iosfwd>
@@ -148,4 +148,4 @@ std::istream & operator>>(std::istream &stream, ClassAd &ad);
 
 END_NAMESPACE // classad
 
-#endif//__SOURCE_H__
+#endif//__CLASSAD_SOURCE_H__

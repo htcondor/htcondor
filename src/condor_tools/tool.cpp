@@ -1359,7 +1359,7 @@ doCommand( Daemon* d )
 				if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
 					fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true));
 				}
-				if( !sock.code(name) || !sock.eom() ) {
+				if( !sock.code(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n", 
 								 cmdToStr(my_cmd), d->idStr() );
 					return;
@@ -1382,7 +1382,7 @@ doCommand( Daemon* d )
 				if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 					fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true));
 				}
-				if( !sock.code(name) || !sock.eom() ) {
+				if( !sock.code(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n",
 								 cmdToStr(my_cmd), d->idStr() );
 					return;
@@ -1404,7 +1404,7 @@ doCommand( Daemon* d )
 			if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 			}
-			if( !sock.code( psubsys ) || !sock.eom() ) {
+			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 							cmdToStr(my_cmd), d->idStr() );
 				return;
@@ -1417,7 +1417,7 @@ doCommand( Daemon* d )
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 			}
-			if( !sock.code( psubsys ) || !sock.eom() ) {
+			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
 				return;
@@ -1472,7 +1472,7 @@ doCommand( Daemon* d )
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 			}
-			if( !sock.code( pexec ) || !sock.eom() ) {
+			if( !sock.code( pexec ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
 				return;
@@ -1661,7 +1661,7 @@ handleSquawk( char *line, char *addr ) {
 
 		sock.encode();
 		sock.code( signal );
-		sock.eom();
+		sock.end_of_message();
 		
 		return TRUE;
 	}
@@ -1698,7 +1698,7 @@ handleSquawk( char *line, char *addr ) {
 				}
 			}
 		}
-		sock.eom();
+		sock.end_of_message();
 
 		return TRUE;
 	}
@@ -1802,6 +1802,7 @@ doSquawkReconnect( char *addr ) {
 	}
 	if( ! d.locate() ) {
 		printf ( "Failed to contact daemon.\n" );
+		delete [] hostname;
 		return FALSE;
 	}
 	strcpy ( addr, d.addr() );

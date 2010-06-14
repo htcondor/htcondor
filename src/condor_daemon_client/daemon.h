@@ -320,8 +320,8 @@ public:
 		  the command they want to send, the type of Sock they
 		  want to use to send it over, and an optional timeout.  
 		  We then instantiate a new Sock of the right type and
-		  timeout, send the command, and finally, the eom().  The Sock
-		  is then destroyed.
+		  timeout, send the command, and finally, the end_of_message().  
+		  The Sock is then destroyed.
 		  @param cmd The command you want to send.
 		  @param st The type of the Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
@@ -337,8 +337,8 @@ public:
 		  want us to use to send it over, and an optional timeout.
 		  This method will then put the desired timeout on that sock,
 		  place it in encode() mode, send the command, and finally,
-		  the eom().  The sock is otherwise left alone (i.e. not
-		  destroyed)
+		  the end_of_message().  The sock is otherwise left alone 
+		  (i.e. not destroyed)
 		  @param cmd The command you want to send.
 		  @param sock The Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.

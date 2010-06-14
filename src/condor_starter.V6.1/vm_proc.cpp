@@ -1292,7 +1292,7 @@ VMProc::reportErrorToStartd()
 
 	ssock.code(buffer);
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
 		free(buffer);
 		return false;
@@ -1349,7 +1349,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	ASSERT(vm_value);
 	ssock.code(vm_value);
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
 		free(starter_pid);
 		free(vm_value);

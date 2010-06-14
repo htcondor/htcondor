@@ -78,7 +78,7 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 	int input_length = strlen(input);
 
 		// safe to assume output length is <= input_length
-	*output = (unsigned char *)malloc(input_length);
+	*output = (unsigned char *)malloc(input_length + 1);
 	ASSERT( *output );
 	memset(*output, 0, input_length);
 

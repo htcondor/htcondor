@@ -315,7 +315,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	sock->decode();
 	sock->timeout(ClientTimeout);
 	bool ep = CondorThreads::enable_parallel(true);
-	bool res = !cad.initFromStream(*sock) || !sock->eom();
+	bool res = !cad.initFromStream(*sock) || !sock->end_of_message();
 	CondorThreads::enable_parallel(ep);
     if( res )
     {
@@ -523,7 +523,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if( !cad.initFromStream(*sock) || !sock->eom() )
+    if( !cad.initFromStream(*sock) || !sock->end_of_message() )
     {
         dprintf( D_ALWAYS,
 				 "Failed to receive invalidation on %s: aborting\n",
@@ -806,7 +806,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
         }
 
-        if ( !socket->eom () ) {
+        if ( !socket->end_of_message () ) {
         
             dprintf ( 
                 D_FULLDEBUG, 
@@ -1300,11 +1300,6 @@ void CollectorDaemon::sendCollectorAd()
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
 
-    // If we don't have any machines, then bail out. You oftentimes
-    // see people run a collector on each macnine in their pool. Duh.
-    if(machinesTotal == 0) {
-		return;
-	}
     // insert values into the ad
     char line[100];
     sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);
@@ -1336,6 +1331,11 @@ void CollectorDaemon::sendCollectorAd()
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 
+       // If we don't have any machines, then bail out. You oftentimes
+       // see people run a collector on each macnine in their pool. Duh.
+	if(machinesTotal == 0) {
+		return ;
+	}
 	if ( updateRemoteCollector ) {
 		char *update_addr = updateRemoteCollector->addr();
 		if (!update_addr) update_addr = "(null)";

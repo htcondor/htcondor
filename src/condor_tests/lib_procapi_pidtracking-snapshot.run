@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'lib_procapi_pidtracking-snapshot.cmd';
 $testdesc =  'We cleanup correctly after our kids. - vanilla U';
@@ -77,7 +78,7 @@ $ExitSuccess = sub {
 	# determine correct ps by expecting a certain number of lines of text
 
 	my $pscmd = "ps -ef";
-	system("which ps");
+	runcmd("which ps");
 	open(PULL, "$pscmd | wc -l 2>&1 |") || die "ps -eo pid failed: $!\n";
 	while(<PULL>)
 	{
@@ -117,7 +118,7 @@ $ExitSuccess = sub {
 					{
 						CondorTest::debug("Test fails because PARENT pid $pidcheck should have been removed\n",1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 				foreach my $pidcheck (@kidpids)
@@ -126,7 +127,7 @@ $ExitSuccess = sub {
 					{
 						CondorTest::debug("Test fails because CHILD pid $pidcheck should have been removed\n",1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 			}
@@ -143,7 +144,7 @@ $ExitSuccess = sub {
 					{
 						CondorTest::debug("Test fails because PARENT pid $pidcheck should have been removed\n",1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 				foreach my $pidcheck (@kidpids)
@@ -152,7 +153,7 @@ $ExitSuccess = sub {
 					{
 						CondorTest::debug("Test fails because CHILD pid $pidcheck should have been removed\n",1);
 						$worked = "no";
-						system("kill -9 $pidcheck");
+						runcmd("kill -9 $pidcheck");
 					}
 				}
 			}

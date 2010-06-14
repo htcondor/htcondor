@@ -172,7 +172,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	//	ATTR_TREQ_CAPABILITY
 	//	ATTR_TREQ_FTP
 	reqad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	rsock->decode();
 
@@ -184,7 +184,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	//
 	//	ATTR_TREQ_INVALID_REQUEST (set to false)
 	respad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
 	
@@ -239,7 +239,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 
 				dprintf(D_ALWAYS | D_NOHEADER, ".");
 			}	
-			rsock->eom();
+			rsock->end_of_message();
 			dprintf(D_ALWAYS | D_NOHEADER, "\n");
 			break;
 
@@ -261,7 +261,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 
 	rsock->decode();
 	respad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	// close up shop
 	delete rsock;
@@ -345,7 +345,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	//	ATTR_TREQ_CAPABILITY
 	//	ATTR_TREQ_FTP
 	reqad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	rsock->decode();
 
@@ -359,7 +359,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	//	ATTR_TREQ_NUM_TRANSFERS
 	//
 	respad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
 	
@@ -389,7 +389,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 				// Grab a job ad the server is sending us so we know what
 				// to receive.
 				jad.initFromStream(*rsock);
-				rsock->eom();
+				rsock->end_of_message();
 
 				// translate the job ad by replacing the 
 				// saved SUBMIT_ attributes so the download goes into the
@@ -435,7 +435,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 
 				dprintf(D_ALWAYS | D_NOHEADER, ".");
 			}	
-			rsock->eom();
+			rsock->end_of_message();
 
 			dprintf(D_ALWAYS | D_NOHEADER, "\n");
 
@@ -459,7 +459,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 
 	rsock->decode();
 	respad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	// close up shop
 	delete rsock;

@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __CLASSAD_ITOR_H__
-#define __CLASSAD_ITOR_H__
+#ifndef __CLASSAD_CLASSAD_ITOR_H__
+#define __CLASSAD_CLASSAD_ITOR_H__
 
 BEGIN_NAMESPACE( classad )
 
@@ -97,4 +97,4 @@ class ClassAdIterator
 
 END_NAMESPACE // classad
 
-#endif//CLASSAD_ITOR
+#endif//__CLASSAD_CLASSAD_ITOR_H__

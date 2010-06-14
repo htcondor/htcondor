@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __LEXER_H__
-#define __LEXER_H__
+#ifndef __CLASSAD_LEXER_H__
+#define __CLASSAD_LEXER_H__
 
 #include "classad/common.h"
 #include "classad/value.h"
@@ -251,4 +251,4 @@ class Lexer
 
 END_NAMESPACE // classad
 
-#endif //__LEXER_H__
+#endif //__CLASSAD_LEXER_H__

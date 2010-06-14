@@ -783,7 +783,7 @@ get_machine_state()
 		return _error_state_;
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 	if( !sock->code( state_str ) || !sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't read state/eom from startd.\n" );

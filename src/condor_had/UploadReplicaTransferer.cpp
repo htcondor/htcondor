@@ -107,7 +107,7 @@ UploadReplicaTransferer::upload( )
 //			 newTimeout, oldTimeout, bytesTotal );
 //	m_socket->encode( );
 //	if( ! m_socket->code( bytesTotal ) || 
-//		! m_socket->eom( ) ) {
+//		! m_socket->end_of_message( ) ) {
 //		 dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to send "
 //							"the state file size (%d) or to code the end of "
 //							"message\n", bytesTotal );

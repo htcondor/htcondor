@@ -86,6 +86,7 @@ ResMgr::ResMgr()
 	num_updates = 0;
 	startTime = 0;
 	type_strings = NULL;
+	m_startd_hook_shutdown_pending = false;
 }
 
 
@@ -111,6 +112,10 @@ ResMgr::~ResMgr()
 
 #if HAVE_HIBERNATION
 	cancelHibernateTimer();
+	if (m_hibernation_manager) {
+		delete m_hibernation_manager;
+	}
+
 #endif /* HAVE_HIBERNATION */
 
 	if( resources ) {

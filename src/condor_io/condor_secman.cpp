@@ -1373,7 +1373,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			return StartCommandFailed;
 		}
 
-		// we must _NOT_ do an eom() here!  Ques?  See Todd or Zach 9/01
+		// we must _NOT_ do an end_of_message() here!  Ques?  See Todd or Zach 9/01
 
 		return StartCommandSucceeded;
 	}
@@ -1928,7 +1928,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// Why is it being done?  Perhaps to ensure clean state of the
 			// socket?
 			m_sock->encode();
-			m_sock->eom();
+			m_sock->end_of_message();
 
 			if( m_nonblocking && !m_sock->readReady() ) {
 				return WaitForSocketCallback();
@@ -1937,7 +1937,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// receive a classAd containing info about new session
 			ClassAd post_auth_info;
 			m_sock->decode();
-			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->eom()) {
+			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->end_of_message()) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 							"could not receive post_auth_info." );
@@ -2188,7 +2188,7 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 	m_tcp_auth_command = NULL;
 
 		// close the TCP socket, the rest will be UDP.
-	tcp_auth_sock->eom();
+	tcp_auth_sock->end_of_message();
 	tcp_auth_sock->close();
 	delete tcp_auth_sock;
 	tcp_auth_sock = NULL;

@@ -76,6 +76,8 @@ CollectorBaseStats::CollectorBaseStats ( int history_size )
 	} else {
 		historyBuffer = NULL;
 		historyWords = 0;
+		historyMaxbit = 0;
+		historyBitnum = 0;
 	}
 
 	// Reset vars..

@@ -65,7 +65,7 @@ TransferD::dump_state_handler(int cmd, Stream *sock)
 
 	state.put(*sock);
 
-	sock->eom();
+	sock->end_of_message();
 
 	// all done with this stream, so close it.
 	return !KEEP_STREAM;

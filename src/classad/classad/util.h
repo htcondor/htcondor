@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
+#ifndef __CLASSAD_UTIL_H__
+#define __CLASSAD_UTIL_H__
 
 #include "classad/common.h"
 
@@ -68,4 +68,4 @@ int classad_isnan(double x);
 
 END_NAMESPACE // classad
 
-#endif//__UTILS_H__
+#endif//__CLASSAD_UTIL_H__

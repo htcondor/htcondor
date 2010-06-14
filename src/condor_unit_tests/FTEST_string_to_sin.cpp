@@ -68,12 +68,10 @@ static bool test_normal_case() {
 	int port = ntohs(sa_in.sin_port);
 	e.emit_param("sockaddr_in.in_addr", "%d.%d.%d.%d", *byte, *(byte+1), *(byte+2), *(byte+3));
 	e.emit_param("sockaddr_in.port", "%d", port);
-	if(result != 1 || port != 80 || !utest_sock_eq_octet(&(sa_in.sin_addr), 192, 168, 0, 2) ){
-		e.emit_result_failure(__LINE__);
-		return false;
+	if(result != 1 || port != 80 || !utest_sock_eq_octet(&(sa_in.sin_addr), 192, 168, 0, 2) ) {
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_alpha_input() {
@@ -89,9 +87,7 @@ static bool test_alpha_input() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != 0) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

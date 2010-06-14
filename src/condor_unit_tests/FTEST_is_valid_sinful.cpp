@@ -63,11 +63,9 @@ static bool test_normal_case() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_hostname() {
@@ -82,11 +80,9 @@ static bool test_hostname() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_no_angle_brackets() {
@@ -101,9 +97,7 @@ static bool test_no_angle_brackets() {
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

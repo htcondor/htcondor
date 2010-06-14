@@ -53,6 +53,7 @@ bool FTEST_stl_string_utils(void);
 bool OTEST_HashTable(void);
 bool OTEST_MyString(void);
 bool OTEST_StringList(void);
+bool OTEST_Old_Classads(void);
 
 int main() {
 	e.init();
@@ -82,12 +83,15 @@ int main() {
 	driver.register_function(OTEST_HashTable);
 	driver.register_function(OTEST_MyString);
 	driver.register_function(OTEST_StringList);
+	driver.register_function(OTEST_Old_Classads);
 
 		// run all the functions and return the result
 	bool result = driver.do_all_functions();
 	e.emit_summary();
 	if(result) {
+		printf ("Test suite has passed.\n");
 		return EXIT_SUCCESS;
 	}
+	printf ("Test suite has failed.\n");
 	return EXIT_FAILURE;
 }

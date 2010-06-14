@@ -26,6 +26,7 @@
 ## this test because Stork is not supported on all platforms.
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_noop_node-upper.dag';
 
@@ -68,7 +69,7 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 
@@ -78,7 +79,7 @@ unlink <job_dagman_noop_node-lower.dag.rescue???>;
 # Get rid of node output files we should have at the end.
 foreach $name (@nodeoutput) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 

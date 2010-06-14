@@ -147,6 +147,7 @@ main (int argc, char *argv[])
 
       case GRID_AD:
         setPPstyle(PP_GRID_NORMAL, 0, DEFAULT);
+		break;
 
 	  case GENERIC_AD:
 		setPPstyle(PP_GENERIC, 0, DEFAULT);

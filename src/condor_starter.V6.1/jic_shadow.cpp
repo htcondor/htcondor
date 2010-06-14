@@ -1292,8 +1292,12 @@ JICShadow::initWithFileTransfer()
 					 "ad, aborting\n" );
 			return false;
 		}
+
+		char firstCharOfTF = tmp[0];
+		free(tmp);
+
 			// if set to "ALWAYS", then set transfer_at_vacate to true
-		switch ( tmp[0] ) {
+		switch ( firstCharOfTF ) {
 		case 'a':
 		case 'A':
 			transfer_at_vacate = true;
@@ -1303,7 +1307,6 @@ JICShadow::initWithFileTransfer()
 			return initNoFileTransfer();
 			break;
 		}
-		free( tmp );
 	}
 
 		// if we're here, it means we're transfering files, so we need
@@ -1513,7 +1516,7 @@ refuse(ReliSock * s)
 	s->encode();
 	int i = 0; // == failure;
 	s->code(i); // == failure
-	s->eom();
+	s->end_of_message();
 }
 
 // Based on Scheduler::updateGSICred
@@ -1613,7 +1616,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		// Send our reply back to the client
 	rsock->encode();
 	rsock->code(reply);
-	rsock->eom();
+	rsock->end_of_message();
 
 	if(reply) {
 		dprintf(D_FULLDEBUG,
@@ -1633,7 +1636,7 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		s->encode();
 		int i = 2; // == success, but please don't call any more.
 		s->code(i); // == success, but please don't call any more.
-		s->eom();
+		s->end_of_message();
 		refuse(s);
 		return false;
 	}

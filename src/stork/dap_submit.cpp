@@ -433,7 +433,7 @@ int main(int argc, char **argv)
 	sock->encode();
 	char *goodbye = "";
 	sock->code(goodbye);
-	sock->eom();
+	sock->end_of_message();
 
 	sock->close();
 	delete sock;

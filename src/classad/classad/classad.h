@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __CLASSAD_H__
-#define __CLASSAD_H__
+#ifndef __CLASSAD_CLASSAD_H__
+#define __CLASSAD_CLASSAD_H__
 
 
 #include <set>
@@ -695,4 +695,4 @@ END_NAMESPACE // classad
 
 #include "classad/classadItor.h"
 
-#endif//__CLASSAD_H__
+#endif//__CLASSAD_CLASSAD_H__

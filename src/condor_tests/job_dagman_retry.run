@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_retry.dag';
 $testdesc =  'Condor submit dag - retry test - scheduler U';
@@ -123,7 +124,7 @@ $failure = sub
 		}
 		close(RESCUE);
 		close(NEWRESCUE);
-		system("mv $newrescuedag $rescuedag");
+		runcmd("mv $newrescuedag $rescuedag");
 		if( CondorTest::RunDagTest($testname, $rescuedag, 0, $dagman_args) ) {
 			CondorTest::debug("$testname: SUCCESS\n",1);
 			exit(0);

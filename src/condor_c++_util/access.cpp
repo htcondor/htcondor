@@ -143,7 +143,7 @@ void attempt_access_handler(Service *, int  /*i*/, Stream *s)
 		return;
 	}
 	
-	if( ! s->eom() ) {
+	if( ! s->end_of_message() ) {
 		dprintf( D_ALWAYS,
 				 "ATTEMPT_ACCESS: Failed to send end of message.\n");
 	}

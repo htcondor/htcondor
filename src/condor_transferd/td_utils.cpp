@@ -48,5 +48,5 @@ TransferD::refuse(Sock *sock)
 
 	sock->encode();
 	sock->code( val );
-	sock->eom();
+	sock->end_of_message();
 }

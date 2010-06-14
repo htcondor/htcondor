@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#ifndef __CLASSAD_INDEXFILE_H__
+#define __CLASSAD_INDEXFILE_H__
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -66,3 +68,5 @@ class IndexFile {
 };
 
 END_NAMESPACE
+
+#endif //__CLASSAD_INDEXFILE_H__

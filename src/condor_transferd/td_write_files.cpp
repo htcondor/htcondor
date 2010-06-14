@@ -100,7 +100,7 @@ TransferD::write_files_handler(int cmd, Stream *sock)
 
 	// soak the request ad from the client about what it wants to transfer
 	reqad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	reqad.LookupString(ATTR_TREQ_CAPABILITY, capability);
 
@@ -112,7 +112,7 @@ TransferD::write_files_handler(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, "Invalid capability!");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Client identity '%s' tried to write some files "
 			"using capability '%s', but there was no such capability. "
@@ -132,7 +132,7 @@ TransferD::write_files_handler(int cmd, Stream *sock)
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
 				"Invalid file transfer protocol!");
 			respad.put(*rsock);
-			rsock->eom();
+			rsock->end_of_message();
 
 			dprintf(D_ALWAYS, "Client identity '%s' tried to write some files "
 				"using protocol '%d', but I don't support that protocol. "
@@ -146,7 +146,7 @@ TransferD::write_files_handler(int cmd, Stream *sock)
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
 				"Transfer Request was not an uploading request!");
 			respad.put(*rsock);
-			rsock->eom();
+			rsock->end_of_message();
 
 			dprintf(D_ALWAYS, "Client identity '%s' tried to write some files "
 				"to a transfer request that wasn't expecting to be written. "
@@ -159,7 +159,7 @@ TransferD::write_files_handler(int cmd, Stream *sock)
 
 	respad.Assign(ATTR_TREQ_INVALID_REQUEST, FALSE);
 	respad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	/////////////////////////////////////////////////////////////////////////
 	// Set up a thread (a process under unix) to read ALL of the job files
@@ -275,7 +275,7 @@ TransferD::write_files_thread(void *targ, Stream *sock)
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
 				"FileTransfer Object failed to SimpleInit.");
 			respad.put(*rsock);
-			rsock->eom();
+			rsock->end_of_message();
 
 			rsock->timeout(old_timeout);
 
@@ -296,14 +296,14 @@ TransferD::write_files_thread(void *targ, Stream *sock)
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
 				"FileTransfer Object failed to download.");
 			respad.put(*rsock);
-			rsock->eom();
+			rsock->end_of_message();
 
 			rsock->timeout(old_timeout);
 			return EXIT_FAILURE;
 		}
 	}
 
-	rsock->eom();
+	rsock->end_of_message();
 
 	//////////////////////////////////////////////////////////////////////////
 	// Now that the file transfer is done, tell the client everything is ok.
@@ -320,7 +320,7 @@ TransferD::write_files_thread(void *targ, Stream *sock)
 	//	ATTR_TREQ_INVALID_REQUEST (set to false)
 	//
 	respad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	delete rsock;
 
@@ -401,7 +401,7 @@ TransferD::write_files_reaper(int tid, int exit_status)
 	/////////////////////////////////////////////////////////////////////////
 	m_update_sock->encode();
 	result.put(*m_update_sock);
-	m_update_sock->eom();
+	m_update_sock->end_of_message();
 
 	// now remove the treq forever from our knowledge
 	m_treqs.remove(treq->get_capability());

@@ -85,9 +85,6 @@ ExtArray (const ExtArray &old)
 {
 	int i;
 
-	// sanity check
-	if (&old == this) return;
-
 	// establish new array of required size;
 	size = old.size;
 	last = old.last;

@@ -1176,8 +1176,11 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 			return false;
 		}
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
-		job->varNamesFromDag->Append(new MyString(varName));
-		job->varValsFromDag->Append(new MyString(varValue));
+		bool appendResult;
+		appendResult = job->varNamesFromDag->Append(new MyString(varName));
+		ASSERT( appendResult );
+		appendResult = job->varValsFromDag->Append(new MyString(varValue));
+		ASSERT( appendResult );
 	}
 
 	if(numPairs == 0) {
@@ -1474,7 +1477,8 @@ parse_splice(
 							dag->DefaultNodeLog(),
 							dag->GenerateSubdagSubmits(),
 							NULL, // this Dag will never submit a job
-							true); /* we are a splice! */
+							true, /* we are a splice! */
+							current_splice_scope() );
 	
 	// initialize whatever the DIR line was, or defaults to, here.
 	splice_dag->SetDirectory(directory);

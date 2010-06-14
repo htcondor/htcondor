@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_subdag-A-upper.dag';
 $testdesc =  'Condor submit dag - sub-DAG test with lazy submit file generation - scheduler U';
@@ -62,14 +63,14 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 
 # Get rid of any existing submit files.
 foreach $name (@submitfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 
@@ -132,7 +133,7 @@ $success = sub
 	}
 	# clean out old output files
 	foreach $name (@outfiles) {
-		system("rm -f $name.out $name.err");
+		runcmd("rm -f $name.out $name.err");
 	}
 
 	foreach $name (@logfiles) {

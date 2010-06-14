@@ -19,8 +19,8 @@
 
 
 
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#ifndef __CLASSAD_COMMON_H__
+#define __CLASSAD_COMMON_H__
 
 #ifndef WIN32
 #include <strings.h>
@@ -207,4 +207,4 @@ char* strnewp( const char* );
 
 #include "classad/classadErrno.h"
 
-#endif//__COMMON_H__
+#endif//__CLASSAD_COMMON_H__

@@ -1,3 +1,10 @@
+Changes for version 1.0.9 (Released ????-??-??)
+* Fix interval() function to omit leading zeros and spaces.
+
+Changes for version 1.0.8 (Released 2010-06-10)
+* Set a version (1.0.0) on the .so (thanks Steve Traylen)
+* Updated ClassAdLibraryVersion to 1.0.8 (was 1.0.4)
+
 Changes for version 1.0.7 (Released 2010-05-26)
 * Fix parsing of strings containing characters with negative ASCII values.
 * Stop escaping '?' in strings when unparsing.

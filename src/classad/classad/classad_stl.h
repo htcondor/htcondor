@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __CLASSAD_STL_H__
-#define __CLASSAD_STL_H__
+#ifndef __CLASSAD_CLASSAD_STL_H__
+#define __CLASSAD_CLASSAD_STL_H__
 
 #include <map>
 #include <list>
@@ -38,4 +38,4 @@
 #define classad_map   std::map 
 #define classad_slist std::list
 
-#endif /* __CLASSAD_STL_H__ */
+#endif /* __CLASSAD_CLASSAD_STL_H__ */

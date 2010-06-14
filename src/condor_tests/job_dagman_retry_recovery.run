@@ -28,6 +28,7 @@
 ## successfully run once.
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_retry_recovery.dag';
 $testdesc =  'Condor submit dag - retry-recovery test - scheduler U';
@@ -47,7 +48,7 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 

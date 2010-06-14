@@ -36,4 +36,4 @@ void _classad_except(char *format, ...);
 
 END_NAMESPACE
 
-#endif /* __CLASSAD_DEBUG_H */
+#endif /* __CLASSAD_DEBUG_H__ */

@@ -21,8 +21,11 @@
 	This file contains functions used by the rest of the unit_test suite.
  */
 
+#include "condor_common.h"
 #include "MyString.h"
 #include "string_list.h"
+#include "condor_debug.h"
+#include "condor_config.h"
 
 // Global emitter declaration
 extern class Emitter e;
@@ -58,3 +61,13 @@ char** string_compare_helper(StringList* list, int start);
 
 /* Frees a char** */
 void free_helper(char** array);
+
+/* Originallly from condor_c++_util/test_old_classads.cpp */
+void make_big_string(int length, char **string, char **quoted_string);
+
+/* Originally from condor_c++_util/test_old_classads.cpp*/
+compat_classad::ClassAd* get_classad_from_file();
+
+/* Originally from condor_c++_util/test_old_classads.cpp*/
+bool floats_close( float one, float two, float diff = .0001);
+

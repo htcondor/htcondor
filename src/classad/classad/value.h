@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __VALUES_H__
-#define __VALUES_H__
+#ifndef __CLASSAD_VALUE_H__
+#define __CLASSAD_VALUE_H__
 
 #include "classad/common.h"
 #include "classad/util.h"
@@ -533,4 +533,4 @@ IsNumber( ) const
 }
 END_NAMESPACE // classad
 
-#endif//__VALUES_H__
+#endif//__CLASSAD_VALUE_H__

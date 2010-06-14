@@ -100,7 +100,7 @@ DCCredd::storeCredential (Credential * cred,
 		goto EXIT;
 	}
 
-	rsock->eom();
+	rsock->end_of_message();
 
 		// Receive the return code
 	rsock->decode();
@@ -198,7 +198,7 @@ DCCredd::listCredentials (SimpleList <Credential*> & result,
 
 	rsock->encode();
 	rsock->code (request);
-	rsock->eom();
+	rsock->end_of_message();
 
 		// Receive response
 	rsock->decode();
@@ -264,7 +264,7 @@ DCCredd::removeCredential (const char * cred_name,
 		goto EXIT;
 	}
 
-	if ( ! rsock->eom() ) {
+	if ( ! rsock->end_of_message() ) {
 		condor_error.pushf ( "DC_CREDD", 3, "Error sending credential eom: %s",
 				strerror(errno) );
 		goto EXIT;

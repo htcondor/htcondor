@@ -134,6 +134,7 @@ Matchmaker ()
 	strcpy(MatchesTable, "matches");
 
 	prevLHF = 0;
+	Collectors = 0;
 }
 
 
@@ -1344,6 +1345,7 @@ SimpleGroupEntry()
 {
 	groupName = NULL;
 	prio = 0;
+	usage = 0.0f;
 	maxAllowed = (float) INT_MAX;
 }
 
@@ -3522,6 +3524,7 @@ MatchListType(int maxlen)
 	m_rejPreemptForPolicy = 0; 
 	m_rejPreemptForRank = 0;
 	m_rejForSubmitterLimit = 0;
+	m_submitterLimit = 0.0f;
 }
 
 Matchmaker::MatchListType::

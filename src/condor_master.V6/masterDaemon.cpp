@@ -1617,6 +1617,7 @@ Daemons::Daemons()
 	immediate_restart_master = FALSE;
 	prevLHF = 0;
 	m_retry_start_all_daemons_tid = -1;
+	master = NULL;
 }
 
 

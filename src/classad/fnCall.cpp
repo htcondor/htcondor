@@ -2287,7 +2287,15 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	secs = tot_secs % 60;
 
 	char strval[25];
-	sprintf(strval,"%3d+%02d:%02d:%02d", days, hours, min, secs );
+	if ( days != 0 ) {
+		sprintf(strval,"%d+%02d:%02d:%02d", days, abs(hours), abs(min), abs(secs) );
+	} else if ( hours != 0 ) {
+		sprintf(strval,"%d:%02d:%02d", hours, abs(min), abs(secs) );
+	} else if ( min != 0 ) {
+		sprintf(strval,"%d:%02d", min, abs(secs) );
+	} else {
+		sprintf(strval,"%d", secs );
+	}
 	result.SetStringValue(strval);
 
     return true;

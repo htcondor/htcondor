@@ -151,7 +151,7 @@ DCStarter::updateX509Proxy( const char * filename, char const *sec_session_id)
 	rsock.decode();
 	int reply = 0;
 	rsock.code(reply);
-	rsock.eom();
+	rsock.end_of_message();
 
 	switch(reply) {
 		case 0: return XUS_Error;
@@ -197,7 +197,7 @@ DCStarter::delegateX509Proxy( const char * filename, char const *sec_session_id)
 	rsock.decode();
 	int reply = 0;
 	rsock.code(reply);
-	rsock.eom();
+	rsock.end_of_message();
 
 	switch(reply) {
 		case 0: return XUS_Error;
@@ -266,7 +266,7 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 	input.Assign(ATTR_SESSION_INFO,session_info);
 
 	sock.encode();
-	if( !input.put(sock) || !sock.eom() ) {
+	if( !input.put(sock) || !sock.end_of_message() ) {
 		error_msg = "Failed to compose CREATE_JOB_OWNER_SEC_SESSION to starter";
 		return false;
 	}
@@ -274,7 +274,7 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 	sock.decode();
 
 	ClassAd reply;
-	if( !reply.initFromStream(sock) || !sock.eom() ) {
+	if( !reply.initFromStream(sock) || !sock.end_of_message() ) {
 		error_msg = "Failed to get response to CREATE_JOB_OWNER_SEC_SESSION from starter";
 		return false;
 	}
@@ -331,14 +331,14 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 	}
 
 	sock.encode();
-	if( !input.put(sock) || !sock.eom() ) {
+	if( !input.put(sock) || !sock.end_of_message() ) {
 		error_msg = "Failed to send START_SSHD request to starter";
 		return false;
 	}
 
 	ClassAd result;
 	sock.decode();
-	if( !result.initFromStream(sock) || !sock.eom() ) {
+	if( !result.initFromStream(sock) || !sock.end_of_message() ) {
 		error_msg = "Failed to read response to START_SSHD from starter";
 		return false;
 	}

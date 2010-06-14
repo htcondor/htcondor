@@ -12,6 +12,9 @@ Edit new_classad.cpp and change the version number:
 The other version of ClassAdLibraryVersion(major,minor,patch) in
 new_classad.cpp should also be updated.
 
+Edit Makefile.am.m4 and update -version-info to reflect the ABI
+version.
+
 Edit README to update the version number and release date at the top
 of the file.
 

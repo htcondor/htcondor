@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __QUERY_H__
-#define __QUERY_H__
+#ifndef __CLASSAD_QUERY_H__
+#define __CLASSAD_QUERY_H__
 
 #include <vector>
 #include <list>

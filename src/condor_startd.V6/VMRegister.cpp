@@ -88,7 +88,7 @@ _requestVMRegister(char *addr)
 		return FALSE;
 	}
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to host startd %s\n", addr );
 		free(buffer);
 		return FALSE;
@@ -103,7 +103,7 @@ _requestVMRegister(char *addr)
 	int permission = 0;
 	ssock.code(permission);
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to receive EOM from host startd(%s)\n", addr );
 		return FALSE;
 	}
@@ -204,7 +204,7 @@ VMRegister::requestHostClassAds(void)
 		dprintf(D_FULLDEBUG, "Failed to send query Ad to host startd(%s)\n", addr);
 	}
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf(D_FULLDEBUG, "Failed to send query EOM to host startd(%s)\n", addr);
 	}
 
@@ -217,14 +217,14 @@ VMRegister::requestHostClassAds(void)
 
 	while (more) {
 		if( !ssock.code(more) ) {
-			ssock.eom();
+			ssock.end_of_message();
 			return;
 		}
 
 		if(more) {
 			ad = new ClassAd;
 			if( !ad->initFromStream(ssock) ) {
-				ssock.eom();
+				ssock.end_of_message();
 				delete ad;
 				return;
 			}
@@ -234,7 +234,7 @@ VMRegister::requestHostClassAds(void)
 		}
 	}
 
-	ssock.eom();
+	ssock.end_of_message();
 
 	dprintf(D_FULLDEBUG, "Got %d classAds from host\n", num_ads);
 
