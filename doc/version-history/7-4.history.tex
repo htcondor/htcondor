@@ -64,7 +64,7 @@ disables Chirp remote file access from execute machines.
   Fixed numerous, small, rare memory leaks.
 
 \item 
-  Fixed a bug where processor affinity settings were ignored if
+  Fixed a bug in which processor affinity settings were ignored if
   privilege separation was enabled.
 
 % gittrac 1329
@@ -73,9 +73,10 @@ disables Chirp remote file access from execute machines.
   the submit node always attempted to use the public network address
   of the submit machine.
 
-% gittrack 1405
-\item \MacroNI{TCP\_FORWARDING\_HOST} did not work in some situations because
-of Condor's attempts to automatically rewrite published addresses to
+% gittrac 1405
+\item The configuration variable \MacroNI{TCP\_FORWARDING\_HOST} did not work
+in some situations
+because of Condor's attempts to automatically rewrite published addresses to
 match the IP address of the network interface used to make the publication.
 
 % gittrac 1346
@@ -114,8 +115,8 @@ were any idle scheduler universe jobs when files were staged into the
 \Condor{schedd} for a new job.
 
 % gittrac #1404
-\item Fixed a bug in the nordugrid\_gahp that could cause it to exit when
-connecting to a misconfigured LDAP server.
+\item Fixed a bug in the \Prog{nordugrid\_gahp} that could cause it to exit
+when connecting to a misconfigured LDAP server.
 
 \end{itemize}
 
