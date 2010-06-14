@@ -1334,7 +1334,7 @@ void CollectorDaemon::sendCollectorAd()
        // If we don't have any machines, then bail out. You oftentimes
        // see people run a collector on each macnine in their pool. Duh.
 	if(machinesTotal == 0) {
-		return 1;
+		return ;
 	}
 	if ( updateRemoteCollector ) {
 		char *update_addr = updateRemoteCollector->addr();
