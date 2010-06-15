@@ -118,6 +118,13 @@ were any idle scheduler universe jobs when files were staged into the
 \item Fixed a bug in the \Prog{nordugrid\_gahp} that could cause it to exit
 when connecting to a misconfigured LDAP server.
 
+% gittrac #1352
+\item Fixed a bug that prevented the \MacroNI{NEGOTIATOR\_MATCH\_LOG} from rotating.
+
+% gittrac #1413
+\item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. This bug is 
+present in all earlier 7.4.x Condor releases.
+
 \end{itemize}
 
 \noindent Known Bugs:
