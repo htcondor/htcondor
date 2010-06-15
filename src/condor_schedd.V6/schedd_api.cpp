@@ -627,7 +627,6 @@ ScheddTransaction::newCluster(int &id)
 		// XXX: Need a transaction...
 	id = NewCluster();
 
-    //return -1 == id ? -1 : 0;
 	return (id < 0) ? -1 : 0;
 }
 
