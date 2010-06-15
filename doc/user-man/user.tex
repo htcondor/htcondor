@@ -15,7 +15,7 @@
 Presenting Condor \VersionNotice! Condor is developed by
 the Condor Team at the University of Wisconsin-Madison (UW-Madison), and
 was first installed as a production system in the UW-Madison Computer
-Sciences department more than 10 years ago. This Condor pool has since
+Sciences department more than 15 years ago. This Condor pool has since
 served as a major source of computing cycles to UW faculty and students.
 For many, it has revolutionized the role computing plays in their
 research. An increase of one, and sometimes even two, orders of
@@ -25,7 +25,7 @@ years, the Condor Team has established collaborations with scientists
 from around the world, and it has provided them with access to surplus
 cycles (one scientist has consumed 100 CPU years!). Today, our
 department's pool consists of more than 700 desktop Unix workstations
-and more than 100 Windows 2000 machines.
+and more than 100 Windows machines.
 On a typical day, our pool delivers more than 500 CPU days to UW
 researchers. Additional Condor pools have been established over the
 years across our campus and the world. Groups of researchers, engineers,
@@ -55,7 +55,7 @@ jobs.  Condor can schedule jobs on dedicated machines.  But unlike traditional
 batch systems, Condor is also designed to effectively 
 utilize non-dedicated machines to run jobs.  By being told to only
 run compute jobs on machines which are currently not being used (no keyboard
-activity, no load average, no active telnet users, etc), Condor can
+activity, low load average, etc.), Condor can
 effectively harness otherwise idle machines throughout a pool of machines.
 This is important because often times the amount of
 compute power represented by the aggregate total of all the non-dedicated 
@@ -104,7 +104,7 @@ are sellers.
 All machines in a Condor pool advertise their attributes,
 \index{ClassAd!attributes}
 such as
-available RAM memory, CPU type and speed, virtual memory size, current
+available memory, CPU type and speed, virtual memory size, current
 load average, along with other static and dynamic properties.
 This machine ClassAd
 \index{ClassAd!machine}
@@ -384,7 +384,7 @@ These jobs are submitted for execution on grid resources.
 The java universe allows users to run jobs written for the
 Java Virtual Machine (JVM).
 The scheduler universe allows users to submit lightweight jobs
-to be spawned by the \Condor{schedd} daemon on the submit host itself.
+to be spawned by the program known as a daemon on the submit host itself.
 \index{universe!parallel}
 The parallel universe is for programs that require multiple machines
 for one job.
@@ -497,7 +497,7 @@ In this case, Condor will transfer any files needed by a job to the
 execution site, run the job, and transfer the output back to the
 submitting machine.
 
-Under Unix, the Condor presumes a shared file system for vanilla jobs. 
+Under Unix, Condor presumes a shared file system for vanilla jobs. 
 However, if a shared file system is unavailable, a user can enable the
 Condor File Transfer mechanism.
 On Windows platforms, the default is to use the File Transfer
@@ -709,7 +709,7 @@ have a large group of Condor jobs to run. The example file
 shows program submission of
 \Prog{mathematica} as a vanilla universe job.
 This may be necessary if the source
-and/or object code to program \Prog{mathematica} is not available.
+and/or object code to \Prog{mathematica} is not available.
 \begin{verbatim}
   ####################     
   #                       
@@ -807,7 +807,7 @@ page~\pageref{classad-reference}.
 
 All of the commands in the submit description file are case insensitive, 
 \emph{except} for the ClassAd attribute string values.
-ClassAds attribute names are
+ClassAd attribute names are
 case insensitive, but ClassAd string
 values are \emph{case preserving}.
 
@@ -1774,9 +1774,10 @@ machines and their configuration.
 \index{environment variables!CONDOR\_VM}
 equivalent to \Env{\_CONDOR\_SLOT} described above, except that it is
 only available in the standard universe.
-\Note: As of Condor version 6.9.3, this environment variable is deprecated.
+\Note As of Condor version 6.9.3, this environment variable is no longer
+used.
 It will only be defined if the \Macro{ALLOW\_VM\_CRUFT} configuration
-setting is set to TRUE.
+variable is set to \Expr{True}.
 
 \item \Env{X509\_USER\_PROXY}
 \index{X509\_USER\_PROXY}
@@ -1921,7 +1922,7 @@ the job in the held state until the problem is resolved.
 The second common error occurs due to an incomplete job set up.
 For example, the submit description file given above specifies
 three available executables.
-If one is missing, Condor report back that an
+If one is missing, Condor reports back that an
 executable is missing when it happens to match the
 job with a resource that requires the missing binary.
 
