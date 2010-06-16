@@ -322,7 +322,7 @@ defined for \Arg{JobName}.
 
 \index{DAGMan!RETRY@\verb^$RETRY^ value}
 The variable \Env{\$RETRY} evaluates to an 
-integer value set to 0 first time a node is run,
+integer value set to 0 the first time a node is run,
 and is  incremented each time the node is retried. 
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried. 
@@ -1706,7 +1706,7 @@ succeeds, but then the node's Condor job cluster fails,
 the entire node, which includes the PRE script will be re-run.
 A job cluster may result in the submission of multiple Condor jobs.
 If one of the multiple jobs fails, the node fails.
-Therefore, a the Rescue DAG will
+Therefore, the Rescue DAG will
 re-run the entire node,
 implying the submission of the entire cluster of jobs,
 not just the one(s) that failed.
@@ -1928,7 +1928,7 @@ is specified.
 \item \Opt{DONT-OVERWRITE} Used to create multiple dot files, instead
 of overwriting the single one specified.
 To create file names,
-DAGMan uses the name of the file concatenated a period and an
+DAGMan uses the name of the file concatenated with a period and an
 integer. For example, the DAGMan input file line
 \begin{verbatim}
     DOT dag.dot DONT-OVERWRITE
@@ -1939,7 +1939,7 @@ causes files
 \File{dag.dot.2},
 etc. to be created.
 This option is
-most useful combined with the \Opt{UPDATE} option to
+most useful when combined with the \Opt{UPDATE} option to
 visualize the history of the DAG after it has finished executing. 
 
 \item \OptArg{INCLUDE}{path-to-filename} Includes the contents

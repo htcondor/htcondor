@@ -2219,12 +2219,12 @@ you have the following choices:
 \item Copy the needed files from AFS to either a local hard disk where 
 Condor can access them using remote system calls (if
 this is a standard universe job), or copy them to an NFS volume.
-\item If you must keep the files on AFS, then set a host ACL
+\item If the files must be kept on AFS, then set a host ACL
 (using the AFS \Prog{fs setacl} command) on the subdirectory to
 serve as the current working directory for the job.
-If a standard universe job, then the host ACL needs
+If this is a standard universe job, then the host ACL needs
 to give read/write permission to any process on the submit machine.
-If vanilla universe job, then you need to set the ACL such that any host 
+If this is a vanilla universe job, then set the ACL such that any host 
 in the pool can access the files without being authenticated.
 If you do not know how to use an AFS host ACL, ask the person at your 
 site responsible for the AFS configuration.
@@ -2274,7 +2274,7 @@ Condor attempts to flush the NFS cache on a submit machine in order to
 refresh a job's initial working directory.
 This allows files written by the job into an NFS mounted 
 initial working directory to be immediately visible on the submit machine.
-Since the flush operation can require multiple multiple round trips
+Since the flush operation can require multiple round trips
 to the NFS server, it is expensive.
 Therefore, a job may disable the flushing by setting
 \begin{verbatim}
@@ -2391,7 +2391,7 @@ chance to recover.
 Forward progress on the job will be lost.
 Too large a value,
 and an execute resource will be tied up waiting for the job lease to expire.
-The value should be chosen based on how long is the user willing to tie up
+The value should be chosen based on how long the user is willing to tie up
 the execute machines, how quickly submit machines come  back up,
 and how much work would be lost if the lease expires,
 the job is killed, and the job must start over from its beginning.
