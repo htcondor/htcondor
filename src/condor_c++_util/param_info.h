@@ -133,12 +133,12 @@ void param_info_hash_create(param_info_hash_t* param_info);
 // The function is called on every element as the hash table is iterated.
 // Continues as long as callPerElement returns 0, or until it iterates
 // everything.  user_data is passed to every call of callPerElement.
-void param_info_hash_iterate(param_info_hash_t* param_info,
+void param_info_hash_iterate(param_info_hash_t param_info,
 		int (*callPerElement) (param_info_t* /*value*/, void* /*user_data*/),
 		void* user_data);
 
 // Dump the whole hash table.
-void param_info_hash_dump(param_info_hash_t* param_info);
+void param_info_hash_dump(param_info_hash_t param_info);
 
 // Print out information for one given value.  Typed to be used with
 // param_info_hash_iterate.
