@@ -64,7 +64,7 @@ disables Chirp remote file access from execute machines.
   Fixed numerous, small, rare memory leaks.
 
 \item 
-  Fixed a bug where processor affinity settings were ignored if
+  Fixed a bug in which processor affinity settings were ignored if
   privilege separation was enabled.
 
 % gittrac 1329
@@ -73,9 +73,10 @@ disables Chirp remote file access from execute machines.
   the submit node always attempted to use the public network address
   of the submit machine.
 
-% gittrack 1405
-\item \MacroNI{TCP\_FORWARDING\_HOST} did not work in some situations because
-of Condor's attempts to automatically rewrite published addresses to
+% gittrac 1405
+\item The configuration variable \MacroNI{TCP\_FORWARDING\_HOST} did not work
+in some situations
+because of Condor's attempts to automatically rewrite published addresses to
 match the IP address of the network interface used to make the publication.
 
 % gittrac 1346
@@ -107,6 +108,22 @@ when run on a RHEL4 or Scientific Linux 4 machine.
 \item Fixed a bug in \Condor{rm} that caused it to misinterpret user names
 that begin with a digit, such as \Expr{1abc}.
 It incorrectly used them as cluster numbers. 
+
+% gittrac #1330
+\item Fixed a bug that could cause the \Condor{schedd} to crash if there
+were any idle scheduler universe jobs when files were staged into the
+\Condor{schedd} for a new job.
+
+% gittrac #1404
+\item Fixed a bug in the \Prog{nordugrid\_gahp} that could cause it to exit
+when connecting to a misconfigured LDAP server.
+
+% gittrac #1352
+\item Fixed a bug that prevented the \MacroNI{NEGOTIATOR\_MATCH\_LOG} from rotating.
+
+% gittrac #1413
+\item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. This bug is 
+present in all earlier 7.4.x Condor releases.
 
 \end{itemize}
 

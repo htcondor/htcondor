@@ -357,7 +357,7 @@ defined for \Arg{JobName}.
 
 \index{DAGMan!RETRY@\verb^$RETRY^ value}
 The variable \Env{\$RETRY} evaluates to an 
-integer value set to 0 first time a node is run,
+integer value set to 0 the first time a node is run,
 and is  incremented each time the node is retried. 
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried. 
@@ -925,7 +925,7 @@ of the macro as a command-line argument to the job.
     executable = A.exe
     log        = A.log
     error      = A.err
-    arguments  = $(state)
+    arguments  = "$(state)"
     queue
 \end{verbatim}
 \normalsize
@@ -1839,7 +1839,7 @@ succeeds, but then the node's Condor job cluster fails,
 the entire node, which includes the PRE script will be re-run.
 A job cluster may result in the submission of multiple Condor jobs.
 If one of the multiple jobs fails, the node fails.
-Therefore, a the Rescue DAG will
+Therefore, the Rescue DAG will
 re-run the entire node,
 implying the submission of the entire cluster of jobs,
 not just the one(s) that failed.
@@ -1950,7 +1950,7 @@ are relative to the current
 working directory when \Condor{submit\_dag} is run.  
 Note that 
 relative paths in submit description files can be modified by the submit command
-\SubmitCmd{initialdir}; see the \Condor{submit} manual page at
+\SubmitCmd{initialdir}; see the \Condor{submit} manual page within Chapter
 ~\ref{man-condor-submit} for more details.  The rest of this discussion
 ignores \SubmitCmd{initialdir}.
 
@@ -1960,7 +1960,7 @@ However, if running
 multiple DAGs with a single \Condor{dagman}, and each DAG is in its
 own directory, this will cause problems.  In this case,
 use the \Arg{-usedagdir} command-line argument to
-\Condor{submit\_dag} (see the \Condor{submit\_dag} manual page at
+\Condor{submit\_dag} (see the \Condor{submit\_dag} manual page within Chapter
 ~\ref{man-condor-submit-dag} for more details).
 This tells \Condor{dagman} to run each DAG
 as if \Condor{submit\_dag} had been run in the directory in which
@@ -2061,7 +2061,7 @@ is specified.
 \item \Opt{DONT-OVERWRITE} Used to create multiple dot files, instead
 of overwriting the single one specified.
 To create file names,
-DAGMan uses the name of the file concatenated a period and an
+DAGMan uses the name of the file concatenated with a period and an
 integer. For example, the DAGMan input file line
 \begin{verbatim}
     DOT dag.dot DONT-OVERWRITE
@@ -2072,7 +2072,7 @@ causes files
 \File{dag.dot.2},
 etc. to be created.
 This option is
-most useful combined with the \Opt{UPDATE} option to
+most useful when combined with the \Opt{UPDATE} option to
 visualize the history of the DAG after it has finished executing. 
 
 \item \OptArg{INCLUDE}{path-to-filename} Includes the contents
@@ -2178,6 +2178,48 @@ A drawback to having unique submit description files for each of the jobs
 is that there are lots of files, one for each job.
 
 \item[Single submit description file.]
+A single Condor submit description file might be used for all the many
+jobs of the parameter sweep.
+To distinguish the jobs and their associated distinct input and output files,
+the DAG input file assigns a unique identifier with the \Arg{VARS} keyword.
+\begin{verbatim}
+  # file sweep.dag
+  JOB job0 common.submit
+  VARS job0 runnumber="0"
+  JOB job1 common.submit
+  VARS job1 runnumber="1"
+  JOB job2 common.submit
+  VARS job2 runnumber="2"
+  .
+  .
+  .
+  JOB job999 common.submit
+  VARS job999 runnumber="999"
+\end{verbatim}
+
+The single submit description file for all these jobs utilizes the
+\Expr{runnumber} variable value in its identification of the job's
+files. 
+This submit description file might appear as
+\begin{verbatim}
+  # file common.submit
+  universe = vanilla
+  executable = /path/to/executable
+  log = job$(runnumber).log
+  input = job$(runnumber).in
+  output = job$(runnumber).out
+  notification = Never
+  arguments = "-$(runnumber)"
+  queue
+\end{verbatim}
+The job with \Expr{runnumber="8"} expects to find its input file \File{job8.in} 
+in the single, common directory, and it logs job events in \File{job8.log}
+and sends its output to \File{job8.out}.
+The executable is invoked with
+\begin{verbatim}
+  /path/to/executable -8
+\end{verbatim}
+
 \end{description}
 
 \MoreTodo
