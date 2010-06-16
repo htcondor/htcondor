@@ -49,13 +49,24 @@ An example of the output from \Condor{q} is
 \begin{verbatim}
 %  condor_q
 
--- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
- ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
- 127.0   raman           4/11 15:35   0+00:00:00 R  0   1.4  hello             
- 128.0   raman           4/11 15:35   0+00:02:33 I  0   1.4  hello             
+-- Submitter: submit.chtc.wisc.edu : <128.104.55.9:32772> : submit.chtc.wisc.edu
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD               
+711197.0   aragorn         1/15 19:18   0+04:29:33 H  0   0.0  script.sh         
+894381.0   frodo           3/16 09:06  82+17:08:51 R  0   439.5 elk elk.in        
+894386.0   frodo           3/16 09:06  82+20:21:28 R  0   219.7 elk elk.in        
+894388.0   frodo           3/16 09:06  81+17:22:10 R  0   439.5 elk elk.in        
+1086870.0   gollum          4/27 09:07   0+00:10:14 I  0   7.3  condor_dagman     
+1086874.0   gollum          4/27 09:08   0+00:00:01 H  0   0.0  RunDC.bat         
+1297254.0   legolas         5/31 18:05  14+17:40:01 R  0   7.3  condor_dagman     
+1297255.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman     
+1297256.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman     
+1297259.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman     
+1297261.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman     
+1302278.0   legolas         6/4  12:22   1+00:05:37 I  0   390.6 mdrun_1.sh        
+1304740.0   legolas         6/5  00:14   1+00:03:43 I  0   390.6 mdrun_1.sh        
+1304967.0   legolas         6/5  05:08   0+00:00:00 I  0   0.0  mdrun_1.sh        
 
-3 jobs; 2 idle, 1 running, 0 held
+14 jobs; 4 idle, 8 running, 2 held
 
 \end{verbatim} 
 \normalsize
@@ -69,7 +80,6 @@ means the the job is currently running.
 An \verb@I@ stands for idle. 
 The job is not running right
 now, because it is waiting for a machine to become available. 
-% A suspended job may have an \verb@S@ in the status column.
 The status
 \verb@H@ is the hold state. In the hold state,
 the job will not be scheduled to
@@ -77,24 +87,8 @@ run until it is released (see the \Condor{hold}
 reference page located on page~\pageref{man-condor-hold}
 and the \Condor{release}
 reference page located on page~\pageref{man-condor-release}).
-Older versions of Condor used a
-\verb@U@ in the status column to stand for unexpanded.
-In this state,
-a job has never 
-produced a checkpoint,
-and when the job starts running, it will start running from the
-beginning.
-Newer versions of Condor do not use the \verb@U@ state.
-
-The \verb@CPU_USAGE@ time reported for a job is the time that has been
-committed to the job.  It is not updated for a job until
-the job checkpoints. At that time, the job has made guaranteed forward 
-progress.  Depending upon how the site administrator configured the pool,
-several hours may pass between checkpoints, so do not worry if you do
-not observe the \verb@CPU_USAGE@ entry changing by the hour.
-Also note that this is actual CPU
-time as reported by the operating system; it is not time as
-measured by a wall clock.
+The \verb@RUN_TIME@ time reported for a job is the time that has been
+committed to the job.
 
 Another useful method of tracking the progress of jobs is through the
 user log.  If you have specified a \AdAttr{log} command in 
@@ -103,8 +97,7 @@ log file.  Various events such as execution commencement, checkpoint, eviction
 and termination are logged in the file.
 Also logged is the time at which the event occurred.
 
-% Karen's note:  degraded performance where?
-When your job begins to run, Condor starts up a \Condor{shadow} process
+When a job begins to run, Condor starts up a \Condor{shadow} process
 \index{condor\_shadow}
 \index{remote system call!condor\_shadow}
 on the submit machine.  The shadow process is the mechanism by which the
@@ -123,7 +116,7 @@ You can also find all the machines that are running your job through the
 \Condor{status} command.
 \index{Condor commands!condor\_status}
 For example, to find all the machines that are
-running jobs submitted by ``breach@cs.wisc.edu,'' type:
+running jobs submitted by \Expr{breach@cs.wisc.edu}, type:
 \footnotesize
 \begin{verbatim}
 %  condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"'

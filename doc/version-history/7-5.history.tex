@@ -148,11 +148,33 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   \Condor{off}, \Condor{on}, \Condor{reconfig}, \Condor{reschedule},
   \Condor{restart}, \Condor{set\_shutdown}, and \Condor{vacate}.
 
+%gittrac #1351
+\item File transfer plugins can be used for vm universe jobs. Notably,
+  \Expr{file://} URLs can be used to allow VM image files to be pre-staged
+  on the execute machine. The submit description file command 
+  \SubmitCmd{vmware\_dir} is now optional.
+  If it is not given, then all relevant VMware image files
+  must be listed in \SubmitCmd{transfer\_input\_files}, possibly as URLs.
+
+%gittrac #1403
+\item File transfers for CREAM grid universe jobs are now initiated by
+  the \Condor{gridmanager}. This removes the need for a GridFTP server
+  on the client machine.
+
+%gittrac #1403
+\item Improved the parallelism of file transfers for nordugrid jobs.
+
 %gittrac #1298
 \item Removed the distinction between regular and full reconfiguration
   of Condor daemons. Now, all reconfigurations are full and require the
   WRITE authorization level. \Condor{reconfig} accepts but ignores the
-  -full command-line argument.
+  \Opt{-full} command-line option.
+
+\item The \Prog{batch\_gahp}, used for pbs and lsf grid universe jobs, has been
+updated from version 1.12.2 to 1.16.0.
+
+\item \Condor{dagman} now prints a message to the \File{dagman.out} file
+when it truncates a node job user log file.
 
 \end{itemize}
 
@@ -162,7 +184,7 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
 
 \item The new configuration variable \Macro{JOB\_ROUTER\_LOCK}  specifies a
   lock file used to
-  ensure that multiple instances of \Condor{job\_router} never run
+  ensure that multiple instances of the \Condor{job\_router} never run
   with the same values of \MacroNI{JOB\_ROUTER\_NAME}.
   Multiple instances running
   with the same name could lead to mismanagement of routed jobs.
@@ -209,20 +231,33 @@ page~\pageref{man-condor-submit-job-ad-information-attrs} for details.
   the default value is displayed.
 
 % gittrac #1203
-\item Starting in Condor 7.5.1, using literals with a logical operator
+\item Starting in Condor version 7.5.1,
+  using literals with a logical operator
   in a ClassAd expression (for example, \Expr{1 || 0}) caused the expression
   to evaluate to the value \Expr{ERROR}. The previous behavior has been
   restored: zero values are treated as \Expr{False},
   and non-zero values are treated as \Expr{True}.
 
+
 % gittrac 1378
-\item Starting in 7.5.0, the \Condor{schedd} no longer supported queue
-  management commands when security negotiation was disabled
-  (for example, if \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}).
+\item Starting in Condor version 7.5.0,
+  the \Condor{schedd} no longer supported queue
+  management commands when security negotiation was disabled,
+  for example, if \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}.
 
 % gittrac 1395
-\item Fixed a bug introduced in 7.5.1.  ClassAd string literals containing
+\item Fixed a bug introduced in Condor version 7.5.1.
+ClassAd string literals containing
 characters with negative ASCII values were not accepted.
+
+% gittrac #1334
+\item Fixed a bug introduced in Condor version 7.5.0,
+which caused Condor to not renew
+job leases for CREAM grid jobs in most situations.
+
+% gittrac #1331
+\item Question marks occurring in a ClassAd string are no longer preceded
+by a backslash when the ClassAd is printed.
 
 \end{itemize}
 
