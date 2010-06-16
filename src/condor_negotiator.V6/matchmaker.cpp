@@ -62,10 +62,6 @@ typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
 MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
-//added by ameet - dirty hack - needs to be removed soon!!!
-//#include "../condor_c++_util/queuedbmanager.h"
-//QueueDBManager queueDBManager;
-
 static MyString MachineAdID(ClassAd * ad)
 {
 	ASSERT(ad);
@@ -129,9 +125,6 @@ Matchmaker ()
     DynQuotaMachConstraint = NULL;
 
 	groupQuotasHash = NULL;
-
-	strcpy(RejectsTable, "rejects");
-	strcpy(MatchesTable, "matches");
 
 	prevLHF = 0;
 	Collectors = 0;

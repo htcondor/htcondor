@@ -410,8 +410,6 @@ class Matchmaker : public Service
 		};
 		static int groupSortCompare(const void*, const void*);
 		
-		char RejectsTable[40];
-		char MatchesTable[40];
 		int prevLHF;
 };
 
