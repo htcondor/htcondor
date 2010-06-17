@@ -39,6 +39,7 @@ int		Termlog = 0;
 extern int		DebugFlags;
 extern FILE		*DebugFP;
 extern uint64_t		MaxLog[D_NUMLEVELS+1];
+extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern char		*_condor_DebugFlagNames[];
@@ -209,6 +210,20 @@ dprintf_config( const char *subsys )
 					free(pval);
 				} else {
 					MaxLog[debug_level] = 1024*1024;
+				}
+				
+				if (debug_level == 0) {
+					(void)sprintf(pname, "MAX_NUM_%s_LOG", subsys);
+				} else {
+					(void)sprintf(pname, "MAX_NUM_%s_%s_LOG", subsys,
+								  _condor_DebugFlagNames[debug_level-1]+2);
+				}
+				pval = param(pname);
+				if (pval != NULL) {
+					MaxLogNum[debug_level] = atoi(pval);
+					free(pval);
+				} else {
+					MaxLogNum[debug_level] = 1;
 				}
 
 				if (debug_level == 0) {

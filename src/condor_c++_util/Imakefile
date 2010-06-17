@@ -179,6 +179,7 @@ CONLIBAPI_OBJ = \
 	utc_time.o \
 	stat_wrapper.o \
 	stat_wrapper_internal.o \
+	../condor_util_lib/log_rotate.o \
 	../condor_util_lib/dprintf_common.o \
 	../condor_util_lib/dprintf_config.o \
 	../condor_util_lib/dprintf.o \
