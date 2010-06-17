@@ -190,9 +190,6 @@ transtimeout()
 	void *info = daemonCore->GetDataPtr();
 	ASSERT(info);
 	memcpy(&transaction,info,sizeof(condor__Transaction));
-	free(info);
-	info = NULL;
-
 	condor__abortTransaction(NULL, transaction, result);
 }
 
