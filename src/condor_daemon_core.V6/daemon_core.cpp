@@ -981,6 +981,7 @@ int DaemonCore::Cancel_Command( int command )
 			comTable[i].command_descrip = NULL;
 			free(comTable[i].handler_descrip);
 			comTable[i].handler_descrip = NULL;
+			nCommand--;
 			return TRUE;
 		}
 	}
