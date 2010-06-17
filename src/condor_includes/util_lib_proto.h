@@ -40,6 +40,8 @@ char* getExecPath( void );
 
 int rotate_file(const char *old_filename, const char *new_filename);
 
+int rotate_file_dprintf(const char *old_filename, const char *new_filename, int calledByDprintf);
+
 /// If new_filename exists, overwrite it.
 int copy_file(const char *old_filename, const char *new_filename);
 

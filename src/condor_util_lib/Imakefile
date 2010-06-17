@@ -51,7 +51,7 @@ FDPASS_OBJ = fdpass.o
 #endif
 
 #define ObjectFiles \
-	blankline.o do_connect.o except.o \
+	blankline.o do_connect.o except.o log_rotate.o \
 	dprintf.o dprintf_common.o dprintf_config.o \
 	ltrunc.o mkargv.o proc.o signames.o \
 	get_port_range.o \
