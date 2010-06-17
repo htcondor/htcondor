@@ -6553,7 +6553,9 @@ These macros affect the \Condor{negotiator}.
 \label{param:NegotiationCycleStatsLength}
 \item[\Macro{NEGOTIATION\_CYCLE\_STATS\_LENGTH}] Specifies how many
  recent negotiation cycles should be included in the history that is
- published in the \Condor{negotiator}'s ad.  The default is 3.  The
+ published in the \Condor{negotiator}'s ad.  The default is 3 and the
+ maximum allowed value is 100.  Setting this value to 0 disables
+ publication of negotiation cycle statistics.  The
  statistics about recent cycles are stored in several attributes per
  cycle.  Each of these attribute names will have a number appended to
  it to indicate how long ago the cycle happened, for example:
