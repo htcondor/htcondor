@@ -360,6 +360,10 @@ GahpServer::buffered_read( int fd, void *buf, int count )
 	ASSERT(count == 1);
 
 	if ( m_buffer_pos >= m_buffer_end ) {
+		// Also read from the gahp's stderr. Otherwise, we can potential
+		// deadlock, us reading from gahp's stdout and it writing to its
+		// stderr.
+		err_pipe_ready();
 		int rc = daemonCore->Read_Pipe(fd, m_buffer, m_buffer_size );
 		m_buffer_pos = 0;
 		if ( rc <= 0 ) {
@@ -1472,7 +1476,7 @@ GahpServer::command_version()
 	j = sizeof(m_gahp_version);
 	i = 0;
 	while ( i < j ) {
-		result = daemonCore->Read_Pipe(m_gahp_readfd, &(m_gahp_version[i]), 1 );
+		result = buffered_read(m_gahp_readfd, &(m_gahp_version[i]), 1 );
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
 			continue;
