@@ -6549,7 +6549,23 @@ These macros affect the \Condor{negotiator}.
   Sets the timeout that the negotiator uses on its network connections
   to the \Condor{schedd} and \Condor{startd}s.
   It is defined in seconds and defaults to 30.
-  
+
+\label{param:NegotiationCycleStatsLength}
+\item[\Macro{NEGOTIATION\_CYCLE\_STATS\_LENGTH}] Specifies how many
+ recent negotiation cycles should be included in the history that is
+ published in the \Condor{negotiator}'s ad.  The default is 3.  The
+ statistics about recent cycles are stored in several attributes per
+ cycle.  Each of these attribute names will have a number appended to
+ it to indicate how long ago the cycle happened, for example:
+ \AdAttr{LastNegotiationCycleDuration0},
+ \AdAttr{LastNegotiationCycleDuration1},
+ \AdAttr{LastNegotiationCycleDuration1}, \ldots.  The attribute
+ numbered 0 applies to the most recent negotiation cycle.  The
+ attribute numbered 1 applies to the next most recent negotiation
+ cycle, and so on.  See
+ page~\pageref{attr:LastNegotiationCycleActiveSubmitterCountX} for a
+ list of attributes that are published.
+
 \label{param:PriorityHalfLife}
 \item[\Macro{PRIORITY\_HALFLIFE}]
   This macro defines the half-life of the user priorities.  See
