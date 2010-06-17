@@ -29,22 +29,6 @@
 #include "../condor_procapi/processid.h"
 #include "../condor_procapi/procapi.h"
 
-//------------------------------------------------------------------------
-int util_getline(FILE *fp, char *line, int max) {
-  int c, i = 0;
-    
-  ASSERT( EOF  == -1 );
-  ASSERT( fp   != NULL );
-  ASSERT( line != NULL );
-  ASSERT( max  > 0 );      /* Need at least 1 slot for '\0' character */
-
-  for (c = getc(fp) ; c != '\n' && c != EOF ; c = getc(fp)) {
-    if ( !(i == 0 && isspace(c)) && (i+1 < max)) line[i++] = c;
-  }
-  line[i] = '\0';
-  return (i==0 && c==EOF) ? EOF : i;
-}
-
 //-----------------------------------------------------------------------------
 int util_popen (ArgList &args) {
 	MyString cmd; // for debug output
