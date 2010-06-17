@@ -239,7 +239,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	ad->InsertOrUpdate( buf );
 	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage->user_cpu_time );
 	ad->InsertOrUpdate( buf );
+
 	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage->max_image_size );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
 	ad->InsertOrUpdate( buf );
 
 		// Update our knowledge of how many processes the job has

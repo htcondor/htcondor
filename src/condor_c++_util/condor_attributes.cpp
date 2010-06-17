@@ -264,6 +264,7 @@ const char * const ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char * const ATTR_HOOK_KEYWORD             = "HookKeyword";
 const char * const ATTR_IDLE_JOBS                = "IdleJobs";
 const char * const ATTR_IMAGE_SIZE				 = "ImageSize";
+const char * const ATTR_RESIDENT_SET_SIZE        = "ResidentSetSize";
 const char * const ATTR_INTERACTIVE			 = "Interactive";
 const char * const ATTR_IS_DAEMON_CORE           = "IsDaemonCore";
 const char * const ATTR_IS_OWNER                 = "IsOwner";
