@@ -177,7 +177,7 @@ if ($type eq "RPM") {
 	############################################################################################
 
 	print "************************************************************\n";
-	print "Making drone RPM \n";
+	print "Making drone RPM/SRPM \n";
 	print "************************************************************\n";
 	
 	#Build area is already created by previous section	
@@ -206,24 +206,36 @@ if ($type eq "RPM") {
 					s|_DATE_|$rpm_date|g;" $build_area_path/SPECS/condor_drone.spec`;
 
 
-	print "Building RPM\n";
-	`$rpm_cmd --define="_topdir $build_area_path" -bb $build_area_path/SPECS/condor_drone.spec`;
+	print "Building RPM/SRPM\n";
+	#-ba will build both source and binary rpm
+	`$rpm_cmd --define="_topdir $build_area_path" -ba $build_area_path/SPECS/condor_drone.spec`;
 
 	$rpm_file = glob "$build_area_path/RPMS/noarch/condor*";
+	my $srpm_file = glob "$build_area_path/SRPMS/condor*";
 	
 	if (!defined ($rpm_file)) {
 		die "Drone RPM package not found";
+	}
+	if (!defined ($srpm_file)) {
+		die "Drone SRPM package not found";
 	}
 	
 	#Construct os-specific rpm name
 	$rpm_file =~ /.*(condor-drone.*?)(\.noarch.*)/;
 	my $rpm_name = "$1.$os$2";
 
-	print "Renamed RPM: $rpm_name\n";
+	#Construct os-specific rpm name
+	$srpm_file =~ /.*(condor-drone.*?)(\.src.*)/;
+	my $srpm_name = "$1.$os$2";
+
+	print "Renamed  RPM: $rpm_name\n";
+	print "Renamed SRPM: $srpm_name\n";
 	!system ("mv", "$rpm_file", "$binaries_dir/$rpm_name") or die "Cannot move package to public folder";
+	!system ("mv", "$srpm_file", "$binaries_dir/$srpm_name") or die "Cannot move source package to public folder";
    
 	print "************************************************************\n";
-	print "All done. Result package: $rpm_name \n";
+	print "All done. RPM package: $rpm_name \n";
+	print "         SRPM package: $srpm_name \n";
 	print "************************************************************\n";
 
 } else {
