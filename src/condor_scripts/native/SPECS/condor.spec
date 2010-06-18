@@ -166,10 +166,11 @@ move $PREFIX/sbin				/usr/sbin
 move $PREFIX/sql				/usr/share/condor/sql	
 move $PREFIX/src				/usr/src
 
-#Create RUN LOG LOCK 
+#Create RUN LOG LOCK CONFIG.D
 mkdir -p -m0755 "%{buildroot}"/var/run/condor
 mkdir -p -m0755 "%{buildroot}"/var/log/condor
 mkdir -p -m0755 "%{buildroot}"/var/lock/condor
+mkdir -p -m0755 "%{buildroot}"/etc/condor/config.d
 
 #Put the rest into documentation
 move $PREFIX				/usr/share/doc/%{name}-%{version}
@@ -206,6 +207,7 @@ mv $FILELIST.new $FILELIST
 #Configuration scripts
 %defattr(-,root,root,-)
 %dir %_sysconfdir/condor/
+%dir %_sysconfdir/condor/config.d/
 %config(noreplace) %_sysconfdir/condor/condor_config
 %config(noreplace) %_sysconfdir/condor/condor_config.local
 
@@ -265,6 +267,7 @@ VAR=$RPM_INSTALL_PREFIX2
 #Patch config file if relocated
 
 if [ $USR != "/usr" ] ; then
+  #Patch parameters which are affected by /usr relocation
   perl -p -i -e "s:^CONDOR_CONFIG_VAL=.*:CONDOR_CONFIG_VAL=$USR/bin/condor_config_val:" $ETC/sysconfig/condor 
   perl -p -i -e "s:^RELEASE_DIR(\s*)=.*:RELEASE_DIR\$1= $USR:" $ETC/condor/condor_config   
 
@@ -277,12 +280,15 @@ if [ $USR != "/usr" ] ; then
 fi
 
 if [ $VAR != "/var" ] ; then
+  #Patch parameters which are affected by /var relocation
   perl -p -i -e "s:^LOCAL_DIR(\s*)=.*:LOCAL_DIR\$1= $VAR:" $ETC/condor/condor_config   
 fi
 
 if [ $ETC != "/etc" ] ; then
-  perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/sysconfig/condor 
-  perl -p -i -e "s:^LOCAL_CONFIG_FILE(\s*)=\s*/etc(.*):LOCAL_CONFIG_FILE\$1= $ETC\$2:" $ETC/condor/condor_config 
+  #Patch parameters which are affected by /etc relocation
+  perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/sysconfig/condor
+  perl -p -i -e "s:^LOCAL_CONFIG_FILE(\s*)=\s*/etc(.*):LOCAL_CONFIG_FILE\$1= $ETC\$2:" $ETC/condor/condor_config
+  perl -p -i -e "s:^LOCAL_CONFIG_DIR(\s*)=\s*/etc(.*):LOCAL_CONFIG_DIR\$1= $ETC\$2:" $ETC/condor/condor_config
   
   #Install init script and sysconfig only if this is the first instance
   if [ $1 = 1 ]; then
@@ -345,8 +351,8 @@ fi
 * _DATE_  <condor-users@cs.wisc.edu> - _VERSION_-_REVISION_
 - Please see version history at http://www.cs.wisc.edu/condor/manual/v_VERSION_/8_Version_History.html
 
-* Sun Jan 24 2010  <kooburat@cs.wisc.edu> - 7.5.0-2
+* Sun Jan 24 2010  <kooburat@cs.wisc.edu> - 7.4.0-2
 - Make RPM relocatable and support multiple version install
 
 * Fri Nov 13 2009  <kooburat@cs.wisc.edu> - 7.4.0-1
-- Initial release based on Fedora's RPM by <matt@redhat>
+- Initial release is based on Fedora's RPM by <matt@redhat>
