@@ -30,7 +30,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gt #1460
+% gittrac #1460
 \item Decreased the CPU utilization of \Condor{dagman} when it is
 	submitting ready jobs into Condor.
 
@@ -40,12 +40,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gittrack 1458
+% gittrac 1458
 \item The new configuration variable
-  \MacroNI{NEGOTIATION\_CYCLE\_STATS\_LENGTH} specifies how many
+  \Macro{NEGOTIATION\_CYCLE\_STATS\_LENGTH} specifies how many
   recent negotiation cycles should be included in the history that is
   published in the \Condor{negotiator}'s ad.  The default is 3.  See
-  page~\pageref{attr:LastNegotiationCycleActiveSubmitterCountX} for a
+  page~\pageref{param:NegotiationCycleStatsLength} for the
+  definition of this configuration variable, and see
+  page~\pageref{attr:LastNegotiationCycleActiveSubmitterCount<X>} for a
   list of attributes that are published.
 
 

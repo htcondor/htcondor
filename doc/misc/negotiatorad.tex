@@ -6,6 +6,58 @@
   started, represented as the number of second elapsed since
     the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
+
+\label{attr:LastNegotiationCycleActiveSubmitterCount<X>}
+\index{ClassAd Negotiator attribute!LastNegotiationCycleActiveSubmitterCount<X>}
+\item[\AdAttr{LastNegotiationCycleActiveSubmitterCount<X>}:] The integer
+  number of submitters
+  the \Condor{negotiator} attempted to negotiate with in the negotiation cycle.
+  The number \AdAttr{<X>} appended to the attribute name indicates how
+  many negotiation cycles ago this cycle happened.
+
+\index{ClassAd Negotiator attribute!LastNegotiationCycleDuration<X>}
+\item[\AdAttr{LastNegotiationCycleDuration<X>}:] The number of seconds
+  that it took to complete the negotiation cycle.  The number \AdAttr{<X>}
+  appended to the attribute name indicates how many negotiation cycles
+  ago this cycle happened.
+
+\index{ClassAd Negotiator attribute!LastNegotiationCycleMatches<X>}
+\item[\AdAttr{LastNegotiationCycleMatches<X>}:] The number of successful
+  matches that were made in the negotiation cycle.  The number \AdAttr{<X>}
+  appended to the attribute name indicates how many negotiation cycles
+  ago this cycle happened.
+
+\index{ClassAd Negotiator attribute!LastNegotiationCycleRejections<X>}
+\item[\AdAttr{LastNegotiationCycleDuration<X>}:] The number of
+  rejections that occurred in the negotiation cycle.  The number \AdAttr{<X>}
+  appended to the attribute name indicates how many negotiation cycles
+  ago this cycle happened.
+
+\index{ClassAd Negotiator attribute!LastNegotiationCycleStartTime<X>}
+\item[\AdAttr{LastNegotiationCycleStartTime<X>}:]
+  The time, represented as the number of second elapsed since the Unix
+  epoch (00:00:00 UTC, Jan 1, 1970), at which the negotiation cycle
+  started.  The number \AdAttr{<X>} appended to the attribute name
+  indicates how many negotiation cycles ago this cycle happened.
+
+\index{ClassAd Negotiator attribute!LastNegotiationCycleSubmittersFailed<X>}
+\item[\AdAttr{LastNegotiationCycleSubmittersFailed<X>}:] A string containing
+  a space and comma-separated list of the names of all submitters who
+  failed to negotiate in the negotiation cycle.  One possible cause of
+  failure is a communication timeout.  This list does not include
+  submitters who ran out of time due
+  to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}.  Those are listed
+  separately in \AdAttr{LastNegotiationCycleSubmittersOutOfTime<X>}.
+  The number \AdAttr{<X>} appended to the attribute name indicates how
+  many negotiation cycles ago this cycle happened.
+
+\index{ClassAd Negotiator attribute!LastNegotiationCycleSubmittersOutOfTime<X>}
+\item[\AdAttr{LastNegotiationCycleSubmittersOutOfTime<X>}:] A string containing
+  a space and comma-separated list of the names of all submitters who
+  ran out of time due to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}
+  in the negotiation cycle.  The number \AdAttr{<X>} appended to the
+  attribute name indicates how many negotiation cycles ago this cycle
+  happened.
 \index{ClassAd Negotiator attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified 
   host name.
@@ -41,57 +93,6 @@
   and incremented with each ClassAd update sent to the \Condor{collector}.
   The \Condor{collector} uses this value to sequence the updates it
   receives.
-
-\label{attr:LastNegotiationCycleActiveSubmitterCountX}
-\index{ClassAd Negotiator attribute!LastNegotiationCycleActiveSubmitterCountX}
-\item[\AdAttr{LastNegotiationCycleActiveSubmitterCountX}:] The number of submitters
-  the negotiator attempted to negotiate with in the negotiation cycle.
-  The number \AdAttr{X} appended to the attribute name indicates how
-  many negotiation cycles ago this cycle happened.
-
-\index{ClassAd Negotiator attribute!LastNegotiationCycleDurationX}
-\item[\AdAttr{LastNegotiationCycleDurationX}:] The number of seconds
-  that it took to complete the negotiation cycle.  The number \AdAttr{X}
-  appended to the attribute name indicates how many negotiation cycles
-  ago this cycle happened.
-
-\index{ClassAd Negotiator attribute!LastNegotiationCycleMatchesX}
-\item[\AdAttr{LastNegotiationCycleMatchesX}:] The number of successful
-  matches that were made in the negotiation cycle.  The number \AdAttr{X}
-  appended to the attribute name indicates how many negotiation cycles
-  ago this cycle happened.
-
-\index{ClassAd Negotiator attribute!LastNegotiationCycleRejectionsX}
-\item[\AdAttr{LastNegotiationCycleDurationX}:] The number of
-  rejections that occurred in the negotiation cycle.  The number \AdAttr{X}
-  appended to the attribute name indicates how many negotiation cycles
-  ago this cycle happened.
-
-\index{ClassAd Negotiator attribute!LastNegotiationCycleStartTimeX}
-\item[\AdAttr{LastNegotiationCycleStartTimeX}:]
-  The time, represented as the number of second elapsed since the Unix
-  epoch (00:00:00 UTC, Jan 1, 1970), at which the negotiation cycle
-  started.  The number \AdAttr{X} appended to the attribute name
-  indicates how many negotiation cycles ago this cycle happened.
-
-\index{ClassAd Negotiator attribute!LastNegotiationCycleSubmittersFailedX}
-\item[\AdAttr{LastNegotiationCycleSubmittersFailedX}:] A string containing
-  a space and comma-separated list of the names of all submitters who
-  failed to negotiate in the negotiation cycle.  One possible cause of
-  failure is a communication timeout.  This list does not include
-  submitters who ran out of time due
-  to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}.  Those are listed
-  separately in \AdAttr{LastNegotiationCycleSubmittersOutOfTimeX}.
-  The number \AdAttr{X} appended to the attribute name indicates how
-  many negotiation cycles ago this cycle happened.
-
-\index{ClassAd Negotiator attribute!LastNegotiationCycleSubmittersOutOfTimeX}
-\item[\AdAttr{LastNegotiationCycleSubmittersOutOfTimeX}:] A string containing
-  a space and comma-separated list of the names of all submitters who
-  ran out of time due to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}
-  in the negotiation cycle.  The number \AdAttr{X} appended to the
-  attribute name indicates how many negotiation cycles ago this cycle
-  happened.
 
 \end{description}
 
