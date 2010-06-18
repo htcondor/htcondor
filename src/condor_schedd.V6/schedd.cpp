@@ -1129,6 +1129,12 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  m_ad->InsertOrUpdate(tmp);
 
+#if HAVE_DLOPEN
+	// update plugins
+	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
+	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
+
 		// Update collectors
 	  int num_udates = 
 		  daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
