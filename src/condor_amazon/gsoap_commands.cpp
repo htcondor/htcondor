@@ -177,8 +177,8 @@ AmazonRequest::SetupSoap(void)
 		return false;
 	}
 
-	char *ca_file = param("SOAP_SSL_CA_FILE");
-	char *ca_dir = param("SOAP_SSL_CA_DIR");;
+	const char *ca_file = getenv("SOAP_SSL_CA_FILE");
+	const char *ca_dir = getenv("SOAP_SSL_CA_DIR");;
 	if (soap_ssl_client_context(m_soap, SOAP_SSL_DEFAULT,
 				    NULL,
 				    NULL,
@@ -188,8 +188,6 @@ AmazonRequest::SetupSoap(void)
 	{
 	    soap_print_fault(m_soap, stderr);
 	}
-	free(ca_file);
-	free(ca_dir);
 
 	// Timestamp must be signed, the "Timestamp" value just needs
 	// to be non-NULL
