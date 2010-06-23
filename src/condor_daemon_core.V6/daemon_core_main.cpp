@@ -265,6 +265,17 @@ DC_Exit( int status, const char *shutdown_program )
 		exit_status = DAEMON_NO_RESTART;
 	}
 
+#ifndef WIN32
+	// unregister our signal handlers in case some 3rd-party lib
+	// was masking signals on us...no late arrivals
+	install_sig_handler(SIGCHLD,SIG_DFL);
+	install_sig_handler(SIGHUP,SIG_DFL);
+	install_sig_handler(SIGTERM,SIG_DFL);
+	install_sig_handler(SIGQUIT,SIG_DFL);
+	install_sig_handler(SIGUSR1,SIG_DFL);
+	install_sig_handler(SIGUSR2,SIG_DFL);
+#endif /* ! WIN32 */
+
 		// Now, delete the daemonCore object, since we allocated it. 
 	unsigned long	pid = daemonCore->getpid( );
 	delete daemonCore;
