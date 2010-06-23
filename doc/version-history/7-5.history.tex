@@ -21,7 +21,7 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Condor version 7.5.3 not yet released.
-%\item Condor version 7.5.3 released on Month Date, 2010.
+%\item Condor version 7.5.3 released on June 23, 2010.
 
 \end{itemize}
 
@@ -131,6 +131,14 @@ for details.
 be overriden by higher levels in the DAG splicing structure.
 See section~\ref{sec:DAG-node-category} for details.
 
+%gittrac 1158
+\item Daemon logs can now be rotated several times instead of only once 
+  into a single \File{.old} file. In order to do so, the newly introduced 
+  configuration variables \Macro{MAX\_NUM\_<SUBSYS>\_LOG} need to be set 
+  to a value greater than 1. The file endings will be ISO timestamps, wheras
+  the current oldest rotated file will still have the ending \File{.old}.
+ 
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -171,6 +179,12 @@ See section~\ref{sec:DAG-node-category} for details.
   reduce overhead and can allow the \Condor{schedd} to achieve higher
   job completion rates.  The default is 3600, one hour.  The value 0
   causes \Condor{shadow} to exit after running a single job.
+
+%gittrac 1158  
+\item The new configuration variable \Macro{MAX\_NUM\_<SUBSYS>\_LOG} 
+  will determine how often the daemon log of \Macro{SUBSYS} will rotate.
+  The default value is 1 which leads to the old behavior of a single 
+  rotation into a \emph{.old} file.
 
 \end{itemize}
 

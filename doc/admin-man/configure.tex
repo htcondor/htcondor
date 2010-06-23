@@ -1353,12 +1353,22 @@ of the subsystem corresponding to the daemon.
 \item[\Macro{MAX\_<SUBSYS>\_LOG}]
   Controls the maximum length in bytes to which a
   log will be allowed to grow.  Each log file will grow to the
-  specified length, then be saved to a file with the suffix
-  \File{.old}.  The \File{.old}
-  files are overwritten each time the log is saved, thus the maximum
-  space devoted to logging for any one program will be twice the
-  maximum length of its log file.  A value of 0 specifies that the
-  file may grow without bounds.  The default is 1 Mbyte.
+  specified length, then be saved to a file with an ISO timestamp 
+  suffix. The oldest rotated file receives the ending \File{.old}. 
+  The \File{.old} files are overwritten each time the maximum 
+  number of rotated files (determined by \ref{param:MaxNumSubsysLog}) 
+  is exceeded. Thus the maximum space devoted to logging for 
+  any one program will be \Macro{MAX\_NUM\_<SUBSYS>\_LOG} + 1 times 
+  the maximum length of its log file.  A value of 0 specifies that 
+  the file may grow without bounds. The default is 1 Mbyte.
+ 
+\label{param:MaxNumSubsysLog}
+\item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]
+  Controls the maximum number of rotatations a log file 
+  is allowed to perform before the oldest one will be 
+  rotated away. Thus, at most \Macro{MAX\_NUM\_<SUBSYS>\_LOG} + 1
+  log files of the same program coexist at a given time.
+  The default value is 1.
 
 \label{param:TruncSubsysLogOnOpen}
 \item[\Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}]
