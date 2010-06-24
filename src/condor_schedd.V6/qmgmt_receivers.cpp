@@ -620,7 +620,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		ClassAd *ad;
+		ClassAd *ad = NULL;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -651,8 +651,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			// the schedd's canonical copy.
 			if ( cluster_ad ) {
 				ad = new ClassAd(*cluster_ad);			
-			} else {
-				ad = NULL;
 			}
 		}
 		terrno = errno;
