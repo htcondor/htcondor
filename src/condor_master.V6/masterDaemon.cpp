@@ -1414,7 +1414,7 @@ Daemons::Daemons()
 	immediate_restart = FALSE;
 	immediate_restart_master = FALSE;
 	prevLHF = 0;
-	master = -1;
+	master = NULL;
 }
 
 

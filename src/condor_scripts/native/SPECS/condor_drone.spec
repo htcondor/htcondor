@@ -82,7 +82,7 @@ function move {
   _dest_dir=$(dirname $_dest)
   mkdir -p "%{buildroot}$_dest_dir"
   #Treat target folder as normal file
-  mv $_src "%{buildroot}$_dest"
+  cp $_src "%{buildroot}$_dest"
 
 }
 
@@ -171,4 +171,4 @@ fi
 
 %changelog
 * _DATE_  <condor-users@cs.wisc.edu> - _VERSION_-_REVISION_
-- Please see version history in Condor manual http://www.cs.wisc.edu/condor/manual
+- Please see version history at http://www.cs.wisc.edu/condor/manual/v_VERSION_/8_Version_History.html

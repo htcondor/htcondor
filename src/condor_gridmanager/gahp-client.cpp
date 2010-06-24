@@ -689,6 +689,20 @@ GahpServer::Startup()
 		free( tmp_char );
 	}
 
+	// For amazon ec2 ca authentication
+	tmp_char = param("SOAP_SSL_CA_FILE");
+	if( tmp_char ) {
+		newenv.SetEnv( "SOAP_SSL_CA_FILE", tmp_char );
+		free( tmp_char );
+	}
+
+	// For amazon ec2 ca authentication
+	tmp_char = param("SOAP_SSL_CA_DIR");
+	if( tmp_char ) {
+		newenv.SetEnv( "SOAP_SSL_CA_DIR", tmp_char );
+		free( tmp_char );
+	}
+
 		// Now register a reaper, if we haven't already done so.
 		// Note we use ReaperHandler instead of ReaperHandlercpp
 		// for the callback prototype, because our handler is 

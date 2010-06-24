@@ -1002,8 +1002,12 @@ Daemon::locate( void )
 		setSubsystem( "HAD" );
 		rval = getDaemonInfo( HAD_AD );
 		break;
+	case DT_KBDD:
+		setSubsystem( "KBDD" );
+		rval = getDaemonInfo( NO_AD );
+		break;
 	default:
-		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
+		EXCEPT( "Unknown daemon type (%d) in Daemon::locate", (int)_type );
 	}
 
 	if( ! rval) {
