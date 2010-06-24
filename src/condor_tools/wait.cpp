@@ -162,10 +162,6 @@ int main( int argc, char *argv[] )
 	int process=ANY_NUMBER;
 	int subproc=ANY_NUMBER;
 
-	int submitted=0;
-	int aborted=0;
-	int completed=0;
-
 	if( job_name ) {
 		int fields = sscanf(job_name,"%d.%d.%d",&cluster,&process,&subproc);
 		if(fields>=1 && fields<=3) {
@@ -177,16 +173,30 @@ int main( int argc, char *argv[] )
 	}
 	
 	dprintf(D_FULLDEBUG,"Reading log file %s\n",log_file_name);
-	ReadUserLog log;
+	int submitted, aborted, completed, flagged;
+	FILE *sec_fp = NULL;
+	int pos, nPos;
+rescue :
+	submitted=0;
+	aborted=0;
+	completed=0;
+	flagged = 0;
+	ReadUserLog log ;
 	HashTable<MyString,MyString> table(127,MyStringHash);
-
+	
 	if(log.initialize(log_file_name)) {
+		sec_fp = safe_fopen_wrapper(log_file_name, "r", 0644);
+		fseek (sec_fp, 0, SEEK_END);
+		pos = ftell(sec_fp); 
+		nPos = pos;
 		while(1) {
+			
 			ULogEventOutcome outcome;
 			ULogEvent *event;
-
 			outcome = log.readEvent(event);
+			
 			if(outcome==ULOG_OK) {
+				flagged = 0;
 				char key[1024];
 				sprintf(key,"%d.%d.%d",event->cluster,event->proc,event->subproc);
 				MyString str(key);
@@ -213,6 +223,21 @@ int main( int argc, char *argv[] )
 					EXIT_SUCCESS;
 				}
 			} else {
+				// did something change in the file since our last visit?
+				fseek(sec_fp, 0, SEEK_END);
+				nPos = ftell(sec_fp);
+				if (flagged == 1) {
+					fclose(sec_fp);
+					dprintf(D_FULLDEBUG, "INFO: File %s changed but userLog reader could not read another event. We are reinitializing userLog reader. \n", log_file_name);
+					// reinitialize the user log, we ended up here a second time 
+					goto rescue;
+				}
+				if ( nPos != pos ){
+					pos = nPos;
+					// we do not want to retry every time we are in a waiting sleep cycle, therefore flag a change
+					flagged = 1;
+				}
+				
 				dprintf(D_FULLDEBUG,"%d submitted %d completed %d aborted %d remaining\n",submitted,completed,aborted,submitted-completed-aborted);
 				if(table.getNumElements()==0) {
 					if(submitted>0) {
@@ -249,9 +274,11 @@ int main( int argc, char *argv[] )
 					log.synchronize();
 					dprintf(D_FULLDEBUG,"No more events, sleeping for %ld seconds\n", (long)sleeptime);
 					sleep(sleeptime);
+					
 				}
 			}
 		}
+		fclose(sec_fp);
 	} else {
 		fprintf(stderr,"Couldn't open %s: %s\n",log_file_name,strerror(errno));
 	}
