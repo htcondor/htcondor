@@ -128,15 +128,15 @@ for details.
 
 %gittrac 1410
 \item \Condor{dagman} now allows category throttles in splices to
-be overriden by higher levels in the DAG splicing structure.
+be overridden by higher levels in the DAG splicing structure.
 See section~\ref{sec:DAG-node-category} for details.
 
 %gittrac 1158
 \item Daemon logs can now be rotated several times instead of only once 
   into a single \File{.old} file. In order to do so, the newly introduced 
-  configuration variables \Macro{MAX\_NUM\_<SUBSYS>\_LOG} need to be set 
-  to a value greater than 1. The file endings will be ISO timestamps, wheras
-  the current oldest rotated file will still have the ending \File{.old}.
+  configuration variable \Macro{MAX\_NUM\_<SUBSYS>\_LOG} needs to be set 
+  to a value greater than 1. The file endings will be ISO timestamps, and
+  the oldest rotated file will still have the ending \File{.old}.
  
 
 \end{itemize}
@@ -182,9 +182,9 @@ See section~\ref{sec:DAG-node-category} for details.
 
 %gittrac 1158  
 \item The new configuration variable \Macro{MAX\_NUM\_<SUBSYS>\_LOG} 
-  will determine how often the daemon log of \Macro{SUBSYS} will rotate.
+  will determine how often the daemon log of \MacroNI{SUBSYS} will rotate.
   The default value is 1 which leads to the old behavior of a single 
-  rotation into a \emph{.old} file.
+  rotation into a \File{.old} file.
 
 \end{itemize}
 
