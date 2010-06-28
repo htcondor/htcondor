@@ -7446,7 +7446,7 @@ int DaemonCore::Create_Process(
 		/** since we do not actually know how long the extension of
 			the file is, we'll need to hunt down the '.' in the path
 			*/
-		extension = strrchr ( executable, '.' );
+		extension = strrchr ( condor_basename(executable), '.' );
 
 		if ( !extension ) {
 

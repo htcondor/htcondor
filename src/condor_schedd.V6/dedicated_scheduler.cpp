@@ -2082,10 +2082,9 @@ DedicatedScheduler::addToSchedulingGroup(ClassAd *r) {
 	if (group) {
 		if (!scheduling_groups.contains(group)) {
 			// add it to our list of groups, if it isn't already there
-			scheduling_groups.append(group); // transfers ownership
-		} else {
-			free(group);
+			scheduling_groups.append(group); // doesn't transfer ownership
 		}
+		free(group);
 	}
 }
 
@@ -2478,6 +2477,13 @@ DedicatedScheduler::computeSchedule( void )
 
 		if (want_groups) {
 			satisfyJobWithGroups(jobs, cluster, nprocs);
+			
+ 				// we're done with these, safe to delete
+			delete idle_candidates;
+			idle_candidates = NULL;
+
+			delete idle_candidates_jobs;
+			idle_candidates_jobs = NULL;
 			continue; // on to the next job
 		}
 
