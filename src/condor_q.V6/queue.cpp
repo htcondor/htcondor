@@ -1664,7 +1664,7 @@ format_cpu_util (float utime, AttrList *ad)
 	int ckpt_time = 0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
 	if (ckpt_time == 0) return " [??????]";
-	float util = (ckpt_time) ? utime/ckpt_time*100.0 : 0.0;
+	float util = utime/ckpt_time*100.0;
 	if (util > 100.0) util = 100.0;
 	else if (util < 0.0) return " [??????]";
 	sprintf(result_format, "  %6.1f%%", util);

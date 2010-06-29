@@ -168,6 +168,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		// Don't print any waiting node reports until we're done with
 		// recovery mode.
 	_pendingReportInterval = -1;
+	_lastPendingNodePrintTime = 0;
+	_lastEventTime = 0;
 
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 

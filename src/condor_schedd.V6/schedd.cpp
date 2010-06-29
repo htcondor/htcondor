@@ -6858,7 +6858,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		dprintf( D_ALWAYS, "Trying to reconnect but you do not have a "
 				 "condor_shadow that will work, aborting.\n" );
 		noShadowForJob( srec, NO_SHADOW_RECONNECT );
-		delete( shadow_obj );
 		free(shadow_path);
 		return;
 	}

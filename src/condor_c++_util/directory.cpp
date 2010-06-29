@@ -737,7 +737,7 @@ Directory::Next()
 		if( strcmp("..",dirent->d_name) == MATCH ) {
 			continue;
 		}
-		if ( dirent->d_name ) {
+		{
 			path = curr_dir;
 			path += DIR_DELIM_CHAR;
 			path += dirent->d_name;
