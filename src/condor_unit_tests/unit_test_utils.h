@@ -27,9 +27,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-// Global emitter declaration
-extern class Emitter e;
-
 bool utest_sock_eq_octet( struct in_addr* address, unsigned char oct1, unsigned char oct2, unsigned char oct3, unsigned char oct4 );
 
 /*  Prints TRUE or FALSE depending on if the input indicates success or failure */
@@ -70,4 +67,3 @@ compat_classad::ClassAd* get_classad_from_file();
 
 /* Originally from condor_c++_util/test_old_classads.cpp*/
 bool floats_close( float one, float two, float diff = .0001);
-

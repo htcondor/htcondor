@@ -24,8 +24,6 @@
 #include "unit_test_utils.h"
 #include "emit.h"
 
-class Emitter e;
-
 bool utest_sock_eq_octet( 	struct in_addr* address,
 							unsigned char oct1,
 							unsigned char oct2,

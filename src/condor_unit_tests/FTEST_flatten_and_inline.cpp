@@ -65,8 +65,9 @@ static bool test_equivalence_complex_list(void);
 
 
 bool FTEST_flatten_and_inline(void) {
-	e.emit_function("bool FlattenAndInline( const ExprTree *tree , Value &val , ExprTree *&fexpr ) const");
-	e.emit_comment("Note that these tests are not exhaustive, but are "
+	emit_function("bool FlattenAndInline( const ExprTree *tree , Value &val , "
+		"ExprTree *&fexpr ) const");
+	emit_comment("Note that these tests are not exhaustive, but are "
 		"sufficient for testing the basics of FlattenAndInline");
 	
 		// driver to run the tests and all required setup
@@ -99,14 +100,12 @@ bool FTEST_flatten_and_inline(void) {
 	driver.register_function(test_equivalence_complex_list);
 
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 
 static bool test_empty_simple_return() {
-	e.emit_test("Does FlattenAndInline return true when passed a simple "
+	emit_test("Does FlattenAndInline return true when passed a simple "
 		"ExprTree on an empty ClassAd?");
 
 	classad::ClassAd classad;
@@ -119,15 +118,15 @@ static bool test_empty_simple_return() {
 	unparser.Unparse(expr_string, expr);
 	unparser.Unparse(classad_string, &classad);
 	bool flattenResult = classad.FlattenAndInline(expr, value, fexpr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(flattenResult));
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(flattenResult));
 	if(!flattenResult) {
 		delete expr; delete fexpr;
 		FAIL;
@@ -137,7 +136,7 @@ static bool test_empty_simple_return() {
 }
 
 static bool test_empty_simple_value() {
-	e.emit_test("Does FlattenAndInline set the value to be the flattened "
+	emit_test("Does FlattenAndInline set the value to be the flattened "
 		"simple ExprTree's value on an empty ClassAd?");
 
 	classad::ClassAd classad;
@@ -152,15 +151,15 @@ static bool test_empty_simple_value() {
 	
 	classad.FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Value", expr_string.c_str());
-	e.emit_output_actual_header();
-	e.emit_param("Value", value_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Value", expr_string.c_str());
+	emit_output_actual_header();
+	emit_param("Value", value_string.c_str());
 	if(expr_string.compare(value_string)) {
 		delete expr; delete fexpr;
 		FAIL;
@@ -170,7 +169,7 @@ static bool test_empty_simple_value() {
 }
 
 static bool test_empty_simple_flattened_expression() {
-	e.emit_test("Does FlattenAndInline set fexpr to NULL when the simple "
+	emit_test("Does FlattenAndInline set fexpr to NULL when the simple "
 		"ExprTree is flattened to a single value on an empty ClassAd?");
 
 	classad::ClassAd classad;
@@ -186,15 +185,15 @@ static bool test_empty_simple_flattened_expression() {
 	classad.FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
 
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("fexpr is NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("fexpr is NULL", tfstr(fexpr == NULL));
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("fexpr is NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("fexpr is NULL", tfstr(fexpr == NULL));
 	if(fexpr != NULL) {
 		delete expr; delete fexpr;
 		FAIL;
@@ -205,7 +204,7 @@ static bool test_empty_simple_flattened_expression() {
 }
 
 static bool test_non_empty_simple_return() {
-	e.emit_test("Does FlattenAndInline return true when passed a simple "
+	emit_test("Does FlattenAndInline return true when passed a simple "
 		"ExprTree on a non-empty ClassAd?");
 
 	classad::ClassAd *classad;
@@ -221,15 +220,15 @@ static bool test_non_empty_simple_return() {
 	expr = parser.ParseExpression(expr_string);
 
 	bool flattenResult = classad->FlattenAndInline(expr, value, fexpr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(flattenResult));
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(flattenResult));
 	if(!flattenResult) {
 		delete expr; delete fexpr;
 		FAIL;
@@ -239,7 +238,7 @@ static bool test_non_empty_simple_return() {
 }
 
 static bool test_non_empty_simple_value() {
-	e.emit_test("Does FlattenAndInline set the value to be the flattened "
+	emit_test("Does FlattenAndInline set the value to be the flattened "
 		"simple ExprTree's value on a non-empty ClassAd?");
 
 	classad::ClassAd *classad;
@@ -259,15 +258,15 @@ static bool test_non_empty_simple_value() {
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Value", "1");
-	e.emit_output_actual_header();
-	e.emit_param("Value", value_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Value", "1");
+	emit_output_actual_header();
+	emit_param("Value", value_string.c_str());
 	if(value_string.compare("1")) {
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -277,7 +276,7 @@ static bool test_non_empty_simple_value() {
 }
 
 static bool test_non_empty_simple_flattened_expression() {
-	e.emit_test("Does FlattenAndInline set fexpr to NULL when the simple "
+	emit_test("Does FlattenAndInline set fexpr to NULL when the simple "
 		"ExprTree is flattened to a single value on a non-empty ClassAd?");
 
 	classad::ClassAd *classad;
@@ -297,15 +296,15 @@ static bool test_non_empty_simple_flattened_expression() {
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("fexpr is NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("fexpr is NULL", tfstr(fexpr == NULL));
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("fexpr is NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("fexpr is NULL", tfstr(fexpr == NULL));
 	if(fexpr != NULL) {
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -316,8 +315,8 @@ static bool test_non_empty_simple_flattened_expression() {
 
 //This test segfaults!
 static bool test_null_expression() {
-	e.emit_test("Test FlattenAndInline when passing a null expression.");
-	e.emit_alert("Causes segfault! See ticket #1379");
+	emit_test("Test FlattenAndInline when passing a null expression.");
+	emit_alert("Causes segfault! See ticket #1379");
 /*
 	classad::ClassAd classad;
 	classad::ExprTree *expr;
@@ -335,15 +334,15 @@ static bool test_null_expression() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", "%s", classad_string.c_str());
-	e.emit_param("ExprTree", "%s", expr_string.c_str());
-	e.emit_param("Value", "%s", "");
-	e.emit_param("ExprTree", "%s", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(flattenResult));
+	emit_input_header();
+	emit_param("ClassAd", "%s", classad_string.c_str());
+	emit_param("ExprTree", "%s", expr_string.c_str());
+	emit_param("Value", "%s", "");
+	emit_param("ExprTree", "%s", "NULL");
+	emit_output_expected_header();
+	emit_retval("%s", "TRUE");
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(flattenResult));
 	if(!flattenResult) {
 		delete expr; delete fexpr;
 		FAIL;
@@ -358,7 +357,7 @@ static bool test_null_expression() {
 
 
 static bool test_equivalence_no_change() {
-	e.emit_test("Test if the flattened and inlined ExprTree is logically "
+	emit_test("Test if the flattened and inlined ExprTree is logically "
 		"equivalent to the original ExprTree when the flattening and inlining "
 		"does nothing.");
 	
@@ -381,17 +380,17 @@ static bool test_equivalence_no_change() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "f");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "f");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(!expr->SameAs(fexpr)){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -401,7 +400,7 @@ static bool test_equivalence_no_change() {
 }
 
 static bool test_equivalence_full_simple() {
-	e.emit_test("Test if the fully flattened and inlined ExprTree is logically "
+	emit_test("Test if the fully flattened and inlined ExprTree is logically "
 		"equivalent to the original simple ExprTree.");
 	
 	classad::ClassAd *classad;
@@ -423,17 +422,17 @@ static bool test_equivalence_full_simple() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "1");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "1");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(value_string.compare("1") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -443,7 +442,7 @@ static bool test_equivalence_full_simple() {
 }
 
 static bool test_equivalence_partial_simple() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original simple ExprTree.");
 	
 	classad::ClassAd *classad;
@@ -465,17 +464,17 @@ static bool test_equivalence_partial_simple() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "f");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "f");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("f") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -485,7 +484,7 @@ static bool test_equivalence_partial_simple() {
 }
 
 static bool test_equivalence_full_multiple() {
-	e.emit_test("Test if the fully flattened and inlined ExprTree is logically "
+	emit_test("Test if the fully flattened and inlined ExprTree is logically "
 		"equivalent to the original ExprTree after multiple FlattenAndInline "
 		"calls.");
 	
@@ -514,19 +513,19 @@ static bool test_equivalence_full_multiple() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr3);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd 1", classad1_string.c_str());
-	e.emit_param("ClassAd 2", classad2_string.c_str());
-	e.emit_param("ClassAd 3", classad3_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "0");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd 1", classad1_string.c_str());
+	emit_param("ClassAd 2", classad2_string.c_str());
+	emit_param("ClassAd 3", classad3_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "0");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(value_string.compare("0") != MATCH){
 		delete classad1; delete classad2; delete classad3;
 		delete expr; delete fexpr1; delete fexpr2; delete fexpr3;
@@ -538,7 +537,7 @@ static bool test_equivalence_full_multiple() {
 }
 
 static bool test_equivalence_partial_multiple() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original ExprTree after multiple "
 		"FlattenAndInline calls.");
 	
@@ -567,19 +566,19 @@ static bool test_equivalence_partial_multiple() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr3);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd 1", classad1_string.c_str());
-	e.emit_param("ClassAd 2", classad2_string.c_str());
-	e.emit_param("ClassAd 3", classad3_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "d + d - d");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", "'%s'", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd 1", classad1_string.c_str());
+	emit_param("ClassAd 2", classad2_string.c_str());
+	emit_param("ClassAd 3", classad3_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "d + d - d");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", "'%s'", fexpr_string.c_str());
 	if(fexpr_string.compare("d + d - d") != MATCH){
 		delete classad1; delete classad2; delete classad3;
 		delete expr; delete fexpr1; delete fexpr2; delete fexpr3;
@@ -592,7 +591,7 @@ static bool test_equivalence_partial_multiple() {
 
 
 static bool test_equivalence_full_arithmetic_constants() {
-	e.emit_test("Test if the fully flattened and inlined ExprTree is logically "
+	emit_test("Test if the fully flattened and inlined ExprTree is logically "
 		"equivalent to the original arithmetic ExprTree that has constants.");
 	
 	classad::ClassAd *classad;
@@ -614,17 +613,17 @@ static bool test_equivalence_full_arithmetic_constants() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "2");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "2");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(value_string.compare("2") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -637,10 +636,10 @@ static bool test_equivalence_full_arithmetic_constants() {
 //	Flatten: 6 + a - 5
 //	FlattenAndInline: 6 + f - 5
 static bool test_equivalence_partial_arithmetic_constants() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original arithmetic ExprTree that has "
 		"constants.");
-	e.emit_comment("This expression could be further reduced to '1 + f'");
+	emit_comment("This expression could be further reduced to '1 + f'");
 	classad::ClassAd *classad;
 	classad::ExprTree *expr;
 	Value value;
@@ -661,17 +660,17 @@ static bool test_equivalence_partial_arithmetic_constants() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "6 + f - 5");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "6 + f - 5");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("6 + f - 5") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -681,7 +680,7 @@ static bool test_equivalence_partial_arithmetic_constants() {
 }
 
 static bool test_equivalence_full_arithmetic() {
-	e.emit_test("Test if the fully flattened and inlined ExprTree is logically "
+	emit_test("Test if the fully flattened and inlined ExprTree is logically "
 		"equivalent to the original arithmetic ExprTree.");
 	
 	classad::ClassAd *classad;
@@ -703,17 +702,17 @@ static bool test_equivalence_full_arithmetic() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "3");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "3");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(value_string.compare("3") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -723,7 +722,7 @@ static bool test_equivalence_full_arithmetic() {
 }
 
 static bool test_equivalence_partial_arithmetic_beginning() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original arithmetic ExprTree with an "
 		"inlined value at the beginning.");
 	
@@ -747,17 +746,17 @@ static bool test_equivalence_partial_arithmetic_beginning() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "2 + f");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "2 + f");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("2 + f") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -767,7 +766,7 @@ static bool test_equivalence_partial_arithmetic_beginning() {
 }
 
 static bool test_equivalence_partial_arithmetic_middle() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original arithmetic ExprTree with an "
 		"inlined value in the middle.");
 	
@@ -791,17 +790,17 @@ static bool test_equivalence_partial_arithmetic_middle() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "2 + f");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "2 + f");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("2 + f") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -811,7 +810,7 @@ static bool test_equivalence_partial_arithmetic_middle() {
 }
 
 static bool test_equivalence_partial_arithmetic_end() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original arithmetic ExprTree with an "
 		"inlined value in the end.");
 	
@@ -835,17 +834,17 @@ static bool test_equivalence_partial_arithmetic_end() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "2 + f");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "2 + f");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("2 + f") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -855,7 +854,7 @@ static bool test_equivalence_partial_arithmetic_end() {
 }
 
 static bool test_equivalence_full_simple_boolean() {
-	e.emit_test("Test if the fully flattened and inlined ExprTree is logically "
+	emit_test("Test if the fully flattened and inlined ExprTree is logically "
 		"equivalent to the original simple boolean ExprTree.");
 	
 	classad::ClassAd *classad;
@@ -877,17 +876,17 @@ static bool test_equivalence_full_simple_boolean() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "true");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "true");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(value_string.compare("true") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -897,9 +896,9 @@ static bool test_equivalence_full_simple_boolean() {
 }
 
 static bool test_equivalence_partial_simple_boolean() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original simple boolean ExprTree.");
-	e.emit_comment("This expression could be further reduced to 'd'");
+	emit_comment("This expression could be further reduced to 'd'");
 	classad::ClassAd *classad;
 	classad::ExprTree *expr;
 	Value value;
@@ -919,17 +918,17 @@ static bool test_equivalence_partial_simple_boolean() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "false || d");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "false || d");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("false || d") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -939,7 +938,7 @@ static bool test_equivalence_partial_simple_boolean() {
 }
 
 static bool test_equivalence_full_complex_boolean() {
-	e.emit_test("Test if the fully flattened and inlined ExprTree is logically "
+	emit_test("Test if the fully flattened and inlined ExprTree is logically "
 		"equivalent to the original complex boolean ExprTree.");
 	
 	classad::ClassAd *classad;
@@ -962,17 +961,17 @@ static bool test_equivalence_full_complex_boolean() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "true");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "true");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(value_string.compare("true") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -982,9 +981,9 @@ static bool test_equivalence_full_complex_boolean() {
 }
 
 static bool test_equivalence_partial_complex_boolean() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original complex boolean ExprTree.");
-	e.emit_comment("This expression could be further reduced to 'g'");
+	emit_comment("This expression could be further reduced to 'g'");
 	
 	classad::ClassAd *classad;
 	classad::ExprTree *expr;
@@ -1006,17 +1005,17 @@ static bool test_equivalence_partial_complex_boolean() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "false || h");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "false || h");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("false || h") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -1026,7 +1025,7 @@ static bool test_equivalence_partial_complex_boolean() {
 }
 
 static bool test_equivalence_nested_classad() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original ExprTree when using a nested "
 		"classad.");
 	
@@ -1049,17 +1048,17 @@ static bool test_equivalence_nested_classad() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "[ b = 1 ]");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "[ b = 1 ]");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("[ b = 1 ]") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -1069,7 +1068,7 @@ static bool test_equivalence_nested_classad() {
 }
 
 static bool test_equivalence_nested_loop_classad() {
-	e.emit_test("Test if FlattenAndInline handles a nested classad with a "
+	emit_test("Test if FlattenAndInline handles a nested classad with a "
 		"loop");
 	
 	classad::ClassAd *classad;
@@ -1093,17 +1092,17 @@ static bool test_equivalence_nested_loop_classad() {
 	classad_string.clear();
 	unparser.Unparse(classad_string, classad);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "<error:null expr>");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "<error:null expr>");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr == NULL &&  value_string.compare("undefined") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -1113,7 +1112,7 @@ static bool test_equivalence_nested_loop_classad() {
 }
 
 static bool test_equivalence_simple_list() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original simple expression list "
 		"ExprTree.");
 	
@@ -1136,17 +1135,17 @@ static bool test_equivalence_simple_list() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "{ 1,2,1,2 }");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "{ 1,2,1,2 }");
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("{ 1,2,1,2 }") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;
@@ -1156,7 +1155,7 @@ static bool test_equivalence_simple_list() {
 }
 
 static bool test_equivalence_complex_list() {
-	e.emit_test("Test if the partially flattened and inlined ExprTree is "
+	emit_test("Test if the partially flattened and inlined ExprTree is "
 		"logically equivalent to the original complex expression list "
 		"ExprTree.");
 	
@@ -1180,18 +1179,18 @@ static bool test_equivalence_complex_list() {
 	unparser.Unparse(value_string, value);
 	unparser.Unparse(fexpr_string, fexpr);
 	
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string.c_str());
-	e.emit_param("ExprTree", expr_string.c_str());
-	e.emit_param("Value", "");
-	e.emit_param("ExprTree", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Flattened and Inlined Value", "undefined");
-	e.emit_param("Flattened and Inlined Expression", "{ 2,2,d,d,true,false,12,"
+	emit_input_header();
+	emit_param("ClassAd", classad_string.c_str());
+	emit_param("ExprTree", expr_string.c_str());
+	emit_param("Value", "");
+	emit_param("ExprTree", "NULL");
+	emit_output_expected_header();
+	emit_param("Flattened and Inlined Value", "undefined");
+	emit_param("Flattened and Inlined Expression", "{ 2,2,d,d,true,false,12,"
 		"8,20,5 }");
-	e.emit_output_actual_header();
-	e.emit_param("Flattened and Inlined Value", value_string.c_str());
-	e.emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
+	emit_output_actual_header();
+	emit_param("Flattened and Inlined Value", value_string.c_str());
+	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("{ 2,2,d,d,true,false,12,8,20,5 }") != MATCH){
 		delete classad; delete expr; delete fexpr;
 		FAIL;

@@ -31,31 +31,31 @@
 
 #include "stl_string_utils.h"
 
-bool test_sprintf_string();
-bool test_sprintf_MyString();
-bool test_sprintf_cat_string();
-bool test_sprintf_cat_MyString();
-bool test_comparison_ops_lhs_string();
-bool test_comparison_ops_lhs_MyString();
-bool test_lower_case_empty(void);
-bool test_lower_case_non_empty(void);
-bool test_upper_case_empty(void);
-bool test_upper_case_non_empty(void);
-bool test_chomp_new_line_end(void);
-bool test_chomp_crlf_end(void);
-bool test_chomp_new_line_beginning(void);
-bool test_chomp_return_false(void);
-bool test_chomp_return_true(void);
-bool test_trim_beginning_and_end(void);
-bool test_trim_end(void);
-bool test_trim_none(void);
-bool test_trim_beginning(void);
-bool test_trim_empty(void);
+static bool test_sprintf_string(void);
+static bool test_sprintf_MyString(void);
+static bool test_sprintf_cat_string(void);
+static bool test_sprintf_cat_MyString(void);
+static bool test_comparison_ops_lhs_string(void);
+static bool test_comparison_ops_lhs_MyString(void);
+static bool test_lower_case_empty(void);
+static bool test_lower_case_non_empty(void);
+static bool test_upper_case_empty(void);
+static bool test_upper_case_non_empty(void);
+static bool test_chomp_new_line_end(void);
+static bool test_chomp_crlf_end(void);
+static bool test_chomp_new_line_beginning(void);
+static bool test_chomp_return_false(void);
+static bool test_chomp_return_true(void);
+static bool test_trim_beginning_and_end(void);
+static bool test_trim_end(void);
+static bool test_trim_none(void);
+static bool test_trim_beginning(void);
+static bool test_trim_empty(void);
 
 bool FTEST_stl_string_utils(void) {
-		// beginning junk for getPortFromAddr()
-	e.emit_function("STL string utils");
-	e.emit_comment("Package of functions/operators to facilitate adoption of std::string");
+		// beginning junk for getPortFromAddr(() {
+	emit_function("STL string utils");
+	emit_comment("Package of functions/operators to facilitate adoption of std::string");
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
@@ -81,14 +81,12 @@ bool FTEST_stl_string_utils(void) {
 	driver.register_function(test_trim_empty);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 
-bool test_sprintf_string() {
-    e.emit_test("Test sprintf overloading for std::string");
+static bool test_sprintf_string() {
+    emit_test("Test sprintf overloading for std::string");
 
     int nchars = 0;
     int rchars = 0;
@@ -153,8 +151,8 @@ bool test_sprintf_string() {
 	PASS;
 }
 
-bool test_sprintf_MyString() {
-    e.emit_test("Test sprintf overloading for MyString");
+static bool test_sprintf_MyString() {
+    emit_test("Test sprintf overloading for MyString");
 
     int nchars = 0;
     int rchars = 0;
@@ -219,8 +217,8 @@ bool test_sprintf_MyString() {
 	PASS;
 }
 
-bool test_sprintf_cat_string() {
-    e.emit_test("Test sprintf_cat overloading for std::string");
+static bool test_sprintf_cat_string() {
+    emit_test("Test sprintf_cat overloading for std::string");
 
     std::string s = "foo";
     int r = sprintf_cat(s, "%s", "bar");
@@ -234,8 +232,8 @@ bool test_sprintf_cat_string() {
 	PASS;
 }
 
-bool test_sprintf_cat_MyString() {
-    e.emit_test("Test sprintf_cat overloading for MyString");
+static bool test_sprintf_cat_MyString() {
+    emit_test("Test sprintf_cat overloading for MyString");
 
     MyString s = "foo";
     int r = sprintf_cat(s, "%s", "bar");
@@ -249,8 +247,8 @@ bool test_sprintf_cat_MyString() {
 	PASS;
 }
 
-bool test_comparison_ops_lhs_string() {
-    e.emit_test("Test comparison operators: LHS is std::string and RHS is MyString");
+static bool test_comparison_ops_lhs_string() {
+    emit_test("Test comparison operators: LHS is std::string and RHS is MyString");
 
     std::string lhs;
     MyString rhs;
@@ -324,8 +322,8 @@ bool test_comparison_ops_lhs_string() {
 	PASS;
 }
 
-bool test_comparison_ops_lhs_MyString() {
-    e.emit_test("Test comparison operators: LHS is MyString and LHS is std::string");
+static bool test_comparison_ops_lhs_MyString() {
+    emit_test("Test comparison operators: LHS is MyString and LHS is std::string");
 
     MyString lhs;
     std::string rhs;
@@ -399,202 +397,202 @@ bool test_comparison_ops_lhs_MyString() {
 	PASS;
 }
 
-bool test_lower_case_empty(void) {
-	e.emit_test("Test lower_case() on an empty std::string.");
+static bool test_lower_case_empty() {
+	emit_test("Test lower_case() on an empty std::string.");
 	std::string a;
 	lower_case(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_lower_case_non_empty(void) {
-	e.emit_test("Test lower_case() on a non-empty std::string.");
+static bool test_lower_case_non_empty() {
+	emit_test("Test lower_case() on a non-empty std::string.");
 	std::string a("lower UPPER");
 	lower_case(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "lower upper");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "lower upper");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "lower upper") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_upper_case_empty(void) {
-	e.emit_test("Test upper_case() on an empty std::string.");
+static bool test_upper_case_empty() {
+	emit_test("Test upper_case() on an empty std::string.");
 	std::string a;
 	upper_case(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_upper_case_non_empty(void) {
-	e.emit_test("Test upper_case() on a non-empty std::string.");
+static bool test_upper_case_non_empty() {
+	emit_test("Test upper_case() on a non-empty std::string.");
 	std::string a("lower UPPER");
 	upper_case(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "LOWER UPPER");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "LOWER UPPER");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "LOWER UPPER") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_chomp_new_line_end(void) {
-	e.emit_test("Does chomp() remove the newLine if its the last character in "
+static bool test_chomp_new_line_end() {
+	emit_test("Does chomp() remove the newLine if its the last character in "
 		"the std::string?");
 	std::string a("stuff\n");
 	chomp(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "stuff");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "stuff");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "stuff") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_chomp_crlf_end(void) {
-	e.emit_test("Does chomp() remove CR and LF if they are the last characters"
+static bool test_chomp_crlf_end() {
+	emit_test("Does chomp() remove CR and LF if they are the last characters"
 		" in the std::string?");
 	std::string a("stuff\r\n");
 	chomp(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "stuff");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "stuff");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "stuff") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_chomp_new_line_beginning(void) {
-	e.emit_test("Does chomp() do nothing if the newLine if it's not the last "
+static bool test_chomp_new_line_beginning() {
+	emit_test("Does chomp() do nothing if the newLine if it's not the last "
 		"character in the std::string?");
 	std::string a("stuff\nmore stuff");
 	chomp(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "stuff\nmore stuff");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "stuff\nmore stuff");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "stuff\nmore stuff") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_chomp_return_false(void) {
-	e.emit_test("Does chomp() return false if the std::string doesn't have a "
+static bool test_chomp_return_false() {
+	emit_test("Does chomp() return false if the std::string doesn't have a "
 		"newLine?");
 	std::string a("stuff");
 	bool result = chomp(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", 0);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", 0);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(result) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_chomp_return_true(void) {
-	e.emit_test("Does chomp() return true if the std::string has a newLine at the "
+static bool test_chomp_return_true() {
+	emit_test("Does chomp() return true if the std::string has a newLine at the "
 		"end?");
 	std::string a("stuff\n");
 	bool result = chomp(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", 1);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", 1);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(!result) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_trim_beginning_and_end(void) {
-	e.emit_test("Test trim on a std::string with white space at the beginning and "
+static bool test_trim_beginning_and_end() {
+	emit_test("Test trim on a std::string with white space at the beginning and "
 		"end.");
 	std::string a("  Miguel   ");
 	trim(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "Miguel");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "Miguel");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Miguel") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_trim_end(void) {
-	e.emit_test("Test trim() on a std::string with white space at the end.");
+static bool test_trim_end() {
+	emit_test("Test trim() on a std::string with white space at the end.");
 	std::string a("Hinault   ");
 	trim(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "Hinault");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "Hinault");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Hinault") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_trim_none(void) {
-	e.emit_test("Test trim() on a std::string with no white space.");
+static bool test_trim_none() {
+	emit_test("Test trim() on a std::string with no white space.");
 	std::string a("Indurain");
 	trim(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "Indurain");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "Indurain");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Indurain") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_trim_beginning(void) {
-	e.emit_test("Test trim() on a std::string with white space at the beginning.");
+static bool test_trim_beginning() {
+	emit_test("Test trim() on a std::string with white space at the beginning.");
 	std::string a("   Merckx");
 	trim(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "Merckx");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "Merckx");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "Merckx") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
-bool test_trim_empty(void) {
-	e.emit_test("Test trim() on an empty std::string.");
+static bool test_trim_empty() {
+	emit_test("Test trim() on an empty std::string.");
 	std::string a;
 	trim(a);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", a.c_str());
+	emit_output_expected_header();
+	emit_retval("%s", "");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "") != MATCH) {
 		FAIL;
 	}
