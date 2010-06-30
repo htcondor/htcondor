@@ -1825,7 +1825,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 		*total_bytes += bytes;
 
-		record.fullname = strdup(fullname.Value());
+		record.fullname = fullname.Value();
 		record.bytes = bytes;
 		record.elapsed  = elapsed;
     
