@@ -9655,3 +9655,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow
 id=600
+
+[NEGOTIATION_CYCLE_STATS_LENGTH]
+aliases=
+default=3
+version=7.5.3
+range=0,100
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiation Cycle Stats Length
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator
+id=600

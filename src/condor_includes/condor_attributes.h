@@ -771,6 +771,14 @@ extern const char * const ATTR_SSH_KEYGEN_ARGS;
 extern const char * const ATTR_SOCK;
 extern const char * const ATTR_JOB_AD_INFORMATION_ATTRS;
 
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_TIME;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCHES;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {
