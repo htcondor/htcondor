@@ -3897,7 +3897,9 @@ void
 Matchmaker::updateCollector() {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
-	publishNegotiationCycleStats( publicAd );
+	if( publicAd ) {
+		publishNegotiationCycleStats( publicAd );
+	}
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
@@ -4232,7 +4234,7 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		// clear out all negotiation cycle attributes in the ad
 	for(i=0; i<MAX_NEGOTIATION_CYCLE_STATS; i++) {
 		int a;
-		for(a=0; a<sizeof(attrs)/sizeof(char *); a++) {
+		for(a=0; a<sizeof(attrs)/sizeof(char *) && attrs[a]; a++) {
 			DelAttrN( ad, attrs[a], i );
 		}
 	}
