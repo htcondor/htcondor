@@ -674,7 +674,7 @@ command (for example, \File{stdin}) are transferred.
 Only the transfer of files is available; the transfer of
 subdirectories is not supported.
 
-For vanilla universe jobs only,
+For vanilla and vm universe jobs only,
 a file may be specified by giving a URL, instead of a file name.
 The implementation for URL transfers requires both configuration
 and available plug-in.  See section~\ref{sec:URL-transfer} for details. 
@@ -1898,6 +1898,8 @@ job expects.
 The complete path and name of the directory where VMware-specific
 files and applications such as the VMDK (Virtual Machine Disk Format) and
 VMX (Virtual Machine Configuration) reside.
+This command is optional; when not specified, all relevant VMware image files
+are to be listed using \SubmitCmd{transfer\_input\_files}.
 
 %%%%%%%%%%%%%%%%%%%
 %% vmware_should_transfer_files
