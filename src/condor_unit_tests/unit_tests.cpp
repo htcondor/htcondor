@@ -57,6 +57,7 @@ bool OTEST_HashTable(void);
 bool OTEST_MyString(void);
 bool OTEST_StringList(void);
 bool OTEST_Old_Classads(void);
+bool OTEST_Env(void);
 
 const static struct {
 	const char* name;
@@ -85,6 +86,7 @@ const static struct {
 	map(OTEST_MyString),
 	map(OTEST_StringList),
 	map(OTEST_Old_Classads),
+	map(OTEST_Env)
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 

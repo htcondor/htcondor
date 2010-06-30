@@ -184,3 +184,38 @@ bool floats_close( float one, float two, float diff) {
 		return(true);
 	}
 }
+
+bool strings_similar(const MyString* str1, const MyString* str2, 
+	const char* delims) 
+{
+	return strings_similar(str1->Value(), str2->Value(), delims);
+}
+
+bool strings_similar(const char* str1, const char* str2, const char* delims) 
+{
+	StringList sl1(str1, delims);
+	StringList sl2(str2, delims);
+	return sl1.number() == sl2.number() && 
+		sl1.contains_list(sl2, false) && 
+		sl2.contains_list(sl1, false);
+}
+
+MyString* convert_string_array(char** str, int size, char* delim){
+	MyString* toReturn = new MyString;
+	
+	for(int i = 0; i < size && str[i] && str[i][0]; i++) {
+		*toReturn+=str[i];
+		*toReturn+=delim;
+	}
+	return toReturn;
+}
+
+MyString* convert_string_array(const char** str, int size, const char* delim){
+	MyString* toReturn = new MyString;
+	
+	for(int i = 0; i < size && str[i] && str[i][0]; i++) {
+		*toReturn+=str[i];
+		*toReturn+=delim;
+	}
+	return toReturn;
+}
