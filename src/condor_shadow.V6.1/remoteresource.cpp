@@ -115,6 +115,15 @@ RemoteResource::~RemoteResource()
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
 	}
+
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		if( m_claim_session.secSessionId() ) {
+			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
+		}
+		if( m_filetrans_session.secSessionId() ) {
+			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
+		}
+	}
 }
 
 
