@@ -480,10 +480,8 @@ CronTab::nextRunTime( long timestamp ) {
 			// may be rounded up to the next minute
 			//
 		if ( runtime < timestamp ) {
-			dprintf( D_FULLDEBUG, "CronTab: Generated a runtime that is in "
-								  "the past (%d < %d)\n",
-								  (int)runtime, (int)timestamp );
-			runtime = CRONTAB_INVALID;
+			EXCEPT( "CronTab: Generated a runtime that is in the past (%d < %d)"
+				, (int)runtime, (int)timestamp );
 		}
 		
 		//
@@ -491,8 +489,8 @@ CronTab::nextRunTime( long timestamp ) {
 		// be able to find a match.
 		//
 	} else {
-		dprintf( D_FULLDEBUG, "CronTab: Failed to find a match for timestamp %d\n",
-							  (int)timestamp );
+		EXCEPT( "CronTab: Failed to find a match for timestamp %d", 
+			(int)timestamp );
 	}
 	
 	this->lastRunTime = runtime;
