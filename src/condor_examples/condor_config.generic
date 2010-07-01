@@ -538,6 +538,17 @@ GLIDEIN_SERVER_URLS = \
 ## The default of this parameter if not specified is: stm_use_schedd_only
 #SANDBOX_TRANSFER_METHOD = stm_use_schedd_only
 
+## This setting specifies an IP address that depends on the setting of
+## BIND_ALL_INTERFACES. If BIND_ALL_INTERFACES  is True (the default), then
+## this variable controls what IP address will be advertised as the public
+## address of the daemon. If BIND_ALL_INTERFACES is False, then this variable
+## specifies which IP address to bind network sockets to. If
+## BIND_ALL_INTERFACES is False  and NETWORK_INTERFACE is not defined, Condor
+## chooses a network interface automatically. It tries to choose a public
+## interface if one is available. If it cannot decide which of two interfaces
+## to choose from, it will pick the first one.
+#NETWORK_INTERFACE = 
+
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
