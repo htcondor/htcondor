@@ -54,6 +54,16 @@ disables Chirp remote file access from execute machines.
   used to make the publication, for example, the network interface used 
   to communicate with the \Condor{collector}.
 
+% gittrac 1407
+\item Configuration variable \Macro{VM\_BRIDGE\_SCRIPT} has been removed
+  and is no longer valid.
+
+% gittrac 1402 and 1407
+\item The new configuration variable
+  \Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE} specifies the networking interface
+  that xen or kvm \SubmitCmd{vm} universe jobs will use.
+  See section~\ref{param:VMNetworkingBridgeInterface} for documentation.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -139,7 +149,10 @@ present in all earlier 7.4.x Condor releases.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1340
+\item The new subsection~\ref{ClassAd:examples} provides examples of
+evaluation results when using the operators \Expr{==}, \Expr{=?=},
+\Expr{!=}, and \Expr{=!=}.
 
 \end{itemize}
 

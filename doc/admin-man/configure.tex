@@ -1353,12 +1353,23 @@ of the subsystem corresponding to the daemon.
 \item[\Macro{MAX\_<SUBSYS>\_LOG}]
   Controls the maximum length in bytes to which a
   log will be allowed to grow.  Each log file will grow to the
-  specified length, then be saved to a file with the suffix
-  \File{.old}.  The \File{.old}
-  files are overwritten each time the log is saved, thus the maximum
-  space devoted to logging for any one program will be twice the
-  maximum length of its log file.  A value of 0 specifies that the
-  file may grow without bounds.  The default is 1 Mbyte.
+  specified length, then be saved to a file with an ISO timestamp 
+  suffix. The oldest rotated file receives the ending \File{.old}. 
+  The \File{.old} files are overwritten each time the maximum 
+  number of rotated files (determined by the value of
+  \MacroNI{MAX\_NUM\_<SUBSYS>\_LOG}) is exceeded.
+  Thus, the maximum space devoted to logging for 
+  any one program will be \Expr{MAX\_NUM\_<SUBSYS>\_LOG + 1} times 
+  the maximum length of its log file.  A value of 0 specifies that 
+  the file may grow without bounds. The default is 1 Mbyte.
+ 
+\label{param:MaxNumSubsysLog}
+\item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]
+  An integer that controls the maximum number of rotatations a log file 
+  is allowed to perform before the oldest one will be 
+  rotated away. Thus, at most \Expr{MAX\_NUM\_<SUBSYS>\_LOG + 1}
+  log files of the same program coexist at a given time.
+  The default value is 1.
 
 \label{param:TruncSubsysLogOnOpen}
 \item[\Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}]
@@ -8897,17 +8908,11 @@ They specify items related to the \Condor{vm-gahp}.
   The complete path and file name of the script that controls Xen and KVM.
     There is no default value for this required variable.
 
-\label{param:VMBridgeScript}
-\item[\Macro{VM\_BRIDGE\_SCRIPT}]
-  A path, file name, and command-line arguments to specify a script
-  that will be run to set up a bridging network interface for guests.
-  The interface should provide direct access to the host system's LAN,
-  that is, not be NAT'd on the host. 
-  An example:
-  \begin{verbatim}
-  VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
-  \end{verbatim}
-
+\label{param:VMNetworkingBridgeInterface}
+\item[\Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE}]
+  For xen and kvm only, a required string if bridge networking is to be
+  enabled.  It specifies the networking interface that vm universe jobs
+  will use.
 \end{description}
 
 The following configuration variables are specific to the VMware

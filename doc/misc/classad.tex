@@ -863,8 +863,8 @@ evaluated in a context with another ad $B$:
 \index{ClassAd!expression operators}
 All operators in the ClassAd language are \Term{total}, and thus have well
 defined behavior regardless of the supplied operands.  Furthermore, most
-operators are \Term{strict} with respect to \texttt{ERROR} and 
-\texttt{UNDEFINED}, and thus evaluate to \texttt{ERROR} (or \texttt{UNDEFINED})
+operators are \Term{strict} with respect to \Expr{ERROR} and 
+\Expr{UNDEFINED}, and thus evaluate to \Expr{ERROR} or \Expr{UNDEFINED}
 if either of their operands have these exceptional values.
 
 \begin{itemize}
@@ -877,11 +877,11 @@ if either of their operands have these exceptional values.
 		and type promotions from integers to reals are performed if one operand 
 		is an integer and the other real.
 
-		\item The operators are strict with respect to both \texttt{UNDEFINED} 
-		and \texttt{ERROR}.  
+		\item The operators are strict with respect to both \Expr{UNDEFINED} 
+		and \Expr{ERROR}.  
 
 		\item If either operand is not a numerical type, the value of the
-		operation is \texttt{ERROR}.
+		operation is \Expr{ERROR}.
 	\end{enumerate}
 
 	\item\textbf{Comparison operators:}
@@ -897,11 +897,11 @@ if either of their operands have these exceptional values.
 		and type promotions from integers to reals are performed if one operand
 		is a real, and the other an integer.  Strings may not be converted to
 		any other type, so comparing a string and an integer or a
-		string and a real results in \texttt{ERROR}.
+		string and a real results in \Expr{ERROR}.
 
 		\item The operators \verb@==@, \verb@!=@, \verb@<=@, \verb@<@ and 
-		\verb@>=@ \verb@>@ are strict with respect to both \texttt{UNDEFINED} 
-		and \texttt{ERROR}.
+		\verb@>=@ \verb@>@ are strict with respect to both \Expr{UNDEFINED} 
+		and \Expr{ERROR}.
 
 		\item In addition, the operators \verb@=?=@ and \verb@=!=@ behave
 		similar to \verb@==@ and \verb@!=@, but are not strict.  Semantically,
@@ -909,7 +909,7 @@ if either of their operands have these exceptional values.
 		the same type and the same value.  For example, \verb@10 == UNDEFINED@ 
 		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \texttt{UNDEFINED},
 		but \verb@10 =?= UNDEFINED@ and \verb@UNDEFINED =?= UNDEFINED@ 
-		evaluate to \texttt{FALSE} and \texttt{TRUE} respectively.  The
+		evaluate to \Expr{FALSE} and \Expr{TRUE} respectively.  The
 		\verb@=!=@ operator test for the ``is not identical to'' condition.
 	\end{enumerate}
 
@@ -917,19 +917,113 @@ if either of their operands have these exceptional values.
 	\begin{enumerate}
 		\item The logical operators \verb@&&@ and \verb@||@ operate on 
 		integers and reals.  The zero value of these types are considered 
-		\texttt{FALSE} and non-zero values \texttt{TRUE}.
+		\Expr{FALSE} and non-zero values \Expr{TRUE}.
 
 		\item The operators are \emph{not} strict, and exploit the 
-		``don't care'' properties of the operators to squash \texttt{UNDEFINED}
-		and \texttt{ERROR} values when possible.  For example,
-		\verb@UNDEFINED && FALSE@ evaluates to \texttt{FALSE}, but	
-		\verb@UNDEFINED || FALSE@ evaluates to \texttt{UNDEFINED}.
+		``don't care'' properties of the operators to squash \Expr{UNDEFINED}
+		and \Expr{ERROR} values when possible.  For example,
+		\verb@UNDEFINED && FALSE@ evaluates to \Expr{FALSE}, but	
+		\verb@UNDEFINED || FALSE@ evaluates to \Expr{UNDEFINED}.
 
-		\item Any string operand is equivalent to an \texttt{ERROR} operand
+		\item Any string operand is equivalent to an \Expr{ERROR} operand
 		for a logical operator.  In other words,
-		\verb@TRUE && "foobar"@ evaluates to \texttt{ERROR}.
+		\verb@TRUE && "foobar"@ evaluates to \Expr{ERROR}.
 	\end{enumerate}
 \end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Expression Examples}
+\label{ClassAd:examples}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression examples}
+
+The \Expr{=?=} operator is similar to the \Expr{==} operator.
+It checks if the left hand side operand is identical in both type and value
+to the the right hand side operand, returning \Expr{TRUE} when they
+are identical.
+A key point in understanding is that
+the \Expr{=?=} operator only produces evaluation results of \Expr{TRUE}
+and \Expr{FALSE},
+where the \Expr{==} operator may produce evaluation results \Expr{TRUE},
+\Expr{FALSE}, \Expr{UNDEFINED}, or \Expr{ERROR}.
+Table~\ref{expr-examples-1} presents examples that define the
+outcome of the \Expr{==} operator.
+Table~\ref{expr-examples-2} presents examples that define the
+outcome of the \Expr{=?=} operator.
+
+% Karen's table of == expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 == 10)}                       & \Expr{TRUE}  \\
+\Expr{(10 == 5)}                        & \Expr{FALSE} \\
+\Expr{(10 == "ABC")}                    & \Expr{ERROR} \\
+\Expr{(10 == UNDEFINED)}                & \Expr{UNDEFINED} \\
+\Expr{(UNDEFINED == UNDEFINED)}         & \Expr{UNDEFINED}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-1}Evaluation examples for the \Expr{==} operator}
+\end{table}
+\end{center}
+
+% Karen's table of =?= expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 =?= 10)}                       & \Expr{TRUE}  \\
+\Expr{(10 =?= 5)}                        & \Expr{FALSE} \\
+\Expr{(10 =?= "ABC")}                    & \Expr{FALSE} \\
+\Expr{(10 =?= UNDEFINED)}                & \Expr{FALSE} \\
+\Expr{(UNDEFINED =?= UNDEFINED)}         & \Expr{TRUE}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-2}Evaluation examples for the \Expr{=?=} operator}
+\end{table}
+\end{center}
+
+The \Expr{=!=} operator is similar to the \Expr{!=} operator.
+It checks if the left hand side operand is \emph{not} identical 
+in both type and value to the the right hand side operand,
+returning \Expr{FALSE} when they are identical.
+A key point in understanding is that
+the \Expr{=!=} operator only produces evaluation results of \Expr{TRUE}
+and \Expr{FALSE},
+where the \Expr{!=} operator may produce evaluation results \Expr{TRUE},
+\Expr{FALSE}, \Expr{UNDEFINED}, or \Expr{ERROR}.
+Table~\ref{expr-examples-3} presents examples that define the
+outcome of the \Expr{!=} operator.
+Table~\ref{expr-examples-4} presents examples that define the
+outcome of the \Expr{=!=} operator.
+
+% Karen's table of != expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 != 10)}                       & \Expr{FALSE}  \\
+\Expr{(10 != 5)}                        & \Expr{TRUE} \\
+\Expr{(10 != "ABC")}                    & \Expr{ERROR} \\
+\Expr{(10 != UNDEFINED)}                & \Expr{UNDEFINED} \\
+\Expr{(UNDEFINED != UNDEFINED)}         & \Expr{UNDEFINED}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-3}Evaluation examples for the \Expr{!=} operator}
+\end{table}
+\end{center}
+
+% Karen's table of =!= expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 =!= 10)}                       & \Expr{FALSE}  \\
+\Expr{(10 =!= 5)}                        & \Expr{TRUE} \\
+\Expr{(10 =!= "ABC")}                    & \Expr{TRUE} \\
+\Expr{(10 =!= UNDEFINED)}                & \Expr{TRUE} \\
+\Expr{(UNDEFINED =!= UNDEFINED)}         & \Expr{FALSE}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-4}Evaluation examples for the \Expr{=!=} operator}
+\end{table}
+\end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Old ClassAds in the Condor System}

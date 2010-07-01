@@ -365,7 +365,12 @@ universes for user jobs:
 
 The \SubmitCmd{universe} under which a job runs
 is specified in the submit description file.
-If a universe is not specified, the default is standard.
+If a universe is not specified,
+the default is vanilla,
+unless your Condor administrator has changed the default.
+However, we strongly encourage you to specify the universe,
+since the default can be changed by your Condor administrator,
+and the default that ships with Condor has changed.
 
 \index{universe!standard}
 The standard universe provides migration and reliability, but has some
@@ -1584,7 +1589,7 @@ Queue
 %%%%%%%%%%%%
 \index{file transfer mechanism!input file specified by URL}
 \index{URL file transfer}
-For vanilla universe jobs only,
+For vanilla and vm universe jobs only,
 Condor has the ability to allow a job's input file to be 
 obtained by the machine allocated to execute the job
 with the specification of a URL.
