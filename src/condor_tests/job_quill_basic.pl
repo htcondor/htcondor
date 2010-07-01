@@ -261,7 +261,7 @@ $submitted = sub
 		CondorTest::debug("Size of array is $#adarray\n",1);
 		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
-					"ServerTime", 1, "RemoteUserCpu", 1, "Environment", 1);
+					"ServerTime", 1, "RemoteUserCpu", 1, "environment", 1, "Environment", 1);
 		print scalar localtime() . "\n";
 		@scheddads = sort(@adarray);
 		@rdbmsads = sort(@bdarray);
