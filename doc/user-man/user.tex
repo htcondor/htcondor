@@ -365,7 +365,12 @@ universes for user jobs:
 
 The \SubmitCmd{universe} under which a job runs
 is specified in the submit description file.
-If a universe is not specified, the default is standard.
+If a universe is not specified,
+the default is vanilla,
+unless your Condor administrator has changed the default.
+However, we strongly encourage you to specify the universe,
+since the default can be changed by your Condor administrator,
+and the default that ships with Condor has changed.
 
 \index{universe!standard}
 The standard universe provides migration and reliability, but has some

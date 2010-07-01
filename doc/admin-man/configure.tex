@@ -8890,17 +8890,11 @@ They specify items related to the \Condor{vm-gahp}.
   The complete path and file name of the script that controls Xen and KVM.
     There is no default value for this required variable.
 
-\label{param:VMBridgeScript}
-\item[\Macro{VM\_BRIDGE\_SCRIPT}]
-  A path, file name, and command-line arguments to specify a script
-  that will be run to set up a bridging network interface for guests.
-  The interface should provide direct access to the host system's LAN,
-  that is, not be NAT'd on the host. 
-  An example:
-  \begin{verbatim}
-  VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
-  \end{verbatim}
-
+\label{param:VMNetworkingBridgeInterface}
+\item[\Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE}]
+  For xen and kvm only, a required string if bridge networking is to be
+  enabled.  It specifies the networking interface that vm universe jobs
+  will use.
 \end{description}
 
 The following configuration variables are specific to the VMware

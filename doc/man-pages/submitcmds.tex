@@ -1792,6 +1792,43 @@ the value of \SubmitCmd{kill\_sig} is used.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% kvm_disk
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!kvm\_disk}
+\item[kvm\_disk = file1:device1:permission1, file2:device2:permission2, \Dots]
+A list of comma separated disk files.
+Each disk file is specified by 3 colon separated fields.
+The first field is the path and file name of the disk file.
+The second field specifies the device, and
+the third field specifies permissions.
+
+An example that specifies two disk files:
+\footnotesize
+\begin{verbatim}
+kvm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%
+%% kvm_cdrom_device
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!kvm\_cdrom\_device}
+\item[kvm\_cdrom\_device = $<$device$>$]
+Describes the KVM CD-ROM device when
+\SubmitCmd{vm\_cdrom\_files} is defined.
+
+%%%%%%%%%%%%%%%%%%%
+%% kvm_transfer_files
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!kvm\_transfer\_files}
+\item[kvm\_transfer\_files = $<$list-of-files$>$]
+A comma separated list of all files that Condor is to transfer
+to the execute machine.
+
+%%%%%%%%%%%%%%%%%%%
 %% vm_cdrom_files
 %%%%%%%%%%%%%%%%%%%
 
@@ -2004,43 +2041,6 @@ submission.
 A comma separated list of all files that Condor is to transfer
 to the execute machine.
 
-%%%%%%%%%%%%%%%%%%%
-%% kvm_disk
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_disk}
-\item[kvm\_disk = file1:device1:permission1, file2:device2:permission2, \Dots]
-A list of comma separated disk files.
-Each disk file is specified by 3 colon separated fields.
-The first field is the path and file name of the disk file.
-The second field specifies the device, and
-the third field specifies permissions.
-
-An example that specifies two disk files:
-\footnotesize
-\begin{verbatim}
-kvm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
-\end{verbatim}
-\normalsize
-
-%%%%%%%%%%%%%%%%%%%
-%% kvm_cdrom_device
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_cdrom\_device}
-\item[kvm\_cdrom\_device = $<$device$>$]
-Describes the KVM CD-ROM device when
-\SubmitCmd{vm\_cdrom\_files} is defined.
-
-%%%%%%%%%%%%%%%%%%%
-%% kvm_transfer_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_transfer\_files}
-\item[kvm\_transfer\_files = $<$list-of-files$>$]
-A comma separated list of all files that Condor is to transfer
-to the execute machine.
-
 \end{description} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2091,7 +2091,9 @@ precisely the same executable that created the checkpoint.
 a core file, \SubmitCmd{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \SubmitCmd{coresize} is not
 specified in the command file, the system's user resource limit
-\mbox{``coredumpsize''} is used.
+\Env{coredumpsize} is used.
+A value of -1 results in no limits being applied to the core file size.
+This limit is not used in HP-UX operating systems. 
 
 %%%%%%%%%%%%%%%%%%
 % cron_day_of_month
