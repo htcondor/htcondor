@@ -539,7 +539,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
   char  attrLastUsage[32];
   char  name[128];
   float priority, Factor, AccUsage = -1;
-  int   resUsed, BeginUsage = 0;
+  int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
   float wtResUsed;
 
