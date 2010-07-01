@@ -27,16 +27,20 @@ typedef bool (*test_func_ptr)(void);
 class FunctionDriver {
 public:
 		// ctor/detor
-	FunctionDriver();
+	FunctionDriver(int num_tests = INT_MAX);
 	~FunctionDriver();
+
+	void init(int num_tests);
 	
 		// register a function with the driver
 	void register_function(test_func_ptr);
 
 		// perform all the functions.  Returns true if every function
 		// called returns true, false otherwise.
-	bool do_all_functions();
+	bool do_all_functions(bool increment_tests_run = true);
 	
 private:
 	std::list<test_func_ptr> pointers;
+	int num_funcs_or_objs;
 };
+

@@ -9183,6 +9183,11 @@ Scheduler::child_exit(int pid, int status)
 			if ( this->LocalUniverseJobsRunning > 0 ) {
 				this->LocalUniverseJobsRunning--;
 			}
+			else
+			{
+				EXCEPT("Internal consistency error: No local universe jobs were"
+					" expected to be running, but one just exited!");
+			}
 		} else {
 				// A real shadow
 			name = "Shadow";

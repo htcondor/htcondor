@@ -236,10 +236,10 @@ static bool test_get_delimiters_non_empty_no(void);
 static bool test_get_delimiters_non_empty_yes(void);
 
 bool OTEST_StringList(void) {
-	e.emit_object("StringList");
-	e.emit_comment("This primitive class is used to contain and search arrays "
+	emit_object("StringList");
+	emit_comment("This primitive class is used to contain and search arrays "
 		"of strings.");
-	e.emit_comment("Many of the tests rely on print_to_string(), so a problem "
+	emit_comment("Many of the tests rely on print_to_string(), so a problem "
 		"with that may cause a problem in something else");
 	
 		// driver to run the tests and all required setup
@@ -451,23 +451,21 @@ bool OTEST_StringList(void) {
 	driver.register_function(test_get_delimiters_non_empty_yes);
 
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_constructor() {
-	e.emit_test("Test the StringList constructor.");
+	emit_test("Test the StringList constructor.");
 	StringList sl("a;b;c", ";");
 	char* expect = "a,b,c";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "a;b;c");
-	e.emit_param("DELIMS", ";");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "a;b;c");
+	emit_param("DELIMS", ";");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -477,18 +475,18 @@ static bool test_constructor() {
 }
 
 static bool test_constructor_empty_list() {
-	e.emit_test("Test the StringList constructor when passed an empty list with"
+	emit_test("Test the StringList constructor when passed an empty list with"
 		" a non-empty delimiter.");
 	StringList sl("", ";");
 	char* expect = "";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", expect);
-	e.emit_param("DELIMS", ";");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", expect);
+	emit_param("DELIMS", ";");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -498,18 +496,18 @@ static bool test_constructor_empty_list() {
 }
 
 static bool test_constructor_empty_delim() {
-	e.emit_test("Test the StringList constructor when passed a non-empty list "
+	emit_test("Test the StringList constructor when passed a non-empty list "
 		"with an empty delimiter.");
 	StringList sl("abc", "");
 	char* expect = "abc";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "abc");
-	e.emit_param("DELIMS", "");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "abc");
+	emit_param("DELIMS", "");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -519,18 +517,18 @@ static bool test_constructor_empty_delim() {
 }
 
 static bool test_constructor_empty_both() {
-	e.emit_test("Test the StringList constructor when passed both an empty list"
+	emit_test("Test the StringList constructor when passed both an empty list"
 		" and an empty delimiter.");
 	StringList sl("", "");
 	char* expect = "";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "");
-	e.emit_param("DELIMS", "");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "");
+	emit_param("DELIMS", "");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -540,17 +538,17 @@ static bool test_constructor_empty_both() {
 }
 
 static bool test_constructor_null_list() {
-	e.emit_test("Test the StringList constructor when passed a null string for "
+	emit_test("Test the StringList constructor when passed a null string for "
 		"the StringList.");
 	StringList sl(NULL, ";");
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "NULL");
-	e.emit_param("DELIMS", ";");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "NULL");
+	emit_param("DELIMS", ";");
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -560,18 +558,18 @@ static bool test_constructor_null_list() {
 }
 
 static bool test_constructor_null_delim() {
-	e.emit_test("Test the StringList constructor when passed a null string for "
+	emit_test("Test the StringList constructor when passed a null string for "
 		"the delimiter of the StringList.");
 	StringList sl("abc", NULL);
 	char* expect = "abc";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "abc");
-	e.emit_param("DELIMS", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "abc");
+	emit_param("DELIMS", "NULL");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -581,17 +579,17 @@ static bool test_constructor_null_delim() {
 }
 
 static bool test_constructor_null_both() {
-	e.emit_test("Test the StringList constructor when passed a null string for "
+	emit_test("Test the StringList constructor when passed a null string for "
 		"both the StringList and the delimiter of the StringList.");
 	StringList sl(NULL, NULL);
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "NULL");
-	e.emit_param("DELIMS", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "NULL");
+	emit_param("DELIMS", "NULL");
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -601,18 +599,18 @@ static bool test_constructor_null_both() {
 }
 
 static bool test_copy_constructor_value() {
-	e.emit_test("Check the value of the StringList copy constructor.");
+	emit_test("Check the value of the StringList copy constructor.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	StringList copy(sl);
 	char* expect = "a,b,c";
 	char* retVal = copy.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", "a,b,c");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", "a,b,c");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -622,17 +620,17 @@ static bool test_copy_constructor_value() {
 }
 
 static bool test_copy_constructor_empty() {
-	e.emit_test("Test the StringList copy constructor when passed an empty "
+	emit_test("Test the StringList copy constructor when passed an empty "
 		"StringList.");
 	StringList sl;
 	StringList copy(sl);
 	char* retVal = copy.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", "");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", "");
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -642,17 +640,17 @@ static bool test_copy_constructor_empty() {
 }
 
 static bool test_copy_constructor_pointer() {
-	e.emit_test("Check that the pointer of the copied StringList is not equal "
+	emit_test("Check that the pointer of the copied StringList is not equal "
 		"to the original StringList.");
 	StringList sl("a;b;c", ";");
 	StringList copy(sl);
 	char* retVal = copy.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", "a,b,c");
-	e.emit_output_expected_header();
-	e.emit_retval("!=%x", &sl);
-	e.emit_output_actual_header();
-	e.emit_retval("%x", &copy);
+	emit_input_header();
+	emit_param("StringList", "a,b,c");
+	emit_output_expected_header();
+	emit_retval("!=%x", &sl);
+	emit_output_actual_header();
+	emit_retval("%x", &copy);
 	if(&sl == &copy) {	//compares pointers
 		niceFree(retVal);
 		FAIL;
@@ -662,18 +660,18 @@ static bool test_copy_constructor_pointer() {
 }
 
 static bool test_initialize_from_string_empty_valid() {
-	e.emit_test("Test initializeFromString on an empty StringList when passed "
+	emit_test("Test initializeFromString on an empty StringList when passed "
 		" a valid string.");
 	StringList sl("", ";");
 	sl.initializeFromString("a;b;c");
 	char* expect = "a,b,c";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "a;b;c");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "a;b;c");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -683,20 +681,20 @@ static bool test_initialize_from_string_empty_valid() {
 }
 
 static bool test_initialize_from_string_empty_empty() {
-	e.emit_test("Test initializeFromString on an empty StringList when passed "
+	emit_test("Test initializeFromString on an empty StringList when passed "
 		" an empty string.");
 	StringList sl("", ";");
 	sl.initializeFromString("");
 	char* expect = "";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -706,9 +704,9 @@ static bool test_initialize_from_string_empty_empty() {
 }
 
 static bool test_initialize_from_string_empty_null() {
-	e.emit_test("Test initializeFromString on an empty StringList when passed "
+	emit_test("Test initializeFromString on an empty StringList when passed "
 		" a null string.");
-	e.emit_comment("initializeFromString() throws an exception for this test. "
+	emit_comment("initializeFromString() throws an exception for this test. "
 		"The test is commented out so that the unit testing can continue.");
 	PASS;
 /*
@@ -716,13 +714,13 @@ static bool test_initialize_from_string_empty_null() {
 	sl.initializeFromString(NULL);
 	char* expect = "";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("STRING", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("STRING", "NULL");
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(retVal);
 		FAIL;
@@ -733,22 +731,22 @@ static bool test_initialize_from_string_empty_null() {
 }
 
 static bool test_initialize_from_string_non_empty_valid() {
-	e.emit_test("Test initializeFromString on a non-empty StringList when "
+	emit_test("Test initializeFromString on a non-empty StringList when "
 		"passed a valid string.");
-	e.emit_comment("initializeFromString() is currently set up to append to an "
+	emit_comment("initializeFromString() is currently set up to append to an "
 		"existing StringList, so if that changes this test will fail.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	sl.initializeFromString("d;e;f");
 	char* expect = "a,b,c,d,e,f";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d;e;f");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d;e;f");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -758,20 +756,20 @@ static bool test_initialize_from_string_non_empty_valid() {
 }
 
 static bool test_initialize_from_string_non_empty_empty() {
-	e.emit_test("Test initializeFromString on a non-empty StringList when "
+	emit_test("Test initializeFromString on a non-empty StringList when "
 		"passed an empty string.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	sl.initializeFromString("");
 	char* expect = "a,b,c";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -781,9 +779,9 @@ static bool test_initialize_from_string_non_empty_empty() {
 }
 
 static bool test_initialize_from_string_non_empty_null() {
-	e.emit_test("Test initializeFromString on a non-empty StringList when "
+	emit_test("Test initializeFromString on a non-empty StringList when "
 		"passed a null string.");
-	e.emit_comment("initializeFromString() throws an exception for this test. "
+	emit_comment("initializeFromString() throws an exception for this test. "
 		"The test is commented out so that the unit testing can continue.");
 	PASS;
 /*
@@ -792,13 +790,13 @@ static bool test_initialize_from_string_non_empty_null() {
 	sl.initializeFromString(NULL);
 	char* expect = "a,b,c";
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "NULL");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -809,17 +807,17 @@ static bool test_initialize_from_string_non_empty_null() {
 }
 
 static bool test_clear_all_empty() {
-	e.emit_test("Test clearAll on an empty StringList.");
+	emit_test("Test clearAll on an empty StringList.");
 	StringList sl("", "");
 	char* orig = sl.print_to_string();
 	sl.clearAll();
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -829,17 +827,17 @@ static bool test_clear_all_empty() {
 }
 
 static bool test_clear_all_non_empty_many() {
-	e.emit_test("Test clearAll on a non-empty StringList with many strings.");
+	emit_test("Test clearAll on a non-empty StringList with many strings.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	sl.clearAll();
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -849,18 +847,18 @@ static bool test_clear_all_non_empty_many() {
 }
 
 static bool test_clear_all_non_empty_one() {
-	e.emit_test("Test clearAll on a non-empty StringList with only one "
+	emit_test("Test clearAll on a non-empty StringList with only one "
 		"string.");
 	StringList sl("a", "");
 	char* orig = sl.print_to_string();
 	sl.clearAll();
 	char* retVal = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -870,20 +868,20 @@ static bool test_clear_all_non_empty_one() {
 }
 
 static bool test_create_union_return_true() {
-	e.emit_test("Does create_union return true when the list is modified?");
+	emit_test("Does create_union return true when the list is modified?");
 	StringList sl("a;b;c", ";");
 	StringList toAdd("d;e;f", ";");
 	char* orig = sl.print_to_string();
 	char* add = toAdd.print_to_string();
 	bool retVal = sl.create_union(toAdd, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", add);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", add);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(add);
 		FAIL;
@@ -893,21 +891,21 @@ static bool test_create_union_return_true() {
 }
 
 static bool test_create_union_return_false() {
-	e.emit_test("Does create_union return false when the list is not "
+	emit_test("Does create_union return false when the list is not "
 		"modified?");
 	StringList sl("a;b;c", ";");
 	StringList toAdd("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* add = toAdd.print_to_string();
 	bool retVal = sl.create_union(toAdd, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", add);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", add);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(add);
 		FAIL;
@@ -917,7 +915,7 @@ static bool test_create_union_return_false() {
 }
 
 static bool test_create_union_duplicates_all() {
-	e.emit_test("Does create_union avoid adding duplicates when the given "
+	emit_test("Does create_union avoid adding duplicates when the given "
 		"StringList contains all duplicates?");
 	StringList sl("a;b;c", ";");
 	StringList toAdd("a;b;c", ";");
@@ -926,14 +924,14 @@ static bool test_create_union_duplicates_all() {
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
 	char* expect = "a,b,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", add);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", add);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(orig); niceFree(add); niceFree(retVal);
 		FAIL;
@@ -943,7 +941,7 @@ static bool test_create_union_duplicates_all() {
 }
 
 static bool test_create_union_duplicates_some() {
-	e.emit_test("Does create_union avoid adding duplicates when the given "
+	emit_test("Does create_union avoid adding duplicates when the given "
 		"StringList contains some duplicates?");
 	StringList sl("a;b;c", ";");
 	StringList toAdd("a;d;c", ";");
@@ -952,14 +950,14 @@ static bool test_create_union_duplicates_some() {
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
 	char* expect = "a,b,c,d";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", add);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", add);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(orig); niceFree(add); niceFree(retVal);
 		FAIL;
@@ -969,7 +967,7 @@ static bool test_create_union_duplicates_some() {
 }
 
 static bool test_create_union_duplicates_all_ignore() {
-	e.emit_test("Does create_union avoid adding duplicates when the given "
+	emit_test("Does create_union avoid adding duplicates when the given "
 		"StringList contains all duplicates when case-insensitive?");
 	StringList sl("A;b;c;D", ";");
 	StringList toAdd("A;B;c;d", ";");
@@ -978,14 +976,14 @@ static bool test_create_union_duplicates_all_ignore() {
 	sl.create_union(toAdd, true);
 	char* retVal = sl.print_to_string();
 	char* expect = "A,b,c,D";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", add);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", add);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(orig); niceFree(add); niceFree(retVal);
 		FAIL;
@@ -995,7 +993,7 @@ static bool test_create_union_duplicates_all_ignore() {
 }
 
 static bool test_create_union_duplicates_some_ignore() {
-	e.emit_test("Does create_union avoid adding duplicates when the given "
+	emit_test("Does create_union avoid adding duplicates when the given "
 		"StringList contains some duplicates when case-insensitive?");
 	StringList sl("A;b;c;D", ";");
 	StringList toAdd("A;B;c;d;E", ";");
@@ -1004,14 +1002,14 @@ static bool test_create_union_duplicates_some_ignore() {
 	sl.create_union(toAdd, true);
 	char* retVal = sl.print_to_string();
 	char* expect = "A,b,c,D,E";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", add);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", add);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(orig); niceFree(add); niceFree(retVal);
 		FAIL;
@@ -1021,7 +1019,7 @@ static bool test_create_union_duplicates_some_ignore() {
 }
 
 static bool test_create_union_empty_current() {
-	e.emit_test("Test create_union when the current StringList is empty.");
+	emit_test("Test create_union when the current StringList is empty.");
 	StringList sl;
 	StringList toAdd("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -1029,14 +1027,14 @@ static bool test_create_union_empty_current() {
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
 	char* expect = "a,b,c";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_param("SUBSET", add);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_param("SUBSET", add);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(orig); niceFree(add); niceFree(retVal);
 		FAIL;
@@ -1046,21 +1044,21 @@ static bool test_create_union_empty_current() {
 }
 
 static bool test_create_union_empty_subset() {
-	e.emit_test("Test create_union when the StringList to add is empty.");
+	emit_test("Test create_union when the StringList to add is empty.");
 	StringList sl("a;b;c", ";");
 	StringList toAdd;
 	char* orig = sl.print_to_string();
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
 	char* expect = "a,b,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", "");
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", "");
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
 		niceFree(orig); niceFree(retVal);
 		FAIL;
@@ -1070,21 +1068,21 @@ static bool test_create_union_empty_subset() {
 }
 
 static bool test_contains_list_return_false() {
-	e.emit_test("Does contains_list() return false when the StringList doesn't "
+	emit_test("Does contains_list() return false when the StringList doesn't "
 		"contain the given subset?");
 	StringList sl("a;b;c;d;e;f", ";");
 	StringList subset("g;h;i", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1094,21 +1092,21 @@ static bool test_contains_list_return_false() {
 }
 
 static bool test_contains_list_return_false_ignore() {
-	e.emit_test("Does contains_list() return false when the StringList contains"
+	emit_test("Does contains_list() return false when the StringList contains"
 		" the given subset when ignoring case, but anycase is false?");
 	StringList sl("a;b;c", ";");
 	StringList subset("A;B;C", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1118,21 +1116,21 @@ static bool test_contains_list_return_false_ignore() {
 }
 
 static bool test_contains_list_return_false_almost() {
-	e.emit_test("Does contains_list() return false when the StringList contains"
+	emit_test("Does contains_list() return false when the StringList contains"
 		" all but 1 string of the subset?");
 	StringList sl("a;b;c;d;e;f", ";");
 	StringList subset("a;c;e;g", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1142,21 +1140,21 @@ static bool test_contains_list_return_false_almost() {
 }
 
 static bool test_contains_list_return_false_reverse() {
-	e.emit_test("Does contains_list() return false when the StringList is a "
+	emit_test("Does contains_list() return false when the StringList is a "
 		"subset of the subset?");
 	StringList sl("a;b;c", ";");
 	StringList subset("a;b;c;d;e;f", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1166,21 +1164,21 @@ static bool test_contains_list_return_false_reverse() {
 }
 
 static bool test_contains_list_return_true_not() {
-	e.emit_test("Does contains_list() return true when the StringList does "
+	emit_test("Does contains_list() return true when the StringList does "
 		"contain the given subset?");
 	StringList sl("a;b;c;d;e;f", ";");
 	StringList subset("a;c;f", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1190,21 +1188,21 @@ static bool test_contains_list_return_true_not() {
 }
 
 static bool test_contains_list_return_true_consecutive() {
-	e.emit_test("Does contains_list() return true when the StringList does "
+	emit_test("Does contains_list() return true when the StringList does "
 		"contain the given subset consecutively?");
 	StringList sl("a;b;c;d;e;f", ";");
 	StringList subset("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1214,21 +1212,21 @@ static bool test_contains_list_return_true_consecutive() {
 }
 
 static bool test_contains_list_return_true_not_ignore() {
-	e.emit_test("Does contains_list() return true when the StringList does "
+	emit_test("Does contains_list() return true when the StringList does "
 		"contain the given subset when ignoring case?");
 	StringList sl("a;b;c;D;E;F", ";");
 	StringList subset("a;C;d;F", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1238,21 +1236,21 @@ static bool test_contains_list_return_true_not_ignore() {
 }
 
 static bool test_contains_list_return_true_consecutive_ignore() {
-	e.emit_test("Does contains_list() return true when the StringList does "
+	emit_test("Does contains_list() return true when the StringList does "
 		"contain the given subset consecutively when ignoring case?");
 	StringList sl("a;b;C;D;e;f", ";");
 	StringList subset("a;B;c;D", ";");
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1262,19 +1260,19 @@ static bool test_contains_list_return_true_consecutive_ignore() {
 }
 
 static bool test_contains_list_return_true_itself() {
-	e.emit_test("Does contains_list() return true when passed the same "
+	emit_test("Does contains_list() return true when passed the same "
 		"StringList called on?");
 	StringList sl("a;b;c;d;e;f", ";");
 	char* orig = sl.print_to_string();
 	bool retVal = sl.contains_list(sl, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", orig);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", orig);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1284,21 +1282,21 @@ static bool test_contains_list_return_true_itself() {
 }
 
 static bool test_contains_list_return_true_copy() {
-	e.emit_test("Does contains_list() return true when passed a StringList "
+	emit_test("Does contains_list() return true when passed a StringList "
 		"copy?");
 	StringList sl("a;b;c;d;e;f", ";");
 	StringList subset(sl);
 	char* orig = sl.print_to_string();
 	char* check = subset.print_to_string();
 	bool retVal = sl.contains_list(subset, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("SUBSET", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("SUBSET", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -1308,19 +1306,19 @@ static bool test_contains_list_return_true_copy() {
 }
 
 static bool test_contains_return_false() {
-	e.emit_test("Does contains() return false when passed a string not in the "
+	emit_test("Does contains() return false when passed a string not in the "
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.contains(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1330,19 +1328,19 @@ static bool test_contains_return_false() {
 }
 
 static bool test_contains_return_false_substring() {
-	e.emit_test("Does contains() return false when passed a string not in the "
+	emit_test("Does contains() return false when passed a string not in the "
 		"StringList, but the StringList has a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "boo";
 	bool retVal = sl.contains(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1352,19 +1350,19 @@ static bool test_contains_return_false_substring() {
 }
 
 static bool test_contains_return_false_case() {
-	e.emit_test("Does contains() return false when passed a string in the "
+	emit_test("Does contains() return false when passed a string in the "
 		"StringList when ignoring case?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "A";
 	bool retVal = sl.contains(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1374,19 +1372,19 @@ static bool test_contains_return_false_case() {
 }
 
 static bool test_contains_return_true_one() {
-	e.emit_test("Does contains() return true when passed one string in the "
+	emit_test("Does contains() return true when passed one string in the "
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "a";
 	bool retVal = sl.contains(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1396,7 +1394,7 @@ static bool test_contains_return_true_one() {
 }
 
 static bool test_contains_return_true_many() {
-	e.emit_test("Does contains() return true for multiple calls with different "
+	emit_test("Does contains() return true for multiple calls with different "
 		"strings in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -1405,15 +1403,15 @@ static bool test_contains_return_true_many() {
 	char* check3 = "c";
 	bool retVal = sl.contains(check3) && sl.contains(check2) 
 		&& sl.contains(check1);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check3);
-	e.emit_param("STRING", check2);
-	e.emit_param("STRING", check1);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check3);
+	emit_param("STRING", check2);
+	emit_param("STRING", check1);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1423,9 +1421,9 @@ static bool test_contains_return_true_many() {
 }
 
 static bool test_contains_current_single() {
-	e.emit_test("Does contains() change current to point to the location of the"
+	emit_test("Does contains() change current to point to the location of the"
 		" single match?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"next() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a;b;c", ";");
@@ -1434,13 +1432,13 @@ static bool test_contains_current_single() {
 	sl.contains(check); 
 	char* next = sl.next();
 	char* expect = "b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("next", expect);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("next", expect);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -1450,9 +1448,9 @@ static bool test_contains_current_single() {
 }
 
 static bool test_contains_current_multiple() {
-	e.emit_test("Does contains() change current to point to the location of the"
+	emit_test("Does contains() change current to point to the location of the"
 		" first match when there are multiple matches?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"deleteCurrent() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a;b;a;b", ";");
@@ -1462,13 +1460,13 @@ static bool test_contains_current_multiple() {
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	char* expect = "b,a,b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1478,19 +1476,19 @@ static bool test_contains_current_multiple() {
 }
 
 static bool test_contains_anycase_return_false() {
-	e.emit_test("Does contains_anycase() return false when passed a string not "
+	emit_test("Does contains_anycase() return false when passed a string not "
 		"in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.contains_anycase(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1500,19 +1498,19 @@ static bool test_contains_anycase_return_false() {
 }
 
 static bool test_contains_anycase_return_false_substring() {
-	e.emit_test("Does contains_anycase() return false when passed a string not "
+	emit_test("Does contains_anycase() return false when passed a string not "
 		"in the StringList, but the StringList has a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "boo";
 	bool retVal = sl.contains_anycase(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1522,19 +1520,19 @@ static bool test_contains_anycase_return_false_substring() {
 }
 
 static bool test_contains_anycase_return_true_one() {
-	e.emit_test("Does contains_anycase() return true when passed one string in "
+	emit_test("Does contains_anycase() return true when passed one string in "
 		"the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "a";
 	bool retVal = sl.contains_anycase(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1544,7 +1542,7 @@ static bool test_contains_anycase_return_true_one() {
 }
 
 static bool test_contains_anycase_return_true_many() {
-	e.emit_test("Does contains_anycase() return true for multiple calls with "
+	emit_test("Does contains_anycase() return true for multiple calls with "
 		"different strings in the StringList?");
 	StringList sl("a;b;C;D", ";");
 	char* orig = sl.print_to_string();
@@ -1554,16 +1552,16 @@ static bool test_contains_anycase_return_true_many() {
 	char* check4 = "d";
 	bool retVal = sl.contains_anycase(check4) && sl.contains_anycase(check3) 
 		&& sl.contains_anycase(check2) && sl.contains_anycase(check1);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check4);
-	e.emit_param("STRING", check3);
-	e.emit_param("STRING", check2);
-	e.emit_param("STRING", check1);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check4);
+	emit_param("STRING", check3);
+	emit_param("STRING", check2);
+	emit_param("STRING", check1);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1573,9 +1571,9 @@ static bool test_contains_anycase_return_true_many() {
 }
 
 static bool test_contains_anycase_current_single() {
-	e.emit_test("Does contains_anycase() change current to point to the "
+	emit_test("Does contains_anycase() change current to point to the "
 		"location of the single match?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"next() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a;b;c", ";");
@@ -1584,13 +1582,13 @@ static bool test_contains_anycase_current_single() {
 	sl.contains_anycase(check); 
 	char* next = sl.next();
 	char* expect = "b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("next", next);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("next", next);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -1600,9 +1598,9 @@ static bool test_contains_anycase_current_single() {
 }
 
 static bool test_contains_anycase_current_multiple() {
-	e.emit_test("Does contains_anycase() change current to point to the "
+	emit_test("Does contains_anycase() change current to point to the "
 		"location of the first match when there are multiple matches?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"deleteCurrent() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("A;B;a;b", ";");
@@ -1612,13 +1610,13 @@ static bool test_contains_anycase_current_multiple() {
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	char* expect = "B,a,b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1628,7 +1626,7 @@ static bool test_contains_anycase_current_multiple() {
 }
 
 static bool test_remove_invalid() {
-	e.emit_test("Test that the StringList stays the same when calling remove() "
+	emit_test("Test that the StringList stays the same when calling remove() "
 		"with a string not in the list.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -1636,13 +1634,13 @@ static bool test_remove_invalid() {
 	sl.remove(remove);
 	char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1652,7 +1650,7 @@ static bool test_remove_invalid() {
 }
 
 static bool test_remove_case() {
-	e.emit_test("Test that the StringList stays the same when calling remove() "
+	emit_test("Test that the StringList stays the same when calling remove() "
 		"with a string in the list when ignoring case.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -1660,13 +1658,13 @@ static bool test_remove_case() {
 	sl.remove(remove);
 	char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1676,7 +1674,7 @@ static bool test_remove_case() {
 }
 
 static bool test_remove_substring() {
-	e.emit_test("Test that the StringList stays the same when calling remove() "
+	emit_test("Test that the StringList stays the same when calling remove() "
 		"with a string not in the list, but the list contains a substring of "
 		"the string.");
 	StringList sl("a;b;c", ";");
@@ -1685,13 +1683,13 @@ static bool test_remove_substring() {
 	sl.remove(remove);
 	char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1701,19 +1699,19 @@ static bool test_remove_substring() {
 }
 
 static bool test_remove_empty() {
-	e.emit_test("Test remove() on an empty StringList.");
+	emit_test("Test remove() on an empty StringList.");
 	StringList sl("", "");
 	char* orig = sl.print_to_string();
 	char* remove = "b";
 	sl.remove(remove);
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1723,20 +1721,20 @@ static bool test_remove_empty() {
 }
 
 static bool test_remove_first() {
-	e.emit_test("Does remove() successfully remove the first string?");
+	emit_test("Does remove() successfully remove the first string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* remove = "a";
 	sl.remove(remove);
 	char* expect = "b,c";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1746,20 +1744,20 @@ static bool test_remove_first() {
 }
 
 static bool test_remove_last() {
-	e.emit_test("Does remove() successfully remove the last string?");
+	emit_test("Does remove() successfully remove the last string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* remove = "c";
 	sl.remove(remove);
 	char* expect = "a,b";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1769,7 +1767,7 @@ static bool test_remove_last() {
 }
 
 static bool test_remove_many() {
-	e.emit_test("Does remove() successfully remove many strings?");
+	emit_test("Does remove() successfully remove many strings?");
 	StringList sl("a;b;c;d;e;f", ";");
 	char* orig = sl.print_to_string();
 	char* remove1 = "f";
@@ -1780,15 +1778,15 @@ static bool test_remove_many() {
 	sl.remove(remove3);
 	char* expect = "a,c,e";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove1);
-	e.emit_param("STRING", remove2);
-	e.emit_param("STRING", remove3);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove1);
+	emit_param("STRING", remove2);
+	emit_param("STRING", remove3);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1798,7 +1796,7 @@ static bool test_remove_many() {
 }
 
 static bool test_remove_anycase_invalid() {
-	e.emit_test("Test that the StringList stays the same when calling "
+	emit_test("Test that the StringList stays the same when calling "
 		"remove_anycase() with a string not in the list.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -1806,13 +1804,13 @@ static bool test_remove_anycase_invalid() {
 	sl.remove_anycase(remove);
 	char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1824,7 +1822,7 @@ static bool test_remove_anycase_invalid() {
 
 
 static bool test_remove_anycase_substring() {
-	e.emit_test("Test that the StringList stays the same when calling "
+	emit_test("Test that the StringList stays the same when calling "
 		"remove_anycase() with a string not in the list, but the list contains "
 		"a substring of the string.");
 	StringList sl("a;b;c", ";");
@@ -1833,13 +1831,13 @@ static bool test_remove_anycase_substring() {
 	sl.remove_anycase(remove);
 	char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1849,19 +1847,19 @@ static bool test_remove_anycase_substring() {
 }
 
 static bool test_remove_anycase_empty() {
-	e.emit_test("Test remove_anycase() on an empty StringList.");
+	emit_test("Test remove_anycase() on an empty StringList.");
 	StringList sl("", "");
 	char* orig = sl.print_to_string();
 	char* remove = "b";
 	sl.remove_anycase(remove);
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", "");
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", "");
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1871,20 +1869,20 @@ static bool test_remove_anycase_empty() {
 }
 
 static bool test_remove_anycase_first() {
-	e.emit_test("Does remove_anycase() successfully remove the first string?");
+	emit_test("Does remove_anycase() successfully remove the first string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* remove = "A";
 	sl.remove_anycase(remove);
 	char* expect = "b,c";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1894,20 +1892,20 @@ static bool test_remove_anycase_first() {
 }
 
 static bool test_remove_anycase_last() {
-	e.emit_test("Does remove_anycase() successfully remove the last string?");
+	emit_test("Does remove_anycase() successfully remove the last string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* remove = "C";
 	sl.remove_anycase(remove);
 	char* expect = "a,b";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1917,7 +1915,7 @@ static bool test_remove_anycase_last() {
 }
 
 static bool test_remove_anycase_many() {
-	e.emit_test("Does remove_anycase() successfully remove many strings?");
+	emit_test("Does remove_anycase() successfully remove many strings?");
 	StringList sl("a;b;c;d;E;F;G;H", ";");
 	char* orig = sl.print_to_string();
 	char* remove1 = "h";
@@ -1930,16 +1928,16 @@ static bool test_remove_anycase_many() {
 	sl.remove_anycase(remove4);
 	char* expect = "a,c,E,G";
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", remove1);
-	e.emit_param("STRING", remove2);
-	e.emit_param("STRING", remove3);
-	e.emit_param("STRING", remove4);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", remove1);
+	emit_param("STRING", remove2);
+	emit_param("STRING", remove3);
+	emit_param("STRING", remove4);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -1949,19 +1947,19 @@ static bool test_remove_anycase_many() {
 }
 
 static bool test_substring_return_false_invalid() {
-	e.emit_test("Does substring() return false when passed a string not in the "
+	emit_test("Does substring() return false when passed a string not in the "
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.substring(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1971,19 +1969,19 @@ static bool test_substring_return_false_invalid() {
 }
 
 static bool test_substring_return_false_almost() {
-	e.emit_test("Does substring() return false when the StringList contains a "
+	emit_test("Does substring() return false when the StringList contains a "
 		"string that is almost a substring of the string?");
 	StringList sl("abc;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "abd";
 	bool retVal = sl.substring(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -1993,19 +1991,19 @@ static bool test_substring_return_false_almost() {
 }
 
 static bool test_substring_return_false_reverse() {
-	e.emit_test("Does substring() return false when the passed string is a "
+	emit_test("Does substring() return false when the passed string is a "
 		"substring of one of the StringList's strings?");
 	StringList sl("aah;boo;car", ";");
 	char* orig = sl.print_to_string();
 	char* check = "bo";
 	bool retVal = sl.substring(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2015,19 +2013,19 @@ static bool test_substring_return_false_reverse() {
 }
 
 static bool test_substring_return_false_case() {
-	e.emit_test("Does substring() return false when the StringList contains a "
+	emit_test("Does substring() return false when the StringList contains a "
 		"string that is a substring of the string when ignoring case?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "B";
 	bool retVal = sl.substring(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2038,19 +2036,19 @@ static bool test_substring_return_false_case() {
 
 
 static bool test_substring_return_true_identical() {
-	e.emit_test("Does substring() return true when the passed string is in "
+	emit_test("Does substring() return true when the passed string is in "
 		"the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "a";
 	bool retVal = sl.substring(check);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2060,7 +2058,7 @@ static bool test_substring_return_true_identical() {
 }
 
 static bool test_substring_return_true_many() {
-	e.emit_test("Does substring() return true when the StringList contains "
+	emit_test("Does substring() return true when the StringList contains "
 		"substrings of the string for multiple calls?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -2069,15 +2067,15 @@ static bool test_substring_return_true_many() {
 	char* check3 = "aar";
 	bool retVal = sl.substring(check1) && sl.substring(check2) 
 		&& sl.substring(check3);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check1);
-	e.emit_param("STRING", check2);
-	e.emit_param("STRING", check3);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check1);
+	emit_param("STRING", check2);
+	emit_param("STRING", check3);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2087,9 +2085,9 @@ static bool test_substring_return_true_many() {
 }
 
 static bool test_substring_current_single() {
-	e.emit_test("Does substring() change current to point to the location of "
+	emit_test("Does substring() change current to point to the location of "
 		"the single match?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"next() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a;b;c", ";");
@@ -2098,13 +2096,13 @@ static bool test_substring_current_single() {
 	sl.substring(check); 
 	char* next = sl.next();
 	char* expect = "b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("next", next);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("next", next);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -2114,9 +2112,9 @@ static bool test_substring_current_single() {
 }
 
 static bool test_substring_current_multiple() {
-	e.emit_test("Does substring() change current to point to the location of "
+	emit_test("Does substring() change current to point to the location of "
 		"the first match when there are multiple matches?");	
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"deleteCurrent() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a;b;a;b", ";");
@@ -2126,13 +2124,13 @@ static bool test_substring_current_multiple() {
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	char* expect = "b,a,b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -2143,19 +2141,19 @@ static bool test_substring_current_multiple() {
 
 
 static bool test_contains_withwildcard_return_false() {
-	e.emit_test("Does contains_withwildcard() return false when passed a string"
+	emit_test("Does contains_withwildcard() return false when passed a string"
 		" not in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2165,19 +2163,19 @@ static bool test_contains_withwildcard_return_false() {
 }
 
 static bool test_contains_withwildcard_return_false_substring() {
-	e.emit_test("Does contains_withwildcard() return false when the StringList "
+	emit_test("Does contains_withwildcard() return false when the StringList "
 		"contains a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "boo";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2187,19 +2185,19 @@ static bool test_contains_withwildcard_return_false_substring() {
 }
 
 static bool test_contains_withwildcard_return_false_case() {
-	e.emit_test("Does contains_withwildcard() return false when the StringList "
+	emit_test("Does contains_withwildcard() return false when the StringList "
 		"contains the string when ignoring case?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "A";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2209,19 +2207,19 @@ static bool test_contains_withwildcard_return_false_case() {
 }
 
 static bool test_contains_withwildcard_return_false_wild() {
-	e.emit_test("Does contains_withwildcard() return false when the passed "
+	emit_test("Does contains_withwildcard() return false when the passed "
 		"string is not in the StringList when using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d*";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2231,19 +2229,19 @@ static bool test_contains_withwildcard_return_false_wild() {
 }
 
 static bool test_contains_withwildcard_return_true_no_wild() {
-	e.emit_test("Does contains_withwildcard() return true when the StringList "
+	emit_test("Does contains_withwildcard() return true when the StringList "
 		"contains the string when not using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "a";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2253,19 +2251,19 @@ static bool test_contains_withwildcard_return_true_no_wild() {
 }
 
 static bool test_contains_withwildcard_return_true_only_wild() {
-	e.emit_test("Does contains_withwildcard() return true when the StringList "
+	emit_test("Does contains_withwildcard() return true when the StringList "
 		"passed contains a string consisting of only the wildcard?");
 	StringList sl("*;a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "foo";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2275,19 +2273,19 @@ static bool test_contains_withwildcard_return_true_only_wild() {
 }
 
 static bool test_contains_withwildcard_return_true_start() {
-	e.emit_test("Does contains_withwildcard() return true when StringList "
+	emit_test("Does contains_withwildcard() return true when StringList "
 		"contains the string with a wildcard at the start?");
 	StringList sl("a;*r;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "bar";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2297,19 +2295,19 @@ static bool test_contains_withwildcard_return_true_start() {
 }
 
 static bool test_contains_withwildcard_return_true_mid() {
-	e.emit_test("Does contains_withwildcard() return true when StringList "
+	emit_test("Does contains_withwildcard() return true when StringList "
 		"contains the string with a wildcard in the middle of the string?");
 	StringList sl("a;b*r;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "bar";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2319,19 +2317,19 @@ static bool test_contains_withwildcard_return_true_mid() {
 }
 
 static bool test_contains_withwildcard_return_true_end() {
-	e.emit_test("Does contains_withwildcard() return true when StringList "
+	emit_test("Does contains_withwildcard() return true when StringList "
 		"contains the string with a wildcard at the end of the string?");
 	StringList sl("a;b*;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "bar";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2341,19 +2339,19 @@ static bool test_contains_withwildcard_return_true_end() {
 }
 
 static bool test_contains_withwildcard_return_true_same_wild() {
-	e.emit_test("Does contains_withwildcard() return true when StringList "
+	emit_test("Does contains_withwildcard() return true when StringList "
 		"contains the string but the wildcard is used too?");
 	StringList sl("a*;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "a";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2363,19 +2361,19 @@ static bool test_contains_withwildcard_return_true_same_wild() {
 }
 
 static bool test_contains_withwildcard_return_true_multiple() {
-	e.emit_test("Does contains_withwildcard() return true when the StringList "
+	emit_test("Does contains_withwildcard() return true when the StringList "
 		"contains multiple matches of the string?");
 	StringList sl("a*;ar*;are*;", ";");
 	char* orig = sl.print_to_string();
 	char* check = "are";
 	bool retVal = sl.contains_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2385,7 +2383,7 @@ static bool test_contains_withwildcard_return_true_multiple() {
 }
 
 static bool test_contains_withwildcard_return_true_many() {
-	e.emit_test("Does contains_withwildcard() return true when StringList "
+	emit_test("Does contains_withwildcard() return true when StringList "
 		"contains the strings for many calls?");
 	StringList sl("a*;ba*;car*", ";");
 	char* orig = sl.print_to_string();
@@ -2395,15 +2393,15 @@ static bool test_contains_withwildcard_return_true_many() {
 	bool retVal = sl.contains_withwildcard(check1) 
 		&& sl.contains_withwildcard(check2) 
 		&& sl.contains_withwildcard(check3);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check1);
-	e.emit_param("STRING", check2);
-	e.emit_param("STRING", check3);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check1);
+	emit_param("STRING", check2);
+	emit_param("STRING", check3);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2413,9 +2411,9 @@ static bool test_contains_withwildcard_return_true_many() {
 }
 
 static bool test_contains_withwildcard_current_single() {
-	e.emit_test("Does contains_withwildcard() change current to point to the "
+	emit_test("Does contains_withwildcard() change current to point to the "
 		"location of the single match?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"next() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a*;b;c*", ";");
@@ -2424,13 +2422,13 @@ static bool test_contains_withwildcard_current_single() {
 	sl.contains_withwildcard(check); 
 	char* next = sl.next();
 	char* expect = "b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("next", next);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("next", next);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -2440,9 +2438,9 @@ static bool test_contains_withwildcard_current_single() {
 }
 
 static bool test_contains_withwildcard_current_multiple() {
-	e.emit_test("Does contains_withwildcard() change current to point to the "
+	emit_test("Does contains_withwildcard() change current to point to the "
 		"location of the first match when there are multiple matches?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"deleteCurrent() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a*;b;aa*;b", ";");
@@ -2452,13 +2450,13 @@ static bool test_contains_withwildcard_current_multiple() {
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	char* expect = "b,aa*,b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -2468,19 +2466,19 @@ static bool test_contains_withwildcard_current_multiple() {
 }
 
 static bool test_contains_anycase_wwc_return_false() {
-	e.emit_test("Does contains_anycase_withwildcard() return false when passed "
+	emit_test("Does contains_anycase_withwildcard() return false when passed "
 		"a string not in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2490,19 +2488,19 @@ static bool test_contains_anycase_wwc_return_false() {
 }
 
 static bool test_contains_anycase_wwc_return_false_substring() {
-	e.emit_test("Does contains_anycase_withwildcard() return false when the "
+	emit_test("Does contains_anycase_withwildcard() return false when the "
 		"StringList contains a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "boo";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2512,19 +2510,19 @@ static bool test_contains_anycase_wwc_return_false_substring() {
 }
 
 static bool test_contains_anycase_wwc_return_false_wild() {
-	e.emit_test("Does contains_anycase_withwildcard() return false when the "
+	emit_test("Does contains_anycase_withwildcard() return false when the "
 		"passed string is not in the StringList when using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d*";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2534,19 +2532,19 @@ static bool test_contains_anycase_wwc_return_false_wild() {
 }
 
 static bool test_contains_anycase_wwc_return_true_no_wild() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when the "
+	emit_test("Does contains_anycase_withwildcard() return true when the "
 		"StringList contains the string when not using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "A";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2556,19 +2554,19 @@ static bool test_contains_anycase_wwc_return_true_no_wild() {
 }
 
 static bool test_contains_anycase_wwc_return_true_only_wild() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when the "
+	emit_test("Does contains_anycase_withwildcard() return true when the "
 		"StringList passed contains a string consisting of only the wildcard?");
 	StringList sl("*;a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "foo";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2578,19 +2576,19 @@ static bool test_contains_anycase_wwc_return_true_only_wild() {
 }
 
 static bool test_contains_anycase_wwc_return_true_start() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when "
+	emit_test("Does contains_anycase_withwildcard() return true when "
 		"StringList contains the string with a wildcard at the start?");
 	StringList sl("A;*R;C", ";");
 	char* orig = sl.print_to_string();
 	char* check = "bar";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2600,20 +2598,20 @@ static bool test_contains_anycase_wwc_return_true_start() {
 }
 
 static bool test_contains_anycase_wwc_return_true_mid() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when "
+	emit_test("Does contains_anycase_withwildcard() return true when "
 		"StringList contains the string with a wildcard in the middle of the "
 		"string?");
 	StringList sl("a;b*r;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "Bar";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2623,20 +2621,20 @@ static bool test_contains_anycase_wwc_return_true_mid() {
 }
 
 static bool test_contains_anycase_wwc_return_true_end() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when "
+	emit_test("Does contains_anycase_withwildcard() return true when "
 		"StringList contains the string with a wildcard at the end of the "
 		"string?");
 	StringList sl("a;b*;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "BAR";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2646,19 +2644,19 @@ static bool test_contains_anycase_wwc_return_true_end() {
 }
 
 static bool test_contains_anycase_wwc_return_true_same_wild() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when "
+	emit_test("Does contains_anycase_withwildcard() return true when "
 		"StringList contains the string but the wildcard is used too?");
 	StringList sl("a*;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "A";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2668,19 +2666,19 @@ static bool test_contains_anycase_wwc_return_true_same_wild() {
 }
 
 static bool test_contains_anycase_wwc_return_true_multiple() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when the "
+	emit_test("Does contains_anycase_withwildcard() return true when the "
 		"StringList contains multiple matches of the string?");
 	StringList sl("a*;AR*;Are*;", ";");
 	char* orig = sl.print_to_string();
 	char* check = "are";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2690,7 +2688,7 @@ static bool test_contains_anycase_wwc_return_true_multiple() {
 }
 
 static bool test_contains_anycase_wwc_return_true_many() {
-	e.emit_test("Does contains_anycase_withwildcard() return true when "
+	emit_test("Does contains_anycase_withwildcard() return true when "
 		"StringList contains the strings for many calls?");
 	StringList sl("a*;ba*;CAR*", ";");
 	char* orig = sl.print_to_string();
@@ -2700,15 +2698,15 @@ static bool test_contains_anycase_wwc_return_true_many() {
 	bool retVal = sl.contains_anycase_withwildcard(check1) 
 		&& sl.contains_anycase_withwildcard(check2) 
 		&& sl.contains_anycase_withwildcard(check3);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check1);
-	e.emit_param("STRING", check2);
-	e.emit_param("STRING", check3);
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check1);
+	emit_param("STRING", check2);
+	emit_param("STRING", check3);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2718,9 +2716,9 @@ static bool test_contains_anycase_wwc_return_true_many() {
 }
 
 static bool test_contains_anycase_wwc_current_single() {
-	e.emit_test("Does contains_anycase_withwildcard() change current to point "
+	emit_test("Does contains_anycase_withwildcard() change current to point "
 		"to the location of the single match?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"next() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("a*;b;c*", ";");
@@ -2729,13 +2727,13 @@ static bool test_contains_anycase_wwc_current_single() {
 	sl.contains_anycase_withwildcard(check); 
 	char* next = sl.next();
 	char* expect = "b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("next", next);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("next", next);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -2745,9 +2743,9 @@ static bool test_contains_anycase_wwc_current_single() {
 }
 
 static bool test_contains_anycase_wwc_current_multiple() {
-	e.emit_test("Does contains_anycase_withwildcard() change current to point "
+	emit_test("Does contains_anycase_withwildcard() change current to point "
 		"to the location of the first match when there are multiple matches?");
-	e.emit_comment("To test that current points to the correct string, "
+	emit_comment("To test that current points to the correct string, "
 		"deleteCurrent() has to be called so a problem with that may cause this"
 		" to fail.");
 	StringList sl("A*;b;Aa*;b", ";");
@@ -2757,13 +2755,13 @@ static bool test_contains_anycase_wwc_current_multiple() {
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	char* expect = "b,Aa*,b";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -2773,20 +2771,20 @@ static bool test_contains_anycase_wwc_current_multiple() {
 }
 
 static bool test_find_matches_any_wwc_return_false() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return false when "
+	emit_test("Does find_matches_anycase_withwildcard() return false when "
 		"passed a string not in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2796,20 +2794,20 @@ static bool test_find_matches_any_wwc_return_false() {
 }
 
 static bool test_find_matches_any_wwc_return_false_substring() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return false when the"
+	emit_test("Does find_matches_anycase_withwildcard() return false when the"
 		" StringList contains a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "boo";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2819,20 +2817,20 @@ static bool test_find_matches_any_wwc_return_false_substring() {
 }
 
 static bool test_find_matches_any_wwc_return_false_wild() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return false when the"
+	emit_test("Does find_matches_anycase_withwildcard() return false when the"
 		" passed string is not in the StringList when using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d*";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2842,20 +2840,20 @@ static bool test_find_matches_any_wwc_return_false_wild() {
 }
 
 static bool test_find_matches_any_wwc_return_true_no_wild() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when the "
+	emit_test("Does find_matches_anycase_withwildcard() return true when the "
 		"StringList contains the string when not using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "A";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2865,20 +2863,20 @@ static bool test_find_matches_any_wwc_return_true_no_wild() {
 }
 
 static bool test_find_matches_any_wwc_return_true_only_wild() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when the "
+	emit_test("Does find_matches_anycase_withwildcard() return true when the "
 		"StringList passed contains a string consisting of only the wildcard?");
 	StringList sl("*;a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "foo";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2888,20 +2886,20 @@ static bool test_find_matches_any_wwc_return_true_only_wild() {
 }
 
 static bool test_find_matches_any_wwc_return_true_start() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when "
+	emit_test("Does find_matches_anycase_withwildcard() return true when "
 		"StringList contains the string with a wildcard at the start?");
 	StringList sl("A;*R;C", ";");
 	char* orig = sl.print_to_string();
 	char* check = "bar";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2911,21 +2909,21 @@ static bool test_find_matches_any_wwc_return_true_start() {
 }
 
 static bool test_find_matches_any_wwc_return_true_mid() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when "
+	emit_test("Does find_matches_anycase_withwildcard() return true when "
 		"StringList contains the string with a wildcard in the middle of the "
 		"string?");
 	StringList sl("a;b*r;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "Bar";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2935,21 +2933,21 @@ static bool test_find_matches_any_wwc_return_true_mid() {
 }
 
 static bool test_find_matches_any_wwc_return_true_end() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when "
+	emit_test("Does find_matches_anycase_withwildcard() return true when "
 		"StringList contains the string with a wildcard at the end of the "
 		"string?");
 	StringList sl("a;b*;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "BAR";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2959,20 +2957,20 @@ static bool test_find_matches_any_wwc_return_true_end() {
 }
 
 static bool test_find_matches_any_wwc_return_true_same_wild() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when "
+	emit_test("Does find_matches_anycase_withwildcard() return true when "
 		"StringList contains the string but the wildcard is used too?");
 	StringList sl("a*;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "A";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -2982,20 +2980,20 @@ static bool test_find_matches_any_wwc_return_true_same_wild() {
 }
 
 static bool test_find_matches_any_wwc_return_true_multiple() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when the "
+	emit_test("Does find_matches_anycase_withwildcard() return true when the "
 		"StringList contains multiple matches of the string?");
 	StringList sl("a*;AR*;Are*;", ";");
 	char* orig = sl.print_to_string();
 	char* check = "are";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3005,7 +3003,7 @@ static bool test_find_matches_any_wwc_return_true_multiple() {
 }
 
 static bool test_find_matches_any_wwc_return_true_many() {
-	e.emit_test("Does find_matches_anycase_withwildcard() return true when "
+	emit_test("Does find_matches_anycase_withwildcard() return true when "
 		"StringList contains the strings for many calls?");
 	StringList sl("a*;ba*;CAR*", ";");
 	char* orig = sl.print_to_string();
@@ -3015,18 +3013,18 @@ static bool test_find_matches_any_wwc_return_true_many() {
 	bool retVal = sl.find_matches_anycase_withwildcard(check1, NULL) 
 		&& sl.find_matches_anycase_withwildcard(check2, NULL) 
 		&& sl.find_matches_anycase_withwildcard(check3, NULL);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check1);
-	e.emit_param("StringList", "NULL");
-	e.emit_param("STRING", check2);
-	e.emit_param("StringList", "NULL");
-	e.emit_param("STRING", check3);
-	e.emit_param("StringList", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check1);
+	emit_param("StringList", "NULL");
+	emit_param("STRING", check2);
+	emit_param("StringList", "NULL");
+	emit_param("STRING", check3);
+	emit_param("StringList", "NULL");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3036,7 +3034,7 @@ static bool test_find_matches_any_wwc_return_true_many() {
 }
 
 static bool test_find_matches_any_wwc_none() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() does not add "
+	emit_test("Test that find_matches_anycase_withwildcard() does not add "
 		"any matches to the list when there are no matches in the StringList.");
 	StringList sl("a;b;c", ";");
 	StringList m;
@@ -3044,14 +3042,14 @@ static bool test_find_matches_any_wwc_none() {
 	char* check = "d";
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "");
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", "");
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "");
+	emit_output_expected_header();
+	emit_param("MATCHES", "");
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, "") != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -3061,7 +3059,7 @@ static bool test_find_matches_any_wwc_none() {
 }
 
 static bool test_find_matches_any_wwc_one() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() adds the "
+	emit_test("Test that find_matches_anycase_withwildcard() adds the "
 		"matching string to the StringList.");
 	StringList sl("a;b;c", ";");
 	StringList m;
@@ -3070,14 +3068,14 @@ static bool test_find_matches_any_wwc_one() {
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* expect = "a";
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "");
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", expect);
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "");
+	emit_output_expected_header();
+	emit_param("MATCHES", expect);
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
 		niceFree(orig); niceFree(matches);
 		FAIL;
@@ -3087,7 +3085,7 @@ static bool test_find_matches_any_wwc_one() {
 }
 
 static bool test_find_matches_any_wwc_one_exist() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() adds the "
+	emit_test("Test that find_matches_anycase_withwildcard() adds the "
 		"matching string to the StringList with existing strings.");
 	StringList sl("a;b;c", ";");
 	StringList m("1;2;3", ";");
@@ -3097,14 +3095,14 @@ static bool test_find_matches_any_wwc_one_exist() {
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* expect = "1,2,3,a";
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", list);
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", expect);
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", list);
+	emit_output_expected_header();
+	emit_param("MATCHES", expect);
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
 		niceFree(orig); niceFree(list); niceFree(matches);
 		FAIL;
@@ -3114,7 +3112,7 @@ static bool test_find_matches_any_wwc_one_exist() {
 }
 
 static bool test_find_matches_any_wwc_wild_start() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() adds the "
+	emit_test("Test that find_matches_anycase_withwildcard() adds the "
 		"matching string to the StringList when using a wildcard at the start "
 		"of a string.");
 	StringList sl("a;*R;c", ";");
@@ -3124,14 +3122,14 @@ static bool test_find_matches_any_wwc_wild_start() {
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* expect = "*R";
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "");
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", expect);
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "");
+	emit_output_expected_header();
+	emit_param("MATCHES", expect);
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
 		niceFree(orig); niceFree(matches);
 		FAIL;
@@ -3141,7 +3139,7 @@ static bool test_find_matches_any_wwc_wild_start() {
 }
 
 static bool test_find_matches_any_wwc_wild_mid() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() adds the "
+	emit_test("Test that find_matches_anycase_withwildcard() adds the "
 		"matching string to the StringList when using a wildcard in the middle "
 		"of a string.");
 	StringList sl("a;B*r;c", ";");
@@ -3151,14 +3149,14 @@ static bool test_find_matches_any_wwc_wild_mid() {
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* expect = "B*r";
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "");
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", expect);
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "");
+	emit_output_expected_header();
+	emit_param("MATCHES", expect);
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
 		niceFree(orig); niceFree(matches);
 		FAIL;
@@ -3168,7 +3166,7 @@ static bool test_find_matches_any_wwc_wild_mid() {
 }
 
 static bool test_find_matches_any_wwc_wild_end() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() adds the "
+	emit_test("Test that find_matches_anycase_withwildcard() adds the "
 		"matching string to the StringList when using a wildcard at the end "
 		"of a string.");
 	StringList sl("a;b*;c", ";");
@@ -3178,14 +3176,14 @@ static bool test_find_matches_any_wwc_wild_end() {
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* expect = "b*";
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "");
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", expect);
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "");
+	emit_output_expected_header();
+	emit_param("MATCHES", expect);
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
 		niceFree(orig); niceFree(matches);
 		FAIL;
@@ -3195,7 +3193,7 @@ static bool test_find_matches_any_wwc_wild_end() {
 }
 
 static bool test_find_matches_any_wwc_multiple() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() adds the "
+	emit_test("Test that find_matches_anycase_withwildcard() adds the "
 		"matching strings to the StringList when there are multiple matches.");
 	StringList sl("a*;AR*;Are*;are", ";");
 	StringList m;
@@ -3204,14 +3202,14 @@ static bool test_find_matches_any_wwc_multiple() {
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* expect = "a*,AR*,Are*,are";
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", "");
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", expect);
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", "");
+	emit_output_expected_header();
+	emit_param("MATCHES", expect);
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
 		niceFree(orig); niceFree(matches);
 		FAIL;
@@ -3221,7 +3219,7 @@ static bool test_find_matches_any_wwc_multiple() {
 }
 
 static bool test_find_matches_any_wwc_multiple_exist() {
-	e.emit_test("Test that find_matches_anycase_withwildcard() adds the "
+	emit_test("Test that find_matches_anycase_withwildcard() adds the "
 		"matching strings to the StringList with existing strings when there "
 		"are multiple matches.");
 	StringList sl("a*;AR*;Are*;are", ";");
@@ -3232,14 +3230,14 @@ static bool test_find_matches_any_wwc_multiple_exist() {
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* expect = "a,b,c,a*,AR*,Are*,are";
 	char* matches = m.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("StringList", list);
-	e.emit_output_expected_header();
-	e.emit_param("MATCHES", expect);
-	e.emit_output_actual_header();
-	e.emit_param("MATCHES", nicePrint(matches));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("StringList", list);
+	emit_output_expected_header();
+	emit_param("MATCHES", expect);
+	emit_output_actual_header();
+	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
 		niceFree(orig); niceFree(list); niceFree(matches);
 		FAIL;
@@ -3249,20 +3247,20 @@ static bool test_find_matches_any_wwc_multiple_exist() {
 }
 
 static bool test_find_return_false() {
-	e.emit_test("Does find() return false when passed a string not in the "
+	emit_test("Does find() return false when passed a string not in the "
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.find(check, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("Anycase", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("Anycase", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3272,20 +3270,20 @@ static bool test_find_return_false() {
 }
 
 static bool test_find_return_false_substring() {
-	e.emit_test("Does find() return false when passed a string not in the "
+	emit_test("Does find() return false when passed a string not in the "
 		"StringList, but the StringList has a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "boo";
 	bool retVal = sl.find(check, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("Anycase", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("Anycase", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3295,20 +3293,20 @@ static bool test_find_return_false_substring() {
 }
 
 static bool test_find_return_false_case() {
-	e.emit_test("Does find() return false when passed a string in the "
+	emit_test("Does find() return false when passed a string in the "
 		"StringList when ignoring case, but anycase is false?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "A";
 	bool retVal = sl.find(check, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("Anycase", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("Anycase", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3318,20 +3316,20 @@ static bool test_find_return_false_case() {
 }
 
 static bool test_find_return_true_one() {
-	e.emit_test("Does find() return true when passed one string in the "
+	emit_test("Does find() return true when passed one string in the "
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "a";
 	bool retVal = sl.find(check, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("Anycase", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("Anycase", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3341,7 +3339,7 @@ static bool test_find_return_true_one() {
 }
 
 static bool test_find_return_true_many() {
-	e.emit_test("Does find() return true when called many times for different "
+	emit_test("Does find() return true when called many times for different "
 		"strings in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
@@ -3350,18 +3348,18 @@ static bool test_find_return_true_many() {
 	char* check3 = "c";
 	bool retVal = sl.find(check3, false) && sl.find(check2, false) 
 		&& sl.find(check1, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check3);
-	e.emit_param("Anycase", "FALSE");
-	e.emit_param("STRING", check2);
-	e.emit_param("Anycase", "FALSE");
-	e.emit_param("STRING", check1);
-	e.emit_param("Anycase", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check3);
+	emit_param("Anycase", "FALSE");
+	emit_param("STRING", check2);
+	emit_param("Anycase", "FALSE");
+	emit_param("STRING", check1);
+	emit_param("Anycase", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3371,20 +3369,20 @@ static bool test_find_return_true_many() {
 }
 
 static bool test_find_anycase_return_false() {
-	e.emit_test("Does find() return false when passed a string not in the "
+	emit_test("Does find() return false when passed a string not in the "
 		"StringList when anycase is true?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "d";
 	bool retVal = sl.find(check, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("Anycase", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("Anycase", "TRUE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3394,21 +3392,21 @@ static bool test_find_anycase_return_false() {
 }
 
 static bool test_find_anycase_return_false_substring() {
-	e.emit_test("Does find() return false when passed a string not in the "
+	emit_test("Does find() return false when passed a string not in the "
 		"StringList when anycase is true, but the StringList has a substring "
 		"of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "boo";
 	bool retVal = sl.find(check, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("Anycase", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("Anycase", "TRUE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3418,20 +3416,20 @@ static bool test_find_anycase_return_false_substring() {
 }
 
 static bool test_find_anycase_return_true_one() {
-	e.emit_test("Does find() return true when passed one string in the "
+	emit_test("Does find() return true when passed one string in the "
 		"StringList when anycase is true?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = "a";
 	bool retVal = sl.find(check, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check);
-	e.emit_param("Anycase", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_param("Anycase", "TRUE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3441,7 +3439,7 @@ static bool test_find_anycase_return_true_one() {
 }
 
 static bool test_find_anycase_return_true_many() {
-	e.emit_test("Does find() return true when called many times with different "
+	emit_test("Does find() return true when called many times with different "
 		"strings in the StringList when anycase is true?");
 	StringList sl("a;b;C;D", ";");
 	char* orig = sl.print_to_string();
@@ -3451,20 +3449,20 @@ static bool test_find_anycase_return_true_many() {
 	char* check4 = "d";
 	bool retVal = sl.find(check4, true) && sl.find(check3, true) 
 		&& sl.find(check2, true) && sl.find(check1, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", check4);
-	e.emit_param("Anycase", "TRUE");
-	e.emit_param("STRING", check3);
-	e.emit_param("Anycase", "TRUE");
-	e.emit_param("STRING", check2);
-	e.emit_param("Anycase", "TRUE");
-	e.emit_param("STRING", check1);
-	e.emit_param("Anycase", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check4);
+	emit_param("Anycase", "TRUE");
+	emit_param("STRING", check3);
+	emit_param("Anycase", "TRUE");
+	emit_param("STRING", check2);
+	emit_param("Anycase", "TRUE");
+	emit_param("STRING", check1);
+	emit_param("Anycase", "TRUE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3475,21 +3473,21 @@ static bool test_find_anycase_return_true_many() {
 
 
 static bool test_identical_return_false_same() {
-	e.emit_test("Does identical() return false when the lists are not identical"
+	emit_test("Does identical() return false when the lists are not identical"
 		", but contain the same number of strings?");
 	StringList sl("a;b;c", ";");
 	StringList other("d;e;f", ";");
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3499,21 +3497,21 @@ static bool test_identical_return_false_same() {
 }
 
 static bool test_identical_return_false_not_same() {
-	e.emit_test("Does identical() return false when the lists are not identical"
+	emit_test("Does identical() return false when the lists are not identical"
 		" and don't contain the same number of strings?");
 	StringList sl("a;b;c", ";");
 	StringList other("d;e;f;g;h;i", ";");
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3523,21 +3521,21 @@ static bool test_identical_return_false_not_same() {
 }
 
 static bool test_identical_return_false_almost() {
-	e.emit_test("Does identical() return false when the lists only differ by "
+	emit_test("Does identical() return false when the lists only differ by "
 		"one string?");
 	StringList sl("a;b;c", ";");
 	StringList other("a;d;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3547,21 +3545,21 @@ static bool test_identical_return_false_almost() {
 }
 
 static bool test_identical_return_false_ignore() {
-	e.emit_test("Does identical() return false when the lists are identical "
+	emit_test("Does identical() return false when the lists are identical "
 		"when ignoring case, but anycase is false?");
 	StringList sl("a;b;c", ";");
 	StringList other("A;B;C", ";");
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3571,21 +3569,21 @@ static bool test_identical_return_false_ignore() {
 }
 
 static bool test_identical_return_false_subset() {
-	e.emit_test("Does identical() return false when the passed StringList is a "
+	emit_test("Does identical() return false when the passed StringList is a "
 		"subset of the StringList called upon?");
 	StringList sl("a;b;c;d;e;f", ";");
 	StringList other("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("FALSE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3595,21 +3593,21 @@ static bool test_identical_return_false_subset() {
 }
 
 static bool test_identical_return_true_case() {
-	e.emit_test("Does identical() return true when the StringLists are "
+	emit_test("Does identical() return true when the StringLists are "
 		"identical when not ignoring case?");
 	StringList sl("a;b;c", ";");
 	StringList other("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3619,21 +3617,21 @@ static bool test_identical_return_true_case() {
 }
 
 static bool test_identical_return_true_ignore() {
-	e.emit_test("Does identical() return return true when the StringLists are "
+	emit_test("Does identical() return return true when the StringLists are "
 		"identical when ignoring case?");
 	StringList sl("a;b;C;D", ";");
 	StringList other("a;B;c;D", ";");
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3643,19 +3641,19 @@ static bool test_identical_return_true_ignore() {
 }
 
 static bool test_identical_return_true_itself() {
-	e.emit_test("Does identical() return true when passed the same StringList "
+	emit_test("Does identical() return true when passed the same StringList "
 		"called on?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	bool retVal = sl.identical(sl, false);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", orig);
-	e.emit_param("ANYCASE", "FALSE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", orig);
+	emit_param("ANYCASE", "FALSE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -3665,21 +3663,21 @@ static bool test_identical_return_true_itself() {
 }
 
 static bool test_identical_return_true_copy() {
-	e.emit_test("Does identical() return true when using the copy "
+	emit_test("Does identical() return true when using the copy "
 		"constructor?");
 	StringList sl("a;b;c", ";");
 	StringList other(sl);
 	char* orig = sl.print_to_string();
 	char* check = other.print_to_string();
 	bool retVal = sl.identical(other, true);
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("StringList", check);
-	e.emit_param("ANYCASE", "TRUE");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("StringList", check);
+	emit_param("ANYCASE", "TRUE");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig); niceFree(check);
 		FAIL;
@@ -3689,18 +3687,18 @@ static bool test_identical_return_true_copy() {
 }
 
 static bool test_print_to_string_empty() {
-	e.emit_test("Test print_to_string() on an empty StringList.");
-	e.emit_comment("print_to_string() currently returns NULL for an empty "
+	emit_test("Test print_to_string() on an empty StringList.");
+	emit_comment("print_to_string() currently returns NULL for an empty "
 		"StringList, so this will fail if that changes.");
 	StringList sl("", "");
 	char* ps = sl.print_to_string();
 	char* expect = "";
-	e.emit_input_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", expect);
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(ps);
 		FAIL;
@@ -3710,16 +3708,16 @@ static bool test_print_to_string_empty() {
 }
 
 static bool test_print_to_string_one() {
-	e.emit_test("Test print_to_string() on a StringList with only one string.");
+	emit_test("Test print_to_string() on a StringList with only one string.");
 	StringList sl("foo", "");
 	char* ps = sl.print_to_string();
 	char* expect = "foo";
-	e.emit_input_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", expect);
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(ps);
 		FAIL;
@@ -3729,16 +3727,16 @@ static bool test_print_to_string_one() {
 }
 
 static bool test_print_to_string_many() {
-	e.emit_test("Test print_to_string() on a StringList with many strings.");
+	emit_test("Test print_to_string() on a StringList with many strings.");
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* ps = sl.print_to_string();
 	char* expect = "a,b,c,dog,eel,fish,goat";
-	e.emit_input_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", expect);
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(ps);
 		FAIL;
@@ -3748,19 +3746,19 @@ static bool test_print_to_string_many() {
 }
 
 static bool test_print_to_delimed_string_empty() {
-	e.emit_test("Test print_to_delimed_string() on an empty StringList.");
-	e.emit_comment("print_to_delimed_string() currently returns NULL for an "
+	emit_test("Test print_to_delimed_string() on an empty StringList.");
+	emit_comment("print_to_delimed_string() currently returns NULL for an "
 		"empty StringList, so this will fail if that changes.");
 	StringList sl("", "");
 	char* ps = sl.print_to_delimed_string(",");
 	char* expect = "";
-	e.emit_input_header();
-	e.emit_param("StringList", expect);
-	e.emit_param("DELIM", ",");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", expect);
+	emit_param("DELIM", ",");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(ps);
 		FAIL;
@@ -3770,18 +3768,18 @@ static bool test_print_to_delimed_string_empty() {
 }
 
 static bool test_print_to_delimed_string_one() {
-	e.emit_test("Test print_to_delimed_string() on a StringList with only one "
+	emit_test("Test print_to_delimed_string() on a StringList with only one "
 		"string.");
 	StringList sl("foo", "");
 	char* ps = sl.print_to_delimed_string("!");
 	char* expect = "foo";
-	e.emit_input_header();
-	e.emit_param("StringList", expect);
-	e.emit_param("DELIM", "!");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", expect);
+	emit_param("DELIM", "!");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(ps);
 		FAIL;
@@ -3791,19 +3789,19 @@ static bool test_print_to_delimed_string_one() {
 }
 
 static bool test_print_to_delimed_string_many_short() {
-	e.emit_test("Test print_to_delimed_string() with a short delimiter on a "
+	emit_test("Test print_to_delimed_string() with a short delimiter on a "
 		"StringList with many strings.");
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* orig = sl.print_to_delimed_string();
 	char* ps = sl.print_to_delimed_string("&");
 	char* expect = "a&b&c&dog&eel&fish&goat";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("DELIM", "&");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("DELIM", "&");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(orig); niceFree(ps);
 		FAIL;
@@ -3813,19 +3811,19 @@ static bool test_print_to_delimed_string_many_short() {
 }
 
 static bool test_print_to_delimed_string_many_long() {
-	e.emit_test("Test print_to_delimed_string() with a long delimiter on a "
+	emit_test("Test print_to_delimed_string() with a long delimiter on a "
 		"StringList with many strings.");
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* orig = sl.print_to_string();
 	char* ps = sl.print_to_delimed_string(" and ");
 	char* expect = "a and b and c and dog and eel and fish and goat";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("DELIM", " and ");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("DELIM", " and ");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(orig); niceFree(ps);
 		FAIL;
@@ -3835,21 +3833,21 @@ static bool test_print_to_delimed_string_many_long() {
 }
 
 static bool test_print_to_delimed_string_many_null() {
-	e.emit_test("Test print_to_delimed_string() with a NULL delimiter on a "
+	emit_test("Test print_to_delimed_string() with a NULL delimiter on a "
 		"StringList with many strings.");
-	e.emit_comment("Currently print_to_delimed_string() prints the StringList "
+	emit_comment("Currently print_to_delimed_string() prints the StringList "
 		"using the StringList's delimiters if the passed delim is NULL.");
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* ps = sl.print_to_delimed_string(NULL);
 	char* orig = sl.print_to_string();
 	char* expect = "a;b;c;dog;eel;fish;goat";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("DELIM", "NULL");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(ps));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("DELIM", "NULL");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
 		niceFree(orig); niceFree(ps);
 		FAIL;
@@ -3859,9 +3857,9 @@ static bool test_print_to_delimed_string_many_null() {
 }
 
 static bool test_delete_current_before() {
-	e.emit_test("Does calling deleteCurrent() before any calls to contains() "
+	emit_test("Does calling deleteCurrent() before any calls to contains() "
 		"or substring() delete the last string from the StringList?");
-	e.emit_comment("Since the StringList constructor calls Append on its "
+	emit_comment("Since the StringList constructor calls Append on its "
 		"internal list for each string to add, current points at the last "
 		"string added.");
 	StringList sl("a;b;c", ";");
@@ -3869,12 +3867,12 @@ static bool test_delete_current_before() {
 	char* expect = "a,b";
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -3884,13 +3882,13 @@ static bool test_delete_current_before() {
 }
 
 static bool test_delete_current_after_no_match() {
-	e.emit_test("Does calling deleteCurrent() after calling contains() on a "
+	emit_test("Does calling deleteCurrent() after calling contains() on a "
 		"string that isn't in the StringList delete change the current "
 		"pointer?");	
-	e.emit_comment("Since the StringList constructor calls Append on its "
+	emit_comment("Since the StringList constructor calls Append on its "
 		"internal list for each string to add, current points at the last "
 		"string added.");
-	e.emit_comment("Testing deleteCurrent() requires calling contains*() or "
+	emit_comment("Testing deleteCurrent() requires calling contains*() or "
 		"substring() so a problem with one of these could cause problems "
 		"here.");
 	StringList sl("a;b;c", ";");
@@ -3899,13 +3897,13 @@ static bool test_delete_current_after_no_match() {
 	sl.contains("d");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains()", "d");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains()", "d");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -3915,9 +3913,9 @@ static bool test_delete_current_after_no_match() {
 }
 
 static bool test_delete_current_one_first() {
-	e.emit_test("Test deleteCurrent() after calling contains() on the first "
+	emit_test("Test deleteCurrent() after calling contains() on the first "
 		"string in the StringList.");
-	e.emit_comment("Testing deleteCurrent() requires calling contains*() or "
+	emit_comment("Testing deleteCurrent() requires calling contains*() or "
 		"substring() so a problem with one of these could cause problems "
 		"here.");
 	StringList sl("a;b;c", ";");
@@ -3926,13 +3924,13 @@ static bool test_delete_current_one_first() {
 	sl.contains("a");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains()", "a");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains()", "a");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -3942,9 +3940,9 @@ static bool test_delete_current_one_first() {
 }
 
 static bool test_delete_current_one_mid() {
-	e.emit_test("Test deleteCurrent() after calling contains() on a string in "
+	emit_test("Test deleteCurrent() after calling contains() on a string in "
 		"the middle of the StringList.");
-	e.emit_comment("Testing deleteCurrent() requires calling contains*() or "
+	emit_comment("Testing deleteCurrent() requires calling contains*() or "
 		"substring() so a problem with one of these could cause problems "
 		"here.");
 	StringList sl("a;b;c;d;e", ";");
@@ -3953,13 +3951,13 @@ static bool test_delete_current_one_mid() {
 	sl.contains("c");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains()", "c");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains()", "c");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -3969,9 +3967,9 @@ static bool test_delete_current_one_mid() {
 }
 
 static bool test_delete_current_one_last() {
-	e.emit_test("Test deleteCurrent() after calling contains() on the last "
+	emit_test("Test deleteCurrent() after calling contains() on the last "
 		" string in the StringList.");
-	e.emit_comment("Testing deleteCurrent() requires calling contains*() or "
+	emit_comment("Testing deleteCurrent() requires calling contains*() or "
 		"substring() so a problem with one of these could cause problems "
 		"here.");
 	StringList sl("a;b;c", ";");
@@ -3980,13 +3978,13 @@ static bool test_delete_current_one_last() {
 	sl.contains("c");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains()", "c");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains()", "c");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -3996,9 +3994,9 @@ static bool test_delete_current_one_last() {
 }
 
 static bool test_delete_current_all() {
-	e.emit_test("Test calling deleteCurrent() on all the strings in the "
+	emit_test("Test calling deleteCurrent() on all the strings in the "
 		"StringList.");
-	e.emit_comment("Testing deleteCurrent() requires calling contains*() or "
+	emit_comment("Testing deleteCurrent() requires calling contains*() or "
 		"substring() so a problem with one of these could cause problems "
 		"here.");
 	StringList sl("a;b;c", ";");
@@ -4011,15 +4009,15 @@ static bool test_delete_current_all() {
 	sl.contains("c");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains()", "a");
-	e.emit_param("contains()", "b");
-	e.emit_param("contains()", "c");
-	e.emit_output_expected_header();
-	e.emit_retval(expect);
-	e.emit_output_actual_header();
-	e.emit_retval(nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains()", "a");
+	emit_param("contains()", "b");
+	emit_param("contains()", "c");
+	emit_output_expected_header();
+	emit_retval(expect);
+	emit_output_actual_header();
+	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4029,22 +4027,22 @@ static bool test_delete_current_all() {
 }
 
 static bool test_string_compare_equal_same_beg() {
-	e.emit_test("Test string_compare() on the same string at the beginning of "
+	emit_test("Test string_compare() on the same string at the beginning of "
 		" a single StringList.");
-	e.emit_comment("This test relies on number(), rewind(), and next() so a "
+	emit_comment("This test relies on number(), rewind(), and next() so a "
 		"problem with any of these may cause problems here.");
 	StringList sl("a;b;c", ";");
 	char* list = sl.print_to_string();
 	char** strs = string_compare_helper(&sl, 0);
 	int retVal = string_compare(strs, strs);
-	e.emit_input_header();
-	e.emit_param("StringList", list);
-	e.emit_param("STRING", *strs);
-	e.emit_param("STRING", *strs);
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("StringList", list);
+	emit_param("STRING", *strs);
+	emit_param("STRING", *strs);
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
 		niceFree(list); free_helper(strs);
 		FAIL;
@@ -4054,22 +4052,22 @@ static bool test_string_compare_equal_same_beg() {
 }
 
 static bool test_string_compare_equal_same_mid() {
-	e.emit_test("Test string_compare() on the same string in the middle of a "
+	emit_test("Test string_compare() on the same string in the middle of a "
 		"single StringList.");
-	e.emit_comment("This test relies on number(), rewind(), and next() so a "
+	emit_comment("This test relies on number(), rewind(), and next() so a "
 		"problem with any of these may cause problems here.");
 	StringList sl("a;b;c", ";");
 	char* list = sl.print_to_string();
 	char** strs = string_compare_helper(&sl, 1);
 	int retVal = string_compare(strs, strs);
-	e.emit_input_header();
-	e.emit_param("StringList", list);
-	e.emit_param("STRING", *strs);
-	e.emit_param("STRING", *strs);
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("StringList", list);
+	emit_param("STRING", *strs);
+	emit_param("STRING", *strs);
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
 		niceFree(list); free_helper(strs);
 		FAIL;
@@ -4079,22 +4077,22 @@ static bool test_string_compare_equal_same_mid() {
 }
 
 static bool test_string_compare_equal_same_end() {
-	e.emit_test("Test string_compare() on the same string at the end of a "
+	emit_test("Test string_compare() on the same string at the end of a "
 		"single StringList.");
-	e.emit_comment("This test relies on number(), rewind(), and next() so a "
+	emit_comment("This test relies on number(), rewind(), and next() so a "
 		"problem with any of these may cause problems here.");
 	StringList sl("a;b;c", ";");
 	char* list = sl.print_to_string();
 	char** strs = string_compare_helper(&sl, 2);
 	int retVal = string_compare(strs, strs);
-	e.emit_input_header();
-	e.emit_param("StringList", list);
-	e.emit_param("STRING", *strs);
-	e.emit_param("STRING", *strs);
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("StringList", list);
+	emit_param("STRING", *strs);
+	emit_param("STRING", *strs);
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
 		niceFree(list); free_helper(strs);
 		FAIL;
@@ -4104,9 +4102,9 @@ static bool test_string_compare_equal_same_end() {
 }
 
 static bool test_string_compare_equal_different_list() {
-	e.emit_test("Test string_compare() on two identical strings within two "
+	emit_test("Test string_compare() on two identical strings within two "
 		"different StringLists.");
-	e.emit_comment("This test relies on number(), rewind(), and next() so a "
+	emit_comment("This test relies on number(), rewind(), and next() so a "
 		"problem with any of these may cause problems here.");
 	StringList sl1("a;b;c", ";");
 	StringList sl2("a;b;c", ";");
@@ -4115,15 +4113,15 @@ static bool test_string_compare_equal_different_list() {
 	char** strs1 = string_compare_helper(&sl1,1);
 	char** strs2 = string_compare_helper(&sl2,1);
 	int retVal = string_compare(strs1, strs2);
-	e.emit_input_header();
-	e.emit_param("StringList", list1);
-	e.emit_param("StringList", list2);
-	e.emit_param("STRING", *strs1);
-	e.emit_param("STRING", *strs2);
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("StringList", list1);
+	emit_param("StringList", list2);
+	emit_param("STRING", *strs1);
+	emit_param("STRING", *strs2);
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
 		niceFree(list1); niceFree(list2); 
 		free_helper(strs1); free_helper(strs2); 
@@ -4135,8 +4133,8 @@ static bool test_string_compare_equal_different_list() {
 }
 
 static bool test_string_compare_copy() {
-	e.emit_test("Test string_compare() after using the copy constructor.");
-	e.emit_comment("This test relies on number(), rewind(), and next() so a "
+	emit_test("Test string_compare() after using the copy constructor.");
+	emit_comment("This test relies on number(), rewind(), and next() so a "
 		"problem with any of these may cause problems here.");
 	StringList sl1("a;b;c", ";");
 	StringList sl2(sl1);
@@ -4145,15 +4143,15 @@ static bool test_string_compare_copy() {
 	char** strs1 = string_compare_helper(&sl1,0);
 	char** strs2 = string_compare_helper(&sl2,0);
 	int retVal = string_compare(strs1, strs2);
-	e.emit_input_header();
-	e.emit_param("StringList", list1);
-	e.emit_param("StringList", list2);
-	e.emit_param("STRING", *strs1);
-	e.emit_param("STRING", *strs2);
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("StringList", list1);
+	emit_param("StringList", list2);
+	emit_param("STRING", *strs1);
+	emit_param("STRING", *strs2);
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
 		niceFree(list1); niceFree(list2); 
 		free_helper(strs1); free_helper(strs2);
@@ -4165,23 +4163,23 @@ static bool test_string_compare_copy() {
 }
 
 static bool test_string_compare_not_equal_same() {
-	e.emit_test("Test string_compare() on two different strings in a single "
+	emit_test("Test string_compare() on two different strings in a single "
 		"StringList.");
-	e.emit_comment("This test relies on number(), rewind(), and next() so a "
+	emit_comment("This test relies on number(), rewind(), and next() so a "
 		"problem with any of these may cause problems here.");
 	StringList sl("a;b;c", ";");
 	char* list = sl.print_to_string();
 	char** strs1 = string_compare_helper(&sl, 0);
 	char** strs2 = string_compare_helper(&sl, 1);
 	int retVal = string_compare(strs1, strs2);
-	e.emit_input_header();
-	e.emit_param("StringList", list);
-	e.emit_param("STRING", *strs1);
-	e.emit_param("STRING", *strs2);
-	e.emit_output_expected_header();
-	e.emit_retval("!= 0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("StringList", list);
+	emit_param("STRING", *strs1);
+	emit_param("STRING", *strs2);
+	emit_output_expected_header();
+	emit_retval("!= 0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
 		niceFree(list); free_helper(strs1); free_helper(strs2);
 		FAIL;
@@ -4191,9 +4189,9 @@ static bool test_string_compare_not_equal_same() {
 }
 
 static bool test_string_compare_not_equal_different() {
-	e.emit_test("Test string_compare() on two different strings within two "
+	emit_test("Test string_compare() on two different strings within two "
 		"different StringLists.");
-	e.emit_comment("This test relies on number(), rewind(), and next() so a "
+	emit_comment("This test relies on number(), rewind(), and next() so a "
 		"problem with any of these may cause problems here.");
 	StringList sl1("a;b;c", ";");
 	StringList sl2("d;e;f", ";");
@@ -4202,15 +4200,15 @@ static bool test_string_compare_not_equal_different() {
 	char** strs1 = string_compare_helper(&sl1,1);
 	char** strs2 = string_compare_helper(&sl2,0);
 	int retVal = string_compare(strs1, strs2);
-	e.emit_input_header();
-	e.emit_param("StringList", list1);
-	e.emit_param("StringList", list2);
-	e.emit_param("STRING", *strs1);
-	e.emit_param("STRING", *strs2);
-	e.emit_output_expected_header();
-	e.emit_retval("!= 0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("StringList", list1);
+	emit_param("StringList", list2);
+	emit_param("STRING", *strs1);
+	emit_param("STRING", *strs2);
+	emit_output_expected_header();
+	emit_retval("!= 0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
 		niceFree(list1); niceFree(list2); 
 		free_helper(strs1); free_helper(strs2);
@@ -4222,18 +4220,18 @@ static bool test_string_compare_not_equal_different() {
 }
 
 static bool test_qsort_empty() {
-	e.emit_test("Test qsort() on an empty StringList.");
+	emit_test("Test qsort() on an empty StringList.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
 	char* expect  = "";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4243,18 +4241,18 @@ static bool test_qsort_empty() {
 }
 
 static bool test_qsort_one() {
-	e.emit_test("Test qsort() on a StringList with only one string.");
+	emit_test("Test qsort() on a StringList with only one string.");
 	StringList sl("foo", "");
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
 	char* expect  = "foo";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4264,18 +4262,18 @@ static bool test_qsort_one() {
 }
 
 static bool test_qsort_already() {
-	e.emit_test("Does qsort() change a StringList that is already sorted?");
+	emit_test("Does qsort() change a StringList that is already sorted?");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4285,7 +4283,7 @@ static bool test_qsort_already() {
 }
 
 static bool test_qsort_multiple() {
-	e.emit_test("Does qsort() change a StringList that has already been sorted "
+	emit_test("Does qsort() change a StringList that has already been sorted "
 		"by qsort()?");
 	StringList sl("c;b;a", ";");
 	char* orig  = sl.print_to_string();
@@ -4294,12 +4292,12 @@ static bool test_qsort_multiple() {
 	sl.qsort();
 	char* changed2  = sl.print_to_string();
 	char* expect  = "a,b,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed2));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed2));
 	if(niceStrCmp(changed2, expect) != MATCH) {
 		niceFree(orig); niceFree(changed1); niceFree(changed2);
 		FAIL;
@@ -4309,18 +4307,18 @@ static bool test_qsort_multiple() {
 }
 
 static bool test_qsort_many() {
-	e.emit_test("Test qsort() on a StringList with many strings.");
+	emit_test("Test qsort() on a StringList with many strings.");
 	StringList sl("f;foo;eat;e;d;door;cool;c;b;bah;aah;a", ";");
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,aah,b,bah,c,cool,d,door,e,eat,f,foo";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4330,7 +4328,7 @@ static bool test_qsort_many() {
 }
 
 static bool test_qsort_many_shuffle() {
-	e.emit_test("Test qsort() on a StringList with many strings after calling "
+	emit_test("Test qsort() on a StringList with many strings after calling "
 		"shuffle.");
 	StringList sl("a;b;c;d;e;f;g;h;i;j;k;l;m;n;o;p;q;r;s;t;u;v;w;x;y;z", ";");
 	sl.shuffle();
@@ -4338,12 +4336,12 @@ static bool test_qsort_many_shuffle() {
 	sl.qsort();
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4353,18 +4351,18 @@ static bool test_qsort_many_shuffle() {
 }
 
 static bool test_shuffle_empty() {
-	e.emit_test("Test shuffle() on an empty StringList.");
+	emit_test("Test shuffle() on an empty StringList.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	sl.shuffle();
 	char* changed  = sl.print_to_string();
 	char* expect  = "";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4374,18 +4372,18 @@ static bool test_shuffle_empty() {
 }
 
 static bool test_shuffle_one() {
-	e.emit_test("Test shuffle() on a StringList with only one string.");
+	emit_test("Test shuffle() on a StringList with only one string.");
 	StringList sl("foo", "");
 	char* orig  = sl.print_to_string();
 	sl.shuffle();
 	char* changed  = sl.print_to_string();
 	char* expect  = "foo";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4395,20 +4393,20 @@ static bool test_shuffle_one() {
 }
 
 static bool test_shuffle_many() {
-	e.emit_test("Test shuffle() on a StringList with many strings.");
-	e.emit_comment("This test may fail if shuffle happens to shuffle to the "
+	emit_test("Test shuffle() on a StringList with many strings.");
+	emit_comment("This test may fail if shuffle happens to shuffle to the "
 		"same order as the original, although this is highly unlikely here.");
 	StringList sl("a;b;c;d;e;f;g;h;i;j;k;l;m;n;o;p;q;r;s;t;u;v;w;x;y;z", ";");
 	char* orig  = sl.print_to_string();
 	sl.shuffle();
 	char* changed  = sl.print_to_string();
 	char* notExpect  = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("StringList !=", notExpect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("StringList !=", notExpect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, notExpect) == MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4418,20 +4416,20 @@ static bool test_shuffle_many() {
 }
 
 static bool test_rewind_empty() {
-	e.emit_test("Test rewind() on an empty StringList.");
-	e.emit_comment("This test uses next() to check where 'current' is "
+	emit_test("Test rewind() on an empty StringList.");
+	emit_comment("This test uses next() to check where 'current' is "
 		"so a problem with that may cause this to fail.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	sl.rewind();
 	char* next = sl.next();
 	char* expect  = "";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("next", expect);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("next", expect);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4441,20 +4439,20 @@ static bool test_rewind_empty() {
 }
 
 static bool test_rewind_non_empty() {
-	e.emit_test("Test rewind() on a non-empty StringList.");
-	e.emit_comment("This test uses next() to check where 'current' is "
+	emit_test("Test rewind() on a non-empty StringList.");
+	emit_comment("This test uses next() to check where 'current' is "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.rewind();
 	char* next = sl.next();
 	char* expect  = "a";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("next", expect);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("next", expect);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4464,8 +4462,8 @@ static bool test_rewind_non_empty() {
 }
 
 static bool test_rewind_after_contains_true() {
-	e.emit_test("Test rewind() after a successful call to contains().");
-	e.emit_comment("This test uses next() to check where 'current' is "
+	emit_test("Test rewind() after a successful call to contains().");
+	emit_comment("This test uses next() to check where 'current' is "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
@@ -4473,13 +4471,13 @@ static bool test_rewind_after_contains_true() {
 	sl.rewind();
 	char* next = sl.next();
 	char* expect  = "a";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains(\"b\")", tfstr(retVal));
-	e.emit_output_expected_header();
-	e.emit_param("next", expect);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains(\"b\")", tfstr(retVal));
+	emit_output_expected_header();
+	emit_param("next", expect);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4489,8 +4487,8 @@ static bool test_rewind_after_contains_true() {
 }
 
 static bool test_rewind_after_contains_false() {
-	e.emit_test("Test rewind() after an unsuccessful call to contains().");
-	e.emit_comment("This test uses next() to check where 'current' is "
+	emit_test("Test rewind() after an unsuccessful call to contains().");
+	emit_comment("This test uses next() to check where 'current' is "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
@@ -4498,13 +4496,13 @@ static bool test_rewind_after_contains_false() {
 	sl.rewind();
 	char* next = sl.next();
 	char* expect  = "a";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains(\"d\")", tfstr(retVal));
-	e.emit_output_expected_header();
-	e.emit_param("next", expect);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains(\"d\")", tfstr(retVal));
+	emit_output_expected_header();
+	emit_param("next", expect);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4514,19 +4512,19 @@ static bool test_rewind_after_contains_false() {
 }
 
 static bool test_append_empty() {
-	e.emit_test("Test append() on an empty StringList.");
+	emit_test("Test append() on an empty StringList.");
 	StringList sl("", ";");
 	char* orig  = sl.print_to_string();
 	sl.append("a");
 	char* changed  = sl.print_to_string();
 	char* expect  = "a";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_param("STRING", "a");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_param("STRING", "a");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4536,19 +4534,19 @@ static bool test_append_empty() {
 }
 
 static bool test_append_one() {
-	e.emit_test("Test a single append() on a non-empty StringList.");
+	emit_test("Test a single append() on a non-empty StringList.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.append("d");
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,c,d";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4558,7 +4556,7 @@ static bool test_append_one() {
 }
 
 static bool test_append_many() {
-	e.emit_test("Test many calls to append() on a non-empty StringList.");
+	emit_test("Test many calls to append() on a non-empty StringList.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.append("d");
@@ -4566,15 +4564,15 @@ static bool test_append_many() {
 	sl.append("f");
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,c,d,e,f";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_param("STRING", "e");
-	e.emit_param("STRING", "f");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_param("STRING", "e");
+	emit_param("STRING", "f");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4584,21 +4582,21 @@ static bool test_append_many() {
 }
 
 static bool test_append_contains() {
-	e.emit_test("Test append() after a successful call to contains().");
+	emit_test("Test append() after a successful call to contains().");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	bool retVal = sl.contains("b");
 	sl.append("d");
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,c,d";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("contains(\"b\")", tfstr(retVal));
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("contains(\"b\")", tfstr(retVal));
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4608,7 +4606,7 @@ static bool test_append_contains() {
 }
 
 static bool test_append_rewind() {
-	e.emit_test("Test append() after calling rewind().");
+	emit_test("Test append() after calling rewind().");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.rewind();
@@ -4616,14 +4614,14 @@ static bool test_append_rewind() {
 	char* next = sl.next();
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,c,d";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4633,8 +4631,8 @@ static bool test_append_rewind() {
 }
 
 static bool test_append_current() {
-	e.emit_test("Does append() change 'current' to point at the new item?");
-	e.emit_comment("This test uses deleteCurrent() to check where 'current' is "
+	emit_test("Does append() change 'current' to point at the new item?");
+	emit_comment("This test uses deleteCurrent() to check where 'current' is "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
@@ -4642,13 +4640,13 @@ static bool test_append_current() {
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	char* expect  = "a,b,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("StrinList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StrinList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("StrinList", expect);
+	emit_output_actual_header();
+	emit_param("StrinList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4658,19 +4656,19 @@ static bool test_append_current() {
 }
 
 static bool test_insert_empty() {
-	e.emit_test("Test insert() on an empty StringList.");
+	emit_test("Test insert() on an empty StringList.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	sl.insert("a");
 	char* changed  = sl.print_to_string();
 	char* expect  = "a";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_param("STRING", "a");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_param("STRING", "a");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4680,8 +4678,8 @@ static bool test_insert_empty() {
 }
 
 static bool test_insert_head() {
-	e.emit_test("Test insert() at the beginning of the StringList.");
-	e.emit_comment("This test uses next() to navigate through the StringList "
+	emit_test("Test insert() at the beginning of the StringList.");
+	emit_comment("This test uses next() to navigate through the StringList "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
@@ -4690,13 +4688,13 @@ static bool test_insert_head() {
 	sl.insert("d");
 	char* changed  = sl.print_to_string();
 	char* expect  = "d,a,b,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4706,8 +4704,8 @@ static bool test_insert_head() {
 }
 
 static bool test_insert_middle() {
-	e.emit_test("Test insert() in the middle of the StringList.");
-	e.emit_comment("This test uses next() to navigate through the StringList "
+	emit_test("Test insert() in the middle of the StringList.");
+	emit_comment("This test uses next() to navigate through the StringList "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
@@ -4718,13 +4716,13 @@ static bool test_insert_middle() {
 	sl.insert("d");
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,d,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4734,10 +4732,10 @@ static bool test_insert_middle() {
 }
 
 static bool test_insert_end() {
-	e.emit_test("Test insert() at the end of the StringList.");
-	e.emit_comment("This test uses next() to navigate through the StringList "
+	emit_test("Test insert() at the end of the StringList.");
+	emit_comment("This test uses next() to navigate through the StringList "
 		"so a problem with that may cause this to fail.");
-	e.emit_comment("Currently insert() inserts the string before what 'current'"
+	emit_comment("Currently insert() inserts the string before what 'current'"
 		" points to, so there is no way at inserting at the end of the list, "
 		"just before the last element.");
 	StringList sl("a;b;c", ";");
@@ -4749,13 +4747,13 @@ static bool test_insert_end() {
 	sl.insert("d");
 	char* changed  = sl.print_to_string();
 	char* expect  = "a,b,d,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4765,8 +4763,8 @@ static bool test_insert_end() {
 }
 
 static bool test_insert_current() {
-	e.emit_test("Test that insert() doesn't change what 'current' points to.");
-	e.emit_comment("This test uses next() to navigate through the StringList "
+	emit_test("Test that insert() doesn't change what 'current' points to.");
+	emit_comment("This test uses next() to navigate through the StringList "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
@@ -4776,13 +4774,13 @@ static bool test_insert_current() {
 	sl.insert("d");
 	char* next = sl.next();	//current=c
 	char* expect  = "c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("STRING", "d");
-	e.emit_output_expected_header();
-	e.emit_param("next", expect);
-	e.emit_output_actual_header();
-	e.emit_param("next", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", "d");
+	emit_output_expected_header();
+	emit_param("next", expect);
+	emit_output_actual_header();
+	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4792,8 +4790,8 @@ static bool test_insert_current() {
 }
 
 static bool test_insert_many() {
-	e.emit_test("Test many calls to  insert().");
-	e.emit_comment("This test uses next() to navigate through the StringList "
+	emit_test("Test many calls to  insert().");
+	emit_comment("This test uses next() to navigate through the StringList "
 		"so a problem with that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
@@ -4807,19 +4805,19 @@ static bool test_insert_many() {
 	sl.insert("3");
 	char* changed  = sl.print_to_string();
 	char* expect  = "0,1,a,2,b,3,c";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("'current'", "a");
-	e.emit_param("insert", "0");
-	e.emit_param("insert", "1");
-	e.emit_param("'current'", "b");
-	e.emit_param("insert", "2");
-	e.emit_param("'current'", "c");
-	e.emit_param("insert", "3");
-	e.emit_output_expected_header();
-	e.emit_param("StringList", expect);
-	e.emit_output_actual_header();
-	e.emit_param("StringList", nicePrint(changed));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("'current'", "a");
+	emit_param("insert", "0");
+	emit_param("insert", "1");
+	emit_param("'current'", "b");
+	emit_param("insert", "2");
+	emit_param("'current'", "c");
+	emit_param("insert", "3");
+	emit_output_expected_header();
+	emit_param("StringList", expect);
+	emit_output_actual_header();
+	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
 		niceFree(orig); niceFree(changed);
 		FAIL;
@@ -4829,17 +4827,17 @@ static bool test_insert_many() {
 }
 
 static bool test_next_empty() {
-	e.emit_test("Test calling next() on an empty StringList.");
+	emit_test("Test calling next() on an empty StringList.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	char* next = sl.next();
 	char* expect  = "";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("STRING", expect);
-	e.emit_output_actual_header();
-	e.emit_param("STRING", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("STRING", expect);
+	emit_output_actual_header();
+	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4849,21 +4847,21 @@ static bool test_next_empty() {
 }
 
 static bool test_next_beginning() {
-	e.emit_test("Test calling next() when 'current' is at the beginning of the "
+	emit_test("Test calling next() when 'current' is at the beginning of the "
 		"StringList.");
-	e.emit_comment("This test requires the use of rewind(), so a problem with "
+	emit_comment("This test requires the use of rewind(), so a problem with "
 		"that could cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.rewind();
 	char* next = sl.next();
 	char* expect  = "a";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("STRING", expect);
-	e.emit_output_actual_header();
-	e.emit_param("STRING", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("STRING", expect);
+	emit_output_actual_header();
+	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4873,21 +4871,21 @@ static bool test_next_beginning() {
 }
 
 static bool test_next_middle() {
-	e.emit_test("Test calling next() when 'current' is in the middle of the "
+	emit_test("Test calling next() when 'current' is in the middle of the "
 		"StringList.");
-	e.emit_comment("This test requires the use of contains(), so a problem with"
+	emit_comment("This test requires the use of contains(), so a problem with"
 		" that could cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.contains("b");
 	char* next = sl.next();
 	char* expect  = "c";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("STRING", expect);
-	e.emit_output_actual_header();
-	e.emit_param("STRING", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("STRING", expect);
+	emit_output_actual_header();
+	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4897,21 +4895,21 @@ static bool test_next_middle() {
 }
 
 static bool test_next_end() {
-	e.emit_test("Test calling next() when 'current' is at the end of the "
+	emit_test("Test calling next() when 'current' is at the end of the "
 		"StringList.");
-	e.emit_comment("This test requires the use of contains(), so a problem with"
+	emit_comment("This test requires the use of contains(), so a problem with"
 		" that could cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.contains("c");
 	char* next = sl.next();
 	char* expect  = "";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("STRING", expect);
-	e.emit_output_actual_header();
-	e.emit_param("STRING", nicePrint(next));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("STRING", expect);
+	emit_output_actual_header();
+	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -4921,17 +4919,17 @@ static bool test_next_end() {
 }
 
 static bool test_number_empty() {
-	e.emit_test("Test number() on an empty StringList.");
+	emit_test("Test number() on an empty StringList.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	int num = sl.number();
 	int expect  = 0;
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num);
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num);
 	if(num != expect) {
 		niceFree(orig);
 		FAIL;
@@ -4941,17 +4939,17 @@ static bool test_number_empty() {
 }
 
 static bool test_number_one() {
-	e.emit_test("Test number() on a StringList with one string.");
+	emit_test("Test number() on a StringList with one string.");
 	StringList sl("foo", "");
 	char* orig  = sl.print_to_string();
 	int num = sl.number();
 	int expect  = 1;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num);
 	if(num != expect) {
 		niceFree(orig);
 		FAIL;
@@ -4961,17 +4959,17 @@ static bool test_number_one() {
 }
 
 static bool test_number_many() {
-	e.emit_test("Test number() on a StringList with many strings.");
+	emit_test("Test number() on a StringList with many strings.");
 	StringList sl("a;b;c;d;e;f", ";");
 	char* orig  = sl.print_to_string();
 	int num = sl.number();
 	int expect  = 6;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num);
 	if(num != expect) {
 		niceFree(orig);
 		FAIL;
@@ -4981,8 +4979,8 @@ static bool test_number_many() {
 }
 
 static bool test_number_after_delete() {
-	e.emit_test("Test that number() changes after calling deleteCurrent().");
-	e.emit_comment("This test requires the use of contains() and "
+	emit_test("Test that number() changes after calling deleteCurrent().");
+	emit_comment("This test requires the use of contains() and "
 		"deleteCurrent() so a problem with either of these may cause this to "
 		"fail.");
 	StringList sl("a;b;c;d;e;f", ";");
@@ -4991,14 +4989,14 @@ static bool test_number_after_delete() {
 	sl.deleteCurrent();
 	int num = sl.number();
 	int expect  = 5;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("Call", "contains(\"c\")");
-	e.emit_param("Call", "deleteCurrent()");
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("Call", "contains(\"c\")");
+	emit_param("Call", "deleteCurrent()");
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num);
 	if(num != expect) {
 		niceFree(orig);
 		FAIL;
@@ -5008,21 +5006,21 @@ static bool test_number_after_delete() {
 }
 
 static bool test_number_after_clear_all() {
-	e.emit_test("Test that number() returns 0 after calling clearAll().");
-	e.emit_comment("This test requires the use of clearAll() so a problem with "
+	emit_test("Test that number() returns 0 after calling clearAll().");
+	emit_comment("This test requires the use of clearAll() so a problem with "
 		"that may cause this to fail.");
 	StringList sl("a;b;c;d;e;f", ";");
 	char* orig  = sl.print_to_string();
 	sl.clearAll();
 	int num = sl.number();
 	int expect  = 0;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("Call", "clearAll()");
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("Call", "clearAll()");
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num);
 	if(num != expect) {
 		niceFree(orig);
 		FAIL;
@@ -5032,22 +5030,22 @@ static bool test_number_after_clear_all() {
 }
 
 static bool test_number_after_append() {
-	e.emit_test("Test that number() returns the correct size of the StringList "
+	emit_test("Test that number() returns the correct size of the StringList "
 		"after calling append().");
-	e.emit_comment("This test requires the use of append() so a problem with "
+	emit_comment("This test requires the use of append() so a problem with "
 		"that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.append("dog");
 	int num = sl.number();
 	int expect  = 4;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("Call", "append(\"dog\")");
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("Call", "append(\"dog\")");
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num);
 	if(num != expect) {
 		niceFree(orig);
 		FAIL;
@@ -5057,22 +5055,22 @@ static bool test_number_after_append() {
 }
 
 static bool test_number_after_insert() {
-	e.emit_test("Test that number() returns the correct size of the StringList "
+	emit_test("Test that number() returns the correct size of the StringList "
 		"after calling insert().");
-	e.emit_comment("This test requires the use of insert() so a problem with "
+	emit_comment("This test requires the use of insert() so a problem with "
 		"that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.insert("dog");
 	int num = sl.number();
 	int expect  = 4;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("Call", "insert(\"dog\")");
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("Call", "insert(\"dog\")");
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num);
 	if(num != expect) {
 		niceFree(orig);
 		FAIL;
@@ -5082,7 +5080,7 @@ static bool test_number_after_insert() {
 }
 
 static bool test_number_copy() {
-	e.emit_test("Test that number() of a StringList created by using the copy "
+	emit_test("Test that number() of a StringList created by using the copy "
 		"constructor is equal to the source StringList.");
 	StringList sl1("a;b;c;d;e;f", ";");
 	StringList sl2(sl1);
@@ -5091,14 +5089,14 @@ static bool test_number_copy() {
 	int num1 = sl1.number();
 	int num2 = sl2.number();
 	int expect  = 6;
-	e.emit_input_header();
-	e.emit_param("StringList", orig1);
-	e.emit_param("StringList", orig2);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", num1);
-	e.emit_retval("%d", num2);
+	emit_input_header();
+	emit_param("StringList", orig1);
+	emit_param("StringList", orig2);
+	emit_output_expected_header();
+	emit_retval("%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", num1);
+	emit_retval("%d", num2);
 	if(num1 != expect || num2 != expect) {
 		niceFree(orig1); niceFree(orig2);
 		FAIL;
@@ -5108,17 +5106,17 @@ static bool test_number_copy() {
 }
 
 static bool test_is_empty_empty() {
-	e.emit_test("Test that isEmpty() returns true for an empty StringList.");
+	emit_test("Test that isEmpty() returns true for an empty StringList.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	bool retVal = sl.isEmpty();
 	bool expect  = true;
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -5128,21 +5126,21 @@ static bool test_is_empty_empty() {
 }
 
 static bool test_is_empty_clear() {
-	e.emit_test("Test that isEmpty() returns true after calling clearAll().");
-	e.emit_comment("This test requires the use of clearAll() so a problem with "
+	emit_test("Test that isEmpty() returns true after calling clearAll().");
+	emit_comment("This test requires the use of clearAll() so a problem with "
 		"that may cause this to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig  = sl.print_to_string();
 	sl.clearAll();
 	bool retVal = sl.isEmpty();
 	bool expect  = true;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_param("Call", "clearAll()");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("Call", "clearAll()");
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
 		niceFree(orig);
 		FAIL;
@@ -5152,18 +5150,18 @@ static bool test_is_empty_clear() {
 }
 
 static bool test_is_empty_one() {
-	e.emit_test("Test that isEmpty() returns false for a StringList with only "
+	emit_test("Test that isEmpty() returns false for a StringList with only "
 		"one string.");
 	StringList sl("foo", "");
 	char* orig  = sl.print_to_string();
 	bool retVal = sl.isEmpty();
 	bool expect  = false;
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -5173,18 +5171,18 @@ static bool test_is_empty_one() {
 }
 
 static bool test_is_empty_many() {
-	e.emit_test("Test that isEmpty() returns false for a StringList with many "
+	emit_test("Test that isEmpty() returns false for a StringList with many "
 		"strings.");
 	StringList sl("a;b;c;d;e;f", ";");
 	char* orig  = sl.print_to_string();
 	bool retVal = sl.isEmpty();
 	bool expect  = false;
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -5194,22 +5192,22 @@ static bool test_is_empty_many() {
 }
 
 static bool test_is_empty_append() {
-	e.emit_test("Test that isEmpty() returns false after calling append() on an"
+	emit_test("Test that isEmpty() returns false after calling append() on an"
 		" empty StringList.");
-	e.emit_comment("This test requires the use of append() so a problem with "
+	emit_comment("This test requires the use of append() so a problem with "
 		"that may cause this to fail.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	sl.append("foo");
 	bool retVal = sl.isEmpty();
 	bool expect  = false;
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_param("Call", "append(\"foo\")");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_param("Call", "append(\"foo\")");
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -5219,21 +5217,21 @@ static bool test_is_empty_append() {
 }
 
 static bool test_is_empty_insert() {
-	e.emit_test("Test that isEmpty() returns false after calling insert() on an"		" empty StringList.");
-	e.emit_comment("This test requires the use of insert() so a problem with "
+	emit_test("Test that isEmpty() returns false after calling insert() on an"		" empty StringList.");
+	emit_comment("This test requires the use of insert() so a problem with "
 		"that may cause this to fail.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	sl.insert("foo");
 	bool retVal = sl.isEmpty();
 	bool expect  = false;
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_param("Call", "insert(\"foo\")");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(retVal));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_param("Call", "insert(\"foo\")");
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
 		niceFree(orig);
 		FAIL;
@@ -5243,19 +5241,19 @@ static bool test_is_empty_insert() {
 }
 
 static bool test_get_list_empty() {
-	e.emit_test("Test that getList() returns a the List<char> representation "
+	emit_test("Test that getList() returns a the List<char> representation "
 		"of the strings in an empty StringList.");
-	e.emit_comment("All this test checks is if getList() is empty since all of "
+	emit_comment("All this test checks is if getList() is empty since all of "
 		"List's operations are tested elswhere.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	bool isEmpty = sl.getList().IsEmpty();
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("Is Empty", "%s", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Is Empty", "%s", tfstr(isEmpty));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("Is Empty", "%s", "TRUE");
+	emit_output_actual_header();
+	emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(!isEmpty) {
 		niceFree(orig);
 		FAIL;
@@ -5265,19 +5263,19 @@ static bool test_get_list_empty() {
 }
 
 static bool test_get_list_non_empty() {
-	e.emit_test("Test that getList() returns a the List<char> representation "
+	emit_test("Test that getList() returns a the List<char> representation "
 		"of the strings in a non-empty StringList.");
-	e.emit_comment("All this test checks is if getList() is not empty since all"
+	emit_comment("All this test checks is if getList() is not empty since all"
 		" of List's operations are tested elswhere.");
 	StringList sl("a;b;c;dog", ";");
 	char* orig  = sl.print_to_string();
 	bool isEmpty = sl.getList().IsEmpty();
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("Is Empty", "%s", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("Is Empty", "%s", tfstr(isEmpty));
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("Is Empty", "%s", "FALSE");
+	emit_output_actual_header();
+	emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(isEmpty) {
 		niceFree(orig);
 		FAIL;
@@ -5287,19 +5285,19 @@ static bool test_get_list_non_empty() {
 }
 
 static bool test_get_delimiters_empty_no() {
-	e.emit_test("Test that getDelimiters() returns the correct string "
+	emit_test("Test that getDelimiters() returns the correct string "
 		"representation of the delimiters of an empty StringList with no "
 		"delimiters.");
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
 	char* expect = "";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("DELIMS", expect);
-	e.emit_output_actual_header();
-	e.emit_param("DELIMS", delims);
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("DELIMS", expect);
+	emit_output_actual_header();
+	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -5309,19 +5307,19 @@ static bool test_get_delimiters_empty_no() {
 }
 
 static bool test_get_delimiters_empty_yes() {
-	e.emit_test("Test that getDelimiters() returns the correct string "
+	emit_test("Test that getDelimiters() returns the correct string "
 		"representation of the delimiters of an empty StringList with "
 		"delimiters.");
 	StringList sl("", ";");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
 	char* expect = ";";
-	e.emit_input_header();
-	e.emit_param("StringList", nicePrint(orig));
-	e.emit_output_expected_header();
-	e.emit_param("DELIMS", expect);
-	e.emit_output_actual_header();
-	e.emit_param("DELIMS", delims);
+	emit_input_header();
+	emit_param("StringList", nicePrint(orig));
+	emit_output_expected_header();
+	emit_param("DELIMS", expect);
+	emit_output_actual_header();
+	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -5331,19 +5329,19 @@ static bool test_get_delimiters_empty_yes() {
 }
 
 static bool test_get_delimiters_non_empty_no() {
-	e.emit_test("Test that getDelimiters() returns the correct string "
+	emit_test("Test that getDelimiters() returns the correct string "
 		"representation of the delimiters of a non-empty StringList with no "
 		"delimiters.");
 	StringList sl("a;b;c", "");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
 	char* expect = "";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("DELIMS", expect);
-	e.emit_output_actual_header();
-	e.emit_param("DELIMS", delims);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("DELIMS", expect);
+	emit_output_actual_header();
+	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;
@@ -5353,19 +5351,19 @@ static bool test_get_delimiters_non_empty_no() {
 }
 
 static bool test_get_delimiters_non_empty_yes() {
-	e.emit_test("Test that getDelimiters() returns the correct string "
+	emit_test("Test that getDelimiters() returns the correct string "
 		"representation of the delimiters of a non-empty StringList with "
 		"delimiters.");
 	StringList sl("a;b,c!d", ";!,");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
 	char* expect = ";!,";
-	e.emit_input_header();
-	e.emit_param("StringList", orig);
-	e.emit_output_expected_header();
-	e.emit_param("DELIMS", expect);
-	e.emit_output_actual_header();
-	e.emit_param("DELIMS", delims);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_output_expected_header();
+	emit_param("DELIMS", expect);
+	emit_output_actual_header();
+	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
 		niceFree(orig);
 		FAIL;

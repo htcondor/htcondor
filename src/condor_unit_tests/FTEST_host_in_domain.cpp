@@ -35,10 +35,10 @@ static bool test_two_hostname(void);
 static bool test_different_subdomain(void);
 
 bool FTEST_host_in_domain(void) {
-		// beginning junk for getPortFromAddr()
-	e.emit_function("host_in_domain(char* host, char* domain)");
-	e.emit_comment("Converts a sockaddr_in to a sinful string.");
-	e.emit_problem("None");
+		// beginning junk for getPortFromAddr(() {
+	emit_function("host_in_domain(char* host, char* domain)");
+	emit_comment("Converts a sockaddr_in to a sinful string.");
+	emit_problem("None");
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
@@ -48,25 +48,23 @@ bool FTEST_host_in_domain(void) {
 	driver.register_function(test_different_subdomain);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_normal_case() {
-	e.emit_test("Is a positive case identified correctly?");
+	emit_test("Is a positive case identified correctly?");
 	char* input_host = strdup( "balthazar.cs.wisc.edu" );
 	char* input_domain = strdup( "cs.wisc.edu" );
-	e.emit_input_header();
-	e.emit_param("HOST", input_host);
-	e.emit_param("DOMAIN", input_domain);
+	emit_input_header();
+	emit_param("HOST", input_host);
+	emit_param("DOMAIN", input_domain);
 	int result = host_in_domain(input_host, input_domain);
 	free(input_host);
 	free(input_domain);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(TRUE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(TRUE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
 		FAIL;
 	}
@@ -74,19 +72,19 @@ static bool test_normal_case() {
 }
 
 static bool test_general_domain() {
-	e.emit_test("Is a more generic domain identified correctly?");
+	emit_test("Is a more generic domain identified correctly?");
 	char* input_host = strdup( "balthazar.cs.wisc.edu" );
 	char* input_domain = strdup( "wisc.edu" );
-	e.emit_input_header();
-	e.emit_param("HOST", input_host);
-	e.emit_param("DOMAIN", input_domain);
+	emit_input_header();
+	emit_param("HOST", input_host);
+	emit_param("DOMAIN", input_domain);
 	int result = host_in_domain(input_host, input_domain);
 	free(input_host);
 	free(input_domain);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(TRUE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(TRUE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
 		FAIL;
 	}
@@ -94,19 +92,19 @@ static bool test_general_domain() {
 }
 
 static bool test_two_hostname() {
-	e.emit_test("Is a test with two hostnames in the same domain identified as failure?");
+	emit_test("Is a test with two hostnames in the same domain identified as failure?");
 	char* input_host = strdup( "balthazar.cs.wisc.edu" );
 	char* input_domain = strdup( "jerez.cs.wisc.edu" );
-	e.emit_input_header();
-	e.emit_param("HOST", input_host);
-	e.emit_param("DOMAIN", input_domain);
+	emit_input_header();
+	emit_param("HOST", input_host);
+	emit_param("DOMAIN", input_domain);
 	int result = host_in_domain(input_host, input_domain);
 	free(input_host);
 	free(input_domain);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(FALSE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
 		FAIL;
 	}
@@ -114,19 +112,19 @@ static bool test_two_hostname() {
 }
 
 static bool test_different_subdomain() {
-	e.emit_test("Is failure identified in different subdomains of the same domain?");
+	emit_test("Is failure identified in different subdomains of the same domain?");
 	char* input_host = strdup( "balthazar.cs.wisc.edu" );
 	char* input_domain = strdup( "www.wisc.edu" );
-	e.emit_input_header();
-	e.emit_param("HOST", input_host);
-	e.emit_param("DOMAIN", input_domain);
+	emit_input_header();
+	emit_param("HOST", input_host);
+	emit_param("DOMAIN", input_domain);
 	int result = host_in_domain(input_host, input_domain);
 	free(input_host);
 	free(input_domain);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(FALSE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
 		FAIL;
 	}

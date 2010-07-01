@@ -27,9 +27,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-// Global emitter declaration
-extern class Emitter e;
-
 bool utest_sock_eq_octet( struct in_addr* address, unsigned char oct1, unsigned char oct2, unsigned char oct3, unsigned char oct4 );
 
 /*  Prints TRUE or FALSE depending on if the input indicates success or failure */
@@ -71,3 +68,19 @@ compat_classad::ClassAd* get_classad_from_file();
 /* Originally from condor_c++_util/test_old_classads.cpp*/
 bool floats_close( float one, float two, float diff = .0001);
 
+bool strings_similar(const MyString* str1, const MyString* str2, 
+	const char* delims = " ");
+
+/* Checks if the given strings contain the same strings when split into 
+	tokens by the given delimiters .
+   Note that if the two strings have duplicates, this does not check if they
+    have the same number of duplicates. */
+bool strings_similar(const char* str1, const char* str2, 
+	const char* delims = " ");
+
+/* Converts the given char** into a MyString seperated by the given delims */
+MyString* convert_string_array(char** str, int size, char* delim = " ");
+
+/* Converts the given char** into a MyString seperated by the given delims */
+MyString* convert_string_array(const char** str, int size, 
+	const char* delim = " ");
