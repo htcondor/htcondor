@@ -1057,6 +1057,8 @@ print_status() {
 
 	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
 				  done, pre, submitted, post, ready, unready, failed );
+	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
+				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
 }
 
@@ -1086,6 +1088,7 @@ void condor_event_timer () {
     static int prevJobsSubmitted = 0;
     static int prevJobsReady = 0;
     static int prevScriptRunNodes = 0;
+    static int prevJobsHeld = 0;
 
 	int justSubmitted;
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
@@ -1122,6 +1125,7 @@ void condor_event_timer () {
         || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumNodesReady()
         || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
+	|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
         prevJobsDone = dagman.dag->NumNodesDone();
@@ -1130,6 +1134,7 @@ void condor_event_timer () {
         prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumNodesReady();
         prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
+	prevJobsHeld = dagman.dag->NumHeldJobProcs();
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();

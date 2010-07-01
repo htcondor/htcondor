@@ -98,6 +98,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
+	_numHeldJobProcs	  (0),
 	_allowLogError		  (allowLogError),
 	m_retrySubmitFirst	  (retrySubmitFirst),
 	m_retryNodeFirst	  (retryNodeFirst),
@@ -560,8 +561,12 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
-			case ULOG_JOB_HELD:
 			case ULOG_SHADOW_EXCEPTION:
+				ProcessIsIdleEvent(job);
+				break;
+
+			case ULOG_JOB_HELD:
+				ProcessHeldEvent(job);
 				ProcessIsIdleEvent(job);
 				break;
 
@@ -569,8 +574,11 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessNotIdleEvent(job);
 				break;
 
-			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_JOB_RELEASED:
+				ProcessReleasedEvent(job);
+				break;
+
+			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
@@ -1111,6 +1119,28 @@ Dag::ProcessNotIdleEvent(Job *job) {
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessHeldEvent(Job *job) {
+
+	if ( !job ) {
+		return;
+	}
+
+	_numHeldJobProcs++;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessReleasedEvent(Job *job) {
+
+	if ( !job ) {
+		return;
+	}
+
+	_numHeldJobProcs--;
 }
 
 //---------------------------------------------------------------------------

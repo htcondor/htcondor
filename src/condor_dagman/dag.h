@@ -99,7 +99,7 @@ class Dag {
 			   have an error determining the job log files
 		@param useDagDir run DAGs in directories from DAG file paths
 		       if true
-		@param maxIdleJobProcs the maximum number of idle job procss to
+		@param maxIdleJobProcs the maximum number of idle job procs to
 			   allow at one time (0 means unlimited)
 		@param retrySubmitFirst whether, when a submit fails for a node's
 		       job, to put the node at the head of the ready queue
@@ -254,6 +254,16 @@ class Dag {
 		@param The job corresponding to this event.
 	*/
 	void ProcessNotIdleEvent(Job *job);
+
+	/** Process a held event for a job.
+		@param The job corresponding to this event.
+	*/
+	void ProcessHeldEvent(Job *job);
+
+	/** Process a released event for a job.
+		@param The job corresponding to this event.
+	*/
+	void ProcessReleasedEvent(Job *job);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -442,6 +452,8 @@ class Dag {
 	const MyString ParentListString( Job *node, const char delim = ',' ) const;
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
+
+	int NumHeldJobProcs() const { return _numHeldJobProcs; }
 
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
@@ -790,6 +802,9 @@ class Dag {
 		// number of idle job procs hits this limit).  Non-negative.  Zero
 		// means unlimited.
     const int _maxIdleJobProcs;
+
+		// The number of DAG job procs currently held.
+	int _numHeldJobProcs;
 
 		// Whether to allow the DAG to run even if we have an error
 		// determining the job log files.
