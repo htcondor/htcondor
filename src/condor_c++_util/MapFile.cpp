@@ -140,8 +140,8 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		if (method.IsEmpty() ||
 			principal.IsEmpty() ||
 			canonicalization.IsEmpty()) {
-				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  Skipping to next line.\n",
-						line, filename.Value());
+				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  (Method=%s) (Principal=%s) (Canon=%s) Skipping to next line.\n",
+						line, filename.Value(), method.Value(), principal.Value(), canonicalization.Value());
 
 				continue;
 		}
