@@ -23,6 +23,9 @@ use CondorUtils;
 use Cwd;
 
 
+# whoami is in /usr/ucb on solaris
+$ENV{PATH}="$ENV{PATH}:/usr/ucb";
+
 my $topleveldir = getcwd();
 my $name4test = `whoami`;
 CondorTest::fullchomp($name4test);
