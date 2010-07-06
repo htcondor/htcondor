@@ -148,7 +148,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 	char		*tmp      = NULL;
 	char		 controllee[128];
 	bool    	 usePrimary  = false;
-	int     	 selfId;
+	int     	 selfId = -1;
 	StringList	 allHadIps;
 
 	tmp = param( "HAD_CONTROLLEE" );
