@@ -53,7 +53,7 @@
 #include "condor_threads.h"
 #include "log_rotate.h"
 
-FILE *debug_lock(int debug_level);
+FILE *debug_lock(int debug_level, const char *mode);
 FILE *open_debug_file( int debug_level, char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
@@ -309,7 +309,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 			int result;
 
 				/* Open and lock the log file */
-			(void)debug_lock(debug_level);
+			(void)debug_lock(debug_level, NULL);
 
 			if (DebugFP) {
 
@@ -475,12 +475,17 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 }
 
 FILE *
-debug_lock(int debug_level)
+debug_lock(int debug_level, const char *mode)
 {
 	off_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
+	struct stat fstatus;
+
+	if ( mode == NULL ) {
+		mode = "a";
+	}
 
 	if ( DebugFP == NULL ) {
 		DebugFP = stderr;
@@ -504,13 +509,23 @@ debug_lock(int debug_level)
 
 		/* Acquire the lock */
 	if( DebugLock ) {
-		if( use_kernel_mutex == FALSE && LockFd < 0 ) {
-			LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
-			if( LockFd < 0 ) {
-				save_errno = errno;
-				snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
-				_condor_dprintf_exit( save_errno, msg_buf );
+		
+		if( use_kernel_mutex == FALSE) {
+			if (LockFd > 0 ) {
+				fstat(LockFd, &fstatus);
+				if (fstatus.st_nlink == 0){
+					close(LockFd);
+					LockFd = -1;
+				}	
 			}
+			if (LockFd < 0) {
+				LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
+				if( LockFd < 0 ) {
+					save_errno = errno;
+					snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
+					_condor_dprintf_exit( save_errno, msg_buf );
+				} 
+			}	
 		}
 
 		errno = 0;
@@ -530,7 +545,7 @@ debug_lock(int debug_level)
 	if( DebugFile[debug_level] ) {
 		errno = 0;
 
-		DebugFP = open_debug_file(debug_level, "a");
+		DebugFP = open_debug_file(debug_level, mode);
 
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;

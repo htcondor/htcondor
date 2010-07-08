@@ -184,10 +184,19 @@ dprintf_config( const char *subsys )
 					} 
 					free(pval);
 				}
+
+				if (debug_level == 0) {
+					(void)sprintf(pname, "%s_LOCK", subsys);
+					if (DebugLock) {
+						free(DebugLock);
+					}
+					DebugLock = param(pname);
+				}
+
 				if( first_time && want_truncate ) {
-					DebugFP = open_debug_file(debug_level, "w");
+					DebugFP = debug_lock(debug_level, "w");
 				} else {
-					DebugFP = open_debug_file(debug_level, "a");
+					DebugFP = debug_lock(debug_level, "a");
 				}
 
 				if( DebugFP == NULL && debug_level == 0 ) {
@@ -195,7 +204,7 @@ dprintf_config( const char *subsys )
 						   DebugFile[debug_level]);
 				}
 
-				if (DebugFP) (void)fclose( DebugFP );
+				if (DebugFP) (void)debug_unlock( debug_level );
 				DebugFP = (FILE *)0;
 
 				if (debug_level == 0) {
@@ -224,14 +233,6 @@ dprintf_config( const char *subsys )
 					free(pval);
 				} else {
 					MaxLogNum[debug_level] = 1;
-				}
-
-				if (debug_level == 0) {
-					(void)sprintf(pname, "%s_LOCK", subsys);
-					if (DebugLock) {
-						free(DebugLock);
-					}
-					DebugLock = param(pname);
 				}
 			}
 		}
