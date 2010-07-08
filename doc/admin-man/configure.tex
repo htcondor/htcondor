@@ -1322,7 +1322,7 @@ File System Configuration File Entries''.
 
 \label{param:ClassadUserLibs}
 \item[\Macro{CLASSAD\_USER\_LIBS}]
-  A comma-separate list of paths to shared libraries that contain
+  A comma separated list of paths to shared libraries that contain
   additional ClassAd functions to be used during ClassAd evaluation.
 
 \end{description}
@@ -1365,7 +1365,7 @@ of the subsystem corresponding to the daemon.
  
 \label{param:MaxNumSubsysLog}
 \item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]
-  An integer that controls the maximum number of rotatations a log file 
+  An integer that controls the maximum number of rotations a log file 
   is allowed to perform before the oldest one will be 
   rotated away. Thus, at most \Expr{MAX\_NUM\_<SUBSYS>\_LOG + 1}
   log files of the same program coexist at a given time.
@@ -2077,6 +2077,15 @@ which use DaemonCore).
   If set to a value less than 60, the update time will be 60 seconds.
   The default value is 28800, which is 8 hours. 
   This variable only takes effect at the start or restart of a daemon.
+
+\label{param:MaxAcceptsPerCycle}
+\item[\Macro{MAX\_ACCEPTS\_PER\_CYCLE}]
+  An integer value that defaults to 1.
+  It is a limit on the number of accepts of new, incoming, 
+  socket connect requests per DaemonCore event cycle.
+  It typically only matters to the \Condor{schedd},
+  and would be given a higher integer value for tuning purposes when 
+  there is a high number of jobs starting and exiting per second.
 
 \end{description}
 
