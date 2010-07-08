@@ -1083,7 +1083,7 @@ COLLECTOR			= $(SBIN)/condor_collector
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
-HDFS				= $(LIBEXEC)/condor_hdfs
+HDFS				= $(SBIN)/condor_hdfs
 SHARED_PORT			= $(LIBEXEC)/condor_shared_port
 TRANSFERER			= $(LIBEXEC)/condor_transferer
 

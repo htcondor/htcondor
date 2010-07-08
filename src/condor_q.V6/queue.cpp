@@ -2235,10 +2235,10 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	const char *scheddMachine;
 	const char *scheddVersion;
 
-	const char *quill_name;
-	const char *db_ipAddr;
-	const char *db_name;
-	const char *query_password;
+	const char *quill_name = 0;
+	const char *db_ipAddr = 0;
+	const char *db_name = 0;
+	const char *query_password = 0;
 
 	ClassAdList jobs; 
 	ClassAd		*job;

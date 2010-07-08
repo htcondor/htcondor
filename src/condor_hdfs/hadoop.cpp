@@ -471,7 +471,7 @@ void Hadoop::startService(int type) {
         
                 //For now always run name server with upgrade option, In case
                 //Hadoop Jar files are updated to a newer version.
-                arglist.AppendArg("-upgrade");
+                //arglist.AppendArg("-upgrade");
         }
 
         MyString argString;
