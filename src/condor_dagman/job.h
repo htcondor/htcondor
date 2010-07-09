@@ -441,6 +441,9 @@ class Job {
 		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
 
+		//TEMPTEMP -- change this to an ExtArray or something for parallel jobs?
+	int _heldCount;
+
 private:
 
 		// Note: Init moved to private section because calling int more than

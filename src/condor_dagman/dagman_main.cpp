@@ -1,3 +1,4 @@
+//TEMPTEMP -- implementing gittrac #1480 (remove jobs held too many times)
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -340,6 +341,8 @@ Dagman::Config()
 		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS", true );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n",
 				_generateSubdagSubmits ? "True" : "False" );
+
+	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", 5, 0, 1000 );
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
@@ -929,6 +932,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
+	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 
     //
     // Parse the input files.  The parse() routine

@@ -1,3 +1,4 @@
+//TEMPTEMP -- wrong number of job procs held -- aborted needs to count against held jobs if job is held
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -119,7 +120,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_submitDagDeepOpts	  (submitDagDeepOpts),
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
-	_recoveryMaxfakeID	  (0)
+	_recoveryMaxfakeID	  (0),
+	_maxJobHolds		  (0)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -566,7 +568,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_HELD:
-				ProcessHeldEvent(job);
+				ProcessHeldEvent(job, event);
 				ProcessIsIdleEvent(job);
 				break;
 
@@ -1122,16 +1124,28 @@ Dag::ProcessNotIdleEvent(Job *job) {
 }
 
 //---------------------------------------------------------------------------
+// We need the event here so we can tell which process has been held for
+// multi-process jobs.
 void
-Dag::ProcessHeldEvent(Job *job) {
+Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 
 	if ( !job ) {
 		return;
 	}
 
+	debug_printf( DEBUG_VERBOSE, "DIAG HELD event for %d.%d.%d\n", event->cluster, event->proc, event->subproc );//TEMPTEMP
+
 	_numHeldJobProcs++;
+
+	job->_heldCount++;//TEMPTEMP
+	if ( _maxJobHolds > 0 && job->_heldCount >= _maxJobHolds ) {
+		debug_printf( DEBUG_VERBOSE, "Job proc %d.%d.%d has been held DAGMAN_MAX_JOB_HOLDS (%d) times ... TEMPTEMP add more here...\n", event->cluster, event->proc, event->subproc, _maxJobHolds );
+		//TEMPTEMP -- delete the node job...
+		RemoveBatchJob( job );
+	}
 }
 
+//TEMPTEMP -- hmm -- if the job goes on hold and then we remove it, is there still a released event?
 //---------------------------------------------------------------------------
 void
 Dag::ProcessReleasedEvent(Job *job) {
