@@ -34,7 +34,7 @@ const char * AmazonResource::HashName( const char * resource_name,
 		const char * public_key_file, const char * private_key_file )
 {								 
 	static MyString hash_name;
-	hash_name.sprintf( "%s#%s#%s", resource_name, public_key_file, private_key_file );
+	hash_name.sprintf( "amazon %s#%s#%s", resource_name, public_key_file, private_key_file );
 	return hash_name.Value();
 }
 
@@ -137,7 +137,7 @@ void AmazonResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping
 	
 	ping_delay = 0;
 	
-	int rc = gahp->amazon_ping( m_public_key_file, m_private_key_file );
+	int rc = gahp->amazon_ping( resourceName, m_public_key_file, m_private_key_file );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;

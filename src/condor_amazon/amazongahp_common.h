@@ -32,8 +32,6 @@
 #define AMAZON_COMMAND_ERROR_OUTPUT		"1"
 
 #define AMAZON_HTTP_PROXY   "AMAZON_HTTP_PROXY"
-#define AMAZON_EC2_URL		"AMAZON_EC2_URL"
-#define DEFAULT_AMAZON_EC2_URL "https://ec2.amazonaws.com/"
 
 typedef bool (*ioCheckfn)(char **argv, int argc);
 typedef bool (*workerfn)(char **argv, int argc, std::string &output_string);
@@ -79,8 +77,5 @@ bool set_gahp_log_file(const char* logfile);
 
 void set_amazon_proxy_server(const char* url);
 bool get_amazon_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd );
-
-const char* get_ec2_url(void);
-void set_ec2_url(const char* url);
 
 #endif

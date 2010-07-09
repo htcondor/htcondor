@@ -29,8 +29,6 @@ static int amazon_proxy_port;
 static std::string amazon_proxy_user;
 static std::string amazon_proxy_passwd;
 
-static std::string amazon_ec2_url(DEFAULT_AMAZON_EC2_URL);
-
 // List for all amazon commands
 static SimpleList<AmazonGahpCommand*> amazon_gahp_commands;
 
@@ -38,16 +36,6 @@ static FILE *gahp_log_file = stderr;
 
 // This variable is defined in dprintf.c
 extern FILE *DebugFP;
-
-const char* get_ec2_url(void)
-{
-	return amazon_ec2_url.c_str();
-}
-
-void set_ec2_url(const char* url)
-{
-	amazon_ec2_url = url;
-}
 
 bool set_gahp_log_file(const char* logfile)
 {
