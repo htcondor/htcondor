@@ -5066,6 +5066,19 @@ SetGSICredentials()
 				exit( 1 );
 			}
 
+			/* Insert the proxy expiration time into the ad */
+			time_t proxy_expiration;
+			proxy_expiration = x509_proxy_expiration_time(proxy_file);
+			if (proxy_expiration == -1) {
+				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				exit( 1 );
+			}
+
+			(void) buffer.sprintf( "%s=%i", ATTR_X509_USER_PROXY_EXPIRATION, 
+						   proxy_expiration);
+			InsertJobExpr(buffer);	
+	
+
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
 			proxy_subject = x509_proxy_identity_name(proxy_file);

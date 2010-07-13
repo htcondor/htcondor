@@ -152,6 +152,7 @@ extern const char * const  ATTR_GLOBUS_RSL;
 extern const char * const  ATTR_GLOBUS_STATUS;
 extern const char * const  ATTR_GLOBUS_XML;
 extern const char * const  ATTR_X509_USER_PROXY;
+extern const char * const  ATTR_X509_USER_PROXY_EXPIRATION;
 extern const char * const  ATTR_X509_USER_PROXY_SUBJECT;
 extern const char * const  ATTR_X509_USER_PROXY_VONAME;
 extern const char * const  ATTR_X509_USER_PROXY_FIRST_FQAN;

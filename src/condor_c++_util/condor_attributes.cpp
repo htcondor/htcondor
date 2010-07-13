@@ -213,6 +213,7 @@ const char * const ATTR_GLOBUS_STATUS			 = "GlobusStatus";
 const char * const ATTR_GLOBUS_XML				 = "GlobusXML";
 const char * const ATTR_X509_USER_PROXY          = "x509userproxy";
 const char * const ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
+const char * const ATTR_X509_USER_PROXY_EXPIRATION	 = "x509UserProxyExpiration";
 const char * const ATTR_X509_USER_PROXY_VONAME	 = "x509UserProxyVOName";
 const char * const ATTR_X509_USER_PROXY_FIRST_FQAN	 = "x509UserProxyFirstFQAN";
 const char * const ATTR_X509_USER_PROXY_FQAN	 = "x509UserProxyFQAN";
