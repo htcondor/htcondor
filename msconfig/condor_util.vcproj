@@ -184,6 +184,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_util_lib\log_rotate.c"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_util_lib\log_rotate.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_util_lib\dprintf.c"
 			>
 		</File>

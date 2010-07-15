@@ -664,7 +664,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		ClassAd *ad;
+		ClassAd *ad = NULL;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -693,7 +693,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			// "ad" is a deep copy and therefore below we can set
 			// private attrs, delete it, etc, without messing up 
 			// the schedd's canonical copy.
-			ad = new ClassAd(*cluster_ad);			
+			if ( cluster_ad ) {
+				ad = new ClassAd(*cluster_ad);			
+			}
 		}
 		terrno = errno;
 		rval = ad ? 0 : -1;

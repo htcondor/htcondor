@@ -981,6 +981,7 @@ int DaemonCore::Cancel_Command( int command )
 			comTable[i].command_descrip = NULL;
 			free(comTable[i].handler_descrip);
 			comTable[i].handler_descrip = NULL;
+			nCommand--;
 			return TRUE;
 		}
 	}
@@ -7445,7 +7446,7 @@ int DaemonCore::Create_Process(
 		/** since we do not actually know how long the extension of
 			the file is, we'll need to hunt down the '.' in the path
 			*/
-		extension = strrchr ( executable, '.' );
+		extension = strrchr ( condor_basename(executable), '.' );
 
 		if ( !extension ) {
 
@@ -8280,8 +8281,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 
 		priv_state new_priv = get_priv();
 		if( saved_priv != new_priv ) {
-			char const *reaper =
-				reaper_id > 0 ? reapTable[reaper_id-1].handler_descrip : NULL;
+			char const *reaper = reapTable[reaper_id-1].handler_descrip;
 			dprintf(D_ALWAYS,
 					"Create_Thread: UNEXPECTED: priv state changed "
 					"during worker function: %d %d (%s)\n",

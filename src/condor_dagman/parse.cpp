@@ -242,7 +242,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			
 		// Handle a Retry spec
 		// Example Syntax is:  Retry JobName 3 UNLESS-EXIT 42
-		else if( strcasecmp( token, "Retry" ) == 0 ) {
+		else if( strcasecmp( token, "RETRY" ) == 0 ) {
 			parsed_line_successfully = parse_retry(dag, filename, lineNumber);
 		} 
 
@@ -303,9 +303,9 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Expected JOB, DATA, SCRIPT, PARENT, RETRY, "
+				"Expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS "
-				"or CONFIG token\n",
+				"CONFIG or SPLICE token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}

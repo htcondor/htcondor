@@ -264,6 +264,7 @@ const char * const ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char * const ATTR_HOOK_KEYWORD             = "HookKeyword";
 const char * const ATTR_IDLE_JOBS                = "IdleJobs";
 const char * const ATTR_IMAGE_SIZE				 = "ImageSize";
+const char * const ATTR_RESIDENT_SET_SIZE        = "ResidentSetSize";
 const char * const ATTR_INTERACTIVE			 = "Interactive";
 const char * const ATTR_IS_DAEMON_CORE           = "IsDaemonCore";
 const char * const ATTR_IS_OWNER                 = "IsOwner";
@@ -839,3 +840,11 @@ const char * const ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
 //************* Added for Lease Manager *******************//
 const char * const ATTR_LEASE_MANAGER_IP_ADDR = "LeaseManagerIpAddr";
 //************* End of Lease Manager    *******************//
+
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_TIME = "LastNegotiationCycleTime";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION = "LastNegotiationCycleDuration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCHES = "LastNegotiationCycleMatches";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS = "LastNegotiationCycleRejections";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED = "LastNegotiationCycleSubmittersFailed";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME = "LastNegotiationCycleSubmittersOutOfTime";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT = "LastNegotiationCycleActiveSubmitterCount";

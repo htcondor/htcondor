@@ -410,9 +410,14 @@ class Matchmaker : public Service
 		};
 		static int groupSortCompare(const void*, const void*);
 		
-		char RejectsTable[40];
-		char MatchesTable[40];
 		int prevLHF;
+
+		#define MAX_NEGOTIATION_CYCLE_STATS 100
+		class NegotiationCycleStats *negotiation_cycle_stats[MAX_NEGOTIATION_CYCLE_STATS];
+		int num_negotiation_cycle_stats;
+
+		void StartNewNegotiationCycleStat();
+		void publishNegotiationCycleStats( ClassAd *ad );
 };
 
 

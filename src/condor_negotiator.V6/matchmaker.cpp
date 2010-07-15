@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include <math.h>
 #include <float.h>
+#include <set>;
 #include "condor_state.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -62,9 +63,24 @@ typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
 MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
-//added by ameet - dirty hack - needs to be removed soon!!!
-//#include "../condor_c++_util/queuedbmanager.h"
-//QueueDBManager queueDBManager;
+class NegotiationCycleStats
+{
+public:
+	NegotiationCycleStats();
+	typedef std::set<std::string>::value_type StringSetType;
+
+	void SubmitterOutOfTime( StringSetType const &submitter );
+	void SubmitterFailed( StringSetType const &submitter );
+	void SubmitterActive( StringSetType const &submitter );
+
+	time_t start_time;
+	int duration;
+	std::set<std::string> submitters_out_of_time;
+	std::set<std::string> submitters_failed;
+	std::set<std::string> active_submitters;
+	int matches;
+	int rejections;
+};
 
 static MyString MachineAdID(ClassAd * ad)
 {
@@ -130,11 +146,11 @@ Matchmaker ()
 
 	groupQuotasHash = NULL;
 
-	strcpy(RejectsTable, "rejects");
-	strcpy(MatchesTable, "matches");
-
 	prevLHF = 0;
 	Collectors = 0;
+
+	memset(negotiation_cycle_stats,0,sizeof(negotiation_cycle_stats));
+	num_negotiation_cycle_stats = 0;
 }
 
 
@@ -163,6 +179,11 @@ Matchmaker::
     if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
 	if (stashedAds) delete stashedAds;
+
+	int i;
+	for(i=0;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
+		delete negotiation_cycle_stats[i];
+	}
 }
 
 
@@ -427,6 +448,9 @@ reinitialize ()
 		}
         free (tmp);
 	}
+
+	num_negotiation_cycle_stats = param_integer("NEGOTIATION_CYCLE_STATS_LENGTH",3,0,MAX_NEGOTIATION_CYCLE_STATS);
+	ASSERT( num_negotiation_cycle_stats <= MAX_NEGOTIATION_CYCLE_STATS );
 
 	if( first_time ) {
 		first_time = false;
@@ -884,6 +908,8 @@ negotiationTime ()
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
+	time_t start_time = time(NULL);
+
 	GotRescheduleCmd=false;  // Reset the reschedule cmd flag
 
 	// We need to nuke our MatchList from the previous negotiation cycle,
@@ -911,6 +937,11 @@ negotiationTime ()
 		scheddAds.Close();
 		return;
 	}
+
+		// allocate stat object here, now that we know we are not going
+		// to abort the cycle
+	StartNewNegotiationCycleStat();
+	negotiation_cycle_stats[0]->start_time = start_time;
 
 	// Save this for future use.
 	// This _must_ come before trimming the startd ads.
@@ -1327,6 +1358,8 @@ negotiationTime ()
 
 	completedLastCycleTime = time(NULL);
 
+	negotiation_cycle_stats[0]->duration = time(NULL) - negotiation_cycle_stats[0]->start_time;
+
 	ClassAd *tmp;
 	startdAds.Open();
 	while ( (tmp = startdAds.Next()) ) {
@@ -1564,6 +1597,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				dprintf(D_ALWAYS,
 					"  %d seconds spent, max allowed %d\n ",
 					totalTime, MaxTimePerSubmitter);
+				negotiation_cycle_stats[0]->SubmitterOutOfTime( scheddName.Value() );
 				result = MM_DONE;
 			} else {
 				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
@@ -1582,6 +1616,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 								  startdAds, claimIds, 
 								  scheddVersion, ignore_schedd_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
+					negotiation_cycle_stats[0]->SubmitterActive( scheddName.Value() );
 					updateNegCycleEndTime(startTime, schedd);
 
 				}
@@ -1615,6 +1650,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					dprintf(D_ALWAYS,"  Error: Ignoring submitter for this cycle\n" );
 					sockCache->invalidateSock( scheddAddr.Value() );
 					scheddAds.Remove( schedd );
+					negotiation_cycle_stats[0]->SubmitterFailed( scheddName.Value() );
 			}
 		}
 		scheddAds.Close();
@@ -2299,6 +2335,9 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr.Value());
+
+				negotiation_cycle_stats[0]->rejections++;
+
 				if( rejForSubmitterLimit ) {
 					limited_by_submitterLimit = true;
 				}
@@ -2418,6 +2457,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		double SlotWeight = accountant.GetSlotWeight(offer);
 		limitUsed += SlotWeight;
 		pieLeft -= SlotWeight;
+		negotiation_cycle_stats[0]->matches++;
 	}
 
 
@@ -3857,6 +3897,10 @@ void
 Matchmaker::updateCollector() {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
+	if( publicAd ) {
+		publishNegotiationCycleStats( publicAd );
+	}
+
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
@@ -4087,5 +4131,126 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		}
 
 		collector->sendMsg( msg.get() );
+	}
+}
+
+NegotiationCycleStats::NegotiationCycleStats():
+	duration(0),
+	matches(0),
+	rejections(0)
+{
+	start_time = time(NULL);
+}
+
+void NegotiationCycleStats::SubmitterOutOfTime( StringSetType const &submitter )
+{
+	submitters_out_of_time.insert( submitter );
+}
+void NegotiationCycleStats::SubmitterFailed( StringSetType const &submitter )
+{
+	submitters_failed.insert( submitter );
+}
+void NegotiationCycleStats::SubmitterActive( StringSetType const &submitter )
+{
+	active_submitters.insert( submitter );
+}
+
+void Matchmaker::StartNewNegotiationCycleStat()
+{
+	int i;
+
+	delete negotiation_cycle_stats[MAX_NEGOTIATION_CYCLE_STATS-1];
+
+	for(i=MAX_NEGOTIATION_CYCLE_STATS-1;i>0;i--) {
+		negotiation_cycle_stats[i] = negotiation_cycle_stats[i-1];
+	}
+
+	negotiation_cycle_stats[0] = new NegotiationCycleStats();
+	ASSERT( negotiation_cycle_stats[0] );
+
+		// to save memory, only keep stats within the configured visible window
+	for(i=num_negotiation_cycle_stats;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
+		if( i == 0 ) {
+				// always have a 0th entry in the list so we can mindlessly
+				// update it without checking every time.
+			continue;
+		}
+		delete negotiation_cycle_stats[i];
+		negotiation_cycle_stats[i] = NULL;
+	}
+}
+
+static void
+DelAttrN( ClassAd *ad, char const *attr, int n )
+{
+	MyString attrn;
+	attrn.sprintf("%s%d",attr,n);
+	ad->Delete( attrn.Value() );
+}
+
+static void
+SetAttrN( ClassAd *ad, char const *attr, int n, int value )
+{
+	MyString attrn;
+	attrn.sprintf("%s%d",attr,n);
+	ad->Assign(attrn.Value(),value);
+}
+
+static void
+SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_list )
+{
+	MyString attrn;
+	attrn.sprintf("%s%d",attr,n);
+
+	MyString value;
+	std::set<std::string>::iterator it;
+	for(it = string_list.begin();
+		it != string_list.end();
+		it++)
+	{
+		if( !value.IsEmpty() ) {
+			value += ", ";
+		}
+		value += it->c_str();
+	}
+
+	ad->Assign(attrn.Value(),value.Value());
+}
+
+void
+Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
+{
+	int i;
+	char const *attrs[8];
+	attrs[0] = ATTR_LAST_NEGOTIATION_CYCLE_TIME;
+	attrs[1] = ATTR_LAST_NEGOTIATION_CYCLE_DURATION;
+	attrs[2] = ATTR_LAST_NEGOTIATION_CYCLE_MATCHES;
+	attrs[3] = ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
+	attrs[4] = ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
+	attrs[5] = ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
+	attrs[6] = ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
+	attrs[7] = NULL;
+
+		// clear out all negotiation cycle attributes in the ad
+	for(i=0; i<MAX_NEGOTIATION_CYCLE_STATS; i++) {
+		int a;
+		for(a=0; a<sizeof(attrs)/sizeof(char *) && attrs[a]; a++) {
+			DelAttrN( ad, attrs[a], i );
+		}
+	}
+
+	for(i=0; i<num_negotiation_cycle_stats; i++) {
+		NegotiationCycleStats *s = negotiation_cycle_stats[i];
+		if( !s ) {
+			continue;
+		}
+
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCHES, i, s->matches);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS, i, s->rejections);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TIME, i, s->start_time);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION, i, s->duration);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT, i, s->active_submitters.size());
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED, i, s->submitters_failed);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME, i, s->submitters_out_of_time);
 	}
 }

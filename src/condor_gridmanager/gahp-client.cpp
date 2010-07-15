@@ -118,6 +118,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	requestTable = NULL;
 	current_proxy = NULL;
 	skip_next_r = false;
+	m_deleteMeTid = TIMER_UNSET;
 
 	next_reqid = 1;
 	rotated_reqids = false;
@@ -160,6 +161,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 GahpServer::~GahpServer()
 {
 	GahpServersById.remove( HashKey( my_id ) );
+	if ( m_deleteMeTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( m_deleteMeTid );
+	}
 	free( m_buffer );
 	delete m_commands_supported;
 	if ( globus_gass_server_url != NULL ) {
@@ -211,6 +215,18 @@ GahpServer::~GahpServer()
 	}
 	if ( requestTable != NULL ) {
 		delete requestTable;
+	}
+}
+
+void
+GahpServer::DeleteMe()
+{
+	m_deleteMeTid = TIMER_UNSET;
+
+	if ( m_reference_count <= 0 ) {
+
+		delete this;
+		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
 	}
 }
 
@@ -360,6 +376,10 @@ GahpServer::buffered_read( int fd, void *buf, int count )
 	ASSERT(count == 1);
 
 	if ( m_buffer_pos >= m_buffer_end ) {
+		// Also read from the gahp's stderr. Otherwise, we can potential
+		// deadlock, us reading from gahp's stdout and it writing to its
+		// stderr.
+		err_pipe_ready();
 		int rc = daemonCore->Read_Pipe(fd, m_buffer, m_buffer_size );
 		m_buffer_pos = 0;
 		if ( rc <= 0 ) {
@@ -588,6 +608,11 @@ void
 GahpServer::AddGahpClient()
 {
 	m_reference_count++;
+
+	if ( m_deleteMeTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( m_deleteMeTid );
+		m_deleteMeTid = TIMER_UNSET;
+	}
 }
 
 void
@@ -596,7 +621,9 @@ GahpServer::RemoveGahpClient()
 	m_reference_count--;
 
 	if ( m_reference_count <= 0 ) {
-		delete this;
+		m_deleteMeTid = daemonCore->Register_Timer( 30,
+								(TimerHandlercpp)&GahpServer::DeleteMe,
+								"GahpServer::DeleteMe", (Service*)this );
 	}
 }
 
@@ -686,6 +713,20 @@ GahpServer::Startup()
 	tmp_char = param("AMAZON_EC2_URL");
 	if( tmp_char ) {
 		newenv.SetEnv( "AMAZON_EC2_URL", tmp_char );
+		free( tmp_char );
+	}
+
+	// For amazon ec2 ca authentication
+	tmp_char = param("SOAP_SSL_CA_FILE");
+	if( tmp_char ) {
+		newenv.SetEnv( "SOAP_SSL_CA_FILE", tmp_char );
+		free( tmp_char );
+	}
+
+	// For amazon ec2 ca authentication
+	tmp_char = param("SOAP_SSL_CA_DIR");
+	if( tmp_char ) {
+		newenv.SetEnv( "SOAP_SSL_CA_DIR", tmp_char );
 		free( tmp_char );
 	}
 
@@ -1472,7 +1513,7 @@ GahpServer::command_version()
 	j = sizeof(m_gahp_version);
 	i = 0;
 	while ( i < j ) {
-		result = daemonCore->Read_Pipe(m_gahp_readfd, &(m_gahp_version[i]), 1 );
+		result = buffered_read(m_gahp_readfd, &(m_gahp_version[i]), 1 );
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
 			continue;
@@ -4976,6 +5017,69 @@ GahpClient::nordugrid_ping(const char *hostname)
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
 		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::gridftp_transfer(const char *src_url, const char *dst_url)
+{
+	static const char* command = "GRIDFTP_TRANSFER";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!src_url) src_url=NULLSTRING;
+	if (!dst_url) dst_url=NULLSTRING;
+	MyString reqline;
+	char *esc1 = strdup( escapeGahpString(src_url) );
+	char *esc2 = strdup( escapeGahpString(dst_url) );
+	bool x = reqline.sprintf( "%s %s", esc1, esc2 );
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 

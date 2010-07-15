@@ -1825,7 +1825,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 		*total_bytes += bytes;
 
-		record.fullname = strdup(fullname.Value());
+		record.fullname = fullname.Value();
 		record.bytes = bytes;
 		record.elapsed  = elapsed;
     
@@ -2226,6 +2226,24 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
+	// If a bunch of file transfers failed strictly due to
+	// PUT_FILE_OPEN_FAILED, then we keep track of the information relating to
+	// the first failed one, and continue to attempt to transfer the rest in
+	// the list. At the end of the transfer, the job will go on hold with the
+	// information of the first failed transfer. This is to allow things like
+	// corefiles and whatnot to be brought back to the spool even if the user
+	// job hadn't completed writing all the files as specified in
+	// transfer_output_files. These variables represent the saved state of the
+	// first failed transfer. See gt #487.
+	bool first_failed_file_transfer_happened = false;
+	bool first_failed_upload_success = false;
+	bool first_failed_try_again = false;
+	int first_failed_hold_code = 0;
+	int first_failed_hold_subcode = 0;
+	MyString first_failed_error_desc;
+	int first_failed_line_number;
+
+
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 
@@ -2454,20 +2472,34 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			error_desc.sprintf("error sending %s",fullname.Value());
 			if(rc == PUT_FILE_OPEN_FAILED) {
 				// In this case, put_file() has transmitted a zero-byte
-				// file in place of the failed one, so that we can
-				// send the upload ack containing the full error message.
-				if(!s->end_of_message()) {
-					dprintf(D_ALWAYS,"Failed to end message after file open failure.\n");
-					dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-					return_and_resetpriv( -1 );
-				}
-				do_upload_ack = true;
-				do_download_ack = true;
+				// file in place of the failed one. This means there is an
+				// ack waiting for us to read back which we do at the end of
+				// the while loop.
+
 				error_desc.replaceString("sending","reading from");
 				error_desc.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
 				try_again = false; // put job on hold
 				hold_code = CONDOR_HOLD_CODE_UploadFileError;
 				hold_subcode = the_error;
+
+				// We'll continue trying to transfer the rest of the files
+				// in question, but we'll record the information we need from
+				// the first failure. Notice that this means we won't know
+				// the complete set of files which failed to transfer back
+				// but have become zero length files on the submit side.
+				// We'd need to append those failed files to some kind of an
+				// attribute in the job ad representing this failure. That
+				// is not currently implemented....
+
+				if (first_failed_file_transfer_happened == false) {
+					first_failed_file_transfer_happened = true;
+					first_failed_upload_success = false;
+					first_failed_try_again = false;
+					first_failed_hold_code = hold_code;
+					first_failed_hold_subcode = the_error;
+					first_failed_error_desc = error_desc;
+					first_failed_line_number = __LINE__;
+				}
 			}
 			else {
 				// We can't currently tell the different between other
@@ -2482,11 +2514,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				// the other side to be able to read our upload ack.
 				do_upload_ack = false;
 				try_again = true;
-			}
-			return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
-			                    upload_success,do_upload_ack,do_download_ack,
+
+				// for the more interesting reasons why the transfer failed,
+				// we can try again and see what happens.
+				return ExitDoUpload(total_bytes,s,saved_priv,
+								socket_default_crypto,upload_success,
+								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
 			                    error_desc.Value(),__LINE__);
+			}
 		}
 
 		if( !s->end_of_message() ) {
@@ -2497,9 +2533,18 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		*total_bytes += bytes;
 	}
 
-	upload_success = true;
 	do_download_ack = true;
 	do_upload_ack = true;
+
+	if (first_failed_file_transfer_happened == true) {
+		return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
+			first_failed_upload_success,do_upload_ack,do_download_ack,
+			first_failed_try_again,first_failed_hold_code,
+			first_failed_hold_subcode,first_failed_error_desc.Value(),
+			first_failed_line_number);
+	} 
+
+	upload_success = true;
 	return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
 	                    try_again,hold_code,hold_subcode,NULL,__LINE__);

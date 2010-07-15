@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 my $testdesc =  'Condor autogen scalability test';
 my $testname = "perf_busy_lynn_100_100_500_sched";
@@ -28,8 +29,8 @@ my $cmdfile = "perf_busy_lynn_100_100_500_sched.cmd";
 my $testdesc =  'condor scalability test';
 my $testname = "perf_busy_lynn_100_100_500_sched";
 
-CondorTest::verbose_system("rm -rf $datafile");
-CondorTest::verbose_system("touch $datafile");
+runcmd("rm -rf $datafile");
+runcmd("touch $datafile");
 
 my $startjobs = 100;
 my $incrementjobs = 100;

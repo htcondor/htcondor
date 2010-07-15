@@ -115,6 +115,15 @@ RemoteResource::~RemoteResource()
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
 	}
+
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		if( m_claim_session.secSessionId() ) {
+			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
+		}
+		if( m_filetrans_session.secSessionId() ) {
+			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
+		}
+	}
 }
 
 
@@ -990,7 +999,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
 		}
 	}
-			
+
+	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
+	    jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
+	}
+
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		if( int_value > disk_usage ) {
 			disk_usage = int_value;

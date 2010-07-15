@@ -430,7 +430,7 @@ GlobusResource::CheckMonitor()
 	dprintf(D_FULLDEBUG, "grid_monitor for %s entering CheckMonitor\n",
 		resourceName);
 
-	if ( m_isGt5 ) {
+	if ( m_versionKnown && m_isGt5 ) {
 		dprintf( D_FULLDEBUG, "Disabling grid_monitor for GRAM5 server %s\n",
 				 resourceName );
 		return;

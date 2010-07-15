@@ -9,7 +9,7 @@ CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt4job.o gt4resource.o infnbatchjob.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o amazonjob.o amazonresource.o proxymanager.o gahp-client.o basejob.o baseresource.o gridftpmanager.o
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt4job.o gt4resource.o infnbatchjob.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o amazonjob.o amazonresource.o proxymanager.o gahp-client.o basejob.o baseresource.o gridftpmanager.o transferrequest.o
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

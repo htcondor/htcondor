@@ -409,6 +409,7 @@ ResState::eval( void )
 		if( ! rip->eval_is_owner() ) {
 			dprintf( D_ALWAYS, "State change: IS_OWNER is false\n" );
 			change( unclaimed_state );
+			return TRUE; // change() can delete rip
 		}
 #if HAVE_JOB_HOOKS
 			// If we're compiled to support fetching work

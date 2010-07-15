@@ -79,12 +79,16 @@ class GahpServer : public Service {
 	bool Startup();
 	bool Initialize(Proxy * proxy);
 
+	void DeleteMe();
+
 	static const int m_buffer_size;
 	char *m_buffer;
 	int m_buffer_pos;
 	int m_buffer_end;
 	int buffered_read( int fd, void *buf, int count );
 	int buffered_peek();
+
+	int m_deleteMeTid;
 
 	bool m_in_results;
 
@@ -554,6 +558,9 @@ class GahpClient : public Service {
 
 		int
 		nordugrid_ping(const char *hostname);
+
+		int
+		gridftp_transfer(const char *src_url, const char *dst_url);
 
 		///
 		int 

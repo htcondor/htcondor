@@ -265,6 +265,17 @@ DC_Exit( int status, const char *shutdown_program )
 		exit_status = DAEMON_NO_RESTART;
 	}
 
+#ifndef WIN32
+	// unregister our signal handlers in case some 3rd-party lib
+	// was masking signals on us...no late arrivals
+	install_sig_handler(SIGCHLD,SIG_DFL);
+	install_sig_handler(SIGHUP,SIG_DFL);
+	install_sig_handler(SIGTERM,SIG_DFL);
+	install_sig_handler(SIGQUIT,SIG_DFL);
+	install_sig_handler(SIGUSR1,SIG_DFL);
+	install_sig_handler(SIGUSR2,SIG_DFL);
+#endif /* ! WIN32 */
+
 		// Now, delete the daemonCore object, since we allocated it. 
 	unsigned long	pid = daemonCore->getpid( );
 	delete daemonCore;
@@ -800,7 +811,9 @@ handle_off_fast( Service*, int, Stream* stream)
 		dprintf( D_ALWAYS, "handle_off_fast: failed to read end of message\n");
 		return FALSE;
 	}
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	}
 	return TRUE;
 }
 
@@ -812,7 +825,9 @@ handle_off_graceful( Service*, int, Stream* stream)
 		dprintf( D_ALWAYS, "handle_off_graceful: failed to read end of message\n");
 		return FALSE;
 	}
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
 	return TRUE;
 }
 
@@ -826,8 +841,10 @@ handle_off_peaceful( Service*, int, Stream* stream)
 		dprintf( D_ALWAYS, "handle_off_peaceful: failed to read end of message\n");
 		return FALSE;
 	}
-	daemonCore->SetPeacefulShutdown(true);
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	if (daemonCore) {
+		daemonCore->SetPeacefulShutdown(true);
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
 	return TRUE;
 }
 
@@ -1256,41 +1273,53 @@ handle_config( Service *, int cmd, Stream *stream )
 void
 unix_sighup(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
+	}
 }
 
 
 void
 unix_sigterm(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
 }
 
 
 void
 unix_sigquit(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	}
 }
 
 
 void
 unix_sigchld(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGCHLD );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGCHLD );
+	}
 }
 
 
 void
 unix_sigusr1(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
+	}
 }
 
 void
 unix_sigusr2(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+	}
 }
 
 

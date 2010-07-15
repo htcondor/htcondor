@@ -239,7 +239,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	ad->InsertOrUpdate( buf );
 	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage->user_cpu_time );
 	ad->InsertOrUpdate( buf );
+
 	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage->max_image_size );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
 	ad->InsertOrUpdate( buf );
 
 		// Update our knowledge of how many processes the job has
@@ -372,9 +375,9 @@ VanillaProc::ShutdownFast()
 	// job
 	if ( kill_sig != -1 ) {
 		if ( daemonCore->Signal_Process( JobPid, kill_sig ) == FALSE ) {
-                        dprintf(D_ALWAYS,
-                                "Error: Failed to send signal %d to job with "
-                                " pid %u\n", kill_sig, JobPid);
+			dprintf(D_ALWAYS,
+				"Error: Failed to send signal %d to "
+				"job with pid %u\n", kill_sig, JobPid);
 		}
 		else {
 			startEscalationTimer();
@@ -449,9 +452,8 @@ VanillaProc::cancelEscalationTimer()
 bool
 VanillaProc::EscalateSignal()
 {
-	cancelEscalationTimer();
-
 	dprintf(D_FULLDEBUG, "Esclation Timer fired.  Killing job\n");
+	cancelEscalationTimer();
 	finishShutdownFast();
 
 	return true;

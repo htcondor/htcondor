@@ -294,7 +294,7 @@ static bool test_size_undefined(void);
 
 
 bool OTEST_Old_Classads(void) {
-	e.emit_object("Old_Classads");
+	emit_object("Old_Classads");
 	
 	FunctionDriver driver;
 	driver.register_function( test_copy_constructor_actuals);
@@ -560,13 +560,11 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_size_zero);
 	driver.register_function(test_size_undefined);
 
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_copy_constructor_actuals() {
-	e.emit_test("Test that a copied ClassAd has the same attributes and actuals"
+	emit_test("Test that a copied ClassAd has the same attributes and actuals"
 		" as the original ClassAd.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
 	compat_classad::ClassAd* classad = new ClassAd;
@@ -577,16 +575,16 @@ static bool test_copy_constructor_actuals() {
 	classadCopy->EvalInteger("A", NULL, actual1);
 	classadCopy->EvalBool("B", NULL, actual2);
 	classadCopy->EvalString("C", NULL, actual3);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_param("A", "1");
-	e.emit_param("B", "1");
-	e.emit_param("C", "String");
-	e.emit_output_actual_header();
-	e.emit_param("A", "%d", actual1);
-	e.emit_param("B", "%d", actual2);
-	e.emit_param("C", actual3);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_param("A", "1");
+	emit_param("B", "1");
+	emit_param("C", "String");
+	emit_output_actual_header();
+	emit_param("A", "%d", actual1);
+	emit_param("B", "%d", actual2);
+	emit_param("C", actual3);
 	if(actual1 != 1 || actual2 != 1 || strcmp(actual3, "String") != MATCH) {
 		delete classad; delete classadCopy;
 		FAIL;
@@ -596,18 +594,18 @@ static bool test_copy_constructor_actuals() {
 }
 
 static bool test_copy_constructor_pointer() {
-	e.emit_test("Test that a copied ClassAd pointer is not equal to the "
+	emit_test("Test that a copied ClassAd pointer is not equal to the "
 		"original ClassAd pointer.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
 	compat_classad::ClassAd* classadCopy = new ClassAd(*classad);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_param("ClassAd Copy", "!= %p", classad);
-	e.emit_output_actual_header();
-	e.emit_param("ClassAd Copy", "%p", classadCopy);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_param("ClassAd Copy", "!= %p", classad);
+	emit_output_actual_header();
+	emit_param("ClassAd Copy", "%p", classadCopy);
 	if(classad == classadCopy) {
 		delete classad; delete classadCopy;
 		FAIL;
@@ -617,7 +615,7 @@ static bool test_copy_constructor_pointer() {
 }
 
 static bool test_assignment_actuals() {
-	e.emit_test("Test that a ClassAd has the same attributes and actuals as the"
+	emit_test("Test that a ClassAd has the same attributes and actuals as the"
 		" original ClassAd that it was assigned to.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
 	compat_classad::ClassAd* classad = new ClassAd;
@@ -629,16 +627,16 @@ static bool test_assignment_actuals() {
 	classadAssign->EvalInteger("A", NULL, actual1);
 	classadAssign->EvalBool("B", NULL, actual2);
 	classadAssign->EvalString("C", NULL, actual3);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_param("A", "1");
-	e.emit_param("B", "1");
-	e.emit_param("C", "String");
-	e.emit_output_actual_header();
-	e.emit_param("A", "%d", actual1);
-	e.emit_param("B", "%d", actual2);
-	e.emit_param("C", actual3);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_param("A", "1");
+	emit_param("B", "1");
+	emit_param("C", "String");
+	emit_output_actual_header();
+	emit_param("A", "%d", actual1);
+	emit_param("B", "%d", actual2);
+	emit_param("C", actual3);
 	if(actual1 != 1 || actual2 != 1 || strcmp(actual3, "String") != MATCH) {
 		delete classad; delete classadAssign;
 		FAIL;
@@ -648,7 +646,7 @@ static bool test_assignment_actuals() {
 }
 
 static bool test_assignment_actuals_before() {
-	e.emit_test("Test that a ClassAd has the same attributes and actuals as the"
+	emit_test("Test that a ClassAd has the same attributes and actuals as the"
 		" original ClassAd that it was assigned to when the ClassAd had actuals"
 		" beforehand.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
@@ -663,16 +661,16 @@ static bool test_assignment_actuals_before() {
 	classadAssign->EvalInteger("A", NULL, actual1);
 	classadAssign->EvalBool("B", NULL, actual2);
 	classadAssign->EvalString("C", NULL, actual3);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_param("A", "1");
-	e.emit_param("B", "1");
-	e.emit_param("C", "String");
-	e.emit_output_actual_header();
-	e.emit_param("A", "%d", actual1);
-	e.emit_param("B", "%d", actual2);
-	e.emit_param("C", actual3);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_param("A", "1");
+	emit_param("B", "1");
+	emit_param("C", "String");
+	emit_output_actual_header();
+	emit_param("A", "%d", actual1);
+	emit_param("B", "%d", actual2);
+	emit_param("C", actual3);
 	if(actual1 != 1 || actual2 != 1 || strcmp(actual3, "String") != MATCH) {
 		delete classad; delete classadAssign;
 		FAIL;
@@ -682,19 +680,19 @@ static bool test_assignment_actuals_before() {
 }
 
 static bool test_assignment_pointer() {
-	e.emit_test("Test that a ClassAd pointer is not equal to the original "
+	emit_test("Test that a ClassAd pointer is not equal to the original "
 		"ClassAd pointer that it was assigned to.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
 	compat_classad::ClassAd* classadAssign = new ClassAd;
 	*classadAssign = *classad;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_param("Assigned ClassAd", "!= %p", classad);
-	e.emit_output_actual_header();
-	e.emit_param("Assigned ClassAd", "%p", classadAssign);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_param("Assigned ClassAd", "!= %p", classad);
+	emit_output_actual_header();
+	emit_param("Assigned ClassAd", "%p", classadAssign);
 	if(classad == classadAssign) {
 		delete classad; delete classadAssign;
 		FAIL;
@@ -704,9 +702,9 @@ static bool test_assignment_pointer() {
 }
 
 static bool test_xml() {
-	e.emit_test("Test that a ClassAd is the same after printing to a string, "
+	emit_test("Test that a ClassAd is the same after printing to a string, "
 		"converting to XML, and back.");
-	e.emit_comment("This doesn't look like it preserves tabs.");
+	emit_comment("This doesn't look like it preserves tabs.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"\n\t\t"
 		"D=\"\"\n\t\tE=\" \"";
 	ClassAdXMLUnparser unparser;
@@ -719,14 +717,14 @@ static bool test_xml() {
 	unparser.Unparse(&classad, xml);
 	classadAfter = parser.ParseClassAd(xml.Value());
 	classadAfter->sPrint(after);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_param("Before", classad_string);
-	e.emit_param("After", classad_string);
-	e.emit_output_actual_header();
-	e.emit_param("Before", before.Value());
-	e.emit_param("After", after.Value());
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_param("Before", classad_string);
+	emit_param("After", classad_string);
+	emit_output_actual_header();
+	emit_param("Before", before.Value());
+	emit_param("After", after.Value());
 	if(after != before) {
 		delete classadAfter;
 		FAIL;
@@ -736,7 +734,7 @@ static bool test_xml() {
 }
 
 static bool test_lookup_integer_first() {
-	e.emit_test("Test LookupInteger() on the first attribute in a classad.");
+	emit_test("Test LookupInteger() on the first attribute in a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
@@ -744,14 +742,14 @@ static bool test_lookup_integer_first() {
 	int actual = -1;
 	classad.LookupInteger(attribute_name, actual);
 	int expect = 1;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -759,7 +757,7 @@ static bool test_lookup_integer_first() {
 }
 
 static bool test_lookup_integer_middle() {
-	e.emit_test("Test LookupInteger() on the second attribute in a classad.");
+	emit_test("Test LookupInteger() on the second attribute in a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
@@ -767,14 +765,14 @@ static bool test_lookup_integer_middle() {
 	int actual = -1;
 	classad.LookupInteger(attribute_name, actual);
 	int expect = 2;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -782,7 +780,7 @@ static bool test_lookup_integer_middle() {
 }
 
 static bool test_lookup_integer_last() {
-	e.emit_test("Test LookupInteger() on the last attribute in a classad.");
+	emit_test("Test LookupInteger() on the last attribute in a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
@@ -790,14 +788,14 @@ static bool test_lookup_integer_last() {
 	int actual = -1;
 	classad.LookupInteger(attribute_name, actual);
 	int expect = 3;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -805,7 +803,7 @@ static bool test_lookup_integer_last() {
 }
 
 static bool test_eval_bool_true() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that evaluates to"
+	emit_test("Test EvalBool() on an attribute in a classad that evaluates to"
 		" true.");
 	const char* classad_string = "\tDoesMatch = \"Bone Machine\" == \"bone "
 		"machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\"";
@@ -815,14 +813,14 @@ static bool test_eval_bool_true() {
 	int actual = -1;
 	classad.EvalBool(attribute_name, NULL, actual);
 	int expect = 1;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -830,7 +828,7 @@ static bool test_eval_bool_true() {
 }
 
 static bool test_eval_bool_false() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that evaluates to"
+	emit_test("Test EvalBool() on an attribute in a classad that evaluates to"
 		" false.");
 	const char* classad_string = "\tDoesntMatch = \"a\" =?= \"A\"";
 	compat_classad::ClassAd classad;
@@ -839,14 +837,14 @@ static bool test_eval_bool_false() {
 	int actual = -1;
 	classad.EvalBool(attribute_name, NULL, actual);
 	int expect = 0;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -854,7 +852,7 @@ static bool test_eval_bool_false() {
 }
 
 static bool test_lookup_expr_error_or_false() {
-	e.emit_test("Test LookupExpr() on an attribute in a classad that contains "
+	emit_test("Test LookupExpr() on an attribute in a classad that contains "
 		"an error when used in a logical OR with a FALSE.");
 	const char* classad_string = "\tE = FALSE || ERROR";
 	compat_classad::ClassAd classad;
@@ -865,15 +863,15 @@ static bool test_lookup_expr_error_or_false() {
 	int actual1 = EvalExprTree(tree, &classad, NULL, &val);
 	int actual2 = (val.type == LX_ERROR);
 	int expect = 1;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_output_expected_header();
-	e.emit_param("EvalExprTree", "%d", expect);
-	e.emit_param("LX_ERROR", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("EvalExprTree", "%d", actual1);
-	e.emit_param("LX_ERROR", "%d", actual2);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_output_expected_header();
+	emit_param("EvalExprTree", "%d", expect);
+	emit_param("LX_ERROR", "%d", expect);
+	emit_output_actual_header();
+	emit_param("EvalExprTree", "%d", actual1);
+	emit_param("LX_ERROR", "%d", actual2);
 	if(actual1 != expect || actual2 != expect) {
 		FAIL;
 	}
@@ -881,7 +879,7 @@ static bool test_lookup_expr_error_or_false() {
 }
 
 static bool test_lookup_expr_error_and() {
-	e.emit_test("Test LookupExpr() on an attribute in a classad that contains "
+	emit_test("Test LookupExpr() on an attribute in a classad that contains "
 		"an error when used in a logical AND.");
 	const char* classad_string = "\tL = \"foo\" && ERROR";
 	compat_classad::ClassAd classad;
@@ -892,15 +890,15 @@ static bool test_lookup_expr_error_and() {
 	int actual1 = EvalExprTree(tree, &classad, NULL, &val);
 	int actual2 = (val.type == LX_ERROR);
 	int expect = 1;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_output_expected_header();
-	e.emit_param("EvalExprTree", "%d", expect);
-	e.emit_param("LX_ERROR", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("EvalExprTree", "%d", actual1);
-	e.emit_param("LX_ERROR", "%d", actual2);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_output_expected_header();
+	emit_param("EvalExprTree", "%d", expect);
+	emit_param("LX_ERROR", "%d", expect);
+	emit_output_actual_header();
+	emit_param("EvalExprTree", "%d", actual1);
+	emit_param("LX_ERROR", "%d", actual2);
 	if(actual1 != expect || actual2 != expect) {
 		FAIL;
 	}
@@ -908,7 +906,7 @@ static bool test_lookup_expr_error_and() {
 }
 
 static bool test_lookup_expr_error_and_true() {
-	e.emit_test("Test LookupExpr() on an attribute in a classad that contains "
+	emit_test("Test LookupExpr() on an attribute in a classad that contains "
 		"an error when used in a logical AND with a TRUE.");
 	const char* classad_string = "\tM = TRUE && ERROR";
 	compat_classad::ClassAd classad;
@@ -919,15 +917,15 @@ static bool test_lookup_expr_error_and_true() {
 	int actual1 = EvalExprTree(tree, &classad, NULL, &val);
 	int actual2 = (val.type == LX_ERROR);
 	int expect = 1;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_output_expected_header();
-	e.emit_param("EvalExprTree", "%d", expect);
-	e.emit_param("LX_ERROR", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("EvalExprTree", "%d", actual1);
-	e.emit_param("LX_ERROR", "%d", actual2);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_output_expected_header();
+	emit_param("EvalExprTree", "%d", expect);
+	emit_param("LX_ERROR", "%d", expect);
+	emit_output_actual_header();
+	emit_param("EvalExprTree", "%d", actual1);
+	emit_param("LX_ERROR", "%d", actual2);
 	if(actual1 != expect || actual2 != expect) {
 		FAIL;
 	}
@@ -935,7 +933,7 @@ static bool test_lookup_expr_error_and_true() {
 }
 
 static bool test_lookup_string_normal() {
-	e.emit_test("Test LookupString() on an attribute in a classad that contains"
+	emit_test("Test LookupString() on an attribute in a classad that contains"
 		" a typical attribute name and expression.");
 	const char* classad_string = "\tD = \"alain\"";
 	compat_classad::ClassAd classad;
@@ -945,16 +943,16 @@ static bool test_lookup_string_normal() {
 	char* expectString = "alain";
 	char* result;
 	int found = classad.LookupString(attribute_name, &result);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expectInt);
-	e.emit_param("STRING", "%s", expectString);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", found);
-	e.emit_param("STRING", "%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("%d", expectInt);
+	emit_param("STRING", "%s", expectString);
+	emit_output_actual_header();
+	emit_retval("%d", found);
+	emit_param("STRING", "%s", result);
 	if(found != expectInt || strcmp(result, expectString) != MATCH) {
 		free(result);
 		FAIL;
@@ -964,11 +962,11 @@ static bool test_lookup_string_normal() {
 }
 
 static bool test_lookup_string_long() {
-	e.emit_test("Test LookupString() on an attribute in a classad that has a "
+	emit_test("Test LookupString() on an attribute in a classad that has a "
 		" very long name and expression.");
-	e.emit_comment("This test requires the use of Insert() so if there is a "
+	emit_comment("This test requires the use of Insert() so if there is a "
 		"problem with that, this test may fail.");
-	e.emit_comment("The attribute name and string are not printed here due to "
+	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
 	char *attribute_name, *expectString, *expression;
 	make_big_string(15000, &attribute_name, NULL);
@@ -980,16 +978,16 @@ static bool test_lookup_string_long() {
 	int expectInt = 1;
 	char* result;
 	int found = classad.LookupString(attribute_name, &result);
-	e.emit_input_header();
-	e.emit_param("ClassAd", "");
-	e.emit_param("Attribute", "");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expectInt);
-	e.emit_param("STRING", "");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", found);
-	e.emit_param("STRING", "");
+	emit_input_header();
+	emit_param("ClassAd", "");
+	emit_param("Attribute", "");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("%d", expectInt);
+	emit_param("STRING", "");
+	emit_output_actual_header();
+	emit_retval("%d", found);
+	emit_param("STRING", "");
 	if(found != expectInt || strcmp(result, expectString) != MATCH) {
 		free(attribute_name); free(expectString); 
 		free(expression); free(result);
@@ -1001,7 +999,7 @@ static bool test_lookup_string_long() {
 }
 
 static bool test_lookup_string_file() {
-	e.emit_test("Test LookupString() on an attribute in a classad that was read"
+	emit_test("Test LookupString() on an attribute in a classad that was read"
 		" from a file.");
 	compat_classad::ClassAd* classad = get_classad_from_file();
 	char* attribute_name = "D";
@@ -1009,15 +1007,15 @@ static bool test_lookup_string_file() {
 	char* expectString = "alain";
 	char* result;
 	int found = classad->LookupString(attribute_name, &result);
-	e.emit_input_header();
-	e.emit_param("Attribute", attribute_name);
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expectInt);
-	e.emit_param("STRING", "%s", expectString);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", found);
-	e.emit_param("STRING", "%s", result);
+	emit_input_header();
+	emit_param("Attribute", attribute_name);
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("%d", expectInt);
+	emit_param("STRING", "%s", expectString);
+	emit_output_actual_header();
+	emit_retval("%d", found);
+	emit_param("STRING", "%s", result);
 	if(found != expectInt || strcmp(result, expectString) != MATCH) {
 		delete classad;	free(result);	
 		FAIL;
@@ -1027,7 +1025,7 @@ static bool test_lookup_string_file() {
 }
 
 static bool test_get_my_type_name_no() {
-	e.emit_test("Test GetMyTypeName() on a classad that doesn't have a type "
+	emit_test("Test GetMyTypeName() on a classad that doesn't have a type "
 		"name.");
 	const char* classad_string = "\tA = 1\n\t\tB=2\n\t\tC = 3\n\t\t"
 		"D='2001-04-05T12:14:15'\n\t\tG=GetTime(1)\n\t\tH=foo(1)";
@@ -1035,12 +1033,12 @@ static bool test_get_my_type_name_no() {
 	classad.initFromString(classad_string, NULL);
 	char* expect = "";
 	const char* result = classad.GetMyTypeName();
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", result);
 	if(strcmp(result, expect) != MATCH) {
 		FAIL;
 	}
@@ -1048,19 +1046,19 @@ static bool test_get_my_type_name_no() {
 }
 
 static bool test_get_my_type_name_yes() {
-	e.emit_test("Test GetMyTypeName() on a classad that has a type name.");
+	emit_test("Test GetMyTypeName() on a classad that has a type name.");
 	const char* classad_string = "\tA = 0.7\n\t\tB=2\n\t\tC = 3\n\t\tD = \"alain\""
 		"\n\t\tMyType=\"foo\"\n\t\tTargetType=\"blah\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char* expect = "foo";
 	const char* result = classad.GetMyTypeName();
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", result);
 	if(strcmp(result, expect) != MATCH) {
 		FAIL;
 	}
@@ -1068,7 +1066,7 @@ static bool test_get_my_type_name_yes() {
 }
 
 static bool test_get_target_type_name_no() {
-	e.emit_test("Test GetTargetTypeName() on a classad that doesn't have a "
+	emit_test("Test GetTargetTypeName() on a classad that doesn't have a "
 		"target type name.");
 	const char* classad_string = "\tA = 1\n\t\tB=2\n\t\tC = 3\n\t\t"
 		"D='2001-04-05T12:14:15'\n\t\tG=GetTime(1)\n\t\tH=foo(1)";
@@ -1076,12 +1074,12 @@ static bool test_get_target_type_name_no() {
 	classad.initFromString(classad_string, NULL);
 	char* expect = "";
 	const char* result = classad.GetTargetTypeName();
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", result);
 	if(strcmp(result, expect) != MATCH) {
 		FAIL;
 	}
@@ -1089,7 +1087,7 @@ static bool test_get_target_type_name_no() {
 }
 
 static bool test_get_target_type_name_yes() {
-	e.emit_test("Test GetTargetTypeName() on a classad that has a target type"
+	emit_test("Test GetTargetTypeName() on a classad that has a target type"
 		" name.");
 	const char* classad_string = "\tA = 0.7\n\t\tB=2\n\t\tC = 3\n\t\t"
 		"D = \"alain\"\n\t\tMyType=\"foo\"\n\t\tTargetType=\"blah\"";
@@ -1097,12 +1095,12 @@ static bool test_get_target_type_name_yes() {
 	classad.initFromString(classad_string, NULL);
 	char* expect = "blah";
 	const char* result = classad.GetTargetTypeName();
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", result);
 	if(strcmp(result, expect) != MATCH) {
 		FAIL;
 	}
@@ -1110,7 +1108,7 @@ static bool test_get_target_type_name_yes() {
 }
 
 static bool test_is_a_match_true() {
-	e.emit_test("Test that IsAMatch() returns true for two classads that "
+	emit_test("Test that IsAMatch() returns true for two classads that "
 		"match.");
     char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
@@ -1121,13 +1119,13 @@ static bool test_is_a_match_true() {
 	classad2.initFromString(classad_string2, NULL);
 	bool expect = true;
 	bool result = IsAMatch(&classad1, &classad2);
-	e.emit_input_header();
-	e.emit_param("ClassAd1", classad_string1);
-	e.emit_param("ClassAd2", classad_string2);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd1", classad_string1);
+	emit_param("ClassAd2", classad_string2);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != expect) {
 		FAIL;
 	}
@@ -1135,7 +1133,7 @@ static bool test_is_a_match_true() {
 }
 
 static bool test_is_a_match_true_reverse() {
-	e.emit_test("Test that IsAMatch() returns true for two classads that "
+	emit_test("Test that IsAMatch() returns true for two classads that "
 		"match with the arguments in reverse order.");
     char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
@@ -1146,13 +1144,13 @@ static bool test_is_a_match_true_reverse() {
 	classad2.initFromString(classad_string1, NULL);
 	bool expect = true;
 	bool result = IsAMatch(&classad1, &classad2);
-	e.emit_input_header();
-	e.emit_param("ClassAd1", classad_string2);
-	e.emit_param("ClassAd2", classad_string1);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd1", classad_string2);
+	emit_param("ClassAd2", classad_string1);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != expect) {
 		FAIL;
 	}
@@ -1160,7 +1158,7 @@ static bool test_is_a_match_true_reverse() {
 }
 
 static bool test_is_a_match_false_memory() {
-	e.emit_test("Test that IsAMatch() returns false for two classads that "
+	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a memory attribute difference.");
     char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
@@ -1171,13 +1169,13 @@ static bool test_is_a_match_false_memory() {
 	classad2.initFromString(classad_string2, NULL);
 	bool expect = false;
 	bool result = IsAMatch(&classad1, &classad2);
-	e.emit_input_header();
-	e.emit_param("ClassAd1", classad_string1);
-	e.emit_param("ClassAd2", classad_string2);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd1", classad_string1);
+	emit_param("ClassAd2", classad_string2);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != expect) {
 		FAIL;
 	}
@@ -1185,7 +1183,7 @@ static bool test_is_a_match_false_memory() {
 }
 
 static bool test_is_a_match_false_memory_reverse() {
-	e.emit_test("Test that IsAMatch() returns false for two classads that "
+	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a memory attribute difference with the arguments "
 		"in reverse order.");
     char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
@@ -1197,13 +1195,13 @@ static bool test_is_a_match_false_memory_reverse() {
 	classad2.initFromString(classad_string1, NULL);
 	bool expect = false;
 	bool result = IsAMatch(&classad1, &classad2);
-	e.emit_input_header();
-	e.emit_param("ClassAd1", classad_string1);
-	e.emit_param("ClassAd2", classad_string2);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd1", classad_string1);
+	emit_param("ClassAd2", classad_string2);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != expect) {
 		FAIL;
 	}
@@ -1211,7 +1209,7 @@ static bool test_is_a_match_false_memory_reverse() {
 }
 
 static bool test_is_a_match_false_owner() {
-	e.emit_test("Test that IsAMatch() returns false for two classads that "
+	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a owner requirement difference.");
     char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
@@ -1222,13 +1220,13 @@ static bool test_is_a_match_false_owner() {
 	classad2.initFromString(classad_string2, NULL);
 	bool expect = false;
 	bool result = IsAMatch(&classad1, &classad2);
-	e.emit_input_header();
-	e.emit_param("ClassAd1", classad_string1);
-	e.emit_param("ClassAd2", classad_string2);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd1", classad_string1);
+	emit_param("ClassAd2", classad_string2);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != expect) {
 		FAIL;
 	}
@@ -1236,7 +1234,7 @@ static bool test_is_a_match_false_owner() {
 }
 
 static bool test_is_a_match_false_owner_reverse() {
-	e.emit_test("Test that IsAMatch() returns false for two classads that "
+	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a owner requirement difference with the arguments "
 		"in reverse order.");
     char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
@@ -1248,13 +1246,13 @@ static bool test_is_a_match_false_owner_reverse() {
 	classad2.initFromString(classad_string1, NULL);
 	bool expect = false;
 	bool result = IsAMatch(&classad1, &classad2);
-	e.emit_input_header();
-	e.emit_param("ClassAd1", classad_string1);
-	e.emit_param("ClassAd2", classad_string2);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd1", classad_string1);
+	emit_param("ClassAd2", classad_string2);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != expect) {
 		FAIL;
 	}
@@ -1262,7 +1260,7 @@ static bool test_is_a_match_false_owner_reverse() {
 }
 
 static bool test_expr_tree_to_string_short() {
-	e.emit_test("Test that ExprTreeToString() returns the correct string "
+	emit_test("Test that ExprTreeToString() returns the correct string "
 		"representation of the ExprTree of the attribute in the classad when "
 		"the string is short.");
     const char* classad_string = "\tRank = ( Memory >= 50 )";
@@ -1272,13 +1270,13 @@ static bool test_expr_tree_to_string_short() {
 	ExprTree* expr = classad.LookupExpr(attribute_name);
 	char* expect = "( Memory >= 50 )";
 	const char* result = ExprTreeToString(expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", result);
 	if(strcmp(result, expect) != MATCH) {
 		FAIL;
 	}
@@ -1286,7 +1284,7 @@ static bool test_expr_tree_to_string_short() {
 }
 
 static bool test_expr_tree_to_string_long() {
-	e.emit_test("Test that ExprTreeToString() returns the correct string "
+	emit_test("Test that ExprTreeToString() returns the correct string "
 		"representation of the ExprTree of the attribute in the classad when "
 		"the string is long.");
     const char* classad_string = "\tEnv = \"CPUTYPE=i86pc;GROUP=unknown;"
@@ -1306,13 +1304,13 @@ static bool test_expr_tree_to_string_long() {
 		"PATH=/s/std/bin:/usr/afsws/bin:/usr/ccs/bin:/usr/ucb:/bin:/usr/bin:/"
 		"usr/X11R6/bin:/unsup/condor/bin:.\"";
 	const char* result = ExprTreeToString(expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", result);
 	if(strcmp(result, expect) != MATCH) {
 		FAIL;
 	}
@@ -1320,7 +1318,7 @@ static bool test_expr_tree_to_string_long() {
 }
 
 static bool test_expr_tree_to_string_long2() {
-	e.emit_test("Test that ExprTreeToString() returns the correct string "
+	emit_test("Test that ExprTreeToString() returns the correct string "
 		"representation of the ExprTree of the attribute in the classad when "
 		"the string is long with many operators.");
     const char* classad_string = "\tRequirements = (a > 3) && (b >= 1.3) && "
@@ -1338,13 +1336,13 @@ static bool test_expr_tree_to_string_long2() {
 		"( ( a + b ) < ( c - d ) ) && ( ( e * false ) > ( g / h ) ) && "
 		"x == false && y == true && z == false && j == true";
 	const char* result = ExprTreeToString(expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", attribute_name);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", result);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", result);
 	if(strcmp(result, expect) != MATCH) {
 		FAIL;
 	}
@@ -1352,10 +1350,10 @@ static bool test_expr_tree_to_string_long2() {
 }
 
 static bool test_expr_tree_to_string_big() {
-	e.emit_test("Test that ExprTreeToString() returns the correct string "
+	emit_test("Test that ExprTreeToString() returns the correct string "
 		"representation of the ExprTree of the attribute in a very big "
 		"classad.");
-	e.emit_comment("The attribute name and string are not printed here due to "
+	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
 	char* attribute_name, *expectString, *expression;
 	make_big_string(15000, &attribute_name, NULL);
@@ -1368,13 +1366,13 @@ static bool test_expr_tree_to_string_big() {
 	classad.Insert(expression);
 	ExprTree* expr = classad.LookupExpr(attribute_name);
 	const char* result = ExprTreeToString(expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", "");
-	e.emit_param("Attribute", "");
-	e.emit_output_expected_header();
-	e.emit_retval("%s", "");
-	e.emit_output_actual_header();
-	e.emit_retval("%s", "");
+	emit_input_header();
+	emit_param("ClassAd", "");
+	emit_param("Attribute", "");
+	emit_output_expected_header();
+	emit_retval("%s", "");
+	emit_output_actual_header();
+	emit_retval("%s", "");
 	if(strcmp(result, expect) != MATCH) {
 		free(attribute_name); free(expectString); free(expression); 
 		free(expect);
@@ -1386,7 +1384,7 @@ static bool test_expr_tree_to_string_big() {
 }
 
 static bool test_get_references_simple_true_internal() {
-	e.emit_test("Test that GetReferences() puts the references of the classad "
+	emit_test("Test that GetReferences() puts the references of the classad "
 		"into the StringList for internal references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
@@ -1401,16 +1399,16 @@ static bool test_get_references_simple_true_internal() {
 	bool expect = true;
 	bool result = internal_references->contains("Memory") &&
 		internal_references->contains("Disk");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "Memory, Disk");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "Memory, Disk");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1420,7 +1418,7 @@ static bool test_get_references_simple_true_internal() {
 }
 
 static bool test_get_references_simple_true_external() {
-	e.emit_test("Test that GetReferences() puts the references of the classad "
+	emit_test("Test that GetReferences() puts the references of the classad "
 		"into the StringList for external references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
@@ -1436,16 +1434,16 @@ static bool test_get_references_simple_true_external() {
 	bool result = external_references->contains("ImageSize") &&
 		external_references->contains("AvailableDisk") &&
 		external_references->contains("XX");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "ImageSize, AvailableDisk, XX");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "ImageSize, AvailableDisk, XX");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1455,7 +1453,7 @@ static bool test_get_references_simple_true_external() {
 }
 
 static bool test_get_references_simple_false_internal() {
-	e.emit_test("Test that GetReferences() doesn't put the references of the "
+	emit_test("Test that GetReferences() doesn't put the references of the "
 		"classad into the incorrect references StringList for internal "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
@@ -1472,16 +1470,16 @@ static bool test_get_references_simple_false_internal() {
 	bool result = internal_references->contains("ImageSize") &&
 		internal_references->contains("AvailableDisk") &&
 		internal_references->contains("Linux");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "ImageSize, AvailableDisk, XX");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "ImageSize, AvailableDisk, XX");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1491,7 +1489,7 @@ static bool test_get_references_simple_false_internal() {
 }
 
 static bool test_get_references_simple_false_external() {
-	e.emit_test("Test that GetReferences() doesn't put the references of the "
+	emit_test("Test that GetReferences() doesn't put the references of the "
 		"classad into the incorrect references StringList for external "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
@@ -1509,16 +1507,16 @@ static bool test_get_references_simple_false_external() {
 		external_references->contains("Disk") &&
 		external_references->contains("Linux") &&
 		external_references->contains("X");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "Memory, Disk, Linux, X");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "Memory, Disk, Linux, X");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1528,7 +1526,7 @@ static bool test_get_references_simple_false_external() {
 }
 
 static bool test_get_references_complex_true_internal() {
-	e.emit_test("Test that GetReferences() puts the references of the classad "
+	emit_test("Test that GetReferences() puts the references of the classad "
 		"into the StringList for internal references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
@@ -1543,16 +1541,16 @@ static bool test_get_references_complex_true_internal() {
 	bool expect = true;
 	bool result = internal_references->contains("Memory") &&
 		internal_references->contains("Disk");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "Memory, Disk");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "Memory, Disk");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1562,7 +1560,7 @@ static bool test_get_references_complex_true_internal() {
 }
 
 static bool test_get_references_complex_true_external() {
-	e.emit_test("Test that GetReferences() puts the references of the classad "
+	emit_test("Test that GetReferences() puts the references of the classad "
 		"into the StringList for external references.");
     char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux\n\t\t"
 		"Requirements = ((TARGET.ImageSize > Memory) && (AvailableDisk > Disk) "
@@ -1579,16 +1577,16 @@ static bool test_get_references_complex_true_external() {
 		external_references->contains("AvailableDisk") &&
 		external_references->contains("X") &&
 		external_references->contains("XX");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "ImageSize, AvailableDisk, X, XX");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "ImageSize, AvailableDisk, X, XX");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1598,7 +1596,7 @@ static bool test_get_references_complex_true_external() {
 }
 
 static bool test_get_references_complex_false_internal() {
-	e.emit_test("Test that GetReferences() doesn't put the references of the "
+	emit_test("Test that GetReferences() doesn't put the references of the "
 		"classad into the incorrect references StringList for internal "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
@@ -1615,16 +1613,16 @@ static bool test_get_references_complex_false_internal() {
 	bool result = internal_references->contains("ImageSize") &&
 		internal_references->contains("AvailableDisk") &&
 		internal_references->contains("Linux");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "ImageSize, AvailableDisk, Linux");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "ImageSize, AvailableDisk, Linux");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1634,7 +1632,7 @@ static bool test_get_references_complex_false_internal() {
 }
 
 static bool test_get_references_complex_false_external() {
-	e.emit_test("Test that GetReferences() doesn't put the references of the "
+	emit_test("Test that GetReferences() doesn't put the references of the "
 		"classad into the incorrect references StringList for external "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
@@ -1651,16 +1649,16 @@ static bool test_get_references_complex_false_external() {
 	bool result = external_references->contains("Memory") &&
 		external_references->contains("Disk") &&
 		external_references->contains("Linux");
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "Requirements");
-	e.emit_param("StringList", "Internal References");
-	e.emit_param("StringList", "External References");
-	e.emit_param("Contains", "Memory, Disk, Linux");
-	e.emit_output_expected_header();
-	e.emit_param("Contains References", "%s", tfstr(expect));
-	e.emit_output_actual_header();
-	e.emit_param("Contains References", "%s", tfstr(result));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "Requirements");
+	emit_param("StringList", "Internal References");
+	emit_param("StringList", "External References");
+	emit_param("Contains", "Memory, Disk, Linux");
+	emit_output_expected_header();
+	emit_param("Contains References", "%s", tfstr(expect));
+	emit_output_actual_header();
+	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
 		delete internal_references; delete external_references;
 		FAIL;
@@ -1670,7 +1668,7 @@ static bool test_get_references_complex_false_external() {
 }
 
 static bool test_next_dirty_expr_clear() {
-	e.emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
 		"calling ClearAllDirtyFlags() on a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
@@ -1680,14 +1678,14 @@ static bool test_next_dirty_expr_clear() {
 	const char* name;
 	ExprTree* expr;
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Has Dirty Attribute", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("Has Dirty Attribute", "%s", tfstr(name));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Has Dirty Attribute", "FALSE");
+	emit_output_actual_header();
+	emit_param("Has Dirty Attribute", "%s", tfstr(name));
 	if(name) {
 		FAIL;
 	}
@@ -1695,7 +1693,7 @@ static bool test_next_dirty_expr_clear() {
 }
 
 static bool test_next_dirty_expr_insert() {
-	e.emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
+	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
 		"inserting an attribute into the classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
@@ -1706,14 +1704,14 @@ static bool test_next_dirty_expr_insert() {
 	const char* name;
 	ExprTree* expr;
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Dirty Attribute", "C");
-	e.emit_output_actual_header();
-	e.emit_param("Dirty Attribute", name);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Dirty Attribute", "C");
+	emit_output_actual_header();
+	emit_param("Dirty Attribute", name);
 	if(strcmp(name, "C") != MATCH) {
 		FAIL;
 	}
@@ -1721,7 +1719,7 @@ static bool test_next_dirty_expr_insert() {
 }
 
 static bool test_next_dirty_expr_insert_two_calls() {
-	e.emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
 		"inserting one attribute into the classad and calling NextDirtyExpr() "
 		"two times.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
@@ -1734,14 +1732,14 @@ static bool test_next_dirty_expr_insert_two_calls() {
 	ExprTree* expr;
 	classad.NextDirtyExpr(name, expr);
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Has Dirty Attribute", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("Has Dirty Attribute", "%s", tfstr(name));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Has Dirty Attribute", "FALSE");
+	emit_output_actual_header();
+	emit_param("Has Dirty Attribute", "%s", tfstr(name));
 	if(name) {
 		FAIL;
 	}
@@ -1749,7 +1747,7 @@ static bool test_next_dirty_expr_insert_two_calls() {
 }
 
 static bool test_next_dirty_expr_two_inserts_first() {
-	e.emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
+	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
 		"inserting two attributes into the classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
@@ -1761,14 +1759,14 @@ static bool test_next_dirty_expr_two_inserts_first() {
 	const char* name;
 	ExprTree* expr;
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Dirty Attribute", "C");
-	e.emit_output_actual_header();
-	e.emit_param("Dirty Attribute", name);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Dirty Attribute", "C");
+	emit_output_actual_header();
+	emit_param("Dirty Attribute", name);
 	if(strcmp(name, "C") != MATCH) {
 		FAIL;
 	}
@@ -1776,7 +1774,7 @@ static bool test_next_dirty_expr_two_inserts_first() {
 }
 
 static bool test_next_dirty_expr_two_inserts_second() {
-	e.emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
+	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
 		"inserting two attributes into the classad and calling NextDirtyExpr() "
 		"two times.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
@@ -1790,14 +1788,14 @@ static bool test_next_dirty_expr_two_inserts_second() {
 	ExprTree* expr;
 	classad.NextDirtyExpr(name, expr);
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Dirty Attribute", "D");
-	e.emit_output_actual_header();
-	e.emit_param("Dirty Attribute", name);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Dirty Attribute", "D");
+	emit_output_actual_header();
+	emit_param("Dirty Attribute", name);
 	if(strcmp(name, "D") != MATCH) {
 		FAIL;
 	}
@@ -1805,7 +1803,7 @@ static bool test_next_dirty_expr_two_inserts_second() {
 }
 
 static bool test_next_dirty_expr_two_inserts_third() {
-	e.emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
 		"inserting two attributes into the classad and calling NextDirtyExpr() "
 		"three times.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
@@ -1820,14 +1818,14 @@ static bool test_next_dirty_expr_two_inserts_third() {
 	classad.NextDirtyExpr(name, expr);
 	classad.NextDirtyExpr(name, expr);
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Has Dirty Attribute", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("Has Dirty Attribute", "%s", tfstr(name));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Has Dirty Attribute", "FALSE");
+	emit_output_actual_header();
+	emit_param("Has Dirty Attribute", "%s", tfstr(name));
 	if(name) {
 		FAIL;
 	}
@@ -1835,7 +1833,7 @@ static bool test_next_dirty_expr_two_inserts_third() {
 }
 
 static bool test_next_dirty_expr_two_inserts_clear() {
-	e.emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
 		"inserting two attributes into the classad and then calling "
 		"ClearAllDirtyFlags() and ResetExpr().");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
@@ -1850,14 +1848,14 @@ static bool test_next_dirty_expr_two_inserts_clear() {
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Has Dirty Attribute", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("Has Dirty Attribute", "%s", tfstr(name));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Has Dirty Attribute", "FALSE");
+	emit_output_actual_header();
+	emit_param("Has Dirty Attribute", "%s", tfstr(name));
 	if(name) {
 		FAIL;
 	}
@@ -1865,7 +1863,7 @@ static bool test_next_dirty_expr_two_inserts_clear() {
 }
 
 static bool test_next_dirty_expr_set_first() {
-	e.emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
+	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
 		"setting both attributes to dirty and then setting one to not dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
@@ -1878,14 +1876,14 @@ static bool test_next_dirty_expr_set_first() {
 	const char* name;
 	ExprTree* expr;
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Dirty Attribute", "A");
-	e.emit_output_actual_header();
-	e.emit_param("Dirty Attribute", name);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Dirty Attribute", "A");
+	emit_output_actual_header();
+	emit_param("Dirty Attribute", name);
 	if(strcmp(name, "A") != MATCH) {
 		FAIL;
 	}
@@ -1893,7 +1891,7 @@ static bool test_next_dirty_expr_set_first() {
 }
 
 static bool test_next_dirty_expr_set_second() {
-	e.emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
 		"setting both attributes to dirty, setting one to not dirty, and then "
 		"calling NextDirtyExpr() twice.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
@@ -1908,14 +1906,14 @@ static bool test_next_dirty_expr_set_second() {
 	ExprTree* expr;
 	classad.NextDirtyExpr(name, expr);
 	classad.NextDirtyExpr(name, expr);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("STRING", "");
-	e.emit_param("ExprTree", "");
-	e.emit_output_expected_header();
-	e.emit_param("Has Dirty Attribute", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("Has Dirty Attribute", "%s", tfstr(name));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("STRING", "");
+	emit_param("ExprTree", "");
+	emit_output_expected_header();
+	emit_param("Has Dirty Attribute", "FALSE");
+	emit_output_actual_header();
+	emit_param("Has Dirty Attribute", "%s", tfstr(name));
 	if(name) {
 		FAIL;
 	}
@@ -1923,7 +1921,7 @@ static bool test_next_dirty_expr_set_second() {
 }
 
 static bool test_get_dirty_flag_exists_dirty() {
-	e.emit_test("Test that GetDirtyFlag() sets both boolean parameters to true "
+	emit_test("Test that GetDirtyFlag() sets both boolean parameters to true "
 		"when the given name exists and is dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
@@ -1935,17 +1933,17 @@ static bool test_get_dirty_flag_exists_dirty() {
 	classad.SetDirtyFlag("B", false);
 	bool exists = false, dirty = false;
 	classad.GetDirtyFlag("A", &exists, &dirty);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "A");
-	e.emit_param("BOOL", "");
-	e.emit_param("BOOL", "");
-	e.emit_output_expected_header();
-	e.emit_param("'A' Exists", "TRUE");
-	e.emit_param("'A' is Dirty", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("'A' Exists", tfstr(exists));
-	e.emit_param("'A' is Dirty", tfstr(dirty));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "A");
+	emit_param("BOOL", "");
+	emit_param("BOOL", "");
+	emit_output_expected_header();
+	emit_param("'A' Exists", "TRUE");
+	emit_param("'A' is Dirty", "TRUE");
+	emit_output_actual_header();
+	emit_param("'A' Exists", tfstr(exists));
+	emit_param("'A' is Dirty", tfstr(dirty));
 	if(!exists || !dirty) {
 		FAIL;
 	}
@@ -1953,7 +1951,7 @@ static bool test_get_dirty_flag_exists_dirty() {
 }
 
 static bool test_get_dirty_flag_exists_not_dirty() {
-	e.emit_test("Test that GetDirtyFlag() sets only exists to true when the "
+	emit_test("Test that GetDirtyFlag() sets only exists to true when the "
 		"given name exists but is not dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
@@ -1965,17 +1963,17 @@ static bool test_get_dirty_flag_exists_not_dirty() {
 	classad.SetDirtyFlag("B", false);
 	bool exists = false, dirty = true;
 	classad.GetDirtyFlag("B", &exists, &dirty);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("BOOL", "");
-	e.emit_param("BOOL", "");
-	e.emit_output_expected_header();
-	e.emit_param("'B' Exists", "TRUE");
-	e.emit_param("'B' is Dirty", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("'B' Exists", tfstr(exists));
-	e.emit_param("'B' is Dirty", tfstr(dirty));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("BOOL", "");
+	emit_param("BOOL", "");
+	emit_output_expected_header();
+	emit_param("'B' Exists", "TRUE");
+	emit_param("'B' is Dirty", "FALSE");
+	emit_output_actual_header();
+	emit_param("'B' Exists", tfstr(exists));
+	emit_param("'B' is Dirty", tfstr(dirty));
 	if(!exists || dirty) {
 		FAIL;
 	}
@@ -1983,7 +1981,7 @@ static bool test_get_dirty_flag_exists_not_dirty() {
 }
 
 static bool test_get_dirty_flag_not_exist() {
-	e.emit_test("Test that GetDirtyFlag() sets exists to false when the given "
+	emit_test("Test that GetDirtyFlag() sets exists to false when the given "
 		"name doesn't exist.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
@@ -1995,15 +1993,15 @@ static bool test_get_dirty_flag_not_exist() {
 	classad.SetDirtyFlag("B", false);
 	bool exists = true, dirty = false;
 	classad.GetDirtyFlag("Unknown", &exists, &dirty);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("BOOL", "");
-	e.emit_param("BOOL", "");
-	e.emit_output_expected_header();
-	e.emit_param("'Unknown' Exists", "FALSE");
-	e.emit_output_actual_header();
-	e.emit_param("'Unknown' Exists", tfstr(exists));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("BOOL", "");
+	emit_param("BOOL", "");
+	emit_output_expected_header();
+	emit_param("'Unknown' Exists", "FALSE");
+	emit_output_actual_header();
+	emit_param("'Unknown' Exists", tfstr(exists));
 	if(exists) {
 		FAIL;
 	}
@@ -2011,28 +2009,28 @@ static bool test_get_dirty_flag_not_exist() {
 }
 
 static bool test_from_file() {
-	e.emit_test("Test that reading a classad from a file works correctly.");
+	emit_test("Test that reading a classad from a file works correctly.");
 	compat_classad::ClassAd* classad = get_classad_from_file();
 	int actual1 = -1, actual2 = -1;
 	char* actual3;
 	bool retVal1 = classad->LookupInteger("B", actual1);
 	bool retVal2 = classad->LookupInteger("C", actual2);
 	bool retVal3 = classad->LookupString("D", &actual3);
-	e.emit_input_header();
-	e.emit_output_expected_header();
-	e.emit_param("'B' Exists", "TRUE");
-	e.emit_param("'B'", "%d", 2);
-	e.emit_param("'C' Exists", "TRUE");
-	e.emit_param("'C'", "%d", 3);
-	e.emit_param("'D' Exists", "TRUE");
-	e.emit_param("'D'", "%s", "alain");
-	e.emit_output_actual_header();
-	e.emit_param("'B' Exists", "%s", tfstr(retVal1));
-	e.emit_param("'B'", "%d", actual1);
-	e.emit_param("'C' Exists", "%s", tfstr(retVal2));
-	e.emit_param("'C'", "%d", actual2);
-	e.emit_param("'D' Exists", "%s", tfstr(retVal3));
-	e.emit_param("'D'", "%s", actual3);
+	emit_input_header();
+	emit_output_expected_header();
+	emit_param("'B' Exists", "TRUE");
+	emit_param("'B'", "%d", 2);
+	emit_param("'C' Exists", "TRUE");
+	emit_param("'C'", "%d", 3);
+	emit_param("'D' Exists", "TRUE");
+	emit_param("'D'", "%s", "alain");
+	emit_output_actual_header();
+	emit_param("'B' Exists", "%s", tfstr(retVal1));
+	emit_param("'B'", "%d", actual1);
+	emit_param("'C' Exists", "%s", tfstr(retVal2));
+	emit_param("'C'", "%d", actual2);
+	emit_param("'D' Exists", "%s", tfstr(retVal3));
+	emit_param("'D'", "%s", actual3);
 	if(!retVal1 || !retVal2 || !retVal3 || actual1 != 2 || actual2 != 3 || 
 			strcmp(actual3, "alain") != MATCH) {
 		delete classad; free(actual3);
@@ -2043,7 +2041,7 @@ static bool test_from_file() {
 }
 
 static bool test_init_from_string_ints() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using int().");
     const char* classad_string = 	"\tB0=int(-3)\n\t\t"
 							"B1=int(3.4)\n\t\t"
@@ -2055,13 +2053,13 @@ static bool test_init_from_string_ints() {
 							"B9=isError(B8)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2071,7 +2069,7 @@ static bool test_init_from_string_ints() {
 }
 
 static bool test_init_from_string_reals() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using real().");
     const char* classad_string = 	"\tB0=real(-3)\n\t\t"
 							"B1=real(3.4)\n\t\t"
@@ -2083,13 +2081,13 @@ static bool test_init_from_string_reals() {
 							"B9=isError(B8)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2099,7 +2097,7 @@ static bool test_init_from_string_reals() {
 }
 
 static bool test_init_from_string_if_then_else() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using ifThenElse().");
     const char* classad_string = 	"\tBB=2\n\t\t"
 							"BC=10\n\t\t"
@@ -2121,13 +2119,13 @@ static bool test_init_from_string_if_then_else() {
 							"E2=isError(BB13)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2137,9 +2135,9 @@ static bool test_init_from_string_if_then_else() {
 }
 
 static bool test_init_from_string_string_list() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using stringlist*() functions.");
-	e.emit_comment("The classad string is not printed here due to its large "
+	emit_comment("The classad string is not printed here due to its large "
 		"size.");
     const char* classad_string = 	
 		"\tO0=stringlistsize(\"A ,0 ,C\")\n\t\t"
@@ -2201,13 +2199,13 @@ static bool test_init_from_string_string_list() {
 		"V=stringlistimember(\"ReD\", \"RED, BLUE, GREEN\")";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", "");
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", "");
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2217,20 +2215,20 @@ static bool test_init_from_string_string_list() {
 }
 
 static bool test_init_from_string_string() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using string().");
     const char* classad_string = 	"\tBC0=string(\"-3\")\n\t\t"
 							"BC1=string(123)\n\t\t"
 							"E0=isError(BC1)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2240,20 +2238,20 @@ static bool test_init_from_string_string() {
 }
 
 static bool test_init_from_string_strcat() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using strcat().");
     const char* classad_string = 	"\tBC0=strcat(\"-3\",\"3\")\n\t\t"
 							"BC1=strcat(\"a\",\"b\",\"c\",\"d\",\"e\",\"f\","
 								"\"g\")";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2263,7 +2261,7 @@ static bool test_init_from_string_strcat() {
 }
 
 static bool test_init_from_string_floor() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using floor().");
     const char* classad_string = 	"\tBC0=floor(\"-3\")\n\t\t"
 							"BC1=floor(\"-3.4\")\n\t\t"
@@ -2272,13 +2270,13 @@ static bool test_init_from_string_floor() {
 							"BC4=floor(5.2)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2288,7 +2286,7 @@ static bool test_init_from_string_floor() {
 }
 
 static bool test_init_from_string_ceiling() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using ceiling().");
     const char* classad_string = 	"\tBC0=ceiling(\"-3\")\n\t\t"
 							"BC1=ceiling(\"-3.4\")\n\t\t"
@@ -2297,13 +2295,13 @@ static bool test_init_from_string_ceiling() {
 							"BC4=ceiling(5.2)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2313,7 +2311,7 @@ static bool test_init_from_string_ceiling() {
 }
 
 static bool test_init_from_string_round() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using round().");
     const char* classad_string = 	"\tBC0=round(\"-3\")\n\t\t"
 							"BC1=round(\"-3.5\")\n\t\t"
@@ -2322,13 +2320,13 @@ static bool test_init_from_string_round() {
 							"BC4=round(5.2)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2338,7 +2336,7 @@ static bool test_init_from_string_round() {
 }
 
 static bool test_init_from_string_random() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using random().");
     const char* classad_string = 	"\tBC1=random(5)\n\t\t"
 							"BC2=random()\n\t\t"
@@ -2351,13 +2349,13 @@ static bool test_init_from_string_random() {
 							"BC9=random(5.2)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2367,19 +2365,19 @@ static bool test_init_from_string_random() {
 }
 
 static bool test_init_from_string_is_string() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using isString().");
     const char* classad_string = 	"\tBC3=isString(\"abc\")\n\t\t"
 							"BC0=isString(strcat(\"-3\",\"3\"))";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2389,7 +2387,7 @@ static bool test_init_from_string_is_string() {
 }
 
 static bool test_init_from_string_is_undefined() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using isUndefined().");
     const char* classad_string = 	"\tBB=2\n\t\t"
 							"BC=10\n\t\t"
@@ -2397,13 +2395,13 @@ static bool test_init_from_string_is_undefined() {
 							"BB1=isUndefined(BC)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2413,7 +2411,7 @@ static bool test_init_from_string_is_undefined() {
 }
 
 static bool test_init_from_string_is_error() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using isError().");
     const char* classad_string =  "\tBC0=isError(random(\"-3\"))\n\t\t"
 							"BC1=isError(int(\"this is not an int\"))\n\t\t"
@@ -2421,13 +2419,13 @@ static bool test_init_from_string_is_error() {
 							"BC3=isError(floor(\"this is not a float\"))";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2437,7 +2435,7 @@ static bool test_init_from_string_is_error() {
 }
 
 static bool test_init_from_string_is_integer() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using isInteger().");
     const char* classad_string =  "\tBC1=isInteger(-3.4 )\n\t\t"
 							"BC2=isInteger(-3)\n\t\t"
@@ -2448,13 +2446,13 @@ static bool test_init_from_string_is_integer() {
 							"BC7=isInteger(3)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2464,7 +2462,7 @@ static bool test_init_from_string_is_integer() {
 }
 
 static bool test_init_from_string_is_real() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using isReal().");
     const char* classad_string =  "\tBC1=isReal(-3.4 )\n\t\t"
 							"BC2=isReal(-3)\n\t\t"
@@ -2477,13 +2475,13 @@ static bool test_init_from_string_is_real() {
 							"BC9=isError(BC8)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2493,18 +2491,18 @@ static bool test_init_from_string_is_real() {
 }
 
 static bool test_init_from_string_is_boolean() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using isBoolean().");
     const char* classad_string =  "\tBC1=isBoolean(isReal(-3.4 ))";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2514,7 +2512,7 @@ static bool test_init_from_string_is_boolean() {
 }
 
 static bool test_init_from_string_substr() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using substr().");
     const char* classad_string =  "\tI0=substr(\"abcdefg\", 3)\n\t\t"
 							"I1=substr(\"abcdefg\", 3, 2)\n\t\t"
@@ -2527,13 +2525,13 @@ static bool test_init_from_string_substr() {
 							"E1=isUndefined(I6)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2543,7 +2541,7 @@ static bool test_init_from_string_substr() {
 }
 
 static bool test_init_from_string_formattime() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using formattime().");
     const char* classad_string =  "\tI0=formattime()\n\t\t"
 							"I1=formattime(CurrentTime)\n\t\t"
@@ -2555,13 +2553,13 @@ static bool test_init_from_string_formattime() {
 							"E1=isError(I5)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2571,7 +2569,7 @@ static bool test_init_from_string_formattime() {
 }
 
 static bool test_init_from_string_strcmp() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string when using strcmp().");
     const char* classad_string =  "\tJ0=strcmp(\"ABCDEFgxx\", \"ABCDEFg\")\n\t\t"
 							"J1=strcmp(\"BBBBBBBxx\", \"CCCCCCC\")\n\t\t"
@@ -2585,13 +2583,13 @@ static bool test_init_from_string_strcmp() {
 							"K4=stricmp(\"2\", 1+1)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2601,18 +2599,18 @@ static bool test_init_from_string_strcmp() {
 }
 
 static bool test_init_from_string_attrnm() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string with an attribute name.");
     const char* classad_string =  "\tT012=t";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2622,9 +2620,9 @@ static bool test_init_from_string_attrnm() {
 }
 
 static bool test_init_from_string_regexp() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string with regexp().");
-	e.emit_comment("The classad string is not printed here due to its large "
+	emit_comment("The classad string is not printed here due to its large "
 		"size.");
     const char* classad_string =  
 		"W0=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\",\"i\")\n\t\t"
@@ -2654,13 +2652,13 @@ static bool test_init_from_string_regexp() {
 		"E7=isError(X5)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", "");
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", "");
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2670,9 +2668,9 @@ static bool test_init_from_string_regexp() {
 }
 
 static bool test_init_from_string_stringlists_regexpmember() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string with stringlists_regexpmember().");
-	e.emit_comment("The classad string is not printed here due to its large "
+	emit_comment("The classad string is not printed here due to its large "
 		"size.");
     const char* classad_string =  
 		"\tU0=stringlist_regexpMember(\"green\", \"red, blue, green\")\n\t\t"
@@ -2699,13 +2697,13 @@ static bool test_init_from_string_stringlists_regexpmember() {
 			"\"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\")";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", "");
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", "");
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2715,7 +2713,7 @@ static bool test_init_from_string_stringlists_regexpmember() {
 }
 
 static bool test_init_from_string_various() {
-	e.emit_test("Test that initFromString() correctly initializes the classad "
+	emit_test("Test that initFromString() correctly initializes the classad "
 		" to the given string with various classad functions.");
     const char* classad_string =  "\tD1=Time()\n\t\t"
 							"D2=Interval(60)\n\t\t"
@@ -2732,13 +2730,13 @@ static bool test_init_from_string_various() {
 							"E0=isUndefined(N2)";
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_param("Error Message", "NULL");
-	e.emit_output_expected_header();
-	e.emit_param("Classad != NULL", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_param("Error Message", "NULL");
+	emit_output_expected_header();
+	emit_param("Classad != NULL", "TRUE");
+	emit_output_actual_header();
+	emit_param("Classad != NULL", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -2748,22 +2746,22 @@ static bool test_init_from_string_various() {
 }
 
 static bool test_int_invalid() {
-	e.emit_test("Test that EvalInteger() returns 0 for an attribute with an "
+	emit_test("Test that EvalInteger() returns 0 for an attribute with an "
 		"invalid integer actual.");
     const char* classad_string = "\tB=int(\"this is not a number\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal == 1) {
 		FAIL;
 	}
@@ -2771,24 +2769,24 @@ static bool test_int_invalid() {
 }
 
 static bool test_int_false() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"of an attribute with the actual false.");
     const char* classad_string = "\tB=int(false)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalInteger("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal == 0 || actual != expect) {
 		FAIL;
 	}
@@ -2796,24 +2794,24 @@ static bool test_int_false() {
 }
 
 static bool test_int_true() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"of an attribute with the actual true.");
     const char* classad_string = "\tB=int(true)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalInteger("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal == 0 || actual != expect) {
 		FAIL;
 	}
@@ -2821,24 +2819,24 @@ static bool test_int_true() {
 }
 
 static bool test_int_float_negative_quotes() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"of an attribute with a negative float actual enclosed in quotes.");
     const char* classad_string = "\tB=int(\"-3.4\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -3;
 	int retVal = classad.EvalInteger("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal == 0 || actual != expect) {
 		FAIL;
 	}
@@ -2846,24 +2844,24 @@ static bool test_int_float_negative_quotes() {
 }
 
 static bool test_int_float_negative() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"of an attribute with a negative float actual.");
     const char* classad_string = "\tB=int(-3.4)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -3;
 	int retVal = classad.EvalInteger("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal == 0 || actual != expect) {
 		FAIL;
 	}
@@ -2871,24 +2869,24 @@ static bool test_int_float_negative() {
 }
 
 static bool test_int_float_positive() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"of an attribute with a positive float actual.");
     const char* classad_string = "\tB=int(3.4)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal == 0 || actual != expect) {
 		FAIL;
 	}
@@ -2896,24 +2894,24 @@ static bool test_int_float_positive() {
 }
 
 static bool test_int_int_positive() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"of an attribute with a positive integer actual.");
     const char* classad_string = "\tB=int(3)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal == 0 || actual != expect) {
 		FAIL;
 	}
@@ -2921,7 +2919,7 @@ static bool test_int_int_positive() {
 }
 
 static bool test_int_error() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that uses "
+	emit_test("Test EvalBool() on an attribute in a classad that uses "
 		"isError() of another attribute that uses int() incorrectly.");
 	const char* classad_string = "\tA=int(\"this is not a number\")\n\t\t"
 							"B=isError(A)";
@@ -2929,14 +2927,14 @@ static bool test_int_error() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	classad.EvalBool("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "B");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "B");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -2944,22 +2942,22 @@ static bool test_int_error() {
 }
 
 static bool test_real_invalid() {
-	e.emit_test("Test that EvalFloat() returns 0 for an attribute that uses "
+	emit_test("Test that EvalFloat() returns 0 for an attribute that uses "
 		"real() with an invalid float actual.");
     const char* classad_string = "\tB=real(\"this is not a number\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0;
 	int retVal = classad.EvalFloat("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal == 1) {
 		FAIL;
 	}
@@ -2967,24 +2965,24 @@ static bool test_real_invalid() {
 }
 
 static bool test_real_false() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with the actual false.");
     const char* classad_string = "\tB=real(false)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 0;
 	int retVal = classad.EvalFloat("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal == 0 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -2992,24 +2990,24 @@ static bool test_real_false() {
 }
 
 static bool test_real_true() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with the actual true.");
     const char* classad_string = "\tB=real(true)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 1;
 	int retVal = classad.EvalFloat("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal == 0 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3017,7 +3015,7 @@ static bool test_real_true() {
 }
 
 static bool test_real_float_negative_quotes() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with a negative float actual enclosed"
 		" in quotes.");
     const char* classad_string = "\tB=real(\"-3.4\")";
@@ -3025,17 +3023,17 @@ static bool test_real_float_negative_quotes() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = -3.4;
 	int retVal = classad.EvalFloat("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal == 0 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3043,24 +3041,24 @@ static bool test_real_float_negative_quotes() {
 }
 
 static bool test_real_float_negative() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with a negative float actual.");
     const char* classad_string = "\tB=real(-3.4)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = -3.4;
 	int retVal = classad.EvalFloat("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal == 0 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3068,24 +3066,24 @@ static bool test_real_float_negative() {
 }
 
 static bool test_real_float_positive() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with a positive float actual.");
     const char* classad_string = "\tB=real(3.4)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 3.4;
 	int retVal = classad.EvalFloat("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal == 0 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3093,24 +3091,24 @@ static bool test_real_float_positive() {
 }
 
 static bool test_real_int_positive() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with a positive integer actual.");
     const char* classad_string = "\tB=real(3)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 3;
 	int retVal = classad.EvalFloat("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal == 0 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3118,7 +3116,7 @@ static bool test_real_int_positive() {
 }
 
 static bool test_real_error() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that uses "
+	emit_test("Test EvalBool() on an attribute in a classad that uses "
 		"isError() of another attribute that uses real() incorrectly.");
 	const char* classad_string = "\tA=real(\"this is not a number\")\n\t\t"
 							"B=isError(A)";
@@ -3127,14 +3125,14 @@ static bool test_real_error() {
 	int actual = -1;
 	classad.EvalBool("B", NULL, actual);
 	int expect = 1;
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "B");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "B");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3142,7 +3140,7 @@ static bool test_real_error() {
 }
 
 static bool test_if_then_else_false() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to false.");
     const char* classad_string = "\tA=2\n\t\tB=ifThenElse(A > 5, \"big\", \""
 		"small\")";
@@ -3151,17 +3149,17 @@ static bool test_if_then_else_false() {
 	char actual[1024];
 	char* expect = "small";
 	int retVal = classad.EvalString("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal == 0 || strcmp(actual, expect)) {
 		FAIL;
 	}
@@ -3169,7 +3167,7 @@ static bool test_if_then_else_false() {
 }
 
 static bool test_if_then_else_false_error() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to false when the "
 		"else part evaluates to an error.");
     const char* classad_string = "\tA=2\n\t\tB=ifThenElse(A > 5, 4 / 0, \"small"
@@ -3179,17 +3177,17 @@ static bool test_if_then_else_false_error() {
 	char actual[1024];
 	char* expect = "small";
 	int retVal = classad.EvalString("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal == 0 || strcmp(actual, expect)) {
 		FAIL;
 	}
@@ -3197,7 +3195,7 @@ static bool test_if_then_else_false_error() {
 }
 
 static bool test_if_then_else_false_constant() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to false when "
 		"evaluating a constant.");
     const char* classad_string = "\tB=ifThenElse(0.0, \"then\", \"else\")";
@@ -3206,17 +3204,17 @@ static bool test_if_then_else_false_constant() {
 	char actual[1024];
 	char* expect = "else";
 	int retVal = classad.EvalString("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal == 0 || strcmp(actual, expect)) {
 		FAIL;
 	}
@@ -3224,7 +3222,7 @@ static bool test_if_then_else_false_constant() {
 }
 
 static bool test_if_then_else_true() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to true.");
     const char* classad_string = "\tA=10\n\t\tB=ifThenElse(A > 5, \"big\", "
 		"\"small\")";
@@ -3233,17 +3231,17 @@ static bool test_if_then_else_true() {
 	char actual[1024];
 	char* expect = "big";
 	int retVal = classad.EvalString("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal == 0 || strcmp(actual, expect)) {
 		FAIL;
 	}
@@ -3251,7 +3249,7 @@ static bool test_if_then_else_true() {
 }
 
 static bool test_if_then_else_true_error() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to true when the "
 		"then part evaluates to an error.");
     const char* classad_string = "\tA=10\n\t\tB=ifThenElse(A > 5, \"big\", "
@@ -3261,17 +3259,17 @@ static bool test_if_then_else_true_error() {
 	char actual[1024];
 	char* expect = "big";
 	int retVal = classad.EvalString("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal == 0 || strcmp(actual, expect)) {
 		FAIL;
 	}
@@ -3279,7 +3277,7 @@ static bool test_if_then_else_true_error() {
 }
 
 static bool test_if_then_else_true_constant1() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to true when "
 		"evaluating a constant with the actual 1.0.");
     const char* classad_string = "\tB=ifThenElse(1.0, \"then\", \"else\")";
@@ -3288,17 +3286,17 @@ static bool test_if_then_else_true_constant1() {
 	char actual[1024];
 	char* expect = "then";
 	int retVal = classad.EvalString("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal == 0 || strcmp(actual, expect)) {
 		FAIL;
 	}
@@ -3306,7 +3304,7 @@ static bool test_if_then_else_true_constant1() {
 }
 
 static bool test_if_then_else_true_constant2() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to true when "
 		"evaluating a constant with the actual 3.7.");
     const char* classad_string = "\tB=ifThenElse(3.7, \"then\", \"else\")";
@@ -3315,17 +3313,17 @@ static bool test_if_then_else_true_constant2() {
 	char actual[1024];
 	char* expect = "then";
 	int retVal = classad.EvalString("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute Name", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal == 0 || strcmp(actual, expect)) {
 		FAIL;
 	}
@@ -3333,7 +3331,7 @@ static bool test_if_then_else_true_constant2() {
 }
 
 static bool test_if_then_else_invalid1() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that uses "
+	emit_test("Test EvalBool() on an attribute in a classad that uses "
 		"isError() on another attribute that uses an ifThenElse() with an "
 		"invalid condition.");
 	const char* classad_string = "\tA=ifThenElse(4 / \"hello\", \"big\","
@@ -3342,15 +3340,15 @@ static bool test_if_then_else_invalid1() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	classad.EvalBool("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3358,7 +3356,7 @@ static bool test_if_then_else_invalid1() {
 }
 
 static bool test_if_then_else_invalid2() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that uses "
+	emit_test("Test EvalBool() on an attribute in a classad that uses "
 		"isError() on another attribute that uses an ifThenElse() with an "
 		"empty condition.");
 	const char* classad_string = "\tA=ifThenElse(\"\", \"then\", \"else\")"
@@ -3367,15 +3365,15 @@ static bool test_if_then_else_invalid2() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	classad.EvalBool("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3383,7 +3381,7 @@ static bool test_if_then_else_invalid2() {
 }
 
 static bool test_if_then_else_too_few() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that uses "
+	emit_test("Test EvalBool() on an attribute in a classad that uses "
 		"isError() on another attribute that uses an ifThenElse() with too few "
 		"arguments.");
 	const char* classad_string = "\tA=ifThenElse(\"big\",\"small\")\n\t\t"
@@ -3392,15 +3390,15 @@ static bool test_if_then_else_too_few() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	classad.EvalBool("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3408,7 +3406,7 @@ static bool test_if_then_else_too_few() {
 }
 
 static bool test_if_then_else_undefined() {
-	e.emit_test("Test EvalBool() on an attribute in a classad that uses "
+	emit_test("Test EvalBool() on an attribute in a classad that uses "
 		"isUndefined() on another attribute that uses an undefined attribute "
 		"in an ifThenElse().");
 	const char* classad_string = "\tA=ifThenElse(C > 5, \"big\",\"small\")"
@@ -3417,15 +3415,15 @@ static bool test_if_then_else_undefined() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	classad.EvalBool("B", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "B");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_param("INT", "%d", actual);
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3433,24 +3431,24 @@ static bool test_if_then_else_undefined() {
 }
 
 static bool test_string_list_size_3() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsize() on a StringList of size 3.");
 	const char* classad_string = "\tA1=stringlistsize(\"A ,0 ,C\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3458,24 +3456,24 @@ static bool test_string_list_size_3() {
 }
 
 static bool test_string_list_size_0() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsize() on a StringList of size 0.");
 	const char* classad_string = "\tA1=stringlistsize(\"\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3483,24 +3481,24 @@ static bool test_string_list_size_0() {
 }
 
 static bool test_string_list_size_5() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsize() on a StringList of size 5.");
 	const char* classad_string = "\tA1=stringlistsize(\"A;B;C;D;E\",\";\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 5;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3508,22 +3506,22 @@ static bool test_string_list_size_5() {
 }
 
 static bool test_string_list_size_default_delim() {
-	e.emit_test("Test that EvalInteger() returns 1 for an attribute using "
+	emit_test("Test that EvalInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList using the default delimiter.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C,D\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -3531,22 +3529,22 @@ static bool test_string_list_size_default_delim() {
 }
 
 static bool test_string_list_size_repeat_delim() {
-	e.emit_test("Test that EvalInteger() returns 1 for an attribute using "
+	emit_test("Test that EvalInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList with repeating delimiters.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C ; D\",\";\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -3554,22 +3552,22 @@ static bool test_string_list_size_repeat_delim() {
 }
 
 static bool test_string_list_size_non_default_delim() {
-	e.emit_test("Test that EvalInteger() returns 1 for an attribute using "
+	emit_test("Test that EvalInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList not using the default delimiter.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C ; D\",\";\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -3577,22 +3575,22 @@ static bool test_string_list_size_non_default_delim() {
 }
 
 static bool test_string_list_size_two_delim() {
-	e.emit_test("Test that EvalInteger() returns 1 for an attribute using "
+	emit_test("Test that EvalInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList using two different delimiters.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C;D\",\" ; \")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -3600,22 +3598,22 @@ static bool test_string_list_size_two_delim() {
 }
 
 static bool test_string_list_size_three_delim() {
-	e.emit_test("Test that EvalInteger() returns 1 for an attribute using "
+	emit_test("Test that EvalInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList using three different delimiters.");
 	const char* classad_string = "\tA1=stringlistsize(\"A  +B;C$D\",\"$;+\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -3623,7 +3621,7 @@ static bool test_string_list_size_three_delim() {
 }
 
 static bool test_string_list_size_error_end() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual for"
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual for"
 		" an attribute using isError() of stringlistsize() on a StringList with"
 		" an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistsize(\"A;B;C;D;E\","
@@ -3632,17 +3630,17 @@ static bool test_string_list_size_error_end() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", actual);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", expect);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", actual);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", expect);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3650,7 +3648,7 @@ static bool test_string_list_size_error_end() {
 }
 
 static bool test_string_list_size_error_beginning() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual for"
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual for"
 		" an attribute using isError() of stringlistsize() on a StringList with"
 		" an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistsize(true,\"A;B;C;D;E"
@@ -3659,17 +3657,17 @@ static bool test_string_list_size_error_beginning() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", actual);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", expect);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", actual);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", expect);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3677,7 +3675,7 @@ static bool test_string_list_size_error_beginning() {
 }
 
 static bool test_string_list_sum_default() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsum() on a StringList using the "
 		"default delimiter.");
 	const char* classad_string = "\tA1=stringlistsum(\"1,2,3\")";
@@ -3685,17 +3683,17 @@ static bool test_string_list_sum_default() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 6;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3703,24 +3701,24 @@ static bool test_string_list_sum_default() {
 }
 
 static bool test_string_list_sum_empty() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsum() on an empty StringList.");
 	const char* classad_string = "\tA1=stringlistsum(\"\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 0.0;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3728,7 +3726,7 @@ static bool test_string_list_sum_empty() {
 }
 
 static bool test_string_list_sum_non_default() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsum() on a StringList not using the "
 		"default delimiter.");
 	const char* classad_string = "\tA1=stringlistsum(\"1;2;3\",\";\")";
@@ -3736,17 +3734,17 @@ static bool test_string_list_sum_non_default() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 6;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3754,7 +3752,7 @@ static bool test_string_list_sum_non_default() {
 }
 
 static bool test_string_list_sum_both() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsum() on a StringList that contains "
 		"both ints and floats.");
 	const char* classad_string = "\tA1=stringlistsum(\"1,2.0,3\")";
@@ -3762,17 +3760,17 @@ static bool test_string_list_sum_both() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 6.0;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3780,7 +3778,7 @@ static bool test_string_list_sum_both() {
 }
 
 static bool test_string_list_sum_error_end() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError of stringlistsum() on a StringList that"
 		" contains an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistsum(\"1;2;3\",true))";
@@ -3788,17 +3786,17 @@ static bool test_string_list_sum_error_end() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3806,7 +3804,7 @@ static bool test_string_list_sum_error_end() {
 }
 
 static bool test_string_list_sum_error_beginning() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError of stringlistsum() on a StringList that"
 		" contains an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistsum(true,\"1;2;3\"))";
@@ -3814,17 +3812,17 @@ static bool test_string_list_sum_error_beginning() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3832,7 +3830,7 @@ static bool test_string_list_sum_error_beginning() {
 }
 
 static bool test_string_list_sum_error_all() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError of stringlistsum() on a StringList that"
 		" doesn't contain integers.");
 	const char* classad_string = "\tA1=isError(stringlistsum(\"this, list, bad"
@@ -3841,17 +3839,17 @@ static bool test_string_list_sum_error_all() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3859,7 +3857,7 @@ static bool test_string_list_sum_error_all() {
 }
 
 static bool test_string_list_min_negative() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmin() on a StringList that contains "
 		"negative integers.");
 	const char* classad_string = "\tA1=stringlistmin(\"-1,2,-3\")";
@@ -3867,17 +3865,17 @@ static bool test_string_list_min_negative() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3885,7 +3883,7 @@ static bool test_string_list_min_negative() {
 }
 
 static bool test_string_list_min_positive() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmin() on a StringList that contains "
 		"positive integers.");
 	const char* classad_string = "\tA1=stringlistmin(\"1;2;3\",\";\")";
@@ -3893,17 +3891,17 @@ static bool test_string_list_min_positive() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3911,7 +3909,7 @@ static bool test_string_list_min_positive() {
 }
 
 static bool test_string_list_min_both() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmin() on a StringList that contains "
 		"both ints and floats.");
 	const char* classad_string = "\tA1=stringlistmin(\"1,-2.0,3\")";
@@ -3919,17 +3917,17 @@ static bool test_string_list_min_both() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = -2.0;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -3937,7 +3935,7 @@ static bool test_string_list_min_both() {
 }
 
 static bool test_string_list_min_undefined() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isUndefined() of stringlistmin() on an empty "
 		"StringList.");
 	const char* classad_string = "\tA1=isUndefined(stringlistmin(\"\"))";
@@ -3945,17 +3943,17 @@ static bool test_string_list_min_undefined() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3963,7 +3961,7 @@ static bool test_string_list_min_undefined() {
 }
 
 static bool test_string_list_min_error_end() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmin() on a StringList "
 		"with an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistmin(\"1;2;3\",true))";
@@ -3971,17 +3969,17 @@ static bool test_string_list_min_error_end() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3989,7 +3987,7 @@ static bool test_string_list_min_error_end() {
 }
 
 static bool test_string_list_min_error_beginning() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmin() on a StringList "
 		"with an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistmin(true,\"1;2;3\"))";
@@ -3997,17 +3995,17 @@ static bool test_string_list_min_error_beginning() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4015,7 +4013,7 @@ static bool test_string_list_min_error_beginning() {
 }
 
 static bool test_string_list_min_error_all() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmin() on a StringList "
 		"that doesn't have any numbers.");
 	const char* classad_string = "\tA1=isError(stringlistmin(\"this, list, bad"
@@ -4024,17 +4022,17 @@ static bool test_string_list_min_error_all() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4042,7 +4040,7 @@ static bool test_string_list_min_error_all() {
 }
 
 static bool test_string_list_min_error_middle() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmin() on a StringList "
 		"with an invalid string in the middle.");
 	const char* classad_string = "\tA1=isError(stringlistmin(\"1;A;3\",\";\"))";
@@ -4050,17 +4048,17 @@ static bool test_string_list_min_error_middle() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4068,7 +4066,7 @@ static bool test_string_list_min_error_middle() {
 }
 
 static bool test_string_list_max_negatve() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmax() on a StringList that contains "
 		"negative actuals.");
 	const char* classad_string = "\tA1=stringlistmax(\"1 , 4.5, -5\")";
@@ -4076,17 +4074,17 @@ static bool test_string_list_max_negatve() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 4.5;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -4094,7 +4092,7 @@ static bool test_string_list_max_negatve() {
 }
 
 static bool test_string_list_max_positive() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmax() on a StringList that contains "
 		"positive integers.");
 	const char* classad_string = "\tA1=stringlistmax(\"1;2;3\",\";\")";
@@ -4102,17 +4100,17 @@ static bool test_string_list_max_positive() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4120,7 +4118,7 @@ static bool test_string_list_max_positive() {
 }
 
 static bool test_string_list_max_both() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmax() on a StringList that contains "
 		"both integers and floats.");
 	const char* classad_string = "\tA1=stringlistmax(\"1,-2.0,3.0\")";
@@ -4128,17 +4126,17 @@ static bool test_string_list_max_both() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 3.0;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -4146,7 +4144,7 @@ static bool test_string_list_max_both() {
 }
 
 static bool test_string_list_max_undefined() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isUndefined() of stringlistmax() on an empty "
 		"StringList.");
 	const char* classad_string = "\tA1=isUndefined(stringlistmax(\"\"))";
@@ -4154,17 +4152,17 @@ static bool test_string_list_max_undefined() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4172,7 +4170,7 @@ static bool test_string_list_max_undefined() {
 }
 
 static bool test_string_list_max_error_end() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmax() on a StringList "
 		"with an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistmax(\"1;2;3\",true))";
@@ -4180,17 +4178,17 @@ static bool test_string_list_max_error_end() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4198,7 +4196,7 @@ static bool test_string_list_max_error_end() {
 }
 
 static bool test_string_list_max_error_beginning() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmax() on a StringList "
 		"with an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistmax(true,\"1;2;3\"))";
@@ -4206,17 +4204,17 @@ static bool test_string_list_max_error_beginning() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4224,7 +4222,7 @@ static bool test_string_list_max_error_beginning() {
 }
 
 static bool test_string_list_max_error_all() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmax() on a StringList "
 		"with all invalid strings.");
 	const char* classad_string = "\tA1=isError(stringlistmax(\"this, list, bad"
@@ -4233,17 +4231,17 @@ static bool test_string_list_max_error_all() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4251,7 +4249,7 @@ static bool test_string_list_max_error_all() {
 }
 
 static bool test_string_list_max_error_middle() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistmax() on a StringList "
 		"with an invalid string in the middle.");
 	const char* classad_string = "\tA1=isError(stringlistmax(\"1;A;3\",\";\"))";
@@ -4259,17 +4257,17 @@ static bool test_string_list_max_error_middle() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4277,7 +4275,7 @@ static bool test_string_list_max_error_middle() {
 }
 
 static bool test_string_list_avg_default() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistavg() on a StringList that uses the "
 		"default delimiter.");
 	const char* classad_string = "\tA1=stringlistavg(\"10, 20, 30, 40\")";
@@ -4285,17 +4283,17 @@ static bool test_string_list_avg_default() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 25.0;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -4303,24 +4301,24 @@ static bool test_string_list_avg_default() {
 }
 
 static bool test_string_list_avg_empty() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistavg() on an empty StringList.");
 	const char* classad_string = "\tA1=stringlistavg(\"\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 0.0;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -4328,7 +4326,7 @@ static bool test_string_list_avg_empty() {
 }
 
 static bool test_string_list_avg_non_default() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistavg() on a StringList that doesn't "
 		"use the default delimiter.");
 	const char* classad_string = "\tA1=stringlistavg(\"1;2;3\",\";\")";
@@ -4336,17 +4334,17 @@ static bool test_string_list_avg_non_default() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 2.0;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -4354,7 +4352,7 @@ static bool test_string_list_avg_non_default() {
 }
 
 static bool test_string_list_avg_both() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistavg() on a StringList that contains "
 		"both integers and floats.");
 	const char* classad_string = "\tA1=stringlistavg(\"1,-2.0,3.0\")";
@@ -4362,17 +4360,17 @@ static bool test_string_list_avg_both() {
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 0.666667;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "%f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "%f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || !floats_close(actual, expect)) {
 		FAIL;
 	}
@@ -4380,7 +4378,7 @@ static bool test_string_list_avg_both() {
 }
 
 static bool test_string_list_avg_error_end() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistavg() on a StringList "
 		"with an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistavg(\"1;2;3\",true))";
@@ -4388,17 +4386,17 @@ static bool test_string_list_avg_error_end() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4406,7 +4404,7 @@ static bool test_string_list_avg_error_end() {
 }
 
 static bool test_string_list_avg_error_beginning() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistavg() on a StringList "
 		"with an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistavg(true,\"1;2;3\"))";
@@ -4414,17 +4412,17 @@ static bool test_string_list_avg_error_beginning() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4432,7 +4430,7 @@ static bool test_string_list_avg_error_beginning() {
 }
 
 static bool test_string_list_avg_error_all() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistavg() on a StringList "
 		"with all invalid strings.");
 	const char* classad_string = "\tA1=isError(stringlistavg(\"this, list, bad"
@@ -4441,17 +4439,17 @@ static bool test_string_list_avg_error_all() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4459,7 +4457,7 @@ static bool test_string_list_avg_error_all() {
 }
 
 static bool test_string_list_avg_error_middle() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of stringlistavg() on a StringList "
 		"with an invalid string in the middle.");
 	const char* classad_string = "\tA1=isError(stringlistavg(\"1;A;3\",\";\"))";
@@ -4467,17 +4465,17 @@ static bool test_string_list_avg_error_middle() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4485,7 +4483,7 @@ static bool test_string_list_avg_error_middle() {
 }
 
 static bool test_string_list_member() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmember() on a typical StringList.");
 	const char* classad_string = "\tA1=stringlistmember(\"green\", \"red, blue,"
 		" green\")";
@@ -4493,17 +4491,17 @@ static bool test_string_list_member() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4511,7 +4509,7 @@ static bool test_string_list_member() {
 }
 
 static bool test_string_list_member_case() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmember() on a typical StringList "
 		"with different cases.");
 	const char* classad_string = "\tA1=stringlistimember(\"ReD\", \"RED, BLUE, "
@@ -4520,17 +4518,17 @@ static bool test_string_list_member_case() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4538,22 +4536,22 @@ static bool test_string_list_member_case() {
 }
 
 static bool test_string_negative_int() {
-	e.emit_test("Test that EvalString() returns 1 for an attribute using "
+	emit_test("Test that EvalString() returns 1 for an attribute using "
 		"string() with a negative int.");
 	const char* classad_string = "\tA1=string(\"-3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -4561,22 +4559,22 @@ static bool test_string_negative_int() {
 }
 
 static bool test_string_positive_int() {
-	e.emit_test("Test that EvalString() returns 1 for an attribute using "
+	emit_test("Test that EvalString() returns 1 for an attribute using "
 		"string() with a positive int.");
 	const char* classad_string = "\tA1=string(123)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -4584,7 +4582,7 @@ static bool test_string_positive_int() {
 }
 
 static bool test_strcat_short() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for a short attribute using strcat().");
 	const char* classad_string = "\tA1=strcat(\"-3\",\"3\")";
 	compat_classad::ClassAd classad;
@@ -4592,17 +4590,17 @@ static bool test_strcat_short() {
 	char actual[1024];
 	char* expect = "-33";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -4610,7 +4608,7 @@ static bool test_strcat_short() {
 }
 
 static bool test_strcat_long() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for a long attribute using strcat().");
 	const char* classad_string = "\tA1=strcat(\"a\",\"b\",\"c\",\"d\",\"e\","
 		"\"f\",\"g\")";
@@ -4619,17 +4617,17 @@ static bool test_strcat_long() {
 	char actual[1024];
 	char* expect = "abcdefg";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -4637,24 +4635,24 @@ static bool test_strcat_long() {
 }
 
 static bool test_floor_negative_int() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a negative integer.");
 	const char* classad_string = "\tA1=floor(\"-3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4662,24 +4660,24 @@ static bool test_floor_negative_int() {
 }
 
 static bool test_floor_negative_float() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a negative float.");
 	const char* classad_string = "\tA1=floor(\"-3.4\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -4;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4687,24 +4685,24 @@ static bool test_floor_negative_float() {
 }
 
 static bool test_floor_positive_integer() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a positive integer.");
 	const char* classad_string = "\tA1=floor(\"3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4712,7 +4710,7 @@ static bool test_floor_positive_integer() {
 }
 
 static bool test_floor_positive_integer_wo() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a positive integer without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=floor(5)";
@@ -4720,17 +4718,17 @@ static bool test_floor_positive_integer_wo() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 5;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4738,7 +4736,7 @@ static bool test_floor_positive_integer_wo() {
 }
 
 static bool test_floor_positive_float_wo() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a positive float without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=floor(5.2)";
@@ -4746,17 +4744,17 @@ static bool test_floor_positive_float_wo() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 5;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4764,24 +4762,24 @@ static bool test_floor_positive_float_wo() {
 }
 
 static bool test_ceiling_negative_int() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a negative integer.");
 	const char* classad_string = "\tA1=ceiling(\"-3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4789,24 +4787,24 @@ static bool test_ceiling_negative_int() {
 }
 
 static bool test_ceiling_negative_float() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a negative float.");
 	const char* classad_string = "\tA1=ceiling(\"-3.4\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4814,24 +4812,24 @@ static bool test_ceiling_negative_float() {
 }
 
 static bool test_ceiling_positive_integer() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a positive integer.");
 	const char* classad_string = "\tA1=ceiling(\"3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4839,7 +4837,7 @@ static bool test_ceiling_positive_integer() {
 }
 
 static bool test_ceiling_positive_integer_wo() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a positive integer without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=ceiling(5)";
@@ -4847,17 +4845,17 @@ static bool test_ceiling_positive_integer_wo() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 5;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4865,7 +4863,7 @@ static bool test_ceiling_positive_integer_wo() {
 }
 
 static bool test_ceiling_positive_float_wo() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a positive float without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=ceiling(5.2)";
@@ -4873,17 +4871,17 @@ static bool test_ceiling_positive_float_wo() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 6;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4891,24 +4889,24 @@ static bool test_ceiling_positive_float_wo() {
 }
 
 static bool test_round_negative_int() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a negative integer.");
 	const char* classad_string = "\tA1=round(\"-3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4916,24 +4914,24 @@ static bool test_round_negative_int() {
 }
 
 static bool test_round_negative_float() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a negative float.");
 	const char* classad_string = "\tA1=round(\"-3.5\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -4;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4941,24 +4939,24 @@ static bool test_round_negative_float() {
 }
 
 static bool test_round_positive_int() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a positive integer.");
 	const char* classad_string = "\tA1=round(\"3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4966,7 +4964,7 @@ static bool test_round_positive_int() {
 }
 
 static bool test_round_positive_float_wo_up() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a positive float without "
 		"quotes surrounding the number and the function rounds up.");
 	const char* classad_string = "\tA1=round(5.5)";
@@ -4974,17 +4972,17 @@ static bool test_round_positive_float_wo_up() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 6;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4992,7 +4990,7 @@ static bool test_round_positive_float_wo_up() {
 }
 
 static bool test_round_positive_float_wo_down() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a positive float without "
 		"quotes surrounding the number and the function rounds down.");
 	const char* classad_string = "\tA1=round(5.2)";
@@ -5000,17 +4998,17 @@ static bool test_round_positive_float_wo_down() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 5;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5018,24 +5016,24 @@ static bool test_round_positive_float_wo_down() {
 }
 
 static bool test_random_integer() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using random() on a positive integer.");
 	const char* classad_string = "\tA1=random(5)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual =-1, expect = 5;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "< %d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "< %d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual >= expect) {
 		FAIL;
 	}
@@ -5043,24 +5041,24 @@ static bool test_random_integer() {
 }
 
 static bool test_random() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using random() without an argument.");
 	const char* classad_string = "\tA1=random()";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 1;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "< %f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "< %f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || actual >= expect) {
 		FAIL;
 	}
@@ -5068,24 +5066,24 @@ static bool test_random() {
 }
 
 static bool test_random_float() {
-	e.emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
+	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
 		"for an attribute using random() on a positive float.");
 	const char* classad_string = "\tA1=random(3.5)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	float actual = -1.0, expect = 3.5;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("FLOAT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("FLOAT Value", "< %f", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("FLOAT Value", "%f", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("FLOAT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("FLOAT Value", "< %f", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("FLOAT Value", "%f", actual);
 	if(retVal != 1 || actual >= expect) {
 		FAIL;
 	}
@@ -5093,22 +5091,22 @@ static bool test_random_float() {
 }
 
 static bool test_is_string_simple() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isString() on a simple string.");
 	const char* classad_string = "\tA1=isString(\"abc\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -5116,22 +5114,22 @@ static bool test_is_string_simple() {
 }
 
 static bool test_is_string_concat() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isString() on a concatenated string.");
 	const char* classad_string = "\tA1=isString(strcat(\"-3\",\"3\"))";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -5139,24 +5137,24 @@ static bool test_is_string_concat() {
 }
 
 static bool test_is_undefined_true() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isUndefined() on an undefined attribute.");
 	const char* classad_string = "\tA1=isUndefined(BD)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5164,7 +5162,7 @@ static bool test_is_undefined_true() {
 }
 
 static bool test_is_undefined_false() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isUndefined() on an attribute that is "
 		"defined.");
 	const char* classad_string = "\tBC=10\n\t\tA1=isUndefined(BC)";
@@ -5172,17 +5170,17 @@ static bool test_is_undefined_false() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5190,7 +5188,7 @@ static bool test_is_undefined_false() {
 }
 
 static bool test_is_error_random() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of random().");
 	const char* classad_string = "\tA1=isError(random(\"-3\"))";
@@ -5198,17 +5196,17 @@ static bool test_is_error_random() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5216,7 +5214,7 @@ static bool test_is_error_random() {
 }
 
 static bool test_is_error_int() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of int().");
 	const char* classad_string = "\tA1=isError(int(\"this is not an int\"))";
@@ -5224,17 +5222,17 @@ static bool test_is_error_int() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5242,7 +5240,7 @@ static bool test_is_error_int() {
 }
 
 static bool test_is_error_real() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of real().");
 	const char* classad_string = "\tA1=isError(real(\"this is not an float\"))";
@@ -5250,17 +5248,17 @@ static bool test_is_error_real() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5268,7 +5266,7 @@ static bool test_is_error_real() {
 }
 
 static bool test_is_error_floor() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of floor().");
 	const char* classad_string = "\tA1=isError(floor(\"this is not an float\"))";
@@ -5276,17 +5274,17 @@ static bool test_is_error_floor() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5294,24 +5292,24 @@ static bool test_is_error_floor() {
 }
 
 static bool test_is_integer_false_negative() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a negative real.");
 	const char* classad_string = "\tA1=isInteger(-3.4 )";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5319,24 +5317,24 @@ static bool test_is_integer_false_negative() {
 }
 
 static bool test_is_integer_false_positive() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a positive real.");
 	const char* classad_string = "\tA1=isInteger(3.4 )";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5344,24 +5342,24 @@ static bool test_is_integer_false_positive() {
 }
 
 static bool test_is_integer_false_quotes() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on an integer in quotes.");
 	const char* classad_string = "\tA1=isInteger(\"-3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5369,24 +5367,24 @@ static bool test_is_integer_false_quotes() {
 }
 
 static bool test_is_integer_true_negative() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a negative integer.");
 	const char* classad_string = "\tA1=isInteger(-3)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5394,7 +5392,7 @@ static bool test_is_integer_true_negative() {
 }
 
 static bool test_is_integer_true_int() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() along with int() on a positive "
 		"real.");
 	const char* classad_string = "\tA1=isInteger( int(3.4) )";
@@ -5402,17 +5400,17 @@ static bool test_is_integer_true_int() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5420,7 +5418,7 @@ static bool test_is_integer_true_int() {
 }
 
 static bool test_is_integer_true_int_quotes() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() along with int() on a negative "
 		"integer in quotes.");
 	const char* classad_string = "\tA1=isInteger(int(\"-3\"))";
@@ -5428,17 +5426,17 @@ static bool test_is_integer_true_int_quotes() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5446,24 +5444,24 @@ static bool test_is_integer_true_int_quotes() {
 }
 
 static bool test_is_integer_true_positive() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a positive integer.");
 	const char* classad_string = "\tA1=isInteger(3)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5471,24 +5469,24 @@ static bool test_is_integer_true_positive() {
 }
 
 static bool test_is_real_false_negative_int() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a negative integer.");
 	const char* classad_string = "\tA1=isReal(-3)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5496,7 +5494,7 @@ static bool test_is_real_false_negative_int() {
 }
 
 static bool test_is_real_false_negative_int_quotes() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a negative integer in "
 		"quotes.");
 	const char* classad_string = "\tA1=isReal(\"-3\")";
@@ -5504,17 +5502,17 @@ static bool test_is_real_false_negative_int_quotes() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5522,24 +5520,24 @@ static bool test_is_real_false_negative_int_quotes() {
 }
 
 static bool test_is_real_false_positive_int() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a positive integer.");
 	const char* classad_string = "\tA1=isReal(3)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5547,24 +5545,24 @@ static bool test_is_real_false_positive_int() {
 }
 
 static bool test_is_real_true_negative() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a negative real.");
 	const char* classad_string = "\tA1=isReal(-3.4 )";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5572,24 +5570,24 @@ static bool test_is_real_true_negative() {
 }
 
 static bool test_is_real_true_positive() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a positive real.");
 	const char* classad_string = "\tA1=isReal( 3.4 )";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5597,7 +5595,7 @@ static bool test_is_real_true_positive() {
 }
 
 static bool test_is_real_true_real() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() along with real() on a positive "
 		"integer.");
 	const char* classad_string = "\tA1=isReal( real(3) )";
@@ -5605,17 +5603,17 @@ static bool test_is_real_true_real() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5623,7 +5621,7 @@ static bool test_is_real_true_real() {
 }
 
 static bool test_is_real_true_real_quotes() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() along with real() on a negative "
 		"integer in quotes.");
 	const char* classad_string = "\tA1=isReal(real(\"-3\"))";
@@ -5631,17 +5629,17 @@ static bool test_is_real_true_real_quotes() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5649,7 +5647,7 @@ static bool test_is_real_true_real_quotes() {
 }
 
 static bool test_is_real_error() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of an attriute that uses isReal() "
 		"incorrectly.");
 	const char* classad_string = "\tBC8=isReal(3,1)\n\t\tA1=isError(BC8)";
@@ -5657,17 +5655,17 @@ static bool test_is_real_error() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5675,7 +5673,7 @@ static bool test_is_real_error() {
 }
 
 static bool test_is_boolean() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isBoolean() along with isReal() on a negative "
 		"real.");
 	const char* classad_string = "\tA1=isBoolean(isReal(-3.4 ))";
@@ -5683,17 +5681,17 @@ static bool test_is_boolean() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("TRUE");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval(tfstr(expect));
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval(tfstr(expect));
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5701,7 +5699,7 @@ static bool test_is_boolean() {
 }
 
 static bool test_substr_end() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using substr() on the end of a string.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3)";
 	compat_classad::ClassAd classad;
@@ -5709,17 +5707,17 @@ static bool test_substr_end() {
 	char actual[1024];
 	char* expect = "defg";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -5727,7 +5725,7 @@ static bool test_substr_end() {
 }
 
 static bool test_substr_middle() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using substr() on the middle of a string.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, 2)";
 	compat_classad::ClassAd classad;
@@ -5735,17 +5733,17 @@ static bool test_substr_middle() {
 	char actual[1024];
 	char* expect = "de";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -5753,7 +5751,7 @@ static bool test_substr_middle() {
 }
 
 static bool test_substr_negative_index() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using substr() with a negative starting index.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", -2, 1)";
 	compat_classad::ClassAd classad;
@@ -5761,17 +5759,17 @@ static bool test_substr_negative_index() {
 	char actual[1024];
 	char* expect = "f";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -5779,7 +5777,7 @@ static bool test_substr_negative_index() {
 }
 
 static bool test_substr_negative_length() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using substr() with a negative length.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, -1)";
 	compat_classad::ClassAd classad;
@@ -5787,17 +5785,17 @@ static bool test_substr_negative_length() {
 	char actual[1024];
 	char* expect = "def";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -5805,7 +5803,7 @@ static bool test_substr_negative_length() {
 }
 
 static bool test_substr_out_of_bounds() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using substr() with an out of bounds length.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, -9)";
 	compat_classad::ClassAd classad;
@@ -5813,17 +5811,17 @@ static bool test_substr_out_of_bounds() {
 	char actual[1024];
 	char* expect = "";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -5831,7 +5829,7 @@ static bool test_substr_out_of_bounds() {
 }
 
 static bool test_substr_error_index() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"substr() with an invalid index.");
 	const char* classad_string = "\tI5=substr(\"abcdefg\", 3.3, -9)\n\t\t"
@@ -5840,17 +5838,17 @@ static bool test_substr_error_index() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5858,7 +5856,7 @@ static bool test_substr_error_index() {
 }
 
 static bool test_substr_error_string() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"substr() on an invalid string.");
 	const char* classad_string = "\tI6=substr(foo, 3, -9)\n\t\t"
@@ -5867,17 +5865,17 @@ static bool test_substr_error_string() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5885,22 +5883,22 @@ static bool test_substr_error_string() {
 }
 
 static bool test_formattime_empty() {
-	e.emit_test("Test that EvalString() returns 1 for an attribute using "
+	emit_test("Test that EvalString() returns 1 for an attribute using "
 		"formattime() with no arguments.");
 	const char* classad_string = "\tA1=formattime()";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -5908,9 +5906,9 @@ static bool test_formattime_empty() {
 }
 
 static bool test_formattime_current() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using formattime() with CurrentTime.");
-	e.emit_comment("Since there is a chance that the each EvalString() may be "
+	emit_comment("Since there is a chance that the each EvalString() may be "
 		"run at a different second, we retry the evaluations up to 10 times.");
 	const char* classad_string = "\tA0=formattime()\n\t\tA1=formattime("
 		"CurrentTime)";
@@ -5924,17 +5922,17 @@ static bool test_formattime_current() {
 		retVal = classad.EvalString("A1", NULL, actual);
 		attempts++;
 	}while(attempts < 10 && strcmp(actual, expect) != MATCH);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -5942,10 +5940,10 @@ static bool test_formattime_current() {
 }
 
 static bool test_formattime_current_options() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using formattime() with CurrentTime and the \"%c\" "
 		"option.");
-	e.emit_comment("Since there is a chance that the each EvalString() may be "
+	emit_comment("Since there is a chance that the each EvalString() may be "
 		"run at a different second, we retry the evaluations up to 10 times.");
 	const char* classad_string = "\tA0=formattime()\n\t\tA1=formattime("
 		"CurrentTime,\"%c\")";
@@ -5959,17 +5957,17 @@ static bool test_formattime_current_options() {
 		retVal = classad.EvalString("A1", NULL, actual);
 		attempts++;
 	}while(attempts < 10 && strcmp(actual, expect) != MATCH);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -5977,7 +5975,7 @@ static bool test_formattime_current_options() {
 }
 
 static bool test_formattime_int() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using formattime() from a integer.");
 	const char* classad_string = "\tA1=formattime(1174737600,\"%m/%d/%y\")";
 	compat_classad::ClassAd classad;
@@ -5985,17 +5983,17 @@ static bool test_formattime_int() {
 	char actual[1024];
 	char* expect = "03/24/07";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -6003,7 +6001,7 @@ static bool test_formattime_int() {
 }
 
 static bool test_formattime_error() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"formattime() incorrectly.");
 	const char* classad_string = "\tI5=formattime(1174694400,1174694400)\n\t\t"
@@ -6012,17 +6010,17 @@ static bool test_formattime_error() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6030,7 +6028,7 @@ static bool test_formattime_error() {
 }
 
 static bool test_strcmp_positive() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using strcmp() of two strings that should result in "
 		"a positive number.");
 	const char* classad_string = "\tA1=strcmp(\"ABCDEFgxx\", \"ABCDEFg\")";
@@ -6038,17 +6036,17 @@ static bool test_strcmp_positive() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "> 0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "> 0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual <= 0) {
 		FAIL;
 	}
@@ -6056,7 +6054,7 @@ static bool test_strcmp_positive() {
 }
 
 static bool test_strcmp_negative() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using strcmp() of two strings that should result in "
 		"a negative number.");
 	const char* classad_string = "\tA1=strcmp(\"BBBBBBBxx\", \"CCCCCCC\")";
@@ -6064,17 +6062,17 @@ static bool test_strcmp_negative() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "< 0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "< 0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual >= 0) {
 		FAIL;
 	}
@@ -6082,7 +6080,7 @@ static bool test_strcmp_negative() {
 }
 
 static bool test_strcmp_equal() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using strcmp() of two strings that should give a "
 		"result of 0.");
 	const char* classad_string = "\tA1=strcmp(\"AbAbAbAb\", \"AbAbAbAb\")";
@@ -6090,17 +6088,17 @@ static bool test_strcmp_equal() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != 0) {
 		FAIL;
 	}
@@ -6108,7 +6106,7 @@ static bool test_strcmp_equal() {
 }
 
 static bool test_strcmp_convert1() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using strcmp() of two strings that should give a "
 		"result of 0 after converting the first argument to a string.");
 	const char* classad_string = "\tA1=strcmp(1+1, \"2\")";
@@ -6116,17 +6114,17 @@ static bool test_strcmp_convert1() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != 0) {
 		FAIL;
 	}
@@ -6134,7 +6132,7 @@ static bool test_strcmp_convert1() {
 }
 
 static bool test_strcmp_convert2() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using strcmp() of two strings that should give a "
 		"result of 0 after converting the second argument to a string.");
 	const char* classad_string = "\tA1=strcmp(\"2\", 1+1)";
@@ -6142,17 +6140,17 @@ static bool test_strcmp_convert2() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != 0) {
 		FAIL;
 	}
@@ -6160,7 +6158,7 @@ static bool test_strcmp_convert2() {
 }
 
 static bool test_stricmp_equal() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of 0.");
 	const char* classad_string = "\tA1=stricmp(\"ABCDEFg\", \"abcdefg\")";
@@ -6168,17 +6166,17 @@ static bool test_stricmp_equal() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != 0) {
 		FAIL;
 	}
@@ -6186,7 +6184,7 @@ static bool test_stricmp_equal() {
 }
 
 static bool test_stricmp_positive() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of a positive number.");
 	const char* classad_string = "\tA1=stricmp(\"ffgghh\", \"aabbcc\")";
@@ -6194,17 +6192,17 @@ static bool test_stricmp_positive() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "> 0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "> 0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual <= 0) {
 		FAIL;
 	}
@@ -6212,7 +6210,7 @@ static bool test_stricmp_positive() {
 }
 
 static bool test_stricmp_negative() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of a negative number.");
 	const char* classad_string = "\tA1=stricmp(\"aBabcd\", \"ffgghh\")";
@@ -6220,17 +6218,17 @@ static bool test_stricmp_negative() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "< 0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "< 0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual >= 0) {
 		FAIL;
 	}
@@ -6238,7 +6236,7 @@ static bool test_stricmp_negative() {
 }
 
 static bool test_stricmp_convert1() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of 0 after converting the first argument to a string.");
 	const char* classad_string = "\tA1=stricmp(1+1, \"2\")";
@@ -6246,17 +6244,17 @@ static bool test_stricmp_convert1() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != 0) {
 		FAIL;
 	}
@@ -6264,7 +6262,7 @@ static bool test_stricmp_convert1() {
 }
 
 static bool test_stricmp_convert2() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of 0 after converting the second argument to a string.");
 	const char* classad_string = "\tA1=stricmp(\"2\", 1+1)";
@@ -6272,17 +6270,17 @@ static bool test_stricmp_convert2() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != 0) {
 		FAIL;
 	}
@@ -6290,7 +6288,7 @@ static bool test_stricmp_convert2() {
 }
 
 static bool test_regexp_match_wildcard() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using regexp() that evaluates to a match when using "
 		"a wildcard.");
 	const char* classad_string = "\tA1=regexp(\"[Mm]atcH.i\", \""
@@ -6299,17 +6297,17 @@ static bool test_regexp_match_wildcard() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6317,7 +6315,7 @@ static bool test_regexp_match_wildcard() {
 }
 
 static bool test_regexp_match_repeat() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using regexp() that evaluates to a match when using "
 		"repeating characters.");
 	const char* classad_string = "\tA1=regexp(\"([Mm]+[Nn]+)\", "
@@ -6326,17 +6324,17 @@ static bool test_regexp_match_repeat() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6344,7 +6342,7 @@ static bool test_regexp_match_repeat() {
 }
 
 static bool test_regexp_no_match() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using regexp() that doesn't evaluate to a match.");
 	const char* classad_string = "\tA1=regexp(\"[Mm]atcH.i\", \"thisisalist\","
 		" \"i\")";
@@ -6352,17 +6350,17 @@ static bool test_regexp_no_match() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6370,7 +6368,7 @@ static bool test_regexp_no_match() {
 }
 
 static bool test_regexp_no_match_case() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using regexp() that doesn't evaluate to a match due "
 		"to its case.");
 	const char* classad_string = "\tA1=regexp(\"[Mm]atcH.i\", \""
@@ -6379,17 +6377,17 @@ static bool test_regexp_no_match_case() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6397,7 +6395,7 @@ static bool test_regexp_no_match_case() {
 }
 
 static bool test_regexp_error_pattern() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"regexp() with an invalid regexp pattern.");
 	const char* classad_string = "\tW1=regexp(20, \"thisisamatchlist\", \"i\")"
@@ -6406,17 +6404,17 @@ static bool test_regexp_error_pattern() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6424,7 +6422,7 @@ static bool test_regexp_error_pattern() {
 }
 
 static bool test_regexp_error_target() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"regexp() with an invalid regexp target string.");
 	const char* classad_string = "\tW1=regexp(\"[Mm]atcH.i\", 20, \"i\")\n\t\t"
@@ -6433,17 +6431,17 @@ static bool test_regexp_error_target() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6451,7 +6449,7 @@ static bool test_regexp_error_target() {
 }
 
 static bool test_regexp_error_option() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"regexp() with an invalid regexp option.");
 	const char* classad_string = "W3=regexp(\"[Mm]atcH.i\", \"thisisamatchlist"
@@ -6460,17 +6458,17 @@ static bool test_regexp_error_option() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6478,7 +6476,7 @@ static bool test_regexp_error_option() {
 }
 
 static bool test_regexps_match() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using regexps() that evaluates to a match.");
 	const char* classad_string = "\tA1=regexps(\"([Mm]at)c(h).i\", "
 		"\"thisisamatchlist\", \"one is \\1 two is \\2\")";
@@ -6487,17 +6485,17 @@ static bool test_regexps_match() {
 	char actual[1024];
 	char* expect = "one is mat two is h";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -6505,7 +6503,7 @@ static bool test_regexps_match() {
 }
 
 static bool test_regexps_match_case() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using regexps() that evaluates to a match.");
 	const char* classad_string = "\tA1=regexps(\"([Mm]at)c(h).i\", "
 		"\"thisisamatchlist\", \"one is \\1 two is \\2\",\"i\")";
@@ -6514,17 +6512,17 @@ static bool test_regexps_match_case() {
 	char actual[1024];
 	char* expect = "one is mat two is h";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "%s", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "%s", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -6532,7 +6530,7 @@ static bool test_regexps_match_case() {
 }
 
 static bool test_regexps_error_pattern() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"regexps() with an invalid regexps pattern.");
 	const char* classad_string = "\tX2=regexps(20 , \"thisisamatchlist\", \"one is "
@@ -6542,17 +6540,17 @@ static bool test_regexps_error_pattern() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6560,7 +6558,7 @@ static bool test_regexps_error_pattern() {
 }
 
 static bool test_regexps_error_target() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"regexps() with an invalid regexps target string.");
 	const char* classad_string = "\tX3=regexps(\"([Mm]at)c(h).i\", 20 , \""
@@ -6569,17 +6567,17 @@ static bool test_regexps_error_target() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6587,7 +6585,7 @@ static bool test_regexps_error_target() {
 }
 
 static bool test_regexps_error_option() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"regexps() with an invalid regexps option.");
 	const char* classad_string = "\tX5=regexps(\"([Mm]at)c(h).i\", \""
@@ -6596,17 +6594,17 @@ static bool test_regexps_error_option() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6614,7 +6612,7 @@ static bool test_regexps_error_option() {
 }
 
 static bool test_regexps_error_return() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"regexps() with an invalid regexps return arg.");
 	const char* classad_string = "\tX4=regexps(\"([Mm]at)c(h).i\", \""
@@ -6623,17 +6621,17 @@ static bool test_regexps_error_return() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6641,7 +6639,7 @@ static bool test_regexps_error_return() {
 }
 
 static bool test_stringlist_regexp_member_match_default() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlist_regexpMember() that evaluates to a "
 		"match when using the default delimiter.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"green\", \""
@@ -6650,17 +6648,17 @@ static bool test_stringlist_regexp_member_match_default() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6668,7 +6666,7 @@ static bool test_stringlist_regexp_member_match_default() {
 }
 
 static bool test_stringlist_regexp_member_match_non_default() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlist_regexpMember() that evaluates to a "
 		"match when not using the default delimiter.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"green\", \""
@@ -6677,17 +6675,17 @@ static bool test_stringlist_regexp_member_match_non_default() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6695,7 +6693,7 @@ static bool test_stringlist_regexp_member_match_non_default() {
 }
 
 static bool test_stringlist_regexp_member_match_case() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlist_regexpMember() that evaluates to a "
 		"match when using case insensitive.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"[Mm]atcH.i\", "
@@ -6704,17 +6702,17 @@ static bool test_stringlist_regexp_member_match_case() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6722,7 +6720,7 @@ static bool test_stringlist_regexp_member_match_case() {
 }
 
 static bool test_stringlist_regexp_member_match_repeat() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlist_regexpMember() that evaluates to a "
 		"match when using repeating characters.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"([Mm]+[Nn]+)"
@@ -6731,17 +6729,17 @@ static bool test_stringlist_regexp_member_match_repeat() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6749,7 +6747,7 @@ static bool test_stringlist_regexp_member_match_repeat() {
 }
 
 static bool test_stringlist_regexp_member_no_match_multiple() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlist_regexpMember() that doesn't evaluate"
 		" to a match due to multiple misses.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"([p]+)\", \"red, "
@@ -6758,17 +6756,17 @@ static bool test_stringlist_regexp_member_no_match_multiple() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6776,7 +6774,7 @@ static bool test_stringlist_regexp_member_no_match_multiple() {
 }
 
 static bool test_stringlist_regexp_member_no_match() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlist_regexpMember() that doesn't evaluate"
 		" to a match.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"[Mm]atcH.i\", "
@@ -6785,17 +6783,17 @@ static bool test_stringlist_regexp_member_no_match() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6803,7 +6801,7 @@ static bool test_stringlist_regexp_member_no_match() {
 }
 
 static bool test_stringlist_regexp_member_no_match_case() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using stringlist_regexpMember() that doesn't evaluate"
 		" to a match due to case.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"[Mm]atcH.i\", "
@@ -6812,17 +6810,17 @@ static bool test_stringlist_regexp_member_no_match_case() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6830,7 +6828,7 @@ static bool test_stringlist_regexp_member_no_match_case() {
 }
 
 static bool test_stringlist_regexp_member_error_pattern() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"stringlist_regexpMember() with an invalid regexp pattern.");
 	const char* classad_string = 
@@ -6840,17 +6838,17 @@ static bool test_stringlist_regexp_member_error_pattern() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6858,7 +6856,7 @@ static bool test_stringlist_regexp_member_error_pattern() {
 }
 
 static bool test_stringlist_regexp_member_error_target() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"stringlist_regexpMember() with an invalid regexp target.");
 	const char* classad_string = "\tW2=stringlist_regexpMember(\"[Mm]atcH.i\", "
@@ -6867,17 +6865,17 @@ static bool test_stringlist_regexp_member_error_target() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6885,7 +6883,7 @@ static bool test_stringlist_regexp_member_error_target() {
 }
 
 static bool test_stringlist_regexp_member_error_delim() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"stringlist_regexpMember() with an invalid delimiter.");
 	const char* classad_string = "\tW3=stringlist_regexpMember(\"[Mm]atcH.i\", "
@@ -6894,17 +6892,17 @@ static bool test_stringlist_regexp_member_error_delim() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6912,7 +6910,7 @@ static bool test_stringlist_regexp_member_error_delim() {
 }
 
 static bool test_stringlist_regexp_member_error_option() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() of another attribute that uses "
 		"stringlist_regexpMember() with an invalid regexp option.");
 	const char* classad_string = "\tW7=stringlist_regexpMember(\"[Mm]atcH.i\", "
@@ -6921,17 +6919,17 @@ static bool test_stringlist_regexp_member_error_option() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6939,10 +6937,10 @@ static bool test_stringlist_regexp_member_error_option() {
 }
 
 static bool test_random_different() {
-	e.emit_test("Test that EvalInteger() sets the correct actual for an "
+	emit_test("Test that EvalInteger() sets the correct actual for an "
 		"attribute using random(), in particular check that it generates "
 		"different numbers.");
-	e.emit_comment("This test will fail if random() generates the same number "
+	emit_comment("This test will fail if random() generates the same number "
 		"10 times in a row, although this is highly unlikely.");
 	const char* classad_string = "\tA1 = random()";
 	compat_classad::ClassAd classad;
@@ -6954,15 +6952,15 @@ static bool test_random_different() {
 		classad.EvalInteger("A1", NULL, actual);
 		different_numbers = (actual != expect);
 	}
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("Different Numbers Generated", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Different Numbers Generated", tfstr(different_numbers));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("Different Numbers Generated", "TRUE");
+	emit_output_actual_header();
+	emit_param("Different Numbers Generated", tfstr(different_numbers));
 	if(!different_numbers) {
 		FAIL;
 	}
@@ -6970,7 +6968,7 @@ static bool test_random_different() {
 }
 
 static bool test_random_range() {
-	e.emit_test("Test that EvalInteger() sets the correct actual for an "
+	emit_test("Test that EvalInteger() sets the correct actual for an "
 		"attribute using random(), in particular check that it generates "
 		"random numbers within the correct range.");
 	const char* classad_string = "\tA1 = random(10)";
@@ -6982,15 +6980,15 @@ static bool test_random_range() {
 		classad.EvalInteger("A1", NULL, actual);
 		in_range = (actual >= 0 && actual < 10);
 	}
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_param("Numbers Generated in Range", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("Numbers Generated in Range", tfstr(in_range));
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_param("Numbers Generated in Range", "TRUE");
+	emit_output_actual_header();
+	emit_param("Numbers Generated in Range", tfstr(in_range));
 	if(!in_range) {
 		FAIL;
 	}
@@ -6998,21 +6996,21 @@ static bool test_random_range() {
 }
 
 static bool test_equality() {
-	e.emit_test("Test equality after parsing a classad string into an ExprTree "
+	emit_test("Test equality after parsing a classad string into an ExprTree "
 		"and MyString.");
 	const char* classad_string = "\tFoo = 3";
 	ExprTree *e1, *e2;
 	MyString n1, n2;
 	Parse(classad_string, n1, e1);
 	Parse(classad_string, n2, e2);
-	e.emit_input_header();
-	e.emit_param("STRING", classad_string);
-	e.emit_output_expected_header();
-	e.emit_param("ExprTree Equality", "TRUE");
-	e.emit_param("MyString Equality", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("ExprTree Equality", tfstr((*e1) == (*e2)));
-	e.emit_param("MyString Equality", tfstr(n1 == n2));
+	emit_input_header();
+	emit_param("STRING", classad_string);
+	emit_output_expected_header();
+	emit_param("ExprTree Equality", "TRUE");
+	emit_param("MyString Equality", "TRUE");
+	emit_output_actual_header();
+	emit_param("ExprTree Equality", tfstr((*e1) == (*e2)));
+	emit_param("MyString Equality", tfstr(n1 == n2));
 	if(!((*e1) == (*e2)) || !(n1 == n2)) {
 		delete(e1); delete(e2);
 		FAIL;
@@ -7022,7 +7020,7 @@ static bool test_equality() {
 }
 
 static bool test_inequality() {
-	e.emit_test("Test inequality after parsing a classad string into an "
+	emit_test("Test inequality after parsing a classad string into an "
 		"ExprTree and MyString.");
 	const char* classad_string1  = "Foo = 3";
 	const char* classad_string2  = "Bar = 5";
@@ -7030,15 +7028,15 @@ static bool test_inequality() {
 	MyString n1, n2;
 	Parse(classad_string1, n1, e1);
 	Parse(classad_string2, n2, e2);
-	e.emit_input_header();
-	e.emit_param("STRING 1", classad_string1);
-	e.emit_param("STRING 2", classad_string2);
-	e.emit_output_expected_header();
-	e.emit_param("ExprTree Inequality", "TRUE");
-	e.emit_param("MyString Inequality", "TRUE");
-	e.emit_output_actual_header();
-	e.emit_param("ExprTree Inequality", tfstr(!((*e1) == (*e2))));
-	e.emit_param("MyString Inequality", tfstr(!(n1 == n2)));
+	emit_input_header();
+	emit_param("STRING 1", classad_string1);
+	emit_param("STRING 2", classad_string2);
+	emit_output_expected_header();
+	emit_param("ExprTree Inequality", "TRUE");
+	emit_param("MyString Inequality", "TRUE");
+	emit_output_actual_header();
+	emit_param("ExprTree Inequality", tfstr(!((*e1) == (*e2))));
+	emit_param("MyString Inequality", tfstr(!(n1 == n2)));
 	if(((*e1) == (*e2)) || (n1 == n2)) {
 		delete e1; delete e2;
 		FAIL;
@@ -7048,24 +7046,24 @@ static bool test_inequality() {
 }
 
 static bool test_operators_short_or() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using short-circuiting with logical OR.");
 	const char* classad_string = "\tA1 = TRUE || ERROR";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7073,24 +7071,24 @@ static bool test_operators_short_or() {
 }
 
 static bool test_operators_no_short_or() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute not using short-circuiting with logical OR.");
 	const char* classad_string = "\tA1 = isError(FALSE || ERROR)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7098,24 +7096,24 @@ static bool test_operators_no_short_or() {
 }
 
 static bool test_operators_short_and() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using short-circuiting with logical AND.");
 	const char* classad_string = "\tA1 = FALSE && ERROR";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7123,7 +7121,7 @@ static bool test_operators_short_and() {
 }
 
 static bool test_operators_short_and_error() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using short-circuiting with logical AND that "
 		"evaluates to an ERROR.");
 	const char* classad_string = "\tA1 = isError(\"foo\" && ERROR)";
@@ -7131,17 +7129,17 @@ static bool test_operators_short_and_error() {
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7149,24 +7147,24 @@ static bool test_operators_short_and_error() {
 }
 
 static bool test_operators_no_short_and() {
-	e.emit_test("Test that EvalBool() returns 1 and sets the correct actual "
+	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute not using short-circuiting with logical AND.");
 	const char* classad_string = "\tA1 = isError(TRUE && ERROR)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7174,7 +7172,7 @@ static bool test_operators_no_short_and() {
 }
 
 static bool test_scoping_my() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute in the classad's slope.");
 	const char* classad_string1 = "\tA = MY.X\n\t\tB = TARGET.X\n\t\tC = MY.Y"
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
@@ -7185,17 +7183,17 @@ static bool test_scoping_my() {
 	classad2.initFromString(classad_string2, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad1.EvalInteger("A", &classad2, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string1);
-	e.emit_param("Attribute", "A");
-	e.emit_param("Target", classad_string2);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string1);
+	emit_param("Attribute", "A");
+	emit_param("Target", classad_string2);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7203,7 +7201,7 @@ static bool test_scoping_my() {
 }
 
 static bool test_scoping_my_dup() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute in the classad's slope in which there is also an "
 		"attribute with the same name in the target classad's scope.");
 	const char* classad_string1 = "\tA = MY.X\n\t\tB = TARGET.X\n\t\tC = MY.Y"
@@ -7215,17 +7213,17 @@ static bool test_scoping_my_dup() {
 	classad2.initFromString(classad_string2, NULL);
 	int actual = -1, expect = 4;
 	int retVal = classad1.EvalInteger("G", &classad2, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string1);
-	e.emit_param("Attribute", "G");
-	e.emit_param("Target", classad_string2);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string1);
+	emit_param("Attribute", "G");
+	emit_param("Target", classad_string2);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7233,7 +7231,7 @@ static bool test_scoping_my_dup() {
 }
 
 static bool test_scoping_target() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute in the target classad's slope.");
 	const char* classad_string1 = "\tA = MY.X\n\t\tB = TARGET.X\n\t\tC = MY.Y"
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
@@ -7244,17 +7242,17 @@ static bool test_scoping_target() {
 	classad2.initFromString(classad_string2, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad1.EvalInteger("D", &classad2, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string1);
-	e.emit_param("Attribute", "D");
-	e.emit_param("Target", classad_string2);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string1);
+	emit_param("Attribute", "D");
+	emit_param("Target", classad_string2);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7262,7 +7260,7 @@ static bool test_scoping_target() {
 }
 
 static bool test_scoping_target_dup() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute in the target classad's slope in which there is also "
 		"an attribute with the same name in the classad's scope.");
 	const char* classad_string1 = "\tA = MY.X\n\t\tB = TARGET.X\n\t\tC = MY.Y"
@@ -7274,17 +7272,17 @@ static bool test_scoping_target_dup() {
 	classad2.initFromString(classad_string2, NULL);
 	int actual = -1, expect = 2;
 	int retVal = classad1.EvalInteger("B", &classad2, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string1);
-	e.emit_param("Attribute", "B");
-	e.emit_param("Target", classad_string2);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string1);
+	emit_param("Attribute", "B");
+	emit_param("Target", classad_string2);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7292,7 +7290,7 @@ static bool test_scoping_target_dup() {
 }
 
 static bool test_scoping_both() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute in the target classad's slope that is then in the "
 		"classad's scope.");
 	const char* classad_string1 = "\tA = MY.X\n\t\tB = TARGET.X\n\t\tC = MY.Y"
@@ -7304,17 +7302,17 @@ static bool test_scoping_both() {
 	classad2.initFromString(classad_string2, NULL);
 	int actual = -1, expect = 5;
 	int retVal = classad1.EvalInteger("J", &classad2, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string1);
-	e.emit_param("Attribute", "J");
-	e.emit_param("Target", classad_string2);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string1);
+	emit_param("Attribute", "J");
+	emit_param("Target", classad_string2);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7322,7 +7320,7 @@ static bool test_scoping_both() {
 }
 
 static bool test_scoping_my_miss() {
-	e.emit_test("Test that EvalInteger() returns 0 for an attribute not in the "
+	emit_test("Test that EvalInteger() returns 0 for an attribute not in the "
 		"classad's slope.");
 	const char* classad_string1 = "\tA = MY.X\n\t\tB = TARGET.X\n\t\tC = MY.Y"
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
@@ -7333,15 +7331,15 @@ static bool test_scoping_my_miss() {
 	classad2.initFromString(classad_string2, NULL);
 	int actual = -1;
 	int retVal = classad1.EvalInteger("C", &classad2, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string1);
-	e.emit_param("Attribute", "C");
-	e.emit_param("Target", classad_string2);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string1);
+	emit_param("Attribute", "C");
+	emit_param("Target", classad_string2);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal == 1) {
 		FAIL;
 	}
@@ -7349,7 +7347,7 @@ static bool test_scoping_my_miss() {
 }
 
 static bool test_scoping_target_miss() {
-	e.emit_test("Test that EvalInteger() returns 0 for an attribute not in the "
+	emit_test("Test that EvalInteger() returns 0 for an attribute not in the "
 		"Target's slope.");
 	const char* classad_string1 = "\tA = MY.X\n\t\tB = TARGET.X\n\t\tC = MY.Y"
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
@@ -7360,15 +7358,15 @@ static bool test_scoping_target_miss() {
 	classad2.initFromString(classad_string2, NULL);
 	int actual = -1;
 	int retVal = classad1.EvalInteger("H", &classad2, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string1);
-	e.emit_param("Attribute", "H");
-	e.emit_param("Target", classad_string2);
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("0");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string1);
+	emit_param("Attribute", "H");
+	emit_param("Target", classad_string2);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("0");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal == 1) {
 		FAIL;
 	}
@@ -7376,22 +7374,22 @@ static bool test_scoping_target_miss() {
 }
 
 static bool test_time() {
-	e.emit_test("Test that EvalInteger() returns 1 for an attribute using "
+	emit_test("Test that EvalInteger() returns 1 for an attribute using "
 		"time().");
 	const char* classad_string = "\tA1=Time()";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
 	if(retVal != 1) {
 		FAIL;
 	}
@@ -7399,9 +7397,9 @@ static bool test_time() {
 }
 
 static bool test_interval_minute() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct value "
+	emit_test("Test that EvalString() returns 1 and sets the correct value "
 		"for actual for an attribute using Interval() of one minute.");
-	e.emit_comment("Interval() currently pads the days field with spaces, this "
+	emit_comment("Interval() currently pads the days field with spaces, this "
 		"will likely be changed to match the documentation and this test will "
 		"then fail. See ticket #1440");
 	const char* classad_string = "\tA1=Interval(60)";
@@ -7410,17 +7408,17 @@ static bool test_interval_minute() {
 	char actual[1024];
 	char* expect = "1:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "'%s'", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "'%s'", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "'%s'", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "'%s'", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -7428,9 +7426,9 @@ static bool test_interval_minute() {
 }
 
 static bool test_interval_hour() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct value "
+	emit_test("Test that EvalString() returns 1 and sets the correct value "
 		"for actual for an attribute using Interval() of one hour.");
-	e.emit_comment("Interval() currently pads the days field with spaces, this "
+	emit_comment("Interval() currently pads the days field with spaces, this "
 		"will likely be changed to match the documentation and this test will "
 		"then fail. See ticket #1440");
 	const char* classad_string = "\tA1=Interval(3600)";
@@ -7439,17 +7437,17 @@ static bool test_interval_hour() {
 	char actual[1024];
 	char* expect = "1:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "'%s'", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "'%s'", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "'%s'", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "'%s'", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -7457,9 +7455,9 @@ static bool test_interval_hour() {
 }
 
 static bool test_interval_day() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct value "
+	emit_test("Test that EvalString() returns 1 and sets the correct value "
 		"for actual for an attribute using Interval() of one hour.");
-	e.emit_comment("Interval() currently pads the days field with spaces, this "
+	emit_comment("Interval() currently pads the days field with spaces, this "
 		"will likely be changed to match the documentation and this test will "
 		"then fail. See ticket #1440");
 	const char* classad_string = "\tA1=Interval(86400)";
@@ -7468,17 +7466,17 @@ static bool test_interval_day() {
 	char actual[1024];
 	char* expect = "1+00:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", "'%s'", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", "'%s'", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "'%s'", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "'%s'", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -7486,7 +7484,7 @@ static bool test_interval_day() {
 }
 
 static bool test_to_upper() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using toupper().");
 	const char* classad_string = "\tA1=toupper(\"AbCdEfg\")";
 	compat_classad::ClassAd classad;
@@ -7494,17 +7492,17 @@ static bool test_to_upper() {
 	char actual[1024];
 	char* expect = "ABCDEFG";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -7512,7 +7510,7 @@ static bool test_to_upper() {
 }
 
 static bool test_to_lower() {
-	e.emit_test("Test that EvalString() returns 1 and sets the correct actual "
+	emit_test("Test that EvalString() returns 1 and sets the correct actual "
 		"for an attribute using toLower().");
 	const char* classad_string = "\tA1=toLower(\"ABCdeFg\")";
 	compat_classad::ClassAd classad;
@@ -7520,17 +7518,17 @@ static bool test_to_lower() {
 	char actual[1024];
 	char* expect = "abcdefg";
 	int retVal = classad.EvalString("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("STRING", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("STRING Value", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("STRING Value", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", actual);
 	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
 		FAIL;
 	}
@@ -7538,24 +7536,24 @@ static bool test_to_lower() {
 }
 
 static bool test_size_positive() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using size() with a positive result.");
     const char* classad_string = "\tA1=size(\"ABC\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 3;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7563,24 +7561,24 @@ static bool test_size_positive() {
 }
 
 static bool test_size_zero() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using size() with a result of zero.");
     const char* classad_string = "\tA1=size(\"\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 0;
 	int retVal = classad.EvalInteger("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7588,26 +7586,26 @@ static bool test_size_zero() {
 }
 
 static bool test_size_undefined() {
-	e.emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
 		"for an attribute using isUndefined() of another attribute that uses "
 		"size() with an invalid string.");
     const char* classad_string =  "\tN2=size(foo)\n\t\tA1=isUndefined(N2)";
-	e.emit_param("size", "%d", strlen(classad_string));
+	emit_param("size", "%d", strlen(classad_string));
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
 	int retVal = classad.EvalBool("A1", NULL, actual);
-	e.emit_input_header();
-	e.emit_param("ClassAd", classad_string);
-	e.emit_param("Attribute", "A1");
-	e.emit_param("Target", "NULL");
-	e.emit_param("INT", "");
-	e.emit_output_expected_header();
-	e.emit_retval("1");
-	e.emit_param("INT Value", "%d", expect);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", retVal);
-	e.emit_param("INT Value", "%d", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}

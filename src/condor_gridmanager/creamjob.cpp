@@ -58,6 +58,10 @@
 #define GM_CLEANUP				18
 #define GM_SET_LEASE			19
 #define GM_RECOVER_POLL			20
+#define GM_STAGE_IN				21
+#define GM_STAGE_OUT			22
+#define GM_EXTEND_LIFETIME_STAGE_IN	23
+#define GM_EXTEND_LIFETIME_STAGE_OUT	24
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -81,6 +85,10 @@ static const char *GMStateNames[] = {
 	"GM_CLEANUP",
 	"GM_SET_LEASE",
 	"GM_RECOVER_POLL",
+	"GM_STAGE_IN",
+	"GM_STAGE_OUT",
+	"GM_EXTEND_LIFETIME_STAGE_IN",
+	"GM_EXTEND_LIFETIME_STAGE_OUT",
 };
 
 #define CREAM_JOB_STATE_UNSET			""
@@ -98,6 +106,7 @@ static const char *GMStateNames[] = {
 #define CREAM_JOB_STATE_PURGED			"PURGED"
 
 const char *ATTR_CREAM_UPLOAD_URL = "CreamUploadUrl";
+const char *ATTR_CREAM_DOWNLOAD_URL = "CreamDownloadUrl";
 const char *ATTR_CREAM_DELEGATION_URI = "CreamDelegationUri";
 const char *ATTR_CREAM_LEASE_ID = "CreamLeaseId";
 
@@ -198,7 +207,6 @@ CreamJob::CreamJob( ClassAd *classad )
 	bool job_already_submitted = false;
 	std::string error_string = "";
 	char *gahp_path = NULL;
-	char *tmp = NULL;
 
 	creamAd = NULL;
 	remoteJobId = NULL;
@@ -222,12 +230,13 @@ CreamJob::CreamJob( ClassAd *classad )
 	myResource = NULL;
 	jobProxy = NULL;
 	uploadUrl = NULL;
+	downloadUrl = NULL;
 	gahp = NULL;
 	delegatedCredentialURI = NULL;
-	gridftpServer = NULL;
 	leaseId = NULL;
 	connectFailureCount = 0;
 	doActivePoll = false;
+	m_xfer_request = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -346,27 +355,6 @@ CreamJob::CreamJob( ClassAd *classad )
 		myResource->AlreadySubmitted( this );
 	}
 
-	buff[0] = '\0';
-	if ( job_already_submitted ) {
-		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
-	}
-
-/*
-	tmp = param( "GRIDFTP_URL_BASE" );
-	if ( !tmp ) {
-		error_string = "GRIDFTP_URL_BASE is not set in the configuration file";
-		goto error_exit;
-	}
-	free( tmp );
-*/
-
-	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy );
-
-		// TODO It would be nice to register only after going through
-		//   GM_CLEAR_REQUEST, so that a ATTR_GRIDFTP_URL_BASE from a
-		//   previous submission isn't requested here.
-	gridftpServer->RegisterClient( evaluateStateTid, buff[0] ? buff : NULL );
-
 	if ( job_already_submitted &&
 		 jobAd->LookupString( ATTR_CREAM_DELEGATION_URI, buff ) ) {
 
@@ -376,6 +364,7 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	if ( job_already_submitted ) {
 		jobAd->LookupString( ATTR_CREAM_UPLOAD_URL, &uploadUrl );
+		jobAd->LookupString( ATTR_CREAM_DOWNLOAD_URL, &downloadUrl );
 		jobAd->LookupString( ATTR_CREAM_LEASE_ID, &leaseId );
 	}
 
@@ -448,9 +437,6 @@ CreamJob::CreamJob( ClassAd *classad )
 
 CreamJob::~CreamJob()
 {
-	if ( gridftpServer ) {
-		gridftpServer->UnregisterClient( evaluateStateTid );
-	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 	}
@@ -487,7 +473,9 @@ CreamJob::~CreamJob()
 	if ( uploadUrl != NULL ) {
 		free( uploadUrl );
 	}
+	free( downloadUrl );
 	free( leaseId );
+	delete m_xfer_request;
 }
 
 void CreamJob::Reconfig()
@@ -648,12 +636,7 @@ void CreamJob::doEvaluateState()
 			} else if ( condorState == HELD ) {
 				gmState = GM_DELETE;
 				break;
-			} else if ( gridftpServer->GetErrorMessage() ) {
-				errorString = gridftpServer->GetErrorMessage();
-				gmState = GM_HOLD;
-				break;
-			} else if ( gridftpServer->GetUrlBase() ) {
-				jobAd->Assign( ATTR_GRIDFTP_URL_BASE, gridftpServer->GetUrlBase() );
+			} else {
 				gmState = GM_DELEGATE_PROXY;
 			}
 		} break;
@@ -815,8 +798,9 @@ void CreamJob::doEvaluateState()
 					SetRemoteJobId( job_id );
 					free( job_id );
 					uploadUrl = upload_url;
-					free( download_url );
 					jobAd->Assign( ATTR_CREAM_UPLOAD_URL, uploadUrl );
+					downloadUrl = download_url;
+					jobAd->Assign( ATTR_CREAM_DOWNLOAD_URL, downloadUrl );
 					gmState = GM_SUBMIT_SAVE;				
 					
 					UpdateJobLeaseSent(jmLifetime);
@@ -855,9 +839,44 @@ void CreamJob::doEvaluateState()
 					requestScheddUpdate( this, true );
 					break;
 				}
-				gmState = GM_SUBMIT_COMMIT;
+				gmState = GM_STAGE_IN;
 			}
 			} break;
+		case GM_STAGE_IN: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				delete m_xfer_request;
+				m_xfer_request = NULL;
+				gmState = GM_CANCEL;
+			} else {
+				if ( m_xfer_request == NULL ) {
+					m_xfer_request = MakeStageInRequest();
+				}
+				if ( m_xfer_request->m_status == TransferRequest::TransferDone ) {
+					delete m_xfer_request;
+					m_xfer_request = NULL;
+					gmState = GM_SUBMIT_COMMIT;
+				} else if ( m_xfer_request->m_status == TransferRequest::TransferFailed ) {
+					dprintf( D_ALWAYS, "(%d.%d) Stage-in failed: %s\n",
+							 procID.cluster, procID.proc,
+							 m_xfer_request->m_errMsg.c_str() );
+					gahpErrorString = m_xfer_request->m_errMsg;
+					delete m_xfer_request;
+					m_xfer_request = NULL;
+					gmState = GM_CLEAR_REQUEST;
+				}
+
+				int new_lease;	// CalculateJobLease needs an int
+				time_t renew_time;
+				if ( CalculateJobLease( jobAd, new_lease,
+										DEFAULT_LEASE_DURATION,
+										&renew_time ) ) {
+					jmLifetime = new_lease;
+					gmState = GM_EXTEND_LIFETIME_STAGE_IN;
+					break;
+				}
+				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
+			}
+		} break;
 		case GM_SUBMIT_COMMIT: {
 			// Now that we've saved the job id, tell cream it can start
 			if ( condorState == REMOVED || condorState == HELD ) {
@@ -890,27 +909,12 @@ void CreamJob::doEvaluateState()
 			// jobmanager). Wait for completion or failure, and probe the
 			// jobmanager occassionally to make it's still alive.
 			if ( remoteState == CREAM_JOB_STATE_DONE_OK ) {
-				gmState = GM_DONE_SAVE;
+				gmState = GM_STAGE_OUT;
 			} else if ( remoteState == CREAM_JOB_STATE_DONE_FAILED || remoteState == CREAM_JOB_STATE_ABORTED ) {
 				gmState = GM_PURGE;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-					// Check that our gridftp server is healthy
-				if ( gridftpServer->GetErrorMessage() ) {
-					errorString = gridftpServer->GetErrorMessage();
-					gmState = GM_HOLD;
-					break;
-				}
-				MyString url_base;
-				jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, url_base );
-				if ( gridftpServer->GetUrlBase() &&
-					 strcmp( url_base.Value(),
-							 gridftpServer->GetUrlBase() ) ) {
-					gmState = GM_CANCEL;
-					break;
-				}
-
 				int new_lease;	// CalculateJobLease needs an int
 				time_t renew_time;
 				if ( CalculateJobLease( jobAd, new_lease,
@@ -934,6 +938,8 @@ void CreamJob::doEvaluateState()
 				
 			}
 			} break;
+		case GM_EXTEND_LIFETIME_STAGE_IN:
+		case GM_EXTEND_LIFETIME_STAGE_OUT:
 		case GM_EXTEND_LIFETIME: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
@@ -961,7 +967,13 @@ void CreamJob::doEvaluateState()
 				jmLifetime = server_lease;
 
 				UpdateJobLeaseSent( jmLifetime );
-				gmState = GM_SUBMITTED;
+				if ( gmState == GM_EXTEND_LIFETIME_STAGE_IN ) {
+					gmState = GM_STAGE_IN;
+				} else if ( gmState == GM_EXTEND_LIFETIME_STAGE_OUT ) {
+					gmState = GM_STAGE_OUT;
+				} else {
+					gmState = GM_SUBMITTED;
+				}
 			}
 			} break;
 		case GM_POLL_JOB_STATE: {
@@ -1023,6 +1035,42 @@ void CreamJob::doEvaluateState()
 				gmState = GM_SUBMITTED;
 			}
 			} break;
+		case GM_STAGE_OUT: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				delete m_xfer_request;
+				m_xfer_request = NULL;
+				gmState = GM_CANCEL;
+			} else {
+				if ( m_xfer_request == NULL ) {
+					m_xfer_request = MakeStageOutRequest();
+				}
+				// TODO: Add check for job lease renewal
+				if ( m_xfer_request->m_status == TransferRequest::TransferDone ) {
+					delete m_xfer_request;
+					m_xfer_request = NULL;
+					gmState = GM_DONE_SAVE;
+				} else if ( m_xfer_request->m_status == TransferRequest::TransferFailed ) {
+					dprintf( D_ALWAYS, "(%d.%d) Stage-out failed: %s\n",
+							 procID.cluster, procID.proc,
+							 m_xfer_request->m_errMsg.c_str() );
+					gahpErrorString = m_xfer_request->m_errMsg;
+					delete m_xfer_request;
+					m_xfer_request = NULL;
+					gmState = GM_CLEAR_REQUEST;
+				}
+
+				int new_lease;	// CalculateJobLease needs an int
+				time_t renew_time;
+				if ( CalculateJobLease( jobAd, new_lease,
+										DEFAULT_LEASE_DURATION,
+										&renew_time ) ) {
+					jmLifetime = new_lease;
+					gmState = GM_EXTEND_LIFETIME_STAGE_OUT;
+					break;
+				}
+				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
+			}
+		} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
 			JobTerminated();
@@ -1261,10 +1309,8 @@ void CreamJob::doEvaluateState()
 					evictLogged = true;
 				}
 			}
-			MyString val;
-			if ( jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, val ) ) {
-				jobAd->AssignExpr( ATTR_GRIDFTP_URL_BASE, "Undefined" );
-			}
+			delete m_xfer_request;
+			m_xfer_request = NULL;
 			
 			if ( wantRematch ) {
 				dprintf(D_ALWAYS,
@@ -1510,7 +1556,6 @@ char *CreamJob::buildSubmitAd()
 	const char *ATTR_STD_ERROR = "StdError";
 	const char *ATTR_INPUT_SB = "InputSandbox";
 	const char *ATTR_OUTPUT_SB = "OutputSandbox";
-	const char *ATTR_OUTPUT_SB_DEST_URI = "OutputSandboxDestURI";
 	const char *ATTR_VIR_ORG = "VirtualOrganization";
 	const char *ATTR_BATCH_SYSTEM = "BatchSystem";
 	const char *ATTR_QUEUE_NAME = "QueueName";
@@ -1521,10 +1566,8 @@ char *CreamJob::buildSubmitAd()
 	MyString tmp_str2 = "";
 	MyString buf = "";
 	MyString iwd_str = "";
-	MyString gridftp_url = "";
 	StringList isb;
 	StringList osb;
-	StringList osb_url;
 	bool result;
 
 		// Once we add streaming support, remove this
@@ -1544,38 +1587,21 @@ char *CreamJob::buildSubmitAd()
 		iwd_str = '/';
 	}
 	
-		//Gridftp server to use with CREAM
-	if(!jobAd->LookupString(ATTR_GRIDFTP_URL_BASE, gridftp_url)){
-		errorString.sprintf( "%s not defined", ATTR_GRIDFTP_URL_BASE );
-		return NULL;
-	}
-	
-		//EXECUTABLE can either be STAGED or TRANSFERED
+		//EXECUTABLE can either be PRE-STAGED or TRANSFERED
+		//here, JOB_CMD = full path to executable
 	result = true;
+	jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
 	jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, result);
-	if (result) { //TRANSFERED
-		
-			//here, JOB_CMD = full path to executable
-		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
-		tmp_str2 = gridftp_url + tmp_str;
-		if ( gridftpServer->UseSelfCred() ) {
-			tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
-		}
-		isb.insert(tmp_str2.Value());
+	if (result) {
+		//TRANSFERED
+		tmp_str2 = condor_basename( tmp_str.Value() );
 
-			//get simple filename
-		StringList strlist(tmp_str.Value(), "/");
-		strlist.rewind();
-		for(int i = 0; i < strlist.number(); i++) 
-			tmp_str = strlist.next();
+		isb.insert( tmp_str2.Value() );
 
-		buf.sprintf("%s = \"%s\"", ATTR_EXECUTABLE, tmp_str.Value());
-		submitAd.Insert(buf.Value());
-	}
-	else { //STAGED
-		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
-		buf.sprintf("%s = \"%s\"", ATTR_EXECUTABLE, tmp_str.Value());
-		submitAd.Insert(buf.Value());
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str2.Value() );
+	} else {
+		//PRE-STAGED
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str.Value() );
 	}
 
 		//ARGUMENTS
@@ -1584,39 +1610,22 @@ char *CreamJob::buildSubmitAd()
 		submitAd.Insert(buf.Value());
 	}
 	
-		//STDINPUT can be either be STAGED or TRANSFERED
+		//STDINPUT can be either be PRE-STAGED or TRANSFERED
 	result = true;
 	jobAd->LookupBool(ATTR_TRANSFER_INPUT, result);
-	if (result) { //TRANSFERED
-		
-		if (jobAd->LookupString(ATTR_JOB_INPUT, tmp_str)) {
-
-			if (tmp_str[0] != '/')  //not absolute path
-				tmp_str2 = gridftp_url + iwd_str + tmp_str;
-			else 
-				tmp_str2 = gridftp_url + tmp_str;
-
-			if ( gridftpServer->UseSelfCred() ) {
-				tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
-			}
-
-			isb.insert(tmp_str2.Value());
+	jobAd->LookupString(ATTR_JOB_INPUT, tmp_str);
+	if ( !tmp_str.IsEmpty() ) {
+		if (result) {
+			//TRANSFERED
+			tmp_str2 = condor_basename( tmp_str.Value() );
+			isb.insert(condor_basename( tmp_str2.Value() ) );
 			
-				//get simple filename
-			StringList strlist(tmp_str.Value(), "/");
-			strlist.rewind();
-			for(int i = 0; i < strlist.number(); i++) 
-				tmp_str = strlist.next();
-		}
-			buf.sprintf("%s = \"%s\"", ATTR_STD_INPUT, tmp_str.Value());
-			submitAd.Insert(buf.Value());
-	}
-	else { //STAGED. Be careful, if stdin is not found in WN, job will not
-			//complete successfully.
-		if (jobAd->LookupString(ATTR_JOB_INPUT, tmp_str)) {
-			if (tmp_str[0] == '/') { //Only add absolute path
-				buf.sprintf("%s = \"%s\"", ATTR_STD_INPUT, tmp_str.Value());
-				submitAd.Insert(buf.Value());
+			submitAd.Assign( ATTR_STD_INPUT, tmp_str2.Value() );
+		} else {
+			//PRE-STAGED. Be careful, if stdin is not found in WN, job
+			// will not complete successfully.
+			if ( tmp_str[0] == '/' ) { //Only add absolute path
+				submitAd.Assign( ATTR_STD_INPUT, tmp_str.Value() );
 			}
 		}
 	}
@@ -1629,49 +1638,19 @@ char *CreamJob::buildSubmitAd()
 		for (int i = 0; i < strlist.number(); i++) {
 			tmp_str = strlist.next();
 
-			if (tmp_str[0] != '/')  //not absolute path
-				tmp_str2 = gridftp_url + iwd_str + tmp_str;
-			else 
-				tmp_str2 = gridftp_url + tmp_str;
-
-			if ( gridftpServer->UseSelfCred() ) {
-				tmp_str2.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
-			}
-
-			isb.insert(tmp_str2.Value());
+			isb.insert( condor_basename( tmp_str.Value() ) );
 		}
 	}
 
 		//TRANSFER OUTPUT FILES: handle absolute ?
 	if (jobAd->LookupString(ATTR_TRANSFER_OUTPUT_FILES, tmp_str)) {
 		char *filename;
-		char *remaps = NULL;
-		MyString new_name;
-		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
-
 		StringList output_files(tmp_str.Value());
 		output_files.rewind();
 		while ( (filename = output_files.next()) != NULL ) {
 
 			osb.insert( filename );
-
-			if ( remaps && filename_remap_find( remaps, filename,
-												new_name ) ) {
-				buf.sprintf( "%s%s%s", gridftp_url.Value(),
-							 new_name[0] == '/' ? "" : iwd_str.Value(),
-							 new_name.Value() );
-			} else {
-				buf.sprintf( "%s%s%s", gridftp_url.Value(),
-							 iwd_str.Value(),
-							 condor_basename( filename ) );
-			}
-			if ( gridftpServer->UseSelfCred() ) {
-				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
-			}
-			osb_url.insert( buf.Value() );
 		}
-
-		free( remaps );
 	}
 	
 		//STDOUTPUT TODO: handle absolute ?
@@ -1681,24 +1660,12 @@ char *CreamJob::buildSubmitAd()
 		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, result);
 
 		if (result) {
-			buf.sprintf("%s = \"%s\"", ATTR_STD_OUTPUT,
-						condor_basename(tmp_str.Value()));
-			submitAd.Insert(buf.Value());
+			tmp_str2 = condor_basename( tmp_str.Value() );
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str2.Value() );
 
-			osb.insert(condor_basename(tmp_str.Value()));
-
-			buf.sprintf("%s%s%s", gridftp_url.Value(),
-						tmp_str[0] == '/' ? "" : iwd_str.Value(),
-						tmp_str.Value());
-
-			if ( gridftpServer->UseSelfCred() ) {
-				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
-			}
-
-			osb_url.insert(buf.Value());
+			osb.insert( condor_basename( tmp_str2.Value() ) );
 		} else {
-			buf.sprintf("%s = \"%s\"", ATTR_STD_OUTPUT, tmp_str.Value());
-			submitAd.Insert(buf.Value());
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str.Value() );
 		}
 	}
 
@@ -1709,24 +1676,12 @@ char *CreamJob::buildSubmitAd()
 		jobAd->LookupBool(ATTR_TRANSFER_ERROR, result);
 
 		if (result) {
-			buf.sprintf("%s = \"%s\"", ATTR_STD_ERROR,
-						condor_basename(tmp_str.Value()));
-			submitAd.Insert(buf.Value());
+			tmp_str2 = condor_basename( tmp_str.Value() );
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str2.Value() );
 
-			osb.insert(condor_basename(tmp_str.Value()));
-
-			buf.sprintf("%s%s%s", gridftp_url.Value(),
-						tmp_str[0] == '/' ? "" : iwd_str.Value(),
-						tmp_str.Value());
-
-			if ( gridftpServer->UseSelfCred() ) {
-				buf.sprintf_cat( "?DN=%s", jobProxy->subject->subject_name );
-			}
-
-			osb_url.insert(buf.Value());
+			osb.insert( condor_basename( tmp_str2.Value() ) );
 		} else {
-			buf.sprintf("%s = \"%s\"", ATTR_STD_ERROR, tmp_str.Value());
-			submitAd.Insert(buf.Value());
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str.Value() );
 		}
 	}
 
@@ -1745,7 +1700,8 @@ char *CreamJob::buildSubmitAd()
 		//QUEUENAME
 	buf.sprintf("%s = \"%s\"", ATTR_QUEUE_NAME, resourceQueueString);
 	submitAd.Insert(buf.Value());
-	
+
+	submitAd.Assign("outputsandboxbasedesturi", "gsiftp://localhost");
 
 	MyString ad_string;
 
@@ -1783,22 +1739,6 @@ char *CreamJob::buildSubmitAd()
 				buf.sprintf_cat("\"%s\"", osb.next());
 			else
 				buf.sprintf_cat(",\"%s\"", osb.next());
-		}
-		buf.sprintf_cat("}; ]");
-
-		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.Value(), insert_pos );
-	}
-
-		//OUTPUT SANDBOX DEST URI
-	if (osb_url.number() > 0) {
-		buf.sprintf("%s = {", ATTR_OUTPUT_SB_DEST_URI);
-		osb_url.rewind();
-		for (int i = 0; i < osb_url.number(); i++) {
-			if (i == 0)
-				buf.sprintf_cat("\"%s\"", osb_url.next());
-			else
-				buf.sprintf_cat(",\"%s\"", osb_url.next());
 		}
 		buf.sprintf_cat("}; ]");
 
@@ -1869,4 +1809,168 @@ MyString CreamJob::getFullJobId(const char * resourceManager, const char * job_i
 	MyString full_job_id;
 	full_job_id.sprintf( "cream %s %s", resourceManager, job_id );
 	return full_job_id;
+}
+
+TransferRequest *CreamJob::MakeStageInRequest()
+{
+	MyString tmp_str = "";
+	MyString tmp_str2 = "";
+	MyString iwd_str = "";
+	StringList local_urls;
+	StringList remote_urls;
+	bool result;
+
+	if ( jobAd->LookupString(ATTR_JOB_IWD, tmp_str) ) {
+		int len = tmp_str.Length();
+		if ( len > 1 && tmp_str[len - 1] != '/' ) {
+			tmp_str += '/';
+		}
+		iwd_str = "file://" + tmp_str;
+	} else {
+		iwd_str = "file:///";
+	}
+
+	result = true;
+	jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, result);
+	if (result) {
+			//here, JOB_CMD = full path to executable
+		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
+		tmp_str2 = "file://" + tmp_str;
+		local_urls.insert(tmp_str2.Value());
+
+		sprintf( tmp_str2, "%s/%s", uploadUrl,
+				 condor_basename( tmp_str.Value() ) );
+		remote_urls.insert( tmp_str2.Value() );
+	}
+
+	result = true;
+	jobAd->LookupBool(ATTR_TRANSFER_INPUT, result);
+	if (result) { //TRANSFERED
+
+		if (jobAd->LookupString(ATTR_JOB_INPUT, tmp_str)) {
+
+			if (tmp_str[0] != '/')  //not absolute path
+				tmp_str2 = iwd_str + tmp_str;
+			else 
+				tmp_str2 = "file://" + tmp_str;
+
+			local_urls.insert( tmp_str2.Value() );
+
+			sprintf( tmp_str2, "%s/%s", uploadUrl,
+					 condor_basename( tmp_str.Value() ) );
+			remote_urls.insert( tmp_str2.Value() );
+		}
+	}
+
+	if (jobAd->LookupString(ATTR_TRANSFER_INPUT_FILES, tmp_str)) {
+		StringList strlist(tmp_str.Value());
+		strlist.rewind();
+
+		for (int i = 0; i < strlist.number(); i++) {
+			tmp_str = strlist.next();
+
+			if (tmp_str[0] != '/')  //not absolute path
+				tmp_str2 = iwd_str + tmp_str;
+			else 
+				tmp_str2 = "file://" + tmp_str;
+
+			local_urls.insert( tmp_str2.Value() );
+
+			sprintf( tmp_str2, "%s/%s", uploadUrl,
+					 condor_basename( tmp_str.Value() ) );
+			remote_urls.insert( tmp_str2.Value() );
+		}
+	}
+
+	return new TransferRequest( jobProxy, local_urls, remote_urls,
+								evaluateStateTid );
+}
+
+TransferRequest *CreamJob::MakeStageOutRequest()
+{
+	StringList remote_urls;
+	StringList local_urls;
+	MyString tmp_str;
+	MyString buf;
+	MyString iwd_str = "";
+	bool result;
+
+	if ( jobAd->LookupString( ATTR_JOB_IWD, tmp_str ) ) {
+		int len = tmp_str.Length();
+		if ( len > 1 && tmp_str[len - 1] != '/' ) {
+			tmp_str += '/';
+		}
+		iwd_str = "file://" + tmp_str;
+	} else {
+		iwd_str = "file:///";
+	}
+
+	if ( jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tmp_str ) ) {
+		char *filename;
+		char *remaps = NULL;
+		MyString new_name;
+		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
+
+		StringList output_files(tmp_str.Value());
+		output_files.rewind();
+		while ( (filename = output_files.next()) != NULL ) {
+
+			sprintf( buf, "%s/%s", downloadUrl, filename );
+			remote_urls.insert( buf.Value() );
+
+			if ( remaps && filename_remap_find( remaps, filename,
+												new_name ) ) {
+				sprintf( buf, "%s%s",
+						 new_name[0] == '/' ? "file://" : iwd_str.Value(),
+						 new_name.Value() );
+			} else {
+				sprintf( buf, "%s%s",
+						 iwd_str.Value(),
+						 condor_basename( filename ) );
+			}
+			local_urls.insert( buf.Value() );
+		}
+
+		free( remaps );
+	}
+
+	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, tmp_str ) ) {
+
+		result = true;
+		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, result);
+
+		if (result) {
+			sprintf( buf, "%s/%s", downloadUrl,
+					 condor_basename( tmp_str.Value() ) );
+			remote_urls.insert( buf.Value() );
+
+			sprintf( buf, "%s%s",
+					 tmp_str[0] == '/' ? "file://" : iwd_str.Value(),
+					 tmp_str.Value());
+
+			local_urls.insert( buf.Value() );
+		}
+	}
+
+		//STDERROR TODO: handle absolute ?
+	if ( jobAd->LookupString( ATTR_JOB_ERROR, tmp_str ) ) {
+
+		result = true;
+		jobAd->LookupBool( ATTR_TRANSFER_ERROR, result );
+
+		if ( result ) {
+			sprintf( buf, "%s/%s", downloadUrl,
+					 condor_basename( tmp_str.Value() ) );
+			remote_urls.insert( buf.Value() );
+
+			sprintf( buf, "%s%s",
+					 tmp_str[0] == '/' ? "file://" : iwd_str.Value(),
+					 tmp_str.Value() );
+
+			local_urls.insert( buf.Value() );
+		}
+	}
+
+	return new TransferRequest( jobProxy, remote_urls, local_urls,
+								evaluateStateTid );
 }

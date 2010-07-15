@@ -246,6 +246,10 @@ start() {
         "$CONDOR_MASTER" -pidfile "$PIDFILE"
     else
         "$CONDOR_MASTER_WRAPPER"
+        if [ $? -ne 0 ]; then
+           echo " failed to start Condor via condor_master_wrapper."
+           return 1;
+        fi
     fi
     echo "done."
     return 0

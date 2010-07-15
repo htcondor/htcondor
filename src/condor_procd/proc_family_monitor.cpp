@@ -469,6 +469,7 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	usage->sys_cpu_time = 0;
 	usage->percent_cpu = 0.0;
 	usage->total_image_size = 0;
+    usage->total_resident_set_size = 0;
 	usage->num_procs = 0;
 	get_family_usage(tree, usage);
 

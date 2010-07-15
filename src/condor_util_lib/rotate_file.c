@@ -25,22 +25,55 @@
 int
 rotate_file(const char *old_filename, const char *new_filename)
 {
+	return rotate_file_dprintf(old_filename, new_filename, 0);
+}
+
+int
+rotate_file_dprintf(const char *old_filename, const char *new_filename, int calledByDprintf)
+{
 #if defined(WIN32)
 	/* We must use MoveFileEx on NT because rename can not overwrite
 	   an existing file. */
+	DWORD err;
+	
 	if (MoveFileEx(old_filename, new_filename,
 				   MOVEFILE_COPY_ALLOWED |
                    MOVEFILE_REPLACE_EXISTING |
                    MOVEFILE_WRITE_THROUGH) == 0) {
-		DWORD err = GetLastError();
-		dprintf(D_ALWAYS, "MoveFileEx(%s,%s) failed with error %d\n",
-				old_filename, new_filename, err);
+		
+		if (calledByDprintf == 0) {
+			err = GetLastError();
+			dprintf(D_ALWAYS, "MoveFileEx(%s,%s) failed with error %d\n",
+					old_filename, new_filename, err);
+		} else {
+			// we are called by dprintf, therefore retry.
+			Sleep(500);
+			if (MoveFileEx(old_filename, new_filename,
+				   MOVEFILE_COPY_ALLOWED |
+                   MOVEFILE_REPLACE_EXISTING |
+				   MOVEFILE_WRITE_THROUGH) == 0) {
+					   if (CopyFile(old_filename, new_filename, 0) == 0) {
+							return (int)GetLastError();
+					   } else {
+							return -2; // copy succeeded but old file still there.
+					   }
+			   // we succeeded on second try.
+			} else {
+				return 0;
+			}
+			
+		}
+			
 		return -1;
 	}
 #else
 	if (rename(old_filename, new_filename) < 0) {
-		dprintf(D_ALWAYS, "rename(%s, %s) failed with errno %d\n",
-				old_filename, new_filename, errno);
+		if (calledByDprintf == 0) {
+			dprintf(D_ALWAYS, "rename(%s, %s) failed with errno %d\n",
+					old_filename, new_filename, errno);
+		} else {
+			return errno; // return errno if called by dprintf
+		}
 		return -1;
 	}
 #endif

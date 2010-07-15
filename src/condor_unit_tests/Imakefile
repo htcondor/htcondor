@@ -10,7 +10,8 @@ OBJ = FTEST_string_to_sin.o FTEST_sin_to_string.o FTEST_getHostFromAddr.o \
 	  FTEST_string_to_hostname.o FTEST_string_to_ip.o OTEST_HashTable.o \
 	  FTEST_strupr.o FTEST_strlwr.o FTEST_basename.o FTEST_dirname.o \
 	  FTEST_fullpath.o OTEST_MyString.o FTEST_flatten_and_inline.o \
-	  OTEST_StringList.o FTEST_stl_string_utils.o OTEST_Old_Classads.o
+	  OTEST_StringList.o FTEST_stl_string_utils.o OTEST_Old_Classads.o \
+	  OTEST_Env.o
 
 UNIT_TEST_DEPENDENCY_OBJ = emit.o function_test_driver.o unit_tests.o \
 	unit_test_utils.o 

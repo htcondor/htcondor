@@ -208,10 +208,11 @@ move $PREFIX/sql				/usr/share/condor/sql
 move $PREFIX/src				/usr/src
 
 
-#Create RUN LOG LOCK 
+#Create RUN LOG LOCK CONFIG.D
 mkdir -p -m0755 $DEB_ROOT/var/run/condor
 mkdir -p -m0755 $DEB_ROOT/var/log/condor
 mkdir -p -m0755 $DEB_ROOT/var/lock/condor
+mkdir -p -m0755 $DEB_ROOT/etc/condor/config.d
 
 #Put the rest into documentation
 move $PREFIX				/usr/share/doc/condor

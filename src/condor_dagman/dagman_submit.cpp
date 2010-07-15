@@ -50,7 +50,9 @@ typedef bool (* parse_submit_fnc)( const char *buffer, int &jobProcCount,
 static bool
 parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
 {
-  if ( 2 != sscanf( buffer, "%d job(s) submitted to cluster %d",
+  // The initial space is to make the sscanf match zero or more leading
+  // whitespace that may exist in the buffer.
+  if ( 2 != sscanf( buffer, " %d job(s) submitted to cluster %d",
   			&jobProcCount, &cluster) ) {
 	debug_printf( DEBUG_QUIET, "ERROR: parse_condor_submit failed:\n\t%s\n",
 				buffer );
@@ -72,7 +74,9 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
 static bool
 parse_stork_submit( const char *buffer, int &jobProcCount, int &cluster )
 {
-  if ( 1 != sscanf( buffer, "Request assigned id: %d", &cluster) ) {
+  // The initial space is to make the sscanf match zero or more leading
+  // whitespace that may exist in the buffer.
+  if ( 1 != sscanf( buffer, " Request assigned id: %d", &cluster) ) {
 	debug_printf( DEBUG_QUIET, "ERROR: parse_stork_submit failed:\n\t%s\n",
 				buffer );
     return false;
@@ -146,11 +150,13 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 
   MyString  command_output("");
   MyString keyLine("");
-  while (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) != EOF) {
-	debug_printf(DEBUG_VERBOSE, "From submit: %s\n", buffer);
-	command_output += buffer;
+  while (fgets(buffer, UTIL_MAX_LINE_LENGTH, fp)) {
+    MyString buf_line = buffer;
+	buf_line.chomp();
+	debug_printf(DEBUG_VERBOSE, "From submit: %s\n", buf_line.Value());
+	command_output += buf_line;
     if (strstr(buffer, marker) != NULL) {
-	  keyLine = buffer;
+	  keyLine = buf_line;
 	}
   }
 

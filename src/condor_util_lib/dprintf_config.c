@@ -39,6 +39,7 @@ int		Termlog = 0;
 extern int		DebugFlags;
 extern FILE		*DebugFP;
 extern uint64_t		MaxLog[D_NUMLEVELS+1];
+extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern char		*_condor_DebugFlagNames[];
@@ -183,10 +184,19 @@ dprintf_config( const char *subsys )
 					} 
 					free(pval);
 				}
+
+				if (debug_level == 0) {
+					(void)sprintf(pname, "%s_LOCK", subsys);
+					if (DebugLock) {
+						free(DebugLock);
+					}
+					DebugLock = param(pname);
+				}
+
 				if( first_time && want_truncate ) {
-					DebugFP = open_debug_file(debug_level, "w");
+					DebugFP = debug_lock(debug_level, "w");
 				} else {
-					DebugFP = open_debug_file(debug_level, "a");
+					DebugFP = debug_lock(debug_level, "a");
 				}
 
 				if( DebugFP == NULL && debug_level == 0 ) {
@@ -194,7 +204,7 @@ dprintf_config( const char *subsys )
 						   DebugFile[debug_level]);
 				}
 
-				if (DebugFP) (void)fclose( DebugFP );
+				if (DebugFP) (void)debug_unlock( debug_level );
 				DebugFP = (FILE *)0;
 
 				if (debug_level == 0) {
@@ -210,13 +220,19 @@ dprintf_config( const char *subsys )
 				} else {
 					MaxLog[debug_level] = 1024*1024;
 				}
-
+				
 				if (debug_level == 0) {
-					(void)sprintf(pname, "%s_LOCK", subsys);
-					if (DebugLock) {
-						free(DebugLock);
-					}
-					DebugLock = param(pname);
+					(void)sprintf(pname, "MAX_NUM_%s_LOG", subsys);
+				} else {
+					(void)sprintf(pname, "MAX_NUM_%s_%s_LOG", subsys,
+								  _condor_DebugFlagNames[debug_level-1]+2);
+				}
+				pval = param(pname);
+				if (pval != NULL) {
+					MaxLogNum[debug_level] = atoi(pval);
+					free(pval);
+				} else {
+					MaxLogNum[debug_level] = 1;
 				}
 			}
 		}
