@@ -73,10 +73,11 @@ disables Chirp remote file access from execute machines.
 % gittrac 487
 \item
   Fixed a bug where if a user job using file transfer with
-  \Attr{transfer\_output\_files} and \Expr{ON\_EVICT\_OR\_EXIT} fails
-  to produce all of the specified files and exits (suppose when core
-  dumping due to a fault) then the stdout, stderr, and core file of the
-  job weren't brought back.
+  \SubmitCmd{transfer\_output\_files} and \SubmitCmd{when\_to\_transfer\_output}
+  is set to \Expr{ON\_EXIT\_OR\_EVICT} fails
+  to produce all of the specified files and exit, as when core
+  dumping due to a fault, then the stdout, stderr, and core file of the
+  job were not transferred back to the submitting machine.
 
 \item
   Fixed numerous, small, rare memory leaks.
