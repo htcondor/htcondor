@@ -137,7 +137,7 @@ StarterHookMgr::tryHookPrepareJob()
 
 	HookClient* hook_client = new HookPrepareJobClient(m_hook_prepare_job);
 
-	if (!spawn(hook_client, NULL, &hook_stdin)) {
+	if (!spawn(hook_client, NULL, &hook_stdin, PRIV_USER_FINAL)) {
 		MyString err_msg;
 		err_msg.sprintf("failed to execute HOOK_PREPARE_JOB (%s)",
 						m_hook_prepare_job);
