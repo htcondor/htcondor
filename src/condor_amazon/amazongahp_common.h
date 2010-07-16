@@ -57,7 +57,7 @@ bool executeWorkerFunc(const char* cmd, char **argv, int argc, MyString &output_
 int parse_gahp_command (const char* raw, Gahp_Args* args);
 
 bool check_read_access_file(const char *file);
-bool check_create_file(const char *file);
+bool check_create_file(const char *file, mode_t mode);
 
 int get_int (const char *, int *);
 int get_ulong (const char *, unsigned long *);
