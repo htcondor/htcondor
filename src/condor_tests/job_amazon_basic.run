@@ -102,15 +102,15 @@ if ( $ec2_sim_pid == 0 ) {
 
 CondorTest::debug("Starting personal condor\n",$debuglevel);
 
-# Modify our config file suffix to include port of ec2_sim
-open(CFGSRC,"<x_amazon_configpostsrc.template") || die "Could not open x_amazon_configpostsrc.template: $!\n";
-open(CFGDST,">x_amazon_configpostsrc") || die "Could not open x_amazon_configpostsrc: $!\n";
-while(<CFGSRC>) {
+# Modify our submit file to include port of ec2_sim
+open(CMDSRC,"<job_amazon_basic.template") || die "Could not open job_amazon_basic.template: $!\n";
+open(CMDDST,">job_amazon_basic.cmd") || die "Could not open job_amazon_basic.cmd: $!\n";
+while(<CMDSRC>) {
 	s/xxxxxx/$ec2_sim_port/g;
-	print CFGDST $_;
+	print CMDDST $_;
 }
-close(CFGSRC);
-close(CFGDST);
+close(CMDSRC);
+close(CMDDST);
 
 print "Start up a configured personal condor pool - ";
 # get a local scheduler running (side a)
