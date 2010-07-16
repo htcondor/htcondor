@@ -405,7 +405,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 1);
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 4);
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
@@ -2624,7 +2624,7 @@ DaemonCore::reconfig(void) {
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
 
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 1);
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 4);
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
