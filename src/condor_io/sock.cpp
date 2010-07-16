@@ -255,14 +255,10 @@ int Sock::assign(
 			ASSERT(0);
 	}
 
-	_sock = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
+	int socket_fd = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
 					  FROM_PROTOCOL_INFO, pProtoInfo, 0, 0);
 
-	if ( _sock == INVALID_SOCKET )
-		return FALSE;
-
-	_state = sock_assigned;
-	return TRUE;
+	return assign( socket_fd );
 }
 #endif
 
