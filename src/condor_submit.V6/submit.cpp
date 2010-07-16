@@ -5870,6 +5870,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_arch = false;
 	bool	checks_disk = false;
 	bool	checks_mem = false;
+	bool	checks_reqmem = false;
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
@@ -5981,7 +5982,13 @@ check_requirements( char const *orig, MyString &answer )
 					// Must be VirtualMemory, keep searching...
 				continue;
 			}
-				// If it wasn't an 'l', we must have found it...
+				// If it wasn't 't', we must have found it...
+			if( *(aptr-1) == 't' || *(aptr-1) == 'T' ) {
+					// Must be RequestMemory, keep searching...
+				checks_reqmem = true;
+				continue;
+			}	
+		
 			checks_mem = true;
 			break;
 		}
@@ -6068,7 +6075,10 @@ check_requirements( char const *orig, MyString &answer )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 		if ( !checks_mem ) {
-			answer += " && ( ( (TARGET.Memory * 1024) >= ImageSize ) && ( ( RequestMemory * 1024 ) >= ImageSize ) )";
+			answer += " && ( (TARGET.Memory * 1024) >= ImageSize ) ";
+		}
+		if ( !checks_reqmem ) {
+			answer += " && ( ( RequestMemory * 1024 ) >= ImageSize ) ";
 		}
 	}
 
