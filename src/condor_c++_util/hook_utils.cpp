@@ -25,53 +25,59 @@
 #include "directory.h"
 
 
-char*
-validateHookPath( const char* hook_param )
+bool validateHookPath( const char* hook_param, char*& hpath )
 {
+    hpath = NULL;
 	char* tmp = param(hook_param);
-	if (tmp) {
-		StatInfo si(tmp);
-		if (si.Error() != SIGood) {
-			int si_errno = si.Errno();
-			dprintf(D_ALWAYS, "ERROR: invalid path specified for %s (%s): "
-					"stat() failed with errno %d (%s)\n",
-					hook_param, tmp, si_errno, strerror(si_errno));
-			free(tmp);
-			return NULL;
-		}
-#if !defined(WIN32)
-		mode_t mode = si.GetMode();
-		if (mode & S_IWOTH) {
-			dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
-					"is world-writable! Refusing to use.\n",
-					hook_param, tmp);
-			free(tmp);
-			return NULL;
-		}
-#endif
-		if (!si.IsExecutable()) {
-			dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
-					"is not executable.\n", hook_param, tmp);
-			free(tmp);
-			return NULL;
-		}
-			// TODO: forbid symlinks, too?
-		
-			// Now, make sure the parent directory isn't world-writable.
-#if !defined(WIN32)
-		StatInfo dir_si(si.DirPath());
-		mode_t dir_mode = dir_si.GetMode();
-		if (dir_mode & S_IWOTH) {
-			dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
-					"is a world-writable directory (%s)! Refusing to use.\n",
-					hook_param, tmp, si.DirPath());
-			free(tmp);
-			return NULL;
-		}
-#endif
+
+    // an undefined hook parameter is not an error
+    if (NULL == tmp) return true;
+
+	StatInfo si(tmp);
+	if (si.Error() != SIGood) {
+		int si_errno = si.Errno();
+		dprintf(D_ALWAYS, "ERROR: invalid path specified for %s (%s): "
+				"stat() failed with errno %d (%s)\n",
+				hook_param, tmp, si_errno, strerror(si_errno));
+		free(tmp);
+		return false;
 	}
 
-		// If we got this far, we've either got a valid hook or it
-		// wasn't defined. Either way, we can just return that directly.
-	return tmp;
+#if !defined(WIN32)
+	mode_t mode = si.GetMode();
+	if (mode & S_IWOTH) {
+		dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
+				"is world-writable! Refusing to use.\n",
+				hook_param, tmp);
+		free(tmp);
+		return false;
+	}
+#endif
+
+	if (!si.IsExecutable()) {
+		dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
+				"is not executable.\n", hook_param, tmp);
+		free(tmp);
+		return false;
+	}
+
+	// TODO: forbid symlinks, too?
+	
+	// Now, make sure the parent directory isn't world-writable.
+#if !defined(WIN32)
+	StatInfo dir_si(si.DirPath());
+	mode_t dir_mode = dir_si.GetMode();
+	if (dir_mode & S_IWOTH) {
+		dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
+				"is a world-writable directory (%s)! Refusing to use.\n",
+				hook_param, tmp, si.DirPath());
+		free(tmp);
+		return false;
+	}
+#endif
+
+    // If the hook parameter was defined and the path passes inspection,
+    // return with success.
+    hpath = tmp;
+	return true;
 }
