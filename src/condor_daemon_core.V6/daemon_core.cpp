@@ -1712,6 +1712,7 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 			     unsigned int psize)
 {
 	dprintf(D_DAEMONCORE,"Entering Create_Pipe()\n");
+#ifdef WIN32
 	static unsigned pipe_counter = 0;
 	MyString pipe_name;
 	pipe_name.sprintf("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
@@ -1722,6 +1723,16 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 		nonblocking_write,
 		psize,
 		pipe_name.Value());
+#else // unix
+	return Create_Named_Pipe(
+		pipe_ends,
+		can_register_read,
+		can_register_write,
+		nonblocking_read,
+		nonblocking_write,
+		psize,
+		NULL);
+#endif
 }
 
 int DaemonCore::Create_Named_Pipe( int *pipe_ends,
@@ -1732,7 +1743,7 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 			     unsigned int psize,
 				 const char* pipe_name)
 {
-	dprintf(D_DAEMONCORE,"Entering Create_Pipe()\n");
+	dprintf(D_DAEMONCORE,"Entering Create_Named_Pipe()\n");
 
 	PipeHandle read_handle, write_handle;
 
@@ -1778,6 +1789,11 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 	write_handle = new WritePipeEnd(w, overlapped_write_flag, nonblocking_write, psize);
 #else
 	// Unix
+	if( pipe_name ) {
+		EXCEPT("Create_NamedPipe() not implemented yet under unix!");
+	}
+		// what follows is the unix implementation of an unnamed pipe,
+		// which is what we do when pipe_name == NULL
 
 	// Shut the compiler up
 	// These parameters are needed on Windows
@@ -7118,7 +7134,7 @@ int DaemonCore::Create_Process(
 		if( !shared_port_endpoint.CreateListener() ) {
 			goto wrapup;
 		}
-dprintf(D_ALWAYS, "Created shared port for child.\n");
+
 		if( !shared_port_endpoint.ChownSocket(priv) ) {
 				// The child process will probably not be able to remove the
 				// named socket.  That's ok.  We'll try to clean up for
@@ -8713,7 +8729,7 @@ DaemonCore::Inherit( void )
 			ptmp += 11;
 			delete m_shared_port_endpoint;
 			m_shared_port_endpoint = new SharedPortEndpoint();
-			dprintf(D_ALWAYS, "Inheriting a shared port pipe.\n");
+			dprintf(D_DAEMONCORE, "Inheriting a shared port pipe.\n");
 			m_shared_port_endpoint->deserialize(ptmp);
 			ptmp=inherit_list.next();
 		}

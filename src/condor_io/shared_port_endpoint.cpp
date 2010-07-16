@@ -33,12 +33,17 @@
 // Check once that a method for passing fds has been enabled if we
 // are supposed to support shared ports.
 #ifdef HAVE_SHARED_PORT
-#ifndef WIN32
 #ifdef HAVE_SCM_RIGHTS_PASSFD
+#elif defined(WIN32)
 #else
 #error HAVE_SHARED_PORT is defined, but no method for passing fds is enabled.
 #endif
 #endif
+
+#ifdef WIN32
+// eventually, when the param table supports OS-specific defaults,
+// get rid of this and move it to the param table
+static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 #endif
 
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
@@ -88,6 +93,10 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	kill_thread = false;
 	thread_killed = INVALID_HANDLE_VALUE;
 
+	pipe_end = INVALID_HANDLE_VALUE;
+
+	thread_handle = INVALID_HANDLE_VALUE;
+
 	InitializeCriticalSection(&received_lock);
 	InitializeCriticalSection(&kill_lock);
 #endif
@@ -95,7 +104,7 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 
 SharedPortEndpoint::~SharedPortEndpoint()
 {
-	dprintf(D_ALWAYS, "SharedPortEndpoint: Inside destructor.\n");
+	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside destructor.\n");
 	StopListener();
 
 #ifdef WIN32
@@ -125,9 +134,13 @@ SharedPortEndpoint::InitAndReconfig()
 {
 	MyString socket_dir;
 
+#ifdef WIN32
+	socket_dir = WINDOWS_DAEMON_SOCKET_DIR;
+#else
 	if( !param(socket_dir,"DAEMON_SOCKET_DIR") ) {
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
 	}
+#endif
 	if( !m_listening ) {
 		m_socket_dir = socket_dir;
 	}
@@ -148,7 +161,7 @@ SharedPortEndpoint::StopListener()
 	On Windows we only need to close the pipe ends for the
 	two pipes we're using.
 	*/
-	dprintf(D_ALWAYS, "SharedPortEndpoint: Inside stop listener.\n");
+	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside stop listener.\n");
 	if( m_registered_listener )
 	{
 		bool tried = false;
@@ -227,7 +240,7 @@ SharedPortEndpoint::CreateListener()
 	return false;
 #elif WIN32
 	if( m_listening ) {
-		dprintf(D_ALWAYS, "Listener already created.\n");
+		dprintf(D_ALWAYS, "SharedPortEndpoint: listener already created.\n");
 		return true;
 	}
 
@@ -405,10 +418,11 @@ SharedPortEndpoint::StartListener()
 bool
 SharedPortEndpoint::StartListenerWin32()
 {
-	dprintf(D_ALWAYS, "SharedPortEndpoint: Entered StartListenerWin32.\n");
+	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Entered StartListenerWin32.\n");
 	if( m_registered_listener )
 		return true;
 
+	DWORD threadID;
 	thread_handle = CreateThread(NULL,
 		0,
 		InstanceThread,
@@ -419,7 +433,7 @@ SharedPortEndpoint::StartListenerWin32()
 	{
 		EXCEPT("SharedPortEndpoint: Failed to create listener thread: %d", GetLastError());
 	}
-	dprintf(D_DAEMONCORE, "SharedPortEndpoint: StartListenerWin32: Thread spun off, listening on pipes.\n");
+	dprintf(D_DAEMONCORE|D_FULLDEBUG, "SharedPortEndpoint: StartListenerWin32: Thread spun off, listening on pipes.\n");
 
 	kill_thread = false;
 
@@ -446,9 +460,12 @@ InstanceThread(void* instance)
 }
 
 /*
-DPRINTF IS COMMENTED OUT FOR A REASON!!!!!!
-IT ISN'T THREADSAFE!!!!!
-UNCOMMENT IF DPRINTF BECOMES THREADSAFE!!!!!!
+  The following function runs in its own thread.  We must therefore be
+  very careful about what we do here.  Much of condor code is not
+  thread-safe, so we cannot use it.
+
+  Unfortunately, we observed deadlocks when dprintf() was used in the
+  following function.  Therefore, dprintf is commented out.
 */
 void
 SharedPortEndpoint::PipeListenerThread()
@@ -510,7 +527,7 @@ SharedPortEndpoint::PipeListenerThread()
 			if(bytes < buffSize)
 			{
 //				dprintf(D_ALWAYS, "SharedPortEndpoint: Partial read: %d\n", bytes);
-				memcpy_s(storeBuff + (expected - buffSize), 1024, readBuff, bytes);
+				memcpy_s(storeBuff + (expected - buffSize), buffSize, readBuff, bytes);
 				total_received += bytes;
 				buffSize -= bytes;
 				delete [] readBuff;
@@ -525,8 +542,6 @@ SharedPortEndpoint::PipeListenerThread()
 			int destLeft = expected - total_received;
 //			dprintf(D_ALWAYS, "SharedPortEndpoint: Read: %d Offset: %d Left: %d\n", bytes, destOffset, destLeft);
 			memcpy_s(storeBuff + destOffset, destLeft, readBuff, bytes);
-			delete [] readBuff;
-			readBuff = NULL;
 			int cmd;
 			memcpy_s(&cmd, sizeof(int), storeBuff, sizeof(int));
 			if( cmd != SHARED_PORT_PASS_SOCK ) {
@@ -572,6 +587,7 @@ SharedPortEndpoint::PipeListenerThread()
 
 			break;
 		}
+		delete [] readBuff;
 		delete [] storeBuff;
 
 		DisconnectNamedPipe(pipe_end);
@@ -581,7 +597,7 @@ SharedPortEndpoint::PipeListenerThread()
 void
 SharedPortEndpoint::PipeListenerHelper()
 {
-	dprintf(D_ALWAYS, "SharedPortEndpoint: Inside PipeListenerHelper\n");
+	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside PipeListenerHelper\n");
 	DoListenerAccept(NULL);
 }
 #endif
@@ -683,7 +699,7 @@ void
 SharedPortEndpoint::RetryInitRemoteAddress()
 {
 	const int remote_addr_retry_time = 60;
-	const int remote_addr_refresh_time = 60;
+	const int remote_addr_refresh_time = 300;
 
 	m_retry_remote_addr_timer = -1;
 
@@ -807,7 +823,7 @@ void
 SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 {
 #ifdef WIN32
-	dprintf(D_ALWAYS, "SharedPortEndpoint: Entered DoListerAccept Win32 path.\n");
+	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Entered DoListerAccept Win32 path.\n");
 	ReliSock *remote_sock = return_remote_sock;
 	if(!remote_sock)
 	{
@@ -1003,7 +1019,6 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 	Serializing requires acquiring the handles of the respective pipes and seeding them into
 	the buffer.
 	*/
-	dprintf(D_ALWAYS, "SharedPortEndpoint: Serializing.\n");
 
 	HANDLE current_process = GetCurrentProcess();
 	HANDLE to_child;
@@ -1029,7 +1044,6 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 char *
 SharedPortEndpoint::deserialize(char *inherit_buf)
 {
-	dprintf(D_ALWAYS, "SharedPortEndpoint::deserialize: Inside deserialize.\n");
 	char *ptr;
 	ptr = strchr(inherit_buf,'*');
 	ASSERT( ptr );
@@ -1052,10 +1066,6 @@ SharedPortEndpoint::deserialize(char *inherit_buf)
 	inherit_buf = m_listener_sock.serialize(inherit_buf);
 #endif
 	m_listening = true;
-	if(m_listening == false)
-	{
-		dprintf(D_ALWAYS, "SharedPortEndpoint::deserialize: Major problem.\n");
-	}
 
 	ASSERT( StartListener() );
 
@@ -1133,7 +1143,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 	if( abs((int)now-(int)cached_time) > 10 || cached_time==0 || why_not ) {
 		MyString socket_dir;
 #ifdef WIN32
-		socket_dir.sprintf("\\\\.\\pipe\\condor");
+		socket_dir = WINDOWS_DAEMON_SOCKET_DIR;
 #else
 		ASSERT( param(socket_dir,"DAEMON_SOCKET_DIR") );
 #endif

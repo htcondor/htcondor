@@ -83,10 +83,6 @@ class SharedPortEndpoint: Service {
 		// by a process with the specified priv state.
 	bool ChownSocket(priv_state priv);
 #ifdef WIN32
-	/*
-	DO NOT USE ANYTHING CONDOR INSIDE THIS FUNCTION!!!!!!!!!!!!
-	CONDOR IS NOT THREADSAFE!!!!!!!!!!!!!!!!!!!!!
-	*/
 	void PipeListenerThread();
 
 	void PipeListenerHelper();
@@ -139,7 +135,6 @@ class SharedPortEndpoint: Service {
 	HANDLE pipe_end;
 
 	//Bookkeeping information for the listener thread.
-	DWORD threadID;
 	HANDLE thread_handle;
 
 	ReliSock *wake_select_source;

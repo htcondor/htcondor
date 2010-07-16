@@ -182,7 +182,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	}
 	else
 	{
-		dprintf(D_ALWAYS, "SharedPortClient: Read PID: %d\n", child_pid);
+		dprintf(D_FULLDEBUG, "SharedPortClient: Read PID: %d\n", child_pid);
 	}
 
 	WSAPROTOCOL_INFO protocol_info;
@@ -190,23 +190,26 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	if(dup_result == SOCKET_ERROR)
 	{
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
+		CloseHandle(child_pipe);
 		return false;
 	}
 
 	int bufferSize = sizeof(WSAPROTOCOL_INFO) + sizeof(int);
 	char *buffer = new char[bufferSize];
+	ASSERT( buffer );
 	int cmd = SHARED_PORT_PASS_SOCK;
 	memcpy_s(buffer, sizeof(int), &cmd, sizeof(int));
 	memcpy_s(buffer+sizeof(int), sizeof(WSAPROTOCOL_INFO), &protocol_info, sizeof(WSAPROTOCOL_INFO));
 	BOOL write_result = WriteFile(child_pipe, buffer, bufferSize, &read_bytes, 0);
 
+	delete [] buffer;
 	if(!write_result)
 	{
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to send WSAPROTOCOL_INFO struct: %d\n", GetLastError());
+		CloseHandle(child_pipe);
 		return false;
 	}
-	delete buffer;
-	dprintf(D_ALWAYS, "SharedPortClient: Wrote %d bytes to named pipe.\n", read_bytes);
+	dprintf(D_FULLDEBUG, "SharedPortClient: Wrote %d bytes to named pipe.\n", read_bytes);
 	FlushFileBuffers(child_pipe);
 
 	CloseHandle(child_pipe);

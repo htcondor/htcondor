@@ -58,11 +58,6 @@ class DaemonCoreSockAdapterClass {
 		int             dprintf_flag,
 		bool            force_authentication);
 	typedef void (DaemonCore::*daemonContactInfoChanged_fnptr)();
-	typedef int (DaemonCore::*Register_Timer_TS_fnptr)(
-		unsigned deltawhen,
-		TimerHandlercpp handler,
-		const char *event_descrip,
-		Service* s);
 
 
 	DaemonCoreSockAdapterClass(): m_daemonCore(0) {}

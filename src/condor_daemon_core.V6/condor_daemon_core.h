@@ -870,6 +870,11 @@ class DaemonCore : public Service
                         const char * event_descrip,
                         Service*     s);
 
+	/** Thread-safe Register_Timer().
+		This function locks the big fat daemon-core mutex, so it can
+		be safely called from within a thread, as long as there is no
+		way that thread could already have locked the same mutex.
+	 */
 	int Register_Timer_TS (unsigned deltawhen,
 		TimerHandlercpp handler,
 		const char * event_descrip,
