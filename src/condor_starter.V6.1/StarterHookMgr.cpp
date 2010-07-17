@@ -138,7 +138,10 @@ StarterHookMgr::tryHookPrepareJob()
 
 	HookClient* hook_client = new HookPrepareJobClient(m_hook_prepare_job);
 
-	if (!spawn(hook_client, NULL, &hook_stdin, PRIV_USER_FINAL)) {
+	Env env;
+	Starter->PublishToEnv(&env);
+
+	if (!spawn(hook_client, NULL, &hook_stdin, PRIV_USER_FINAL, &env)) {
 		MyString err_msg;
 		err_msg.sprintf("failed to execute HOOK_PREPARE_JOB (%s)",
 						m_hook_prepare_job);
@@ -175,7 +178,10 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
         // the stack and be destroyed as soon as we return.
     HookClient client(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info, false);
 
-	if (!spawn(&client, NULL, &hook_stdin, PRIV_USER_FINAL)) {
+	Env env;
+	Starter->PublishToEnv(&env);
+
+	if (!spawn(&client, NULL, &hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n",
@@ -229,7 +235,10 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 
 	hook_client = new HookJobExitClient(m_hook_job_exit);
 
-	if (!spawn(hook_client, &args, &hook_stdin, PRIV_USER_FINAL)) {
+	Env env;
+	Starter->PublishToEnv(&env);
+
+	if (!spawn(hook_client, &args, &hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit);
