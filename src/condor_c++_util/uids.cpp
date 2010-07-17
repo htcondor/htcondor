@@ -1533,6 +1533,9 @@ priv_identifier( priv_state s )
 
 	case PRIV_FILE_OWNER:
 		if( ! OwnerIdsInited ) {
+			if( !can_switch_ids() ) {
+				return priv_identifier( PRIV_CONDOR );
+			}
 			EXCEPT( "Programmer Error: priv_identifier() called for "
 					"PRIV_FILE_OWNER, but owner ids are not initialized" );
 		}
@@ -1548,6 +1551,9 @@ priv_identifier( priv_state s )
 	case PRIV_USER:
 	case PRIV_USER_FINAL:
 		if( ! UserIdsInited ) {
+			if( !can_switch_ids() ) {
+				return priv_identifier( PRIV_CONDOR );
+			}
 			EXCEPT( "Programmer Error: priv_identifier() called for "
 					"%s, but user ids are not initialized",
 					priv_to_string(s) );
