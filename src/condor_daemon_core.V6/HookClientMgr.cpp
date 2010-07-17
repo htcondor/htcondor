@@ -64,7 +64,7 @@ HookClientMgr::initialize() {
 
 
 bool
-HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, priv_state priv) {
+HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, priv_state priv, Env *env) {
 	int reaper_id;
 	bool wants_output = client->wantsOutput();
 	const char* hook_path = client->path();
@@ -95,7 +95,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 
 	int pid = daemonCore->
 		Create_Process(hook_path, final_args, priv,
-					  reaper_id, FALSE, NULL, NULL, &fi,
+					  reaper_id, FALSE, env, NULL, &fi,
 					  NULL, std_fds);
 	client->setPid(pid);
 	if (pid == FALSE) {
