@@ -37,6 +37,7 @@
 #undef open
 #include "classad/classad_distribution.h"
 #include "set_user_from_ad.h"
+#include "file_transfer.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -440,6 +441,13 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		src.Assign(ATTR_JOB_STATUS, 5); // 5==HELD
 		src.Assign(ATTR_HOLD_REASON, "Spooling input data files");
 
+			// See the comment in the function body of ExpandInputFileList
+			// for an explanation of what is going on here.
+		MyString transfer_input_error_msg;
+		if( !FileTransfer::ExpandInputFileList( &src, transfer_input_error_msg ) ) {
+			failobj.fail("%s\n",transfer_input_error_msg.Value());
+			return false;
+		}
 	}
 
 		// we want the job to hang around (taken from condor_submit.V6/submit.C)

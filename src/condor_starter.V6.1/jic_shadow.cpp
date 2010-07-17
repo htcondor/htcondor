@@ -420,6 +420,11 @@ JICShadow::transferOutput( void )
 		bool rval = filetrans->UploadFiles( true, final_transfer );
 		set_priv(saved_priv);
 
+		if( rval ) {
+			FileTransfer::FileTransferInfo ft_info = filetrans->GetInfo();
+			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,ft_info.spooled_files.Value());
+		}
+
 		if( ! rval ) {
 				// Failed to transfer.  See if there is a reason to put
 				// the job on hold.
@@ -657,7 +662,7 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 
 		// We want the update ad anyway, in case we want it for the
 		// LocalUserLog
-	user_proc->PublishUpdateAd( &ad );
+	publishUpdateAd( &ad );
 
 		// depending on the exit reason, we want a different event. 
 		// however, don't write multiple events if we've already been
@@ -1665,6 +1670,12 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		execsz = starter_dir.GetDirectorySize();
 		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
 		ad->InsertOrUpdate( buf );
+
+	}
+	MyString spooled_files;
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+	{
+		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
 	}
 
 	// Insert the starter's address into the update ad, because all
@@ -1766,6 +1777,13 @@ JICShadow::beginFileTransfer( void )
 		}
 
 		filetrans = new FileTransfer();
+
+			// In the starter, we never want to use
+			// SpooledOutputFiles, because we are not reading the
+			// output from the spool.  We always want to use
+			// TransferOutputFiles instead.
+		job_ad->Delete(ATTR_SPOOLED_OUTPUT_FILES);
+
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->RegisterCallback(

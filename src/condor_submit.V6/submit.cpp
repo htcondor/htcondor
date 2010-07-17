@@ -2552,6 +2552,21 @@ SetTransferFiles()
 	}
 }
 
+void FixupTransferInputFiles( void )
+{
+		// See the comment in the function body of ExpandInputFileList
+		// for an explanation of what is going on here.
+
+	MyString error_msg;
+	if( Remote && !FileTransfer::ExpandInputFileList( job, error_msg ) )
+	{
+		MyString err_msg;
+		err_msg.sprintf( "\n%s\n",error_msg.Value());
+		print_wrapped_text( err_msg.Value(), stderr );
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+}
 
 void SetPerFileEncryption( void )
 {
@@ -5760,6 +5775,9 @@ queue(int num)
 		SetConcurrencyLimits();
 		SetVMParams();
 
+			// This must come after all things that modify the input file list
+		FixupTransferInputFiles();
+
 			// SetForcedAttributes should be last so that it trumps values
 			// set by normal submit attributes
 		SetForcedAttributes();
@@ -6329,6 +6347,15 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 			if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+			if( errno == EISDIR && (flags & O_WRONLY)) {
+					// Entries in the transfer output list may be
+					// files or directories; no way to tell in
+					// advance.  When there is already a directory by
+					// the same name, it is not obvious what to do.
+					// Therefore, we will just do nothing here and leave
+					// it up to the runtime to nicely report errors.
+				return;
+			}
 			fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
 					 strPathname.Value(), flags, strerror( errno ) );
 			DoCleanup(0,0,NULL);
