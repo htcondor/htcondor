@@ -1255,7 +1255,8 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 				} else {
 						// We aren't looking at the userlog file... ship it!
 					const char *filename = spool_space.GetFullPath();
-					if ( !transobject->InputFiles->file_contains(filename) ) {
+					if ( !transobject->InputFiles->file_contains(filename) &&
+						 !transobject->InputFiles->file_contains(condor_basename(filename)) ) {
 						transobject->InputFiles->append(filename);
 					}
 				}
