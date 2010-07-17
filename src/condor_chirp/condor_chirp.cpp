@@ -307,8 +307,8 @@ int chirp_get_job_attr(int argc, char **argv) {
 	}
 
 	char *p = 0;
-    	chirp_client_get_job_attr(client, argv[2], &p);
-	printf("%s\n", p);
+	int len = chirp_client_get_job_attr(client, argv[2], &p);
+	printf("%.*s\n", len, p);
 	return 0;
 }
 
