@@ -663,28 +663,6 @@ pseudo_ulog( ClassAd *ad )
 }
 
 int
-pseudo_get_job_attr( const char *name, char *expr )
-{
-	RemoteResource *remote;
-	if (parallelMasterResource == NULL) {
-		remote = thisRemoteResource;
-	} else {
-		remote = parallelMasterResource;
-	}
-	ClassAd *ad = remote->getJobAd();
-	ExprTree *e = ad->Lookup(name);
-	if(e) {
-		expr[0] = 0;
-		e->RArg()->PrintToStr(expr);
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr);
-		return 0;
-	} else {
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
-		return -1;
-	}
-}
-
-int
 pseudo_get_job_attr( const char *name, MyString &expr )
 {
 	RemoteResource *remote;
