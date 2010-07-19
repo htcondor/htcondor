@@ -3081,31 +3081,22 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 		// These three lists must be kept in sync!
-	static const int ATTR_ARRAY_SIZE = 8;
+	static const int ATTR_ARRAY_SIZE = 5;
 	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
-		ATTR_JOB_OUTPUT,
-		ATTR_JOB_ERROR,
 		ATTR_TRANSFER_INPUT_FILES,
-		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_ULOG_FILE,
 		ATTR_X509_USER_PROXY };
 	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
 		false,
 		false,
-		false,
-		false,
-		true,
 		true,
 		false,
 		false };
 	static const char *AttrXferBool[ATTR_ARRAY_SIZE] = {
 		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT,
-		ATTR_TRANSFER_OUTPUT,
-		ATTR_TRANSFER_ERROR,
-		NULL,
 		NULL,
 		NULL,
 		NULL };
