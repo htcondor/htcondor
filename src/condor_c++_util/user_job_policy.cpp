@@ -536,7 +536,22 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, const char *
 	int result;
 	m_fire_expr = attrname;
 	if(!m_ad->EvalBool(attrname, m_ad, result)) {
-		retval = UNDEFINED_EVAL;
+        //check to see if the attribute actually exists, or if it's really
+        //  undefined.
+        //originally this if-statement wasn't here, so when the expression
+        //  tied to this attribute had an undefined value in it, e.g.
+        //      PeriodicRemove = DoesNotExist > 0
+        //  the function would set retval = UNDEFINED_EVAL and return
+        //
+        //now it can differentiate between the something in the 
+        //expression being undefined, and the attribute itself 
+        //being undefined.
+        if(m_ad->Lookup(attrname) != NULL)
+        {
+            m_fire_expr_val = -1;
+            m_fire_source = FS_JobAttribute;
+        }
+        retval = UNDEFINED_EVAL;
 		return true;
 	}
 	if( result ) {
