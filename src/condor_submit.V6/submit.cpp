@@ -4763,6 +4763,13 @@ SetGridParams()
 			InsertJobExpr (buffer);
 		}
 
+		if ( strcasecmp( tmp, "amazon" ) == 0 ) {
+			fprintf(stderr, "\nERROR: Amazon EC2 grid jobs require a "
+					"service URL\n");
+			DoCleanup( 0, 0, NULL );
+			exit( 1 );
+		}
+
 		free( tmp );
 
 	} else {
