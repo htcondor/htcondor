@@ -1813,6 +1813,7 @@ usage (char *myName)
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-global\t\t\tGet global queue\n"
+		"\t\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t\t-help\t\t\tThis screen\n"
 		"\t\t-name <name>\t\tName of schedd\n"
@@ -1824,6 +1825,7 @@ usage (char *myName)
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
+		"\t\t-globus\t\t\tGet information about Condor-G jobs\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
@@ -1842,7 +1844,7 @@ usage (char *myName)
 		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
 		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
-		"\t\t-version\t\t\tPrint the Condor Version and exit\n"
+		"\t\t-version\t\tPrint the Condor Version and exit\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
