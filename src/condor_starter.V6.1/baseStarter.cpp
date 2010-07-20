@@ -930,9 +930,6 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			s,"Failed to get job environment: %s",error_msg.Value());
 	}
 
-		// our sshd_shell_setup script uses this to cd to the job working dir
-	setup_env.SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
-
 	if( !slot_name.IsEmpty() ) {
 		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
 	}
@@ -951,18 +948,6 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			}
 		}
 	}
-
-		// put the pid of the job in the environment
-	MyString job_pids;
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
-		if( ! job_pids.IsEmpty() ) {
-			job_pids += " ";
-		}
-		job_pids.sprintf_cat("%d",job->GetJobPid());
-	}
-	setup_env.SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
 	ArgList setup_args;
 	setup_args.AppendArg(ssh_to_job_sshd_setup.Value());
@@ -2482,11 +2467,23 @@ CStarter::PublishToEnv( Env* proc_env )
 		// after everything else, so there's not going to be any info
 		// about it to pass until it's already done.
 
+		// used by sshd_shell_setup script to cd to the job working dir
+	proc_env->SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
+
+	MyString job_pids;
 	UserProc* uproc;
 	m_job_list.Rewind();
 	while ((uproc = m_job_list.Next()) != NULL) {
 		uproc->PublishToEnv( proc_env );
+
+		if( ! job_pids.IsEmpty() ) {
+			job_pids += " ";
+		}
+		job_pids.sprintf_cat("%d",uproc->GetJobPid());		
 	}
+		// put the pid of the job in the environment, used by sshd and hooks
+	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
+
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
 		uproc->PublishToEnv( proc_env );

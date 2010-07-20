@@ -679,8 +679,9 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
 		return 0;
 	} else {
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
-		return -1;
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) is UNDEFINED\n",name);
+		expr = "UNDEFINED";
+		return 0;
 	}
 }
 

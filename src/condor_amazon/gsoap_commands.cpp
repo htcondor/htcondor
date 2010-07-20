@@ -317,7 +317,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 
 	// check if output file could be created
 	if( has_outputfile ) { 
-		if( check_create_file(outputfile.c_str()) == false ) {
+		if( check_create_file(outputfile.c_str(), 0600) == false ) {
 			m_error_msg = "No_permission_for_keypair_outputfile";
 			dprintf(D_ALWAYS, "AmazonVMCreateKeypair Error: %s\n", m_error_msg.c_str());
 			return false;
@@ -341,7 +341,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 		if( has_outputfile ) {
 
 			FILE *fp = NULL;
-			fp = safe_fopen_wrapper(outputfile.c_str(), "w");
+			fp = safe_fopen_wrapper(outputfile.c_str(), "w", 600);
 			if( !fp ) {
 				sprintf(m_error_msg,"failed to safe_fopen_wrapper %s in write mode: "
 						"safe_fopen_wrapper returns %s", 
