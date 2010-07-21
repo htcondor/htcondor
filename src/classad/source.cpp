@@ -1122,8 +1122,10 @@ parseArgumentList( vector<ExprTree*>& argList )
 		argList.push_back( tree );
 
 		// the next token must be a ',' or a ')'
+		// or it can be a ';' if using old ClassAd semantics
 		tt = lexer.PeekToken();
-		if( tt == Lexer::LEX_COMMA )
+		if( tt == Lexer::LEX_COMMA ||
+			( tt == Lexer::LEX_SEMICOLON && _useOldClassAdSemantics ) )
 			lexer.ConsumeToken();
 		else
 		if( tt != Lexer::LEX_CLOSE_PAREN ) {
