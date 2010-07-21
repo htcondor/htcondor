@@ -220,7 +220,7 @@ XCOMM End translation of func(library_target)
 XCOMM Begin translation of func(shared_library_target) @@\
 libname: $(call picobjs,objlist)					@@\
 	rm -f libname						@@\
-	$(CC) $(CC_SHARED_FLAGS) $(CC_PIC_FLAGS) -o libname $(call picobjs,objlist) @@\
+	$(CC_LINK) $(CC_SHARED_FLAGS) $(CC_PIC_FLAGS) -o libname $(call picobjs,objlist) @@\
 clean::							@@\
 	rm -f libname $(call picobjs,objlist)		@@\
 XCOMM End translation of func(shared_library_target)
