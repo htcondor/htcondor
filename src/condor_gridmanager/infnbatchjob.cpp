@@ -109,7 +109,7 @@ void INFNBatchJobReconfig()
 
 bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 		// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 		//   system names should be used (pbs, lsf). Glite are the only
 		//   people who care about the old value. This changed happend in
@@ -119,11 +119,11 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 ( strncasecmp( resource.Value(), "blah", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "pbs", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "lsf", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "nqs", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "naregi", 6 ) == 0 ) ) {
+		 ( strncasecmp( resource.c_str(), "blah", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "pbs", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "lsf", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "nqs", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "naregi", 6 ) == 0 ) ) {
 
 		return true;
 	}
@@ -620,7 +620,7 @@ void INFNBatchJob::doEvaluateState()
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' ) {
@@ -677,11 +677,11 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 		remoteJobId = NULL;
 	}
 
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "%s %s", batchType, job_id );
+		sprintf( full_job_id, "%s %s", batchType, job_id );
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
@@ -852,7 +852,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 		if ( !args.AppendArgsFromClassAd( jobAd, &error_str ) ||
 			 !args.GetArgsStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str;
+			errorString = error_str.Value();
 			delete submit_ad;
 			return NULL;
 		}
@@ -861,7 +861,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		value_str = "";
 		if ( !env.MergeFrom( jobAd, &error_str ) ||
 			 !env.getDelimitedStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str;
+			errorString = error_str.Value();
 			delete submit_ad;
 			return NULL;
 		}

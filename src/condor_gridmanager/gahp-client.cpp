@@ -278,7 +278,7 @@ GahpServer::write_line(const char *command, int req, const char *args)
 			sprintf( debug, "'%s%s'", command, buf );
 		}
 		if ( logGahpIoSize > 0 && debug.length() > logGahpIoSize ) {
-			debug.erose( logGahpIoSize, std::string::npos );
+			debug.erase( logGahpIoSize, std::string::npos );
 			debug += "...";
 		}
 		dprintf( D_FULLDEBUG, "GAHP[%d] <- %s\n", m_gahp_pid,
@@ -524,7 +524,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 					debug += "'";
 				}
 				if ( logGahpIoSize > 0 && debug.length() > logGahpIoSize ) {
-					debug.erose( logGahpIoSize, std::string::npos );
+					debug.erase( logGahpIoSize, std::string::npos );
 					debug += "...";
 				}
 				dprintf( D_FULLDEBUG, "GAHP[%d] %s-> %s\n", m_gahp_pid,
@@ -2706,8 +2706,8 @@ GahpClient::gt4_gram_client_job_create(
 	char * _callback_contact = strdup (escapeGahpString(callback_contact));
 	char * _rsl = strdup (escapeGahpString(rsl));
 
-	MyString reqline;
-	bool x = reqline.sprintf("%s %s %s %s %s %d", 
+	std::string reqline;
+	int x = sprintf(reqline, "%s %s %s %s %s %d", 
 							 _submit_id,
 							 _resource_manager_contact,
 							 _jobmanager_type,
@@ -2722,8 +2722,8 @@ GahpClient::gt4_gram_client_job_create(
 	free (_callback_contact);
 	free (_rsl);
 
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2781,10 +2781,10 @@ GahpClient::gt4_gram_client_job_start(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2839,10 +2839,10 @@ GahpClient::gt4_gram_client_job_destroy(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2899,10 +2899,10 @@ GahpClient::gt4_gram_client_job_status(const char * job_contact,
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2975,14 +2975,14 @@ GahpClient::gt4_gram_client_job_callback_register(const char * job_contact,
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
 	if (!callback_contact) callback_contact=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(job_contact) );
 	char *esc2 = strdup( escapeGahpString(callback_contact) );
-	bool x = reqline.sprintf("%s %s",esc1,esc2);
+	int x = sprintf(reqline,"%s %s",esc1,esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3038,10 +3038,10 @@ GahpClient::gt4_gram_client_ping(const char * resource_contact)
 
 		// Generate request line
 	if (!resource_contact) resource_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(resource_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(resource_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3096,10 +3096,10 @@ GahpClient::gt4_gram_client_delegate_credentials(const char *delegation_service_
 
 		// Generate request line
 	ASSERT (delegation_service_url && *delegation_service_url);
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(delegation_service_url));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(delegation_service_url));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3163,10 +3163,10 @@ GahpClient::gt4_gram_client_refresh_credentials(const char *delegation_uri)
 
 		// Generate request line
 	ASSERT (delegation_uri && *delegation_uri);
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(delegation_uri));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(delegation_uri));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3222,11 +3222,11 @@ GahpClient::gt4_set_termination_time(const char *resource_uri,
 
 		// Generate request line
 	if (!resource_uri) resource_uri=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s %ld",escapeGahpString(resource_uri),
+	std::string reqline;
+	int x = sprintf(reqline,"%s %ld",escapeGahpString(resource_uri),
 							 new_termination_time);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3302,14 +3302,14 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 			unparser.Unparse( job_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3392,16 +3392,16 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 			unparser.Unparse( update_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(constraint) );
 	char *esc3 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf( reqline, "%s %s %s", esc1, esc2, esc3 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3462,14 +3462,14 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!constraint) constraint=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(constraint) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf( reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3553,15 +3553,15 @@ GahpClient::condor_job_remove(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!reason) reason=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(reason) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3639,15 +3639,15 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 			unparser.Unparse( update_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3707,15 +3707,15 @@ GahpClient::condor_job_hold(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!reason) reason=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(reason) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3775,15 +3775,15 @@ GahpClient::condor_job_release(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!reason) reason=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(reason) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3860,14 +3860,14 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 			unparser.Unparse( job_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	int x = sprintf(reqline, "%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3925,12 +3925,12 @@ GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
 
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	bool x = reqline.sprintf("%s %d.%d", esc1, job_id.cluster, job_id.proc);
+	int x = sprintf(reqline, "%s %d.%d", esc1, job_id.cluster, job_id.proc);
 	free( esc1 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3990,15 +3990,15 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!proxy_file) proxy_file=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(proxy_file) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4061,22 +4061,22 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	bool x = reqline.sprintf("%s %d", esc1, jobs.Length());
+	int x = sprintf(reqline, "%s %d", esc1, jobs.Length());
 	free( esc1 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 		// Add variable arguments
 	SimpleListIterator<PROC_ID> jobs_i (jobs);
 	SimpleListIterator<int> exps_i (expirations);
 	PROC_ID next_job;
 	int next_exp;
 	while ( jobs_i.Next( next_job ) && exps_i.Next( next_exp ) ) {
-		x = reqline.sprintf_cat( " %d.%d %d", next_job.cluster, next_job.proc,
+		x = sprintf_cat( reqline, " %d.%d %d", next_job.cluster, next_job.proc,
 								 next_exp );
-		ASSERT( x == true );
+		ASSERT( x > 0 );
 	}
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4162,10 +4162,10 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 		unparser.SetOutputTargetType( false );
 		unparser.Unparse( job_ad, ad_string );
 	}
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(ad_string.Value()) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(ad_string.Value()) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4223,10 +4223,10 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 
 		// Generate request line
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(job_id) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(job_id) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4288,10 +4288,10 @@ GahpClient::blah_job_cancel(const char *job_id)
 
 		// Generate request line
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString( job_id ) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString( job_id ) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4346,14 +4346,14 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 
 		// Generate request line
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(job_id) );
 	char *esc2 = strdup( escapeGahpString(proxy_file) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf( reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5079,7 +5079,7 @@ GahpClient::gridftp_transfer(const char *src_url, const char *dst_url)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5108,10 +5108,10 @@ if ( i > 0 && desc[i-1] == '\n' ) {
 desc[i-1] = '\0';
 }
 description = desc;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(description) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(description) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 free(desc);
 
 		// Check if this request is currently pending.  If not, make
@@ -5167,10 +5167,10 @@ GahpClient::unicore_job_start(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5222,10 +5222,10 @@ GahpClient::unicore_job_destroy(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5279,10 +5279,10 @@ GahpClient::unicore_job_status(const char * job_contact,
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5345,10 +5345,10 @@ if ( i > 0 && desc[i-1] == '\n' ) {
 desc[i-1] = '\0';
 }
 description = desc;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(description) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(description) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 free(desc);
 
 		// Check if this request is currently pending.  If not, make
@@ -5448,14 +5448,14 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 		// Generate request line
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(delg_service) );
 	char *esc2 = strdup( escapeGahpString(delg_id) );
-	bool x = reqline.sprintf("%s %s", esc2, esc1);
+	int x = sprintf(reqline, "%s %s", esc2, esc1);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5518,18 +5518,18 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 	if (!jdl) jdl = NULLSTRING;
 	if (!lease_id) lease_id = "";
 
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(delg_id) );
 	char *esc3 = strdup( escapeGahpString(jdl) );
 	char *esc4 = strdup( escapeGahpString(lease_id) );
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	int x = sprintf( reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 	
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5603,15 +5603,15 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 		// Just start one job
-	bool x = reqline.sprintf("%s 1 %s", esc1, esc2);
+	int x = sprintf(reqline, "%s 1 %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 	
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5669,15 +5669,15 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5735,15 +5735,15 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5801,15 +5801,15 @@ GahpClient::cream_job_suspend(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5867,15 +5867,15 @@ GahpClient::cream_job_resume(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5934,15 +5934,15 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6013,14 +6013,14 @@ GahpClient::cream_job_status_all(const char *service,
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
-	MyString reqline;
+	std::string reqline;
 
 	char *esc1 = strdup( escapeGahpString(service) );
 	int job_number = 0; // "all"
-	bool x = reqline.sprintf("%s %d", esc1, job_number);
-	ASSERT( x == true );
+	int x = sprintf(reqline, "%s %d", esc1, job_number);
+	ASSERT( x > 0 );
 	free( esc1 );
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6101,14 +6101,14 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 		// Generate request line
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(delg_service) );
 	char *esc2 = strdup( escapeGahpString(delg_id) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	int x = sprintf(reqline, "%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6165,10 +6165,10 @@ GahpClient::cream_ping(const char * service)
 
 		// Generate request line
 	if (!service) service=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(service));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(service));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6231,14 +6231,14 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!lease_id) lease_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(lease_id) );
-	bool x = reqline.sprintf("%s %s %ld", esc1, esc2, (long)lease_expiry);
+	int x = sprintf(reqline, "%s %s %ld", esc1, esc2, (long)lease_expiry);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -7664,7 +7664,7 @@ int GahpClient::amazon_vm_keypair_names( const char * publickeyfile, const char 
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	
-	inr x = sprintf(reqline, "%s %s", esc1, esc2);
+	int x = sprintf(reqline, "%s %s", esc1, esc2);
 	
 	free( esc1 );
 	free( esc2 );

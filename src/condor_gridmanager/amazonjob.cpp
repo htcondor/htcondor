@@ -468,7 +468,7 @@ void AmazonJob::doEvaluateState()
 				}
 
 				if ( m_key_pair == "" ) {
-					SetKeypairId( build_keypair().Value() );
+					SetKeypairId( build_keypair().c_str() );
 				}
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {

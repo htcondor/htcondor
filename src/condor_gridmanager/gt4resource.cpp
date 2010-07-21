@@ -50,7 +50,7 @@ struct GT4ProxyDelegation {
 	time_t proxy_expire;
 	time_t last_proxy_refresh;
 	Proxy *proxy;
-	MyString error_message;
+	std::string error_message;
 };
 
 GT4Resource *GT4Resource::FindOrCreateResource( const char *resource_name,
@@ -233,11 +233,11 @@ const char *GT4Resource::CanonicalName( const char *name )
 const char *GT4Resource::HashName( const char *resource_name,
 								   const char *proxy_subject )
 {
-	static MyString hash_name;
+	static std::string hash_name;
 
-	hash_name.sprintf( "gt4 %s#%s", resource_name, proxy_subject );
+	sprintf( hash_name, "gt4 %s#%s", resource_name, proxy_subject );
 
-	return hash_name.Value();
+	return hash_name.c_str();
 }
 
 const char *GT4Resource::GetHashName()
@@ -362,10 +362,10 @@ const char *GT4Resource::getDelegationError( Proxy *job_proxy )
 
 	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
 		if ( next_deleg->proxy == job_proxy ) {
-			if ( next_deleg->error_message.IsEmpty() ) {
+			if ( next_deleg->error_message.empty() ) {
 				return NULL;
 			} else {
-				return next_deleg->error_message.Value();
+				return next_deleg->error_message.c_str();
 			}
 		}
 	}
@@ -673,20 +673,20 @@ dprintf(D_ALWAYS,"JEF: Telling jobs to switch to Gram 42\n");
 		}
 	}
 
-	MyString gahp_name;
+	std::string gahp_name;
 	if ( m_isGram42 ) {
-		gahp_name.sprintf( "GT42/%s", proxyFQAN );
+		sprintf( gahp_name, "GT42/%s", proxyFQAN );
 	} else {
-		gahp_name.sprintf( "GT4/%s", proxyFQAN );
+		sprintf( gahp_name, "GT4/%s", proxyFQAN );
 	}
 
-	new_gahp = new GahpClient( gahp_name.Value() );
+	new_gahp = new GahpClient( gahp_name.c_str() );
 
 	new_gahp->setNotificationTimerId( pingTimerId );
 	new_gahp->setMode( GahpClient::normal );
 	new_gahp->setTimeout( gahpCallTimeout );
 
-	new_deleg_gahp = new GahpClient( gahp_name.Value() );
+	new_deleg_gahp = new GahpClient( gahp_name.c_str() );
 
 	new_deleg_gahp->setNotificationTimerId( delegationTimerId );
 	new_deleg_gahp->setMode( GahpClient::normal );

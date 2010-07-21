@@ -893,7 +893,7 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 
 	std::string full_job_id;
 	if ( job_id ) {
-		printf( full_job_id, "nordugrid %s %s", resourceManagerString,
+		sprintf( full_job_id, "nordugrid %s %s", resourceManagerString,
 							 job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
@@ -1009,7 +1009,7 @@ std::string *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( file ) ) {
-				rsl->sprintf_cat( " \"%s\")", file );
+				sprintf_cat( *rsl, " \"%s\")", file );
 			} else {
 				*rsl += " \"\")";
 			}

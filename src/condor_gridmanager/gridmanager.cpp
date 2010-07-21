@@ -127,7 +127,7 @@ void CHECK_LEASES_signalHandler();
 static bool jobExternallyManaged(ClassAd * ad)
 {
 	ASSERT(ad);
-	MyString job_managed;
+	std::string job_managed;
 	if( ! ad->LookupString(ATTR_JOB_MANAGED, job_managed) ) {
 		return false;
 	}
@@ -141,9 +141,9 @@ exposed as a remote call.  Perhaps link it in directly?
 static int tSetAttributeString(int cluster, int proc, 
 	const char * attr_name, const char * attr_value)
 {
-	MyString tmp;
-	tmp.sprintf("\"%s\"", attr_value);
-	return SetAttribute( cluster, proc, attr_name, tmp.Value());
+	std::string tmp;
+	sprintf(tmp, "\"%s\"", attr_value);
+	return SetAttribute( cluster, proc, attr_name, tmp.c_str());
 }
 
 // Check if a job ad needs $$() expansion performed on it. The initial ad
@@ -155,9 +155,9 @@ bool MustExpandJobAd( const ClassAd *job_ad ) {
 
 	job_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
 	if ( !must_expand ) {
-		MyString resource_name;
+		std::string resource_name;
 		if ( job_ad->LookupString( ATTR_GRID_RESOURCE, resource_name ) ) {
-			if ( strstr(resource_name.Value(),"$$") ) {
+			if ( strstr(resource_name.c_str(),"$$") ) {
 				must_expand = true;
 			}
 		}
@@ -499,25 +499,25 @@ static const char * expr_false = "FALSE";
 //static const char * expr_undefined = "UNDEFINED";
 	// The job is matched, or in unknown match state.
 	// definately unmatched
-static MyString expr_matched_or_undef;
+static std::string expr_matched_or_undef;
 	// Job is being managed by an external process
 	// (probably this gridmanager process)
-static MyString expr_managed;
+static std::string expr_managed;
 	// The job is not being managed by an external
 	// process.  The schedd should be managing it.
 	// It may be done.
-static MyString expr_not_managed;
+static std::string expr_not_managed;
 	// The job is not HELD
-static MyString expr_not_held;
+static std::string expr_not_held;
 	// The constraint passed into the gridmanager
 	// to filter all jobs by
-static MyString expr_schedd_job_constraint;
+static std::string expr_schedd_job_constraint;
 	// The job is marked as completely done by
 	// the gridmanager.  The gridmanager should
 	// never try to manage the job again
-static MyString expr_completely_done;
+static std::string expr_completely_done;
 	// Opposite of expr_completely_done
-static MyString expr_not_completely_done;
+static std::string expr_not_completely_done;
 
 static void 
 initJobExprs()
@@ -525,15 +525,15 @@ initJobExprs()
 	static bool done = false;
 	if(done) { return; }
 
-	expr_matched_or_undef.sprintf("(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
-	expr_managed.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-	expr_not_managed.sprintf("(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-	expr_not_held.sprintf("(%s != %d)", ATTR_JOB_STATUS, HELD);
-	expr_schedd_job_constraint.sprintf("(%s)", ScheddJobConstraint);
+	sprintf(expr_matched_or_undef, "(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
+	sprintf(expr_managed, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	sprintf(expr_not_managed, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	sprintf(expr_not_held, "(%s != %d)", ATTR_JOB_STATUS, HELD);
+	sprintf(expr_schedd_job_constraint, "(%s)", ScheddJobConstraint);
 	// The gridmanager never wants to see this job again.
 	// It should be in the process of leaving the queue.
-	expr_completely_done.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
-	expr_not_completely_done.sprintf("(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
+	sprintf(expr_completely_done, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
+	sprintf(expr_not_completely_done, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
 
 	done = true;
 }
@@ -563,7 +563,7 @@ doContactSchedd()
 	bool commit_transaction = true;
 	int failure_line_num = 0;
 	bool send_reschedule = false;
-	MyString error_str = "";
+	std::string error_str = "";
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
@@ -574,7 +574,7 @@ doContactSchedd()
 	// vacateJobs
 	/////////////////////////////////////////////////////
 	if ( pendingScheddVacates.getNumElements() != 0 ) {
-		MyString buff;
+		std::string buff;
 		StringList job_ids;
 		VacateRequest curr_request;
 
@@ -584,9 +584,9 @@ doContactSchedd()
 
 		pendingScheddVacates.startIterations();
 		while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
-			buff.sprintf( "%d.%d", curr_request.job->procID.cluster,
+			sprintf( buff, "%d.%d", curr_request.job->procID.cluster,
 						  curr_request.job->procID.proc );
-			job_ids.append( buff.Value() );
+			job_ids.append( buff.c_str() );
 		}
 
 		char *tmp = job_ids.print_to_string();
@@ -598,15 +598,15 @@ doContactSchedd()
 
 		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
 		if ( rval == NULL ) {
-			error_str.sprintf( "vacateJobs returned NULL, CondorError: %s!",
+			sprintf( error_str, "vacateJobs returned NULL, CondorError: %s!",
 							   errstack.getFullText() );
 			goto contact_schedd_failure;
 		} else {
 			pendingScheddVacates.startIterations();
 			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
-				buff.sprintf( "job_%d_%d", curr_request.job->procID.cluster,
+				sprintf( buff, "job_%d_%d", curr_request.job->procID.cluster,
 							  curr_request.job->procID.proc );
-				if ( !rval->LookupInteger( buff.Value(), result ) ) {
+				if ( !rval->LookupInteger( buff.c_str(), result ) ) {
 					dprintf( D_FULLDEBUG, "vacateJobs returned malformed ad\n" );
 					EXCEPT( "vacateJobs returned malformed ad" );
 				} else {
@@ -627,7 +627,7 @@ doContactSchedd()
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
 	if ( !schedd ) {
-		error_str.sprintf( "Failed to connect to schedd!" );
+		error_str = "Failed to connect to schedd!";
 		goto contact_schedd_failure;
 	}
 
@@ -697,21 +697,21 @@ doContactSchedd()
 			// superfluous (by boolean logic), so we drop it.
 			sprintf( expr_buf,
 					 "%s && %s && ((%s && %s) || %s)",
-					 expr_schedd_job_constraint.Value(), 
-					 expr_not_completely_done.Value(),
-					 expr_matched_or_undef.Value(),
-					 expr_not_held.Value(),
-					 expr_managed.Value()
+					 expr_schedd_job_constraint.c_str(), 
+					 expr_not_completely_done.c_str(),
+					 expr_matched_or_undef.c_str(),
+					 expr_not_held.c_str(),
+					 expr_managed.c_str()
 					 );
 		} else {
 			// Grab new jobs for us to manage
 			sprintf( expr_buf,
 					 "%s && %s && %s && %s && %s",
-					 expr_schedd_job_constraint.Value(), 
-					 expr_not_completely_done.Value(),
-					 expr_matched_or_undef.Value(),
-					 expr_not_held.Value(),
-					 expr_not_managed.Value()
+					 expr_schedd_job_constraint.c_str(), 
+					 expr_not_completely_done.c_str(),
+					 expr_matched_or_undef.c_str(),
+					 expr_not_held.c_str(),
+					 expr_not_managed.c_str()
 					 );
 		}
 		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
@@ -838,7 +838,7 @@ contact_schedd_next_add_job:
 		// haven't previously indicated that we're done with (by setting
 		// JobManaged to "Schedd".
 		sprintf( expr_buf, "(%s) && (%s) && (%s == %d || %s == %d || (%s == %d && %s =?= \"%s\"))",
-				 ScheddJobConstraint, expr_not_completely_done.Value(),
+				 ScheddJobConstraint, expr_not_completely_done.c_str(),
 				 ATTR_JOB_STATUS, REMOVED,
 				 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, HELD,
 				 ATTR_JOB_MANAGED, MANAGED_EXTERNAL );
@@ -925,7 +925,6 @@ contact_schedd_next_add_job:
 	// requestJobStatus
 	/////////////////////////////////////////////////////
 	if ( pendingJobStatus.getNumElements() != 0 ) {
-		MyString buff;
 		JobStatusRequest curr_request;
 
 		pendingJobStatus.startIterations();
@@ -1062,12 +1061,12 @@ contact_schedd_next_add_job:
 		firstScheddContact = false;
 		addJobsSignaled = false;
 	} else {
-		error_str.sprintf( "Schedd connection error during Add/RemoveJobs at line %d!", failure_line_num );
+		sprintf( error_str, "Schedd connection error during Add/RemoveJobs at line %d!", failure_line_num );
 		goto contact_schedd_failure;
 	}
 
 	if ( schedd_updates_complete == false ) {
-		error_str.sprintf( "Schedd connection error during updates at line %d!", failure_line_num );
+		sprintf( error_str, "Schedd connection error during updates at line %d!", failure_line_num );
 		goto contact_schedd_failure;
 	}
 
@@ -1135,7 +1134,7 @@ contact_schedd_next_add_job:
 	lastContactSchedd = time(NULL);
 
 	if ( schedd_deletes_complete == false ) {
-		error_str.sprintf( "Problem using DestroyProc to delete jobs!" );
+		error_str = "Problem using DestroyProc to delete jobs!";
 		goto contact_schedd_failure;
 	}
 
@@ -1150,10 +1149,10 @@ dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 		error_str = "Failure in doContactSchedd";
 	}
 	if ( scheddFailureCount >= maxScheddFailures ) {
-		dprintf( D_ALWAYS, "%s\n", error_str.Value() );
+		dprintf( D_ALWAYS, "%s\n", error_str.c_str() );
 		EXCEPT( "Too many failures connecting to schedd!" );
 	}
-	dprintf( D_ALWAYS, "%s Will retry\n", error_str.Value() );
+	dprintf( D_ALWAYS, "%s Will retry\n", error_str.c_str() );
 	lastContactSchedd = time(NULL);
 	RequestContactSchedd();
 	return;
