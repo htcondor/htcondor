@@ -1807,7 +1807,7 @@ JobRouter::TestJobSuccess(RoutedJob *job)
 	classad::ClassAd *upd;
 	classad::ClassAdParser parser;
 	std::string upd_str;
-	upd_str = "[leftJobFailureTest = adcl.ad.";
+	upd_str = "[leftJobFailureTest = LEFT.";
 	upd_str += JR_ATTR_JOB_FAILURE_TEST;
 	upd_str += " ;]";
 	upd = parser.ParseClassAd(upd_str);
@@ -1846,7 +1846,7 @@ JobRouter::TestJobSandboxed(RoutedJob *job)
 	classad::ClassAd *upd;
 	classad::ClassAdParser parser;
 	std::string upd_str;
-	upd_str = "[leftJobSandboxedTest = adcl.ad.";
+	upd_str = "[leftJobSandboxedTest = LEFT.";
 	upd_str += JR_ATTR_JOB_SANDBOXED_TEST;
 	upd_str += " ;]";
 	upd = parser.ParseClassAd(upd_str);
@@ -1879,7 +1879,7 @@ JobRoute::EvalUseSharedX509UserProxy(RoutedJob *job)
 	classad::ClassAd *upd;
 	classad::ClassAdParser parser;
 	std::string upd_str;
-	upd_str = "[leftTest = adcl.ad.";
+	upd_str = "[leftTest = LEFT.";
 	upd_str += JR_ATTR_USE_SHARED_X509_USER_PROXY;
 	upd_str += " ;]";
 	upd = parser.ParseClassAd(upd_str);
@@ -1911,7 +1911,7 @@ JobRoute::EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file)
 	classad::ClassAd *upd;
 	classad::ClassAdParser parser;
 	std::string upd_str;
-	upd_str = "[leftValue = adcl.ad.";
+	upd_str = "[leftValue = LEFT.";
 	upd_str += JR_ATTR_SHARED_X509_USER_PROXY;
 	upd_str += " ;]";
 	upd = parser.ParseClassAd(upd_str);
