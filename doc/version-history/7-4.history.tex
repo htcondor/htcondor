@@ -49,7 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item For spooled jobs, input files were sometimes transferred twice from
+the submit machine to the execute machine.  This happened if the input files
+were specified without any path information (i.e. a filename with no
+directory specified).  This problem has existed since before Condor 7.0.0.
 
 \end{itemize}
 
