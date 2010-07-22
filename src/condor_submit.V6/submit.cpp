@@ -2533,6 +2533,15 @@ SetTransferFiles()
 	output_file_list.rewind();
 	char const *output_file;
 	while ( (output_file=output_file_list.next()) ) {
+		output_file = condor_basename(output_file);
+		if( !output_file || !output_file[0] ) {
+				// output_file may be empty if the entry in the list is
+				// a path ending with a slash.  Since a path ending in a
+				// slash means to get the contents of a directory, and we
+				// don't know in advance what names will exist in the
+				// directory, we can't do any check now.
+			continue;
+		}
 		// Apply filename remaps if there are any.
 		MyString remap_fname;
 		if(filename_remap_find(output_remaps.Value(),output_file,remap_fname)) {
