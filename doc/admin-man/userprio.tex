@@ -566,8 +566,12 @@ for the groups.
 A declared number of slots specifies the quota for each group
 (see \MacroNI{GROUP\_QUOTA\_<groupname>}
 in section~\ref{param:GroupQuotaGroupname}).
-The sum of the quotas for all groups must be less than or equal to
-the number of slots in the entire pool.
+The sum of the quotas for all groups should typically be less than or equal to
+the number of slots in the entire pool, but there are situations where it
+can make sense to have the sum be greater than the size of the pool.
+An example of this is where large quotas can be used to give 
+some groups a chance to
+claim all slots before other groups have a chance to claim any.
 If the sum is less than the number of
 slots in the entire pool,
 the slots are 
