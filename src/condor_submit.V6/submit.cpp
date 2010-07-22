@@ -4288,21 +4288,24 @@ void
 SetRunAsOwner()
 {
 	char *run_as_owner = condor_param(RunAsOwner, ATTR_JOB_RUNAS_OWNER);
+	bool bRunAsOwner=false;
 	if (run_as_owner == NULL) {
 		return;
 	}
+	else {
+		bRunAsOwner = isTrue(run_as_owner);
+		free(run_as_owner);
+	}
 
 	MyString buffer;
-	buffer.sprintf(  "%s = %s", ATTR_JOB_RUNAS_OWNER, isTrue(run_as_owner) ? "True" : "False" );
+	buffer.sprintf(  "%s = %s", ATTR_JOB_RUNAS_OWNER, bRunAsOwner ? "True" : "False" );
 	InsertJobExpr (buffer);
-	free(run_as_owner);
 
 #if defined(WIN32)
 	// make sure we have a CredD
 	// (RunAsOwner is global for use in SetRequirements(),
 	//  the memory is freed() there)
-	RunAsOwnerCredD = param("CREDD_HOST");
-	if(RunAsOwnerCredD == NULL) {
+	if( bRunAsOwner && NULL == ( RunAsOwnerCredD = param("CREDD_HOST") ) ) {
 		fprintf(stderr,
 				"\nERROR: run_as_owner requires a valid CREDD_HOST configuration macro\n");
 		DoCleanup(0,0,NULL);
