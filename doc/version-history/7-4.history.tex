@@ -16,6 +16,61 @@ New features will be added in the 7.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-4-4}Version 7.4.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.4.4 not yet released.
+%\item Condor version 7.4.4 released on Month Date, 2010.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-4-3}Version 7.4.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -69,6 +124,15 @@ disables Chirp remote file access from execute machines.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrac 487
+\item
+  Fixed a bug where if a user job using file transfer with
+  \SubmitCmd{transfer\_output\_files} and \SubmitCmd{when\_to\_transfer\_output}
+  is set to \Expr{ON\_EXIT\_OR\_EVICT} fails
+  to produce all of the specified files and exit, as when core
+  dumping due to a fault, then the stdout, stderr, and core file of the
+  job were not transferred back to the submitting machine.
 
 \item
   Fixed numerous, small, rare memory leaks.
@@ -148,6 +212,10 @@ present in all earlier 7.4.x Condor releases.
 \noindent Additions and Changes to the Manual:
 
 \begin{itemize}
+
+\item Searching the PDF version of the manual for items containing 
+underscore characters, such as many configuration variable names,
+now works correctly.
 
 % gittrac #1340
 \item The new subsection~\ref{ClassAd:examples} provides examples of
