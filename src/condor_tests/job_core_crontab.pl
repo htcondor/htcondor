@@ -56,7 +56,7 @@ my $testdesc =  "CronTab Testing - $universe";
 my $base_name = 'job_core_crontab';
 my $base_cmd = $base_name.".cmd";
 my $testname = "";
-my $debuglevel = 2;
+my $debuglevel = 1;
 
 if( defined $ARGV[0] ) {
 	if($ARGV[0] =~ /.*van.*/ ) {

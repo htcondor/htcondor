@@ -24,7 +24,7 @@ use warnings;
 
 #$cmd = 'job_amazon_basic.cmd';
 my $cmd = $ARGV[0];
-my $debuglevel = 2;
+my $debuglevel = 1;
 
 CondorTest::debug( "Submit file for this test is $cmd\n",$debuglevel);
 CondorTest::debug( "looking at env for condor config\n",$debuglevel);
