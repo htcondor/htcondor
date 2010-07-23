@@ -347,9 +347,7 @@ const char	*CronWindow		= "cron_window";
 const char	*CronPrepTime	= "cron_prep_time";
 
 const char	*RunAsOwner = "run_as_owner";
-#if defined(WIN32)
 const char	*LoadProfile = "load_profile";
-#endif
 
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
@@ -423,9 +421,7 @@ void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 void	SetRunAsOwner();
-#if defined(WIN32)
 void    SetLoadProfile();
-#endif
 void	SetRank();
 void 	SetIWD();
 void 	ComputeIWD();
@@ -4373,7 +4369,6 @@ SetRunAsOwner()
 #endif
 }
 
-#if defined(WIN32)
 void 
 SetLoadProfile()
 {
@@ -4403,7 +4398,6 @@ SetLoadProfile()
     caching their profile on the local machine (which may be someone's
     laptop, which may already be running low on disk-space). */
 }
-#endif
 
 void
 SetRank()
@@ -5977,9 +5971,7 @@ queue(int num)
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetRunAsOwner();
-#if defined(WIN32)
         SetLoadProfile();
-#endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 
