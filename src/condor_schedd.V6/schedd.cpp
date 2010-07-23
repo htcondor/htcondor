@@ -3222,13 +3222,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			MyString new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.sprintf(
-						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
-					base = new_path_buf.Value();
 					changed = true;
 				}
 				new_paths.append(base);
