@@ -665,14 +665,31 @@ The default value is \Expr{True}.
 
 \index{submit commands!transfer\_input\_files}
 \item[transfer\_input\_files = $<$ file1,file2,file... $>$]
-A comma-delimited list of all the files to be transferred into the
+A comma-delimited list of all the files and directories to be transferred into the
 working directory for the job before the job is started.
 By default, the file specified in the
 \SubmitCmd{executable} command and any file specified in the \SubmitCmd{input}
 command (for example, \File{stdin}) are transferred.
 
-Only the transfer of files is available; the transfer of
-subdirectories is not supported.
+When a path to an input file or directory is specified, this specifies
+the path to the file on the submit side.  On the execute side, the
+file is placed in the job's temporary scratch directory and it is
+named using the base name of the original path.  For
+example, \File{/path/to/input\_file} becomes \File{input\_file} in the job's
+scratch directory.
+
+When a directory is specified with a trailing path separator
+(e.g. \File{input\_data/} in unix), the contents of the directory are
+transferred but not the directory itself, just as if each of the items
+in the directory were listed in the transfer list.  When there is no
+trailing path separator (e.g. \File{input\_data}), the directory is
+transferred and its transferred contents are placed inside it.
+
+For grid universe jobs other than Condor-C, the transfer of
+directories is not currently supported.
+
+Symlinks to files are transferred as the files they point to.
+Transfer of symlinks to directories is not currently supported.
 
 For vanilla and vm universe jobs only,
 a file may be specified by giving a URL, instead of a file name.
@@ -689,26 +706,23 @@ page~\pageref{sec:file-transfer}.
 
 \index{submit commands!transfer\_output\_files}
 \item[transfer\_output\_files = $<$ file1,file2,file... $>$]
-This command forms an explicit list of output files to be transferred
+This command forms an explicit list of output files and directories to be transferred
 back from the temporary working directory on the execute machine to
 the submit machine.
-Most of the time, there is no need to use this command.
-For grid universe jobs, other than where the grid type is \SubmitCmd{condor},
-the use of \SubmitCmd{transfer\_output\_files} is useful.
+If there are multiple files, they must be delimited with commas.
+
 For Condor-C jobs and all other non-grid universe jobs,
 if \SubmitCmd{transfer\_output\_files} is not specified,
 Condor will automatically transfer back all files in the job's
 temporary working directory which have been
-modified or created by the job.
-This is usually the desired behavior.
-Explicitly listing output files is typically only done when the job creates
+modified or created by the job.  Subdirectories are not scanned for
+output, so if output from subdirectories is desired, the output list
+must be explicitly specified.
+For grid universe jobs other than Condor-C, desired output files must
+also be explicitly listed.
+Another reason to explicitly list output files is when the job creates
 many files, and the user wants to keep a subset of
 those files.
-If there are multiple files, they must be delimited with commas.
-\Warn Do not specify \SubmitCmd{transfer\_output\_files} in the
-submit description file unless there is a really good reason -- it is
-best to let Condor figure things out by itself based upon what
-the job produces.
 
 For grid universe jobs other than with grid type \SubmitCmd{condor},
 to have files other than standard output and standard error transferred
@@ -717,6 +731,28 @@ do use \SubmitCmd{transfer\_output\_files}, listing
 all files to be transferred.
 These files are found on the execute machine in the
 working directory of the job.
+
+When a path to an output file or directory is specified, this
+specifies the path to the file on the execute side.  On the submit
+side, the file is placed in the job's initial working directory and it
+is named using the base name of the original path.  For
+example, \File{path/to/output\_file} becomes \File{output\_file} in
+the job's initial working directory.  The name and path of the file
+that is written on the submit side may be modified by
+using \SubmitCmd{transfer\_output\_remaps}.
+
+When a directory is specified with a trailing path separator
+(e.g. \File{input\_data/} in unix), the contents of the directory are
+transferred but not the directory itself, just as if each of the items
+in the directory were listed in the transfer list.  When there is no trailing
+path separator (e.g. \File{input\_data}), the directory is transferred
+and its contents are transferred and placed inside it.
+
+For grid universe jobs other than Condor-C, the transfer of
+directories is not currently supported.
+
+Symlinks to files are transferred as the files they point to.
+Transfer of symlinks to directories is not currently supported.
 
 For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on

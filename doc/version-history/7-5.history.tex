@@ -30,6 +30,27 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrac #1522
+\item Transfer of directories is now supported by
+  \SubmitCmd{transfer\_input\_files} and
+  \SubmitCmd{transfer\_output\_files} for non-grid universes and
+  Condor-C.  The auto-selection of output files, however, remains the
+  same: new directories in the job's output sandbox are not
+  automatically selected as outputs to be transferred.
+
+% gittrac #1520
+\item Paths other than simple file names with no directory information
+  in \SubmitCmd{transfer\_output\_files} previously did not have well
+  defined behavior.  Now, paths are supported for non-grid universes
+  and Condor-C.  When a path to an output file or directory is
+  specified, this specifies the path to the file on the execute side.
+  On the submit side, the file is placed in the job's initial working
+  directory and it is named using the base name of the original path.
+  For example, \File{path/to/output\_file} becomes \File{output\_file}
+  in the job's initial working directory.  The name and path of the
+  file that is written on the submit side may be modified by using
+  \SubmitCmd{transfer\_output\_remaps}.
+
 % gittrac #1460
 \item Decreased the CPU utilization of \Condor{dagman} when it is
 	submitting ready jobs into Condor.
@@ -64,6 +85,15 @@ as part of the DAG status message in the \File{dagman.out} file.
 \item Since 7.5.2, the following \Condor{job\_router} features were
   effectively non-functional: \Attr{UseSharedX509UserProxy},
   \Attr{JobShouldBeSandbox}, and \Attr{JobFailureTest}.
+
+% gittrack #1521
+\item When output files were auto-selected and spooled, Condor-C and
+  \Condor{transfer\_data} would copy back both the output files and
+  all other contents of the job's spool directory, which typically
+  included the spooled input and the user log.  Now just the output
+  files are retrieved.  To adjust which files are retrieved, the job
+  attribute \Attr{SpooledOutputFiles} can be manipulated, but this
+  typically should just be managed by Condor.
 
 \end{itemize}
 
