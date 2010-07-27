@@ -133,14 +133,8 @@ void
 SharedPortEndpoint::InitAndReconfig()
 {
 	MyString socket_dir;
+	paramDaemonSocketDir(socket_dir);
 
-#ifdef WIN32
-	socket_dir = WINDOWS_DAEMON_SOCKET_DIR;
-#else
-	if( !param(socket_dir,"DAEMON_SOCKET_DIR") ) {
-		EXCEPT("DAEMON_SOCKET_DIR must be defined");
-	}
-#endif
 	if( !m_listening ) {
 		m_socket_dir = socket_dir;
 	}
@@ -1142,11 +1136,8 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 	time_t now = time(NULL);
 	if( abs((int)now-(int)cached_time) > 10 || cached_time==0 || why_not ) {
 		MyString socket_dir;
-#ifdef WIN32
-		socket_dir = WINDOWS_DAEMON_SOCKET_DIR;
-#else
-		ASSERT( param(socket_dir,"DAEMON_SOCKET_DIR") );
-#endif
+		paramDaemonSocketDir(socket_dir);
+
 		cached_time = now;
 		cached_result = access(socket_dir.Value(),W_OK)==0;
 
@@ -1294,3 +1285,15 @@ SharedPortEndpoint::MakeDaemonSocketDir()
 	return mkdir_rc == 0;
 }
 #endif
+
+void
+SharedPortEndpoint::paramDaemonSocketDir(MyString &result)
+{
+#ifdef WIN32
+	result = WINDOWS_DAEMON_SOCKET_DIR;
+#else
+	if( !param(result,"DAEMON_SOCKET_DIR") ) {
+		EXCEPT("DAEMON_SOCKET_DIR must be defined");
+	}
+#endif
+}

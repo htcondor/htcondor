@@ -112,6 +112,8 @@ class SharedPortEndpoint: Service {
 
 	void DoListenerAccept(ReliSock *return_remote_sock);
 
+	static void paramDaemonSocketDir(MyString &result);
+
  private:
 	bool m_listening;
 	bool m_registered_listener;

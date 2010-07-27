@@ -23,6 +23,7 @@
 #include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
 #include "shared_port_client.h"
+#include "shared_port_endpoint.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -125,9 +126,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	MyString pipe_name;
 	MyString socket_dir;
 
-	if( !param(pipe_name,"DAEMON_SOCKET_DIR") ) {
-		EXCEPT("SharedPortClient requires DAEMON_SOCKET_DIR to be defined");
-	}
+	SharedPortEndpoint::paramDaemonSocketDir(pipe_name);
 	pipe_name.sprintf_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
 
 	MyString requested_by_buf;
@@ -227,9 +226,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	MyString sock_name;
 	MyString socket_dir;
 
-	if( !param(sock_name,"DAEMON_SOCKET_DIR") ) {
-		EXCEPT("SharedPortClient requires DAEMON_SOCKET_DIR to be defined");
-	}
+	SharedPortEndpoint::paramDaemonSocketDir(sock_name);
 	sock_name.sprintf_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
 
 	MyString requested_by_buf;
