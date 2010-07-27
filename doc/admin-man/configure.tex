@@ -2185,6 +2185,7 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:EnableAddressRewriting}
 \item[\Macro{ENABLE\_ADDRESS\_REWRITING}]
   A boolean value that defaults to \Expr{True}.  When
+  \MacroNI{NETWORK\_INTERFACE} is defined or
   \MacroNI{TCP\_FORWARDING\_HOST} is defined or
   \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
   the behavior is as though it had been set to \Expr{False}.  When \Expr{True},

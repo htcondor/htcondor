@@ -56,6 +56,12 @@ the submit machine to the execute machine.  This happened if the input files
 were specified without any path information (i.e. a filename with no
 directory specified).  This problem has existed since before Condor 7.0.0.
 
+% gittrac 457
+\item The configuration variable \MacroNI{NETWORK\_INTERFACE} did not
+work in some situations because of Condor's attempts to
+automatically rewrite published addresses to match the IP address of
+the network interface used to make the publication.
+
 \end{itemize}
 
 \noindent Known Bugs:
