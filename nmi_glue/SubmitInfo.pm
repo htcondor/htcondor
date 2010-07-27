@@ -521,6 +521,23 @@ our %submit_info = (
 	},
 
 	##########################################################################
+	# Platform Mac OSX 10.6 on x86_64
+	##########################################################################
+	'x86_64_macos_10.6'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05'],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
 	# Platform RHEL 5 on x86
 	##########################################################################
 	'x86_rhap_5'	=> {
