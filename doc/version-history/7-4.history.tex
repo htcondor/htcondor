@@ -33,7 +33,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \SubmitCmd{load\_profile} is now supported by the unix version of
+\item \SubmitCmd{load\_profile} is now supported by the Unix version of
 \Condor{submit} when submitting jobs to Windows.  Previously, this command
 was only supported by the Windows version of \Condor{submit}.
 
@@ -53,12 +53,13 @@ was only supported by the Windows version of \Condor{submit}.
 
 \item For spooled jobs, input files were sometimes transferred twice from
 the submit machine to the execute machine.  This happened if the input files
-were specified without any path information (i.e. a filename with no
-directory specified).  This problem has existed since before Condor 7.0.0.
+were specified without any path information,
+as with a filename with no directory specified.
+This problem has existed since before Condor version 7.0.0.
 
 % gittrac 457
 \item The configuration variable \MacroNI{NETWORK\_INTERFACE} did not
-work in some situations because of Condor's attempts to
+work in some situations, because of Condor's attempts to
 automatically rewrite published addresses to match the IP address of
 the network interface used to make the publication.
 
