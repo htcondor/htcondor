@@ -20,6 +20,8 @@
 #include "condor_common.h"
 #include "compat_classad_util.h"
 #include "classad_oldnew.h"
+#include "string_list.h"
+#include "condor_adtypes.h"
 
 /* TODO This function needs to be tested.
  */

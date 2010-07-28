@@ -20,7 +20,6 @@
 #ifndef COMPAT_CLASSAD_UTIL_H
 #define COMPAT_CLASSAD_UTIL_H
 
-#include "condor_common.h"
 #include "compat_classad.h"
 
 int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos = NULL);
