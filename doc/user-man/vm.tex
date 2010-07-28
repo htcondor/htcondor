@@ -71,6 +71,9 @@ the submit machine with
 \begin{verbatim}
   vm_should_transfer_cdrom_files = YES
 \end{verbatim}
+If a single file that ends with the suffix \Expr{.iso} is listed
+with \SubmitCmd{vm\_cdrom\_files},
+Condor uses the file as an iso file, rather than creating one.
 
 Creating a checkpoint is straightforward for a virtual machine,
 as a checkpoint is a set of files that represent
