@@ -6,9 +6,6 @@
 \index{daemon!condor\_shared\_port@\Condor{shared\_port}}
 \index{condor\_shared\_port daemon}
 The \Condor{shared\_port} is an optional daemon
-currently implemented on a limited set of platforms.
-It is supported on all Unix platforms, except for HPUX.
-This daemon is
 responsible for creating a TCP listener port shared by all of the
 Condor daemons for which the configuration variable
 \Macro{USE\_SHARED\_PORT} is \Expr{True}.
@@ -104,7 +101,8 @@ COLLECTOR_HOST = collector.host.name:11000?sock=collector
 This configuration assumes that the socket name used by 
 the \Condor{collector} is \Expr{collector}.
 The \Condor{collector} that runs on \Expr{collector.host.name}
-will automatically choose this socket name.
+will automatically choose this socket name if \MacroNI{COLLECTOR\_HOST}
+is configured as in the example above.
 If multiple \Condor{collector} daemons are started on the same
 machine, the socket name can be explicitly set in the daemon arguments,
 as in the example:

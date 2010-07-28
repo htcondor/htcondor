@@ -2141,12 +2141,11 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 \label{param:UseSharedPort}
 \item[\Macro{USE\_SHARED\_PORT}] This is a boolean value that
   specifies whether a Condor process should rely on
-  \Condor{shared\_port} for receiving incoming connections.  Write
+  \Condor{shared\_port} for receiving incoming connections.  Under unix, write
   access to \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
   effect.  The default is false.  If this is set to true,
   \MacroNI{SHARED\_PORT} should be added to \MacroNI{DAEMON\_LIST}.
-  The \Condor{collector} daemon ignores this setting, because it must
-  always have its own network port.  For more information about using
+  For more information about using
   a shared port, see page~\pageref{sec:Config-shared-port}.
 
 \label{param:SubsysMaxFileDescriptors}
@@ -9999,6 +9998,8 @@ how to do this.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!condor\_shared\_port configuration variables}
 These configuration variables affect the \Condor{shared\_port} daemon.
+For general discussion of \Condor{shared\_port},
+see~\pageref{sec:shared-port-daemon}.
 
 \begin{description}
 
@@ -10017,7 +10018,7 @@ These configuration variables affect the \Condor{shared\_port} daemon.
 
 \label{param:DaemonSocketDir}
 \item[\Macro{DAEMON\_SOCKET\_DIR}] This specifies the directory where
- Condor daemons will create named sockets so that incoming
+ Unix versions of Condor daemons will create named sockets so that incoming
  connections can be forwarded to them by \Condor{shared\_port}.  If
  this directory does not exist, it will be created. The maximum length
  of named socket paths plus names is restricted by the operating system,
