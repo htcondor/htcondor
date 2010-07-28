@@ -895,6 +895,19 @@ XCOMM End translation of func(public_copy_target)
 #endif /* public_copy_target */
 
 
+/*
+** Target is released by recursive copying
+*/
+#ifndef public_recursive_copy_target
+#define public_recursive_copy_target(src,dest)	@@\
+XCOMM Begin translation of func(public_recursive_copy_target) @@\
+release_recursive_copy_target(src,dest) @@\
+strip_recursive_copy_target(src,dest) @@\
+static_recursive_copy_target(src,dest) @@\
+XCOMM End translation of func(public_recursive_copy_target)
+#endif /* public_recursive_copy_target */
+
+
 /* Build the super public_link_target, which generates the other kinds
    of hard-link targets.  all of these behave the same way, and we
    almost always want all 3 whenever we want one of them, so just
