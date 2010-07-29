@@ -698,7 +698,7 @@ int daemon::RealStart( )
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
 	} 
-	else if( stricmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
+	else if( strcasecmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
 		char* host = getCmHostFromConfig( "NEGOTIATOR" );
 		if( host ) {
 			free (host);
