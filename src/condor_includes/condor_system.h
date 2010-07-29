@@ -122,10 +122,6 @@
 #	define WCOREFLG WCOREFLAG
 #endif
 
-#ifndef WORD_BIT
-#	define WORD_BIT 32
-#endif 
-
 #ifndef _POSIX_PATH_MAX
 #	define _POSIX_PATH_MAX 255
 #endif
