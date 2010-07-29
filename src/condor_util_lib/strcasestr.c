@@ -18,7 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "string_funcs.h"
+#include "strcasestr.h"
 
 #if ( !HAVE_STRCASESTR )
 // Like strstr(), but case-insensitive

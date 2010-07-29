@@ -23,7 +23,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "internet.h"
-#include "string_funcs.h"
+#include "strcasestr.h"
 #include "condor_random_num.h"
 
 // initialize the List<char> from the VALID_*_FILES variable in the

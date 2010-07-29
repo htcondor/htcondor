@@ -162,7 +162,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o \
-	strupr.o string_funcs.o \
+	strupr.o strcasestr.o \
 	mark_thread.o
 
 CPP_UTIL_OBJ = \
