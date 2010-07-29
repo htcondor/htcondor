@@ -219,7 +219,7 @@ StringList::contains_anycase( const char *st )
 
 	m_strings.Rewind ();
 	while ((x = m_strings.Next ())) {
-		if( stricmp(st, x) == MATCH ) {
+		if( strcasecmp(st, x) == MATCH ) {
 			return TRUE;
 		}
 	}
@@ -247,7 +247,7 @@ StringList::remove_anycase(const char *str)
 
 	m_strings.Rewind();
 	while ((x = m_strings.Next())) {
-		if (stricmp(str, x) == MATCH) {
+		if (strcasecmp(str, x) == MATCH) {
 			deleteCurrent();
 		}
 	}

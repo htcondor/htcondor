@@ -251,7 +251,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		value.Tokenize();
 
 		token = value.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "amazon" ) ) {
+		if ( !token || strcasecmp( token, "amazon" ) ) {
 			error_string.sprintf( "%s not of type amazon",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
@@ -320,7 +320,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		value.Tokenize();
 
 		token = value.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "amazon" ) ) {
+		if ( !token || strcasecmp( token, "amazon" ) ) {
 			error_string.sprintf( "%s not of type amazon",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;

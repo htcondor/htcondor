@@ -107,10 +107,10 @@ _condor_set_debug_flags( const char *strflags )
 		}
 
 		bit = 0;
-		if( stricmp(flag, "D_ALL") == 0 ) {
+		if( strcasecmp(flag, "D_ALL") == 0 ) {
 			bit = D_ALL;
 		} else for( i = 0; i < D_MAXFLAGS; i++ ) {
-			if( stricmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
+			if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
 				bit = (1 << i);
 				break;
 			}

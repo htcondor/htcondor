@@ -5289,7 +5289,7 @@ Scheduler::negotiate(int command, Stream* s)
 						}
 					}
 
-					if ( stricmp(claim_id,"null") == 0 ) {
+					if ( strcasecmp(claim_id,"null") == 0 ) {
 						// No ClaimId given by the matchmaker.  This means
 						// the resource we were matched with does not support
 						// the claiming protocol.
@@ -7604,7 +7604,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
 
 	// sanity check to make sure this job isn't going to start as root.
-	if (stricmp(owner.Value(), "root") == 0 ) {
+	if (strcasecmp(owner.Value(), "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
 		goto wrapup;
@@ -8040,7 +8040,7 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 
 			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( stricmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 				// In vmware vm universe, vmware disk may be 
 				// a sparse disk or snapshot disk. So we can't estimate the disk space 
 				// in advanace because the sparse disk or snapshot disk will 

@@ -1211,7 +1211,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 						// should we print a warning?
 					continue;
 				}
-				if( stricmp(tmp, host) ) {		// no match
+				if( strcasecmp(tmp, host) ) {		// no match
 					free( tmp );
 					tmp = NULL;
 					continue;
@@ -1252,7 +1252,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 				} else {
 					host = tmp;
 				}
-				if( ! stricmp(host, name) ) {
+				if( ! strcasecmp(host, name) ) {
 					d = new Daemon( ad, real_dt, pool_addr );
 				}
 				free( tmp );

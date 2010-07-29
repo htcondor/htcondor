@@ -599,8 +599,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	if (credd_host) {
 
 		// figure out if we're on the CREDD_HOST
-		bool on_credd_host = (stricmp(my_full_hostname(), credd_host) == MATCH);
-		on_credd_host = on_credd_host || (stricmp(my_hostname(), credd_host) == MATCH);
+		bool on_credd_host = (strcasecmp(my_full_hostname(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcasecmp(my_hostname(), credd_host) == MATCH);
 		on_credd_host = on_credd_host || (strcmp(my_ip_string(), credd_host) == MATCH);
 
 		if (on_credd_host) {

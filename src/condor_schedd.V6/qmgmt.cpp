@@ -1804,14 +1804,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
-	if (stricmp(attr_name, ATTR_OWNER) == 0) 
+	if (strcasecmp(attr_name, ATTR_OWNER) == 0) 
 	{
 		const char* sock_owner = Q_SOCK ? Q_SOCK->getOwner() : "";
 		if( !sock_owner ) {
 			sock_owner = "";
 		}
 
-		if ( stricmp(attr_value,"UNDEFINED")==0 ) {
+		if ( strcasecmp(attr_value,"UNDEFINED")==0 ) {
 				// If the user set the owner to be undefined, then
 				// just fill in the value of Owner with the owner name
 				// of the authenticated socket.
@@ -1873,7 +1873,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		if (!qmgmt_all_users_trusted
 #if defined(WIN32)
-			&& (stricmp(owner,sock_owner) != 0)
+			&& (strcasecmp(owner,sock_owner) != 0)
 #else
 			&& (strcmp(owner,sock_owner) != 0)
 #endif
@@ -1904,7 +1904,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// Also update the owner history hash table
 		AddOwnerHistory(owner);
 	}
-	else if (stricmp(attr_name, ATTR_CLUSTER_ID) == 0) {
+	else if (strcasecmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -1914,7 +1914,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 	}
-	else if (stricmp(attr_name, ATTR_NICE_USER) == 0) {
+	else if (strcasecmp(attr_name, ATTR_NICE_USER) == 0) {
 			// Because we're setting a new value for nice user, we
 			// should create a new value for ATTR_USER while we're at
 			// it, since that might need to change now that
@@ -1922,7 +1922,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		MyString owner;
 		MyString user;
 		bool nice_user = false;
-		if( ! stricmp(attr_value, "TRUE") ) {
+		if( ! strcasecmp(attr_value, "TRUE") ) {
 			nice_user = true;
 		}
 		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner)
@@ -1932,7 +1932,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value() );
 		}
 	}
-	else if (stricmp(attr_name, ATTR_PROC_ID) == 0) {
+	else if (strcasecmp(attr_name, ATTR_PROC_ID) == 0) {
 		if (atoi(attr_value) != proc_id) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -1952,14 +1952,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// take this cluster_id and look at all of its procs to see if 
 		// need to be added to the main CronTab list of jobs.
 		//
-	} else if ( stricmp( attr_name, ATTR_CRON_MINUTES ) == 0 ||
-				stricmp( attr_name, ATTR_CRON_HOURS ) == 0 ||
-				stricmp( attr_name, ATTR_CRON_DAYS_OF_MONTH ) == 0 ||
-				stricmp( attr_name, ATTR_CRON_MONTHS ) == 0 ||
-				stricmp( attr_name, ATTR_CRON_DAYS_OF_WEEK ) == 0 ) {
+	} else if ( strcasecmp( attr_name, ATTR_CRON_MINUTES ) == 0 ||
+				strcasecmp( attr_name, ATTR_CRON_HOURS ) == 0 ||
+				strcasecmp( attr_name, ATTR_CRON_DAYS_OF_MONTH ) == 0 ||
+				strcasecmp( attr_name, ATTR_CRON_MONTHS ) == 0 ||
+				strcasecmp( attr_name, ATTR_CRON_DAYS_OF_WEEK ) == 0 ) {
 		scheduler.addCronTabClusterId( cluster_id );				
 	}
-	else if ( stricmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
+	else if ( strcasecmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
 			// If the status is being set, let's record the previous
 			// status. If there is no status we'll default to
 			// UNEXPANDED.
@@ -1969,8 +1969,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 #if !defined(WANT_OLD_CLASSADS)
 /* Disable AddTargetRefs() for now
-	else if ( stricmp( attr_name, ATTR_REQUIREMENTS ) == 0 ||
-			  stricmp( attr_name, ATTR_RANK ) ) {
+	else if ( strcasecmp( attr_name, ATTR_REQUIREMENTS ) == 0 ||
+			  strcasecmp( attr_name, ATTR_RANK ) ) {
 		// Check Requirements and Rank for proper TARGET scoping of
 		// machine attributes.
 		ExprTree *tree = NULL;
@@ -2126,10 +2126,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	free( round_param );
 
 	if( !PrioRecArrayIsDirty ) {
-		if( stricmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
+		if( strcasecmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
 			PrioRecArrayIsDirty = true;
 		}
-		if( stricmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
+		if( strcasecmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
 			if( atoi(attr_value) == IDLE ) {
 				PrioRecArrayIsDirty = true;
 			}
@@ -2799,7 +2799,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// contain literal $$(...) in the replacement text.
 				continue;
 			}
-			if ( stricmp(attr_name,ATTR_JOB_CMD) ) { 
+			if ( strcasecmp(attr_name,ATTR_JOB_CMD) ) { 
 				AttrsToExpand.append(attr_name);
 			}
 		}
@@ -2870,7 +2870,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			if ( (index == 0) && (attribute_value != NULL)
 				 && ((tvalue=strstr(attribute_value,"$$")) != NULL) ) 
 			{
-				if ( stricmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
+				if ( strcasecmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
 				{
 						// convert to the new format
 						// First, we need to re-allocate attribute_value to a bigger
@@ -2954,7 +2954,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// If it is not there, use the fallback.
 					// If no fallback value, then fail.
 
-					if( stricmp(name,"DOLLARDOLLAR") == 0 ) {
+					if( strcasecmp(name,"DOLLARDOLLAR") == 0 ) {
 							// replace $$(DOLLARDOLLAR) with literal $$
 						value = strdup("DOLLARDOLLAR = \"$$\"");
 						value_came_from_jobad = true;

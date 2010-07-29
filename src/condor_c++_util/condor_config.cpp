@@ -639,7 +639,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		// Try to find the global config source
 
 	char* env = getenv( EnvGetName(ENV_CONFIG) );
-	if( env && stricmp(env, "ONLY_ENV") == MATCH ) {
+	if( env && strcasecmp(env, "ONLY_ENV") == MATCH ) {
 			// special case, no config source desired
 		have_config_source = false;
 	}

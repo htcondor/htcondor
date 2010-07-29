@@ -288,8 +288,8 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 	if( !target_type ) {
 		target_type = "";
 	}
-	if( stricmp(target_type,my_target_type) &&
-		stricmp(my_target_type,ANY_ADTYPE) )
+	if( strcasecmp(target_type,my_target_type) &&
+		strcasecmp(my_target_type,ANY_ADTYPE) )
 	{
 		return false;
 	}

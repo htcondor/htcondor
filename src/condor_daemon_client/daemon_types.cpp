@@ -61,7 +61,7 @@ stringToDaemonType( char* name )
 {
 	int i;
 	for( i=0; i<_dt_threshold_; i++ ) {
-		if( !stricmp(daemon_names[i], name) ) {
+		if( !strcasecmp(daemon_names[i], name) ) {
 			return (daemon_t)i;
 		}
 	}

@@ -85,7 +85,7 @@ signalNumber( const char* signame )
 		return -1;
 	}
 	for( int i = 0; SigNameArray[i].name; i++ ) {
-		if( stricmp(SigNameArray[i].name, signame) == 0) {
+		if( strcasecmp(SigNameArray[i].name, signame) == 0) {
 			return SigNameArray[i].num;
 		}
 	}

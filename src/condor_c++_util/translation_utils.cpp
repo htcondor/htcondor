@@ -51,7 +51,7 @@ getNumFromName( const char* str, const struct Translation *table )
 	int i;
 	
 	for( i=0 ; (table[i].name != NULL) ; i++ ) {
-		if ( !stricmp ( table[i].name, str ) ) {
+		if ( !strcasecmp ( table[i].name, str ) ) {
 			return table[i].number;
 		}
 	}

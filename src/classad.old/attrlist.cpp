@@ -2122,7 +2122,7 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 	if (seperator) {
 		*seperator = '\0';
 		rest = seperator + 1;
-		if (!stricmp(prefix, "TARGET")) {
+		if (!strcasecmp(prefix, "TARGET")) {
 			is_external = TRUE;
 		}
 		else {
