@@ -63,6 +63,12 @@ The details of each version are described below.
 that are on hold,
 as part of the DAG status message in the \File{dagman.out} file.
 
+%gittrac #1179
+\item \Condor{q} now uses the queue-management api's projection feature when 
+  used with \Opt{-run}, \Opt{-hold}, \Opt{-goodput}, \Opt{-cputime}, 
+  \Opt{-currentrun}, and \Opt{-io} options when called with no display options
+  or with \Opt{-format}. 
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
