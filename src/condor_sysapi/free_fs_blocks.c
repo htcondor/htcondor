@@ -203,7 +203,18 @@ const char *filename;
 		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,%p) failed\n",
 													filename, &statfsbuf );
 		dprintf(D_ALWAYS, "errno = %d\n", errno );
-		return(0);
+
+		if (errno != EOVERFLOW) {
+			return(0);
+		}
+
+		// if we get here, it means that statfs failed because
+		// there are more free blocks than can be represented
+		// in a long.  Let's lie and make it INT_MAX - 1.
+
+		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs overflowed, setting to %d\n", (INT_MAX - 1));
+		statfsbuf.f_bavail = (INT_MAX - 1);	
+		statfsbuf.f_bsize = 1024; // this isn't set if result < 0, guess
 	}
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
@@ -221,6 +232,7 @@ const char *filename;
 
 	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
 	if(free_kbytes > INT_MAX) {
+		dprintf( D_ALWAYS, "sysapi_disk_space_raw: Free disk space kbytes overflow, capping to INT_MAX\n");
 		return(INT_MAX);
 	}
 
