@@ -76,14 +76,6 @@ static const char *GMStateNames[] = {
 #define AMAZON_VM_STATE_SHUTTINGDOWN	"shutting-down"
 #define AMAZON_VM_STATE_TERMINATED		"terminated"
 
-// Filenames are case insensitive on Win32, but case sensitive on Unix
-#ifdef WIN32
-#	define file_strcmp _stricmp
-#	define file_contains contains_anycase
-#else
-#	define file_strcmp strcmp
-#	define file_contains contains
-#endif
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
