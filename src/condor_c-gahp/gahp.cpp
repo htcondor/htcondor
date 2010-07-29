@@ -23,10 +23,6 @@
 #include <unistd.h>
 
 
-#ifdef WIN32
-#define strcasecmp(s1, s2) stricmp(s1, s2)
-#endif
-
 int main() {
 	char buff[500];
 	char buff2[2];
