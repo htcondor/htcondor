@@ -3624,6 +3624,7 @@ SetCronTab()
 								};
 	int ctr;
 	char *param = NULL;
+	CronTab::initRegexObject();
 	for ( ctr = 0; ctr < CronFields; ctr++ ) {
 		param = condor_param( attributes[ctr], CronTab::attributes[ctr] );
 		if ( param != NULL ) {
