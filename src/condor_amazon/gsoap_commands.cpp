@@ -52,7 +52,7 @@ AmazonRequest::ParseSoapError(const char* callerstring)
 
 	if( *code ) {
 		// For real error code, refer to 
-		// http://docs.amazonwebservices.com/AWSEC2/2007-08-29/DeveloperGuide/api-error-codes.html
+		// http://docs.amazonwebservices.com/AWSEC2/2008-12-01/DeveloperGuide/index.html?api-error-codes.html
 		//
 		// Client error codes suggest that the error was caused by 
 		// something the client did, such as an authentication failure or 

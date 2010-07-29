@@ -27,9 +27,6 @@ html:
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_util_lib, setsyscalls.o )
 
-2007-08-29.ec2.wsdl:
-	wget "http://ec2.amazonaws.com/doc/2007-08-29/AmazonEC2.wsdl"
-
 gsoap_commands.cpp: soapH.h
 
 soapH.h soapStub.h soapC.cpp soapClient.cpp soapServer.cpp: gsoap_ec2.h
