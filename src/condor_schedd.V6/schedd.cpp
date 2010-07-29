@@ -2110,6 +2110,7 @@ jobIsSandboxed( ClassAd * ad )
 	ASSERT(ad);
 	int stage_in_start = 0;
 	int never_create_sandbox_expr = 0;
+
 	// In the past, we created sandboxes (or not) based on the
 	// universe in which a job is executing.  Now, we create a
 	// sandbox only if we are in a universe that ordinarily
@@ -2117,7 +2118,7 @@ jobIsSandboxed( ClassAd * ad )
 	// create_sandbox may be set to false by other attributes in
 	// the job ad (see below).
 	bool create_sandbox = true;
-	
+
 	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
 	if( stage_in_start > 0 ) {
 		return true;
@@ -2126,14 +2127,17 @@ jobIsSandboxed( ClassAd * ad )
 	// 
 	if( ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr ) &&
 	    never_create_sandbox_expr == TRUE ) {
-	  // As this function stands now, we could return false here.
+	  // As this function stands now, we could return the result of 
+	  // evaluating ATTR_WANT_IO_PROXY here.  (We must create a sandbox for  
+	  // parallel universe jobs because the scripts and chirp depend on one.)
 	  // But if the sandbox logic becomes more complicated in the
 	  // future --- notably, if there might be a case in which
-	  // we'd want to always create a sandbox even if
+	  // we'd want to always create a sandbox for non-PU jobs even if
 	  // ATTR_NEVER_CREATE_JOB_SANDBOX were set --- then we'd want
 	  // to be sure to ensure that we weren't in such a case.
+	  int want_io_proxy_expr = 0;
 
-	  create_sandbox = false;
+	  create_sandbox = (ad->EvalBool(ATTR_WANT_IO_PROXY, NULL, want_io_proxy_expr) && want_io_proxy_expr);
 	}
 
 	int univ = CONDOR_UNIVERSE_VANILLA;
@@ -2143,13 +2147,13 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_GRID:
+	case CONDOR_UNIVERSE_PARALLEL: // MPI scripts require a spool directory
 		return false;
 		break;
 
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_MPI:
-	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_VM:
 	  // True by default for jobs in these universes, but false if
 	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad.

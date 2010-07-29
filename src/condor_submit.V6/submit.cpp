@@ -343,9 +343,7 @@ const char	*CronWindow		= "cron_window";
 const char	*CronPrepTime	= "cron_prep_time";
 
 const char	*RunAsOwner = "run_as_owner";
-#if defined(WIN32)
 const char	*LoadProfile = "load_profile";
-#endif
 
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
@@ -421,9 +419,7 @@ void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 void	SetRunAsOwner();
-#if defined(WIN32)
 void    SetLoadProfile();
-#endif
 void	SetRank();
 void 	SetIWD();
 void 	ComputeIWD();
@@ -3569,6 +3565,7 @@ SetCronTab()
 								};
 	int ctr;
 	char *param = NULL;
+	CronTab::initRegexObject();
 	for ( ctr = 0; ctr < CronFields; ctr++ ) {
 		param = condor_param( attributes[ctr], CronTab::attributes[ctr] );
 		if ( param != NULL ) {
@@ -4288,21 +4285,24 @@ void
 SetRunAsOwner()
 {
 	char *run_as_owner = condor_param(RunAsOwner, ATTR_JOB_RUNAS_OWNER);
+	bool bRunAsOwner=false;
 	if (run_as_owner == NULL) {
 		return;
 	}
+	else {
+		bRunAsOwner = isTrue(run_as_owner);
+		free(run_as_owner);
+	}
 
 	MyString buffer;
-	buffer.sprintf(  "%s = %s", ATTR_JOB_RUNAS_OWNER, isTrue(run_as_owner) ? "True" : "False" );
+	buffer.sprintf(  "%s = %s", ATTR_JOB_RUNAS_OWNER, bRunAsOwner ? "True" : "False" );
 	InsertJobExpr (buffer);
-	free(run_as_owner);
 
 #if defined(WIN32)
 	// make sure we have a CredD
 	// (RunAsOwner is global for use in SetRequirements(),
 	//  the memory is freed() there)
-	RunAsOwnerCredD = param("CREDD_HOST");
-	if(RunAsOwnerCredD == NULL) {
+	if( bRunAsOwner && NULL == ( RunAsOwnerCredD = param("CREDD_HOST") ) ) {
 		fprintf(stderr,
 				"\nERROR: run_as_owner requires a valid CREDD_HOST configuration macro\n");
 		DoCleanup(0,0,NULL);
@@ -4311,7 +4311,6 @@ SetRunAsOwner()
 #endif
 }
 
-#if defined(WIN32)
 void 
 SetLoadProfile()
 {
@@ -4341,7 +4340,6 @@ SetLoadProfile()
     caching their profile on the local machine (which may be someone's
     laptop, which may already be running low on disk-space). */
 }
-#endif
 
 void
 SetRank()
@@ -5704,9 +5702,7 @@ queue(int num)
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetRunAsOwner();
-#if defined(WIN32)
         SetLoadProfile();
-#endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 

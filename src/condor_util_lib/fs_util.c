@@ -157,6 +157,11 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 #	  if (!defined FS_UTIL_TEST )
 		dprintf( D_ALWAYS, "statfs(%s) failed: %d/%s\n",
 				 path, errno, strerror( errno ) );
+		if (EOVERFLOW == errno) {
+			dprintf(D_ALWAYS,
+					"statfs overflow, if %s is a large volume make "
+					"sure you have a 64 bit version of Condor\n", path);
+		}
 #	  endif
 		return -1;
 	}
