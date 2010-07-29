@@ -37,7 +37,7 @@
 
 // WIN32 doesn't have strcasecmp
 #ifdef WIN32
-#define strcasecmp(s1, s2) stricmp(s1, s2)
+#define strcasecmp(s1, s2) _stricmp(s1, s2)
 #endif
 
 /* Solaris doesn't have unsetenv */
