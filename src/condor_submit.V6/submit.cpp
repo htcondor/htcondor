@@ -1211,7 +1211,7 @@ SetRemoteAttrs()
 
 		char * key = hash_iter_key(it);
 		int remote_depth = 0;
-		while(strincmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
+		while(strncasecmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
 			remote_depth++;
 			key += REMOTE_PREFIX_LEN;
 		}
@@ -1225,7 +1225,7 @@ SetRemoteAttrs()
 			preremote += REMOTE_PREFIX;
 		}
 
-		if(stricmp(key, Universe) == 0 || stricmp(key, ATTR_JOB_UNIVERSE) == 0) {
+		if(strcasecmp(key, Universe) == 0 || strcasecmp(key, ATTR_JOB_UNIVERSE) == 0) {
 			MyString Univ1 = preremote + Universe;
 			MyString Univ2 = preremote + ATTR_JOB_UNIVERSE;
 			MyString val = condor_param_mystring(Univ1.Value(), Univ2.Value());
@@ -1243,9 +1243,9 @@ SetRemoteAttrs()
 			for(int i = 0; i < tostringizesz; ++i) {
 				ExprItem & item = tostringize[i];
 
-				if(	stricmp(key, item.submit_expr) &&
-					(item.special_expr == NULL || stricmp(key, item.special_expr)) &&
-					stricmp(key, item.job_expr)) {
+				if(	strcasecmp(key, item.submit_expr) &&
+					(item.special_expr == NULL || strcasecmp(key, item.special_expr)) &&
+					strcasecmp(key, item.job_expr)) {
 					continue;
 				}
 				MyString key1 = preremote + item.submit_expr;
@@ -1351,7 +1351,7 @@ check_and_universalize_path( MyString &path )
 			// basically involve creating a whole separate mapping just to
 			// test it, the expense is not worth it.
 			
-			if (stricmp(my_name, net_name) != 0 ) {
+			if (strcasecmp(my_name, net_name) != 0 ) {
 				fprintf(stderr, "\nERROR: The path '%s' is associated with\n"
 				"\tuser '%s', but you're '%s', so Condor can\n"
 			    "\tnot access it. Currently Condor only supports network\n"
@@ -1405,7 +1405,7 @@ SetExecutable()
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
-		   stricmp( JobGridType, "amazon" ) == MATCH ) ) {
+		   strcasecmp( JobGridType, "amazon" ) == MATCH ) ) {
 		ignore_it = true;
 	}
 
@@ -1629,7 +1629,7 @@ SetUniverse()
 		}
 	}
 
-	if( univ && stricmp(univ,"scheduler") == MATCH ) {
+	if( univ && strcasecmp(univ,"scheduler") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_SCHEDULER;
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER);
 		InsertJobExpr (buffer);
@@ -1637,7 +1637,7 @@ SetUniverse()
 		return;
 	};
 
-	if( univ && stricmp(univ,"local") == MATCH ) {
+	if( univ && strcasecmp(univ,"local") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_LOCAL;
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE,
 						CONDOR_UNIVERSE_LOCAL );
@@ -1647,7 +1647,7 @@ SetUniverse()
 	};
 
 	if( univ && 
-		((stricmp(univ,"globus") == MATCH) || (stricmp(univ,"grid") == MATCH))) {
+		((strcasecmp(univ,"globus") == MATCH) || (strcasecmp(univ,"grid") == MATCH))) {
 		JobUniverse = CONDOR_UNIVERSE_GRID;
 		
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);
@@ -1688,23 +1688,23 @@ SetUniverse()
 			//   system names should be used (pbs, lsf). Glite are the only
 			//   people who care about the old value. This changed happend in
 			//   Condor 6.7.12.
-			if ((stricmp (JobGridType, "gt2") == MATCH) ||
-				(stricmp (JobGridType, "gt5") == MATCH) ||
-				(stricmp (JobGridType, "gt4") == MATCH) ||
-				(stricmp (JobGridType, "infn") == MATCH) ||
-				(stricmp (JobGridType, "blah") == MATCH) ||
-				(stricmp (JobGridType, "pbs") == MATCH) ||
-				(stricmp (JobGridType, "lsf") == MATCH) ||
-				(stricmp (JobGridType, "nqs") == MATCH) ||
-				(stricmp (JobGridType, "naregi") == MATCH) ||
-				(stricmp (JobGridType, "condor") == MATCH) ||
-				(stricmp (JobGridType, "nordugrid") == MATCH) ||
-				(stricmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
-				(stricmp (JobGridType, "unicore") == MATCH) ||
-				(stricmp (JobGridType, "cream") == MATCH)){
+			if ((strcasecmp (JobGridType, "gt2") == MATCH) ||
+				(strcasecmp (JobGridType, "gt5") == MATCH) ||
+				(strcasecmp (JobGridType, "gt4") == MATCH) ||
+				(strcasecmp (JobGridType, "infn") == MATCH) ||
+				(strcasecmp (JobGridType, "blah") == MATCH) ||
+				(strcasecmp (JobGridType, "pbs") == MATCH) ||
+				(strcasecmp (JobGridType, "lsf") == MATCH) ||
+				(strcasecmp (JobGridType, "nqs") == MATCH) ||
+				(strcasecmp (JobGridType, "naregi") == MATCH) ||
+				(strcasecmp (JobGridType, "condor") == MATCH) ||
+				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
+				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
+				(strcasecmp (JobGridType, "unicore") == MATCH) ||
+				(strcasecmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
-			} else if ( stricmp( JobGridType, "globus" ) == MATCH ) {
+			} else if ( strcasecmp( JobGridType, "globus" ) == MATCH ) {
 				// Convert 'globus' to 'gt2'
 				free( JobGridType );
 				JobGridType = strdup( "gt2" );
@@ -1720,7 +1720,7 @@ SetUniverse()
 		return;
 	};
 
-	if( univ && stricmp(univ,"parallel") == MATCH ) {
+	if( univ && strcasecmp(univ,"parallel") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_PARALLEL;
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL);
 		InsertJobExpr (buffer);
@@ -1729,7 +1729,7 @@ SetUniverse()
 		return;
 	}
 
-	if( univ && stricmp(univ,"vanilla") == MATCH ) {
+	if( univ && strcasecmp(univ,"vanilla") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA);
 		InsertJobExpr (buffer);
@@ -1737,7 +1737,7 @@ SetUniverse()
 		return;
 	};
 
-	if( univ && stricmp(univ,"mpi") == MATCH ) {
+	if( univ && strcasecmp(univ,"mpi") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_MPI;
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI);
 		InsertJobExpr (buffer);
@@ -1746,7 +1746,7 @@ SetUniverse()
 		return;
 	}
 
-	if( univ && stricmp(univ,"java") == MATCH ) {
+	if( univ && strcasecmp(univ,"java") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_JAVA;
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_JAVA);
 		InsertJobExpr (buffer);
@@ -1754,7 +1754,7 @@ SetUniverse()
 		return;
 	}
 
-	if( univ && stricmp(univ,"vm") == MATCH ) {
+	if( univ && strcasecmp(univ,"vm") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_VM;
 		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VM);
 		InsertJobExpr (buffer);
@@ -1843,7 +1843,7 @@ SetUniverse()
 	};
 
 
-	if( univ && stricmp(univ,"standard") == MATCH ) {
+	if( univ && strcasecmp(univ,"standard") == MATCH ) {
 #if defined( CLIPPED )
 		fprintf( stderr, 
 				 "\nERROR: You are trying to submit a \"%s\" job to Condor. "
@@ -2066,7 +2066,7 @@ SetImageSize()
 		// snapshot disk. So we can't estimate the disk space in advanace 
 		// because the sparse disk or snapshot disk will grow up 
 		// as a VM runs. So we will add 100MB to disk space.
-		if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+		if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 			vm_disk_space += 100*1024;
 		}
 		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
@@ -2533,6 +2533,15 @@ SetTransferFiles()
 	output_file_list.rewind();
 	char const *output_file;
 	while ( (output_file=output_file_list.next()) ) {
+		output_file = condor_basename(output_file);
+		if( !output_file || !output_file[0] ) {
+				// output_file may be empty if the entry in the list is
+				// a path ending with a slash.  Since a path ending in a
+				// slash means to get the contents of a directory, and we
+				// don't know in advance what names will exist in the
+				// directory, we can't do any check now.
+			continue;
+		}
 		// Apply filename remaps if there are any.
 		MyString remap_fname;
 		if(filename_remap_find(output_remaps.Value(),output_file,remap_fname)) {
@@ -2543,6 +2552,21 @@ SetTransferFiles()
 	}
 }
 
+void FixupTransferInputFiles( void )
+{
+		// See the comment in the function body of ExpandInputFileList
+		// for an explanation of what is going on here.
+
+	MyString error_msg;
+	if( Remote && !FileTransfer::ExpandInputFileList( job, error_msg ) )
+	{
+		MyString err_msg;
+		err_msg.sprintf( "\n%s\n",error_msg.Value());
+		print_wrapped_text( err_msg.Value(), stderr );
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+}
 
 void SetPerFileEncryption( void )
 {
@@ -3456,16 +3480,16 @@ SetNotification()
 	int notification;
 	MyString buffer;
 
-	if( (how == NULL) || (stricmp(how, "COMPLETE") == 0) ) {
+	if( (how == NULL) || (strcasecmp(how, "COMPLETE") == 0) ) {
 		notification = NOTIFY_COMPLETE;
 	} 
-	else if( stricmp(how, "NEVER") == 0 ) {
+	else if( strcasecmp(how, "NEVER") == 0 ) {
 		notification = NOTIFY_NEVER;
 	} 
-	else if( stricmp(how, "ALWAYS") == 0 ) {
+	else if( strcasecmp(how, "ALWAYS") == 0 ) {
 		notification = NOTIFY_ALWAYS;
 	} 
-	else if( stricmp(how, "ERROR") == 0 ) {
+	else if( strcasecmp(how, "ERROR") == 0 ) {
 		notification = NOTIFY_ERROR;
 	} 
 	else {
@@ -3494,10 +3518,10 @@ SetNotifyUser()
 
 	if (who) {
 		if( ! did_warning ) {
-			if( !stricmp(who, "false") ) {
+			if( !strcasecmp(who, "false") ) {
 				needs_warning = true;
 			}
-			if( !stricmp(who, "never") ) {
+			if( !strcasecmp(who, "never") ) {
 				needs_warning = true;
 			}
 		}
@@ -4761,6 +4785,13 @@ SetGridParams()
 			InsertJobExpr (buffer);
 		}
 
+		if ( strcasecmp( tmp, "amazon" ) == 0 ) {
+			fprintf(stderr, "\nERROR: Amazon EC2 grid jobs require a "
+					"service URL\n");
+			DoCleanup( 0, 0, NULL );
+			exit( 1 );
+		}
+
 		free( tmp );
 
 	} else {
@@ -4772,10 +4803,10 @@ SetGridParams()
 	}
 
 	if ( JobGridType == NULL ||
-		 stricmp (JobGridType, "gt2") == MATCH ||
-		 stricmp (JobGridType, "gt4") == MATCH ||
-		 stricmp (JobGridType, "gt5") == MATCH ||
-		 stricmp (JobGridType, "nordugrid") == MATCH ) {
+		 strcasecmp (JobGridType, "gt2") == MATCH ||
+		 strcasecmp (JobGridType, "gt4") == MATCH ||
+		 strcasecmp (JobGridType, "gt5") == MATCH ||
+		 strcasecmp (JobGridType, "nordugrid") == MATCH ) {
 
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 			buffer.sprintf( "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
@@ -4797,9 +4828,9 @@ SetGridParams()
 	}
 
 	if ( JobGridType == NULL ||
-		 stricmp (JobGridType, "gt2") == MATCH ||
-		 stricmp (JobGridType, "gt5") == MATCH ||
-		 stricmp (JobGridType, "gt4") == MATCH ) {
+		 strcasecmp (JobGridType, "gt2") == MATCH ||
+		 strcasecmp (JobGridType, "gt5") == MATCH ||
+		 strcasecmp (JobGridType, "gt4") == MATCH ) {
 
 		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
 				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
@@ -4845,7 +4876,7 @@ SetGridParams()
 		buffer.sprintf( "%s = \"%s\"", ATTR_KEYSTORE_FILE, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
-	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
+	} else if ( JobGridType && strcasecmp( JobGridType, "unicore" ) == 0 ) {
 		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
 				"parameter\n", KeystoreFile );
 		DoCleanup( 0, 0, NULL );
@@ -4856,7 +4887,7 @@ SetGridParams()
 		buffer.sprintf( "%s = \"%s\"", ATTR_KEYSTORE_ALIAS, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
-	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
+	} else if ( JobGridType && strcasecmp( JobGridType, "unicore" ) == 0 ) {
 		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
 				"parameter\n", KeystoreAlias );
 		DoCleanup( 0, 0, NULL );
@@ -4868,7 +4899,7 @@ SetGridParams()
 		buffer.sprintf( "%s = \"%s\"", ATTR_KEYSTORE_PASSPHRASE_FILE, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
-	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
+	} else if ( JobGridType && strcasecmp( JobGridType, "unicore" ) == 0 ) {
 		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
 				"parameter\n", KeystorePassphraseFile );
 		DoCleanup( 0, 0, NULL );
@@ -4891,7 +4922,7 @@ SetGridParams()
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PUBLIC_KEY, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
 		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPublicKey );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
@@ -4910,7 +4941,7 @@ SetGridParams()
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PRIVATE_KEY, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
 		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPrivateKey );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
@@ -4935,7 +4966,7 @@ SetGridParams()
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_AMI_ID, tmp );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
 		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonAmiID );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
@@ -4990,7 +5021,7 @@ SetGridParams()
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
 	//   host.edu:8443 batchname queuename
-	if ( JobGridType != NULL && stricmp (JobGridType, "cream") == MATCH ) {
+	if ( JobGridType != NULL && strcasecmp (JobGridType, "cream") == MATCH ) {
 		tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 		MyString resource = tmp;
 		free( tmp );
@@ -5032,11 +5063,11 @@ SetGSICredentials()
 
 	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
-		 (stricmp (JobGridType, "gt2") == MATCH ||
-		  stricmp (JobGridType, "gt4") == MATCH ||
-		  stricmp (JobGridType, "gt5") == MATCH ||
-		  stricmp (JobGridType, "cream") == MATCH ||
-		  stricmp (JobGridType, "nordugrid") == MATCH)) {
+		 (strcasecmp (JobGridType, "gt2") == MATCH ||
+		  strcasecmp (JobGridType, "gt4") == MATCH ||
+		  strcasecmp (JobGridType, "gt5") == MATCH ||
+		  strcasecmp (JobGridType, "cream") == MATCH ||
+		  strcasecmp (JobGridType, "nordugrid") == MATCH)) {
 
 		proxy_file = get_x509_proxy_filename();
 		if ( proxy_file == NULL ) {
@@ -5327,7 +5358,7 @@ read_condor_file( FILE *fp )
 			continue;
 		}
 
-		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
+		if( strncasecmp(name, "queue", strlen("queue")) == 0 ) {
 			// if this is the first time we've seen this "queue"
 			// command, then set justSeenQueue to TRUE and go back to
 			// the top of the loop to process extraLines before
@@ -5745,6 +5776,9 @@ queue(int num)
 		SetConcurrencyLimits();
 		SetVMParams();
 
+			// This must come after all things that modify the input file list
+		FixupTransferInputFiles();
+
 			// SetForcedAttributes should be last so that it trumps values
 			// set by normal submit attributes
 		SetForcedAttributes();
@@ -5845,7 +5879,7 @@ findClause( const char* buffer, const char* attr_name )
 	const char* ptr;
 	int len = strlen( attr_name );
 	for( ptr = buffer; *ptr; ptr++ ) {
-		if( strincmp(attr_name,ptr,len) == MATCH ) {
+		if( strncasecmp(attr_name,ptr,len) == MATCH ) {
 			return true;
 		}
 	}
@@ -5964,7 +5998,7 @@ check_requirements( char const *orig, MyString &answer )
 		// "VirtualMemory", we have to do this one manually...
 	char const *aptr;
 	for( aptr = answer.Value(); *aptr; aptr++ ) {
-		if( strincmp(ATTR_MEMORY,aptr,5) == MATCH ) {
+		if( strncasecmp(ATTR_MEMORY,aptr,5) == MATCH ) {
 				// We found "Memory", but we need to make sure that's
 				// not part of "VirtualMemory"...
 			if( aptr == answer.Value() ) {
@@ -6314,6 +6348,15 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 			if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+			if( errno == EISDIR && (flags & O_WRONLY)) {
+					// Entries in the transfer output list may be
+					// files or directories; no way to tell in
+					// advance.  When there is already a directory by
+					// the same name, it is not obvious what to do.
+					// Therefore, we will just do nothing here and leave
+					// it up to the runtime to nicely report errors.
+				return;
+			}
 			fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
 					 strPathname.Value(), flags, strerror( errno ) );
 			DoCleanup(0,0,NULL);
@@ -7030,7 +7073,7 @@ void SetVMRequirements()
 
 	// check OS
 	/*	
-	if( (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) || 
+	if( (strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) || 
 			vm_need_fsdomain ) {
 		bool checks_opsys = false;
 		checks_opsys = findClause( vmanswer, ATTR_OPSYS );
@@ -7065,7 +7108,7 @@ void SetVMRequirements()
 		}
 	}
 
-	if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) != MATCH ) {
+	if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) != MATCH ) {
 		// For most virtual machine programs except Xen, 
 		// it's reasonable to expect the physical memory is 
 		// larger than the memory for VM.
@@ -7393,14 +7436,15 @@ SetVMParams()
 		free(vm_cdrom_files);
 	}
 
-	if( (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
+	if( (strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) ||
+		(strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		bool real_xen_kernel_file = false;
 		bool need_xen_root_device = false;
 
 		// Read the parameter of xen_transfer_files 
 		char *transfer_files = NULL;
 		char *transf_attr_name;
-		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			transfer_files = condor_param("xen_transfer_files");
 			transf_attr_name = VMPARAM_XEN_TRANSFER_FILES;
@@ -7446,7 +7490,7 @@ SetVMParams()
 			free(transfer_files);
 		}
 		
-		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			// xen_kernel is a required parameter
 			char *xen_kernel = NULL;
@@ -7463,13 +7507,13 @@ SetVMParams()
 			}else {
 				MyString fixedname = delete_quotation_marks(xen_kernel);
 
-				if ( stricmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
+				if ( strcasecmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
 					// kernel image is included in a disk image file
 					// so we will use bootloader(pygrub etc.) defined 
 					// in a vmgahp config file on an excute machine 
 					real_xen_kernel_file = false;
 					need_xen_root_device = false;
-				}else if ( stricmp(fixedname.Value(), XEN_KERNEL_HW_VT) == 0) {
+				}else if ( strcasecmp(fixedname.Value(), XEN_KERNEL_HW_VT) == 0) {
 					// A job user want to use an unmodified OS in Xen.
 					// so we require hardware virtualization.
 					real_xen_kernel_file = false;
@@ -7539,7 +7583,7 @@ SetVMParams()
 		// <x>_disk is a required parameter
 		char *disk = NULL;
 		char *disk_attr_name;
-		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			disk = condor_param("xen_disk");
 			disk_attr_name = VMPARAM_XEN_DISK;
@@ -7576,7 +7620,7 @@ SetVMParams()
 			free(disk);
 		}
 
-		if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			// xen_kernel_params is a optional parameter
 			char *xen_kernel_params = NULL;
@@ -7596,7 +7640,7 @@ SetVMParams()
 			char *cdrom_device = NULL;
 			char *cdrom_attr_name;
 
-			if ( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
+			if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 			{
 				cdrom_device = condor_param("xen_cdrom_device");
 				cdrom_attr_name = VMPARAM_XEN_CDROM_DEVICE;
@@ -7629,7 +7673,7 @@ SetVMParams()
 			InsertJobExpr( buffer, false );
 		}
 
-	}else if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+	}else if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 		bool vmware_should_transfer_files = false;
 		tmp_ptr = condor_param("vmware_should_transfer_files");
 		if( parse_vm_option(tmp_ptr, vmware_should_transfer_files) == false ) {
@@ -7769,7 +7813,7 @@ SetVMParams()
 	// Here we check if this job submit description file is 
 	// correct for vm checkpoint
 	if( VMCheckpoint ) {
-		if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+		if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
 			// For vm checkpoint in Xen
 			// 1. all disk files should be in a shared file system
 			// 2. If a job uses CDROM files, it should be 

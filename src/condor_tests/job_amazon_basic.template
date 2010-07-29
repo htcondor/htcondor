@@ -1,5 +1,5 @@
 universe = grid
-grid_resource = amazon
+grid_resource = amazon http://localhost:xxxxxx
 executable = job_amazon_basic
 amazon_ami_id = ami-basic
 amazon_keypair_file = job_amazon_basic.ssh_keys

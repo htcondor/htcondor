@@ -190,7 +190,7 @@ CONLIBAPI_OBJ = \
 	../condor_util_lib/strupr.o \
 	../condor_util_lib/lock_file.NON_POSIX.o \
 	../condor_util_lib/rotate_file.o \
-	../condor_util_lib/string_funcs.o \
+	../condor_util_lib/strcasestr.o \
 	strnewp.o \
 	condor_environ.o \
 	../condor_util_lib/setsyscalls.o \
@@ -442,6 +442,18 @@ public_copy_target(MyString.h,include,MyString.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/MyString.h
 
 public_copy_target(../condor_includes/condor_header_features.h,include,condor_header_features.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_header_features.h
+
+public_copy_target(../condor_c++_util/compat_classad.h,include,compat_classad.h,TEXT_MODE)
+
+public_copy_target(../condor_c++_util/compat_classad_list.h,include,compat_classad_list.h,TEXT_MODE)
+
+public_copy_target(../condor_c++_util/compat_classad_util.h,include,compat_classad_util.h,TEXT_MODE)
+
+public_copy_target(../condor_c++_util/stl_string_utils.h,include,stl_string_utils.h,TEXT_MODE)
+
+public_recursive_copy_target(../classad/classad,include/classad)
+
 libcondorapi-release:: $(RELEASE_DIR)/include/condor_header_features.h
 
 condor_version.o: condor_version.cpp

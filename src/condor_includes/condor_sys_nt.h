@@ -102,7 +102,6 @@ typedef unsigned __int32 uint32_t;
 #define pclose _pclose
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
-#define strincmp _strnicmp
 #define strdup _strdup
 #define strupr _strupr
 #define strlwr _strlwr

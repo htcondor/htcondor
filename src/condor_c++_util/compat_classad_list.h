@@ -20,7 +20,6 @@
 #ifndef COMPAT_CLASSAD_LIST_H
 #define COMPAT_CLASSAD_LIST_H
 
-#include "condor_common.h"
 #include "compat_classad.h"
 
 #include <vector>

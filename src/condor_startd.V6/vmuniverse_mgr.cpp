@@ -316,10 +316,10 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 	const char *attr_name = NULL;
 	while(m_vmgahp_info.NextExpr(attr_name, expr)) {
 		// we need to adjust available vm memory
-		if( stricmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
+		if( strcasecmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
 			int freemem = getFreeVMMemSize();
 			ad->Assign(ATTR_VM_MEMORY, freemem);
-		}else if( stricmp(attr_name, ATTR_VM_NETWORKING) == MATCH ) {
+		}else if( strcasecmp(attr_name, ATTR_VM_NETWORKING) == MATCH ) {
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
 			ad->Insert(attr_name, expr->Copy());

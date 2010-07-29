@@ -374,7 +374,7 @@ host_in_domain( const char *host, const char *domain )
         return FALSE;
     }
 
-    if( stricmp(host+skip,domain) == MATCH ) {
+    if( strcasecmp(host+skip,domain) == MATCH ) {
         if(skip==0 || host[skip-1] == '.' || domain[0] == '.' ) {
             return TRUE;
         }

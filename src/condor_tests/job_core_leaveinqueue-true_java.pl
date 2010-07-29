@@ -25,7 +25,7 @@ my $testdesc =  'Condor submit with test for policy trigger of leave_in_queue - 
 my $testname = "job_core_leaveinqueue_java";
 
 my $killedchosen = 0;
-my $debuglevel = 2;
+my $debuglevel = 1;
 
 # truly const variables in perl
 sub IDLE{1};

@@ -41,6 +41,7 @@ class DaemonCoreSockAdapterClass {
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
 	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,TimerHandlercpp handler,const char * event_descrip,Service* s);
+	typedef int (DaemonCore::*Register_Timer_TS_fnptr)(unsigned deltawhen,TimerHandlercpp handler,const char * event_descrip,Service* s);
 	typedef int (DaemonCore::*Register_PeriodicTimer_fnptr)(unsigned deltawhen,unsigned period,TimerHandlercpp handler,const char * event_descrip,Service* s);
 	typedef int (DaemonCore::*Cancel_Timer_fnptr)(int id);
 	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg,int num_fds);
@@ -63,40 +64,42 @@ class DaemonCoreSockAdapterClass {
 
 	void EnableDaemonCore(
 		DaemonCore *dC,
-		Register_Socket_fnptr Register_Socket_fptr,
-		Cancel_Socket_fnptr Cancel_Socket_fptr,
-		CallSocketHandler_fnptr CallSocketHandler_fptr,
-		CallCommandHandler_fnptr CallCommandHandler_fptr,
-		HandleReqAsync_fnptr HandleReqAsync_fptr,
-		Register_DataPtr_fnptr Register_DataPtr_fptr,
-		GetDataPtr_fnptr GetDataPtrFun_fptr,
-		Register_Timer_fnptr Register_Timer_fptr,
-		Register_PeriodicTimer_fnptr Register_PeriodicTimer_fptr,
-		Cancel_Timer_fnptr Cancel_Timer_fptr,
-		TooManyRegisteredSockets_fnptr TooManyRegisteredSockets_fptr,
-		incrementPendingSockets_fnptr incrementPendingSockets_fptr,
-		decrementPendingSockets_fnptr decrementPendingSockets_fptr,
-		publicNetworkIpAddr_fnptr publicNetworkIpAddr_fptr,
-		Register_Command_fnptr Register_Command_fptr,
-		daemonContactInfoChanged_fnptr daemonContactInfoChanged_fptr)
+		Register_Socket_fnptr in_Register_Socket_fnptr,
+		Cancel_Socket_fnptr in_Cancel_Socket_fnptr,
+		CallSocketHandler_fnptr in_CallSocketHandler_fnptr,
+		CallCommandHandler_fnptr in_CallCommandHandler_fnptr,
+		HandleReqAsync_fnptr in_HandleReqAsync_fnptr,
+		Register_DataPtr_fnptr in_Register_DataPtr_fnptr,
+		GetDataPtr_fnptr in_GetDataPtrFun_fnptr,
+		Register_Timer_fnptr in_Register_Timer_fnptr,
+		Register_PeriodicTimer_fnptr in_Register_PeriodicTimer_fnptr,
+		Cancel_Timer_fnptr in_Cancel_Timer_fnptr,
+		TooManyRegisteredSockets_fnptr in_TooManyRegisteredSockets_fnptr,
+		incrementPendingSockets_fnptr in_incrementPendingSockets_fnptr,
+		decrementPendingSockets_fnptr in_decrementPendingSockets_fnptr,
+		publicNetworkIpAddr_fnptr in_publicNetworkIpAddr_fnptr,
+		Register_Command_fnptr in_Register_Command_fnptr,
+		daemonContactInfoChanged_fnptr in_daemonContactInfoChanged_fnptr,
+		Register_Timer_TS_fnptr in_Register_Timer_TS_fnptr)
 	{
 		m_daemonCore = dC;
-		m_Register_Socket_fnptr = Register_Socket_fptr;
-		m_Cancel_Socket_fnptr = Cancel_Socket_fptr;
-		m_CallSocketHandler_fnptr = CallSocketHandler_fptr;
-		m_CallCommandHandler_fnptr = CallCommandHandler_fptr;
-		m_HandleReqAsync_fnptr = HandleReqAsync_fptr;
-		m_Register_DataPtr_fnptr = Register_DataPtr_fptr;
-		m_GetDataPtr_fnptr = GetDataPtrFun_fptr;
-		m_Register_Timer_fnptr = Register_Timer_fptr;
-		m_Register_PeriodicTimer_fnptr = Register_PeriodicTimer_fptr;
-		m_Cancel_Timer_fnptr = Cancel_Timer_fptr;
-		m_TooManyRegisteredSockets_fnptr = TooManyRegisteredSockets_fptr;
-		m_incrementPendingSockets_fnptr = incrementPendingSockets_fptr;
-		m_decrementPendingSockets_fnptr = decrementPendingSockets_fptr;
-		m_publicNetworkIpAddr_fnptr = publicNetworkIpAddr_fptr;
-		m_Register_Command_fnptr = Register_Command_fptr;
-		m_daemonContactInfoChanged_fnptr = daemonContactInfoChanged_fptr;
+		m_Register_Socket_fnptr = in_Register_Socket_fnptr;
+		m_Cancel_Socket_fnptr = in_Cancel_Socket_fnptr;
+		m_CallSocketHandler_fnptr = in_CallSocketHandler_fnptr;
+		m_CallCommandHandler_fnptr = in_CallCommandHandler_fnptr;
+		m_HandleReqAsync_fnptr = in_HandleReqAsync_fnptr;
+		m_Register_DataPtr_fnptr = in_Register_DataPtr_fnptr;
+		m_GetDataPtr_fnptr = in_GetDataPtrFun_fnptr;
+		m_Register_Timer_fnptr = in_Register_Timer_fnptr;
+		m_Register_PeriodicTimer_fnptr = in_Register_PeriodicTimer_fnptr;
+		m_Cancel_Timer_fnptr = in_Cancel_Timer_fnptr;
+		m_TooManyRegisteredSockets_fnptr = in_TooManyRegisteredSockets_fnptr;
+		m_incrementPendingSockets_fnptr = in_incrementPendingSockets_fnptr;
+		m_decrementPendingSockets_fnptr = in_decrementPendingSockets_fnptr;
+		m_publicNetworkIpAddr_fnptr = in_publicNetworkIpAddr_fnptr;
+		m_Register_Command_fnptr = in_Register_Command_fnptr;
+		m_daemonContactInfoChanged_fnptr = in_daemonContactInfoChanged_fnptr;
+		m_Register_Timer_TS_fnptr = in_Register_Timer_TS_fnptr;
 	}
 
 		// These functions all have the same interface as the corresponding
@@ -119,6 +122,7 @@ class DaemonCoreSockAdapterClass {
 	publicNetworkIpAddr_fnptr m_publicNetworkIpAddr_fnptr;
 	Register_Command_fnptr m_Register_Command_fnptr;
 	daemonContactInfoChanged_fnptr m_daemonContactInfoChanged_fnptr;
+	Register_Timer_TS_fnptr m_Register_Timer_TS_fnptr;
 
     int Register_Socket (Stream*              iosock,
                          const char *         iosock_descrip,
@@ -239,6 +243,13 @@ class DaemonCoreSockAdapterClass {
 	void daemonContactInfoChanged() {
 		ASSERT(m_daemonCore);
 		return (m_daemonCore->*m_daemonContactInfoChanged_fnptr)();
+	}
+
+	int Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
+				const char *event_descrip, Service* s)
+	{
+		ASSERT(m_daemonCore);
+		return (m_daemonCore->*m_Register_Timer_TS_fnptr)(deltawhen, handler, event_descrip, s);
 	}
 };
 

@@ -225,7 +225,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "nordugrid" ) ) {
+		if ( !token || strcasecmp( token, "nordugrid" ) ) {
 			error_string.sprintf( "%s not of type nordugrid",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;

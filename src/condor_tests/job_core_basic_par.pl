@@ -27,7 +27,7 @@ my $pid = $ARGV[1];
 
 my $testdesc =  'Basic Parallel - Parallel U';
 my $testname = "job_core_basic_par";
-my $debuglevel = 2;
+my $debuglevel = 1;
 my $outputbase = "job_core_basic_par$pid.out";
 
 CondorTest::debug("Submit file for this test is $cmd\n",$debuglevel);

@@ -17,59 +17,23 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+#include "strcasestr.h"
 
- 
-
-
-#include <stdio.h>
-#include <string.h>
-
-#define to_lower(a) (((a)>='A'&&(a)<='Z')?((a)|040):(a))
-
-/*
-** Just like strcmp but case independent. 
-*/
-int
-stricmp(register char* s1, register char* s2)
+#if ( !HAVE_STRCASESTR )
+// Like strstr(), but case-insensitive
+char *
+strcasestr( const char *string, const char *pattern )
 {
-	while (to_lower(*s1) == to_lower(*s2)) {
-		s2++;
-		if (*s1++=='\0')
-			return(0);
-	}
-	return(to_lower(*s1) - to_lower(*s2));
-}
-
-
-/*
- * Compare strings (at most n bytes):  s1>s2: >0  s1==s2: 0  s1<s2: <0
- */
-int
-strincmp( register char* s1, register char* s2, register int n )
-{
-
-	while (--n >= 0 && to_lower(*s1) == to_lower(*s2)) {
-		s2++;
-		if (*s1++ == '\0')
-			return(0);
-	}
-	return(n<0 ? 0 : to_lower(*s1) - to_lower(*s2) );
-}
-
-/*
-** Return a pointer to the first occurence of pattern in string.
-*/
-const char *
-substr( const char* string, const char* pattern )
-{
-	const char	*str;
-	int		n;
+	char	*str;
+	int			n;
 
 	n = strlen( pattern );
-	for( str=string; *str; str++ ) {
-		if( strncmp(str,pattern,n) == 0 ) {
+	for( str=(char *)string; *str; str++ ) {
+		if( strncasecmp(str,pattern,n) == 0 ) {
 			return str;
 		}
 	}
 	return NULL;
 }
+#endif

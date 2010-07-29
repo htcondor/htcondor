@@ -461,7 +461,7 @@ agent_starter( ReliSock * s )
 
 	dprintf ( D_ALWAYS, "Starting agent '%s'\n", subsys );
 
-	if( stricmp(subsys, "fetch_log") == 0 ) {
+	if( strcasecmp(subsys, "fetch_log") == 0 ) {
 		free (subsys);
 		return handle_agent_fetch_log( stream );
 	}

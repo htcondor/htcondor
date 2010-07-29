@@ -346,6 +346,7 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
 #define DC_TIME_OFFSET      (DC_BASE+17)
 #define DC_PURGE_LOG        (DC_BASE+18)
+#define DC_SHARE_SOCK       (DC_BASE+19)
 
 /*
 *** Log type supported by DC_FETCH_LOG

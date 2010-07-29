@@ -3085,31 +3085,22 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 		// These three lists must be kept in sync!
-	static const int ATTR_ARRAY_SIZE = 8;
+	static const int ATTR_ARRAY_SIZE = 5;
 	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
-		ATTR_JOB_OUTPUT,
-		ATTR_JOB_ERROR,
 		ATTR_TRANSFER_INPUT_FILES,
-		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_ULOG_FILE,
 		ATTR_X509_USER_PROXY };
 	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
 		false,
 		false,
-		false,
-		false,
-		true,
 		true,
 		false,
 		false };
 	static const char *AttrXferBool[ATTR_ARRAY_SIZE] = {
 		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT,
-		ATTR_TRANSFER_OUTPUT,
-		ATTR_TRANSFER_ERROR,
-		NULL,
 		NULL,
 		NULL,
 		NULL };
@@ -3231,13 +3222,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			MyString new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.sprintf(
-						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
-					base = new_path_buf.Value();
 					changed = true;
 				}
 				new_paths.append(base);
@@ -5302,7 +5289,7 @@ Scheduler::negotiate(int command, Stream* s)
 						}
 					}
 
-					if ( stricmp(claim_id,"null") == 0 ) {
+					if ( strcasecmp(claim_id,"null") == 0 ) {
 						// No ClaimId given by the matchmaker.  This means
 						// the resource we were matched with does not support
 						// the claiming protocol.
@@ -6722,7 +6709,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	}
 
 	if( match_opsys ) {
-		if( strincmp(match_opsys,"winnt",5) == MATCH ) {
+		if( strncasecmp(match_opsys,"winnt",5) == MATCH ) {
 			nt_resource = true;
 		}
 		free( match_opsys );
@@ -7617,7 +7604,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
 
 	// sanity check to make sure this job isn't going to start as root.
-	if (stricmp(owner.Value(), "root") == 0 ) {
+	if (strcasecmp(owner.Value(), "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
 		goto wrapup;
@@ -8053,7 +8040,7 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 
 			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( stricmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 				// In vmware vm universe, vmware disk may be 
 				// a sparse disk or snapshot disk. So we can't estimate the disk space 
 				// in advanace because the sparse disk or snapshot disk will 

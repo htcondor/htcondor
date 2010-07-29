@@ -30,9 +30,9 @@ domainAndNameMatch( const char *account1,
 				   	const char *domain2 ) 
 {
 	
-	return ( ( stricmp ( account1, account2 ) == 0 ) && 
+	return ( ( strcasecmp ( account1, account2 ) == 0 ) && 
 		( domain1 == NULL || domain1 == "" || 
-		stricmp ( domain1, domain2 ) == 0 ) );
+		strcasecmp ( domain1, domain2 ) == 0 ) );
 
 }
 

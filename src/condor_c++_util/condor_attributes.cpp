@@ -646,6 +646,7 @@ const char * const ATTR_TRANSFER_INPUT_FILES	 = "TransferInput";
 const char * const ATTR_TRANSFER_INTERMEDIATE_FILES = "TransferIntermediate";
 const char * const ATTR_TRANSFER_OUTPUT_FILES	 = "TransferOutput";
 const char * const ATTR_TRANSFER_OUTPUT_REMAPS   = "TransferOutputRemaps";
+const char * const ATTR_SPOOLED_OUTPUT_FILES     = "SpooledOutputFiles";
 const char * const ATTR_ENCRYPT_INPUT_FILES		 = "EncryptInputFiles";
 const char * const ATTR_ENCRYPT_OUTPUT_FILES	 = "EncryptOutputFiles";
 const char * const ATTR_DONT_ENCRYPT_INPUT_FILES = "DontEncryptInputFiles";

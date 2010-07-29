@@ -269,7 +269,7 @@ AmazonVMKeypairNames::gsoapRequest(void)
 	int code = -1;		
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeKeyPairs(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -332,7 +332,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__CreateKeyPair(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -391,7 +391,7 @@ AmazonVMDestroyKeypair::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DeleteKeyPair(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -559,7 +559,7 @@ AmazonVMStart::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__RunInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -611,7 +611,7 @@ AmazonVMStop::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__TerminateInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -661,7 +661,7 @@ AmazonVMStatus::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -751,7 +751,7 @@ AmazonVMStatusAll::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);

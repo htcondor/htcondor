@@ -65,6 +65,9 @@ class AmazonRequest {
 		AmazonRequest();
 		virtual ~AmazonRequest();
 
+		// Service URL
+		std::string m_service_url;
+
 		// Access key or User certificate
 		std::string accesskeyfile;
 		// Secret key or User private Key

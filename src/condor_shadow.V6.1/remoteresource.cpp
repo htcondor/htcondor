@@ -1046,17 +1046,29 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, (bool)int_value);
 	}
 
+		// The starter sends this attribute whether or not we are spooling
+		// output (because it doesn't know if we are).  Technically, we
+		// only need to write this attribute into the job ClassAd if we
+		// are spooling output.  However, it doesn't hurt to have it there
+		// otherwise.
+	if( update_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
+		jobAd->Assign(ATTR_SPOOLED_OUTPUT_FILES,string_value.Value());
+	}
+	else if( jobAd->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
+		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
+	}
+
 	char* job_state = NULL;
 	ResourceState new_state = state;
 	update_ad->LookupString( ATTR_JOB_STATE, &job_state );
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
-		if( stricmp(job_state, "Suspended") == MATCH ) {
+		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
-		} else if ( stricmp(job_state, "Running") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Running") == MATCH ) {
 			new_state = RR_EXECUTING;
-		} else if ( stricmp(job_state, "Checkpointed") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Checkpointed") == MATCH ) {
 			new_state = RR_CHECKPOINTED;
 		} else { 
 				// For our purposes in here, we don't care about any

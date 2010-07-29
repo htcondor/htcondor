@@ -210,7 +210,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "condor" ) ) {
+		if ( !token || strcasecmp( token, "condor" ) ) {
 			error_string.sprintf( "%s not of type condor",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
@@ -1269,6 +1269,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
+		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {

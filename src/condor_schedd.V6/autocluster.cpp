@@ -100,7 +100,7 @@ bool AutoCluster::config(const char* significant_target_attrs)
 	}
 
 
-	if ( significant_attrs && old_sig_attrs  && (stricmp(new_sig_attrs,old_sig_attrs)==0) )
+	if ( significant_attrs && old_sig_attrs  && (strcasecmp(new_sig_attrs,old_sig_attrs)==0) )
 	{
 		/* 	Just compare new and old attr strings directly.
 			If they match, then we already have dealt with the
