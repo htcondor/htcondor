@@ -342,7 +342,7 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 
 		bn = condor_basename(tmp);
 
-		if ( 0 == stricmp(bn, name) ) {
+		if ( 0 == strcasecmp(bn, name) ) {
 			
 			// basenames match, so remove it from the list.
 			

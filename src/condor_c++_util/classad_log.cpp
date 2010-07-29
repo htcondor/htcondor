@@ -507,7 +507,7 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 		}
 		case CondorLogOp_SetAttribute: {
 			char const *lname = ((LogSetAttribute *)log)->get_name();
-			if (name && stricmp(lname, name) == 0) {
+			if (name && strcasecmp(lname, name) == 0) {
 				if (ValFound) {
 					free(val);
 				}
@@ -532,7 +532,7 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 		}
 		case CondorLogOp_DeleteAttribute: {
 			char const *lname = ((LogDeleteAttribute *)log)->get_name();
-			if (name && stricmp(lname, name) == 0) {
+			if (name && strcasecmp(lname, name) == 0) {
 				if (ValFound) {
 					free(val);
 				}

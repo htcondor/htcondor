@@ -69,7 +69,7 @@ StringToDCpermission(char const *str) {
 	DCpermission perm;
 
 	for(perm = FIRST_PERM;perm!=LAST_PERM;perm=NEXT_PERM(perm)) {
-		if( !stricmp(str,PermString(perm)) ) {
+		if( !strcasecmp(str,PermString(perm)) ) {
 			return perm;
 		}
 	}
@@ -160,7 +160,7 @@ main( int argc, char* argv[] )
 			result = "ALLOWED";
 		}
 
-		if( expected && stricmp(expected,result) != 0 ) {
+		if( expected && strcasecmp(expected,result) != 0 ) {
 			printf("Got wrong result '%s' for '%s': reason: %s!\n",
 				   result,line.Value(),reason.Value());
 			printf("Aborting.\n");

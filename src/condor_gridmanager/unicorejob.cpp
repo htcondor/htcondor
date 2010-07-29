@@ -228,7 +228,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 		buff.Tokenize();
 
 		token = buff.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "unicore" ) ) {
+		if ( !token || strcasecmp( token, "unicore" ) ) {
 			error_string.sprintf( "%s not of type unicore", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}

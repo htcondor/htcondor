@@ -66,9 +66,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-#ifndef WORD_BIT
-#define WORD_BIT 32
-#endif
 
 
 

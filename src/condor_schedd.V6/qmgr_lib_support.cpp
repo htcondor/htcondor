@@ -30,8 +30,6 @@
 #include "my_hostname.h"
 #include "my_username.h"
 
-extern "C" int		strcmp_until(const char *, const char *, const char);
-
 ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 

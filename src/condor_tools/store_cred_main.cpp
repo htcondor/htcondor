@@ -296,7 +296,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 		switch(argv[i][0]) {
 		case 'a':
 		case 'A':	// Add
-			if (stricmp(argv[i], ADD_CREDENTIAL) == 0) {
+			if (strcasecmp(argv[i], ADD_CREDENTIAL) == 0) {
 				if (!opts->mode) {
 					opts->mode = ADD_MODE;
 				}
@@ -313,7 +313,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 			break;
 		case 'd':	
 		case 'D':	// Delete
-			if (stricmp(argv[i], DELETE_CREDENTIAL) == 0) {
+			if (strcasecmp(argv[i], DELETE_CREDENTIAL) == 0) {
 				if (!opts->mode) {
 					opts->mode = DELETE_MODE;
 				}
@@ -330,7 +330,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 			break;
 		case 'q':	
 		case 'Q':	// tell me if I have anything stored
-			if (stricmp(argv[i], QUERY_CREDENTIAL) == 0) {
+			if (strcasecmp(argv[i], QUERY_CREDENTIAL) == 0) {
 				if (!opts->mode) {
 					opts->mode = QUERY_MODE;
 				}
@@ -348,7 +348,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 #if defined(WIN32)
 		case 'c':	
 		case 'C':	// Config
-			if (stricmp(argv[i], CONFIG_CREDENTIAL) == 0) {
+			if (strcasecmp(argv[i], CONFIG_CREDENTIAL) == 0) {
 				if (!opts->mode) {
 					opts->mode = CONFIG_MODE;
 				}

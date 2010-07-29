@@ -1737,8 +1737,8 @@ format_globusHostAndJM( char *, AttrList *ad )
 
 	if ( resource_name != NULL ) {
 
-		if ( grid_type == NULL || !stricmp( grid_type, "gt2" ) ||
-			 !stricmp( grid_type, "globus" ) ) {
+		if ( grid_type == NULL || !strcasecmp( grid_type, "gt2" ) ||
+			 !strcasecmp( grid_type, "globus" ) ) {
 
 			// copy the hostname
 			p = strcspn( resource_name, ":/" );
@@ -1758,7 +1758,7 @@ format_globusHostAndJM( char *, AttrList *ad )
 				jm[p] = '\0';
 			}
 
-		} else if ( !stricmp( grid_type, "gt4" ) ) {
+		} else if ( !strcasecmp( grid_type, "gt4" ) ) {
 
 			strcpy( jm, "Fork" );
 

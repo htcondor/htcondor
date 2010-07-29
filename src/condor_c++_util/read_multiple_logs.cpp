@@ -703,7 +703,7 @@ MultiLogFiles::getValuesFromFile(const MyString &fileName,
 			StringList	tokens(logicalLine, " \t");
 			tokens.rewind();
 
-			if ( !stricmp(tokens.next(), keyword.Value()) ) {
+			if ( !strcasecmp(tokens.next(), keyword.Value()) ) {
 					// Skip over unwanted tokens.
 				for ( int skipped = 0; skipped < skipTokens; skipped++ ) {
 					if ( !tokens.next() ) {

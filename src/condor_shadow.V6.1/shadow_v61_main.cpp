@@ -419,7 +419,7 @@ printClassAd( void )
 void
 main_pre_dc_init( int argc, char* argv[] )
 {
-	if( argc == 2 && strincmp(argv[1],"-cl",3) == MATCH ) {
+	if( argc == 2 && strncasecmp(argv[1],"-cl",3) == MATCH ) {
 		printClassAd();
 		exit(0);
 	}

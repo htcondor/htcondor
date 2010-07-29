@@ -972,7 +972,7 @@ JICShadow::initUserPriv( void )
 				setExecuteAccountIsDedicated( owner.Value() );
 			}
 		}
-		else if( stricmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+		else if( strcasecmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 			// For VMware vm universe, we can't use SOFT_UID_DOMAIN
 			run_as_owner = false;
 		}
@@ -1428,7 +1428,7 @@ JICShadow::sameUidDomain( void )
 	dprintf( D_FULLDEBUG, " Local UidDomain: \"%s\"\n",
 			 uid_domain );
 
-	if( stricmp(job_uid_domain, uid_domain) == MATCH ) {
+	if( strcasecmp(job_uid_domain, uid_domain) == MATCH ) {
 		same_domain = true;
 	}
 
@@ -1495,7 +1495,7 @@ JICShadow::sameFSDomain( void )
 	dprintf( D_FULLDEBUG, " Local FsDomain: \"%s\"\n",
 			 fs_domain );
 
-	if( stricmp(job_fs_domain, fs_domain) == MATCH ) {
+	if( strcasecmp(job_fs_domain, fs_domain) == MATCH ) {
 		same_domain = true;
 	}
 

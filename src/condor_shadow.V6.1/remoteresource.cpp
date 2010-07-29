@@ -1064,11 +1064,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
-		if( stricmp(job_state, "Suspended") == MATCH ) {
+		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
-		} else if ( stricmp(job_state, "Running") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Running") == MATCH ) {
 			new_state = RR_EXECUTING;
-		} else if ( stricmp(job_state, "Checkpointed") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Checkpointed") == MATCH ) {
 			new_state = RR_CHECKPOINTED;
 		} else { 
 				// For our purposes in here, we don't care about any

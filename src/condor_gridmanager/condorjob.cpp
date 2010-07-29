@@ -210,7 +210,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "condor" ) ) {
+		if ( !token || strcasecmp( token, "condor" ) ) {
 			error_string.sprintf( "%s not of type condor",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
