@@ -63,8 +63,6 @@ int get_ulong (const char *, unsigned long *);
 int verify_number (const char*);
 int verify_request_id(const char *);
 int verify_string_name(const char *);
-int verify_ami_id(const char *);
-int verify_instance_id(const char *);
 int verify_number_args (const int, const int);
 int verify_min_number_args (const int, const int);
 

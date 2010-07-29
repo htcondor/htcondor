@@ -39,7 +39,7 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]) &&
-		verify_ami_id(argv[5]) &&
+		verify_string_name(argv[5]) &&
 		verify_string_name(argv[6]) &&
 		verify_string_name(argv[7]) &&
 		verify_string_name(argv[8]) &&
@@ -54,7 +54,7 @@ bool AmazonVMStop::ioCheck(char **argv, int argc)
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]) &&
-		verify_instance_id(argv[5]);
+		verify_string_name(argv[5]);
 }
 
 // Expecting:AMAZON_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
@@ -65,7 +65,7 @@ bool AmazonVMStatus::ioCheck(char **argv, int argc)
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]) &&
-		verify_instance_id(argv[5]);
+		verify_string_name(argv[5]);
 }
 
 // Expecting:AMAZON_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
