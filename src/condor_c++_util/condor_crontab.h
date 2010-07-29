@@ -232,6 +232,10 @@ public:
 		 **/
 	long lastRun() { return (this->lastRunTime); }
 		/**
+		 * Initializes CronTab::regex
+		 */
+	static void initRegexObject();
+		/**
 		 * Static helper method that can check to see if a 
 		 * parameter has the proper syntax.
 		 * 
