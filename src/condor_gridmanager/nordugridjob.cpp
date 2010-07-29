@@ -100,10 +100,8 @@ static const char *GMStateNames[] = {
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
-#	define file_strcmp _stricmp
 #	define file_contains contains_anycase
 #else
-#	define file_strcmp strcmp
 #	define file_contains contains
 #endif
 
