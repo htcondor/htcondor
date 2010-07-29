@@ -6709,7 +6709,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	}
 
 	if( match_opsys ) {
-		if( strincmp(match_opsys,"winnt",5) == MATCH ) {
+		if( strncasecmp(match_opsys,"winnt",5) == MATCH ) {
 			nt_resource = true;
 		}
 		free( match_opsys );

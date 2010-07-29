@@ -1211,7 +1211,7 @@ SetRemoteAttrs()
 
 		char * key = hash_iter_key(it);
 		int remote_depth = 0;
-		while(strincmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
+		while(strncasecmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
 			remote_depth++;
 			key += REMOTE_PREFIX_LEN;
 		}
@@ -5357,7 +5357,7 @@ read_condor_file( FILE *fp )
 			continue;
 		}
 
-		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
+		if( strncasecmp(name, "queue", strlen("queue")) == 0 ) {
 			// if this is the first time we've seen this "queue"
 			// command, then set justSeenQueue to TRUE and go back to
 			// the top of the loop to process extraLines before
@@ -5878,7 +5878,7 @@ findClause( const char* buffer, const char* attr_name )
 	const char* ptr;
 	int len = strlen( attr_name );
 	for( ptr = buffer; *ptr; ptr++ ) {
-		if( strincmp(attr_name,ptr,len) == MATCH ) {
+		if( strncasecmp(attr_name,ptr,len) == MATCH ) {
 			return true;
 		}
 	}
@@ -5997,7 +5997,7 @@ check_requirements( char const *orig, MyString &answer )
 		// "VirtualMemory", we have to do this one manually...
 	char const *aptr;
 	for( aptr = answer.Value(); *aptr; aptr++ ) {
-		if( strincmp(ATTR_MEMORY,aptr,5) == MATCH ) {
+		if( strncasecmp(ATTR_MEMORY,aptr,5) == MATCH ) {
 				// We found "Memory", but we need to make sure that's
 				// not part of "VirtualMemory"...
 			if( aptr == answer.Value() ) {

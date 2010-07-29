@@ -264,7 +264,7 @@ main(int argc, char *argv[] )
 	int		i;
 
 	myDistro->Init( argc, argv );
-	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
+	if( argc == 2 && strncasecmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();
 		exit( 0 );
 	}

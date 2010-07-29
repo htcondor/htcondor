@@ -178,7 +178,6 @@
 #endif
 
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
-#define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
 
 /* select() on all our platforms takes an fd_set pointer, so we can
    just define this here for everyone.  We don't really need it
