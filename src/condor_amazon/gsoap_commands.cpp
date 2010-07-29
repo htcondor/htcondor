@@ -202,7 +202,7 @@ AmazonRequest::SetupSoap(void)
 		return false;
 	}
 
-	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "BinarySecurityToken", m_cert)) {
+	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "X509Token", m_cert)) {
 		sprintf(m_error_msg,"Could not set BinarySecurityToken from: %s", 
 				accesskeyfile.c_str());
 		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
