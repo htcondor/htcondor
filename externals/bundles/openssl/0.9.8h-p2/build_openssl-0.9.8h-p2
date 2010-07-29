@@ -17,11 +17,17 @@ cd $PACKAGE_SRC_NAME
 # slowdown when the frame pointer is left in place.
 sed 's/-fomit-frame-pointer//' Configure > Configure.new
 mv Configure.new Configure
+chmod a+rx Configure
 
 # Globus builds on some platforms fail in creating their shared libraies
 # if OpenSSL isn't built with -fPIC
 if [ `uname` = "AIX" ] ; then
     ./config --prefix=$PACKAGE_INSTALL_DIR --with-krb5-dir=$KERBEROS_DIR no-asm
+elif [ `uname` = "Darwin" -a `uname -r | sed 's/\..*//'` = "10" ] ; then
+    # Mac OS X 10.6. Force it to build 64-bit.
+    pwd
+    ls -l
+    ./Configure darwin64-x86_64-cc --prefix=$PACKAGE_INSTALL_DIR --with-krb5-dir=$KERBEROS_DIR no-asm -fPIC
 else
     ./config --prefix=$PACKAGE_INSTALL_DIR --with-krb5-dir=$KERBEROS_DIR no-asm -fPIC
 fi

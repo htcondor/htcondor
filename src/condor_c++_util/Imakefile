@@ -289,7 +289,11 @@ library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
 libcondorapi.a: Makefile
 
 #if HAVE_CC_SHARED_FLAG
+#ifdef IS_SOLARIS
 shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
+#else
+c_plus_shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
+#endif
 libcondorapi.so: Makefile
 #endif
 
