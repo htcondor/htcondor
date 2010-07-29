@@ -177,9 +177,14 @@ AmazonRequest::SetupSoap(void)
 		return false;
 	}
 
+	unsigned short flags = SOAP_SSL_DEFAULT;
+	const char *host_check = getenv("SOAP_SSL_SKIP_HOST_CHECK");
+	if ( host_check && ( host_check[0] == 'T' || host_check[0] == 't' ) ) {
+		flags |= SOAP_SSL_SKIP_HOST_CHECK;
+	}
 	const char *ca_file = getenv("SOAP_SSL_CA_FILE");
 	const char *ca_dir = getenv("SOAP_SSL_CA_DIR");;
-	if (soap_ssl_client_context(m_soap, SOAP_SSL_DEFAULT,
+	if (soap_ssl_client_context(m_soap, flags,
 				    NULL,
 				    NULL,
 				    ca_file,
