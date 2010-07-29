@@ -1151,7 +1151,7 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 		// on the other hand, is FIFO --- thus starvation is avoided.
 
 		// If we're trying to lock NUL, just return success early
-	if (stricmp(DebugLock, "NUL") == 0) {
+	if (strcasecmp(DebugLock, "NUL") == 0) {
 		return 0;
 	}
 
