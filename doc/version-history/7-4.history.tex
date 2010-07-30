@@ -51,6 +51,12 @@ was only supported by the Windows version of \Condor{submit}.
 
 \begin{itemize}
 
+% gittrac 1543
+\item When the startd is running with an execute directory on
+a very large filesystem, with more than 32 bits worth of free blocks
+on a 32 bit system, it would incorrectly report 0 free bytes.  This
+has been fixed.
+
 \item For spooled jobs, input files were sometimes transferred twice from
 the submit machine to the execute machine.  This happened if the input files
 were specified without any path information,
