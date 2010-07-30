@@ -64,13 +64,11 @@ that the job has been allocated a machine,
 excluding the time spent on run attempts that
 were evicted without a checkpoint.  
 Like \AdAttr{RemoteWallClockTime},
-this includes time the job spent in a suspended state.
-In the case of \AdAttr{RemoteWallClockTime}, 
-one can disregard suspended time by
-subtracting out \AdAttr{CumulativeSuspensionTime}.
-However, no analogous attribute representing committed suspension time exists,
-so it is not possible to
-compute how much of \AdAttr{CommittedTime} was actual time spent running.
+this includes time the job spent in a suspended state,
+so the total committed wall time spent running is 
+\begin{verbatim}
+CommittedTime - CommittedSuspensionTime
+\end{verbatim}
 
 %%% ClassAd attribute: CompletionDate
 \index{ClassAd job attribute!CompletionDate}
@@ -79,6 +77,14 @@ compute how much of \AdAttr{CommittedTime} was actual time spent running.
 or the value 0 if the job has not yet completed.
 Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: CommittedSuspensionTime
+\index{ClassAd job attribute!CommittedSuspensionTime}
+\index{CommittedSuspensionTime!job ClassAd attribute}
+\item[\AdAttr{CommittedSuspensionTime}:]  A running total of the number of
+seconds the job has spent in suspension during time in which the job was
+not evicted without a checkpoint.  This number is updated when the job is
+checkpointed and when it exits.
 
 %%% ClassAd attribute: CumulativeSuspensionTime
 \index{ClassAd job attribute!CumulativeSuspensionTime}
@@ -694,6 +700,9 @@ RemoteWallClockTime - CumulativeSuspensionTime
 \end{verbatim}
 Note that this number does not get reset to
 zero when a job is forced to migrate from one machine to another.
+\AdAttr{CommittedTime}, on the other hand, is just like
+\AdAttr{RemoteWallClockTime} except it does get reset to 0 whenever
+the job is evicted without a checkpoint.
 
 %%% ClassAd attribute: RemoveKillSig
 \index{ClassAd job attribute!RemoveKillSig}

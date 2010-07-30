@@ -69,6 +69,14 @@ as part of the DAG status message in the \File{dagman.out} file.
   \Opt{-currentrun}, and \Opt{-io} options when called with no display options
   or with \Opt{-format}. 
 
+%gittrac #1385
+\item The new job ClassAd attribute \AdAttr{CommittedSuspensionTime}
+is a running total of the number of seconds the job has spent in
+suspension during time in which the job was not evicted without a
+checkpoint.  This complements the existing attribute
+\AdAttr{CumulativeSuspensionTime}, which includes all time spent in
+suspension, regardless of job eviction.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
