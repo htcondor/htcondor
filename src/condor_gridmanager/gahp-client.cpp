@@ -724,7 +724,7 @@ GahpServer::Startup()
 	}
 
 	// For amazon ec2 ca authentication
-	if ( param_boolean( "SOAP_SSL_SKIP_HOST_CHECK", false ) );
+	if ( param_boolean( "SOAP_SSL_SKIP_HOST_CHECK", false ) ) {
 		newenv.SetEnv( "SOAP_SSL_SKIP_HOST_CHECK", "True" );
 	}
 
