@@ -600,6 +600,8 @@ extern const char * const  ATTR_WANT_RESOURCE_AD;
 extern const char * const  ATTR_TOTAL_SUSPENSIONS;
 extern const char * const  ATTR_LAST_SUSPENSION_TIME;
 extern const char * const  ATTR_CUMULATIVE_SUSPENSION_TIME;
+extern const char * const  ATTR_COMMITTED_SUSPENSION_TIME;
+extern const char * const  ATTR_UNCOMMITTED_SUSPENSION_TIME;
 
 extern const char * const  ATTR_ON_EXIT_BY_SIGNAL;
 extern const char * const  ATTR_ON_EXIT_CODE;

@@ -1052,6 +1052,19 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							 ATTR_LAST_VACATE_TIME, time(0) );
 		}
 
+		if( ExitReason == JOB_CKPTED || LastCkptTime > LastRestartTime ) {
+			int uncommitted_suspension_time = 0;
+			JobAd->LookupInteger(ATTR_UNCOMMITTED_SUSPENSION_TIME, uncommitted_suspension_time);
+			if( uncommitted_suspension_time > 0 ) {
+				int committed_suspension_time = 0;
+				GetAttributeInt(Proc->id.cluster, Proc->id.proc,
+								ATTR_COMMITTED_SUSPENSION_TIME, &committed_suspension_time);
+				committed_suspension_time += uncommitted_suspension_time;
+				SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+								ATTR_COMMITTED_SUSPENSION_TIME, committed_suspension_time);
+			}
+		}
+
 		// if we had checkpointed, then save all of these attributes as well.
 		if (LastCkptTime > LastRestartTime) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,

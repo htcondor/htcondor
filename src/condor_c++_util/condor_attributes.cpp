@@ -663,6 +663,8 @@ const char * const ATTR_WANT_RESOURCE_AD		 = "WantResAd";
 const char * const ATTR_TOTAL_SUSPENSIONS        = "TotalSuspensions";
 const char * const ATTR_LAST_SUSPENSION_TIME     = "LastSuspensionTime";
 const char * const ATTR_CUMULATIVE_SUSPENSION_TIME= "CumulativeSuspensionTime";
+const char * const ATTR_COMMITTED_SUSPENSION_TIME= "CommittedSuspensionTime";
+const char * const ATTR_UNCOMMITTED_SUSPENSION_TIME= "UncommittedSuspensionTime";
 
 const char * const ATTR_ON_EXIT_BY_SIGNAL        = "ExitBySignal";
 const char * const ATTR_ON_EXIT_CODE		     = "ExitCode";

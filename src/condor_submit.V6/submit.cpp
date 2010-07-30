@@ -705,6 +705,9 @@ init_job_ad()
 	buffer.sprintf( "%s = 0", ATTR_CUMULATIVE_SUSPENSION_TIME);
 	InsertJobExpr (buffer);
 
+	buffer.sprintf( "%s = 0", ATTR_COMMITTED_SUSPENSION_TIME);
+	InsertJobExpr (buffer);
+
 	buffer.sprintf( "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
 	InsertJobExpr (buffer);
 

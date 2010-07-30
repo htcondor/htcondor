@@ -1205,6 +1205,12 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	if( last_suspension_time > 0 ) {
 		// There was a real job suspension.
 		cumulative_suspension_time += now - last_suspension_time;
+
+		int uncommitted_suspension_time = 0;
+		jobAd->LookupInteger( ATTR_UNCOMMITTED_SUSPENSION_TIME,
+							  uncommitted_suspension_time );
+		uncommitted_suspension_time += now - last_suspension_time;
+		jobAd->Assign(ATTR_UNCOMMITTED_SUSPENSION_TIME, uncommitted_suspension_time);
 	}
 
 	sprintf( tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
@@ -1306,6 +1312,8 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 		jobAd->Assign(ATTR_VM_CKPT_IP, string_value.Value());
 	}
 
+	shadow->CommitSuspensionTime(jobAd);
+
 		// Log stuff so we can check our sanity
 	printCheckpointStats( D_FULLDEBUG );
 
@@ -1368,6 +1376,13 @@ RemoteResource::printCheckpointStats( int debug_level )
 	int_value = 0;
 	jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, int_value);
 	dprintf( debug_level, "%s = %d\n", ATTR_JOB_COMMITTED_TIME, int_value);
+
+	int committed_suspension_time = 0;
+	jobAd->LookupInteger( ATTR_COMMITTED_SUSPENSION_TIME, 
+						  committed_suspension_time );
+	dprintf( debug_level, "%s = %d\n",
+			 ATTR_COMMITTED_SUSPENSION_TIME,
+			 committed_suspension_time );
 
 	// timestamp of the last checkpoint
 	int_value = 0;

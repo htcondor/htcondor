@@ -99,6 +99,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->InsertAttr(ATTR_TOTAL_SUSPENSIONS, 0);
 	ad->InsertAttr(ATTR_LAST_SUSPENSION_TIME, 0);
 	ad->InsertAttr(ATTR_CUMULATIVE_SUSPENSION_TIME, 0);
+	ad->InsertAttr(ATTR_COMMITTED_SUSPENSION_TIME, 0);
 	ad->InsertAttr(ATTR_ON_EXIT_BY_SIGNAL, false);
 
 
