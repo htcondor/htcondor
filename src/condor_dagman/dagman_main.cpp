@@ -742,27 +742,36 @@ void main_init (int argc, char ** const argv) {
 		}
 
 		// Make sure .condor.sub file is recent enough.
-	} else if( !submitFileVersion.built_since_version(
-				MIN_SUBMIT_FILE_VERSION.majorVer,
-				MIN_SUBMIT_FILE_VERSION.minorVer,
-				MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
-		if ( !allowVerMismatch ) {
-        	debug_printf( DEBUG_QUIET, "Error: %s is older than "
-						"oldest permissible version (%s)\n",
-						versionMsg.Value(), minSubmitVersionStr.Value() );
-			DC_Exit( EXIT_ERROR );
-		} else {
-        	debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
-						"oldest permissible version (%s); continuing "
-						"because of -AllowVersionMismatch flag\n",
-						versionMsg.Value(), minSubmitVersionStr.Value() );
-		}
+	} else if ( submitFileVersion.compare_versions(
+				CondorVersion() ) != 0 ) {
 
-		// Warn if .condor.sub file is a newer version than this binary.
-	} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
-        debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
-					"condor_dagman version (%s)\n", versionMsg.Value(),
-					CondorVersion() );
+		if( !submitFileVersion.built_since_version(
+					MIN_SUBMIT_FILE_VERSION.majorVer,
+					MIN_SUBMIT_FILE_VERSION.minorVer,
+					MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
+			if ( !allowVerMismatch ) {
+        		debug_printf( DEBUG_QUIET, "Error: %s is older than "
+							"oldest permissible version (%s)\n",
+							versionMsg.Value(), minSubmitVersionStr.Value() );
+				DC_Exit( EXIT_ERROR );
+			} else {
+        		debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
+							"oldest permissible version (%s); continuing "
+							"because of -AllowVersionMismatch flag\n",
+							versionMsg.Value(), minSubmitVersionStr.Value() );
+			}
+
+			// Warn if .condor.sub file is a newer version than this binary.
+		} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
+        	debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
+						"condor_dagman version (%s)\n", versionMsg.Value(),
+						CondorVersion() );
+		} else {
+        	debug_printf( DEBUG_NORMAL, "Note: %s differs from "
+						"condor_dagman version (%s), but the "
+						"difference is permissible\n", 
+						versionMsg.Value(), CondorVersion() );
+		}
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
