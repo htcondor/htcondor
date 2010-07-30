@@ -1933,6 +1933,13 @@ TESTCLASS(job_dagman_noop_node,quick)
 TESTCLASS(job_dagman_noop_node,full)
 TESTCLASS(job_dagman_noop_node,quicknolink)
 
+DESC(job_dagman_job_held,"Test removing jobs held too many times")
+RUN(job_dagman_job_held)
+TESTCLASS(job_dagman_job_held,dagman)
+TESTCLASS(job_dagman_job_held,quick)
+TESTCLASS(job_dagman_job_held,full)
+TESTCLASS(job_dagman_job_held,quicknolink)
+
 /* Sample performance tests */
 
 /*

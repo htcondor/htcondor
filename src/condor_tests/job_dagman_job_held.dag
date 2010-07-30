@@ -1,0 +1,11 @@
+#TEMPTEMP -- add config file with DAGMAN_MAX_JOB_HOLDS setting
+#TEMPTEMP -- hmm -- we probably want to remove the job after the first hold...
+CONFIG job_dagman_job_held.config
+
+
+#TEMPTEMP -- add retries...
+JOB A job_dagman_job_held-nodeA.cmd
+
+#TEMPTEMP -- add retries...
+# This is a parallel job.
+JOB B job_dagman_job_held-nodeB.cmd
