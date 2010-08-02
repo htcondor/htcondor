@@ -731,7 +731,7 @@ tokenizePunctOperator (void)
 
 
 // strLexToken:  Return string representation of token type
-char *Lexer::
+const char *Lexer::
 strLexToken (int tokenValue)
 {
 	switch (tokenValue) {
