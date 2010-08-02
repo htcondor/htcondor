@@ -33,7 +33,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \SubmitCmd{load\_profile} is now supported by the Unix version of
+\Condor{submit} when submitting jobs to Windows.  Previously, this command
+was only supported by the Windows version of \Condor{submit}.
 
 \end{itemize}
 
@@ -49,7 +51,28 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac 1543
+\item When the \Condor{startd} daemon is running with an execute directory on
+a very large file system, with more than 32 bits worth of free blocks
+on a 32-bit system, it would incorrectly report 0 free bytes.  This
+has been fixed.
+
+\item For spooled jobs, input files were sometimes transferred twice from
+the submit machine to the execute machine.  This happened if the input files
+were specified without any path information,
+as with a file name with no directory specified.
+This problem has existed since before Condor version 7.0.0.
+
+% gittrac 457
+\item The configuration variable \MacroNI{NETWORK\_INTERFACE} did not
+work in some situations, because of Condor's attempts to
+automatically rewrite published addresses to match the IP address of
+the network interface used to make the publication.
+
+% gittrac 961
+\item Fixed a bug in which the default unit of configuration variable
+\MacroNI{STARTD\_CRON\_TEST\_PERIOD}
+should have been seconds, but instead was \Expr{Undefined}.
 
 \end{itemize}
 
