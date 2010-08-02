@@ -51,10 +51,16 @@ was only supported by the Windows version of \Condor{submit}.
 
 \begin{itemize}
 
+% gittrac 1543
+\item When the \Condor{startd} daemon is running with an execute directory on
+a very large file system, with more than 32 bits worth of free blocks
+on a 32-bit system, it would incorrectly report 0 free bytes.  This
+has been fixed.
+
 \item For spooled jobs, input files were sometimes transferred twice from
 the submit machine to the execute machine.  This happened if the input files
 were specified without any path information,
-as with a filename with no directory specified.
+as with a file name with no directory specified.
 This problem has existed since before Condor version 7.0.0.
 
 % gittrac 457
@@ -64,8 +70,9 @@ automatically rewrite published addresses to match the IP address of
 the network interface used to make the publication.
 
 % gittrac 961
-\item Fixed a bug where the \Attr{STARTD\_CRON\_TEST\_PERIOD} macro's default
-unit should have been seconds, but instead was undefined.
+\item Fixed a bug in which the default unit of configuration variable
+\MacroNI{STARTD\_CRON\_TEST\_PERIOD}
+should have been seconds, but instead was \Expr{Undefined}.
 
 \end{itemize}
 
