@@ -74,6 +74,11 @@ the network interface used to make the publication.
 \MacroNI{STARTD\_CRON\_TEST\_PERIOD}
 should have been seconds, but instead was \Expr{Undefined}.
 
+% gittrac 1485
+\item Fixed a bug in which \Condor{submit} checked for bad schedd cron 
+ arguments incorrectly within a submit file. Now \Condor{submit} will detect 
+ the problem and print out an error message.
+
 \end{itemize}
 
 \noindent Known Bugs:
