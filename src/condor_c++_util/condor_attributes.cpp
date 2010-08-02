@@ -852,3 +852,7 @@ const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS = "LastNegotiationCycl
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED = "LastNegotiationCycleSubmittersFailed";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME = "LastNegotiationCycleSubmittersOutOfTime";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT = "LastNegotiationCycleActiveSubmitterCount";
+
+const char * const ATTR_JOB_MACHINE_ATTRS = "JobMachineAttrs";
+const char * const ATTR_MACHINE_ATTR_PREFIX = "MachineAttr";
+const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH = "JobMachineAttrsHistoryLength";

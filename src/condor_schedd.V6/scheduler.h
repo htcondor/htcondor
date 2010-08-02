@@ -356,7 +356,7 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	int				receive_startd_alive(int cmd, Stream *s);
-
+	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
 	void            checkContactQueue();
 
@@ -719,6 +719,8 @@ private:
 	int prevLHF;
 #endif
 
+	StringList m_job_machine_attrs;
+	int m_job_machine_attrs_history_length;
 };
 
 

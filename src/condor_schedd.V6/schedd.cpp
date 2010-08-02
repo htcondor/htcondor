@@ -5298,6 +5298,7 @@ Scheduler::negotiate(int command, Stream* s)
 						// and store the my_match_ad (if exists) in a hashtable.
 						if ( my_match_ad ) {
 							ClassAd *tmp_ad = NULL;
+							InsertMachineAttrs(id.cluster,id.proc,my_match_ad);
 							resourcesByProcID->lookup(id,tmp_ad);
 							if ( tmp_ad ) delete tmp_ad;
 							resourcesByProcID->insert(id,my_match_ad);
@@ -8057,6 +8058,87 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 	}
 }
 
+static void
+RotateAttributeList( int cluster, int proc, char const *attrname, int start_index, int history_len )
+{
+	int index;
+	for(index=start_index+history_len-1;
+		index>start_index;
+		index--)
+	{
+		MyString attr;
+		attr.sprintf("%s%d",attrname,index-1);
+
+		char *value=NULL;
+		if( GetAttributeExprNew(cluster,proc,attr.Value(),&value) == 0 ) {
+			attr.sprintf("%s%d",attrname,index);
+			SetAttribute(cluster,proc,attr.Value(),value);
+			free( value );
+		}
+	}
+}
+
+void
+Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
+{
+	ASSERT( machine_ad );
+
+	classad::ClassAdUnParser unparser;
+	classad::ClassAd *machine;
+#if !defined (WANT_OLD_CLASSADS)
+	machine = machine_ad;
+#else
+	classad::ClassAd machine_buff;
+	old_to_new(*machine_ad,machine_buff);
+	machine = &machine_buff;
+	unparser.SetOldClassAd(true);
+#endif
+
+	ClassAd *job = GetJobAd( cluster, proc );
+
+	if( !job ) {
+		return;
+	}
+
+	MyString user_machine_attrs;
+	GetAttributeString(cluster,proc,ATTR_JOB_MACHINE_ATTRS,user_machine_attrs);
+
+	int history_len = 1;
+	GetAttributeInt(cluster,proc,ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH,&history_len);
+
+	if( m_job_machine_attrs_history_length > history_len ) {
+		history_len = m_job_machine_attrs_history_length;
+	}
+
+	if( history_len == 0 ) {
+		return;
+	}
+
+	StringList machine_attrs(user_machine_attrs.Value());
+
+	machine_attrs.create_union( m_job_machine_attrs, true );
+
+	machine_attrs.rewind();
+	char const *attr;
+	while( (attr=machine_attrs.next()) != NULL ) {
+		MyString result_attr;
+		result_attr.sprintf("%s%s",ATTR_MACHINE_ATTR_PREFIX,attr);
+
+		RotateAttributeList(cluster,proc,result_attr.Value(),0,history_len);
+
+		classad::Value result;
+		if( !machine->EvaluateAttr(attr,result) ) {
+			result.SetErrorValue();
+		}
+		std::string unparsed_result;
+
+		unparser.Unparse(unparsed_result,result);
+		result_attr += "0";
+		SetAttribute(cluster,proc,result_attr.Value(),unparsed_result.c_str());
+	}
+
+	FreeJobAd( job );
+}
 
 struct shadow_rec *
 Scheduler::add_shadow_rec( shadow_rec* new_rec )
@@ -8103,6 +8185,8 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			int slot = 1;
 			mrec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot );
 			SetAttributeInt(cluster,proc,ATTR_REMOTE_SLOT_ID,slot);
+
+			InsertMachineAttrs(cluster,proc,mrec->my_match_ad);
 		}
 		if( ! have_remote_host ) {
 				// CRUFT
@@ -10557,6 +10641,13 @@ Scheduler::Init()
 	}
 	m_unparsed_gridman_selection_expr = expr;
 		/* End of support for  GRIDMANAGER_SELECTION_EXPR */
+
+	MyString job_machine_attrs_str;
+	param(job_machine_attrs_str,"SYSTEM_JOB_MACHINE_ATTRS");
+	m_job_machine_attrs.clearAll();
+	m_job_machine_attrs.initializeFromString( job_machine_attrs_str.Value() );
+
+	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
 	first_time_in_init = false;
 }
