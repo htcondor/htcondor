@@ -352,33 +352,6 @@ verify_string_name(const char * s) {
 }
 
 int
-verify_ami_id(const char * s) {
-	// ami_id should begin with "ami-"
-	if( !verify_string_name(s) ) {
-		return false;
-	}
-
-	if( strncasecmp(s, "ami-", strlen("ami-")) ) {
-		dprintf (D_ALWAYS, "Bad AMI ID %s\n", s);
-		return false;
-	}
-	return true;
-}
-
-int
-verify_instance_id(const char * s) {
-	if( !verify_string_name(s) ) {
-		return false;
-	}
-	if( strncasecmp(s, "i-", strlen("i-")) ) {
-		dprintf (D_ALWAYS, "Bad Instance ID %s\n", s);
-		return false;
-	}
-
-	return true;
-}
-
-int
 verify_number (const char * s) {
 	if (!s || !(*s)) {
 		dprintf (D_ALWAYS, "No digit number\n");

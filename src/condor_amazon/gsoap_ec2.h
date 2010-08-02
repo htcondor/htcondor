@@ -15,7 +15,7 @@
  */
 
 //
-// We don't care about all the symbols defined in 2007-08-29.ec2.wsdl,
+// We don't care about all the symbols defined in 2008-12-01.ec2.wsdl,
 // only the ones we use.
 //
 // A start to figuring out what symbols we need:
@@ -48,7 +48,7 @@
 //gsoap ec2 service encoding: literal
 //gsoap ec2 schema form: qualified
 //gsoap ec2 schema attributeForm: unqualified
-//gsoap ec2 schema namespace: http://ec2.amazonaws.com/doc/2007-08-29/
+//gsoap ec2 schema namespace: http://ec2.amazonaws.com/doc/2008-12-01/
 
 #import "stlvector.h"
 
@@ -73,6 +73,7 @@ class ec2__CreateKeyPairType
 
 class ec2__CreateKeyPairResponseType
 { public:
+	std::string requestId 1;
 	std::string keyName 1;
 	std::string keyFingerprint 1;
 	std::string keyMaterial 1;
@@ -87,6 +88,7 @@ class ec2__DeleteKeyPairType
   
 class ec2__DeleteKeyPairResponseType
 { public:
+	std::string requestId 1;
 	bool return_ 1;
 };
 
@@ -124,6 +126,7 @@ class ec2__DescribeKeyPairsResponseInfoType
   
 class ec2__DescribeKeyPairsResponseType
 { public:
+	std::string requestId 1;
 	ec2__DescribeKeyPairsResponseInfoType *keySet 1;
 };
 
@@ -148,6 +151,25 @@ class ec2__UserDataType // mixed="true" ?
 };
 
 
+class ec2__PlacementRequestType
+{ public:
+	std::string *availabilityZone 0:1;
+};
+
+
+class ec2__BlockDeviceMappingItemType
+{ public:
+	std::string virtualName 1;
+	std::string deviceName 1;
+}
+
+
+class ec2__BlockDeviceMappingType
+{ public:
+	std::vector<ec2__BlockDeviceMappingItemType*> item 0;
+};
+
+
 class ec2__RunInstancesType
 { public:
 	std::string imageId 1;
@@ -159,6 +181,10 @@ class ec2__RunInstancesType
 	ec2__UserDataType *userData 0:1;
 	std::string *addressingType 0:1;
 	std::string instanceType 1;
+	ec2__PlacementRequestType *placement 0:1;
+	std::string *kernelId 0:1;
+	std::string *ramdiskId 0:1;
+	ec2__BlockDeviceMappingType *blockDeviceMapping 0:1;
 };
 
 
@@ -181,11 +207,17 @@ class ec2__ProductCodesSetType
 };
 
 
+class ec2__PlacementResponseType
+{ public:
+	std::string availabilityZone 1;
+};
+
+
 class ec2__RunningInstancesItemType
 { public:
 	std::string instanceId 1;
 	std::string imageId 1;
-	ec2__InstanceStateType *instanceState 0;
+	ec2__InstanceStateType *instanceState 1;
 	std::string privateDnsName 1;
 	std::string dnsName 1;
 	std::string *reason 0;
@@ -194,6 +226,10 @@ class ec2__RunningInstancesItemType
 	ec2__ProductCodesSetType *productCodes 0:1;
 	std::string instanceType 1;
 	time_t launchTime 1;
+	ec2__PlacementResponseType *placement 0;
+	std::string *kernelId 0;
+	std::string *ramdiskId 0;
+	std::string *platform 0;
 };
 
 
@@ -237,6 +273,7 @@ class ec2__TerminateInstancesResponseInfoType
 
 class ec2__TerminateInstancesResponseType
 { public:
+	std::string requestId 1;
 	ec2__TerminateInstancesResponseInfoType *instancesSet 1;
 };
 
@@ -265,6 +302,7 @@ class ec2__ReservationInfoType
 	std::string ownerId 1;
 	ec2__GroupSetType *groupSet 1;
 	ec2__RunningInstancesSetType *instancesSet 1;
+	std::string *requesterId 0;
 };
 
 
@@ -276,7 +314,8 @@ class ec2__ReservationSetType
   
 class ec2__DescribeInstancesResponseType
 { public:
-	ec2__ReservationSetType *reservationSet 0;
+	std::string requestId 1;
+	ec2__ReservationSetType *reservationSet 1;
 };
 
 

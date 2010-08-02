@@ -52,7 +52,7 @@ AmazonRequest::ParseSoapError(const char* callerstring)
 
 	if( *code ) {
 		// For real error code, refer to 
-		// http://docs.amazonwebservices.com/AWSEC2/2007-08-29/DeveloperGuide/api-error-codes.html
+		// http://docs.amazonwebservices.com/AWSEC2/2008-12-01/DeveloperGuide/index.html?api-error-codes.html
 		//
 		// Client error codes suggest that the error was caused by 
 		// something the client did, such as an authentication failure or 
@@ -177,9 +177,14 @@ AmazonRequest::SetupSoap(void)
 		return false;
 	}
 
+	unsigned short flags = SOAP_SSL_DEFAULT;
+	const char *host_check = getenv("SOAP_SSL_SKIP_HOST_CHECK");
+	if ( host_check && ( host_check[0] == 'T' || host_check[0] == 't' ) ) {
+		flags |= SOAP_SSL_SKIP_HOST_CHECK;
+	}
 	const char *ca_file = getenv("SOAP_SSL_CA_FILE");
 	const char *ca_dir = getenv("SOAP_SSL_CA_DIR");;
-	if (soap_ssl_client_context(m_soap, SOAP_SSL_DEFAULT,
+	if (soap_ssl_client_context(m_soap, flags,
 				    NULL,
 				    NULL,
 				    ca_file,
@@ -197,7 +202,7 @@ AmazonRequest::SetupSoap(void)
 		return false;
 	}
 
-	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "BinarySecurityToken", m_cert)) {
+	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "X509Token", m_cert)) {
 		sprintf(m_error_msg,"Could not set BinarySecurityToken from: %s", 
 				accesskeyfile.c_str());
 		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());

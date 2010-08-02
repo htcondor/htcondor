@@ -723,6 +723,11 @@ GahpServer::Startup()
 		free( tmp_char );
 	}
 
+	// For amazon ec2 ca authentication
+	if ( param_boolean( "SOAP_SSL_SKIP_HOST_CHECK", false ) ) {
+		newenv.SetEnv( "SOAP_SSL_SKIP_HOST_CHECK", "True" );
+	}
+
 		// Now register a reaper, if we haven't already done so.
 		// Note we use ReaperHandler instead of ReaperHandlercpp
 		// for the callback prototype, because our handler is 

@@ -663,6 +663,8 @@ const char * const ATTR_WANT_RESOURCE_AD		 = "WantResAd";
 const char * const ATTR_TOTAL_SUSPENSIONS        = "TotalSuspensions";
 const char * const ATTR_LAST_SUSPENSION_TIME     = "LastSuspensionTime";
 const char * const ATTR_CUMULATIVE_SUSPENSION_TIME= "CumulativeSuspensionTime";
+const char * const ATTR_COMMITTED_SUSPENSION_TIME= "CommittedSuspensionTime";
+const char * const ATTR_UNCOMMITTED_SUSPENSION_TIME= "UncommittedSuspensionTime";
 
 const char * const ATTR_ON_EXIT_BY_SIGNAL        = "ExitBySignal";
 const char * const ATTR_ON_EXIT_CODE		     = "ExitCode";
@@ -850,3 +852,7 @@ const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS = "LastNegotiationCycl
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED = "LastNegotiationCycleSubmittersFailed";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME = "LastNegotiationCycleSubmittersOutOfTime";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT = "LastNegotiationCycleActiveSubmitterCount";
+
+const char * const ATTR_JOB_MACHINE_ATTRS = "JobMachineAttrs";
+const char * const ATTR_MACHINE_ATTR_PREFIX = "MachineAttr";
+const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH = "JobMachineAttrsHistoryLength";

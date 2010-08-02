@@ -893,9 +893,6 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
 			summarize = 0;
-			if( !custom_attributes ) {
-				attrs.clearAll();
-			}
 		} 
 		else
 		if (match_prefix (arg, "xml")) {
@@ -903,9 +900,6 @@ processCommandLineArguments (int argc, char *argv[])
 			verbose = 1;
 			summarize = 0;
 			customFormat = true;
-			if( !custom_attributes ) {
-				attrs.clearAll();
-			}
 		}
 		else
 		if (match_prefix (arg, "pool")) {
@@ -1202,13 +1196,14 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg, "run")) {
 			Q.add (CQ_STATUS, RUNNING);
 			run = true;
-			attrs.clearAll();
+			attrs.append( ATTR_REMOTE_HOST );
 		}
 		else
 		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
 			Q.add (CQ_STATUS, HELD);		
 			show_held = true;
-			attrs.clearAll();
+			attrs.append( ATTR_ENTERED_CURRENT_STATUS );
+			attrs.append( ATTR_HOLD_REASON );
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
@@ -1216,18 +1211,20 @@ processCommandLineArguments (int argc, char *argv[])
 			// real-estate, so they're mutually exclusive
 			goodput = true;
 			show_io = false;
-			attrs.clearAll();
+			attrs.append( ATTR_JOB_COMMITTED_TIME );
+			attrs.append( ATTR_SHADOW_BIRTHDATE );
+			attrs.append( ATTR_LAST_CKPT_TIME );
+			attrs.append( ATTR_JOB_REMOTE_WALL_CLOCK );
 		}
 		else
 		if (match_prefix( arg, "cputime")) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
-			attrs.clearAll();
+		 	attrs.append( ATTR_JOB_REMOTE_USER_CPU );
 		}
 		else
 		if (match_prefix( arg, "currentrun")) {
 			current_run = true;
-			attrs.clearAll();
 		}
 		else
 		if( match_prefix( arg, "globus" ) ) {
@@ -1248,12 +1245,17 @@ processCommandLineArguments (int argc, char *argv[])
 			// real-estate, so they're mutually exclusive
 			show_io = true;
 			goodput = false;
-			attrs.clearAll();
-		}   
+			attrs.append(ATTR_FILE_READ_BYTES);
+			attrs.append(ATTR_FILE_WRITE_BYTES);
+			attrs.append(ATTR_FILE_SEEK_COUNT);
+			attrs.append(ATTR_JOB_REMOTE_WALL_CLOCK);
+			attrs.append(ATTR_BUFFER_SIZE);
+			attrs.append(ATTR_BUFFER_BLOCK_SIZE);
+		}
 		else if( match_prefix( arg, "dag" ) ) {
 			dag = true;
 			attrs.clearAll();
-		}   
+		}
 		else if (match_prefix(arg, "expert")) {
 			expert = true;
 			attrs.clearAll();
@@ -1292,6 +1294,11 @@ processCommandLineArguments (int argc, char *argv[])
 			usage(argv[0]);
 			exit( 1 );
 		}
+	}
+
+		//Added so -long or -xml can be listed before other options
+	if(verbose && !custom_attributes) {
+		attrs.clearAll();
 	}
 }
 

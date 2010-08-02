@@ -705,6 +705,9 @@ init_job_ad()
 	buffer.sprintf( "%s = 0", ATTR_CUMULATIVE_SUSPENSION_TIME);
 	InsertJobExpr (buffer);
 
+	buffer.sprintf( "%s = 0", ATTR_COMMITTED_SUSPENSION_TIME);
+	InsertJobExpr (buffer);
+
 	buffer.sprintf( "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
 	InsertJobExpr (buffer);
 
@@ -1273,6 +1276,27 @@ SetRemoteAttrs()
 	hash_iter_delete(&it);
 }
 
+void
+SetJobMachineAttrs()
+{
+	MyString job_machine_attrs = condor_param_mystring( "job_machine_attrs", ATTR_JOB_MACHINE_ATTRS );
+	MyString history_len_str = condor_param_mystring( "job_machine_attrs_history_length", ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
+	MyString buffer;
+
+	if( job_machine_attrs.Length() ) {
+		InsertJobExprString(ATTR_JOB_MACHINE_ATTRS,job_machine_attrs.Value());
+	}
+	if( history_len_str.Length() ) {
+		char *endptr=NULL;
+		long history_len = strtol(history_len_str.Value(),&endptr,10);
+		if( history_len > MAXINT || history_len < 0 || *endptr) {
+			fprintf(stderr,"\nERROR: job_machine_attrs_history_length=%s is out of bounds 0 to %d\n",history_len_str.Value(),MAXINT);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		InsertJobExprInt(ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH,(int)history_len);
+	}
+}
 
 /*
 ** Send the reschedule command to the local schedd to get the jobs running
@@ -5755,6 +5779,7 @@ queue(int num)
 		SetJobLease();		// must be called _after_ SetStdFile(0,1,2)
 
 		SetRemoteAttrs();
+		SetJobMachineAttrs();
 
 		SetPeriodicHoldCheck();
 		SetPeriodicRemoveCheck();

@@ -3092,6 +3092,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=161
 
+[SOAP_SSL_SKIP_HOST_CHECK]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Soap Ssl Skip Host Check
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=daemon_core,daemon_core
+id=165
+
 [WEB_ROOT_DIR]
 aliases=
 default=
@@ -9670,4 +9686,36 @@ friendly_name=Negotiation Cycle Stats Length
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator
+id=600
+
+[SYSTEM_JOB_MACHINE_ATTRS]
+aliases=
+default=Cpus,SlotWeight
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=System Job Machine Attrs
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=600
+
+[SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH]
+aliases=
+default=1
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=System Job Machine Attrs History Length
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
 id=600

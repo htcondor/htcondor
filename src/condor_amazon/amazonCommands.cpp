@@ -175,12 +175,6 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 		return FALSE;
 	}
 
-	if( !verify_ami_id(argv[5]) ) {
-		result_string = create_failure_result( req_id, "Invalid_AMI_ID");
-		dprintf (D_ALWAYS, "Invalid AMI Id format %s to %s\n", argv[5], argv[0]);
-		return FALSE;
-	}
-	
 	AmazonVMStart request;
 
 	request.m_service_url = argv[2];
@@ -252,12 +246,6 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_str
 		return FALSE;
 	}
 
-	if( !verify_instance_id(argv[5]) ) {
-		result_string = create_failure_result( req_id, "Invalid_Instance_Id");
-		dprintf (D_ALWAYS, "Invalid Instance Id format %s to %s\n", argv[5], argv[0]);
-		return FALSE;
-	}
-	
 	AmazonVMStop request;
 
 	request.m_service_url = argv[2];
@@ -313,12 +301,6 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be %d, but %d) to %s\n", 
 				6, argc, argv[0]);
-		return FALSE;
-	}
-
-	if( !verify_instance_id(argv[5]) ) {
-		result_string = create_failure_result( req_id, "Invalid_Instance_Id");
-		dprintf (D_ALWAYS, "Invalid Instance Id format %s to %s\n", argv[5], argv[0]);
 		return FALSE;
 	}
 

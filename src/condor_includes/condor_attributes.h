@@ -600,6 +600,8 @@ extern const char * const  ATTR_WANT_RESOURCE_AD;
 extern const char * const  ATTR_TOTAL_SUSPENSIONS;
 extern const char * const  ATTR_LAST_SUSPENSION_TIME;
 extern const char * const  ATTR_CUMULATIVE_SUSPENSION_TIME;
+extern const char * const  ATTR_COMMITTED_SUSPENSION_TIME;
+extern const char * const  ATTR_UNCOMMITTED_SUSPENSION_TIME;
 
 extern const char * const  ATTR_ON_EXIT_BY_SIGNAL;
 extern const char * const  ATTR_ON_EXIT_CODE;
@@ -780,6 +782,10 @@ extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
+
+extern const char * const ATTR_JOB_MACHINE_ATTRS;
+extern const char * const ATTR_MACHINE_ATTR_PREFIX;
+extern const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

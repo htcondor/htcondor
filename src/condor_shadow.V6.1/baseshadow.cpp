@@ -547,6 +547,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
         jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
     }
 
+	CommitSuspensionTime(jobAd);
 
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
@@ -1215,4 +1216,19 @@ bool
 BaseShadow::getMachineName( MyString & /*machineName*/ )
 {
 	return false;
+}
+
+void
+BaseShadow::CommitSuspensionTime(ClassAd *jobAd)
+{
+	int uncommitted_suspension_time = 0;
+	jobAd->LookupInteger(ATTR_UNCOMMITTED_SUSPENSION_TIME,uncommitted_suspension_time);
+	if( uncommitted_suspension_time > 0 ) {
+		int committed_suspension_time = 0;
+		jobAd->LookupInteger( ATTR_COMMITTED_SUSPENSION_TIME,
+							  committed_suspension_time );
+		committed_suspension_time += uncommitted_suspension_time;
+		jobAd->Assign( ATTR_COMMITTED_SUSPENSION_TIME, committed_suspension_time );
+		jobAd->Assign( ATTR_UNCOMMITTED_SUSPENSION_TIME, 0 );
+	}
 }

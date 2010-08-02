@@ -204,7 +204,7 @@ class Lexer
 		std::string lexBuffer;					    // the buffer itselfw
 
 		// miscellaneous functions
-		static char *strLexToken (int);				// string rep'n of token
+		static const char *strLexToken (int);		// string rep'n of token
 
 		// set debug flag 
 		void SetDebug( bool d ) { debug = d; }

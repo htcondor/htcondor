@@ -305,7 +305,7 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\string_funcs.obj"
+			RelativePath="$(OutDir)\strcasestr.obj"
 			>
 		</File>
 		<File
