@@ -22,6 +22,7 @@
 #include "classad/common.h"
 #include "classad/lexer.h"
 #include "classad/util.h"
+#include "classad/classad.h"
 
 using namespace std;
 
@@ -392,7 +393,14 @@ tokenizeNumber (void)
 
 	if( numberType == INTEGER ) {
 		cut( );
-		long l = strtol( lexBuffer.c_str(), NULL, 0 );
+		long l;
+		if ( _useOldClassAdSemantics ) {
+			// Old ClassAds don't support octal or hexidecimal
+			// representations for integers.
+			l = strtol( lexBuffer.c_str(), NULL, 10 );
+		} else {
+			l = strtol( lexBuffer.c_str(), NULL, 0 );
+		}
 		if ( l > INT_MAX ) {
 			l = INT_MAX;
 		} else if ( l < INT_MIN ) {
