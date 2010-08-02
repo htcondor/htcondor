@@ -1896,7 +1896,6 @@ void
 SetMachineCount()
 {
 	char	*mach_count;
-	char	*ptr;
 	MyString buffer;
 	int		request_cpus = 1;
 
@@ -1990,7 +1989,7 @@ SetSimpleJobExprs()
 	SimpleExprInfo simple_exprs[] = {
 		{ATTR_NEXT_JOB_START_DELAY, next_job_start_delay, next_job_start_delay2, NULL, false},
 		{ATTR_JOB_AD_INFORMATION_ATTRS, "JobAdInformationAttrs", "job_ad_information_attrs", NULL, true},
-		{NULL,NULL,NULL}
+		{NULL,NULL,NULL,NULL,false}
 	};
 
 	SimpleExprInfo *i = simple_exprs;
@@ -4653,12 +4652,6 @@ SetUserLogXML()
 	}
 	return;
 }
-
-#if defined(ALPHA)
-	char	*CoreSizeFmt = "CONDOR_CORESIZE=%ld";
-#else
-	char	*CoreSizeFmt = "CONDOR_CORESIZE=%d";
-#endif
 
 
 void
@@ -7468,7 +7461,7 @@ SetVMParams()
 
 		// Read the parameter of xen_transfer_files 
 		char *transfer_files = NULL;
-		char *transf_attr_name;
+		const char *transf_attr_name;
 		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			transfer_files = condor_param("xen_transfer_files");
@@ -7607,7 +7600,7 @@ SetVMParams()
 
 		// <x>_disk is a required parameter
 		char *disk = NULL;
-		char *disk_attr_name;
+		const char *disk_attr_name;
 		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			disk = condor_param("xen_disk");
@@ -7663,7 +7656,7 @@ SetVMParams()
 		{
 			MyString xen_cdrom_string;
 			char *cdrom_device = NULL;
-			char *cdrom_attr_name;
+			const char *cdrom_attr_name;
 
 			if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 			{
