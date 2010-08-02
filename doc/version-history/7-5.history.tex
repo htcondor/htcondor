@@ -88,6 +88,25 @@ permissible.
 
 \begin{itemize}
 
+%gittrack #1385
+\item The new configuration variable
+\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS} specifies a list of machine
+attributes that should be recorded in the job ad.  The default
+attributes are \Attr{Cpus} and \Attr{SlotWeight}.  When there are
+multiple run attempts, history of machine attributes from previous
+run attempts may be kept.  The number of run attempts to store is
+specified by the new configuration variable
+\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS\_HISTORY\_LENGTH}, which defaults
+to 1.  A machine attribute named \Attr{X} will be inserted into the
+job ad as an attribute named \Attr{MachineAttrX0}.  The previous
+value of this attribute will be named \Attr{MachineAttrX1}, the
+previous to that will be named \Attr{MachineAttrX2}, and so on, up to
+the specified history length.  Additional attributes to record may be
+specified on a per-job basis by using the new \SubmitCmd{job\_machine\_attrs}
+submit file command.  The history length may also be extended on a
+per-job basis by using the new submit file command
+\SubmitCmd{job\_machine\_attrs\_history\_length}.
+
 % gittrac 1458
 \item The new configuration variable
   \Macro{NEGOTIATION\_CYCLE\_STATS\_LENGTH} specifies how many
