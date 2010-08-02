@@ -58,6 +58,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <limits.h>
 #include <math.h>
 #ifndef WIN32
 	#include <unistd.h>
