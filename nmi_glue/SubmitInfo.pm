@@ -67,6 +67,7 @@ our %build_and_test_sets = (
 		'x86_sles_9',
 		'ppc_macos_10.4',
 		'hppa_hpux_11',
+		'x86_64_fedora_12-updated',
 	],
 
 	'psilord' => [
