@@ -392,7 +392,13 @@ tokenizeNumber (void)
 
 	if( numberType == INTEGER ) {
 		cut( );
-		integer = (int) strtol( lexBuffer.c_str(), NULL, 0 );
+		long l = strtol( lexBuffer.c_str(), NULL, 0 );
+		if ( l > INT_MAX ) {
+			l = INT_MAX;
+		} else if ( l < INT_MIN ) {
+			l = INT_MIN;
+		}
+		integer = (int) l;
 	} else if( numberType == REAL ) {
 		cut( );
 		real = strtod( lexBuffer.c_str(), NULL );
