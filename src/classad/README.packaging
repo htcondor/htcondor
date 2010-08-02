@@ -48,5 +48,13 @@ Copy src/classad/CHANGELOG to
 Update /p/condor/public/html/classad/classad.html to mention the new 
 release.
 
+Update the Doxygen webpages:
+    cd classad-1.0.8
+    /unsup/doxygen-1.7.1/bin/doxygen
+    mv /p/condor/public/html/classad/c++doc \
+       /p/condor/public/html/classad/c++doc.old
+    cp -r doc/html /p/condor/public/html/classad/c++doc
+    rm -rf /p/condor/public/html/classad/c++doc.old
+
 To update the external package used by Condor, follow the instructions
 for creating externals from the Condor Developers web page.
