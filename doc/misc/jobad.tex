@@ -500,6 +500,19 @@ the job was submitted.
 user CPU time that the job caused to the machine upon which
 the job was submitted.
 
+%%% ClassAd attribute: MachineAttr<X><N>
+\index{ClassAd job attribute!MachineAttr<X><N>}
+\index{MachineAttr<X><N>!job ClassAd attribute}
+\item[\AdAttr{MachineAttr<X><N>}:] 
+Machine attribute of name \Attr{<X>} that is placed into this job ClassAd,
+as specified by the configuration variable
+\MacroNI{SYSTEM\_JOB\_MACHINE\_ATTRS}.
+With the potential for multiple run attempts, \Attr{<N>} represents
+an integer value providing historical values of this machine attribute
+for multiple runs.
+The most recent run will have a value of \Attr{<N>} equal to \Expr{0}.
+The next most recent run will have a value of \Attr{<N>} equal to \Expr{1}.
+
 %%% ClassAd attribute: MaxHosts
 \index{ClassAd job attribute!MaxHosts}
 \index{MaxHosts!job ClassAd attribute}

@@ -69,14 +69,6 @@ as part of the DAG status message in the \File{dagman.out} file.
   \Opt{-currentrun}, and \Opt{-io} options when called with no display options
   or with \Opt{-format}. 
 
-%gittrac #1385
-\item The new job ClassAd attribute \AdAttr{CommittedSuspensionTime}
-is a running total of the number of seconds the job has spent in
-suspension during time in which the job was not evicted without a
-checkpoint.  This complements the existing attribute
-\AdAttr{CumulativeSuspensionTime}, which includes all time spent in
-suspension, regardless of job eviction.
-
 %gittrac #825
 \item \Condor{dagman} now prints a note when the \Condor{submit\_dag}
 and \Condor{dagman} versions differ, even if the difference is
@@ -88,17 +80,25 @@ permissible.
 
 \begin{itemize}
 
+%gittrac #1385
+\item The new job ClassAd attribute \AdAttr{CommittedSuspensionTime}
+is a running total of the number of seconds the job has spent in
+suspension during time in which the job was not evicted without a
+checkpoint.  This complements the existing attribute
+\AdAttr{CumulativeSuspensionTime}, which includes all time spent in
+suspension, regardless of job eviction.
+
 %gittrack #1385
 \item The new configuration variable
 \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS} specifies a list of machine
-attributes that should be recorded in the job ad.  The default
+attributes that should be recorded in the job ClassAd.  The default
 attributes are \Attr{Cpus} and \Attr{SlotWeight}.  When there are
 multiple run attempts, history of machine attributes from previous
 run attempts may be kept.  The number of run attempts to store is
 specified by the new configuration variable
 \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS\_HISTORY\_LENGTH}, which defaults
 to 1.  A machine attribute named \Attr{X} will be inserted into the
-job ad as an attribute named \Attr{MachineAttrX0}.  The previous
+job ClassAd as an attribute named \Attr{MachineAttrX0}.  The previous
 value of this attribute will be named \Attr{MachineAttrX1}, the
 previous to that will be named \Attr{MachineAttrX2}, and so on, up to
 the specified history length.  Additional attributes to record may be

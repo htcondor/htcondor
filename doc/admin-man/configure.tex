@@ -5363,29 +5363,31 @@ MAX_JOBS_RUNNING	= \
 \label{param:SystemJobMachineAttrs}
 \item[\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}]
   This macro specifies a space and/or comma separated list of
-  machine attributes that should be recorded in the job ad.  The
+  machine attributes that should be recorded in the job ClassAd.  The
   default attributes are \Attr{Cpus} and \Attr{SlotWeight}.  When
   there are multiple run attempts, history of machine attributes from
   previous run attempts may be kept.  The number of run attempts to
   store is specified by the configuration variable
   \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS\_HISTORY\_LENGTH}.  A machine
-  attribute named \Attr{X} will be inserted into the job ad as an
+  attribute named \Attr{X} will be inserted into the job ClassAd as an
   attribute named \Attr{MachineAttrX0}.  The previous value of this
   attribute will be named \Attr{MachineAttrX1}, the previous to that
   will be named \Attr{MachineAttrX2}, and so on, up to the specified
   history length.  A history of length 1 means that only \Attr{MachineAttrX0}
   will be recorded.  Additional attributes to record may be specified on
   a per-job basis by using the \SubmitCmd{job\_machine\_attrs} submit
-  file command.  The value recorded in the job ad is the evaluation of
-  the machine attribute in the context of the job ad when the \Condor{schedd}
-  daemon initiates the startup of the job.  If the evaluation results in
-  an undefined or error result, the value recorded in the job ad will be
-  undefined or error respectively.
+  file command.  The value recorded in the job ClassAd is the evaluation of
+  the machine attribute in the context of the job ClassAd when 
+  the \Condor{schedd}
+  daemon initiates the start up of the job.  If the evaluation results in
+  an \Expr{Undefined} or \Expr{Error} result, 
+  the value recorded in the job ClassAd will be
+  \Expr{Undefined} or \Expr{Error} respectively.
 
 \label{param:SystemJobMachineAttrsHistoryLength}
 \item[\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS\_HISTORY\_LENGTH}]
-  This macro specifies the number of run attempts to store in
-  the job ad when recording the values of machine attributes listed
+  The integer number of run attempts to store in
+  the job ClassAd when recording the values of machine attributes listed
   in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.  The default is 1.
   The history length may also be extended on a per-job
   basis by using the submit file command

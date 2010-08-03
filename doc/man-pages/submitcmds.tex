@@ -2409,27 +2409,27 @@ or a different resource than a previous match.
 %% job_machine_attrs
 %%%%%%%%%%%%%%%%%%%
 
-\index{job\_machine\_attrs}
+\label{condor-submit-job-machine-attrs}
 \index{submit commands!job\_machine\_attrs}
-\item[job\_machine\_attrs = $<$attr1,attr2,...$>$]
+\item[job\_machine\_attrs = $<$attr1, attr2, \Dots $>$]
 A comma and/or space separated list of machine attribute names that
-should be recorded in the job ad in addition to the ones specified
-by the \Condor{schedd} daemon's system configuration
-(\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}).  When there are multiple run
+should be recorded in the job ClassAd in addition to the ones specified
+by the \Condor{schedd} daemon's system configuration variable
+\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.  When there are multiple run
 attempts, history of machine attributes from previous run attempts
 may be kept.  The number of run attempts to store may be extended
 beyond the system-specified history length by using the submit file
 command \SubmitCmd{job\_machine\_attrs\_history\_length}.  A machine
-attribute named \Attr{X} will be inserted into the job ad as an
+attribute named \Attr{X} will be inserted into the job ClassAd as an
 attribute named \Attr{MachineAttrX0}.  The previous value of this
 attribute will be named \Attr{MachineAttrX1}, the previous to that
 will be named \Attr{MachineAttrX2}, and so on, up to the specified
 history length.  A history of length 1 means that only \Attr{MachineAttrX0}
-will be recorded.  The value recorded in the job ad is the evaluation
-of the machine attribute in the context of the job ad when
-the \Condor{schedd} daemon initiates the startup of the job.  If the
-evaluation results in an undefined or error result, the value
-recorded in the job ad will be undefined or error respectively.
+will be recorded.  The value recorded in the job ClassAd is the evaluation
+of the machine attribute in the context of the job ClassAd when
+the \Condor{schedd} daemon initiates the start up of the job.  If the
+evaluation results in an \Expr{Undefined} or \Expr{Error} result, the value
+recorded in the job ad will be \Expr{Undefined} or \Expr{Error}, respectively.
 
 
 %%%%%%%%%%%%%%%%%%%
