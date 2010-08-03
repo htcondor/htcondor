@@ -309,7 +309,7 @@ static bool test_input_was_v1_true_v1r(void);
 static bool test_input_was_v1_true_ad(void);
 
 //char* constants
-const char 
+static const char 
 	*V1R = "one=1;two=2;three=3",	//V1Raw format
 	   *V1R_WIN = "one=1|two=2|three=3",
 	   *V1R_MISS_NAME = "=1;two=2;three=3",
@@ -325,14 +325,12 @@ const char
 	   *V2Q_MISS_NAME = "\"=1 two=2 three=3\"",
 	   *V2Q_MISS_DELIM = "\"one1 two=2 three=3\"",
 	   *V2Q_MISS_BOTH = "\"=1 two2 three=3\"",
-	   *V2Q_MISS_BEG = "one=1 two=2 three=3\"",
 	   *V2Q_MISS_END = "\"one=1 two=2 three=3",
 	   *V2Q_TRAIL = "\"one=1 two=2 three=3\"extra=stuff",
 	   *V2Q_SEMI ="\"one=1 two=2 three=3 semi=;\"",
 	   *V2Q_DELIM_SEMI = "\"one=1;two=2;three=3\"",
 	*V1R_ADD = "four=4;five=5",	//V1Raw format
 	*V2R_ADD = "four=4 five=5",	//V2Raw format
-	*V2Q_ADD = "\"four=4 five=5\"",	//V2Quoted format
 	*V1R_REP = "one=10;two=200;three=3000",	//V1Raw format
 		*V1R_REP_WIN = "one=10|two=200|three=3000",
 	*V2R_REP = "one=10 two=200 three=3000",	//V2Raw format
@@ -350,14 +348,12 @@ const char
 	   *AD_V1_MISS_NAME = "\tEnv = \"=1;two=2;three=3\"",
 	   *AD_V1_MISS_DELIM = "\tEnv = \"one1;two=2;three=3\"",
 	   *AD_V1_MISS_BOTH = "\tEnv = \"=1;two2;three=3\"",
-	   *AD_V1_ADD = "\tEnv = \"four=4;five=5\"", 
 	   *AD_V1_REP = "\tEnv = \"one=10;two=200;three=3000\"", 
 	   *AD_V1_REP_ADD = "\tEnv = \"one=10;two=200;three=3000;four=4;five=5\"", 
 	*AD_V2 = "\tEnvironment = \"one=1 two=2 three=3\"",	//ClassAd with V2 Env
 	   *AD_V2_MISS_NAME = "\tEnvironment = \"=1 two=2 three=3\"",
 	   *AD_V2_MISS_DELIM = "\tEnvironment = \"one1 two=2 three=3\"",
 	   *AD_V2_MISS_BOTH = "\tEnvironment = \"=1 two2 three=3\"",
-	   *AD_V2_ADD = "\tEnvironment = \"four=4 five=5\"",
 	   *AD_V2_REP = "\tEnvironment = \"one=10 two=200 three=3000\"",
 	   *AD_V2_REP_ADD = "\tEnvironment = \"one=10 two=200 three=3000 four=4 "
 	    	"five=5\"",
@@ -367,15 +363,14 @@ const char
 	   *ONE_MISS_DELIM = "one1",
 	   *ONE_MISS_VAL = "one=",
 	   *ONE_REP = "one=10",
-	*NULL_DELIM = "one=1\0two=2\0three=3",	//NULL-Delimited string
+	*NULL_DELIM = "one=1\0two=2\0three=3\0",	//NULL-Delimited string
 	   *NULL_DELIM_MISS_NAME = "=1\0two=2\0three=3\0",
 	   *NULL_DELIM_MISS_DELIM = "one1\0two=2\0three=3\0",
-	   *NULL_DELIM_MISS_BOTH = "=1\0two2\0three=3\0",
 	   *NULL_DELIM_REP = "one=10\0two=200\0three=3000\0",
 	   *NULL_DELIM_REP_ADD = "one=10\0two=200\0three=3000\0four=4\0five=5\0",
 	*EMPTY = "";
 //char** constants
-const char
+static const char
 	*ARRAY[] = {"one=1", "two=2", "three=3", ""},
 	*ARRAY_MISS_NAME[] = {"=1", "two=2", "three=3", ""},
 	*ARRAY_MISS_DELIM[] = {"one1", "two=2", "three=3", ""},
@@ -385,7 +380,7 @@ const char
 		""};
 
 //MyString constants
-const MyString
+static const MyString
 	ADD("one=1 two=2 three=3"),
 		ADD_SEMI("one=1 two=2 three=3 semi=;"),
 	REP("one=10 two=200 three=3000"),

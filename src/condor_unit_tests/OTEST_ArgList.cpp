@@ -91,7 +91,7 @@ static char const *test_win32_v1 = "one \"two three\" four\\ \"five "
 	"\\\"six\\\\\\\"\" \"seven\\\\\\\"\"";
 static char const *test_unix_v1 = "one 'two three' four";
 
-ArgList arglist;
+static ArgList arglist;
 
 bool OTEST_ArgList(void) {
 	emit_object("ArgList");
