@@ -121,10 +121,9 @@ char** string_compare_helper(StringList* sl, int start) {
 }
 
 /* Frees a char** */
-void free_helper(char** array) {
-	int j = sizeof(array)/sizeof(char*);
+void free_helper(char** array, int num_strs) {
 	int i;
-	for(i = 0; i < j; i++) {
+	for(i = 0; i < num_strs; i++) {
 		free(array[i]);		
 	}
 	free(array);

@@ -57,7 +57,7 @@ void niceFree(char* str);
 char** string_compare_helper(StringList* list, int start);
 
 /* Frees a char** */
-void free_helper(char** array);
+void free_helper(char** array, int num_strs);
 
 /* Originallly from condor_c++_util/test_old_classads.cpp */
 void make_big_string(int length, char **string, char **quoted_string);
