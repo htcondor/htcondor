@@ -1142,6 +1142,14 @@ PREEN_ARGS			= -m -r
 
 
 ##--------------------------------------------------------------------
+##  condor_collector
+##--------------------------------------------------------------------
+## Address to which Condor will send a weekly e-mail with output of
+## condor_status.
+#CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
+
+
+##--------------------------------------------------------------------
 ##  condor_negotiator
 ##--------------------------------------------------------------------
 ## Determine if the Negotiator will honor SlotWeight attributes, which
