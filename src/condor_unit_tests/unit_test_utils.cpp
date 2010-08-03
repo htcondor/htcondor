@@ -218,3 +218,13 @@ MyString* convert_string_array(const char** str, int size, const char* delim){
 	}
 	return toReturn;
 }
+
+/* Deletes a char** */
+void delete_helper(char** array, int num_strs) {
+	int i;
+	for(i = 0; i < num_strs; i++) {
+dprintf(D_ALWAYS, "\ti:%d\n", i);
+		delete[] array[i];		
+	}
+	delete[] array;
+}
