@@ -1289,8 +1289,8 @@ SetJobMachineAttrs()
 	if( history_len_str.Length() ) {
 		char *endptr=NULL;
 		long history_len = strtol(history_len_str.Value(),&endptr,10);
-		if( history_len > MAXINT || history_len < 0 || *endptr) {
-			fprintf(stderr,"\nERROR: job_machine_attrs_history_length=%s is out of bounds 0 to %d\n",history_len_str.Value(),MAXINT);
+		if( history_len > INT_MAX || history_len < 0 || *endptr) {
+			fprintf(stderr,"\nERROR: job_machine_attrs_history_length=%s is out of bounds 0 to %d\n",history_len_str.Value(),INT_MAX);
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
