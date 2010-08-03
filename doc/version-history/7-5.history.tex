@@ -74,6 +74,12 @@ as part of the DAG status message in the \File{dagman.out} file.
 and \Condor{dagman} versions differ, even if the difference is
 permissible.
 
+% gittrac #61
+\item Added default values for \MacroNI{<SUBSYS>\_LOG} configurations. If a 
+  \MacroNI{<SUBSYS>\_LOG} configuration variable is not set in 
+  \File{condor\_config} or \File{condor\_config.local} it will default to 
+  \MacroNI{\$(LOG)/<SUBSYS>LOG}.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
