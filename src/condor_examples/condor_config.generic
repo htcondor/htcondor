@@ -1142,6 +1142,14 @@ PREEN_ARGS			= -m -r
 
 
 ##--------------------------------------------------------------------
+##  condor_negotiator
+##--------------------------------------------------------------------
+## Determine if the Negotiator will honor SlotWeight attributes, which
+## may be used to give a slot greater weight when calculating usage.
+#NEGOTIATOR_USE_SLOT_WEIGHTS = True
+
+
+##--------------------------------------------------------------------
 ##  condor_startd
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
