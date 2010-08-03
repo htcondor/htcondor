@@ -26,6 +26,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "iso_dates.h"
 
 bool utest_sock_eq_octet( struct in_addr* address, unsigned char oct1, unsigned char oct2, unsigned char oct3, unsigned char oct4 );
 
@@ -87,3 +88,9 @@ MyString* convert_string_array(const char** str, int size,
 
 /* Deletes a char** */
 void delete_helper(char** array, int num_strs);
+
+/* 
+ Adds a string representation of the tm struct into the MyString based on the 
+ ISO8601Type. 
+ */
+void get_tm(ISO8601Type type, const struct tm &time, MyString* str);

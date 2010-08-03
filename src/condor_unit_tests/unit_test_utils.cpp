@@ -228,3 +228,19 @@ dprintf(D_ALWAYS, "\ti:%d\n", i);
 	}
 	delete[] array;
 }
+
+void get_tm(ISO8601Type type, const struct tm &time, MyString* str)
+{
+	if(str) {
+		if (type == ISO8601_DateOnly) {
+			str->sprintf("%d-%d-%d", time.tm_year, time.tm_mon, time.tm_mday);
+		} else if (type == ISO8601_TimeOnly) {
+			str->sprintf("%d:%d:%d", time.tm_hour, time.tm_min, time.tm_sec);
+		} else {
+			str->sprintf("%d-%d-%dT%d:%d:%d",
+						 time.tm_year, time.tm_mon, time.tm_mday,
+						 time.tm_hour, time.tm_min, time.tm_sec);
+		}
+	}
+
+}
