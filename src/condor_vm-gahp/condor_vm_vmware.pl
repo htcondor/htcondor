@@ -54,7 +54,7 @@ if (lc($^O) eq "mswin32") {
 my $mkisofs;
 if (lc($^O) eq "mswin32") {
 	# For MS Windows 
-	$mkisofs = 'C:\condor\bin\mkisofs.bat';
+	$mkisofs = 'C:\condor\bin\mkisofs.exe';
 }else {
 	# For Linux
 	$mkisofs = 'mkisofs';
