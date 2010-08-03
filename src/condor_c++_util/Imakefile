@@ -300,7 +300,6 @@ libcondorapi.so: Makefile
 all:: JobLogMirror.o
 
 c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
-c_plus_target(test_locks,test_locks.o,$(LIB))
 c_plus_target(test_iso_dates,test_iso_dates.o,$(LIB))
 c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
@@ -353,7 +352,7 @@ c_plus_target(my_hostname.t,my_hostname.t.o,$(LIB))
 
 html_target( documentation )
 
-all-tests: access.t killfamily.t test_locks my_hostname.t
+all-tests: access.t killfamily.t my_hostname.t
 
 /* User log testing */
 USERLOG_TEST_NAMES = reader reader_state writer
