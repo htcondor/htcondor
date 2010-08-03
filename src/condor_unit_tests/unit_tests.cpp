@@ -58,7 +58,9 @@ bool OTEST_MyString(void);
 bool OTEST_StringList(void);
 bool OTEST_Old_Classads(void);
 bool OTEST_Env(void);
+bool OTEST_FileLock(void);
 
+	// function map that maps testing function names to testing functions
 const static struct {
 	const char* name;
 	test_func_ptr func;
@@ -86,7 +88,8 @@ const static struct {
 	map(OTEST_MyString),
 	map(OTEST_StringList),
 	map(OTEST_Old_Classads),
-	map(OTEST_Env)
+	map(OTEST_Env),
+	map(OTEST_FileLock),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 
