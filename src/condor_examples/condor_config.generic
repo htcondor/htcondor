@@ -1148,6 +1148,10 @@ PREEN_ARGS			= -m -r
 ## condor_status.
 #CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
 
+## Global Collector to periodically advertise basic information about
+## your pool.
+#CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
+
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator
