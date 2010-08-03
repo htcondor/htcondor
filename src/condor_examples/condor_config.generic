@@ -1148,6 +1148,10 @@ PREEN_ARGS			= -m -r
 ## may be used to give a slot greater weight when calculating usage.
 #NEGOTIATOR_USE_SLOT_WEIGHTS = True
 
+## How often the Negotaitor starts a negotiation cycle, defined in
+## seconds.
+#NEGOTIATOR_INTERVAL = 60
+
 
 ##--------------------------------------------------------------------
 ##  condor_startd
