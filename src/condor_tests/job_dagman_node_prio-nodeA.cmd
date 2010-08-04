@@ -1,8 +1,8 @@
 executable   = ./job_dagman_node_prio-nodeA.pl
 arguments    = $(nodename)
 universe     = scheduler
-output       = $(job).out
-error        = $(job).err
+output       = $(nodename).out
+error        = $(nodename).err
 log          = job_dagman_node_prio.log
 Notification = NEVER
 queue
