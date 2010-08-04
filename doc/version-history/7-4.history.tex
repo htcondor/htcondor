@@ -144,6 +144,11 @@ when connecting to a misconfigured LDAP server.
 \item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. This bug is 
 present in all earlier 7.4.x Condor releases.
 
+% gittrac #1551
+\item The submit file attribute vm\_cdrom\_files now works properly
+with Windows execute machines. Previously, creation of the ISO file
+would fail, causing job execution to be aborted.
+
 \end{itemize}
 
 \noindent Known Bugs:
