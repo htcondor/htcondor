@@ -54,25 +54,25 @@ The details of each version are described below.
 % gittrac #991
 \item The \Condor{shared\_port} daemon is now supported on Windows platforms.
 
+%gittrac #1179
+\item \Condor{q} now uses the queue-management API's projection feature when 
+  used with \Opt{-run}, \Opt{-hold}, \Opt{-goodput}, \Opt{-cputime}, 
+  \Opt{-currentrun}, and \Opt{-io} options when called with no display options
+  or with \Opt{-format}. 
+
 % gittrac #1460
 \item Decreased the CPU utilization of \Condor{dagman} when it is
 	submitting ready jobs into Condor.
 
 %gittrac #1479
-\item \Condor{dagman} now prints the number of queued jobs in the DAG
+\item \Condor{dagman} now logs the number of queued jobs in the DAG
 that are on hold,
 as part of the DAG status message in the \File{dagman.out} file.
 
-%gittrac #1179
-\item \Condor{q} now uses the queue-management api's projection feature when 
-  used with \Opt{-run}, \Opt{-hold}, \Opt{-goodput}, \Opt{-cputime}, 
-  \Opt{-currentrun}, and \Opt{-io} options when called with no display options
-  or with \Opt{-format}. 
-
 %gittrac #825
-\item \Condor{dagman} now prints a note when the \Condor{submit\_dag}
-and \Condor{dagman} versions differ, even if the difference is
-permissible.
+\item \Condor{dagman} now logs a note in the \File{dagman.out} file
+when the \Condor{submit\_dag} and \Condor{dagman} versions differ,
+even if the difference is permissible.
 
 \end{itemize}
 
