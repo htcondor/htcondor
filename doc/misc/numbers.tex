@@ -16,10 +16,10 @@
 106 &   JOB\_SHADOW\_USAGE & incorrect arguments to condor\_shadow \\ \hline
 107 &   JOB\_NOT\_CKPTED  & the job vacated without a checkpoint \\ \hline
 107 &   JOB\_SHOULD\_REQUEUE  & same number as JOB\_NOT\_CKPTED, \\
-    &                         & to achieve the same behavior.  \\
-    &                         & This exit code implies that we want \\
-    &                         & the job to be put back in the job queue \\
-    &                         & and run again. \\ \hline
+    & &                       to achieve the same behavior.  \\
+    & &                       This exit code implies that we want \\
+    & &                       the job to be put back in the job queue \\
+    & &                       and run again. \\ \hline
 108 &   JOB\_NOT\_STARTED  & can not connect to the \Condor{startd} or request refused \\ \hline
 109 &   JOB\_BAD\_STATUS  & job status != RUNNING on start up \\ \hline
 110 &   JOB\_EXEC\_FAILED & exec failed for some reason other than ENOMEM \\ \hline
@@ -70,6 +70,10 @@
 26  &   Grid resource down \\ \hline
 27  &   Grid submit \\ \hline
 28  &   Job ClassAd attribute values added to event log  \\ \hline
+29  &   Job status unknown \\ \hline
+30  &   Job status known \\ \hline
+31  &   Job stage in \\ \hline
+32  &   Job stage out \\ \hline
 \end{tabular}
 \end{table}
 \end{center}
@@ -85,6 +89,8 @@
 GT2 gatekeeper        &   2119  \\ \hline
 gridftp               &   2811  \\ \hline
 GT4 web services      &   8443  \\ \hline
+GCB local             &   65430  \\ \hline
+GCB public            &   65432  \\ \hline
 \end{tabular}
 \end{table}
 \end{center}
@@ -113,6 +119,7 @@ GT4 web services      &   8443  \\ \hline
 60015  &   DC\_OFF\_PEACEFUL               \\ \hline
 60016  &   DC\_SET\_PEACEFUL\_SHUTDOWN     \\ \hline
 60017  &   DC\_TIME\_OFFSET                \\ \hline
+60018  &   DC\_PURGE\_LOG                  \\ \hline
 \end{tabular}
 \end{table}
 \end{center}

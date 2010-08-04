@@ -432,29 +432,31 @@ the changed value.
   \index{subsystem names}
   \index{macro!subsystem names}
   \begin{itemize}
-  \item \verb@STARTD@
-  \item \verb@SCHEDD@
-  \item \verb@MASTER@
-  \item \verb@COLLECTOR@
-  \item \verb@NEGOTIATOR@
-  \item \verb@KBDD@ 
-  \item \verb@SHADOW@
-  \item \verb@STARTER@
+  \label{list:subsystem names}
+  \item \verb@AMAZON_GAHP@
+  \item \verb@C_GAHP@
   \item \verb@CKPT_SERVER@
-  \item \verb@SUBMIT@
-  \item \verb@GRIDMANAGER@
-  \item \verb@TOOL@
-  %\item \verb@STORK@
-  \item \verb@HAD@
-  \item \verb@REPLICATION@
-  \item \verb@TRANSFERER@
-  \item \verb@QUILL@
+  \item \verb@COLLECTOR@
   \item \verb@DBMSD@
-  \item \verb@JOB_ROUTER@
-  \item \verb@LEASEMANAGER@
-  \item \verb@ROOSTER@
+  \item \verb@GRIDMANAGER@
+  \item \verb@HAD@
   \item \verb@HDFS@
-    \label{list:subsystem names}
+  \item \verb@JOB_ROUTER@
+  \item \verb@KBDD@ 
+  \item \verb@LEASEMANAGER@
+  \item \verb@MASTER@
+  \item \verb@NEGOTIATOR@
+  \item \verb@QUILL@
+  \item \verb@REPLICATION@
+  \item \verb@ROOSTER@
+  \item \verb@SCHEDD@
+  \item \verb@SHADOW@
+  \item \verb@STARTD@
+  \item \verb@STARTER@
+  %\item \verb@STORK@
+  \item \verb@SUBMIT@
+  \item \verb@TOOL@
+  \item \verb@TRANSFERER@
   \end{itemize}
 
 \end{description}
@@ -2183,6 +2185,7 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:EnableAddressRewriting}
 \item[\Macro{ENABLE\_ADDRESS\_REWRITING}]
   A boolean value that defaults to \Expr{True}.  When
+  \MacroNI{NETWORK\_INTERFACE} is defined or
   \MacroNI{TCP\_FORWARDING\_HOST} is defined or
   \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
   the behavior is as though it had been set to \Expr{False}.  When \Expr{True},
@@ -8781,17 +8784,11 @@ They specify items related to the \Condor{vm-gahp}.
   The complete path and file name of the script that controls Xen and KVM.
     There is no default value for this required variable.
 
-\label{param:VMBridgeScript}
-\item[\Macro{VM\_BRIDGE\_SCRIPT}]
-  A path, file name, and command-line arguments to specify a script
-  that will be run to set up a bridging network interface for guests.
-  The interface should provide direct access to the host system's LAN,
-  that is, not be NAT'd on the host. 
-  An example:
-  \begin{verbatim}
-  VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
-  \end{verbatim}
-
+\label{param:VMNetworkingBridgeInterface}
+\item[\Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE}]
+  For xen and kvm only, a required string if bridge networking is to be
+  enabled.  It specifies the networking interface that vm universe jobs
+  will use.
 \end{description}
 
 The following configuration variables are specific to the VMware

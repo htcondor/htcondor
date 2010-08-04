@@ -16,6 +16,72 @@ New features will be added in the 7.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-4-4}Version 7.4.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.4.4 not yet released.
+%\item Condor version 7.4.4 released on Month Date, 2010.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item \SubmitCmd{load\_profile} is now supported by the unix version of
+\Condor{submit} when submitting jobs to Windows.  Previously, this command
+was only supported by the Windows version of \Condor{submit}.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item For spooled jobs, input files were sometimes transferred twice from
+the submit machine to the execute machine.  This happened if the input files
+were specified without any path information (i.e. a filename with no
+directory specified).  This problem has existed since before Condor 7.0.0.
+
+% gittrac 457
+\item The configuration variable \MacroNI{NETWORK\_INTERFACE} did not
+work in some situations because of Condor's attempts to
+automatically rewrite published addresses to match the IP address of
+the network interface used to make the publication.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-4-3}Version 7.4.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -54,17 +120,36 @@ disables Chirp remote file access from execute machines.
   used to make the publication, for example, the network interface used 
   to communicate with the \Condor{collector}.
 
+% gittrac 1407
+\item Configuration variable \Macro{VM\_BRIDGE\_SCRIPT} has been removed
+  and is no longer valid.
+
+% gittrac 1402 and 1407
+\item The new configuration variable
+  \Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE} specifies the networking interface
+  that xen or kvm \SubmitCmd{vm} universe jobs will use.
+  See section~\ref{param:VMNetworkingBridgeInterface} for documentation.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
+% gittrac 487
+\item
+  Fixed a bug where if a user job using file transfer with
+  \SubmitCmd{transfer\_output\_files} and \SubmitCmd{when\_to\_transfer\_output}
+  is set to \Expr{ON\_EXIT\_OR\_EVICT} fails
+  to produce all of the specified files and exit, as when core
+  dumping due to a fault, then the stdout, stderr, and core file of the
+  job were not transferred back to the submitting machine.
+
 \item
   Fixed numerous, small, rare memory leaks.
 
 \item 
-  Fixed a bug where processor affinity settings were ignored if
+  Fixed a bug in which processor affinity settings were ignored if
   privilege separation was enabled.
 
 % gittrac 1329
@@ -73,9 +158,10 @@ disables Chirp remote file access from execute machines.
   the submit node always attempted to use the public network address
   of the submit machine.
 
-% gittrack 1405
-\item \MacroNI{TCP\_FORWARDING\_HOST} did not work in some situations because
-of Condor's attempts to automatically rewrite published addresses to
+% gittrac 1405
+\item The configuration variable \MacroNI{TCP\_FORWARDING\_HOST} did not work
+in some situations
+because of Condor's attempts to automatically rewrite published addresses to
 match the IP address of the network interface used to make the publication.
 
 % gittrac 1346
@@ -114,6 +200,22 @@ It incorrectly used them as cluster numbers.
   hibernation to fail because power\_state requires root privileges
   to function properly.
 
+% gittrac #1330
+\item Fixed a bug that could cause the \Condor{schedd} to crash if there
+were any idle scheduler universe jobs when files were staged into the
+\Condor{schedd} for a new job.
+
+% gittrac #1404
+\item Fixed a bug in the \Prog{nordugrid\_gahp} that could cause it to exit
+when connecting to a misconfigured LDAP server.
+
+% gittrac #1352
+\item Fixed a bug that prevented the \MacroNI{NEGOTIATOR\_MATCH\_LOG} from rotating.
+
+% gittrac #1413
+\item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. This bug is 
+present in all earlier 7.4.x Condor releases.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -128,7 +230,14 @@ It incorrectly used them as cluster numbers.
 
 \begin{itemize}
 
-\item None.
+\item Searching the PDF version of the manual for items containing 
+underscore characters, such as many configuration variable names,
+now works correctly.
+
+% gittrac #1340
+\item The new subsection~\ref{ClassAd:examples} provides examples of
+evaluation results when using the operators \Expr{==}, \Expr{=?=},
+\Expr{!=}, and \Expr{=!=}.
 
 \end{itemize}
 

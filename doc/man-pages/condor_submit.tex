@@ -56,8 +56,15 @@ To stash a password, use the \Condor{store\_cred} command.
 See the manual page at
 page~\pageref{man-condor-store-cred} for details.
 
-See section~\ref{sec:submit-cmds}
-for the commands that may be placed in the submit description file
+For lengthy lines within the submit description file,
+the backslash (\Bs) is a line continuation character.
+Placing the backslash at the end of a line causes the current line's command
+to be continued with the next line of the file.
+Submit description files may contain comments.
+A comment is any line beginning with a pound character (\verb@#@). 
+
+Here is a list of
+the commands that may be placed in the submit description file
 to direct the submission of a job.
 
 \begin{Options}
