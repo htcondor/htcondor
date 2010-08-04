@@ -158,16 +158,16 @@ dprintf_config( const char *subsys )
 
 					// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
 					if(!tmp2) {
+						// This char* will never be freed, but as long as
+						// defaults are defined in condor_c++_util/param_info.in
+						// we will never get here.
+						char *str;
 						char *log = param("LOG");
 						char *subsys = param("SUBSYSTEM");
 						if(!log || !subsys) {
 							EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
 						}
 						
-						// This char* will never be freed, but as long as
-						// defaults are defined in condor_c++_util/param_info.in
-						// we will never get here.
-						char *str;
 						if(strcmp(pname, "NEGOTIATOR_MATCH_LOG") == MATCH) {
 							str = (char*)malloc(strlen(log) + strlen(subsys) 
 								+ 10);
