@@ -191,7 +191,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "dcloud" ) ) {
+		if ( !token || strcasecmp( token, "dcloud" ) ) {
 			error_string.sprintf( "%s not of type dcloud",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
@@ -241,7 +241,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "dcloud" ) ) {
+		if ( !token || strcasecmp( token, "dcloud" ) ) {
 			error_string.sprintf( "%s not of type dcloud",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
