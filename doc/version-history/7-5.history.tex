@@ -164,6 +164,12 @@ for \MacroNI{FLOCK\_COLLECTOR\_HOSTS} and \MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.
   effectively non-functional: \Attr{UseSharedX509UserProxy},
   \Attr{JobShouldBeSandboxed}, and \Attr{JobFailureTest}.
 
+% gittrack #1561
+\item \SubmitCmd{copy\_to\_spool} did not work properly in 7.5.3.
+  When sending the executable to the execute machine, it was
+  transferred from the original path rather than from the spooled copy
+  of the file.
+
 % gittrack #1521
 \item When output files were auto-selected and spooled, Condor-C and
   \Condor{transfer\_data} would copy back both the output files and
