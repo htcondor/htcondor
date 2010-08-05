@@ -126,6 +126,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
 	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
+	common_job_queue_attrs->insert( ATTR_COMMITTED_SLOT_TIME );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );

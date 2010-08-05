@@ -857,3 +857,6 @@ const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT = "LastNeg
 const char * const ATTR_JOB_MACHINE_ATTRS = "JobMachineAttrs";
 const char * const ATTR_MACHINE_ATTR_PREFIX = "MachineAttr";
 const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH = "JobMachineAttrsHistoryLength";
+const char * const ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0 = "MachineAttrSlotWeight0";
+const char * const ATTR_CUMULATIVE_SLOT_TIME = "CumulativeSlotTime";
+const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";

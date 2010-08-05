@@ -696,6 +696,12 @@ init_job_ad()
 	buffer.sprintf( "%s = 0", ATTR_JOB_COMMITTED_TIME);
 	InsertJobExpr (buffer);
 
+	buffer.sprintf( "%s = 0", ATTR_COMMITTED_SLOT_TIME);
+	InsertJobExpr (buffer);
+
+	buffer.sprintf( "%s = 0", ATTR_CUMULATIVE_SLOT_TIME);
+	InsertJobExpr (buffer);
+
 	buffer.sprintf( "%s = 0", ATTR_TOTAL_SUSPENSIONS);
 	InsertJobExpr (buffer);
 

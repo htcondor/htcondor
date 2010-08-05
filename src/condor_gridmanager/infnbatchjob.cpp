@@ -884,6 +884,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
 //	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
 //	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+//	submit_ad->Assign( ATTR_COMMITTED_SLOT_TIME, 0 );
+//	submit_ad->Assign( ATTR_CUMULATIVE_SLOT_TIME, 0 );
 //	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
 //	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 //	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );

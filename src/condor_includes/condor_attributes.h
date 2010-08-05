@@ -787,6 +787,9 @@ extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
 extern const char * const ATTR_JOB_MACHINE_ATTRS;
 extern const char * const ATTR_MACHINE_ATTR_PREFIX;
 extern const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH;
+extern const char * const ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0;
+extern const char * const ATTR_CUMULATIVE_SLOT_TIME;
+extern const char * const ATTR_COMMITTED_SLOT_TIME;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

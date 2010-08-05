@@ -3751,6 +3751,17 @@ int mark_idle(ClassAd *job)
 			// runs before a new shadow starts, it won't
 			// potentially double-count
 		DeleteAttribute(cluster,proc,ATTR_SHADOW_BIRTHDATE);
+
+		float slot_weight = 1;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
+		float slot_time = 0;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
+		slot_time += wall_clock_ckpt*slot_weight;
+		SetAttributeFloat(cluster, proc,
+						  ATTR_CUMULATIVE_SLOT_TIME,slot_time);
+
 		CommitTransaction();
 	}
 

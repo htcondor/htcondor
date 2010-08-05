@@ -1291,6 +1291,13 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 		jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 		job_committed_time += now - int_value;
 		jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+
+		float slot_weight = 1;
+		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
+		float slot_time = 0;
+		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
+		slot_time += slot_weight * (now - int_value);
+		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
 	}
 
 	// Update timestamp of the last checkpoint

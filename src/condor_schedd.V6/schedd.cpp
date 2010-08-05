@@ -8416,7 +8416,8 @@ update_remote_wall_clock(int cluster, int proc)
 		float accum_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-		accum_time += (float)( time(NULL) - bday );
+		float delta = (float)(time(NULL) - bday);
+		accum_time += delta;
 			// We want to update our wall clock time and delete
 			// our wall clock checkpoint inside a transaction, so
 			// we are sure not to double-count.  The wall-clock
@@ -8429,6 +8430,16 @@ update_remote_wall_clock(int cluster, int proc)
 		SetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
 		DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
+
+		float slot_weight = 1;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
+		float slot_time = 0;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
+		slot_time += delta*slot_weight;
+		SetAttributeFloat(cluster, proc,
+						  ATTR_CUMULATIVE_SLOT_TIME,slot_time);
 	}
 }
 
