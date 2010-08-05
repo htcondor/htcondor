@@ -65,6 +65,11 @@ LOCAL_DIR		= $(TILDE)
 LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 #LOCAL_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).local
 
+##  Where are optional machine-specific local config files located?
+##  Config files are included in lexicographic order.
+##  No default. $(LOCAL_DIR)/config is an example.
+#LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
+
 ## If the local config file is not present, is it an error?
 ## WARNING: This is a potential security issue. 
 ## If not specificed, the default is True
@@ -506,9 +511,8 @@ GLIDEIN_SERVER_URLS = \
 ## just disable it).
 #NEGOTIATOR_IGNORE_USER_PRIORITIES = False
 
-## These are the directories used to locate classad plug-in functions
-#CLASSAD_SCRIPT_DIRECTORY =
-#CLASSAD_LIB_PATH =
+## This is a list of libraries containing ClassAd plug-in functions.
+#CLASSAD_USER_LIBS =
 
 ## This setting tells Condor whether to delegate or copy GSI X509
 ## credentials when sending them over the wire between daemons.
@@ -538,6 +542,17 @@ GLIDEIN_SERVER_URLS = \
 ## The allowed values are case insensitive.
 ## The default of this parameter if not specified is: stm_use_schedd_only
 #SANDBOX_TRANSFER_METHOD = stm_use_schedd_only
+
+## This setting specifies an IP address that depends on the setting of
+## BIND_ALL_INTERFACES. If BIND_ALL_INTERFACES  is True (the default), then
+## this variable controls what IP address will be advertised as the public
+## address of the daemon. If BIND_ALL_INTERFACES is False, then this variable
+## specifies which IP address to bind network sockets to. If
+## BIND_ALL_INTERFACES is False  and NETWORK_INTERFACE is not defined, Condor
+## chooses a network interface automatically. It tries to choose a public
+## interface if one is available. If it cannot decide which of two interfaces
+## to choose from, it will pick the first one.
+#NETWORK_INTERFACE = 
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
@@ -1073,8 +1088,9 @@ COLLECTOR			= $(SBIN)/condor_collector
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
-HDFS				= $(LIBEXEC)/condor_hdfs
+HDFS				= $(SBIN)/condor_hdfs
 SHARED_PORT			= $(LIBEXEC)/condor_shared_port
+TRANSFERER			= $(LIBEXEC)/condor_transferer
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1144,6 +1160,30 @@ PREEN_ARGS			= -m -r
 ##  it "recovered".  Once a daemon has recovered, we reset the number
 ##  of restarts so the exponential backoff stuff goes back to normal. 
 #MASTER_RECOVER_FACTOR		= 300
+
+
+##--------------------------------------------------------------------
+##  condor_collector
+##--------------------------------------------------------------------
+## Address to which Condor will send a weekly e-mail with output of
+## condor_status.
+#CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
+
+## Global Collector to periodically advertise basic information about
+## your pool.
+#CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
+
+
+##--------------------------------------------------------------------
+##  condor_negotiator
+##--------------------------------------------------------------------
+## Determine if the Negotiator will honor SlotWeight attributes, which
+## may be used to give a slot greater weight when calculating usage.
+#NEGOTIATOR_USE_SLOT_WEIGHTS = True
+
+## How often the Negotaitor starts a negotiation cycle, defined in
+## seconds.
+#NEGOTIATOR_INTERVAL = 60
 
 
 ##--------------------------------------------------------------------
@@ -2303,17 +2343,6 @@ VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
 
 ## Networking parameters for Xen & KVM
 ##
-## This parameter is used only for virsh.
-##
-## A string specifying a script and its arguments that will be run to
-## setup a bridging network interface for guests. The interface should
-## provide direct access to the host system's LAN, i.e. not be NAT'd on the
-## host. 
-##
-## Example 
-##  VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
-#VM_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
-
 ## This is the path to the XML helper command; the libvirt_simple_script.awk
 ## script just reproduces what Condor already does for the kvm/xen VM
 ## universe
@@ -2452,7 +2481,7 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 ## The host and port for hadoop's name node. If this machine is the
 ## name node (see HDFS_SERVICES) then the specified port will be used
 ## to run name node. 
-HDFS_NAMENODE = example.com:9000
+HDFS_NAMENODE = hdfs://example.com:9000
 HDFS_NAMENODE_WEB = example.com:8000
 
 ## You need to pick one machine as name node by setting this parameter
@@ -2495,6 +2524,7 @@ HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 #Fully qualified name for Name node and Datanode class.
 #HDFS_NAMENODE_CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
 #HDFS_DATANODE_CLASS=org.apache.hadoop.hdfs.server.datanode.DataNode
+#HDFS_DFSADMIN_CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
 
 ## In case an old name for hdfs configuration files is required.
 #HDFS_SITE_FILE = hadoop-site.xml

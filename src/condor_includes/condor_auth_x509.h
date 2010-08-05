@@ -96,10 +96,8 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     //          >0 -- expiration time
     //------------------------------------------
 
-	MyString get_VOMS_string(gss_cred_id_t cred_handle);
-
-	void setFQAN(MyString fqan);
-	MyString getFQAN();
+	void setFQAN(const char *fqan);
+	const char *getFQAN();
 
  private:
 

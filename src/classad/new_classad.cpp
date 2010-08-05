@@ -29,6 +29,11 @@ extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 BEGIN_NAMESPACE( classad )
 
+// This flag is only meant for use in Condor, which is transitioning
+// from an older version of ClassAds with slightly different evaluation
+// semantics. It will be removed without warning in a future release.
+bool _useOldClassAdSemantics = false;
+
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 
@@ -39,13 +44,13 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 {
     major = 1;
     minor = 0;
-    patch = 4;
+    patch = 8;
     return;
 }
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "1.0.6";
+    version_string = "1.0.8";
     return;
 }
 
@@ -435,7 +440,7 @@ int ClassAd::
 LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 {
 	extern int exprHash( const ExprTree* const&, int );
-	ClassAd 		*current = (ClassAd*)this, *superScope;
+	const ClassAd *current = this, *superScope;
 	Value			val;
 
 	expr = NULL;
@@ -450,18 +455,18 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 			return( EVAL_OK );
 		}
 
-		superScope = (ClassAd*)current->parentScope;
+		superScope = current->parentScope;
 		if(strcasecmp(name.c_str( ),"toplevel")==0 || 
 				strcasecmp(name.c_str( ),"root")==0){
 			// if the "toplevel" attribute was requested ...
-			expr = state.rootAd;
+			expr = (ClassAd*)state.rootAd;
 			if( expr == NULL ) {	// NAC - circularity so no root
 				return EVAL_FAIL;  	// NAC
 			}						// NAC
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), "self" ) == 0 ) {
 			// if the "self" ad was requested
-			expr = state.curAd;
+			expr = (ClassAd*)state.curAd;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), "parent" ) == 0 ) {
 			// the lexical parent
@@ -725,13 +730,13 @@ _Flatten( EvalState& state, Value&, ExprTree*& tree, int* ) const
 	ClassAd 	*newAd = new ClassAd();
 	Value		eval;
 	ExprTree	*etree;
-	ClassAd		*oldAd;
+	const ClassAd *oldAd;
 	AttrList::const_iterator	itr;
 
 	tree = NULL; // Just to be safe...  wenger 2003-12-11.
 
 	oldAd = state.curAd;
-	state.curAd = (ClassAd*)this;
+	state.curAd = this;
 
 	for( itr = attrList.begin( ); itr != attrList.end( ); itr++ ) {
 		// flatten expression
@@ -915,7 +920,7 @@ GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
     EvalState       state;
 
     state.rootAd = this; 
-    state.curAd = (ClassAd*)tree->GetParentScope( );
+    state.curAd = tree->GetParentScope( );
 	if( !state.curAd ) state.curAd = this;
 	
     return( _GetExternalReferences( tree, this, state, refs, fullNames ) );
@@ -932,13 +937,13 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             return( true );
 
         case ATTRREF_NODE: {
-            ClassAd   		*start;
+            const ClassAd   *start;
             ExprTree        *tree, *result;
             string          attr;
             Value           val;
             bool            abs;
 
-            ((AttributeReference*)expr)->GetComponents( tree, attr, abs );
+            ((const AttributeReference*)expr)->GetComponents( tree, attr, abs );
                 // establish starting point for attribute search
             if( tree==NULL ) {
                 start = abs ? state.rootAd : state.curAd;
@@ -974,7 +979,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
                 }
             }
                 // lookup for attribute
-			ClassAd *curAd = state.curAd;
+			const ClassAd *curAd = state.curAd;
             switch( start->LookupInScope( attr, result, state ) ) {
                 case EVAL_ERROR:
                         // some error
@@ -1003,7 +1008,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
                 // recurse on subtrees
             Operation::OpKind	op;
             ExprTree    		*t1, *t2, *t3;
-            ((Operation*)expr)->GetComponents( op, t1, t2, t3 );
+            ((const Operation*)expr)->GetComponents( op, t1, t2, t3 );
             if( t1 && !_GetExternalReferences( t1, ad, state, refs, fullNames ) ) {
                 return( false );
             }
@@ -1022,7 +1027,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             vector<ExprTree*>           args;
             vector<ExprTree*>::iterator itr;
 
-            ((FunctionCall*)expr)->GetComponents( fnName, args );
+            ((const FunctionCall*)expr)->GetComponents( fnName, args );
             for( itr = args.begin( ); itr != args.end( ); itr++ ) {
                 if( !_GetExternalReferences( *itr, ad, state, refs, fullNames ) ) {
 					return( false );
@@ -1037,7 +1042,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             vector< pair<string, ExprTree*> >           attrs;
             vector< pair<string, ExprTree*> >::iterator itr;
 
-            ((ClassAd*)expr)->GetComponents( attrs );
+            ((const ClassAd*)expr)->GetComponents( attrs );
             for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
                 if( !_GetExternalReferences( itr->second, ad, state, refs, fullNames )) {
 					return( false );
@@ -1052,7 +1057,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             vector<ExprTree*>           exprs;
             vector<ExprTree*>::iterator itr;
 
-            ((ExprList*)expr)->GetComponents( exprs );
+            ((const ExprList*)expr)->GetComponents( exprs );
             for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
                 if( !_GetExternalReferences( *itr, ad, state, refs, fullNames ) ) {
 					return( false );
@@ -1073,7 +1078,7 @@ GetExternalReferences( const ExprTree *tree, PortReferences &refs )
     EvalState       state;
 
     state.rootAd = this; 
-    state.curAd = (ClassAd*)tree->GetParentScope( );
+    state.curAd = tree->GetParentScope( );
 	if( !state.curAd ) state.curAd = this;
 	
     return( _GetExternalReferences( tree, this, state, refs ) );
@@ -1089,14 +1094,14 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             return( true );
 
         case ATTRREF_NODE: {
-            ClassAd   		*start;
+            const ClassAd   *start;
             ExprTree        *tree, *result;
             string          attr;
             Value           val;
             bool            abs;
 			PortReferences::iterator	pitr;
 
-            ((AttributeReference*)expr)->GetComponents( tree, attr, abs );
+            ((const AttributeReference*)expr)->GetComponents( tree, attr, abs );
                 // establish starting point for attribute search
             if( tree==NULL ) {
                 start = abs ? state.rootAd : state.curAd;
@@ -1122,7 +1127,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 				}
             }
                 // lookup for attribute
-			ClassAd *curAd = state.curAd;
+			const ClassAd *curAd = state.curAd;
             switch( start->LookupInScope( attr, result, state ) ) {
                 case EVAL_ERROR:
                         // some error
@@ -1151,7 +1156,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
                 // recurse on subtrees
             Operation::OpKind   op;
             ExprTree    		*t1, *t2, *t3;
-            ((Operation*)expr)->GetComponents( op, t1, t2, t3 );
+            ((const Operation*)expr)->GetComponents( op, t1, t2, t3 );
             if( t1 && !_GetExternalReferences( t1, ad, state, refs ) ) {
                 return( false );
             }
@@ -1170,7 +1175,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             vector<ExprTree*>           args;
             vector<ExprTree*>::iterator itr;
 
-            ((FunctionCall*)expr)->GetComponents( fnName, args );
+            ((const FunctionCall*)expr)->GetComponents( fnName, args );
             for( itr = args.begin( ); itr != args.end( ); itr++ ) {
                 if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
 					return( false );
@@ -1185,7 +1190,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             vector< pair<string, ExprTree*> >           attrs;
             vector< pair<string, ExprTree*> >::iterator itr;
 
-            ((ClassAd*)expr)->GetComponents( attrs );
+            ((const ClassAd*)expr)->GetComponents( attrs );
             for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
                 if( !_GetExternalReferences( itr->second, ad, state, refs )) {
 					return( false );
@@ -1200,7 +1205,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             vector<ExprTree*>           exprs;
             vector<ExprTree*>::iterator itr;
 
-            ((ExprList*)expr)->GetComponents( exprs );
+            ((const ExprList*)expr)->GetComponents( exprs );
             for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
                 if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
 					return( false );
@@ -1221,7 +1226,7 @@ GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames)
 {
     EvalState state;
     state.rootAd = this;
-    state.curAd = (ClassAd*)tree->GetParentScope();
+    state.curAd = tree->GetParentScope();
     if(!state.curAd) state.curAd = this;
 
     return( _GetInternalReferences( tree, this, state, refs, fullNames) );
@@ -1241,13 +1246,13 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                           }
 
         case ATTRREF_NODE:{
-            ClassAd         *start;
+            const ClassAd   *start;
             ExprTree        *tree, *result;
             string          attr;
             Value           val;
             bool            abs;
 
-            ((AttributeReference*)expr)->GetComponents(tree,attr,abs);
+            ((const AttributeReference*)expr)->GetComponents(tree,attr,abs);
 
             //figuring out which state to base this off of
             if( tree == NULL ){
@@ -1319,7 +1324,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 }
             }
 
-            ClassAd *curAd = state.curAd;
+            const ClassAd *curAd = state.curAd;
             switch( start->LookupInScope( attr, result, state) ) {
                 case EVAL_ERROR:
                     return false;
@@ -1361,7 +1366,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
             //recurse on subtrees
             Operation::OpKind       op;
             ExprTree                *t1, *t2, *t3;
-            ((Operation*)expr)->GetComponents(op, t1, t2, t3);
+            ((const Operation*)expr)->GetComponents(op, t1, t2, t3);
             if( t1 && !_GetInternalReferences(t1, ad, state, refs, fullNames)) {
                 return false;
             }
@@ -1384,7 +1389,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
             vector<ExprTree*>               args;
             vector<ExprTree*>::iterator     itr;
 
-            ((FunctionCall*)expr)->GetComponents(fnName, args);
+            ((const FunctionCall*)expr)->GetComponents(fnName, args);
             for( itr = args.begin(); itr != args.end(); itr++){
                 if( !_GetInternalReferences( *itr, ad, state, refs, fullNames) ) {
                     return false;
@@ -1400,7 +1405,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
             vector< pair<string, ExprTree*> >               attrs;
             vector< pair<string, ExprTree*> >:: iterator    itr;
 
-            ((ClassAd*)expr)->GetComponents(attrs);
+            ((const ClassAd*)expr)->GetComponents(attrs);
             for(itr = attrs.begin(); itr != attrs.end(); itr++){
                 if( !_GetInternalReferences(itr->second, ad, state, refs, fullNames)) {
                     return false;
@@ -1415,7 +1420,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
             vector<ExprTree*>               exprs;
             vector<ExprTree*>::iterator     itr;
 
-            ((ExprList*)expr)->GetComponents(exprs);
+            ((const ExprList*)expr)->GetComponents(exprs);
             for(itr = exprs.begin(); itr != exprs.end(); itr++){
                 if( !_GetInternalReferences(*itr, ad, state, refs, fullNames) ) {
                     return false;

@@ -110,7 +110,7 @@ DownloadReplicaTransferer::transferFileCommand( )
     // its number is sent to the remote replication daemon
     char* temporarySinfulString = const_cast<char*>( sinfulString.Value( ) );
     if( ! temporarySocket.code( temporarySinfulString ) ||
-        ! temporarySocket.eom( ) ) {
+        ! temporarySocket.end_of_message( ) ) {
         dprintf( D_NETWORK, "DownloadReplicaTransferer::transferFileCommand "
                "unable to code the sinful string %s\n", temporarySinfulString );
 		temporarySocket.close( );

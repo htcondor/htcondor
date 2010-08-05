@@ -68,6 +68,7 @@ Directory::Directory( const char *name, priv_state priv )
 
 #ifndef WIN32
 	owner_ids_inited = false;
+	owner_uid = owner_gid = -1;
 	if( priv == PRIV_FILE_OWNER ) {
 		EXCEPT( "Internal error: "
 		           "Directory instantiated with PRIV_FILE_OWNER" );
@@ -737,7 +738,7 @@ Directory::Next()
 		if( strcmp("..",dirent->d_name) == MATCH ) {
 			continue;
 		}
-		if ( dirent->d_name ) {
+		{
 			path = curr_dir;
 			path += DIR_DELIM_CHAR;
 			path += dirent->d_name;

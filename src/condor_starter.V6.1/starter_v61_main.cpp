@@ -163,7 +163,7 @@ main_pre_dc_init( int argc, char* argv[] )
 	const char* base = condor_basename(argv[0]);
 	char const *tmp;
 	tmp = strrchr(base, '_' );
-	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {
+	if( tmp && strncasecmp(tmp, "_gridshell", 10) == MATCH ) {
 		get_mySubSystem()->setName( "GRIDSHELL" );
 		is_gridshell = true;
 	} else { 
@@ -175,7 +175,7 @@ main_pre_dc_init( int argc, char* argv[] )
 					// confused with just "-" or something
 				continue;
 			}
-			if( strincmp(argv[i], "-gridshell", MIN(len,10)) == MATCH ) {
+			if( strncasecmp(argv[i], "-gridshell", MIN(len,10)) == MATCH ) {
 				get_mySubSystem()->setName( "GRIDSHELL" );
 				is_gridshell = true;
 				break;
@@ -190,7 +190,7 @@ main_pre_dc_init( int argc, char* argv[] )
 		// exit, without going back to daemoncore or anything.  we
 		// need to do this *after* we set get_mySubSystem(), since this ends
 		// up calling functions that rely on it being defined...  
-	if( argc == 2 && strincmp(argv[1],"-cla",4) == MATCH ) {
+	if( argc == 2 && strncasecmp(argv[1],"-cla",4) == MATCH ) {
 			// needed for Java stuff
 		config(true);
 
@@ -236,7 +236,7 @@ main_pre_dc_init( int argc, char* argv[] )
 }
 
 
-int
+void
 main_init(int argc, char *argv[])
 {
 	my_argc = argc;
@@ -277,8 +277,6 @@ main_init(int argc, char *argv[])
 		dprintf(D_ALWAYS, "Unable to start job.\n");
 		DC_Exit(1);
 	}
-
-	return 0;
 }
 
 
@@ -684,15 +682,14 @@ parseArgs( int argc, char* argv [] )
 }
 
 
-int
-main_config( bool /*is_full*/ )
+void
+main_config()
 {
 	Starter->Config();
-	return 0;
 }
 
 
-int
+void
 main_shutdown_fast()
 {
 	if ( Starter->RemoteShutdownFast(0) ) {
@@ -700,11 +697,10 @@ main_shutdown_fast()
 		// no jobs to shutdown.  No need to stick around.
 		Starter->StarterExit(0);
 	}
-	return 0;
 }
 
 
-int
+void
 main_shutdown_graceful()
 {
 	if ( Starter->RemoteShutdownGraceful(0) ) {
@@ -712,7 +708,6 @@ main_shutdown_graceful()
 		// there are no jobs to shutdown.  No need to stick around.
 		Starter->StarterExit(0);
 	}
-	return 0;
 }
 
 extern "C" 

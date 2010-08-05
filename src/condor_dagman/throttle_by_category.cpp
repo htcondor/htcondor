@@ -77,8 +77,8 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 		AddCategory( category, maxJobs );
 	} else {
 			// category is in table
-		if ( info->_maxJobs != noThrottleSetting &&
-					info->_maxJobs != maxJobs ) {
+
+		if ( info->isSet() && info->_maxJobs != maxJobs ) {
 			debug_printf( DEBUG_NORMAL, "Warning: new maxjobs value %d "
 						"for category %s overrides old value %d\n",
 						maxJobs, category->Value(), info->_maxJobs );
@@ -105,14 +105,38 @@ ThrottleByCategory::GetThrottleInfo( const MyString *category )
 void
 ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 {
+		// We copy the ThrottleInfo objects into this hash table,
+		// and then copy this hash table over the one in this object
+		// so that the ThrottleInfo objects are indexed by their
+		// new names.  Note that we don't need to delete any
+		// ThrottleInfo objects because we're re-using the ones
+		// we already have.
+	HashTable<MyString, ThrottleInfo *> tmpThrottles( CATEGORY_HASH_SIZE,
+				MyStringHash, rejectDuplicateKeys );
+
 	_throttles.startIterations();
 	ThrottleInfo	*info;
 	while ( _throttles.iterate( info ) ) {
-		MyString *newCat = new MyString( prefix );
-		*newCat += *(info->_category);
-		delete info->_category;
-		info->_category = newCat;
+			// Don't change category names for global categories (names
+			// starting with '+') (allows nodes in different splices to
+			// be in the same category).
+		if ( ! info->isGlobal() ) {
+			MyString *newCat = new MyString( prefix );
+			*newCat += *(info->_category);
+			delete info->_category;
+			info->_category = newCat;
+		}
+		if ( tmpThrottles.insert( *(info->_category), info ) != 0 ) {
+			EXCEPT( "HashTable error" );
+		}
 	}
+
+		// Get rid of old hash buckets.
+	_throttles.clear();	// get rid of hash buckets
+
+		// Shallow copy here, as far as ThrottleInfo objects are
+		// concerned (we get new hash buckets).
+	_throttles = tmpThrottles;
 }
 
 //---------------------------------------------------------------------------
@@ -126,7 +150,7 @@ ThrottleByCategory::PrintThrottles( FILE *fp ) /* const */
 	_throttles.startIterations();
 	ThrottleInfo	*info;
 	while ( _throttles.iterate( info ) ) {
-		if ( info->_maxJobs != noThrottleSetting ) {
+		if ( info->isSet() ) {
 			fprintf( fp, "MAXJOBS %s %d\n", info->_category->Value(),
 						info->_maxJobs );
 		}

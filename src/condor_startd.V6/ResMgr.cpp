@@ -86,6 +86,7 @@ ResMgr::ResMgr()
 	num_updates = 0;
 	startTime = 0;
 	type_strings = NULL;
+	m_startd_hook_shutdown_pending = false;
 }
 
 
@@ -111,6 +112,10 @@ ResMgr::~ResMgr()
 
 #if HAVE_HIBERNATION
 	cancelHibernateTimer();
+	if (m_hibernation_manager) {
+		delete m_hibernation_manager;
+	}
+
 #endif /* HAVE_HIBERNATION */
 
 	if( resources ) {
@@ -233,7 +238,7 @@ verifyBackfillSystem( const char* sys )
 {
 
 #if HAVE_BOINC
-	if( ! stricmp(sys, "BOINC") ) {
+	if( ! strcasecmp(sys, "BOINC") ) {
 		return true;
 	}
 #endif /* HAVE_BOINC */
@@ -300,7 +305,7 @@ ResMgr::backfillConfig()
 	}
 
 	if( m_backfill_mgr ) {
-		if( ! stricmp(new_system, m_backfill_mgr->backfillSystemName()) ) {
+		if( ! strcasecmp(new_system, m_backfill_mgr->backfillSystemName()) ) {
 				// same as before
 			free( new_system );
 				// since it's already here and we're keeping it, tell
@@ -335,7 +340,7 @@ ResMgr::backfillConfig()
 		// no manager object.  so, depending on the system,
 		// instantiate the right thing.
 #if HAVE_BOINC
-	if( ! stricmp(new_system, "BOINC") ) {
+	if( ! strcasecmp(new_system, "BOINC") ) {
 		m_backfill_mgr = new BOINC_BackfillMgr();
 		if( ! m_backfill_mgr->init() ) {
 			dprintf( D_ALWAYS, "ERROR initializing BOINC_BackfillMgr\n" );
@@ -980,7 +985,7 @@ ResMgr::parse_value( const char* str, int type, bool except )
 {
 	char *tmp, *foo = strdup( str );
 	float val;
-	if( stricmp(foo,"auto") == 0 || stricmp(foo,"automatic") == 0 ) {
+	if( strcasecmp(foo,"auto") == 0 || strcasecmp(foo,"automatic") == 0 ) {
 		free( foo );
 		return AUTO_SHARE;
 	}

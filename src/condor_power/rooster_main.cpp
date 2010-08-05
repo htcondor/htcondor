@@ -32,26 +32,22 @@ Rooster *rooster = NULL;
 
 //-------------------------------------------------------------
 
-int main_init(int /* argc */, char * /* argv */ [])
+void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_FULLDEBUG, "main_init() called\n");
 
 	rooster = new Rooster();
 	rooster->init();
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool /* is_full */ )
+void 
+main_config()
 {
 	dprintf(D_FULLDEBUG, "main_config() called\n");
 
 	rooster->config();
-
-	return TRUE;
 }
 
 static void Stop()
@@ -64,22 +60,20 @@ static void Stop()
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_FULLDEBUG, "main_shutdown_fast() called\n");
 	Stop();
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_FULLDEBUG, "main_shutdown_graceful() called\n");
 	Stop();
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

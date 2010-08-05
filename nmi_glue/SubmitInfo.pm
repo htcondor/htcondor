@@ -67,6 +67,7 @@ our %build_and_test_sets = (
 		'x86_sles_9',
 		'ppc_macos_10.4',
 		'hppa_hpux_11',
+		'x86_64_fedora_12-updated',
 	],
 
 	'psilord' => [
@@ -275,7 +276,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				@default_prereqs, 
 				'binutils-2.16', 'coreutils-5.2.1', 'gcc-3.4.3', 
-				'gzip-1.2.4', 'wget-1.9.1',
+				'gzip-1.3.3', 'wget-1.9.1',
 			],
 			'xtests'	=> undef,
 		},
@@ -284,7 +285,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs,
 				'binutils-2.16', 'coreutils-5.2.1', 'gcc-3.4.3',
-				'gzip-1.2.4', 'wget-1.9.1',
+				'gzip-1.3.3', 'wget-1.9.1',
 				'java-1.5.0_03' ],
 			'testclass'	=> [ @default_testclass ],
 		},
@@ -430,15 +431,15 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ 
-				@default_prereqs,
-				'VMware-server-1.0.7',
+				@default_prereqs
 			],
 			'xtests'	=> [ 'x86_64_rhas_4' ],
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
+							'VMware-server-1.0.7' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -522,6 +523,23 @@ our %submit_info = (
 	},
 
 	##########################################################################
+	# Platform Mac OSX 10.6 on x86_64
+	##########################################################################
+	'x86_64_macos_10.6'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05'],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
 	# Platform RHEL 5 on x86
 	##########################################################################
 	'x86_rhap_5'	=> {
@@ -569,8 +587,7 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs,
-				'binutils-2.15', 'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59',
-				'VMware-server-1.0.7',
+				'binutils-2.15', 'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			# I've removed x86_64_rhas_3 for now, as per git trac #482
 			'xtests'	=> [ 
@@ -581,7 +598,8 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5'],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
+							'VMware-server-1.0.7' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -676,7 +694,7 @@ our %submit_info = (
 				@default_test_configure_args,
 				'--disable-full-port' => undef,
 			},
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -837,7 +855,8 @@ our %submit_info = (
 				@default_test_configure_args, 
 				'--disable-full-port' => undef,
 			},
-			'prereqs'	=> [ @default_prereqs, 'gcc-4.3.2', 'wget-1.9.1' ],
+			'prereqs'	=> [ @default_prereqs, 'gcc-4.3.2', 'wget-1.9.1',
+							'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -1157,7 +1176,7 @@ our %submit_info = (
 				@default_test_configure_args,
 				'--disable-full-port' => undef,
 			},
-			'prereqs'	=> [ @default_prereqs, 'wget-1.9.1' ],
+			'prereqs'	=> [ @default_prereqs, 'wget-1.9.1', 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -1361,7 +1380,7 @@ our %submit_info = (
 				@default_test_configure_args, 
 				'--disable-full-port' => undef,
 			},
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},

@@ -140,6 +140,7 @@ main( int argc, char* argv[] )
 	bool    dump_all_variables = false;
 	bool    print_config_sources = false;
 	bool	write_config = false;
+	bool	debug = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -224,8 +225,7 @@ main( int argc, char* argv[] )
 			write_config = true;
 		} else if( match_prefix( argv[i], "-debug" ) ) {
 				// dprintf to console
-			Termlog = 1;
-			dprintf_config( "TOOL" );
+			debug = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -277,6 +277,11 @@ main( int argc, char* argv[] )
 		if (print_config_sources) {
 			PrintConfigSources();
 		}
+	}
+
+	if (debug) {
+		Termlog = 1;
+		dprintf_config( "TOOL" );
 	}
 
 	/* XXX -dump only currently spits out variables found through the
@@ -369,8 +374,15 @@ main( int argc, char* argv[] )
 			} else { 
 				CollectorList * collectors = CollectorList::create();
 				Daemon * collector = NULL;
+				ReliSock sock;
 				while (collectors->next (collector)) {
-					if (collector->locate()) break;
+					if (collector->locate() &&
+					    sock.connect((char*) collector->addr(), 0)) {
+						// If we can connect to the
+						// collector, then we accept
+						// it as valid
+						break;
+					}
 				}
 				if( (!collector) || (!collector->addr()) ) {
 					fprintf( stderr, 
@@ -451,13 +463,23 @@ GetRemoteParam( Daemon* target, char* param_name )
 		// tools for fear that someone's ASCII parser will break, i'm
 		// just cheating and being lazy here by replicating the old
 		// behavior...
-	char* addr = target->addr();
-	char* name = target->name();
-	if( !name ) {
-		name = "";
-	}
+	char* addr;
+	char* name;
+	bool connect_error = true;
+	do {
+		addr = target->addr();
+		name = target->name();
+		if( !name ) {
+			name = "";
+		}
 
-    if( ! s.connect( addr, 0 ) ) {
+		if( s.connect( addr, 0 ) ) {
+			connect_error = false;
+			break;
+		}
+	} while( target->nextValidCm() == true );
+
+	if( connect_error == true ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
 				 daemonString(dt), name, addr );
 		my_exit(1);
@@ -504,11 +526,9 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// tools for fear that someone's ASCII parser will break, i'm
 		// just cheating and being lazy here by replicating the old
 		// behavior...
-	char* addr = target->addr();
-	char* name = target->name();
-	if( !name ) {
-		name = "";
-	}
+	char* addr;
+	char* name;
+	bool connect_error = true;
 
 		// We need to know two things: what command to send, and (for
 		// error messages) if we're setting or unsetting.  Since our
@@ -587,8 +607,21 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	char* buf = (char*)malloc( strlen(param_value) + 2 );
 	sprintf( buf, "%s\n", param_value );
 
-    s.timeout( 30 );
-	if( ! s.connect( addr, 0 ) ) {
+	s.timeout( 30 );
+	do {
+		addr = target->addr();
+		name = target->name();
+		if( !name ) {
+			name = "";
+		}
+
+		if( s.connect( addr, 0 ) ) {
+			connect_error = false;
+			break;
+		}
+	} while( target->nextValidCm() == true );
+
+	if( connect_error == true ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
 				 daemonString(dt), name, addr );
 		my_exit(1);

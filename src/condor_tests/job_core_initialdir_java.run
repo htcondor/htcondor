@@ -19,14 +19,15 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_core_initialdir_java.cmd';
 $testdesc =  'condor_submit initialdir works - java U';
 $testname = "job_core_initialdir_java";
 
 
-system("mkdir -p initd");
-system("cp x_java_CondorEcho.class initd");
+runcmd("mkdir -p initd");
+runcmd("cp x_java_CondorEcho.class initd");
 
 #CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
 
@@ -48,7 +49,7 @@ $ExitSuccess = sub
 		die "Initialdir does not contain user log\n";
 	}
 	# clean up
-	system("rm -rf initd");
+	runcmd("rm -rf initd");
 };
 
 

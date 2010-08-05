@@ -88,7 +88,8 @@ int privsep_launch_user_job(uid_t       uid,
                             size_t*     core_size_ptr,
                             int         reaper_id,
                             int         dc_job_opts,
-                            FamilyInfo* family_info);
+                            FamilyInfo* family_info,
+							int  	    *affinity_mask = 0);
 
 // make a directory owned by the given user
 //

@@ -25,7 +25,7 @@
 
 char ATTR_DIRTY_ATTR_LIST [] = "DirtyAttrList";
 
-static char *assign = " = ";
+static char *assign_str = " = ";
 
 
 /* if the attr isn't already in the dirty list, place it in there */
@@ -58,14 +58,14 @@ void SetAttrDirty(ClassAd *ad, char *attr)
 	/* length of the list, plus the attribute, plus the assignment, plus 2
 		for the double quotes, plus 1 for nul */
 	tmp2 = (char*)calloc(strlen(tmp) + strlen(ATTR_DIRTY_ATTR_LIST) 
-						+ strlen(assign) + 2 + 1, 1);
+						+ strlen(assign_str) + 2 + 1, 1);
 	if (tmp2 == NULL)
 	{
 		EXCEPT("Out of memory in SetAttrDirty()");
 	}
 
 	strcpy(tmp2, ATTR_DIRTY_ATTR_LIST);
-	strcat(tmp2, assign);
+	strcat(tmp2, assign_str);
 	strcat(tmp2, "\"");
 	strcat(tmp2, tmp);
 	strcat(tmp2, "\"");
@@ -114,14 +114,14 @@ void SetAttrClean(ClassAd *ad, char *attr)
 	/* length of the list, plus the attribute, plus the assignment, plus 2
 		for the double quotes, plus 1 for nul */
 	tmp2 = (char*)calloc(strlen(tmp) + strlen(ATTR_DIRTY_ATTR_LIST) 
-						+ strlen(assign) + 2 + 1, 1);
+						+ strlen(assign_str) + 2 + 1, 1);
 	if (tmp2 == NULL)
 	{
 		EXCEPT("Out of memory in SetAttrClean()");
 	}
 
 	strcpy(tmp2, ATTR_DIRTY_ATTR_LIST);
-	strcat(tmp2, assign);
+	strcat(tmp2, assign_str);
 	strcat(tmp2, "\"");
 	strcat(tmp2, tmp);
 	strcat(tmp2, "\"");

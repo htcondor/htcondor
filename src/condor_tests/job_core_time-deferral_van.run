@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Cwd;
 
 
@@ -72,22 +73,22 @@ CondorTest::debug("Set config to $timedeferlocconfig\n",1);
 my $result = system("./job_core_time-deferral.pl van");
 CondorTest::debug("Result of job_core_time-deferral.pl local test  job is  $result\n",1);
 
-
-system("cp *job_core_time-deferral_van* $mysaveme");
+#fails due to directory matching pattern
+runcmd("cp *job_core_time-deferral_van* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($timedeferlocconfig);

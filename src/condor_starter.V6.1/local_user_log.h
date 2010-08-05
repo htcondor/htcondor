@@ -159,7 +159,7 @@ private:
 	bool should_log;
 
 		/// The actual UserLog object we're using to write events. 
-	UserLog u_log;
+	WriteUserLog u_log;
 
 };
 

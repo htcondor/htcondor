@@ -146,7 +146,7 @@ private:
 	StatOpType			 m_last_which;
 	StatWrapperOp		*m_last_op;
 	StatWrapperOp		*m_ops[ STATOP_NUM ];
-	StatWrapperIntBase	*m_last_stat;
+	//StatWrapperIntBase	*m_last_stat;
 };
 
 #endif

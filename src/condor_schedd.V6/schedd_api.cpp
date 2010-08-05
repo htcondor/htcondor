@@ -62,7 +62,9 @@ Job::initialize(CondorError &errstack)
 	char * Spool = param("SPOOL");
 	ASSERT(Spool);
 
-	spoolDirectory = gen_ckpt_name(Spool, id.cluster, id.proc, 0);
+	char *ckpt_name = gen_ckpt_name(Spool, id.cluster, id.proc, 0);
+	spoolDirectory = ckpt_name;
+	free(ckpt_name); ckpt_name = NULL;
 
 	if (Spool) {
 		free(Spool);
@@ -143,6 +145,9 @@ Job::getClusterID()
 
 JobFile::JobFile()
 {
+	currentOffset = -1;
+	file = -1;
+	size = -1;
 }
 
 JobFile::~JobFile()
@@ -151,6 +156,8 @@ JobFile::~JobFile()
 
 FileInfo::FileInfo()
 {
+	name = NULL;
+	size = 0;
 }
 
 FileInfo::~FileInfo()
@@ -620,7 +627,7 @@ ScheddTransaction::newCluster(int &id)
 		// XXX: Need a transaction...
 	id = NewCluster();
 
-	return -1 == id ? -1 : 0;
+	return (id < 0) ? -1 : 0;
 }
 
 int
@@ -636,6 +643,7 @@ ScheddTransaction::newJob(int clusterId, int &id, CondorError & /* errstack */)
 		ASSERT(job);
 		CondorError error_stack;
 		if (job->initialize(error_stack)) {
+			delete job;
 			return -2; // XXX: Cleanup? How do you undo NewProc?
 		} else {
 			if (this->jobs.insert(pid, job)) {

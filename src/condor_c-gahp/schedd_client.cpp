@@ -35,6 +35,7 @@
 #include "globus_utils.h"
 #include "PipeBuffer.h"
 #include "io_loop.h"
+#include "file_transfer.h"
 
 #include "schedd_client.h"
 #include "SchedDCommands.h"
@@ -63,7 +64,7 @@ PipeBuffer request_buffer;
 
 
 // Queue for command results to be written to our output pipe.
-SimpleList<MyString *> results_queue;
+SimpleList<std::string *> results_queue;
 
 int RESULT_OUTBOX = -1;
 int REQUEST_INBOX = -1;
@@ -84,17 +85,17 @@ extern int main_shutdown_graceful();
 int
 request_pipe_handler(Service*, int) {
 
-	MyString* next_line;
+	std::string* next_line;
 	while ((next_line = request_buffer.GetNextLine()) != NULL) {
 
-		dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->Value());
+		dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->c_str());
 
 		Gahp_Args args;
 
 			// Parse the command...
-		if (!(parse_gahp_command (next_line->Value(), &args) &&
+		if (!(parse_gahp_command (next_line->c_str(), &args) &&
 			  handle_gahp_command (args.argv, args.argc))) {
-			dprintf (D_ALWAYS, "ERROR processing %s\n", next_line->Value());
+			dprintf (D_ALWAYS, "ERROR processing %s\n", next_line->c_str());
 		}
 
 			// Clean up...
@@ -124,7 +125,7 @@ doContactSchedd()
 	SchedDRequest * current_command = NULL;
 
 	int error=FALSE;
-	MyString error_msg;
+	std::string error_msg;
 	CondorError errstack;
 	bool do_reschedule = false;
 	int failure_line_num = 0;
@@ -133,9 +134,9 @@ doContactSchedd()
 	// Try connecting to schedd
 	DCSchedd dc_schedd ( ScheddAddr, ScheddPool );
 	if (dc_schedd.error() || !dc_schedd.locate()) {
-		error_msg.sprintf( "Error locating schedd %s", ScheddAddr );
+		sprintf( error_msg, "Error locating schedd %s", ScheddAddr );
 
-		dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+		dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 
 		// If you can't connect return "Failure" on every job request
 		command_queue.Rewind();
@@ -146,25 +147,25 @@ doContactSchedd()
 			if (current_command->command == SchedDRequest::SDC_STATUS_CONSTRAINED) {
 				const char * result[] = {
 					GAHP_RESULT_FAILURE,
-					error_msg.Value(),
+					error_msg.c_str(),
 					"0"};
 				enqueue_result (current_command->request_id, result, 3);
 			} else if (current_command->command == SchedDRequest::SDC_SUBMIT_JOB) {
 				const char * result[] = {
 									GAHP_RESULT_FAILURE,
 									NULL,
-									error_msg.Value() };
+									error_msg.c_str() };
 				enqueue_result (current_command->request_id, result, 3);
 			} else if (current_command->command == SchedDRequest::SDC_UPDATE_LEASE) {
 				const char * result[] = {
 									GAHP_RESULT_FAILURE,
-									error_msg.Value(),
+									error_msg.c_str(),
 									NULL };
 				enqueue_result (current_command->request_id, result, 3);
 			} else {
 				const char * result[] = {
 									GAHP_RESULT_FAILURE,
-									error_msg.Value() };
+									error_msg.c_str() };
 				enqueue_result (current_command->request_id, result, 2);
 			}
 
@@ -260,7 +261,7 @@ doContactSchedd()
 		// Analyze the result ad
 		if (!result_ad) {
 			error = TRUE;
-			error_msg.sprintf ( "Error connecting to schedd %s %s: %s",
+			sprintf( error_msg, "Error connecting to schedd %s %s: %s",
 					 ScheddAddr, dc_schedd.addr(), errstack.getFullText() );
 		}
 		else {
@@ -322,11 +323,11 @@ doContactSchedd()
 						this_action,
 						current_command->cluster_id,
 						current_command->proc_id,
-						error_msg.Value());
+						error_msg.c_str());
 
 				const char * result[2];
 				result[0] = GAHP_RESULT_FAILURE;
-				result[1] = error_msg.Value();
+				result[1] = error_msg.c_str();
 
 				enqueue_result (current_command->request_id, result, 2);
 			} else {
@@ -393,8 +394,8 @@ doContactSchedd()
 										  array,
 										  &errstack )) {
 				error = TRUE;
-				error_msg.sprintf( "Error sending files to schedd %s: %s", ScheddAddr, errstack.getFullText() );
-				dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+				sprintf( error_msg, "Error sending files to schedd %s: %s", ScheddAddr, errstack.getFullText() );
+				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 			}
 			delete [] array;
   
@@ -405,7 +406,7 @@ doContactSchedd()
 				if (error) {
 					const char * result[] = {
 						GAHP_RESULT_FAILURE,
-						error_msg.Value() };
+						error_msg.c_str() };
 					enqueue_result (current_command->request_id, result, 2);
 
 				} else {
@@ -438,11 +439,11 @@ doContactSchedd()
 	}
 
 	if (stage_out_batch.Number() > 0) {
-		MyString constraint = "";
+		std::string constraint = "";
 		stage_out_batch.Rewind();
 		int jobsexpected = stage_out_batch.Number();
 		while (stage_out_batch.Next(current_command)) {
-			constraint.sprintf_cat( "(ClusterId==%d&&ProcId==%d)||",
+			sprintf_cat( constraint, "(ClusterId==%d&&ProcId==%d)||",
 									current_command->cluster_id,
 									current_command->proc_id );
 		}
@@ -451,17 +452,17 @@ doContactSchedd()
 		error = FALSE;
 		errstack.clear();
 		int jobssent;
-		if (!dc_schedd.receiveJobSandbox( constraint.Value(),
+		if (!dc_schedd.receiveJobSandbox( constraint.c_str(),
 										  &errstack, &jobssent )) {
 			error = TRUE;
-			error_msg.sprintf( "Error receiving files from schedd %s: %s",
+			sprintf( error_msg, "Error receiving files from schedd %s: %s",
 							   ScheddAddr, errstack.getFullText() );
-			dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		}
 
 		if(error == FALSE && jobssent != jobsexpected) {
 			error = TRUE;
-			dprintf (D_ALWAYS, "Transfered files for %d jobs but got files for %d jobs. (Schedd %s with contraint %s\n", jobsexpected, jobssent, ScheddAddr, constraint.Value());
+			dprintf (D_ALWAYS, "Transfered files for %d jobs but got files for %d jobs. (Schedd %s with contraint %s\n", jobsexpected, jobssent, ScheddAddr, constraint.c_str());
 		}
   
 		stage_out_batch.Rewind();
@@ -471,7 +472,7 @@ doContactSchedd()
 			if (error) {
 				const char * result[] = {
 								GAHP_RESULT_FAILURE,
-								error_msg.Value() };
+								error_msg.c_str() };
 				enqueue_result (current_command->request_id, result, 2);
 
 			} else {
@@ -524,13 +525,13 @@ doContactSchedd()
 		current_command->status = SchedDRequest::SDCS_COMPLETED;
 
 		if (result == false) {
-			error_msg.sprintf( "Error refreshing proxy to schedd %s: %s",
+			sprintf( error_msg, "Error refreshing proxy to schedd %s: %s",
 					 ScheddAddr, errstack.getFullText() );
-			dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 
 			const char * result_to_queue[] = {
 				GAHP_RESULT_FAILURE,
-				error_msg.Value() };
+				error_msg.c_str() };
 			enqueue_result (current_command->request_id, result_to_queue, 2);
 
 		} else {
@@ -551,8 +552,8 @@ doContactSchedd()
 	
 	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false, NULL, NULL, dc_schedd.version() )) == NULL) {
 		error = TRUE;
-		error_msg.sprintf( "Error connecting to schedd %s", ScheddAddr );
-		dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+		sprintf( error_msg, "Error connecting to schedd %s", ScheddAddr );
+		dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 	} else {
 		errno = 0;
 		AbortTransaction(); // Just so we can call BeginTransaction() in the loop
@@ -597,9 +598,9 @@ doContactSchedd()
 
 			rhstr = ExprTreeToString( tree );
 			if( !lhstr || !rhstr) {
-				error_msg.sprintf( "ERROR: ClassAd problem in Updating by constraint %s",
+				sprintf( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
-				dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 				error = TRUE;
 			} else {
 				if (current_command->command == SchedDRequest::SDC_UPDATE_CONSTRAINED) {
@@ -611,9 +612,9 @@ doContactSchedd()
 							failure_errno = errno;
 							goto contact_schedd_disconnect;
 						}
-						error_msg.sprintf( "ERROR: Failed (errno=%d) to SetAttributeByConstraint %s=%s for constraint %s",
+						sprintf( error_msg, "ERROR: Failed (errno=%d) to SetAttributeByConstraint %s=%s for constraint %s",
 									errno, lhstr, rhstr, current_command->constraint );
-						dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+						dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 						error = TRUE;
 					}
 				} else if (current_command->command == SchedDRequest::SDC_UPDATE_JOB) {
@@ -626,9 +627,9 @@ doContactSchedd()
 							failure_errno = errno;
 							goto contact_schedd_disconnect;
 						}
-						error_msg.sprintf ("ERROR: Failed to SetAttribute() %s=%s for job %d.%d",
+						sprintf( error_msg, "ERROR: Failed to SetAttribute() %s=%s for job %d.%d",
 										 lhstr, rhstr, current_command->cluster_id,  current_command->proc_id);
-						dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+						dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 						error = TRUE;
 					}
 				}
@@ -642,7 +643,7 @@ update_report_result:
 		if (error) {
 			const char * result[] = {
 				GAHP_RESULT_FAILURE,
-				error_msg.Value() };
+				error_msg.c_str() };
 
 
 			//RemoteCommitTransaction();
@@ -687,9 +688,9 @@ update_report_result:
 		if (current_command->command != SchedDRequest::SDC_UPDATE_LEASE)
 			continue;
 
-		MyString success_job_ids="";
+		std::string success_job_ids="";
 		if (qmgr_connection == NULL) {
-			error_msg.sprintf( "Error connecting to schedd %s", ScheddAddr );
+			sprintf( error_msg, "Error connecting to schedd %s", ScheddAddr );
 			error = TRUE;
 		} else {
 			error = FALSE;
@@ -731,10 +732,10 @@ update_report_result:
 						 
 				} else {
 						// Append job id to the result line
-					if (success_job_ids.Length() > 0)
+					if (success_job_ids.length() > 0)
 						success_job_ids += ",";
 
-					success_job_ids.sprintf_cat (
+					sprintf_cat( success_job_ids,
 						"%d.%d",
 						current_command->expirations[i].cluster,
 						current_command->expirations[i].proc);
@@ -746,7 +747,7 @@ update_report_result:
 		if (error) {
 			const char * result[] = {
 				GAHP_RESULT_FAILURE,
-				error_msg.Value(),
+				error_msg.c_str(),
 				NULL
 			};
 
@@ -772,7 +773,7 @@ update_report_result:
 			const char * result[] = {
 				GAHP_RESULT_SUCCESS,
 				NULL,
-				success_job_ids.Length()?success_job_ids.Value():NULL
+				success_job_ids.length()?success_job_ids.c_str():NULL
 			};
 			enqueue_result (current_command->request_id, result, 3);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
@@ -821,17 +822,17 @@ update_report_result:
 		if ( ClusterId < 0 ) {
 			error = TRUE;
 			error_msg = "Unable to create a new job cluster";
-			dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		} else if ( ProcId < 0 ) {
 			error = TRUE;
 			error_msg = "Unable to create a new job proc";
-			dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		}
 		if ( ClusterId == -2 || ProcId == -2 ) {
 			error = TRUE;
 			error_msg =
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n";
-			dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		}
 
 
@@ -848,24 +849,34 @@ update_report_result:
 			if(!arglist.AppendArgsFromClassAd(current_command->classad,&arg_error_msg) ||
 		   !	arglist.InsertArgsIntoClassAd(current_command->classad,&version_info,&arg_error_msg))
 			{
-				error_msg.sprintf(
+				sprintf( error_msg,
 						"ERROR: ClassAd problem in converting arguments to syntax "
 						"for schedd (version=%s): %s\n",
 						dc_schedd.version() ? dc_schedd.version() : "NULL",
 						arg_error_msg.Value());
-				dprintf( D_ALWAYS,"%s\n", error_msg.Value() );
+				dprintf( D_ALWAYS,"%s\n", error_msg.c_str() );
 				error = TRUE;
 			}	
 
 			if(!env_obj.MergeFrom(current_command->classad,&env_error_msg) ||
 			   !env_obj.InsertEnvIntoClassAd(current_command->classad,&env_error_msg,NULL,&version_info))
 			{
-				error_msg.sprintf(
+				sprintf( error_msg,
 						"ERROR: Failed to convert environment to target syntax"
 						" for schedd (version %s): %s\n",
 						dc_schedd.version() ? dc_schedd.version() : "NULL",
 						env_error_msg.Value());
-				dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
+				error = TRUE;
+			}
+		}
+
+		if( error == FALSE ) {
+				// See the comment in the function body of ExpandInputFileList
+				// for an explanation of what is going on here.
+			MyString transfer_input_error_msg;
+			if( !FileTransfer::ExpandInputFileList( current_command->classad, transfer_input_error_msg ) ) {
+				dprintf( D_ALWAYS, "%s\n", transfer_input_error_msg.Value() );
 				error = TRUE;
 			}
 		}
@@ -885,9 +896,9 @@ update_report_result:
 						failure_errno = errno;
 						goto contact_schedd_disconnect;
 					}
-					error_msg.sprintf( "ERROR: Failed to SetTimerAttribute %s=%ld for job %d.%d",
+					sprintf( error_msg, "ERROR: Failed to SetTimerAttribute %s=%ld for job %d.%d",
 							 ATTR_TIMER_REMOVE_CHECK, expire_time - time(NULL), ClusterId, ProcId );
-					dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
 					goto submit_report_result;
 				}
@@ -902,9 +913,9 @@ update_report_result:
 
 				rhstr = ExprTreeToString( tree );
 				if( !lhstr || !rhstr) {
-					error_msg.sprintf( "ERROR: ClassAd problem in Updating by constraint %s",
+					sprintf( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
-					dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
 				} else if( SetAttribute (ClusterId, ProcId,
 											lhstr,
@@ -914,9 +925,9 @@ update_report_result:
 						failure_errno = errno;
 						goto contact_schedd_disconnect;
 					}
-					error_msg.sprintf( "ERROR: Failed to SetAttribute %s=%s for job %d.%d",
+					sprintf( error_msg, "ERROR: Failed to SetAttribute %s=%s for job %d.%d",
 									 lhstr, rhstr, ClusterId, ProcId );
-					dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
+					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
 				}
 
@@ -932,7 +943,7 @@ submit_report_result:
 			const char * result[] = {
 								GAHP_RESULT_FAILURE,
 								job_id_buff,
-								error_msg.Value() };
+								error_msg.c_str() };
 			enqueue_result (current_command->request_id, result, 3);
 			if ( qmgr_connection != NULL ) {
 				errno = 0;
@@ -1027,13 +1038,13 @@ submit_report_result:
 			// now output this list of classads into a result
 			const char ** result  = new const char* [matching_ads.Length() + 3];
 
-			MyString _ad_count;
-			_ad_count += matching_ads.Length();
+			std::string _ad_count;
+			sprintf( _ad_count, "%d", matching_ads.Length() );
 
 			int count=0;
 			result[count++] = GAHP_RESULT_SUCCESS;
 			result[count++] = NULL;
-			result[count++] = _ad_count.Value();
+			result[count++] = _ad_count.c_str();
 
 			MyString *next_string;
 			matching_ads.Rewind();
@@ -1055,7 +1066,7 @@ submit_report_result:
 		else {
 			const char * result[] = {
 				GAHP_RESULT_FAILURE,
-				error_msg.Value(),
+				error_msg.c_str(),
 				"0" };
 			//RemoteCommitTransaction();
 			enqueue_result (current_command->request_id, result, 3);
@@ -1077,12 +1088,12 @@ submit_report_result:
 		if ( failure_errno == ETIMEDOUT ) {
 			dprintf( D_ALWAYS, "Timed out talking to schedd at line %d in "
 					 "doContactSchedd()\n", failure_line_num );
-			error_msg.sprintf( "Timed out talking to schedd" );
+			sprintf( error_msg, "Timed out talking to schedd" );
 		} else {
 			dprintf( D_ALWAYS, "Error talking to schedd at line %d in "
 					 "doContactSchedd(), errno=%d (%s)\n", failure_line_num,
 					 failure_errno, strerror(failure_errno) );
-			error_msg.sprintf( "Error talking to schedd" );
+			sprintf( error_msg, "Error talking to schedd" );
 		}
 		command_queue.Rewind();
 		while (command_queue.Next(current_command)) {
@@ -1093,28 +1104,28 @@ submit_report_result:
 			case SchedDRequest::SDC_UPDATE_JOB:
 			case SchedDRequest::SDC_UPDATE_CONSTRAINED:
 			{
-				const char *result[2] = { GAHP_RESULT_FAILURE, error_msg.Value() };
+				const char *result[2] = { GAHP_RESULT_FAILURE, error_msg.c_str() };
 				enqueue_result (current_command->request_id, result, 2);
 				current_command->status = SchedDRequest::SDCS_COMPLETED;
 			}
 				break;
 			case SchedDRequest::SDC_UPDATE_LEASE:
 			{
-				const char *result[3] = { GAHP_RESULT_FAILURE, error_msg.Value(), NULL };
+				const char *result[3] = { GAHP_RESULT_FAILURE, error_msg.c_str(), NULL };
 				enqueue_result (current_command->request_id, result, 3);
 				current_command->status = SchedDRequest::SDCS_COMPLETED;
 			}
 				break;
 			case SchedDRequest::SDC_SUBMIT_JOB:
 			{
-				const char *result[3] = { GAHP_RESULT_FAILURE, "-1.-1", error_msg.Value() };
+				const char *result[3] = { GAHP_RESULT_FAILURE, "-1.-1", error_msg.c_str() };
 				enqueue_result (current_command->request_id, result, 3);
 				current_command->status = SchedDRequest::SDCS_COMPLETED;
 			}
 				break;
 			case SchedDRequest::SDC_STATUS_CONSTRAINED:
 			{
-				const char *result[3] = { GAHP_RESULT_FAILURE, error_msg.Value(), "0" };
+				const char *result[3] = { GAHP_RESULT_FAILURE, error_msg.c_str(), "0" };
 				enqueue_result (current_command->request_id, result, 3);
 				current_command->status = SchedDRequest::SDCS_COMPLETED;
 			}
@@ -1481,12 +1492,12 @@ enqueue_command (SchedDRequest * request) {
 void
 flush_results()
 {
-	MyString *next_str;
+	std::string *next_str;
 
 	results_queue.Rewind();
 	while ( results_queue.Next( next_str ) ) {
-		daemonCore->Write_Pipe( RESULT_OUTBOX, next_str->Value(),
-								next_str->Length() );
+		daemonCore->Write_Pipe( RESULT_OUTBOX, next_str->c_str(),
+								next_str->length() );
 		delete next_str;
 	}
 	results_queue.Clear();
@@ -1495,9 +1506,9 @@ flush_results()
 void
 enqueue_result (int req_id, const char ** results, const int argc)
 {
-	MyString *buffer = new MyString();
+	std::string *buffer = new std::string();
 
-	*buffer += req_id;
+	sprintf( *buffer, "%d", req_id );
 
 	for ( int i = 0; i < argc; i++ ) {
 		*buffer += ' ';

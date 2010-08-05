@@ -602,7 +602,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 		  // user is now in variable str, domain in str2
 
 		  // see if it is the login prefix we are looking for
-		  if ( strincmp(searchLogin,str,strlen(searchLogin))==0 ) {
+		  if ( strncasecmp(searchLogin,str,strlen(searchLogin))==0 ) {
 			  // a match!  add to our list.   
 			  pidFamily[index_pidFamily++] = pids[s];
 			  // and add the procHandle to a list as well; we keep the

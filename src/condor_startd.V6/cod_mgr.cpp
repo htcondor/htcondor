@@ -436,7 +436,7 @@ CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
 
 
 int
-CODMgr::suspend( Stream* s, ClassAd* req, Claim* claim )
+CODMgr::suspend( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 {
 	int rval;
 	ClassAd reply;
@@ -500,7 +500,7 @@ CODMgr::suspend( Stream* s, ClassAd* req, Claim* claim )
 }
 
 int
-CODMgr::renew( Stream* s, ClassAd* req, Claim* claim )
+CODMgr::renew( Stream* s, ClassAd* /*req*/ /* UNUSED*/, Claim* claim )
 {
 	MyString line;
 	ClassAd reply;
@@ -517,7 +517,7 @@ CODMgr::renew( Stream* s, ClassAd* req, Claim* claim )
 }
 
 int
-CODMgr::resume( Stream* s, ClassAd* req, Claim* claim )
+CODMgr::resume( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 {
 	int rval;
 	ClassAd reply;

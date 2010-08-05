@@ -114,7 +114,7 @@ InputStreamLexerSource::ReadCharacter(void)
 
 	if (_stream != NULL && !_stream->eof()) {
 		_stream->get(real_character);
-		character = real_character;
+		character = (unsigned char)real_character;
 	} else {
 		character = -1;
 	}
@@ -173,7 +173,7 @@ CharLexerSource::ReadCharacter(void)
 {
 	int character;
 
-	character = _string[_offset];
+	character = (unsigned char)_string[_offset];
 	if (character == 0) {
 		character = -1; 
 	} else {
@@ -241,7 +241,7 @@ StringLexerSource::ReadCharacter(void)
 {
 	int character;
 
-	character = (*_string)[_offset];
+	character = (unsigned char)(*_string)[_offset];
 	if (character == 0) {
 		character = -1;
 	} else {

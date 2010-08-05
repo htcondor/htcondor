@@ -434,7 +434,7 @@ write_xml_user_log(
 
 bool
 user_log_submit(	const classad::ClassAd *ad,
-					UserLog& user_log)
+					WriteUserLog& user_log)
 {
 	SubmitEvent jobSubmit;
 	std::string logNotes;
@@ -468,7 +468,7 @@ user_log_submit(	const classad::ClassAd *ad,
 
 bool
 user_log_execute(	const classad::ClassAd *ad,
-					UserLog& user_log)
+					WriteUserLog& user_log)
 {
 	ExecuteEvent event;
 
@@ -492,7 +492,7 @@ user_log_execute(	const classad::ClassAd *ad,
 
 bool
 user_log_generic(	const classad::ClassAd *ad,
-					UserLog& user_log)
+					WriteUserLog& user_log)
 {
 	GenericEvent event;
 
@@ -514,7 +514,7 @@ user_log_generic(	const classad::ClassAd *ad,
 
 bool
 user_log_terminated(	const classad::ClassAd *ad,
-						UserLog& user_log)
+						WriteUserLog& user_log)
 {
 	JobTerminatedEvent event;
 	std::string termination_type;
@@ -570,7 +570,7 @@ user_log_terminated(	const classad::ClassAd *ad,
 
 bool
 user_log_aborted(	const classad::ClassAd *ad,
-						UserLog& user_log)
+						WriteUserLog& user_log)
 {
 	JobAbortedEvent event;
 
@@ -593,7 +593,7 @@ user_log(			const classad::ClassAd *ad,
 	std::string userLogFile;
 	int cluster_id, proc_id;
 	bool log_xml;
-	UserLog usr_log;
+	WriteUserLog usr_log;
 
 	if	(	!ad->EvaluateAttrString("log", userLogFile) ||
 			userLogFile.empty()

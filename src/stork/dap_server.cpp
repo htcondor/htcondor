@@ -1976,7 +1976,7 @@ write_requests_to_file(ReliSock * sock)
 		}
     }
 
-	if(!sock->eom()) {
+	if(!sock->end_of_message()) {
 		dprintf(D_ALWAYS, "%s:%d Server: failed to read eom!: (%d)%s\n",
 				__FILE__, __LINE__,
 				errno, strerror(errno));
@@ -2141,7 +2141,7 @@ write_requests_to_file(ReliSock * sock)
 		);
 		return FALSE;
     }
-    if ( !sock->eom() ) {
+    if ( !sock->end_of_message() ) {
 		dprintf( D_ALWAYS,
 				"%s:%d: Server: send error (eom))!: (%d)%s\n",
 				__FILE__, __LINE__,
@@ -2226,7 +2226,7 @@ list_queue(ReliSock * sock)
 		}
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	return TRUE;
 }
 
@@ -2325,7 +2325,7 @@ send_dap_status_to_client(ReliSock * sock)
 		if (pstr) free (pstr);
 		return FALSE;
     }
-    sock->eom();
+    sock->end_of_message();
 	if (pstr) free (pstr);
     return TRUE;
 }
@@ -2921,7 +2921,7 @@ get_cred_from_credd (const char * request, void *& buff, int & size)
 	}
 	free (_request);
 
-	if (!sock->eom() ) {
+	if (!sock->end_of_message() ) {
 		dprintf(
 			D_ALWAYS,
 			"%s:%d: put eom to credd:  (%d)%s\n",

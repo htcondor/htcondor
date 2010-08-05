@@ -587,7 +587,8 @@ SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 
 SecMan::sec_feat_act
 SecMan::ReconcileSecurityAttribute(const char* attr,
-									ClassAd &cli_ad, ClassAd &srv_ad) {
+								   ClassAd &cli_ad, ClassAd &srv_ad,
+								   bool *required ) {
 
 	// extract the values from the classads
 
@@ -617,6 +618,10 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 		free (srv_buf);
 	}
 
+	if( required ) {
+		// if either party requires this feature, indicate that
+		*required = (cli_req == SEC_REQ_REQUIRED || srv_req == SEC_REQ_REQUIRED);
+	}
 
 	// this policy is moderately complicated.  make sure you know
 	// the implications if you monkey with the below code.  -zach
@@ -696,11 +701,12 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	sec_feat_act authentication_action;
 	sec_feat_act encryption_action;
 	sec_feat_act integrity_action;
+	bool auth_required = false;
 
 
 	authentication_action = ReconcileSecurityAttribute(
 								ATTR_SEC_AUTHENTICATION,
-								cli_ad, srv_ad );
+								cli_ad, srv_ad, &auth_required );
 
 	encryption_action = ReconcileSecurityAttribute(
 								ATTR_SEC_ENCRYPTION,
@@ -727,6 +733,15 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 	sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[authentication_action]);
 	action_ad->Insert(buf);
+
+	if( authentication_action == SecMan::SEC_FEAT_ACT_YES ) {
+			// record whether the authentication is required or not, so
+			// both parties know what to expect if authentication fails
+		if( !auth_required ) {
+				// this is assumed to be true if not set
+			action_ad->Assign(ATTR_SEC_AUTH_REQUIRED,false);
+		}
+	}
 
 	sprintf (buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION, SecMan::sec_feat_act_rev[encryption_action]);
 	action_ad->Insert(buf);
@@ -1358,7 +1373,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			return StartCommandFailed;
 		}
 
-		// we must _NOT_ do an eom() here!  Ques?  See Todd or Zach 9/01
+		// we must _NOT_ do an end_of_message() here!  Ques?  See Todd or Zach 9/01
 
 		return StartCommandSucceeded;
 	}
@@ -1703,6 +1718,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTH_REQUIRED );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENCRYPTION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_INTEGRITY );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
@@ -1812,15 +1828,27 @@ SecManStartCommand::authenticate_inner()
 			}
 
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			if (!m_sock->authenticate(m_private_key, auth_methods, m_errstack,auth_timeout)) {
-            	if (auth_methods) {  
-                	free(auth_methods);
-            	}
-				return StartCommandFailed;
+			bool auth_success = m_sock->authenticate(m_private_key, auth_methods, m_errstack,auth_timeout);
+
+			if (auth_methods) {  
+				free(auth_methods);
 			}
-            if (auth_methods) {  
-                free(auth_methods);
-            }
+
+			if( !auth_success ) {
+				bool auth_required = true;
+				m_auth_info.LookupBool(ATTR_SEC_AUTH_REQUIRED,auth_required);
+
+				if( auth_required ) {
+					dprintf( D_ALWAYS,
+							 "SECMAN: required authentication with %s failed, so aborting command %s.\n",
+							 m_sock->peer_description(),
+							 m_cmd_description.Value());
+					return StartCommandFailed;
+				}
+				dprintf( D_SECURITY|D_FULLDEBUG,
+						 "SECMAN: authentication with %s failed but was not required, so continuing.\n",
+						 m_sock->peer_description() );
+			}
 		} else {
 			// !m_new_session is equivalent to use_session in this client.
 			if (!m_new_session) {
@@ -1900,7 +1928,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// Why is it being done?  Perhaps to ensure clean state of the
 			// socket?
 			m_sock->encode();
-			m_sock->eom();
+			m_sock->end_of_message();
 
 			if( m_nonblocking && !m_sock->readReady() ) {
 				return WaitForSocketCallback();
@@ -1909,7 +1937,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// receive a classAd containing info about new session
 			ClassAd post_auth_info;
 			m_sock->decode();
-			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->eom()) {
+			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->end_of_message()) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 							"could not receive post_auth_info." );
@@ -2160,7 +2188,7 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 	m_tcp_auth_command = NULL;
 
 		// close the TCP socket, the rest will be UDP.
-	tcp_auth_sock->eom();
+	tcp_auth_sock->end_of_message();
 	tcp_auth_sock->close();
 	delete tcp_auth_sock;
 	tcp_auth_sock = NULL;
@@ -2412,23 +2440,23 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 
 int
 SecMan::sec_char_to_auth_method( char* method ) {
-    if (!stricmp( method, "SSL" )  ) {
+    if (!strcasecmp( method, "SSL" )  ) {
         return CAUTH_SSL;
-    } else if (!stricmp( method, "GSI" )  ) {
+    } else if (!strcasecmp( method, "GSI" )  ) {
 		return CAUTH_GSI;
-	} else if ( !stricmp( method, "NTSSPI" ) ) {
+	} else if ( !strcasecmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;
-	} else if ( !stricmp( method, "PASSWORD" ) ) {
+	} else if ( !strcasecmp( method, "PASSWORD" ) ) {
 		return CAUTH_PASSWORD;
-	} else if ( !stricmp( method, "FS" ) ) {
+	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
-	} else if ( !stricmp( method, "FS_REMOTE" ) ) {
+	} else if ( !strcasecmp( method, "FS_REMOTE" ) ) {
 		return CAUTH_FILESYSTEM_REMOTE;
-	} else if ( !stricmp( method, "KERBEROS" ) ) {
+	} else if ( !strcasecmp( method, "KERBEROS" ) ) {
 		return CAUTH_KERBEROS;
-	} else if ( !stricmp( method, "CLAIMTOBE" ) ) {
+	} else if ( !strcasecmp( method, "CLAIMTOBE" ) ) {
 		return CAUTH_CLAIMTOBE;
-	} else if ( !stricmp( method, "ANONYMOUS" ) ) {
+	} else if ( !strcasecmp( method, "ANONYMOUS" ) ) {
 		return CAUTH_ANONYMOUS;
 	}
 	return 0;
@@ -2478,7 +2506,7 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 	while ( (sm = server_methods.next()) ) {
 		client_methods.rewind();
 		while ( (cm = client_methods.next()) ) {
-			if (!stricmp(sm, cm)) {
+			if (!strcasecmp(sm, cm)) {
 				// add a comma if it isn't the first match
 				if (match) {
 					results += ",";

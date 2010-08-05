@@ -53,6 +53,8 @@ extern  void	init_ipaddr( int config_done );
 
 void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s);
 
+void ConfigConvertDefaultIPToSocketIP();
+
 // This is a convenient interface to ConvertDefaultIPToSocketIP().
 // If a replacement occurs, expr_string will be freed and replaced
 // with a new buffer allocated with malloc().  The caller should free it.

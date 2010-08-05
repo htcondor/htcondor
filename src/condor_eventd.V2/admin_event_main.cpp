@@ -41,7 +41,7 @@ AdminEvent	*admin_event;
 
 //-------------------------------------------------------------
 
-int main_init(int argc, char *argv[])
+void main_init(int argc, char *argv[])
 {
 	dprintf(D_FULLDEBUG, "main_init() called\n");
 
@@ -50,36 +50,31 @@ int main_init(int argc, char *argv[])
 
 	// Read our Configuration parameters
 	//config(true);
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool is_full )
+void 
+main_config()
 {
 	dprintf(D_FULLDEBUG, "main_config() called\n");
-	admin_event->config(is_full);
-	return TRUE;
+	admin_event->config();
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_FULLDEBUG, "main_shutdown_fast() called\n");
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_FULLDEBUG, "main_shutdown_graceful() called\n");
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

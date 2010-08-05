@@ -75,6 +75,13 @@ static void Usage() {
             "\t\t[-DoRescueFrom <int N>]\n"
 			"\t\t[-AllowVersionMismatch]\n"
 			"\t\t[-DumpRescue]\n"
+			"\t\t[-Verbose]\n"
+			"\t\t[-Force]\n"
+			"\t\t[-Notification <never|always|complete|error>]\n"
+			"\t\t[-Dagman <dagman_executable>]\n"
+			"\t\t[-Outfile_dir <directory>]\n"
+			"\t\t[-Update_submit]\n"
+			"\t\t[-Import_env]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
@@ -119,7 +126,8 @@ Dagman::Dagman() :
 	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
 	rescueFileToRun(""),
 	dumpRescueDag(false),
-	_defaultNodeLog(NULL)
+	_defaultNodeLog(NULL),
+	_generateSubdagSubmits(true)
 {
 }
 
@@ -328,6 +336,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n",
 				_defaultNodeLog ? _defaultNodeLog : "null" );
 
+	_generateSubdagSubmits = 
+		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n",
+				_generateSubdagSubmits ? "True" : "False" );
+
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
 				debugSetting ? debugSetting : "" );
@@ -353,34 +366,31 @@ Dagman::Config()
 
 
 // NOTE: this is only called on reconfig, not at startup
-int
-main_config( bool )
+void
+main_config()
 {
 		// This is commented out because, even if we get new config
 		// values here, they don't get passed to the Dag object (which
 		// is where most of them actually take effect).  (See Gnats
 		// PR 808.)  wenger 2007-02-09
 	// dagman.Config();
-	return 0;
 }
 
 // this is called by DC when the schedd is shutdown fast
-int
+void
 main_shutdown_fast()
 {
     DC_Exit( EXIT_RESTART );
-    return FALSE;
 }
 
 // this can be called by other functions, or by DC when the schedd is
 // shutdown gracefully
-int main_shutdown_graceful() {
+void main_shutdown_graceful() {
     dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
-    return FALSE;
 }
 
-int main_shutdown_rescue( int exitVal ) {
+void main_shutdown_rescue( int exitVal ) {
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 	if( dagman.dag ) {
 			// we write the rescue DAG *before* removing jobs because
@@ -418,7 +428,6 @@ int main_shutdown_rescue( int exitVal ) {
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( exitVal );
-	return false;
 }
 
 // this gets called by DC when DAGMan receives a SIGUSR1 -- which,
@@ -427,7 +436,7 @@ int main_shutdown_rescue( int exitVal ) {
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	main_shutdown_rescue( EXIT_ABORT );
-	return false;
+	return FALSE;
 }
 
 void ExitSuccess() {
@@ -451,7 +460,7 @@ int main_testing_stub( Service *, int ) {
 ****** FOR TESTING ********/
 
 //---------------------------------------------------------------------------
-int main_init (int argc, char ** const argv) {
+void main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
 
@@ -629,6 +638,42 @@ int main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-DumpRescue", argv[i] ) ) {
 			dagman.dumpRescueDag = true;
 
+        } else if( !strcasecmp( "-verbose", argv[i] ) ) {
+			dagman._submitDagDeepOpts.bVerbose = true;
+
+        } else if( !strcasecmp( "-force", argv[i] ) ) {
+			dagman._submitDagDeepOpts.bForce = true;
+		
+        } else if( !strcasecmp( "-notification", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No notification value specified\n" );
+                Usage();
+            }
+			dagman._submitDagDeepOpts.strNotification = argv[i];
+
+        } else if( !strcasecmp( "-dagman", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No dagman value specified\n" );
+                Usage();
+            }
+			dagman._submitDagDeepOpts.strDagmanPath = argv[i];
+
+        } else if( !strcasecmp( "-outfile_dir", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No outfile_dir value specified\n" );
+                Usage();
+            }
+			dagman._submitDagDeepOpts.strOutfileDir = argv[i];
+
+        } else if( !strcasecmp( "-update_submit", argv[i] ) ) {
+			dagman._submitDagDeepOpts.updateSubmit = true;
+
+        } else if( !strcasecmp( "-import_env", argv[i] ) ) {
+			dagman._submitDagDeepOpts.importEnv = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -697,27 +742,36 @@ int main_init (int argc, char ** const argv) {
 		}
 
 		// Make sure .condor.sub file is recent enough.
-	} else if( !submitFileVersion.built_since_version(
-				MIN_SUBMIT_FILE_VERSION.majorVer,
-				MIN_SUBMIT_FILE_VERSION.minorVer,
-				MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
-		if ( !allowVerMismatch ) {
-        	debug_printf( DEBUG_QUIET, "Error: %s is older than "
-						"oldest permissible version (%s)\n",
-						versionMsg.Value(), minSubmitVersionStr.Value() );
-			DC_Exit( EXIT_ERROR );
-		} else {
-        	debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
-						"oldest permissible version (%s); continuing "
-						"because of -AllowVersionMismatch flag\n",
-						versionMsg.Value(), minSubmitVersionStr.Value() );
-		}
+	} else if ( submitFileVersion.compare_versions(
+				CondorVersion() ) != 0 ) {
 
-		// Warn if .condor.sub file is a newer version than this binary.
-	} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
-        debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
-					"condor_dagman version (%s)\n", versionMsg.Value(),
-					CondorVersion() );
+		if( !submitFileVersion.built_since_version(
+					MIN_SUBMIT_FILE_VERSION.majorVer,
+					MIN_SUBMIT_FILE_VERSION.minorVer,
+					MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
+			if ( !allowVerMismatch ) {
+        		debug_printf( DEBUG_QUIET, "Error: %s is older than "
+							"oldest permissible version (%s)\n",
+							versionMsg.Value(), minSubmitVersionStr.Value() );
+				DC_Exit( EXIT_ERROR );
+			} else {
+        		debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
+							"oldest permissible version (%s); continuing "
+							"because of -AllowVersionMismatch flag\n",
+							versionMsg.Value(), minSubmitVersionStr.Value() );
+			}
+
+			// Warn if .condor.sub file is a newer version than this binary.
+		} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
+        	debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
+						"condor_dagman version (%s)\n", versionMsg.Value(),
+						CondorVersion() );
+		} else {
+        	debug_printf( DEBUG_NORMAL, "Note: %s differs from "
+						"condor_dagman version (%s), but the "
+						"difference is permissible\n", 
+						versionMsg.Value(), CondorVersion() );
+		}
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -843,10 +897,28 @@ int main_init (int argc, char ** const argv) {
 		}
 	}
 
+		//
+		// Fill in values in the deep submit options that we haven't
+		// already set.
+		//
+	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
+	dagman._submitDagDeepOpts.iDebugLevel = debug_level;
+	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
+	dagman._submitDagDeepOpts.oldRescue =
+				(dagman.rescueFileToWrite != NULL);
+	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
+	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
+	dagman._submitDagDeepOpts.allowVerMismatch = allowVerMismatch;
+	dagman._submitDagDeepOpts.recurse = false;
+
     //
     // Create the DAG
     //
 
+	// Note: a bunch of the parameters we pass here duplicate things
+	// in submitDagOpts, but I'm keeping them separate so we don't have to
+	// bother to construct a new SubmitDagOtions object for splices.
+	// wenger 2010-03-25
     dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.allowLogError, dagman.useDagDir,
@@ -854,7 +926,10 @@ int main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog, false ); /* toplevel dag! */
+						  dagman._defaultNodeLog,
+						  dagman._generateSubdagSubmits,
+						  &dagman._submitDagDeepOpts,
+						  false ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -918,7 +993,7 @@ int main_init (int argc, char ** const argv) {
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		ExitSuccess();
-		return 0;
+		return;
 	}
 
     //------------------------------------------------------------------------
@@ -970,8 +1045,6 @@ int main_init (int argc, char ** const argv) {
 
 	dagman.dag->SetPendingNodeReportInterval(
 				dagman.pendingReportInterval );
-
-    return 0;
 }
 
 void
@@ -993,6 +1066,8 @@ print_status() {
 
 	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
 				  done, pre, submitted, post, ready, unready, failed );
+	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
+				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
 }
 
@@ -1022,6 +1097,7 @@ void condor_event_timer () {
     static int prevJobsSubmitted = 0;
     static int prevJobsReady = 0;
     static int prevScriptRunNodes = 0;
+    static int prevJobsHeld = 0;
 
 	int justSubmitted;
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
@@ -1058,6 +1134,7 @@ void condor_event_timer () {
         || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumNodesReady()
         || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
+	|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
         prevJobsDone = dagman.dag->NumNodesDone();
@@ -1066,6 +1143,7 @@ void condor_event_timer () {
         prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumNodesReady();
         prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
+	prevJobsHeld = dagman.dag->NumHeldJobProcs();
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();

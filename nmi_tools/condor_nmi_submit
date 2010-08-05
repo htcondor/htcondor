@@ -61,9 +61,6 @@ sub SRC 	{ 0; };
 # Configurable settings
 ######################################################################
 
-# Location of the nightly build tag file
-my $tag_file = "/space/cvs/nwo-build-tags";
-
 # CVSROOT to use for checking out from CVS
 my $CVSROOT = "/space/cvs/CONDOR_SRC";
 
@@ -222,17 +219,10 @@ foreach $tag (sort keys %tags ) {
         $tag = undef;
     }
 
-	if (1) {
-		# the new way with SubmitInfo.pm
-    	getSubmitInfoNew( $tag, $opt_src_tag );
-    	$cmdfile = createSubmitFilesNew( $tag, $opt_src_tag, $opt_other_tag );
-    	submitRun( $cmdfile, $tag );
-	} else {
-		# the old way with submit_info
-    	getSubmitInfo( $tag, $opt_src_tag );
-    	$cmdfile = createSubmitFiles( $tag, $opt_src_tag, $opt_other_tag );
-    	submitRun( $cmdfile, $tag );
-	}
+	# Uses SubmitInfo.pm to get configuration info.
+   	getSubmitInfoNew( $tag, $opt_src_tag );
+   	$cmdfile = createSubmitFilesNew( $tag, $opt_src_tag, $opt_other_tag );
+   	submitRun( $cmdfile, $tag );
 }
 
 print "All steps completed successfully\n";
@@ -385,11 +375,6 @@ sub parseOptions
         printUsage( 0 );
     }
 
-    # Replace the default tag_file location if we're using git
-    if( defined $opt_git ) {
-		$tag_file = "/space/git/nwo-build-tags.git";
-    }
-
     if( defined $opt_build ) {
         if( defined $opt_test ) {
             print "ERROR: You cannot specify both --build and --test\n";
@@ -495,15 +480,22 @@ sub parseOptions
 	    print "You requested a split fetch from two branches\n";
         $tags{"$opt_other_tag"} = "split_fetch";
     } elsif ( defined $opt_nightly ) {
-        print "You specified --nightly, will fetch tags\n";
+        print "You specified --nightly, will munge tag name with --desc for " . 
+				"Condor's NMI pages\n";
     } elsif ( defined $opt_workspace ) {
 		print "Working from local workspace $opt_workspace\n";
 		$src_workspace = File::Spec->rel2abs($opt_workspace);
     } else {
         print "You need to define either --tag and --module, ";
-        print "or use --nightly, or use --workspace\n";
+        print "possibly with --nightly, or use --workspace\n";
         printUsage( 1 );
     }
+
+	if ( defined($opt_nightly) && !(defined($opt_tag) || defined($opt_module)))
+	{
+		print "ERROR: You need to specify --tag and --module with --nightly\n";
+		printUsage( 1 );
+	}
 
     if( defined($opt_externals) ) {
         if( defined($opt_nightly) ) {
@@ -521,8 +513,6 @@ sub parseOptions
 
     if( defined $opt_workspace ) {
         if( defined $opt_nightly ) {
-                # Notably, the %tags list can have a list of tags
-                # OR a dummy entry for a workspace build
             print "ERROR: You cannot use --workspace with --nightly\n";
             printUsage( 1 );
         }
@@ -609,9 +599,9 @@ Where [options] can be any of:
 					--src-tag>
 
 Where [build-options] can be any of:
---nightly          <Default for builds: pulls the nightly tags file from 
-                    http://www.cs.wisc.edu/condor/nwo-build-tags and submits
-                    builds for all the tags listed there>
+--nightly          <Munges the description of a build to be programmatically
+                    understood by the Condor NMI pages. You must still supply
+                    --tag and --module.>
 --externals=string <Module name to use for fetching externals (only needed 
                     if the tag defined with --tag doesn't define them)>
 --without-tests    <Submit a build job such that it will NOT submit
@@ -649,11 +639,6 @@ END_USAGE
 
 sub getTags
 {
-    if( defined $opt_nightly ) {
-        getNightlyTags();
-    }
-    # else nothing else to do?
-
     # Sanity checking 
     if( (scalar keys %tags > 1) && (exists $tags{'workspace'}) ) {
         # parseOptions should have caught this, but just in case.
@@ -661,18 +646,6 @@ sub getTags
     }
 }
 
-
-sub getNightlyTags
-{
-    open(TAGS, $tag_file) || 
-        die "Can't read nightly tag file $tag_file: $!\n";
-    while (<TAGS>) {
-        chomp($_);
-        my @tag = split /\s/, $_;
-        $tags{$tag[1]} = $tag[0]; 
-    }
-    close(TAGS);
-}
 
 sub getSubmitInfoNew
 {
@@ -754,12 +727,10 @@ sub loadModule
 	
 	$mpath = dirname($module_path);
 
-	# The --nightly code path expects to reload modules multiple times because
-	# they are different versions. Here we make the idempotency check fail so
+	# Here we make the idempotency check fail so
 	# the new module gets loaded and stomps on the old module's
-	# definitions--which is what we want. This is vile and ugly and is a result
-	# of the coupling between the nightlies and this script. See gittrac ticket
-	# #974 for details about this coupling.
+	# definitions--which is what we want. This is vile and ugly but does the
+	# thing people implicitly expect.
 	if (exists($INC{"$module_name.pm"})) {
 		print "Removing perl's module idempotency check to allow reloading " .
 				"of $module_name.pm with new definitions.\n";
@@ -868,61 +839,6 @@ sub createSubmitFilesNew
     return $cmdfile;
 }
 
-sub getSubmitInfo
-{
-    my( $tag, $src_tag ) = @_;
-
-    my $submit_info_path;
-    if( defined $opt_nmi_glue ) {
-        $submit_info_path = "$opt_nmi_glue/$submit_info_basename";
-    }
-    elsif( defined $src_workspace ) {
-        $submit_info_path = "$src_workspace/$submit_info";
-        # in this case $tag is worthless, so trying to
-        # check it out is hopeless.
-    }
-    else {
-		if(defined $src_tag) {
-			my $realtag = "origin\/" . $src_tag;
-        	checkoutSubmitInfo( $realtag ) ||
-	    		die "$tag does not contain $submit_info!\n";
-		} else {
-        	checkoutSubmitInfo( $tag ) ||
-	    		die "$tag does not contain $submit_info!\n";
-		}
-        $submit_info_path = $submit_info;
-    }
-
-    -f $submit_info_path || die "$submit_info_path doesn't exist!\n";
-
-    # clear out any existing values in any of our global data structs
-    clearGlobalSubmitInfo();
-
-    # parse the submit_info file
-    parseSubmitInfo( $submit_info_path );
-    printSubmitInfo() if $opt_debug;
-
-    if( %opt_platforms ) {
-        @platforms = sort keys %opt_platforms;
-        if( grep(/all/, @platforms) ) {
-            # we already verified the command-line, so we know we've
-            # got opt_buildid and we're in test mode... 
-            if( ! defined $opt_buildid ) {
-                die "IMPOSSIBLE: saw --platforms=all without --builddid\n";
-            }
-            @platforms = ();
-            print "Saw --platforms=all, getting platforms from build runid: "
-                . "$opt_buildid\n";
-            @platforms = getPlatformsFromRunid( $opt_buildid );
-        }
-    } else {
-        @platforms = sort keys %platforms;
-    }
-    print "Found platforms: " . join( ', ', @platforms ) . "\n"; 
-
-}
-
-
 sub checkoutSubmitInfo
 {
     my( $tag ) = @_;
@@ -1003,100 +919,6 @@ sub printSubmitInfo
     print "----- End of data parsed from submit_info -----\n";
 }
 
-
-sub createSubmitFiles
-{
-    my ( $tag, $srctag, $othertag ) = @_;
-
-	print "createSubmitFiles: $tag, $srctag, $othertag\n";
-
-    my $cmdfile = "cmdfile";
-    if( defined $tag ) {
-        $cmdfile .= "-$tag";
-	$cmdfile =~ s,/,,g;
-    } else {
-        $cmdfile .= "-workspace";
-    }
-
-    my $module;
-    if( defined $tag ) {
-        $module = $tags{$tag};
-    }
-    my @fetch_files;
-    
-    # Generate the cmdfile
-    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
-
-    writeCommonInfo( *CMDFILE, $tag, $module );
-
-    # define inputs
-    if( $runtype eq "build" ) {
-        @fetch_files = generateBuildFetchFiles( $tag, $module, $opt_src_tag, $opt_other_tag );
-    } else {
-        @fetch_files = generateTestFetchFiles( $tag, $module, $opt_src_tag, $opt_other_tag );
-    }
-    print CMDFILE "inputs = " . join(', ', @fetch_files) . "\n";
-
-
-    if( $runtype eq "build" ) {
-        print CMDFILE "run_type = build\n";
-        writeBuildPrereqs( *CMDFILE );
-        writeBuildGlue( *CMDFILE, $tag, $module );
-		writeBuildXTestSpecs( *CMDFILE );
-
-	# This disk requirement is intended to override the default
-	# requirement inserted by condor_submit.  This is a temporary
-	# workaround for the problem of interrupted jobs failing to
-	# rerun because the slot Disk advertised by a number of platforms
-	# is not actually big enough for Condor builds.  The automatic
-	# requirements fail because the job's DiskUsage gets updated
-	# in the first attempt to run the job and then prevent the job
-	# from matching in the second attempt.
-	print CMDFILE "append_requirements = Disk =!= UNDEFINED && TotalDisk >= 18000000\n";
-    } else {
-	 	#print CMDFILE "+periodic_remove = (((JobStatus == 2)&&(JobUniverse == 5)&&((CurrentTime - JobCurrentStartDate) > (60 * 60 * 8))) =?= TRUE)\n";
-	 	print CMDFILE "platform_job_timeout = 8h\n";
-        print CMDFILE "run_type = test\n";
-		# allow tests on changing systems "unmanaged like unmanaged-x86_rhap_5.1"
-		print CMDFILE "++unmanaged = true \n";
-        writeTestPrereqs( *CMDFILE );
-		writeTestGlue( *CMDFILE );
-    }
-
-	# Sometimes builds and tests get backed up.  If so, we would 
-	# like to eventually run all the jobs, but we'd like to see results from
-	# newer ones first.  Setting the user job prio to the Qdate should
-	# help with this.
-
-	print CMDFILE "+priority = ", time, "\n";
-
-	close CMDFILE;
-    return $cmdfile;
-}
-
-
-sub writeTestPrereqs
-{
-    my $fh = shift;
-    my $platform;
-
-    if( $global_test_prereqs ) {
-        print $fh "prereqs = $global_test_prereqs\n";
-    }
-    foreach $platform ( @platforms ) {
-        if( $platform_test_prereqs{$platform} ) {
-            print $fh "prereqs_$platform = "
-                . "$platform_test_prereqs{$platform}\n";
-        }
-    }
-    foreach $platform ( @platforms ) {
-        if( $testplatform_test_prereqs{$platform} ) {
-            print $fh "prereqs_$platform = "
-                . "$testplatform_test_prereqs{$platform}\n";
-        }
-    }
-}
-
 sub writeTestPrereqsNew
 {
     my $fh = shift;
@@ -1132,21 +954,6 @@ EOF
 }
 
 
-sub writeBuildPrereqs
-{
-    my $fh = shift;
-    my $platform;
-
-    if( $global_prereqs ) {
-        print $fh "prereqs = $global_prereqs\n";
-    }
-    foreach $platform ( @platforms ) {
-        if( $platform_prereqs{$platform} ) {
-            print $fh "prereqs_$platform = $platform_prereqs{$platform}\n";
-        }
-    }
-}
-
 sub writeBuildPrereqsNew
 {
     my $fh = shift;
@@ -1179,20 +986,6 @@ EOF
 			print $fh "# None.\n";
 		}
 		print $fh "\n";
-    }
-}
-
-sub writeBuildXTestSpecs
-{
-    my $fh = shift;
-
-    # Drop the info on desired cross testing into environment
-    # via entries in the command file.
-    if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
-        foreach my $key (sort keys %platform_x_test_platforms) {
-            my $code = "x_test_platforms_" . $key . " =";
-            print $fh "$code $platform_x_test_platforms{$key}\n";
-        }
     }
 }
 
@@ -1333,81 +1126,11 @@ sub writeCommonInfo
         print $fh "configure = $opt_configure\n";
     }
 
-    print $fh "+load_profile = true\n";
+    print $fh "+LoadProfile = true\n";
 
     print $fh "platforms = " . join(', ', @platforms) . "\n";
 }
 
-
-sub writeBuildGlue
-{
-    my ( $fh, $tag, $module ) = @_;
-    my $post_args = '';
-    my $pre_args = '';
-    # tag and module may be null (if $src_workspace is defined)
-
-    # define the glue scripts we want
-    print $fh "pre_all = nmi_glue/build/pre_all\n";
-	my $pre_all_args = "";
-	if (defined($opt_skip_doc)) {
-		$pre_all_args = $pre_all_args . " --skip-doc";
-	}
-    if (defined($opt_version_buildid)) {
-      $pre_all_args = $pre_all_args . "--version-buildid=$opt_version_buildid";
-    }
-    print $fh "pre_all_args = $pre_all_args\n";
-    print $fh "remote_declare = nmi_glue/build/remote_declare\n";
-    print $fh "remote_declare_args =";
-    print $fh " --externals-only" if defined($opt_externals_only);
-    print $fh " --release-only" if defined($opt_release_only);
-    print $fh "\n";
-    print $fh "remote_pre = nmi_glue/build/remote_pre\n";
-    print $fh "remote_task = nmi_glue/build/remote_task\n";
-    print $fh "remote_post = nmi_glue/build/remote_post\n";
-    print $fh "platform_post = nmi_glue/build/platform_post\n";
-    print $fh "post_all = nmi_glue/build/post_all\n";
-
-    # Pass arguments to remote_pre script
-    if( defined($opt_use_externals_cache) ) {
-	$pre_args .= ' --use_externals_cache';
-    }
-    if( defined($opt_clear_externals_cache) ) {
-	$pre_args .= ' --clear_externals_cache';
-    }
-    if( defined($opt_clear_externals_cache_weekly) ) {
-	$pre_args .= ' --clear-externals-cache-weekly';
-    }
-    if( $pre_args ) {
-	print $fh "remote_pre_args = $pre_args\n";
-    }
-
-    if( defined($opt_without_tests) ) {
-        $post_args = '--without-tests';
-    } else {
-        # If a build is submitted using --submit-xtests, all we have
-        # to do is propagate it to platform_post via arguments...
-        if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
-            $post_args = "--submit-xtests";
-        } else {
-            $post_args = "--nosubmit-xtests";
-        }
-		# If tests are desired to be run concurrently pass it on
-		if( defined $opt_tests_at_once ) {
-			$post_args .= " --tests-at-once=$opt_tests_at_once";
-		}
-        # If a build is submitted using --git pass it on,
-        # platform_post checks out the test_glue from some VCS
-        if( defined($opt_git) ) {
-            $post_args .= " --git";
-        }       
-        if( defined($src_workspace) ) {
-            $post_args .= " --test-args=--workspace='$src_workspace'";
-        }
-    }
-    if( $post_args ) {
-        print $fh "platform_post_args = $post_args\n";
-    }
-}
 
 sub writeBuildGlueNew
 {
@@ -1519,54 +1242,6 @@ EOF
         print $fh "# None\n";
 	}
 	print $fh "\n";
-}
-
-
-sub writeTestGlue
-{
-    my ( $fh ) = @_;
-
-    # select scope of testsuite run
-    my $args;
-
-
-    if( defined $opt_test_class ) {
-        # command-line takes precedent
-        $args = $opt_test_class;
-    } elsif( $#platforms == 0 && defined $platform_testargs{$platforms[0]} ) {
-        # if we've only got 1 platform (the last element of @platforms
-        # is at offset 0), we should use a platform-specific value for
-        # testargs if there is one...
-        $args = $platform_testargs{$platforms[0]};
-    } elsif( defined $global_testargs ) {
-        # if there is no per-platform arg or we're submitting tests
-        # for more than 1 platform (yuck!) we use the global value
-        $args = $global_testargs;
-    } else {
-        # if not specified at all, use a default test class
-        $args = "quick";
-    }
-
-    # define the glue scripts we want for test jobs
-    print $fh "pre_all = nmi_glue/test/pre_all\n";
-    if( defined $opt_test_src) {
-        print CMDFILE "pre_all_args = --src=$opt_test_src\n";
-    }
-    print $fh "platform_pre = nmi_glue/test/platform_pre\n";
-    print $fh "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
-    print $fh "remote_declare = nmi_glue/test/remote_declare\n";
-    print $fh "remote_declare_args = $args\n";
-    print $fh "remote_pre = nmi_glue/test/remote_pre\n";
-    print $fh "remote_task = nmi_glue/test/remote_task\n";
-    print $fh "remote_task_timeout = $test_timeout\n";
-    print $fh "remote_post = nmi_glue/test/remote_post\n";
-    print $fh "platform_post = nmi_glue/test/platform_post\n";
-    print $fh "post_all = nmi_glue/test/post_all\n";
-	# turn on testing concurrency
-	if( defined $opt_tests_at_once) {
-    	print $fh "max_concurrent_subtasks = $opt_tests_at_once\n";
-	}
-    print $fh "\n";
 }
 
 sub writeTestGlueNew

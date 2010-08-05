@@ -41,7 +41,7 @@
 #include <rpc/types.h>
 #include <X11/Xlib.h>
 
-XInterface *xinter;
+XInterface *xinter = NULL;
 #endif
 
 DECL_SUBSYSTEM( "KBDD", SUBSYSTEM_TYPE_DAEMON );
@@ -138,41 +138,37 @@ PollActivity()
 #endif
 }
 
-int 
+void 
 main_shutdown_graceful()
 {
 #ifndef WIN32
     delete xinter;
 #endif
     DC_Exit(EXIT_SUCCESS);
-	return TRUE;
 }
 
-int 
+void 
 main_shutdown_fast()
 {
 	DC_Exit(EXIT_SUCCESS);
-	return TRUE;
 }
 
-int 
-main_config( bool is_full )
+void 
+main_config()
 {
-    return TRUE;
 }
 
-int
+void
 main_init(int, char *[])
 {
-    int id;
 #ifndef WIN32
 	xinter = NULL;
-	xinter = new XInterface(id);
 #endif
     //Poll for X activity every second.
-    id = daemonCore->Register_Timer(5, 5, PollActivity, "PollActivity");
-
-    return TRUE;
+    int id = daemonCore->Register_Timer(5, 5, PollActivity, "PollActivity");
+#ifndef WIN32
+	xinter = new XInterface(id);
+#endif
 }
 
 

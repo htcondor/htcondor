@@ -116,15 +116,15 @@ usage()
 	DC_Exit( 1 );
 }
 
-int
+void
 main_init( int argc, char ** const argv )
 {
 
 
 	dprintf(D_FULLDEBUG, "C-GAHP IO thread\n");
 
-	MyString schedd_addr;
-	MyString schedd_pool;
+	std::string schedd_addr;
+	std::string schedd_pool;
 
 	// handle specific command line args
 	int i = 1;
@@ -219,7 +219,7 @@ main_init( int argc, char ** const argv )
 					      true	// read end registerable
 					     ) )
 		{
-			return -1;
+			return;
 		}
 
 		workers[i].request_buffer.setPipeEnd(workers[i].request_pipe[1]);
@@ -252,7 +252,7 @@ main_init( int argc, char ** const argv )
 									  
 
 
-	MyString exec_name;
+	std::string exec_name;
 	char * c_gahp_worker_thread = param("CONDOR_GAHP_WORKER");
 	if (c_gahp_worker_thread) {
 		exec_name = c_gahp_worker_thread;
@@ -261,24 +261,24 @@ main_init( int argc, char ** const argv )
 	else {
 		char * c_gahp_name = param ("CONDOR_GAHP");
 		ASSERT (c_gahp_name);
-		exec_name.sprintf ("%s_worker_thread", c_gahp_name);
+		sprintf(exec_name, "%s_worker_thread", c_gahp_name);
 		free (c_gahp_name);
 	}
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
 		ArgList args;
 
-		args.AppendArg(exec_name.Value());
+		args.AppendArg(exec_name.c_str());
 		args.AppendArg("-f");
 
-		if (schedd_addr.Length()) {
+		if (schedd_addr.length()) {
 			args.AppendArg("-s");
-			args.AppendArg(schedd_addr.Value());
+			args.AppendArg(schedd_addr.c_str());
 		}
 
-		if (schedd_pool.Length()) {
+		if (schedd_pool.length()) {
 			args.AppendArg("-P");
-			args.AppendArg(schedd_pool.Value());
+			args.AppendArg(schedd_pool.c_str());
 		}
 
 		MyString args_string;
@@ -293,7 +293,7 @@ main_init( int argc, char ** const argv )
 
 		workers[i].pid = 
 			daemonCore->Create_Process (
-										exec_name.Value(),
+										exec_name.c_str(),
 										args,
 										PRIV_UNKNOWN,
 										reaper_id,
@@ -320,18 +320,16 @@ main_init( int argc, char ** const argv )
 	fflush(stdout);
 
 	dprintf (D_FULLDEBUG, "C-GAHP IO initialized\n");
-
-	return TRUE;
 }
 
 
 int
 stdin_pipe_handler(Service*, int) {
 
-	MyString* line;
+	std::string* line;
 	while ((line = stdin_buffer.GetNextLine()) != NULL) {
 
-		const char * command = line->Value();
+		const char * command = line->c_str();
 
 		dprintf (D_ALWAYS, "got stdin: %s\n", command);
 
@@ -343,11 +341,11 @@ stdin_pipe_handler(Service*, int) {
 				// Catch "special commands first
 			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 					// Print number of results
-				MyString rn_buff;
-				rn_buff+=result_list.number();
+				std::string rn_buff;
+				sprintf( rn_buff, "%d", result_list.number() );
 				const char * commands [] = {
 					GAHP_RESULT_SUCCESS,
-					rn_buff.Value() };
+					rn_buff.c_str() };
 				gahp_output_return (commands, 2);
 
 					// Print each result line
@@ -442,13 +440,13 @@ stdin_pipe_handler(Service*, int) {
 int 
 result_pipe_handler(int id) {
 
-	MyString* line;
+	std::string* line;
 	while ((line = workers[id].result_buffer.GetNextLine()) != NULL) {
 
-		dprintf (D_FULLDEBUG, "Received from worker:\"%s\"\n", line->Value());
+		dprintf (D_FULLDEBUG, "Received from worker:\"%s\"\n", line->c_str());
 
 			// Add this to the list
-		result_list.append (line->Value());
+		result_list.append (line->c_str());
 
 		if (async_mode) {
 			if (!new_results_signaled) {
@@ -678,10 +676,10 @@ flush_request (int worker_id, const char * request) {
 			 request,
 			 worker_id);
 
-	MyString strRequest = request;
+	std::string strRequest = request;
 	strRequest += "\n";
 
-	workers[worker_id].request_buffer.Write(strRequest.Value());
+	workers[worker_id].request_buffer.Write(strRequest.c_str());
 
 	daemonCore->Reset_Timer (flush_request_tid, 0, 1);
 }
@@ -732,21 +730,18 @@ void Register() {}
 void Reconfig() {}
 
 
-int
-main_config( bool )
+void
+main_config()
 {
 	Reconfig();
-	return TRUE;
 }
 
-int
+void
 main_shutdown_fast()
 {
-
-	return TRUE;	// to satisfy c++
 }
 
-int
+void
 main_shutdown_graceful()
 {
 	daemonCore->Cancel_And_Close_All_Pipes();
@@ -754,8 +749,6 @@ main_shutdown_graceful()
 	for (int i=0; i<NUMBER_WORKERS; i++) {
 		daemonCore->Send_Signal (workers[i].pid, SIGKILL);
 	}
-
-	return TRUE;	// to satify c++
 }
 
 void

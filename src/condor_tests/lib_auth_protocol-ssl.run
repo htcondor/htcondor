@@ -19,8 +19,12 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Cwd;
 
+
+# whoami is in /usr/ucb on solaris
+$ENV{PATH}="$ENV{PATH}:/usr/ucb";
 
 my $topleveldir = getcwd();
 my $name4test = `whoami`;
@@ -59,15 +63,15 @@ if($mypid == 0) {
 
 # make sure path exists since we have not called StartPersonal yet
 my $saveme = $topleveldir . "/" . $mysaveme;
-system("mkdir -p $saveme");
+runcmd("mkdir -p $saveme");
 my $lowerlevel = $saveme . "/" . $mypid;
-system("mkdir -p $lowerlevel");
+runcmd("mkdir -p $lowerlevel");
 
 $pidleveldir = $topleveldir . "/" . $mysaveme . "/" . $mypid;
 print "changing to $pidleveldir\n";
 chdir("$pidleveldir");
-system("pwd");
-system("tar -zxvf ../../$mysslcerts");
+runcmd("pwd");
+runcmd("tar -zxvf ../../$mysslcerts");
 chdir("ssl_keys");
 
 $newmap = "condor_mapfile.new";
@@ -88,8 +92,8 @@ while(<OLD>) {
 }
 close(OLD);
 close(NEW);
-system("mv $oldmap $oldmap.old");
-system("mv $newmap $oldmap");
+runcmd("mv $oldmap $oldmap.old");
+runcmd("mv $newmap $oldmap");
 
 chdir("$topleveldir");
 
@@ -186,21 +190,22 @@ $ENV{CONDOR_CONFIG} = $secconfig;
 my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile \"ssl\"");
 CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
 
-system("cp *$corename* $mysaveme");
+#fails due to directory matching pattern
+runcmd("cp *$corename* $mysaveme", {expect_result=>\&ANY});
 	
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmout $mycorenmout");
+	runcmd("cp $mysubmitnmout $mycorenmout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($secconfig);

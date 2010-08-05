@@ -603,6 +603,7 @@ sub Monitor
     my $line;
     #my %info;
 	my $timestamp = 0;
+    my $parent_pid = getppid();
 
     debug( "Entering Monitor\n" ,5);
 
@@ -656,6 +657,7 @@ sub Monitor
   LINE:
     while( 1 )
     {
+
 		#print "Now $num_active_jobs is number of active jobs\n";
 	if( $saw_submit && $num_active_jobs == 0 )
 	{
@@ -678,6 +680,12 @@ sub Monitor
 	while( ! defined $line )
 	{
 		sleep 2;
+		if( getppid() != $parent_pid )
+		{
+		    print "\nCondor::Monitor: our parent pid $parent_pid has gone away.  Aborting.\n";
+		    return 0;
+		}
+
 		if(defined $TimedCallback)
 		{
 			CheckTimedCallback();

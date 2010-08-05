@@ -34,10 +34,10 @@ static bool test_hostname(void);
 static bool test_no_angle_brackets(void);
 
 bool FTEST_is_valid_sinful(void) {
-		// beginning junk for getPortFromAddr()
-	e.emit_function("int is_valid_sinful(char* sinful)");
-	e.emit_comment("Determines if a function is a valid sinful string.");
-	e.emit_problem("None");
+		// beginning junk for getPortFromAddr(() {
+	emit_function("int is_valid_sinful(char* sinful)");
+	emit_comment("Determines if a function is a valid sinful string.");
+	emit_problem("None");
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
@@ -46,64 +46,56 @@ bool FTEST_is_valid_sinful(void) {
 	driver.register_function(test_no_angle_brackets);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_normal_case() {
-	e.emit_test("Is normal input identified correctly?");
+	emit_test("Is normal input identified correctly?");
 	char* input = strdup( "<208.122.19.56:47>" );
-	e.emit_input_header();
-	e.emit_param("SINFUL", input);
+	emit_input_header();
+	emit_param("SINFUL", input);
 	int result = is_valid_sinful( input );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(TRUE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(TRUE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_hostname() {
-	e.emit_test("Are hostnames instead of IP addresses rejected like they should be?");
+	emit_test("Are hostnames instead of IP addresses rejected like they should be?");
 	char* input = strdup( "<balthazar.cs.wisc.edu:47>" );
-	e.emit_input_header();
-	e.emit_param("SINFUL", input);
+	emit_input_header();
+	emit_param("SINFUL", input);
 	int result = is_valid_sinful( input );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(FALSE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_no_angle_brackets() {
-	e.emit_test("Is the string correctly rejected if there are no angle brackets?");
+	emit_test("Is the string correctly rejected if there are no angle brackets?");
 	char* input = strdup( "209.172.63.167:8080" );
-	e.emit_input_header();
-	e.emit_param("SINFUL", input);
+	emit_input_header();
+	emit_param("SINFUL", input);
 	int result = is_valid_sinful( input );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(FALSE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

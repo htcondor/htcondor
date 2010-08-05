@@ -169,4 +169,5 @@ SocketProxyPair::SocketProxyPair(int from,int to):
 	buf_begin(0),
 	buf_end(0)
 {
+	buf[0] = '\0';
 }

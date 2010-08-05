@@ -35,7 +35,7 @@ sub RUNNING{2};
 my %testerrors;
 my %info;
 my $cluster;
-my $debuglevel = 2;
+my $debuglevel = 1;
 
 $executed = sub
 {

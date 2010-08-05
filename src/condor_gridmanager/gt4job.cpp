@@ -333,7 +333,7 @@ GT4Job::GT4Job( ClassAd *classad )
 		grid_resource.Tokenize();
 
 		token = grid_resource.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "gt4" ) ) {
+		if ( !token || strcasecmp( token, "gt4" ) ) {
 			error_string.sprintf( "%s not of type gt4", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -1657,6 +1657,7 @@ MyString *GT4Job::buildSubmitRSL()
 					// we can access an executable in the spool dir
 				local_executable = source;
 			}
+			free(source); source = NULL;
 		}
 		if ( local_executable.IsEmpty() ) {
 				// didn't find any executable in the spool directory,

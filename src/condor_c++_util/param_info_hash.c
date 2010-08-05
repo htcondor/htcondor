@@ -103,12 +103,12 @@ param_info_hash_dump_value(param_info_t* param_value, void* unused) {
 }
 
 void
-param_info_hash_dump(param_info_hash_t* param_info) {
+param_info_hash_dump(param_info_hash_t param_info) {
 	param_info_hash_iterate(param_info, &param_info_hash_dump_value, NULL);
 }
 
 void
-param_info_hash_iterate(param_info_hash_t* param_info, int (*callPerElement)
+param_info_hash_iterate(param_info_hash_t param_info, int (*callPerElement)
 			(param_info_t* /*value*/, void* /*user data*/), void* user_data) {
 	int i;
 	int stop = 0;

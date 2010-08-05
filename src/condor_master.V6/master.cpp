@@ -73,7 +73,7 @@ extern "C"
 
 // local function prototypes
 void	init_params();
-int		init_daemon_list();
+void	init_daemon_list();
 void	init_classad();
 void	init_firewall_exceptions();
 void	check_uid_for_privsep();
@@ -83,13 +83,14 @@ int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
 void	run_preen();
 void	usage(const char* );
-int		main_shutdown_graceful();
-int		main_shutdown_fast();
-int		main_config( bool is_full );
-int		agent_starter(ReliSock *);
-int		handle_agent_fetch_log(ReliSock *);
-int		admin_command_handler(Service *, int, Stream *);
-int		handle_subsys_command(int, Stream *);
+void	main_shutdown_graceful();
+void	main_shutdown_fast();
+void	invalidate_ads();
+void	main_config();
+int	agent_starter(ReliSock *);
+int	handle_agent_fetch_log(ReliSock *);
+int	admin_command_handler(Service *, int, Stream *);
+int	handle_subsys_command(int, Stream *);
 int     handle_shutdown_program( int cmd, Stream* stream );
 void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
@@ -219,7 +220,7 @@ DoCleanup(int,int,char*)
 }
 
 
-int
+void
 main_init( int argc, char* argv[] )
 {
     extern int runfor;
@@ -231,7 +232,7 @@ main_init( int argc, char* argv[] )
 	if ( argc == -1 ) {
 		NT_ServiceFlag = TRUE;
 		register_service();
-		return TRUE;
+		return;
 	}
 #endif
 
@@ -275,8 +276,9 @@ main_init( int argc, char* argv[] )
 		// Grab all parameters needed by the master.
 	init_params();
 		// param() for DAEMON_LIST and initialize our daemons object.
-	if ( init_daemon_list() < 0 ) {
-		EXCEPT( "Daemon list initialization failed" );
+	init_daemon_list();
+	if ( daemons.SetupControllers() < 0 ) {
+		EXCEPT( "Daemon initialization failed" );
 	}
 		// Lookup the paths to all the daemons we now care about.
 	daemons.InitParams();
@@ -296,9 +298,6 @@ main_init( int argc, char* argv[] )
 #endif
 
 		// Register admin commands
-	daemonCore->Register_Command( RECONFIG, "RECONFIG",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( RESTART, "RESTART",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
@@ -374,7 +373,6 @@ main_init( int argc, char* argv[] )
 		daemons.StartAllDaemons();
 	}
 	daemons.StartTimers();
-	return TRUE;
 }
 
 
@@ -390,9 +388,6 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	dprintf( D_FULLDEBUG, 
 			 "Got admin command (%d) and allowing it.\n", cmd );
 	switch( cmd ) {
-	case RECONFIG:
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
-		return TRUE;
 	case RESTART:
 		restart_everyone();
 		return TRUE;
@@ -467,7 +462,7 @@ agent_starter( ReliSock * s )
 
 	dprintf ( D_ALWAYS, "Starting agent '%s'\n", subsys );
 
-	if( stricmp(subsys, "fetch_log") == 0 ) {
+	if( strcasecmp(subsys, "fetch_log") == 0 ) {
 		free (subsys);
 		return handle_agent_fetch_log( stream );
 	}
@@ -739,13 +734,14 @@ init_params()
 }
 
 
-int
+void
 init_daemon_list()
 {
 	char	*daemon_name;
 	class daemon	*new_daemon;
 	StringList daemon_names, dc_daemon_names;
 
+	daemons.ordered_daemon_names.clearAll();
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
 
 	if( !dc_daemon_list ) {
@@ -797,16 +793,16 @@ init_daemon_list()
 	if( ha_list ) {
 			// Make MASTER_HA_LIST case insensitive by always converting
 			// what we get to uppercase.
-		StringList	ha_names;
+		StringList ha_names;
 		ha_list = strupr( ha_list );
 		ha_names.initializeFromString(ha_list);
-		free( ha_list );
 			// Tolerate a trailing comma in the list
 		ha_names.remove( "" );
+		daemons.ordered_daemon_names.create_union( ha_names, false );
 
 		ha_names.rewind();
 		while( (daemon_name = ha_names.next()) ) {
-			if(daemons.GetIndex(daemon_name) < 0) {
+			if(daemons.FindDaemon(daemon_name) == NULL) {
 				if( dc_daemon_names.contains(daemon_name) ) {
 					new_daemon = new class daemon(daemon_name, true, true );
 				} else {
@@ -855,10 +851,11 @@ init_daemon_list()
 			daemon_names.next();
 			daemon_names.insert( "SHARED_PORT" );
 		}
+		daemons.ordered_daemon_names.create_union( daemon_names, false );
 
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
-			if(daemons.GetIndex(daemon_name) < 0) {
+			if(daemons.FindDaemon(daemon_name) == NULL) {
 				if( dc_daemon_names.contains(daemon_name) ) {
 					new_daemon = new class daemon(daemon_name);
 				} else {
@@ -867,43 +864,12 @@ init_daemon_list()
 			}
 		}
 	} else {
+		daemons.ordered_daemon_names.create_union( dc_daemon_names, false );
 		for(int i = 0; default_daemon_list[i]; i++) {
 			new_daemon = new class daemon(default_daemon_list[i]);
 		}
 	}
 
-	return daemons.SetupControllers( );
-}
-
-
-void
-check_daemon_list()
-{
-	char	*daemon_name;
-	class daemon	*new_daemon;
-	StringList daemon_names;
-	char* daemon_list = param("DAEMON_LIST");
-	if( !daemon_list ) {
-			// Without a daemon list, there's no way it could be
-			// different than what we've got now.
-		return;
-	}
-
-		// Make DAEMON_LIST case insensitive by always converting what
-		// we get to uppercase.
-	daemon_list = strupr( daemon_list );
-
-	daemon_names.initializeFromString(daemon_list);
-	free( daemon_list );
-		// Tolerate a trailing comma in the list
-	daemon_names.remove( "" );
-
-	daemon_names.rewind();
-	while( (daemon_name = daemon_names.next()) ) {
-		if(daemons.GetIndex(daemon_name) < 0) {
-			new_daemon = new class daemon(daemon_name);
-		}
-	}
 }
 
 
@@ -963,14 +929,55 @@ lock_or_except( const char* file_name )
  ** Re read the config file, and send all the daemons a signal telling
  ** them to do so also.
  */
-int
-main_config( bool /* is_full */ )
+void
+main_config()
 {
+	StringList old_daemon_list;
+	char *list = daemons.ordered_daemon_names.print_to_string();
+	char *daemon_name;
+	class daemon	*new_daemon;
+	int new_daemons = 0;
+
+	if( list ) {
+		old_daemon_list.initializeFromString(list);
+		free(list);
+	}
+
 		// Re-read the config files and create a new classad
 	init_classad(); 
 
 		// Reset our config values
 	init_params();
+
+		// Reset the daemon list
+	init_daemon_list();
+
+		// Setup Controllers for new daemons
+	daemons.ordered_daemon_names.rewind();
+	while( ( daemon_name = daemons.ordered_daemon_names.next() ) ) {
+		if( !old_daemon_list.contains(daemon_name) ) {
+			new_daemon = daemons.FindDaemon(daemon_name);
+			if ( new_daemon == NULL || 
+			     new_daemon->SetupController() < 0 ) {
+				dprintf( D_ALWAYS,
+						"Setup for daemon %s failed\n",
+						new_daemon->daemon_name );
+			}
+			else {
+				++new_daemons;
+			}
+		}
+	}
+
+	// Remove daemons that should no longer be running
+	old_daemon_list.rewind();
+	while( (daemon_name = old_daemon_list.next()) ) {
+		if( !daemons.ordered_daemon_names.contains(daemon_name) ) {
+			if( NULL != daemons.FindDaemon(daemon_name) ) {
+				daemons.StopDaemon(daemon_name);
+			}
+		}
+	}
 
 		// Re-read the paths to our executables.  If any paths
 		// changed, the daemons will be marked as having a new
@@ -978,13 +985,19 @@ main_config( bool /* is_full */ )
 	daemons.InitParams();
 
 	if( StartDaemons ) {
-			// Restart any daemons who's executables are new or ones 
+			// Restart any daemons who's executables are new or ones
 			// that the path to the executable has changed.  
 		daemons.immediate_restart = TRUE;
 		daemons.CheckForNewExecutable();
 		daemons.immediate_restart = FALSE;
 			// Tell all the daemons that are running to reconfig.
 		daemons.ReconfigAllDaemons();
+
+		if( new_daemons > 0 ) {
+				// Start new daemons
+			daemons.StartAllDaemons();
+		}
+	
 	} else {
 		daemons.DaemonsOff();
 	}
@@ -994,15 +1007,16 @@ main_config( bool /* is_full */ )
 		// changed.
 	daemons.StartTimers();
 	daemons.UpdateCollector();
-	return TRUE;
 }
 
 /*
  ** Kill all daemons and go away.
  */
-int
+void
 main_shutdown_fast()
 {
+	invalidate_ads();
+	
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
@@ -1012,16 +1026,17 @@ main_shutdown_fast()
 
 	daemons.CancelRestartTimers();
 	daemons.StopFastAllDaemons();
-	return TRUE;
 }
 
 
 /*
  ** Cause job(s) to vacate, kill all daemons and go away.
  */
-int
+void
 main_shutdown_graceful()
 {
+	invalidate_ads();
+	
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
@@ -1031,7 +1046,28 @@ main_shutdown_graceful()
 
 	daemons.CancelRestartTimers();
 	daemons.StopAllDaemons();
-	return TRUE;
+}
+
+void
+invalidate_ads() {
+	ClassAd cmd_ad;
+	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
+	cmd_ad.SetTargetTypeName( MASTER_ADTYPE );
+	
+	MyString line;
+	MyString escaped_name;
+	char* default_name = MasterName;
+	if(!default_name) {
+		default_name = default_daemon_name();
+	}
+	
+	ClassAd::EscapeStringValue( default_name, escaped_name );
+	line.sprintf( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
+	cmd_ad.Assign( ATTR_NAME, default_name );
+	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
+	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
+	delete [] default_name;
 }
 
 time_t
@@ -1370,14 +1406,14 @@ void init_firewall_exceptions() {
 	}
 
 	// Insert daemons needed on a central manager
-	if ( (! (daemons.GetIndex("NEGOTIATOR") < 0) ) && negotiator_image_path ) {
+	if ( (daemons.FindDaemon("NEGOTIATOR") != NULL) && negotiator_image_path ) {
 		if ( !wfh.addTrusted(negotiator_image_path) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				negotiator_image_path);
 		}
 	}
-	if ( (! (daemons.GetIndex("COLLECTOR") < 0) ) && collector_image_path ) {
+	if ( (daemons.FindDaemon("COLLECTOR") != NULL) && collector_image_path ) {
 		if ( !wfh.addTrusted(collector_image_path) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
@@ -1386,7 +1422,7 @@ void init_firewall_exceptions() {
 	}
 
 	// Insert daemons needed on a submit node
-	if ( (! (daemons.GetIndex("SCHEDD") < 0) ) && schedd_image_path ) {
+	if ( (daemons.FindDaemon("SCHEDD") != NULL) && schedd_image_path ) {
 		// put in schedd
 		if ( !wfh.addTrusted(schedd_image_path) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
@@ -1423,7 +1459,7 @@ void init_firewall_exceptions() {
 	// Note we include the starter and friends seperately, since the
 	// starter could run on either execute or submit nodes (think 
 	// local universe jobs).
-	if ( (! (daemons.GetIndex("STARTD") < 0) ) && startd_image_path ) {
+	if ( (daemons.FindDaemon("STARTD") != NULL) && startd_image_path ) {
 		if ( !wfh.addTrusted(startd_image_path) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
@@ -1436,7 +1472,7 @@ void init_firewall_exceptions() {
 		}
 	}
 
-	if ( (! (daemons.GetIndex("QUILL") < 0) ) && quill_image_path ) {
+	if ( (daemons.FindDaemon("QUILL") != NULL) && quill_image_path ) {
 		if ( !wfh.addTrusted(quill_image_path) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
@@ -1444,7 +1480,7 @@ void init_firewall_exceptions() {
 		}
 	}
 
-	if ( (! (daemons.GetIndex("DBMSD") < 0) ) && dbmsd_image_path ) {
+	if ( (daemons.FindDaemon("DBMSD") != NULL) && dbmsd_image_path ) {
 		if ( !wfh.addTrusted(dbmsd_image_path) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
@@ -1460,7 +1496,7 @@ void init_firewall_exceptions() {
 		}
 	}
 
-	if ( (! (daemons.GetIndex("CREDD") < 0) ) && credd_image_path ) {
+	if ( (daemons.FindDaemon("CREDD") != NULL) && credd_image_path ) {
 		if ( !wfh.addTrusted(credd_image_path) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",

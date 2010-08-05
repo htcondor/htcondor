@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __CLASSAD_DISTRIBUTION_H__
-#define __CLASSAD_DISTRIBUTION_H__
+#ifndef __CLASSAD_CLASSAD_DISTRIBUTION_H__
+#define __CLASSAD_CLASSAD_DISTRIBUTION_H__
 
 #include "classad/common.h"
 #include "classad/classad.h"

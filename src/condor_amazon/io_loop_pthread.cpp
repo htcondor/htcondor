@@ -25,7 +25,6 @@
 
 #include "condor_debug.h"
 #include "string_list.h"
-#include "MyString.h"
 #include "HashTable.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
@@ -222,13 +221,10 @@ main( int argc, char ** const argv )
 #endif
 
 	// get env
-	MyString debug_string = getenv("DebugLevel");
-	if( debug_string.IsEmpty() == false ) {
-		set_debug_flags(debug_string.Value());
+	const char *debug_string = getenv("DebugLevel");
+	if( debug_string && *debug_string ) {
+		set_debug_flags(debug_string);
 	}
-
-	// parse arguments
-	MyString log_file;
 
 	int min_workers = MIN_NUMBER_WORKERS;
 	int max_workers = -1;
@@ -238,18 +234,18 @@ main( int argc, char ** const argv )
 		switch(c) {
 			case 'f':
 				// Log file
-				log_file = my_optarg;
-				if( !set_gahp_log_file(log_file.Value()) ) {
-					fprintf(stderr, "Can't create the log file(%s)\n", 
-							log_file.Value());
-					exit(1);
+				if ( my_optarg ) {
+					if( !set_gahp_log_file(my_optarg) ) {
+						fprintf(stderr, "Can't create the log file(%s)\n", 
+								my_optarg);
+						exit(1);
+					}
 				}
 				break;
 			case 'd':
 				// Debug Level
-				debug_string = my_optarg;
-				if( debug_string.IsEmpty() == false ) {
-					set_debug_flags(debug_string.Value());
+				if( my_optarg && *my_optarg ) {
+					set_debug_flags(my_optarg);
 				}
 
 				break;
@@ -274,18 +270,13 @@ main( int argc, char ** const argv )
 
 	dprintf(D_FULLDEBUG, "Welcome to the AMAZON-GAHP\n");
 
-	//Try to read env for amazon_http_proxy
-	MyString amazon_proxy_server = getenv(AMAZON_HTTP_PROXY);
-	if( amazon_proxy_server.IsEmpty() == false ) {
-		set_amazon_proxy_server(amazon_proxy_server.Value());
-		dprintf(D_ALWAYS, "Using http proxy = %s\n", amazon_proxy_server.Value());
-	}
+	const char *buff;
 
-	// Try to get amazon ec2 url
-	MyString ec2_url = getenv(AMAZON_EC2_URL);
-	if( ec2_url.IsEmpty() == false ) {
-		set_ec2_url(ec2_url.Value());
-		dprintf(D_ALWAYS, "Using ec2 url = %s\n", get_ec2_url());
+	//Try to read env for amazon_http_proxy
+	buff = getenv(AMAZON_HTTP_PROXY);
+	if( buff && *buff ) {
+		set_amazon_proxy_server(buff);
+		dprintf(D_ALWAYS, "Using http proxy = %s\n", buff);
 	}
 
 	// Register all amazon commands
@@ -474,10 +465,10 @@ IOProcess::startUp(int stdin_pipe, int min_workers, int max_workers)
 int
 IOProcess::stdinPipeHandler() 
 {
-	MyString* line;
+	std::string* line;
 	while ((line = m_stdin_buffer.GetNextLine()) != NULL) {
 
-		const char *command = line->Value();
+		const char *command = line->c_str();
 
 		dprintf (D_FULLDEBUG, "got stdin: %s\n", command);
 
@@ -794,7 +785,7 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 
 	if( worker ) { 
 		dprintf (D_FULLDEBUG, "Sending %s to worker %d\n", 
-				request->m_raw_cmd.Value(), worker->m_id);
+				request->m_raw_cmd.c_str(), worker->m_id);
 
 //		pthread_mutex_lock(&worker->m_mutex);
 
@@ -811,7 +802,7 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 		// There is no available worker.
 		// So we will insert this request to global pending request list
 		dprintf (D_FULLDEBUG, "Appending %s to global pending request list\n", 
-				request->m_raw_cmd.Value());
+				request->m_raw_cmd.c_str());
 
 //		pthread_mutex_lock(&m_pending_req_list_mutex);
 		m_pending_req_list.Append(request);
@@ -867,7 +858,7 @@ Request* popRequest(Worker* worker)
 				new_request->m_worker = worker;
 
 				dprintf (D_FULLDEBUG, "Assigning %s to worker %d\n", 
-						new_request->m_raw_cmd.Value(), worker->m_id);
+						new_request->m_raw_cmd.c_str(), worker->m_id);
 			}
 		}
 	}
@@ -878,12 +869,12 @@ Request* popRequest(Worker* worker)
 static void
 enqueue_result(Request* request)
 {
-	if( !request || request->m_result.IsEmpty() 
+	if( !request || request->m_result.empty() 
 			|| !ioprocess ) {
 		return;
 	}
 
-	ioprocess->addResult(request->m_result.Value());
+	ioprocess->addResult(request->m_result.c_str());
 }
 
 static bool
@@ -908,7 +899,7 @@ handle_gahp_command(Request* request)
 
 	bool result = executeWorkerFunc(argv[0], argv, argc, request->m_result);
 
-	if( request->m_result.IsEmpty() == false ) {
+	if( request->m_result.empty() == false ) {
 		enqueue_result(request);
 	}
 
@@ -1072,11 +1063,11 @@ static void *worker_function( void *ptr )
 
 		if(!handle_gahp_command(new_request) ) {
 			dprintf(D_ALWAYS, "ERROR (io_loop) processing %s\n", 
-					new_request->m_raw_cmd.Value());
+					new_request->m_raw_cmd.c_str());
 		}else {
 			dprintf(D_FULLDEBUG, "CMD(\"%s\") is done with result %s", 
-					new_request->m_raw_cmd.Value(),
-					new_request->m_result.Value());
+					new_request->m_raw_cmd.c_str(),
+					new_request->m_result.c_str());
 		}
 
 		// Now we processed one request 

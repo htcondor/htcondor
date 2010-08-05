@@ -2,9 +2,7 @@ type = jobs
 
 ports = dynamic
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 localpostsrc = x_amazon_configpostsrc
 nameschedd = parent;
-condordaemons = master,collector,schedd
+daemon_list = master,collector,schedd
 slots	= 1

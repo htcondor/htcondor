@@ -101,29 +101,26 @@ void Reconfig()
 	}
 }
 
-int
-main_config( bool is_full )
+void
+main_config()
 {
 	Reconfig();
-	return TRUE;
 }
 
-int 
+void 
 main_shutdown_fast()
 {
 	vmprintf(D_ALWAYS, "Received Signal for shutdown fast\n");
 	vm_cleanup();
 	DC_Exit(0);
-	return TRUE; // to satisfy c++
 }
 
-int 
+void 
 main_shutdown_graceful()
 {
 	vmprintf(D_ALWAYS, "Received Signal for shutdown gracefully\n");
 	vm_cleanup();
 	DC_Exit(0);
-	return TRUE; // to satisfy c++
 }
 
 void 
@@ -234,7 +231,7 @@ usage( char *name)
 
 }
 
-int main_init(int argc, char *argv[])
+void main_init(int argc, char *argv[])
 {
 	init_uids();
 
@@ -511,7 +508,5 @@ int main_init(int argc, char *argv[])
 	vmgahp->startUp();
 
 	write_to_daemoncore_pipe("%s\n", vmgahp_version);
-
-	return TRUE;
 }
 

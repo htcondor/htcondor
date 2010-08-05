@@ -78,7 +78,7 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 	int input_length = strlen(input);
 
 		// safe to assume output length is <= input_length
-	*output = (unsigned char *)malloc(input_length);
+	*output = (unsigned char *)malloc(input_length + 1);
 	ASSERT( *output );
 	memset(*output, 0, input_length);
 
@@ -494,7 +494,7 @@ process_request(const ClassAd *inputAd)
 
 //-------------------------------------------------------------
 
-int main_init(int  argc , char *  argv  [])
+void main_init(int  argc , char *  argv  [])
 {
 	char *testfile = NULL;
 	ClassAd *inputAd = NULL;
@@ -539,36 +539,30 @@ int main_init(int  argc , char *  argv  [])
 		resultAd->dPrint(D_ALWAYS);
 		DC_Exit( 0 );
 	}
-
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool /* is_full */ )
+void 
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

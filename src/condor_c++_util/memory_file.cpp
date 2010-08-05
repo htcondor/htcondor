@@ -107,6 +107,9 @@ off_t memory_file::seek( off_t offset, int whence )
 		case SEEK_END:
 		newpointer = filesize+offset;
 		break;
+		default:
+		newpointer = -1;
+		break;
 	}
 
 	if( newpointer<0 ) {

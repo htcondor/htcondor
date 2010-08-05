@@ -1202,13 +1202,15 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, sys_time );
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, user_time );
 		ad->Assign(ATTR_IMAGE_SIZE, (int)0);
+		ad->Assign(ATTR_RESIDENT_SET_SIZE, (int)0);
 	}else {
 		// Update usage of process for VM
 		long sys_time = 0;
 		long user_time = 0;
 		unsigned long max_image = 0;
+        unsigned long rss = 0;
 
-		getUsageOfVM(sys_time, user_time, max_image);
+		getUsageOfVM(sys_time, user_time, max_image, rss);
 		
 		// Added to update CPU Usage of VM in ESX
 		if ( (long)m_vm_cputime > user_time ) {
@@ -1218,7 +1220,10 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		// Publish it into the ad.
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (float)sys_time );
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (float)user_time );
+
 		buf.sprintf("%s=%lu", ATTR_IMAGE_SIZE, max_image );
+		ad->InsertOrUpdate( buf.Value());
+		buf.sprintf("%s=%lu", ATTR_RESIDENT_SET_SIZE, rss );
 		ad->InsertOrUpdate( buf.Value());
 	}
 
@@ -1292,7 +1297,7 @@ VMProc::reportErrorToStartd()
 
 	ssock.code(buffer);
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
 		free(buffer);
 		return false;
@@ -1349,7 +1354,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	ASSERT(vm_value);
 	ssock.code(vm_value);
 
-	if( !ssock.eom() ) {
+	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
 		free(starter_pid);
 		free(vm_value);
@@ -1466,11 +1471,14 @@ VMProc::updateUsageOfVM()
 }
 
 void
-VMProc::getUsageOfVM(long &sys_time, long& user_time, unsigned long &max_image)
+VMProc::getUsageOfVM(long &sys_time, long& user_time, unsigned long &max_image, unsigned long& rss)
 {
 	updateUsageOfVM();
 	sys_time = m_vm_exited_pinfo.sys_time + m_vm_alive_pinfo.sys_time;
 	user_time = m_vm_exited_pinfo.user_time + m_vm_alive_pinfo.user_time;
+
+	rss = (m_vm_exited_pinfo.rssize > m_vm_alive_pinfo.rssize) ? 
+		   m_vm_exited_pinfo.rssize : m_vm_alive_pinfo.rssize;
 
 #if defined(WIN32)
 	max_image = (m_vm_exited_pinfo.rssize > m_vm_alive_pinfo.rssize) ? 

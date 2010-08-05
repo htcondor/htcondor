@@ -287,6 +287,8 @@ class WriteUserLog
 					   bool is_header_event,
 					   ClassAd *ad);
 
+	void writeJobAdInfoEvent(char const *attrsToWrite, ULogEvent *event, ClassAd *param_jobad, bool is_global_event );
+
 	bool doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
 	void GenerateGlobalId( MyString &id );
 
@@ -347,9 +349,6 @@ class WriteUserLog
 	/** Initialized?                 */  bool       m_initialized;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 };
-
-// For backward compatibility, define UserLog
-typedef WriteUserLog UserLog;
 
 #endif /* __cplusplus */
 

@@ -330,14 +330,22 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		}
 
-		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-		}
 		free( (char *)attr_value );
 		free( (char *)attr_name );
-		assert( syscall_sock->end_of_message() );;
+
+		if( flags & SetAttribute_NoAck ) {
+			if( rval < 0 ) {
+				return -1;
+			}
+		}
+		else {
+			syscall_sock->encode();
+			assert( syscall_sock->code(rval) );
+			if( rval < 0 ) {
+				assert( syscall_sock->code(terrno) );
+			}
+			assert( syscall_sock->end_of_message() );
+		}
 		return 0;
 	}
 
@@ -656,7 +664,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		ClassAd *ad;
+		ClassAd *ad = NULL;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -665,11 +673,30 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->end_of_message() );;
 
+		errno = 0;
+		// Only fetch the jobad for legal values of cluster/proc
+		if ( cluster_id >= 1 && proc_id >= 0 ) {
+			// expand $$() macros in the jobad as required by GridManager.
 			// The GridManager depends on the fact that the following call
 			// expands $$ and saves the expansions to disk in case of
 			// restart.
-		errno = 0;
-		ad = GetJobAd( cluster_id, proc_id, true, true );
+			ad = GetJobAd( cluster_id, proc_id, true, true );
+			// note : since we expanded the ad, ad is now a deep
+			// copy of the ad in memory, so we must delete it below.
+		}
+		if ( cluster_id >= 1 && proc_id == -1 ) {
+			// allow cluster ad to be queried as required by preen, but
+			// do NOT ask to expand $$() macros in a cluster ad!
+			ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
+			// since we did not expand, ad is not a deep copy.
+			// thus we deep copy it now, since the below code assumes
+			// "ad" is a deep copy and therefore below we can set
+			// private attrs, delete it, etc, without messing up 
+			// the schedd's canonical copy.
+			if ( cluster_ad ) {
+				ad = new ClassAd(*cluster_ad);			
+			}
+		}
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );

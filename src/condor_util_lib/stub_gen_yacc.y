@@ -1685,6 +1685,8 @@ output_switch( struct node *n )
 			printf("\tif( do_local!=do_local_two ) {\n");
 			printf("\t\terrno = EXDEV;\n");
 			printf("\t\t_condor_signals_enable( condor_omask );\n");
+			printf("\t\tfree( newname);\n");
+			printf("\t\tfree( newname2);\n");
 			printf("\t\treturn -1;\n");
 			printf("\t}\n");
 		}

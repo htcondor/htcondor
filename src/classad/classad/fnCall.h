@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __FN_CALL_H__
-#define __FN_CALL_H__
+#ifndef __CLASSAD_FN_CALL_H__
+#define __CLASSAD_FN_CALL_H__
 
 #include <map>
 #include <vector>
@@ -208,4 +208,4 @@ class FunctionCall : public ExprTree
 
 END_NAMESPACE // classad
 
-#endif//__FN_CALL_H__
+#endif//__CLASSAD_FN_CALL_H__

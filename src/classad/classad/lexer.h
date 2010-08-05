@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __LEXER_H__
-#define __LEXER_H__
+#ifndef __CLASSAD_LEXER_H__
+#define __CLASSAD_LEXER_H__
 
 #include "classad/common.h"
 #include "classad/value.h"
@@ -204,7 +204,7 @@ class Lexer
 		std::string lexBuffer;					    // the buffer itselfw
 
 		// miscellaneous functions
-		static char *strLexToken (int);				// string rep'n of token
+		static const char *strLexToken (int);		// string rep'n of token
 
 		// set debug flag 
 		void SetDebug( bool d ) { debug = d; }
@@ -251,4 +251,4 @@ class Lexer
 
 END_NAMESPACE // classad
 
-#endif //__LEXER_H__
+#endif //__CLASSAD_LEXER_H__

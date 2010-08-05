@@ -110,7 +110,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		sockFailed( sock );
 		return false;
 	}
-		// eom() is done by caller
+		// end_of_message() is done by caller
 
 	return true;
 }
@@ -145,7 +145,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	} else {
 		dprintf( failureDebugLevel(), "Unknown reply from startd when requesting claim %s\n",description());
 	}
-		// eom() is done by caller
+		// end_of_message() is done by caller
 
 	return true;
 }
@@ -236,7 +236,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		return false;
 	}
-	if( ! reli_sock.eom() ) {
+	if( ! reli_sock.end_of_message() ) {
 		MyString err = "DCStartd::deactivateClaim: ";
 		err += "Failed to send EOM to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
@@ -245,7 +245,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 
 	reli_sock.decode();
 	ClassAd response_ad;
-	if( !response_ad.initFromStream(reli_sock) || !reli_sock.eom() ) {
+	if( !response_ad.initFromStream(reli_sock) || !reli_sock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "DCStartd::deactivateClaim: failed to read response ad.\n");
 			// The response ad is not critical and is expected to be missing
 			// if the startd is from before 7.0.5.
@@ -301,7 +301,6 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		err += "ACTIVATE_CLAIM";
 		err += " to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
-		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if( ! tmp->put_secret(claim_id) ) {
@@ -596,7 +595,6 @@ DCStartd::delegateX509Proxy( const char* proxy )
 		               "DELEGATE_GSI_CRED_STARTD "
 		               "to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
-		delete tmp;
 		return CONDOR_ERROR;
 	}
 
@@ -739,7 +737,7 @@ DCStartd::vacateClaim( const char* name_vacate )
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		return false;
 	}
-	if( ! reli_sock.eom() ) {
+	if( ! reli_sock.end_of_message() ) {
 		MyString err = "DCStartd::vacateClaim: ";
 		err += "Failed to send EOM to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
@@ -788,7 +786,7 @@ DCStartd::checkpointJob( const char* name_ckpt )
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		return false;
 	}
-	if( ! reli_sock.eom() ) {
+	if( ! reli_sock.end_of_message() ) {
 		MyString err = "DCStartd::checkpointJob: ";
 		err += "Failed to send EOM to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );

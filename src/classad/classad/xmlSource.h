@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __XMLSOURCE_H__
-#define __XMLSOURCE_H__
+#ifndef __CLASSAD_XMLSOURCE_H__
+#define __CLASSAD_XMLSOURCE_H__
 
 #include "classad/xmlLexer.h"
 
@@ -65,4 +65,4 @@ class ClassAdXMLParser
 
 END_NAMESPACE
 
-#endif//__SOURCE_H__
+#endif//__CLASSAD_XMLSOURCE_H__

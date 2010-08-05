@@ -26,7 +26,7 @@
 #include "my_hostname.h"
 #include "env.h"
 
-extern int main_shutdown_graceful();
+extern void main_shutdown_graceful();
 
 MPIMasterProc::MPIMasterProc( ClassAd * jobAd ) : MPIComradeProc( jobAd )
 {

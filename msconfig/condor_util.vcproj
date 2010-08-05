@@ -184,6 +184,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_util_lib\log_rotate.c"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_util_lib\log_rotate.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_util_lib\dprintf.c"
 			>
 		</File>
@@ -333,11 +341,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_util_lib\strcmp_until.c"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_util_lib\string_funcs.c"
+			RelativePath="..\src\condor_util_lib\strcasestr.c"
 			>
 		</File>
 		<File

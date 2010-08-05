@@ -117,7 +117,7 @@ char *strcpy();
 #endif
 
 #include "write_user_log.h"
-UserLog ULog;
+WriteUserLog ULog;
 
 char * My_Filesystem_Domain;
 char * My_UID_Domain;
@@ -264,7 +264,7 @@ main(int argc, char *argv[] )
 	int		i;
 
 	myDistro->Init( argc, argv );
-	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
+	if( argc == 2 && strncasecmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();
 		exit( 0 );
 	}
@@ -1052,6 +1052,19 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							 ATTR_LAST_VACATE_TIME, time(0) );
 		}
 
+		if( ExitReason == JOB_CKPTED || LastCkptTime > LastRestartTime ) {
+			int uncommitted_suspension_time = 0;
+			JobAd->LookupInteger(ATTR_UNCOMMITTED_SUSPENSION_TIME, uncommitted_suspension_time);
+			if( uncommitted_suspension_time > 0 ) {
+				int committed_suspension_time = 0;
+				GetAttributeInt(Proc->id.cluster, Proc->id.proc,
+								ATTR_COMMITTED_SUSPENSION_TIME, &committed_suspension_time);
+				committed_suspension_time += uncommitted_suspension_time;
+				SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+								ATTR_COMMITTED_SUSPENSION_TIME, committed_suspension_time);
+			}
+		}
+
 		// if we had checkpointed, then save all of these attributes as well.
 		if (LastCkptTime > LastRestartTime) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
@@ -1290,10 +1303,12 @@ start_job( char *cluster_id, char *proc_id )
 		tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
 		snprintf( CkptName, MAXPATHLEN, "%s", tmp );
 		sprintf( TmpCkptName, "%s.tmp", CkptName );
+		free(tmp); tmp = NULL;
 	}
 
 	tmp = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
 	snprintf( ICkptName, MAXPATHLEN, "%s", tmp );
+	free(tmp); tmp = NULL;
 
 	strcpy( RCkptName, CkptName );
 }
@@ -1606,7 +1621,8 @@ void RemoveNewShadowDroppings(char *cluster, char *proc)
 	strcpy(names[0], ckpt_name);
 	strcpy(names[1], ckpt_name);
 	strcat(names[1], ".tmp");
-	
+	free(ckpt_name); ckpt_name = NULL;
+
 	for (j = 0; j < 2; j++)
 	{
 		if (stat(names[j], &buf) == 0) {

@@ -353,9 +353,6 @@ elif test $os = "Linux" ; then
   elif test -f "/etc/SuSE-release" ; then
     _suse_vers=`cat /etc/SuSE-release | grep VERSION | $AWK '{print $3}'`
     case "$_suse_vers" in
-     "8.1" )
-       _cv_linux_distro="SLES81"
-       ;;
      "9" )
        _cv_linux_distro="SLES9"
        ;;
@@ -399,8 +396,10 @@ elif test $os = "SunOS" ; then
   _cv_opsys="SOLARIS"
   if test $arch = "sun4m" -o $arch = "sun4u" ; then
     _cv_arch="SUN4X"
+  elif test $arch = "i86pc" ; then
+    _cv_arch="X86_64"
   else
-    AC_MSG_ERROR([Condor only supports Sparc Solaris (not $arch)])
+    AC_MSG_ERROR([Condor only supports SPARC and X86/64 Solaris (not $arch)])
   fi
   if test "$osrelease" = "5.6" ; then
     _cv_opsys_vers="SOLARIS26"
@@ -414,6 +413,16 @@ elif test $os = "SunOS" ; then
   elif test "$osrelease" = "5.9" ; then
     _cv_opsys_vers="SOLARIS29"
     _cv_sysname="sun4x_59"
+  elif test "$osrelease" = "5.10" ; then
+    _cv_opsys_vers="SOLARIS10"
+    _cv_sysname="sun4x_solaris10"
+  elif test "$osrelease" = "5.11" ; then
+    _cv_opsys_vers="SOLARIS11"
+    if test "$arch" = "i86pc" ; then
+      _cv_sysname="x86_64_solaris11"
+    else
+      _cv_sysname="sun4x_solaris11"
+    fi
   fi
 
   # now figure out the kernel revision. Under solaris this will have
@@ -573,6 +582,9 @@ if test "$KERNEL"  != "" ; then
   AC_MSG_NOTICE([Using kernel version \"$OSVER\" from command line])
   _cv_kernel_rev="$KERNEL"
 fi
+
+echo "opsys_ver:${_cv_opsys_vers}"
+echo "sysname:${_cv_sysname}"
 
 if test "$LIBC" != "" ; then
   AC_MSG_NOTICE([Using libc \"$LIBC\" from command line])
@@ -1170,7 +1182,7 @@ else
   rm -f static_test.c static_test.o static_test > /dev/null 2>&1
   if test "x$gcc_static_ld_flag" = "x" ; then
     msg="can not find appropriate flags for $gcc_ld_prog!"
-    if test $os = "SunOS" ; then
+    if test $os = "SunOS" && test "$arch" != "i86pc" ; then
       # on Solaris, this is fatal, since we depend on this info
       AC_MSG_ERROR([$msg])
     else
@@ -1660,6 +1672,8 @@ fi
 case "$_cv_opsys_vers" in
   SOLARIS28 ) AC_DEFINE([Solaris28], [Solaris28], [Define if on Solaris28]) ;;
   SOLARIS29 ) AC_DEFINE([Solaris29], [Solaris29], [Define if on Solaris29]) ;;
+  SOLARIS10 ) AC_DEFINE([Solaris10], [Solaris10], [Define if on Solaris10]) ;;
+  SOLARIS11 ) AC_DEFINE([Solaris11], [Solaris11], [Define if on Solaris11]) ;;
 esac
 
 # Old FREEBSD*.cf files contained -DCONDOR_FREEBSD*=CONDOR_FREEBSD*,
@@ -2382,6 +2396,8 @@ AC_CHECK_HEADERS([net/if.h],[],[],[
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
+AC_CHECK_HEADERS([procfs.h])
+AC_CHECK_HEADERS([sys/procfs.h])
 AC_CHECK_HEADERS([inttypes.h])
 AC_CHECK_HEADERS([os_types.h])
 AC_CHECK_HEADERS([sys/syscall.h])
@@ -2998,7 +3014,9 @@ fi
 
 CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
-               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
+               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal],
+	       			     [k5crypto krb5_c_encrypt],
+				     [com_err error_message]]))
 
 CHECK_EXTERNAL([openssl], [0.9.8h-p2], [soft],
                [use OpenSSL (provides authentication and encryption support)],
@@ -3011,7 +3029,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[5.0.0-p1], [soft])
+  CHECK_EXTERNAL([globus],[5.0.1], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -3032,7 +3050,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [1.0.6], [soft],
+CHECK_EXTERNAL([classads], [1.0.7], [soft],
                [use new ClassAds (provides -better-analyze and more)],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]], [classads]))
@@ -3053,7 +3071,7 @@ else
 fi
 
 if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
-  CHECK_EXTERNAL([cream],[1.10.1-p5], [soft])
+  CHECK_EXTERNAL([cream],[1.10.1-p6], [soft])
 fi
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
@@ -3075,7 +3093,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p10], [soft])
+CHECK_EXTERNAL([blahp], [1.16.0], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -3107,15 +3125,9 @@ fi
 # Figure out which postgresql we need.
 
 if test "x$enable_quill" = xyes; then
-if test "$_cv_opsys" = "AIX" ; then
-  CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
-                 [use PostgreSQL (provides Quill and other support)],
-                 MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
-else
-  CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
-                 [use PostgreSQL (provides Quill and other support)],
-                 MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
-fi
+CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
+               [use PostgreSQL (provides Quill and other support)],
+               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
 fi
 AC_MSG_CHECKING([postgresql])
 AC_MSG_RESULT([$_cv_ext_postgresql_version])
@@ -3187,7 +3199,7 @@ CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
 # Only build hadoop external if hdfs is enabled
 AS_IF([test "x$enable_hdfs" = xyes], 
-  [CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft])])
+  [CHECK_EXTERNAL([hadoop],[0.20.2],[soft])])
 
 if test "x$_cv_opsys" = "xLINUX" ; then
   CHECK_EXTERNAL([libxml2],[2.7.3],[soft],

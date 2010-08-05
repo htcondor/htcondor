@@ -122,10 +122,6 @@
 #	define WCOREFLG WCOREFLAG
 #endif
 
-#ifndef WORD_BIT
-#	define WORD_BIT 32
-#endif 
-
 #ifndef _POSIX_PATH_MAX
 #	define _POSIX_PATH_MAX 255
 #endif
@@ -180,9 +176,6 @@
 #if !defined(Darwin)
 #include <sys/poll.h>
 #endif
-
-#define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
-#define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
 
 /* select() on all our platforms takes an fd_set pointer, so we can
    just define this here for everyone.  We don't really need it

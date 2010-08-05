@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include <math.h>
 #include <float.h>
+#include <set>;
 #include "condor_state.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -62,9 +63,24 @@ typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
 MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
-//added by ameet - dirty hack - needs to be removed soon!!!
-//#include "../condor_c++_util/queuedbmanager.h"
-//QueueDBManager queueDBManager;
+class NegotiationCycleStats
+{
+public:
+	NegotiationCycleStats();
+	typedef std::set<std::string>::value_type StringSetType;
+
+	void SubmitterOutOfTime( StringSetType const &submitter );
+	void SubmitterFailed( StringSetType const &submitter );
+	void SubmitterActive( StringSetType const &submitter );
+
+	time_t start_time;
+	int duration;
+	std::set<std::string> submitters_out_of_time;
+	std::set<std::string> submitters_failed;
+	std::set<std::string> active_submitters;
+	int matches;
+	int rejections;
+};
 
 static MyString MachineAdID(ClassAd * ad)
 {
@@ -130,10 +146,11 @@ Matchmaker ()
 
 	groupQuotasHash = NULL;
 
-	strcpy(RejectsTable, "rejects");
-	strcpy(MatchesTable, "matches");
-
 	prevLHF = 0;
+	Collectors = 0;
+
+	memset(negotiation_cycle_stats,0,sizeof(negotiation_cycle_stats));
+	num_negotiation_cycle_stats = 0;
 }
 
 
@@ -161,6 +178,12 @@ Matchmaker::
 	if (publicAd) delete publicAd;
     if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
+	if (stashedAds) delete stashedAds;
+
+	int i;
+	for(i=0;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
+		delete negotiation_cycle_stats[i];
+	}
 }
 
 
@@ -425,6 +448,9 @@ reinitialize ()
 		}
         free (tmp);
 	}
+
+	num_negotiation_cycle_stats = param_integer("NEGOTIATION_CYCLE_STATS_LENGTH",3,0,MAX_NEGOTIATION_CYCLE_STATS);
+	ASSERT( num_negotiation_cycle_stats <= MAX_NEGOTIATION_CYCLE_STATS );
 
 	if( first_time ) {
 		first_time = false;
@@ -882,6 +908,8 @@ negotiationTime ()
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
+	time_t start_time = time(NULL);
+
 	GotRescheduleCmd=false;  // Reset the reschedule cmd flag
 
 	// We need to nuke our MatchList from the previous negotiation cycle,
@@ -909,6 +937,11 @@ negotiationTime ()
 		scheddAds.Close();
 		return;
 	}
+
+		// allocate stat object here, now that we know we are not going
+		// to abort the cycle
+	StartNewNegotiationCycleStat();
+	negotiation_cycle_stats[0]->start_time = start_time;
 
 	// Save this for future use.
 	// This _must_ come before trimming the startd ads.
@@ -1325,6 +1358,8 @@ negotiationTime ()
 
 	completedLastCycleTime = time(NULL);
 
+	negotiation_cycle_stats[0]->duration = time(NULL) - negotiation_cycle_stats[0]->start_time;
+
 	ClassAd *tmp;
 	startdAds.Open();
 	while ( (tmp = startdAds.Next()) ) {
@@ -1343,6 +1378,7 @@ SimpleGroupEntry()
 {
 	groupName = NULL;
 	prio = 0;
+	usage = 0.0f;
 	maxAllowed = (float) INT_MAX;
 }
 
@@ -1561,6 +1597,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				dprintf(D_ALWAYS,
 					"  %d seconds spent, max allowed %d\n ",
 					totalTime, MaxTimePerSubmitter);
+				negotiation_cycle_stats[0]->SubmitterOutOfTime( scheddName.Value() );
 				result = MM_DONE;
 			} else {
 				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
@@ -1579,6 +1616,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 								  startdAds, claimIds, 
 								  scheddVersion, ignore_schedd_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
+					negotiation_cycle_stats[0]->SubmitterActive( scheddName.Value() );
 					updateNegCycleEndTime(startTime, schedd);
 
 				}
@@ -1612,6 +1650,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					dprintf(D_ALWAYS,"  Error: Ignoring submitter for this cycle\n" );
 					sockCache->invalidateSock( scheddAddr.Value() );
 					scheddAds.Remove( schedd );
+					negotiation_cycle_stats[0]->SubmitterFailed( scheddName.Value() );
 			}
 		}
 		scheddAds.Close();
@@ -2052,6 +2091,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 	numMatched = 0;
 
+	MyString submitter_tag;
+	int negotiate_cmd = NEGOTIATE; // 7.5.4+
+	if( !scheddAd->LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
+			// schedd must be older than 7.5.4
+		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
+	}
+
 	// Because of GCB, we may end up contacting a different
 	// address than scheddAddr!  This is used for logging (to identify
 	// the schedd) and to uniquely identify the host in the socketCache.
@@ -2081,8 +2127,8 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			dprintf( D_ALWAYS, "    Failed to connect to %s\n", schedd_id.Value() );
 			return MM_ERROR;
 		}
-		if( ! schedd.startCommand(NEGOTIATE_WITH_SIGATTRS, sock, NegotiatorTimeout) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE_WITH_SIGATTRS to %s\n",
+		if( ! schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
 					 schedd_id.Value() );
 			delete sock;
 			return MM_ERROR;
@@ -2095,34 +2141,50 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			// this address is already in our socket cache.  since
 			// we've already got a TCP connection, we do *NOT* want to
 			// use a Daemon::startCommand() to create a new security
-			// session, we just want to encode the NEGOTIATE_WITH_SIGATTRS
+			// session, we just want to encode the command
 			// int on the socket...
 		sock->encode();
-		if( ! sock->put(NEGOTIATE_WITH_SIGATTRS) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE_WITH_SIGATTRS to %s\n",
+		if( ! sock->put(negotiate_cmd) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
 					 schedd_id.Value() );
 			sockCache->invalidateSock( scheddAddr.Value() );
 			return MM_ERROR;
 		}
 	}
 
-	// 1.  send NEGOTIATE_WITH_SIGATTRS command, followed by the
-	//     scheddName (user@uiddomain)
 	sock->encode();
-	if (!sock->put(scheddName))
-	{
-		dprintf (D_ALWAYS, "    Failed to send scheddName to %s\n",
-			schedd_id.Value() );
-		sockCache->invalidateSock(scheddAddr.Value());
-		return MM_ERROR;
+	if( negotiate_cmd == NEGOTIATE ) {
+		ClassAd negotiate_ad;
+		negotiate_ad.Assign(ATTR_OWNER,scheddName);
+		negotiate_ad.Assign(ATTR_AUTO_CLUSTER_ATTRS,job_attr_references ? job_attr_references : "");
+		negotiate_ad.Assign(ATTR_SUBMITTER_TAG,submitter_tag.Value());
+		if( !negotiate_ad.put( *sock ) ) {
+			dprintf (D_ALWAYS, "    Failed to send negotiation header to %s\n",
+					 schedd_id.Value() );
+			sockCache->invalidateSock(scheddAddr.Value());
+			return MM_ERROR;
+		}
 	}
-	// send the significant attributes
-	if (!sock->put(job_attr_references)) 
-	{
-		dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
-				schedd_id.Value() );
-		sockCache->invalidateSock(scheddAddr.Value());
-		return MM_ERROR;
+	else if( negotiate_cmd == NEGOTIATE_WITH_SIGATTRS ) {
+			// old protocol prior to 7.5.4
+		if (!sock->put(scheddName))
+		{
+			dprintf (D_ALWAYS, "    Failed to send scheddName to %s\n",
+					 schedd_id.Value() );
+			sockCache->invalidateSock(scheddAddr.Value());
+			return MM_ERROR;
+		}
+			// send the significant attributes
+		if (!sock->put(job_attr_references)) 
+		{
+			dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
+					 schedd_id.Value() );
+			sockCache->invalidateSock(scheddAddr.Value());
+			return MM_ERROR;
+		}
+	}
+	else {
+		EXCEPT("Unexpected negotiate_cmd=%d\n",negotiate_cmd);
 	}
 	if (!sock->end_of_message())
 	{
@@ -2280,25 +2342,12 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		while (result == MM_BAD_MATCH) 
 		{
 			// 2e(i).  find a compatible offer
-			while( (offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
+			offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
 											 startdAds, priority,
 											 share, 
 											 limitUsed, submitterLimit,
 											 pieLeft,
-											 only_consider_startd_rank)))
-			{
-				int offline = false;
-				if( offer->EvalBool(ATTR_OFFLINE,NULL,offline) && offline )
-				{
-						// this startd is offline, so skip over it
-					RegisterAttemptedOfflineMatch( &request, offer );
-					startdAds.Remove( offer );
-				}
-				else {
-						// this startd is online, so go ahead and use it
-					break;
-				}
-			}
+											 only_consider_startd_rank);
 
 			if( !offer )
 			{
@@ -2309,6 +2358,9 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr.Value());
+
+				negotiation_cycle_stats[0]->rejections++;
+
 				if( rejForSubmitterLimit ) {
 					limited_by_submitterLimit = true;
 				}
@@ -2428,6 +2480,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		double SlotWeight = accountant.GetSlotWeight(offer);
 		limitUsed += SlotWeight;
 		pieLeft -= SlotWeight;
+		negotiation_cycle_stats[0]->matches++;
 	}
 
 
@@ -3055,13 +3108,20 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	int length;
 	char *tmp;
 
-
 	// these will succeed
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
-	// see if offer supports claiming or not
-	offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	int offline = false;
+	offer->EvalBool(ATTR_OFFLINE,NULL,offline);
+	if( offline ) {
+		want_claiming = 0;
+		RegisterAttemptedOfflineMatch( &request, offer );
+	}
+	else {
+			// see if offer supports claiming or not
+		offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	}
 
 	// if offer says nothing, see if request says something
 	if ( want_claiming == -1 ) {
@@ -3184,9 +3244,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 		startdAddr = "<0.0.0.0:0>";
 	}
-	dprintf(D_ALWAYS|D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s\n",
+	dprintf(D_ALWAYS|D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s%s\n",
 			cluster, proc, scheddName, scheddAddr, remoteUser,
-			startdAddr.Value(), startdName.Value() );
+			startdAddr.Value(), startdName.Value(),
+			offline ? " (offline)" : "");
 
 	/* CONDORDB Insert into matches table */
 	insert_into_matches(scheddName, request, *offer);
@@ -3196,7 +3257,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	accountant.AddMatch(scheddName, offer);
 
 	// done
-	dprintf (D_ALWAYS, "      Successfully matched with %s\n", startdName.Value());
+	dprintf (D_ALWAYS, "      Successfully matched with %s%s\n",
+			 startdName.Value(),
+			 offline ? " (offline)" : "");
 	return MM_GOOD_MATCH;
 }
 
@@ -3524,6 +3587,7 @@ MatchListType(int maxlen)
 	m_rejPreemptForPolicy = 0; 
 	m_rejPreemptForRank = 0;
 	m_rejForSubmitterLimit = 0;
+	m_submitterLimit = 0.0f;
 }
 
 Matchmaker::MatchListType::
@@ -3856,6 +3920,10 @@ void
 Matchmaker::updateCollector() {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
+	if( publicAd ) {
+		publishNegotiationCycleStats( publicAd );
+	}
+
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
@@ -4086,5 +4154,126 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		}
 
 		collector->sendMsg( msg.get() );
+	}
+}
+
+NegotiationCycleStats::NegotiationCycleStats():
+	duration(0),
+	matches(0),
+	rejections(0)
+{
+	start_time = time(NULL);
+}
+
+void NegotiationCycleStats::SubmitterOutOfTime( StringSetType const &submitter )
+{
+	submitters_out_of_time.insert( submitter );
+}
+void NegotiationCycleStats::SubmitterFailed( StringSetType const &submitter )
+{
+	submitters_failed.insert( submitter );
+}
+void NegotiationCycleStats::SubmitterActive( StringSetType const &submitter )
+{
+	active_submitters.insert( submitter );
+}
+
+void Matchmaker::StartNewNegotiationCycleStat()
+{
+	int i;
+
+	delete negotiation_cycle_stats[MAX_NEGOTIATION_CYCLE_STATS-1];
+
+	for(i=MAX_NEGOTIATION_CYCLE_STATS-1;i>0;i--) {
+		negotiation_cycle_stats[i] = negotiation_cycle_stats[i-1];
+	}
+
+	negotiation_cycle_stats[0] = new NegotiationCycleStats();
+	ASSERT( negotiation_cycle_stats[0] );
+
+		// to save memory, only keep stats within the configured visible window
+	for(i=num_negotiation_cycle_stats;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
+		if( i == 0 ) {
+				// always have a 0th entry in the list so we can mindlessly
+				// update it without checking every time.
+			continue;
+		}
+		delete negotiation_cycle_stats[i];
+		negotiation_cycle_stats[i] = NULL;
+	}
+}
+
+static void
+DelAttrN( ClassAd *ad, char const *attr, int n )
+{
+	MyString attrn;
+	attrn.sprintf("%s%d",attr,n);
+	ad->Delete( attrn.Value() );
+}
+
+static void
+SetAttrN( ClassAd *ad, char const *attr, int n, int value )
+{
+	MyString attrn;
+	attrn.sprintf("%s%d",attr,n);
+	ad->Assign(attrn.Value(),value);
+}
+
+static void
+SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_list )
+{
+	MyString attrn;
+	attrn.sprintf("%s%d",attr,n);
+
+	MyString value;
+	std::set<std::string>::iterator it;
+	for(it = string_list.begin();
+		it != string_list.end();
+		it++)
+	{
+		if( !value.IsEmpty() ) {
+			value += ", ";
+		}
+		value += it->c_str();
+	}
+
+	ad->Assign(attrn.Value(),value.Value());
+}
+
+void
+Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
+{
+	int i;
+	char const *attrs[8];
+	attrs[0] = ATTR_LAST_NEGOTIATION_CYCLE_TIME;
+	attrs[1] = ATTR_LAST_NEGOTIATION_CYCLE_DURATION;
+	attrs[2] = ATTR_LAST_NEGOTIATION_CYCLE_MATCHES;
+	attrs[3] = ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
+	attrs[4] = ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
+	attrs[5] = ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
+	attrs[6] = ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
+	attrs[7] = NULL;
+
+		// clear out all negotiation cycle attributes in the ad
+	for(i=0; i<MAX_NEGOTIATION_CYCLE_STATS; i++) {
+		int a;
+		for(a=0; a<sizeof(attrs)/sizeof(char *) && attrs[a]; a++) {
+			DelAttrN( ad, attrs[a], i );
+		}
+	}
+
+	for(i=0; i<num_negotiation_cycle_stats; i++) {
+		NegotiationCycleStats *s = negotiation_cycle_stats[i];
+		if( !s ) {
+			continue;
+		}
+
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCHES, i, s->matches);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS, i, s->rejections);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TIME, i, s->start_time);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION, i, s->duration);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT, i, s->active_submitters.size());
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED, i, s->submitters_failed);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME, i, s->submitters_out_of_time);
 	}
 }

@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __VALUES_H__
-#define __VALUES_H__
+#ifndef __CLASSAD_VALUE_H__
+#define __CLASSAD_VALUE_H__
 
 #include "classad/common.h"
 #include "classad/util.h"
@@ -156,6 +156,16 @@ class Value
 			@return true iff the value is boolean.
 		*/	
 		inline bool IsBooleanValue() const;
+
+		/** Checks if the value is boolean or something considered
+			equivalent by implicit conversion (e.g. a number), if
+			old ClassAd evaluation semantics are being used. If they're
+			not being used, this method behaves like IsBooleanValue().
+			@param b The boolean value if return is true.
+			@return true iff the value is boolean or equivalent
+		 */
+		bool IsBooleanValueEquiv(bool &b) const;
+
 		/** Checks if the value is integral.
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
@@ -523,4 +533,4 @@ IsNumber( ) const
 }
 END_NAMESPACE // classad
 
-#endif//__VALUES_H__
+#endif//__CLASSAD_VALUE_H__

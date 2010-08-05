@@ -150,7 +150,10 @@ libclassad_la_SOURCES = \
 	exprList.cpp exprTree.cpp fnCall.cpp indexfile.cpp lexer.cpp		\
 	lexerSource.cpp literals.cpp matchClassad.cpp new_classad_operators.cpp query.cpp	\
 	sink.cpp source.cpp transaction.cpp new_classad_util.cpp new_classad_value.cpp view.cpp xmlLexer.cpp	\
-	xmlSink.cpp xmlSource.cpp cclassad.cpp $(_libclassad_la_SOURCES)
+	xmlSink.cpp xmlSource.cpp cclassad.cpp common.cpp $(_libclassad_la_SOURCES)
+
+libclassad_la_LDFLAGS = -version-info 1:0:0
+libclassad_ns_la_LDFLAGS = -version-info 1:0:0
 
 MF_IF_NAMESPACE([libclassad_ns_la_SOURCES = $(libclassad_la_SOURCES)
    libclassad_ns_la_CXXFLAGS = $(NAMESPACE)])

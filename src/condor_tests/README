@@ -3,10 +3,12 @@ going on and to understand where and how to add new tests to the test
 suite.  For maximum clarity, these files should be read in the
 following order:
 
-README.filenames    Describes the filename convention in place
-README.imake        Describes the Imake rules and files in use
-README.testclass    Describes how and why tests can be categorized
-README.running      Describes how to run tests in the test suite
+README.filenames        Describes the filename convention in place
+README.imake            Describes the Imake rules and files in use
+README.testclass        Describes how and why tests can be categorized
+README.running          Describes how to run tests in the test suite
+README.personal_condor  Describes how to wrap a test in a personal condor
+README.checks           Description of check modules
 
 The WISDOM.* files are specific wisdom about various languages, tests,
 etc, and is not particularly current or accurate...

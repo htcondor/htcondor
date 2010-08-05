@@ -95,7 +95,7 @@ public:
 	// root pid and all subfamilies
 	//
 	proc_family_error_t signal_family(pid_t, int);
-
+	
 	// get resource usage information about a family (and all
 	// subfamilies)
 	//

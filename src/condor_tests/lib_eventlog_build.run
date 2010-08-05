@@ -21,6 +21,7 @@
 use strict;
 use warnings;
 use Cwd;
+use CondorUtils;
 
 sub usage( )
 {
@@ -93,7 +94,7 @@ my $exe = "./lib_eventlog_".$settings{name}.".exe";
 my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} )
 {
-    system( "rm", "-fr", $dir );
+    runcmd( "rm", "-fr", $dir );
 }
 if ( -d $dir )
 {

@@ -3,10 +3,8 @@ universe = vanilla
 type = jobs
 
 condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
 localpostsrc = x_gcb_locconfigpostsrc
-condordaemons = master,schedd
+daemon_list = master,schedd
 collector = 198.51.254.85:9618
 
 ports = dynamic

@@ -1,0 +1,11 @@
+--- gt5.0.1-all-source-installer/source-trees/gridftp/server/src/globus_gridftp_server.c	2009-12-17 00:04:18.000000000 -0600
++++ gt5.0.1-all-source-installer.patched/source-trees/gridftp/server/src/globus_gridftp_server.c	2010-01-22 00:04:29.000000000 -0600
+@@ -1454,7 +1454,7 @@
+             "Error: unable to drop supplemental group privileges.\n");
+         return 1;
+     }
+-    setenv("GLOBUS_CALLBACK_POLLING_THREADS", "1", 1); 
++    putenv("GLOBUS_CALLBACK_POLLING_THREADS=1");
+     /* activte globus stuff */    
+     if((rc = globus_module_activate(GLOBUS_COMMON_MODULE)) != GLOBUS_SUCCESS ||
+         (rc = globus_module_activate(GLOBUS_XIO_MODULE)) != GLOBUS_SUCCESS ||

@@ -65,7 +65,7 @@ public:
 	bool continue_family(pid_t);
 
 	bool kill_family(pid_t);
-
+	
 	bool unregister_family(pid_t);
 
 	// this class currently doesn't support GLEXEC_JOB

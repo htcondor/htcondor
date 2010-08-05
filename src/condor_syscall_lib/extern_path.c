@@ -201,13 +201,15 @@ xlate_link( char* name )
 				dprintf(D_ALWAYS, "lstat failed in xlate_link: %s\n",
 						strerror(errno));
 			}
+			free(up);
 			return NULL;
 		}
 		if( (st_buf.st_mode & S_IFMT) == S_IFLNK ) {
 			done = FALSE;
-			if( (count=readlink(path,maps_to,sizeof(maps_to))) < 0 ) {
+			if( (count=readlink(path,maps_to,sizeof(maps_to)) - 1) < 0 ) {
 				dprintf(D_ALWAYS, "readlink failed in xlate_link: %s\n",
 						strerror(errno));
+				free(up);
 				return NULL;
 			}
 			maps_to[count] = '\0';

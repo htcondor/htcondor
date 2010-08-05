@@ -50,6 +50,12 @@ MyString::MyString(const char* S)
     *this=S; // = operator is overloaded!
 };
 
+MyString::MyString(const std::string& S) 
+{
+	init();
+    *this=S; // = operator is overloaded!
+}
+
 MyString::MyString(const MyString& S) 
 {
 	init();
@@ -63,6 +69,13 @@ MyString::~MyString()
 	}
 	delete [] tokenBuf;
 	init(); // for safety -- errors if you try to re-use this object
+}
+
+
+MyString::operator std::string()
+{
+    std::string r = this->Value();
+    return r;
 }
 
 /*--------------------------------------------------------------------
@@ -111,6 +124,13 @@ MyString& MyString::
 operator=(const MyString& S) 
 {
 	assign_str(S.Value(), S.Len);
+    return *this;
+}
+
+MyString& MyString::
+operator=(const std::string& S) 
+{
+	assign_str(S.c_str(), S.length());
     return *this;
 }
 
@@ -213,7 +233,16 @@ MyString::reserve_at_least(const int sz)
 MyString& 
 MyString::operator+=(const MyString& S) 
 {
+	
     append_str( S.Value(), S.Len );
+    return *this;
+}
+
+MyString& 
+MyString::operator+=(const std::string& S) 
+{
+	
+    append_str( S.c_str(), S.length() );
     return *this;
 }
 
@@ -231,16 +260,35 @@ MyString::operator+=(const char *s)
 void
 MyString::append_str( const char *s, int s_len )
 {
-    if( s_len + Len > capacity || !Data ) {
+	char * pCopy=0;
+
+	if (s == Data)
+	{
+		pCopy = (char *) new char[s_len+1];
+		strcpy(pCopy,s);
+	}
+	
+    if( s_len + Len > capacity || !Data )
+    {
 		reserve_at_least( Len + s_len );
     }
-    //strcat( Data, s );
-	strcpy( Data + Len, s);
+
+	if (pCopy)
+	{
+		strcpy( Data + Len, pCopy); // b/c you invalided s w/reserve_at_least
+		delete [] pCopy; 
+	}
+	else
+		strcpy( Data + Len, s);
+
 	Len += s_len;
 }
 
 void
 MyString::append_to_list(char const *str,char const *delim /* = "," */) {
+	if(str == NULL || str[0] == 0) {
+		return;
+	}
 	if( Len ) {
 		(*this) += delim;
 	}
@@ -418,11 +466,29 @@ MyString::Hash() const
 int 
 MyString::find(const char *pszToFind, int iStartPos) const
 { 
-	if (!Data || iStartPos >= Len || iStartPos < 0)
+	ASSERT(pszToFind != NULL);
+
+	if (pszToFind[0] == '\0') {
+		/* the operator[] will return 0 (which is also '\0') if someone 
+			uses this value to index into a MyString that is empty (or a
+			MyString which returns "" as the result of its Value()), so we
+			retain a consistent API into this object. This is the
+			same behavior as strstr() if passed a "" as the needle when the
+			haystack is "". */
+
+		return 0;
+	}
+
+	if (!Data || iStartPos >= Len || iStartPos < 0) {
 		return -1;
+	}
+
 	const char *pszFound = strstr(Data + iStartPos, pszToFind);
-	if (!pszFound)
+
+	if (!pszFound) {
 		return -1;
+	}
+
 	return pszFound - Data;
 }
   
@@ -578,14 +644,11 @@ MyString::chomp( void )
 		Data[Len-1] = '\0';
 		Len--;
 		chomped = true;
+		if( ( Len > 0 ) && ( Data[Len-1] == '\r' ) ) {
+			Data[Len-1] = '\0';
+			Len--;
+		}
 	}
-#if defined(WIN32)
-	if( ( Len > 1 ) && ( Data[Len-2] == '\r' ) ) {
-		Data[Len-2] = '\0';
-		Len--;
-		chomped = true;
-	}
-#endif
 	return chomped;
 }
 
@@ -614,8 +677,9 @@ MyString::randomlyGenerate(const char *set, int len)
 	int idx;
 	int set_len;
 
-    if (!set) {
+    if (!set || len <= 0) {
 		// passed in NULL set, so automatically MyString is empty
+		// or told the string size is negative or nothing, again empty string.
 		if (Data) {
 			Data[0] = '\0';
 		}
@@ -657,6 +721,7 @@ MyString::init()
     capacity = 0;
 	tokenBuf = NULL;
 	nextToken = NULL;
+	dummy = '\0';
 }
 
 /*--------------------------------------------------------------------
@@ -697,12 +762,31 @@ int operator==(const MyString& S1, const char *S2)
     return 0;
   }
 
+int operator==(const char *S1, const MyString& S2) 
+{
+    if ((!S2.Data || !S2.Length()) && (!S1 || !strlen(S1))) {
+		return 1;
+	}
+    if (!S2.Data || !S1) {
+		return 0;
+	}
+    if (strcmp(S2.Data,S1)==0) {
+		return 1;
+	}
+    return 0;
+  }
+
 int operator!=(const MyString& S1, const MyString& S2) 
 { 
 	return ((S1==S2) ? 0 : 1); 
 }
 
 int operator!=(const MyString& S1, const char *S2) 
+{ 
+	return ((S1==S2) ? 0 : 1); 
+}
+
+int operator!=(const char *S1, const MyString& S2) 
 { 
 	return ((S1==S2) ? 0 : 1); 
 }
@@ -747,6 +831,8 @@ MyString::readLine( FILE* fp, bool append )
 {
 	char buf[1024];
 	bool first_time = true;
+
+	ASSERT( fp );
 
 	while( 1 ) {
 		if( ! fgets(buf, 1024, fp) ) {

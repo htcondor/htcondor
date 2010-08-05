@@ -167,7 +167,8 @@ CondorPrivSepHelper::create_process(const char* path,
                                      size_t*     core_size_ptr,
                                      int         reaper_id,
                                      int         dc_job_opts,
-                                     FamilyInfo* family_info)
+                                     FamilyInfo* family_info,
+									 int *       affinity_mask)
 {
 	ASSERT(m_user_initialized);
 	return privsep_launch_user_job(m_uid,
@@ -181,5 +182,6 @@ CondorPrivSepHelper::create_process(const char* path,
 	                               core_size_ptr,
 	                               reaper_id,
 	                               dc_job_opts,
-	                               family_info);
+	                               family_info,
+								   affinity_mask);
 }

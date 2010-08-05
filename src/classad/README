@@ -1,4 +1,4 @@
-This is version 1.0.6 of the Condor Classad library, released on 2010-02-25.
+This is version 1.0.8 of the Condor Classad library, released on 2010-06-10.
 
 ===== What is it? =====
 
@@ -30,8 +30,8 @@ the hope that you will find it useful for your own purposes.
 ===== Credits =====
 This version of the ClassAd library was written by Rajesh Raman. Small
 contributions and bug fixes where contributed by Su Zhang, Nick
-Coleman, and Alain Roy, but really, Rajesh did all of the real
-work. The release was prepared by Alain Roy, who is responsible for
+Coleman, Alain Roy, Dan Bradley and Jaime Frey, but really, Rajesh did
+all of the real work. Jaime Frey is currently responsible for
 maintaining the code.
 
 The original ClassAd library (still in the process of being phased out
@@ -51,7 +51,7 @@ There is some documentation online at:
 
     http://www.cs.wisc.edu/condor/classad/
 
-Also examine "sample.C", which is a small sample program that should
+Also examine "sample.cpp", which is a small sample program that should
 help you get started.
 
 If you encounter problems that are not solved by the online
@@ -81,10 +81,10 @@ of the Apache License, Version 2.0. Please see the LICENSE-2.0.txt file
 for more information.
 
 ===== Building ===== 
-We have built the ClassAd library on Linux, Solaris and Windows. Hopefully
-it will build on other systems. If you are trying to build on Windows, you
-can skip the following section and proceed to the next section entitled,
-"Building on Windows".
+We have built the ClassAd library on Linux, Mac OS X, Solaris and Windows.
+Hopefully it will build on other systems. If you are trying to build on
+Windows, you can skip the following section and proceed to the next
+section entitled, "Building on Windows".
 
 Building is a two step process: configure and make. The configure
 script is generated from autoconf and has the usual arguments.
@@ -146,9 +146,8 @@ programs. You need to include a single file, "classad_distribution.h",
 and link with a single library, "libclassad.a". 
 
 ===== Feedback =====
-Please provide us with feedback. We are working hard to create version
-1.0 of the ClassAd library. Your feedback will help us make that
-version the best it can be. If you find bugs, missing features, or
-signs of insanity, please let us know by contacting us at:
+Please provide us with feedback. Your feedback will help us make
+future versions the best they can be. If you find bugs, missing
+features, or signs of insanity, please let us know by contacting us at:
 condor-admin@cs.wisc.edu. Please include "ClassAd" in your subject
 line. 

@@ -59,7 +59,7 @@ usage()
 
 void init_pipes();
 
-int
+void
 main_init( int argc, char ** const argv )
 {
 
@@ -124,10 +124,6 @@ main_init( int argc, char ** const argv )
 		   contact_schedd_interval,
 		   doContactSchedd,
 		  "doContactSchedD" );
-
-
-	
-	return TRUE;
 }
 
 void 
@@ -168,28 +164,27 @@ Reconfig()
 	if ( proxySubjectName ) {
 		char *daemon_subjects = param( "GSI_DAEMON_NAME" );
 		if ( daemon_subjects ) {
-			MyString buff;
-			buff.sprintf( "%s,%s", daemon_subjects, proxySubjectName );
+			std::string buff;
+			sprintf( buff, "%s,%s", daemon_subjects, proxySubjectName );
 			dprintf( D_ALWAYS, "Setting %s=%s\n", "GSI_DAEMON_NAME",
-					 buff.Value() );
+					 buff.c_str() );
 				// We must use our daemon subsystem prefix in case the
 				// admin used it in the config file.
 			config_insert( "C_GAHP_WORKER_THREAD.GSI_DAEMON_NAME",
-						   buff.Value() );
+						   buff.c_str() );
 			free( daemon_subjects );
 		}
 	}
 }
 
 
-int
-main_config( bool )
+void
+main_config()
 {
 	Reconfig();
-	return TRUE;
 }
 
-int
+void
 main_shutdown_fast()
 {
 #ifndef WIN32
@@ -197,10 +192,9 @@ main_shutdown_fast()
 		kill(io_loop_pid, SIGKILL);
 #endif
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
-int
+void
 main_shutdown_graceful()
 {
 #ifndef WIN32
@@ -208,7 +202,6 @@ main_shutdown_graceful()
 		kill(io_loop_pid, SIGTERM);
 #endif
 	DC_Exit(0);
-	return TRUE;	// to satify c++
 }
 
 void

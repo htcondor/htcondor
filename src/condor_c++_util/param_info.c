@@ -545,5 +545,5 @@ void
 iterate_params(int (*callPerElement)
 							(param_info_t* /*value*/, void* /*user data*/),
 				void* user_data) {
-	param_info_hash_iterate(&param_info, callPerElement, user_data);
+	param_info_hash_iterate(param_info, callPerElement, user_data);
 }

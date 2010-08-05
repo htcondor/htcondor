@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use strict;
 use warnings;
 
@@ -70,7 +71,7 @@ $ENV{CONDOR_CONFIG} = $parallelconfig;
 CondorTest::debug("Set config to $parallelconfig\n",$debuglevel);
 
 #print "Looking for schedd for Basic Parallel Test\n";
-system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
+runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
 
 # Edit submit file to submit to scheduler at remote (side b) schedd.
 my $line;
@@ -115,29 +116,29 @@ close(CSUB);
 
 
 # make test data
-system("./x_chirpio_mkdata.pl --message='Testing message'");
+runcmd("./x_chirpio_mkdata.pl --message='Testing message'");
 # remove marker files which pace parallel job
-system("rm -rf ALLDONE WRITEDONE");
+runcmd("rm -rf ALLDONE WRITEDONE");
 
 my $result = system("./job_core_chirp_par.pl $mysubmitnm");
 CondorTest::debug("Result of chirp paarallel  job is  $result\n",$debuglevel);
 
-
-system("cp *job_core_chirp_par* $mysaveme");
+#fails due to directory matching pattern 
+runcmd("cp *job_core_chirp_par* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($parallelconfig);

@@ -40,6 +40,7 @@
 #include "basename.h"
 #include "extArray.h"
 #include "condor_string.h"  /* for strnewp() */
+#include "dagman_recursive_submit.h"
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
@@ -241,7 +242,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			
 		// Handle a Retry spec
 		// Example Syntax is:  Retry JobName 3 UNLESS-EXIT 42
-		else if( strcasecmp( token, "Retry" ) == 0 ) {
+		else if( strcasecmp( token, "RETRY" ) == 0 ) {
 			parsed_line_successfully = parse_retry(dag, filename, lineNumber);
 		} 
 
@@ -302,9 +303,9 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Expected JOB, DATA, SCRIPT, PARENT, RETRY, "
+				"Expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS "
-				"or CONFIG token\n",
+				"CONFIG or SPLICE token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}
@@ -345,11 +346,11 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
 		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
-	} else {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
-					"EXTERNAL is supported at this time\n", dagFile, lineNum);
-		return false;
 	}
+
+	debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
+				"EXTERNAL is supported at this time\n", dagFile, lineNum);
+	return false;
 }
 
 static bool 
@@ -455,15 +456,24 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	// If this is a "SUBDAG" line, generate the real submit file name.
 	MyString nestedDagFile("");
 	MyString dagSubmitFile(""); // must be outside if so it stays in scope
-	if ( !strcasecmp( nodeTypeKeyword, "SUBDAG" ) ) {
+	if ( strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH ) {
 			// Save original DAG file name (needed for rescue DAG).
 		nestedDagFile = submitFile;
 
 			// Generate the "real" submit file name (append ".condor.sub"
 			// to the DAG file name).
 		dagSubmitFile = submitFile;
-		dagSubmitFile += ".condor.sub";
+		dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
 		submitFile = dagSubmitFile.Value();
+	} else if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
+			// If the submit file name ends in ".condor.sub", we assume
+			// that this node is a nested DAG, and set the DAG filename
+			// accordingly.
+		nestedDagFile = submitFile;
+		nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
+					"keyword for nested DAGs is deprecated; please "
+					"use SUBDAG EXTERNAL instead" );
 	}
 
 	// looks ok, so add it
@@ -1166,8 +1176,11 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 			return false;
 		}
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
-		job->varNamesFromDag->Append(new MyString(varName));
-		job->varValsFromDag->Append(new MyString(varValue));
+		bool appendResult;
+		appendResult = job->varNamesFromDag->Append(new MyString(varName));
+		ASSERT( appendResult );
+		appendResult = job->varValsFromDag->Append(new MyString(varValue));
+		ASSERT( appendResult );
 	}
 
 	if(numPairs == 0) {
@@ -1445,6 +1458,8 @@ parse_splice(
 	--_thisDagNum;
 
 	// This "copy" is tailored to be correct according to Dag::~Dag()
+	// We can pass in NULL for submitDagOpts because the splice DAG
+	// object will never actually do a submit.  wenger 2010-03-25
 	splice_dag = new Dag(	dag->DagFiles(),
 							dag->MaxJobsSubmitted(),
 							dag->MaxPreScripts(),
@@ -1460,7 +1475,10 @@ parse_splice(
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),
 							dag->DefaultNodeLog(),
-							true); /* we are a splice! */
+							dag->GenerateSubdagSubmits(),
+							NULL, // this Dag will never submit a job
+							true, /* we are a splice! */
+							current_splice_scope() );
 	
 	// initialize whatever the DIR line was, or defaults to, here.
 	splice_dag->SetDirectory(directory);

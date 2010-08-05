@@ -23,7 +23,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "internet.h"
-#include "string_funcs.h"
+#include "strcasestr.h"
 #include "condor_random_num.h"
 
 // initialize the List<char> from the VALID_*_FILES variable in the
@@ -46,7 +46,11 @@ StringList::isSeparator( char x )
 
 StringList::StringList(const char *s, const char *delim ) 
 {
-	m_delimiters = strnewp( delim );
+	if ( delim ) {
+		m_delimiters = strnewp( delim );
+	} else {
+		m_delimiters = strnewp( "" );
+	}
 	if ( s ) {
 		initializeFromString(s);
 	}
@@ -215,7 +219,7 @@ StringList::contains_anycase( const char *st )
 
 	m_strings.Rewind ();
 	while ((x = m_strings.Next ())) {
-		if( stricmp(st, x) == MATCH ) {
+		if( strcasecmp(st, x) == MATCH ) {
 			return TRUE;
 		}
 	}
@@ -243,7 +247,7 @@ StringList::remove_anycase(const char *str)
 
 	m_strings.Rewind();
 	while ((x = m_strings.Next())) {
-		if (stricmp(str, x) == MATCH) {
+		if (strcasecmp(str, x) == MATCH) {
 			deleteCurrent();
 		}
 	}
@@ -468,44 +472,6 @@ StringList::identical( const StringList &other, bool anycase ) const
 	iter.ToBeforeFirst ();
 	while ( iter.Next(x) ) {
 		if ( !other.find( x, anycase ) ) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-bool
-StringList::similar( const StringList &other, bool anycase ) const
-{
-	char *this_str, *other_str;
-	ListIterator<char> this_iter;
-
-	// First, if they're different sizes, quit
-	if ( other.number() != this->number() ) {
-		return false;
-	}
-
-	// Walk through the other list, verify that everything is in my list
-	this_iter.Initialize ( m_strings );
-	this_iter.ToBeforeFirst ();
-	while ( this_iter.Next(this_str) ) {
-		bool	found = false;
-		ListIterator<char> other_iter;
-		other_iter.Initialize ( other.getList() );
-		other_iter.ToBeforeFirst ();
-		while ( !found && other_iter.Next(other_str) ) {
-			if ( anycase ) {
-				if ( strcasecmp( this_str, other_str ) != 0 ) {
-					found = true;
-				}
-			} else {
-				if ( strcmp( this_str, other_str ) != 0 ) {
-					found = true;
-				}
-			}
-		}
-		if( ! found ) {
 			return false;
 		}
 	}

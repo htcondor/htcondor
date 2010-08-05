@@ -540,7 +540,7 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 void
 CpuAttributes::compute( amask_t how_much )
 {
-	float val;
+	double val;
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
 
@@ -563,7 +563,7 @@ CpuAttributes::compute( amask_t how_much )
 		}
 
 		val = c_total_disk * c_disk_fraction;
-		c_disk = (unsigned long)floor( val );
+		c_disk = (int)floor( val );
 	}	
 }
 

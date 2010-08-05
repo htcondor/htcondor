@@ -140,27 +140,24 @@ main_pre_dc_init(int, char**) {
 	return TRUE;
 
 }
-int
+void
 main_shutdown_graceful()
 {
 	printf("** IN MAIN_SHUTDOWN_GRACEFUL\n");
 	exit(0);
-	return TRUE;
 }
-int
+void
 main_shutdown_fast()
 {
 	printf("** IN MAIN_SHUTDOWN_FAST\n");
-	return TRUE;
 }
-int
-main_config( bool /*is_full*/ )
+void
+main_config()
 {
 	printf("** IN MAIN_CONFIG\n");
-	return TRUE;
 }
 
-int
+void
 main_init(int argc, char ** /*argv*/)
 {
 	Foo*	f;
@@ -191,9 +188,6 @@ main_init(int argc, char ** /*argv*/)
 		}
 		daemonCore->Register_Timer(5,5,(TimerHandlercpp)&Foo::timer5,"Five Second Timer",f);
 	}
-
-
-	return TRUE;
 }
 
 

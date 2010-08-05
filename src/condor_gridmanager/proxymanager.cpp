@@ -1028,7 +1028,7 @@ int GetMyProxyPasswordFromSchedD (int cluster_id, int proc_id,
 		return FALSE;
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 
 	if (!sock->code (*password)) {
@@ -1037,7 +1037,7 @@ int GetMyProxyPasswordFromSchedD (int cluster_id, int proc_id,
 
 	}
 
-	sock->eom();
+	sock->end_of_message();
 	sock->close();
 	delete sock;
 	return TRUE;

@@ -35,6 +35,7 @@
 #include "basename.h"
 #include "dc_starter.h"
 #include "classadHistory.h"
+#include "classad_helpers.h"
 
 #if defined(LINUX)
 #include "glexec_starter.h"
@@ -237,19 +238,19 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 				// insert every attr that's not in the ignored_attr_list
 			if (!ignored_attr_list->contains(lhstr)) {
 				ad->Insert(lhstr, tree->Copy());
-				if (strincmp(lhstr, "Has", 3) == MATCH) {
+				if (strncasecmp(lhstr, "Has", 3) == MATCH) {
 					list->append(lhstr);
 				}
 			}
 		}
 		else {
 				// no list of attrs to ignore - fallback on old behavior
-			if( strincmp(lhstr, "Has", 3) == MATCH ) {
+			if( strncasecmp(lhstr, "Has", 3) == MATCH ) {
 				ad->Insert( lhstr, tree->Copy() );
 				if( list ) {
 					list->append( lhstr );
 				}
-			} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
+			} else if( strncasecmp(lhstr, "Java", 4) == MATCH ) {
 				ad->Insert( lhstr, tree->Copy() );
 			}
 		}
@@ -452,6 +453,7 @@ Starter::reallykill( int signo, int type )
 		dprintf( D_FULLDEBUG, 
 				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
 				 s_pid, signo, signame );
+		break;
 	case 2:
 		dprintf( D_FULLDEBUG, 
 				 "In Starter::kill_kids() with pid %d, sig %d (%s)\n", 
@@ -1196,11 +1198,14 @@ Starter::killHard( void )
 	if( ! active() ) {
 		return true;
 	}
+	
 	if( ! kill(DC_SIGHARDKILL) ) {
 		killpg( SIGKILL );
 		return false;
 	}
-	startKillTimer();
+	dprintf(D_FULLDEBUG, "in starter:killHard starting kill timer\n");
+	startKillTimer();	
+
 	return true;
 }
 
@@ -1254,7 +1259,7 @@ Starter::startKillTimer( void )
 			// Timer already started.
 		return TRUE;
 	}
-
+ 
 	int tmp_killing_timeout = killing_timeout;
 	if( s_claim && (s_claim->universe() == CONDOR_UNIVERSE_VM) ) {
 		// For vm universe, we need longer killing_timeout

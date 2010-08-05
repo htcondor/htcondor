@@ -176,6 +176,7 @@ KeyCache::KeyCache(int nbuckets) {
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
+	m_index = new KeyCacheIndex(MyStringHash);
 	copy_storage(k);
 }
 
@@ -195,6 +196,7 @@ const KeyCache& KeyCache::operator=(const KeyCache& k) {
 
 void KeyCache::copy_storage(const KeyCache &copy) {
 	if (copy.key_table) {
+		m_index = new KeyCacheIndex(MyStringHash);
 		key_table = new HashTable<MyString, KeyCacheEntry*>(copy.key_table->getTableSize(), MyStringHash, rejectDuplicateKeys);
 		dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
 

@@ -23,7 +23,7 @@
 #include "chirp_client.h"
 
 #define		REMDIR			"job_chirp_io_mkdir"
-#define 	TSTMSG			"Testing message"
+#define 	TSTMSG			"Testing"
 #define 	SRCFILE			"job_chirp_io.txtdata"
 #define		SRCFILE2		"job_chirp_io2.txtdata"
 #define 	PATHSRCFILETEST		"/test_job_chirp_io.txtdata"
@@ -83,8 +83,11 @@ main(int argc, char **argv)
 				while( (node0readfd = chirp_client_open(chirp_clnt,ALLDONE,"r", 511)) < 0){
 					printf("waiting on %s\n",ALLDONE);
 					node0waitcount += 3;
-					if(node0waitcount > maxnode0wait) { exit(1); }
-					sleep(3);
+					if(node0waitcount > maxnode0wait) { 
+						printf("Giving up on waiting, exiting\n");
+						exit(1);
+					}
+					sleep(10);
 				}
 				break;
 		case '1':
@@ -118,7 +121,7 @@ main(int argc, char **argv)
 				// check test message
 				if(readcnt != tstmsglen)
 				{
-					printf("Failed to get entire test pattern\n");
+					printf("Failed to get entire test pattern: readcnt is %d tstmsglen is %d\n", readcnt, tstmsglen);
 					exit(1);
 				}
 				if( strncmp(tstmessage, chktstmessage, tstmsglen) != 0)
@@ -191,7 +194,7 @@ main(int argc, char **argv)
 						break;
 					}
 					writetot += writecnt;
-					printf("write %d bytes\n",writecnt);
+					printf("wrote %d bytes\n",writecnt);
 					buffptr = &filebuff[writetot];
 				}
 				res = chirp_client_fsync(chirp_clnt, writefd );

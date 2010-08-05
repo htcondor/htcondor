@@ -21,6 +21,7 @@
 ## This tests submit failure with post script (see gittrac #435).
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_submit_fails_post.dag';
 $testdesc =  'Condor submit dag - submit failure on node w/ POST script test - scheduler U';
@@ -37,7 +38,7 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 
@@ -45,7 +46,7 @@ foreach $name (@logfiles) {
 # correctly.
 $name = "job_dagman_submit_fails_post.log";
 if (-e $name) {
-	system("rm -f $name");
+	runcmd("rm -f $name");
 }
 
 $abnormal = sub 

@@ -37,6 +37,7 @@
 #undef open
 #include "classad/classad_distribution.h"
 #include "set_user_from_ad.h"
+#include "file_transfer.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -440,6 +441,13 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		src.Assign(ATTR_JOB_STATUS, 5); // 5==HELD
 		src.Assign(ATTR_HOLD_REASON, "Spooling input data files");
 
+			// See the comment in the function body of ExpandInputFileList
+			// for an explanation of what is going on here.
+		MyString transfer_input_error_msg;
+		if( !FileTransfer::ExpandInputFileList( &src, transfer_input_error_msg ) ) {
+			failobj.fail("%s\n",transfer_input_error_msg.Value());
+			return false;
+		}
 	}
 
 		// we want the job to hang around (taken from condor_submit.V6/submit.C)
@@ -712,7 +720,7 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 	return success;
 }
 
-bool InitializeUserLog( classad::ClassAd const &job_ad, UserLog *ulog, bool *no_ulog )
+bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool *no_ulog )
 {
 	int cluster, proc;
 	std::string owner;
@@ -873,7 +881,7 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 
 bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 {
-	UserLog ulog;
+	WriteUserLog ulog;
 	bool no_ulog = false;
 
 	if(!InitializeUserLog(ad,&ulog,&no_ulog)) {

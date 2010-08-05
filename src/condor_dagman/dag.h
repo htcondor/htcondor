@@ -35,6 +35,7 @@
 #include "prioritysimplelist.h"
 #include "throttle_by_category.h"
 #include "MyString.h"
+#include "dagman_recursive_submit.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -62,14 +63,15 @@ class OwnedMaterials
 	public:
 		// this structure owns the containers passed to it, but not the memory 
 		// contained in the containers...
-		OwnedMaterials(ExtArray<Job*> *a) :
-				nodes (a) {};
+		OwnedMaterials(ExtArray<Job*> *a, ThrottleByCategory *tr) :
+				nodes (a), throttles (tr) {};
 		~OwnedMaterials() 
 		{
 			delete nodes;
 		};
 
 	ExtArray<Job*> *nodes;
+	ThrottleByCategory *throttles;
 };
 
 //------------------------------------------------------------------------
@@ -97,7 +99,7 @@ class Dag {
 			   have an error determining the job log files
 		@param useDagDir run DAGs in directories from DAG file paths
 		       if true
-		@param maxIdleJobProcs the maximum number of idle job procss to
+		@param maxIdleJobProcs the maximum number of idle job procs to
 			   allow at one time (0 means unlimited)
 		@param retrySubmitFirst whether, when a submit fails for a node's
 		       job, to put the node at the head of the ready queue
@@ -117,6 +119,9 @@ class Dag {
 				wan't to allocate some regulated resources we won't need
 				if we are a splice. It is true for a top level dag, and false
 				for a splice.
+		@param spliceScope a string containing the names of all splices
+				on the "path" to the top-level DAG (e.g., "A+B+"), or
+				"root" for the top-level DAG.
     */
 
     Dag( /* const */ StringList &dagFiles,
@@ -127,7 +132,9 @@ class Dag {
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 const char *defaultNodeLog, bool isSplice = false );
+		 const char *defaultNodeLog, bool generateSubdagSubmits,
+		 const SubmitDagDeepOptions *submitDagDeepOpts,
+		 bool isSplice = false, const MyString &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -247,6 +254,16 @@ class Dag {
 		@param The job corresponding to this event.
 	*/
 	void ProcessNotIdleEvent(Job *job);
+
+	/** Process a held event for a job.
+		@param The job corresponding to this event.
+	*/
+	void ProcessHeldEvent(Job *job);
+
+	/** Process a released event for a job.
+		@param The job corresponding to this event.
+	*/
+	void ProcessReleasedEvent(Job *job);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -436,6 +453,8 @@ class Dag {
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
+	int NumHeldJobProcs() const { return _numHeldJobProcs; }
+
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
 			@param level: debug level for output.
@@ -505,6 +524,8 @@ class Dag {
 
 	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
+	const bool GenerateSubdagSubmits(void) { return _generateSubdagSubmits; }
+
 	StringList& DagFiles(void) { return _dagFiles; }
 
 	/** Determine whether a job is a NOOP job based on the Condor ID.
@@ -559,7 +580,8 @@ class Dag {
 	OwnedMaterials* RelinquishNodeOwnership(void);
 
 	// Take an array from RelinquishNodeOwnership) and store it in my self.
-	void AssumeOwnershipofNodes(OwnedMaterials *om);
+	void AssumeOwnershipofNodes(const MyString &spliceName,
+				OwnedMaterials *om);
 
 	// This must be called after the toplevel dag has been parsed and
 	// the splices lifted. It will resolve the use of $(JOB) in the value
@@ -781,6 +803,9 @@ class Dag {
 		// means unlimited.
     const int _maxIdleJobProcs;
 
+		// The number of DAG job procs currently held.
+	int _numHeldJobProcs;
+
 		// Whether to allow the DAG to run even if we have an error
 		// determining the job log files.
 	bool		_allowLogError;
@@ -907,6 +932,13 @@ class Dag {
 		// not specify a log file.
 	const char *_defaultNodeLog;
 
+		// Whether to generate the .condor.sub files for sub-DAGs
+		// at run time (just before the node is submitted).
+	bool	_generateSubdagSubmits;
+
+		// Options for running condor_submit_dag on nested DAGs.
+	const SubmitDagDeepOptions *_submitDagDeepOpts;
+
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel
 		// dag will have this be false, and any included splices will be true.
@@ -915,11 +947,15 @@ class Dag {
 		// which is also a splice.
 	bool _isSplice;
 
+		// The splice "scope" for this DAG (e.g., "A+B+", or "root").
+		// This is currently just used for diagnostic messages
+		// (wenger 2010-06-07)
+	MyString _spliceScope;
+
 		// The maximum fake subprocID we see in recovery mode (needed to
 		// initialize the ID for subsequent fake events so IDs don't
 		// collide).
 	int _recoveryMaxfakeID;
-
 };
 
 #endif /* #ifndef DAG_H */

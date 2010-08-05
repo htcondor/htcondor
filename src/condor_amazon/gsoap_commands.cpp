@@ -21,8 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_string.h"
-#include "string_list.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "stat_wrapper.h"
 #include "amazongahp_common.h"
@@ -54,7 +52,7 @@ AmazonRequest::ParseSoapError(const char* callerstring)
 
 	if( *code ) {
 		// For real error code, refer to 
-		// http://docs.amazonwebservices.com/AWSEC2/2007-08-29/DeveloperGuide/api-error-codes.html
+		// http://docs.amazonwebservices.com/AWSEC2/2008-12-01/DeveloperGuide/index.html?api-error-codes.html
 		//
 		// Client error codes suggest that the error was caused by 
 		// something the client did, such as an authentication failure or 
@@ -107,11 +105,11 @@ AmazonRequest::ParseSoapError(const char* callerstring)
 bool 
 AmazonRequest::SetupSoap(void)
 {
-	if( secretkeyfile.IsEmpty() ) {
+	if( secretkeyfile.empty() ) {
 		dprintf(D_ALWAYS, "There is no privatekey\n");
 		return false;
 	}
-	if( accesskeyfile.IsEmpty() ) {
+	if( accesskeyfile.empty() ) {
 		dprintf(D_ALWAYS, "There is no accesskeyfile\n");
 		return false;
 	}
@@ -123,7 +121,7 @@ AmazonRequest::SetupSoap(void)
 	// Must use canoicalization
 	if( !(m_soap = soap_new1(SOAP_XML_CANONICAL))) {
 		m_error_msg = "Failed to create SOAP context";
-		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 		return false;
 	}
 
@@ -145,43 +143,48 @@ AmazonRequest::SetupSoap(void)
 	}
 
 	FILE *file = NULL;
-	if ((file = safe_fopen_wrapper(secretkeyfile.Value(), "r"))) {
+	if ((file = safe_fopen_wrapper(secretkeyfile.c_str(), "r"))) {
 		m_rsa_privk = PEM_read_PrivateKey(file, NULL, NULL, NULL);
 		fclose(file);
 
 		if( !m_rsa_privk ) {
-			m_error_msg.sprintf("Could not read private RSA key from: %s",
-					secretkeyfile.Value());
-			dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+			sprintf(m_error_msg,"Could not read private RSA key from: %s",
+					secretkeyfile.c_str());
+			dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 			return false;
 		}
 	} else {
-		m_error_msg.sprintf("Could not read private key file: %s",
-				secretkeyfile.Value());
-		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+		sprintf(m_error_msg,"Could not read private key file: %s",
+				secretkeyfile.c_str());
+		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	if ((file = safe_fopen_wrapper(accesskeyfile.Value(), "r"))) {
+	if ((file = safe_fopen_wrapper(accesskeyfile.c_str(), "r"))) {
 		m_cert = PEM_read_X509(file, NULL, NULL, NULL);
 		fclose(file);
 
 		if (!m_cert) {
-			m_error_msg.sprintf("Could not read accesskeyfile from: %s",
-					accesskeyfile.Value());
-			dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+			sprintf(m_error_msg,"Could not read accesskeyfile from: %s",
+					accesskeyfile.c_str());
+			dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 			return false;
 		}
 	} else {
-		m_error_msg.sprintf("Could not read accesskeyfile file: %s",
-				accesskeyfile.Value());
-		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+		sprintf(m_error_msg,"Could not read accesskeyfile file: %s",
+				accesskeyfile.c_str());
+		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	char *ca_file = param("SOAP_SSL_CA_FILE");
-	char *ca_dir = param("SOAP_SSL_CA_DIR");;
-	if (soap_ssl_client_context(m_soap, SOAP_SSL_DEFAULT,
+	unsigned short flags = SOAP_SSL_DEFAULT;
+	const char *host_check = getenv("SOAP_SSL_SKIP_HOST_CHECK");
+	if ( host_check && ( host_check[0] == 'T' || host_check[0] == 't' ) ) {
+		flags |= SOAP_SSL_SKIP_HOST_CHECK;
+	}
+	const char *ca_file = getenv("SOAP_SSL_CA_FILE");
+	const char *ca_dir = getenv("SOAP_SSL_CA_DIR");;
+	if (soap_ssl_client_context(m_soap, flags,
 				    NULL,
 				    NULL,
 				    ca_file,
@@ -190,35 +193,33 @@ AmazonRequest::SetupSoap(void)
 	{
 	    soap_print_fault(m_soap, stderr);
 	}
-	free(ca_file);
-	free(ca_dir);
 
 	// Timestamp must be signed, the "Timestamp" value just needs
 	// to be non-NULL
 	if( soap_wsse_add_Timestamp(m_soap, "Timestamp", 137)) { 
 		m_error_msg = "Failed to sign timestamp";
-		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "BinarySecurityToken", m_cert)) {
-		m_error_msg.sprintf("Could not set BinarySecurityToken from: %s", 
-				accesskeyfile.Value());
-		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "X509Token", m_cert)) {
+		sprintf(m_error_msg,"Could not set BinarySecurityToken from: %s", 
+				accesskeyfile.c_str());
+		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 		return false;
 	}
 
 	// May be optional
 	if( soap_wsse_add_KeyInfo_SecurityTokenReferenceX509(m_soap, "#X509Token") ) {
 		m_error_msg = "Failed to setup SecurityTokenReference";
-		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 		return false;
 	}
 
 	// Body must be signed
 	if( soap_wsse_sign_body(m_soap, SOAP_SMD_SIGN_RSA_SHA1, m_rsa_privk, 0)) {
 		m_error_msg = "Failed to setup signing of SOAP body";
-		dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 		return false;
 	}
 
@@ -257,9 +258,9 @@ AmazonVMKeypairNames::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
-				secretkeyfile.Value(), m_error_msg) ) {
-		dprintf(D_ALWAYS, "AmazonVMKeypairNames Error: %s\n", m_error_msg.Value());
+	if( !check_access_and_secret_key_file(accesskeyfile.c_str(),
+				secretkeyfile.c_str(), m_error_msg) ) {
+		dprintf(D_ALWAYS, "AmazonVMKeypairNames Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
@@ -273,7 +274,7 @@ AmazonVMKeypairNames::gsoapRequest(void)
 	int code = -1;		
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeKeyPairs(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -303,27 +304,27 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.Value(), 
-				secretkeyfile.Value(), m_error_msg) ) {
-		dprintf(D_ALWAYS, "AmazonVMCreateKeyPair Error: %s\n", m_error_msg.Value());
+	if( !check_access_and_secret_key_file(accesskeyfile.c_str(), 
+				secretkeyfile.c_str(), m_error_msg) ) {
+		dprintf(D_ALWAYS, "AmazonVMCreateKeyPair Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	if( keyname.IsEmpty() ) {
+	if( keyname.empty() ) {
 		m_error_msg = "Empty_Keyname";
-		dprintf(D_ALWAYS, "AmazonVMCreateKeyPair Error: %s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "AmazonVMCreateKeyPair Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	if( strcmp(outputfile.Value(), NULL_FILE) ) { 
+	if( strcmp(outputfile.c_str(), NULL_FILE) ) { 
 		has_outputfile = true;
 	}
 
 	// check if output file could be created
 	if( has_outputfile ) { 
-		if( check_create_file(outputfile.Value()) == false ) {
+		if( check_create_file(outputfile.c_str(), 0600) == false ) {
 			m_error_msg = "No_permission_for_keypair_outputfile";
-			dprintf(D_ALWAYS, "AmazonVMCreateKeypair Error: %s\n", m_error_msg.Value());
+			dprintf(D_ALWAYS, "AmazonVMCreateKeypair Error: %s\n", m_error_msg.c_str());
 			return false;
 		}
 	}
@@ -331,12 +332,12 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 	ec2__CreateKeyPairType request;
 	ec2__CreateKeyPairResponseType response;
 
-	request.keyName = keyname.Value();
+	request.keyName = keyname.c_str();
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__CreateKeyPair(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -345,12 +346,12 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 		if( has_outputfile ) {
 
 			FILE *fp = NULL;
-			fp = safe_fopen_wrapper(outputfile.Value(), "w");
+			fp = safe_fopen_wrapper(outputfile.c_str(), "w", 600);
 			if( !fp ) {
-				m_error_msg.sprintf("failed to safe_fopen_wrapper %s in write mode: "
+				sprintf(m_error_msg,"failed to safe_fopen_wrapper %s in write mode: "
 						"safe_fopen_wrapper returns %s", 
-						outputfile.Value(), strerror(errno));
-				dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+						outputfile.c_str(), strerror(errno));
+				dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 				return false;
 			}
 
@@ -373,29 +374,29 @@ AmazonVMDestroyKeypair::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
-				secretkeyfile.Value(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.c_str(),
+				secretkeyfile.c_str(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMDestroyKeypair Error: %s\n", 
-				m_error_msg.Value());
+				m_error_msg.c_str());
 		return false;
 	}
 
-	if( keyname.IsEmpty() ) {
+	if( keyname.empty() ) {
 		m_error_msg = "Empty_Keyname";
 		dprintf(D_ALWAYS, "AmazonVMDestroyKeypair Error: %s\n", 
-				m_error_msg.Value());
+				m_error_msg.c_str());
 		return false;
 	}
 
 	ec2__DeleteKeyPairType request;
 	ec2__DeleteKeyPairResponseType response;
 
-	request.keyName = keyname.Value();
+	request.keyName = keyname.c_str();
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DeleteKeyPair(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -423,36 +424,36 @@ AmazonVMStart::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
-				secretkeyfile.Value(), m_error_msg) ) {
-		dprintf(D_ALWAYS, "AmazonVMStart Error: %s\n", m_error_msg.Value());
+	if( !check_access_and_secret_key_file(accesskeyfile.c_str(),
+				secretkeyfile.c_str(), m_error_msg) ) {
+		dprintf(D_ALWAYS, "AmazonVMStart Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	if( user_data_file.IsEmpty() == false ) {
-		if( !check_read_access_file( user_data_file.Value()) ) {
-			m_error_msg.sprintf("Cannot read the file for user data(%s)",
-					user_data_file.Value());
+	if( user_data_file.empty() == false ) {
+		if( !check_read_access_file( user_data_file.c_str()) ) {
+			sprintf(m_error_msg,"Cannot read the file for user data(%s)",
+					user_data_file.c_str());
 			return false;
 		}
 	}
 
-	if( ami_id.IsEmpty() ) {
+	if( ami_id.empty() ) {
 		m_error_msg = "Empty_AMI_ID";
-		dprintf(D_ALWAYS, "AmazonVMStart Error: %s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "AmazonVMStart Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
 	// userData
-	if( user_data_file.IsEmpty() == false ) {
+	if( user_data_file.empty() == false ) {
 		// Need to read file
 		int fd = -1;
-		fd = safe_open_wrapper(user_data_file.Value(), O_RDONLY);
+		fd = safe_open_wrapper(user_data_file.c_str(), O_RDONLY);
 		if( fd < 0 ) {
-			m_error_msg.sprintf("failed to safe_open_wrapper file(%s) : "
-					"safe_open_wrapper returns %s", user_data_file.Value(), 
+			sprintf(m_error_msg,"failed to safe_open_wrapper file(%s) : "
+					"safe_open_wrapper returns %s", user_data_file.c_str(), 
 					strerror(errno));
-			dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+			dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 			return false;
 		}
 
@@ -463,7 +464,7 @@ AmazonVMStart::gsoapRequest(void)
 		if (file_size <= 0) {
 			dprintf(D_ALWAYS,
 					"WARNING: UserData file, %s, specified and empty\n",
-					user_data_file.Value());
+					user_data_file.c_str());
 			base64_userdata = NULL;
 		} else {
 			char *readbuffer = (char*)malloc(file_size);
@@ -473,10 +474,10 @@ AmazonVMStart::gsoapRequest(void)
 			close(fd);
 
 			if( ret != file_size ) {
-				m_error_msg.sprintf("failed to read(need %d but real read %d) "
+				sprintf(m_error_msg,"failed to read(need %d but real read %d) "
 									"in file(%s)",
-									file_size, ret, user_data_file.Value());
-				dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+									file_size, ret, user_data_file.c_str());
+				dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 
 				free(readbuffer);
 				readbuffer = NULL;
@@ -487,8 +488,8 @@ AmazonVMStart::gsoapRequest(void)
 			free(readbuffer); readbuffer = NULL;
 		}
 	}else {
-		if( user_data.IsEmpty() == false ) { 
-			base64_userdata = condor_base64_encode((unsigned char*)user_data.Value(), user_data.Length());
+		if( user_data.empty() == false ) { 
+			base64_userdata = condor_base64_encode((unsigned char*)user_data.c_str(), user_data.length());
 		}
 	}
 
@@ -498,15 +499,15 @@ AmazonVMStart::gsoapRequest(void)
 	std::string request_keyname;
 
 	// image id
-	request.imageId = ami_id.Value();
+	request.imageId = ami_id.c_str();
 	// min Count
 	request.minCount = 1;
 	// max Count
 	request.maxCount = 1;
 
 	// Keypair
-	if( keypair.IsEmpty() == false ) {
-		request_keyname = keypair.Value();
+	if( keypair.empty() == false ) {
+		request_keyname = keypair.c_str();
 		request.keyName = &request_keyname;
 	}else {
 		request.keyName = NULL;
@@ -554,8 +555,8 @@ AmazonVMStart::gsoapRequest(void)
 	request.addressingType = NULL;
 
 	// instanceType
-	if( instance_type.IsEmpty() == false ) {
-		request.instanceType = instance_type.Value();
+	if( instance_type.empty() == false ) {
+		request.instanceType = instance_type.c_str();
 	}else {
 		request.instanceType = "m1.small";
 	}
@@ -563,7 +564,7 @@ AmazonVMStart::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__RunInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -588,15 +589,15 @@ AmazonVMStop::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
-				secretkeyfile.Value(), m_error_msg) ) {
-		dprintf(D_ALWAYS, "AmazonVMStop Error: %s\n", m_error_msg.Value());
+	if( !check_access_and_secret_key_file(accesskeyfile.c_str(),
+				secretkeyfile.c_str(), m_error_msg) ) {
+		dprintf(D_ALWAYS, "AmazonVMStop Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	if( instance_id.IsEmpty() ) {
+	if( instance_id.empty() ) {
 		m_error_msg = "Empty_Instance_ID";
-		dprintf(D_ALWAYS, "AmazonVMStop Error: %s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "AmazonVMStop Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
@@ -606,7 +607,7 @@ AmazonVMStop::gsoapRequest(void)
 	ec2__TerminateInstancesInfoType instanceSet;
 
 	ec2__TerminateInstancesItemType item;
-	item.instanceId = instance_id.Value();
+	item.instanceId = instance_id.c_str();
 
 	instanceSet.item.push_back( &item );
 
@@ -615,7 +616,7 @@ AmazonVMStop::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__TerminateInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -637,15 +638,15 @@ AmazonVMStatus::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
-				secretkeyfile.Value(), m_error_msg) ) {
-		dprintf(D_ALWAYS, "AmazonVMStatus Error: %s\n", m_error_msg.Value());
+	if( !check_access_and_secret_key_file(accesskeyfile.c_str(),
+				secretkeyfile.c_str(), m_error_msg) ) {
+		dprintf(D_ALWAYS, "AmazonVMStatus Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
-	if( instance_id.IsEmpty() ) {
+	if( instance_id.empty() ) {
 		m_error_msg = "Empty_Instance_ID";
-		dprintf(D_ALWAYS, "AmazonVMStatus Error: %s\n", m_error_msg.Value());
+		dprintf(D_ALWAYS, "AmazonVMStatus Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
@@ -655,7 +656,7 @@ AmazonVMStatus::gsoapRequest(void)
 	ec2__DescribeInstancesInfoType instancesSet;
 	ec2__DescribeInstancesItemType item;
 
-	item.instanceId = instance_id.Value();
+	item.instanceId = instance_id.c_str();
 
 	instancesSet.item.push_back( &item );
 
@@ -665,7 +666,7 @@ AmazonVMStatus::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -695,7 +696,7 @@ AmazonVMStatus::gsoapRequest(void)
 					continue;
 				}
 
-				if( !strcmp(instance->instanceId.c_str(), instance_id.Value()) ) {
+				if( !strcmp(instance->instanceId.c_str(), instance_id.c_str()) ) {
 
 					status_result.status = instance->instanceState->name.c_str();
 					status_result.instance_id = instance->instanceId.c_str();
@@ -738,9 +739,9 @@ AmazonVMStatusAll::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
-				secretkeyfile.Value(), m_error_msg) ) {
-		dprintf(D_ALWAYS, "AmazonVMStatusAll Error: %s\n", m_error_msg.Value());
+	if( !check_access_and_secret_key_file(accesskeyfile.c_str(),
+				secretkeyfile.c_str(), m_error_msg) ) {
+		dprintf(D_ALWAYS, "AmazonVMStatusAll Error: %s\n", m_error_msg.c_str());
 		return false;
 	}
 
@@ -755,7 +756,7 @@ AmazonVMStatusAll::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);

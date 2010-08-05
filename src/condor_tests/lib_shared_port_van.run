@@ -19,82 +19,31 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
 
-$testdesc =  'lib_shared_port_van.run - Simple personal condor wrapped test';
-$testname = "lib_shared_port_van";
-$corename = "lib_shared_port_van";
+my $append_condor_config = '
+  USE_SHARED_PORT = True
+  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
-chomp($currenthost);
-$primarycollector = $currenthost;
+  SHARED_PORT_DEBUG = D_COMMAND D_FULLDEBUG
 
-CondorTest::fullchomp($currenthost);
+  # named sockets cannot have very long paths (~100 chars), so put them
+  # in /tmp to avoid problems
+  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
+';
 
-print scalar localtime() . "\n";
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
 
-$mypid = $$;
-if($$ != $mypid) {
-	die "Need to access right pid\n";
-}
-$mysaveme = $corename . ".saveme";
+# verify that a job runs
+SimpleJob::RunCheck();
 
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
+# verify that at least one connection request was made via shared port server
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "SharedPortServer: request from SCHEDD"
+);
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
-
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
-
-my $version = "local";
-# get a local scheduler running (side a)
-my $configloc = CondorTest::StartPersonal( "lib_shared_port_van", "x_param.lib_shared_port_van" ,$version);
-my @local = split /\+/, $configloc;
-my $locconfig = shift @local;
-my $locport = shift @local;
-
-CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
-
-my $holdone = CondorTest::verbose_system("./lib_shared_port_van.pl");
-if($holdone != 0) {
-	CondorTest::debug("Bailing because running job failed to submit\n",1);
-	$bail = 1;
-}
-
-system("cp *lib_shared_port_van* $mysaveme");
-
-if( -e "$mysubmitnm" )
-{
-	system("cp $mysubmitnm $mycorenm");
-}
-
-if( -e "$mysubmitnmout" )
-{
-	system("cp $mysubmitnmout $mycorenmout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	system("cp $mysubmitnmlog $mycorenmlog");
-}
-
-CondorTest::KillPersonal($locconfig);
-
-print scalar localtime() . "\n";
-
-if( $bail != 0 )
-{
-	# actual test failed but we allowed cleanup
-	exit(1);
-}
-
-CondorTest::debug("lib_shared_port_van SUCCESS\n",1);
-exit(0);
+CondorTest::EndTest();

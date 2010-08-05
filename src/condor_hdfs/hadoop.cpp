@@ -120,12 +120,21 @@ void Hadoop::initialize() {
                 free(snclass);
         }
 
-        m_siteFile = "hdfs-site.xml";
+        m_dfsAdminClass = "org.apache.hadoop.hdfs.tools.DFSAdmin";
+        char *dfsAdminclass = param("HDFS_DFSADMIN_CLASS");
+        if (dfsAdminclass != NULL) {
+                m_dfsAdminClass = dfsAdminclass;
+                free(dfsAdminclass);
+        }
+
+        m_hdfsSiteFile = "hdfs-site.xml";
         char *sitef = param("HDFS_SITE_FILE");
         if (sitef != NULL) {
-                m_siteFile = sitef;
+                m_hdfsSiteFile = sitef;
                 free(sitef);
         }
+
+        m_coreSiteFile = "core-site.xml";
 
         char *adPubInt = param("HDFS_AD_PUBLISH_INTERVAL");
         if (adPubInt != NULL) {
@@ -144,6 +153,7 @@ void Hadoop::initialize() {
 
         ASSERT(m_reaper != FALSE);
 
+        writeCoreSiteFile();  
         writeConfigFile();
 
         startServices();
@@ -152,6 +162,7 @@ void Hadoop::initialize() {
         m_hdfsAd.SetMyTypeName(GENERIC_ADTYPE);
         m_hdfsAd.SetTargetTypeName("hdfs");
         m_hdfsAd.Assign(ATTR_NAME, "hdfs");
+        m_hdfsAd.Assign("ServiceType", getServiceNameByType( m_serviceType) );
         daemonCore->publish(&m_hdfsAd); 
 
         //Register a timer for periodically pushing classads.
@@ -161,13 +172,50 @@ void Hadoop::initialize() {
 
 }
 
+void Hadoop::writeCoreSiteFile() {
+        MyString confFile;
+        char *logdir = param("LOG");
+        if (logdir == NULL) 
+            EXCEPT("Misconfigured HDFS!: log directory is not specified\n");
+
+        confFile.sprintf("%s/%s", logdir, m_coreSiteFile.Value());
+        free(logdir);
+
+        int fd = safe_create_replace_if_exists(confFile.Value(), O_CREAT|O_WRONLY);
+        if (fd == -1) {
+                dprintf(D_ALWAYS, "Failed to create hadoop configuration file\n");
+                exit(1);
+        }
+
+        StringList xml("", "\n");;
+        xml.append("<?xml version=\"1.0\"?>");
+        xml.append("<?xml-stylesheet type=\"text/xsl\" href=\"configuration.xsl\"?>");
+        xml.append("<!-- DON'T MODIFY this file manually, as it is overwritten by CONDOR.-->");
+        xml.append("<configuration>");
+
+        char *namenode = param("HDFS_NAMENODE");
+        if (namenode != NULL) {
+                writeXMLParam("fs.default.name", namenode, &xml);
+                free(namenode);
+        } 
+
+        xml.append("</configuration>");
+
+        char *str = xml.print_to_delimed_string(NULL);
+        ASSERT(str != NULL);
+        int len = full_write(fd, str, strlen(str));
+        ASSERT(len == strlen(str));
+        close(fd);
+        free(str);
+}
+
 void Hadoop::writeConfigFile() {
         MyString confFile;
         char *logdir = param("LOG");
         if (logdir == NULL) 
             EXCEPT("Misconfigured HDFS!: log directory is not specified\n");
 
-        confFile.sprintf("%s/%s", logdir, m_siteFile.Value());
+        confFile.sprintf("%s/%s", logdir, m_hdfsSiteFile.Value());
         free(logdir);
         dprintf(D_ALWAYS, "Config file location %s\n", confFile.Value());
 
@@ -356,23 +404,21 @@ void Hadoop::killTimer() {
 void Hadoop::startServices() {
         char *services = param ("HDFS_SERVICES");
 
-        if (services == NULL) {
-                startService(HADOOP_DATANODE);
-        } 
+        if (services == NULL) //by default run system as DataNode
+             m_serviceType = HADOOP_DATANODE;
+
         else {
-                MyString s(services);
-                
-                if (s == "HDFS_NAMENODE")
-                        startService(HADOOP_NAMENODE);
-                else if (s == "HDFS_DATANODE")
-                        startService(HADOOP_DATANODE);
-                else
-                        startService(HADOOP_SECONDARY);
+            MyString s(services);
+            m_serviceType = getServiceTypeByName( s );
         }
+
+        startService( m_serviceType );
 }
 
-void Hadoop::startService(int type) {
-        dprintf(D_ALWAYS, "Starting hadoop node service type = %d\n", type);
+void Hadoop::startService( NodeType type ) {
+        dprintf(D_ALWAYS, "Starting hadoop node service type = %s\n",
+                getServiceNameByType(type).Value() );
+
         ArgList arglist;
 
         java_config(m_java, &arglist, &m_classpath);
@@ -471,7 +517,7 @@ void Hadoop::startService(int type) {
         
                 //For now always run name server with upgrade option, In case
                 //Hadoop Jar files are updated to a newer version.
-                arglist.AppendArg("-upgrade");
+                //arglist.AppendArg("-upgrade");
         }
 
         MyString argString;
@@ -493,8 +539,59 @@ void Hadoop::startService(int type) {
         if (m_pid == FALSE) 
                 EXCEPT("Failed to launch hadoop process using Create_Process.\n ");
 
-        dprintf(D_ALWAYS, "Launched hadoop process %d pid=%d\n", type, m_pid);
+        dprintf(D_ALWAYS, "Launched hadoop process %s with pid=%d\n", 
+                getServiceNameByType(type).Value(), m_pid);
+
         m_state = STATE_RUNNING;
+}
+
+MyString Hadoop::runDFSAdmin( const char * cmd) {
+
+        MyString result;
+
+        ArgList arglist;
+
+        java_config(m_java, &arglist, &m_classpath);
+      
+        arglist.RemoveArg(0);
+        arglist.InsertArg(m_java.Value(), 0);
+        
+        arglist.AppendArg(m_dfsAdminClass);
+        arglist.AppendArg(cmd);
+
+        MyString argString;
+        arglist.GetArgsStringForDisplay(&argString);
+        dprintf(D_FULLDEBUG, "%s\n", argString.Value());
+
+        char ** args = arglist.GetStringArray();
+
+        FILE* fp;
+	fp = my_popenv( args, "r", FALSE );
+	if( ! fp ) {
+	       dprintf( D_ALWAYS, "Failed to execute %s %s\n",
+                     arglist.GetArg( arglist.Count()-2), 
+                     arglist.GetArg( arglist.Count()-1) );
+	       return "";
+	}
+
+        bool short_report=false;
+        char buf[ STDOUT_READBUF_SIZE ];
+
+        while ( fgets(buf, STDOUT_READBUF_SIZE, fp) ) {
+            MyString line = buf;
+
+            if( line.find("---")>=0 ){ //check end of namenode report
+                short_report=true; // set flag to parse one more line
+                continue;
+            }
+            result += line;
+            if( short_report ) //do not grab details of each node
+                break;
+        }
+        my_pclose( fp );
+        free( args );
+        dprintf(D_FULLDEBUG,"RESULT:%s\n", result.Value());
+        return result;
 }
 
 void Hadoop::writeXMLParam(const char *key, const char *value, StringList *buff) {
@@ -526,8 +623,52 @@ void Hadoop::recurrBuildClasspath(const char *path) {
                 }
         }
 }
+void Hadoop::updateClassAd( MyString safemode, MyString stats) {
+
+       MyString adKey, adValue;
+
+       adKey.sprintf("SAFEMODE");
+       int pos = safemode.find("OFF", 0);
+       if (pos >= 0)
+           adValue.sprintf("ON");
+       else
+           adValue.sprintf("OFF");
+
+       m_hdfsAd.Assign(adKey.Value(), adValue.Value() );
+       dprintf( D_ALWAYS, "Key=%s:Value=%s\n", adKey.Value(), adValue.Value() );
+
+       int ln_begin = 0;
+       int ln_end = 0;
+
+       while( (ln_end = stats.FindChar('\n', ln_begin+1)) > 0 ) {
+            MyString line = stats.Substr(ln_begin, ln_end-1);
+            ln_begin = ln_end;
+            line.trim();
+            if( line.Length() < 2 )
+                continue; 
+
+            pos = line.FindChar(':', 0);
+            if( pos < 0 ) //omit unncessary output
+                continue;
+
+            adKey = line.Substr(0, pos-1);
+            adKey.replaceString(" ","_");
+            adKey.replaceString("%","Percent");
+            adValue = line.Substr(pos+1, line.Length() );
+            adValue.replaceString("�", "0"); //this a bug in hdfs
+            adValue.trim();
+            m_hdfsAd.Assign(adKey.Value(), adValue.Value() );
+            dprintf( D_ALWAYS, "Key=%s:Value=%s\n", adKey.Value(), adValue.Value() );
+      }
+}
 
 void Hadoop::publishClassAd() {
+
+       if( m_serviceType == HADOOP_NAMENODE) { 
+           MyString mode  = runDFSAdmin("-safemode get");
+           MyString stats = runDFSAdmin("-report");
+
+           updateClassAd( mode, stats );       }
        daemonCore->UpdateLocalAd(&m_hdfsAd);
        int stat = daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_hdfsAd, NULL, true);
        dprintf(D_FULLDEBUG, "Updated ClassAds (status = %d)\n", stat);
@@ -654,4 +795,39 @@ int Hadoop::getKeyValue(MyString line, MyString *key, MyString *value) {
 
 end:
         return type;
+}
+
+NodeType Hadoop::getServiceTypeByName( MyString s )
+{
+	NodeType type;
+	if( s == "HDFS_NAMENODE" )
+     		type = HADOOP_NAMENODE;
+	
+	else if( s == "HDFS_SECONDARY" )
+		type = HADOOP_SECONDARY;
+	
+	else //by default run system as DataNode
+		type = HADOOP_DATANODE;
+	
+	return type;
+}
+
+MyString Hadoop::getServiceNameByType( NodeType type)
+{
+	MyString s;
+
+	switch (type){
+		case HADOOP_NAMENODE: 
+			s.sprintf("HADOOP_NAMENODE");
+			break;
+		
+		case HADOOP_SECONDARY:
+			s.sprintf("HADOOP_SECONDARY");
+			break;
+
+		default: //by default run system as DataNode
+			s.sprintf("HADOOP_DATANODE");
+	}
+
+	return s;
 }

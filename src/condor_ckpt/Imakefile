@@ -5,14 +5,6 @@
 
 CC_PIC_FLAG =
 
-XCOMM
-XCOMM Set the following if you want a PVM ready checkpointing library
-XCOMM compiled.  This will require that the PVM library be linked into
-XCOMM the application.
-XCOMM
-
-PVM_CHECKPOINT = -DPVM_CHECKPOINTING
-
 FILE_TABLE = -DFILE_TABLE -I$(ZLIB_INC)
 FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_basic.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o condor_file_append.o file_table_interf.o
 
@@ -61,9 +53,9 @@ COMPRESS_FLAGS = -DCOMPRESS_CKPT -I $(ZLIB_INC)
 #endif /* DOES_COMPRESS_CKPT */
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) \
-	$(FILE_TABLE) $(PVM_CHECKPOINT) -DIN_CKPT_LIB $(DL_EXTRACT)
+	$(FILE_TABLE) -DIN_CKPT_LIB $(DL_EXTRACT)
 TOUPPER_C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) \
-	$(FILE_TABLE) $(PVM_CHECKPOINT) -DIN_CKPT_LIB $(DL_EXTRACT)
+	$(FILE_TABLE) -DIN_CKPT_LIB $(DL_EXTRACT)
 
 CFLAGS = $(STD_C_FLAGS) -DIN_CKPT_LIB $(DYNAMIC_FLAGS) $(DL_EXTRACT)
 
@@ -75,7 +67,7 @@ UTIL_OBJ =  dprintf_common.o mkargv.o
 
 #ifdef DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
-	fake_remote_syscall.o fake_hooks.o condor_error.o \
+	fake_remote_syscall.o condor_error.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ) $(FILE_TABLE_OBJ) \
 	$(COMPRESS_OBJ) shared_utils.o malloc-user.o gtodc.o maps.o

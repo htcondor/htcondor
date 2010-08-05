@@ -34,7 +34,12 @@ typedef struct {
 typedef int (*scan_func)(ClassAd *ad);
 
 typedef unsigned char SetAttributeFlags_t;
-const SetAttributeFlags_t NONDURABLE = 1;
+const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
+	// NoAck tells the remote version of SetAttribute to not send back a
+	// return code.  If the operation fails, the connection will be closed,
+	// so failure will be detected in CommitTransaction().  This is useful
+	// for improving performance when setting lots of attributes.
+const SetAttributeFlags_t SetAttribute_NoAck = (1<<1);
 
 #define SHADOW_QMGMT_TIMEOUT 300
 
@@ -73,9 +78,11 @@ bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true);
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
-	@return -1 on failure; the new cluster id on success
+	@return the new cluster id on success, < 0 on failure: -1 == "owner check failed"
+    -2 == "MAX_JOBS_SUBMITTED exceeded", -3 == "cluster id collision"
 */
 int NewCluster(void);
+
 /** Signal the start of a new job description (a new job process).
 	@param cluster_id cluster id of the active job cluster (from NewCluster())
 	@return -1 on failure; the new proc id on success

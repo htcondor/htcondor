@@ -276,9 +276,10 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 
 	char *owner = my_username();
 	if( !owner ) {
-		owner = "unknown";
+		owner = strdup("unknown");
 	}
 	requestAd.Assign(ATTR_OWNER, owner);
+	free(owner);
 
 #ifdef WIN32
 	// put the NT domain into the ad as well
@@ -339,7 +340,7 @@ fetchSubmittorPrios()
 
 	// connect to negotiator
 
-	sock->eom();
+	sock->end_of_message();
 	sock->decode();
 	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 

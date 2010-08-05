@@ -99,6 +99,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->InsertAttr(ATTR_TOTAL_SUSPENSIONS, 0);
 	ad->InsertAttr(ATTR_LAST_SUSPENSION_TIME, 0);
 	ad->InsertAttr(ATTR_CUMULATIVE_SUSPENSION_TIME, 0);
+	ad->InsertAttr(ATTR_COMMITTED_SUSPENSION_TIME, 0);
 	ad->InsertAttr(ATTR_ON_EXIT_BY_SIGNAL, false);
 
 
@@ -300,6 +301,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
 		ATTR_SHADOW_BIRTHDATE,
+		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 		// ATTR_JOB_STATUS
 

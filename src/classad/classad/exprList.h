@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __EXPR_LIST_H__
-#define __EXPR_LIST_H__
+#ifndef __CLASSAD_EXPR_LIST_H__
+#define __CLASSAD_EXPR_LIST_H__
 
 #include <vector>
 
@@ -235,4 +235,4 @@ class ExprListIterator
 
 END_NAMESPACE // classad
 
-#endif//__EXPR_LIST_H__
+#endif//__CLASSAD_EXPR_LIST_H__

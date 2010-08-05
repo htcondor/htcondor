@@ -20,7 +20,18 @@
 #ifndef EMIT_H
 #define EMIT_H
 
+#define FAIL \
+	e.emit_result_failure(__LINE__); \
+	return false
+
+#define PASS \
+	e.emit_result_success(__LINE__); \
+	return true
+
 #include "condor_common.h"
+
+// Global emitter declaration
+extern class Emitter e;
 
 class Emitter {
 private:
@@ -32,7 +43,14 @@ private:
 	int aborted_tests;
 	int skipped_tests;
 
+	bool print_failures;
+	bool print_successes;
+
+	MyString *buf, *test_buf;
+
 	time_t start;
+
+	void print_result_failure();
 public:
 		// constructor and destructor
 	Emitter();
@@ -40,15 +58,16 @@ public:
 	
 	/* Initializes the Emitter object.
 	 */
-	void init(void);
+	void init(bool failures_printed, bool successes_printed);
 	
 	/* Formats and prints a parameter and its value as a sub-point of input,
 	 * output_expected, or output_actual.  format can use printf formatting.
 	 */
-	void emit_param(const char* pname, const char* format, ...);
+	//void emit_param(const char* pname, const char* format, ...);
+	void emit_param(const char* pname, const char* format, va_list args);
 	
 	/* A version of emit_param() for return values. */
-	void emit_retval(const char* format, ...);
+	void emit_retval(const char* format, va_list args);
 
 	/* Emits a heading and the function string.
 	 */
@@ -69,7 +88,11 @@ public:
 	/* Shows exactly what is going to be tested.
 	 */
 	void emit_test(const char* test);
-
+	
+	/* Print out name of test function.
+	 */
+	void emit_name(const char* test_name);
+	
 	/* Shows exactly what is going to be tested.
 	 */
 	void emit_skipped(const char* skipped);
@@ -108,10 +131,6 @@ public:
 	 */
 	void emit_alert(const char* alert);
 
-	/* Emits a break between function tests.
-	 */
-	void emit_function_break(void);
-
 	/* Emits a line break.  This is taken care of between tests, so you probably
 	 *  won't need this.
 	 */
@@ -123,4 +142,43 @@ public:
 	 */
 	void emit_summary(void);
 };
+
+void init(bool failures_printed, bool successes_printed);
+	
+void emit_param(const char* pname, const char* format, ...);
+	
+void emit_retval(const char* format, ...);
+
+void emit_function(const char* function);
+
+void emit_object(const char* object);
+
+void emit_comment(const char* comment);
+
+void emit_problem(const char* problem);
+
+void emit_test(const char* test);
+	
+void emit_name(const char* test_name);
+	
+void emit_skipped(const char* skipped);
+
+void emit_input_header(void);
+
+void emit_output_expected_header(void);
+
+void emit_output_actual_header(void);
+
+void emit_result_success(int line);
+
+void emit_result_failure(int line);
+
+void emit_result_abort(int line);
+
+void emit_alert(const char* alert);
+
+void emit_test_break(void);
+
+void emit_summary(void);
+
 #endif

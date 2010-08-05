@@ -19,14 +19,18 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_subdag-A-upper.dag';
-$testdesc =  'Condor submit dag - basic splice test - scheduler U';
+$testdesc =  'Condor submit dag - sub-DAG test with lazy submit file generation - scheduler U';
 $testname = "job_dagman_subdag-A";
-$dagman_args = "-verbose";
+# Here we pass most arguments that should be passed down to lower-level
+# DAGs.  We're just passing in non-default values here so that we can
+# check that the get passed down properly and inserted into the generated
+# .condor.sub files.
+$dagman_args = "-verbose -notification never -allowlogerror -debug 2 -outfile_dir . -oldrescue 1 -autorescue 0 -allowversionmismatch -update_submit -import_env";
 
-@outfiles = ("job_dagman_subdag-A-lower1-node.A",
-  "job_dagman_subdag-A-lower1-node.B", 
+@outfiles = ("job_dagman_subdag-A-lower1-node.B", 
   "job_dagman_subdag-A-lower1-node.C", 
   "job_dagman_subdag-A-lower1-node.D", 
   "job_dagman_subdag-A-lower2-node.A", 
@@ -34,12 +38,20 @@ $dagman_args = "-verbose";
   "job_dagman_subdag-A-lower2-node.C", 
   "job_dagman_subdag-A-lower2-node.D", 
   "job_dagman_subdag-A-upper-node.A", 
-  "job_dagman_subdag-A-upper-node.D");
+  "job_dagman_subdag-A-upper-node.D",
+  "job_dagman_subdag-A-lowerlower1-node.A",
+  "job_dagman_subdag-A-lowerlower1-node.B",
+  "job_dagman_subdag-A-lowerlower1-node.C",
+  "job_dagman_subdag-A-lowerlower1-node.D");
 
 @logfiles = ("job_dagman_subdag-A-lower1.dag.dagman.out",
   "job_dagman_subdag-A-lower2.dag.dagman.out",
   "job_dagman_subdag-A-upper.dag.dagman.out");
 
+@submitfiles = ("job_dagman_subdag-A-lower1.dag.condor.sub",
+	"job_dagman_subdag-A-lower2.dag.condor.sub",
+	"job_dagman_subdag-A-upper.dag.condor.sub",
+	"job_dagman_subdag-A-lowerlower1.dag.condor.sub");
 
 my $killedchosen = 0;
 
@@ -51,7 +63,14 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
+	}
+}
+
+# Get rid of any existing submit files.
+foreach $name (@submitfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
 	}
 }
 
@@ -114,7 +133,7 @@ $success = sub
 	}
 	# clean out old output files
 	foreach $name (@outfiles) {
-		system("rm -f $name.out $name.err");
+		runcmd("rm -f $name.out $name.err");
 	}
 
 	foreach $name (@logfiles) {
@@ -131,6 +150,57 @@ $success = sub
 			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
 				$passed = 1;
 				CondorTest::debug("$name: $line\n",1);
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	# Make sure that the right arguments got passed down to all of the
+	# submit files.
+	foreach $name (@submitfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = lc $_;
+			if( $line =~ /arguments/ ) {
+				# I'm not using regexps here because we want to search
+				# for exact matches...
+				if( index($line, "-verbose") lt 0) {
+					CondorTest::debug("failed: missing '-verbose' in line <$line>\n");
+				} elsif( index($line, "-notification never") lt 0) {
+					CondorTest::debug("failed: missing '-notification never' in line <$line>\n");
+				} elsif( index($line, "-allowlogerror") lt 0) {
+					CondorTest::debug("failed: missing '-allowlogerror' in line <$line>\n");
+				} elsif( index($line, "-debug 2") lt 0) {
+					CondorTest::debug("failed: missing '-debug 2' in line <$line>\n");
+				} elsif( index($line, "-outfile_dir .") lt 0) {
+					CondorTest::debug("failed: missing '-outfile_dir .' in line <$line>\n");
+				} elsif( index($line, "-rescue") lt 0) {
+					CondorTest::debug("failed: missing '-rescue' in line <$line>\n");
+				} elsif( index($line, "-autorescue 0") lt 0) {
+					CondorTest::debug("failed: missing '-autorescue 0' in line <$line>\n");
+				} elsif( index($line, "-allowversionmismatch") lt 0) {
+					CondorTest::debug("failed: missing '-allowversionmismatch' in line <$line>\n");
+				} elsif( index($line, "-update_submit") lt 0) {
+					CondorTest::debug("failed: missing '-update_submit' in line <$line>\n");
+				} elsif( index($line, "-import_env") lt 0) {
+					CondorTest::debug("failed: missing '-import_env' in line <$line>\n");
+				} else {
+					$passed = 1;
+					CondorTest::debug("$name: $line\n",1);
+				}
 			}
 		}
 		close(OUT);

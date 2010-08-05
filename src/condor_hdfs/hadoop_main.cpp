@@ -33,36 +33,32 @@ DECL_SUBSYSTEM("HDFS", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 static Hadoop hadoop;
 
-int main_init(int /* argc */, char * /* argv */ [])
+void main_init(int /* argc */, char * /* argv */ [])
 {     
         hadoop.initialize();
-        return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool /* is_full */ )
+void
+main_config()
 {
         hadoop.initialize();
-        return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
         hadoop.stop(true);
         DC_Exit(0);
-        return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
         hadoop.stop();
-        return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

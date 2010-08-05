@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __OPERATORS_H__
-#define __OPERATORS_H__
+#ifndef __CLASSAD_OPERATORS_H__
+#define __CLASSAD_OPERATORS_H__
 
 #include "classad/exprTree.h"
 
@@ -226,4 +226,4 @@ class Operation : public ExprTree
 
 END_NAMESPACE // classad
 
-#endif//__OPERATORS_H__
+#endif//__CLASSAD_OPERATORS_H__

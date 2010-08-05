@@ -137,7 +137,7 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 #ifdef DOES_CHECKPOINTING
 CKPT_OBJ = $(FILE_TABLE_OBJ)\
 	image.o tmp_stack.o machdep.$(DEP_OS).o malloc-user.o \
-	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
+	syscall_mode.o $(LONGJMP) $(HP_CKPT) \
 	$(SIG_CKPT_OBJS) eprintf.o shared_utils.o condor_error.o \
 	gtodc.o
 #else
@@ -162,14 +162,15 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o \
-	strupr.o string_funcs.o \
+	strupr.o strcasestr.o \
 	mark_thread.o
 
 CPP_UTIL_OBJ = \
 	condor_version.o condor_ver_info.o \
 	stat_wrapper.o stat_wrapper_internal.o \
 	condor_open.o selector.o \
-	MyString.o subsystem_info.o
+	MyString.o subsystem_info.o \
+	HashTable.o
 
 CONDOR_TYPE_OBJ = sig_num.o open_flags.o fcntl_cmd.o errno_num.o
 

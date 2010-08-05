@@ -88,7 +88,7 @@ QmgrJobUpdater::~QmgrJobUpdater()
 		q_update_tid = -1;
 	}
 	if( schedd_addr ) { free(schedd_addr); }
-	free(schedd_ver);
+	if (schedd_ver)   {free(schedd_ver); }
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
@@ -114,11 +114,13 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 
 	common_job_queue_attrs = new StringList();
 	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
+	common_job_queue_attrs->insert( ATTR_RESIDENT_SET_SIZE );
 	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
 	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
+	common_job_queue_attrs->insert( ATTR_COMMITTED_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
@@ -151,6 +153,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
 	terminate_job_queue_attrs->insert( ATTR_TERMINATION_PENDING );
 	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_FILENAME );
+	terminate_job_queue_attrs->insert( ATTR_SPOOLED_OUTPUT_FILES );
 
 	checkpoint_job_queue_attrs = new StringList();
 	checkpoint_job_queue_attrs->insert( ATTR_NUM_CKPTS );
@@ -350,7 +353,6 @@ QmgrJobUpdater::periodicUpdateQ( void )
 	updateJob( U_PERIODIC, NONDURABLE );
 }
 
-
 bool
 QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
 {
@@ -377,7 +379,12 @@ QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
 		// and call SetAttribute(), so it was both a waste of effort
 		// here, and made this code needlessly more complex.  
 		// Derek Wright, 3/25/02
-	if( SetAttribute(cluster, proc, name, value) < 0 ) {
+
+		// We use SetAttribute_NoAck to improve performance, since this
+		// avoids a lot of round-trips between the schedd and shadow.
+		// This means we may not detect failure until CommitTransaction()
+		// or the next call to SetAttribute().
+	if( SetAttribute(cluster, proc, name, value, SetAttribute_NoAck) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
 				 name, value );

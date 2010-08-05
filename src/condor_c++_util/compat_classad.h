@@ -24,10 +24,18 @@
 #define WANT_CLASSAD_NAMESPACE
 #endif
 
-#include "condor_common.h"
 #include "classad/classad_distribution.h"
-#include "condor_io.h"
-#include "string_list.h"
+#include "MyString.h"
+
+class StringList;
+class Stream;
+
+#ifndef TRUE
+#define TRUE  1
+#endif
+#ifndef FALSE 
+#define FALSE 0
+#endif
 
 #ifndef ATTRLIST_MAX_EXPRESSION
 #define	ATTRLIST_MAX_EXPRESSION 10240
@@ -173,6 +181,9 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name, MyString const &value)
 	{ return InsertAttr( name, value.Value()) ? TRUE : FALSE; }
 
+	int Assign(char const *name, std::string const &value)
+	{ return InsertAttr( name, value.c_str()) ? TRUE : FALSE; }
+
 	int Assign(char const *name,char const *value);
 
 	int Assign(char const *name,int value)
@@ -233,6 +244,13 @@ class ClassAd : public classad::ClassAd
 		 */
 	int LookupString(const char *name, MyString &value) const; 
 
+		/** Lookup (don't evaluate) an attribute that is a string.
+		 *  @param name The attribute
+		 *  @param value The string
+		 *  @return true if the attribute exists and is a string, false otherwise
+		 */
+	int LookupString(const char *name, std::string &value) const; 
+
 		/** Lookup (don't evaluate) an attribute that is an integer.
 		 *  @param name The attribute
 		 *  @param value The integer
@@ -289,6 +307,15 @@ class ClassAd : public classad::ClassAd
 		 *  but is not a string.
          */
     int EvalString (const char *name, classad::ClassAd *target, MyString & value);
+
+        /** std::string version of EvalString()
+		 *  @param name The name of the attribute
+		 *  @param target A ClassAd to resolve MY or other references
+		 *  @param value A std::string where we the copy the string.
+		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
+		 *  but is not a string.
+         */
+    int EvalString (const char *name, classad::ClassAd *target, std::string & value);
 
 		/** Lookup and evaluate an attribute in the ClassAd that is an integer
 		 *  @param name The name of the attribute
@@ -366,6 +393,11 @@ class ClassAd : public classad::ClassAd
 			@return TRUE
 		*/
 	int sPrint( MyString &output, StringList *attr_white_list = NULL );
+		/** Format the ClassAd as an old ClassAd into the std::string.
+			@param output The std::string to write into
+			@return TRUE
+		*/
+	int sPrint( std::string &output, StringList *attr_white_list = NULL );
         /** Prints an expression with a certain name into a buffer. 
          *
          *  @param buffer The buffer to place the named expression into. NOTE: if this is NULL, then the function returns some malloc'd memory. Free it.
@@ -383,9 +415,11 @@ class ClassAd : public classad::ClassAd
 
     /* Prints the current classad as XML to a string. fPrintAsXML calls this.
      * @param output The MyString to have filled with the XML-ified classad.
+	 *   The string is appended to, not overwritten.
      * @return TRUE
      */
     int sPrintAsXML(MyString &output, StringList *attr_white_list = NULL);
+    int sPrintAsXML(std::string &output, StringList *attr_white_list = NULL);
 
     void ResetExpr();
 

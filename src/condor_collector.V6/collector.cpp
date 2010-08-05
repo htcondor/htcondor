@@ -111,7 +111,7 @@ extern "C"
 	void install_sig_handler( int, SIGNAL_HANDLER );
 	void schedule_event ( int month, int day, int hour, int minute, int second, SIGNAL_HANDLER );
 }
-
+ 
 //----------------------------------------------------------------
 
 void computeProjection(ClassAd *shortAd, ClassAd *curr_ad, SimpleList<MyString> *projectionList);
@@ -129,6 +129,12 @@ void CollectorDaemon::Init()
 	updateCollectors = NULL;
 	updateRemoteCollector = NULL;
 	Config();
+
+	/* TODO: Eval notes and refactor when time permits.
+	 * 
+	 * per-review <tstclair> this is a really unintuive and I would consider unclean.
+	 * Maybe if we care about cron like events we should develop a clean mechanism
+	 * which doesn't indirectly hook into daemon-core timers. */
 
     // setup routine to report to condor developers
     // schedule reports to developers
@@ -309,7 +315,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	sock->decode();
 	sock->timeout(ClientTimeout);
 	bool ep = CondorThreads::enable_parallel(true);
-	bool res = !cad.initFromStream(*sock) || !sock->eom();
+	bool res = !cad.initFromStream(*sock) || !sock->end_of_message();
 	CondorThreads::enable_parallel(ep);
     if( res )
     {
@@ -517,7 +523,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if( !cad.initFromStream(*sock) || !sock->eom() )
+    if( !cad.initFromStream(*sock) || !sock->end_of_message() )
     {
         dprintf( D_ALWAYS,
 				 "Failed to receive invalidation on %s: aborting\n",
@@ -800,7 +806,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
         }
 
-        if ( !socket->eom () ) {
+        if ( !socket->end_of_message () ) {
         
             dprintf ( 
                 D_FULLDEBUG, 
@@ -929,20 +935,35 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 
 void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
+	if (param_boolean("IGNORE_INVALIDATE", false)) {
+		dprintf(D_ALWAYS, "Ignoring invalidate (IGNORE_INVALIDATE=TRUE)\n");
+		return;
+	}
+
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
-	// set up for hashtable scan
-	__query__ = &query;
-	__numAds__ = 0;
+    if ( 0 == ( __numAds__ = collector.remove( whichAds, query ) ) )
+	{
+		dprintf ( D_ALWAYS, "Walking tables to invalidate... O(n)\n" );
 
-	// first set all the "LastHeardFrom" attributes to low values ...
-	collector.walkHashTable (whichAds, invalidation_scanFunc);
+		// set up for hashtable scan
+		__query__ = &query;
 
-	// ... then invoke the housekeeper
-	collector.invokeHousekeeper (whichAds);
+		if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) 
+		{
+			// first set all the "LastHeardFrom" attributes to low values ...
+			collector.walkHashTable (whichAds, invalidation_scanFunc);
 
-	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__);
+			// ... then invoke the housekeeper
+			collector.invokeHousekeeper (whichAds);
+		} else 
+		{
+			__numAds__ = collector.invalidateAds(whichAds, query);
+		}
+	}
+
+	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__ );
 }	
 
 
@@ -967,30 +988,34 @@ int CollectorDaemon::reportSubmittorScanFunc( ClassAd *cad )
 int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
 {
     char buf[80];
+	int iRet = 0;
 
-    if ( !cad->LookupString( ATTR_STATE, buf ) )
-        return 0;
-    machinesTotal++;
-    switch ( buf[0] ) {
-        case 'C':
-            machinesClaimed++;
-            break;
-        case 'U':
-            machinesUnclaimed++;
-            break;
-        case 'O':
-            machinesOwner++;
-            break;
-    }
+	if ( cad && cad->LookupString( ATTR_STATE, buf ) )
+	{
+		machinesTotal++;
+		switch ( buf[0] )
+		{
+			case 'C':
+				machinesClaimed++;
+				break;
+			case 'U':
+				machinesUnclaimed++;
+				break;
+			case 'O':
+				machinesOwner++;
+				break;
+		}
 
-	// Count the number of jobs in each universe
-	int		universe;
-	if ( cad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
-		ustatsAccum.accumulate( universe );
+		// Count the number of jobs in each universe
+		int universe;
+		if ( cad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) )
+		{
+			ustatsAccum.accumulate( universe );
+		}
+		iRet = 1;
 	}
 
-	// Done
-    return 1;
+    return iRet;
 }
 
 void CollectorDaemon::reportToDevelopers (void)
@@ -1011,7 +1036,7 @@ void CollectorDaemon::reportToDevelopers (void)
     }
 
     // If we don't have any machines reporting to us, bail out early
-    if(machinesTotal == 0) 	
+    if(machinesTotal == 0)
         return;
 
 	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
@@ -1100,7 +1125,7 @@ void CollectorDaemon::Config()
 	if (tmp == NULL) {
 		tmp = strdup("condor.cs.wisc.edu");
 	}
-	if (stricmp(tmp,"NONE") == 0 ) {
+	if (strcasecmp(tmp,"NONE") == 0 ) {
 		free(tmp);
 		tmp = NULL;
 	}
@@ -1275,11 +1300,6 @@ void CollectorDaemon::sendCollectorAd()
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
 
-    // If we don't have any machines, then bail out. You oftentimes
-    // see people run a collector on each macnine in their pool. Duh.
-    if(machinesTotal == 0) {
-		return;
-	}
     // insert values into the ad
     char line[100];
     sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);
@@ -1311,6 +1331,11 @@ void CollectorDaemon::sendCollectorAd()
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 
+       // If we don't have any machines, then bail out. You oftentimes
+       // see people run a collector on each macnine in their pool. Duh.
+	if(machinesTotal == 0) {
+		return ;
+	}
 	if ( updateRemoteCollector ) {
 		char *update_addr = updateRemoteCollector->addr();
 		if (!update_addr) update_addr = "(null)";

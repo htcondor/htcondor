@@ -2122,7 +2122,7 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 	if (seperator) {
 		*seperator = '\0';
 		rest = seperator + 1;
-		if (!stricmp(prefix, "TARGET")) {
+		if (!strcasecmp(prefix, "TARGET")) {
 			is_external = TRUE;
 		}
 		else {
@@ -2496,19 +2496,19 @@ bool AttrList::GetInvisible(char const *name)
 bool AttrList::ClassAdAttributeIsPrivate( char const *name )
 {
 		// keep this in sync with SetPrivateAttributesInvisible()
-	if( stricmp(name,ATTR_CLAIM_ID) == 0 ) {
+	if( strcasecmp(name,ATTR_CLAIM_ID) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;
 	}
-	if( stricmp(name,ATTR_CAPABILITY) == 0 ) {
+	if( strcasecmp(name,ATTR_CAPABILITY) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;
 	}
-	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
+	if( strcasecmp(name,ATTR_CLAIM_IDS) == 0 ) {
 			// This attribute contains secret capability cookies
 		return true;
 	}
-	if( stricmp(name,ATTR_TRANSFER_KEY) == 0 ) {
+	if( strcasecmp(name,ATTR_TRANSFER_KEY) == 0 ) {
 			// This attribute contains the secret file transfer cookie
 		return true;
 	}

@@ -338,7 +338,7 @@ StatWrapper::Stat( StatOpType which, bool force )
 
 	m_last_op = op;
 	m_last_which = which;
-	m_last_stat = op->getPrimary( );
+	//m_last_stat = op->getPrimary( );
 
 	// Invoke the relevant stat functions
 	return op->StatAll( force );

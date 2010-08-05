@@ -210,7 +210,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "condor" ) ) {
+		if ( !token || strcasecmp( token, "condor" ) ) {
 			error_string.sprintf( "%s not of type condor",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
@@ -1210,7 +1210,6 @@ void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 		dprintf( D_FULLDEBUG, "(%d.%d) Got NULL classad from CondorResource\n",
 				 procID.cluster, procID.proc );
 		doActivePoll = true;
-		delete update_ad;
 		SetEvaluateState();
 		return;
 	}
@@ -1270,6 +1269,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
+		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {
@@ -1438,6 +1438,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
 	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+	submit_ad->Assign( ATTR_COMMITTED_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );

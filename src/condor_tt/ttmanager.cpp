@@ -3069,8 +3069,10 @@ static int file_checksum(char *filePathName, int fileSize, char *sum) {
 	unsigned char *checksum;
 
 
-	if (!filePathName || !sum) 
+	if (!filePathName || !sum) {
+		delete checker;
 		return FALSE;
+	}
 
 #if 0
 	int fd;

@@ -35,12 +35,13 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 
 
-	// Some stub functions. In days of old, we would fire up
-	// a perm object on windows, but since the shadow runs as
-	// the user now, we don't need to do that stuff.
-static void initialize_perm_checks() { return; }
-static bool read_access(const char * /* filename */) { return true; }
-static bool write_access(const char * /* filename */) { return true; }
+static bool read_access(const char * filename ) {
+	return thisRemoteResource->allowRemoteReadFileAccess( filename );
+}
+
+static bool write_access(const char * filename ) {
+	return thisRemoteResource->allowRemoteWriteFileAccess( filename );
+}
 
 static const char * shadow_syscall_name(int condor_sysnum)
 {
@@ -81,8 +82,6 @@ do_REMOTE_syscall()
 	int	rval;
 	condor_errno_t terrno;
 	int result = 0;
-
-	initialize_perm_checks();
 
 	syscall_sock->decode();
 
@@ -729,8 +728,13 @@ do_REMOTE_syscall()
 
 		errno = (condor_errno_t)0;
 		MyString expr;
-		rval = pseudo_get_job_attr( attrname , expr);
-		terrno = (condor_errno_t)errno;
+		if ( thisRemoteResource->allowRemoteReadAttributeAccess(attrname) ) {
+			rval = pseudo_get_job_attr( attrname , expr);
+			terrno = (condor_errno_t)errno;
+		} else {
+			rval = -1;
+			terrno = (condor_errno_t)EACCES;
+		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();
@@ -756,8 +760,13 @@ do_REMOTE_syscall()
 		assert( syscall_sock->end_of_message() );;
 
 		errno = (condor_errno_t)0;
-		rval = pseudo_set_job_attr( attrname , expr);
-		terrno = (condor_errno_t)errno;
+		if ( thisRemoteResource->allowRemoteWriteAttributeAccess(attrname) ) {
+			rval = pseudo_set_job_attr( attrname , expr);
+			terrno = (condor_errno_t)errno;
+		} else {
+			rval = -1;
+			terrno = (condor_errno_t)EACCES;
+		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();
@@ -779,8 +788,13 @@ do_REMOTE_syscall()
 		assert( syscall_sock->end_of_message() );;
 
 		errno = (condor_errno_t)0;
-		rval = pseudo_constrain( expr);
-		terrno = (condor_errno_t)errno;
+		if ( thisRemoteResource->allowRemoteWriteAttributeAccess(ATTR_REQUIREMENTS) ) {
+			rval = pseudo_constrain( expr);
+			terrno = (condor_errno_t)errno;
+		} else {
+			rval = -1;
+			terrno = (condor_errno_t)EACCES;
+		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();

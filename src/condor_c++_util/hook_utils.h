@@ -25,11 +25,11 @@
   Lookup the given hook config parameter and make sure it is
   defined, pointing to a valid executable, and that we have
   some reason to believe that executable is trust-worthy.
-
-  @return The strdup'ed string from param() if everything is
-    ok, otherwise NULL.
+  @param hook_param The name of the hook parameter
+  @param hpath Returns with path to hook. NULL if not defined, or path error
+  @return true if successful, false if there was a path error
 */
-char* validateHookPath( const char* hook_param );
+bool validateHookPath( const char* hook_param, char*& hpath );
 
 
 #endif /* _CONDOR_HOOK_UTILS_H_ */

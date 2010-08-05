@@ -102,13 +102,12 @@ typedef unsigned __int32 uint32_t;
 #define pclose _pclose
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
-#define strincmp _strnicmp
 #define strdup _strdup
 #define strupr _strupr
 #define strlwr _strlwr
 #define chdir _chdir
 #define fsync _commit
-#define access _access
+int access(const char *, int);
 #define execl _execl  
 #define execv _execv
 #define putenv _putenv

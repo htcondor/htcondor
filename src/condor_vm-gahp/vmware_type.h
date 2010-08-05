@@ -41,6 +41,8 @@ public:
 
 	virtual ~VMwareType();
 
+	virtual void Config();
+
 	virtual bool Start();
 
 	virtual bool Shutdown();

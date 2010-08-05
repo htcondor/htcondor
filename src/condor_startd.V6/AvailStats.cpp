@@ -47,7 +47,7 @@ AvailStats::~AvailStats()
 }
 
 void
-AvailStats::update( State new_state, Activity new_act )
+AvailStats::update( State new_state, Activity /*new_act */ /*UNUSED*/ )
 {
 	if( !compute_avail_stats ) return;
 	if( new_state == owner_state ) {
@@ -180,9 +180,10 @@ AvailStats::compute( amask_t how_much )
 void
 AvailStats::serialize( MyString state )
 {
-	char *s = (char *)state.Value();
+	const char * starts = state.Value();
+	char *s;
 
-	int prev_time = strtol(s, &s, 0);
+	int prev_time = strtol(starts, &s, 0);
 	as_birthdate -= prev_time;
 	int prev_avail_time = strtol(s, &s, 0);
 	as_tot_avail_time += prev_avail_time;

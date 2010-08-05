@@ -245,6 +245,10 @@
 			>
 		</File>
 		<File
+			RelativePath="$(OutDir)\stl_string_utils.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\new_classad.obj"
 			>
 		</File>
@@ -301,7 +305,7 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\string_funcs.obj"
+			RelativePath="$(OutDir)\strcasestr.obj"
 			>
 		</File>
 		<File

@@ -22,6 +22,7 @@
 #include "condor_ver_info.h"
 #include "subsystem_info.h"
 #include "condor_debug.h"
+#include "filename_tools.h"
 
 extern "C" char *CondorVersion(void);
 extern "C" char *CondorPlatform(void);
@@ -230,6 +231,15 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 
 	FILE *fp = safe_fopen_wrapper(filename,readonly);
 
+	if (!fp) {
+		// file not found, try alternate exec pathname
+		char *altname = alternate_exec_pathname( filename );
+		if ( altname ) {
+			fp = safe_fopen_wrapper(altname,readonly);
+			free(altname);
+		}
+	}
+
 	if ( !fp ) {
 		// file not found
 		return NULL;
@@ -311,6 +321,15 @@ CondorVersionInfo::get_platform_from_file(const char* filename,
 #endif
 
 	FILE *fp = safe_fopen_wrapper(filename,readonly);
+
+	if (!fp) {
+		// file not found, try alternate exec pathname
+		char *altname = alternate_exec_pathname( filename );
+		if ( altname ) {
+			fp = safe_fopen_wrapper(altname,readonly);
+			free(altname);
+		}
+	}
 
 	if ( !fp ) {
 		// file not found

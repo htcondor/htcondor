@@ -19,6 +19,8 @@ REVISION=${2:-"1"}
 
 ARCH=`dpkg-architecture -qDEB_HOST_ARCH`
 #ARCH=i386
+CODENAME=`lsb_release -cs`
+#CODENAME=lenny
 
 ###############################################################################
 # Script variables
@@ -58,7 +60,7 @@ VERSION=${VERSION%%-*}
 SOURCE0=$SOURCE_DIR/$SOURCE0
 
 #Result file name
-DEB_FILE_NAME="condor_"$VERSION-$REVISION"_$ARCH.deb"
+DEB_FILE_NAME="condor_"$VERSION-$REVISION$CODENAME"_$ARCH.deb"
 
 echo "Building Debian package for Condor $VERSION-$REVISION on $ARCH"
 
@@ -73,21 +75,29 @@ chmod 755 $META_DIR/pre*
 chmod 755 $META_DIR/post*
 
 ############################################################################################
-#Updating changelog 
+#Updating timestamp in changelog and copy right file
 ############################################################################################
-echo "Generating changelog file"
+echo "Generating changelog and copyright file"
 echo
 
 DEB_DATE=`date -R`
+DEB_YEAR=`date +%Y`
+
+#Changelog
 sed < $META_DIR/changelog \
      "s|_VERSION_|$VERSION-$REVISION|g; \
-     s|_DATE_|$DEB_DATE|g; \
-     s|_CONDORVERSION_|$VERSION|g" > $META_DIR/changelog.new
-
-#Debian distribution list in changelog is not valid for some platform. 
-#but it does not affect package usability.
+      s|_DATE_|$DEB_DATE|g; \
+      s|_DIST_|$CODENAME|g; \
+      s|_CONDORVERSION_|$VERSION|g" > $META_DIR/changelog.new
 
 mv $META_DIR/changelog.new $META_DIR/changelog
+
+#Copyright
+sed < $META_DIR/copyright \
+     "s|_DATE_|$DEB_DATE|g; \
+      s|_YEAR_|$DEB_YEAR|g" > $META_DIR/copyright.new
+
+mv $META_DIR/copyright.new $META_DIR/copyright
 
 ############################################################################################
 
@@ -116,8 +126,11 @@ mkdir -p -m0755 local/log
 mkdir -p -m0755 local/spool
 
 #Patching files
-#Use VDT init script
-chmod 755 etc/examples/condor.boot.vdt
+#Use rpm init script
+chmod 755 etc/examples/condor.boot.rpm
+#Debian use /etc/default instead of /etc/sysconfig
+perl -p -i -e "s|/etc/sysconfig/condor|/etc/default/condor|g;" etc/examples/condor.boot.rpm
+
 
 #Fix permission
 chmod 644 etc/examples/condor.boot
@@ -183,7 +196,8 @@ rm -f $PREFIX/condor_configure $PREFIX/condor_install
 # Relocate main path layout
 move $PREFIX/bin				/usr/bin			
 move $PREFIX/etc/condor				/etc/condor
-move $PREFIX/etc/examples/condor.boot.vdt	/etc/init.d/condor
+move $PREFIX/etc/examples/condor.sysconfig	/etc/default/condor
+move $PREFIX/etc/examples/condor.boot.rpm	/etc/init.d/condor
 move $PREFIX/include				/usr/include/condor	
 move $PREFIX/lib				/usr/lib/condor		
 move $PREFIX/libexec				/usr/lib/condor/libexec
@@ -194,10 +208,11 @@ move $PREFIX/sql				/usr/share/condor/sql
 move $PREFIX/src				/usr/src
 
 
-#Create RUN LOG LOCK 
+#Create RUN LOG LOCK CONFIG.D
 mkdir -p -m0755 $DEB_ROOT/var/run/condor
 mkdir -p -m0755 $DEB_ROOT/var/log/condor
 mkdir -p -m0755 $DEB_ROOT/var/lock/condor
+mkdir -p -m0755 $DEB_ROOT/etc/condor/config.d
 
 #Put the rest into documentation
 move $PREFIX				/usr/share/doc/condor
@@ -278,7 +293,6 @@ sed < $CONTROL \
 
 mv $CONTROL.new $CONTROL
 
-
 ############################################################################################
 #Modify version, architecture and installed-size
 ############################################################################################
@@ -302,6 +316,13 @@ mv $CONTROL.new $CONTROL
 echo "Building package"
 cd $BUILD_ROOT
 fakeroot dpkg-deb --build $DEB_ROOT $DEB_FILE_NAME
+
+#This might return error if package is not properly created
+#Indirect way of verifing the package
+echo "Package Summary"
+echo 
+dpkg-deb -I $DEB_FILE_NAME
+echo 
 
 #Clean up
 rm -rf $DEB_ROOT

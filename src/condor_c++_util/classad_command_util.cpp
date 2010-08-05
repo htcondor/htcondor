@@ -44,7 +44,7 @@ sendCAReply( Stream* s, const char* cmd_str, ClassAd* reply )
 				 cmd_str );
 		return FALSE;
 	}
-	if( ! s->eom() ) {
+	if( ! s->end_of_message() ) {
 		dprintf( D_ALWAYS, "ERROR: Can't send eom for %s, aborting\n", 
 				 cmd_str );
 		return FALSE;
@@ -109,7 +109,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
 				 "Failed to read ClassAd from network, aborting\n" ); 
 		return FALSE;
 	}
-	if( ! s->eom() ) { 
+	if( ! s->end_of_message() ) { 
 		dprintf( D_ALWAYS, 
 				 "Error, more data on stream after ClassAd, aborting\n" ); 
 		return FALSE;

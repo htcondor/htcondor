@@ -40,7 +40,7 @@ class RemoteResource;
 	make sure you know how these classes interact.  If it's a general
 	shadow thing, you very well may want to add it to this class.  
 	However, if it is specific to one remote resource, you want to
-	look at RemoteResource.  If it is single, MPI, or PVM (one day!)
+	look at RemoteResource.  If it is single, MPI
 	specific, make the change in that derived class. <p>
 
 	More to come...<p>
@@ -217,6 +217,8 @@ class BaseShadow : public Service
 
 	virtual bool claimIsClosing( void ) = 0;
 
+	static void CommitSuspensionTime(ClassAd *jobAd);
+
 		/** Initializes the user log.  'Nuff said. 
 		 */
 	void initUserLog();
@@ -333,7 +335,7 @@ class BaseShadow : public Service
 	virtual int exitCode( void ) = 0;
 
 		// make UserLog static so it can be accessed by EXCEPTION handler
-	static UserLog uLog;
+	static WriteUserLog uLog;
 
 	void evalPeriodicUserPolicy( void );
 
@@ -391,6 +393,7 @@ class BaseShadow : public Service
 
 	virtual void emailTerminateEvent( int exitReason, update_style_t kind = US_NORMAL ) = 0;
 
+	void startdClaimedCB(DCMsgCallback *cb);
 	bool m_lazy_queue_update;
 
  private:
@@ -440,6 +443,11 @@ class BaseShadow : public Service
 };
 
 extern void dumpClassad( const char*, ClassAd*, int );
+
+// Register the shadow "exit status" for the previous job
+// and restart this shadow with a new job.
+// Returns false if no new job found.
+extern bool recycleShadow(int previous_job_exit_reason);
 
 extern BaseShadow *Shadow;
 

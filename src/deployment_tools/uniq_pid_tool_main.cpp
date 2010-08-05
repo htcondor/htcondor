@@ -271,6 +271,7 @@ midwife_executable(int  /* argc */, char* argv[],
 		ProcessId* pProcId = NULL;
 		if( ProcAPI::createProcessId(pid, pProcId, status, precision_range) == PROCAPI_FAILURE ){
 			procapi_perror(status, pid, "ERROR: Failed to create process id in midwife_executable\n");
+			delete pProcId;
 			return -1;
 		}
 		
@@ -278,6 +279,7 @@ midwife_executable(int  /* argc */, char* argv[],
 		if( pProcId->write(fp) == ProcessId::FAILURE ){
 			fprintf(stderr,
 					"ERROR: Failed to write process id to %s in midwife_executable\n", pidfile);
+			delete pProcId;
 			return -1;
 		}
 
@@ -289,6 +291,7 @@ midwife_executable(int  /* argc */, char* argv[],
 			// generate a confirmation
 		if( ProcAPI::confirmProcessId(*pProcId, status) == PROCAPI_FAILURE ){
 			procapi_perror(status, pid, "ERROR: Failed to confirm process id in midwife_executable\n");
+			delete pProcId;
 			return -1;
 		}
 
@@ -300,6 +303,7 @@ midwife_executable(int  /* argc */, char* argv[],
 			if( pProcId->writeConfirmationOnly(fp) == ProcessId::FAILURE ){
 				fprintf(stderr,
 						"ERROR: Failed to write process confirmation to %s in midwife_executable\n", pidfile);
+				delete pProcId;
 				return -1;
 			}
 		}

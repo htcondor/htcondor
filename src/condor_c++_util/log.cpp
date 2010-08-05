@@ -34,6 +34,7 @@ class LogRecordHead: public LogRecord {
 
 LogRecord::LogRecord()
 {
+	op_type = 0;
 }
 
 

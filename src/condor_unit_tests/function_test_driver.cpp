@@ -21,33 +21,48 @@
 	The function driver code for unit_tests.
  */
 
+#include "condor_common.h"
 #include "function_test_driver.h"
 
-FunctionDriver::FunctionDriver(int size) {
-	pointers = new test_func_ptr[size];
-	max_functions = size;
-	used_functions = 0;
+static int num_tests_to_run;
+static int num_tests_run;
+
+FunctionDriver::FunctionDriver(int num_tests) {
+	num_funcs_or_objs = num_tests;
 }
 
 FunctionDriver::~FunctionDriver() {
-	delete[] pointers;
+}
+
+void FunctionDriver::init(int num_tests) {
+	num_tests_to_run = num_tests;
+	num_tests_run = 0;
 }
 
 void FunctionDriver::register_function(test_func_ptr function) {
-	if(used_functions >= max_functions) {
-		return;
-	}
-	pointers[used_functions] = function;
-	used_functions++;
+
+	pointers.push_back(function);
 }
 
-bool FunctionDriver::do_all_functions() {
+bool FunctionDriver::do_all_functions(bool increment_tests_run) {
 	bool test_passed = true;
+
+	// ensure that at least one test ran...
+	bool at_least_one = false;
 	int i;
-	for(i = 0; i < used_functions; i++) {
-		if(!(*pointers[i])()) {
+	std::list<test_func_ptr>::iterator itr;
+	for ( itr = pointers.begin(), i = 0; itr != pointers.end() && 
+		i <	num_funcs_or_objs && num_tests_run < num_tests_to_run; itr++, i++ ) 
+	{
+		at_least_one = true;
+		if ( !(**itr)() ) {
 			test_passed = false;
 		}
+		if(increment_tests_run)
+			num_tests_run++;
 	}
-	return test_passed;
+
+	return at_least_one && test_passed;
 }
+
+

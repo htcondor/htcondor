@@ -21,6 +21,6 @@ all_target($(TRANSFERER_NAME))
 
 TRANSFERER_OBJ =  BaseReplicaTransferer.o UploadReplicaTransferer.o DownloadReplicaTransferer.o Utils.o Transferer.o FilesOperations.o
 
-public_c_plus_target($(TRANSFERER_NAME),sbin,$(TRANSFERER_OBJ),$(LIB))
+public_c_plus_target($(TRANSFERER_NAME),libexec,$(TRANSFERER_OBJ),$(LIB))
 
 testbin:: all

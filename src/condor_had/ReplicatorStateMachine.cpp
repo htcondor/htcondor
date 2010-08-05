@@ -700,7 +700,9 @@ ReplicatorStateMachine::commandHandler( int command, Stream* stream )
    
     stream->decode( );
 
-    if( ! stream->code( daemonSinfulString ) /*|| ! stream->eom( )*/ ) {
+    if( ! stream->code( daemonSinfulString ) 
+		/*|| ! stream->end_of_message( )*/ ) 
+	{
         dprintf( D_NETWORK, "ReplicatorStateMachine::commandHandler "
                             "cannot read remote daemon sinful string for %s\n",
                  utilToString( command ) );

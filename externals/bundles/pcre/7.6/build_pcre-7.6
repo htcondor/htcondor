@@ -25,9 +25,9 @@ fi
 
 cd $PACKAGE_NAME
 ##
-## We need this special flag for Intel OSX (as of 10.4)
-##
-if [ `uname` = "Darwin" -a `uname -m` = "i386" ]; then
+## We need this special flag for Intel OSX (for 10.4)
+## 
+if [ `uname` = "Darwin" -a `uname -m` = "i386" -a `uname -r | sed 's/\..*//'` = "8" ]; then
     CFLAGS="-arch i386" ./configure --prefix=$PACKAGE_INSTALL_DIR --with-ccopts=$PACKAGE_DEBUG --disable-cpp
 else
     ./configure --prefix=$PACKAGE_INSTALL_DIR --with-ccopts=$PACKAGE_DEBUG --disable-cpp

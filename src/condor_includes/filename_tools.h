@@ -32,6 +32,8 @@ code gives some information about the path actually present.
 Returns true if there was a directory component to split off.
 Returns false if there was no directory component, but in this case,
 still fills "dir" with "."
+The buffers dir and file must be as big as path.  They are not allocated
+by this function.
 */
 
 int filename_split( const char *path, char *dir, char *file );
@@ -47,6 +49,8 @@ The caller should free the resulting strings in method, server, and path.
 void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path );
 
 void canonicalize_dir_delimiters( char *path );
+
+char *alternate_exec_pathname( const char *path );
 
 /*
 Returns true if path is a relative path; false if it is not.

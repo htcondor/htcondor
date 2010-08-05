@@ -29,6 +29,7 @@
 
 #include "../condor_procapi/procapi.h"
 #include "../condor_procd/proc_family_io.h"
+
 class Claim;
 
 class Starter : public Service
@@ -72,7 +73,7 @@ public:
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
 	void	sigkillStarter( void );
-
+	
 	void	publish( ClassAd* ad, amask_t mask, StringList* list );
 
 	bool	satisfies( ClassAd* job_ad, ClassAd* mach_ad );
@@ -127,9 +128,8 @@ private:
 
 	void	initRunData( void );
 
-	int		startKillTimer( void );	    // Timer for how long we're willing 
+	int	startKillTimer( void );		// Timer for how long we're willing
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
-
 		// choose EXECUTE directory for starter
 	void    finalizeExecuteDir( void );
 

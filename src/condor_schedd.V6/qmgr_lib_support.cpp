@@ -30,8 +30,6 @@
 #include "my_hostname.h"
 #include "my_username.h"
 
-extern "C" int		strcmp_until(const char *, const char *, const char);
-
 ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
@@ -39,6 +37,7 @@ Qmgr_connection *
 ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack, const char *effective_owner, const char* schedd_version_str )
 {
 	int		rval, ok;
+	int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
 
 		// do we already have a connection active?
 	if( qmgmt_sock ) {
@@ -65,8 +64,6 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
 		}
 	} else { 
-		int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
-
 			// QMGMT_WRITE_CMD didn't exist before 7.5.0, so use QMGMT_READ_CMD
 			// when talking to older schedds
 		if( cmd == QMGMT_WRITE_CMD ) {
@@ -102,6 +99,22 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 		return 0;
 	}
 
+		// If security negotiation is turned off and we are using WRITE_CMD,
+		// then we must force authentication now, before trying to initialize
+		// the connection, because this command is registered with
+		// force_authentication=true on the server side.
+	if( cmd == QMGMT_WRITE_CMD && !qmgmt_sock->triedAuthentication()) {
+		if( !SecMan::authenticate_sock(qmgmt_sock, CLIENT_PERM, errstack_select ) )
+		{
+			delete qmgmt_sock;
+			qmgmt_sock = NULL;
+			if (!errstack) {
+				dprintf( D_ALWAYS, "Authentication Error: %s\n",
+						 errstack_select->getFullText() );
+			}
+			return 0;
+		}
+	}
 
     // This could be a problem
 	char *username = my_username();

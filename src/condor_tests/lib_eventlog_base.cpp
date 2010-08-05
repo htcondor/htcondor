@@ -114,7 +114,7 @@ int
 WriteEventLog( const char *event_log, int &num_events )
 {
 	int			errors = 0;
-	UserLog		writer;
+	WriteUserLog		writer;
 	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1, NULL)) {
 		fprintf( stderr, "Failed to initailize writer (#1)\n" );
 		errors++;

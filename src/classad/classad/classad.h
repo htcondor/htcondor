@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __CLASSAD_H__
-#define __CLASSAD_H__
+#ifndef __CLASSAD_CLASSAD_H__
+#define __CLASSAD_CLASSAD_H__
 
 
 #include <set>
@@ -46,6 +46,11 @@ typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
 void ClassAdLibraryVersion(std::string &version_string);
+
+// This flag is only meant for use in Condor, which is transitioning
+// from an older version of ClassAds with slightly different evaluation
+// semantics. It will be removed without warning in a future release.
+extern bool _useOldClassAdSemantics;
 
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
@@ -690,4 +695,4 @@ END_NAMESPACE // classad
 
 #include "classad/classadItor.h"
 
-#endif//__CLASSAD_H__
+#endif//__CLASSAD_CLASSAD_H__

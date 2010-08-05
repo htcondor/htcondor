@@ -329,8 +329,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// is sometimes condor_exec, in the Args string. 
 
 	MyString args_string;
-	int start_arg = has_wrapper ? 2 : 1;
-	args.GetArgsStringForDisplay(&args_string,start_arg);
+	args.GetArgsStringForDisplay(&args_string, 1);
 	if( has_wrapper ) { 
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
@@ -453,7 +452,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                        core_size_ptr,
 		                                        1,
 		                                        job_opt_mask,
-		                                        family_info);
+		                                        family_info,
+												affinity_mask);
 	}
 	else {
 		JobPid = daemonCore->Create_Process( JobName.Value(),

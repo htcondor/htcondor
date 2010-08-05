@@ -49,7 +49,7 @@ DECL_SUBSYSTEM( "HAD", SUBSYSTEM_TYPE_DAEMON );		// used by Daemon Core
 
 HADStateMachine* stateMachine = NULL;
 
-int
+void
 main_init (int, char *[])
 {
     dprintf(D_ALWAYS,"Starting HAD ....\n");
@@ -57,15 +57,13 @@ main_init (int, char *[])
         stateMachine = new HADStateMachine();
 
         stateMachine->initialize();
-        return TRUE;
     } catch (char* rr) {
         cout << rr << endl;
         dprintf(D_ALWAYS, "Exception in main_init %s \n", rr);
-        return FALSE;
     }
 }
 
-int
+void
 main_shutdown_graceful()
 {
 
@@ -74,11 +72,10 @@ main_shutdown_graceful()
         delete  stateMachine;
     }
     DC_Exit(0);
-    return 0;
 }
 
 
-int
+void
 main_shutdown_fast()
 {
     if(stateMachine!=NULL){
@@ -86,7 +83,6 @@ main_shutdown_fast()
     }
 
     DC_Exit(0);
-    return 0;
 }
 /**
  * we employ the following terminology inside the function:
@@ -95,20 +91,16 @@ main_shutdown_fast()
  * soft reconfiguration - for rereading configuration values from
  *                        $CONDOR_CONFIG without changing the state machine
  **/
-int
-main_config( bool /* is_full */ )
+void
+main_config()
 {
-	int returnValue = 0;
-
 	if( stateMachine->isHardConfigurationNeeded( ) ) {
     	dprintf( D_ALWAYS, "main_config hard configuration started\n" );
-		returnValue = stateMachine->reinitialize( );
+		stateMachine->reinitialize( );
 	} else {
 		dprintf( D_ALWAYS, "main_config soft configuration started\n" );
-		returnValue = stateMachine->softReconfigure( );
+		stateMachine->softReconfigure( );
 	}
-
-	return returnValue;
 }
 
 

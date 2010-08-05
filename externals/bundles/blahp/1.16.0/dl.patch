@@ -1,0 +1,11 @@
+diff -u -r org.glite.ce.blahp/configure.ac org.glite.ce.blahp.patched/configure.ac
+--- org.glite.ce.blahp/configure.ac	2010-04-27 04:35:05.000000000 -0500
++++ org.glite.ce.blahp.patched/configure.ac	2010-05-26 16:37:03.000000000 -0500
+@@ -173,6 +173,7 @@
+ 
+ dnl Checks for library functions.
+ AC_CHECK_FUNCS(select socket strdup strerror bsearch vsnprintf)
++AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
+ 
+ AC_GLITE
+ 

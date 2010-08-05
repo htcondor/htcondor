@@ -173,15 +173,33 @@ class TimerManager
 		                      and how long this timer has been waiting.
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int ResetTimer(int tid, unsigned when, unsigned period = 0, bool recompute_when=false);
+    int ResetTimer(int tid, unsigned when, unsigned period = 0, bool recompute_when=false, Timeslice const *new_timeslice=NULL);
 
 	/**
        This is equivalent to calling ResetTimer with recompute_when=true.
 	   @param tid The ID of the timer
 	   @param period The new period for the timer.
+	   @param new_timeslice The new timeslice settings to use
+	          (other args such as when and period ignored if this is non-NULL)
 	   @return 0 if successful, -1 on failure (timer not found)
 	 */
     int ResetTimerPeriod(int tid, unsigned period);
+
+	/**
+       This is equivalent to calling ResetTimer with new_timeslice != NULL.
+	   @param tid The ID of the timer
+	   @param new_timeslice The new timeslice settings to use.
+	   @return true if successful, false on failure (timer not found)
+	 */
+	bool ResetTimerTimeslice(int id, Timeslice const &new_timeslice);
+
+	/**
+	   Get a copy of the timeslice settings associated with a timer.
+	   @param tid The ID of the timer
+	   @param timeslice Object to receive a copy of the timeslice settings.
+	   @return false if no timeslice associated with this timer.
+	 */
+	bool GetTimerTimeslice(int id, Timeslice &timeslice);
 
     /// Not_Yet_Documented.
     void CancelAllTimers();
@@ -212,6 +230,13 @@ class TimerManager
 	void RemoveTimer( Timer *timer, Timer *prev );
 	void InsertTimer( Timer *new_timer );
 	void DeleteTimer( Timer *timer );
+
+	/*
+	  @param id The id of the timer to find
+	  @param prev If not NULL, this will be set to previous timer in list
+	  @return pointer to timer with specified id or NULL if not found
+	 */
+	Timer *GetTimer( int id, Timer **prev );
 
     Timer*  timer_list;
 	Timer*  list_tail;

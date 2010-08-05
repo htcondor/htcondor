@@ -190,9 +190,6 @@ transtimeout()
 	void *info = daemonCore->GetDataPtr();
 	ASSERT(info);
 	memcpy(&transaction,info,sizeof(condor__Transaction));
-	free(info);
-	info = NULL;
-
 	condor__abortTransaction(NULL, transaction, result);
 }
 
@@ -772,14 +769,17 @@ condor__newJob(struct soap *soap,
 	case -1:
 		result.response.status.code = FAIL;
 		result.response.status.message = "Could not create new job";
+		break;
 	case -2:
 		result.response.status.code =
 			(condor__StatusCode) errstack.code();
 		result.response.status.message =
 			soap_strdup(soap, errstack.message());
+		break;
 	case -3:
 		result.response.status.code = FAIL;
 		result.response.status.message = "Could not record new job";
+		break;
 	default:
 		result.response.status.code = FAIL;
 		result.response.status.message = "Unknown error";

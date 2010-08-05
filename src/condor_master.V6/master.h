@@ -37,6 +37,7 @@ class daemon : public Service
 {
 public:
 	daemon(char *name, bool is_daemon_core = true, bool is_ha = false );
+	~daemon();
 	daemon_t type;
 	char*	name_in_config_file;
 	char*	daemon_name; 
@@ -78,6 +79,7 @@ public:
 	void	Kill( int );
 	void	KillFamily( void );
 	void	Reconfig();
+	void	InitParams();
 
 	int		SetupController( void );
 	int		RegisterControllee( class daemon * );
@@ -153,7 +155,6 @@ public:
 	Daemons();
 	void	RegisterDaemon(class daemon *);
 	void 	InitParams();
-	int		GetIndex(const char* process_name);
 
 	void	CheckForNewExecutable();
 	void	DaemonsOn();
@@ -162,6 +163,7 @@ public:
 	void 	StartAllDaemons();
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
+	void	StopDaemon( char* name );
 	void	HardKillAllDaemons();
 	void	StopPeacefulAllDaemons();
 	void	ReconfigAllDaemons();
@@ -198,6 +200,8 @@ public:
 	int		immediate_restart;
 	int		immediate_restart_master;
 
+	StringList	ordered_daemon_names;
+
 	void	Update( ClassAd* );
 	void	UpdateCollector();
 
@@ -205,13 +209,12 @@ public:
 	class daemon*	FindDaemon( const char * );
 
 private:
-	class daemon **daemon_ptr;
-	int	no_daemons;
-	int daemon_list_size;
+	std::map<std::string, class daemon*> daemon_ptr;
+	std::map<int, class daemon*> exit_allowed;
 	int check_new_exec_tid;
 	int update_tid;
 	int preen_tid;
-	int master;  		// index of the master in our daemon table
+	class daemon* master;  	// the master in our daemon table
 	AllGoneT all_daemons_gone_action;
 	ReaperT reaper;
 	int prevLHF;

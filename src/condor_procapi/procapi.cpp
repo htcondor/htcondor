@@ -23,6 +23,13 @@
 #include "procapi.h"
 #include "procapi_internal.h"
 
+#if HAVE_PROCFS_H
+# include <procfs.h>
+#endif
+#if HAVE_SYS_PROCFS_H
+# include <sys/procfs.h>
+#endif
+
 // Ugly hack: stat64 prototyps are wacked on HPUX
 // These are cut & pasted from the HPUX man pages...                            
 #if defined( HPUX )
@@ -111,8 +118,8 @@ ProcAPI::~ProcAPI() {
 // Each platform gets its own function unless two are so similar that you can
 // ifdef between them.
 
-#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
-// This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8 and 2.9
+#if defined(Solaris)
+// This is the version of getProcInfo for Solaris 2.6 - 2.11
 
 int
 ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 

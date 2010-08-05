@@ -91,7 +91,7 @@ public:
 	// subfamilies of that family)
 	//
 	bool kill_family(pid_t, bool&);
-
+	
 	// tell the procd we don't care about this family any
 	// more
 	//
@@ -111,6 +111,9 @@ public:
 
 private:
 
+	// common code to send a signal to a process
+	bool signal_process(pid_t, int, proc_family_command_t, bool&);
+	
 	// common code for killing, suspending, and
 	// continuing a family
 	//

@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd_template = "job_schedd_restart-runningjobs-ok.template";
 $testdesc =  'job_schedd_restart-runningjobs-ok - Simple parallel job with security on';
@@ -68,22 +69,22 @@ CondorTest::debug("Set config to $parallelconfig\n",1);
 my $result = system("./job_schedd_restart-runningjobs-ok.pl $mysubmitnm");
 CondorTest::debug("Result of job_schedd_restart-runningjobs-ok job is  $result\n",1);
 
-
-system("cp *schedd_restart-runningjobs-ok* $mysaveme");
+#fails due to directory matching pattern
+runcmd("cp *schedd_restart-runningjobs-ok* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($parallelconfig);

@@ -25,6 +25,7 @@
 ## lower-level DAG, node D will fail the first time, and then succeed.
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_rescue-A-upper.dag';
 
@@ -43,7 +44,7 @@ sub RUNNING{2};
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
 	if (-e $name) {
-		system("rm -f $name");
+		runcmd("rm -f $name");
 	}
 }
 

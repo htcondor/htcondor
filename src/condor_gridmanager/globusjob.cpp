@@ -737,12 +737,12 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		grid_resource.Tokenize();
 
 		token = grid_resource.GetNextToken( " ", false );
-		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
+		if ( !token || ( strcasecmp( token, "gt2" ) && strcasecmp( token, "gt5" ) ) ) {
 			error_string.sprintf( "%s not of type gt2 or gt5",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
-		if ( !stricmp( token, "gt5" ) ) {
+		if ( !strcasecmp( token, "gt5" ) ) {
 			is_gt5 = true;
 		}
 
@@ -768,12 +768,12 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		grid_job_id.Tokenize();
 
 		token = grid_job_id.GetNextToken( " ", false );
-		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
+		if ( !token || ( strcasecmp( token, "gt2" ) && strcasecmp( token, "gt5" ) ) ) {
 			error_string.sprintf( "%s not of type gt2 or gt5",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
-		if ( !stricmp( token, "gt5" ) ) {
+		if ( !strcasecmp( token, "gt5" ) ) {
 			is_gt5 = true;
 		}
 
@@ -2920,6 +2920,7 @@ MyString *GlobusJob::buildSubmitRSL()
 				// we can access an executable in the spool dir
 			executable_path = source;
 		}
+		free(source); source = NULL;
 	}
 	if ( executable_path.IsEmpty() ) {
 			// didn't find any executable in the spool directory,

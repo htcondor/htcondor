@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __XMLLEXER_H__
-#define __XMLLEXER_H__
+#ifndef __CLASSAD_XMLLEXER_H__
+#define __CLASSAD_XMLLEXER_H__
 
 #include "classad/common.h"
 #include "classad/lexerSource.h"
@@ -123,4 +123,4 @@ extern struct xml_tag_mapping tag_mappings[];
 
 END_NAMESPACE // classad
 
-#endif //__LEXER_H__
+#endif //__CLASSAD_XMLLEXER_H__

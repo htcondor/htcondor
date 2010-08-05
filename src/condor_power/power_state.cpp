@@ -99,7 +99,7 @@ static void
 usage( bool error = true )
 {
 	FILE	*out = error ? stderr : stdout;
-	fprintf( out, "usage: %s [OPTIONS] (ad|hibernate <level>)\n", name );
+	fprintf( out, "usage: %s [OPTIONS] (ad|set <level>)\n", name );
 	fprintf( out, "%s - %s\n", name, DESCRIPTION );
 	fprintf( out, "-h|--help            This message\n" );
 	fprintf( out, "-d|--debug           Enables debugging\n" );
@@ -273,7 +273,7 @@ main( int argc, const char *argv[] )
 		dump_ad( );
 	}
 	else if ( MODE_SET == run_mode ) {
-		hibernate_machine ();
+		hibernate_machine( );
 	}
 
 	delete hibernator;

@@ -73,7 +73,6 @@ template <class Key, class Value> class HashTable; // forward declaration
 static const int KEEP_STREAM = 100;
 static const int CLOSE_STREAM = 101;
 static const int MAX_SOCKS_INHERITED = 4;
-static char* EMPTY_DESCRIP = "<NULL>";
 
 /**
    Magic fd to include in the 'std' array argument to Create_Process()
@@ -757,6 +756,12 @@ class DaemonCore : public Service
 			 bool nonblocking_read = false, bool nonblocking_write = false,
 			 unsigned int psize = 4096);
 
+	/** Create a named pipe
+	*/
+	int Create_Named_Pipe( int *pipe_ends,
+			 bool can_register_read = false, bool can_register_write = false,
+			 bool nonblocking_read = false, bool nonblocking_write = false,
+			 unsigned int psize = 4096, const char* pipe_name = NULL);
 	/** Make DaemonCore aware of an inherited pipe.
 	*/
 	int Inherit_Pipe( int p, bool write, bool can_register, bool nonblocking, int psize = 4096);
@@ -865,6 +870,15 @@ class DaemonCore : public Service
                         const char * event_descrip,
                         Service*     s);
 
+	/** Thread-safe Register_Timer().
+		This function locks the big fat daemon-core mutex, so it can
+		be safely called from within a thread, as long as there is no
+		way that thread could already have locked the same mutex.
+	 */
+	int Register_Timer_TS (unsigned deltawhen,
+		TimerHandlercpp handler,
+		const char * event_descrip,
+		Service* s);
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param period          Not_Yet_Documented
@@ -912,6 +926,21 @@ class DaemonCore : public Service
         @return 0 on success
     */
     int Reset_Timer_Period ( int id, unsigned period );
+
+    /** Change a timer's timeslice settings.
+        @param id The timer's ID
+        @param new_timeslice New timeslice settings to use.
+        @return 0 on success
+    */
+    int ResetTimerTimeslice ( int id, Timeslice const &new_timeslice );
+
+    /** Get a timer's timeslice settings.
+        @param id The timer's ID
+        @param timeslice Object to receive a copy of the timeslice settings.
+        @return false if no timeslice associated with this timer
+    */
+    bool GetTimerTimeslice ( int id, Timeslice &timeslice );
+
 	//@}
 
     /** Not_Yet_Documented
@@ -1058,7 +1087,8 @@ class DaemonCore : public Service
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
-
+    int Signal_Process(pid_t,int);
+    
 	/** Used to explicitly initialize our ProcFamilyInterface object.
 	    Calling this is not required - if not called, the object
 	    will be initialized on-demand: the first time Create_Process
@@ -1361,6 +1391,8 @@ class DaemonCore : public Service
 	
 	void Wake_up_select();
 
+	void Do_Wake_up_select();
+
 		/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes
 			available.
@@ -1382,6 +1414,7 @@ class DaemonCore : public Service
 	bool m_invalidate_sessions_via_tcp;
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
+    int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()
@@ -1674,8 +1707,6 @@ class DaemonCore : public Service
 	int					_cookie_len, _cookie_len_old;
 	unsigned char		*_cookie_data, *_cookie_data_old;
 
-    void free_descrip(char *p) { if(p &&  p != EMPTY_DESCRIP) free(p); }
-    
     struct in_addr      negotiator_sin_addr;    // used by Verify method
 
 #ifdef WIN32

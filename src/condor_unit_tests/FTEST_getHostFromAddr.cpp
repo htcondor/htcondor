@@ -30,10 +30,10 @@ static bool test_normal_case(void);
 static bool test_hostname(void);
 
 bool FTEST_getHostFromAddr(void) {
-		// beginning junk for getPortFromAddr()
-	e.emit_function("getHostFromAddr(sockaddr_in)");
-	e.emit_comment("Returns the host portion of the sinful string");
-	e.emit_problem("None");
+		// beginning junk for getPortFromAddr(() {
+	emit_function("getHostFromAddr(sockaddr_in)");
+	emit_comment("Returns the host portion of the sinful string");
+	emit_problem("None");
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
@@ -41,53 +41,47 @@ bool FTEST_getHostFromAddr(void) {
 	driver.register_function(test_hostname);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_normal_case() {
-	e.emit_test("Is normal input parsed correctly?");
+	emit_test("Is normal input parsed correctly?");
 	char* inputstring = strdup("<192.168.0.2:496>");
-	e.emit_input_header();
-	e.emit_param("STRING", inputstring);
+	emit_input_header();
+	emit_param("STRING", inputstring);
 	char* sinstring = getHostFromAddr(inputstring);
 	free(inputstring);
-	e.emit_output_expected_header();
+	emit_output_expected_header();
 	char expected[30];
 	sprintf(expected, "192.168.0.2");
-	e.emit_retval(expected);
-	e.emit_output_actual_header();
-	e.emit_retval(sinstring);
+	emit_retval(expected);
+	emit_output_actual_header();
+	emit_retval(sinstring);
 	if(strcmp(expected, sinstring) != 0) {
 		free(sinstring);
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
 	free(sinstring);
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_hostname() {
-	e.emit_test("Is input with a hostname parsed correctly?");
+	emit_test("Is input with a hostname parsed correctly?");
 	char* inputstring = strdup("<balthazar.cs.wisc.edu:496>");
-	e.emit_input_header();
-	e.emit_param("STRING", inputstring);
+	emit_input_header();
+	emit_param("STRING", inputstring);
 	char* sinstring = getHostFromAddr(inputstring);
 	free(inputstring);
-	e.emit_output_expected_header();
+	emit_output_expected_header();
 	char expected[30];
 	sprintf(expected, "balthazar.cs.wisc.edu");
-	e.emit_retval(expected);
-	e.emit_output_actual_header();
-	e.emit_retval(sinstring);
+	emit_retval(expected);
+	emit_output_actual_header();
+	emit_retval(sinstring);
 	if(strcmp(expected, sinstring) != 0) {
 		free(sinstring);
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
 	free(sinstring);
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

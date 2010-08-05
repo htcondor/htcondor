@@ -48,6 +48,7 @@
 #include "extArray.h"
 #include "HashTable.h"
 #include <set>
+#include "dagman_recursive_submit.h"
 
 using namespace std;
 
@@ -77,7 +78,9 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
-		  const char *defaultNodeLog, bool isSplice) :
+		  const char *defaultNodeLog, bool generateSubdagSubmits,
+		  const SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
+		  const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -95,6 +98,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
+	_numHeldJobProcs	  (0),
 	_allowLogError		  (allowLogError),
 	m_retrySubmitFirst	  (retrySubmitFirst),
 	m_retryNodeFirst	  (retryNodeFirst),
@@ -111,7 +115,10 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst),
 	_defaultNodeLog		  (defaultNodeLog),
+	_generateSubdagSubmits (generateSubdagSubmits),
+	_submitDagDeepOpts	  (submitDagDeepOpts),
 	_isSplice			  (isSplice),
+	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0)
 {
 
@@ -170,6 +177,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		// Don't print any waiting node reports until we're done with
 		// recovery mode.
 	_pendingReportInterval = -1;
+	_lastPendingNodePrintTime = 0;
+	_lastEventTime = 0;
 
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 
@@ -552,8 +561,12 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
-			case ULOG_JOB_HELD:
 			case ULOG_SHADOW_EXCEPTION:
+				ProcessIsIdleEvent(job);
+				break;
+
+			case ULOG_JOB_HELD:
+				ProcessHeldEvent(job);
 				ProcessIsIdleEvent(job);
 				break;
 
@@ -561,8 +574,11 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessNotIdleEvent(job);
 				break;
 
-			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_JOB_RELEASED:
+				ProcessReleasedEvent(job);
+				break;
+
+			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
@@ -1106,6 +1122,28 @@ Dag::ProcessNotIdleEvent(Job *job) {
 }
 
 //---------------------------------------------------------------------------
+void
+Dag::ProcessHeldEvent(Job *job) {
+
+	if ( !job ) {
+		return;
+	}
+
+	_numHeldJobProcs++;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessReleasedEvent(Job *job) {
+
+	if ( !job ) {
+		return;
+	}
+
+	_numHeldJobProcs--;
+}
+
+//---------------------------------------------------------------------------
 Job * Dag::FindNodeByName (const char * jobName) const {
 	if( !jobName ) {
 		return NULL;
@@ -1318,8 +1356,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// Check for throttling by node category.
 		ThrottleByCategory::ThrottleInfo *catThrottle = job->GetThrottleInfo();
 		if ( catThrottle &&
-					catThrottle->_maxJobs !=
-					ThrottleByCategory::noThrottleSetting &&
+					catThrottle->isSet() &&
 					catThrottle->_currentJobs >= catThrottle->_maxJobs ) {
 			debug_printf( DEBUG_DEBUG_1,
 						"Node %s deferred by category throttle (%s, %d)\n",
@@ -1718,8 +1755,8 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 		param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
 
 
-    fprintf (fp, "# Rescue DAG file, created after running\n");
-    fprintf (fp, "#   the %s DAG file\n", datafile);
+    fprintf(fp, "# Rescue DAG file, created after running\n");
+    fprintf(fp, "#   the %s DAG file\n", datafile);
 
 	time_t timestamp;
 	(void)time( &timestamp );
@@ -1729,29 +1766,29 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 				tm->tm_mday, tm->tm_year + 1900, tm->tm_hour, tm->tm_min,
 				tm->tm_sec );
 
-    fprintf (fp, "#\n");
-    fprintf (fp, "# Total number of Nodes: %d\n", NumNodes());
-    fprintf (fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
-    fprintf (fp, "# Nodes that failed: %d\n", _numNodesFailed);
+    fprintf(fp, "#\n");
+    fprintf(fp, "# Total number of Nodes: %d\n", NumNodes());
+    fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
+    fprintf(fp, "# Nodes that failed: %d\n", _numNodesFailed);
 
     //
     // Print the names of failed Jobs
     //
-    fprintf (fp, "#   ");
+    fprintf(fp, "#   ");
     ListIterator<Job> it (_jobs);
     Job * job;
     while (it.Next(job)) {
         if (job->GetStatus() == Job::STATUS_ERROR) {
-            fprintf (fp, "%s,", job->GetJobName());
+            fprintf(fp, "%s,", job->GetJobName());
         }
     }
-    fprintf (fp, "<ENDLIST>\n\n");
+    fprintf(fp, "<ENDLIST>\n\n");
 
 	//
 	// Print the CONFIG file, if any.
 	//
 	if ( _configFile ) {
-    	fprintf ( fp, "CONFIG %s\n\n", _configFile );
+    	fprintf( fp, "CONFIG %s\n\n", _configFile );
 		
 	}
 
@@ -1770,7 +1807,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
         } else {
 			EXCEPT( "Illegal node type (%d)\n", job->JobType() );
 		}
-        fprintf (fp, "%s %s %s ", keyword, job->GetJobName(),
+        fprintf(fp, "%s %s %s ", keyword, job->GetJobName(),
 					job->GetDagFile() ? job->GetDagFile() :
 					job->GetCmdFile());
 		if ( strcmp( job->GetDirectory(), "" ) ) {
@@ -1779,18 +1816,18 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 		if ( job->GetNoop() ) {
         	fprintf( fp, "NOOP " );
 		}
-		fprintf (fp, "%s\n",
+		fprintf(fp, "%s\n",
 				job->_Status == Job::STATUS_DONE ? "DONE" : "");
 
 			// Print the SCRIPT PRE line, if any.
         if (job->_scriptPre != NULL) {
-            fprintf (fp, "SCRIPT PRE  %s %s\n", 
+            fprintf(fp, "SCRIPT PRE  %s %s\n", 
                      job->GetJobName(), job->_scriptPre->GetCmd());
         }
 
 			// Print the SCRIPT POST line, if any.
         if (job->_scriptPost != NULL) {
-            fprintf (fp, "SCRIPT POST %s %s\n", 
+            fprintf(fp, "SCRIPT POST %s %s\n", 
                      job->GetJobName(), job->_scriptPost->GetCmd());
         }
 
@@ -1880,21 +1917,21 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
     //
     // Print Dependency Section
     //
-    fprintf (fp, "\n");
+    fprintf(fp, "\n");
     it.ToBeforeFirst();
     while (it.Next(job)) {
 
         set<JobID_t> & _queue = job->GetQueueRef(Job::Q_CHILDREN);
         if (!_queue.empty()) {
-            fprintf (fp, "PARENT %s CHILD", job->GetJobName());
+            fprintf(fp, "PARENT %s CHILD", job->GetJobName());
 
 			set<JobID_t>::const_iterator qit;
 			for (qit = _queue.begin(); qit != _queue.end(); qit++) {
                 Job * child = FindNodeByNodeID( *qit );
                 ASSERT( child != NULL );
-                fprintf (fp, " %s", child->GetJobName());
+                fprintf(fp, " %s", child->GetJobName());
 			}
-            fprintf (fp, "\n");
+            fprintf(fp, "\n");
         }
     }
 
@@ -2029,7 +2066,6 @@ Dag::RestartNode( Job *node, bool recovery )
 					_nfsLogIsError, recovery, _defaultNodeLog );
 	}
 }
-
 
 //-------------------------------------------------------------------------
 // Number the nodes according to DFS order 
@@ -2991,6 +3027,23 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		sleep( dm.submit_delay );
 	}
 
+		// Do condor_submit_dag -no_submit if this is a nested DAG node
+		// and lazy submit file generation is enabled (this must be
+		// done before we try to monitor the log file).
+   	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
+				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
+		bool isRetry = node->GetRetries() > 0;
+		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
+					node->GetDirectory(), isRetry ) != 0 ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: condor_submit_dag -no_submit failed "
+						"for node %s.\n", node->GetJobName() );
+				// Hmm -- should this be a node failure, since it probably
+				// won't work on retry?  wenger 2010-03-26
+			return SUBMIT_RESULT_NO_SUBMIT;
+		}
+	}
+
 	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
 				_recovery, _defaultNodeLog ) ) {
 		return SUBMIT_RESULT_NO_SUBMIT;
@@ -3356,7 +3409,7 @@ Dag::RelinquishNodeOwnership(void)
 	}
 
 	// shove it into a packet and give it back
-	return new OwnedMaterials(nodes);
+	return new OwnedMaterials(nodes, &_catThrottles);
 }
 
 
@@ -3380,7 +3433,7 @@ Dag::LiftSplices(SpliceLayer layer)
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.Value());
 		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
-		AssumeOwnershipofNodes(om);
+		AssumeOwnershipofNodes(key, om);
 		delete om;
 	}
 
@@ -3405,13 +3458,15 @@ Dag::LiftChildSplices(void)
 	MyString key;
 	Dag *splice = NULL;
 
-	debug_printf(DEBUG_DEBUG_1, "Lifting child splices...\n");
+	debug_printf(DEBUG_DEBUG_1, "Lifting child splices of %s...\n",
+				_spliceScope.Value());
 	_splices.startIterations();
 	while( _splices.iterate(key, splice) ) {
 		debug_printf(DEBUG_DEBUG_1, "Lifting child splice: %s\n", key.Value());
 		splice->LiftSplices(SELF);
 	}
-	debug_printf(DEBUG_DEBUG_1, "Done lifting child splices.\n");
+	debug_printf(DEBUG_DEBUG_1, "Done lifting child splices of %s.\n",
+				_spliceScope.Value());
 }
 
 
@@ -3421,7 +3476,7 @@ Dag::LiftChildSplices(void)
 // have true initial or final nodes, then those must move over the the
 // recorded inital and final nodes for 'here'.
 void
-Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
+Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 {
 	Job *job = NULL;
 	int i;
@@ -3429,6 +3484,34 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 	JobID_t key_id;
 
 	ExtArray<Job*> *nodes = om->nodes;
+
+	// 0. Take ownership of the categories
+
+	// Merge categories from the splice into this DAG object.  If the
+	// same category exists in both (whether global or non-global) the
+	// higher-level value overrides the lower-level value.
+
+	// Note: by the time we get to here, all category names have already
+	// been prefixed with the proper scope.
+	om->throttles->StartIterations();
+	ThrottleByCategory::ThrottleInfo *spliceThrottle;
+	while ( om->throttles->Iterate( spliceThrottle ) ) {
+		ThrottleByCategory::ThrottleInfo *mainThrottle =
+					_catThrottles.GetThrottleInfo(
+					spliceThrottle->_category );
+		if ( mainThrottle && mainThrottle->isSet() &&
+					mainThrottle->_maxJobs != spliceThrottle->_maxJobs ) {
+			debug_printf( DEBUG_NORMAL, "Warning: higher-level (%s) "
+						"maxjobs value of %d for category %s overrides "
+						"splice %s value of %d\n", _spliceScope.Value(),
+						mainThrottle->_maxJobs,
+						mainThrottle->_category->Value(),
+						spliceName.Value(), spliceThrottle->_maxJobs );
+		} else {
+			_catThrottles.SetThrottle( spliceThrottle->_category,
+						spliceThrottle->_maxJobs );
+		}
+	}
 
 	// 1. Take ownership of the nodes
 
@@ -3449,20 +3532,12 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 	// DAG (which will be deleted soon).
 	for ( i = 0; i < nodes->length(); i++ ) {
 		Job *tmpNode = (*nodes)[i];
-		ThrottleByCategory::ThrottleInfo *catThrottle =
-					tmpNode->GetThrottleInfo();
-		if ( catThrottle != NULL ) {
-
-				// Copy the category throttle setting from the splice
-				// DAG to the upper DAG (creates the category if we don't
-				// already have it).
-			_catThrottles.SetThrottle( catThrottle->_category,
-						catThrottle->_maxJobs );
-
+		spliceThrottle = tmpNode->GetThrottleInfo();
+		if ( spliceThrottle != NULL ) {
 				// Now re-set the category in the node, so that the
 				// category info points to the upper DAG rather than the
 				// splice DAG.
-			tmpNode->SetCategory( catThrottle->_category->Value(),
+			tmpNode->SetCategory( spliceThrottle->_category->Value(),
 						_catThrottles );
 		}
 	}

@@ -75,15 +75,15 @@ if ($Config{'archname'} =~ m!ia64-linux!)
 	#$ENV{PATH} = '.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
 	print "Adjusting component build for Linux ia64\n";
 	$Compiler = "gcc64";
-	if( -e "SLES8" )
+	if( -e "SLES9" )
 	{
-		print "We are told it is SLES 8, so ia64_sles8\n";
-		$TargetDir = ia64_sles8;
+		print "We are told it is SLES 9, so ia64_sles9\n";
+		$TargetDir = ia64_sles9;
 	}
 	else
 	{
-		print "We are told it is rh 72, so ia64_rh72\n";
-		$TargetDir = ia64_rh72;
+		print "We do not know what kind it is, so ia64_unknown\n";
+		$TargetDir = ia64_unknown;
 	}
 }
 

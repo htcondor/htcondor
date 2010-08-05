@@ -44,6 +44,7 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
 }
 #else
 {
+    resetState();
 }
 #endif
 
@@ -52,15 +53,10 @@ Condor_Crypt_3des :: ~Condor_Crypt_3des()
 }
 
 void Condor_Crypt_3des:: resetState()
-#if !defined(SKIP_AUTHENTICATION)
 {
      memset(ivec_, 0, 8);
      num_=0;
 }
-#else
-{
-}
-#endif
 
 bool Condor_Crypt_3des :: encrypt(unsigned char *  input, 
                                   int              input_len, 
@@ -113,4 +109,5 @@ bool Condor_Crypt_3des :: decrypt(unsigned char *  input,
 
 Condor_Crypt_3des :: Condor_Crypt_3des()
 {
+	resetState();
 }

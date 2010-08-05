@@ -208,15 +208,15 @@ ShadowMgr::init( void )
 		delete( tmp_shadow );
 		shadows.DeleteCurrent();
 	}
-	bool new_config = true;
 
 	char *tmp, *shadow_path;
 	tmp = param( "SHADOW_LIST" );
 	if( ! tmp ) {
 			// Not defined, give them a default
-		new_config = false;
-		tmp = strdup( "SHADOW, SHADOW_NT, SHADOW_MPI, SHADOW_PVM, "
-					  "SHADOW_JAVA" );
+		tmp = strdup( "SHADOW, SHADOW_STANDARD" );
+		dprintf(D_ALWAYS,
+				"WARNING: SHADOW_LIST not defined in config file, "
+				"using default: %s\n", tmp);
 	}
 	shadow_list.initializeFromString( tmp );
 	free( tmp );
@@ -225,19 +225,15 @@ ShadowMgr::init( void )
 	while( (tmp = shadow_list.next()) ) {
 		shadow_path = param( tmp );
 		if( ! shadow_path ) {
-			if( new_config ) {
-				dprintf( D_ALWAYS, "Shadow specified in SHADOW_LIST "
-						 "\"%s\" not found in config file, ignoring.\n",
-						 tmp ); 
-			}
+			dprintf( D_ALWAYS, "Shadow specified in SHADOW_LIST "
+					 "\"%s\" not found in config file, ignoring.\n",
+					 tmp ); 
 			continue;
 		}
 		if( checked_shadow_list.contains(shadow_path) ) {
-			if( new_config ) {
-				dprintf( D_ALWAYS, "Shadow pointed to by \"%s\" (%s) is "
-						 "in SHADOW_LIST more than once, ignoring.\n", 
-						 tmp, shadow_path );
-			}
+			dprintf( D_ALWAYS, "Shadow pointed to by \"%s\" (%s) is "
+					 "in SHADOW_LIST more than once, ignoring.\n", 
+					 tmp, shadow_path );
 			free( shadow_path );
 			continue;
 		}
@@ -254,24 +250,6 @@ ShadowMgr::init( void )
 			// shadow, even if it failed to give us a classad. 
 		checked_shadow_list.append( shadow_path );
 		free( shadow_path );
-	}
-	if( ! new_config ) {
-			// if we're reading an old config file, we've got to check
-			// for one more thing.  none of their old settings are
-			// going to reference "condor_shadow.std", which is the
-			// new name for the non-dc standard universe shadow.  So,
-			// try to find that ourselves.
-		char* sbin = param( "SBIN" );
-		if( sbin ) {
-			MyString std_path;
-			std_path += sbin;
-			free( sbin );
-			std_path += "/condor_shadow.std";
-			tmp_shadow = makeShadow( std_path.Value() );
-			if( tmp_shadow ) {
-				shadows.Append( tmp_shadow );
-			}
-		}
 	}
 }
 

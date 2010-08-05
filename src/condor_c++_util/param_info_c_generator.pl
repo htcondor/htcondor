@@ -159,7 +159,7 @@ my $property_types = {
 #                    the value, the second the type.
 ##################################################################################
 my $type_subs = { 
-	'char[]'  => sub { return $_[0]?'"'.escape($_[0]).'"':'""'; },
+	'char[]'  => sub { return '"'.escape($_[0]).'"'; },
 	'bool'  => sub { return enum($_[0],'true','false'); },
 	'int'  => sub { return $_[0]=~/^\d+$/?$_[0]:type_error($_[0], 'int'); },
 	'float'  => sub { return $_[0]=~/^\d+\.\d+$/?$_[0]:type_error($_[0], 'float'); },

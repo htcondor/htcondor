@@ -201,45 +201,39 @@ StorkMatchTest	smt;
 
 //-------------------------------------------------------------
 
-int main_init(int /*argc*/, char * /*argv*/ [])
+void main_init(int /*argc*/, char * /*argv*/ [])
 {
 	DebugFlags = D_FULLDEBUG | D_ALWAYS;
 	dprintf(D_ALWAYS, "main_init() called\n");
 
 	smt.init( );
-
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool /*is_full*/ )
+void 
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 	smt.config( true );
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast(void)
+void main_shutdown_fast(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	smt.stop( );
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful(void)
+void main_shutdown_graceful(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	smt.stop( );
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

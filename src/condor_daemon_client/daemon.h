@@ -320,8 +320,8 @@ public:
 		  the command they want to send, the type of Sock they
 		  want to use to send it over, and an optional timeout.  
 		  We then instantiate a new Sock of the right type and
-		  timeout, send the command, and finally, the eom().  The Sock
-		  is then destroyed.
+		  timeout, send the command, and finally, the end_of_message().  
+		  The Sock is then destroyed.
 		  @param cmd The command you want to send.
 		  @param st The type of the Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
@@ -337,8 +337,8 @@ public:
 		  want us to use to send it over, and an optional timeout.
 		  This method will then put the desired timeout on that sock,
 		  place it in encode() mode, send the command, and finally,
-		  the eom().  The sock is otherwise left alone (i.e. not
-		  destroyed)
+		  the end_of_message().  The sock is otherwise left alone 
+		  (i.e. not destroyed)
 		  @param cmd The command you want to send.
 		  @param sock The Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
@@ -515,6 +515,17 @@ public:
 		 **/
 	bool setSubsystem( const char* subsys );
 
+		/*
+		 * Interate to the next CM daemon in a case where
+		 * more than 1 central manager is configured
+		 **/
+	bool nextValidCm();
+
+		/*
+		 * Reset the list of CM daemons to the first one
+		 **/
+	void rewindCmList();
+
 protected:
 	// Data members
 
@@ -539,6 +550,8 @@ protected:
 	bool _is_configured; 
 	ClassAd *m_daemon_ad_ptr;
 	SecMan _sec_man;
+	StringList daemon_list;
+
 
 
 		// //////////////////////////////////////////////////////////
@@ -568,18 +581,25 @@ protected:
 		/** Helper for central manager daemons (collector and
 		  negotiator).  These are a special case since they have
 		  well-known ports, instead of needing to query the central
-		  manager (of course).   Also, we have to deal with the fact
-		  that the CM might have multiple network interfaces, and we
-		  need to be sure to connect to the right one.  We return
-		  success or failure on whether we found any of the parameters
-		  we were looking for that describe where the CM is.  This is
-		  useful when we're trying to find the condor_view collector,
+		  manager (of course).  Uses findCmDaemon to determine the
+		  parameters for central manager daemons.  This is useful
+		  when we're trying to find the condor_view collector,
 		  b/c if we can't find condor_view-specific entries, we fall
 		  back and try to just find the default collector.  
 		  @param subsys The subsystem string for this daemon
 		  @return Whether or not we found the info we want
 		  */
 	bool getCmInfo( const char* subsys );
+
+		/** Deal with the fact that the CM might have multiple
+		  network interfaces, and we need to be sure to connect
+		  to the right one.  We return success or failure on whether
+		  we found any of the parameters we were looking for that
+		  describe where the CM is.
+		  @param name The hostname of a central manager
+		  @return Whether all the parameters for the CM were found
+		  */
+	bool findCmDaemon( const char* name );
 
 
 		/** Helper to initialize the hostname if we don't have it
@@ -684,7 +704,7 @@ protected:
 	char* New_name( char* );
 	char* New_version( char* );
 	char* New_platform( char* );
-	char* New_addr( char* );
+	void New_addr( char* );
 	char* New_pool( char* );
 
 		/**

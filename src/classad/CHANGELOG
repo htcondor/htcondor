@@ -1,3 +1,21 @@
+Changes for version 1.0.9 (Released ????-??-??)
+* Fix interval() function to omit leading zeros and spaces.
+* Allow semicolons to separate function arguments when
+  _useOldClassAdSemantics is true.
+* Parse negative numbers as such, rather than as negated positive numbers.
+* When parsing integers larger than 32 bits, use INT_MAX and INT_MIN
+  rather than truncating to 32 bits.
+
+Changes for version 1.0.8 (Released 2010-06-10)
+* Set a version (1.0.0) on the .so (thanks Steve Traylen)
+* Updated ClassAdLibraryVersion to 1.0.8 (was 1.0.4)
+
+Changes for version 1.0.7 (Released 2010-05-26)
+* Fix parsing of strings containing characters with negative ASCII values.
+* Stop escaping '?' in strings when unparsing.
+* Added _useOldClassAdSemantics, which makes expression evaluation behave
+  more like the old ClassAds implementation. Meant for use in Condor only.
+
 Changes for version 1.0.6 (Released 2010-02-25)
 * Fixed bug in MatchClassAd::OptimizeAdForMatchmaking() that broke
   references to the right ad from the left ad.

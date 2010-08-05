@@ -28,9 +28,6 @@
 #include "CryptKey.h"                 // KeyInfo
 #include "condor_ver_info.h"
 #include "classy_counted_ptr.h"
-// This #define is a desperate move. GNU g++ seems to choke at runtime on our
-// inline function for eom.  Someday not needed ?
-#define eom end_of_message
 
 enum CONDOR_MD_MODE {
     MD_OFF        = 0,         // off
@@ -222,7 +219,7 @@ public:
 	int code(long &);
     ///
 	int code(unsigned long &);
-#if !defined(__LP64__)
+#if !defined(__LP64__) || defined(Darwin)
     ///
 	int code(int64_t &);
     ///
@@ -240,6 +237,8 @@ public:
 	int code(char *&);
     ///
 	int code(MyString &);
+    ///
+	int code(std::string &);
     ///
 	int code(char *&, int &);
     ///
@@ -384,7 +383,7 @@ public:
 	int put(unsigned int);
 	int put(long);
 	int put(unsigned long);
-#if !defined(__LP64__)
+#if !defined(__LP64__) || defined(Darwin)
 	int put(int64_t);
 	int put(uint64_t);
 #endif
@@ -394,6 +393,7 @@ public:
 	int put(double);
 	int put(char const *);
 	int put(const MyString &);
+	int put(const std::string &);
 	int put(char const *, int);
 
 
@@ -406,7 +406,7 @@ public:
 	int get(unsigned int &);
 	int get(long &);
 	int get(unsigned long &);
-#if !defined(__LP64__)
+#if !defined(__LP64__) || defined(Darwin)
 	int get(int64_t &);
 	int get(uint64_t &);
 #endif
@@ -416,6 +416,7 @@ public:
 	int get(double &);
 
 	int get(MyString &);
+	int get(std::string &);
 
 		// This function assigns the argument to a freshly mallocated string
 		// or NULL.  The caller should free the string.
@@ -508,7 +509,6 @@ public:
         @return TRUE or FALSE
     */
 	virtual int end_of_message() = 0;
-//	int eom() { return end_of_message(); }
 
 	///
 	virtual void allow_one_empty_message();
@@ -552,6 +552,10 @@ public:
 
 	/// For stream types that support it, this returns the ip address we are connecting to.
 	virtual char const *peer_ip_str() = 0;
+
+	/// For stream types that support it, test if peer is a local interface, aka did this connection 
+	/// originate from a local process?
+	virtual bool peer_is_local() = 0;
 
 	/// For stream types that support it, this is the sinful address of peer.
 	virtual char const *default_peer_description() = 0;

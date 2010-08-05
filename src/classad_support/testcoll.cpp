@@ -18,14 +18,8 @@
  ***************************************************************/
 
 
-#if !defined( STANDALONE ) 
-#include <stdio.h>
-#include "classad/collection.h"
-#include "collectionServer.h"
-#else
 #include <ctype.h>
-#include "classad_package.h"
-#endif
+#include "classad/classad_distribution.h"
 
 enum Commands {
 	_NO_CMD_,

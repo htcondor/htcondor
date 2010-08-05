@@ -39,8 +39,6 @@ CondorTest::LoadExemption("lib_auth_protocol-negot,no,SECMAN:2004:Was waiting fo
 CondorTest::LoadExemption("lib_auth_protocol-negot,no,FAILED TO SEND INITIAL KEEP ALIVE TO OUR PARENT");
 CondorTest::LoadExemption("lib_auth_protocol-negot,no,DC_AUTHENTICATE unable to receive auth_info!");
 CondorTest::LoadExemption("lib_auth_protocol-negot,no,SECMAN:2003:TCP auth connection to");
-CondorTest::LoadExemption("lib_auth_protocol-negot,no,receiving new UDP message but found a short message still waiting to be closed");
-CondorTest::LoadExemption("lib_auth_protocol-negot,no,receiving new UDP message but found a long message still waiting to be closed");
 
 # truly const variables in perl
 sub IDLE{1};

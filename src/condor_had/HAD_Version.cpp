@@ -136,9 +136,9 @@ Version::code( ReliSock& socket )
     char* temporarySinfulString = const_cast<char*>( m_sinfulString.Value() );
    	int isPrimaryAsInteger      = int( m_isPrimary );
    
-    if( ! socket.code( m_gid )          /*|| ! socket.eom( )*/ ||
-        ! socket.code( m_logicalClock ) /*|| ! socket.eom( )*/ ||
-        ! socket.code( temporarySinfulString ) /*|| ! socket.eom( )*/ || 
+    if( ! socket.code( m_gid )          /*|| ! socket.end_of_message( )*/ ||
+        ! socket.code( m_logicalClock ) /*|| ! socket.end_of_message( )*/ ||
+        ! socket.code( temporarySinfulString ) /*|| ! socket.end_of_message( )*/ || 
 		! socket.code( isPrimaryAsInteger ) ) {
         dprintf( D_NETWORK, "Version::code "
                             "unable to code the version\n");

@@ -141,7 +141,7 @@ cleanTemporaryFiles()
  *            argv[5], argv[6], ... argv[5 + argv[4] - 1] - state files
  * Remarks: flags (like '-f') are being stripped off before this function call
  */
-int
+void
 main_init( int argc, char *argv[] )
 {
     /*if( argc != 5 ) {
@@ -192,35 +192,28 @@ main_init( int argc, char *argv[] )
     int result = replicaTransferer->initialize( );
 
     DC_Exit( result );
-
-    return TRUE; // compilation reason
 }
 
-int
+void
 main_shutdown_graceful( )
 {
 	cleanTemporaryFiles( );
     delete replicaTransferer;
     DC_Exit( 0 );
-
-    return 0; // compilation reason
 }
 
-int
+void
 main_shutdown_fast( )
 {
 	cleanTemporaryFiles( );
 	delete replicaTransferer;
 	DC_Exit( 0 );
-
-	return 0; // compilation reason
 }
 
 // no reconfigurations enabled
-int
-main_config( bool is_full )
+void
+main_config()
 {
-    return 1;
 }
 
 void

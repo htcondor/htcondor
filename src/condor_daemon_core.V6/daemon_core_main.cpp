@@ -61,15 +61,15 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 
 // External protos
-extern int main_init(int argc, char *argv[]);	// old main()
-extern int main_config(bool is_full);
-extern int main_shutdown_fast();
-extern int main_shutdown_graceful();
+extern void main_init(int argc, char *argv[]);	// old main()
+extern void main_config();
+extern void main_shutdown_fast();
+extern void main_shutdown_graceful();
 extern void main_pre_dc_init(int argc, char *argv[]);
 extern void main_pre_command_sock_init();
 
 // Internal protos
-void dc_reconfig( bool is_full );
+void dc_reconfig();
 void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
 int handle_fetch_log_history(ReliSock *s, char *name);
 int handle_fetch_log_history_dir(ReliSock *s, char *name);
@@ -264,6 +264,17 @@ DC_Exit( int status, const char *shutdown_program )
 	else {
 		exit_status = DAEMON_NO_RESTART;
 	}
+
+#ifndef WIN32
+	// unregister our signal handlers in case some 3rd-party lib
+	// was masking signals on us...no late arrivals
+	install_sig_handler(SIGCHLD,SIG_DFL);
+	install_sig_handler(SIGHUP,SIG_DFL);
+	install_sig_handler(SIGTERM,SIG_DFL);
+	install_sig_handler(SIGQUIT,SIG_DFL);
+	install_sig_handler(SIGUSR1,SIG_DFL);
+	install_sig_handler(SIGUSR2,SIG_DFL);
+#endif /* ! WIN32 */
 
 		// Now, delete the daemonCore object, since we allocated it. 
 	unsigned long	pid = daemonCore->getpid( );
@@ -800,7 +811,9 @@ handle_off_fast( Service*, int, Stream* stream)
 		dprintf( D_ALWAYS, "handle_off_fast: failed to read end of message\n");
 		return FALSE;
 	}
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	}
 	return TRUE;
 }
 
@@ -812,7 +825,9 @@ handle_off_graceful( Service*, int, Stream* stream)
 		dprintf( D_ALWAYS, "handle_off_graceful: failed to read end of message\n");
 		return FALSE;
 	}
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
 	return TRUE;
 }
 
@@ -826,8 +841,10 @@ handle_off_peaceful( Service*, int, Stream* stream)
 		dprintf( D_ALWAYS, "handle_off_peaceful: failed to read end of message\n");
 		return FALSE;
 	}
-	daemonCore->SetPeacefulShutdown(true);
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	if (daemonCore) {
+		daemonCore->SetPeacefulShutdown(true);
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
 	return TRUE;
 }
 
@@ -856,11 +873,7 @@ handle_reconfig( Service*, int cmd, Stream* stream )
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
 		return FALSE;
 	}
-	if( cmd == DC_RECONFIG_FULL ) {
-		dc_reconfig( true );
-	} else {
-		dc_reconfig( false );
-	}		
+	dc_reconfig();
 	return TRUE;
 }
 
@@ -932,6 +945,11 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 	MyString full_filename = filename;
 	if(ext) {
 		full_filename += ext;
+
+		if( strchr(ext,DIR_DELIM_CHAR) ) {
+			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			return FALSE;
+		}
 	}
 
 	int fd = safe_open_wrapper(full_filename.Value(),O_RDONLY);
@@ -1255,41 +1273,53 @@ handle_config( Service *, int cmd, Stream *stream )
 void
 unix_sighup(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
+	}
 }
 
 
 void
 unix_sigterm(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
 }
 
 
 void
 unix_sigquit(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	}
 }
 
 
 void
 unix_sigchld(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGCHLD );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGCHLD );
+	}
 }
 
 
 void
 unix_sigusr1(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
+	}
 }
 
 void
 unix_sigusr2(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+	if (daemonCore) {
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+	}
 }
 
 
@@ -1299,7 +1329,7 @@ unix_sigusr2(int)
 
 
 void
-dc_reconfig( bool is_full )
+dc_reconfig()
 {
 		// do this first in case anything else depends on DNS
 	daemonCore->refreshDNS();
@@ -1318,10 +1348,6 @@ dc_reconfig( bool is_full )
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
-
-	if( DynamicDirs ) {
-		handle_dynamic_dirs();
-	}
 
 		// If we're supposed to be using our own log file, reset that here. 
 	if( logDir ) {
@@ -1344,9 +1370,7 @@ dc_reconfig( bool is_full )
 	daemonCore->reconfig();
 
 	// Clear out the passwd cache.
-	if( is_full ) {
-		clear_passwd_cache();
-	}
+	clear_passwd_cache();
 
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
@@ -1372,14 +1396,14 @@ dc_reconfig( bool is_full )
 	}
 
 	// call this daemon's specific main_config()
-	main_config( is_full );
+	main_config();
 }
 
 int
 handle_dc_sighup( Service*, int )
 {
 	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
-	dc_reconfig( true );
+	dc_reconfig();
 	return TRUE;
 }
 
@@ -2203,7 +2227,7 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Command( DC_RECONFIG_FULL, "DC_RECONFIG_FULL",
 								  (CommandHandler)handle_reconfig,
-								  "handle_reconfig()", 0, ADMINISTRATOR );
+								  "handle_reconfig()", 0, WRITE );
 
 	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
 								  (CommandHandler)handle_config_val,

@@ -32,7 +32,7 @@ class SafeSock;
 class VanillaProc : public OsProc
 {
 public:
-	VanillaProc(ClassAd* jobAd) : OsProc(jobAd) { }
+	VanillaProc(ClassAd* jobAd);
 
 		/** call OsProc::StartJob(), make a new ProcFamily with new
 			process as head. */
@@ -66,9 +66,19 @@ public:
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
+	bool finishShutdownFast();
+#if !defined(WIN32)
+	bool startEscalationTimer();
+	void cancelEscalationTimer();
+	bool EscalateSignal();
+#endif
+
 private:
 		/// Final usage stats for this proc and all its children.
 	ProcFamilyUsage m_final_usage;
+#if !defined(WIN32)
+	int m_escalation_tid;
+#endif
 };
 
 #endif

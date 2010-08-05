@@ -420,6 +420,11 @@ JICShadow::transferOutput( void )
 		bool rval = filetrans->UploadFiles( true, final_transfer );
 		set_priv(saved_priv);
 
+		if( rval ) {
+			FileTransfer::FileTransferInfo ft_info = filetrans->GetInfo();
+			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,ft_info.spooled_files.Value());
+		}
+
 		if( ! rval ) {
 				// Failed to transfer.  See if there is a reason to put
 				// the job on hold.
@@ -657,7 +662,7 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 
 		// We want the update ad anyway, in case we want it for the
 		// LocalUserLog
-	user_proc->PublishUpdateAd( &ad );
+	publishUpdateAd( &ad );
 
 		// depending on the exit reason, we want a different event. 
 		// however, don't write multiple events if we've already been
@@ -967,7 +972,7 @@ JICShadow::initUserPriv( void )
 				setExecuteAccountIsDedicated( owner.Value() );
 			}
 		}
-		else if( stricmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+		else if( strcasecmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 			// For VMware vm universe, we can't use SOFT_UID_DOMAIN
 			run_as_owner = false;
 		}
@@ -1118,7 +1123,7 @@ bool
 JICShadow::initJobInfo( void ) 
 {
 		// Give our base class a chance.
-	JobInfoCommunicator::initJobInfo();
+	if (!JobInfoCommunicator::initJobInfo()) return false;
 
 	char *orig_job_iwd;
 
@@ -1292,8 +1297,12 @@ JICShadow::initWithFileTransfer()
 					 "ad, aborting\n" );
 			return false;
 		}
+
+		char firstCharOfTF = tmp[0];
+		free(tmp);
+
 			// if set to "ALWAYS", then set transfer_at_vacate to true
-		switch ( tmp[0] ) {
+		switch ( firstCharOfTF ) {
 		case 'a':
 		case 'A':
 			transfer_at_vacate = true;
@@ -1303,7 +1312,6 @@ JICShadow::initWithFileTransfer()
 			return initNoFileTransfer();
 			break;
 		}
-		free( tmp );
 	}
 
 		// if we're here, it means we're transfering files, so we need
@@ -1420,7 +1428,7 @@ JICShadow::sameUidDomain( void )
 	dprintf( D_FULLDEBUG, " Local UidDomain: \"%s\"\n",
 			 uid_domain );
 
-	if( stricmp(job_uid_domain, uid_domain) == MATCH ) {
+	if( strcasecmp(job_uid_domain, uid_domain) == MATCH ) {
 		same_domain = true;
 	}
 
@@ -1487,7 +1495,7 @@ JICShadow::sameFSDomain( void )
 	dprintf( D_FULLDEBUG, " Local FsDomain: \"%s\"\n",
 			 fs_domain );
 
-	if( stricmp(job_fs_domain, fs_domain) == MATCH ) {
+	if( strcasecmp(job_fs_domain, fs_domain) == MATCH ) {
 		same_domain = true;
 	}
 
@@ -1513,7 +1521,7 @@ refuse(ReliSock * s)
 	s->encode();
 	int i = 0; // == failure;
 	s->code(i); // == failure
-	s->eom();
+	s->end_of_message();
 }
 
 // Based on Scheduler::updateGSICred
@@ -1613,7 +1621,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		// Send our reply back to the client
 	rsock->encode();
 	rsock->code(reply);
-	rsock->eom();
+	rsock->end_of_message();
 
 	if(reply) {
 		dprintf(D_FULLDEBUG,
@@ -1633,7 +1641,7 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		s->encode();
 		int i = 2; // == success, but please don't call any more.
 		s->code(i); // == success, but please don't call any more.
-		s->eom();
+		s->end_of_message();
 		refuse(s);
 		return false;
 	}
@@ -1662,6 +1670,12 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		execsz = starter_dir.GetDirectorySize();
 		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
 		ad->InsertOrUpdate( buf );
+
+	}
+	MyString spooled_files;
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+	{
+		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
 	}
 
 	// Insert the starter's address into the update ad, because all
@@ -1763,6 +1777,13 @@ JICShadow::beginFileTransfer( void )
 		}
 
 		filetrans = new FileTransfer();
+
+			// In the starter, we never want to use
+			// SpooledOutputFiles, because we are not reading the
+			// output from the spool.  We always want to use
+			// TransferOutputFiles instead.
+		job_ad->Delete(ATTR_SPOOLED_OUTPUT_FILES);
+
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->RegisterCallback(
@@ -1885,6 +1906,16 @@ JICShadow::initIOProxy( void )
 {
 	int want_io_proxy = 0;
 	MyString io_proxy_config_file;
+
+		// the admin should have the final say over whether
+		// chirp is enabled
+    bool enableIOProxy = true;
+	enableIOProxy = param_boolean("ENABLE_CHIRP", true);
+	
+	if (!enableIOProxy) {
+		dprintf(D_ALWAYS, "ENABLE_CHIRP is false in config file, not enabling chirp\n");
+		return false;
+	}
 
 	if( job_ad->LookupBool( ATTR_WANT_IO_PROXY, want_io_proxy ) < 1 ) {
 		dprintf( D_FULLDEBUG, "JICShadow::initIOProxy(): "

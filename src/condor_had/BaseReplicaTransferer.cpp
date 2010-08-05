@@ -26,7 +26,6 @@
 #include "FilesOperations.h"
 #include "Utils.h"
 
-extern int main_shutdown_graceful();
 
 BaseReplicaTransferer::BaseReplicaTransferer(
                                  const MyString&  pDaemonSinfulString,

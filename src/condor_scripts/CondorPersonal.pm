@@ -60,17 +60,18 @@ use strict;
 #	condorlocalsrc	Name for condor local config src 								$personal_local_src
 #   daemonwait      Wait for startd/schedd to be seen	true						$personal_startup_wait
 #   localpostsrc    New end of local config file                                    $personal_local_post_src
+#   append_condor_config    Text to append to end of local config file
 #   secprepostsrc	New security settings 											$personal_sec_prepost_src
 #	condordaemon	daemon list to start				contents of config template $personal_daemons
 #	condorconfig	Name for condor config file			condor_config				$personal_config
 #	condordomain	Name for domain						local						$condordomain
 #	condorlocal		Name for condor local config 		condor_config.local			$personal_local
-#	condor			"install" or path to tarball 									$condordistribution
+#	condor			"install" or path to tarball 		nightlies							$condordistribution
 #	collector	 	Used to define COLLECTOR_HOST									$collectorhost
 #	nameschedd	 	Used to define SCHEDD_NAME			cat(name and collector)		$scheddname
 #	condorhost	 	Used to define CONDOR_HOST										$condorhost
 #	ports			Select dynamic or normal ports		dynamic						$portchanges	
-#   slot				sets NUM_CPUS NUM_SLOTS				none
+#	slots			sets NUM_CPUS NUM_SLOTS			none
 #   universe		parallel configuration of schedd	none						$personal_universe
 #
 #   Notes added 12/14/05 bt
@@ -246,6 +247,45 @@ sub StartCondor
 		$mpid = shift; # assign process id
 	}
 
+	CondorPersonal::ParsePersonalCondorParams($paramfile);
+
+	# Insert the positional arguments into the new-style named-argument
+	# hash and call the version of this function which handles it.
+	$personal_condor_params{"test_name"} = $testname;
+	$personal_condor_params{"condor_name"} = $version;
+	$personal_condor_params{"owner_pid"} = $mpid;
+
+	return StartCondorWithParams(%personal_condor_params);
+}
+
+############################################
+## StartCondorWithParams
+##
+## Starts up a personal condor that is configured as specified in
+## the named arguments to this function.  If you are using the
+## CondorTest framework, do not call this function directly.
+## Call CondorTest::StartCondorWithParams().
+##
+## Required Arguments:
+##  condor_name      - a descriptive name, used when generating directory names
+##
+## Optional Arguments:
+##  test_name            - name of the test that is using this personal condor
+##  append_condor_config - lines to be added to the (local) configuration file
+##  daemon_list          - list of condor daemons to run
+##
+##
+############################################
+sub StartCondorWithParams
+{
+	%personal_condor_params = @_;
+
+	my $testname = $personal_condor_params{"test_name"} || die "Missing test_name\n";
+	$version = $personal_condor_params{"condor_name"} || die "Missing condor_name!\n";
+	my $mpid = $personal_condor_params{"owner_pid"} || $pid;
+	my $config_and_port = "";
+	my $winpath = "";
+
 	runcmd("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/$testname" . ".saveme";
 	runcmd("mkdir -p $topleveldir");
@@ -256,8 +296,6 @@ sub StartCondor
 
 	$procdaddress = $mpid . $version;
 
-
-	CondorPersonal::ParsePersonalCondorParams($paramfile);
 
 	if(exists $personal_condor_params{"personaldir"}) {
 		$topleveldir = $personal_condor_params{"personaldir"};
@@ -425,7 +463,7 @@ sub ParsePersonalCondorParams
 	    	}
 
 	    	debug( "(CondorPersonal.pm) $variable = $value\n" ,$debuglevel);
-	    
+
 	    	# save the variable/value pair
 	    	$personal_condor_params{$variable} = $value;
 		} else {
@@ -494,6 +532,26 @@ sub WhichCondorConfig
 	}
 }
 
+##################################################################
+#
+# Run condor_config_val using the specified configuration file.
+#
+
+sub CondorConfigVal
+{
+    my $config_file = shift;
+    my $param_name = shift;
+
+    my $oldconfig = $ENV{CONDOR_CONFIG};
+    $ENV{CONDOR_CONFIG} = $config_file;
+
+    my $result = `condor_config_val $param_name`;
+
+    chomp $result;
+    $ENV{CONDOR_CONFIG} = $oldconfig;
+    return $result;
+}
+
 #################################################################
 #
 # InstallPersonalCondor
@@ -520,197 +578,171 @@ sub InstallPersonalCondor
 
 	my $binloc;
 
-	if( exists $control{"condor"} )
+	$condordistribution = $control{"condor"} || "nightlies";
+	debug( "Install this condor --$condordistribution--\n",$debuglevel);
+	if( $condordistribution eq "nightlies" ) {
+		# test if this is really the environment we are in or
+		# switch it to install mode.
+		 if(! -f "../../condor/sbin/condor_master") {
+		 	$condordistribution = "install";
+		 }
+	}
+	if( $condordistribution eq "install" )
 	{
-		$condordistribution = $control{"condor"};
-		debug( "Install this condor --$condordistribution--\n",$debuglevel);
-		if( $condordistribution eq "nightlies" ) {
-			# test if this is really the environment we are in or
-			# switch it to install mode.
-			 if(! -f "../../condor/sbin/condor_master") {
-			 	$condordistribution = "install";
-			 }
-		}
-		if( $condordistribution eq "install" )
+		# where is the hosting condor_config file? The one assumed to be based
+		# on a setup with condor_configure.
+		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+		while(<CONFIG>)
 		{
-			# where is the hosting condor_config file? The one assumed to be based
-			# on a setup with condor_configure.
-			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
-			while(<CONFIG>)
-			{
-				fullchomp($_);
-				$configline = $_;
-				push @configfiles, $configline;
-			}
-			close(CONFIG);
-			$personal_condor_params{"condortemplate"} = shift @configfiles;
-			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
-			#
-			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
-
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
-				debug( "Root path $1 and base $2\n",$debuglevel);
-				$binloc = $1;	# we'll get our binaries here.
-			} elsif(-f "../release_dir/bin/condor_status") {
-				print "Bummer which condor_q failed\n";
-				print "Using ../release_dir/bin(s)\n";
-				$binloc = "../release_dir/bin"; # we'll get our binaries here.
-			}
-			else
-			{
-				print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
-				die "Can not seem to find a Condor install!\n";
-			}
-			
-
-			if( $binloc =~ /^(\/.*\/)s*bin\/\s*$/ )
-			{
-				debug( "Root path to sbin is $1\n",$debuglevel);
-				$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
-			}
-			else
-			{
-				die "Can not seem to locate Condor release binaries\n";
-			}
-
-			$schedd = $sbinloc . "sbin/". "condor_schedd";
-			$master = $sbinloc . "sbin/". "condor_master";
-			$collector = $sbinloc . "sbin/". "condor_collector";
-			$submit = $binloc . "condor_submit";
-			$startd = $sbinloc . "sbin/". "condor_startd";
-			$negotiator = $sbinloc . "sbin/". "condor_negotiator";
-
-			debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
-
-
-			debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
-
-			runcmd("mkdir -p $topleveldir/execute");
-			runcmd("mkdir -p $topleveldir/spool");
-			runcmd("mkdir -p $topleveldir/log");
-			runcmd("mkdir -p $topleveldir/log/tmp");
+			fullchomp($_);
+			$configline = $_;
+			push @configfiles, $configline;
 		}
-		elsif( $condordistribution eq "nightlies" )
-		{
-			# we want a mechanism by which to find the condor binaries
-			# we are testing. But we know where they are relative to us
-			# ../../condor/bin etc
-			# That is simply the nightly test setup.... for now at least
-			# where is the hosting condor_config file? The one assumed to be based
-			# on a setup with condor_configure.
+		close(CONFIG);
+		$personal_condor_params{"condortemplate"} = shift @configfiles;
+		$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+		#
+		debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
 
-			debug(" Nightlies - find environment config files\n",$debuglevel);
-			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
-			while(<CONFIG>)
-			{
-				fullchomp($_);
-				$configline = $_;
-				debug( "$_\n" ,$debuglevel);
-				push @configfiles, $configline;
-			}
-			close(CONFIG);
-			# yes this assumes we don't have multiple config files!
-			$personal_condor_params{"condortemplate"} = shift @configfiles;
-			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
-
-			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
-
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
-			{
-				debug( "Root path $1 and base $2\n",$debuglevel);
-				$binloc = $1;	# we'll get our binaries here.
-			}
-			else
-			{
-				print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
-				die "Can not seem to find a Condor install!\n";
-			}
-			
-
-			if( $binloc =~ /^(\/.*\/)bin\/\s*$/ )
-			{
-				debug( "Root path to sbin is $1\n",$debuglevel);
-				$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
-			}
-			else
-			{
-				die "Can not seem to locate Condor release binaries\n";
-			}
-			#$binloc = "../../condor/bin/";
-			#$sbinloc = "../../condor/";
-
-			debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n",$debuglevel);
-
-			$schedd = $sbinloc . "sbin/" .  "condor_schedd";
-			$master = $sbinloc . "sbin/" .  "condor_master";
-			$collector = $sbinloc . "sbin/" .  "condor_collector";
-			$submit = $binloc . "condor_submit";
-			$startd = $sbinloc . "sbin/" .  "condor_startd";
-			$negotiator = $sbinloc . "sbin/" .  "condor_negotiator";
-
-			debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
-
-
-			debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
-
-			runcmd("mkdir -p $topleveldir/execute");
-			runcmd("mkdir -p $topleveldir/spool");
-			runcmd("mkdir -p $topleveldir/log");
-			runcmd("mkdir -p $topleveldir/log/tmp");
-		}
-		elsif( -e $condordistribution )
-		{
-			# in this option we ought to run condor_configure
-			# to get a current config files but we'll do this
-			# after getting the current condor_config from
-			# the environment we are in as it is supposed to
-			# have been generated this way in the nightly tests
-			# run in the NWO.
-
-			my $res = chdir "$topleveldir";
-			if(! $res)
-			{
-				die "Relcation failed!\n";
-				exit(1);
-			}
-			runcmd("mkdir -p $topleveldir/execute");
-			runcmd("mkdir -p $topleveldir/spool");
-			runcmd("mkdir -p $topleveldir/log");
-			runcmd("tar -xf $home/$condordistribution");
-			$sbinloc = $topleveldir; # local_dir is here
-			chdir "$home";
+		if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
+			debug( "Root path $1 and base $2\n",$debuglevel);
+			$binloc = $1;	# we'll get our binaries here.
+		} elsif(-f "../release_dir/bin/condor_status") {
+			print "Bummer which condor_q failed\n";
+			print "Using ../release_dir/bin(s)\n";
+			$binloc = "../release_dir/bin"; # we'll get our binaries here.
 		}
 		else
 		{
-			die "Undiscernable install directive! (condor = $condordistribution)\n";
+			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			die "Can not seem to find a Condor install!\n";
 		}
+		
+
+		if( $binloc =~ /^(\/.*\/)s*bin\/\s*$/ )
+		{
+			debug( "Root path to sbin is $1\n",$debuglevel);
+			$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
+		}
+		else
+		{
+			die "Can not seem to locate Condor release binaries\n";
+		}
+
+		$schedd = $sbinloc . "sbin/". "condor_schedd";
+		$master = $sbinloc . "sbin/". "condor_master";
+		$collector = $sbinloc . "sbin/". "condor_collector";
+		$submit = $binloc . "condor_submit";
+		$startd = $sbinloc . "sbin/". "condor_startd";
+		$negotiator = $sbinloc . "sbin/". "condor_negotiator";
+
+		debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
+
+
+		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
+
+		runcmd("mkdir -p $topleveldir/execute");
+		runcmd("mkdir -p $topleveldir/spool");
+		runcmd("mkdir -p $topleveldir/log");
+		runcmd("mkdir -p $topleveldir/log/tmp");
+	}
+	elsif( $condordistribution eq "nightlies" )
+	{
+		# we want a mechanism by which to find the condor binaries
+		# we are testing. But we know where they are relative to us
+		# ../../condor/bin etc
+		# That is simply the nightly test setup.... for now at least
+		# where is the hosting condor_config file? The one assumed to be based
+		# on a setup with condor_configure.
+
+		debug(" Nightlies - find environment config files\n",$debuglevel);
+		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+		while(<CONFIG>)
+		{
+			fullchomp($_);
+			$configline = $_;
+			debug( "$_\n" ,$debuglevel);
+			push @configfiles, $configline;
+		}
+		close(CONFIG);
+		# yes this assumes we don't have multiple config files!
+		$personal_condor_params{"condortemplate"} = shift @configfiles;
+		$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+
+		debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
+
+		if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
+		{
+			debug( "Root path $1 and base $2\n",$debuglevel);
+			$binloc = $1;	# we'll get our binaries here.
+		}
+		else
+		{
+			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			die "Can not seem to find a Condor install!\n";
+		}
+		
+
+		if( $binloc =~ /^(\/.*\/)bin\/\s*$/ )
+		{
+			debug( "Root path to sbin is $1\n",$debuglevel);
+			$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
+		}
+		else
+		{
+			die "Can not seem to locate Condor release binaries\n";
+		}
+		#$binloc = "../../condor/bin/";
+		#$sbinloc = "../../condor/";
+
+		debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n",$debuglevel);
+
+		$schedd = $sbinloc . "sbin/" .  "condor_schedd";
+		$master = $sbinloc . "sbin/" .  "condor_master";
+		$collector = $sbinloc . "sbin/" .  "condor_collector";
+		$submit = $binloc . "condor_submit";
+		$startd = $sbinloc . "sbin/" .  "condor_startd";
+		$negotiator = $sbinloc . "sbin/" .  "condor_negotiator";
+
+		debug( "$schedd $master $collector $submit $startd $negotiator\n",$debuglevel);
+
+
+		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
+
+		runcmd("mkdir -p $topleveldir/execute");
+		runcmd("mkdir -p $topleveldir/spool");
+		runcmd("mkdir -p $topleveldir/log");
+		runcmd("mkdir -p $topleveldir/log/tmp");
+	}
+	elsif( -e $condordistribution )
+	{
+		# in this option we ought to run condor_configure
+		# to get a current config files but we'll do this
+		# after getting the current condor_config from
+		# the environment we are in as it is supposed to
+		# have been generated this way in the nightly tests
+		# run in the NWO.
+
+		my $res = chdir "$topleveldir";
+		if(! $res)
+		{
+			die "Relcation failed!\n";
+			exit(1);
+		}
+		runcmd("mkdir -p $topleveldir/execute");
+		runcmd("mkdir -p $topleveldir/spool");
+		runcmd("mkdir -p $topleveldir/log");
+		runcmd("tar -xf $home/$condordistribution");
+		$sbinloc = $topleveldir; # local_dir is here
+		chdir "$home";
 	}
 	else
 	{
-		debug( " no condor attribute so not installing condor \n",$debuglevel);
-		$sbinloc = "";
+		die "Undiscernable install directive! (condor = $condordistribution)\n";
 	}
+
 	debug( "InstallPersonalCondor returning $sbinloc for LOCAL_DIR setting\n",$debuglevel);
 
-	# I hate to do this but....
-    # The quill daemon really wants to see the passwd file .pgpass
-    # when it starts and IF this is a quill test, then quill is within
-    # $personal_daemons AND $topleveldir/../pgpass wants to  be
-    # $topleveldir/spool/.pgpass
-    #my %control = %personal_condor_params;
-    # was a special daemon list called out?
-    if( exists $control{"condordaemons"} )
-    {
-        $personal_daemons = $control{"condordaemons"};
-    }
-
-    debug( "Looking to see if this is a quill test..........\n",$debuglevel);
-    debug( "Daemonlist requested is <<$personal_daemons>>\n",$debuglevel);
-    if($personal_daemons =~ /.*quill.*/) {
-        debug( "Yup it is a quill test..........copy in .pgpass file\n",$debuglevel);
-        my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
-        runcmd("$cmd");
-    }
 	return($sbinloc);
 }
 
@@ -793,18 +825,26 @@ sub TunePersonalCondor
 	if( exists $control{"condorconfig"} )
 	{
 		$personal_config = $control{"condorconfig"};
+	} else {
+		$personal_config = "condor_config";
+
+		# store this default in the personal condor params so
+		# other parts of the code can rely on it.
+		$personal_condor_params{"condorconfig"} = $personal_config;
 	}
 
 	# was a special daemon list called out?
-	if( exists $control{"condordaemons"} )
+	if( exists $control{"daemon_list"} )
 	{
-		$personal_daemons = $control{"condordaemons"};
+		$personal_daemons = $control{"daemon_list"};
 	}
 
 	# was a special local config file name called out?
 	if( exists $control{"condorlocal"} )
 	{
 		$personal_local = $control{"condorlocal"};
+	} else {
+		$personal_local = "condor_config.local";
 	}
 
 	# was a special local config file src called out?
@@ -1063,7 +1103,38 @@ sub TunePersonalCondor
 		print NEW "# Done Adding changes requested from $personal_local_post_src\n";
 	}
 
+	if( exists $control{append_condor_config} ) {
+	    print NEW "# Appending from 'append_condor_config'\n";
+	    print NEW "$control{append_condor_config}\n";
+	    print NEW "# Done appending from 'append_condor_config'\n";
+	}
+
 	close(NEW);
+
+	PostTunePersonalCondor($personal_config_file);
+}
+
+
+#################################################################
+#
+#   PostTunePersonalCondor() is called after TunePersonalCondor.
+#   It assumes that the configuration file is all set up and
+#   ready to use.
+
+sub PostTunePersonalCondor
+{
+    my $config_file = shift;
+
+    # If this is a quill test, then quill is within
+    # $personal_daemons AND $topleveldir/../pgpass wants to  be
+    # $topleveldir/spool/.pgpass
+
+    my $configured_daemon_list = CondorConfigVal($config_file,"daemon_list");
+    if($configured_daemon_list =~ m/quill/i ) {
+        debug( "This is a quill test (because DAEMON_LIST=$configured_daemon_list)\n", $debuglevel );
+        my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
+        runcmd("$cmd");
+    }
 }
 
 #################################################################
@@ -1417,7 +1488,7 @@ sub IsRunningYet
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			print "Want collector to see startd - ";
 			$loopcount = 0;
-			while( $done eq "no") {
+			TRY: while( $done eq "no") {
 				$loopcount += 1;
 				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
 
@@ -1427,6 +1498,7 @@ sub IsRunningYet
         			{
             			$done = "yes";
 						print "ok\n";
+						last TRY;
         			}
     			}
 				if($loopcount == $runlimit) { 
@@ -1447,7 +1519,7 @@ sub IsRunningYet
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			print "Want collector to see schedd - ";
 			$loopcount = 0;
-			while( $done eq "no") {
+			TRY: while( $done eq "no") {
 				$loopcount += 1;
 				my @cmd = `condor_status -schedd -format \"%s\\n\" name`;
 
@@ -1457,6 +1529,7 @@ sub IsRunningYet
         			{
 						print "ok\n";
             			$done = "yes";
+						last TRY;
         			}
     			}
 				if($loopcount == $runlimit) { 

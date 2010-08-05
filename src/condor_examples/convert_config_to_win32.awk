@@ -42,8 +42,14 @@ BEGIN {
 	next
 }
 
-# Add a .exe to the end of all condor daemon names
+# Add a .exe to the end of all condor daemon names in $(BIN) and $(SBIN)
 /BIN)\/condor_/ {
+	printf "%s.exe\n",$0
+	next
+}
+
+# Add a .exe to the end of all condor daemon names in $(LIBEXEC)
+/LIBEXEC)\/condor_/ {
 	printf "%s.exe\n",$0
 	next
 }
@@ -74,6 +80,12 @@ BEGIN {
 
 # Have $(SBIN) point to $(BIN)
 /^SBIN/ {
+	printf "%s= $(BIN)\n", $1
+	next
+}
+
+# Have $(LIBEXEC) point to $(BIN)
+/^LIBEXEC/ {
 	printf "%s= $(BIN)\n", $1
 	next
 }

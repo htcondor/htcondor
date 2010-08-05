@@ -47,7 +47,7 @@ class SelfDrainingHashItem {
 	ServiceData *m_service;
 
  public:
-	SelfDrainingHashItem() {}
+	SelfDrainingHashItem(): m_service(0) {}
 	SelfDrainingHashItem(ServiceData *service):
 		m_service(service) {}
 

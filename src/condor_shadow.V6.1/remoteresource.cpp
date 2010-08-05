@@ -86,11 +86,19 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
+	m_want_chirp = false;
+	m_want_streaming_io = false;
 }
 
 
 RemoteResource::~RemoteResource()
 {
+	if( syscall_sock == claim_sock ) {
+		syscall_sock = NULL;
+	}
+	if( thisRemoteResource == this ) {
+		thisRemoteResource = NULL;
+	}
 	if ( dc_startd     ) delete dc_startd;
 	if ( machineName   ) delete [] machineName;
 	if ( starterAddress) delete [] starterAddress;
@@ -99,11 +107,22 @@ RemoteResource::~RemoteResource()
 	if ( starter_version ) delete [] starter_version;
 	if ( uid_domain	   ) delete [] uid_domain;
 	if ( fs_domain     ) delete [] fs_domain;
-	if ( claim_sock    ) delete claim_sock;
-	if ( jobAd         ) delete jobAd;
+	closeClaimSock();
+	if ( jobAd && jobAd != shadow->getJobAd() ) {
+		delete jobAd;
+	}
 	if( proxy_check_tid != -1) {
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
+	}
+
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		if( m_claim_session.secSessionId() ) {
+			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
+		}
+		if( m_filetrans_session.secSessionId() ) {
+			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
+		}
 	}
 }
 
@@ -272,6 +291,12 @@ RemoteResource::killStarter( bool graceful )
 				 graceful ? "graceful" : "fast", addr );
 	}
 
+	int wantReleaseClaim = 0;
+	jobAd->LookupBool(ATTR_RELEASE_CLAIM, wantReleaseClaim);
+	if (wantReleaseClaim) {
+		ClassAd replyAd;
+		dc_startd->releaseClaim(VACATE_FAST, &replyAd);
+	}
 	return true;
 }
 
@@ -324,8 +349,7 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
 			// we call our shadow's shutdown method:
 		shadow->shutDown( exit_reason );
-			// close sock on this end...the starter has gone away.
-		return TRUE;
+		return KEEP_STREAM;
 	}
 	hadContact();
 	return KEEP_STREAM;
@@ -925,6 +949,21 @@ RemoteResource::setJobAd( ClassAd *jA )
 	if( jA->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, int_value) ) {
 		last_job_lease_renewal = (time_t)int_value;
 	}
+
+	jA->LookupBool( ATTR_WANT_IO_PROXY, m_want_chirp );
+
+	bool stream_input=false, stream_output=false, stream_error=false;
+	jA->LookupBool(ATTR_STREAM_INPUT,stream_input);
+	jA->LookupBool(ATTR_STREAM_OUTPUT,stream_output);
+	jA->LookupBool(ATTR_STREAM_ERROR,stream_error);
+
+	m_want_streaming_io = stream_input || stream_output || stream_error;
+	if( m_want_chirp || m_want_streaming_io ) {
+		dprintf(D_FULLDEBUG,
+			"Enabling remote IO syscalls (want chirp=%s,want streaming=%s).\n",
+			m_want_chirp ? "true" : "false",
+			m_want_streaming_io ? "true" : "false");
+	}
 }
 
 
@@ -960,7 +999,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
 		}
 	}
-			
+
+	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
+	    jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
+	}
+
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		if( int_value > disk_usage ) {
 			disk_usage = int_value;
@@ -1003,17 +1046,29 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, (bool)int_value);
 	}
 
+		// The starter sends this attribute whether or not we are spooling
+		// output (because it doesn't know if we are).  Technically, we
+		// only need to write this attribute into the job ClassAd if we
+		// are spooling output.  However, it doesn't hurt to have it there
+		// otherwise.
+	if( update_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
+		jobAd->Assign(ATTR_SPOOLED_OUTPUT_FILES,string_value.Value());
+	}
+	else if( jobAd->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
+		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
+	}
+
 	char* job_state = NULL;
 	ResourceState new_state = state;
 	update_ad->LookupString( ATTR_JOB_STATE, &job_state );
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
-		if( stricmp(job_state, "Suspended") == MATCH ) {
+		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
-		} else if ( stricmp(job_state, "Running") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Running") == MATCH ) {
 			new_state = RR_EXECUTING;
-		} else if ( stricmp(job_state, "Checkpointed") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Checkpointed") == MATCH ) {
 			new_state = RR_CHECKPOINTED;
 		} else { 
 				// For our purposes in here, we don't care about any
@@ -1150,6 +1205,12 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	if( last_suspension_time > 0 ) {
 		// There was a real job suspension.
 		cumulative_suspension_time += now - last_suspension_time;
+
+		int uncommitted_suspension_time = 0;
+		jobAd->LookupInteger( ATTR_UNCOMMITTED_SUSPENSION_TIME,
+							  uncommitted_suspension_time );
+		uncommitted_suspension_time += now - last_suspension_time;
+		jobAd->Assign(ATTR_UNCOMMITTED_SUSPENSION_TIME, uncommitted_suspension_time);
 	}
 
 	sprintf( tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
@@ -1251,6 +1312,8 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 		jobAd->Assign(ATTR_VM_CKPT_IP, string_value.Value());
 	}
 
+	shadow->CommitSuspensionTime(jobAd);
+
 		// Log stuff so we can check our sanity
 	printCheckpointStats( D_FULLDEBUG );
 
@@ -1313,6 +1376,13 @@ RemoteResource::printCheckpointStats( int debug_level )
 	int_value = 0;
 	jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, int_value);
 	dprintf( debug_level, "%s = %d\n", ATTR_JOB_COMMITTED_TIME, int_value);
+
+	int committed_suspension_time = 0;
+	jobAd->LookupInteger( ATTR_COMMITTED_SUSPENSION_TIME, 
+						  committed_suspension_time );
+	dprintf( debug_level, "%s = %d\n",
+			 ATTR_COMMITTED_SUSPENSION_TIME,
+			 committed_suspension_time );
 
 	// timestamp of the last checkpoint
 	int_value = 0;
@@ -1900,4 +1970,46 @@ RemoteResource::getSecSessionInfo(
 	filetrans_session_key = m_filetrans_session.secSessionKey();
 
 	return true;
+}
+
+bool
+RemoteResource::allowRemoteReadFileAccess( char const * filename )
+{
+	bool response = m_want_chirp || m_want_streaming_io;
+	logRemoteAccessCheck(response,"read access to file",filename);
+	return response;
+}
+
+bool
+RemoteResource::allowRemoteWriteFileAccess( char const * filename )
+{
+	bool response = m_want_chirp || m_want_streaming_io;
+	logRemoteAccessCheck(response,"write access to file",filename);
+	return response;
+}
+
+bool
+RemoteResource::allowRemoteReadAttributeAccess( char const * name )
+{
+	bool response = m_want_chirp;
+	logRemoteAccessCheck(response,"read access to attribute",name);
+	return response;
+}
+
+bool
+RemoteResource::allowRemoteWriteAttributeAccess( char const * name )
+{
+	bool response = m_want_chirp;
+	logRemoteAccessCheck(response,"write access to attribute",name);
+	return response;
+}
+
+void
+RemoteResource::logRemoteAccessCheck(bool allow,char const *op,char const *name)
+{
+	int debug_level = allow ? D_FULLDEBUG : D_ALWAYS;
+	dprintf(debug_level,"%s remote request for %s %s\n",
+			allow ? "ALLOWING" : "DENYING",
+			op,
+			name);
 }

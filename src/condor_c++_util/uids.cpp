@@ -239,7 +239,7 @@ init_user_ids(const char username[], const char domain[])
 		// see if our calling thread matches the user and domain
 		// we want a token for. This happens if we're submit for example.
 		if ( strcmp( myusr, username ) == 0 &&
-			 stricmp( mydom, domain ) == 0 ) { // domain is case insensitive
+			 strcasecmp( mydom, domain ) == 0 ) { // domain is case insensitive
 
 			dprintf(D_FULLDEBUG, "init_user_ids: Calling thread has token "
 					"we want, so returning.\n");
@@ -613,7 +613,7 @@ is_root( void )
 				 "ERROR in is_root(): my_username() returned NULL\n" );
 		return 0;
 	}
-	if( !stricmp(user, "SYSTEM") ) {
+	if( !strcasecmp(user, "SYSTEM") ) {
 		root = 1;
 	}
 	free( user );
@@ -1018,7 +1018,7 @@ init_user_ids_implementation( const char username[], int is_quiet )
 	*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
-	if( ! stricmp(username, "nobody") ) {
+	if( ! strcasecmp(username, "nobody") ) {
 			// There's so much special logic for user nobody that it's
 			// all in a seperate function now.
 		return init_nobody_ids( is_quiet );
@@ -1533,6 +1533,9 @@ priv_identifier( priv_state s )
 
 	case PRIV_FILE_OWNER:
 		if( ! OwnerIdsInited ) {
+			if( !can_switch_ids() ) {
+				return priv_identifier( PRIV_CONDOR );
+			}
 			EXCEPT( "Programmer Error: priv_identifier() called for "
 					"PRIV_FILE_OWNER, but owner ids are not initialized" );
 		}
@@ -1548,6 +1551,9 @@ priv_identifier( priv_state s )
 	case PRIV_USER:
 	case PRIV_USER_FINAL:
 		if( ! UserIdsInited ) {
+			if( !can_switch_ids() ) {
+				return priv_identifier( PRIV_CONDOR );
+			}
 			EXCEPT( "Programmer Error: priv_identifier() called for "
 					"%s, but user ids are not initialized",
 					priv_to_string(s) );

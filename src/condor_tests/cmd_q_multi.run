@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 
 $cmd_template = "cmd_q_multi.template";
@@ -70,7 +71,7 @@ CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1)
 
 $saveconfig = $ENV{CONDOR_CONFIG};
 $ENV{CONDOR_CONFIG} = $locconfig;
-system("condor_config_val COLLECTOR_HOST");
+runcmd("condor_config_val COLLECTOR_HOST");
 $ENV{CONDOR_CONFIG} = $saveconfig;
 
 my $line;
@@ -175,21 +176,21 @@ CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",1);
 	}
 }
 
-system("cp *cmd_q_shows-global* $mysaveme");
+runcmd("cp *cmd_q_shows-global* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmout $mycorenmout");
+	runcmd("cp $mysubmitnmout $mycorenmout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($locconfig);

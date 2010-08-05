@@ -465,7 +465,7 @@ main(int argc, char* argv[])
     }
 
 	// ship it out
-	sock->eom();
+	sock->end_of_message();
 
     // get reply
     sock->decode();
@@ -538,9 +538,9 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
   char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42];
   char  attrLastUsage[32];
   char  name[128];
-  float priority, Factor, AccUsage;
-  int   resUsed, BeginUsage;
-  int   LastUsage;
+  float priority, Factor, AccUsage = -1;
+  int   resUsed = 0, BeginUsage = 0;
+  int   LastUsage = 0;
   float wtResUsed;
 
   for( int i=1; i<=numElem; i++) {

@@ -178,6 +178,8 @@ void EvalResult::toString(bool force)
 	}
 }
 
+static StringList ClassAdUserLibs;
+
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
 
@@ -185,6 +187,25 @@ void ClassAd::
 Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
+	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+
+	char *new_libs = param( "CLASSAD_USER_LIBS" );
+	if ( new_libs ) {
+		StringList new_libs_list( new_libs );
+		free( new_libs );
+		new_libs_list.rewind();
+		char *new_lib;
+		while ( (new_lib = new_libs_list.next()) ) {
+			if ( !ClassAdUserLibs.contains( new_lib ) ) {
+				if ( classad::FunctionCall::RegisterSharedLibraryFunctions( new_lib ) ) {
+					ClassAdUserLibs.append( new_lib );
+				} else {
+					dprintf( D_ALWAYS, "Failed to load ClassAd user library %s: %s\n",
+							 new_lib, classad::CondorErrMsg.c_str() );
+				}
+			}
+		}
+	}
 }
 
 static classad::AttributeReference *the_my_ref = NULL;
@@ -740,19 +761,19 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 bool ClassAd::
 ClassAdAttributeIsPrivate( char const *name )
 {
-	if( stricmp(name,ATTR_CLAIM_ID) == 0 ) {
+	if( strcasecmp(name,ATTR_CLAIM_ID) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;
 	}
-	if( stricmp(name,ATTR_CAPABILITY) == 0 ) {
+	if( strcasecmp(name,ATTR_CAPABILITY) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;
 	}
-	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
+	if( strcasecmp(name,ATTR_CLAIM_IDS) == 0 ) {
 			// This attribute contains secret capability cookies
 		return true;
 	}
-	if( stricmp(name,ATTR_TRANSFER_KEY) == 0 ) {
+	if( strcasecmp(name,ATTR_TRANSFER_KEY) == 0 ) {
 			// This attribute contains the secret file transfer cookie
 		return true;
 	}
@@ -915,6 +936,15 @@ LookupString( const char *name, MyString &value ) const
 		return 0;
 	}
 	value = strVal.c_str();
+	return 1;
+} 
+
+int ClassAd::
+LookupString( const char *name, std::string &value ) const 
+{
+	if( !EvaluateAttrString( string( name ), value ) ) {
+		return 0;
+	}
 	return 1;
 } 
 
@@ -1090,6 +1120,18 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 
 int ClassAd::
 EvalString(const char *name, classad::ClassAd *target, MyString & value)
+{
+    char * pvalue = NULL;
+    //this one makes sure length is good
+    int ret = EvalString(name, target, &pvalue); 
+    if(ret == 0) { return ret; }
+    value = pvalue;
+    free(pvalue);
+    return ret;
+}
+
+int ClassAd::
+EvalString(const char *name, classad::ClassAd *target, std::string & value)
 {
     char * pvalue = NULL;
     //this one makes sure length is good
@@ -1414,6 +1456,15 @@ sPrint( MyString &output, StringList *attr_white_list )
 
 	return TRUE;
 }
+
+int ClassAd::
+sPrint( std::string &output, StringList *attr_white_list )
+{
+	MyString myout = output;
+	int rc = sPrint( myout, attr_white_list );
+	output = myout;
+	return rc;
+}
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
 // The caller should pass the size of the buffer in buffersize.
@@ -1578,6 +1629,9 @@ AddTargetRefs( TargetAdType target_type, bool do_version_check )
 	// Disable AddTargetRefs for now
 	return;
 
+	// Remove use of CondorVersionInfo, which would require several
+	// additional files in libcondorapi.
+#if 0
 	MyString ver_str;
 	if ( do_version_check && this->LookupString( ATTR_VERSION, ver_str ) ) {
 		CondorVersionInfo ver( ver_str.Value() );
@@ -1592,6 +1646,7 @@ AddTargetRefs( TargetAdType target_type, bool do_version_check )
 						  compat_classad::AddTargetRefs( a->second, target_type ) );
 		}
 	}
+#endif
 }
 
 classad::ExprTree *ClassAd::
@@ -1943,6 +1998,17 @@ sPrintAsXML(MyString &output, StringList *attr_white_list)
 	output += xml;
 	return TRUE;
 }
+
+int ClassAd::
+sPrintAsXML(std::string &output, StringList *attr_white_list)
+{
+	ClassAdXMLUnparser  unparser;
+	MyString            xml;
+	unparser.SetUseCompactSpacing(false);
+	unparser.Unparse(this, xml, attr_white_list);
+	output += xml.Value();
+	return TRUE;
+}
 ///////////// end XML functions /////////
 
 char const *
@@ -2257,6 +2323,7 @@ classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 	}
 }	
 
+#if 0
 static ClassAd job_attrs_ad;
 static ClassAd machine_attrs_ad;
 static ClassAd schedd_attrs_ad;
@@ -2395,6 +2462,7 @@ static const char *job_attrs_list[]  = {
 	ATTR_TOTAL_SUSPENSIONS,
 	ATTR_LAST_SUSPENSION_TIME,
 	ATTR_CUMULATIVE_SUSPENSION_TIME,
+	ATTR_COMMITTED_SUSPENSION_TIME,
 	ATTR_JOB_UNIVERSE,
 	ATTR_JOB_CMD,
 	ATTR_TRANSFER_EXECUTABLE,
@@ -2717,12 +2785,14 @@ static void InitTargetAttrLists()
 
 	target_attrs_init = true;
 }
+#endif
 
 classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();
 
+#if 0
 	if ( !target_attrs_init ) {
 		InitTargetAttrLists();
 	}
@@ -2809,6 +2879,7 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 		return tree->Copy( );
 	}
 	}
+#endif
 }
 
 const char *ConvertEscapingOldToNew( const char *str )

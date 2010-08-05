@@ -79,6 +79,10 @@ $submit = sub {
 	}
 	print "$whoami\n";
 	
+	# Give collector time to update submitter records
+	# TODO This is a crude hack and should be fixed.
+	sleep(10);
+
 	$cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
@@ -124,7 +128,9 @@ CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
+if( CondorTest::RunTest2(
+		name => $testname,
+		submit_hash => { hold => 'true' }) ) {
 	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {

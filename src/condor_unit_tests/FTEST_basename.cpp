@@ -59,11 +59,11 @@ static bool test_double_forward_slash(void);
 static bool test_double_backslash(void);
 
 bool FTEST_basename(void) {
-	e.emit_function("const char* condor_basename(const char *path)");
-	e.emit_comment("A basename() function that is happy on both Unix and NT. It returns a pointer to the last element of the path it was given, or the whole string, if there are no directory delimiters.  There's no memory allocated, overwritten or changed in anyway.");
+	emit_function("const char* condor_basename(const char *path)");
+	emit_comment("A basename() function that is happy on both Unix and NT. It returns a pointer to the last element of the path it was given, or the whole string, if there are no directory delimiters.  There's no memory allocated, overwritten or changed in anyway.");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(30);
+	FunctionDriver driver;
 	driver.register_function(test_null);
 	driver.register_function(test_empty_string);
 	driver.register_function(test_current_directory);
@@ -93,520 +93,464 @@ bool FTEST_basename(void) {
 	driver.register_function(test_double_backslash);
 
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_null() {
-	e.emit_test("Does a NULL path return the empty string?");
+	emit_test("Does a NULL path return the empty string?");
 	char *param = NULL;
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", "NULL");
+	emit_input_header();
+	emit_param("STRING", "NULL");
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_empty_string() {
-	e.emit_test("Does a empty path return the empty string?");
+	emit_test("Does a empty path return the empty string?");
 	char *param = "";
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_current_directory() {
-	e.emit_test("Does the current directory return the current directory");
+	emit_test("Does the current directory return the current directory");
 	char *param = ".";
 	char *expected = ".";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_simple_path_1() {
-	e.emit_test("Does a single character path return the base name?");
+	emit_test("Does a single character path return the base name?");
 	char *param = "f";
 	char *expected = "f";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_simple_path_2() {
-	e.emit_test("Does a multiple character path return the base name?");
+	emit_test("Does a multiple character path return the base name?");
 	char *param = "foo";
 	char *expected = "foo";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_simple_directory_1() {
-	e.emit_test("Does a path with a directory return the directory base name?");
+	emit_test("Does a path with a directory return the directory base name?");
 	char *param = "/foo";
 	char *expected = "foo";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_simple_directory_2() {
-	e.emit_test("Does a path with a backslash return the directory base name?");
+	emit_test("Does a path with a backslash return the directory base name?");
 	char *param = "\\foo";
 	char *expected = "foo";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_directory_and_file_1() {
-	e.emit_test("Does a path with both a directory and file return the file base?");
+	emit_test("Does a path with both a directory and file return the file base?");
 	char *param = "foo/bar";
 	char *expected = "bar";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_directory_and_file_2() {
-	e.emit_test("Does a path with both a directory and file in the root directory return the base name?");
+	emit_test("Does a path with both a directory and file in the root directory return the base name?");
 	char *param = "/foo/bar";
 	char *expected = "bar";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_root_directory() {
-	e.emit_test("Does a path with a backslash in the root directory return the base name?");
+	emit_test("Does a path with a backslash in the root directory return the base name?");
 	char *param = "\\foo\\bar";
 	char *expected = "bar";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_directory_and_directory() {
-	e.emit_test("Does a path with two directories return the empty string?");
+	emit_test("Does a path with two directories return the empty string?");
 	char *param = "foo/bar/";
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_directory_and_directory_in_root() {
-	e.emit_test("Does a path with two directories in the root directory return the empty string?");
+	emit_test("Does a path with two directories in the root directory return the empty string?");
 	char *param = "/foo/bar/";
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_forward_slash() {
-	e.emit_test("Does a path with only a forward slash return the empty string?");
+	emit_test("Does a path with only a forward slash return the empty string?");
 	char *param = "/";
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_backslash() {
-	e.emit_test("Does a path with only a backslash return the empty string?");
+	emit_test("Does a path with only a backslash return the empty string?");
 	char *param = "\\";
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_forward_slash_1() {
-	e.emit_test("Does a path with a period and backslash return the directory base name?");
+	emit_test("Does a path with a period and backslash return the directory base name?");
 	char *param = "./bar";
 	char *expected = "bar";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_backslash_1() {
-	e.emit_test("Does a path with a period and forwardslash return the directory base name?");
+	emit_test("Does a path with a period and forwardslash return the directory base name?");
 	char *param = ".\\bar";
 	char *expected = "bar";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_forward_slash_2() {
-	e.emit_test("Does a path with only a period then forwardslash return the empty string?");
+	emit_test("Does a path with only a period then forwardslash return the empty string?");
 	char *param = "./";
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_backslash_2() {
-	e.emit_test("Does a path with only a period then backslash return the empty string?");
+	emit_test("Does a path with only a period then backslash return the empty string?");
 	char *param = ".\\";
 	char *expected = "";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_backslash_and_period() {
-	e.emit_test("Does a path with only a backslash then a period return a period?");
+	emit_test("Does a path with only a backslash then a period return a period?");
 	char *param = "\\.";
 	char *expected = ".";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_forward_slash_and_file_extension() {
-	e.emit_test("Does a path with two directories and a file extension return the file name and its extension?");
+	emit_test("Does a path with two directories and a file extension return the file name and its extension?");
 	char *param = "foo/bar/zap.txt";
 	char *expected = "zap.txt";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_backslash_and_file_extension() {
-	e.emit_test("Does a path with two directories and a file extension using backslashes return the file name and its extension?");
+	emit_test("Does a path with two directories and a file extension using backslashes return the file name and its extension?");
 	char *param = "foo\\bar\\zap.txt";
 	char *expected = "zap.txt";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_forward_slash() {
-	e.emit_test("Does a path using both a period and a forwardslash return the base name?");
+	emit_test("Does a path using both a period and a forwardslash return the base name?");
 	char *param = ".foo/bar";
 	char *expected = "bar";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_backslash() {
-	e.emit_test("Does a path with one directory using a period and another using a backslash return the base name?");
+	emit_test("Does a path with one directory using a period and another using a backslash return the base name?");
 	char *param = ".foo\\bar";
 	char *expected = "bar";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_forward_slash_with_special_file() {
-	e.emit_test("Does a path with one directory using a period and another using a forwardslash return the file name starting with a period and its extension?");
+	emit_test("Does a path with one directory using a period and another using a forwardslash return the file name starting with a period and its extension?");
 	char *param = ".foo/.bar.txt";
 	char *expected = ".bar.txt";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_period_and_backslash_with_special_file() {
-	e.emit_test("Does a path with one directory using a period and another using a backslash return the file name starting with a period and its extension?");
+	emit_test("Does a path with one directory using a period and another using a backslash return the file name starting with a period and its extension?");
 	char *param = ".foo\\.bar.txt";
 	char *expected = ".bar.txt";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_double_forward_slash() {
-	e.emit_test("Does a path with one directory using a double forwardslash and the others using single forwardslashes return the file name and its extension?");
+	emit_test("Does a path with one directory using a double forwardslash and the others using single forwardslashes return the file name and its extension?");
 	char *param = "//foo/bar/zap.txt";
 	char *expected = "zap.txt";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_double_backslash() {
-	e.emit_test("Does a path with one directory using a double backslash and the othere using single backslashes return the file name and its extension?");
+	emit_test("Does a path with one directory using a double backslash and the othere using single backslashes return the file name and its extension?");
 	char *param = "\\\\foo\\bar\\zap.txt";
 	char *expected = "zap.txt";
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	const char *path = condor_basename(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%s", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%s", path);
+	emit_output_expected_header();
+	emit_retval("%s", expected);
+	emit_output_actual_header();
+	emit_retval("%s", path);
 	if(strcmp(path, expected) != MATCH) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

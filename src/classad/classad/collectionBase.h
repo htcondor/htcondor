@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __COLLECTION_BASE_H__
-#define __COLLECTION_BASE_H__
+#ifndef __CLASSAD_COLLECTION_BASE_H__
+#define __CLASSAD_COLLECTION_BASE_H__
 
 #include "classad/collection.h"
 #include "classad/indexfile.h"

@@ -28,6 +28,7 @@ fdpass_send(int uds_fd, int fd)
 
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
+	msg.msg_flags = 0;
 
 	struct iovec iov;
 	char nil = '\0';
@@ -69,6 +70,7 @@ fdpass_recv(int uds_fd)
 
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
+	msg.msg_flags = 0;
 
 	struct iovec iov;
 	char nil = 'X';

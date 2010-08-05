@@ -41,6 +41,7 @@ command_handler( Service*, int cmd, Stream* stream )
 	int rval = FALSE;
 	Resource* rip;
 	if( ! (rip = stream_to_rip(stream)) ) {
+		dprintf(D_ALWAYS, "Error: problem finding resource for %d (%s)\n", cmd, getCommandString(cmd));
 		return FALSE;
 	}
 	State s = rip->state();
@@ -87,7 +88,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 
 	ClassAd response_ad;
 	response_ad.Assign(ATTR_START,!claim_is_closing);
-	if( !response_ad.put(*stream) || !stream->eom() ) {
+	if( !response_ad.put(*stream) || !stream->end_of_message() ) {
 		dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
 			// Prior to 7.0.5, no response ClassAd was expected.
 			// Anyway, failure to send it is not (currently) critical
@@ -129,7 +130,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		free( id );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
@@ -221,7 +222,18 @@ command_x_event( Service*, int, Stream* s )
 {
 	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
 
-	sysapi_last_xevent();
+		// Only trust events over the network if the network message
+		// originated from our local machine.
+	if ( !s ||							// trust calls from within the startd
+		 (s && s->peer_is_local())		// trust only sockets from local machine
+	   ) 
+	{
+		sysapi_last_xevent();
+	} else {
+		dprintf( D_ALWAYS, 
+			"ERROR command_x_event received from %s is not local - discarded\n",
+			s->peer_ip_str() );
+	}
 
 	if( s ) {
 		s->end_of_message();
@@ -282,7 +294,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		free( id );
 		refuse( stream );
 		return FALSE;
@@ -349,8 +361,8 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
-		dprintf( D_FULLDEBUG, 
-				 "Can't find resource with ClaimId (%s); perhaps this claim was removed already.\n", idp.publicClaimId() );
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with ClaimId (%s) for %d (%s); perhaps this claim was removed already.\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		free( id );
 		refuse( stream );
 		return FALSE;
@@ -1386,7 +1398,7 @@ accept_request_claim( Resource* rip )
 		abort_accept_claim( rip, stream );
 		return false;
 	}
-	if( !stream->eom() ) {
+	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
 		abort_accept_claim( rip, stream );
 		return false;
@@ -1540,7 +1552,7 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 	if (!stream->end_of_message()) {
-		rip->dprintf( D_ALWAYS, "Can't receive eom() from shadow.\n" );
+		rip->dprintf( D_ALWAYS, "Can't receive end_of_message() from shadow.\n" );
 		ABORT;
 	}
 
@@ -1651,7 +1663,7 @@ activate_claim( Resource* rip, Stream* stream )
 			ABORT;
 		}
 
-		if (!stream->eom()) {
+		if (!stream->end_of_message()) {
 			ABORT;
 		}
 
@@ -1850,7 +1862,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	Resource* rip;
 	Claim* claim;
 	MyString err_msg;
-	ExprTree *tree, *rhs;
+	ExprTree *tree;
 	ReliSock* rsock = (ReliSock*)s;
 	int lease_duration = 0;
 	const char* owner = rsock->getOwner();

@@ -1,4 +1,4 @@
-condor (_VERSION_) stable; urgency=low
+condor (_VERSION_) _DIST_; urgency=low
 
   * Please see version history at http://www.cs.wisc.edu/condor/manual/v_CONDORVERSION_/8_Version_History.html
 

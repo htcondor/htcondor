@@ -37,12 +37,17 @@ Emitter::Emitter() {
 }
 
 Emitter::~Emitter() {
-	// placeholder function, for now
+	delete buf;
+	delete test_buf;
 }
 
 /* Initializes the Emitter object.
  */
-void Emitter::init() {
+void Emitter::init(bool failures_printed, bool successes_printed) {
+	print_failures = failures_printed;
+	print_successes = successes_printed;
+	buf = new MyString();
+	test_buf = new MyString();
 	Termlog = 1;
 	dprintf_config("TOOL");
 	set_debug_flags("D_ALWAYS");
@@ -53,35 +58,29 @@ void Emitter::init() {
 /* Formats and prints a parameter and its value as a sub-point of input,
  * output_expected, or output_actual.  format can use printf formatting.
  */
-void Emitter::emit_param(const char* pname, const char* format, ...) {
-	va_list args;
-	MyString tmp;
-	va_start(args, format);
-	tmp.sprintf("    %s:  %s\n",pname,format);
-	::_condor_dprintf_va(D_ALWAYS, tmp.Value(), args);
-	va_end( args );
+void Emitter::emit_param(const char* pname, const char* format, va_list args) {
+	buf->sprintf_cat("    %s:  ",pname);
+	buf->vsprintf_cat(format, args);
+	buf->sprintf_cat("\n");
 }
 
 /* A version of emit_param() for return values. */
-void Emitter::emit_retval(const char* format, ...) {
-	va_list args;
-	MyString tmp;
-	va_start(args, format);
-	tmp.sprintf("    RETURN:  %s\n",format);
-	::_condor_dprintf_va(D_ALWAYS, tmp.Value(), args);
-	va_end( args );
+void Emitter::emit_retval(const char* format, va_list args) {
+	buf->sprintf_cat("    RETURN:  ");
+	buf->vsprintf_cat(format, args);
+	buf->sprintf_cat("\n");
 }
 
 /* Emits a heading and the function string.
  */
 void Emitter::emit_function(const char* function) {
-	dprintf(D_ALWAYS, "FUNCTION:  %s\n", function);
+	test_buf->sprintf("---------------------\nFUNCTION:  %s\n", function);
 }
 
 /* Emits a heading and the object string.
  */
 void Emitter::emit_object(const char* object) {
-	dprintf(D_ALWAYS, "OBJECT:  %s\n", object);
+	test_buf->sprintf("---------------------\nOBJECT:  %s\n", object);
 	object_tests++;
 }
 
@@ -89,57 +88,72 @@ void Emitter::emit_object(const char* object) {
 /* Prints a comment indicating what the function does.
  */
 void Emitter::emit_comment(const char* comment) {
-	dprintf(D_ALWAYS, "COMMENT:  %s\n", comment);
+	buf->sprintf_cat("COMMENT:  %s\n", comment);
 }
 
 /* Prints a known problem of the function.
  */
 void Emitter::emit_problem(const char* problem) {
-	dprintf(D_ALWAYS, "KNOWN PROBLEM:  %s\n", problem);
+	buf->sprintf_cat("KNOWN PROBLEM:  %s\n", problem);
 }
 
 /* Shows exactly what is going to be tested.
  */
 void Emitter::emit_test(const char* test) {
 	function_tests++;
-	dprintf(D_ALWAYS, "TEST:  %s\n", test);
+	buf->sprintf_cat("TEST:  %s\n", test);
 	start = time(0);
+}
+
+void Emitter::emit_name(const char* test_name) {
+	buf->sprintf_cat("TESTNAME:  %s\n", test_name);
 }
 
 /* A header saying that the function's input is going to follow.
  */
 void Emitter::emit_input_header() {
-	dprintf(D_ALWAYS, "INPUT:\n");
+	buf->sprintf_cat("INPUT:\n");
 }
 
 /* A header saying that the function's expected output is going to follow.
  */
 void Emitter::emit_output_expected_header() {
-	dprintf(D_ALWAYS, "EXPECTED OUTPUT:\n");
+	buf->sprintf_cat("EXPECTED OUTPUT:\n");
 }
 
 /* A header saying that the function's actual output is going to follow.
  */
 void Emitter::emit_output_actual_header() {
-	dprintf(D_ALWAYS, "ACTUAL OUTPUT:\n");
+	buf->sprintf_cat("ACTUAL OUTPUT:\n");
 }
 
 /* Prints out a message saying that the test succeeded.  The function should
  * be called like "emit_result_success(__LINE__);"
  */
 void Emitter::emit_result_success(int line) {
-	dprintf(D_ALWAYS, "RESULT:  SUCCESS, test passed at line %d (%d seconds)\n", line, time(0) - start);
+	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n", 
+		line, time(0) - start);
+	Emitter::emit_test_break();
+	if(print_successes) {
+		if(!test_buf->IsEmpty()) {
+			dprintf(D_ALWAYS, "%s", test_buf->Value());
+			test_buf->setChar(0, '\0');
+		}
+		dprintf(D_ALWAYS, "%s", buf->Value());
+	}
+	buf->setChar(0, '\0');
 	passed_tests++;
-	emit_test_break();
 }
 
 /* Prints out a message saying that the test failed.  The function should
  * be called like "emit_result_failure(__LINE__);"
  */
 void Emitter::emit_result_failure(int line) {
-	dprintf(D_ALWAYS, "RESULT:  FAILURE, test failed at line %d\n", line);
+	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%ld seconds)\n", 
+		line, time(0) - start);
+	Emitter::emit_test_break();
+	print_result_failure();
 	failed_tests++;
-	emit_test_break();
 }
 
 /* Prints out a message saying that the test was aborted for some unknown
@@ -147,18 +161,20 @@ void Emitter::emit_result_failure(int line) {
  * function should be called like "emit_result_abort(__LINE__);"
  */
 void Emitter::emit_result_abort(int line) {
-	dprintf(D_ALWAYS, "RESULT:  ABORTED, test failed at line %d\n", line);
+	buf->sprintf_cat("RESULT:  ABORTED, test failed at line %d\n", line);
+	Emitter::emit_test_break();
+	print_result_failure();
 	aborted_tests++;
-	emit_test_break();
 }
 
 /* Prints out a message saying that the test was skipped, for whatever reason.
  * Usually the testing function should return true after calling this.
  */
 void Emitter::emit_skipped(const char* skipped) {
-	dprintf(D_ALWAYS, "SKIPPED:  %s", skipped);
+	buf->sprintf_cat("SKIPPED:  %s", skipped);
+	Emitter::emit_test_break();
+	print_result_failure();
 	skipped_tests++;
-	emit_test_break();
 }
 
 /* Prints out an alert.  This could be a reason for why the test is being
@@ -166,23 +182,17 @@ void Emitter::emit_skipped(const char* skipped) {
  * anyway.
  */
 void Emitter::emit_alert(const char* alert) {
-	dprintf(D_ALWAYS, "ALERT:  %s\n", alert);
-}
-
-/* Emits a break between function tests.
- */
-void Emitter::emit_function_break() {
-	dprintf(D_ALWAYS, "---------------------\n");
+	buf->sprintf_cat("ALERT:  %s\n", alert);
 }
 
 /* Emits a break between two tests of the same function.
  */
 void Emitter::emit_test_break() {
-	dprintf(D_ALWAYS, "\n");
+	buf->sprintf_cat("\n");
 }
 
 void Emitter::emit_summary() {
-	dprintf(D_ALWAYS, "SUMMARY:\n");
+	dprintf(D_ALWAYS, "---------------------\nSUMMARY:\n");
 	dprintf(D_ALWAYS, "========\n");
 	dprintf(D_ALWAYS, "    Total Tested Objects:  %d\n", object_tests);
 	dprintf(D_ALWAYS, "    Total Unit Tests:      %d\n", function_tests);
@@ -190,4 +200,97 @@ void Emitter::emit_summary() {
 	dprintf(D_ALWAYS, "    Failed Unit Tests:     %d\n", failed_tests);
 	dprintf(D_ALWAYS, "    Aborted Unit Tests:    %d\n", aborted_tests);
 	dprintf(D_ALWAYS, "    Skipped Unit Tests:    %d\n", skipped_tests);
+}
+
+void Emitter::print_result_failure() {
+	if(print_failures) {
+		if(!test_buf->IsEmpty()) {
+			dprintf(D_ALWAYS, "%s", test_buf->Value());
+			test_buf->setChar(0, '\0');
+		}
+		dprintf(D_ALWAYS, "%s", buf->Value());
+	}
+	buf->setChar(0, '\0');
+}
+
+void init(bool failures_printed, bool successes_printed) {
+	e.init(failures_printed, successes_printed);
+}
+	
+void emit_param(const char* pname, const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	e.emit_param(pname, format, args);
+	va_end(args);
+}
+	
+void emit_retval(const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	e.emit_retval(format, args);
+	va_end(args);
+}
+
+void emit_function(const char* function) {
+	e.emit_function(function);
+}
+
+void emit_object(const char* object) {
+	e.emit_object(object);
+}
+
+void emit_comment(const char* comment) {
+	e.emit_comment(comment);
+}
+
+void emit_problem(const char* problem) {
+	e.emit_problem(problem);
+}
+
+void emit_test(const char* test) {
+	e.emit_test(test);
+}
+
+void emit_name(const char* test_name) {
+	e.emit_name(test_name);
+}
+	
+void emit_skipped(const char* skipped) {
+	e.emit_skipped(skipped);
+}
+
+void emit_input_header(void) {
+	e.emit_input_header();
+}
+
+void emit_output_expected_header(void) {
+	e.emit_output_expected_header();
+}
+
+void emit_output_actual_header(void) {
+	e.emit_output_actual_header();
+}
+
+void emit_result_success(int line) {
+	e.emit_result_success(line);
+}
+
+void emit_result_failure(int line) {
+	e.emit_result_failure(line);
+}
+
+void emit_result_abort(int line) {
+	e.emit_result_abort(line);
+}
+
+void emit_alert(const char* alert) {
+	e.emit_alert(alert);
+}
+
+void emit_test_break(void) {
+	e.emit_test_break();
+}
+
+void emit_summary(void) {
+	e.emit_summary();
 }

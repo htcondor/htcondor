@@ -259,13 +259,10 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			return SIG_CHLD1;
 		}
 
-		// otherwise, if the selector is not boolean propagate error
-		if( vt1 != Value::BOOLEAN_VALUE ) {
+		if( !val1.IsBooleanValueEquiv(b) ) {
 			result.SetErrorValue();	
 			return SIG_CHLD1;
-		}
-
-		if( val1.IsBooleanValue(b) && b ) {
+		} else if( b ) {
 			result.CopyFrom( val2 );
 			return( SIG_CHLD2 );
 		} else {
@@ -374,19 +371,19 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 
 	switch( operation ) {
 	case LOGICAL_OR_OP:
-		if( arg1.IsBooleanValue(arg1_bool) && arg1_bool ) {
+		if( arg1.IsBooleanValueEquiv(arg1_bool) && arg1_bool ) {
 			result.SetBooleanValue( true );
 			return true;
 		}
 		break;
 	case LOGICAL_AND_OP:
-		if( arg1.IsBooleanValue(arg1_bool) && !arg1_bool ) {
+		if( arg1.IsBooleanValueEquiv(arg1_bool) && !arg1_bool ) {
 			result.SetBooleanValue( false );
 			return true;
 		}
 		break;
 	case TERNARY_OP:
-		if( arg1.IsBooleanValue(arg1_bool) ) {
+		if( arg1.IsBooleanValueEquiv(arg1_bool) ) {
 			if( arg1_bool ) {
 				if( child2 ) {
 					return child2->Evaluate(state,result);
@@ -398,6 +395,10 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 				}
 			}
 		}
+		break;
+	default:
+		// no-op
+		break;
 	}
 	return false;
 }
@@ -973,9 +974,18 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 {
+	bool		b1, b2;
+
+		// first coerece inputs to boolean if they are considered equivalent
+	if( !v1.IsBooleanValue( b1 ) && v1.IsBooleanValueEquiv( b1 ) ) {
+		v1.SetBooleanValue( b1 );
+	}
+	if( !v2.IsBooleanValue( b2 ) && v2.IsBooleanValueEquiv( b2 ) ) {
+		v2.SetBooleanValue( b2 );
+	}
+
 	Value::ValueType	vt1 = v1.GetType();
 	Value::ValueType	vt2 = v2.GetType();
-	bool		b1, b2;
 
 	if( vt1!=Value::UNDEFINED_VALUE && vt1!=Value::ERROR_VALUE && 
 			vt1!=Value::BOOLEAN_VALUE ) {
@@ -988,9 +998,6 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		return SIG_CHLD2;
 	}
 	
-	v1.IsBooleanValue( b1 );
-	v2.IsBooleanValue( b2 );
-
 	// handle unary operator
 	if (op == LOGICAL_NOT_OP) {
 		if( vt1 == Value::BOOLEAN_VALUE ) {
@@ -1047,7 +1054,7 @@ int Operation::
 doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	int	i1, i2;
-	int signMask = 1 << (WORD_BIT-1);	// now at the position of the sign bit
+	int signMask = ~INT_MAX;	// now at the position of the sign bit
 	int val;
 
 	// bitwise operations are defined only on integers

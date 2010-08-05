@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Cwd;
 
 $cmd = 'job_dagman_prepost.dag';
@@ -27,7 +28,7 @@ $flowlog = "job_dagman_prepost-srvr-log.log";
 $serversubFile = "job_dagman_prepost-srvr.cmd";
 
 my $pid = $$;
-system("mkdir $pid");
+runcmd("mkdir $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",1);
 CondorTest::LoadExemption("job_dagman_prepost,no,DC_AUTHENTICATE unable to receive auth_info!");
@@ -38,7 +39,7 @@ CondorTest::debug("current directory is $newsocketname\n",1);
 
 # start a server for this test
 
-system("rm -f $flowlog");
+runcmd("rm -f $flowlog");
 defined(my $pid = fork) or die "Cannot fork: $!";
 unless ($pid)
 {
@@ -79,7 +80,7 @@ foreach $name (@filestoedit)
 
 foreach $name (@filestochmod)
 {
-	system("chmod 755 $name");
+	runcmd("chmod 755 $name");
 }
 
 $testdesc =  'Condor submit dag - verify pre/post ran test - scheduler U';
@@ -137,12 +138,12 @@ $success = sub
 		if( $ret ne "0" )
 		{
 			# shutdown the server we started
-            system("./x_general_client.pl $newsocketname quit");
+            runcmd("./x_general_client.pl $newsocketname quit");
 			die "failed to run exact number of pre/post scripts\n";
 		}
 	}
 	# shutdown the server we started
-    system("./x_general_client.pl $newsocketname quit");
+    runcmd("./x_general_client.pl $newsocketname quit");
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -157,7 +158,7 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	exit(0);
 } else {
 	# shutdown the server we started
-    system("./x_general_client.pl $newsocketname quit");
+    runcmd("./x_general_client.pl $newsocketname quit");
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

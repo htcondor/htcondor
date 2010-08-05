@@ -204,6 +204,9 @@ public:
 	/// peer's IP address, integer version (e.g. 2154390801)
 	unsigned int peer_ip_int();
 
+	/// is peer a local interface, aka did this connection originate from a local process?
+	bool peer_is_local();
+
     /// my port and IP address in a struct sockaddr_in
     /// @args: the address is returned via 'sin'
     /// @ret: 0 if succeed, -1 if failed
@@ -246,7 +249,7 @@ public:
 	bool is_reverse_connect_pending() { return _state == sock_reverse_connect_pending; }
 
 	/// is the socket connected?
-	bool is_connected() { return _state == sock_connect; }
+	bool is_connected() { return _state == sock_connect; }	
 
     /// 
 	virtual ~Sock();
@@ -258,13 +261,13 @@ public:
 
 	void ignoreTimeoutMultiplier() { ignore_timeout_multiplier = true; }
 
-	const char * getFullyQualifiedUser() const { return _fqu; }
+	const char * getFullyQualifiedUser() const;
 
 		/// Get user portion of fqu
-	const char *getOwner() const { return _fqu_user_part; }
+	const char *getOwner() const;
 
 		/// Get domain portion of fqu
-	const char *getDomain() const { return _fqu_domain_part; }
+	const char *getDomain() const;
 
 	void setFullyQualifiedUser(char const *fqu);
 
@@ -278,6 +281,17 @@ public:
 	bool triedAuthentication() const { return _tried_authentication; }
 
 	void setTriedAuthentication(bool toggle) { _tried_authentication = toggle; }
+
+		/// Returns true if the fully qualified user name is
+		/// a non-anonymous user name (i.e. something not from
+		/// the unmapped domain)
+	bool isMappedFQU() const;
+
+		/// Returns true if the fully qualified user name was
+		/// authenticated
+	bool isAuthenticated() const;
+
+
 	/// if we are connecting, merges together Stream::get_deadline
 	/// and connect_timeout_time()
 	virtual time_t get_deadline();

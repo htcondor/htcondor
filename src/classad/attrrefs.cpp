@@ -155,7 +155,7 @@ _Evaluate (EvalState &state, Value &val) const
 {
 	ExprTree	*tree; 
 	ExprTree	*dummy;
-	ClassAd		*curAd;
+	const ClassAd *curAd;
 	bool		rval;
 
 	// find the expression and the evalstate
@@ -204,7 +204,7 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 {
 	ExprTree	*tree;
 	ExprTree	*exprSig;
-	ClassAd		*curAd;
+	const ClassAd *curAd;
 	bool		rval;
 
 	curAd = state.curAd;
@@ -262,7 +262,7 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 {
 	ExprTree	*tree;
 	ExprTree	*dummy;
-	ClassAd		*curAd;
+	const ClassAd *curAd;
 	bool		rval;
 
 	ntree = NULL; // Just to be safe...  wenger 2003-12-11.
@@ -349,7 +349,7 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 int AttributeReference::
 FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 {
-	ClassAd	*current=NULL;
+	const ClassAd *current=NULL;
 	const ExprList *adList = NULL;
 	Value	val;
 	bool	rval;

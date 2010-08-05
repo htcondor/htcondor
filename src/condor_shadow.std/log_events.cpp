@@ -41,7 +41,7 @@
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
 #endif
-extern UserLog		ULog;
+extern WriteUserLog		ULog;
 
 extern int JobStatus;
 extern "C" PROC  *Proc;
@@ -416,16 +416,23 @@ void record_suspension_hack(unsigned int action)
 				last_suspension_time);
 			JobAd->Insert(tmp);
 			break;
-		case ULOG_JOB_UNSUSPENDED:
+		case ULOG_JOB_UNSUSPENDED: {
 			/* add in the time I spent suspended to a running total */
 			JobAd->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME,
 				cumulative_suspension_time);
 			JobAd->LookupInteger(ATTR_LAST_SUSPENSION_TIME,
 				last_suspension_time);
-			cumulative_suspension_time += time(NULL) - last_suspension_time;
+			int delta = time(NULL) - last_suspension_time;
+			cumulative_suspension_time += delta;
 			sprintf(tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
 				cumulative_suspension_time);
 			JobAd->Insert(tmp);
+
+			int uncommitted_suspension_time = 0;
+			JobAd->LookupInteger(ATTR_UNCOMMITTED_SUSPENSION_TIME,
+								 uncommitted_suspension_time);
+			uncommitted_suspension_time += delta;
+			JobAd->Assign(ATTR_UNCOMMITTED_SUSPENSION_TIME,uncommitted_suspension_time);
 
 			/* set the current suspension time to zero, meaning not suspended */
 			last_suspension_time = 0;
@@ -433,6 +440,7 @@ void record_suspension_hack(unsigned int action)
 				last_suspension_time);
 			JobAd->Insert(tmp);
 			break;
+		}
 		default:
 			EXCEPT("record_suspension_hack(): Action event not recognized.\n");
 			break;

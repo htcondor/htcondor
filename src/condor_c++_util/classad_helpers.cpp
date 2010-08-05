@@ -241,6 +241,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
 	job_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 	job_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+	job_ad->Assign( ATTR_COMMITTED_SUSPENSION_TIME, 0 );
 
 	job_ad->Assign( ATTR_JOB_ROOT_DIR, "/" );
 
@@ -258,11 +259,9 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_PRIO, 0 );
 	job_ad->Assign( ATTR_NICE_USER, false );
 
-	job_ad->Assign( ATTR_JOB_ENVIRONMENT1, "" );
-
 	job_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
 
-	job_ad->Assign( ATTR_KILL_SIG, "SIGTERM" );
+	
 
 	job_ad->Assign( ATTR_IMAGE_SIZE, 0 );
 

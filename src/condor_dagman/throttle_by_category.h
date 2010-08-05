@@ -34,6 +34,11 @@ public:
 
 	struct ThrottleInfo {
 		const MyString *_category;
+		// Note: MyString::FindChar() returns the index of the
+		// first instance of the character, if any (-1 if none).
+		bool			isGlobal() { return _category->FindChar('+') == 0; }
+		bool			isSet() { return _maxJobs != noThrottleSetting; }
+
 		int				_maxJobs;
 		int				_currentJobs;
 	};
@@ -80,6 +85,18 @@ public:
 		@param the FILE to print to
 	*/
 	void		PrintThrottles( FILE *fp ) /* const */;
+
+	/** Start iterating through the list of ThrottleInfo objects
+		owned by this object.
+	*/
+	void StartIterations() { _throttles.startIterations(); }
+
+	/** Get the next ThrottleInfo object while iterating.
+		@param A ThrottleInfo pointer, which will receive a value
+			pointing to the next object
+		@return 0 if we're at the end of the list, 1 otherwise
+	*/
+	int Iterate(ThrottleInfo *&info) { return _throttles.iterate( info ); }
 
 private:
 	HashTable<MyString, ThrottleInfo *>	_throttles;

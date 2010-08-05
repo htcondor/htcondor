@@ -51,20 +51,21 @@
 MapFile* Authentication::global_map_file = NULL;
 bool Authentication::global_map_file_load_attempted = false;
 
-char const *UNMAPPED_DOMAIN = "unmappeduser";
+char const *UNMAPPED_DOMAIN = "unmapped";
 char const *MATCHSESSION_DOMAIN = "matchsession";
+char const *UNAUTHENTICATED_FQU = "unauthenticated@unmapped";
+char const *UNAUTHENTICATED_USER = "unauthenticated";
 extern char const *EXECUTE_SIDE_MATCHSESSION_FQU = "execute-side@matchsession";
 extern char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
 
 Authentication::Authentication( ReliSock *sock )
 {
-#if !defined(SKIP_AUTHENTICATION)
+// Do this regardless of the state of SKIP_AUTHENTICATION)
+// even if SKIP_AUTHENTICATION is true, we call sock->Timeout later
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
 	method_used         = NULL;
 	authenticator_      = NULL;
-#endif
-
 }
 
 Authentication::~Authentication()
@@ -224,8 +225,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 				break;
  
 			case CAUTH_NONE:
-				dprintf(D_ALWAYS,"AUTHENTICATE: no available authentication methods succeeded, "
-						"failing!\n");
+				dprintf(D_SECURITY|D_FULLDEBUG,"AUTHENTICATE: no available authentication methods succeeded!\n");
 				errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_OUT_OF_METHODS,
 						"Failed to authenticate with any method");
 				return 0;
@@ -429,8 +429,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 #if defined(HAVE_EXT_GLOBUS)
 	// if GSI, try first with the FQAN (dn plus voms attrs)
 	if (authentication_type == CAUTH_GSI) {
-		MyString fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
-		if (fqan != "") {
+		const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
+		if (fqan && fqan[0]) {
 			dprintf (D_ALWAYS, "ZKM: GSI was used, and FQAN is present.\n");
 			auth_name_to_map = fqan;
 			included_voms = true;

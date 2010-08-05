@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 
 $param_template = "x_param.protocol-negot.template";
@@ -121,22 +122,23 @@ while(<DF>) {
 		$mynumberoferrors = $mynumberoferrors + 1;
 		CondorTest::debug("ERRORS detected: $mynumberoferrors of $mynumberoftests failed\n",1);
 	}
-
-	system("cp *$corename* $mysaveme");
+    
+    #fails due to directory matching pattern
+	runcmd("cp *$corename* $mysaveme", {expect_result=>\&ANY});
 	
 	if( -e "$mysubmitnm" )
 	{
-		system("cp $mysubmitnm $mycorenm");
+		runcmd("cp $mysubmitnm $mycorenm");
 	}
 
 	if( -e "$mysubmitnmout" )
 	{
-		system("cp $mysubmitnmout $mycorenmout");
+		runcmd("cp $mysubmitnmout $mycorenmout");
 	}
 
 	if( -e "$mysubmitnmlog" )
 	{
-		system("cp $mysubmitnmlog $mycorenmlog");
+		runcmd("cp $mysubmitnmlog $mycorenmlog");
 	}
 
 	CondorTest::KillPersonal($secconfig);

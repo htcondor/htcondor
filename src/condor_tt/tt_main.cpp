@@ -46,7 +46,7 @@ TTManager ttManager;
 
 //-------------------------------------------------------------
 
-int main_init(int argc, char *argv[])
+void main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
@@ -68,37 +68,32 @@ int main_init(int argc, char *argv[])
 	dprintf(D_ALWAYS, "configuring tt options from config file\n");
 	ttManager.config();
 	ttManager.registerTimers();
-
-	return 0;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool is_full )
+void 
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 	ttManager.config(true);
 	ttManager.registerTimers();
-	return 0;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	DC_Exit(0);
-	return 0;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	DC_Exit(0);
-	return 0;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

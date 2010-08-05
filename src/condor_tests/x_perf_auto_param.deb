@@ -7,8 +7,6 @@ duration = 20
 universe = vanilla
 type = transfers
 
-condorconfig = condor_config
-condorlocal = condor_config.local
 vms	= 10
 encryption = 3DES,BLOWFISH
 #authentication = GSI

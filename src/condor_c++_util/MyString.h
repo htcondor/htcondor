@@ -24,6 +24,10 @@
 #include "condor_header_features.h"
 #include <string.h>
 #include <stdarg.h>
+#include <string>
+
+class MyString;
+#include "stl_string_utils.h"
 
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
@@ -56,12 +60,18 @@ class MyString
 	/** Constructor to make a copy of a null-terminated character string. */
 	MyString(const char* S);
 
+	/** Constructor to copy a std::string */
+	MyString(const std::string& S);
+
 	/** Copy constructor */
 	MyString(const MyString& S);
 
 	/** Destructor */
 	~MyString();
     //@}
+
+    /** Casting operator to std::string */
+    operator std::string();
 
 	// ----------------------------------------
 	//               Accessors
@@ -118,6 +128,9 @@ class MyString
 	/** Copies a MyString into the object */
 	MyString& operator=(const MyString& S);
 
+	/** Copies a std::string into the object */
+	MyString& operator=(const std::string& S);
+
 	/** Copies a null-terminated character string into the object */
 	MyString& operator=( const char *s );
 	//@}
@@ -150,6 +163,9 @@ class MyString
 	
 	/** Appends a MyString */
 	MyString& operator+=(const MyString& S);
+
+	/** Appends a std::string */
+	MyString& operator+=(const std::string& S);
 
 	/** Appends a null-termianted string */
 	MyString& operator+=(const char *s);
@@ -238,10 +254,27 @@ class MyString
 	/** Like vsprintf, but this appends to existing data. */
 	bool vsprintf_cat(const char *format, va_list args);
 
-	/** Append str.  If we are non-empty, append delim before str. */
-	void append_to_list(char const *str,char const *delim=",");
+	/** Append str.  If we are non-empty, append delim before str.
+	if str is empty, do nothing.
 
-	/** Append str.  If we are non-empty, append delim before str. */
+	Warning: This functionality is ambiguous, it cannot
+	distinguish between an empty list and a list with one item,
+	which is empty.  It always assumes that an empty string is
+	an empty list. This appending x.append_to_list("") doesn't do
+	anything, while MyString("").append_to_list("x") is "x", not
+	",x".  You can work around this with the operator+= or
+	printf_cat functions, but it's all messy.  You could use
+	StringList, but it's pretty rusty and covered with sharp
+	spikes.
+
+	As such consider instead using a
+	std::vector<MyString>::push_back(), then joining the list
+	into a single string at the end.  If you do, consider making
+	the code to join the list into a shared function in
+	condor_c++_utils for others to use.
+
+	*/
+	void append_to_list(char const *str,char const *delim=",");
 	void append_to_list(MyString const &str,char const *delim=",");
 
 	void lower_case(void);
@@ -249,6 +282,7 @@ class MyString
 
 	/** If the last character in the string is a newline, remove
 		it (by setting it to '\0' and decrementing Len).
+		If the newline is preceeded by a '\r', remove that as well.
 		@return True if we removed a newline, false if not
 	*/  
 	bool chomp( void );
@@ -270,6 +304,7 @@ class MyString
 	/** Compare a MyString with a null-terminated C string to see if
         they are the same.  */
 	friend int operator==(const MyString& S1, const char     *S2);
+	friend int operator==(const char     *S1, const MyString& S2);
 
 	/** Compare two MyStrings to see if they are different. */
 	friend int operator!=(const MyString& S1, const MyString& S2);
@@ -277,6 +312,7 @@ class MyString
 	/** Compare a MyString with a null-terminated C string to see if
         they are different.  */
 	friend int operator!=(const MyString& S1, const char     *S2);
+	friend int operator!=(const char     *S1, const MyString& S2);
 
 	/** Compare two MyStrings to see if the first is less than the
         second.  */
@@ -366,6 +402,8 @@ public:
 		m_str = str;
 	}
 	bool operator ==(const YourSensitiveString &rhs) {
+		if (m_str == rhs.m_str) return true;
+		if ((!m_str) || (!rhs.m_str)) return false;
 		return strcmp(m_str,rhs.m_str) == 0;
 	}
 	void operator =(char const *str) {
@@ -375,6 +413,7 @@ public:
 		// hash function for strings
 		// Chris Torek's world famous hashing function
 		unsigned int hash = 0;
+		if (!s.m_str) return 7; // Least random number
 
 		const char *p = s.m_str;
 		while (*p) {

@@ -65,26 +65,29 @@ class AmazonRequest {
 		AmazonRequest();
 		virtual ~AmazonRequest();
 
+		// Service URL
+		std::string m_service_url;
+
 		// Access key or User certificate
-		MyString accesskeyfile;
+		std::string accesskeyfile;
 		// Secret key or User private Key
-		MyString secretkeyfile;
+		std::string secretkeyfile;
 
 		bool SendRequest();
 		virtual bool gsoapRequest() = 0;
 		virtual bool HandleError();
 		virtual void cleanupRequest() {};
 
-		const char* getErrorCode(void) { return m_error_code.Value(); }
-		const char* getErrorStr(void) { return m_error_msg.Value(); }
+		const char* getErrorCode(void) { return m_error_code.c_str(); }
+		const char* getErrorStr(void) { return m_error_msg.c_str(); }
 
 	protected:
 		// Request Name
-		MyString m_request_name;
+		std::string m_request_name;
 
 		// Error msg
-		MyString m_error_msg;
-		MyString m_error_code;
+		std::string m_error_msg;
+		std::string m_error_code;
 
 		// for gsoap
 		struct soap *m_soap;
@@ -104,7 +107,7 @@ class AmazonVMStart : public AmazonRequest {
 		virtual ~AmazonVMStart();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool gsoapRequest();
 
@@ -116,18 +119,18 @@ class AmazonVMStart : public AmazonRequest {
 		}
 
 		// Request Args
-		MyString ami_id;
-		MyString keypair;
-		MyString user_data;
-		MyString user_data_file;
-		MyString instance_type; //m1.small, m1.large, and m1.xlarge
+		std::string ami_id;
+		std::string keypair;
+		std::string user_data;
+		std::string user_data_file;
+		std::string instance_type; //m1.small, m1.large, and m1.xlarge
 		char *base64_userdata;
 
 		// we support multiple group names
 		StringList groupnames;
 
 		// Result 
-		MyString instance_id;
+		std::string instance_id;
 
 };
 
@@ -137,14 +140,14 @@ class AmazonVMStop : public AmazonRequest {
 		virtual ~AmazonVMStop();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool HandleError();
 
 		virtual bool gsoapRequest();
 
 		// Request Args
-		MyString instance_id;
+		std::string instance_id;
 
 		// Result 
 
@@ -158,14 +161,14 @@ class AmazonVMStop : public AmazonRequest {
 class AmazonStatusResult {
 	public:
 		void clearAll();
-		MyString instance_id;
-		MyString status;
-		MyString ami_id;
-		MyString public_dns;
-		MyString private_dns;
-		MyString keyname;
+		std::string instance_id;
+		std::string status;
+		std::string ami_id;
+		std::string public_dns;
+		std::string private_dns;
+		std::string keyname;
 		StringList groupnames;
-		MyString instancetype;
+		std::string instancetype;
 };
 
 class AmazonVMStatus : public AmazonRequest {
@@ -174,7 +177,7 @@ class AmazonVMStatus : public AmazonRequest {
 		virtual ~AmazonVMStatus();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool HandleError();
 
@@ -185,7 +188,7 @@ class AmazonVMStatus : public AmazonRequest {
 		}
 
 		// Request Args
-		MyString instance_id;
+		std::string instance_id;
 
 		// Result 
 		AmazonStatusResult status_result;
@@ -198,7 +201,7 @@ class AmazonVMStatusAll : public AmazonRequest {
 		virtual ~AmazonVMStatusAll();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool gsoapRequest();
 
@@ -211,7 +214,7 @@ class AmazonVMStatusAll : public AmazonRequest {
 		}
 
 		// Request Args
-		MyString vm_status;
+		std::string vm_status;
 
 		// Result 
 		AmazonStatusResult *status_results;
@@ -225,7 +228,7 @@ class AmazonVMRunningKeypair : public AmazonVMStatusAll {
 		virtual ~AmazonVMRunningKeypair();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool gsoapRequest();
 };
@@ -236,15 +239,15 @@ class AmazonVMCreateKeypair : public AmazonRequest {
 		virtual ~AmazonVMCreateKeypair();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool gsoapRequest();
 
 		bool has_outputfile;
 
 		// Request Args
-		MyString keyname;
-		MyString outputfile;
+		std::string keyname;
+		std::string outputfile;
 
 		// Result 
 
@@ -256,14 +259,14 @@ class AmazonVMDestroyKeypair : public AmazonRequest {
 		virtual ~AmazonVMDestroyKeypair();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool HandleError();
 
 		virtual bool gsoapRequest();
 
 		// Request Args
-		MyString keyname;
+		std::string keyname;
 
 		// Result 
 
@@ -275,7 +278,7 @@ class AmazonVMKeypairNames : public AmazonRequest {
 		virtual ~AmazonVMKeypairNames();
 
 		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, MyString &result_string);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 		virtual bool gsoapRequest();
 

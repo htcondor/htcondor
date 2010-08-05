@@ -561,7 +561,7 @@ CronMgrBase::ParseJobList( const char *jobListString )
 					 jobName );
 			jobOk = false;
 		} else {
-			char	modifier;
+			char	modifier = 'S';
 			int		num = sscanf( paramPeriod.Value(), "%d%c",
 								  &jobPeriod, &modifier );
 			if ( num < 1 ) {
@@ -573,7 +573,7 @@ CronMgrBase::ParseJobList( const char *jobListString )
 			} else {
 				// Check the modifier
 				modifier = toupper( modifier );
-				if ( ( 0 == modifier ) || ( 'S' == modifier ) ) {	// Seconds
+				if ( ( 'S' == modifier ) ) {	// Seconds
 					// Do nothing
 				} else if ( 'M' == modifier ) {
 					jobPeriod *= 60;

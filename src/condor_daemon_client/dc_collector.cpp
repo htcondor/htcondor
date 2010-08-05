@@ -371,7 +371,7 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 			return false;
 		}
 	}
-	if( ! sock->eom() ) {
+	if( ! sock->end_of_message() ) {
 		if(self) {
 			self->newError( CA_COMMUNICATION_ERROR,
 			          "Failed to send EOM to collector" );

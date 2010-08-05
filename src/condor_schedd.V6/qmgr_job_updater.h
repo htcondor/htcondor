@@ -46,9 +46,10 @@ class QmgrJobUpdater : public Service
 {
 public:
 	QmgrJobUpdater( ClassAd* job_ad, const char* schedd_addr, char const *schedd_version );
-	~QmgrJobUpdater();
+	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), m_pull_attrs(0), schedd_addr(0), schedd_ver(0), q_update_tid(-1) {}
+	virtual ~QmgrJobUpdater();
 
-	void startUpdateTimer( void );
+	virtual void startUpdateTimer( void );
 
 		/** Connect to the job queue and update all relevent
 			attributes of the job class ad.  This checks our job
@@ -58,7 +59,7 @@ public:
 			@param commit_flags flags to pass to RemoteCommitTransaction()
 			@return true on success, false on failure
 		*/
-	bool updateJob( update_t type, SetAttributeFlags_t commit_flags = 0 );
+	virtual bool updateJob( update_t type, SetAttributeFlags_t commit_flags = 0 );
 
 		/** Connect to the job queue and update one attribute.
 			WARNING: This method is BAD NEWS for schedd scalability.
@@ -68,10 +69,10 @@ public:
 			the schedd can be held hostage by user-jobs that call this
 			syscall repeatedly.  :(
 		*/
-	bool updateAttr( const char *name, const char *expr, bool updateMaster );
+	virtual bool updateAttr( const char *name, const char *expr, bool updateMaster );
 
 		/// Helper version that takes an int value instead of a string expr.
-	bool updateAttr( const char *name, int value, bool updateMaster );
+	virtual bool updateAttr( const char *name, int value, bool updateMaster );
 
 		/** Add the given attribute to our list of attributes we
 			should watch for changes and update.  The type specifies
@@ -85,7 +86,7 @@ public:
 			   matter for?
 		    @return true if added, false if it was already there
 		*/
-	bool watchAttribute( const char* attr, update_t type = U_NONE );
+	virtual bool watchAttribute( const char* attr, update_t type = U_NONE );
 
 private:
 
@@ -138,5 +139,18 @@ private:
 	int q_update_tid;
 };	
 
+// usefull if you don't want to update the job queue
+class NullQmgrJobUpdater : public QmgrJobUpdater
+{
+public:
+	NullQmgrJobUpdater( ClassAd* , const char* , char const *) : QmgrJobUpdater() {}
+	virtual ~NullQmgrJobUpdater() {}
+
+	virtual void startUpdateTimer( void ) {return;}
+	virtual bool updateJob( update_t /*type*/, SetAttributeFlags_t  /*commit_flags*/ = 0 ) { return true;}
+	virtual bool updateAttr( const char *  /*name*/, const char * /*expr*/, bool  /*updateMaster*/ ) { return true;}
+	virtual bool updateAttr( const char * /*name*/, int  /*value*/, bool  /*updateMaster*/ ) { return true;}
+	virtual bool watchAttribute( const char*  /*attr*/, update_t /*type*/ = U_NONE ) { return true;}
+};
 
 #endif /* CONDOR_QMGR_JOB_UPDATER_H */

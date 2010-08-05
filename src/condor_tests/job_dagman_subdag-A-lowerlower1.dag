@@ -1,0 +1,11 @@
+Job A job_dagman_subdag-A-lowerlower1-node.cmd
+Vars A nodename = "$(JOB)"
+Job B job_dagman_subdag-A-lowerlower1-node.cmd
+Vars B nodename = "$(JOB)"
+Job C job_dagman_subdag-A-lowerlower1-node.cmd
+Vars C nodename = "$(JOB)"
+Job D job_dagman_subdag-A-lowerlower1-node.cmd
+Vars D nodename = "$(JOB)"
+
+PARENT A CHILD B C
+PARENT B C CHILD D

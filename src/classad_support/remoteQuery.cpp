@@ -51,7 +51,7 @@ Connect( const string &serverAddr, int port )
 	serverSock.encode( );
 	if( !serverSock.connect( (char*)serverAddr.c_str( ), port ) || 
 		!serverSock.put((int)ClassAdCollectionInterface::ClassAdCollOp_Connect)
-		|| !serverSock.eom() ){
+		|| !serverSock.end_of_message() ){
 		CondorErrno = ERR_CONNECT_FAILED;
 		CondorErrMsg = "failed to connect to collection server";
 		return( false );
@@ -64,7 +64,7 @@ Disconnect( )
 {
 	serverSock.encode( );
 	serverSock.put( (int)ClassAdCollectionInterface::ClassAdCollOp_Disconnect );
-	serverSock.eom( );
+	serverSock.end_of_message( );
 	serverSock.close( );
 }
 
@@ -132,7 +132,7 @@ PostQuery( const string &viewName, ExprTree *constraint )
 	serverSock.encode( );
 	unp.Unparse( buffer, &query );
 	if(!serverSock.put((int)ClassAdCollectionInterface::ClassAdCollOp_QueryView)
-		|| !serverSock.put((char*)buffer.c_str( )) || !serverSock.eom( ) ) {
+		|| !serverSock.put((char*)buffer.c_str( )) || !serverSock.end_of_message( ) ) {
 		CondorErrno = ERR_COMMUNICATION_ERROR;
 		CondorErrMsg = "failed to send query to collection server";
 		return( false );
@@ -210,7 +210,7 @@ Next( string &key, ClassAd *& ad )
 			// get postlude if necessary
 		tmp = NULL;
 		if( wantPostlude ) {
-			if( !serverSock.get( tmp ) || !serverSock.eom( ) ) {
+			if( !serverSock.get( tmp ) || !serverSock.end_of_message( ) ) {
 				if( tmp ) free( tmp );
 				CondorErrno = ERR_COMMUNICATION_ERROR;
 				CondorErrMsg = "failed to receive query postlude from server";
@@ -223,10 +223,10 @@ Next( string &key, ClassAd *& ad )
 				CondorErrMsg += "; failed to parse query postlude";
 				return( false );
 			}
-		} else if( !serverSock.eom( ) ) {
+		} else if( !serverSock.end_of_message( ) ) {
 				// no postlude
 			CondorErrno = ERR_COMMUNICATION_ERROR;
-			CondorErrMsg = "failed to receive eom() from server";
+			CondorErrMsg = "failed to receive end_of_message() from server";
 			return( false );
 		}
 			// done with results, so return false

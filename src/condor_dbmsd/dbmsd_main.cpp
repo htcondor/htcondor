@@ -42,43 +42,38 @@ DBMSManager dbmsd;
 
 //-------------------------------------------------------------
 
-int main_init(int argc, char *argv[])
+void main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
 	dbmsd.init();
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
-main_config( bool is_full )
+void 
+main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 	dbmsd.config();
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	dbmsd.stop();
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	dbmsd.stop();
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

@@ -44,8 +44,6 @@
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
 #define DEFAULT_HAD_UPDATE_INTERVAL  (5 * MINUTE)
 
-extern int main_shutdown_graceful(void);
-
 
 /***********************************************************
   Function :
@@ -148,7 +146,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 	char		*tmp      = NULL;
 	char		 controllee[128];
 	bool    	 usePrimary  = false;
-	int     	 selfId;
+	int     	 selfId = -1;
 	StringList	 allHadIps;
 
 	tmp = param( "HAD_CONTROLLEE" );
@@ -255,7 +253,8 @@ HADStateMachine::softReconfigure(void)
     int safetyFactor = 1;
 
     // timeoutNumber
-    // connect + startCommand(sock.code() and sock.eom() aren't blocking)
+    // connect + startCommand(sock.code() and sock.end_of_message() aren't 
+	//blocking)
     int timeoutNumber = 2;
 
     int time_to_send_all = (m_connectionTimeout*timeoutNumber);
@@ -635,7 +634,7 @@ HADStateMachine::sendCommandToOthers( int comm )
             continue;
         }
 
-        if(! m_classAd.put(sock) || !sock.eom()) {
+        if(! m_classAd.put(sock) || !sock.end_of_message()) {
             dprintf( D_ALWAYS, "Failed to send classad to peer\n");
         } else {
             dprintf( D_FULLDEBUG, "Sent classad to peer\n");
@@ -689,7 +688,7 @@ HADStateMachine::sendReplicationCommand( int command )
 
     char* subsys = const_cast<char*>( daemonCore->InfoCommandSinfulString( ) );
 
-    if( !sock.code(subsys) || !sock.eom() ) {
+    if( !sock.code(subsys) || !sock.end_of_message() ) {
         dprintf( D_ALWAYS, "send to replication daemon, !sock.code false \n");
         sock.close();
 
@@ -815,7 +814,7 @@ HADStateMachine::sendControlCmdToMaster( int comm )
         return false;
     }
 
-    if( !sock.code(m_controlleeName) || !sock.eom() ) {
+    if( !sock.code(m_controlleeName) || !sock.end_of_message() ) {
         dprintf( D_ALWAYS, "Failed to send controllee name to master\n");
         sock.close();
         return false;

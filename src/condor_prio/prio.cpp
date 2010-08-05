@@ -306,7 +306,6 @@ void ProcArg(const char* arg)
 			UpdateJobAd(cluster, proc);
 			firstTime = 0;
 		}
-		delete ad;
 	}
 	else
 	{

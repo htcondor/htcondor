@@ -8,13 +8,18 @@ job C2 job_dagman_splice-cat.cmd
 category C2 cat2
 
 job D2 job_dagman_splice-cat.cmd
-category D2 cat2D
+category D2 cat3
 
 job E2 job_dagman_splice-cat.cmd
-category E2 cat2D
+category E2 cat3
+
+job F2 job_dagman_splice-cat.cmd
+category F2 +catS
 
 parent A2 child B2 C2
 parent B2 C2 child D2 E2
+parent D2 E2 child F2
 
-maxjobs cat2 12
-maxjobs cat2D 22
+maxjobs cat2 32
+maxjobs cat3 22
+maxjobs +catS 4

@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 #Condor::DebugOn();
 
@@ -35,7 +36,7 @@ my @expected_output =
 );
 CondorTest::SetExpected(\@expected_output);
 
-system("mkdir -p initd_van");
+runcmd("mkdir -p initd_van");
 
 CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
 

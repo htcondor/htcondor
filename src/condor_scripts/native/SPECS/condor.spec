@@ -65,10 +65,10 @@ getent passwd condor >/dev/null || \
   useradd -r -g condor -d %_var/lib/condor -s /sbin/nologin \
     -c "Owner of Condor Daemons" condor
 
-if [ "$1" -ge "2" ]; then
-  #Stopping condor if there is existing version
-  /sbin/service condor stop >/dev/null 2>&1 || :
-fi
+#Stopping condor if there is existing version
+#if [ "$1" -ge "2" ]; then
+#  /sbin/service condor stop >/dev/null 2>&1 || :
+#fi
 
 
 exit 0
@@ -95,8 +95,9 @@ mkdir -p -m0755 local/spool
 
 
 #Patching files
-#Use VDT init script, modify permission
-chmod 755 etc/examples/condor.boot.vdt
+#Use rpm init script, modify permission
+chmod 755 etc/examples/condor.boot.rpm
+chmod 755 etc/examples/condor.sysconfig
 
 #Prepare default configuration files
 mkdir -p -m0755 etc/condor
@@ -154,7 +155,8 @@ rm -f $PREFIX/condor_configure $PREFIX/condor_install
 # Relocate main path layout
 move $PREFIX/bin				/usr/bin			
 move $PREFIX/etc/condor				/etc/condor
-move $PREFIX/etc/examples/condor.boot.vdt	/etc/init.d/condor
+move $PREFIX/etc/examples/condor.sysconfig	/etc/sysconfig/condor
+move $PREFIX/etc/examples/condor.boot.rpm	/etc/init.d/condor
 move $PREFIX/include				/usr/include/condor	
 move $PREFIX/lib				/usr/$LIB/condor		
 move $PREFIX/libexec				/usr/libexec/condor	
@@ -164,10 +166,11 @@ move $PREFIX/sbin				/usr/sbin
 move $PREFIX/sql				/usr/share/condor/sql	
 move $PREFIX/src				/usr/src
 
-#Create RUN LOG LOCK 
+#Create RUN LOG LOCK CONFIG.D
 mkdir -p -m0755 "%{buildroot}"/var/run/condor
 mkdir -p -m0755 "%{buildroot}"/var/log/condor
 mkdir -p -m0755 "%{buildroot}"/var/lock/condor
+mkdir -p -m0755 "%{buildroot}"/etc/condor/config.d
 
 #Put the rest into documentation
 move $PREFIX				/usr/share/doc/%{name}-%{version}
@@ -204,13 +207,14 @@ mv $FILELIST.new $FILELIST
 #Configuration scripts
 %defattr(-,root,root,-)
 %dir %_sysconfdir/condor/
+%dir %_sysconfdir/condor/config.d/
 %config(noreplace) %_sysconfdir/condor/condor_config
 %config(noreplace) %_sysconfdir/condor/condor_config.local
 
-#Init script
+#Init script and sysconfig
 %defattr(-,root,root,-)
-%_sysconfdir/init.d/condor
-
+%config(noreplace) %_sysconfdir/init.d/condor
+%config(noreplace) %_sysconfdir/sysconfig/condor
 
 #/usr/include/condor (_includedir/ = /usr/include)
 %dir %_includedir/condor/
@@ -263,20 +267,34 @@ VAR=$RPM_INSTALL_PREFIX2
 #Patch config file if relocated
 
 if [ $USR != "/usr" ] ; then
-  perl -p -i -e "s:^CONDOR_CONFIG_VAL=.*:CONDOR_CONFIG_VAL=$USR/bin/condor_config_val:" $ETC/init.d/condor 
+  #Patch parameters which are affected by /usr relocation
+  perl -p -i -e "s:^CONDOR_CONFIG_VAL=.*:CONDOR_CONFIG_VAL=$USR/bin/condor_config_val:" $ETC/sysconfig/condor 
   perl -p -i -e "s:^RELEASE_DIR(\s*)=.*:RELEASE_DIR\$1= $USR:" $ETC/condor/condor_config   
+
+  #If man folder is in the same level as bin and sbin, man can find manpages without setting the manpath
+  #Add softlink to do achieve this
+  old_path=`pwd`
+  cd $USR
+  ln -sf share/man 
+  cd $old_path
 fi
 
 if [ $VAR != "/var" ] ; then
+  #Patch parameters which are affected by /var relocation
   perl -p -i -e "s:^LOCAL_DIR(\s*)=.*:LOCAL_DIR\$1= $VAR:" $ETC/condor/condor_config   
 fi
 
 if [ $ETC != "/etc" ] ; then
-  perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/init.d/condor 
-  perl -p -i -e "s:^LOCAL_CONFIG_FILE(\s*)=\s*/etc(.*):LOCAL_CONFIG_FILE\$1= $ETC\$2:" $ETC/condor/condor_config 
+  #Patch parameters which are affected by /etc relocation
+  perl -p -i -e "s:^CONDOR_CONFIG=.*:CONDOR_CONFIG=$ETC/condor/condor_config:" $ETC/sysconfig/condor
+  perl -p -i -e "s:^LOCAL_CONFIG_FILE(\s*)=\s*/etc(.*):LOCAL_CONFIG_FILE\$1= $ETC\$2:" $ETC/condor/condor_config
+  perl -p -i -e "s:^LOCAL_CONFIG_DIR(\s*)=\s*/etc(.*):LOCAL_CONFIG_DIR\$1= $ETC\$2:" $ETC/condor/condor_config
   
-  #Install init.d script
-  cp -f $ETC/init.d/condor /etc/init.d/condor  
+  #Install init script and sysconfig only if this is the first instance
+  if [ $1 = 1 ]; then
+     cp -f $ETC/init.d/condor /etc/init.d/condor  
+     cp -f $ETC/sysconfig/condor /etc/sysconfig/condor  
+  fi
 fi
 
 
@@ -294,24 +312,37 @@ exit 0
 %preun -n condor
 
 #Stop condor
-/sbin/service condor stop >/dev/null 2>&1 || :
+#/sbin/service condor stop >/dev/null 2>&1 || :
+
+#Stop and remove condor only when this is the last instance
 if [ $1 = 0 ]; then
-  
-  /sbin/chkconfig --del condor
+  #This should fail if it is unable to stop condor in timelimit
+  /sbin/service condor stop
+  if [ $? = 1 ]; then
+     echo "Abort uninstallation"
+     exit 1;
+  fi
+
+  if [ -e /etc/init.d/condor ]; then
+     /sbin/chkconfig --del condor
+  fi
   
   #Remove init.d if relocated
   ETC=$RPM_INSTALL_PREFIX0
   if [ $ETC != "/etc" ] ; then    
     rm /etc/init.d/condor
+    rm /etc/sysconfig/condor
   fi
 
 fi
 
 
 %postun -n condor
-#if [ "$1" -ge "1" ]; then
-  #Upgrading or remove but other version existed 
-  #/sbin/service condor restart >/dev/null 2>&1 || :
+
+# We do not need to do anything, Condor will detec binary changes and restart itself automatically
+#Upgrading or remove but other version existed 
+#if [ "$1" -ge "1" ]; then  
+#  /sbin/service condor restart >/dev/null 2>&1 || :
 #fi
 /sbin/ldconfig
 
@@ -320,8 +351,8 @@ fi
 * _DATE_  <condor-users@cs.wisc.edu> - _VERSION_-_REVISION_
 - Please see version history at http://www.cs.wisc.edu/condor/manual/v_VERSION_/8_Version_History.html
 
-* Sun Jan 24 2010  <kooburat@cs.wisc.edu> - 7.5.0-2
+* Sun Jan 24 2010  <kooburat@cs.wisc.edu> - 7.4.0-2
 - Make RPM relocatable and support multiple version install
 
 * Fri Nov 13 2009  <kooburat@cs.wisc.edu> - 7.4.0-1
-- Initial release based on Fedora's RPM by <matt@redhat>
+- Initial release is based on Fedora's RPM by <matt@redhat>

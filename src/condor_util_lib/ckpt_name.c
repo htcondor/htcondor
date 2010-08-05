@@ -25,11 +25,6 @@
 #if !defined(WIN32)
 #include <sys/types.h>
 #include <sys/param.h>
-
-#if defined(SUNOS41)
-#include <sys/time.h>
-#endif
-
 #include <sys/resource.h>
 #endif
 
@@ -37,38 +32,28 @@
 
 #include "proc.h"
 #include "condor_ckpt_name.h"
-#include "util_lib_proto.h"
 
 char *
 gen_ckpt_name( char *directory, int cluster, int proc, int subproc )
 {
-	static char	answer[ MAXPATHLEN ];
+	char *answer = (char *)malloc(MAXPATHLEN);
 
 	if( proc == ICKPT ) {
 		if( directory && directory[0] ) {
-			(void)sprintf( answer, "%s%ccluster%d.ickpt.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "%s%ccluster%d.ickpt.subproc%d",
 						directory, DIR_DELIM_CHAR, cluster, subproc );
 		} else {
-			(void)sprintf( answer, "cluster%d.ickpt.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "cluster%d.ickpt.subproc%d",
 						cluster, subproc );
 		}
 	} else {
 		if( directory && directory[0] ) {
-			(void)sprintf( answer, "%s%ccluster%d.proc%d.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "%s%ccluster%d.proc%d.subproc%d",
 						directory, DIR_DELIM_CHAR, cluster, proc, subproc );
 		} else {
-			(void)sprintf( answer, "cluster%d.proc%d.subproc%d",
+			(void)snprintf( answer, MAXPATHLEN, "cluster%d.proc%d.subproc%d",
 						cluster, proc, subproc );
 		}
 	}
-	return answer;
-}
-
-char *
-gen_exec_name( int cluster, int proc, int subproc )
-{
-	static char	answer[ MAXPATHLEN ];
-
-	(void)sprintf( answer, "condor_exec%d.%d.%d", cluster, proc, subproc );
 	return answer;
 }

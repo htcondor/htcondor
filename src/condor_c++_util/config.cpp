@@ -582,7 +582,7 @@ string_to_long( const char *s, long *valuep )
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 char *
-expand_macro( const char *value, BUCKET **table, int table_size, char *self )
+expand_macro( const char *value, BUCKET **table, int table_size, char *self, bool use_default_param_table )
 {
 	char *tmp = strdup( value );
 	char *left, *name, *tvalue, *right;
@@ -687,6 +687,13 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 		if( get_var(tmp, &left, &name, &right, self) ) {
 			all_done = false;
 			tvalue = lookup_macro( name, table, table_size );
+
+				// Note that if 'name' has been explicitly set to nothing,
+				// tvalue will _not_ be NULL so we will not call
+				// param_default_string().  See gittrack #1302
+			if( !self && use_default_param_table && tvalue == NULL ) {
+				tvalue = param_default_string(name);
+			}
 			if( tvalue == NULL ) {
 				tvalue = "";
 			}
@@ -823,7 +830,8 @@ get_special_var( const char *prefix, bool only_id_chars, register char *value,
 	tvalue = value;
 	left = value;
 
-	for(;;) {
+		// Loop until we're done, helped with the magic of goto's
+	while (1) {
 tryagain:
 		if (tvalue) {
 			value = (char *)strstr( (const char *)tvalue, prefix );
@@ -967,7 +975,7 @@ tryagain:
 					// between these two pointers gives us the length of the
 					// identifier.
 					int namelen = value-name;
-					if( !self || ( strincmp( name, self, namelen ) == MATCH && self[namelen] == '\0' ) ) {
+					if( !self || ( strncasecmp( name, self, namelen ) == MATCH && self[namelen] == '\0' ) ) {
 							// $(DOLLAR) has special meaning; it is
 							// set to "$" and is _not_ recursively
 							// expanded.  To implement this, we have
@@ -978,7 +986,7 @@ tryagain:
 							// we treat it like anything else, and it is up
 							// to the caller to advance search_pos, so we
 							// don't run into the literal $$ again.
-						if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
+						if ( !self && strncasecmp(name,DOLLAR_ID,namelen) == MATCH ) {
 							tvalue = name;
 							goto tryagain;
 						}

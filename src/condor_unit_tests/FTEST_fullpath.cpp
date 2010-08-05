@@ -39,11 +39,11 @@ static bool test_drive_path_forward_slash(void);
 static bool test_colon_forward_slash(void);
 
 bool FTEST_fullpath(void) {
-	e.emit_function("int fullpath( const char* path )");
-	e.emit_comment("return TRUE if the given path is a full pathname, FALSE if not.  by full pathname, we mean it either begins with '/' or '\' or '*:\' (something like 'c:\\...' on windoze).");
+	emit_function("int fullpath( const char* path )");
+	emit_comment("return TRUE if the given path is a full pathname, FALSE if not.  by full pathname, we mean it either begins with '/' or '\' or '*:\' (something like 'c:\\...' on windoze).");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(7);
+	FunctionDriver driver;
 	driver.register_function(test_forward_slash);
 	driver.register_function(test_name);
 	driver.register_function(test_drive_path_backslash);
@@ -53,139 +53,123 @@ bool FTEST_fullpath(void) {
 	driver.register_function(test_colon_forward_slash);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_forward_slash() {
-	e.emit_test("Does a path starting with a forward slash return true?");
+	emit_test("Does a path starting with a forward slash return true?");
 	char *param = "/tmp/foo";
 	int expected = 1;
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	int result = fullpath(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", expected);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_name() {
-	e.emit_test("Does a path starting with a name return false?");
+	emit_test("Does a path starting with a name return false?");
 	char *param = "tmp/foo";
 	int expected = 0;
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	int result = fullpath(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", expected);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 static bool test_drive_path_backslash() {
-	e.emit_test("Does a path with a drive letter followed by a colon and backslash return true?");
+	emit_test("Does a path with a drive letter followed by a colon and backslash return true?");
 	char *param = "c:\\";
 	int expected = 1;
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	int result = fullpath(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", expected);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_colon_backslash() {
-	e.emit_test("Does a path starting with a colon followed by a backslash return false?");
+	emit_test("Does a path starting with a colon followed by a backslash return false?");
 	char *param = ":\\";
 	int expected = 0;
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	int result = fullpath(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", expected);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_backslash() {
-	e.emit_test("Does a path with only a backslash return true?");
+	emit_test("Does a path with only a backslash return true?");
 	char *param = "\\";
 	int expected = 1;
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	int result = fullpath(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", expected);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_drive_path_forward_slash() {
-	e.emit_test("Does a path with a drive letter followed by a colon and forward slash return true?");
+	emit_test("Does a path with a drive letter followed by a colon and forward slash return true?");
 	char *param = "x:/";
 	int expected = 1;
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	int result = fullpath(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", expected);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_colon_forward_slash() {
-	e.emit_test("Does a path with a colon followed by a forward slash return false?");
+	emit_test("Does a path with a colon followed by a forward slash return false?");
 	char *param = ":/";
 	int expected = 0;
-	e.emit_input_header();
-	e.emit_param("STRING", param);
+	emit_input_header();
+	emit_param("STRING", param);
 	int result = fullpath(param);
-	e.emit_output_expected_header();
-	e.emit_retval("%d", expected);
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("%d", expected);
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(expected != result) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

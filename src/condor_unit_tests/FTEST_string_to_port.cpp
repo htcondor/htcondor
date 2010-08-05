@@ -32,36 +32,32 @@
 static bool test_normal_case(void);
 
 bool FTEST_string_to_port(void) {
-		// beginning junk for getPortFromAddr()
-	e.emit_function("int string_to_port(const char* addr)");
-	e.emit_comment("Gets and returns the port number from a sinful string");
-	e.emit_problem("Function does no error checking on the port number");
+		// beginning junk for getPortFromAddr(() {
+	emit_function("int string_to_port(const char* addr)");
+	emit_comment("Gets and returns the port number from a sinful string");
+	emit_problem("Function does no error checking on the port number");
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
 	driver.register_function(test_normal_case);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_normal_case() {
-	e.emit_test("Is normal input converted correctly?");
+	emit_test("Is normal input converted correctly?");
 	char* input = strdup( "<192.168.255.0:35>" );
 	int result = string_to_port(input);
-	e.emit_input_header();
-	e.emit_param("STRING", input);
+	emit_input_header();
+	emit_param("STRING", input);
 	free(input);
-	e.emit_output_expected_header();
-	e.emit_retval("35");
-	e.emit_output_actual_header();
-	e.emit_retval("%d", result);
+	emit_output_expected_header();
+	emit_retval("35");
+	emit_output_actual_header();
+	emit_retval("%d", result);
 	if(result != 35) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

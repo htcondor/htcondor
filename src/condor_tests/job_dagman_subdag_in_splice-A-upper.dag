@@ -1,0 +1,10 @@
+Job A job_dagman_subdag_in_splice-A-upper-node.cmd
+Vars A nodename = "$(JOB)"
+Job B job_dagman_subdag_in_splice-A-upper-node.cmd
+Vars B nodename = "$(JOB)"
+Splice C job_dagman_subdag_in_splice-A-lower.dag
+Job D job_dagman_subdag_in_splice-A-upper-node.cmd
+Vars D nodename = "$(JOB)"
+
+PARENT A CHILD B C
+PARENT B C CHILD D

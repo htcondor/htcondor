@@ -51,8 +51,9 @@
 #endif
 #include "util_lib_proto.h"		// for mkargv() proto
 #include "condor_threads.h"
+#include "log_rotate.h"
 
-FILE *debug_lock(int debug_level);
+FILE *debug_lock(int debug_level, const char *mode);
 FILE *open_debug_file( int debug_level, char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
@@ -106,6 +107,7 @@ int		DebugUseTimestamps = 0;
 */
 
 uint64_t	MaxLog[D_NUMLEVELS+1] = { 0 };
+int			MaxLogNum[D_NUMLEVELS+1] = { 0 };
 char	*DebugFile[D_NUMLEVELS+1] = { NULL };
 char	*DebugLock = NULL;
 
@@ -307,7 +309,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 			int result;
 
 				/* Open and lock the log file */
-			(void)debug_lock(debug_level);
+			(void)debug_lock(debug_level, NULL);
 
 			if (DebugFP) {
 
@@ -473,12 +475,17 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 }
 
 FILE *
-debug_lock(int debug_level)
+debug_lock(int debug_level, const char *mode)
 {
 	off_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
+	struct stat fstatus;
+
+	if ( mode == NULL ) {
+		mode = "a";
+	}
 
 	if ( DebugFP == NULL ) {
 		DebugFP = stderr;
@@ -502,13 +509,23 @@ debug_lock(int debug_level)
 
 		/* Acquire the lock */
 	if( DebugLock ) {
-		if( use_kernel_mutex == FALSE && LockFd < 0 ) {
-			LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
-			if( LockFd < 0 ) {
-				save_errno = errno;
-				snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
-				_condor_dprintf_exit( save_errno, msg_buf );
+		
+		if( use_kernel_mutex == FALSE) {
+			if (LockFd > 0 ) {
+				fstat(LockFd, &fstatus);
+				if (fstatus.st_nlink == 0){
+					close(LockFd);
+					LockFd = -1;
+				}	
 			}
+			if (LockFd < 0) {
+				LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
+				if( LockFd < 0 ) {
+					save_errno = errno;
+					snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
+					_condor_dprintf_exit( save_errno, msg_buf );
+				} 
+			}	
 		}
 
 		errno = 0;
@@ -528,7 +545,7 @@ debug_lock(int debug_level)
 	if( DebugFile[debug_level] ) {
 		errno = 0;
 
-		DebugFP = open_debug_file(debug_level, "a");
+		DebugFP = open_debug_file(debug_level, mode);
 
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
@@ -638,55 +655,41 @@ preserve_log_file(int debug_level)
 	int			failed_to_rotate = FALSE;
 	int			save_errno;
 	int         rename_failed = 0;
+	char		*timestamp;
+	int			result;
 #ifndef WIN32
 	struct stat buf;
 #endif
 	char msg_buf[DPRINTF_ERR_MAX];
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-
-	(void)sprintf( old, "%s.old", DebugFile[debug_level] );
+	(void)setBaseName(DebugFile[debug_level]);
+	timestamp = createRotateFilename(NULL, MaxLogNum[debug_level]);
+	(void)sprintf( old, "%s.%s", DebugFile[debug_level] , timestamp);
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
 	(void)fflush( DebugFP );
 
 	fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 	DebugFP = NULL;
 
+	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
+
 #if defined(WIN32)
-
-	unlink(old);
-
-	/* use rename on WIN32, since link isn't available */
-	if (rename(DebugFile[debug_level], old) < 0) {
-		/* the rename failed, perhaps one of the log files
-		 * is currently open.  Sleep a half second and try again. */		 
-		Sleep(500);
-		unlink(old);
-		if ( rename(DebugFile[debug_level],old) < 0) {
-			/* Feh.  Some bonehead must be keeping one of the files
-			 * open for an extended period.  Win32 will not permit an
-			 * open file to be unlinked or renamed.  So, here we copy
-			 * the file over (instead of renaming it) and then truncate
-			 * our original. */
-
-			if ( CopyFile(DebugFile[debug_level],old,FALSE) == 0 ) {
-				/* Even our attempt to copy failed.  We're screwed. */
-				failed_to_rotate = TRUE;
-			}
-
-			/* now truncate the original by reopening _not_ with append */
-			DebugFP = open_debug_file(debug_level, "w");
-			if ( DebugFP ==  NULL ) {
-				still_in_old_file = TRUE;
-			}
+	if (result < 0) { // MoveFileEx and Copy failed
+		failed_to_rotate = TRUE;
+		DebugFP = open_debug_file(debug_level, "w");
+		if ( DebugFP ==  NULL ) {
+			still_in_old_file = TRUE;
 		}
 	}
-
 #else
 
+	if (result != 0) 
+		rename_failed = 1;
+
 	errno = 0;
-	if( rename(DebugFile[debug_level], old) < 0 ) {
-		save_errno = errno;
+	if (result != 0) {
+		save_errno = result;
 		if( save_errno == ENOENT && !DebugLock ) {
 				/* This can happen if we are not using debug file locking,
 				   and two processes try to rotate this log file at the
@@ -701,7 +704,7 @@ preserve_log_file(int debug_level)
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
-
+	
 	/* double check the result of the rename
 	   If we are not using locking, then it is possible for two processes
 	   to rotate at the same time, in which case the following check
@@ -726,6 +729,7 @@ preserve_log_file(int debug_level)
 	}
 
 	if( DebugFP == NULL ) {
+		DebugFP = stderr;
 		save_errno = errno;
 		snprintf( msg_buf, sizeof(msg_buf), "Can't open file for debug level %d\n",
 				 debug_level ); 
@@ -745,8 +749,9 @@ preserve_log_file(int debug_level)
 			fprintf(DebugFP,"       Perhaps someone is keeping log files open???");
 		}
 	}
-
+	
 	_set_priv(priv, __FILE__, __LINE__, 0);
+	cleanUp(MaxLogNum[debug_level]);
 }
 
 
@@ -1146,7 +1151,7 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 		// on the other hand, is FIFO --- thus starvation is avoided.
 
 		// If we're trying to lock NUL, just return success early
-	if (stricmp(DebugLock, "NUL") == 0) {
+	if (strcasecmp(DebugLock, "NUL") == 0) {
 		return 0;
 	}
 

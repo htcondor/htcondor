@@ -35,13 +35,6 @@ char *IntToString (int i);
 
 const int UTIL_MAX_LINE_LENGTH = 1024;
 
-/** Read a \n-terminated line from fp into line, replacing \n by \0. Do
-    not read more than maxc-1 characters. Do not write leading
-    whitespace into the line buffer. Return the number of characters
-    read (excluding \n). Returns -1 on EOF.
-*/ 
-int util_getline (FILE *fp, char *line, int max);
-
 /** Execute a command, printing verbose messages and failure warnings.
     @param cmd The command or script to execute
     @return The return status of the command

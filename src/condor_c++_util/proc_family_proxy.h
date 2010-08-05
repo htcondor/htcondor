@@ -79,7 +79,7 @@ public:
 	// subfamilies of that family)
 	//
 	bool kill_family(pid_t);
-
+	
 	// tell the procd we don't care about this family any
 	// more
 	//

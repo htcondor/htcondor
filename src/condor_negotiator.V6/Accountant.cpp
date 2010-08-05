@@ -69,6 +69,13 @@ Accountant::Accountant():
   AcctLog=NULL;
   DiscountSuspendedResources = false;
   GroupNamesList = NULL;
+  UseSlotWeights = false;
+  DefaultPriorityFactor = 1.0f;
+  HalfLifePeriod = 1.0f;
+  LastUpdateTime = 0;
+  MaxAcctLogSize = 1000000;
+  NiceUserPriorityFactor = 100000;
+  RemoteUserPriorityFactor = 10000;
 }
 
 //------------------------------------------------------------------
@@ -1125,7 +1132,7 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
        return 0;
     }
-    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+    if (!strcasecmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
        dprintf(D_ACCOUNTANT, "Machine is claimed but suspended\n");
        return 0;
     }
@@ -1187,7 +1194,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
         dprintf(D_ALWAYS, "Could not lookup remote activity\n");
         return 0;
     }
-    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+    if (!strcasecmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
        dprintf(D_ACCOUNTANT, "Machine claimed by %s but suspended\n", 
        RemoteUser);
        return 0;

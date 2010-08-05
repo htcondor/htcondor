@@ -178,6 +178,8 @@ class Authentication {
 
 extern char const *UNMAPPED_DOMAIN;
 extern char const *MATCHSESSION_DOMAIN;
+extern char const *UNAUTHENTICATED_FQU;
+extern char const *UNAUTHENTICATED_USER;
 
 /* This is the hard-coded name of the startd (and starter) as seen by
    the schedd and shadow when using non-negotiated security sessions

@@ -31,8 +31,8 @@ enum exit_value {
 	EXIT_RESTART = 3,	// exit but indicate that we should be restarted
 };
 
-int main_shutdown_rescue( int exitVal );
-int main_shutdown_graceful( void );
+void main_shutdown_rescue( int exitVal );
+void main_shutdown_graceful( void );
 void print_status();
 
 class Dagman {
@@ -177,6 +177,16 @@ class Dagman {
 		// The default log file for node jobs that don't specify a
 		// log file.
 	char * _defaultNodeLog;
+
+		// Whether to generate the .condor.sub files for sub-DAGs
+		// at run time (just before the node is submitted).
+	bool _generateSubdagSubmits;
+
+		// This object must remain in existance the whole time the DAG
+		// is running, since we're just passing the pointer to the
+		// DAG object, and we're not actually copying the SubmitDagOptions
+		// object.
+	SubmitDagDeepOptions _submitDagDeepOpts;
 
     bool Config();
 };

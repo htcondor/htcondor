@@ -31,6 +31,7 @@
 #include "dynuser.h"
 #include "condor_config.h"
 #include "domain_tools.h"
+#include "classad_helpers.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -38,6 +39,13 @@ extern dynuser* myDynuser;
 #endif
 
 extern CStarter *Starter;
+
+VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd)
+{
+#if !defined(WIN32)
+	m_escalation_tid = -1;
+#endif
+}
 
 int
 VanillaProc::StartJob()
@@ -231,7 +239,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	ad->InsertOrUpdate( buf );
 	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage->user_cpu_time );
 	ad->InsertOrUpdate( buf );
+
 	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage->max_image_size );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
 	ad->InsertOrUpdate( buf );
 
 		// Update our knowledge of how many processes the job has
@@ -246,6 +257,10 @@ bool
 VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::JobReaper()\n");
+
+#if !defined(WIN32)
+	cancelEscalationTimer();
+#endif
 
 	if (pid == JobPid) {
 			// Make sure that nothing was left behind.
@@ -346,6 +361,36 @@ VanillaProc::ShutdownFast()
 	// step is to hard kill it.
 	requested_exit = true;
 
+#if !defined(WIN32)
+	int kill_sig = -1;
+
+	// Determine if a custom kill signal is provided in the job
+	kill_sig = findRmKillSig( JobAd );
+	if ( kill_sig == -1 )
+	{
+		kill_sig = findSoftKillSig( JobAd );
+	}
+
+	// If a custom kill signal was given, send that signal to the
+	// job
+	if ( kill_sig != -1 ) {
+		if ( daemonCore->Signal_Process( JobPid, kill_sig ) == FALSE ) {
+			dprintf(D_ALWAYS,
+				"Error: Failed to send signal %d to "
+				"job with pid %u\n", kill_sig, JobPid);
+		}
+		else {
+			startEscalationTimer();
+			return false;
+		}
+	}
+#endif
+	return finishShutdownFast();
+}
+
+bool
+VanillaProc::finishShutdownFast()
+{
 	// this used to be the only place where we would clean up the process
 	// family. this, however, wouldn't properly clean up local universe jobs
 	// so a call to Kill_Family has been added to JobReaper(). i'm not sure
@@ -356,3 +401,61 @@ VanillaProc::ShutdownFast()
 
 	return false;	// shutdown is pending, so return false
 }
+
+#if !defined(WIN32)
+bool
+VanillaProc::startEscalationTimer()
+{
+	int job_kill_time = 0;
+	int killing_timeout = param_integer( "KILLING_TIMEOUT", 30 );
+	int escalation_delay;
+
+	if ( m_escalation_tid >= 0 ) {
+		return true;
+	}
+
+	if ( !JobAd->LookupInteger(ATTR_KILL_SIG_TIMEOUT, job_kill_time) ) {
+		job_kill_time = killing_timeout;
+	}
+
+	escalation_delay = std::max(std::min(killing_timeout-1, job_kill_time), 0);
+
+	dprintf(D_FULLDEBUG, "Using escalation delay %d for Escalation Timer\n", escalation_delay);
+	m_escalation_tid = daemonCore->Register_Timer(escalation_delay,
+						escalation_delay,
+						(TimerHandlercpp)&VanillaProc::EscalateSignal,
+						"EscalateSignal", this);
+
+	if ( m_escalation_tid < 0 ) {
+		dprintf(D_ALWAYS, "Error: Unable to register signal esclation timer.  timeout attmepted: %d\n", escalation_delay);
+	}
+	return true;
+}
+
+void
+VanillaProc::cancelEscalationTimer()
+{
+	int rval;
+	if ( m_escalation_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer( m_escalation_tid );
+		if ( rval < 0 ) {
+			dprintf(D_ALWAYS, "Failed to cancel signal escalation "
+					"timer (%d): daemonCore error\n", m_escalation_tid);
+		}
+		else {
+			dprintf(D_FULLDEBUG, "Cancel signal escalation timer (%d)\n", m_escalation_tid);
+		}
+		m_escalation_tid = -1;
+	}
+}
+
+bool
+VanillaProc::EscalateSignal()
+{
+	dprintf(D_FULLDEBUG, "Esclation Timer fired.  Killing job\n");
+	cancelEscalationTimer();
+	finishShutdownFast();
+
+	return true;
+}
+#endif

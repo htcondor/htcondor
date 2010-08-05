@@ -555,9 +555,17 @@ is_ckpt_file(const char path[])
 	char *test_path;
 
 	test_path = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
-	if (strcmp(path, test_path) == 0) return true;
+	if (strcmp(path, test_path) == 0) {
+		free(test_path); test_path = NULL;
+		return true;
+	}
 	strcat(test_path, ".tmp");
-	if (strcmp(path, test_path) == 0) return true;
+	if (strcmp(path, test_path) == 0) {
+		free(test_path); test_path = NULL;
+		return true;
+	}
+
+	free(test_path); test_path = NULL;
 	return false;
 }
 
@@ -572,7 +580,12 @@ is_ickpt_file(const char path[])
 	char *test_path;
 
 	test_path = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
-	if (strcmp(path, test_path) == 0) return true;
+	if (strcmp(path, test_path) == 0) {
+		free(test_path); test_path = NULL;
+		return true;
+	}
+
+	free(test_path); test_path = NULL;
 	return false;
 }
 

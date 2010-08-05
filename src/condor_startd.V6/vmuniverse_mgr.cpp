@@ -105,8 +105,10 @@ VMStarterInfo::getUsageOfVM(ProcFamilyUsage &usage)
 
 	if( updated ) {
 		usage.total_image_size = m_vm_alive_pinfo.imgsize;
+		usage.total_resident_set_size = m_vm_alive_pinfo.rssize;
 	}else {
 		usage.total_image_size = 0;
+        usage.total_resident_set_size = 0;
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
@@ -314,10 +316,10 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 	const char *attr_name = NULL;
 	while(m_vmgahp_info.NextExpr(attr_name, expr)) {
 		// we need to adjust available vm memory
-		if( stricmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
+		if( strcasecmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
 			int freemem = getFreeVMMemSize();
 			ad->Assign(ATTR_VM_MEMORY, freemem);
-		}else if( stricmp(attr_name, ATTR_VM_NETWORKING) == MATCH ) {
+		}else if( strcasecmp(attr_name, ATTR_VM_NETWORKING) == MATCH ) {
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
 			ad->Insert(attr_name, expr->Copy());
@@ -961,6 +963,7 @@ VMUniverseMgr::getUsageForVM(pid_t s_pid, ProcFamilyUsage &usage)
 		usage.max_image_size = vm_usage.max_image_size;
 	}
 	usage.total_image_size += vm_usage.total_image_size;
+	usage.total_resident_set_size += vm_usage.total_resident_set_size;
 	return true;
 }
 

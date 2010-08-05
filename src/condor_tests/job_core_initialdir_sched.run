@@ -19,13 +19,14 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_core_initialdir_sched.cmd';
 $testdesc =  'condor_submit initialdir works - scheduler U';
 $testname = "job_core_initialdir_sched";
 
 
-system("mkdir -p initd_sched");
+runcmd("mkdir -p initd_sched");
 
 #CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
 
@@ -49,7 +50,7 @@ $ExitSuccess = sub
 	}
 	# clean up
 	CondorTest::debug("Expected logfile found<$goal>\n",1);
-	system("rm -rf initd_sched");
+	runcmd("rm -rf initd_sched");
 };
 
 

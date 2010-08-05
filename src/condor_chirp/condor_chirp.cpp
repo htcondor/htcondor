@@ -41,8 +41,12 @@ chirp_client_connect_starter()
 	MyString path;
     int port;
     int result;
+	char *dir;
 
-	path.sprintf( "%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
+	if (NULL == (dir = getenv("_CONDOR_SCRATCH_DIR"))) {
+		dir = ".";
+	}
+	path.sprintf( "%s%c%s",dir,DIR_DELIM_CHAR,"chirp.config");
     file = safe_fopen_wrapper(path.Value(),"r");
     if(!file) { 
 		fprintf(stderr, "Can't open %s file\n",path.Value());
@@ -303,8 +307,8 @@ int chirp_get_job_attr(int argc, char **argv) {
 	}
 
 	char *p = 0;
-    	chirp_client_get_job_attr(client, argv[2], &p);
-	printf("%s\n", p);
+	int len = chirp_client_get_job_attr(client, argv[2], &p);
+	printf("%.*s\n", len, p);
 	return 0;
 }
 

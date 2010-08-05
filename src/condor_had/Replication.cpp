@@ -31,7 +31,7 @@ DECL_SUBSYSTEM( "Replication", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
 // replication daemon single object
 ReplicatorStateMachine* stateMachine = NULL;
 
-int
+void
 main_init( int , char *[] )
 {
     dprintf(D_ALWAYS, "main_init replication daemon started\n");
@@ -42,44 +42,34 @@ main_init( int , char *[] )
     try {
         stateMachine = new ReplicatorStateMachine( );
         stateMachine->initialize( );
-
-        return TRUE;
     }
     catch(char* exceptionString) {
         dprintf( D_FAILURE, "main_init exception thrown %s\n",
                    exceptionString );
-
-        return FALSE;
     }
 }
 
-int
+void
 main_shutdown_graceful( )
 {
     dprintf( D_ALWAYS, "main_shutdown_graceful started\n" );
 
     delete stateMachine;
     DC_Exit( 0 );
-
-    return 0;
 }
 
-int
+void
 main_shutdown_fast( )
 {
     delete stateMachine;
     DC_Exit( 0 );
-
-    return 0;
 }
 
-int
-main_config( bool isFull )
+void
+main_config()
 {
     // NOTE: restart functionality instead of reconfig
 	stateMachine->reinitialize( );
-    
-    return 0;
 }
 
 void

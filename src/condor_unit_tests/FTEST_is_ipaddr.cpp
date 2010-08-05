@@ -37,10 +37,10 @@ static bool test_only_wildcard(void);
 static bool test_start_wildcard(void);
 
 bool FTEST_is_ipaddr(void) {
-		// beginning junk for getPortFromAddr()
-	e.emit_function("int is_ipaddr(char* addr)");
-	e.emit_comment("Determines if a function is an ip address (with wildcards allowed).");
-	e.emit_problem("None");
+		// beginning junk for getPortFromAddr(() {
+	emit_function("int is_ipaddr(char* addr)");
+	emit_comment("Determines if a function is an ip address (with wildcards allowed).");
+	emit_problem("None");
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
@@ -52,125 +52,111 @@ bool FTEST_is_ipaddr(void) {
 	driver.register_function(test_start_wildcard);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_normal_case() {
-	e.emit_test("Is normal input identified correctly?");
+	emit_test("Is normal input identified correctly?");
 	char* input = strdup( "66.184.142.51" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	struct in_addr ip;
 	unsigned char* byte = (unsigned char*) &ip;
 	int result = is_ipaddr( input, &ip );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_param("IP", "%d.%d.%d.%d", 66, 184, 142, 51);
-	e.emit_retval("%s", tfstr(TRUE));
-	e.emit_output_actual_header();
-	e.emit_param("IP", "%d.%d.%d.%d", *byte, *(byte+1), *(byte+2), *(byte+3));
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_param("IP", "%d.%d.%d.%d", 66, 184, 142, 51);
+	emit_retval("%s", tfstr(TRUE));
+	emit_output_actual_header();
+	emit_param("IP", "%d.%d.%d.%d", *byte, *(byte+1), *(byte+2), *(byte+3));
+	emit_retval("%s", tfstr(result));
 	if(result != TRUE || *byte != 66 || *(byte+1) != 184 || *(byte+2) != 142 || *(byte+3) != 51) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_one_octet_wildcard() {
-	e.emit_test("Is it identified as an IP address with one octet and a wildcard?");
+	emit_test("Is it identified as an IP address with one octet and a wildcard?");
 	char* input = strdup( "66.*" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	int result = is_ipaddr( input, NULL );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(TRUE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(TRUE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_upper_bound() {
-	e.emit_test("Does it work with one octet >255?");
+	emit_test("Does it work with one octet >255?");
 	char* input = strdup( "3.14.159.265" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	int result = is_ipaddr( input, NULL );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(FALSE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_lower_bound() {
-	e.emit_test("Does it work with one octet <0?");
+	emit_test("Does it work with one octet <0?");
 	char* input = strdup( "-2.71.82.81" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	int result = is_ipaddr( input, NULL );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(FALSE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_only_wildcard() {
-	e.emit_test("Does it work with nothing but a single wildcard?"); 
+	emit_test("Does it work with nothing but a single wildcard?"); 
 	char* input = strdup( "*" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	int result = is_ipaddr( input, NULL );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(TRUE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(TRUE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != TRUE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_start_wildcard() {
-	e.emit_test("Does it fail correctly with a wildcard and then some octets?");
+	emit_test("Does it fail correctly with a wildcard and then some octets?");
 	char* input = strdup( "*.0.42.1" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	int result = is_ipaddr( input, NULL );
 	free( input );
-	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
-	e.emit_output_actual_header();
-	e.emit_retval("%s", tfstr(result));
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(FALSE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
 	if(result != FALSE) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

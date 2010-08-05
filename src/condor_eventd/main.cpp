@@ -29,32 +29,28 @@
 
 DECL_SUBSYSTEM( "EVENTD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
-int
+void
 main_init(int, char *[])
 {
 	EventD->Config();
-	return TRUE;
 }
 
-int
-main_config( bool is_full )
+void
+main_config()
 {
 	EventD->Config();
-	return TRUE;
 }
 
-int
+void
 main_shutdown_fast()
 {
 	DC_Exit(0);
-	return TRUE;
 }
 
-int
+void
 main_shutdown_graceful()
 {
 	DC_Exit(0);
-	return TRUE;
 }
 
 

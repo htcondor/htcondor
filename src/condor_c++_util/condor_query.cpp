@@ -282,6 +282,9 @@ CondorQuery::
 CondorQuery (const CondorQuery & /* from */)
 {
 		// Unimplemented!
+		genericQueryType = 0;
+		command = 0;
+		queryType = NO_AD;
 }
 
 
@@ -610,9 +613,11 @@ getQueryAd (ClassAd &queryAd)
 
 	  case GENERIC_AD:
 		queryAd.SetTargetTypeName (GENERIC_ADTYPE);
+		break;
 
 	  case ANY_AD:
 		queryAd.SetTargetTypeName (genericQueryType);
+		break;
 
 	  default:
 		return Q_INVALID_QUERY;

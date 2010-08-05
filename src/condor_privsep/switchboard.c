@@ -180,7 +180,7 @@ static void validate_exec_params(exec_params *c)
     }
 
     if (!c->exec_init_dir) {
-        fatal_error_exit(1, "exec-init_dir not set");
+        fatal_error_exit(1, "exec-init-dir not set");
     }
 }
 

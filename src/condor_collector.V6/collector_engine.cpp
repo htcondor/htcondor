@@ -180,7 +180,7 @@ scheduleHousekeeper (int timeout)
 
 
 int CollectorEngine::
-invokeHousekeeper (AdTypes adtype)
+invokeHousekeeper (AdTypes adType)
 {
 	time_t now;
 
@@ -188,87 +188,63 @@ invokeHousekeeper (AdTypes adtype)
 	if (now == (time_t) -1)
 	{
 		dprintf (D_ALWAYS, "Error in reading system time --- aborting\n");
-		return FALSE;
+		return 0;
 	}
 
-	switch (adtype)
-	{
-		case STARTD_AD:
-			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
-			break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-		case QUILL_AD:
-			cleanHashTable (QuillAds, now, makeQuillAdHashKey);
-			break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
-		case SCHEDD_AD:
-			cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
-			break;
-
-		case MASTER_AD:
-			cleanHashTable (MasterAds, now, makeMasterAdHashKey);
-			break;
-
-		case STARTD_PVT_AD:
-			cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
-			break;
-
-		case SUBMITTOR_AD:
-			cleanHashTable (SubmittorAds, now, makeScheddAdHashKey);
-			break;
-
-		case LICENSE_AD:
-			cleanHashTable (LicenseAds, now, makeLicenseAdHashKey);
-			break;
-
-		case STORAGE_AD:
-			cleanHashTable (StorageAds, now, makeStorageAdHashKey);
-			break;
-
-		case NEGOTIATOR_AD:
-			cleanHashTable (NegotiatorAds, now, makeStorageAdHashKey);
-			break;
-
-		case HAD_AD:
-			cleanHashTable (HadAds, now, makeHadAdHashKey);
-			break;
-            
-		case GRID_AD:
-			cleanHashTable (GridAds, now, makeGridAdHashKey);
-			break;
-
-		case GENERIC_AD:
-			CollectorHashTable *cht;
+	CollectorHashTable *table=0;
+	CollectorEngine::HashFunc func;
+	if (LookupByAdType(adType, table, func)) {
+		cleanHashTable(*table, now, func);
+	} else {
+		if (GENERIC_AD == adType) {
+			CollectorHashTable *cht=0;
 			GenericAds.startIterations();
 			while (GenericAds.iterate(cht)) {
 				cleanHashTable (*cht, now, makeGenericAdHashKey);
 			}
-			break;
-
-		case XFER_SERVICE_AD:
-			cleanHashTable (XferServiceAds, now, makeXferServiceAdHashKey);
-			break;
-
-		case LEASE_MANAGER_AD:
-			cleanHashTable (LeaseManagerAds, now, makeLeaseManagerAdHashKey);
-			break;
-
-		default:
+		} else {
 			return 0;
+		}
 	}
 
 	return 1;
 }
 
-
-void CollectorEngine::
-toggleLogging (void)
+int
+CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 {
-	log = !log;
-}
+	CollectorHashTable *table=0;
+	CollectorEngine::HashFunc func;
+	if (!LookupByAdType(adType, table, func)) {
+		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
+		return 0;
+	}
 
+	int count = 0;
+	ClassAd  *ad;
+	AdNameHashKey  hk;
+	MyString hkString;
+	(*table).startIterations();
+	while ((*table).iterate (ad)) {
+		if (IsAHalfMatch(&query, ad)) {
+			(*table).getCurrentKey(hk);
+			hk.sprint(hkString);
+			if ((*table).remove(hk) == -1) {
+				dprintf(D_ALWAYS,
+						"\t\tError while removing ad: \"%s\"\n",
+						hkString.Value());
+			} else {
+				dprintf(D_ALWAYS,
+						"\t\t**** Invalidating ad: \"%s\"\n",
+						hkString.Value());
+				delete ad;
+				count++;
+			}
+		}
+	}
+
+	return count;
+}
 
 int (*CollectorEngine::genericTableScanFunction)(ClassAd *) = NULL;
 
@@ -292,79 +268,11 @@ walkGenericTables(int (*scanFunction)(ClassAd *))
 int CollectorEngine::
 walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 {
-	CollectorHashTable *table;
-	int retval = 1;
+	//int retval = 1;
 
-	ClassAd *ad;
-
-	switch (adType)
-	{
-	  case STARTD_AD:
-		table = &StartdAds;
-		break;
-
-	  case SCHEDD_AD:
-		table = &ScheddAds;
-		break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUILL_AD:
-		table = &QuillAds;
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
-	  case MASTER_AD:
-		table = &MasterAds;
-		break;
-
-	  case CKPT_SRVR_AD:
-		table = &CkptServerAds;
-		break;
-
-	  case STARTD_PVT_AD:
-		table = &StartdPrivateAds;	
-		break;
-
-	  case SUBMITTOR_AD:
-		table = &SubmittorAds;
-		break;
-
-	  case LICENSE_AD:
-		table = &LicenseAds;
-		break;
-
-	  case COLLECTOR_AD:
-		table = &CollectorAds;
-		break;
-
-	  case STORAGE_AD:
-		table = &StorageAds;
-		break;
-
-	  case NEGOTIATOR_AD:
-		table = &NegotiatorAds;
-		break;
-
-	  case HAD_AD:
-		table = &HadAds;
-		break;
-
-      case GRID_AD:
-        table = &GridAds;
-		break;
-
-	  case XFER_SERVICE_AD:
-		table = &XferServiceAds;
-		break;
-
-	  case LEASE_MANAGER_AD:
-		table = &LeaseManagerAds;
-		break;
-
-	  case GENERIC_AD:
+	if (GENERIC_AD == adType) {
 		return walkGenericTables(scanFunction);
-
-	  case ANY_AD:
+	} else if (ANY_AD == adType) {
 		return
 			StorageAds.walk(scanFunction) &&
 			CkptServerAds.walk(scanFunction) &&
@@ -382,21 +290,25 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			GridAds.walk(scanFunction) &&
 			XferServiceAds.walk(scanFunction) &&
 			LeaseManagerAds.walk(scanFunction) &&
-
 			walkGenericTables(scanFunction);
-	  default:
+	}
+
+	CollectorHashTable *table;
+	CollectorEngine::HashFunc func;
+	if (!LookupByAdType(adType, table, func)) {
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
 	}
 
 	// walk the hash table
-	table->startIterations ();
-	while (table->iterate (ad))
+	ClassAd *ad;
+	(*table).startIterations ();
+	while ((*table).iterate (ad))
 	{
 		// call scan function for each ad
 		if (!scanFunction (ad))
 		{
-			retval = 0;
+			//retval = 0;
 			break;
 		}
 	}
@@ -406,7 +318,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 
 CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 {
-	CollectorHashTable *table;
+	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {
 		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
 		table = new CollectorHashTable(LESSER_TABLE_SIZE , &adNameHashFunction);
@@ -967,148 +879,52 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 {
 	ClassAd *val;
 
-	switch (adType)
-	{
-		case STARTD_AD:
-			if (StartdAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-		case QUILL_AD:
-			if (QuillAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
-		case SCHEDD_AD:
-			if (ScheddAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case SUBMITTOR_AD:
-			if (SubmittorAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case LICENSE_AD:
-			if (LicenseAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case MASTER_AD:
-			if (MasterAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case CKPT_SRVR_AD:
-			if (CkptServerAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case COLLECTOR_AD:
-			if (CollectorAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case STARTD_PVT_AD:
-			if (StartdPrivateAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case STORAGE_AD:
-			if (StorageAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case NEGOTIATOR_AD:
-			if (NegotiatorAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case HAD_AD:
-			if (HadAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-        case GRID_AD:
-            if (GridAds.lookup (hk, val) == -1)
-                return 0;
-			break;
-
-		case XFER_SERVICE_AD:
-			if (XferServiceAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		case LEASE_MANAGER_AD:
-			if (LeaseManagerAds.lookup (hk, val) == -1)
-				return 0;
-			break;
-
-		default:
-			val = 0;
+	CollectorHashTable *table;
+	CollectorEngine::HashFunc func;
+	if (!LookupByAdType(adType, table, func)) {
+		return 0;
+	}
+	if (table->lookup(hk, val) == -1) {
+		return 0;
 	}
 
 	return val;
 }
 
+int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
+{
+	int iRet = 0;
+	AdNameHashKey hk;
+	CollectorHashTable * table;  
+	HashFunc makeKey;
+	MyString hkString;
+
+	// making it generic so any would be invalid query can contain these params.
+	if ( LookupByAdType (t_AddType, table, makeKey) )
+	{
+		ClassAd * pAd=0;
+		// try to create a hk from the query ad if it is possible.
+		if ( (*makeKey) (hk, (ClassAd*) &c_query, NULL) && table->lookup(hk, pAd) != -1 )
+		{
+			hk.sprint( hkString );
+			iRet = !table->remove(hk);
+			dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.Value() );
+			delete pAd;
+		}
+	}
+
+	return ( iRet );
+}
 
 int CollectorEngine::
 remove (AdTypes adType, AdNameHashKey &hk)
 {
-	switch (adType)
-	{
-		case STARTD_AD:
-			return !StartdAds.remove (hk);
-
-#ifdef HAVE_EXT_POSTGRESQL
-		case QUILL_AD:
-			return !QuillAds.remove (hk);
-#endif /* HAVE_EXT_POSTGRESQL */
-
-		case SCHEDD_AD:
-			return !ScheddAds.remove (hk);
-
-		case SUBMITTOR_AD:
-			return !SubmittorAds.remove (hk);
-
-		case LICENSE_AD:
-			return !LicenseAds.remove (hk);
-
-		case MASTER_AD:
-			return !MasterAds.remove (hk);
-
-		case CKPT_SRVR_AD:
-			return !CkptServerAds.remove (hk);
-
-		case STARTD_PVT_AD:
-			return !StartdPrivateAds.remove (hk);
-
-		case COLLECTOR_AD:
-			return !CollectorAds.remove (hk);
-
-		case STORAGE_AD:
-			return !StorageAds.remove (hk);
-
-		case NEGOTIATOR_AD:
-			return !NegotiatorAds.remove (hk);
-
-		case HAD_AD:
-			return !HadAds.remove (hk);
-
-        case GRID_AD:
-			return !GridAds.remove (hk);
-
-		case XFER_SERVICE_AD:
-			return !XferServiceAds.remove (hk);
-
-		case LEASE_MANAGER_AD:
-			return !LeaseManagerAds.remove (hk);
-
-		default:
-			return 0;
+	CollectorHashTable *table;
+	CollectorEngine::HashFunc func;
+	if (!LookupByAdType(adType, table, func)) {
+		return 0;
 	}
+	return !table->remove(hk);
 }
 	
 				
@@ -1217,53 +1033,6 @@ mergeClassAd (CollectorHashTable &hashTable,
 	return old_ad;
 }
 
-#if 0
-void
-CollectorEngine::updateAd ( ClassAd *ad ) {
-
-
-
-    updateClassAd ( StartdAds)
-
-    const char      *label = "Start";
-    AdNameHashKey   hashKey;
-    MyString	    key;
-    ClassAd		    *old_ad;
-    time_t		    now;
-
-    /* get the current time */
-    time ( &now );
-
-    if ( (time_t) -1 == now ) {
-        EXCEPT ("Error reading system time!");
-    }
-
-    buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int) now );
-	ad->Insert ( buf.Value () );
-
-    /* update statistics */
-    collectorStats->update ( label, NULL, ad );
-
-    /* make a hash key for the ad */
-    if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
-
-        dprintf (
-            D_FULLDEBUG,
-            "OfflineCollectorPlugin::update: "
-            "failed to hash class ad. Ignoring.\n" );
-
-        return;
-
-    }
-
-    /* store it the ad */
-    hashKey.sprint ( key );
-    if ( -1 == StartdAds.insert ( key, ad ) ) {
-        EXCEPT ( "Error inserting ad (out of memory)" );
-	}
-
-}
-#endif
 
 void
 CollectorEngine::
@@ -1342,8 +1111,7 @@ housekeeper()
 }
 
 void CollectorEngine::
-cleanHashTable (CollectorHashTable &hashTable, time_t now,
-				bool (*makeKey) (AdNameHashKey &, ClassAd *, sockaddr_in *) )
+cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey)
 {
 	ClassAd  *ad;
 	int   	 timeStamp;
@@ -1382,6 +1150,83 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 			delete ad;
 		}
 	}
+}
+
+
+bool
+CollectorEngine::LookupByAdType(AdTypes adType,
+								CollectorHashTable *&table,
+								CollectorEngine::HashFunc &func)
+{
+	switch (adType)
+	{
+		case STARTD_AD:
+			table = &StartdAds;
+			func = makeStartdAdHashKey;
+			break;
+#ifdef WANT_QUILL
+		case QUILL_AD:
+			table = &QuillAds;
+			func = makeQuillAdHashKey;
+			break;
+#endif /* WANT_QUILL */
+		case SCHEDD_AD:
+			table = &ScheddAds;
+			func = makeScheddAdHashKey;
+			break;
+		case SUBMITTOR_AD:
+			table = &SubmittorAds;
+			func = makeScheddAdHashKey;
+			break;
+		case LICENSE_AD:
+			table = &LicenseAds;
+			func = makeLicenseAdHashKey;
+			break;
+		case MASTER_AD:
+			table = &MasterAds;
+			func = makeMasterAdHashKey;
+			break;
+		case CKPT_SRVR_AD:
+			table = &CkptServerAds;
+			func = makeCkptSrvrAdHashKey;
+			break;
+		case STARTD_PVT_AD:
+			table = &StartdPrivateAds;
+			func = makeStartdAdHashKey;
+			break;
+		case COLLECTOR_AD:
+			table = &CollectorAds;
+			func = makeCollectorAdHashKey;
+			break;
+		case STORAGE_AD:
+			table = &StorageAds;
+			func = makeStorageAdHashKey;
+			break;
+		case NEGOTIATOR_AD:
+			table = &NegotiatorAds;
+			func = makeStorageAdHashKey; // XXX
+			break;
+		case HAD_AD:
+			table = &HadAds;
+			func = makeHadAdHashKey;
+			break;
+        case GRID_AD:
+			table = &GridAds;
+			func = makeGridAdHashKey;
+			break;
+		case XFER_SERVICE_AD:
+			table = &XferServiceAds;
+			func = makeXferServiceAdHashKey;
+			break;
+		case LEASE_MANAGER_AD:
+			table = &LeaseManagerAds;
+			func = makeLeaseManagerAdHashKey;
+			break;
+		default:
+			return false;
+	}
+
+	return true;
 }
 
 

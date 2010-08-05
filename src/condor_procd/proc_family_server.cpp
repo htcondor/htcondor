@@ -421,7 +421,7 @@ ProcFamilyServer::wait_loop()
 				dprintf(D_ALWAYS, "PROC_FAMILY_KILL_FAMILY\n");
 				kill_family();
 				break;
-
+				
 			case PROC_FAMILY_GET_USAGE:
 				dprintf(D_ALWAYS, "PROC_FAMILY_GET_USAGE\n");
 				get_usage();

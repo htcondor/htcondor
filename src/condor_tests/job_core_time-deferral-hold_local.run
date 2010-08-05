@@ -18,6 +18,7 @@
 ##
 ##**************************************************************
 
+use CondorUtils;
 use CondorTest;
 use Cwd;
 
@@ -73,21 +74,22 @@ my $result = system("./job_core_time-deferral-hold.pl local");
 CondorTest::debug("Result of job_core_time-deferral-hold.pl local test  job is  $result\n",1);
 
 
-system("cp *job_core_time-deferral-hold_local* $mysaveme");
+#fails due to own name being included in pattern
+runcmd("cp *job_core_time-deferral-hold_local* $mysaveme", {expect_result=>\&ANY});
 
 if( -e "$mysubmitnm" )
 {
-	system("cp $mysubmitnm $mycorenm");
+	runcmd("cp $mysubmitnm $mycorenm");
 }
 
 if( -e "$mysubmitnmout" )
 {
-	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
 }
 
 if( -e "$mysubmitnmlog" )
 {
-	system("cp $mysubmitnmlog $mycorenmlog");
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
 CondorTest::KillPersonal($timedeferlocconfig);

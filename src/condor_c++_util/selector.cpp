@@ -105,6 +105,8 @@ Selector::reset()
 	_select_errno = 0;
 	state = VIRGIN;
 	timeout_wanted = FALSE;
+	timeout.tv_sec = timeout.tv_usec = 0;
+
 	max_fd = -1;
 #if defined(WIN32)
 	FD_ZERO( save_read_fds );
@@ -157,7 +159,7 @@ describe_fd(int fd) {
 #define PROC_BUFSIZE 32
 #define LINK_BUFSIZE 256
   char proc_buf[PROC_BUFSIZE];
-  char link_buf[LINK_BUFSIZE];
+  char link_buf[LINK_BUFSIZE + 1];
   ssize_t end;
   
   memset(link_buf, '\0', LINK_BUFSIZE);

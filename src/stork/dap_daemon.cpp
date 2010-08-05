@@ -158,7 +158,7 @@ void parse_arguments(int argc, char **argv)
 /* ============================================================================
  * initializations for the reqex_daemon
  * ==========================================================================*/
-int main_init(int argc, char **argv)
+void main_init(int argc, char **argv)
 {
 	parse_arguments(argc, argv);
 
@@ -261,45 +261,38 @@ int main_init(int argc, char **argv)
 
 	if (!initializations()) {
 		DC_Exit (1);
-		return FALSE;
 	}
-
-	return TRUE;
 }
 
 /* ============================================================================
  * reconfigure reqex_daemon
  * ==========================================================================*/
-int main_config(bool v)
+void main_config()
 {
-	(void) v;
 	dprintf(D_ALWAYS,"RECONFIGURING ......\n");
 	read_config_file();
-	return TRUE;
 }
 
 /* ============================================================================
  * shutdown reqex_daemon fast
  * ==========================================================================*/
-int main_shutdown_fast(void)
+void main_shutdown_fast(void)
 {
 	dprintf(D_ALWAYS,"SHUTDOWN FAST ....\n");
 	terminate(TERMINATE_FAST);
   
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 /* ============================================================================
  * shutdown reqex_daemon gracefully
  * ==========================================================================*/
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS,"SHUTDOWN GRACEFULLY ....\n");
 	terminate(TERMINATE_GRACEFUL);
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 

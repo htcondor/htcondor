@@ -1,7 +1,0 @@
-ports = dynamic
-condor = nightlies
-condorconfig = condor_config
-condorlocal = condor_config.local
-localpostsrc = x_wrapped_test_locconfigpostsrc
-condordaemons = master,schedd,collector,negotiator,startd
-slots	= 2

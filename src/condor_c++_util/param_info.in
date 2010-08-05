@@ -738,38 +738,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_main
 id=4
 
-[XEN_VT_VIF]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Vt Vif
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=5
-
-[XEN_VIF_PARAMETER]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Vif Parameter
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=6
-
 [XEN_BRIDGE_SCRIPT]
 aliases=
 default=
@@ -785,22 +753,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=7
-
-[XEN_CONTROLLER]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Controller
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=8
 
 [XEN_BOOTLOADER]
 aliases=
@@ -834,38 +786,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=12
 
-[XEN_IMAGE_IO_TYPE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Image Io Type
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=13
-
-[XEN_DEVICE_TYPE_FOR_VT]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Device Type For Vt
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,xen_type
-id=14
-
 [XEN_SCRIPT]
 aliases=
 default=
@@ -881,22 +801,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=15
-
-[ALLOW_USERS]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Allow Users
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,vmgahp_config
-id=16
 
 [VM_TYPE]
 aliases=
@@ -3187,6 +3091,22 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=161
+
+[SOAP_SSL_SKIP_HOST_CHECK]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Soap Ssl Skip Host Check
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=daemon_core,daemon_core
+id=165
 
 [WEB_ROOT_DIR]
 aliases=
@@ -5700,22 +5620,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=324
 
-[PVMD]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Pvmd
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=325
-
 [DEFAULT_IO_BUFFER_SIZE]
 aliases=
 default=
@@ -5747,22 +5651,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=327
-
-[SubmitEventNotes]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Submiteventnotes
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=328
 
 [SCHEDD_INTERVAL]
 aliases=
@@ -6019,214 +5907,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=345
-
-[VM_NO_OUTPUT_VM]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vm No Output Vm
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=346
-
-[VM_CDROM_FILES]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vm Cdrom Files
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=347
-
-[VM_SHOULD_TRANSFER_CDROM_FILES]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vm Should Transfer Cdrom Files
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=348
-
-[XEN_TRANSFER_FILES]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Transfer Files
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=349
-
-[XEN_KERNEL]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Kernel
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=350
-
-[XEN_INITRD]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Initrd
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=351
-
-[XEN_ROOT]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Root
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=352
-
-[XEN_DISK]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Disk
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=353
-
-[XEN_KERNEL_PARAMS]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Kernel Params
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=354
-
-[XEN_CDROM_DEVICE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Xen Cdrom Device
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=355
-
-[VMWARE_SHOULD_TRANSFER_FILES]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vmware Should Transfer Files
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=356
-
-[VMWARE_SNAPSHOT_DISK]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vmware Snapshot Disk
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=357
-
-[VMWARE_DIR]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vmware Dir
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=358
 
 [MAX_XML_LOG]
 aliases=
@@ -8313,7 +7993,7 @@ id=487
 
 [JOB_ROUTER_NAME]
 aliases=
-default=
+default=jobrouter
 version=0.0.0
 range=.*
 state=default
@@ -8325,6 +8005,22 @@ friendly_name=Job Router Name
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,JobRouter
+id=488
+
+[JOB_ROUTER_LOCK]
+aliases=
+default=$(LOCK)/$(JOB_ROUTER_NAME)Lock
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Job Router Lock
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=JobRouter
 id=488
 
 [POLLING_PERIOD]
@@ -9271,6 +8967,38 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=549
 
+[COLLECTOR_LOG]
+aliases=
+default=$(LOG)/CollectorLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=collector,log
+id=550
+
+[KBDD_LOG]
+aliases=
+default=$(LOG)/KbdLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Kbd Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=kbdd,log
+id=550
+
 [MASTER_LOG]
 aliases=
 default=$(LOG)/MasterLog
@@ -9282,6 +9010,198 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Master Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=master,log
+id=550
+
+[NEGOTIATOR_LOG]
+aliases=
+default=$(LOG)/NegotiatorLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,log
+id=550
+
+[NEGOTIATOR_MATCH_LOG]
+aliases=
+default=$(LOG)/MatchLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Match Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,match,log
+id=550
+
+[SCHEDD_LOG]
+aliases=
+default=$(LOG)/SchedLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Sched Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=sched,log
+id=550
+
+[SHADOW_LOG]
+aliases=
+default=$(LOG)/ShadowLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shadow Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=shadow,log
+id=550
+
+[STARTD_LOG]
+aliases=
+default=$(LOG)/StartLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Start Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd,log
+id=550
+
+[JOB_ROUTER_LOG]
+aliases=
+default=$(LOG)/JobRouterLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Job Router Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=job,router,log
+id=550
+
+[ROOSTER_LOG]
+aliases=
+default=$(LOG)/RoosterLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster,log
+id=550
+
+[SHARED_PORT_LOG]
+aliases=
+default=$(LOG)/SharedPortLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shared Port Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=shared,port,log
+id=550
+
+[HAD_LOG]
+aliases=
+default=$(LOG)/HADLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=HAD Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=had,log
+id=550
+
+[REPLICATION_LOG]
+aliases=
+default=$(LOG)/ReplicationLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Replication Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=replication,log
+id=550
+
+[TRANSFERER_LOG]
+aliases=
+default=$(LOG)/TransfererLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Transferer Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=transferer,log
+id=550
+
+[HDFS_LOG]
+aliases=
+default=$(LOG)/HDFSLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=HDFS Log
 usage=Log files
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
@@ -9816,22 +9736,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=555
 
-[SHARED_PORT_LOG]
-aliases=
-default=$(LOG)/SharedPortLog
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Shared Port Log
-usage=Log files
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=shared_port
-id=550
-
 [CCB_HEARTBEAT_INTERVAL]
 aliases=
 default=1200
@@ -9847,3 +9751,179 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
 id=555
+
+[ROOSTER_INTERVAL]
+aliases=
+default=300
+version=7.4.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster interval
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=555
+
+[ROOSTER_UNHIBERNATE]
+aliases=
+default=Offline && Unhibernate
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster unhibernate
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=550
+
+[ROOSTER_WAKEUP_CMD]
+aliases=
+default="$(BIN)/condor_power -d -i"
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster wakeup command
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=550
+
+[ROOSTER_MAX_UNHIBERNATE]
+aliases=
+default=0
+version=7.5.3
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster max unhibernate per cycle
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=555
+
+[ROOSTER_UNHIBERNATE_RANK]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Rooster unhibernate rank
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=rooster
+id=550
+
+[MAX_PROCD_LOG]
+aliases=
+default=10000000
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Max Procd Log
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util,procd
+id=600
+
+[ENABLE_ADDRESS_REWRITING]
+aliases=
+default=true
+version=7.4.3
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable Address Rewriting
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util
+id=600
+
+[SHADOW_WORKLIFE]
+aliases=
+default=3600
+version=7.5.3
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shadow Worklife
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=shadow
+id=600
+
+[NEGOTIATION_CYCLE_STATS_LENGTH]
+aliases=
+default=3
+version=7.5.3
+range=0,100
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiation Cycle Stats Length
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator
+id=600
+
+[SYSTEM_JOB_MACHINE_ATTRS]
+aliases=
+default=Cpus,SlotWeight
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=System Job Machine Attrs
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=600
+
+[SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH]
+aliases=
+default=1
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=System Job Machine Attrs History Length
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=600

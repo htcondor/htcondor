@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef __SINK_H__
-#define __SINK_H__
+#ifndef __CLASSAD_SINK_H__
+#define __CLASSAD_SINK_H__
 
 #include "classad/common.h"
 #include "classad/exprTree.h"
@@ -133,4 +133,4 @@ class PrettyPrint : public ClassAdUnParser
 
 END_NAMESPACE // classad
 
-#endif//__DUMPER_H__
+#endif//__CLASSAD_SINK_H__

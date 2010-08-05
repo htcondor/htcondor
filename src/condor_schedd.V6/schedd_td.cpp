@@ -29,10 +29,7 @@
 #include "scheduler.h"
 #include "basename.h"
 #include "nullfile.h"
-
-extern "C" {
-	char* gen_ckpt_name(char*, int, int, int);
-}
+#include "condor_ckpt_name.h"
 
 /* In this service function, the client tells the schedd a bunch of jobs
 	it would like to perform a transfer for into/out of a sandbox. The
@@ -92,7 +89,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, "Authentication failed.");
 			respad.put(*rsock);
-			rsock->eom();
+			rsock->end_of_message();
 
 			return FALSE;
 		}
@@ -122,7 +119,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	//	ATTR_TREQ_CONSTRAINT
 	//	ATTR_TREQ_XFP
 	reqad.initFromStream(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	if (reqad.LookupBool(ATTR_TREQ_HAS_CONSTRAINT, has_constraint) == 0) {
 		dprintf(D_ALWAYS, "requestSandBoxLocation(): Client reqad from %s"
@@ -132,7 +129,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing constraint bool.");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		return FALSE;
 	}
@@ -168,7 +165,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing jobid list.");
 			respad.put(*rsock);
-			rsock->eom();
+			rsock->end_of_message();
 
 			return FALSE;
 		}
@@ -189,7 +186,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
 				"No constraint and no jobid list.");
 			respad.put(*rsock);
-			rsock->eom();
+			rsock->end_of_message();
 
 			return FALSE;
 		}
@@ -317,7 +314,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"No file transfer protocol specified.");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		return FALSE;
 	}
@@ -337,7 +334,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"No peer version specified.");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		return FALSE;
 	}
@@ -355,7 +352,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"No file transfer direction specified.");
 		respad.put(*rsock);
-		rsock->eom();
+		rsock->end_of_message();
 
 		return FALSE;
 	}
@@ -503,7 +500,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 				"getting sandbox info for user.\n", fquser.Value());
 			return FALSE;
 		}
-		rsock->eom();
+		rsock->end_of_message();
 
 		if (td == NULL) {
 			// Create a TransferDaemon object, and hand it to the td
@@ -561,7 +558,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			"getting sandbox info for user.\n", fquser.Value());
 		return FALSE;
 	}
-	rsock->eom();
+	rsock->end_of_message();
 
 	// queue the transfer request to the waiting td who will own the 
 	// transfer request memory which owns the socket.
@@ -713,7 +710,7 @@ Scheduler::treq_upload_post_push_callback(TransferRequest *treq,
 	dprintf(D_ALWAYS, "Scheduler::treq_post_push_callback() "
 		"Responding to client about sandbox request and closing connection.\n");
 	respad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	// close the connection to the client now that I've told it where it can
 	// put its files.
@@ -797,7 +794,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		jad = GetJobAd(cluster,proc);
 
 		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = strdup( gen_ckpt_name(mySpool,cluster,proc,0) );
+		SpoolSpace = gen_ckpt_name(mySpool,cluster,proc,0);
 		ASSERT(SpoolSpace);
 
 		BeginTransaction();
@@ -1047,7 +1044,7 @@ Scheduler::treq_download_post_push_callback(TransferRequest *treq,
 	dprintf(D_ALWAYS, "Scheduler::treq_download_post_push_callback() "
 		"Responding to client about sandbox request and closing connection.\n");
 	respad.put(*rsock);
-	rsock->eom();
+	rsock->end_of_message();
 
 	// close the connection to the client now that I've told it where it can
 	// get its files.
@@ -1276,7 +1273,7 @@ Scheduler::uploadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 	}	
 		
 		
-	rsock->eom();
+	rsock->end_of_message();
 
 	int answer;
 
@@ -1284,7 +1281,7 @@ Scheduler::uploadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 
 	answer = OK;
 	rsock->code(answer);
-	rsock->eom();
+	rsock->end_of_message();
 
 	s->timeout(old_timeout);
 
@@ -1360,7 +1357,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			continue;
 		}
 		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = strdup( gen_ckpt_name(Spool,cluster,proc,0) );
+		SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
 		ASSERT(SpoolSpace);
 
 		BeginTransaction();
@@ -1584,7 +1581,7 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 
 	unsetQSock();
 
-	rsock->eom();
+	rsock->end_of_message();
 
 		// DaemonCore will free the thread_arg for us when the thread
 		// exits, but we need to free anything pointed to by
@@ -1666,7 +1663,7 @@ Scheduler::downloadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 	dprintf(D_FULLDEBUG, "Scheduler::generalJobFilesWorkerThread: "
 		"TRANSFER_DATA/WITH_PERMS: %d jobs to be sent\n", JobAdsArrayLen);
 	rsock->encode();
-	if ( !rsock->code(JobAdsArrayLen) || !rsock->eom() ) {
+	if ( !rsock->code(JobAdsArrayLen) || !rsock->end_of_message() ) {
 		dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 				 "failed to send JobAdsArrayLen (%d) \n",
 				 JobAdsArrayLen );
@@ -1717,7 +1714,7 @@ Scheduler::downloadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 				"failed to send job ad for job %d.%d \n",
 				cluster,proc );
 		} else {
-			rsock->eom();
+			rsock->end_of_message();
 			// and then upload the files
 			result = ftrans.UploadFiles();
 		}
@@ -1733,14 +1730,14 @@ Scheduler::downloadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 	}	
 		
 		
-	rsock->eom();
+	rsock->end_of_message();
 
 	int answer;
 	rsock->decode();
 	answer = -1;
 
 	rsock->code(answer);
-	rsock->eom();
+	rsock->end_of_message();
 	s->timeout(old_timeout);
 
 	if ( peer_version ) {

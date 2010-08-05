@@ -295,26 +295,7 @@ CronTab::validateParameter( int attribute_idx, const char *parameter,
  **/
 void
 CronTab::init() {
-		//
-		// There should be only one Regex object shared for all instances
-		// of our object since the pattern that it needs to match is the same
-		// So we only need to compile the pattern once
-		//
-	if ( ! CronTab::regex.isInitialized() ) {
-		const char *errptr;
-		int erroffset;
-		MyString pattern( CRONTAB_PARAMETER_PATTERN ) ;
-			//
-			// It's a big problem if we can't compile the pattern, so
-			// we'll want to dump out right now
-			//
-		if ( ! CronTab::regex.compile( pattern, &errptr, &erroffset )) {
-			MyString error = "CronTab: Failed to compile Regex - ";
-			error += pattern;
-			EXCEPT( (char*)error.Value() );
-		}
-	}
-	
+	initRegexObject();
 		//
 		// Set the last runtime as empty
 		//
@@ -367,8 +348,34 @@ CronTab::init() {
 	}
 	
 	return;
-}  
+}
 
+/**
+ * Initializes CronTab::regex
+ **/  
+void
+CronTab::initRegexObject() {
+		//
+		// There should be only one Regex object shared for all instances
+		// of our object since the pattern that it needs to match is the same
+		// So we only need to compile the pattern once
+		//
+	if ( ! CronTab::regex.isInitialized() ) {
+		const char *errptr;
+		int erroffset;
+		MyString pattern( CRONTAB_PARAMETER_PATTERN ) ;
+			//
+			// It's a big problem if we can't compile the pattern, so
+			// we'll want to dump out right now
+			//
+		if ( ! CronTab::regex.compile( pattern, &errptr, &erroffset )) {
+			MyString error = "CronTab: Failed to compile Regex - ";
+			error += pattern;
+			EXCEPT( (char*)error.Value() );
+		}
+	}
+}
+	
 /**
  * Returns the next execution time for our cron schedule from
  * the current time. The times are the number of seconds
@@ -480,10 +487,8 @@ CronTab::nextRunTime( long timestamp ) {
 			// may be rounded up to the next minute
 			//
 		if ( runtime < timestamp ) {
-			dprintf( D_FULLDEBUG, "CronTab: Generated a runtime that is in "
-								  "the past (%d < %d)\n",
-								  (int)runtime, (int)timestamp );
-			runtime = CRONTAB_INVALID;
+			EXCEPT( "CronTab: Generated a runtime that is in the past (%d < %d)"
+				, (int)runtime, (int)timestamp );
 		}
 		
 		//
@@ -491,8 +496,8 @@ CronTab::nextRunTime( long timestamp ) {
 		// be able to find a match.
 		//
 	} else {
-		dprintf( D_FULLDEBUG, "CronTab: Failed to find a match for timestamp %d\n",
-							  (int)timestamp );
+		EXCEPT( "CronTab: Failed to find a match for timestamp %d", 
+			(int)timestamp );
 	}
 	
 	this->lastRunTime = runtime;
@@ -762,7 +767,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				// Now that we have the denominator, put the numerator back
 				// as the token. This makes it easier to parse later on
 				//
-			token = *new MyString( _numerator );
+			token = _numerator;
 		} // STEP
 		
 			// -------------------------------------------------

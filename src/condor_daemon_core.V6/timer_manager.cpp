@@ -131,7 +131,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, TimerHandler handler,
 	if ( event_descrip ) 
 		new_timer->event_descrip = strdup(event_descrip);
 	else
-		new_timer->event_descrip = EMPTY_DESCRIP;
+		new_timer->event_descrip = strdup("<NULL>");
 
 
 	new_timer->id = timer_ids++;		
@@ -154,7 +154,22 @@ int TimerManager::ResetTimerPeriod(int id,unsigned period)
 	return ResetTimer(id,0,period,true);
 }
 
-int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recompute_when)
+bool TimerManager::ResetTimerTimeslice(int id, Timeslice const &new_timeslice)
+{
+	return ResetTimer(id,0,0,false,&new_timeslice)==0;
+}
+
+bool TimerManager::GetTimerTimeslice(int id, Timeslice &timeslice)
+{
+	Timer *timer_ptr = GetTimer( id, NULL );
+	if( !timer_ptr || !timer_ptr->timeslice ) {
+		return false;
+	}
+	timeslice = *timer_ptr->timeslice;
+	return true;
+}
+
+int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recompute_when, Timeslice const *new_timeslice)
 {
 	Timer*			timer_ptr;
 	Timer*			trail_ptr;
@@ -176,7 +191,17 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recomp
 		dprintf( D_ALWAYS, "Timer %d not found\n",id );
 		return -1;
 	}
-	if ( timer_ptr->timeslice ) {
+	if ( new_timeslice ) {
+		if( timer_ptr->timeslice == NULL ) {
+			timer_ptr->timeslice = new Timeslice( *new_timeslice );
+		}
+		else {
+			*timer_ptr->timeslice = *new_timeslice;
+		}
+
+		timer_ptr->when = timer_ptr->timeslice->getNextStartTime();
+	}
+	else if ( timer_ptr->timeslice ) {
 		dprintf( D_DAEMONCORE, "Timer %d with timeslice can't be reset\n",
 				 id );
 		return 0;
@@ -420,7 +445,17 @@ TimerManager::Timeout()
 		} else if ( !did_reset ) {
 			// here we remove the timer we just serviced, or renew it if it is 
 			// periodic.
-			RemoveTimer( in_timeout, NULL );
+
+			// If a new timer was added at a time in the past
+			// (possible when resetting a timeslice timer), then
+			// it may have landed before the timer we just processed,
+			// meaning that we cannot assume prev==NULL in the call
+			// to RemoveTimer() below.
+
+			Timer *prev = NULL;
+			ASSERT( GetTimer(in_timeout->id,&prev) == in_timeout );
+			RemoveTimer( in_timeout, prev );
+
 			if ( in_timeout->period > 0 || in_timeout->timeslice ) {
 				in_timeout->period_started = time(NULL);
 				in_timeout->when = in_timeout->period_started;
@@ -621,7 +656,7 @@ void TimerManager::DeleteTimer( Timer *timer )
 	}
 
 	// free event_descrip
-	daemonCore->free_descrip( timer->event_descrip );
+	free( timer->event_descrip );
 
 	// set curr_dataptr to NULL if a handler is removing itself. 
 	if ( curr_dataptr == &(timer->data_ptr) )
@@ -631,4 +666,20 @@ void TimerManager::DeleteTimer( Timer *timer )
 
 	delete timer->timeslice;
 	delete timer;
+}
+
+Timer *TimerManager::GetTimer( int id, Timer **prev )
+{
+	Timer *timer_ptr = timer_list;
+	if( prev ) {
+		*prev = NULL;
+	}
+	while ( timer_ptr && timer_ptr->id != id ) {
+		if( prev ) {
+			*prev = timer_ptr;
+		}
+		timer_ptr = timer_ptr->next;
+	}
+
+	return timer_ptr;
 }

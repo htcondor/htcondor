@@ -33,10 +33,10 @@ static bool test_normal_case(void);
 static bool test_invalid_ip(void);
 
 bool FTEST_string_to_ip(void) {
-		// beginning junk for getPortFromAddr()
-	e.emit_function("int string_to_ip(char* addr)");
-	e.emit_comment("Starts with a sinful string and finds the unsigned int ip address from it.");
-	e.emit_problem("None");
+		// beginning junk for getPortFromAddr(() {
+	emit_function("int string_to_ip(char* addr)");
+	emit_comment("Starts with a sinful string and finds the unsigned int ip address from it.");
+	emit_problem("None");
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
@@ -44,20 +44,18 @@ bool FTEST_string_to_ip(void) {
 	driver.register_function(test_invalid_ip);
 	
 		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
+	return driver.do_all_functions();
 }
 
 static bool test_normal_case() {
-	e.emit_test("Is normal input identified correctly?");
+	emit_test("Is normal input identified correctly?");
 	char* input = strdup( "<66.230.200.100:1814>" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	unsigned int result = string_to_ip(input);
 	unsigned char* byte = (unsigned char*) &result;
 	free( input );
-	e.emit_output_expected_header();
+	emit_output_expected_header();
 	unsigned int expected;
 	char* ptr = (char*) &expected;
 	*ptr = 66;
@@ -67,26 +65,24 @@ static bool test_normal_case() {
 	*ptr = 200;
 	ptr++;
 	*ptr = 100;
-	e.emit_retval("%u (%d.%d.%d.%d)", expected, 66, 230, 200, 100);
-	e.emit_output_actual_header();
-	e.emit_retval("%u (%d.%d.%d.%d)", result, *byte, *(byte+1), *(byte+2), *(byte+3));
+	emit_retval("%u (%d.%d.%d.%d)", expected, 66, 230, 200, 100);
+	emit_output_actual_header();
+	emit_retval("%u (%d.%d.%d.%d)", result, *byte, *(byte+1), *(byte+2), *(byte+3));
 	if(result != expected) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }
 
 static bool test_invalid_ip() {
-	e.emit_test("Does it work correctly when a wildcard is passed in?");
+	emit_test("Does it work correctly when a wildcard is passed in?");
 	char* input = strdup( "<66.*:1814>" );
-	e.emit_input_header();
-	e.emit_param("IP", input);
+	emit_input_header();
+	emit_param("IP", input);
 	unsigned int result = string_to_ip(input);
 	unsigned char* byte = (unsigned char*) &result;
 	free( input );
-	e.emit_output_expected_header();
+	emit_output_expected_header();
 	unsigned int expected;
 	char* ptr = (char*) &expected;
 	*ptr = 66;
@@ -96,13 +92,11 @@ static bool test_invalid_ip() {
 	*ptr = 255;
 	ptr++;
 	*ptr = 255;
-	e.emit_retval("%u (%d.%d.%d.%d)", expected, 66, 255, 255, 255);
-	e.emit_output_actual_header();
-	e.emit_retval("%u (%d.%d.%d.%d)", result, *byte, *(byte+1), *(byte+2), *(byte+3));
+	emit_retval("%u (%d.%d.%d.%d)", expected, 66, 255, 255, 255);
+	emit_output_actual_header();
+	emit_retval("%u (%d.%d.%d.%d)", result, *byte, *(byte+1), *(byte+2), *(byte+3));
 	if(result != expected) {
-		e.emit_result_failure(__LINE__);
-		return false;
+		FAIL;
 	}
-	e.emit_result_success(__LINE__);
-	return true;
+	PASS;
 }

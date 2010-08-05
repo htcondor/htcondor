@@ -1,49 +1,60 @@
-
 How to release a new version of the ClassAds library:
 
-Edit Imakefile and set the version number.  Example:
+Ensure src/classad/CHANGELOG has all relevant changes. Add a section for 
+the new version if necessary.
 
-DIST_VERSION = 1.0rc4
+Update the version number and release date in the follow files: 
+    src/classad/CHANGELOG
+    src/classad/Imakefile: DIST_VERSION
+    src/classad/README: first line
+    src/classad/new_classad.cpp: ClassAdLibraryVersion()
+        *Update both functions with this name!*
+    src/classad/Doxyfile
 
-Edit new_classad.cpp and change the version number:
+Update the shared library version number in src/classad/Makefile.am.m4. 
+Look for these two lines:
+    libclassad_la_LDFLAGS = -version-info 1:0:0
+    libclassad_ns_la_LDFLAGS = -version-info 1:0:0
+If the ABI has changed, you should increment the first number and set the 
+second and third ones to zero. If the ABI hasn't changed, then increment 
+the second or third number. See 
+http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html#AEN135  
+for examples of things that will change the ABI.
+This ABI compliance checker program may be useful: 
+http://ispras.linuxfoundation.org/index.php/ABI_compliance_checker
 
-    version_string = "1.0-rc4";
+run make dist in src/classad
 
-The other version of ClassAdLibraryVersion(major,minor,patch) in
-new_classad.cpp should also be updated.
+Ensure the release builds successfully:
+    cd classads-1.0.8
+    ./configure
+    make
+    make check
+    cd ..
 
-Edit README to update the version number and release date at the top
-of the file.
+Edit TAGS and add a new tag name for this version.
 
-Edit TAGS and add a new tag name for this version.  Tag the source
-with this tag.
+Ensure all of your changes are committed.
 
-What I do then is copy src/classad to a build tree and create
-the makefile:
+Tag the release:
+    git tag classads_1_0_8
+    git push origin classads_1_0_8
 
-../condor_imake
+Copy the release tarball into /p/condor/public/ftp/classad/c++/
 
-Then:
-
-make dist
-
-If you are on a UW CSL machine, the above command may fail with an error
-about AC_PROG_LIBTOOL.  To get around that, uncomment the following line
-in Makefile.am.m4:
-
-ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
-
-Once you're happy with the final distribution tarball, tag the repository
-with the new release:
-
-git tag classads_1.0-rc4
-git push origin classads_1.0-rc4
-
-The ClassAds webpage under /p/condor/public/html/classad
-should be updated to show the new version. The distribution tarball
-should be placed in /p/condor/public/ftp/classad/c++. A copy of the
-CHANGELOG should be placed in
+Copy src/classad/CHANGELOG to 
 /p/condor/public/html/classad/c++changelogs/changes-<version>.txt
+
+Update /p/condor/public/html/classad/classad.html to mention the new 
+release.
+
+Update the Doxygen webpages:
+    cd classad-1.0.8
+    /unsup/doxygen-1.7.1/bin/doxygen
+    mv /p/condor/public/html/classad/c++doc \
+       /p/condor/public/html/classad/c++doc.old
+    cp -r doc/html /p/condor/public/html/classad/c++doc
+    rm -rf /p/condor/public/html/classad/c++doc.old
 
 To update the external package used by Condor, follow the instructions
 for creating externals from the Condor Developers web page.

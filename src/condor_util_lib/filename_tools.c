@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "filename_tools.h"
+#include "basename.h"
 
 void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path )
 {
@@ -124,3 +125,38 @@ canonicalize_dir_delimiters( char *path ) {
 		path++;
 	}	
 }
+
+// Give a possible alternate up path to an executable, perhaps
+// fixing up directory delimiters and/or adding default platform-specific
+// extentions like .exe on Windows.
+// Caller is responsible for calling free() on returned pointer if
+// returned pointer is not NULL.
+char *
+alternate_exec_pathname( const char *path ) 
+{
+	int len;
+	char *buf = NULL;
+
+#ifdef WIN32
+	if ( path && path[0] ) 
+	{
+		len = strlen(path) + 20;
+		buf = malloc(len);
+		ASSERT(buf);
+		strcpy(buf,path);
+		canonicalize_dir_delimiters(buf);
+		if (!strchr(condor_basename(buf),'.')) {
+			strcat(buf,".exe");
+		}
+	}
+
+		// return NULL if alternate path is the same as original
+	if (buf && path && strcmp(buf,path)==0 ) {
+		free(buf);
+		buf = NULL;
+	}
+#endif
+
+	return buf;
+}
+

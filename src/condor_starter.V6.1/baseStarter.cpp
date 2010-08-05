@@ -52,7 +52,7 @@
 #include "my_username.h"
 
 extern "C" int get_random_int();
-extern int main_shutdown_fast();
+extern void main_shutdown_fast();
 
 /* CStarter class implementation */
 
@@ -547,7 +547,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	MyString error_msg;
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->eom() ) {
+	if( !input.initFromStream(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in createJobOwnerSecSession()\n");
 		return FALSE;
 	}
@@ -636,7 +636,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 				fqu.Value());
 	}
 
-	if( !response.put(*s) || !s->eom() ) {
+	if( !response.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"createJobOwnerSecSession failed to send response\n");
 	}
@@ -667,7 +667,7 @@ CStarter::vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args)
 	}
 
 	s->encode();
-	if( !response.put(*s) || !s->eom() ) {
+	if( !response.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
 	}
 
@@ -795,7 +795,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->eom() ) {
+	if( !input.initFromStream(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in START_SSHD.\n");
 		return FALSE;
 	}
@@ -930,9 +930,6 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			s,"Failed to get job environment: %s",error_msg.Value());
 	}
 
-		// our sshd_shell_setup script uses this to cd to the job working dir
-	setup_env.SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
-
 	if( !slot_name.IsEmpty() ) {
 		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
 	}
@@ -951,18 +948,6 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			}
 		}
 	}
-
-		// put the pid of the job in the environment
-	MyString job_pids;
-	UserProc *job;
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
-		if( ! job_pids.IsEmpty() ) {
-			job_pids += " ";
-		}
-		job_pids.sprintf_cat("%d",job->GetJobPid());
-	}
-	setup_env.SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
 	ArgList setup_args;
 	setup_args.AppendArg(ssh_to_job_sshd_setup.Value());
@@ -1172,7 +1157,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
 
 	s->encode();
-	if( !response.put(*s) || !s->eom() ) {
+	if( !response.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
 		return FALSE;
 	}
@@ -2482,11 +2467,23 @@ CStarter::PublishToEnv( Env* proc_env )
 		// after everything else, so there's not going to be any info
 		// about it to pass until it's already done.
 
+		// used by sshd_shell_setup script to cd to the job working dir
+	proc_env->SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
+
+	MyString job_pids;
 	UserProc* uproc;
 	m_job_list.Rewind();
 	while ((uproc = m_job_list.Next()) != NULL) {
 		uproc->PublishToEnv( proc_env );
+
+		if( ! job_pids.IsEmpty() ) {
+			job_pids += " ";
+		}
+		job_pids.sprintf_cat("%d",uproc->GetJobPid());		
 	}
+		// put the pid of the job in the environment, used by sshd and hooks
+	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
+
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
 		uproc->PublishToEnv( proc_env );

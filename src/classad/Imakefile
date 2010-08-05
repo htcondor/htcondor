@@ -21,14 +21,14 @@ CFLAGS 		= -Wall $(STD_C_FLAGS) $(LOCAL_FLAGS)
 
 
 /* The basic classad source and object files */
-CLASSAD_SRC_0 	= new_classad_debug.cpp lexer.cpp lexerSource.cpp \
+CLASSAD_SRC_0 	= common.cpp new_classad_debug.cpp lexer.cpp lexerSource.cpp \
 	source.cpp new_classad_operators.cpp attrrefs.cpp fnCall.cpp   \
 	literals.cpp exprTree.cpp new_classad.cpp exprList.cpp \
 	new_classad_value.cpp \
 	sink.cpp matchClassad.cpp      \
 	new_classad_util.cpp xmlLexer.cpp xmlSink.cpp xmlSource.cpp \
 	cclassad.cpp
-CLASSAD_OBJ_0 	= new_classad_debug.o lexer.o lexerSource.o source.o \
+CLASSAD_OBJ_0 	= common.o new_classad_debug.o lexer.o lexerSource.o source.o \
 	new_classad_operators.o attrrefs.o fnCall.o   \
 	literals.o exprTree.o new_classad.o exprList.o new_classad_value.o \
 	sink.o  matchClassad.o     \
@@ -82,10 +82,10 @@ testbin:: all
 /* template instantiations go in here */
 
 /* Standalone distribution of classads/collections */
-DIST_VERSION = 1.0.6
+DIST_VERSION = 1.0.8
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
-DIST_FILES = 								\
+DIST_FILES = common.cpp							\
 	attrrefs.cpp new_classad.cpp classad_functional_tester.cpp	\
 	classad_unit_tester.cpp classad_version.cpp collection.cpp	\
 	collectionBase.cpp cxi.cpp new_classad_debug.cpp exprList.cpp	\

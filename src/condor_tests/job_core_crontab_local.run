@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $testdesc =  'Condor CronTab Test - Local Universe';
 $testname = "job_core_crontab_local";
@@ -55,7 +56,8 @@ $ENV{CONDOR_CONFIG} = $personalconfig;
 my $result = CondorTest::verbose_system("./job_core_crontab.pl local");
 
 #save key files
-system("cp $corename* $mysaveme");
+	# Allow any result because the cp complains because $mysaveme is matched by $corename*
+runcmd("cp $corename* $mysaveme", {expect_result=>\&ANY});
 
 CondorTest::KillPersonal($personalconfig);
 print scalar localtime() . "\n";
