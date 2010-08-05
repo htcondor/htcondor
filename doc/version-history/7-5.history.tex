@@ -149,6 +149,11 @@ authorization level.  Therefore, when using host-based security,
 \Macro{FLOCK\_NEGOTIATOR\_HOSTS} may still be useful as a macro for inserting
 the negotiator hosts into the relevant authorization lists.
 
+%gittrack #1312
+\item The configuration variable \MacroNI{FLOCK\_HOSTS} is no longer used.
+For backward compatibility, this setting used to be treated as a default
+for \MacroNI{FLOCK\_COLLECTOR\_HOSTS} and \MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
