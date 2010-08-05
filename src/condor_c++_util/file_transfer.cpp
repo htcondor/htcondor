@@ -393,7 +393,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		//   spooled the old-fashioned way (which doesn't happen currently).
 		if ( IsServer() && Spool ) {
 			ExecFile = gen_ckpt_name(Spool,Cluster,ICKPT,0);
-			if ( ! access(ExecFile,F_OK | X_OK) >= 0 ) {
+			if ( access(ExecFile,F_OK | X_OK) < 0 ) {
 				free(ExecFile); ExecFile = NULL;
 			}
 		}
