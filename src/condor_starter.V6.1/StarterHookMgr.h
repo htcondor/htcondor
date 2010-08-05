@@ -94,9 +94,10 @@ private:
 		   If the job we're running defines a hook keyword, find the
 		   validate path to the given hook.
 		   @param hook_type The hook you want the path for.
-		   @return Path to the hook if defined and valid, otherwise NULL.
+           @param hpath Returns with hook path.  NULL if undefined or path error.
+		   @return true if hook path is good (or not defined).  false if path error.
 		*/
-	char* getHookPath(HookType hook_type);
+	bool getHookPath(HookType hook_type, char*& hpath);
 
 		/// Clears out all the hook paths we've validated and saved.
 	void clearHookPaths( void );

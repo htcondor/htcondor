@@ -893,9 +893,6 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
 			summarize = 0;
-			if( !custom_attributes ) {
-				attrs.clearAll();
-			}
 		} 
 		else
 		if (match_prefix (arg, "xml")) {
@@ -903,9 +900,6 @@ processCommandLineArguments (int argc, char *argv[])
 			verbose = 1;
 			summarize = 0;
 			customFormat = true;
-			if( !custom_attributes ) {
-				attrs.clearAll();
-			}
 		}
 		else
 		if (match_prefix (arg, "pool")) {
@@ -1202,13 +1196,14 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg, "run")) {
 			Q.add (CQ_STATUS, RUNNING);
 			run = true;
-			attrs.clearAll();
+			attrs.append( ATTR_REMOTE_HOST );
 		}
 		else
 		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
 			Q.add (CQ_STATUS, HELD);		
 			show_held = true;
-			attrs.clearAll();
+			attrs.append( ATTR_ENTERED_CURRENT_STATUS );
+			attrs.append( ATTR_HOLD_REASON );
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
@@ -1216,18 +1211,20 @@ processCommandLineArguments (int argc, char *argv[])
 			// real-estate, so they're mutually exclusive
 			goodput = true;
 			show_io = false;
-			attrs.clearAll();
+			attrs.append( ATTR_JOB_COMMITTED_TIME );
+			attrs.append( ATTR_SHADOW_BIRTHDATE );
+			attrs.append( ATTR_LAST_CKPT_TIME );
+			attrs.append( ATTR_JOB_REMOTE_WALL_CLOCK );
 		}
 		else
 		if (match_prefix( arg, "cputime")) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
-			attrs.clearAll();
+		 	attrs.append( ATTR_JOB_REMOTE_USER_CPU );
 		}
 		else
 		if (match_prefix( arg, "currentrun")) {
 			current_run = true;
-			attrs.clearAll();
 		}
 		else
 		if( match_prefix( arg, "globus" ) ) {
@@ -1248,12 +1245,17 @@ processCommandLineArguments (int argc, char *argv[])
 			// real-estate, so they're mutually exclusive
 			show_io = true;
 			goodput = false;
-			attrs.clearAll();
-		}   
+			attrs.append(ATTR_FILE_READ_BYTES);
+			attrs.append(ATTR_FILE_WRITE_BYTES);
+			attrs.append(ATTR_FILE_SEEK_COUNT);
+			attrs.append(ATTR_JOB_REMOTE_WALL_CLOCK);
+			attrs.append(ATTR_BUFFER_SIZE);
+			attrs.append(ATTR_BUFFER_BLOCK_SIZE);
+		}
 		else if( match_prefix( arg, "dag" ) ) {
 			dag = true;
 			attrs.clearAll();
-		}   
+		}
 		else if (match_prefix(arg, "expert")) {
 			expert = true;
 			attrs.clearAll();
@@ -1292,6 +1294,11 @@ processCommandLineArguments (int argc, char *argv[])
 			usage(argv[0]);
 			exit( 1 );
 		}
+	}
+
+		//Added so -long or -xml can be listed before other options
+	if(verbose && !custom_attributes) {
+		attrs.clearAll();
 	}
 }
 
@@ -1737,8 +1744,8 @@ format_globusHostAndJM( char *, AttrList *ad )
 
 	if ( resource_name != NULL ) {
 
-		if ( grid_type == NULL || !stricmp( grid_type, "gt2" ) ||
-			 !stricmp( grid_type, "globus" ) ) {
+		if ( grid_type == NULL || !strcasecmp( grid_type, "gt2" ) ||
+			 !strcasecmp( grid_type, "globus" ) ) {
 
 			// copy the hostname
 			p = strcspn( resource_name, ":/" );
@@ -1758,7 +1765,7 @@ format_globusHostAndJM( char *, AttrList *ad )
 				jm[p] = '\0';
 			}
 
-		} else if ( !stricmp( grid_type, "gt4" ) ) {
+		} else if ( !strcasecmp( grid_type, "gt4" ) ) {
 
 			strcpy( jm, "Fork" );
 
@@ -1813,6 +1820,7 @@ usage (char *myName)
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-global\t\t\tGet global queue\n"
+		"\t\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t\t-help\t\t\tThis screen\n"
 		"\t\t-name <name>\t\tName of schedd\n"
@@ -1824,6 +1832,7 @@ usage (char *myName)
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
+		"\t\t-globus\t\t\tGet information about Condor-G jobs\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
@@ -1842,7 +1851,7 @@ usage (char *myName)
 		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
 		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
-		"\t\t-version\t\t\tPrint the Condor Version and exit\n"
+		"\t\t-version\t\tPrint the Condor Version and exit\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"

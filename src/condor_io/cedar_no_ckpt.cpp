@@ -466,6 +466,10 @@ ReliSock::get_file_with_permissions( filesize_t *size,
 		return result;
 	}
 
+	if( destination && !strcmp(destination,NULL_FILE) ) {
+		return result;
+	}
+
 		// If the other side told us to ignore its permissions, then we're
 		// done.
 	if ( file_mode == NULL_FILE_PERMISSIONS ) {

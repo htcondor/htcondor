@@ -66,7 +66,7 @@
 #define NUM_FRGN_JOBS		(SCHED_VERS+13)
 #define STARTD_INFO			(SCHED_VERS+14)
 #define SCHEDD_INFO			(SCHED_VERS+15)
-#define NEGOTIATE			(SCHED_VERS+16)		/* Not used */
+#define NEGOTIATE			(SCHED_VERS+16) // 7.5.4+ negotiation command
 #define SEND_JOB_INFO		(SCHED_VERS+17)
 #define NO_MORE_JOBS		(SCHED_VERS+18)
 #define JOB_INFO			(SCHED_VERS+19)
@@ -143,7 +143,7 @@
 #define CHILD_ON            (SCHED_VERS+90) // Turn my child ON (HAD)
 #define CHILD_OFF           (SCHED_VERS+91) // Turn my child OFF (HAD)
 #define CHILD_OFF_FAST      (SCHED_VERS+92) // Turn my child OFF/Fast (HAD)
-#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// same as NEGOTIATE, but send sig attrs after Owner
+#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// pre 7.5.4 NEGOTIATE
 #define SET_ACCUMUSAGE	(SCHED_VERS+94)		// negotiator
 #define SET_BEGINTIME	(SCHED_VERS+95)		// negotiator
 #define SET_LASTTIME	(SCHED_VERS+96)		// negotiator
@@ -346,6 +346,7 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
 #define DC_TIME_OFFSET      (DC_BASE+17)
 #define DC_PURGE_LOG        (DC_BASE+18)
+#define DC_SHARE_SOCK       (DC_BASE+19)
 
 /*
 *** Log type supported by DC_FETCH_LOG

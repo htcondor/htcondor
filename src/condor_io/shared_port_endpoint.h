@@ -23,6 +23,7 @@
 #include "condor_daemon_core.h"
 #include "reli_sock.h"
 #include "selector.h"
+#include <queue>
 
 // SharedPortEndpoint receives connections forwarded from SharedPortServer.
 // This enables Condor daemons to share a single network port.
@@ -65,13 +66,10 @@ class SharedPortEndpoint: Service {
 		// parent to clean this file up in case the child does not.
 	char const *GetSocketFileName();
 
-		// seconds between touching the named socket
-	static int TouchSocketInterval();
-
 		// Appends string to buffer and sets file descriptor that needs
 		// to be inherited so that this object can be reconstructed
 		// in a child process.
-	void serialize(MyString &inherit_buf,int &inherit_fd);
+	bool serialize(MyString &inherit_buf,int &inherit_fd);
 
 		// Restore state of object stored with serialize().
 		// Returns pointer to anything trailing in inherit_buf.
@@ -84,12 +82,27 @@ class SharedPortEndpoint: Service {
 		// Make the named socket owned such that it can be removed
 		// by a process with the specified priv state.
 	bool ChownSocket(priv_state priv);
+#ifdef WIN32
+	void PipeListenerThread();
 
+	void PipeListenerHelper();
+
+	//Event used to notify the class that the thread is dead.
+	HANDLE thread_killed;
+#endif
+#ifndef WIN32
 		// Remove named socket
 	static bool RemoveSocket( char const *fname );
-
+#endif
+		// seconds between touching the named socket
+	static int TouchSocketInterval();
 		// Used by CCB client to manage asynchronous events from the
 		// shared port listener and the CCB server.
+
+	/*
+	Cannot be used under Windows right now because selector does not
+	track named pipes.
+	*/
 	void AddListenerToSelector(Selector &selector);
 	void RemoveListenerFromSelector(Selector &selector);
 	bool CheckListenerReady(Selector &selector);
@@ -98,6 +111,8 @@ class SharedPortEndpoint: Service {
 	static bool UseSharedPort(MyString *why_not=NULL,bool already_open=false);
 
 	void DoListenerAccept(ReliSock *return_remote_sock);
+
+	static void paramDaemonSocketDir(MyString &result);
 
  private:
 	bool m_listening;
@@ -108,18 +123,43 @@ class SharedPortEndpoint: Service {
 	MyString m_remote_addr;  // SharedPortServer addr with our local_id inserted
 	MyString m_local_addr;
 	int m_retry_remote_addr_timer;
+#ifdef WIN32
+	//Lock for accessing the queue that holds onto the received data structures.
+	CRITICAL_SECTION received_lock;
+	//Lock that synchronizes access to the kill thread signal.
+	CRITICAL_SECTION kill_lock;
+
+	//Queue that holds the received data structures.
+	std::queue<WSAPROTOCOL_INFO*> received_sockets;
+	//Kill thread signal.  Best to use an event but previous tests with events proved problematic.
+	bool kill_thread;
+	//Handle to the pipe that listens for connections.
+	HANDLE pipe_end;
+
+	//Bookkeeping information for the listener thread.
+	HANDLE thread_handle;
+
+	ReliSock *wake_select_source;
+	ReliSock *wake_select_dest;
+
+	bool StartListenerWin32();
+#else
 	ReliSock m_listener_sock; // named socket to receive forwarded connections
+#endif
 	int m_socket_check_timer;
 
 	int HandleListenerAccept( Stream * stream );
-
+#ifndef WIN32
 	void ReceiveSocket( ReliSock *local_sock, ReliSock *return_remote_sock );
-
+#endif
 	bool InitRemoteAddress();
 	void RetryInitRemoteAddress();
+#ifndef WIN32
 	void SocketCheck();
-
 	bool MakeDaemonSocketDir();
+#endif
 };
-
+#ifdef WIN32
+DWORD WINAPI InstanceThread(void*);
+#endif
 #endif

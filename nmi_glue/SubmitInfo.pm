@@ -67,6 +67,7 @@ our %build_and_test_sets = (
 		'x86_sles_9',
 		'ppc_macos_10.4',
 		'hppa_hpux_11',
+		'x86_64_fedora_12-updated',
 	],
 
 	'psilord' => [
@@ -517,6 +518,23 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_13'],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Mac OSX 10.6 on x86_64
+	##########################################################################
+	'x86_64_macos_10.6'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05'],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},

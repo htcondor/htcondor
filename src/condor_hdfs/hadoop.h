@@ -22,7 +22,7 @@
 
 #include "condor_daemon_core.h"
 
-enum {
+enum NodeType {
     HADOOP_NAMENODE,
     HADOOP_DATANODE,
     HADOOP_SECONDARY
@@ -84,6 +84,8 @@ class Hadoop : public Service {
 
         ClassAd m_hdfsAd;
 
+        NodeType m_serviceType;
+
         //keeps tracks of std output and error of  hadoop process
         MyString m_line_stdout, m_line_stderr;
 
@@ -101,10 +103,14 @@ class Hadoop : public Service {
 
         MyString m_secondaryNodeClass;
 
+        MyString m_dfsAdminClass;
+
         //Name of hdfs's site configuration files differs among hadoop version
         //Versions > 0.19 has hdfs-site.xml 
         //versions < 0.19 has hadoop-site.xml
-        MyString m_siteFile;
+        MyString m_hdfsSiteFile;
+
+        MyString m_coreSiteFile;
 
         //contains path of all jar files required to run
         //hadoop services.
@@ -113,16 +119,23 @@ class Hadoop : public Service {
         //Write the hadoop-site.xml file based  on parameters specified in
         //condor_config files.
         void writeConfigFile();
+        
+        //core-site.xml file is necassary for DFSAdmin commands
+        void writeCoreSiteFile();
 
         //Identifies the role of this machines (data node, name node or both)
         //and calls appropriate methods.
         void startServices();
 
-        void startService(int /*type*/);
+        void startService( NodeType );
+
+        MyString runDFSAdmin( const char *);
 
         void writeXMLParam(const char *key, const char *value, StringList *buff);
 
         void recurrBuildClasspath(const char *file);
+
+        void updateClassAd( MyString, MyString );
 
         void publishClassAd();
 
@@ -131,6 +144,10 @@ class Hadoop : public Service {
         void stderrHandler(int /*pipe*/);
 
         int getKeyValue(MyString line, MyString *key, MyString *value);
+
+	NodeType getServiceTypeByName( MyString );
+
+	MyString getServiceNameByType( NodeType );
 };
 
 #endif

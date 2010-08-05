@@ -240,6 +240,7 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
   numElems = copy.numElems;
   hashfcn = copy.hashfcn;
   duplicateKeyBehavior = copy.duplicateKeyBehavior;
+  maxLoadFactor = copy.maxLoadFactor;
 }
 
 // Insert entry into hash table mapping Index to Value.

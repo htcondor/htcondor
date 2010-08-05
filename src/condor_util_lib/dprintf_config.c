@@ -148,11 +148,56 @@ dprintf_config( const char *subsys )
 			// *after* the param -- param can dprintf() in some cases
 			{
 				char	*tmp = DebugFile[debug_level];
-				// This is looking up configuration options that I can't
-				// find documentation for, so intead of coding in an incorrect
-				// default value, I'm gonna use param_without_default.
-				// tristan 5/29/09
-				DebugFile[debug_level] = param_without_default(pname);
+
+				// NEGOTIATOR_MATCH_LOG is necessary by default, but debug_level
+				// is not 0
+				if(debug_level == 0 || 
+					strcmp(pname, "NEGOTIATOR_MATCH_LOG") == MATCH) 
+				{
+					char	*tmp2 = param(pname);
+
+					// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
+					if(!tmp2) {
+						// This char* will never be freed, but as long as
+						// defaults are defined in condor_c++_util/param_info.in
+						// we will never get here.
+						char *str;
+						char *log = param("LOG");
+						char *subsys = param("SUBSYSTEM");
+						if(!log || !subsys) {
+							EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
+						}
+						
+						if(strcmp(pname, "NEGOTIATOR_MATCH_LOG") == MATCH) {
+							str = (char*)malloc(strlen(log) + strlen(subsys) 
+								+ 10);
+							sprintf(str, "%s%c%sMATCHLog", log, DIR_DELIM_CHAR, 
+									subsys);
+						}
+						else {
+							str = (char*)malloc(strlen(log) + strlen(subsys) 
+								+ 5);
+							sprintf(str, "%s%c%sLog", log, DIR_DELIM_CHAR, 
+									subsys);
+						}
+						
+						DebugFile[debug_level] = str;
+
+						free(log);
+						free(subsys);
+					}
+					else {
+						DebugFile[debug_level] = tmp2;
+					}
+				}
+				else {
+					// This is looking up configuration options that I can't
+					// find documentation for, so intead of coding in an
+					// incorrect default value, I'm gonna use 
+					// param_without_default.
+					// tristan 5/29/09
+					DebugFile[debug_level] = param_without_default(pname);
+				}
 				if ( tmp ) {
 					free( tmp );
 				}

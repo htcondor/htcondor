@@ -22,6 +22,7 @@
 #include "classad/common.h"
 #include "classad/lexer.h"
 #include "classad/util.h"
+#include "classad/classad.h"
 
 using namespace std;
 
@@ -213,7 +214,32 @@ PeekToken (TokenValue *lvalp)
 	}
 
 	// check the first character of the token
-	if (isdigit( ch ) || ch == '.' ) {
+	if ( ch == '-' ) {
+		// Depending on the last token we saw, a minus may be the start
+		// of an integer or real token. tokenizeNumber() does the right
+		// thing if there is no subsequent integer or real.
+		switch ( tokenType ) {
+		case LEX_INTEGER_VALUE:
+		case LEX_REAL_VALUE:
+		case LEX_BOOLEAN_VALUE:
+		case LEX_STRING_VALUE:
+		case LEX_UNDEFINED_VALUE:
+		case LEX_ERROR_VALUE:
+		case LEX_IDENTIFIER:
+		case LEX_SELECTION:
+		case LEX_CLOSE_BOX:
+		case LEX_CLOSE_PAREN:
+		case LEX_CLOSE_BRACE:
+		case LEX_BACKSLASH:
+		case LEX_ABSOLUTE_TIME_VALUE:
+		case LEX_RELATIVE_TIME_VALUE:
+			tokenizePunctOperator();
+			break;
+		default:
+			tokenizeNumber();
+			break;
+		}
+	} else if (isdigit( ch ) || ch == '.' ) {
 		// tokenizeNumber() also takes care of the selection operator
 		tokenizeNumber();	
 	} else if (isalpha (ch) || ch == '_') {
@@ -240,8 +266,8 @@ PeekToken (TokenValue *lvalp)
 
 
 // Tokenize number constants:
-//   1.  Integers:  0[0-7]+ | 0[xX][0-9a-fA-F]+ | [0-9]+
-//   2.  Reals   :  [0-9]*\.[0-9]* (e|E) [+-]? [0-9]+
+//   1.  Integers:  [-] 0[0-7]+ | 0[xX][0-9a-fA-F]+ | [0-9]+
+//   2.  Reals   :  [-] [0-9]*\.[0-9]* (e|E) [+-]? [0-9]+
 int Lexer::
 tokenizeNumber (void)
 {
@@ -255,6 +281,35 @@ tokenizeNumber (void)
 	och = ch;
 	mark( );
 	wind( );
+
+	if ( och == '-' ) {
+		// This may be a negative number or the unary minus operator
+		// The subsequent two characters will tell us which.
+		if ( isdigit( ch ) ) {
+			// It looks like a negative number, keep reading.
+			och = ch;
+			wind();
+		} else if ( ch == '.' ) {
+			// This could be a real number or an attribute reference
+			// starting with dot. Look at the second character.
+			int ch2 = lexSource->ReadCharacter();
+			if ( ch2 >= 0 ) {
+				lexSource->UnreadCharacter();
+			}
+			if ( !isdigit( ch2 ) ) {
+				// It's not a real number, return a minus token.
+				cut();
+				tokenType = LEX_MINUS;
+				return tokenType;
+			}
+			// It looks like a negative real, keep reading.
+		} else {
+			// It's not a number, return a minus token.
+			cut();
+			tokenType = LEX_MINUS;
+			return tokenType;
+		}
+	}
 
 	if( och == '0' ) {
 		// number is octal, hex or real
@@ -338,7 +393,20 @@ tokenizeNumber (void)
 
 	if( numberType == INTEGER ) {
 		cut( );
-		integer = (int) strtol( lexBuffer.c_str(), NULL, 0 );
+		long l;
+		if ( _useOldClassAdSemantics ) {
+			// Old ClassAds don't support octal or hexidecimal
+			// representations for integers.
+			l = strtol( lexBuffer.c_str(), NULL, 10 );
+		} else {
+			l = strtol( lexBuffer.c_str(), NULL, 0 );
+		}
+		if ( l > INT_MAX ) {
+			l = INT_MAX;
+		} else if ( l < INT_MIN ) {
+			l = INT_MIN;
+		}
+		integer = (int) l;
 	} else if( numberType == REAL ) {
 		cut( );
 		real = strtod( lexBuffer.c_str(), NULL );
@@ -731,7 +799,7 @@ tokenizePunctOperator (void)
 
 
 // strLexToken:  Return string representation of token type
-char *Lexer::
+const char *Lexer::
 strLexToken (int tokenValue)
 {
 	switch (tokenValue) {

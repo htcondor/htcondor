@@ -185,7 +185,7 @@ class DedicatedScheduler : public Service {
 		// jobs.  This is called by Scheduler::negotiate() if the
 		// owner we get off the wire matches the "owner" string we're
 		// using. 
-	int negotiate( Stream* s, char* negotiator_name );
+	int negotiate( Stream* s, char const* remote_pool );
 
 		// Called everytime we want to process the job queue and
 		// schedule/spawn MPI jobs.
@@ -283,13 +283,13 @@ class DedicatedScheduler : public Service {
 		resource request.  
 		@param req ClassAd holding the resource request
 		@param s The Stream to communicate with the CM
-		@param negotiator_name The name of this negotiator
+		@param remote_pool The pool we are negotiating with
 		@param reqs_matched How many requests have been matched already.
 		@param max_reqs Total number of requests we're trying to meet. 
 		@return An enum describing the results.
 	*/
 	NegotiationResult negotiateRequest( ClassAd* req, Stream* s, 
-										char* negotiator_name, 
+										char const *remote_pool, 
 										int reqs_matched, 
 										int max_reqs ); 
 

@@ -58,6 +58,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <limits.h>
 #include <math.h>
 #ifndef WIN32
 	#include <unistd.h>
@@ -66,9 +67,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-#ifndef WORD_BIT
-#define WORD_BIT 32
-#endif
 
 
 

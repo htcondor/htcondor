@@ -32,7 +32,7 @@ public:
 
 	bool initialize();
 
-	bool spawn(HookClient* client, ArgList* args, MyString* hook_stdin, priv_state priv = PRIV_CONDOR_FINAL);
+	bool spawn(HookClient* client, ArgList* args, MyString* hook_stdin, priv_state priv = PRIV_CONDOR_FINAL, Env *env = NULL);
 	bool remove(HookClient* client);
 
 		/**

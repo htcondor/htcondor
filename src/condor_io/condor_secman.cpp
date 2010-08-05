@@ -2440,23 +2440,23 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 
 int
 SecMan::sec_char_to_auth_method( char* method ) {
-    if (!stricmp( method, "SSL" )  ) {
+    if (!strcasecmp( method, "SSL" )  ) {
         return CAUTH_SSL;
-    } else if (!stricmp( method, "GSI" )  ) {
+    } else if (!strcasecmp( method, "GSI" )  ) {
 		return CAUTH_GSI;
-	} else if ( !stricmp( method, "NTSSPI" ) ) {
+	} else if ( !strcasecmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;
-	} else if ( !stricmp( method, "PASSWORD" ) ) {
+	} else if ( !strcasecmp( method, "PASSWORD" ) ) {
 		return CAUTH_PASSWORD;
-	} else if ( !stricmp( method, "FS" ) ) {
+	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
-	} else if ( !stricmp( method, "FS_REMOTE" ) ) {
+	} else if ( !strcasecmp( method, "FS_REMOTE" ) ) {
 		return CAUTH_FILESYSTEM_REMOTE;
-	} else if ( !stricmp( method, "KERBEROS" ) ) {
+	} else if ( !strcasecmp( method, "KERBEROS" ) ) {
 		return CAUTH_KERBEROS;
-	} else if ( !stricmp( method, "CLAIMTOBE" ) ) {
+	} else if ( !strcasecmp( method, "CLAIMTOBE" ) ) {
 		return CAUTH_CLAIMTOBE;
-	} else if ( !stricmp( method, "ANONYMOUS" ) ) {
+	} else if ( !strcasecmp( method, "ANONYMOUS" ) ) {
 		return CAUTH_ANONYMOUS;
 	}
 	return 0;
@@ -2506,7 +2506,7 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 	while ( (sm = server_methods.next()) ) {
 		client_methods.rewind();
 		while ( (cm = client_methods.next()) ) {
-			if (!stricmp(sm, cm)) {
+			if (!strcasecmp(sm, cm)) {
 				// add a comma if it isn't the first match
 				if (match) {
 					results += ",";

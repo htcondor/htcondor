@@ -49,7 +49,7 @@ globus_ftp_client_cwd(
 
 // WIN32 doesn't have strcasecmp
 #ifdef WIN32
-#define strcasecmp(s1, s2) stricmp(s1, s2)
+#define strcasecmp(s1, s2) _stricmp(s1, s2)
 #endif
 
 /* Solaris doesn't have unsetenv */
@@ -555,6 +555,8 @@ escape_err_msg( const char *input_line)
 	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
 		if ( *temp == '\r' || *temp == '\n' ) {
+			output_line[i] = '\\';
+			i++;
 			output_line[i] = ' ';
 			i++;
 		} else {
@@ -566,10 +568,13 @@ escape_err_msg( const char *input_line)
 			i++;
 		}
 	}
-	do {
+	// trim trailing spaces and the backslashes that escape them
+	i--;
+	while ( output_line[i] == ' ' ) {
+		i--;
 		output_line[i] = '\0';
 		i--;
-	} while ( output_line[i] == ' ' );
+	}
 	// the caller is responsible for freeing this memory, not us
 	return output_line;	
 }

@@ -284,7 +284,7 @@ static bool is_sender_ip_attr(char const *attr_name)
     if(strcmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
     if(strcmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
 	size_t attr_name_len = strlen(attr_name);
-    if(attr_name_len >= 6 && stricmp(attr_name+attr_name_len-6,"IpAddr") == 0)
+    if(attr_name_len >= 6 && strcasecmp(attr_name+attr_name_len-6,"IpAddr") == 0)
 	{
         return true;
     }
@@ -320,6 +320,13 @@ void ConfigConvertDefaultIPToSocketIP()
 	if( str && *str ) {
 		enable_convert_default_IP_to_socket_IP = false;
 		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because TCP_FORWARDING_HOST is defined.\n");
+	}
+	free( str );
+
+	str = param("NETWORK_INTERFACE");
+	if( str && *str ) {
+		enable_convert_default_IP_to_socket_IP = false;
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE is defined.\n");
 	}
 	free( str );
 

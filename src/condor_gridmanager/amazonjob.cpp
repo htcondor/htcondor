@@ -76,14 +76,6 @@ static const char *GMStateNames[] = {
 #define AMAZON_VM_STATE_SHUTTINGDOWN	"shutting-down"
 #define AMAZON_VM_STATE_TERMINATED		"terminated"
 
-// Filenames are case insensitive on Win32, but case sensitive on Unix
-#ifdef WIN32
-#	define file_strcmp _stricmp
-#	define file_contains contains_anycase
-#else
-#	define file_strcmp strcmp
-#	define file_contains contains
-#endif
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -151,6 +143,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	int gahp_worker_cnt = 0;
 	char *gahp_debug = NULL;
 	ArgList args;
+	MyString value;
 	
 	remoteJobId = NULL;
 	remoteJobState = "";
@@ -243,13 +236,39 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
+	jobAd->LookupString( ATTR_GRID_RESOURCE, value );
+	if ( value.Length() ) {
+		const char *token;
+
+		value.Tokenize();
+
+		token = value.GetNextToken( " ", false );
+		if ( !token || strcasecmp( token, "amazon" ) ) {
+			error_string.sprintf( "%s not of type amazon",
+								  ATTR_GRID_RESOURCE );
+			goto error_exit;
+		}
+
+		token = value.GetNextToken( " ", false );
+		if ( token && *token ) {
+			m_serviceUrl = token;
+		} else {
+			error_string.sprintf( "%s missing EC2 service URL",
+								  ATTR_GRID_RESOURCE );
+			goto error_exit;
+		}
+
+	} else {
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
+		goto error_exit;
+	}
+
 	gahp_path = param( "AMAZON_GAHP" );
 	if ( gahp_path == NULL ) {
 		error_string = "AMAZON_GAHP not defined";
 		goto error_exit;
 	}
-
-	snprintf( buff, sizeof(buff), AMAZON_RESOURCE_NAME ); // for client's ID
 
 	gahp_log = param( "AMAZON_GAHP_LOG" );
 	if ( gahp_log == NULL ) {
@@ -277,36 +296,37 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		free(gahp_debug);
 	}
 
-	gahp = new GahpClient( buff, gahp_path, &args );
+	gahp = new GahpClient( AMAZON_RESOURCE_NAME, gahp_path, &args );
 	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	myResource = AmazonResource::FindOrCreateResource( AMAZON_RESOURCE_NAME, m_public_key_file, m_private_key_file );
+	myResource = AmazonResource::FindOrCreateResource( m_serviceUrl.c_str(), m_public_key_file, m_private_key_file );
 	myResource->RegisterJob( this );
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] ) {
+	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
+	if ( value.Length() ) {
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		value.Tokenize();
 
-		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "amazon" ) ) {
+		token = value.GetNextToken( " ", false );
+		if ( !token || strcasecmp( token, "amazon" ) ) {
 			error_string.sprintf( "%s not of type amazon",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+			// Skip the service URL
+		value.GetNextToken( " ", false );
+
+		token = value.GetNextToken( " ", false );
 		if ( token ) {
 			m_key_pair = token;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = value.GetNextToken( " ", false );
 		if ( token ) {
 			remoteJobId = strdup( token );
 		}
@@ -519,7 +539,7 @@ void AmazonJob::doEvaluateState()
 					if ( m_group_names == NULL )	m_group_names = build_groupnames();
 					
 					// amazon_vm_start() will check the input arguments
-					rc = gahp->amazon_vm_start( m_public_key_file, m_private_key_file, 
+					rc = gahp->amazon_vm_start( m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
 												m_ami_id.Value(), m_key_pair.Value(), 
 												m_user_data, m_user_data_file, m_instance_type, 
 												*m_group_names, instance_id, gahp_error_code);
@@ -586,7 +606,7 @@ void AmazonJob::doEvaluateState()
 				// check if the VM has been started successfully
 				StringList returnStatus;
 							
-				rc = gahp->amazon_vm_vm_keypair_all(m_public_key_file, m_private_key_file,
+				rc = gahp->amazon_vm_vm_keypair_all(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file,
 												    returnStatus, gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -840,7 +860,7 @@ void AmazonJob::doEvaluateState()
 
 					// need to call amazon_vm_status(), amazon_vm_status() will check input arguments
 					// The VM status we need is saved in the second string of the returned status StringList
-					rc = gahp->amazon_vm_status(m_public_key_file, m_private_key_file, remoteJobId, returnStatus, gahp_error_code );
+					rc = gahp->amazon_vm_status(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, returnStatus, gahp_error_code );
 					
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
@@ -907,7 +927,7 @@ void AmazonJob::doEvaluateState()
 
 				// need to call amazon_vm_stop(), it will only return STOP operation is success or failed
 				// amazon_vm_stop() will check the input arguments
-				rc = gahp->amazon_vm_stop(m_public_key_file, m_private_key_file, remoteJobId, gahp_error_code);
+				rc = gahp->amazon_vm_stop(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, gahp_error_code);
 			
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -945,7 +965,7 @@ void AmazonJob::doEvaluateState()
 				}
 
 				// now create and register this keypair by using amazon_vm_create_keypair()
-				rc = gahp->amazon_vm_create_keypair(m_public_key_file, m_private_key_file, 
+				rc = gahp->amazon_vm_create_keypair(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
 													m_key_pair.Value(), m_key_pair_file.Value(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -996,7 +1016,7 @@ void AmazonJob::doEvaluateState()
 				{
 				// Something went wrong during the submit process and
 				// we need to destroy the keypair
-				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
+				rc = gahp->amazon_vm_destroy_keypair(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1031,7 +1051,7 @@ void AmazonJob::doEvaluateState()
 			case GM_DESTROY_KEYPAIR:
 				{
 				// Yes, now let's destroy the temporary keypair 
-				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
+				rc = gahp->amazon_vm_destroy_keypair(m_serviceUrl.c_str(),m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1176,7 +1196,7 @@ void AmazonJob::SetRemoteJobId( const char *keypair_id, const char *instance_id 
 {
 	MyString full_job_id;
 	if ( keypair_id && keypair_id[0] ) {
-		full_job_id.sprintf( "amazon %s", keypair_id );
+		full_job_id.sprintf( "amazon %s %s", m_serviceUrl.c_str(), keypair_id );
 		if ( instance_id && instance_id[0] ) {
 			full_job_id.sprintf_cat( " %s", instance_id );
 		}

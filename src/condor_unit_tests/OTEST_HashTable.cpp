@@ -30,14 +30,14 @@
 #include "emit.h"
 
 // variable declaration
-HashTable< int, int >* table;
-HashTable< int, short int >* table_two;
+static HashTable< int, int >* table;
+static HashTable< int, short int >* table_two;
 
 // function prototypes
 	// helper functions
-unsigned int intHash(const int &myInt);
-int isOdd(int num);
-bool cleanup(void);
+static unsigned int intHash(const int &myInt);
+static int isOdd(int num);
+static bool cleanup(void);
 
 	// test functions
 static bool insertlookup_normal(void);
@@ -520,7 +520,7 @@ static bool test_iterate_timing() {
 	PASS;
 }
 
-bool cleanup() {
+static bool cleanup() {
 	delete table;
 	delete table_two;
 	return true;
@@ -528,13 +528,13 @@ bool cleanup() {
 
 /* simple hash function for testing purposes */
 /* I'm not using hashFuncInt so that I can predict collisions */
-unsigned int intHash(const int &myInt) {
+static unsigned int intHash(const int &myInt) {
 	return myInt;
 }
 
 /* Function to test the walker with */
 /* returns true if num is odd */
-int isOdd(int num) {
+static int isOdd(int num) {
 	if(num % 2 == 0) {
 		return 0;
 	}

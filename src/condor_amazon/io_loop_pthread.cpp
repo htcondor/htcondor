@@ -279,13 +279,6 @@ main( int argc, char ** const argv )
 		dprintf(D_ALWAYS, "Using http proxy = %s\n", buff);
 	}
 
-	// Try to get amazon ec2 url
-	buff = getenv(AMAZON_EC2_URL);
-	if( buff && *buff ) {
-		set_ec2_url(buff);
-		dprintf(D_ALWAYS, "Using ec2 url = %s\n", buff);
-	}
-
 	// Register all amazon commands
 	if( registerAllAmazonCommands() == false ) {
 		dprintf(D_ALWAYS, "Can't register Amazon Commands\n");

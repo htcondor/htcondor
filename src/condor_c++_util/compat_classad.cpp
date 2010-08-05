@@ -761,19 +761,19 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 bool ClassAd::
 ClassAdAttributeIsPrivate( char const *name )
 {
-	if( stricmp(name,ATTR_CLAIM_ID) == 0 ) {
+	if( strcasecmp(name,ATTR_CLAIM_ID) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;
 	}
-	if( stricmp(name,ATTR_CAPABILITY) == 0 ) {
+	if( strcasecmp(name,ATTR_CAPABILITY) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;
 	}
-	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
+	if( strcasecmp(name,ATTR_CLAIM_IDS) == 0 ) {
 			// This attribute contains secret capability cookies
 		return true;
 	}
-	if( stricmp(name,ATTR_TRANSFER_KEY) == 0 ) {
+	if( strcasecmp(name,ATTR_TRANSFER_KEY) == 0 ) {
 			// This attribute contains the secret file transfer cookie
 		return true;
 	}
@@ -2462,6 +2462,7 @@ static const char *job_attrs_list[]  = {
 	ATTR_TOTAL_SUSPENSIONS,
 	ATTR_LAST_SUSPENSION_TIME,
 	ATTR_CUMULATIVE_SUSPENSION_TIME,
+	ATTR_COMMITTED_SUSPENSION_TIME,
 	ATTR_JOB_UNIVERSE,
 	ATTR_JOB_CMD,
 	ATTR_TRANSFER_EXECUTABLE,

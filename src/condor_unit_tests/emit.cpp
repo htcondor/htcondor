@@ -131,7 +131,7 @@ void Emitter::emit_output_actual_header() {
  * be called like "emit_result_success(__LINE__);"
  */
 void Emitter::emit_result_success(int line) {
-	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds\n", 
+	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n", 
 		line, time(0) - start);
 	Emitter::emit_test_break();
 	if(print_successes) {
@@ -149,7 +149,7 @@ void Emitter::emit_result_success(int line) {
  * be called like "emit_result_failure(__LINE__);"
  */
 void Emitter::emit_result_failure(int line) {
-	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%ld seconds\n", 
+	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%ld seconds)\n", 
 		line, time(0) - start);
 	Emitter::emit_test_break();
 	print_result_failure();

@@ -152,6 +152,7 @@ extern const char * const  ATTR_GLOBUS_RSL;
 extern const char * const  ATTR_GLOBUS_STATUS;
 extern const char * const  ATTR_GLOBUS_XML;
 extern const char * const  ATTR_X509_USER_PROXY;
+extern const char * const  ATTR_X509_USER_PROXY_EXPIRATION;
 extern const char * const  ATTR_X509_USER_PROXY_SUBJECT;
 extern const char * const  ATTR_X509_USER_PROXY_VONAME;
 extern const char * const  ATTR_X509_USER_PROXY_FIRST_FQAN;
@@ -470,6 +471,7 @@ extern const char * const  ATTR_STREAM_INPUT;
 extern const char * const  ATTR_STREAM_OUTPUT;
 extern const char * const  ATTR_STREAM_ERROR;
 extern const char * const  ATTR_SUBMITTER_ID;
+extern const char * const ATTR_SUBMITTER_TAG;
 extern const char * const  ATTR_SUBMITTOR_PRIO;  // old-style for ATTR_SUBMITTER_USER_PRIO
 extern const char * const  ATTR_SUBMITTER_USER_PRIO;
 extern const char * const  ATTR_SUBMITTER_USER_RESOURCES_IN_USE;
@@ -582,6 +584,7 @@ extern const char * const  ATTR_TRANSFER_INPUT_FILES;
 extern const char * const  ATTR_TRANSFER_INTERMEDIATE_FILES;
 extern const char * const  ATTR_TRANSFER_OUTPUT_FILES;
 extern const char * const  ATTR_TRANSFER_OUTPUT_REMAPS;
+extern const char * const  ATTR_SPOOLED_OUTPUT_FILES;
 extern const char * const  ATTR_ENCRYPT_INPUT_FILES;
 extern const char * const  ATTR_ENCRYPT_OUTPUT_FILES;
 extern const char * const  ATTR_DONT_ENCRYPT_INPUT_FILES;
@@ -598,6 +601,8 @@ extern const char * const  ATTR_WANT_RESOURCE_AD;
 extern const char * const  ATTR_TOTAL_SUSPENSIONS;
 extern const char * const  ATTR_LAST_SUSPENSION_TIME;
 extern const char * const  ATTR_CUMULATIVE_SUSPENSION_TIME;
+extern const char * const  ATTR_COMMITTED_SUSPENSION_TIME;
+extern const char * const  ATTR_UNCOMMITTED_SUSPENSION_TIME;
 
 extern const char * const  ATTR_ON_EXIT_BY_SIGNAL;
 extern const char * const  ATTR_ON_EXIT_CODE;
@@ -778,6 +783,10 @@ extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
+
+extern const char * const ATTR_JOB_MACHINE_ATTRS;
+extern const char * const ATTR_MACHINE_ATTR_PREFIX;
+extern const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

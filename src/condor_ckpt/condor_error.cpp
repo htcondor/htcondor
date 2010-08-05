@@ -160,7 +160,7 @@ static int _condor_warning_kind_parse( const char *str, condor_warning_kind_t *k
 	int i;
 
 	for( i=0; i<CONDOR_WARNING_KIND_MAX; i++ ) {
-		if(!stricmp(table[i].name,str)) {
+		if(!strcasecmp(table[i].name,str)) {
 			*kind = (condor_warning_kind_t)i;
 			return 1;
 		}
@@ -174,7 +174,7 @@ static int _condor_warning_mode_parse( const char *str, condor_warning_mode_t *m
 	int i;
 
 	for( i=0; i<CONDOR_WARNING_MODE_MAX; i++ ) {
-		if(!stricmp(mode_names[i],str)) {
+		if(!strcasecmp(mode_names[i],str)) {
 			*mode = (condor_warning_mode_t)i;
 			return 1;
 		}

@@ -333,7 +333,7 @@ GT4Job::GT4Job( ClassAd *classad )
 		grid_resource.Tokenize();
 
 		token = grid_resource.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "gt4" ) ) {
+		if ( !token || strcasecmp( token, "gt4" ) ) {
 			error_string.sprintf( "%s not of type gt4", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}

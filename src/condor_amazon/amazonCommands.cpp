@@ -157,7 +157,7 @@ AmazonVMStart::~AmazonVMStart()
 	}
 }
 
-// Expecting:AMAZON_VM_START <req_id> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
+// Expecting:AMAZON_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
 // <groupname> are optional ones.
 // we support multiple groupnames
 
@@ -168,44 +168,39 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 	
 	dprintf (D_FULLDEBUG, "AmazonVMStart workerFunction is called\n");
 	
-	if( !verify_min_number_args(argc, 9) ) {
+	if( !verify_min_number_args(argc, 10) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be >= %d, but %d) to %s\n", 
-				9, argc, argv[0]);
+				10, argc, argv[0]);
 		return FALSE;
 	}
 
-	if( !verify_ami_id(argv[4]) ) {
-		result_string = create_failure_result( req_id, "Invalid_AMI_ID");
-		dprintf (D_ALWAYS, "Invalid AMI Id format %s to %s\n", argv[4], argv[0]);
-		return FALSE;
-	}
-	
 	AmazonVMStart request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
-	request.ami_id = argv[4];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
+	request.ami_id = argv[5];
 
-	// we already know the number of arguments is >= 9
-	if( strcasecmp(argv[5], NULLSTRING) ) {
-		request.keypair = argv[5];
-	}
-
+	// we already know the number of arguments is >= 10
 	if( strcasecmp(argv[6], NULLSTRING) ) {
-		request.user_data = argv[6];
+		request.keypair = argv[6];
 	}
 
 	if( strcasecmp(argv[7], NULLSTRING) ) {
-		request.user_data_file = argv[7];
+		request.user_data = argv[7];
 	}
 
 	if( strcasecmp(argv[8], NULLSTRING) ) {
-		request.instance_type = argv[8];
+		request.user_data_file = argv[8];
+	}
+
+	if( strcasecmp(argv[9], NULLSTRING) ) {
+		request.instance_type = argv[9];
 	}
 
 	int i = 0;
-	for( i = 9; i < argc; i++ ) {
+	for( i = 10; i < argc; i++ ) {
 		if( strcasecmp(argv[i], NULLSTRING) ) {
 			request.groupnames.append(argv[i]);
 		}
@@ -235,7 +230,7 @@ AmazonVMStop::AmazonVMStop()
 
 AmazonVMStop::~AmazonVMStop() {}
 
-// Expecting:AMAZON_VM_STOP <req_id> <accesskeyfile> <secretkeyfile> <instance-id>
+// Expecting:AMAZON_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 
 bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_string) 
 {
@@ -244,24 +239,19 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_str
 
 	dprintf (D_FULLDEBUG, "AmazonVMStop workerFunction is called\n");
 
-	if( !verify_number_args(argc ,5) ) {
+	if( !verify_number_args(argc, 6) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be %d, but %d) to %s\n", 
-				5, argc, argv[0]);
+				6, argc, argv[0]);
 		return FALSE;
 	}
 
-	if( !verify_instance_id(argv[4]) ) {
-		result_string = create_failure_result( req_id, "Invalid_Instance_Id");
-		dprintf (D_ALWAYS, "Invalid Instance Id format %s to %s\n", argv[4], argv[0]);
-		return FALSE;
-	}
-	
 	AmazonVMStop request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
-	request.instance_id = argv[4];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
+	request.instance_id = argv[5];
 
 	// Send Request
 	bool tmp_result = request.SendRequest();
@@ -298,7 +288,7 @@ AmazonVMStatus::~AmazonVMStatus()
 {
 }
 
-// Expecting:AMAZON_VM_STATUS <req_id> <accesskeyfile> <secretkeyfile> <instance-id>
+// Expecting:AMAZON_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 
 bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_string) 
 {
@@ -307,24 +297,19 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
 	
 	dprintf (D_FULLDEBUG, "AmazonVMStatus workerFunction is called\n");
 
-	if( !verify_number_args(argc ,5) ) {
+	if( !verify_number_args(argc ,6) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be %d, but %d) to %s\n", 
-				5, argc, argv[0]);
-		return FALSE;
-	}
-
-	if( !verify_instance_id(argv[4]) ) {
-		result_string = create_failure_result( req_id, "Invalid_Instance_Id");
-		dprintf (D_ALWAYS, "Invalid Instance Id format %s to %s\n", argv[4], argv[0]);
+				6, argc, argv[0]);
 		return FALSE;
 	}
 
 	AmazonVMStatus request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
-	request.instance_id = argv[4];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
+	request.instance_id = argv[5];
 
 	// Send Request
 	bool tmp_result = request.SendRequest();
@@ -370,7 +355,7 @@ AmazonVMStatusAll::~AmazonVMStatusAll()
 	}
 }
 
-// Expecting:AMAZON_VM_STATUS_ALL <req_id> <accesskeyfile> <secretkeyfile> <Status>
+// Expecting:AMAZON_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <Status>
 // <Status> is optional field. If <Status> is specified, only VMs with the status will be listed
 
 bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &result_string) 
@@ -380,20 +365,21 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
 
 	dprintf (D_FULLDEBUG, "AmazonVMStatusAll workerFunction is called\n");
 	
-	if( !verify_min_number_args(argc ,4) ) {
+	if( !verify_min_number_args(argc ,5) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be >= %d, but %d) to %s\n", 
-				4, argc, argv[0]);
+				5, argc, argv[0]);
 		return FALSE;
 	}
 
 	AmazonVMStatusAll request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
 
-	if( argc >= 5 ) {
-		request.vm_status = argv[4];
+	if( argc >= 6 ) {
+		request.vm_status = argv[5];
 	}
 
 	// Send Request
@@ -430,7 +416,7 @@ AmazonVMRunningKeypair::~AmazonVMRunningKeypair()
 {
 }
 
-// Expecting:AMAZON_VM_RUNNING_KEYPAIR <req_id> <accesskeyfile> <secretkeyfile> <Status>
+// Expecting:AMAZON_VM_RUNNING_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <Status>
 // <Status> is optional field. If <Status> is specified, the keypair which belongs to VM with the status will be listed.
 
 bool AmazonVMRunningKeypair::workerFunction(char **argv, int argc, std::string &result_string) 
@@ -440,20 +426,21 @@ bool AmazonVMRunningKeypair::workerFunction(char **argv, int argc, std::string &
 
 	dprintf (D_FULLDEBUG, "AmazonVMRunningKeypair workerFunction is called\n");
 	
-	if( !verify_min_number_args(argc ,4) ) {
+	if( !verify_min_number_args(argc ,5) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be >= %d, but %d) to %s\n", 
-				4, argc, argv[0]);
+				5, argc, argv[0]);
 		return FALSE;
 	}
 
 	AmazonVMRunningKeypair request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
 
-	if( argc >= 5 ) {
-		request.vm_status = argv[4];
+	if( argc >= 6 ) {
+		request.vm_status = argv[5];
 	}
 
 	// Send Request
@@ -492,7 +479,7 @@ AmazonVMCreateKeypair::AmazonVMCreateKeypair()
 
 AmazonVMCreateKeypair::~AmazonVMCreateKeypair() {}
 
-// Expecting:AMAZON_VM_CREATE_KEYPAIR <req_id> <accesskeyfile> <secretkeyfile> <keyname> <outputfile>
+// Expecting:AMAZON_VM_CREATE_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname> <outputfile>
 
 bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, std::string &result_string) 
 {
@@ -501,19 +488,20 @@ bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, std::string &r
 
 	dprintf (D_FULLDEBUG, "AmazonVMCreateKeypair workerFunction is called\n");
 
-	if( !verify_number_args(argc,6) ) {
+	if( !verify_number_args(argc,7) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be %d, but %d) to %s\n", 
-				6, argc, argv[0]);
+				7, argc, argv[0]);
 		return FALSE;
 	}
 
 	AmazonVMCreateKeypair request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
-	request.keyname = argv[4];
-	request.outputfile = argv[5];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
+	request.keyname = argv[5];
+	request.outputfile = argv[6];
 
 	// Send Request
 	bool tmp_result = request.SendRequest();
@@ -536,7 +524,7 @@ AmazonVMDestroyKeypair::AmazonVMDestroyKeypair()
 
 AmazonVMDestroyKeypair::~AmazonVMDestroyKeypair() {}
 
-// Expecting:AMAZON_VM_DESTROY_KEYPAIR <req_id> <accesskeyfile> <secretkeyfile> <keyname>
+// Expecting:AMAZON_VM_DESTROY_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname>
 
 bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, std::string &result_string) 
 {
@@ -545,18 +533,19 @@ bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, std::string &
 
 	dprintf (D_FULLDEBUG, "AmazonVMDestroyKeypair workerFunction is called\n");
 
-	if( !verify_number_args(argc,5) ) {
+	if( !verify_number_args(argc,6) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be %d, but %d) to %s\n", 
-				5, argc, argv[0]);
+				6, argc, argv[0]);
 		return FALSE;
 	}
 
 	AmazonVMDestroyKeypair request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
-	request.keyname = argv[4];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
+	request.keyname = argv[5];
 
 	// Send Request
 	bool tmp_result = request.SendRequest();
@@ -591,7 +580,7 @@ AmazonVMKeypairNames::AmazonVMKeypairNames()
 
 AmazonVMKeypairNames::~AmazonVMKeypairNames() {}
 
-// Expecting:AMAZON_VM_KEYPAIR_NAMES <req_id> <accesskeyfile> <secretkeyfile>
+// Expecting:AMAZON_VM_KEYPAIR_NAMES <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 
 bool AmazonVMKeypairNames::workerFunction(char **argv, int argc, std::string &result_string) 
 {
@@ -600,17 +589,18 @@ bool AmazonVMKeypairNames::workerFunction(char **argv, int argc, std::string &re
 
 	dprintf (D_FULLDEBUG, "AmazonVMKeypairNames workerFunction is called\n");
 
-	if( !verify_number_args(argc,4) ) {
+	if( !verify_number_args(argc,5) ) {
 		result_string = create_failure_result( req_id, "Wrong_Argument_Number");
 		dprintf (D_ALWAYS, "Wrong args Number(should be %d, but %d) to %s\n", 
-				4, argc, argv[0]);
+				5, argc, argv[0]);
 		return FALSE;
 	}
 
 	AmazonVMKeypairNames request;
 
-	request.accesskeyfile = argv[2];
-	request.secretkeyfile = argv[3];
+	request.m_service_url = argv[2];
+	request.accesskeyfile = argv[3];
+	request.secretkeyfile = argv[4];
 
 	// Send Request
 	bool tmp_result = request.SendRequest();

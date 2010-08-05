@@ -397,7 +397,7 @@ getCommandFromArgv( int argc, char* argv[] )
 		// now, make sure we're not looking at "condor_cod" or
 		// something.  if cmd_str is pointing at cod, we want to move
 		// beyond that...
-	if( cmd_str && !strincmp(cmd_str, "_cod", 4) ) {
+	if( cmd_str && !strncasecmp(cmd_str, "_cod", 4) ) {
 		if( cmd_str[4] ) {
 			cmd_str = &cmd_str[4];
 		} else {

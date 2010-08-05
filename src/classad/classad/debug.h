@@ -31,8 +31,8 @@ BEGIN_NAMESPACE( classad )
     _classad_except
 
 extern int _except_line_number;
-extern char *_except_file_name;
-void _classad_except(char *format, ...);
+extern const char *_except_file_name;
+void _classad_except(const char *format, ...);
 
 END_NAMESPACE
 

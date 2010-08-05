@@ -121,10 +121,9 @@ char** string_compare_helper(StringList* sl, int start) {
 }
 
 /* Frees a char** */
-void free_helper(char** array) {
-	int j = sizeof(array)/sizeof(char*);
+void free_helper(char** array, int num_strs) {
 	int i;
-	for(i = 0; i < j; i++) {
+	for(i = 0; i < num_strs; i++) {
 		free(array[i]);		
 	}
 	free(array);
@@ -218,4 +217,29 @@ MyString* convert_string_array(const char** str, int size, const char* delim){
 		*toReturn+=delim;
 	}
 	return toReturn;
+}
+
+/* Deletes a char** */
+void delete_helper(char** array, int num_strs) {
+	int i;
+	for(i = 0; i < num_strs; i++) {
+		delete[] array[i];		
+	}
+	delete[] array;
+}
+
+void get_tm(ISO8601Type type, const struct tm &time, MyString* str)
+{
+	if(str) {
+		if (type == ISO8601_DateOnly) {
+			str->sprintf("%d-%d-%d", time.tm_year, time.tm_mon, time.tm_mday);
+		} else if (type == ISO8601_TimeOnly) {
+			str->sprintf("%d:%d:%d", time.tm_hour, time.tm_min, time.tm_sec);
+		} else {
+			str->sprintf("%d-%d-%dT%d:%d:%d",
+						 time.tm_year, time.tm_mon, time.tm_mday,
+						 time.tm_hour, time.tm_min, time.tm_sec);
+		}
+	}
+
 }
