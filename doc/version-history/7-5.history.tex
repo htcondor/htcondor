@@ -74,6 +74,11 @@ as part of the DAG status message in the \File{dagman.out} file.
 when the \Condor{submit\_dag} and \Condor{dagman} versions differ,
 even if the difference is permissible.
 
+%gittrac #1483
+\item Added the capability for \Condor{dagman} to create a node status
+file that is continually updated as the DAG runs (see 
+section~\ref{sec:DAG-node-status} for details).
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -94,7 +99,7 @@ checkpoint.  This complements the existing attribute
 \AdAttr{CumulativeSuspensionTime}, which includes all time spent in
 suspension, regardless of job eviction.
 
-%gittrack #1385
+%gittrac #1385
 \item The new configuration variable
 \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS} specifies a list of machine
 attributes that should be recorded in the job ClassAd.  The default
@@ -133,7 +138,7 @@ per-job basis by using the new submit file command
   effectively non-functional: \Attr{UseSharedX509UserProxy},
   \Attr{JobShouldBeSandboxed}, and \Attr{JobFailureTest}.
 
-% gittrack #1521
+% gittrac #1521
 \item When output files were auto-selected and spooled, Condor-C and
   \Condor{transfer\_data} would copy back both the output files and
   all other contents of the job's spool directory, which typically
