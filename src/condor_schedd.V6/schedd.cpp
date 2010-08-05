@@ -105,6 +105,8 @@
 #define SUCCESS 1
 #define CANT_RUN 0
 
+char const * const HOME_POOL_SUBMITTER_TAG = "";
+
 extern char *gen_ckpt_name();
 
 extern GridUniverseLogic* _gridlogic;
@@ -203,7 +205,7 @@ struct job_data_transfer_t {
 };
 
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
-					  const ClassAd *match, char *the_user, char *my_pool,
+					  const ClassAd *match, char const *the_user, char const *my_pool,
 					  bool is_dedicated_arg ):
 	ClaimIdParser(claim_id)
 {
@@ -986,6 +988,8 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  m_ad->InsertOrUpdate(tmp);
 
+	  m_ad->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
+
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
@@ -1062,10 +1066,17 @@ Scheduler::count_jobs()
 				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 						UidDomain);
 				m_ad->InsertOrUpdate(tmp);
+
+					// we will use this "tag" later to identify which
+					// CM we are negotiating with when we negotiate
+				m_ad->Assign(ATTR_SUBMITTER_TAG,flock_col->name());
+
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, m_ad, NULL, true );
 			}
 		}
 	}
+
+	m_ad->Delete(ATTR_SUBMITTER_TAG);
 
 	for (i=0; i < N_Owners; i++) {
 		Owners[i].OldFlockLevel = Owners[i].FlockLevel;
@@ -4708,7 +4719,6 @@ Scheduler::negotiate(int command, Stream* s)
 	int		op = -1;
 	PROC_ID	id;
 	char*	claim_id = NULL;			// claim_id for each match made
-	char*	host = NULL;
 	char*	sinful = NULL;
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
@@ -4719,7 +4729,8 @@ Scheduler::negotiate(int command, Stream* s)
 	int		shadow_num_increment;
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
-	char*	negotiator_name = NULL;	// hostname of negotiator when flocking
+	MyString remote_pool_buf;
+	char const *remote_pool = NULL;
 	Daemon*	neg_host = NULL;	
 	int		owner_num;
 	int		JobsRejected = 0;
@@ -4736,13 +4747,13 @@ Scheduler::negotiate(int command, Stream* s)
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
-	// since this is the socket from the negotiator, the only command that can
-	// come in at this point is NEGOTIAT_WITH_SIGATTRSE.  If we get something
-	// else, something goofy is going on.
-	if (command != NEGOTIATE_WITH_SIGATTRS)
+		// Prior to 7.5.4, the negotiator sent NEGOTIATE_WITH_SIGATTRS
+		// As of 7.5.4, since we are putting ATTR_SUBMITTER_TAG into
+		// the submitter ads, the negotiator sends NEGOTIATE
+	if (command != NEGOTIATE_WITH_SIGATTRS && command != NEGOTIATE)
 	{
 		dprintf(D_ALWAYS,
-				"Negotiator command was %d (not NEGOTIATE_WITH_SIGATTRS) "
+				"Negotiator command was %d (not NEGOTIATE_WITH_SIGATTRS or NEGOTIATE) "
 				"--- aborting\n", command);
 		return (!(KEEP_STREAM));
 	}
@@ -4776,58 +4787,6 @@ Scheduler::negotiate(int command, Stream* s)
 		// CronTab Jobs
 		//
 	this->calculateCronTabSchedules();		
-
-	if (FlockNegotiators) {
-		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
-		struct hostent *hent;
-		bool match = false;
-		Daemon negotiator (DT_NEGOTIATOR);
-		char *negotiator_hostname = negotiator.fullHostname();
-		if (!negotiator_hostname) {
-			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
-			return (!(KEEP_STREAM));
-		}
-		hent = condor_gethostbyname(negotiator_hostname);
-		if (!hent) {
-			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
-					"  Aborting negotiation.\n", negotiator_hostname);
-			return (!(KEEP_STREAM));
-		}
-		char *addr;
-		if (hent->h_addrtype == AF_INET) {
-			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
-				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
-					match = true;
-				}
-			}
-		}
-		// if it isn't our local negotiator, check the FlockNegotiators list.
-		if (!match) {
-			int n;
-			for( n=1, FlockNegotiators->rewind();
-				 !match && FlockNegotiators->next(neg_host); n++) {
-				hent = condor_gethostbyname(neg_host->fullHostname());
-				if (hent && hent->h_addrtype == AF_INET) {
-					for (int a=0;
-						 !match && (addr = hent->h_addr_list[a]);
-						 a++) {
-						if (memcmp(addr, &endpoint_addr,
-									sizeof(struct in_addr)) == 0){
-							match = true;
-							which_negotiator = n;
-							negotiator_name = host;
-						}
-					}
-				}
-			}
-		}
-		if (!match) {
-			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
-					"Aborting negotiation.\n", sock->peer_ip_str());
-			return (!(KEEP_STREAM));
-		}
-	}
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
 
@@ -4868,22 +4827,142 @@ Scheduler::negotiate(int command, Stream* s)
 	//-----------------------------------------------
 	char owner[200], *ownerptr = owner;
 	char *sig_attrs_from_cm = NULL;	
+	ClassAd negotiate_ad;
+	MyString submitter_tag;
 	s->decode();
-	if (!s->get(ownerptr,sizeof(owner))) {
-		dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
-		return (!(KEEP_STREAM));
+	if( command == NEGOTIATE ) {
+		if( !negotiate_ad.initFromStream( *s ) ) {
+			dprintf( D_ALWAYS, "Can't receive negotiation header\n" );
+			return (!(KEEP_STREAM));
+		}
+		if( !negotiate_ad.LookupString(ATTR_OWNER,owner,sizeof(owner)) ) {
+			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
+					 ATTR_OWNER );
+			return (!(KEEP_STREAM));
+		}
+		if( !negotiate_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sig_attrs_from_cm) ) {
+			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
+					 ATTR_AUTO_CLUSTER_ATTRS );
+			return (!(KEEP_STREAM));
+		}
+		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
+			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
+					 ATTR_SUBMITTER_TAG );
+			return (!(KEEP_STREAM));
+		}
 	}
-	if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
-		dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
-		return (!(KEEP_STREAM));
+	else {
+			// old NEGOTIATE_WITH_SIGATTRS protocol
+		if (!s->get(ownerptr,sizeof(owner))) {
+			dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
+			return (!(KEEP_STREAM));
+		}
+		if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
+			dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
+			return (!(KEEP_STREAM));
+		}
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
 		return (!(KEEP_STREAM));
 	}
-	if (negotiator_name) {
-		dprintf (D_ALWAYS, "Negotiating with %s for owner: %s\n",
-				 negotiator_name, owner);
+
+	if( FlockCollectors && command == NEGOTIATE ) {
+			// Use the submitter tag to figure out which negotiator we
+			// are talking to.  We insert a different submitter tag
+			// into the submitter ad that we send to each CM.  In fact,
+			// the tag is just equal to the collector address for the CM.
+		if( submitter_tag != HOME_POOL_SUBMITTER_TAG ) {
+			int n;
+			bool match = false;
+			Daemon *flock_col = NULL;
+			for( n=1, FlockCollectors->rewind();
+				 FlockCollectors->next(flock_col);
+				 n++)
+			{
+				if( submitter_tag == flock_col->name() ){
+					which_negotiator = n;
+					remote_pool_buf = flock_col->name();
+					remote_pool = remote_pool_buf.Value();
+					match = true;
+					break;
+				}
+			}
+			if( !match ) {
+				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
+						"Aborting negotiation.\n", sock->peer_ip_str(),
+						submitter_tag.Value());
+				return (!(KEEP_STREAM));
+			}
+		}
+	}
+	else if( FlockNegotiators && command == NEGOTIATE_WITH_SIGATTRS ) {
+			// This is the old (pre 7.5.4) method for determining
+			// which negotiator we are talking to.  It is brittle
+			// because it depends on a DNS lookup of the negotiator
+			// name matching the peer address.  This is the only place
+			// in the schedd where we really depend on NEGOTIATOR_HOST
+			// and FLOCK_NEGOTIATOR_HOSTS.
+
+		// first, check if this is our local negotiator
+		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
+		struct hostent *hent;
+		bool match = false;
+		Daemon negotiator (DT_NEGOTIATOR);
+		char *negotiator_hostname = negotiator.fullHostname();
+		if (!negotiator_hostname) {
+			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
+			return (!(KEEP_STREAM));
+		}
+		hent = condor_gethostbyname(negotiator_hostname);
+		if (!hent) {
+			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
+					"  Aborting negotiation.\n", negotiator_hostname);
+			return (!(KEEP_STREAM));
+		}
+		char *addr;
+		if (hent->h_addrtype == AF_INET) {
+			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
+				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
+					match = true;
+				}
+			}
+		}
+		// if it isn't our local negotiator, check the FlockNegotiators list.
+		if (!match) {
+			int n;
+			for( n=1, FlockNegotiators->rewind();
+				 !match && FlockNegotiators->next(neg_host); n++) {
+				hent = condor_gethostbyname(neg_host->fullHostname());
+				if (hent && hent->h_addrtype == AF_INET) {
+					for (int a=0;
+						 !match && (addr = hent->h_addr_list[a]);
+						 a++) {
+						if (memcmp(addr, &endpoint_addr,
+									sizeof(struct in_addr)) == 0){
+							match = true;
+							which_negotiator = n;
+							remote_pool_buf = neg_host->pool();
+							remote_pool = remote_pool_buf.Value();
+						}
+					}
+				}
+			}
+		}
+		if (!match) {
+			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
+					"Aborting negotiation.\n", sock->peer_ip_str());
+			return (!(KEEP_STREAM));
+		}
+	}
+	else if( FlockCollectors ) {
+		EXCEPT("Unexpected negotiation command %d\n", command);
+	}
+
+
+	if( remote_pool ) {
+		dprintf (D_ALWAYS, "Negotiating for owner: %s (flock level %d, pool %s)\n",
+				 owner, which_negotiator, remote_pool);
 	} else {
 		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
 	}
@@ -4897,7 +4976,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if (sig_attrs_from_cm) {
 			free(sig_attrs_from_cm);
 		}
-		return dedicated_scheduler.negotiate( s, negotiator_name );
+		return dedicated_scheduler.negotiate( s, remote_pool );
 	}
 
 		// If we got this far, we're negotiating for a regular user,
@@ -5343,7 +5422,7 @@ Scheduler::negotiate(int command, Stream* s)
 						// of the startd we were matched with.
 					pre_existing_match = NULL;
 					mrec = AddMrec( claim_id, sinful, &id, my_match_ad,
-									owner,negotiator_name,&pre_existing_match);
+									owner,remote_pool,&pre_existing_match);
 
 						/* if AddMrec returns NULL, it means we can't
 						   use that match.  in that case, we'll skip
@@ -7963,9 +8042,8 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	if (pid) {
 		add_shadow_rec(new_rec);
 	} else if ( new_rec->match && new_rec->match->pool ) {
-		// need to make sure this gets set immediately
 		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
-						   ATTR_REMOTE_POOL, new_rec->match->pool);
+						   ATTR_REMOTE_POOL, new_rec->match->pool, NONDURABLE);
 	}
 	return new_rec;
 }
@@ -10325,7 +10403,7 @@ Scheduler::Init()
 	if (!flock_negotiator_hosts) { // backward compatibility
 		flock_negotiator_hosts = param( "FLOCK_HOSTS" );
 	}
-	if( flock_collector_hosts && flock_negotiator_hosts ) {
+	if( flock_collector_hosts ) {
 		if( FlockCollectors ) {
 			delete FlockCollectors;
 		}
@@ -10343,15 +10421,6 @@ Scheduler::Init()
 					"FLOCK_NEGOTIATOR_HOSTS lists are not the same size."
 					"Flocking disabled.\n");
 			MaxFlockLevel = 0;
-		}
-	} else {
-		MaxFlockLevel = 0;
-		if (!flock_collector_hosts && flock_negotiator_hosts) {
-			dprintf(D_ALWAYS, "FLOCK_NEGOTIATOR_HOSTS defined but "
-					"FLOCK_COLLECTOR_HOSTS undefined.  Flocking disabled.\n");
-		} else if (!flock_negotiator_hosts && flock_collector_hosts) {
-			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS defined but "
-					"FLOCK_NEGOTIATOR_HOSTS undefined.  Flocking disabled.\n");
 		}
 	}
 	if (flock_collector_hosts) free(flock_collector_hosts);
@@ -10658,6 +10727,10 @@ Scheduler::Register()
 	 // message handlers for schedd commands
 	 daemonCore->Register_Command( NEGOTIATE_WITH_SIGATTRS, 
 		 "NEGOTIATE_WITH_SIGATTRS", 
+		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
+		 this, NEGOTIATOR );
+	 daemonCore->Register_Command( NEGOTIATE, 
+		 "NEGOTIATE", 
 		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
 		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
@@ -11270,7 +11343,7 @@ Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
-				   char *user, char *pool, match_rec **pre_existing)
+				   char const *user, char const *pool, match_rec **pre_existing)
 {
 	match_rec *rec;
 

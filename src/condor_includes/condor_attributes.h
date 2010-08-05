@@ -471,6 +471,7 @@ extern const char * const  ATTR_STREAM_INPUT;
 extern const char * const  ATTR_STREAM_OUTPUT;
 extern const char * const  ATTR_STREAM_ERROR;
 extern const char * const  ATTR_SUBMITTER_ID;
+extern const char * const ATTR_SUBMITTER_TAG;
 extern const char * const  ATTR_SUBMITTOR_PRIO;  // old-style for ATTR_SUBMITTER_USER_PRIO
 extern const char * const  ATTR_SUBMITTER_USER_PRIO;
 extern const char * const  ATTR_SUBMITTER_USER_RESOURCES_IN_USE;

@@ -533,6 +533,7 @@ const char * const ATTR_STREAM_ERROR			 = "StreamErr";
 const char * const ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE = "SubmitterGroupResourcesInUse";
 const char * const ATTR_SUBMITTER_GROUP_QUOTA	 = "SubmitterGroupQuota";
 const char * const ATTR_SUBMITTER_ID			 = "SubmitterId";
+const char * const ATTR_SUBMITTER_TAG            = "SubmitterTag";
 const char * const ATTR_SUBMITTOR_PRIO           = "SubmittorPrio";   // old-style for ATTR_SUBMITTER_USER_PRIO
 const char * const ATTR_SUBMITTER_USER_PRIO	  = "SubmitterUserPrio";
 const char * const ATTR_SUBMITTER_USER_RESOURCES_IN_USE = "SubmitterUserResourcesInUse";
