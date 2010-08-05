@@ -2314,7 +2314,12 @@ void
 Dag::SetNodeStatusFileName( const char *statusFileName,
 			int minUpdateTime )
 {
-	delete[] _statusFileName;
+	if ( _statusFileName != NULL ) {
+		debug_printf( DEBUG_NORMAL, "Attempt to set NODE_STATUS_FILE "
+					"to %s does not override existing value of %s\n",
+					statusFileName, _statusFileName );
+		return;
+	}
 	_statusFileName = strnewp( statusFileName );
 	_minStatusUpdateTime = minUpdateTime;
 }
