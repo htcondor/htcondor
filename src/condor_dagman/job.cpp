@@ -114,7 +114,6 @@ void Job::Init( const char* jobName, const char* directory,
     _Status = STATUS_READY;
 	_isIdle = false;
 	countedAsDone = false;
-	_waitingCount = 0;
 
     _jobName = strnewp (jobName);
 	_directory = strnewp (directory);
@@ -308,12 +307,6 @@ Job::SanityCheck() const
 {
 	bool result = true;
 
-	if( _waitingCount < 0 ) {
-		dprintf( D_ALWAYS, "BADNESS 10000: _waitingCount = %d\n",
-				 _waitingCount );
-		result = false;
-	}
-
 	if( countedAsDone == true && _Status != STATUS_DONE ) {
 		dprintf( D_ALWAYS, "BADNESS 10000: countedAsDone == true but "
 				 "_Status != STATUS_DONE\n" );
@@ -390,7 +383,6 @@ Job::AddParent( Job* parent, MyString &whynot )
 						parent->GetJobName(), GetJobName() );
 			return false;
 		}
-		_waitingCount++;
 	}
 	whynot = "n/a";
     return true;

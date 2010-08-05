@@ -631,7 +631,7 @@ class Dag {
 	// node, unless it is an absolute path, in which case we ignore it.
 	void PropogateDirectoryToAllNodes(void);
 
-  protected:
+  private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
 	// defaults to ".".

@@ -2399,6 +2399,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		const char *nodeNote = "";
 		if ( node->GetStatus() == Job::STATUS_READY ) {
 			if ( !node->CanSubmit() ) {
+				// See Job::_job_type_names for other strings.
 				statusStr = "STATUS_UNREADY  ";
 			}
 		} else if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
