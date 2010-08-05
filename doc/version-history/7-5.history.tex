@@ -79,6 +79,26 @@ even if the difference is permissible.
 file that is continually updated as the DAG runs (see 
 section~\ref{sec:DAG-node-status} for details).
 
+%gittrac #1560
+\item The \Condor{schedd} daemon now uses a better algorithm for
+determining which flocking level is being negotiated.  No special
+configuration is required for the new algorithm to work.  In the
+past, the algorithm that was used depended on DNS and the
+configuration of \MacroNI{NEGOTIATOR\_HOST} and
+\MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.  In some networking environments
+(such as a multi-homed central manager), it was difficult to
+configure things correctly.  When wrongly configured, negotiation
+would be aborted with the message, ``Unknown negotiator.''  The new
+algorithm is only used when the negotiator is version 7.5.4 or
+newer.  Of course, the \Condor{schedd} daemon must still be configured to
+authorize the \Condor{negotiator} daemon at the \DCPerm{NEGOTIATOR}
+authorization level.
+
+%gittrac #1483
+\item Added the capability for \Condor{dagman} to create a node status
+file that is continually updated as the DAG runs (see 
+section~\ref{sec:DAG-node-status} for details).
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -99,7 +119,14 @@ checkpoint.  This complements the existing attribute
 \AdAttr{CumulativeSuspensionTime}, which includes all time spent in
 suspension, regardless of job eviction.
 
-%gittrac #1385
+%gittrack #1385
+\item The new job ClassAd attributes \AdAttr{CommittedSlotTime} and
+\AdAttr{CumulativeSlotTime} are just like \AdAttr{CommittedTime} and
+\AdAttr{RemoteWallClockTime} respectively, except the new attributes
+are weighted by the \AdAttr{SlotWeight} of the machine(s) that ran
+the job.
+
+%gittrack #1385
 \item The new configuration variable
 \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS} specifies a list of machine
 attributes that should be recorded in the job ClassAd.  The default
@@ -128,6 +155,22 @@ per-job basis by using the new submit file command
   page~\pageref{attr:LastNegotiationCycleActiveSubmitterCount<X>} for a
   list of attributes that are published.
 
+%gittrac #1560
+\item The configuration variable \Macro{FLOCK\_NEGOTIATOR\_HOSTS} is now
+optional.  Previously, the \Condor{schedd} daemon refused to flock without
+this setting.  When this is not set, the addresses of the flocked
+\Condor{negotiator} daemons are found by querying the flocked collectors.
+Of course, the \Condor{schedd} daemon must still be configured to
+authorize the \Condor{negotiator} daemon at the \DCPerm{NEGOTIATOR}
+authorization level.  Therefore, when using host-based security,
+\Macro{FLOCK\_NEGOTIATOR\_HOSTS} may still be useful as a macro for inserting
+the negotiator hosts into the relevant authorization lists.
+
+%gittrack #1312
+\item The configuration variable \MacroNI{FLOCK\_HOSTS} is no longer used.
+For backward compatibility, this setting used to be treated as a default
+for \MacroNI{FLOCK\_COLLECTOR\_HOSTS} and \MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -138,7 +181,13 @@ per-job basis by using the new submit file command
   effectively non-functional: \Attr{UseSharedX509UserProxy},
   \Attr{JobShouldBeSandboxed}, and \Attr{JobFailureTest}.
 
-% gittrac #1521
+% gittrack #1561
+\item \SubmitCmd{copy\_to\_spool} did not work properly in 7.5.3.
+  When sending the executable to the execute machine, it was
+  transferred from the original path rather than from the spooled copy
+  of the file.
+
+% gittrack #1521
 \item When output files were auto-selected and spooled, Condor-C and
   \Condor{transfer\_data} would copy back both the output files and
   all other contents of the job's spool directory, which typically
