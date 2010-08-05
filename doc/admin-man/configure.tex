@@ -5442,31 +5442,33 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:FlockNegotiatorHosts} 
 \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}]
-  This macro defines a list of negotiator host names (not including the
-  local \MacroUNI{NEGOTIATOR\_HOST} machine) for pools in which the
-  \Condor{schedd} should attempt to run jobs.  Hosts in the list should be in
-  order of preference.  The \Condor{schedd} will only send a request to a
-  central manager in the list if the local pool and pools earlier in
-  the list are not satisfying all the job requests.
-  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
-  section~\ref{param:HostAllow}) must also be configured to allow
-  negotiators from all of the \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} to
-  contact the \Condor{schedd}.  Please make sure the
-  \MacroUNI{NEGOTIATOR\_HOST} is first in the
-  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.  Similarly, the
-  central managers of the remote pools must be configured to listen to
-  requests from this \Condor{schedd}.
+  This macro defines a list of negotiator host names for pools in which
+  the \Condor{schedd} should attempt to run jobs.  If not set, the
+  \Condor{schedd} will query the collectors for the addresses of the
+  negotiators.  If set, then the negotiators must be specified in order,
+  corresponding to the \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} list.
+  In the typical case, where each pool
+  has the collector and negotiator running on the same machine,
+  \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} should have the same definition as
+  \MacroUNI{FLOCK\_COLLECTOR\_HOSTS}.  This configuration value is also
+  typically used as a macro for adding the negotiator to the relevant
+  authorization lists.
 
 \label{param:FlockCollectorHosts}
 \item[\Macro{FLOCK\_COLLECTOR\_HOSTS}]
-  This macro defines a list of collector host names for pools in which
-  the \Condor{schedd} should attempt to run jobs.
-  The collectors must be specified in order,
-  corresponding to the \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} list.
-  In the typical case, where each pool
-  has the collector and negotiator running on the same machine,
-  \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} should have the same definition as
-  \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS}.
+  This macro defines a list of collector host names (not including the
+  local \MacroUNI{COLLECTOR\_HOST} machine) for pools in which the
+  \Condor{schedd} should attempt to run jobs.  Hosts in the list
+  should be in order of preference.  The \Condor{schedd} will only
+  send a request to a central manager in the list if the local pool
+  and pools earlier in the list are not satisfying all the job
+  requests.  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
+  section~\ref{param:HostAllow}) must also be configured to allow
+  negotiators from all of the pools to contact the \Condor{schedd} at
+  the \DCPerm{NEGOTIATOR} authorization level.  Similarly, the central
+  managers of the remote pools must be configured to allow this
+  \Condor{schedd} to join the pool (this requires \DCPerm{ADVERTISE\_SCHEDD}
+  authorization level, which defaults to \DCPerm{WRITE}).
 
   \label{param:NegotiateAllJobsInCluster}
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
