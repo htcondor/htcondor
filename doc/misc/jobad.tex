@@ -70,6 +70,24 @@ so the total committed wall time spent running is
 CommittedTime - CommittedSuspensionTime
 \end{verbatim}
 
+%%% ClassAd attribute: CommittedSlotTime
+\index{ClassAd job attribute!CommittedSlotTime}
+\index{CommittedSlotTime!job ClassAd attribute}
+\label{CommittedSlotTime}
+\item[\AdAttr{CommittedSlotTime}:] This attribute is identical to
+\AdAttr{CommittedTime} except that the time is multiplied by the
+\AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
+on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
+
+%%% ClassAd attribute: CumulativeSlotTime
+\index{ClassAd job attribute!CumulativeSlotTime}
+\index{CumulativeSlotTime!job ClassAd attribute}
+\label{CumulativeSlotTime}
+\item[\AdAttr{CumulativeSlotTime}:] This attribute is identical to
+\AdAttr{RemoteWallClockTime} except that the time is multiplied by the
+\AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
+on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
+
 %%% ClassAd attribute: CompletionDate
 \index{ClassAd job attribute!CompletionDate}
 \index{CompletionDate!job ClassAd attribute}

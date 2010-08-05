@@ -110,6 +110,13 @@ checkpoint.  This complements the existing attribute
 suspension, regardless of job eviction.
 
 %gittrack #1385
+\item The new job ClassAd attributes \AdAttr{CommittedSlotTime} and
+\AdAttr{CumulativeSlotTime} are just like \AdAttr{CommittedTime} and
+\AdAttr{RemoteWallClockTime} respectively, except the new attributes
+are weighted by the \AdAttr{SlotWeight} of the machine(s) that ran
+the job.
+
+%gittrack #1385
 \item The new configuration variable
 \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS} specifies a list of machine
 attributes that should be recorded in the job ClassAd.  The default
