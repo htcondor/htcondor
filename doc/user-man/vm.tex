@@ -52,7 +52,7 @@ or
   vm_type = kvm
 \end{verbatim}
 
-The job specifies its memory needs 
+The job is required to specify its memory needs 
 for the disk image with \SubmitCmd{vm\_memory},
 which is given in Mbytes.
 Condor uses this number to assure a match with a machine
@@ -75,19 +75,6 @@ If a single file that ends with the suffix \Expr{.iso} is listed
 with \SubmitCmd{vm\_cdrom\_files},
 Condor uses the file as an iso file, rather than creating one.
 
-Creating a checkpoint is straightforward for a virtual machine,
-as a checkpoint is a set of files that represent
-a snapshot of both disk image and memory.
-The checkpoint is created and all files are transferred back
-to the \MacroUNI{SPOOL} directory on the machine from which
-the job was submitted.
-\SubmitCmd{vm} universe jobs can not use a checkpoint server.
-The submit command to create checkpoints is
-\begin{verbatim}
-  vm_checkpoint = true
-\end{verbatim}
-Without this command, no checkpoints are created (by default).
-
 Virtual machine networking is enabled with the command
 \begin{verbatim}
   vm_networking = true
@@ -107,15 +94,6 @@ match the job with a machine that enables networking,
 and further, the choice of bridge or NAT networking
 is determined by the machine's configuration.
 
-Enabling both networking and checkpointing for a \SubmitCmd{vm}
-universe job can cause networking problems when the job restarts,
-particularly if the job migrates to a different machine.
-\Condor{submit} will normally reject such jobs.
-If you wish to enable both, then you must additionally specify
-\begin{verbatim}
-  when_to_transfer_output = ON_EXIT_OR_EVICT
-\end{verbatim}
-
 Modified disk images are transferred back to the machine from which
 the job was submitted as the \SubmitCmd{vm} universe job completes.
 Job completion for a \SubmitCmd{vm} universe job occurs when 
@@ -127,6 +105,22 @@ the submit command to prevent the transfer is
 \begin{verbatim}
   vm_no_output_vm = true
 \end{verbatim}
+
+Setting values in the submit description file for some commands
+have consequences for the virtual machine description file.
+These commands are
+\begin{itemize}
+  \item \SubmitCmd{vm\_memory}
+  \item \SubmitCmd{vm\_macaddr}
+  \item \SubmitCmd{vm\_networking}
+  \item \SubmitCmd{vm\_networking\_type}
+  \item \SubmitCmd{vm\_cdrom\_files}
+\end{itemize}
+For VMware virtual machines,
+setting values for these commands causes Condor to modify the
+\File{.vmx} file, overwriting existing values.
+For KVM and Xen virtual machines,
+Condor uses these values when it produces the description file.
 
 Further commands specify information that is specific to the
 virtual machine type targeted.
@@ -305,7 +299,44 @@ where the last line of this example defines the device.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-checkpoints}Checkpoints}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
+\index{vm universe!checkpoints}
+
+Creating a checkpoint is straightforward for a virtual machine,
+as a checkpoint is a set of files that represent
+a snapshot of both disk image and memory.
+The checkpoint is created and all files are transferred back
+to the \MacroUNI{SPOOL} directory on the machine from which
+the job was submitted.
+The submit command to create checkpoints is
+\begin{verbatim}
+  vm_checkpoint = true
+\end{verbatim}
+Without this command, no checkpoints are created (by default).
+With the command, a checkpoint is created any time the \SubmitCmd{vm}
+universe jobs is evicted from the machine upon which it is executing.
+This occurs as a result of the machine configuration indicating
+that it will no longer execute this job.
+
+\SubmitCmd{vm} universe jobs can \emph{not} use a checkpoint server.
+
+Periodically creating checkpoints is not supported at this time.
+
+Enabling both networking and checkpointing for a \SubmitCmd{vm}
+universe job can cause networking problems when the job restarts,
+particularly if the job migrates to a different machine.
+\Condor{submit} will normally reject such jobs.
+To enable both, then add the command
+\begin{verbatim}
+  when_to_transfer_output = ON_EXIT_OR_EVICT
+\end{verbatim}
+
+Take care with respect to the use of network connections within
+the virtual machine and their interaction with checkpoints.
+Open network connections at the time of the checkpoint will likely
+be lost when the checkpoint is subsequently used to resume execution
+of the virtual machine.
+This occurs whether or not the execution resumes
+on the same machine or a different one within the Condor pool.   
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-disk-image-details}Disk Images}
@@ -349,6 +380,9 @@ universes.
 
 Shut down of a virtual machine occurs from within the virtual
 machine environment.
+A script, executed with the proper authorization level,
+is the likely source of the shut down commands.
+
 Under a Windows 2000, Windows XP, or Vista virtual machine,
 an administrator issues the command
 \begin{verbatim}
