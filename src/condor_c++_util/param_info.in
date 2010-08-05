@@ -8535,22 +8535,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=520
 
-[FLOCK_HOSTS]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Flock Hosts
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=schedd,schedd
-id=521
-
 [FLOCK_NEGOTIATOR_HOSTS]
 aliases=
 default=$(FLOCK_TO)

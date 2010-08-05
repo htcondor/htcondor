@@ -10396,13 +10396,8 @@ Scheduler::Init()
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
 	flock_collector_hosts = param( "FLOCK_COLLECTOR_HOSTS" );
-	if (!flock_collector_hosts) { // backward compatibility
-		flock_collector_hosts = param( "FLOCK_HOSTS" );
-	}
 	flock_negotiator_hosts = param( "FLOCK_NEGOTIATOR_HOSTS" );
-	if (!flock_negotiator_hosts) { // backward compatibility
-		flock_negotiator_hosts = param( "FLOCK_HOSTS" );
-	}
+
 	if( flock_collector_hosts ) {
 		if( FlockCollectors ) {
 			delete FlockCollectors;
