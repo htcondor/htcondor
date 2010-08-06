@@ -49,12 +49,13 @@ if (lc($^O) eq "mswin32") {
 	$vmwarecmd_prog = 'vmware-cmd';
 }
 
-# Location of "mkisofs" or "mkisofs.exe" program
+# Location of "mkisofs" or "cdmake.exe" program
 # If mkisofs program is in $PATH, just use basename. Otherwise use a full path
+my $cdmake;
 my $mkisofs;
 if (lc($^O) eq "mswin32") {
 	# For MS Windows 
-	$mkisofs = 'C:\condor\bin\mkisofs.exe';
+	$cdmake = 'C:\condor\bin\cdmake.exe';
 }else {
 	# For Linux
 	$mkisofs = 'mkisofs';
@@ -197,8 +198,10 @@ sub check
 	!system $vmwarecmd_prog, "-l"
 		or printerror  "Can't execute $vmwarecmd_prog";
 
-	!system $mkisofs, "-version"
-		or printerror "Can't execute $mkisofs";
+	if (lc($^O) ne "mswin32") {
+		!system $mkisofs, "-version"
+			or printerror "Can't execute $mkisofs";
+	}
 }
 
 sub register
@@ -638,8 +641,13 @@ sub createiso
 	my $cdlabel = "CONDOR";
 
 	# Using volume ID, application Label, Joliet
-	!system $mkisofs, "-quiet", "-o", $isofile, "-input-charset", "iso8859-1", "-J", "-A", $cdlabel, "-V", $cdlabel, $tmpdir
-		or printerror "Cannot create an ISO file($isofile)";
+	if (lc($^O) eq "mswin32") {
+		!system $cdmake, "-q", "-j", "-m", $tmpdir, $cdlabel, $isofile
+			or printerror "Cannot create an ISO file($isofile)";
+	} else {
+		!system $mkisofs, "-quiet", "-o", $isofile, "-input-charset", "iso8859-1", "-J", "-A", $cdlabel, "-V", $cdlabel, $tmpdir
+			or printerror "Cannot create an ISO file($isofile)";
+	}
 
 	rmtree("$tmpdir")
 		or printwarn "Cannot delete temporary directory($tmpdir) and files in it";

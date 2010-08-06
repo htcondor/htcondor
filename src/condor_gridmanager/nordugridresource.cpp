@@ -200,9 +200,15 @@ void NordugridResource::DoJobStatus()
 			// start ldap status command
 		dprintf( D_FULLDEBUG, "Starting ldap poll: %s\n", resourceName );
 
+		std::string ldap_server = resourceName;
+		size_t pos = ldap_server.find_first_of( ':' );
+		if ( pos != std::string::npos ) {
+			ldap_server.erase( pos );
+		}
+
 		MyString filter;
 		filter.sprintf( "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
-		int rc = m_statusGahp->nordugrid_ldap_query( resourceName, "mds-vo-name=local,o=grid", filter.Value(), "nordugrid-job-globalid,nordugrid-job-status",
+		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.Value(), "nordugrid-job-globalid,nordugrid-job-status",
 													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 			dprintf( D_ALWAYS,
