@@ -61,7 +61,7 @@ disables Chirp remote file access from execute machines.
 % gittrac 1402 and 1407
 \item The new configuration variable
   \Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE} specifies the networking interface
-  that xen or kvm \SubmitCmd{vm} universe jobs will use.
+  that Xen or KVM \SubmitCmd{vm} universe jobs will use.
   See section~\ref{param:VMNetworkingBridgeInterface} for documentation.
 
 \end{itemize}
@@ -138,22 +138,24 @@ were any idle scheduler universe jobs when files were staged into the
 when connecting to a misconfigured LDAP server.
 
 % gittrac #1352
-\item Fixed a bug that prevented the \MacroNI{NEGOTIATOR\_MATCH\_LOG} from rotating.
+\item Fixed a bug that prevented the \MacroNI{NEGOTIATOR\_MATCH\_LOG} 
+from rotating.
 
 % gittrac #1413
-\item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. This bug is 
-present in all earlier 7.4.x Condor releases.
+\item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. 
+This bug is present in all earlier 7.4.x Condor releases.
 
 % gittrac #1551
-\item The submit file attribute vm\_cdrom\_files now works properly
-with Windows execute machines. Previously, creation of the ISO file
-would fail, causing job execution to be aborted.
+\item The submit description file command \SubmitCmd{vm\_cdrom\_files}
+now works properly with Windows execute machines. 
+Previously, creation of the ISO file would fail, 
+causing job execution to be aborted.
 
 % gittrac #1423
 \item Fixed a bug that caused the \Condor{startd} to invoke the
-  ``power\_state'' plug-in as the condor user.  This caused
-  hibernation to fail because power\_state requires root privileges
-  to function properly.
+  \Prog{power\_state} plug-in as the condor user.
+  This caused hibernation to fail, 
+  because \Prog{power\_state} requires root privileges to function properly.
 
 \end{itemize}
 
