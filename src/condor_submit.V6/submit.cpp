@@ -2419,7 +2419,7 @@ SetTransferFiles()
 
 		macro_value = condor_param( JarFiles, ATTR_JAR_FILES );
 		if(macro_value) {
-			StringList files(macro_value);
+			StringList files(macro_value, ",");
 			files.rewind();
 			while ( (tmp_ptr=files.next()) ) {
 				tmp = tmp_ptr;
@@ -6363,7 +6363,7 @@ check_open( const char *name, int flags )
 
 	temp = condor_param( AppendFiles, ATTR_APPEND_FILES );
 	if(temp) {
-		list = new StringList(temp);
+		list = new StringList(temp, ",");
 		if(list->contains_withwildcard(name)) {
 			flags = flags & ~O_TRUNC;
 		}
@@ -7787,7 +7787,7 @@ SetVMParams()
 		// Look for .vmx and .vmdk files in transfer_input_files
 		StringList vmx_files;
 		StringList vmdk_files;
-		StringList input_files;
+		StringList input_files( NULL, "," );
 		MyString input_files_str;
 		job->LookupString( ATTR_TRANSFER_INPUT_FILES, input_files_str );
 		input_files.initializeFromString( input_files_str.Value() );
