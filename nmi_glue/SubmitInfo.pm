@@ -548,8 +548,7 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'unmanaged-x86_rhap_5', 'x86_64_fc_5', 'x86_fc_5',
-				'x86_64_fedora_8', 'x86_64_fedora_9',
+				'unmanaged-x86_rhap_5', 'x86_64_fedora_8', 'x86_64_fedora_9',
 			],
 		},
 
@@ -917,24 +916,6 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Fedora Core 5 on X86_64
-	# This might work.
-	##########################################################################
-	'x86_64_fc_5'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Fedora Core 11 on X86_64
 	# This might work.
 	##########################################################################
@@ -1196,24 +1177,6 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Fedora Core 5 on x86
-	# This might work.
-	##########################################################################
-	'x86_fc_5'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.5' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
