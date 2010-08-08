@@ -807,6 +807,24 @@ our %submit_info = (
 	},
 
 	##########################################################################
+	# Platform Fedora 12 on x86_64
+	# This might work.
+	##########################################################################
+	'x86_64_fedora_12-updated'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
 	# Platform Fedora 11 on x86_64
 	# This might work.
 	##########################################################################
