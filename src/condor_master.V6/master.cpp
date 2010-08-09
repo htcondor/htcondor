@@ -1015,7 +1015,7 @@ main_config()
 void
 main_shutdown_fast()
 {
-	invalidate_ads();
+	//invalidate_ads();
 	
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
@@ -1035,7 +1035,7 @@ main_shutdown_fast()
 void
 main_shutdown_graceful()
 {
-	invalidate_ads();
+	//invalidate_ads();
 	
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
