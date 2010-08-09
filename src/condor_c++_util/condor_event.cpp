@@ -526,7 +526,7 @@ SubmitEvent::~SubmitEvent(void)
 int
 SubmitEvent::writeEvent (FILE *file)
 {
-	int retval = fprintf (file, "Job submitted from host: %s\n", submitHost);
+	int retval = fprintf (file, "Job submitted to host: %s\n", submitHost);
 	if (retval < 0)
 	{
 		return 0;
@@ -553,7 +553,7 @@ SubmitEvent::readEvent (FILE *file)
 	s[0] = '\0';
 	delete[] submitEventLogNotes;
 	submitEventLogNotes = NULL;
-	if( fscanf( file, "Job submitted from host: %s\n", submitHost ) != 1 ) {
+	if( fscanf( file, "Job submitted to host: %s\n", submitHost ) != 1 ) {
 		return 0;
 	}
 
