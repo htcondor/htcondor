@@ -22,8 +22,12 @@ using the \SubmitCmd{grid} universe and the
 \SubmitCmd{grid\_resource} command  by placing the following
 into the submit description file.
 \begin{verbatim}
-grid_resource = amazon
+grid_resource = amazon https://ec2.amazonaws.com/
 \end{verbatim}
+
+There many providers besides Amazon who support the EC2 interface.
+To use one of them, substitute their EC2 URL for Amazon's in the
+\SubmitCmd{grid\_resource} line.
 
 Since the job is a virtual machine image, most of the submit file
 attributes specifying input or output files aren't applicable. The
@@ -89,10 +93,6 @@ AMAZON_GAHP=$(SBIN)/amazon_gahp
 AMAZON_GAHP_LOG=/tmp/AmazonGahpLog.$(USERNAME)
 \end{verbatim}
 \normalsize
-
-Alter the URL used by Condor to contact the EC2 service using
-the \Macro{AMAZON\_EC2\_URL} variable. The default value is
-\MacroNI{https://ec2.amazonaws.com/}.
 
 If an HTTP proxy is needed to reach EC2, tell Condor to use it
 via the \Macro{AMAZON\_HTTP\_PROXY} configuration variable.

@@ -23,6 +23,11 @@ The details of each version are described below.
 \item Condor version 7.5.4 not yet released.
 %\item Condor version 7.5.4 released on Month Date, 2010.
 
+% gittrac #1539
+\item The release now contains all header files necessary to compile
+code that uses the job log reading and writing utilities contained
+in libcondorapi. Some headers were missing starting in Condor 7.5.1.
+
 \end{itemize}
 
 
@@ -53,6 +58,11 @@ The details of each version are described below.
 
 % gittrac #991
 \item The \Condor{shared\_port} daemon is now supported on Windows platforms.
+
+% gittrac #1257
+\item Jobs can now by submitted to multiple EC2 servers via the amazon
+grid-type. The server's URL must be specified via the grid\_resource
+submit attribute for each job.
 
 %gittrac #1179
 \item \Condor{q} now uses the queue-management API's projection feature when 
@@ -99,11 +109,22 @@ authorization level.
 file that is continually updated as the DAG runs (see 
 section~\ref{sec:DAG-node-status} for details).
 
+% gittrac #1545
+\item The grid universe's 'amazon' grid-type can now be used to submit
+virtual machine jobs to Eucalyptus systems via the EC2 interface.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+% gittrac #1545
+\item The new configuration variable \MacroNI{SOAP\_SSL\_SKIP\_HOST\_CHECK}
+can be used to disable the standard check that a SOAP server's hostname
+matches the hostname in its X509 certificate. This is useful when submitting
+grid-type amazon jobs to Eucalyptus servers, which often have certificaates
+with a hostname of 'localhost'.
 
 % gittrac #61
 \item Added default values for \MacroNI{<SUBSYS>\_LOG} configuration variables.
@@ -171,6 +192,12 @@ the negotiator hosts into the relevant authorization lists.
 For backward compatibility, this setting used to be treated as a default
 for \MacroNI{FLOCK\_COLLECTOR\_HOSTS} and \MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.
 
+% gittrac #1257
+\item The configuration variable \MacroNI{AMAZON\_EC2\_URL} is now only used
+for previously-submitted jobs when upgrading Condor to version 7.5.4 or
+beyond. New grid-type amazon jobs must specify which EC2 service to use
+via the grid\_resource submit attribute.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -199,6 +226,27 @@ for \MacroNI{FLOCK\_COLLECTOR\_HOSTS} and \MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.
 % gittrac 1139
 \item \Condor{master} now invalidates its ad in the collector before it shuts
   down.
+
+% gittrac #1563
+\item Fixed a bug that caused vm universe jobs to not run if the VMware
+.vmx file contained a space.
+
+% gittrac #1549
+\item Fixed a bug introduced in 7.5.1 that caused integers in ClassAd
+expressions that had leading zeros to be read as octal (base eight).
+
+% gittrac #1516
+\item Fixed a bug introduced in 7.5.1 that didn't recognize semicolon
+as a separator of function arguments in ClassAds.
+
+% gittrac #1544
+\item Fixed a bug that caused integers larger than +/-2\^31 in a ClassAd
+expression to be parsed incorrectly. Now, when these integers are
+encountered, the largest 32-bit integer (with matching sign) is used.
+
+% gittrac #1537
+\item Fixed a bug that caused the condor\_gridmanager to exit when
+receiving badly-formatted error messages from the nordugrid\_gahp.
 
 \end{itemize}
 
