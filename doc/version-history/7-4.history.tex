@@ -83,6 +83,13 @@ should have been seconds, but instead was \Expr{Undefined}.
 \item With some versions of \Prog{ssh}, \Condor{ssh\_to\_job} failed if
 the \Env{SHELL} environment variable was set to \Prog{/bin/csh}.
 
+% gittrac 1567
+\item Submission of VM universe jobs via Globus was not possible, because
+the Globus Condor jobmanager explicitly set the input, output, and error files
+to /dev/null, and \Condor{submit} refused any setting of these files for
+VM universe jobs.  Now /dev/null is an allowed setting for the input, output,
+and error files for VM universe jobs.
+
 \end{itemize}
 
 \noindent Known Bugs:
