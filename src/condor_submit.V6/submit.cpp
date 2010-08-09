@@ -3103,6 +3103,9 @@ SetStdFile( int which_file )
 		stream_it = false;
 		// always canonicalize to the UNIX null file (i.e. /dev/null)
 		macro_value = strdup(UNIX_NULL_FILE);
+	}else if( strcmp(macro_value,UNIX_NULL_FILE)==0 ) {
+		transfer_it = false;
+		stream_it = false;
 	}else {
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) {
 			fprintf( stderr,"\nERROR: You cannot use input, ouput, "
