@@ -2177,74 +2177,80 @@ If conflicting parameters are used in a DOT command, the last one
 listed is used.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAG-node-status}Node status file}
+\subsection{\label{sec:DAG-node-status}Capturing the Status of Nodes in a File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!node status file}
-\index{node status}
+\index{status!of a DAGMan node}
 
-In order to be able to easily monitor the status of all DAG nodes, it
-is possible to specify a node status file that is periodically updated
-by DAGMan.
+DAGMan can capture the status of all DAG nodes,
+such that the user or a script may easily monitor the status of all DAG nodes.
+A node status file is periodically rewritten by DAGMan.
+To enable this feature, the DAG input file contains a line with the
+\Arg{NODE\_STATUS\_FILE} key word.
 
 The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 
 \Opt{NODE\_STATUS\_FILE} \Arg{statusFileName} \oArg{minimumUpdateTime}
 
-MinimumUpdateTime is the minimum number of seconds that must elapse
-between updates to the node status file.  This setting can be used
-to avoid having DAGMan spend too much time writing the node status
-file if you have a large DAG.  If no value is specified, no limit
-is set.  However, the node status file can be updated at most once
-per DAGMAN\_USER\_LOG\_SCAN\_INTERVAL (see
-section~\ref{param:DAGManUserLogScanInterval}), no matter how small
-the minimumUpdateTime value.
+The status file is written on the machine where the DAG is submitted;
+its location is given by \Arg{statusFileName}.  
+This will be the same machine where the \Condor{dagman} job is running.
 
-If the DAG file contains a line like this:
+The optional \Arg{minimumUpdateTime} specifies the minimum number of seconds
+that must elapse between updates to the node status file.
+This setting exists to avoid having DAGMan spend too much time writing
+the node status file for very large DAGs.
+If no value is specified, no limit is set.
+The node status file can be updated at most once
+per \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL},
+as defined at section~\ref{param:DAGManUserLogScanInterval},
+no matter how small the \Arg{minimumUpdateTime} value.
 
+As an example, if the DAG input file contains the line
 \begin{verbatim}
-    NODE_STATUS_FILE my.dag.status 30
+  NODE_STATUS_FILE my.dag.status 30
 \end{verbatim}
+the file \File{my.dag.status} will be rewritten at intervals of 30 seconds
+or more.
 
-the file \File{my.dag.status} will be updated with the DAG node status at
-intervals of 30 seconds or more.
-
-Node status file specifications inside splices are ignored.  If you
-specify multiple DAG files on the \Condor{submit\_dag} command line,
-and more than one specifies a node status file, the first specification
-takes precedence.
-
+This node status file is overwritten each time it is updated.
+Therefore, it only holds information about the \emph{current} status 
+of each node; it does not provide a history of the node status.
+The file contains one line describing the status of every node in the DAG.
+The file contents do not distinguish between Condor jobs and Stork jobs.
 Here is an example of a node status file:
 
 \begin{verbatim}
-    BEGIN 1281041745 (Thu Aug  5 15:55:45 2010)
-    Status of nodes of DAG(s): my.dag
+  BEGIN 1281041745 (Thu Aug  5 15:55:45 2010)
+  Status of nodes of DAG(s): my.dag
 
-    JOB A STATUS_DONE      ()
-    JOB B STATUS_SUBMITTED (not_idle)
-    JOB C STATUS_SUBMITTED (idle)
-    JOB D STATUS_UNREADY   ()
+  JOB A STATUS_DONE      ()
+  JOB B STATUS_SUBMITTED (not_idle)
+  JOB C STATUS_SUBMITTED (idle)
+  JOB D STATUS_UNREADY   ()
 
-    DAG status: STATUS_SUBMITTED ()
-    Next scheduled update: 1281041775 (Thu Aug  5 15:56:15 2010)
-    END 1281041745 (Thu Aug  5 15:55:45 2010)
+  DAG status: STATUS_SUBMITTED ()
+  Next scheduled update: 1281041775 (Thu Aug  5 15:56:15 2010)
+  END 1281041745 (Thu Aug  5 15:55:45 2010)
 \end{verbatim}
 
-It is important to note that the node status file is overwritten
-each time it is updated.  Therefore, the node status file only holds
-the information about the \emph{current} status of each node; it
-does not provide a history of the node status.
-
-Possible node status values are as follows:
+Possible node status values are:
 
 \begin{itemize}
-\item STATUS\_UNREADY (at least one parent has not yet finished)
-\item STATUS\_READY (all parents have finished, but not yet running)
-\item STATUS\_PRERUN (pre script is running)
-\item STATUS\_SUBMITTED (the node's Condor job(s) are in the queue)
-\item STATUS\_POSTRUN (post script is running)
-\item STATUS\_DONE (the node has completed successfully)
-\item STATUS\_ERROR (the node has failed)
+\item \verb@STATUS_UNREADY@ At least one parent has not yet finished.
+\item \verb@STATUS_READY@ All parents have finished, but not yet running.
+\item \verb@STATUS_PRERUN@ The PRE script is running.
+\item \verb@STATUS_SUBMITTED@ The node's Condor or Stork job(s) are in 
+  the queue.
+\item \verb@STATUS_POSTRUN@ The POST script is running.
+\item \verb@STATUS_DONE@ The node has completed successfully.
+\item \verb@STATUS_ERROR@ The node has failed.
 \end{itemize}
+
+A \Arg{NODE\_STATUS\_FILE} key word inside any splice is ignored.
+If multiple DAG files are specified on the \Condor{submit\_dag} command line,
+and more than one specifies a node status file,
+the first specification takes precedence.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGLotsaJobs}Utilizing the Power of DAGMan for Large Numbers of Jobs}

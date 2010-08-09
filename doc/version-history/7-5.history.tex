@@ -75,9 +75,9 @@ when the \Condor{submit\_dag} and \Condor{dagman} versions differ,
 even if the difference is permissible.
 
 %gittrac #1483
-\item Added the capability for \Condor{dagman} to create a node status
-file that is continually updated as the DAG runs (see 
-section~\ref{sec:DAG-node-status} for details).
+\item Added the capability for \Condor{dagman} to create and periodically
+rewrite a file that lists the status of all nodes within a DAG.
+See section~\ref{sec:DAG-node-status} for details.
 
 %gittrac #1560
 \item The \Condor{schedd} daemon now uses a better algorithm for
