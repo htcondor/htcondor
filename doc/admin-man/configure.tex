@@ -1646,18 +1646,24 @@ Log files may optionally be specified per debug level as follows:
 \label{param:SubsysLevelLog}
 \item[\MacroB{<SUBSYS>\_<LEVEL>\_LOG}]
 \index{SUBSYS\_LEVEL\_LOG macro@\texttt{<SUBSYS>\_<LEVEL>\_LOG} macro}
-  This is
-  the name of a log file for messages at a specific debug level for a
-  specific subsystem.  If the debug level is included in
+  The name of a log file for messages at a specific debug level for a
+  specific subsystem.  
+  \verb@<LEVEL>@ is defined by any debug level,
+  but without the \verb@D_@ prefix.
+  See section~\ref{list:debug-level-description} for the list of debug levels.
+  If the debug level is included in
   \MacroUNI{<SUBSYS>\_DEBUG}, then all messages of this debug level will be
-  written both to the \MacroUNI{<SUBSYS>\_LOG} file and the
-  \MacroUNI{<SUBSYS>\_<LEVEL>\_LOG} file.  For example,
-  \MacroUNI{SHADOW\_SYSCALLS\_LOG} specifies a log file for all remote
-  system call debug messages.
+  written both to the log file defined by \MacroNI{<SUBSYS>\_LOG} and the
+  the log file defined by \MacroNI{<SUBSYS>\_<LEVEL>\_LOG}.  As examples,
+  \MacroNI{SHADOW\_SYSCALLS\_LOG} specifies a log file for all remote
+  system call debug messages,
+  and \Macro{NEGOTIATOR\_MATCH\_LOG} specifies a log file that only captures
+  \Condor{negotiator} debug events occurring with matches.
 
 \label{param:MaxSubsysLevelLog}
 \item[\Macro{MAX\_<SUBSYS>\_<LEVEL>\_LOG}]
-  Similar to \Macro{MAX\_<SUBSYS>\_LOG}.
+  See section~\ref{param:MaxSubsysLog}, the definition of
+  \MacroNI{MAX\_<SUBSYS>\_LOG}.
 
 \label{param:TruncSubsysLevelLogOnOpen}
 \item[\Macro{TRUNC\_<SUBSYS>\_<LEVEL>\_LOG\_ON\_OPEN}]

@@ -116,16 +116,18 @@ entering an infinite loop on platforms that use X-Windows.
 Microsoft Windows and Mac OS X platforms were not affected.  This bug is
 present in all earlier 7.4.x Condor releases.
 
-\item The default path to \Prog{sftp-server} has been improved so that
-  \Condor{ssh\_to\_job} can use \Prog{sftp} out-of-the-box on RHEL 5 platforms.
+\item The default path to \Prog{sftp-server} has been improved,
+ so that \Condor{ssh\_to\_job} can use \Prog{sftp} out-of-the-box on 
+RedHat Enterprise Linux 5 platforms.
 
 % gittrac #1383
-\item A \Prog{nordugrid\_gahp} binary built on RHEL3 no longer crashes
-when run on a RHEL4 or Scientific Linux 4 machine.
+\item A \Prog{nordugrid\_gahp} binary built on RedHat Enterprise Linux 3
+no longer crashes
+when run on a RedHat Enterprise Linux 4 or Scientific Linux 4 machine.
 
 % gittrac #1418
 \item Fixed a bug in \Condor{rm} that caused it to misinterpret user names
-that begin with a digit, such as \Expr{1abc}.
+that begin with a digit, such as \Expr{4abc}.
 It incorrectly used them as cluster numbers. 
 
 % gittrac #1330
@@ -138,8 +140,9 @@ were any idle scheduler universe jobs when files were staged into the
 when connecting to a misconfigured LDAP server.
 
 % gittrac #1352
-\item Fixed a bug that prevented the \MacroNI{NEGOTIATOR\_MATCH\_LOG} 
-from rotating.
+\item Fixed a bug that prevented the log file defined with the configuration
+variable \Macro{NEGOTIATOR\_MATCH\_LOG} from rotating.
+See section~\ref{param:SubsysLevelLog} for the definition of this variable. 
 
 % gittrac #1413
 \item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. 
