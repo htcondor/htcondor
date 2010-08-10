@@ -1,11 +1,16 @@
 NAME = gahp_server
 all_target($(NAME))
 
+#ifndef HAVE_UNSETENV
+UNSETENV_LIB = ../condor_c++_util/condor_unsetenv.a
+#endif
+
 /* We pick out the specific LIB targets we need to avoid accidently
  * linking against any of the Condor libraries, which we don't want.
  */
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(PRE_EXT_LIBS) \
+	$(UNSETENV_LIB) \
 	$(GLOBUS_DIR)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_gass_transfer_$(GlobusFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_gram_client_$(GlobusFlavor).a \
