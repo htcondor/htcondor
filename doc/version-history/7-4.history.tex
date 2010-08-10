@@ -90,6 +90,11 @@ to /dev/null, and \Condor{submit} refused any setting of these files for
 VM universe jobs.  Now /dev/null is an allowed setting for the input, output,
 and error files for VM universe jobs.
 
+% gittrac #1564
+\item Fixed a bug that caused a vm universe job's output files to be
+transferred back to the submit machine with \MacroNI{vm\_no\_output\_vm}
+was set to \Expr{false}.
+
 \end{itemize}
 
 \noindent Known Bugs:
