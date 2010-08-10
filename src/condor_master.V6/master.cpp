@@ -1056,7 +1056,7 @@ invalidate_ads() {
 	
 	MyString line;
 	MyString escaped_name;
-	char* default_name = MasterName;
+	char* default_name = ::strnewp(MasterName);
 	if(!default_name) {
 		default_name = default_daemon_name();
 	}
