@@ -95,6 +95,11 @@ and error files for VM universe jobs.
 transferred back to the submit machine with \MacroNI{vm\_no\_output\_vm}
 was set to \Expr{false}.
 
+% gittrac #416
+\item String literals within \verb@$$([])@ expressions failed to be evaluated
+and resulted in the job going on hold.  This problem has existed since before
+Condor 7.0.0.
+
 \end{itemize}
 
 \noindent Known Bugs:
