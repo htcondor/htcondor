@@ -2938,6 +2938,29 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					expr_to_add.sprintf("string(%s", name + 1);
 					expr_to_add.setChar(expr_to_add.Length()-1, ')');
 
+						// Any backwacked double quotes or backwacks
+						// within the []'s should be unbackwacked.
+					int read_pos;
+					int write_pos;
+					for( read_pos = 0, write_pos = 0;
+						 read_pos < expr_to_add.Length();
+						 read_pos++, write_pos++ )
+					{
+						if( expr_to_add[read_pos] == '\\'  &&
+							read_pos+1 < expr_to_add.Length() &&
+							( expr_to_add[read_pos+1] == '\"' ||
+							  expr_to_add[read_pos+1] == '\\' ) )
+						{
+							read_pos++; // skip over backwack
+						}
+						if( read_pos != write_pos ) {
+							expr_to_add.setChar(write_pos,expr_to_add[read_pos]);
+						}
+					}
+					if( read_pos != write_pos ) { // terminate the string
+						expr_to_add.setChar(write_pos,'\0');
+					}
+
 					ClassAd tmpJobAd(*ad);
 					const char * INTERNAL_DD_EXPR = "InternalDDExpr";
 
