@@ -310,13 +310,15 @@ static bool test_init_null() {
 	emit_test("Test Init() when passed a NULL ClassAd pointer.");
 	emit_comment("There is no way to check if this test fails, so as long as we"
 		" don't segfault it passes.");
+	emit_problem("By inspection, AnalyzePolicy() code correctly ASSERTS for a "
+		"ClassAd that is NULL, but we can't verify that in the current unit "
+		"test framework.");
 	emit_comment("See ticket #1570.");
 	emit_input_header();
 	emit_param("ClassAd", "NULL");
-	UserPolicy policy;
+	//UserPolicy policy;
 	//policy.Init(NULL);
-	FAIL;	//Remove after problem is fixed
-	//PASS;
+	PASS;
 }
 
 static bool test_init_empty() {
