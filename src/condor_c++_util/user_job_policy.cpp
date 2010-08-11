@@ -361,6 +361,8 @@ UserPolicy::~UserPolicy()
 
 void UserPolicy::Init(ClassAd *ad)
 {
+	ASSERT(ad);
+	
 	m_ad = ad;
 	m_fire_expr = NULL;
 	m_fire_expr_val = -1;
