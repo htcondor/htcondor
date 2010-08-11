@@ -198,6 +198,10 @@ for previously-submitted jobs when upgrading Condor to version 7.5.4 or
 beyond. New grid-type amazon jobs must specify which EC2 service to use
 via the grid\_resource submit attribute.
 
+%gittrack #121
+\item The new job ClassAd attribute \AdAttr{NumPids} is the total number of 
+ child processes a running job has.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
