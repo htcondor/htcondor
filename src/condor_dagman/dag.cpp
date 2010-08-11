@@ -188,6 +188,9 @@ Dag::Dag( /* const */ StringList &dagFiles,
 
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 
+	_jobstateLog = NULL;
+	_jobstateLog = new JobstateLog( "jobstate.log" );//TEMPTEMP!!!!
+
 	return;
 }
 
@@ -213,6 +216,8 @@ Dag::~Dag() {
 	delete[] _dot_include_file_name;
 
 	delete[] _statusFileName;
+
+	delete _jobstateLog;
     
     return;
 }
@@ -733,6 +738,11 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 							"successfully.\n", job->GetJobName(),
 							termEvent->cluster, termEvent->proc,
 							termEvent->subproc );
+		}
+
+		//TEMPTEMP -- write JobSuccess or JobFailure here -- pass job->retVal
+		if ( _jobstateLog ) {
+			_jobstateLog->WriteJobSuccessOrFailure( job );
 		}
 
 		if( job->_scriptPost == NULL ) {
@@ -2035,7 +2045,13 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 					  event->subproc, recovStr );
 	}
 
-	return;
+	//TEMPTEMP -- need to generate POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS "events" in the jobstate.log file...
+	//TEMPTEMP -- print to jobstate log here??
+	//TEMPTEMP -- shit -- I need to remove the "ULOG" from the beginning of the event type...
+	//TEMPTEMP -- oh, yeah -- we also have to filter out events pegasus doesn't care about...
+	if ( _jobstateLog && node ) {
+		_jobstateLog->WriteEvent( event, node );
+	}
 }
 
 //-------------------------------------------------------------------------

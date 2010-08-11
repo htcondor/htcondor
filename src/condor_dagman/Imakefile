@@ -11,7 +11,8 @@ TOOL_LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 OBJ = dagman_main.o dagman_submit.o dag.o job.o dagman_util.o parse.o debug.o \
 	script.o scriptQ.o  dagman_commands.o \
-	dagman_multi_dag.o throttle_by_category.o dagman_recursive_submit.o
+	dagman_multi_dag.o throttle_by_category.o dagman_recursive_submit.o \
+	jobstate_log.o
 
 public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 

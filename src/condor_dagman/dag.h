@@ -36,6 +36,7 @@
 #include "throttle_by_category.h"
 #include "MyString.h"
 #include "dagman_recursive_submit.h"
+#include "jobstate_log.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -1002,6 +1003,9 @@ class Dag {
 		// initialize the ID for subsequent fake events so IDs don't
 		// collide).
 	int _recoveryMaxfakeID;
+
+		//TEMPTEMP -- document
+	JobstateLog *_jobstateLog;
 };
 
 #endif /* #ifndef DAG_H */
