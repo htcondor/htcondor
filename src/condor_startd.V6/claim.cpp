@@ -210,6 +210,15 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		if (tmp) {
 			cad->Assign(ATTR_CONCURRENCY_LIMITS, tmp);
 		}
+
+		int numJobPids = c_client->numPids();
+		
+		//In standard universe, numJobPids should be 1
+		if(c_universe == CONDOR_UNIVERSE_STANDARD) {
+			numJobPids = 1;
+		}
+		line.sprintf("%s=%d", ATTR_NUM_PIDS, numJobPids);
+		cad->Insert( line.Value() );
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -694,6 +703,16 @@ Claim::loadRequestInfo()
 		c_client->setConcurrencyLimits(limits);
 		free(limits); limits = NULL;
 	}
+}
+
+void
+Claim::loadStatistics()
+{
+		// Stash the ATTR_NUM_PIDS, necessary to advertise
+		// them if they exist
+	int numJobPids = 0;
+	c_ad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
+	c_client->setNumPids(numJobPids);
 }
 
 void
@@ -1949,6 +1968,7 @@ Client::Client()
 	c_host = NULL;
 	c_proxyfile = NULL;
 	c_concurrencyLimits = NULL;
+	c_numPids = 0;
 }
 
 
@@ -2055,6 +2075,12 @@ Client::setConcurrencyLimits( const char* limits )
 	} else {
 		c_concurrencyLimits = NULL;
 	}
+}
+
+void
+Client::setNumPids( int numJobPids )
+{
+	c_numPids = numJobPids;
 }
 
 void
@@ -2292,6 +2318,7 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 			delete new_expr;
 		}
 	}
+	loadStatistics();
 	if( DebugFlags & D_JOB ) {
 		dprintf(D_JOB,"Updated job ClassAd:\n");
 		c_ad->dPrint(D_JOB);
