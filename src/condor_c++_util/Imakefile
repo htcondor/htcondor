@@ -27,7 +27,6 @@ TEST_LIBCONDORAPI = test_libcondorapi
 #ifndef HAVE_UNSETENV
 UNSETENV_LIB = condor_unsetenv.a
 UNSETENV_OBJ = condor_unsetenv.o
-library_target(condor_unsetenv.a,$(UNSETENV_OBJ))
 #endif
 
 all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) $(UNSETENV_LIB) )
@@ -268,6 +267,10 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
+
+#ifndef HAVE_UNSETENV
+library_target(condor_unsetenv.a,$(UNSETENV_OBJ))
+#endif
 
 library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
 libcondorapi.a: Makefile
