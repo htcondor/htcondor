@@ -127,7 +127,8 @@ Condor 7.0.0.
 
 \begin{itemize}
 
-\item Condor version 7.4.3 released on August 12, 2010.
+\item Condor version 7.4.3 not yet released.
+%\item Condor version 7.4.3 released on Month Date, 2010.
 
 \end{itemize}
 
@@ -172,41 +173,6 @@ disables Chirp remote file access from execute machines.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-% gittrac 1185
-
-\item
-Prepare hooks are now invoked as the condor user, instead as the job
-user.
-
-\item
-Improved the file extension detection on Windows.
-
-\item
-condor\_wait could occassionally get stuck in an infinite loop,
-having missed the execution event of the job it is waiting for.
-This is now fixed.
-
-% gittrac 1413
-\item
-Fixed a bug in the startd cron that only occurred on Windows. Startd
-cron scripts failed to run if a initial directory was left
-unspecified.
-
-% gittrac 1012
-\item
-Fixed a bug where a job would be incorrectly placed on hold, with 
-a confusing error message about failing to start a your job XXX\.-1. This
-would happen if copy\_to\_spool was true, the job contained \$\$ macros,
-and preen ran after the job was submitted and before it started.
-
-% gittrac 1427
-\item
-Added the jobs\_vertical\_history table to the list of tables that
-quill periodically reindexes.
-
-\item
-Fixed bug in preen where it would delete startd history files.
 
 % gittrac 487
 \item
@@ -287,12 +253,6 @@ when connecting to a misconfigured LDAP server.
 % gittrac #1413
 \item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. This bug is 
 present in all earlier 7.4.x Condor releases.
-
-% gittrac #1333
-\item
-Allowed the condor config file entries GSI\_DAEMON\_TRUSTED\_CA\_DIR and 
-GSI\_DAEMON\_DIRECTORY to be set with environment variables, as the rest of 
-condor config variables can be.
 
 \end{itemize}
 
