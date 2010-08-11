@@ -23,6 +23,7 @@
 
 #include "unit_test_utils.h"
 #include "emit.h"
+#include "condor_attributes.h"
 
 bool utest_sock_eq_octet( 	struct in_addr* address,
 							unsigned char oct1,
@@ -242,4 +243,50 @@ void get_tm(ISO8601Type type, const struct tm &time, MyString* str)
 		}
 	}
 
+}
+
+bool user_policy_ad_checker(ClassAd* ad,
+						 	bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check) 
+{
+	int val1, val2, val3, val4, val5;
+	bool found = ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1) &&
+				 ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2) &&
+				 ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3) &&
+				 ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4) &&
+				 ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5);
+	
+	return found && val1 == periodic_hold && val2 == periodic_remove && 
+		   val3 == periodic_release && val4 == hold_check && 
+		   val5 == remove_check;
+}
+
+bool user_policy_ad_checker(ClassAd* ad,
+							bool timer_remove,
+							bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check) 
+{
+	int val;
+	bool found = ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val);
+	
+	return found && val == timer_remove &&
+		user_policy_ad_checker(ad, 
+							   periodic_hold,
+							   periodic_remove,
+							   periodic_release,
+							   hold_check,
+							   remove_check);
+}
+
+void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {
+	MyString buf;
+
+	buf.sprintf("%s = %s", attribute, value);
+	ad->Insert(buf.Value());
 }

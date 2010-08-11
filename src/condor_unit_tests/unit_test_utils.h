@@ -94,3 +94,40 @@ void delete_helper(char** array, int num_strs);
  ISO8601Type. 
  */
 void get_tm(ISO8601Type type, const struct tm &time, MyString* str);
+
+/*
+ Checks if the ClassAd has the following attributes with the given values
+ 	ATTR_PERIODIC_HOLD_CHECK
+	ATTR_PERIODIC_REMOVE_CHECK
+	ATTR_PERIODIC_RELEASE_CHECK
+	ATTR_ON_EXIT_HOLD_CHECK
+	ATTR_ON_EXIT_REMOVE_CHECK
+ */
+bool user_policy_ad_checker(ClassAd* ad,
+							bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check);
+
+/*
+ Checks if the ClassAd has the following attributes with the given values
+ 	ATTR_TIMER_REMOVE_CHECK
+	ATTR_PERIODIC_HOLD_CHECK
+	ATTR_PERIODIC_REMOVE_CHECK
+	ATTR_PERIODIC_RELEASE_CHECK
+	ATTR_ON_EXIT_HOLD_CHECK
+	ATTR_ON_EXIT_REMOVE_CHECK
+ */
+bool user_policy_ad_checker(ClassAd* ad,
+							bool timer_remove,
+							bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check);
+
+/*
+ Inserts the given attribute and value into the ClassAd
+ */
+void insert_into_ad(ClassAd* ad, const char* attribute, const char* value);
