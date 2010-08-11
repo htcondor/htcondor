@@ -14,7 +14,8 @@ FILES = README condor_config.local.central.manager \
 	condor.sysconfig\
 	condor_config.local.generic\
 	openmpiscript \
-	condor.init
+	condor.init \
+	condor.plist
 
 all::
 
