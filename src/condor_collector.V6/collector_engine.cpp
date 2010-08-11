@@ -99,6 +99,7 @@ CollectorEngine::
 	killHashTable (StorageAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
+	killHashTable (CollectorAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
 	killHashTable (XferServiceAds);
@@ -1387,6 +1388,7 @@ killHashTable (CollectorHashTable &table)
 {
 	ClassAd *ad;
 
+	table.startIterations();
 	while (table.iterate (ad))
 	{
 		delete ad;
