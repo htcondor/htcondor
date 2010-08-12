@@ -3481,6 +3481,7 @@ SendSpoolFile(char const *filename)
 		dprintf(D_ALWAYS, 
 				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
 				filename);
+		free(path);
 		return -1;
 	}
 
