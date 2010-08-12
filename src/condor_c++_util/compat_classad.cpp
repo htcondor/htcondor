@@ -272,7 +272,7 @@ void releaseTheMatchAd()
 }
 
 static
-bool stringListSize_func( const char *name,
+bool stringListSize_func( const char * /*name*/,
 						  const classad::ArgumentList &arg_list,
 						  classad::EvalState &state, classad::Value &result )
 {
@@ -497,7 +497,7 @@ static int regexp_str_to_options( const char *option_str )
 }
 
 static
-bool stringListRegexpMember_func( const char *name,
+bool stringListRegexpMember_func( const char * /*name*/,
 								  const classad::ArgumentList &arg_list,
 								  classad::EvalState &state,
 								  classad::Value &result )
@@ -556,7 +556,6 @@ bool stringListRegexpMember_func( const char *name,
 
 	sl.rewind();
 	char *entry;
-	int match = 0;
 	while( (entry = sl.next())) {
 		if (r.match(entry)) {
 			result.SetBooleanValue( true );
@@ -1048,8 +1047,7 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 		return rc;
 	}
 
-
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
@@ -1092,7 +1090,7 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 
     if( this->Lookup(name) ) {
 
@@ -1158,7 +1156,7 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrInt( name, tmp_val ) ) {
 			value = tmp_val;
@@ -1198,7 +1196,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
@@ -1253,7 +1251,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
