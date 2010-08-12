@@ -209,7 +209,10 @@ JobRouter::config() {
 		}
 		free(router_defaults_str);
 	}
-	if(!m_enable_job_routing) return;
+	if(!m_enable_job_routing) {
+		delete new_routes;
+		return;
+	}
 
 	char *routing_str_s = param(PARAM_JOB_ROUTER_ENTRIES);
 	char *routing_file_s = param(PARAM_JOB_ROUTER_ENTRIES_FILE);
