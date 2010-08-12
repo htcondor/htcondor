@@ -1621,7 +1621,7 @@ MakeOperation( OpKind op, ExprTree *tree, Value &val )
 bool Operation::
 flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 {
-	ExprTree 	*fChild1, *fChild2, *fChild3;
+	ExprTree 	*fChild1 = NULL, *fChild2 = NULL, *fChild3 = NULL;
 	Value		eval1, eval2, eval3, dummy;
 
 	switch( operation ) {

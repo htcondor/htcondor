@@ -442,6 +442,7 @@ _Evaluate( EvalState &state, Value &value, ExprTree *& tree ) const
 	}
 	
 	if( !_Evaluate( state, value ) ) {
+		delete tmpSig;
 		return false;
 	}
 
@@ -513,6 +514,7 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, int* ) const
 	if( fold ) {
 			// flattened to a value
 		if(!(*function)(functionName.c_str(),arguments,state,value)) {
+			delete newCall;
 			return false;
 		}
 		tree = NULL;

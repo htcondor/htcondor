@@ -220,6 +220,9 @@ SetViewInfo( ClassAdCollection *coll, ClassAd *ad )
 
 	if( !evalEnviron.ReplaceLeftAd( ad ) ) {
 		CondorErrMsg+="; could not replace view info; failed to set view info";
+		delete constraintExpr;
+		delete rankExpr;
+		delete partitionExprs;
 		return( false );
 	}
 

@@ -96,6 +96,7 @@ int cclassad_match( struct cclassad *a, struct cclassad *b )
 		free(expr);
 		if(!result) return 0;
 	}
+	free(expr);
 
 	if(!cclassad_evaluate_to_expr(b,"requirements",&expr)) {
 		return 0;
@@ -105,6 +106,7 @@ int cclassad_match( struct cclassad *a, struct cclassad *b )
 		free(expr);
 		if(!result) return 0;
 	}
+	free(expr);
 
 	return 1;
 }

@@ -346,7 +346,6 @@ ToNth( int n )
 		itr = l->exprList.begin( ) + n;
 		return( true );
 	}
-	itr = l->exprList.begin( );
 	return( false );
 }
 
