@@ -666,7 +666,7 @@ private:
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
 	shadow_rec*     find_shadow_rec(PROC_ID*);
-	void			NotifyUser(shadow_rec*, char*, int, int);
+	void			NotifyUser(shadow_rec*, const char*, int, int);
 	
 #ifdef CARMI_OPS
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );

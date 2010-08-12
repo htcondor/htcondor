@@ -72,7 +72,7 @@ static char *priv_state_name[] = {
 static struct {
 	time_t		timestamp;
 	priv_state	priv;
-	char 		*file;
+	const char	*file;
 	int			line;
 } priv_history[HISTORY_LENGTH];
 static int ph_head=0, ph_count=0;
@@ -87,7 +87,7 @@ priv_to_string( priv_state p )
 }
 
 void
-log_priv(priv_state prev, priv_state new_priv, char file[], int line)
+log_priv(priv_state prev, priv_state new_priv, const char *file, int line)
 {
 	dprintf(D_PRIV, "%s --> %s at %s:%d\n",	priv_state_name[prev],
 			priv_state_name[new_priv], file, line);
@@ -473,7 +473,7 @@ init_user_ids(const char username[], const char domain[])
 }
 
 priv_state
-_set_priv(priv_state s, char file[], int line, int dologging)
+_set_priv(priv_state s, const char *file, int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
 
@@ -1123,7 +1123,7 @@ get_priv_state(void)
 }
 
 priv_state
-_set_priv(priv_state s, char file[], int line, int dologging)
+_set_priv(priv_state s, const char *file, int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;

@@ -1360,7 +1360,6 @@ count( ClassAd *job )
 		// for Globus, count jobs in UNSUBMITTED state by owner.
 		// later we make certain there is a grid manager daemon
 		// per owner.
-		int needs_management = 0;
 		int real_status = status;
 		bool want_service = service_this_universe(universe,job);
 		bool job_managed = jobExternallyManaged(job);
@@ -4075,7 +4074,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	StringList job_ids;
 		// NOTE: ATTR_ACTION_CONSTRAINT needs to be treated as a bool,
 		// not as a string...
-	ExprTree *tree, *rhs;
+	ExprTree *tree;
 	tree = command_ad.LookupExpr(ATTR_ACTION_CONSTRAINT);
 	if( tree ) {
 		const char *value = ExprTreeToString( tree );
@@ -9119,7 +9118,7 @@ Scheduler::mail_problem_message()
 }
 
 void
-Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
+Scheduler::NotifyUser(shadow_rec* srec, const char* msg, int status, int JobStatus)
 {
 	int notification;
 	MyString owner;
@@ -9332,7 +9331,7 @@ Scheduler::child_exit(int pid, int status)
 			SchedUniverseJobsRunning--;
 		}
 	} else if (srec) {
-		char* name = NULL;
+		const char* name = NULL;
 			//
 			// Local Universe
 			//
@@ -12559,7 +12558,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		if( email_user ) {
 			fp = email_user_open( job_ad, msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}
@@ -12567,7 +12566,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		if( email_admin ) {
 			fp = email_admin_open( msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}			
@@ -12703,7 +12702,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		if( email_user ) {
 			fp = email_user_open( job_ad, msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}
@@ -12711,7 +12710,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		if( email_admin ) {
 			fp = email_admin_open( msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}			
