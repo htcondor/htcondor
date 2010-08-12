@@ -457,6 +457,7 @@ UserPolicy::AnalyzePolicy( int mode )
 	}
 	if( timer_remove >= 0 && timer_remove < time(NULL) ) {
 		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
 		return REMOVE_FROM_QUEUE;
 	}
 
