@@ -687,6 +687,19 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 
 	m_privateAttrsAreInvisible = false;
 
+		// Compatibility ads are born with this to emulate the special
+		// CurrentTime in old ClassAds. We don't protect it afterwards,
+		// but that shouldn't be problem unless someone is deliberately
+		// trying to shoot themselves in the foot.
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
+
+	ResetName();
+    ResetExpr();
+
+	EnableDirtyTracking();
+
 	nodeKind = CLASSAD_NODE;
 
 	int index;
@@ -743,19 +756,6 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 			empty = FALSE;
 		}
 	}
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
-	ResetName();
-    ResetExpr();
-
-	EnableDirtyTracking();
 }
 
 bool ClassAd::
