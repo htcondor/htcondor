@@ -13235,6 +13235,9 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			valid = cronTab->isValid();
 			if ( valid ) {
 				this->cronTabs->insert( id, cronTab );
+			} else {
+				delete cronTab;
+				cronTab = 0;
 			}
 				//
 				// We set the force flag to true so that we are 
