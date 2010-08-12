@@ -324,7 +324,7 @@ Resource::got_alive( void )
 		dprintf( D_ALWAYS, "Got keep alive with no current client object.\n" );
 		return FALSE;
 	}
-	r_cur->alive();
+	r_cur->alive( true );
 	return TRUE;
 }
 

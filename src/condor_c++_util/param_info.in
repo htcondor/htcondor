@@ -4902,7 +4902,7 @@ id=277
 
 [STARTD_SENDS_ALIVES]
 aliases=
-default=false
+default=peer
 version=0.0.0
 range=.*
 state=default

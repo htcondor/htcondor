@@ -240,6 +240,7 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	needs_release_claim = false;
 	claim_requester = NULL;
 	auth_hole_id = NULL;
+	m_startd_sends_alives = false;
 
 	makeDescription();
 
@@ -276,6 +277,25 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 			// match rec is destroyed.  (If we failed to create the session,
 			// that may because it already exists, and this is a duplicate
 			// match record that will soon be thrown out.)
+	}
+
+	std::string value;
+	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
+		m_startd_sends_alives = false;
+	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
+		m_startd_sends_alives = true;
+	} else if ( my_match_ad &&
+				my_match_ad->LookupString( ATTR_VERSION, value ) ) {
+		CondorVersionInfo ver( value.c_str() );
+		if ( ver.built_since_version( 7, 5, 4 ) ) {
+			m_startd_sends_alives = true;
+		} else {
+			m_startd_sends_alives = false;
+		}
+	} else {
+		// Don't know the version of the startd, assume false
+		m_startd_sends_alives = false;
 	}
 }
 
@@ -427,7 +447,6 @@ Scheduler::Scheduler() :
 	CondorAdministrator = NULL;
 	Mail = NULL;
 	alive_interval = 0;
-	startd_sends_alives = false;
 	leaseAliveInterval = 500000;	// init to a nice big number
 	aliveid = -1;
 	ExitWhenDone = FALSE;
@@ -10439,8 +10458,6 @@ Scheduler::Init()
 	/* Value specified in kilobytes */
 	ShadowSizeEstimate = param_integer( "SHADOW_SIZE_ESTIMATE",DEFAULT_SHADOW_SIZE );
 
-	startd_sends_alives = param_boolean("STARTD_SENDS_ALIVES",false);
-
 	alive_interval = param_integer("ALIVE_INTERVAL",300,0);
 	if( alive_interval > leaseAliveInterval ) {
 			// adjust alive_interval to shortest interval of jobs in the queue
@@ -11672,6 +11689,10 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 	}
 
 	if ( match ) {
+			// If we're sending keep-alives, stop it, since the startd
+			// wants to send them.
+		match->m_startd_sends_alives = true;
+
 		ret_value = alive_interval;
 			// If this match is active, i.e. we have a shadow, then
 			// update the ATTR_LAST_JOB_LEASE_RENEWAL in RAM.  We will
@@ -11730,7 +11751,7 @@ Scheduler::sendAlives()
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
-			if ( startd_sends_alives ) {
+			if ( mrec->m_startd_sends_alives ) {
 				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
 				// is updated someplace else in RAM only when we receive a keepalive
 				// ping from the startd.  So here
@@ -11747,25 +11768,25 @@ Scheduler::sendAlives()
 	}
 	CommitTransaction();
 
-	if ( !startd_sends_alives ) {
-		matches->startIterations();
-		while (matches->iterate(mrec) == 1) {
-			if( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) {
-				if( sendAlive( mrec ) ) {
-					numsent++;
-				}
+	matches->startIterations();
+	while (matches->iterate(mrec) == 1) {
+		if( mrec->m_startd_sends_alives == false &&
+			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
+
+			if( sendAlive( mrec ) ) {
+				numsent++;
 			}
 		}
-		if( numsent ) { 
-			dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-					 "%d startds)\n", numsent );
-		}
-
-		// Just so we don't have to deal with a seperate DC timer for
-		// this, just call the dedicated_scheduler's version of the
-		// same thing so we keep all of those claims alive, too.
-		dedicated_scheduler.sendAlives();
 	}
+	if( numsent ) { 
+		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
+				 "%d startds)\n", numsent );
+	}
+
+	// Just so we don't have to deal with a seperate DC timer for
+	// this, just call the dedicated_scheduler's version of the
+	// same thing so we keep all of those claims alive, too.
+	dedicated_scheduler.sendAlives();
 }
 
 void

@@ -1377,7 +1377,8 @@ DedicatedScheduler::sendAlives( void )
 
 	all_matches->startIterations();
 	while( all_matches->iterate(mrec) == 1 ) {
-		if( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) {
+		if( mrec->m_startd_sends_alives == false &&
+			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
 			if( sendAlive( mrec ) ) {
 				numsent++;
 			}

@@ -157,6 +157,8 @@ class match_rec: public ClaimIdParser
 		// punched hole
 	MyString*		auth_hole_id;
 
+	bool m_startd_sends_alives;
+
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
@@ -684,7 +686,6 @@ private:
 	DaemonList		*FlockCollectors, *FlockNegotiators;
 	int				MaxFlockLevel;
 	int				FlockLevel;
-	bool			startd_sends_alives;	
     int         	alive_interval;  // how often to broadcast alive
 		// leaseAliveInterval is the minimum interval we need to send
 		// keepalives based upon ATTR_JOB_LEASE_DURATION...

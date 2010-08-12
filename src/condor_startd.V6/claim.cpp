@@ -839,7 +839,25 @@ Claim::startLeaseTimer()
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
 	
-	if ( param_boolean("STARTD_SENDS_ALIVES",false) &&
+	bool startd_sends_alives;
+	std::string value;
+	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
+		startd_sends_alives = false;
+	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
+		startd_sends_alives = true;
+	} else if ( c_ad && c_ad->LookupString( ATTR_VERSION, value ) ) {
+		CondorVersionInfo ver( value.c_str() );
+		if ( ver.built_since_version( 7, 5, 4 ) ) {
+			startd_sends_alives = true;
+		} else {
+			startd_sends_alives = false;
+		}
+	} else {
+		// Don't know the version of the schedd, assume true
+		startd_sends_alives = true;
+	}
+	if ( startd_sends_alives &&
 		 c_type != CLAIM_COD &&
 		 c_lease_duration > 0 )	// prevent divide by zero
 	{
@@ -1118,10 +1136,11 @@ Claim::finishKillClaim()
 }
 
 void
-Claim::alive()
+Claim::alive( bool alive_from_schedd )
 {
-	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s job %d.%d\n", 
-		publicClaimId(), c_cluster, c_proc );
+	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s job %d.%d%s\n", 
+			 publicClaimId(), c_cluster, c_proc,
+			 alive_from_schedd ? ", received from schedd" : "" );
 
 		// Process an alive command.  This is called whenever we
 		// "heard" from the schedd since a claim was created, 
@@ -1143,9 +1162,17 @@ Claim::alive()
 		// it is possible that c_lease_duration changed on activation
 		// of a claim, so our timer reset here will handle that case
 		// as well since alive() is called upon claim activation.
+		// If we got an alive message from the schedd, send our own
+		// alive message soon, since that should cause the schedd to
+		// stop sending them (since we're supposed to be sending them).
 	if ( c_sendalive_tid != -1 ) {
-		daemonCore->Reset_Timer(c_sendalive_tid, c_lease_duration / 3, 
-							c_lease_duration / 3);
+		if ( alive_from_schedd ) {
+			daemonCore->Reset_Timer(c_sendalive_tid, 10, 
+									c_lease_duration / 3);
+		} else {
+			daemonCore->Reset_Timer(c_sendalive_tid, c_lease_duration / 3, 
+									c_lease_duration / 3);
+		}
 	}
 }
 
