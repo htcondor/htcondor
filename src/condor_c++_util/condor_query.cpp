@@ -472,7 +472,7 @@ getQueryAd (ClassAd &queryAd)
 
 	queryAd = extraAttrs;
 
-	result = (QueryResult) query.makeQuery (tree, false);
+	result = (QueryResult) query.makeQuery (tree);
 	if (result != Q_OK) return result;
 	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 

@@ -216,7 +216,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	bool useFastPath = false;
 
 	// make the query ad
-	if ((result = query.makeQuery (tree, false)) != Q_OK)
+	if ((result = query.makeQuery (tree)) != Q_OK)
 		return result;
 	constraint = ExprTreeToString( tree );
 	delete tree;
@@ -259,7 +259,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 	int     		result;
 
 	// make the query ad
-	if ((result = query.makeQuery (tree, false)) != Q_OK)
+	if ((result = query.makeQuery (tree)) != Q_OK)
 		return result;
 	constraint = ExprTreeToString( tree );
 	delete tree;
@@ -319,7 +319,7 @@ fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorErro
 	}
 
 	// make the query ad
-	if ((result = query.makeQuery (tree, false)) != Q_OK) {
+	if ((result = query.makeQuery (tree)) != Q_OK) {
 		delete jqSnapshot;
 		return result;
 	}
@@ -349,7 +349,7 @@ fetchQueueFromHostAndProcess ( const char *host, StringList &attrs, process_func
 	int     		result;
 
 	// make the query ad
-	if ((result = query.makeQuery (tree, false)) != Q_OK)
+	if ((result = query.makeQuery (tree)) != Q_OK)
 		return result;
 	constraint = ExprTreeToString( tree );
 	delete tree;
@@ -406,7 +406,7 @@ fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function p
 	}	
 
 	// make the query ad
-	if ((result = query.makeQuery (tree, false)) != Q_OK) {
+	if ((result = query.makeQuery (tree)) != Q_OK) {
 		delete jqSnapshot;
 		return result;
 	}
