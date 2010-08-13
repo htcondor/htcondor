@@ -2399,8 +2399,8 @@ LeaseManager.DEBUG_ADS		= False
 
 LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 #LeaseManager.QUERY_ADTYPE	= Any
-#LeaseManager.QUERY_CONSTRAINTS	= target.MyType == "SomeType"
-#LeaseManager.QUERY_CONSTRAINTS	= target.TargetType == "SomeType"
+#LeaseManager.QUERY_CONSTRAINTS	= MyType == "SomeType"
+#LeaseManager.QUERY_CONSTRAINTS	= TargetType == "SomeType"
 
 ##
 ##--------------------------------------------------------------------

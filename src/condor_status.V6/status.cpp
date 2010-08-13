@@ -190,7 +190,7 @@ main (int argc, char *argv[])
 
 	  case MODE_STARTD_AVAIL:
 			  // For now, -avail shows you machines avail to anyone.
-		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE,
+		sprintf (buffer, "%s == \"%s\"", ATTR_STATE,
 					state_to_string(unclaimed_state));
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
@@ -200,7 +200,7 @@ main (int argc, char *argv[])
 
 
 	  case MODE_STARTD_RUN:
-		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE,
+		sprintf (buffer, "%s == \"%s\"", ATTR_STATE,
 					state_to_string(claimed_state));
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
@@ -209,7 +209,7 @@ main (int argc, char *argv[])
 		break;
 
 	  case MODE_STARTD_COD:
-	    sprintf (buffer, "TARGET.%s > 0", ATTR_NUM_COD_CLAIMS );
+	    sprintf (buffer, "%s > 0", ATTR_NUM_COD_CLAIMS );
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -221,7 +221,7 @@ main (int argc, char *argv[])
 	}	
 
 	if(javaMode) {
-		sprintf( buffer, "TARGET.%s == TRUE", ATTR_HAS_JAVA );
+		sprintf( buffer, "%s == TRUE", ATTR_HAS_JAVA );
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -235,7 +235,7 @@ main (int argc, char *argv[])
 	}
 
 	if(vmMode) {
-		sprintf( buffer, "TARGET.%s == TRUE", ATTR_HAS_VM);
+		sprintf( buffer, "%s == TRUE", ATTR_HAS_VM);
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -818,7 +818,7 @@ secondPass (int argc, char *argv[])
 		}
 		if( matchPrefix(argv[i], "-sort", 3) ) {
 			i++;
-			sprintf( buffer, "TARGET.%s =!= UNDEFINED", argv[i] );
+			sprintf( buffer, "%s =!= UNDEFINED", argv[i] );
 			query->addANDConstraint( buffer );
 			continue;
 		}
@@ -879,7 +879,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_OTHER:
 			  case MODE_GRID_NORMAL:
 			  case MODE_HAD_NORMAL:
-			  	sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")",
+			  	sprintf(buffer,"(%s==\"%s\") || (%s==\"%s\")",
 						ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
@@ -888,7 +888,7 @@ secondPass (int argc, char *argv[])
 				break;
 
 			  case MODE_STARTD_RUN:
-				sprintf (buffer,"TARGET.%s == \"%s\"",ATTR_REMOTE_USER,argv[i]);
+				sprintf (buffer,"%s == \"%s\"",ATTR_REMOTE_USER,argv[i]);
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}

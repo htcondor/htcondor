@@ -572,10 +572,6 @@ getQueryAd (ClassAd &queryAd)
 		return Q_INVALID_QUERY;
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
-#endif
-
 	return Q_OK;
 }
 

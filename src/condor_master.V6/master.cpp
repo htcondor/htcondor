@@ -1062,7 +1062,7 @@ invalidate_ads() {
 	}
 	
 	ClassAd::EscapeStringValue( default_name, escaped_name );
-	line.sprintf( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	line.sprintf( "( %s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
 	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
