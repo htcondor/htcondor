@@ -49,8 +49,7 @@ dprintf(int, const char* format, ...)
 		time_t clock_now;
 		(void)time( &clock_now );
 		struct tm *tm = localtime( &clock_now );
-		static char *timeHead = formatTimeHeader(tm);
-		fprintf(debug_fp, "%s: ", timeHead);
+		fprintf(debug_fp, "%s: ", formatTimeHeader(tm));
 		va_list ap;
 		va_start(ap, format);
 		vfprintf(debug_fp, format, ap);
@@ -74,8 +73,7 @@ _EXCEPT_(const char* format, ...)
 		time_t clock_now;
 		(void)time( &clock_now );
 		struct tm *tm = localtime( &clock_now );
-		static char *timeHead = formatTimeHeader(tm);
-		fprintf(debug_fp, "%s: ", timeHead);
+		fprintf(debug_fp, "%s: ", formatTimeHeader(tm));
 		fprintf(debug_fp, "ERROR: ");
 		va_list ap;
 		va_start(ap, format);
@@ -126,13 +124,11 @@ preserve_log_file()
 	int         rename_failed = 0;
 	time_t clock_now;
 	struct tm *tm; 
-	static char *timeHead; 
 
 	(void)sprintf( old, "%s.old", debug_fn );
 	(void)time( &clock_now );
 	tm = localtime( &clock_now );
-	timeHead = formatTimeHeader(tm);
-	fprintf(debug_fp, "%s: ", timeHead);
+	fprintf(debug_fp, "%s: ", formatTimeHeader(tm));
 	fprintf( debug_fp, "Saving log file to \"%s\"\n", old );
 	(void)fflush( debug_fp );
 
@@ -205,8 +201,7 @@ preserve_log_file()
 	if ( !still_in_old_file ) {
 		(void)time( &clock_now );
 		tm = localtime( &clock_now );
-		timeHead = formatTimeHeader(tm);
-		fprintf(debug_fp, "%s: ", timeHead);
+		fprintf(debug_fp, "%s: ", formatTimeHeader(tm));
 		fprintf (debug_fp, "Now in new log file %s\n", debug_fn);
 	}
 

@@ -756,6 +756,12 @@ class DaemonCore : public Service
 			 bool nonblocking_read = false, bool nonblocking_write = false,
 			 unsigned int psize = 4096);
 
+	/** Create a named pipe
+	*/
+	int Create_Named_Pipe( int *pipe_ends,
+			 bool can_register_read = false, bool can_register_write = false,
+			 bool nonblocking_read = false, bool nonblocking_write = false,
+			 unsigned int psize = 4096, const char* pipe_name = NULL);
 	/** Make DaemonCore aware of an inherited pipe.
 	*/
 	int Inherit_Pipe( int p, bool write, bool can_register, bool nonblocking, int psize = 4096);
@@ -864,6 +870,15 @@ class DaemonCore : public Service
                         const char * event_descrip,
                         Service*     s);
 
+	/** Thread-safe Register_Timer().
+		This function locks the big fat daemon-core mutex, so it can
+		be safely called from within a thread, as long as there is no
+		way that thread could already have locked the same mutex.
+	 */
+	int Register_Timer_TS (unsigned deltawhen,
+		TimerHandlercpp handler,
+		const char * event_descrip,
+		Service* s);
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param period          Not_Yet_Documented
@@ -1375,6 +1390,8 @@ class DaemonCore : public Service
 		{ m_want_send_child_alive = send_alive; }
 	
 	void Wake_up_select();
+
+	void Do_Wake_up_select();
 
 		/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes

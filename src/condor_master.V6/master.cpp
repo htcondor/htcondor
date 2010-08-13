@@ -85,6 +85,7 @@ void	run_preen();
 void	usage(const char* );
 void	main_shutdown_graceful();
 void	main_shutdown_fast();
+void	invalidate_ads();
 void	main_config();
 int	agent_starter(ReliSock *);
 int	handle_agent_fetch_log(ReliSock *);
@@ -461,7 +462,7 @@ agent_starter( ReliSock * s )
 
 	dprintf ( D_ALWAYS, "Starting agent '%s'\n", subsys );
 
-	if( stricmp(subsys, "fetch_log") == 0 ) {
+	if( strcasecmp(subsys, "fetch_log") == 0 ) {
 		free (subsys);
 		return handle_agent_fetch_log( stream );
 	}
@@ -1014,6 +1015,8 @@ main_config()
 void
 main_shutdown_fast()
 {
+	invalidate_ads();
+	
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
@@ -1032,6 +1035,8 @@ main_shutdown_fast()
 void
 main_shutdown_graceful()
 {
+	invalidate_ads();
+	
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
@@ -1041,6 +1046,28 @@ main_shutdown_graceful()
 
 	daemons.CancelRestartTimers();
 	daemons.StopAllDaemons();
+}
+
+void
+invalidate_ads() {
+	ClassAd cmd_ad;
+	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
+	cmd_ad.SetTargetTypeName( MASTER_ADTYPE );
+	
+	MyString line;
+	MyString escaped_name;
+	char* default_name = ::strnewp(MasterName);
+	if(!default_name) {
+		default_name = default_daemon_name();
+	}
+	
+	ClassAd::EscapeStringValue( default_name, escaped_name );
+	line.sprintf( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
+	cmd_ad.Assign( ATTR_NAME, default_name );
+	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
+	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
+	delete [] default_name;
 }
 
 time_t

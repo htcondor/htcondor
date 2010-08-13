@@ -285,7 +285,7 @@ CreamJob::CreamJob( ClassAd *classad )
 		grid_resource.Tokenize();
 
 		token = grid_resource.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "cream" ) ) {
+		if ( !token || strcasecmp( token, "cream" ) ) {
 			sprintf( error_string, "%s not of type cream", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}

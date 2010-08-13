@@ -140,6 +140,7 @@ main( int argc, char* argv[] )
 	bool    dump_all_variables = false;
 	bool    print_config_sources = false;
 	bool	write_config = false;
+	bool	debug = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -224,8 +225,7 @@ main( int argc, char* argv[] )
 			write_config = true;
 		} else if( match_prefix( argv[i], "-debug" ) ) {
 				// dprintf to console
-			Termlog = 1;
-			dprintf_config( "TOOL" );
+			debug = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -277,6 +277,11 @@ main( int argc, char* argv[] )
 		if (print_config_sources) {
 			PrintConfigSources();
 		}
+	}
+
+	if (debug) {
+		Termlog = 1;
+		dprintf_config( "TOOL" );
 	}
 
 	/* XXX -dump only currently spits out variables found through the

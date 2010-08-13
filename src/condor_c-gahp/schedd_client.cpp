@@ -35,6 +35,7 @@
 #include "globus_utils.h"
 #include "PipeBuffer.h"
 #include "io_loop.h"
+#include "file_transfer.h"
 
 #include "schedd_client.h"
 #include "SchedDCommands.h"
@@ -866,6 +867,16 @@ update_report_result:
 						dc_schedd.version() ? dc_schedd.version() : "NULL",
 						env_error_msg.Value());
 				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
+				error = TRUE;
+			}
+		}
+
+		if( error == FALSE ) {
+				// See the comment in the function body of ExpandInputFileList
+				// for an explanation of what is going on here.
+			MyString transfer_input_error_msg;
+			if( !FileTransfer::ExpandInputFileList( current_command->classad, transfer_input_error_msg ) ) {
+				dprintf( D_ALWAYS, "%s\n", transfer_input_error_msg.Value() );
 				error = TRUE;
 			}
 		}

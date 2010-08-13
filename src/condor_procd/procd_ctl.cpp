@@ -81,34 +81,34 @@ main(int argc, char* argv[])
 
 	int cmd_argc = argc - 2;
 	char** cmd_argv = argv + 2;
-	if (stricmp(cmd_argv[0], "REGISTER_FAMILY") == 0) {
+	if (strcasecmp(cmd_argv[0], "REGISTER_FAMILY") == 0) {
 		return register_family(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "GET_USAGE") == 0) {
+	else if (strcasecmp(cmd_argv[0], "GET_USAGE") == 0) {
 		return get_usage(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "DUMP") == 0) {
+	else if (strcasecmp(cmd_argv[0], "DUMP") == 0) {
 		return dump(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "SIGNAL_PROCESS") == 0) {
+	else if (strcasecmp(cmd_argv[0], "SIGNAL_PROCESS") == 0) {
 		return signal_process(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "SUSPEND_FAMILY") == 0) {
+	else if (strcasecmp(cmd_argv[0], "SUSPEND_FAMILY") == 0) {
 		return suspend_family(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "CONTINUE_FAMILY") == 0) {
+	else if (strcasecmp(cmd_argv[0], "CONTINUE_FAMILY") == 0) {
 		return continue_family(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "KILL_FAMILY") == 0) {
+	else if (strcasecmp(cmd_argv[0], "KILL_FAMILY") == 0) {
 		return kill_family(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "UNREGISTER_FAMILY") == 0) {
+	else if (strcasecmp(cmd_argv[0], "UNREGISTER_FAMILY") == 0) {
 		return unregister_family(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "SNAPSHOT") == 0) {
+	else if (strcasecmp(cmd_argv[0], "SNAPSHOT") == 0) {
 		return snapshot(pfc, cmd_argc, cmd_argv);
 	}
-	else if (stricmp(cmd_argv[0], "QUIT") == 0) {
+	else if (strcasecmp(cmd_argv[0], "QUIT") == 0) {
 		return quit(pfc, cmd_argc, cmd_argv);
 	}
 	else {

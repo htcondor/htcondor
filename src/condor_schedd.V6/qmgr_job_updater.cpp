@@ -120,11 +120,13 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
 	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
+	common_job_queue_attrs->insert( ATTR_COMMITTED_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
 	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
+	common_job_queue_attrs->insert( ATTR_COMMITTED_SLOT_TIME );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -152,6 +154,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
 	terminate_job_queue_attrs->insert( ATTR_TERMINATION_PENDING );
 	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_FILENAME );
+	terminate_job_queue_attrs->insert( ATTR_SPOOLED_OUTPUT_FILES );
 
 	checkpoint_job_queue_attrs = new StringList();
 	checkpoint_job_queue_attrs->insert( ATTR_NUM_CKPTS );

@@ -754,7 +754,7 @@ bool IsAHalfMatch(ClassAd *my, ClassAd *target)
 	EvalResult *val;	
 	
 	if( (target->GetMyTypeNumber()!=my->GetTargetTypeNumber()) &&
-	    stricmp(my->GetTargetTypeName(),ANY_ADTYPE) )
+	    strcasecmp(my->GetTargetTypeName(),ANY_ADTYPE) )
 	{
 		return false;
 	}

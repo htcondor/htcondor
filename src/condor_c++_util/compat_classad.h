@@ -24,10 +24,18 @@
 #define WANT_CLASSAD_NAMESPACE
 #endif
 
-#include "condor_common.h"
 #include "classad/classad_distribution.h"
-#include "condor_io.h"
-#include "string_list.h"
+#include "MyString.h"
+
+class StringList;
+class Stream;
+
+#ifndef TRUE
+#define TRUE  1
+#endif
+#ifndef FALSE 
+#define FALSE 0
+#endif
 
 #ifndef ATTRLIST_MAX_EXPRESSION
 #define	ATTRLIST_MAX_EXPRESSION 10240

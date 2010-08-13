@@ -210,7 +210,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "condor" ) ) {
+		if ( !token || strcasecmp( token, "condor" ) ) {
 			sprintf( error_string, "%s not of type condor",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
@@ -1268,6 +1268,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
+		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {
@@ -1433,9 +1434,12 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
 	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
 	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+	submit_ad->Assign( ATTR_COMMITTED_SLOT_TIME, 0 );
+	submit_ad->Assign( ATTR_CUMULATIVE_SLOT_TIME, 0 );
 	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
 	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+	submit_ad->Assign( ATTR_COMMITTED_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );

@@ -32,6 +32,7 @@
 #include "globus_io.h"
 #include "globus_ftp_client.h"
 #include "globus_rsl.h"
+#include "condor_unsetenv.h"
 
 /* An extra globus_ftp_client call we've added for our use */
 globus_result_t
@@ -49,13 +50,7 @@ globus_ftp_client_cwd(
 
 // WIN32 doesn't have strcasecmp
 #ifdef WIN32
-#define strcasecmp(s1, s2) stricmp(s1, s2)
-#endif
-
-/* Solaris doesn't have unsetenv */
-#ifndef HAVE_UNSETENV
-void unsetenv(const char* name);
-char * __findenv(const char *name, int *offset);
+#define strcasecmp(s1, s2) _stricmp(s1, s2)
 #endif
 
 #ifndef true
@@ -555,6 +550,8 @@ escape_err_msg( const char *input_line)
 	temp = input_line;
 	for(i = 0; *temp != '\0'; temp++) {
 		if ( *temp == '\r' || *temp == '\n' ) {
+			output_line[i] = '\\';
+			i++;
 			output_line[i] = ' ';
 			i++;
 		} else {
@@ -566,10 +563,13 @@ escape_err_msg( const char *input_line)
 			i++;
 		}
 	}
-	do {
+	// trim trailing spaces and the backslashes that escape them
+	i--;
+	while ( output_line[i] == ' ' ) {
+		i--;
 		output_line[i] = '\0';
 		i--;
-	} while ( output_line[i] == ' ' );
+	}
 	// the caller is responsible for freeing this memory, not us
 	return output_line;	
 }
@@ -3351,45 +3351,3 @@ main(int argc, char **argv)
 	main_deactivate_globus();
 	_exit(0);
 }
-
-#ifndef HAVE_UNSETENV
-
-/* swiped right out of the bsd libc */
-char *
-__findenv(name, offset)
-        const char *name;
-        int *offset;
-{
-        extern char **environ;
-        register int len;
-        register const char *np;
-        register char **p, *c;
-
-        if (name == NULL || environ == NULL)
-                return (NULL);
-        for (np = name; *np && *np != '='; ++np)
-                continue;
-        len = np - name;
-        for (p = environ; (c = *p) != NULL; ++p)
-                if (strncmp(c, name, len) == 0 && c[len] == '=') {
-                        *offset = p - environ;
-                        return (c + len + 1);
-                }
-        return (NULL);
-}
-
-void
-unsetenv(name)
-        const char *name;
-{
-        extern char **environ;
-        register char **p;
-        int offset;
-
-        while (__findenv(name, &offset))        /* if set multiple times */
-                for (p = &environ[offset];; ++p)
-                        if (!(*p = *(p + 1)))
-                                break;
-}
-#endif
-

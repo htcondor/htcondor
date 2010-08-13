@@ -23,6 +23,7 @@
 #include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
 #include "shared_port_client.h"
+#include "shared_port_endpoint.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -113,6 +114,106 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 #ifndef HAVE_SHARED_PORT
 	dprintf(D_ALWAYS,"SharedPortClient::PassSocket() not supported on this platform\n");
 	return false;
+#elif WIN32
+	if( !SharedPortIdIsValid(shared_port_id) ) {
+		dprintf(D_ALWAYS,
+				"ERROR: SharedPortClient: refusing to connect to shared port"
+				"%s, because specified id is illegal! (%s)\n",
+				requested_by, shared_port_id );
+		return false;
+	}
+
+	MyString pipe_name;
+	MyString socket_dir;
+
+	SharedPortEndpoint::paramDaemonSocketDir(pipe_name);
+	pipe_name.sprintf_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
+
+	MyString requested_by_buf;
+	if( !requested_by ) {
+		requested_by_buf.sprintf(
+			" as requested by %s", sock_to_pass->peer_description());
+		requested_by = requested_by_buf.Value();
+	}
+
+	HANDLE child_pipe;
+	
+	while(true)
+	{
+		child_pipe = CreateFile(
+			pipe_name.Value(),
+			GENERIC_READ | GENERIC_WRITE,
+			0,
+			NULL,
+			OPEN_EXISTING,
+			0,
+			NULL);
+
+		if(child_pipe != INVALID_HANDLE_VALUE)
+			break;
+
+		if(GetLastError() == ERROR_PIPE_BUSY)
+		{
+			if (!WaitNamedPipe(pipe_name.Value(), 20000)) 
+			{
+				dprintf(D_ALWAYS, "ERROR: SharedPortClient: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
+				return false;
+			}
+		}
+		else
+		{
+			dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to open named pipe for sending socket: %d\n", GetLastError());
+			return false;
+		}
+	}
+
+	DWORD child_pid;
+	DWORD read_bytes = 0;
+
+	BOOL read_result = ReadFile(child_pipe, &child_pid, sizeof(DWORD), &read_bytes, NULL);
+
+	if(!read_result)
+	{
+		DWORD last_error = GetLastError();
+		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to read PID from pipe: %d.\n", last_error);
+		CloseHandle(child_pipe);
+		return false;
+	}
+	else
+	{
+		dprintf(D_FULLDEBUG, "SharedPortClient: Read PID: %d\n", child_pid);
+	}
+
+	WSAPROTOCOL_INFO protocol_info;
+	int dup_result = WSADuplicateSocket(sock_to_pass->get_file_desc(), child_pid, &protocol_info);
+	if(dup_result == SOCKET_ERROR)
+	{
+		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
+		CloseHandle(child_pipe);
+		return false;
+	}
+
+	int bufferSize = sizeof(WSAPROTOCOL_INFO) + sizeof(int);
+	char *buffer = new char[bufferSize];
+	ASSERT( buffer );
+	int cmd = SHARED_PORT_PASS_SOCK;
+	memcpy_s(buffer, sizeof(int), &cmd, sizeof(int));
+	memcpy_s(buffer+sizeof(int), sizeof(WSAPROTOCOL_INFO), &protocol_info, sizeof(WSAPROTOCOL_INFO));
+	BOOL write_result = WriteFile(child_pipe, buffer, bufferSize, &read_bytes, 0);
+
+	delete [] buffer;
+	if(!write_result)
+	{
+		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to send WSAPROTOCOL_INFO struct: %d\n", GetLastError());
+		CloseHandle(child_pipe);
+		return false;
+	}
+	dprintf(D_FULLDEBUG, "SharedPortClient: Wrote %d bytes to named pipe.\n", read_bytes);
+	FlushFileBuffers(child_pipe);
+
+	CloseHandle(child_pipe);
+
+	return true;
 #elif HAVE_SCM_RIGHTS_PASSFD
 	if( !SharedPortIdIsValid(shared_port_id) ) {
 		dprintf(D_ALWAYS,
@@ -125,9 +226,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	MyString sock_name;
 	MyString socket_dir;
 
-	if( !param(sock_name,"DAEMON_SOCKET_DIR") ) {
-		EXCEPT("SharedPortClient requires DAEMON_SOCKET_DIR to be defined");
-	}
+	SharedPortEndpoint::paramDaemonSocketDir(sock_name);
 	sock_name.sprintf_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
 
 	MyString requested_by_buf;

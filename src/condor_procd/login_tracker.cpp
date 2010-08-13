@@ -122,7 +122,7 @@ LoginTracker::LoginTag::test(procInfo* pi)
 
 	// TODO: should we be comparing domains here as well?
 	//
-	return (stricmp(user_buffer, m_login) == 0);
+	return (strcasecmp(user_buffer, m_login) == 0);
 }
 
 #else

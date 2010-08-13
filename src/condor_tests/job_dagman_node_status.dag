@@ -1,0 +1,62 @@
+NODE_STATUS_FILE job_dagman_node_status.status 3
+
+Job A job_dagman_node_status.cmd
+Vars A nodename="$(JOB)"
+Script Pre A job_dagman_node_status-script.pl
+Script Post A job_dagman_node_status-script.pl
+
+Job B1 job_dagman_node_status.cmd
+Vars B1 nodename="$(JOB)"
+Parent A Child B1
+
+Job B2 job_dagman_node_status.cmd
+Vars B2 nodename="$(JOB)"
+Parent A Child B2
+
+Job B3 job_dagman_node_status.cmd
+Vars B3 nodename="$(JOB)"
+Parent A Child B3
+
+Job B4 job_dagman_node_status.cmd
+Vars B4 nodename="$(JOB)"
+Parent A Child B4
+
+Job B5 job_dagman_node_status.cmd
+Vars B5 nodename="$(JOB)"
+Parent A Child B5
+
+Job B6 job_dagman_node_status.cmd
+Vars B6 nodename="$(JOB)"
+Parent A Child B6
+
+Job B7 job_dagman_node_status.cmd
+Vars B7 nodename="$(JOB)"
+Parent A Child B7
+
+Job B8 job_dagman_node_status.cmd
+Vars B8 nodename="$(JOB)"
+Parent A Child B8
+
+Job B9 job_dagman_node_status.cmd
+Vars B9 nodename="$(JOB)"
+Parent A Child B9
+
+Job B10 job_dagman_node_status.cmd
+Vars B10 nodename="$(JOB)"
+Parent A Child B10
+
+Job C job_dagman_node_status.cmd
+Vars C nodename="$(JOB)"
+Script Pre C job_dagman_node_status-script.pl
+Script Post C job_dagman_node_status-script.pl
+
+Parent B1 Child C
+Parent B2 Child C
+Parent B3 Child C
+Parent B4 Child C
+Parent B5 Child C
+Parent B6 Child C
+Parent B7 Child C
+Parent B8 Child C
+Parent B9 Child C
+Parent B10 Child C

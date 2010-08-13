@@ -502,10 +502,6 @@ private:
     */
     static JobID_t _jobID_counter;
 
-		// the number of my parents that have yet to complete
-		// successfully
-	int _waitingCount;
-
 		// True if the node job has been submitted and is idle.
 	bool _isIdle;
 

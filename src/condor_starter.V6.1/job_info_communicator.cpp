@@ -712,7 +712,7 @@ JobInfoCommunicator::initJobInfo( void )
 {
 #if HAVE_JOB_HOOKS
 	m_hook_mgr = new StarterHookMgr;
-	m_hook_mgr->initialize(job_ad);
+	return m_hook_mgr->initialize(job_ad);
 #endif
 	return true;
 }

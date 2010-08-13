@@ -31,8 +31,11 @@
 #include "condor_ver_info.h"
 #include "condor_classad.h"
 #include "dc_transfer_queue.h"
+#include <list>
 
 class FileTransfer;	// forward declatation
+class FileTransferItem;
+typedef std::list<FileTransferItem> FileTransferList;
 
 
 struct CatalogEntry {
@@ -139,6 +142,9 @@ class FileTransfer {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
 		    success(true), in_progress(false), try_again(true), hold_code(0),
 		    hold_subcode(0) {}
+
+		void addSpooledFile(char const *name_in_spool);
+
 		filesize_t bytes;
 		time_t duration;
 		TransferType type;
@@ -148,6 +154,9 @@ class FileTransfer {
 		int hold_code;
 		int hold_subcode;
 		MyString error_desc;
+			// List of files we created in remote spool.
+			// This is intended to become SpooledOutputFiles.
+		MyString spooled_files;
 	};
 
 	FileTransferInfo GetInfo() { return Info; }
@@ -224,6 +233,14 @@ class FileTransfer {
 	int InitializePlugins(CondorError &e);
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest);
 
+		// Convert directories with a trailing slash to a list of the contents
+		// of the directory.  This is used so that ATTR_TRANSFER_INPUT_FILES
+		// can be correctly interpreted by the schedd when handling spooled
+		// inputs.  See the lengthy comment in the function body for additional
+		// explanation of why this is necessary.
+		// Returns false on failure and sets error_msg.
+	static bool ExpandInputFileList( ClassAd *job, MyString &error_msg );
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -258,6 +275,7 @@ class FileTransfer {
 	bool DelegateX509Credentials;
 	bool PeerDoesTransferAck;
 	bool PeerDoesGoAhead;
+	bool PeerUnderstandsMkdir;
 	char* Iwd;
 	StringList* ExceptionFiles;
 	StringList* OutputFiles;
@@ -273,6 +291,8 @@ class FileTransfer {
 	char* ExecFile;
 	char* UserLogFile;
 	char* X509UserProxy;
+	MyString JobStdoutFile; // only initialized if we are transferring this
+	MyString JobStderrFile; // only initialized if we are transferring this
 	char* TransSock;
 	char* TransKey;
 	char* SpoolSpace;
@@ -346,6 +366,25 @@ class FileTransfer {
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
+
+	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list );
+
+		// This function generates a list of files to transfer, including
+		// directories to create and their full contents.
+		// Arguments:
+		// src_path  - the path of the file to be transferred
+		// dest_dir  - the directory to write the file to
+		// iwd       - relative paths are relative to this path
+		// max_depth - how deep to recurse (-1 for infinite)
+		// expanded_list - the list of files to transfer
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list );
+
+	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, MyString &error_msg );
+
+		// Returns true if path is a legal path for our peer to tell us it
+		// wants us to write to.  It must be a relative path, containing
+		// no ".." elements.
+	bool LegalPathInSandbox(char const *path,char const *sandbox);
 };
 
 #endif

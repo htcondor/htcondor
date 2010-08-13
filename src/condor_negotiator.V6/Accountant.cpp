@@ -1132,7 +1132,7 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
        return 0;
     }
-    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+    if (!strcasecmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
        dprintf(D_ACCOUNTANT, "Machine is claimed but suspended\n");
        return 0;
     }
@@ -1194,7 +1194,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
         dprintf(D_ALWAYS, "Could not lookup remote activity\n");
         return 0;
     }
-    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+    if (!strcasecmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
        dprintf(D_ACCOUNTANT, "Machine claimed by %s but suspended\n", 
        RemoteUser);
        return 0;

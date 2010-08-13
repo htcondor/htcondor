@@ -1054,7 +1054,7 @@ int Operation::
 doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	int	i1, i2;
-	int signMask = 1 << (WORD_BIT-1);	// now at the position of the sign bit
+	int signMask = ~INT_MAX;	// now at the position of the sign bit
 	int val;
 
 	// bitwise operations are defined only on integers
@@ -1621,7 +1621,7 @@ MakeOperation( OpKind op, ExprTree *tree, Value &val )
 bool Operation::
 flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 {
-	ExprTree 	*fChild1, *fChild2, *fChild3;
+	ExprTree 	*fChild1 = NULL, *fChild2 = NULL, *fChild3 = NULL;
 	Value		eval1, eval2, eval3, dummy;
 
 	switch( operation ) {

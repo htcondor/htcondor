@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "subsystem_info.h"
-#include "string_funcs.h"
+#include "strcasestr.h"
 #include <stdio.h>
 
 //

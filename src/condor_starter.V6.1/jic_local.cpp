@@ -342,7 +342,7 @@ bool
 JICLocal::initJobInfo( void ) 
 {
 		// Give our base class a chance.
-	JobInfoCommunicator::initJobInfo();
+	if (!JobInfoCommunicator::initJobInfo()) return false;
 
 	char *orig_job_iwd;
 

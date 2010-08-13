@@ -1,4 +1,4 @@
-000 (1.000.000) 09/11 00:54:30 Job submitted from host: <1.2.3.4:34870>
+000 (1.000.000) 09/11 00:54:30 Job submitted to host: <1.2.3.4:34870>
     DAG Node: A
 ...
 001 (1.000.000) 09/11 00:54:31 Job executing on host: <1.2.3.5:46937>

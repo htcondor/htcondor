@@ -386,6 +386,7 @@ main_shutdown_fast()
 // this can be called by other functions, or by DC when the schedd is
 // shutdown gracefully
 void main_shutdown_graceful() {
+	dagman.dag->DumpNodeStatus( true, false );
     dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
@@ -425,6 +426,7 @@ void main_shutdown_rescue( int exitVal ) {
 		}
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
 	}
+	dagman.dag->DumpNodeStatus( false, true );
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( exitVal );
@@ -440,6 +442,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
+	dagman.dag->DumpNodeStatus( false, false );
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -742,27 +745,36 @@ void main_init (int argc, char ** const argv) {
 		}
 
 		// Make sure .condor.sub file is recent enough.
-	} else if( !submitFileVersion.built_since_version(
-				MIN_SUBMIT_FILE_VERSION.majorVer,
-				MIN_SUBMIT_FILE_VERSION.minorVer,
-				MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
-		if ( !allowVerMismatch ) {
-        	debug_printf( DEBUG_QUIET, "Error: %s is older than "
-						"oldest permissible version (%s)\n",
-						versionMsg.Value(), minSubmitVersionStr.Value() );
-			DC_Exit( EXIT_ERROR );
-		} else {
-        	debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
-						"oldest permissible version (%s); continuing "
-						"because of -AllowVersionMismatch flag\n",
-						versionMsg.Value(), minSubmitVersionStr.Value() );
-		}
+	} else if ( submitFileVersion.compare_versions(
+				CondorVersion() ) != 0 ) {
 
-		// Warn if .condor.sub file is a newer version than this binary.
-	} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
-        debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
-					"condor_dagman version (%s)\n", versionMsg.Value(),
-					CondorVersion() );
+		if( !submitFileVersion.built_since_version(
+					MIN_SUBMIT_FILE_VERSION.majorVer,
+					MIN_SUBMIT_FILE_VERSION.minorVer,
+					MIN_SUBMIT_FILE_VERSION.subMinorVer ) ) {
+			if ( !allowVerMismatch ) {
+        		debug_printf( DEBUG_QUIET, "Error: %s is older than "
+							"oldest permissible version (%s)\n",
+							versionMsg.Value(), minSubmitVersionStr.Value() );
+				DC_Exit( EXIT_ERROR );
+			} else {
+        		debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
+							"oldest permissible version (%s); continuing "
+							"because of -AllowVersionMismatch flag\n",
+							versionMsg.Value(), minSubmitVersionStr.Value() );
+			}
+
+			// Warn if .condor.sub file is a newer version than this binary.
+		} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
+        	debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
+						"condor_dagman version (%s)\n", versionMsg.Value(),
+						CondorVersion() );
+		} else {
+        	debug_printf( DEBUG_NORMAL, "Note: %s differs from "
+						"condor_dagman version (%s), but the "
+						"difference is permissible\n", 
+						versionMsg.Value(), CondorVersion() );
+		}
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1128,6 +1140,7 @@ void condor_event_timer () {
 	|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
+
         prevJobsDone = dagman.dag->NumNodesDone();
         prevJobs = dagman.dag->NumNodes();
         prevJobsFailed = dagman.dag->NumNodesFailed();
@@ -1141,13 +1154,15 @@ void condor_event_timer () {
 		}
 	}
 
+	dagman.dag->DumpNodeStatus( false, false );
+
     ASSERT( dagman.dag->NumNodesDone() + dagman.dag->NumNodesFailed()
 			<= dagman.dag->NumNodes() );
 
     //
     // If DAG is complete, hurray, and exit.
     //
-    if( dagman.dag->Done() ) {
+    if( dagman.dag->DoneSuccess() ) {
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
@@ -1162,22 +1177,18 @@ void condor_event_timer () {
     }
 
     //
-
     // If no jobs are submitted and no scripts are running, but the
     // dag is not complete, then at least one job failed, or a cycle
     // exists.
     // 
-    if( dagman.dag->NumJobsSubmitted() == 0 &&
-		dagman.dag->NumNodesReady() == 0 &&
-		dagman.dag->ScriptRunNodeCount() == 0 ) {
-		if( dagman.dag->NumNodesFailed() > 0 ) {
+    if( dagman.dag->FinishedRunning() ) {
+		if( dagman.dag->DoneFailed() > 0 ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
 				dagman.dag->PrintJobList( Job::STATUS_ERROR );
 			}
-		}
-		else {
+		} else {
 			// no jobs failed, so a cycle must exist
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 			if ( debug_level >= DEBUG_NORMAL ) {

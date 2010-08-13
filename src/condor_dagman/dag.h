@@ -373,7 +373,35 @@ class Dag {
 	inline int ScriptRunNodeCount() const
 		{ return _preRunNodeCount + _postRunNodeCount; }
 
-	inline bool Done() const { return NumNodesDone() == NumNodes(); }
+		/** Determine whether the DAG has finished running (whether
+			successfully or unsuccessfully).
+	    	(If no jobs are submitted and no scripts are running, but the
+		    dag is not complete, then at least one job failed, or a cycle
+			exists.)
+			@return true iff the DAG is finished
+		*/
+	inline bool FinishedRunning() const { return NumJobsSubmitted() == 0 &&
+				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
+
+		/** Determine whether the DAG is successfully completed.
+			@return true iff the DAG is successfully completed
+		*/
+	inline bool DoneSuccess() const { return NumNodesDone() == NumNodes(); }
+
+		/** Determine whether the DAG is finished, but failed (because
+			of a node job failure, etc.).
+			@return true iff the DAG is finished but failed
+		*/
+	inline bool DoneFailed() const { return FinishedRunning() &&
+				NumNodesFailed() > 0; }
+
+		/** Determine whether the DAG is finished because of a cycle in
+			the DAG.  (Note that this method sometimes incorrectly returns
+			true for errors other than cycles in the DAG.  wenger 2010-07-30.)
+			@return true iff the DAG is finished but there is a cycle
+		*/
+	inline bool DoneCycle() { return FinishedRunning() &&
+				NumNodesFailed() == 0; }
 
 		/** Submit all ready jobs, provided they are not waiting on a
 			parent job or being throttled.
@@ -442,6 +470,10 @@ class Dag {
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
 	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
 	void DumpDotFile(void);
+
+	void SetNodeStatusFileName( const char *statusFileName,
+				int minUpdateTime );
+	void DumpNodeStatus( bool held, bool removed );
 
 	void CheckAllJobs();
 
@@ -599,7 +631,7 @@ class Dag {
 	// node, unless it is an absolute path, in which case we ignore it.
 	void PropogateDirectoryToAllNodes(void);
 
-  protected:
+  private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
 	// defaults to ".".
@@ -861,6 +893,20 @@ class Dag {
 	void DumpDotFileNodes(FILE *temp_dot_file);
 	void DumpDotFileArcs(FILE *temp_dot_file);
 	void ChooseDotFileName(MyString &dot_file_name);
+
+		// Name of node status file.
+	char *_statusFileName;
+		
+		// Whether things have changed since the last time the file
+		// was written.
+	bool _statusFileOutdated;
+		
+		// Minimum time between updates (so we can avoid trying to
+		// write the file too often, e.g., for large DAGs).
+	int _minStatusUpdateTime;
+
+		// Last time the status file was written.
+	time_t _lastStatusUpdateTimestamp;
 
 		// Separate event checkers for Condor and Stork here because
 		// IDs could collide.

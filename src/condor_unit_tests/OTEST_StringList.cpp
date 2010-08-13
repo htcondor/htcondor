@@ -4044,10 +4044,10 @@ static bool test_string_compare_equal_same_beg() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs);
+		niceFree(list); free_helper(strs, 3);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs);
+	niceFree(list); free_helper(strs, 3);
 	PASS;
 }
 
@@ -4069,10 +4069,10 @@ static bool test_string_compare_equal_same_mid() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs);
+		niceFree(list); free_helper(strs, 2);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs);
+	niceFree(list); free_helper(strs, 2);
 	PASS;
 }
 
@@ -4094,10 +4094,10 @@ static bool test_string_compare_equal_same_end() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs);
+		niceFree(list); free_helper(strs, 1);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs);
+	niceFree(list); free_helper(strs, 1);
 	PASS;
 }
 
@@ -4124,11 +4124,11 @@ static bool test_string_compare_equal_different_list() {
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
 		niceFree(list1); niceFree(list2); 
-		free_helper(strs1); free_helper(strs2); 
+		free_helper(strs1, 2); free_helper(strs2, 2); 
 		FAIL;
 	}
 	niceFree(list1); niceFree(list2); 
-	free_helper(strs1); free_helper(strs2);
+	free_helper(strs1, 2); free_helper(strs2, 2);
 	PASS;
 }
 
@@ -4154,11 +4154,11 @@ static bool test_string_compare_copy() {
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
 		niceFree(list1); niceFree(list2); 
-		free_helper(strs1); free_helper(strs2);
+		free_helper(strs1, 3); free_helper(strs2, 3);
 		FAIL;
 	}
 	niceFree(list1); niceFree(list2); 
-	free_helper(strs1); free_helper(strs2);
+	free_helper(strs1, 3); free_helper(strs2, 3);
 	PASS;
 }
 
@@ -4181,10 +4181,10 @@ static bool test_string_compare_not_equal_same() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
-		niceFree(list); free_helper(strs1); free_helper(strs2);
+		niceFree(list); free_helper(strs1, 3); free_helper(strs2, 2);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs1); free_helper(strs2);
+	niceFree(list); free_helper(strs1, 3); free_helper(strs2, 2);
 	PASS;
 }
 
@@ -4211,11 +4211,11 @@ static bool test_string_compare_not_equal_different() {
 	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
 		niceFree(list1); niceFree(list2); 
-		free_helper(strs1); free_helper(strs2);
+		free_helper(strs1, 2); free_helper(strs2, 3);
 		FAIL;
 	}
 	niceFree(list1); niceFree(list2); 
-	free_helper(strs1); free_helper(strs2);
+	free_helper(strs1, 2); free_helper(strs2, 3);
 	PASS;
 }
 

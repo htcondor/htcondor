@@ -786,7 +786,7 @@ DedicatedScheduler::shutdown_graceful( void )
    negotiation.
 */
 int
-DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
+DedicatedScheduler::negotiate( Stream* s, char const* remote_pool )
 {
 		// At this point, we've already read the command int, the
 		// owner to negotiate for, and an eom off the wire.  
@@ -830,7 +830,7 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 
 		req = makeGenericAdFromJobAd(job);
 
-		result = negotiateRequest(req, s, negotiator_name,
+		result = negotiateRequest(req, s, remote_pool,
 								  reqs_matched, max_reqs);
 
 		delete req;
@@ -971,7 +971,7 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 */
 NegotiationResult
 DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s, 
-									  char* negotiator_name, 
+									  char const* remote_pool, 
 									  int reqs_matched, int /*max_reqs*/ )
 {
 	char	*claim_id = NULL;	// ClaimId for each match made
@@ -1152,7 +1152,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				// "DedicatedScheduler" owner, which is why we call
 				// owner() here...
 			mrec = new match_rec( claim_id, sinful, &id,
-			                       my_match_ad, owner(), negotiator_name, true );
+			                       my_match_ad, owner(), remote_pool, true );
 
 			machine_name = NULL;
 			if( ! mrec->my_match_ad->LookupString(ATTR_NAME, &machine_name) ) {

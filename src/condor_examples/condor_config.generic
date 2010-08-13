@@ -65,6 +65,11 @@ LOCAL_DIR		= $(TILDE)
 LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 #LOCAL_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).local
 
+##  Where are optional machine-specific local config files located?
+##  Config files are included in lexicographic order.
+##  No default. $(LOCAL_DIR)/config is an example.
+#LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
+
 ## If the local config file is not present, is it an error?
 ## WARNING: This is a potential security issue. 
 ## If not specificed, the default is True
@@ -1155,6 +1160,30 @@ PREEN_ARGS			= -m -r
 ##  it "recovered".  Once a daemon has recovered, we reset the number
 ##  of restarts so the exponential backoff stuff goes back to normal. 
 #MASTER_RECOVER_FACTOR		= 300
+
+
+##--------------------------------------------------------------------
+##  condor_collector
+##--------------------------------------------------------------------
+## Address to which Condor will send a weekly e-mail with output of
+## condor_status.
+#CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
+
+## Global Collector to periodically advertise basic information about
+## your pool.
+#CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
+
+
+##--------------------------------------------------------------------
+##  condor_negotiator
+##--------------------------------------------------------------------
+## Determine if the Negotiator will honor SlotWeight attributes, which
+## may be used to give a slot greater weight when calculating usage.
+#NEGOTIATOR_USE_SLOT_WEIGHTS = True
+
+## How often the Negotaitor starts a negotiation cycle, defined in
+## seconds.
+#NEGOTIATOR_INTERVAL = 60
 
 
 ##--------------------------------------------------------------------
@@ -2452,7 +2481,7 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 ## The host and port for hadoop's name node. If this machine is the
 ## name node (see HDFS_SERVICES) then the specified port will be used
 ## to run name node. 
-HDFS_NAMENODE = example.com:9000
+HDFS_NAMENODE = hdfs://example.com:9000
 HDFS_NAMENODE_WEB = example.com:8000
 
 ## You need to pick one machine as name node by setting this parameter
@@ -2495,6 +2524,7 @@ HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 #Fully qualified name for Name node and Datanode class.
 #HDFS_NAMENODE_CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
 #HDFS_DATANODE_CLASS=org.apache.hadoop.hdfs.server.datanode.DataNode
+#HDFS_DFSADMIN_CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
 
 ## In case an old name for hdfs configuration files is required.
 #HDFS_SITE_FILE = hadoop-site.xml

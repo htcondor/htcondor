@@ -2091,6 +2091,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 	numMatched = 0;
 
+	MyString submitter_tag;
+	int negotiate_cmd = NEGOTIATE; // 7.5.4+
+	if( !scheddAd->LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
+			// schedd must be older than 7.5.4
+		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
+	}
+
 	// Because of GCB, we may end up contacting a different
 	// address than scheddAddr!  This is used for logging (to identify
 	// the schedd) and to uniquely identify the host in the socketCache.
@@ -2120,8 +2127,8 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			dprintf( D_ALWAYS, "    Failed to connect to %s\n", schedd_id.Value() );
 			return MM_ERROR;
 		}
-		if( ! schedd.startCommand(NEGOTIATE_WITH_SIGATTRS, sock, NegotiatorTimeout) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE_WITH_SIGATTRS to %s\n",
+		if( ! schedd.startCommand(negotiate_cmd, sock, NegotiatorTimeout) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
 					 schedd_id.Value() );
 			delete sock;
 			return MM_ERROR;
@@ -2134,34 +2141,50 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			// this address is already in our socket cache.  since
 			// we've already got a TCP connection, we do *NOT* want to
 			// use a Daemon::startCommand() to create a new security
-			// session, we just want to encode the NEGOTIATE_WITH_SIGATTRS
+			// session, we just want to encode the command
 			// int on the socket...
 		sock->encode();
-		if( ! sock->put(NEGOTIATE_WITH_SIGATTRS) ) {
-			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE_WITH_SIGATTRS to %s\n",
+		if( ! sock->put(negotiate_cmd) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE command to %s\n",
 					 schedd_id.Value() );
 			sockCache->invalidateSock( scheddAddr.Value() );
 			return MM_ERROR;
 		}
 	}
 
-	// 1.  send NEGOTIATE_WITH_SIGATTRS command, followed by the
-	//     scheddName (user@uiddomain)
 	sock->encode();
-	if (!sock->put(scheddName))
-	{
-		dprintf (D_ALWAYS, "    Failed to send scheddName to %s\n",
-			schedd_id.Value() );
-		sockCache->invalidateSock(scheddAddr.Value());
-		return MM_ERROR;
+	if( negotiate_cmd == NEGOTIATE ) {
+		ClassAd negotiate_ad;
+		negotiate_ad.Assign(ATTR_OWNER,scheddName);
+		negotiate_ad.Assign(ATTR_AUTO_CLUSTER_ATTRS,job_attr_references ? job_attr_references : "");
+		negotiate_ad.Assign(ATTR_SUBMITTER_TAG,submitter_tag.Value());
+		if( !negotiate_ad.put( *sock ) ) {
+			dprintf (D_ALWAYS, "    Failed to send negotiation header to %s\n",
+					 schedd_id.Value() );
+			sockCache->invalidateSock(scheddAddr.Value());
+			return MM_ERROR;
+		}
 	}
-	// send the significant attributes
-	if (!sock->put(job_attr_references)) 
-	{
-		dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
-				schedd_id.Value() );
-		sockCache->invalidateSock(scheddAddr.Value());
-		return MM_ERROR;
+	else if( negotiate_cmd == NEGOTIATE_WITH_SIGATTRS ) {
+			// old protocol prior to 7.5.4
+		if (!sock->put(scheddName))
+		{
+			dprintf (D_ALWAYS, "    Failed to send scheddName to %s\n",
+					 schedd_id.Value() );
+			sockCache->invalidateSock(scheddAddr.Value());
+			return MM_ERROR;
+		}
+			// send the significant attributes
+		if (!sock->put(job_attr_references)) 
+		{
+			dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
+					 schedd_id.Value() );
+			sockCache->invalidateSock(scheddAddr.Value());
+			return MM_ERROR;
+		}
+	}
+	else {
+		EXCEPT("Unexpected negotiate_cmd=%d\n",negotiate_cmd);
 	}
 	if (!sock->end_of_message())
 	{

@@ -84,6 +84,8 @@ private:
 	std::string build_ami_id();
 	std::string build_keypair();
 	StringList* build_groupnames();
+
+	std::string m_serviceUrl;
 	
 	char * m_public_key_file;
 	char * m_private_key_file;

@@ -619,7 +619,7 @@ static void process_test_lexer_one_token(const string &line,
 
 	Lexer             lexer;
 	Lexer::TokenType  token_type;
-	char              *token_name;
+	const char        *token_name;
 	StringLexerSource   *lexer_source;
 
 	lexer_source = new StringLexerSource(&token_string);

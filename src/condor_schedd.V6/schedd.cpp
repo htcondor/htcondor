@@ -105,6 +105,8 @@
 #define SUCCESS 1
 #define CANT_RUN 0
 
+char const * const HOME_POOL_SUBMITTER_TAG = "";
+
 extern char *gen_ckpt_name();
 
 extern GridUniverseLogic* _gridlogic;
@@ -203,7 +205,7 @@ struct job_data_transfer_t {
 };
 
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
-					  const ClassAd *match, char *the_user, char *my_pool,
+					  const ClassAd *match, char const *the_user, char const *my_pool,
 					  bool is_dedicated_arg ):
 	ClaimIdParser(claim_id)
 {
@@ -217,7 +219,7 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	num_exceptions = 0;
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
-		if( DebugFlags && D_MACHINE ) {
+		if( DebugFlags & D_MACHINE ) {
 			dprintf( D_MACHINE, "*** ClassAd of Matched Resource ***\n" );
 			my_match_ad->dPrint( D_MACHINE );
 			dprintf( D_MACHINE | D_NOHEADER, "*** End of ClassAd ***\n" );
@@ -986,6 +988,8 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  m_ad->InsertOrUpdate(tmp);
 
+	  m_ad->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
+
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
@@ -1062,10 +1066,17 @@ Scheduler::count_jobs()
 				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 						UidDomain);
 				m_ad->InsertOrUpdate(tmp);
+
+					// we will use this "tag" later to identify which
+					// CM we are negotiating with when we negotiate
+				m_ad->Assign(ATTR_SUBMITTER_TAG,flock_col->name());
+
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, m_ad, NULL, true );
 			}
 		}
 	}
+
+	m_ad->Delete(ATTR_SUBMITTER_TAG);
 
 	for (i=0; i < N_Owners; i++) {
 		Owners[i].OldFlockLevel = Owners[i].FlockLevel;
@@ -1349,7 +1360,6 @@ count( ClassAd *job )
 		// for Globus, count jobs in UNSUBMITTED state by owner.
 		// later we make certain there is a grid manager daemon
 		// per owner.
-		int needs_management = 0;
 		int real_status = status;
 		bool want_service = service_this_universe(universe,job);
 		bool job_managed = jobExternallyManaged(job);
@@ -2110,6 +2120,7 @@ jobIsSandboxed( ClassAd * ad )
 	ASSERT(ad);
 	int stage_in_start = 0;
 	int never_create_sandbox_expr = 0;
+
 	// In the past, we created sandboxes (or not) based on the
 	// universe in which a job is executing.  Now, we create a
 	// sandbox only if we are in a universe that ordinarily
@@ -2117,7 +2128,7 @@ jobIsSandboxed( ClassAd * ad )
 	// create_sandbox may be set to false by other attributes in
 	// the job ad (see below).
 	bool create_sandbox = true;
-	
+
 	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
 	if( stage_in_start > 0 ) {
 		return true;
@@ -2126,14 +2137,17 @@ jobIsSandboxed( ClassAd * ad )
 	// 
 	if( ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr ) &&
 	    never_create_sandbox_expr == TRUE ) {
-	  // As this function stands now, we could return false here.
+	  // As this function stands now, we could return the result of 
+	  // evaluating ATTR_WANT_IO_PROXY here.  (We must create a sandbox for  
+	  // parallel universe jobs because the scripts and chirp depend on one.)
 	  // But if the sandbox logic becomes more complicated in the
 	  // future --- notably, if there might be a case in which
-	  // we'd want to always create a sandbox even if
+	  // we'd want to always create a sandbox for non-PU jobs even if
 	  // ATTR_NEVER_CREATE_JOB_SANDBOX were set --- then we'd want
 	  // to be sure to ensure that we weren't in such a case.
+	  int want_io_proxy_expr = 0;
 
-	  create_sandbox = false;
+	  create_sandbox = (ad->EvalBool(ATTR_WANT_IO_PROXY, NULL, want_io_proxy_expr) && want_io_proxy_expr);
 	}
 
 	int univ = CONDOR_UNIVERSE_VANILLA;
@@ -2143,13 +2157,13 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_GRID:
+	case CONDOR_UNIVERSE_PARALLEL: // MPI scripts require a spool directory
 		return false;
 		break;
 
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_MPI:
-	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_VM:
 	  // True by default for jobs in these universes, but false if
 	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad.
@@ -3081,31 +3095,22 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 		// These three lists must be kept in sync!
-	static const int ATTR_ARRAY_SIZE = 8;
+	static const int ATTR_ARRAY_SIZE = 5;
 	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
-		ATTR_JOB_OUTPUT,
-		ATTR_JOB_ERROR,
 		ATTR_TRANSFER_INPUT_FILES,
-		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_ULOG_FILE,
 		ATTR_X509_USER_PROXY };
 	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
 		false,
 		false,
-		false,
-		false,
-		true,
 		true,
 		false,
 		false };
 	static const char *AttrXferBool[ATTR_ARRAY_SIZE] = {
 		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT,
-		ATTR_TRANSFER_OUTPUT,
-		ATTR_TRANSFER_ERROR,
-		NULL,
 		NULL,
 		NULL,
 		NULL };
@@ -3227,13 +3232,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			MyString new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.sprintf(
-						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
-					base = new_path_buf.Value();
 					changed = true;
 				}
 				new_paths.append(base);
@@ -4073,7 +4074,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	StringList job_ids;
 		// NOTE: ATTR_ACTION_CONSTRAINT needs to be treated as a bool,
 		// not as a string...
-	ExprTree *tree, *rhs;
+	ExprTree *tree;
 	tree = command_ad.LookupExpr(ATTR_ACTION_CONSTRAINT);
 	if( tree ) {
 		const char *value = ExprTreeToString( tree );
@@ -4717,7 +4718,6 @@ Scheduler::negotiate(int command, Stream* s)
 	int		op = -1;
 	PROC_ID	id;
 	char*	claim_id = NULL;			// claim_id for each match made
-	char*	host = NULL;
 	char*	sinful = NULL;
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
@@ -4728,7 +4728,8 @@ Scheduler::negotiate(int command, Stream* s)
 	int		shadow_num_increment;
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
-	char*	negotiator_name = NULL;	// hostname of negotiator when flocking
+	MyString remote_pool_buf;
+	char const *remote_pool = NULL;
 	Daemon*	neg_host = NULL;	
 	int		owner_num;
 	int		JobsRejected = 0;
@@ -4745,13 +4746,13 @@ Scheduler::negotiate(int command, Stream* s)
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
-	// since this is the socket from the negotiator, the only command that can
-	// come in at this point is NEGOTIAT_WITH_SIGATTRSE.  If we get something
-	// else, something goofy is going on.
-	if (command != NEGOTIATE_WITH_SIGATTRS)
+		// Prior to 7.5.4, the negotiator sent NEGOTIATE_WITH_SIGATTRS
+		// As of 7.5.4, since we are putting ATTR_SUBMITTER_TAG into
+		// the submitter ads, the negotiator sends NEGOTIATE
+	if (command != NEGOTIATE_WITH_SIGATTRS && command != NEGOTIATE)
 	{
 		dprintf(D_ALWAYS,
-				"Negotiator command was %d (not NEGOTIATE_WITH_SIGATTRS) "
+				"Negotiator command was %d (not NEGOTIATE_WITH_SIGATTRS or NEGOTIATE) "
 				"--- aborting\n", command);
 		return (!(KEEP_STREAM));
 	}
@@ -4785,58 +4786,6 @@ Scheduler::negotiate(int command, Stream* s)
 		// CronTab Jobs
 		//
 	this->calculateCronTabSchedules();		
-
-	if (FlockNegotiators) {
-		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
-		struct hostent *hent;
-		bool match = false;
-		Daemon negotiator (DT_NEGOTIATOR);
-		char *negotiator_hostname = negotiator.fullHostname();
-		if (!negotiator_hostname) {
-			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
-			return (!(KEEP_STREAM));
-		}
-		hent = condor_gethostbyname(negotiator_hostname);
-		if (!hent) {
-			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
-					"  Aborting negotiation.\n", negotiator_hostname);
-			return (!(KEEP_STREAM));
-		}
-		char *addr;
-		if (hent->h_addrtype == AF_INET) {
-			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
-				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
-					match = true;
-				}
-			}
-		}
-		// if it isn't our local negotiator, check the FlockNegotiators list.
-		if (!match) {
-			int n;
-			for( n=1, FlockNegotiators->rewind();
-				 !match && FlockNegotiators->next(neg_host); n++) {
-				hent = condor_gethostbyname(neg_host->fullHostname());
-				if (hent && hent->h_addrtype == AF_INET) {
-					for (int a=0;
-						 !match && (addr = hent->h_addr_list[a]);
-						 a++) {
-						if (memcmp(addr, &endpoint_addr,
-									sizeof(struct in_addr)) == 0){
-							match = true;
-							which_negotiator = n;
-							negotiator_name = host;
-						}
-					}
-				}
-			}
-		}
-		if (!match) {
-			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
-					"Aborting negotiation.\n", sock->peer_ip_str());
-			return (!(KEEP_STREAM));
-		}
-	}
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
 
@@ -4877,22 +4826,142 @@ Scheduler::negotiate(int command, Stream* s)
 	//-----------------------------------------------
 	char owner[200], *ownerptr = owner;
 	char *sig_attrs_from_cm = NULL;	
+	ClassAd negotiate_ad;
+	MyString submitter_tag;
 	s->decode();
-	if (!s->get(ownerptr,sizeof(owner))) {
-		dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
-		return (!(KEEP_STREAM));
+	if( command == NEGOTIATE ) {
+		if( !negotiate_ad.initFromStream( *s ) ) {
+			dprintf( D_ALWAYS, "Can't receive negotiation header\n" );
+			return (!(KEEP_STREAM));
+		}
+		if( !negotiate_ad.LookupString(ATTR_OWNER,owner,sizeof(owner)) ) {
+			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
+					 ATTR_OWNER );
+			return (!(KEEP_STREAM));
+		}
+		if( !negotiate_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sig_attrs_from_cm) ) {
+			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
+					 ATTR_AUTO_CLUSTER_ATTRS );
+			return (!(KEEP_STREAM));
+		}
+		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
+			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
+					 ATTR_SUBMITTER_TAG );
+			return (!(KEEP_STREAM));
+		}
 	}
-	if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
-		dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
-		return (!(KEEP_STREAM));
+	else {
+			// old NEGOTIATE_WITH_SIGATTRS protocol
+		if (!s->get(ownerptr,sizeof(owner))) {
+			dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
+			return (!(KEEP_STREAM));
+		}
+		if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
+			dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
+			return (!(KEEP_STREAM));
+		}
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
 		return (!(KEEP_STREAM));
 	}
-	if (negotiator_name) {
-		dprintf (D_ALWAYS, "Negotiating with %s for owner: %s\n",
-				 negotiator_name, owner);
+
+	if( FlockCollectors && command == NEGOTIATE ) {
+			// Use the submitter tag to figure out which negotiator we
+			// are talking to.  We insert a different submitter tag
+			// into the submitter ad that we send to each CM.  In fact,
+			// the tag is just equal to the collector address for the CM.
+		if( submitter_tag != HOME_POOL_SUBMITTER_TAG ) {
+			int n;
+			bool match = false;
+			Daemon *flock_col = NULL;
+			for( n=1, FlockCollectors->rewind();
+				 FlockCollectors->next(flock_col);
+				 n++)
+			{
+				if( submitter_tag == flock_col->name() ){
+					which_negotiator = n;
+					remote_pool_buf = flock_col->name();
+					remote_pool = remote_pool_buf.Value();
+					match = true;
+					break;
+				}
+			}
+			if( !match ) {
+				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
+						"Aborting negotiation.\n", sock->peer_ip_str(),
+						submitter_tag.Value());
+				return (!(KEEP_STREAM));
+			}
+		}
+	}
+	else if( FlockNegotiators && command == NEGOTIATE_WITH_SIGATTRS ) {
+			// This is the old (pre 7.5.4) method for determining
+			// which negotiator we are talking to.  It is brittle
+			// because it depends on a DNS lookup of the negotiator
+			// name matching the peer address.  This is the only place
+			// in the schedd where we really depend on NEGOTIATOR_HOST
+			// and FLOCK_NEGOTIATOR_HOSTS.
+
+		// first, check if this is our local negotiator
+		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
+		struct hostent *hent;
+		bool match = false;
+		Daemon negotiator (DT_NEGOTIATOR);
+		char *negotiator_hostname = negotiator.fullHostname();
+		if (!negotiator_hostname) {
+			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
+			return (!(KEEP_STREAM));
+		}
+		hent = condor_gethostbyname(negotiator_hostname);
+		if (!hent) {
+			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
+					"  Aborting negotiation.\n", negotiator_hostname);
+			return (!(KEEP_STREAM));
+		}
+		char *addr;
+		if (hent->h_addrtype == AF_INET) {
+			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
+				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
+					match = true;
+				}
+			}
+		}
+		// if it isn't our local negotiator, check the FlockNegotiators list.
+		if (!match) {
+			int n;
+			for( n=1, FlockNegotiators->rewind();
+				 !match && FlockNegotiators->next(neg_host); n++) {
+				hent = condor_gethostbyname(neg_host->fullHostname());
+				if (hent && hent->h_addrtype == AF_INET) {
+					for (int a=0;
+						 !match && (addr = hent->h_addr_list[a]);
+						 a++) {
+						if (memcmp(addr, &endpoint_addr,
+									sizeof(struct in_addr)) == 0){
+							match = true;
+							which_negotiator = n;
+							remote_pool_buf = neg_host->pool();
+							remote_pool = remote_pool_buf.Value();
+						}
+					}
+				}
+			}
+		}
+		if (!match) {
+			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
+					"Aborting negotiation.\n", sock->peer_ip_str());
+			return (!(KEEP_STREAM));
+		}
+	}
+	else if( FlockCollectors ) {
+		EXCEPT("Unexpected negotiation command %d\n", command);
+	}
+
+
+	if( remote_pool ) {
+		dprintf (D_ALWAYS, "Negotiating for owner: %s (flock level %d, pool %s)\n",
+				 owner, which_negotiator, remote_pool);
 	} else {
 		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
 	}
@@ -4906,7 +4975,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if (sig_attrs_from_cm) {
 			free(sig_attrs_from_cm);
 		}
-		return dedicated_scheduler.negotiate( s, negotiator_name );
+		return dedicated_scheduler.negotiate( s, remote_pool );
 	}
 
 		// If we got this far, we're negotiating for a regular user,
@@ -5298,7 +5367,7 @@ Scheduler::negotiate(int command, Stream* s)
 						}
 					}
 
-					if ( stricmp(claim_id,"null") == 0 ) {
+					if ( strcasecmp(claim_id,"null") == 0 ) {
 						// No ClaimId given by the matchmaker.  This means
 						// the resource we were matched with does not support
 						// the claiming protocol.
@@ -5307,6 +5376,7 @@ Scheduler::negotiate(int command, Stream* s)
 						// and store the my_match_ad (if exists) in a hashtable.
 						if ( my_match_ad ) {
 							ClassAd *tmp_ad = NULL;
+							InsertMachineAttrs(id.cluster,id.proc,my_match_ad);
 							resourcesByProcID->lookup(id,tmp_ad);
 							if ( tmp_ad ) delete tmp_ad;
 							resourcesByProcID->insert(id,my_match_ad);
@@ -5351,7 +5421,7 @@ Scheduler::negotiate(int command, Stream* s)
 						// of the startd we were matched with.
 					pre_existing_match = NULL;
 					mrec = AddMrec( claim_id, sinful, &id, my_match_ad,
-									owner,negotiator_name,&pre_existing_match);
+									owner,remote_pool,&pre_existing_match);
 
 						/* if AddMrec returns NULL, it means we can't
 						   use that match.  in that case, we'll skip
@@ -6718,7 +6788,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	}
 
 	if( match_opsys ) {
-		if( strincmp(match_opsys,"winnt",5) == MATCH ) {
+		if( strncasecmp(match_opsys,"winnt",5) == MATCH ) {
 			nt_resource = true;
 		}
 		free( match_opsys );
@@ -7613,7 +7683,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
 
 	// sanity check to make sure this job isn't going to start as root.
-	if (stricmp(owner.Value(), "root") == 0 ) {
+	if (strcasecmp(owner.Value(), "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
 		goto wrapup;
@@ -7971,9 +8041,8 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	if (pid) {
 		add_shadow_rec(new_rec);
 	} else if ( new_rec->match && new_rec->match->pool ) {
-		// need to make sure this gets set immediately
 		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
-						   ATTR_REMOTE_POOL, new_rec->match->pool);
+						   ATTR_REMOTE_POOL, new_rec->match->pool, NONDURABLE);
 	}
 	return new_rec;
 }
@@ -8049,7 +8118,7 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 
 			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( stricmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 				// In vmware vm universe, vmware disk may be 
 				// a sparse disk or snapshot disk. So we can't estimate the disk space 
 				// in advanace because the sparse disk or snapshot disk will 
@@ -8066,6 +8135,87 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 	}
 }
 
+static void
+RotateAttributeList( int cluster, int proc, char const *attrname, int start_index, int history_len )
+{
+	int index;
+	for(index=start_index+history_len-1;
+		index>start_index;
+		index--)
+	{
+		MyString attr;
+		attr.sprintf("%s%d",attrname,index-1);
+
+		char *value=NULL;
+		if( GetAttributeExprNew(cluster,proc,attr.Value(),&value) == 0 ) {
+			attr.sprintf("%s%d",attrname,index);
+			SetAttribute(cluster,proc,attr.Value(),value);
+			free( value );
+		}
+	}
+}
+
+void
+Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
+{
+	ASSERT( machine_ad );
+
+	classad::ClassAdUnParser unparser;
+	classad::ClassAd *machine;
+#if !defined (WANT_OLD_CLASSADS)
+	machine = machine_ad;
+#else
+	classad::ClassAd machine_buff;
+	old_to_new(*machine_ad,machine_buff);
+	machine = &machine_buff;
+	unparser.SetOldClassAd(true);
+#endif
+
+	ClassAd *job = GetJobAd( cluster, proc );
+
+	if( !job ) {
+		return;
+	}
+
+	MyString user_machine_attrs;
+	GetAttributeString(cluster,proc,ATTR_JOB_MACHINE_ATTRS,user_machine_attrs);
+
+	int history_len = 1;
+	GetAttributeInt(cluster,proc,ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH,&history_len);
+
+	if( m_job_machine_attrs_history_length > history_len ) {
+		history_len = m_job_machine_attrs_history_length;
+	}
+
+	if( history_len == 0 ) {
+		return;
+	}
+
+	StringList machine_attrs(user_machine_attrs.Value());
+
+	machine_attrs.create_union( m_job_machine_attrs, true );
+
+	machine_attrs.rewind();
+	char const *attr;
+	while( (attr=machine_attrs.next()) != NULL ) {
+		MyString result_attr;
+		result_attr.sprintf("%s%s",ATTR_MACHINE_ATTR_PREFIX,attr);
+
+		RotateAttributeList(cluster,proc,result_attr.Value(),0,history_len);
+
+		classad::Value result;
+		if( !machine->EvaluateAttr(attr,result) ) {
+			result.SetErrorValue();
+		}
+		std::string unparsed_result;
+
+		unparser.Unparse(unparsed_result,result);
+		result_attr += "0";
+		SetAttribute(cluster,proc,result_attr.Value(),unparsed_result.c_str());
+	}
+
+	FreeJobAd( job );
+}
 
 struct shadow_rec *
 Scheduler::add_shadow_rec( shadow_rec* new_rec )
@@ -8112,6 +8262,8 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			int slot = 1;
 			mrec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot );
 			SetAttributeInt(cluster,proc,ATTR_REMOTE_SLOT_ID,slot);
+
+			InsertMachineAttrs(cluster,proc,mrec->my_match_ad);
 		}
 		if( ! have_remote_host ) {
 				// CRUFT
@@ -8263,7 +8415,8 @@ update_remote_wall_clock(int cluster, int proc)
 		float accum_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-		accum_time += (float)( time(NULL) - bday );
+		float delta = (float)(time(NULL) - bday);
+		accum_time += delta;
 			// We want to update our wall clock time and delete
 			// our wall clock checkpoint inside a transaction, so
 			// we are sure not to double-count.  The wall-clock
@@ -8276,6 +8429,16 @@ update_remote_wall_clock(int cluster, int proc)
 		SetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
 		DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
+
+		float slot_weight = 1;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
+		float slot_time = 0;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
+		slot_time += delta*slot_weight;
+		SetAttributeFloat(cluster, proc,
+						  ATTR_CUMULATIVE_SLOT_TIME,slot_time);
 	}
 }
 
@@ -8955,7 +9118,7 @@ Scheduler::mail_problem_message()
 }
 
 void
-Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
+Scheduler::NotifyUser(shadow_rec* srec, const char* msg, int status, int JobStatus)
 {
 	int notification;
 	MyString owner;
@@ -9168,7 +9331,7 @@ Scheduler::child_exit(int pid, int status)
 			SchedUniverseJobsRunning--;
 		}
 	} else if (srec) {
-		char* name = NULL;
+		const char* name = NULL;
 			//
 			// Local Universe
 			//
@@ -10243,14 +10406,9 @@ Scheduler::Init()
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
 	flock_collector_hosts = param( "FLOCK_COLLECTOR_HOSTS" );
-	if (!flock_collector_hosts) { // backward compatibility
-		flock_collector_hosts = param( "FLOCK_HOSTS" );
-	}
 	flock_negotiator_hosts = param( "FLOCK_NEGOTIATOR_HOSTS" );
-	if (!flock_negotiator_hosts) { // backward compatibility
-		flock_negotiator_hosts = param( "FLOCK_HOSTS" );
-	}
-	if( flock_collector_hosts && flock_negotiator_hosts ) {
+
+	if( flock_collector_hosts ) {
 		if( FlockCollectors ) {
 			delete FlockCollectors;
 		}
@@ -10268,15 +10426,6 @@ Scheduler::Init()
 					"FLOCK_NEGOTIATOR_HOSTS lists are not the same size."
 					"Flocking disabled.\n");
 			MaxFlockLevel = 0;
-		}
-	} else {
-		MaxFlockLevel = 0;
-		if (!flock_collector_hosts && flock_negotiator_hosts) {
-			dprintf(D_ALWAYS, "FLOCK_NEGOTIATOR_HOSTS defined but "
-					"FLOCK_COLLECTOR_HOSTS undefined.  Flocking disabled.\n");
-		} else if (!flock_negotiator_hosts && flock_collector_hosts) {
-			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS defined but "
-					"FLOCK_NEGOTIATOR_HOSTS undefined.  Flocking disabled.\n");
 		}
 	}
 	if (flock_collector_hosts) free(flock_collector_hosts);
@@ -10567,6 +10716,13 @@ Scheduler::Init()
 	m_unparsed_gridman_selection_expr = expr;
 		/* End of support for  GRIDMANAGER_SELECTION_EXPR */
 
+	MyString job_machine_attrs_str;
+	param(job_machine_attrs_str,"SYSTEM_JOB_MACHINE_ATTRS");
+	m_job_machine_attrs.clearAll();
+	m_job_machine_attrs.initializeFromString( job_machine_attrs_str.Value() );
+
+	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
+
 	first_time_in_init = false;
 }
 
@@ -10576,6 +10732,10 @@ Scheduler::Register()
 	 // message handlers for schedd commands
 	 daemonCore->Register_Command( NEGOTIATE_WITH_SIGATTRS, 
 		 "NEGOTIATE_WITH_SIGATTRS", 
+		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
+		 this, NEGOTIATOR );
+	 daemonCore->Register_Command( NEGOTIATE, 
+		 "NEGOTIATE", 
 		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
 		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
@@ -11188,7 +11348,7 @@ Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
-				   char *user, char *pool, match_rec **pre_existing)
+				   char const *user, char const *pool, match_rec **pre_existing)
 {
 	match_rec *rec;
 
@@ -12398,7 +12558,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		if( email_user ) {
 			fp = email_user_open( job_ad, msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}
@@ -12406,7 +12566,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		if( email_admin ) {
 			fp = email_admin_open( msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}			
@@ -12542,7 +12702,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		if( email_user ) {
 			fp = email_user_open( job_ad, msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}
@@ -12550,7 +12710,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		if( email_admin ) {
 			fp = email_admin_open( msg_subject.Value() );
 			if( fp ) {
-				fprintf( fp, msg_buf.Value() );
+				fprintf( fp, "%s", msg_buf.Value() );
 				email_close( fp );
 			}
 		}			
@@ -13074,6 +13234,9 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			valid = cronTab->isValid();
 			if ( valid ) {
 				this->cronTabs->insert( id, cronTab );
+			} else {
+				delete cronTab;
+				cronTab = 0;
 			}
 				//
 				// We set the force flag to true so that we are 

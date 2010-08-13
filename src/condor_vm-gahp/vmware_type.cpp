@@ -775,8 +775,10 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 			// find cdrom device
 #define CDROM_TYPE1		"atapi-cdrom"
 #define CDROM_TYPE2		"cdrom-raw"
+#define CDROM_TYPE3		"cdrom-image"
 			if( (strcasecmp(value.Value(), CDROM_TYPE1) == 0 ) ||
-					(strcasecmp(value.Value(), CDROM_TYPE2) == 0 )) {
+				(strcasecmp(value.Value(), CDROM_TYPE2) == 0 ) ||
+				(strcasecmp(value.Value(), CDROM_TYPE3) == 0 )) {
 				pos = name.FindChar('.', 0);
 				if( pos > 0 ) {
 					name.setChar(pos, '\0');

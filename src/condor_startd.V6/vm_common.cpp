@@ -301,7 +301,7 @@ _FindDaemon( char *host_name, daemon_t real_dt, Daemon *pool)
 				// should we print a warning?
 				continue;
 			}
-			if( stricmp(tmp, host) ) {		// no match
+			if( strcasecmp(tmp, host) ) {		// no match
 				free( tmp );
 				tmp = NULL;
 				continue;
@@ -320,7 +320,7 @@ _FindDaemon( char *host_name, daemon_t real_dt, Daemon *pool)
 				// should we print a warning?
 				continue;
 			}
-			if( ! stricmp(tmp, host_name) ) {
+			if( ! strcasecmp(tmp, host_name) ) {
 				d = new Daemon( ad, real_dt, pool_addr );
 			}
 			free( tmp );

@@ -124,13 +124,14 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 	ATTR_TIMER_REMOVE_CHECK
 	ATTR_PERIODIC_HOLD_CHECK
-	ATTR_PERIODIC_REMOVE_CHECK
 	ATTR_PERIODIC_RELEASE_CHECK
+	ATTR_PERIODIC_REMOVE_CHECK
 	ATTR_ON_EXIT_HOLD_CHECK
 	ATTR_ON_EXIT_REMOVE_CHECK
 
-	If any of the above attributes are not present, then they will
-	be assigned defaults and inserted into the classad.
+	If any of the above attributes besides ATTR_TIMER_REMOVE_CHECK are 
+	not present, then they will be assigned defaults and inserted into 
+	the classad.
 	The defaults are: False, False, False, False, True, respectively.
 
 	Now, if you are using mode PERIODIC_ONLY in AnalyzePolicy(),
@@ -170,7 +171,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	you can use FiringExpression() to get a pointer to static
 	memory (which is NOT freed by the caller) which details which
 	expression caused the action. You can use strcmp against this
-	string and the four attributes detailed at the top of the comment
+	string and the six attributes detailed at the top of the comment
 	to figure out which expressions caused the action happened to
 	the job.  You can also call FiringExpressionValue() to find out
 	what the firing expression evaluated to which casued the action.
@@ -220,8 +221,9 @@ class UserPolicy
 		const char* FiringReason(void);
 
 	private: /* functions */
-		/* This function inserts the four user job policy expressions with 
-			default values into the classad if they are not already present. */
+		/* This function inserts the five of the six (all but TimerRemove) user
+			job policy expressions with default values into the classad if they
+			are not already present. */
 		void SetDefaults(void);
 
 		/* I can't be copied */

@@ -691,14 +691,14 @@ int daemon::RealStart( )
 
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
-	} else if( stricmp(name_in_config_file,"CONDOR_VIEW") == 0 ||
-			   stricmp(name_in_config_file,"VIEW_SERVER") == 0 ) {
+	} else if( strcasecmp(name_in_config_file,"CONDOR_VIEW") == 0 ||
+			   strcasecmp(name_in_config_file,"VIEW_SERVER") == 0 ) {
 		Daemon d( DT_VIEW_COLLECTOR );
 		command_port = d.port();
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
 	} 
-	else if( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
+	else if( strcasecmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
 		char* host = getCmHostFromConfig( "NEGOTIATOR" );
 		if( host ) {
 			free (host);

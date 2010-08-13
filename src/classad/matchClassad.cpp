@@ -295,6 +295,7 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 						*error_msg = "Failed to rename original requirements.";
 					}
 					delete orig_requirements;
+					delete flat_requirements;
 					return false;
 				}
 			}

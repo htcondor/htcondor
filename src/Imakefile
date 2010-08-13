@@ -55,13 +55,13 @@
 #endif
 
 #if HAVE_EXT_GLOBUS
-#define GlobusGahps GT2_GAHP GT4_GAHP GT42_GAHP
+#define GlobusGahps GT2_GAHP_PROG GT4_GAHP_PROG GT42_GAHP_PROG
 #else
 #define GlobusGahps
 #endif
 
 #if HAVE_EXT_GLOBUS && HAVE_LDAP_H
-#define NordugridGahp NORDUGRID_GAHP
+#define NordugridGahp NORDUGRID_GAHP_PROG
 #else
 #define NordugridGahp
 #endif
@@ -73,7 +73,7 @@
 #endif
 
 #if HAVE_EXT_CREAM
-#define CreamGahp CREAM_GAHP
+#define CreamGahp CREAM_GAHP_PROG
 #else
 #define CreamGahp
 #endif
@@ -376,17 +376,17 @@ object_target(Stork,stork)
 
 
 #if HAVE_EXT_GLOBUS
-object_target(GT2_GAHP,gt2_gahp)
-object_target(GT4_GAHP,gt4_gahp)
-object_target(GT42_GAHP,gt42_gahp)
+object_target(GT2_GAHP_PROG,gt2_gahp)
+object_target(GT4_GAHP_PROG,gt4_gahp)
+object_target(GT42_GAHP_PROG,gt42_gahp)
 #endif
 
 #if HAVE_EXT_GLOBUS && HAVE_LDAP_H
-object_target(NORDUGRID_GAHP,nordugrid_gahp)
+object_target(NORDUGRID_GAHP_PROG,nordugrid_gahp)
 #endif
 
 #if HAVE_EXT_CREAM
-object_target(CREAM_GAHP,cream_gahp)
+object_target(CREAM_GAHP_PROG,cream_gahp)
 #endif
 
 object_target(DeploymentTools,deployment_tools)

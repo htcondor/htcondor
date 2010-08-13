@@ -17,20 +17,17 @@
  *
  ***************************************************************/
 
+/* Solaris doesn't have unsetenv */
+#ifndef HAVE_UNSETENV
 
-#ifndef __CLASSAD_FEATURES_H_
-#define __CLASSAD_FEATURES_H_
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
-#define COLLECTIONS
-/*#define EXPERIMENTAL*/
+void unsetenv(const char* name);
 
-/*#define ENABLE_SHARED_LIBRARY_FUNCTIONS*/
+#if defined(__cplusplus)
+}
+#endif
 
-/* Select how we wish to do regular expressions. 
-   USE_POSIX_REGEX will use the regcomp/regexec functions
-   USE_PCRE will use the PCRE library
-*/ 
-#define USE_POSIX_REGEX 
-/* #define USE_PCRE */
-
-#endif 
+#endif

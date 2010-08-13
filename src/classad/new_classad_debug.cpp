@@ -25,9 +25,9 @@ using namespace std;
 BEGIN_NAMESPACE(classad)
 
 int  _except_line_number = -1;
-char *_except_file_name = NULL;
+const char *_except_file_name = NULL;
 
-void _classad_except(char *format, ...)
+void _classad_except(const char *format, ...)
 {
 	va_list arguments;
 

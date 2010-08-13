@@ -1046,17 +1046,29 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, (bool)int_value);
 	}
 
+		// The starter sends this attribute whether or not we are spooling
+		// output (because it doesn't know if we are).  Technically, we
+		// only need to write this attribute into the job ClassAd if we
+		// are spooling output.  However, it doesn't hurt to have it there
+		// otherwise.
+	if( update_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
+		jobAd->Assign(ATTR_SPOOLED_OUTPUT_FILES,string_value.Value());
+	}
+	else if( jobAd->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
+		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
+	}
+
 	char* job_state = NULL;
 	ResourceState new_state = state;
 	update_ad->LookupString( ATTR_JOB_STATE, &job_state );
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
-		if( stricmp(job_state, "Suspended") == MATCH ) {
+		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
-		} else if ( stricmp(job_state, "Running") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Running") == MATCH ) {
 			new_state = RR_EXECUTING;
-		} else if ( stricmp(job_state, "Checkpointed") == MATCH ) {
+		} else if ( strcasecmp(job_state, "Checkpointed") == MATCH ) {
 			new_state = RR_CHECKPOINTED;
 		} else { 
 				// For our purposes in here, we don't care about any
@@ -1193,6 +1205,12 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	if( last_suspension_time > 0 ) {
 		// There was a real job suspension.
 		cumulative_suspension_time += now - last_suspension_time;
+
+		int uncommitted_suspension_time = 0;
+		jobAd->LookupInteger( ATTR_UNCOMMITTED_SUSPENSION_TIME,
+							  uncommitted_suspension_time );
+		uncommitted_suspension_time += now - last_suspension_time;
+		jobAd->Assign(ATTR_UNCOMMITTED_SUSPENSION_TIME, uncommitted_suspension_time);
 	}
 
 	sprintf( tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
@@ -1273,6 +1291,13 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 		jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 		job_committed_time += now - int_value;
 		jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+
+		float slot_weight = 1;
+		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
+		float slot_time = 0;
+		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
+		slot_time += slot_weight * (now - int_value);
+		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
 	}
 
 	// Update timestamp of the last checkpoint
@@ -1293,6 +1318,8 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	if( update_ad->LookupString(ATTR_VM_CKPT_IP,string_value) ) {
 		jobAd->Assign(ATTR_VM_CKPT_IP, string_value.Value());
 	}
+
+	shadow->CommitSuspensionTime(jobAd);
 
 		// Log stuff so we can check our sanity
 	printCheckpointStats( D_FULLDEBUG );
@@ -1356,6 +1383,13 @@ RemoteResource::printCheckpointStats( int debug_level )
 	int_value = 0;
 	jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, int_value);
 	dprintf( debug_level, "%s = %d\n", ATTR_JOB_COMMITTED_TIME, int_value);
+
+	int committed_suspension_time = 0;
+	jobAd->LookupInteger( ATTR_COMMITTED_SUSPENSION_TIME, 
+						  committed_suspension_time );
+	dprintf( debug_level, "%s = %d\n",
+			 ATTR_COMMITTED_SUSPENSION_TIME,
+			 committed_suspension_time );
 
 	// timestamp of the last checkpoint
 	int_value = 0;

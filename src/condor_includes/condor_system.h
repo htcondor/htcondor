@@ -122,10 +122,6 @@
 #	define WCOREFLG WCOREFLAG
 #endif
 
-#ifndef WORD_BIT
-#	define WORD_BIT 32
-#endif 
-
 #ifndef _POSIX_PATH_MAX
 #	define _POSIX_PATH_MAX 255
 #endif
@@ -181,14 +177,13 @@
 #include <sys/poll.h>
 #endif
 
-#define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
-#define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
-
 /* select() on all our platforms takes an fd_set pointer, so we can
    just define this here for everyone.  We don't really need it
    anymore, but we might hit a platform that has a different select,
    so the level of indirection is worth keeping around. */
 typedef fd_set *SELECT_FDSET_PTR;
+
+#include "condor_unsetenv.h"
 
 #endif /* UNIX */
 

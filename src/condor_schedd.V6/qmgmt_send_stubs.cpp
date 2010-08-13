@@ -38,7 +38,7 @@ extern ReliSock *qmgmt_sock;
 int terrno;
 
 int
-InitializeConnection( const char *owner, const char * /* domain */ )
+InitializeConnection( const char * /*owner*/, const char * /* domain */ )
 {
 	CurrentSysCall = CONDOR_InitializeConnection;
 
@@ -49,7 +49,7 @@ InitializeConnection( const char *owner, const char * /* domain */ )
 }
 
 int
-InitializeReadOnlyConnection( const char *owner )
+InitializeReadOnlyConnection( const char * /*owner*/ )
 {
 	CurrentSysCall = CONDOR_InitializeReadOnlyConnection;
 

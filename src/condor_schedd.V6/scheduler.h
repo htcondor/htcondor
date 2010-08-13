@@ -120,7 +120,7 @@ struct OwnerData {
 class match_rec: public ClaimIdParser
 {
  public:
-    match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool,bool is_dedicated);
+    match_rec(char*, char*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
 	~match_rec();
 
     char*   		peer; //sinful address of startd
@@ -316,7 +316,7 @@ class Scheduler : public Service
 	// match managing
 	int 			publish( ClassAd *ad );
 	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
-    match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*, match_rec **pre_existing=NULL);
+    match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
     int         	DelMrec(char const*);
@@ -356,7 +356,7 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	int				receive_startd_alive(int cmd, Stream *s);
-
+	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
 	void            checkContactQueue();
 
@@ -666,7 +666,7 @@ private:
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
 	shadow_rec*     find_shadow_rec(PROC_ID*);
-	void			NotifyUser(shadow_rec*, char*, int, int);
+	void			NotifyUser(shadow_rec*, const char*, int, int);
 	
 #ifdef CARMI_OPS
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
@@ -719,6 +719,8 @@ private:
 	int prevLHF;
 #endif
 
+	StringList m_job_machine_attrs;
+	int m_job_machine_attrs_history_length;
 };
 
 

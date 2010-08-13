@@ -84,7 +84,7 @@ VMType::~VMType()
 	if( m_delete_working_files && !m_is_checkpointed ) {
 		if( m_workingpath.IsEmpty() == false ) {
 			// We will delete all files in the working directory.
-			Directory working_dir(m_workingpath.Value());
+			Directory working_dir(m_workingpath.Value(), PRIV_USER);
 			working_dir.Remove_Entire_Directory();
 		}
 	}

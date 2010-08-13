@@ -709,13 +709,6 @@ GahpServer::Startup()
 		free( tmp_char );
 	}
 
-	// For amazon ec2 URL
-	tmp_char = param("AMAZON_EC2_URL");
-	if( tmp_char ) {
-		newenv.SetEnv( "AMAZON_EC2_URL", tmp_char );
-		free( tmp_char );
-	}
-
 	// For amazon ec2 ca authentication
 	tmp_char = param("SOAP_SSL_CA_FILE");
 	if( tmp_char ) {
@@ -728,6 +721,11 @@ GahpServer::Startup()
 	if( tmp_char ) {
 		newenv.SetEnv( "SOAP_SSL_CA_DIR", tmp_char );
 		free( tmp_char );
+	}
+
+	// For amazon ec2 ca authentication
+	if ( param_boolean( "SOAP_SSL_SKIP_HOST_CHECK", false ) ) {
+		newenv.SetEnv( "SOAP_SSL_SKIP_HOST_CHECK", "True" );
 	}
 
 		// Now register a reaper, if we haven't already done so.
@@ -6297,7 +6295,8 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 //************* Added for Amazon Jobs by fangcao ***************************//
 
 //  Start VM
-int GahpClient::amazon_vm_start( const char * publickeyfile,
+int GahpClient::amazon_vm_start( const char * service_url,
+								 const char * publickeyfile,
 								 const char * privatekeyfile,
 								 const char * ami_id, 
 								 const char * keypair,
@@ -6318,7 +6317,7 @@ int GahpClient::amazon_vm_start( const char * publickeyfile,
 	}
 	
 	// check the input arguments
-	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (ami_id == NULL) ) {
+	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (ami_id == NULL) ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
@@ -6335,20 +6334,21 @@ int GahpClient::amazon_vm_start( const char * publickeyfile,
 							
 	std::string reqline;
 	
-	char* esc1 = strdup( escapeGahpString(publickeyfile) );
-	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
-	char* esc3 = strdup( escapeGahpString(ami_id) );
-	char* esc4 = strdup( escapeGahpString(keypair) );
-	char* esc5 = strdup( escapeGahpString(user_data) );
-	char* esc6 = strdup( escapeGahpString(user_data_file) );
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc4 = strdup( escapeGahpString(ami_id) );
+	char* esc5 = strdup( escapeGahpString(keypair) );
+	char* esc6 = strdup( escapeGahpString(user_data) );
+	char* esc7 = strdup( escapeGahpString(user_data_file) );
 	
 	// currently we support the following instance type:
 	// 1. m1.small
 	// 2. m1.large
 	// 3. m1.xlarge
-	char* esc7 = strdup( escapeGahpString(instance_type) );
+	char* esc8 = strdup( escapeGahpString(instance_type) );
 	
-	int x = sprintf(reqline, "%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8);
 	
 	free( esc1 );
 	free( esc2 );
@@ -6357,6 +6357,7 @@ int GahpClient::amazon_vm_start( const char * publickeyfile,
 	free( esc5 );
 	free( esc6 );
 	free( esc7 );
+	free( esc8 );
 	ASSERT( x > 0 );
 	
 	const char * group_name;
@@ -6435,7 +6436,7 @@ int GahpClient::amazon_vm_start( const char * publickeyfile,
 
 
 // Stop VM
-int GahpClient::amazon_vm_stop( const char * publickeyfile, const char * privatekeyfile, 
+int GahpClient::amazon_vm_stop( const char *service_url, const char * publickeyfile, const char * privatekeyfile, 
 								const char * instance_id, char* & error_code )
 {	
 	// command line looks like:
@@ -6448,22 +6449,24 @@ int GahpClient::amazon_vm_stop( const char * publickeyfile, const char * private
 	}
 	
 	// check input arguments
-	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
+	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
 	// Generate request line
 	std::string reqline;
 	
-	char* esc1 = strdup( escapeGahpString(publickeyfile) );
-	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
-	char* esc3 = strdup( escapeGahpString(instance_id) );
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc4 = strdup( escapeGahpString(instance_id) );
 	
-	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
+	free( esc4 );
 	ASSERT( x > 0 );
 	
 	const char *buf = reqline.c_str();
@@ -6518,6 +6521,7 @@ int GahpClient::amazon_vm_stop( const char * publickeyfile, const char * private
 	return GAHPCLIENT_COMMAND_PENDING;	
 }							
 
+#if 0
 
 // Restart VM
 int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * privatekeyfile, 
@@ -6601,10 +6605,11 @@ int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * priva
 	// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;
 }	
+#endif
 
 
 // Check VM status
-int GahpClient::amazon_vm_status( const char * publickeyfile, const char * privatekeyfile,
+int GahpClient::amazon_vm_status( const char *service_url, const char * publickeyfile, const char * privatekeyfile,
 							  const char * instance_id, StringList &returnStatus, char* & error_code )
 {	
 	// command line looks like:
@@ -6617,22 +6622,24 @@ int GahpClient::amazon_vm_status( const char * publickeyfile, const char * priva
 	}
 	
 	// check input arguments
-	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
+	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
 	// Generate request line
 	std::string reqline;
 	
-	char* esc1 = strdup( escapeGahpString(publickeyfile) );
-	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
-	char* esc3 = strdup( escapeGahpString(instance_id) );
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc4 = strdup( escapeGahpString(instance_id) );
 	
-	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
+	free( esc4 );
 	ASSERT( x > 0 );
 	
 	const char *buf = reqline.c_str();
@@ -6733,6 +6740,7 @@ int GahpClient::amazon_vm_status( const char * publickeyfile, const char * priva
 }
 
 
+#if 0
 // List the status of all VMs
 int GahpClient::amazon_vm_status_all( const char * publickeyfile, const char * privatekeyfile, 
 									  StringList &returnStatus, char* & error_code )		
@@ -7409,23 +7417,26 @@ int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char 
 	return GAHPCLIENT_COMMAND_PENDING;	
 }
 
+#endif
 
 // Ping to check if the server is alive
-int GahpClient::amazon_ping(const char * publickeyfile, const char * privatekeyfile)
+int GahpClient::amazon_ping(const char *service_url, const char * publickeyfile, const char * privatekeyfile)
 {
 	// we can use "Status All" command to make sure Amazon Server is alive.
 	static const char* command = "AMAZON_VM_STATUS_ALL";
 	
 	// Generate request line
-	char* esc1 = strdup( escapeGahpString(publickeyfile) );
-	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
 	
 	std::string reqline;
-	sprintf(reqline, "%s %s", esc1, esc2 );
+	sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
 	const char *buf = reqline.c_str();
 	
 	free( esc1 );
 	free( esc2 );
+	free( esc3 );
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7460,7 +7471,7 @@ int GahpClient::amazon_ping(const char * publickeyfile, const char * privatekeyf
 
 
 // Create and register SSH keypair
-int GahpClient::amazon_vm_create_keypair( const char * publickeyfile, const char * privatekeyfile,
+int GahpClient::amazon_vm_create_keypair( const char *service_url, const char * publickeyfile, const char * privatekeyfile,
 								   	      const char * keyname, const char * outputfile, char* & error_code)
 {
 	// command line looks like:
@@ -7473,24 +7484,26 @@ int GahpClient::amazon_vm_create_keypair( const char * publickeyfile, const char
 	}
 	
 	// check input arguments
-	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) || (outputfile == NULL) ) {
+	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) || (outputfile == NULL) ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
 	// construct command line
 	std::string reqline;
 	
-	char* esc1 = strdup( escapeGahpString(publickeyfile) );
-	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
-	char* esc3 = strdup( escapeGahpString(keyname) );
-	char* esc4 = strdup( escapeGahpString(outputfile) );
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc4 = strdup( escapeGahpString(keyname) );
+	char* esc5 = strdup( escapeGahpString(outputfile) );
 	
-	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
+	int x = sprintf(reqline, "%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
+	free( esc5 );
 
 	ASSERT( x > 0 );
 	
@@ -7553,7 +7566,7 @@ int GahpClient::amazon_vm_create_keypair( const char * publickeyfile, const char
 // The destroy keypair function will delete the name of keypair, it will not touch the output file of 
 // keypair. So in Amazon Job, we should delete keypair output file manually. We don't need to care about
 // the keypair name/output file in Amazon, it will be removed automatically.
-int GahpClient::amazon_vm_destroy_keypair( const char * publickeyfile, const char * privatekeyfile, 
+int GahpClient::amazon_vm_destroy_keypair( const char *service_url, const char * publickeyfile, const char * privatekeyfile, 
 										   const char * keyname, char* & error_code )
 {
 	// command line looks like:
@@ -7566,22 +7579,24 @@ int GahpClient::amazon_vm_destroy_keypair( const char * publickeyfile, const cha
 	}
 	
 	// check input arguments
-	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) ) {
+	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
 	// construct command line
 	std::string reqline;
 	
-	char* esc1 = strdup( escapeGahpString(publickeyfile) );
-	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
-	char* esc3 = strdup( escapeGahpString(keyname) );
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc4 = strdup( escapeGahpString(keyname) );
 	
-	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3);
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
+	free( esc4 );
 
 	ASSERT( x > 0 );
 	
@@ -7640,6 +7655,7 @@ int GahpClient::amazon_vm_destroy_keypair( const char * publickeyfile, const cha
 }
 
 
+#if 0
 //  List all existing SSH Keypair name
 int GahpClient::amazon_vm_keypair_names( const char * publickeyfile, const char * privatekeyfile, 
 										 StringList &keypair_names, char* & error_code )
@@ -8751,10 +8767,11 @@ int GahpClient::amazon_vm_s3_download_bucket( const char* publickeyfile, const c
 	return GAHPCLIENT_COMMAND_PENDING;
 	
 }
+#endif
 
 
 // Check all the running VM instances and their corresponding keypair name
-int GahpClient::amazon_vm_vm_keypair_all( const char* publickeyfile, const char* privatekeyfile,
+int GahpClient::amazon_vm_vm_keypair_all( const char *service_url, const char* publickeyfile, const char* privatekeyfile,
 										  StringList & returnStatus, char* & error_code )
 {
 	// command line looks like:
@@ -8767,20 +8784,22 @@ int GahpClient::amazon_vm_vm_keypair_all( const char* publickeyfile, const char*
 	}
 	
 	// check input arguments
-	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
+	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
 	// Generate request line
 	std::string reqline;
 	
-	char* esc1 = strdup( escapeGahpString(publickeyfile) );
-	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
 	
-	int x = sprintf(reqline, "%s %s", esc1, esc2 );
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
 	
 	free( esc1 );
 	free( esc2 );
+	free( esc3 );
 	ASSERT( x > 0 );
 	
 	const char *buf = reqline.c_str();

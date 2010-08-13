@@ -16,7 +16,12 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+#ifndef HAVE_UNSETENV
+UNSETENV_LIB = condor_unsetenv.a
+UNSETENV_OBJ = condor_unsetenv.o
+#endif
+
+all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) $(UNSETENV_LIB) )
 
 param_info_init.c: param_info.in param_info_c_generator.pl
 	chmod u+x param_info_c_generator.pl
@@ -190,7 +195,7 @@ CONLIBAPI_OBJ = \
 	../condor_util_lib/strupr.o \
 	../condor_util_lib/lock_file.NON_POSIX.o \
 	../condor_util_lib/rotate_file.o \
-	../condor_util_lib/string_funcs.o \
+	../condor_util_lib/strcasestr.o \
 	strnewp.o \
 	condor_environ.o \
 	../condor_util_lib/setsyscalls.o \
@@ -280,29 +285,35 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_threads.o \
 	classad_newold.o \
 	historyFileFinder.o \
-	socket_proxy.o condor_timeslice.o open_files_in_pid.o
+	socket_proxy.o condor_timeslice.o open_files_in_pid.o \
+	$(UNSETENV_OBJ)
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
+
+#ifndef HAVE_UNSETENV
+library_target(condor_unsetenv.a,$(UNSETENV_OBJ))
+#endif
 
 library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
 libcondorapi.a: Makefile
 
 #if HAVE_CC_SHARED_FLAG
+#ifdef IS_SOLARIS
 shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
+#else
+c_plus_shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
+#endif
 libcondorapi.so: Makefile
 #endif
 
 all:: JobLogMirror.o
 
 c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
-c_plus_target(test_locks,test_locks.o,$(LIB))
-c_plus_target(test_iso_dates,test_iso_dates.o,$(LIB))
 c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
 c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_classad_put,test_classad_put.o,$(LIB))
-c_plus_target(test_condor_arglist,test_condor_arglist.o,$(LIB))
 c_plus_target(test_condor_crontab,test_condor_crontab.o,$(LIB))
 c_plus_target(test_spawn,test_spawn.o,$(LIB))
 c_plus_target(test_tree,test_tree.o,$(LIB))
@@ -349,7 +360,7 @@ c_plus_target(my_hostname.t,my_hostname.t.o,$(LIB))
 
 html_target( documentation )
 
-all-tests: access.t killfamily.t test_locks my_hostname.t
+all-tests: access.t killfamily.t my_hostname.t
 
 /* User log testing */
 USERLOG_TEST_NAMES = reader reader_state writer
@@ -442,6 +453,18 @@ public_copy_target(MyString.h,include,MyString.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/MyString.h
 
 public_copy_target(../condor_includes/condor_header_features.h,include,condor_header_features.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_header_features.h
+
+public_copy_target(../condor_c++_util/compat_classad.h,include,compat_classad.h,TEXT_MODE)
+
+public_copy_target(../condor_c++_util/compat_classad_list.h,include,compat_classad_list.h,TEXT_MODE)
+
+public_copy_target(../condor_c++_util/compat_classad_util.h,include,compat_classad_util.h,TEXT_MODE)
+
+public_copy_target(../condor_c++_util/stl_string_utils.h,include,stl_string_utils.h,TEXT_MODE)
+
+public_recursive_copy_target(../classad/classad,include/classad)
+
 libcondorapi-release:: $(RELEASE_DIR)/include/condor_header_features.h
 
 condor_version.o: condor_version.cpp

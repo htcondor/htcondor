@@ -78,45 +78,45 @@ CondorUniverseNumber( const char* univ )
 		return 0;
 	}
 
-	if( stricmp(univ,"standard") == MATCH ) {
+	if( strcasecmp(univ,"standard") == MATCH ) {
 		return CONDOR_UNIVERSE_STANDARD;
 	}
-	if( stricmp(univ,"pipe") == MATCH ) {
+	if( strcasecmp(univ,"pipe") == MATCH ) {
 		return CONDOR_UNIVERSE_PIPE;
 	}
-	if( stricmp(univ,"linda") == MATCH ) {
+	if( strcasecmp(univ,"linda") == MATCH ) {
 		return CONDOR_UNIVERSE_LINDA;
 	}
-	if( stricmp(univ,"pvm") == MATCH ) {
+	if( strcasecmp(univ,"pvm") == MATCH ) {
 		return CONDOR_UNIVERSE_PVM;
 	}
-	if( stricmp(univ,"vanilla") == MATCH ) {
+	if( strcasecmp(univ,"vanilla") == MATCH ) {
 		return CONDOR_UNIVERSE_VANILLA;
 	}
-	if( stricmp(univ,"pvmd") == MATCH ) {
+	if( strcasecmp(univ,"pvmd") == MATCH ) {
 		return CONDOR_UNIVERSE_PVMD;
 	}
-	if( stricmp(univ,"scheduler") == MATCH ) {
+	if( strcasecmp(univ,"scheduler") == MATCH ) {
 		return CONDOR_UNIVERSE_SCHEDULER;
 	}
-	if( stricmp(univ,"mpi") == MATCH ) {
+	if( strcasecmp(univ,"mpi") == MATCH ) {
 		return CONDOR_UNIVERSE_MPI;
 	}
 		// grid replaces globus, but keeping globus for backwards compat
-	if( stricmp(univ,"globus") == MATCH ||
-		stricmp(univ,"grid") == MATCH ) {
+	if( strcasecmp(univ,"globus") == MATCH ||
+		strcasecmp(univ,"grid") == MATCH ) {
 		return CONDOR_UNIVERSE_GRID;
 	}
-	if( stricmp(univ,"java") == MATCH ) {
+	if( strcasecmp(univ,"java") == MATCH ) {
 		return CONDOR_UNIVERSE_JAVA;
 	}
-	if( stricmp(univ,"parallel") == MATCH ) {
+	if( strcasecmp(univ,"parallel") == MATCH ) {
 		return CONDOR_UNIVERSE_PARALLEL;
 	}
-	if( stricmp(univ,"local") == MATCH ) {
+	if( strcasecmp(univ,"local") == MATCH ) {
 		return CONDOR_UNIVERSE_LOCAL;
 	}
-	if( stricmp(univ,"vm") == MATCH ) {
+	if( strcasecmp(univ,"vm") == MATCH ) {
 		return CONDOR_UNIVERSE_VM;
 	}
 	return 0;

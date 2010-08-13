@@ -94,25 +94,25 @@ getJobStatusNum( const char* name )
 	if( ! name ) {
 		return -1;
 	}
-	if( stricmp(name,"UNEXPANDED") == MATCH ) {
+	if( strcasecmp(name,"UNEXPANDED") == MATCH ) {
 		return UNEXPANDED;
 	}
-	if( stricmp(name,"IDLE") == MATCH ) {
+	if( strcasecmp(name,"IDLE") == MATCH ) {
 		return IDLE;
 	}
-	if( stricmp(name,"RUNNING") == MATCH ) {
+	if( strcasecmp(name,"RUNNING") == MATCH ) {
 		return RUNNING;
 	}
-	if( stricmp(name,"REMOVED") == MATCH ) {
+	if( strcasecmp(name,"REMOVED") == MATCH ) {
 		return REMOVED;
 	}
-	if( stricmp(name,"COMPLETED") == MATCH ) {
+	if( strcasecmp(name,"COMPLETED") == MATCH ) {
 		return COMPLETED;
 	}
-	if( stricmp(name,"HELD") == MATCH ) {
+	if( strcasecmp(name,"HELD") == MATCH ) {
 		return HELD;
 	}
-	if( stricmp(name,"SUBMISSION_ERR") == MATCH ) {
+	if( strcasecmp(name,"SUBMISSION_ERR") == MATCH ) {
 		return SUBMISSION_ERR;
 	}
 	return -1;

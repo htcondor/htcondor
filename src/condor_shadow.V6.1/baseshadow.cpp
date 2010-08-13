@@ -543,10 +543,19 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
     if( int_value > 0 ) {
         int job_committed_time = 0;
         jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
-        job_committed_time += (int)time(NULL) - int_value;
+		int delta = (int)time(NULL) - int_value;
+        job_committed_time += delta;
         jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+
+		float slot_weight = 1;
+		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
+		float slot_time = 0;
+		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
+		slot_time += slot_weight * delta;
+		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
     }
 
+	CommitSuspensionTime(jobAd);
 
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
@@ -1215,4 +1224,19 @@ bool
 BaseShadow::getMachineName( MyString & /*machineName*/ )
 {
 	return false;
+}
+
+void
+BaseShadow::CommitSuspensionTime(ClassAd *jobAd)
+{
+	int uncommitted_suspension_time = 0;
+	jobAd->LookupInteger(ATTR_UNCOMMITTED_SUSPENSION_TIME,uncommitted_suspension_time);
+	if( uncommitted_suspension_time > 0 ) {
+		int committed_suspension_time = 0;
+		jobAd->LookupInteger( ATTR_COMMITTED_SUSPENSION_TIME,
+							  committed_suspension_time );
+		committed_suspension_time += uncommitted_suspension_time;
+		jobAd->Assign( ATTR_COMMITTED_SUSPENSION_TIME, committed_suspension_time );
+		jobAd->Assign( ATTR_UNCOMMITTED_SUSPENSION_TIME, 0 );
+	}
 }

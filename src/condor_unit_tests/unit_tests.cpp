@@ -53,12 +53,18 @@ bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
 bool FTEST_flatten_and_inline(void);
 bool FTEST_stl_string_utils(void);
+bool FTEST_fdpass_recv(void);
 bool OTEST_HashTable(void);
 bool OTEST_MyString(void);
 bool OTEST_StringList(void);
 bool OTEST_Old_Classads(void);
 bool OTEST_Env(void);
+bool OTEST_FileLock(void);
+bool OTEST_ArgList(void);
+bool OTEST_Iso_Dates(void);
+bool OTEST_UserPolicy(void);
 
+	// function map that maps testing function names to testing functions
 const static struct {
 	const char* name;
 	test_func_ptr func;
@@ -86,7 +92,11 @@ const static struct {
 	map(OTEST_MyString),
 	map(OTEST_StringList),
 	map(OTEST_Old_Classads),
-	map(OTEST_Env)
+	map(OTEST_Env),
+	map(OTEST_FileLock),
+	map(OTEST_ArgList),
+	map(OTEST_Iso_Dates),
+	map(OTEST_UserPolicy),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 

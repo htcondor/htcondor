@@ -1125,7 +1125,7 @@ void CollectorDaemon::Config()
 	if (tmp == NULL) {
 		tmp = strdup("condor.cs.wisc.edu");
 	}
-	if (stricmp(tmp,"NONE") == 0 ) {
+	if (strcasecmp(tmp,"NONE") == 0 ) {
 		free(tmp);
 		tmp = NULL;
 	}

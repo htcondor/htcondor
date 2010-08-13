@@ -361,6 +361,8 @@ UserPolicy::~UserPolicy()
 
 void UserPolicy::Init(ClassAd *ad)
 {
+	ASSERT(ad);
+	
 	m_ad = ad;
 	m_fire_expr = NULL;
 	m_fire_expr_val = -1;
@@ -436,6 +438,7 @@ UserPolicy::AnalyzePolicy( int mode )
 	
 			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
+			ATTR_PERIODIC_RELEASE_CHECK
 			ATTR_PERIODIC_REMOVE_CHECK
 			ATTR_ON_EXIT_HOLD_CHECK
 			ATTR_ON_EXIT_REMOVE_CHECK
@@ -444,10 +447,18 @@ UserPolicy::AnalyzePolicy( int mode )
 	/* Should I perform a remove based on the epoch time? */
 	m_fire_expr = ATTR_TIMER_REMOVE_CHECK;
 	if(!m_ad->LookupInteger(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
+		//check if attribute exists, but is undefined
+		if(m_ad->Lookup(ATTR_TIMER_REMOVE_CHECK) != NULL)
+		{
+			m_fire_expr_val = -1;
+			m_fire_source = FS_JobAttribute;
+			return UNDEFINED_EVAL;
+		}
 		timer_remove = -1;
 	}
 	if( timer_remove >= 0 && timer_remove < time(NULL) ) {
 		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
 		return REMOVE_FROM_QUEUE;
 	}
 
@@ -536,7 +547,22 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, const char *
 	int result;
 	m_fire_expr = attrname;
 	if(!m_ad->EvalBool(attrname, m_ad, result)) {
-		retval = UNDEFINED_EVAL;
+        //check to see if the attribute actually exists, or if it's really
+        //  undefined.
+        //originally this if-statement wasn't here, so when the expression
+        //  tied to this attribute had an undefined value in it, e.g.
+        //      PeriodicRemove = DoesNotExist > 0
+        //  the function would set retval = UNDEFINED_EVAL and return
+        //
+        //now it can differentiate between the something in the 
+        //expression being undefined, and the attribute itself 
+        //being undefined.
+        if(m_ad->Lookup(attrname) != NULL)
+        {
+            m_fire_expr_val = -1;
+            m_fire_source = FS_JobAttribute;
+        }
+        retval = UNDEFINED_EVAL;
 		return true;
 	}
 	if( result ) {

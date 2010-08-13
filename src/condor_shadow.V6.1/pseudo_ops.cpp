@@ -100,10 +100,14 @@ pseudo_get_job_info(ClassAd *&ad)
 	ASSERT( the_ad );
 
 	// Only initialize the file transfer object if
-	// NeverCreateJobSandbox is not set
-	 int never_create_sandbox_expr;
-	 int has_nc_sandbox_expr = the_ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr );
-	 if( !(has_nc_sandbox_expr && never_create_sandbox_expr) ) {
+	// NeverCreateJobSandbox is not set OR if we're running
+        // a PU job that depends on the existence of a spool dir
+  	 int never_create_sandbox_expr_result;
+	 int want_io_proxy_expr_result;
+	 bool never_create_sandbox = the_ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr_result ) && never_create_sandbox_expr_result;
+	 bool want_io_proxy = the_ad->EvalBool( ATTR_WANT_IO_PROXY, NULL, want_io_proxy_expr_result ) && want_io_proxy_expr_result;
+
+	 if( !never_create_sandbox || want_io_proxy ) {
 
 		// FileTransfer now makes sure we only do Init() once.
 		//
@@ -679,8 +683,9 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
 		return 0;
 	} else {
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
-		return -1;
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) is UNDEFINED\n",name);
+		expr = "UNDEFINED";
+		return 0;
 	}
 }
 

@@ -32,6 +32,8 @@ code gives some information about the path actually present.
 Returns true if there was a directory component to split off.
 Returns false if there was no directory component, but in this case,
 still fills "dir" with "."
+The buffers dir and file must be as big as path.  They are not allocated
+by this function.
 */
 
 int filename_split( const char *path, char *dir, char *file );

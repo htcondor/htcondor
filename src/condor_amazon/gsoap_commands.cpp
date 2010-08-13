@@ -52,7 +52,7 @@ AmazonRequest::ParseSoapError(const char* callerstring)
 
 	if( *code ) {
 		// For real error code, refer to 
-		// http://docs.amazonwebservices.com/AWSEC2/2007-08-29/DeveloperGuide/api-error-codes.html
+		// http://docs.amazonwebservices.com/AWSEC2/2008-12-01/DeveloperGuide/index.html?api-error-codes.html
 		//
 		// Client error codes suggest that the error was caused by 
 		// something the client did, such as an authentication failure or 
@@ -177,9 +177,14 @@ AmazonRequest::SetupSoap(void)
 		return false;
 	}
 
+	unsigned short flags = SOAP_SSL_DEFAULT;
+	const char *host_check = getenv("SOAP_SSL_SKIP_HOST_CHECK");
+	if ( host_check && ( host_check[0] == 'T' || host_check[0] == 't' ) ) {
+		flags |= SOAP_SSL_SKIP_HOST_CHECK;
+	}
 	const char *ca_file = getenv("SOAP_SSL_CA_FILE");
 	const char *ca_dir = getenv("SOAP_SSL_CA_DIR");;
-	if (soap_ssl_client_context(m_soap, SOAP_SSL_DEFAULT,
+	if (soap_ssl_client_context(m_soap, flags,
 				    NULL,
 				    NULL,
 				    ca_file,
@@ -197,7 +202,7 @@ AmazonRequest::SetupSoap(void)
 		return false;
 	}
 
-	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "BinarySecurityToken", m_cert)) {
+	if( soap_wsse_add_BinarySecurityTokenX509(m_soap, "X509Token", m_cert)) {
 		sprintf(m_error_msg,"Could not set BinarySecurityToken from: %s", 
 				accesskeyfile.c_str());
 		dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
@@ -269,7 +274,7 @@ AmazonVMKeypairNames::gsoapRequest(void)
 	int code = -1;		
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeKeyPairs(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -317,7 +322,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 
 	// check if output file could be created
 	if( has_outputfile ) { 
-		if( check_create_file(outputfile.c_str()) == false ) {
+		if( check_create_file(outputfile.c_str(), 0600) == false ) {
 			m_error_msg = "No_permission_for_keypair_outputfile";
 			dprintf(D_ALWAYS, "AmazonVMCreateKeypair Error: %s\n", m_error_msg.c_str());
 			return false;
@@ -332,7 +337,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__CreateKeyPair(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -341,7 +346,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 		if( has_outputfile ) {
 
 			FILE *fp = NULL;
-			fp = safe_fopen_wrapper(outputfile.c_str(), "w");
+			fp = safe_fopen_wrapper(outputfile.c_str(), "w", 600);
 			if( !fp ) {
 				sprintf(m_error_msg,"failed to safe_fopen_wrapper %s in write mode: "
 						"safe_fopen_wrapper returns %s", 
@@ -391,7 +396,7 @@ AmazonVMDestroyKeypair::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DeleteKeyPair(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -559,7 +564,7 @@ AmazonVMStart::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__RunInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -611,7 +616,7 @@ AmazonVMStop::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__TerminateInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -661,7 +666,7 @@ AmazonVMStatus::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);
@@ -751,7 +756,7 @@ AmazonVMStatusAll::gsoapRequest(void)
 	int code = -1;
 	amazon_gahp_release_big_mutex();
 	code = soap_call_ec2__DescribeInstances(m_soap,
-					get_ec2_url(),
+					m_service_url.c_str(),
 					NULL,
 					&request,
 					&response);

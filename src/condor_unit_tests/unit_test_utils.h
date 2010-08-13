@@ -26,6 +26,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "iso_dates.h"
 
 bool utest_sock_eq_octet( struct in_addr* address, unsigned char oct1, unsigned char oct2, unsigned char oct3, unsigned char oct4 );
 
@@ -57,7 +58,7 @@ void niceFree(char* str);
 char** string_compare_helper(StringList* list, int start);
 
 /* Frees a char** */
-void free_helper(char** array);
+void free_helper(char** array, int num_strs);
 
 /* Originallly from condor_c++_util/test_old_classads.cpp */
 void make_big_string(int length, char **string, char **quoted_string);
@@ -84,3 +85,49 @@ MyString* convert_string_array(char** str, int size, char* delim = " ");
 /* Converts the given char** into a MyString seperated by the given delims */
 MyString* convert_string_array(const char** str, int size, 
 	const char* delim = " ");
+
+/* Deletes a char** */
+void delete_helper(char** array, int num_strs);
+
+/* 
+ Adds a string representation of the tm struct into the MyString based on the 
+ ISO8601Type. 
+ */
+void get_tm(ISO8601Type type, const struct tm &time, MyString* str);
+
+/*
+ Checks if the ClassAd has the following attributes with the given values
+ 	ATTR_PERIODIC_HOLD_CHECK
+	ATTR_PERIODIC_REMOVE_CHECK
+	ATTR_PERIODIC_RELEASE_CHECK
+	ATTR_ON_EXIT_HOLD_CHECK
+	ATTR_ON_EXIT_REMOVE_CHECK
+ */
+bool user_policy_ad_checker(ClassAd* ad,
+							bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check);
+
+/*
+ Checks if the ClassAd has the following attributes with the given values
+ 	ATTR_TIMER_REMOVE_CHECK
+	ATTR_PERIODIC_HOLD_CHECK
+	ATTR_PERIODIC_REMOVE_CHECK
+	ATTR_PERIODIC_RELEASE_CHECK
+	ATTR_ON_EXIT_HOLD_CHECK
+	ATTR_ON_EXIT_REMOVE_CHECK
+ */
+bool user_policy_ad_checker(ClassAd* ad,
+							bool timer_remove,
+							bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check);
+
+/*
+ Inserts the given attribute and value into the ClassAd
+ */
+void insert_into_ad(ClassAd* ad, const char* attribute, const char* value);

@@ -217,6 +217,8 @@ class BaseShadow : public Service
 
 	virtual bool claimIsClosing( void ) = 0;
 
+	static void CommitSuspensionTime(ClassAd *jobAd);
+
 		/** Initializes the user log.  'Nuff said. 
 		 */
 	void initUserLog();

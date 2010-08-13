@@ -220,11 +220,25 @@ XCOMM End translation of func(library_target)
 XCOMM Begin translation of func(shared_library_target) @@\
 libname: $(call picobjs,objlist)					@@\
 	rm -f libname						@@\
-	$(CC) $(CC_SHARED_FLAGS) $(CC_PIC_FLAGS) -o libname $(call picobjs,objlist) @@\
+	$(C_LINK) $(CC_SHARED_FLAGS) $(CC_PIC_FLAGS) -o libname $(call picobjs,objlist) @@\
 clean::							@@\
 	rm -f libname $(call picobjs,objlist)		@@\
 XCOMM End translation of func(shared_library_target)
 #endif /* sahred_library_target */
+
+/*
+** Build a shared library from .o files, and force PIC code for the objs.
+*/
+#ifndef c_plus_shared_library_target
+#define c_plus_shared_library_target(libname,objlist)		@@\
+XCOMM Begin translation of func(c_plus_shared_library_target) @@\
+libname: $(call picobjs,objlist)					@@\
+	rm -f libname						@@\
+	$(CC_LINK) $(CC_SHARED_FLAGS) $(CC_PIC_FLAGS) -o libname $(call picobjs,objlist) @@\
+clean::							@@\
+	rm -f libname $(call picobjs,objlist)		@@\
+XCOMM End translation of func(c_plus_shared_library_target)
+#endif /* c_plus_shared_library_target */
 #endif
 
 /*
@@ -893,6 +907,19 @@ strip_copy_target(src,dir,dest,mode) @@\
 static_copy_target(src,dir,dest,mode) @@\
 XCOMM End translation of func(public_copy_target)
 #endif /* public_copy_target */
+
+
+/*
+** Target is released by recursive copying
+*/
+#ifndef public_recursive_copy_target
+#define public_recursive_copy_target(src,dest)	@@\
+XCOMM Begin translation of func(public_recursive_copy_target) @@\
+release_recursive_copy_target(src,dest) @@\
+strip_recursive_copy_target(src,dest) @@\
+static_recursive_copy_target(src,dest) @@\
+XCOMM End translation of func(public_recursive_copy_target)
+#endif /* public_recursive_copy_target */
 
 
 /* Build the super public_link_target, which generates the other kinds
