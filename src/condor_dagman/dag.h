@@ -476,6 +476,8 @@ class Dag {
 				int minUpdateTime );
 	void DumpNodeStatus( bool held, bool removed );
 
+	void SetJobstateLogFileName( const char *logFileName );
+
 	void CheckAllJobs();
 
 		/** Returns a delimited string listing the node names of all

@@ -68,6 +68,10 @@ public:
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			const MyString &directory, bool &isXml);
 
+		//TEMPTEMP -- document
+    static MyString loadValueFromSubFile(const MyString &strSubFilename,
+			const MyString &directory, const char *keyword);
+
 		/** Makes the given filename an absolute path
 			@param the name of the file (input/output)
 			@param a CondorError object to hold any error information

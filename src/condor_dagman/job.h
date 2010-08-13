@@ -377,6 +377,9 @@ class Job {
 	*/
 	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
+	//TEMPTEMP -- document
+	const char *PegasusSite();
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -526,6 +529,9 @@ private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).
 	bool _noop;
+
+		//TEMPTEMP -- document
+	char *_pegasusSite;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

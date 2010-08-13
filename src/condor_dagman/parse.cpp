@@ -81,6 +81,8 @@ static bool parse_maxjobs(Dag *dag, const char *filename, int lineNumber);
 static bool parse_splice(Dag *dag, const char *filename, int lineNumber);
 static bool parse_node_status_file(Dag  *dag, const char *filename,
 		int  lineNumber);
+static bool parse_jobstate_log(Dag  *dag, const char *filename,
+		int  lineNumber);
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -307,7 +309,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			parsed_line_successfully = parse_node_status_file(dag,
 						filename, lineNumber);
 		}
-		
+
+		// Handle a JOBSTATE_LOG spec
+		else if(strcasecmp(token, "JOBSTATE_LOG") == 0) {
+			parsed_line_successfully = parse_jobstate_log(dag,
+						filename, lineNumber);
+		}
+
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
@@ -1637,7 +1645,7 @@ parse_maxjobs(
 // Function: parse_node_status_file
 // Purpose:  Parses a line specifying the a node_status_file for the DAG.
 //           The format of this line must be
-//           NODE_STATUS_FILE <filename>
+//           NODE_STATUS_FILE <filename> [min update time]
 //			 No whitespace is allowed in the file name
 //-----------------------------------------------------------------------------
 static bool 
@@ -1672,6 +1680,35 @@ parse_node_status_file(
 	}
 
 	dag->SetNodeStatusFileName( statusFileName, minUpdateTime );
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_jobstate_log
+// Purpose:  Parses a line specifying the a jobstate.log for the DAG.
+//           The format of this line must be
+//           JOBSTATE_LOG <filename>
+//			 No whitespace is allowed in the file name
+//-----------------------------------------------------------------------------
+static bool 
+parse_jobstate_log(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char * example = "JOBSTATE_LOG JobstateLogFile";
+
+	char *logFileName = strtok(NULL, DELIMITERS);
+	if (logFileName == NULL) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Missing jobstate log file name,\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	dag->SetJobstateLogFileName( logFileName );
 	return true;
 }
 

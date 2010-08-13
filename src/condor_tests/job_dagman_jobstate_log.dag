@@ -1,4 +1,4 @@
-#TEMPTEMP JOBSTATE_LOG job_dagman_jobstate_log.dag.jobstate.log
+JOBSTATE_LOG job_dagman_jobstate_log.dag.jobstate.log
 
 #TEMPTEMP - job should fail
 Job NodeA job_dagman_jobstate_log-nodeA.cmd

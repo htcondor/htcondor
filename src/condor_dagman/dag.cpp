@@ -189,7 +189,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 
 	_jobstateLog = NULL;
-	_jobstateLog = new JobstateLog( "jobstate.log" );//TEMPTEMP!!!!
 
 	return;
 }
@@ -740,7 +739,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 							termEvent->subproc );
 		}
 
-		//TEMPTEMP -- write JobSuccess or JobFailure here -- pass job->retVal
+		//TEMPTEMP -- do this only when all jobs for the cluster have finished?
 		if ( _jobstateLog ) {
 			_jobstateLog->WriteJobSuccessOrFailure( job );
 		}
@@ -2502,6 +2501,21 @@ Dag::DumpNodeStatus( bool held, bool removed )
 }
 
 //===========================================================================
+
+/** Set the filename of the jobstate.log file.
+	@param the filename to which to write the jobstate log
+*/
+void 
+Dag::SetJobstateLogFileName( const char *logFileName )
+{
+	if ( _jobstateLog != NULL ) {
+		debug_printf( DEBUG_NORMAL, "Attempt to set JOBSTATE_LOG "
+					"to %s does not override existing value of %s\n",
+					logFileName, _jobstateLog->LogFile() );
+		return;
+	}
+	_jobstateLog = new JobstateLog( logFileName );
+}
 
 //-------------------------------------------------------------------------
 // 

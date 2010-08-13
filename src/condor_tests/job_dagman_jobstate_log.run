@@ -30,8 +30,7 @@ $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_jobstate_log.dag.dagman.out");
 
-#TEMPTEMP -- change this
-@outfiles = ("job_dagman_node_prio.order");
+@outfiles = ("job_dagman_jobstate_log.dag.jobstate.log");
 
 my $killedchosen = 0;
 
@@ -42,6 +41,13 @@ sub RUNNING{2};
 
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
+
+# Get rid of any existing output files.
+foreach $name (@outfiles) {
 	if (-e $name) {
 		runcmd("rm -f $name");
 	}

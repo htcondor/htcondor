@@ -53,7 +53,7 @@ JobstateLog::~JobstateLog()
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteEvent( const ULogEvent *event, const Job *node )
+JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 {
 	ASSERT( node );
         //TEMPTEMP -- need to generate POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS "events" in the jobstate.log file...
@@ -101,7 +101,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, const Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteJobSuccessOrFailure( const Job *node )
+JobstateLog::WriteJobSuccessOrFailure( Job *node )
 {
 	ASSERT( node );
 
@@ -115,7 +115,7 @@ JobstateLog::WriteJobSuccessOrFailure( const Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::Write( const Job *node, const char *eventName,
+JobstateLog::Write( Job *node, const char *eventName,
 			const char *condorID )
 {
 	FILE *outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );
@@ -126,7 +126,7 @@ JobstateLog::Write( const Job *node, const char *eventName,
 		time_t eventTime = time( NULL );
 		fprintf( outfile, "%lu %s %s %s %s -\n",
 					(unsigned long)eventTime, node->GetJobName(),
-					eventName, condorID, "TEMPsite" );
+					eventName, condorID, node->PegasusSite() );
 		fclose( outfile );
 	}
 }

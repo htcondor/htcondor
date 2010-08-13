@@ -1933,12 +1933,19 @@ TESTCLASS(job_dagman_noop_node,quick)
 TESTCLASS(job_dagman_noop_node,full)
 TESTCLASS(job_dagman_noop_node,quicknolink)
 
-DESC(job_dagman_node_status,"Test noop nodes")
+DESC(job_dagman_node_status,"Test node status file")
 RUN(job_dagman_node_status)
 TESTCLASS(job_dagman_node_status,dagman)
 TESTCLASS(job_dagman_node_status,quick)
 TESTCLASS(job_dagman_node_status,full)
 TESTCLASS(job_dagman_node_status,quicknolink)
+
+DESC(job_dagman_jobstate_log,"Test jobstate.log file")
+RUN(job_dagman_jobstate_log)
+TESTCLASS(job_dagman_jobstate_log,dagman)
+TESTCLASS(job_dagman_jobstate_log,quick)
+TESTCLASS(job_dagman_jobstate_log,full)
+TESTCLASS(job_dagman_jobstate_log,quicknolink)
 
 /* Sample performance tests */
 

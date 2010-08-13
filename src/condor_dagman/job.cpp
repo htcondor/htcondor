@@ -88,6 +88,8 @@ Job::~Job() {
 
 	delete _scriptPre;
 	delete _scriptPost;
+
+	delete [] _pegasusSite;
 }
 
 //---------------------------------------------------------------------------
@@ -168,6 +170,7 @@ void Job::Init( const char* jobName, const char* directory,
 	_logFileIsXml = false;
 
 	_noop = false;
+	_pegasusSite = NULL;
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
@@ -883,4 +886,21 @@ Job::LogMonitorFailed()
 			_scriptPost->_retValJob = retval;
 		}
 	}
+}
+
+//---------------------------------------------------------------------------
+const char *
+Job::PegasusSite()
+{
+	if ( !_pegasusSite ) {
+		MyString tmpPegasusSite = MultiLogFiles::loadValueFromSubFile(
+					_cmdFile, _directory, "+pegasus_site" );
+
+		if ( tmpPegasusSite == "" ) {
+			tmpPegasusSite = "-";
+		}
+		_pegasusSite = strnewp( tmpPegasusSite.Value() );
+	}
+
+	return _pegasusSite;
 }
