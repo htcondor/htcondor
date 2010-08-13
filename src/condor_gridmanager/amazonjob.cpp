@@ -244,7 +244,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 
 		token = value.GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "amazon" ) ) {
-			error_string.sprintf( "%s not of type amazon",
+			sprintf( error_string, "%s not of type amazon",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -253,13 +253,13 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		if ( token && *token ) {
 			m_serviceUrl = token;
 		} else {
-			error_string.sprintf( "%s missing EC2 service URL",
+			sprintf( error_string, "%s missing EC2 service URL",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -538,13 +538,8 @@ void AmazonJob::doEvaluateState()
 					if ( m_group_names == NULL )	m_group_names = build_groupnames();
 					
 					// amazon_vm_start() will check the input arguments
-<<<<<<< HEAD
-					rc = gahp->amazon_vm_start( m_public_key_file, m_private_key_file, 
-												m_ami_id.c_str(), m_key_pair.c_str(), 
-=======
 					rc = gahp->amazon_vm_start( m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
-												m_ami_id.Value(), m_key_pair.Value(), 
->>>>>>> master
+												m_ami_id.c_str(), m_key_pair.c_str(), 
 												m_user_data, m_user_data_file, m_instance_type, 
 												*m_group_names, instance_id, gahp_error_code);
 					
@@ -969,13 +964,8 @@ void AmazonJob::doEvaluateState()
 				}
 
 				// now create and register this keypair by using amazon_vm_create_keypair()
-<<<<<<< HEAD
-				rc = gahp->amazon_vm_create_keypair(m_public_key_file, m_private_key_file, 
-													m_key_pair.c_str(), m_key_pair_file.c_str(), gahp_error_code);
-=======
 				rc = gahp->amazon_vm_create_keypair(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
-													m_key_pair.Value(), m_key_pair_file.Value(), gahp_error_code);
->>>>>>> master
+													m_key_pair.c_str(), m_key_pair_file.c_str(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1025,11 +1015,7 @@ void AmazonJob::doEvaluateState()
 				{
 				// Something went wrong during the submit process and
 				// we need to destroy the keypair
-<<<<<<< HEAD
-				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
-=======
-				rc = gahp->amazon_vm_destroy_keypair(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
->>>>>>> master
+				rc = gahp->amazon_vm_destroy_keypair(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1064,11 +1050,7 @@ void AmazonJob::doEvaluateState()
 			case GM_DESTROY_KEYPAIR:
 				{
 				// Yes, now let's destroy the temporary keypair 
-<<<<<<< HEAD
-				rc = gahp->amazon_vm_destroy_keypair(m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
-=======
-				rc = gahp->amazon_vm_destroy_keypair(m_serviceUrl.c_str(),m_public_key_file, m_private_key_file, m_key_pair.Value(), gahp_error_code);
->>>>>>> master
+				rc = gahp->amazon_vm_destroy_keypair(m_serviceUrl.c_str(),m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1213,11 +1195,7 @@ void AmazonJob::SetRemoteJobId( const char *keypair_id, const char *instance_id 
 {
 	std::string full_job_id;
 	if ( keypair_id && keypair_id[0] ) {
-<<<<<<< HEAD
-		sprintf( full_job_id, "amazon %s", keypair_id );
-=======
-		full_job_id.sprintf( "amazon %s %s", m_serviceUrl.c_str(), keypair_id );
->>>>>>> master
+		sprintf( full_job_id, "amazon %s %s", m_serviceUrl.c_str(), keypair_id );
 		if ( instance_id && instance_id[0] ) {
 			sprintf_cat( full_job_id, " %s", instance_id );
 		}
