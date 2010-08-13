@@ -174,7 +174,7 @@ ReplicatorStateMachine::finalizeDelta( )
     }
 
     invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
-    invalidate_ad.SetTargetTypeName( GENERIC_ADTYPE );
+    invalidate_ad.SetTargetTypeName( "Replication" );
     line.sprintf( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
     daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );
@@ -283,8 +283,8 @@ ReplicatorStateMachine::initializeClassAd()
 
     m_classAd = new ClassAd();
 
-    m_classAd->SetMyTypeName(GENERIC_ADTYPE);
-    m_classAd->SetTargetTypeName("Replication");
+    m_classAd->SetMyTypeName("Replication");
+    m_classAd->SetTargetTypeName("");
 
     m_name.sprintf( "replication@%s -p %d", my_full_hostname( ),
 				  daemonCore->InfoCommandPort( ) );

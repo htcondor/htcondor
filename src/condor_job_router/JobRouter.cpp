@@ -385,8 +385,8 @@ JobRouter::InitPublicAd()
 
 	m_public_ad = ClassAd();
 
-	m_public_ad.SetMyTypeName(GENERIC_ADTYPE);
-	m_public_ad.SetTargetTypeName("Job_Router");
+	m_public_ad.SetMyTypeName("Job_Router");
+	m_public_ad.SetTargetTypeName("");
 
 	m_public_ad.Assign(ATTR_NAME,daemonName.c_str());
 
@@ -2112,7 +2112,7 @@ JobRouter::InvalidatePublicAd() {
 	MyString line;
 
 	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
-	invalidate_ad.SetTargetTypeName(GENERIC_ADTYPE);
+	invalidate_ad.SetTargetTypeName("Job_Router");
 
 	line.sprintf("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());
