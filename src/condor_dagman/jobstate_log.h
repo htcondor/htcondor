@@ -54,7 +54,7 @@ public:
 	void WritePostStart( const Job *node );
 
 	//TEMPTEMP -- document
-	//TEMPTEMP void WritePostSuccessOrFailure( const Job *node );
+	void WritePostSuccessOrFailure( const Job *node );
 
 	//TEMPTEMP -- add more method(s) for writing the POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS|POST_SCRIPT_FAILED "events"
 

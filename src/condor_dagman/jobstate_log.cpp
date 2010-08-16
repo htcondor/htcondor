@@ -123,6 +123,20 @@ JobstateLog::WritePostStart( const Job *node )
 	Write( node, POST_SCRIPT_STARTED_NAME, "-" );
 }
 
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::WritePostSuccessOrFailure( const Job *node )
+{
+	ASSERT( node );
+
+	//TEMPTEMP -- make sure retval is the right thing here...
+	const char *eventName = node->retval == 0 ? POST_SCRIPT_SUCCESS_NAME :
+				POST_SCRIPT_FAILURE_NAME;
+
+	Write( node, eventName, "-" );
+}
+
 //---------------------------------------------------------------------------
 void
 JobstateLog::Write( const Job *node, const char *eventName,

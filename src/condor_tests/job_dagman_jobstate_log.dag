@@ -1,16 +1,23 @@
 JOBSTATE_LOG job_dagman_jobstate_log.dag.jobstate.log
 
-#TEMPTEMP - job should fail
+# This job fails, but the post script succeeds.
 Job NodeA job_dagman_jobstate_log-nodeA.cmd
 Script Pre NodeA job_dagman_jobstate_log-pre.pl $(JOB)
 Script Post NodeA job_dagman_jobstate_log-post.pl $(JOB)
 
-#TEMPTEMP - job should queue 2 procs
+# The job queues two procs.
 Job NodeB job_dagman_jobstate_log-nodeB.cmd
 Script Pre NodeB job_dagman_jobstate_log-pre.pl $(JOB)
 Script Post NodeB job_dagman_jobstate_log-post.pl $(JOB)
 
+# This node's post script fails the first time, but then succeeds.
+Job NodeC job_dagman_jobstate_log-nodeC.cmd
+Script Pre NodeC job_dagman_jobstate_log-pre.pl $(JOB)
+Script Post NodeC job_dagman_jobstate_log-nodeC-post.pl $(JOB) $RETRY
+Retry NodeC 1
+
 Parent NodeA Child NodeB
+Parent NodeB Child NodeC
 
 #TEMPTEMP -- add nodes that generate fake globus and grid submit events
 

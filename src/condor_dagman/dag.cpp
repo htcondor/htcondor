@@ -880,7 +880,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-			(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -940,6 +940,11 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				job->retval = (0 - termEvent->signalNumber);
 			}
 
+			//TEMPTEMP -- log post script failed here?
+			if ( _jobstateLog ) {
+				_jobstateLog->WritePostSuccessOrFailure( job );
+			}
+
 				//
 				// Deal with retries.
 				//
@@ -989,7 +994,13 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			ASSERT( termEvent->returnValue == 0 );
 			debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 						"completed successfully.\n" );
+
 			job->retval = 0;
+
+			if ( _jobstateLog ) {
+				_jobstateLog->WritePostSuccessOrFailure( job );
+			}
+
 			TerminateJob( job, recovery );
 		}
 
