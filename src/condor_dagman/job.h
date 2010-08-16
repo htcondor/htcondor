@@ -378,7 +378,7 @@ class Job {
 	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
 	//TEMPTEMP -- document
-	const char *PegasusSite();
+	const char *PegasusSite() const;
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
@@ -530,8 +530,12 @@ private:
 		// to Condor).
 	bool _noop;
 
-		//TEMPTEMP -- document
-	char *_pegasusSite;
+		// The Pegasus site for this node ("-" if nothing is specified;
+		// can also be "local").
+		// This is mutable because it's only caching the value, so we
+		// don't have to waste time checking the submit file every time
+		// PegasusSite() is called.
+	mutable char *_pegasusSite;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

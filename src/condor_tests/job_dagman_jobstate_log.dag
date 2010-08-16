@@ -7,6 +7,8 @@ Script Post NodeA job_dagman_jobstate_log-post.pl $(JOB)
 
 #TEMPTEMP - job should queue 2 procs
 Job NodeB job_dagman_jobstate_log-nodeB.cmd
+Script Pre NodeB job_dagman_jobstate_log-pre.pl $(JOB)
+Script Post NodeB job_dagman_jobstate_log-post.pl $(JOB)
 
 Parent NodeA Child NodeB
 

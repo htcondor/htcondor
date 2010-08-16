@@ -45,16 +45,23 @@ public:
 
 	//TEMPTEMP -- document
 	//TEMPTEMP -- don't return void??
-	void WriteEvent( const ULogEvent *event, Job *node );
+	void WriteEvent( const ULogEvent *event, const Job *node );
 
-	void WriteJobSuccessOrFailure( Job *node );
+	//TEMPTEMP -- document
+	void WriteJobSuccessOrFailure( const Job *node );
+
+	//TEMPTEMP -- document
+	void WritePostStart( const Job *node );
+
+	//TEMPTEMP -- document
+	//TEMPTEMP void WritePostSuccessOrFailure( const Job *node );
 
 	//TEMPTEMP -- add more method(s) for writing the POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS|POST_SCRIPT_FAILED "events"
 
 	const char *LogFile() { return _jobstateLogFile; }
 
 private:
-	void Write( Job *node, const char *eventName,
+	void Write( const Job *node, const char *eventName,
 				const char *condorID );
 
 	char *_jobstateLogFile;

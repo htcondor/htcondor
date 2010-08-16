@@ -22,7 +22,7 @@
 #include "condor_string.h"  /* for strnewp() */
 #include "jobstate_log.h"
 #include "debug.h"
-//TEMPTEMP? #include "MyString.h"
+#include "MyString.h"
 
 const char *JobstateLog::SUBMIT_NAME = "SUBMIT";
 const char *JobstateLog::EXECUTE_NAME = "EXECUTE";
@@ -53,7 +53,7 @@ JobstateLog::~JobstateLog()
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
+JobstateLog::WriteEvent( const ULogEvent *event, const Job *node )
 {
 	ASSERT( node );
         //TEMPTEMP -- need to generate POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS "events" in the jobstate.log file...
@@ -101,7 +101,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteJobSuccessOrFailure( Job *node )
+JobstateLog::WriteJobSuccessOrFailure( const Job *node )
 {
 	ASSERT( node );
 
@@ -113,9 +113,19 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 	Write( node, eventName, retval.Value() );
 }
 
+
 //---------------------------------------------------------------------------
 void
-JobstateLog::Write( Job *node, const char *eventName,
+JobstateLog::WritePostStart( const Job *node )
+{
+	ASSERT( node );
+
+	Write( node, POST_SCRIPT_STARTED_NAME, "-" );
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::Write( const Job *node, const char *eventName,
 			const char *condorID )
 {
 	FILE *outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );

@@ -42,6 +42,7 @@ class Script {
 
 	int BackgroundRun( int reaperId );
 	const char* GetNodeName();
+	const Job *GetNode() { return _node; }
 
     inline const char* GetCmd() const { return _cmd; }
     Script( bool post, const char* cmd, const Job* node );

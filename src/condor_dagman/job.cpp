@@ -890,7 +890,7 @@ Job::LogMonitorFailed()
 
 //---------------------------------------------------------------------------
 const char *
-Job::PegasusSite()
+Job::PegasusSite() const
 {
 	if ( !_pegasusSite ) {
 		MyString tmpPegasusSite = MultiLogFiles::loadValueFromSubFile(
@@ -898,6 +898,13 @@ Job::PegasusSite()
 
 		if ( tmpPegasusSite == "" ) {
 			tmpPegasusSite = "-";
+		} else {
+				// Remove double-quotes
+			int begin = tmpPegasusSite[0] == '\"' ? 1 : 0;
+			int last = tmpPegasusSite.Length() - 1;
+			int end = tmpPegasusSite[last] == '\"' ? last - 1 : last;
+
+			tmpPegasusSite = tmpPegasusSite.Substr( begin, end );
 		}
 		_pegasusSite = strnewp( tmpPegasusSite.Value() );
 	}
