@@ -128,7 +128,7 @@ public:
 
 		// Operations you can perform on a Claim
 	void vacate();	// Send a vacate command to the client of this claim
-	void alive();	// Process a keep alive for this claim
+	void alive( bool alive_from_schedd = false );	// Process a keep alive for this claim
 
 	void publish( ClassAd*, amask_t );
 	void publishPreemptingClaim( ClassAd* ad, amask_t how_much );
