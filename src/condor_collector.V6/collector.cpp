@@ -73,6 +73,8 @@ ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
 int CollectorDaemon::__failed__;
 List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
+std::string CollectorDaemon::__adType__;
+ExprTree *CollectorDaemon::__filter__;
 
 TrackTotals* CollectorDaemon::normalTotals;
 int CollectorDaemon::submittorRunningJobs;
@@ -531,7 +533,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
         return FALSE;
     }
 #if !defined(WANT_OLD_CLASSADS)
-	cad.AddExplicitTargetRefs();
+	cad.RemoveExplicitTargetRefs();
 #endif
 
     // cancel timeout --- collector engine sets up its own timeout for
@@ -872,8 +874,17 @@ CollectorDaemon::stashSocket( ReliSock* sock )
 
 int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
-	if (IsAHalfMatch( __query__, cad ))
-    {
+	if ( !__adType__.empty() ) {
+		std::string type = "";
+		cad->LookupString( ATTR_MY_TYPE, type );
+		if ( strcasecmp( type.c_str(), __adType__.c_str() ) != 0 ) {
+			return 1;
+		}
+	}
+
+	EvalResult result;
+	if ( EvalExprTree( __filter__, cad, NULL, &result ) &&
+		 result.type == LX_INTEGER && result.i != 0 ) {
 		// Found a match 
         __numAds__++;
 		__ClassAdResultList__->Append(cad);
@@ -882,32 +893,33 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
     return 1;
 }
 
-/*
-Examine the given ad, and see if it satisfies the query.
-If so, return zero, causing the scan to stop.
-Otherwise, return 1.
-*/
-
-int CollectorDaemon::select_by_match( ClassAd *cad )
-{
-	if ( IsAHalfMatch( query_any_result, cad ) ) {
-		query_any_result = cad;
-		return 0;
-	}
-	return 1;
-}
-
 void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
 											List<ClassAd>* results)
 {
 #if !defined(WANT_OLD_CLASSADS)
-	query->AddExplicitTargetRefs();
+	query->RemoveExplicitTargetRefs();
 #endif
 	// set up for hashtable scan
 	__query__ = query;
 	__numAds__ = 0;
 	__ClassAdResultList__ = results;
+	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
+	// An empty adType means don't check the MyType of the ads.
+	// This means either the command indicates we're only checking one
+	// type of ad, or the query's TargetType is "Any" (match all ad types).
+	__adType__ = "";
+	if ( whichAds == GENERIC_AD || whichAds == ANY_AD ) {
+		query->LookupString( ATTR_TARGET_TYPE, __adType__ );
+		if ( strcasecmp( __adType__.c_str(), "any" ) == 0 ) {
+			__adType__ = "";
+		}
+	}
+
+	if ( __filter__ == NULL ) {
+		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
+		return;
+	}
 
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
 	{
@@ -920,13 +932,19 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 
 int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 {
-	static char buffer[64];
-	
-	sprintf( buffer, "%s = 0", ATTR_LAST_HEARD_FROM );
+	if ( !__adType__.empty() ) {
+		std::string type = "";
+		cad->LookupString( ATTR_MY_TYPE, type );
+		if ( strcasecmp( type.c_str(), __adType__.c_str() ) != 0 ) {
+			return 1;
+		}
+	}
 
-	if (IsAHalfMatch( __query__, cad ))
-    {
-		cad->Insert( buffer );			
+	EvalResult result;
+	if ( EvalExprTree( __filter__, cad, NULL, &result ) &&
+		 result.type == LX_INTEGER && result.i != 0 ) {
+
+		cad->Assign( ATTR_LAST_HEARD_FROM, 0 );
         __numAds__++;
     }
 
@@ -949,6 +967,23 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 
 		// set up for hashtable scan
 		__query__ = &query;
+		__filter__ = query.LookupExpr( ATTR_REQUIREMENTS );
+		// An empty adType means don't check the MyType of the ads.
+		// This means either the command indicates we're only checking
+		// one type of ad, or the query's TargetType is "Any" (match
+		// all ad types).
+		__adType__ = "";
+		if ( whichAds == GENERIC_AD || whichAds == ANY_AD ) {
+			query.LookupString( ATTR_TARGET_TYPE, __adType__ );
+			if ( strcasecmp( __adType__.c_str(), "any" ) == 0 ) {
+				__adType__ = "";
+			}
+		}
+
+		if ( __filter__ == NULL ) {
+			dprintf (D_ALWAYS, "Invalidation missing %s\n", ATTR_REQUIREMENTS );
+			return;
+		}
 
 		if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) 
 		{
