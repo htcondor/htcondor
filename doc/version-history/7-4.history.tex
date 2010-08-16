@@ -79,6 +79,34 @@ should have been seconds, but instead was \Expr{Undefined}.
  arguments incorrectly within a submit description file.
  Now \Condor{submit} will detect the problem and print out an error message.
 
+% gittrac 1565
+\item With some versions of \Prog{ssh}, \Condor{ssh\_to\_job} failed if
+the \Env{SHELL} environment variable was set to \Prog{/bin/csh}.
+
+% gittrac 1567
+\item Submission of vm universe jobs via Globus was not possible, because
+the Globus Condor jobmanager explicitly set the input, output, and error files
+to \File{/dev/null}, and \Condor{submit} refused any setting of these files for
+VM universe jobs.  
+Now, \File{/dev/null} is an allowed setting for the input, output,
+and error files for vm universe jobs.
+
+% gittrac #1564
+\item Fixed a bug that caused a vm universe job's output files to be
+incorrectly transferred back to the submit machine 
+when the submit description file command \SubmitCmd{vm\_no\_output\_vm}
+was set to \Expr{false},
+indicating that no files should be transferred.
+
+% gittrac #416
+\item String literals within \verb@$$([])@ expressions within a submit
+description file failed to be evaluated and resulted in the job going on hold.
+This problem has existed since before Condor 7.0.0.
+
+% gittrac #106
+\item \Condor{preen} was not able to clean up files in the \MacroNI{EXECUTE}
+directory when in privsep mode.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -106,8 +134,7 @@ should have been seconds, but instead was \Expr{Undefined}.
 
 \begin{itemize}
 
-\item Condor version 7.4.3 not yet released.
-%\item Condor version 7.4.3 released on Month Date, 2010.
+\item Condor version 7.4.3 released on August 16, 2010.
 
 \end{itemize}
 
@@ -144,14 +171,63 @@ disables Chirp remote file access from execute machines.
 % gittrac 1402 and 1407
 \item The new configuration variable
   \Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE} specifies the networking interface
-  that xen or kvm \SubmitCmd{vm} universe jobs will use.
+  that Xen or KVM \SubmitCmd{vm} universe jobs will use.
   See section~\ref{param:VMNetworkingBridgeInterface} for documentation.
+
+% gittrac #1333
+\item
+Allowed the configuration file entries \MacroNI{GSI\_DAEMON\_TRUSTED\_CA\_DIR}
+and \MacroNI{GSI\_DAEMON\_DIRECTORY} to be set with environment variables,
+as the rest of Condor configuration variables can be.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrac 1185
+\item
+Fetch work hooks to prepare are now invoked as the \Login{condor} user,
+instead of as the job user.
+
+\item
+Improved the file extension detection on Windows platforms.
+
+\item
+\Condor{wait} could occasionally get stuck in an infinite loop,
+if it missed the execution event of the job it is waiting for.
+This is now fixed.
+
+% gittrac 1413
+\item
+Fixed a bug within the \Condor{startd} cron capabilities,
+that only occurred on Windows platforms.
+\Condor{startd} cron scripts failed to run if an initial directory was left
+unspecified.
+
+% gittrac 1012
+\item
+Fixed a bug in which a job would be incorrectly placed on hold, with 
+a confusing error message that appeared similar to
+\footnotesize
+\begin{verbatim}
+Condor failed to start your job 9090.-1 because job attribute Args contains $$(VirtualMachineID).
+\end{verbatim}
+\normalsize
+This occurred if the submit command \SubmitCmd{copy\_to\_spool} 
+was \Expr{true},
+the submit description file for the job contained \$\$ macros,
+and \Condor{preen} ran after the job was submitted and before it started.
+
+% gittrac 1427
+\item
+Added the jobs\_vertical\_history table to the list of tables that
+\Condor{quill} periodically re-indexes.
+
+\item
+Fixed bug in \Condor{preen} in which it would delete \Condor{startd} daemon
+history files.
 
 % gittrac 487
 \item
@@ -199,17 +275,25 @@ entering an infinite loop on platforms that use X-Windows.
 Microsoft Windows and Mac OS X platforms were not affected.  This bug is
 present in all earlier 7.4.x Condor releases.
 
-\item The default path to \Prog{sftp-server} has been improved so that
-  \Condor{ssh\_to\_job} can use \Prog{sftp} out-of-the-box on RHEL 5 platforms.
+\item The default path to \Prog{sftp-server} has been improved,
+ so that \Condor{ssh\_to\_job} can use \Prog{sftp} out-of-the-box on 
+RedHat Enterprise Linux 5 platforms.
 
 % gittrac #1383
-\item A \Prog{nordugrid\_gahp} binary built on RHEL3 no longer crashes
-when run on a RHEL4 or Scientific Linux 4 machine.
+\item A \Prog{nordugrid\_gahp} binary built on RedHat Enterprise Linux 3
+no longer crashes
+when run on a RedHat Enterprise Linux 4 or Scientific Linux 4 machine.
 
 % gittrac #1418
 \item Fixed a bug in \Condor{rm} that caused it to misinterpret user names
-that begin with a digit, such as \Expr{1abc}.
+that begin with a digit, such as \Expr{4abc}.
 It incorrectly used them as cluster numbers. 
+
+% gittrac #1423
+\item Fixed a bug that caused the \Condor{startd} to invoke the
+  ``power\_state'' plug-in as the condor user.  This caused
+  hibernation to fail because power\_state requires root privileges
+  to function properly.
 
 % gittrac #1330
 \item Fixed a bug that could cause the \Condor{schedd} to crash if there
@@ -221,11 +305,25 @@ were any idle scheduler universe jobs when files were staged into the
 when connecting to a misconfigured LDAP server.
 
 % gittrac #1352
-\item Fixed a bug that prevented the \MacroNI{NEGOTIATOR\_MATCH\_LOG} from rotating.
+\item Fixed a bug that prevented the log file defined with the configuration
+variable \Macro{NEGOTIATOR\_MATCH\_LOG} from rotating.
+See section~\ref{param:SubsysLevelLog} for the definition of this variable. 
 
 % gittrac #1413
-\item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. This bug is 
-present in all earlier 7.4.x Condor releases.
+\item Fixed a bug that caused \Prog{startd\_cron} jobs to fail on Windows. 
+This bug is present in all earlier 7.4.x Condor releases.
+
+% gittrac #1551
+\item The submit description file command \SubmitCmd{vm\_cdrom\_files}
+now works properly with Windows execute machines. 
+Previously, creation of the ISO file would fail, 
+causing job execution to be aborted.
+
+% gittrac #1423
+\item Fixed a bug that caused the \Condor{startd} to invoke the
+  \Prog{power\_state} plug-in as the condor user.
+  This caused hibernation to fail, 
+  because \Prog{power\_state} requires root privileges to function properly.
 
 \end{itemize}
 
@@ -249,6 +347,10 @@ now works correctly.
 \item The new subsection~\ref{ClassAd:examples} provides examples of
 evaluation results when using the operators \Expr{==}, \Expr{=?=},
 \Expr{!=}, and \Expr{=!=}.
+
+\item Section~\ref{sec:vmuniverse} with specifics on \SubmitCmd{vm}
+universe jobs has been updated to contain more details about
+both checkpoints and \SubmitCmd{vm} universe jobs in general.
 
 \end{itemize}
 

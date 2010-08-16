@@ -2321,6 +2321,7 @@ might appear as
   universe = vanilla
   executable = /path/to/executable
   log = job6.log
+  input = job6.in
   output = job6.out
   notification = Never
   arguments = "-file job6.out"
@@ -2383,6 +2384,76 @@ The executable is invoked with
 
 \end{description}
 
-\MoreTodo
+These examples work well with respect to file naming and placement
+when there are less than several thousand jobs submitted as part
+of a DAG.
+The large numbers of files per directory becomes an issue when there
+are greater than several thousand jobs submitted as part of a DAG.
+In this case,
+consider a more hierarchical structure for the files instead of a single
+directory.
+Introduce a separate directory for each run.
+For example, if there were 10,000 jobs, there would be
+10,000 directories, one for each of these jobs.
+The directories are presumed to be generated and populated by 
+programs or scripts that,
+like the previous examples, utilize a run number.
+Each of these directories named utilizing the run number will be used
+for the input, output, and log files for one of the many jobs.
+
+As an example, for this set of 10,000 jobs and directories, assume
+that there is a run number of 600.
+The directory will be named \File{dir.600}, and it will
+hold the 3 files called \File{in}, \File{out}, and \File{log},
+representing the input, output, and Condor job log files associated
+with run number 600.
+
+The DAG input file sets a variable representing the run number,
+as in the previous example:
+\begin{verbatim}
+  # file biggersweep.dag
+  JOB job0 common.submit
+  VARS job0 runnumber="0"
+  JOB job1 common.submit
+  VARS job1 runnumber="1"
+  JOB job2 common.submit
+  VARS job2 runnumber="2"
+  .
+  .
+  .
+  JOB job9999 common.submit
+  VARS job9999 runnumber="9999"
+\end{verbatim}
+
+A single Condor submit description file may be written.
+It resides in the same directory as the DAG input file.
+\begin{verbatim}
+  # file bigger.submit
+  universe = vanilla
+  executable = /path/to/executable
+  log = log
+  input = in
+  output = out
+  notification = Never
+  arguments = "-$(runnumber)"
+  initialdir = dir.$(runnumber)
+  queue
+\end{verbatim}
+
+One item to care about with this set up is the underlying file system 
+for the pool.
+The transfer of files (or not) when using \SubmitCmd{initialdir}
+differs based upon the job \SubmitCmd{universe} and whether or not there
+is a shared file system.
+See section~\ref{man-condor-submit-initialdir} for the details on the
+submit command \SubmitCmd{initialdir}.
+
+Submission of this set of jobs is no different than the previous
+examples.  
+With the current working directory the same as the one containing
+the submit description file, the DAG input file, and the subdirectories,
+\begin{verbatim}
+  condor_submit_dag biggersweep.dag
+\end{verbatim}
 
 \index{DAGMan|)}
