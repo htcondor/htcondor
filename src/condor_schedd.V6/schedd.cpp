@@ -2499,6 +2499,7 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		if (proc > 0) {
 			return true;
 		}
+		ASSERT( srec != NULL );
 			break;
 	default:
 		break;
