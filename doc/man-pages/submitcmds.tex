@@ -1350,8 +1350,10 @@ AMI identifier of the VM image to run for \SubmitCmd{amazon} jobs.
 
 \index{submit commands!amazon\_instance\_type}
 \item[amazon\_instance\_type = $<$VM Type$>$]
-Identifier for the type of VM desired for an \SubmitCmd{amazon} job.
-The default value is ``m1.small''.
+An identifier for the type of VM desired for an \SubmitCmd{amazon} job.
+The default value is \Expr{m1.small}.
+Other values are \Expr{m1.large}, \Expr{m1.xlarge},
+\Expr{c1.medium}, and \Expr{c1.xlarge}.
 
 %%%%%%%%%%%%%%%%%%%
 %% amazon_keypair_file
@@ -1511,8 +1513,8 @@ and \SubmitCmd{unicore}.
 See section~\ref{sec:GridUniverse} for details on the variety of 
 grid types.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{amazon}, no additional
-parameters are used.
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{amazon},
+one additional parameter specifies the EC2 URL.
 See section~\ref{sec:Amazon} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
