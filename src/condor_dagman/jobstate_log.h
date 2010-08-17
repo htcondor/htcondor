@@ -44,6 +44,9 @@ public:
 	~JobstateLog();
 
 	//TEMPTEMP -- document
+	void WriteDagmanStarted( const CondorID &DAGManJobId );
+
+	//TEMPTEMP -- document
 	//TEMPTEMP -- don't return void??
 	void WriteEvent( const ULogEvent *event, const Job *node );
 
@@ -56,14 +59,21 @@ public:
 	//TEMPTEMP -- document
 	void WritePostSuccessOrFailure( const Job *node );
 
-	//TEMPTEMP -- add more method(s) for writing the POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS|POST_SCRIPT_FAILED "events"
+	//TEMPTEMP -- document
+	void WriteDagmanFinished( int exitCode );
 
+	//TEMPTEMP -- document
 	const char *LogFile() { return _jobstateLogFile; }
 
 private:
+	//TEMPTEMP -- document
 	void Write( const Job *node, const char *eventName,
 				const char *condorID );
 
+	//TEMPTEMP -- document
+	void Write( const MyString &info );
+
+	//TEMPTEMP -- document
 	char *_jobstateLogFile;
 
 	static const char *SUBMIT_NAME;

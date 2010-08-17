@@ -53,6 +53,17 @@ JobstateLog::~JobstateLog()
 
 //---------------------------------------------------------------------------
 void
+JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
+{
+	MyString info;
+
+	info.sprintf( "INTERNAL *** DAGMAN_STARTED %d.%d ***",
+				DAGManJobId._cluster, DAGManJobId._proc );
+	Write( info );
+}
+
+//---------------------------------------------------------------------------
+void
 JobstateLog::WriteEvent( const ULogEvent *event, const Job *node )
 {
 	ASSERT( node );
@@ -135,18 +146,41 @@ JobstateLog::WritePostSuccessOrFailure( const Job *node )
 
 //---------------------------------------------------------------------------
 void
+JobstateLog::WriteDagmanFinished( int exitCode )
+{
+	MyString info;
+
+	info.sprintf( "INTERNAL *** DAGMAN_FINISHED %d ***", exitCode );
+	Write( info );
+}
+
+//---------------------------------------------------------------------------
+void
 JobstateLog::Write( const Job *node, const char *eventName,
 			const char *condorID )
 {
+	MyString info;
+
+	info.sprintf( "%s %s %s %s -", node->GetJobName(), eventName,
+				condorID, node->PegasusSite() );
+	Write( info );
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::Write( const MyString &info )
+{
 	FILE *outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );
 	if ( !outfile ) {
-       	debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
+       	debug_printf( DEBUG_QUIET,
+					"Could not open jobstate log file %s for writing.\n",
 					_jobstateLogFile );
-	} else {
-		time_t eventTime = time( NULL );
-		fprintf( outfile, "%lu %s %s %s %s -\n",
-					(unsigned long)eventTime, node->GetJobName(),
-					eventName, condorID, node->PegasusSite() );
-		fclose( outfile );
+		//TEMPTEMP -- maybe exit here?
+		return;
 	}
+
+	time_t eventTime = time( NULL );
+	fprintf( outfile, "%lu %s\n",
+				(unsigned long)eventTime, info.Value() );
+	fclose( outfile );
 }

@@ -380,6 +380,10 @@ main_config()
 void
 main_shutdown_fast()
 {
+	//TEMPTEMP -- make sure dagman.dag is not null?
+	if ( dagman.dag->GetJobstateLog() ) {
+		dagman.dag->GetJobstateLog()->WriteDagmanFinished( EXIT_RESTART );
+	}
     DC_Exit( EXIT_RESTART );
 }
 
@@ -387,6 +391,9 @@ main_shutdown_fast()
 // shutdown gracefully
 void main_shutdown_graceful() {
 	dagman.dag->DumpNodeStatus( true, false );
+	if ( dagman.dag->GetJobstateLog() ) {
+		dagman.dag->GetJobstateLog()->WriteDagmanFinished( EXIT_RESTART );
+	}
     dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
@@ -427,6 +434,9 @@ void main_shutdown_rescue( int exitVal ) {
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
 	}
 	dagman.dag->DumpNodeStatus( false, true );
+	if ( dagman.dag->GetJobstateLog() ) {
+		dagman.dag->GetJobstateLog()->WriteDagmanFinished( exitVal );
+	}
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( exitVal );
@@ -443,6 +453,9 @@ int main_shutdown_remove(Service *, int) {
 
 void ExitSuccess() {
 	dagman.dag->DumpNodeStatus( false, false );
+	if ( dagman.dag->GetJobstateLog() ) {
+		dagman.dag->GetJobstateLog()->WriteDagmanFinished( EXIT_OKAY );
+	}
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -703,6 +716,9 @@ void main_init (int argc, char ** const argv) {
        	debug_printf( DEBUG_QUIET, "Unable to convert default log "
 					"file name to absolute path: %s\n",
 					errstack.getFullText() );
+		if ( dagman.dag->GetJobstateLog() ) {
+			dagman.dag->GetJobstateLog()->WriteDagmanFinished( EXIT_ERROR );
+		}
 		DC_Exit( EXIT_ERROR );
 	}
 	dagman._defaultNodeLog = strdup( tmpDefaultLog.Value() );
@@ -970,6 +986,11 @@ void main_init (int argc, char ** const argv) {
     	}
 	}
 
+	if ( dagman.dag->GetJobstateLog() ) {
+		dagman.dag->GetJobstateLog()->
+					WriteDagmanStarted( dagman.DAGManJobId );
+	}
+
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
 
@@ -1022,6 +1043,10 @@ void main_init (int argc, char ** const argv) {
 							"currently running on this DAG; if that is "
 							"not the case, delete the lock file (%s) "
 							"and re-submit the DAG.\n", lockFileName );
+					if ( dagman.dag->GetJobstateLog() ) {
+						dagman.dag->GetJobstateLog()->
+									WriteDagmanFinished( EXIT_RESTART );
+					}
     				dagman.CleanUp();
 					DC_Exit( EXIT_ERROR );
 					// We should never get to here!
