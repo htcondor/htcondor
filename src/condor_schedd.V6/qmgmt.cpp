@@ -2422,39 +2422,32 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	// submit events into the EVENT_LOG here.
 	if ( !new_ad_keys.empty() ) {
 		int cluster_id;
-		int old_cluster_id = -10;
 		int proc_id;
 		ClassAd *procad;
 		ClassAd *clusterad;
-		bool has_event_log = false;
-		char *evt_log = param("EVENT_LOG");
-		if (evt_log != NULL){
-			has_event_log = true;
-			free(evt_log);
-		}
+		bool write_submit_events = false;
 			// keep usr_log in outer scope so we don't open/close the 
 			// event log over and over.
-		WriteUserLog usr_log; 
-	
+		WriteUserLog usr_log;
+		usr_log.setCreatorName( Name );
+
+		char *eventlog = param("EVENT_LOG");
+		if ( eventlog ) {
+			write_submit_events = true;
+				// don't write to the user log here, since
+				// hopefully condor_submit already did.
+			usr_log.setEnableUserLog(false);
+			usr_log.initialize(0,0,0,NULL);
+			free(eventlog);
+		}
+
 		std::list<std::string>::iterator it;
-		int counter = 0;
-		int ad_keys_size = new_ad_keys.size();
 		for( it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
-			++counter;
 			char const *key = it->c_str();
 			StrToId(key,cluster_id,proc_id);
-			// do we want to fsync the userLog?
-			bool doFsync = false; 
+
 			if( proc_id == -1 ) {
 				continue; // skip over cluster ads
-			}
-			//we want to fsync per cluster
-			if (old_cluster_id == -10)
-				old_cluster_id = cluster_id;
-				
-			if ( (old_cluster_id != cluster_id) || (counter == ad_keys_size) ) {
-				doFsync = true;
-				old_cluster_id = cluster_id;
 			}
 
 			char cluster_key[PROC_ID_STR_BUFLEN];
@@ -2463,7 +2456,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			if ( JobQueue->LookupClassAd(cluster_key, clusterad) &&
 				 JobQueue->LookupClassAd(key,procad))
 			{
-			 
+				dprintf(D_FULLDEBUG,"New job: %s",key);
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
@@ -2472,40 +2465,13 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				ConvertOldJobAdAttrs(procad, false);
 
 					// write submit event to global event log
-
-				std::string owner, ntdomain, simple_name, gjid, submitUserNotes, submitEventNotes;
-				bool use_xml = false;	
-				SubmitEvent jobSubmit;
-				jobSubmit.initFromClassAd(procad);
-				usr_log.Configure(true);
-				clusterad->LookupString(ATTR_ULOG_FILE, simple_name);
-				
-					// userLog is defined in the job ad
-				if (simple_name.size() > 0)	 {
-					
-					strcpy (jobSubmit.submitHost, daemonCore->privateNetworkIpAddr());
-					clusterad->LookupString(ATTR_OWNER, owner);
-					clusterad->LookupString(ATTR_NT_DOMAIN, ntdomain);
-					clusterad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-					clusterad->LookupBool(ATTR_ULOG_USE_XML, use_xml);
-					
-					usr_log.setEnableUserLog(true);	
-					usr_log.setUseXML(use_xml);	
-					usr_log.setEnableFsync(doFsync);
-					usr_log.initialize(owner.c_str(), ntdomain.c_str(), simple_name.c_str(),
-						0, 0, 0, gjid.c_str());
-					
-				} else if (has_event_log) {  // EventLog is defined but not UserLog
-					usr_log.setEnableUserLog(false);
--					usr_log.initialize(0,0,0,NULL);
-				}
-				// we only want to write if there is something to write to - either UserLog or 
-				if (has_event_log || (simple_name.size() > 0) ) {
+				if ( write_submit_events ) {
+					SubmitEvent jobSubmit;
+					jobSubmit.initFromClassAd(procad);
 					usr_log.setGlobalCluster(cluster_id);
 					usr_log.setGlobalProc(proc_id);
 					usr_log.writeEvent(&jobSubmit,procad);
 				}
-				
 			}	
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted

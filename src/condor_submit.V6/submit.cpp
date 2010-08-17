@@ -446,6 +446,7 @@ int 	whitespace( const char *str);
 void 	delete_commas( char *ptr );
 void 	compress( MyString &path );
 char const*full_path(const char *name, bool use_iwd=true);
+void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
 void	InsertJobExpr (const char *expr, bool clustercheck = true);
@@ -1044,6 +1045,11 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "\n");
 	}
 
+	if (!DumpClassAdToFile) {
+		if (UserLogSpecified) {
+			log_submit();
+		}
+	}
 
 	if (Quiet) {
 		int this_cluster = -1, job_count=0;
@@ -3702,23 +3708,12 @@ SetLogNotes()
 	if( !LogNotesVal ) {
 		LogNotesVal = condor_param( "SubmitEventNotes" );
 	}
-	if (LogNotesVal) {
-		MyString buffer;
-		(void) buffer.sprintf( "LogNotes = \"%s\"", LogNotesVal);
-		InsertJobExpr( buffer );
-	}
 }
 
 void
 SetUserNotes()
 {
 	UserNotesVal = condor_param( UserNotesCommand, "SubmitEventUserNotes" );
-	if (UserNotesVal) {
-		MyString buffer;
-		(void) buffer.sprintf( "UserNotes = \"%s\"", UserNotesVal);
-		InsertJobExpr( buffer );
-	}
-	
 }
 
 void
@@ -5815,12 +5810,11 @@ queue(int num)
 			// set by normal submit attributes
 		SetForcedAttributes();
 		rval = 0; // assume success
-		SetLogNotes();
-		SetUserNotes();
 		if ( !DumpClassAdToFile ) {
 			rval = SaveClassAd();
 		}
-		
+		SetLogNotes();
+		SetUserNotes();
 
 		switch( rval ) {
 		case 0:			/* Success */
@@ -5891,8 +5885,6 @@ queue(int num)
 			job->fPrint ( DumpFile );
 			fprintf ( DumpFile, "\n" );
 		}
-		
-		
 
 		if ( job_ad_saved == false ) {
 			delete job;
@@ -6591,6 +6583,89 @@ delete_commas( char *ptr )
 
 extern "C" {
 int SetSyscalls( int foo ) { return foo; }
+}
+
+void
+log_submit()
+{
+	 char	 *simple_name;
+
+		// don't write to the EVENT_LOG in condor_submit; that is done by 
+		// the condor_schedd (since submit likely does not have permission).
+	 WriteUserLog usr_log(true);
+	 SubmitEvent jobSubmit;
+
+	 usr_log.setUseXML(UseXMLInLog);
+
+	if( Quiet ) {
+		fprintf(stdout, "Logging submit event(s)");
+	}
+
+	if ( DumpClassAdToFile ) {
+		// we just put some arbitrary string here: it doesn't actually mean 
+		// anything since we will never communicate the resulting ad to 
+		// to anyone (we make the name obviously unresolvable so we know
+		// this was a generated file).
+		strcpy (jobSubmit.submitHost, "localhost-used-to-dump");
+	} else {
+		strcpy (jobSubmit.submitHost, MySchedd->addr());
+	}
+
+	if( LogNotesVal ) {
+		jobSubmit.submitEventLogNotes = LogNotesVal;
+		LogNotesVal = NULL;
+	}
+
+	if( UserNotesVal ) {
+		jobSubmit.submitEventUserNotes = UserNotesVal;
+		UserNotesVal = NULL;
+	}
+
+	for (int i=0; i <= CurrentSubmitInfo; i++) {
+
+		if ((simple_name = SubmitInfo[i].logfile) != NULL) {
+			if( jobSubmit.submitEventLogNotes ) {
+				delete[] jobSubmit.submitEventLogNotes;
+			}
+			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
+
+			if( jobSubmit.submitEventUserNotes ) {
+				delete[] jobSubmit.submitEventUserNotes;
+			}
+			jobSubmit.submitEventUserNotes = strnewp( SubmitInfo[i].usernotes );
+			
+			// we don't know the gjid here, so pass in NULL as the last 
+			// parameter - epaulson 2/09/2007
+			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
+									  0, 0, 0, NULL) ) {
+				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+			} else {
+				// Output the information
+				for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob;
+							j++) {
+					if ( ! usr_log.initialize(SubmitInfo[i].cluster,
+								j, 0, NULL) ) {
+						fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+					} else {
+							// for efficiency, only fsync on the final event
+							// being written to this log
+						bool enable_fsync = j == SubmitInfo[i].lastjob;
+						usr_log.setEnableFsync( enable_fsync );
+
+						if( ! usr_log.writeEvent(&jobSubmit,job) ) {
+							fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+						}
+						if( Quiet ) {
+							fprintf(stdout, ".");
+						}
+					}
+				}
+			}
+		}
+	}
+	if( Quiet ) {
+		fprintf( stdout, "\n" );
+	}
 }
 
 
