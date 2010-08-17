@@ -1146,9 +1146,6 @@ Sock::cancel_connect()
 		// strange behavior on Solaris as well when we re-use a 
 		// socket after a failed connect.  -Todd 8/00
 		
-		// stash away the descriptor so we can compare later..
-	SOCKET old_sock = _sock;
-
 		// now close the underlying socket.  do not call Sock::close()
 		// here, because we do not want all the CEDAR socket state
 		// (like the _who data member) cleared.
@@ -1163,28 +1160,6 @@ Sock::cancel_connect()
 		connect_state.connect_refused = true; // better give up
 		return;
 	}
-
-#ifndef WIN32
-		// make certain our descriptor number has not changed,
-		// because parts of Condor may have stashed the old
-		// socket descriptor into data structures.  So if it has
-		// changed, use dup2() to set it the same as before.
-		// NOTE from Dan 2007-12-13: we have no good way to do this
-		// under windows, and it is not necessary anyway, now that
-		// daemonCore avoids stashing fds.  Get rid of this in the
-		// next development branch.
-	if ( _sock != old_sock ) {
-		if ( dup2(_sock,old_sock) < 0 ) {
-			dprintf(D_ALWAYS,
-				"dup2 failed after a failed connect! errno=%d\n", 
-				errno);
-			connect_state.connect_refused = true; // better give up
-			return;
-		}
-		::closesocket(_sock);
-		_sock = old_sock;
-	}
-#endif
 
 	// finally, bind the socket
 	/* TRUE means this is an outgoing connection */
