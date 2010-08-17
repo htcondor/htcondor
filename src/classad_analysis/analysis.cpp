@@ -72,6 +72,10 @@ ClassAdAnalyzer( bool ras ) :
 ClassAdAnalyzer::
 ~ClassAdAnalyzer( )
 {
+	delete std_rank_condition;
+	delete preempt_rank_condition;
+	delete preempt_prio_condition;
+	delete preemption_req;
 	if( jobReq ) {
 		delete jobReq;
 	}
