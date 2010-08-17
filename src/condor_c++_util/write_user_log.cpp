@@ -457,7 +457,12 @@ WriteUserLog::openFile(
 	(void)  log_as_user;	// Quiet warning
 	int 	fd = 0;
 
-	if ( file && strcmp(file,UNIX_NULL_FILE)==0 ) {
+	if ( file == NULL ) {
+		dprintf( D_ALWAYS, "WriteUserLog::openFile: NULL filename!\n" );
+		return false;
+	}
+
+	if ( strcmp(file,UNIX_NULL_FILE)==0 ) {
 		// special case - deal with /dev/null.  we don't really want
 		// to open /dev/null, but we don't want to fail in this case either
 		// because this is common when the user does not want a log, but
