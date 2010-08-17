@@ -739,11 +739,6 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 							termEvent->subproc );
 		}
 
-		//TEMPTEMP -- do this only when all jobs for the cluster have finished?
-		if ( _jobstateLog ) {
-			_jobstateLog->WriteJobSuccessOrFailure( job );
-		}
-
 		if( job->_scriptPost == NULL ) {
 			bool abort = CheckForDagAbort(job, "job");
 			// if dag abort happened, we never return here!
@@ -813,6 +808,11 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
 		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+
+			// Log job success or failure if necessary.
+		if ( _jobstateLog ) {
+			_jobstateLog->WriteJobSuccessOrFailure( job );
+		}
 	}
 
 	//
@@ -852,8 +852,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
 			// All procs for this job are done.
-			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
-						job->GetJobName() );
+		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
+					job->GetJobName() );
 
 			// if a POST script is specified for the job, run it
 		if (job->_scriptPost != NULL) {
@@ -940,7 +940,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				job->retval = (0 - termEvent->signalNumber);
 			}
 
-			//TEMPTEMP -- log post script failed here?
+				// Log post script success or failure if necessary.
 			if ( _jobstateLog ) {
 				_jobstateLog->WritePostSuccessOrFailure( job );
 			}
@@ -997,6 +997,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 			job->retval = 0;
 
+				// Log post script success or failure if necessary.
 			if ( _jobstateLog ) {
 				_jobstateLog->WritePostSuccessOrFailure( job );
 			}
@@ -2055,10 +2056,7 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 					  event->subproc, recovStr );
 	}
 
-	//TEMPTEMP -- need to generate POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS "events" in the jobstate.log file...
-	//TEMPTEMP -- print to jobstate log here??
-	//TEMPTEMP -- shit -- I need to remove the "ULOG" from the beginning of the event type...
-	//TEMPTEMP -- oh, yeah -- we also have to filter out events pegasus doesn't care about...
+		// Log this event if necessary.
 	if ( _jobstateLog && node ) {
 		_jobstateLog->WriteEvent( event, node );
 	}

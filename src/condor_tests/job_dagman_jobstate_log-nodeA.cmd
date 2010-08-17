@@ -6,4 +6,4 @@ error        = $(nodename).err
 log          = job_dagman_jobstate_log-nodeA.log
 Notification = NEVER
 +pegasus_site = "local"
-queue
+queue 2

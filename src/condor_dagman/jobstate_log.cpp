@@ -56,10 +56,6 @@ void
 JobstateLog::WriteEvent( const ULogEvent *event, const Job *node )
 {
 	ASSERT( node );
-        //TEMPTEMP -- need to generate POST_SCRIPT_STARTED and POST_SCRIPT_SUCCESS "events" in the jobstate.log file...
-		//TEMPTEMP -- print to jobstate log here??
-		//TEMPTEMP -- shit -- I need to remove the "ULOG" from the beginning of the event type...
-		//TEMPTEMP -- oh, yeah -- we also have to filter out events pegasus doesn't care about...
 
 	const char *eventName = NULL;
 	switch ( event->eventNumber ) {

@@ -1,11 +1,11 @@
 JOBSTATE_LOG job_dagman_jobstate_log.dag.jobstate.log
 
-# This job fails, but the post script succeeds.
+# This job queues two procs that fail, but the post script succeeds.
 Job NodeA job_dagman_jobstate_log-nodeA.cmd
 Script Pre NodeA job_dagman_jobstate_log-pre.pl $(JOB)
 Script Post NodeA job_dagman_jobstate_log-post.pl $(JOB)
 
-# The job queues two procs.
+# The job queues two procs that succeed.
 Job NodeB job_dagman_jobstate_log-nodeB.cmd
 Script Pre NodeB job_dagman_jobstate_log-pre.pl $(JOB)
 Script Post NodeB job_dagman_jobstate_log-post.pl $(JOB)
