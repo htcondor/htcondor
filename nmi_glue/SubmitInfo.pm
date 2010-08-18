@@ -40,7 +40,6 @@ our %build_and_test_sets = (
 	# If you don't specify what platforms you'd like built, then this is the
 	# list to which we default.
 	'official_ports' => [
-		'hppa_hpux_11',
 		'ia64_rhas_3',
 		'ppc64_sles_9',
 		'ppc_aix_5.2-pl5',
