@@ -1045,8 +1045,12 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "\n");
 	}
 
-	if (!DumpClassAdToFile) {
-		if (UserLogSpecified) {
+	// CRUFT Before 7.5.4, condor_submit wrote the submit event to the
+	// user log. If the schedd is older than that, we need to write
+	// the submit event here.
+	if (!DumpClassAdToFile && UserLogSpecified && MySchedd->version()) {
+		CondorVersionInfo vers( MySchedd->version() );
+		if ( !vers.built_since_version( 7, 5, 4 ) ) {
 			log_submit();
 		}
 	}
@@ -3703,17 +3707,19 @@ SetDAGManJobId()
 void
 SetLogNotes()
 {
-	LogNotesVal = condor_param( LogNotesCommand );
-	// just in case the user forgets the underscores
-	if( !LogNotesVal ) {
-		LogNotesVal = condor_param( "SubmitEventNotes" );
+	LogNotesVal = condor_param( LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES );
+	if ( LogNotesVal ) {
+		InsertJobExprString( ATTR_SUBMIT_EVENT_NOTES, LogNotesVal );
 	}
 }
 
 void
 SetUserNotes()
 {
-	UserNotesVal = condor_param( UserNotesCommand, "SubmitEventUserNotes" );
+	UserNotesVal = condor_param( UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES );
+	if ( UserNotesVal ) {
+		InsertJobExprString( ATTR_SUBMIT_EVENT_USER_NOTES, UserNotesVal );
+	}
 }
 
 void
@@ -5802,6 +5808,8 @@ queue(int num)
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
 		SetVMParams();
+		SetLogNotes();
+		SetUserNotes();
 
 			// This must come after all things that modify the input file list
 		FixupTransferInputFiles();
@@ -5813,8 +5821,6 @@ queue(int num)
 		if ( !DumpClassAdToFile ) {
 			rval = SaveClassAd();
 		}
-		SetLogNotes();
-		SetUserNotes();
 
 		switch( rval ) {
 		case 0:			/* Success */
@@ -6612,12 +6618,14 @@ log_submit()
 	}
 
 	if( LogNotesVal ) {
-		jobSubmit.submitEventLogNotes = LogNotesVal;
+		jobSubmit.submitEventLogNotes = strnewp( LogNotesVal );
+		free( LogNotesVal );
 		LogNotesVal = NULL;
 	}
 
 	if( UserNotesVal ) {
-		jobSubmit.submitEventUserNotes = UserNotesVal;
+		jobSubmit.submitEventUserNotes = strnewp( UserNotesVal );
+		free( UserNotesVal );
 		UserNotesVal = NULL;
 	}
 
