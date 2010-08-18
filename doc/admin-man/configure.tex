@@ -5448,16 +5448,19 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:FlockNegotiatorHosts} 
 \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}]
-  This macro defines a list of negotiator host names for pools in which
-  the \Condor{schedd} should attempt to run jobs.  If not set, the
-  \Condor{schedd} will query the collectors for the addresses of the
-  negotiators.  If set, then the negotiators must be specified in order,
-  corresponding to the \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} list.
+  Defines a comma and/or space separated list of \Condor{negotiator} host
+  names for pools in which the \Condor{schedd} should attempt to run jobs.
+  If not set,
+  the \Condor{schedd} will query the \Condor{collector} daemons for 
+  the addresses of the \Condor{negotiator} daemons.
+  If set, then the \Condor{negotiator} daemons must be specified in order,
+  corresponding to the list set by \MacroNI{FLOCK\_COLLECTOR\_HOSTS}.
   In the typical case, where each pool
-  has the collector and negotiator running on the same machine,
+  has the \Condor{collector} and \Condor{negotiator} running on the 
+  same machine,
   \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} should have the same definition as
   \MacroUNI{FLOCK\_COLLECTOR\_HOSTS}.  This configuration value is also
-  typically used as a macro for adding the negotiator to the relevant
+  typically used as a macro for adding the \Condor{negotiator} to the relevant
   authorization lists.
 
 \label{param:FlockCollectorHosts}
