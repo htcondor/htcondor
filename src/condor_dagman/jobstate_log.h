@@ -29,13 +29,16 @@
 // no changes to the format of the output should be made without
 // consulting the Pegasus developers.
 
+// Note: if a jobstate.log file is specified, failing to write to the
+// file is a fatal error.
+
 #include "condor_event.h"
 #include "job.h"
 
 class JobstateLog {
 public:
 	/** Constructor.
-	TEMPTEMP -- document
+		@param The name of the jobstate.log file to write to.
 	*/
 	JobstateLog( const char *jobstateLogFile );
 
@@ -43,39 +46,61 @@ public:
 	*/
 	~JobstateLog();
 
-	//TEMPTEMP -- document
+	/** Write the DAGMAN_STARTED "event".
+		@param The Condor ID of the DAGMan job itself.
+	*/
 	void WriteDagmanStarted( const CondorID &DAGManJobId );
 
-	//TEMPTEMP -- document
-	//TEMPTEMP -- don't return void??
+	/** Write an actual event.  Note that not all events will be written
+		-- only the ones that Pegasus cares about.
+		@param The event.
+		@param The DAG node corresponding to the event.
+	*/
 	void WriteEvent( const ULogEvent *event, const Job *node );
 
-	//TEMPTEMP -- document
+	/** Write the JOB_SUCCESS or JOB_FAILURE "event".
+		@param The DAG node corresponding to the "event".
+	*/
 	void WriteJobSuccessOrFailure( const Job *node );
 
-	//TEMPTEMP -- document
+	/** Write the POST_SCRIPT_STARTED "event".
+		@param The DAG node corresponding to the "event".
+	*/
 	void WritePostStart( const Job *node );
 
-	//TEMPTEMP -- document
+	/** Write the POST_SCRIPT_SUCCESS or POST_SCRIPT_FAILURE "event".
+		@param The DAG node corresponding to the "event".
+	*/
 	void WritePostSuccessOrFailure( const Job *node );
 
-	//TEMPTEMP -- document
+	/** Write the DAGMAN_FINISHED "event".
+		@param The DAGMan exit code.
+	*/
 	void WriteDagmanFinished( int exitCode );
 
-	//TEMPTEMP -- document
+	/** Get the jobstate.log file.
+		@return The jobstate.log file we're writing to.
+	*/
 	const char *LogFile() { return _jobstateLogFile; }
 
 private:
-	//TEMPTEMP -- document
+	/** Write an event to the jobstate.log file.
+		@param The DAG node corresponding to the "event".
+		@param The event name.
+		@param The Condor ID string (or other data).
+	*/
 	void Write( const Job *node, const char *eventName,
 				const char *condorID );
 
-	//TEMPTEMP -- document
+	/** Write an event to the jobstate.log file.
+		@param The string we want to write to the file.
+	*/
 	void Write( const MyString &info );
 
-	//TEMPTEMP -- document
+		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
 
+		// The names of the events we're going to write.
 	static const char *SUBMIT_NAME;
 	static const char *EXECUTE_NAME;
 	static const char *GLOBUS_SUBMIT_NAME;

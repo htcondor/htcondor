@@ -377,7 +377,10 @@ class Job {
 	*/
 	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
-	//TEMPTEMP -- document
+	/** Get the Pegasus site for this node.
+		@return The Pegasus site (can be "local"; if no site is specified,
+			the value will be "-").
+	*/
 	const char *PegasusSite() const;
 
     /** */ CondorID _CondorID;

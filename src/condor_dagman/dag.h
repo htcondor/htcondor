@@ -1008,7 +1008,7 @@ class Dag {
 		// collide).
 	int _recoveryMaxfakeID;
 
-		//TEMPTEMP -- document
+		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog *_jobstateLog;
 };
 

@@ -32,6 +32,44 @@ $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_jobstate_log.dag.jobstate.log");
 
+# Note: we must find these lines *in the specified order*.
+@outlines = ('^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
+	'^\d+ NodeA SUBMIT \d+.\d local -$',
+	'^\d+ NodeA SUBMIT \d+.\d local -$',
+	'^\d+ NodeA EXECUTE \d+.\d local -$',
+	'^\d+ NodeA EXECUTE \d+.\d local -$',
+	'^\d+ NodeA JOB_TERMINATED \d+.\d local -$',
+	'^\d+ NodeA JOB_TERMINATED \d+.\d local -$',
+	'^\d+ NodeA JOB_FAILURE 2 local -$',
+	'^\d+ NodeA POST_SCRIPT_STARTED - local -$',
+	'^\d+ NodeA POST_SCRIPT_TERMINATED \d+.0 local -$',
+	'^\d+ NodeA POST_SCRIPT_SUCCESS - local -$',
+	'^\d+ NodeB SUBMIT \d+.\d viz -$',
+	'^\d+ NodeB SUBMIT \d+.\d viz -$',
+	'^\d+ NodeB EXECUTE \d+.\d viz -$',
+	'^\d+ NodeB EXECUTE \d+.\d viz -$',
+	'^\d+ NodeB JOB_TERMINATED \d+.\d viz -$',
+	'^\d+ NodeB JOB_TERMINATED \d+.\d viz -$',
+	'^\d+ NodeB JOB_SUCCESS 0 viz -$',
+	'^\d+ NodeB POST_SCRIPT_STARTED - viz -$',
+	'^\d+ NodeB POST_SCRIPT_TERMINATED \d+.0 viz -$',
+	'^\d+ NodeB POST_SCRIPT_SUCCESS - viz -$',
+	'^\d+ NodeC SUBMIT \d+.0 - -$',
+	'^\d+ NodeC EXECUTE \d+.0 - -$',
+	'^\d+ NodeC JOB_TERMINATED \d+.0 - -$',
+	'^\d+ NodeC JOB_SUCCESS 0 - -$',
+	'^\d+ NodeC POST_SCRIPT_STARTED - - -$',
+	'^\d+ NodeC POST_SCRIPT_TERMINATED \d+.0 - -$',
+	'^\d+ NodeC POST_SCRIPT_FAILURE - - -$',
+	'^\d+ NodeC SUBMIT \d+.0 - -$',
+	'^\d+ NodeC EXECUTE \d+.0 - -$',
+	'^\d+ NodeC JOB_TERMINATED \d+.0 - -$',
+	'^\d+ NodeC JOB_SUCCESS 0 - -$',
+	'^\d+ NodeC POST_SCRIPT_STARTED - - -$',
+	'^\d+ NodeC POST_SCRIPT_TERMINATED \d+.0 - -$',
+	'^\d+ NodeC POST_SCRIPT_SUCCESS - - -$',
+	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 0 \*\*\*$');
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -112,7 +150,36 @@ $success = sub
 		}
 	}
 
-	#TEMPTEMP -- check jobstate.log file here
+	foreach $name (@outfiles) {
+		$outindex = 0;
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+			$target = $outlines[$outindex];
+			if( $line =~ /$target/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				$outindex++;
+				if ($outindex > $#outlines) {
+					$passed = 1;
+					break;
+				}
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed: missing output line $target\n",1);
+			$diditpass = 0;
+		}
+	}
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";

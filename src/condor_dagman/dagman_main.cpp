@@ -380,7 +380,6 @@ main_config()
 void
 main_shutdown_fast()
 {
-	//TEMPTEMP -- make sure dagman.dag is not null?
 	if ( dagman.dag->GetJobstateLog() ) {
 		dagman.dag->GetJobstateLog()->WriteDagmanFinished( EXIT_RESTART );
 	}

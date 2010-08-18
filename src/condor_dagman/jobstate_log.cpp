@@ -20,9 +20,10 @@
 
 #include "condor_common.h"
 #include "condor_string.h"  /* for strnewp() */
-#include "jobstate_log.h"
-#include "debug.h"
 #include "MyString.h"
+#include "debug.h"
+#include "jobstate_log.h"
+#include "dagman_main.h"
 
 const char *JobstateLog::SUBMIT_NAME = "SUBMIT";
 const char *JobstateLog::EXECUTE_NAME = "EXECUTE";
@@ -137,7 +138,6 @@ JobstateLog::WritePostSuccessOrFailure( const Job *node )
 {
 	ASSERT( node );
 
-	//TEMPTEMP -- make sure retval is the right thing here...
 	const char *eventName = node->retval == 0 ? POST_SCRIPT_SUCCESS_NAME :
 				POST_SCRIPT_FAILURE_NAME;
 
@@ -175,7 +175,7 @@ JobstateLog::Write( const MyString &info )
        	debug_printf( DEBUG_QUIET,
 					"Could not open jobstate log file %s for writing.\n",
 					_jobstateLogFile );
-		//TEMPTEMP -- maybe exit here?
+		main_shutdown_graceful();
 		return;
 	}
 

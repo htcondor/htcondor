@@ -65,7 +65,6 @@ ScriptQ::Run( Script *script )
 	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
 		debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
 					  prefix, script->GetNodeName() );
-		//TEMPTEMP --make sure we log it correctly if script is deferred
 		if ( _dag->GetJobstateLog() && script->_post ) {
 			_dag->GetJobstateLog()->WritePostStart( script->GetNode() );
 		}
