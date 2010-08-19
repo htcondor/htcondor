@@ -47,13 +47,12 @@ bool FTEST_strupr(void) {
 }
 
 static bool test_normal_case() {
-	char *up = NULL;
 	emit_test("Does a lowercase string get converted to upper in place?");
 	char input[1024];
 	sprintf(input, "%s", "lower");
 	emit_input_header();
 	emit_param("STRING", input);
-	up = strupr(input);
+	strupr(input);
 	emit_output_expected_header();
 	emit_retval("LOWER");
 	emit_output_actual_header();
