@@ -37,6 +37,7 @@ DCMsg::DCMsg(int cmd):
 	m_deadline( 0 ),
 	m_raw_protocol( false )
 {
+	setDeadlineTime(time(NULL)+DEFAULT_SHORT_COMMAND_DEADLINE);
 }
 
 DCMsg::~DCMsg() {
