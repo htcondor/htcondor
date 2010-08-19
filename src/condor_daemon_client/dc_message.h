@@ -106,11 +106,13 @@ public:
 
 		// Set the time past which attempts to deliver this message
 		// should be aborted.  0 means no deadline.
+		// The default deadline is now + DEFAULT_SHORT_COMMAND_DEADLINE.
 	void setDeadlineTime(time_t deadline) {
 		m_deadline = deadline;
 	}
 		// Set the time from now past which attempts to deliver this message
 		// should be aborted.  timeout<0 means no deadline.
+		// The default deadline timeout is DEFAULT_SHORT_COMMAND_DEADLINE.
 	void setDeadlineTimeout(int timeout);
 
 		// Set to true to use raw CEDAR protocol with no security negotiation

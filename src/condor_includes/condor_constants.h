@@ -135,4 +135,6 @@ static const size_t IP_STRING_BUF_SIZE = 16;
 
 #define MAX_PARAM_LEN 1024
 
+#define DEFAULT_SHORT_COMMAND_DEADLINE 600
+
 #endif /* CONDOR_CONSTANTS_H */
