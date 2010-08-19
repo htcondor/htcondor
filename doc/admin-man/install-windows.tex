@@ -44,8 +44,7 @@ To subscribe, follow the directions given at
 
 \begin{itemize}
 
-\item Condor for Windows requires Windows 2000 SP4, Windows XP SP2, or 
-a more recent version.
+\item Condor for Windows requires Windows 2000 SP4, Windows XP SP2, or later.
 
 \item 300 megabytes of free disk space is recommended.  Significantly more 
 disk space could be desired to be able to run jobs with large data files.
@@ -186,19 +185,6 @@ and choosing options within the following steps.
 	 some basic information about your new pool:
      \begin{description}
      \item[Name of the pool]
-     \item[hostname] of this machine.
-%  Derek hath declared the Statistics not worthy of prime time.
-%     \item[Do you want to keep statistics?]
-%       Answer yes or no, as appropriate.
-%       If yes, then the maximum amount of data accumulated will
-%       be 10 Mbytes.
-%       A configurable quantity, \Macro{POOL\_HISTORY\_MAX\_STORAGE}
-%       sets the maximum amount of data, and it
-%       defaults to 10 Mbytes.
-%       If no, then the Condor View client will not have data to display.
-     \item[Size of pool]
-       Condor needs to know if this a Personal Condor installation,
-       or if there will be more than one machine in the pool.
 \index{Windows!installation!Personal Condor}
 \index{Personal Condor}
        A Personal Condor pool
@@ -222,65 +208,70 @@ and choosing options within the following steps.
      only execute submitted jobs, or both.
      The common case is both, so the default is both.
 
-\item[STEP 4: Where will Condor be installed?]
+     Condor will execute submitted jobs on machines based on
+     a preference given at installation.
+     Three options are given, and the first is most commonly used
+     by Condor pools.
+     This specification may be changed or refined in
+     the machine ClassAd requirements attribute.
 
-\index{Windows!installation!location of files}
-The next step is where the destination of the Condor files will be
-decided.
-It is recommended that Condor be installed in the location shown as the default in the dialog box:
-\verb@C:\Condor@.
+     The three choices:
+     \begin{description}
+     \item[After 15 minutes of no console activity and low CPU activity.]
+     \item[Always run Condor jobs.]
+     \item[After 15 minutes of no console activity.]
+     \end{description}
 
-Installation on the local disk is chosen for several reasons.
+\index{Console activity}
+     Console activity is the use of the mouse or keyboard.  For instance,
+	 if you are reading this document on line, and are using either the
+	 mouse or the keyboard to change your position, you are generating
+	 Console activity.
 
-The Condor services run as local system, and within Microsoft Windows, local system has no network privileges.
-Therefore, for Condor to operate, Condor should be installed on a local hard drive as opposed to a network drive (file server).
+\index{CPU activity}
+     Low CPU activity is defined as a load of less than 30\Percent
+	 (and is configurable in your \File{condor\_config} file).  If you have
+	 a multiple processor machine, this is the average percentage of
+	 CPU activity for both processors.
 
-The second reason for installation on the local disk is that
-the Windows usage of drive letters has implications for where
-Condor is placed.
-The drive letter used must be not change, even when different users are
-logged in.
-Local drive letters do not change under normal operation of Windows.
+	For testing purposes, it is often helpful to use use the Always run Condor
+	jobs option.  For production mode, however, most people chose the
+	After 15 minutes of no console activity and low CPU activity.
 
-While it is strongly discouraged, it may be possible to place Condor on a hard drive that is not local,  if a dependency is added to the service control manager
-such that Condor starts after the required file services
-are available.
+     This step is omitted if Condor jobs are always run as
+     the option chosen in STEP 9.
 
-%  !! goes in C:/condor   (default)
-%  !! advice is really should go on local hard drive,
-%  as opposed to a network drive (also called file server)
-%  Because,
-%    1. Condor runs as local system, and accesses to a network
-%      drive can't be authenticated  -- local system has
-%      no network privileges.
-%    2.  it is likely that you don't have this set up:
-%    (and you need it to make it work)
-%    you can add a dependency in the service control manager
-%    that condor should start after the file services are
-%    available
-%    3. drive letters are "system-wide"
-%    Must have dedicated letter (for all users), that remains
-%    intact for all time, or condor won't know where
-%    things are and can't get access (without its "letter")
+     If Condor is executing a job and the user returns,
+	 Condor will immediately suspend the job, and after five minutes
+	 Condor will decide what to do with the partially completed job.
+     There are currently two options for the job.
 
+     \begin{description}
+     \item[The job is killed 5 minutes after your return.]
+     The job is suspended immediately once there is console activity.
+     If the console activity continues, then the job is
+     vacated (killed) after 5 minutes. 
+     Since this version does not include check-pointing, the job will
+     be restarted from the beginning at a later time.
+     The job will be placed back into the queue.
+     \item[ Suspend job, leaving it in memory.]
+     The job is suspended immediately.  At a later time, when the
+	 console activity has stopped for ten minutes, the execution of
+	 Condor job will be resumed (the job will be unsuspended).
+	 The drawback to this option is that since the job will remain
+	 in memory, it will occupy swap space.  In many instances, however,
+	 the amount of swap space that the job will occupy is small.
+     \end{description}
 
-\item[STEP 5: Where is the Java Virtual Machine?]
-	While not required, it is possible for Condor to run jobs in the
-	Java universe. In order for Condor to have support for java,
-	you must supply a path to \verb@java.exe@ on your system. The
-	installer will tell you if the path is invalid before proceeding
-	to the next step. To disable the Java universe, simply leave
-	this field blank.
+%    Advice on which to choose goes here.
+     So which one do you choose?  Killing a job is less intrusive
+	 on the workstation owner than leaving it in memory for a later time.
+     A suspended job left in memory will require swap space,
+     which could possibly be a scarce resource.
+     Leaving a job in memory, however, has the benefit that accumulated
+     run time is not lost for a partially completed job.
 
-\item[STEP 6: Where should Condor send e-mail if things go wrong?]
-
-     Various parts of Condor will send e-mail to a Condor administrator
-     if something goes wrong and requires human attention.
-     You specify the e-mail address and the SMTP relay host
-     of this administrator.  Please pay close attention to this email
-	 since it will indicate problems in your Condor pool.
-
-\item[STEP 7: The domain.]
+\item[STEP 4: The domain.]
 
 % not really used right now.  "Things that suck about NT."
 % UNIX has 2 domains:  file system domain and user-ID domain
@@ -289,12 +280,28 @@ are available.
      This step is omitted for the installation of Personal Condor.
 
      Enter the machine's accounting (or UID) domain.
-	 On this version of Condor for Windows, this setting only used for User
+	 On this version of Condor for Windows, this setting is only used for User
 	 priorities (see section~\ref{sec:UserPrio} on
 	 page~\pageref{sec:UserPrio}) and to form a default email address for
 	 the user.
 
-\item[STEP 8: Access permissions.]
+\item[STEP 5: Where should Condor send e-mail if things go wrong?]
+
+     Various parts of Condor will send e-mail to a Condor administrator
+     if something goes wrong and requires human attention.
+     You specify the e-mail address and the SMTP relay host
+     of this administrator.  Please pay close attention to this email
+	 since it will indicate problems in your Condor pool.
+
+\item[STEP 6: Where is the Java Virtual Machine?]
+	While not required, it is possible for Condor to run jobs in the
+	Java universe. In order for Condor to have support for java,
+	you must supply a path to \verb@java.exe@ on your system. The
+	installer will tell you if the path is invalid before proceeding
+	to the next step. To disable the Java universe, simply leave
+	this field blank.
+
+\item[STEP 7: Access permissions.]
      This step is omitted for the installation of Personal Condor.
 
      Machines within the Condor pool will need
@@ -335,70 +342,93 @@ are available.
 	 section~\ref{sec:Host-Security}
 	 on page~\pageref{sec:Host-Security}.
 
-\item[STEP 9: Job Start Policy.]
-     Condor will execute submitted jobs on machines based on
-     a preference given at installation.
-     Three options are given, and the first is most commonly used
-     by Condor pools.
-     This specification may be changed or refined in
-     the machine ClassAd requirements attribute.
+\item[STEP 8: VM Universe.]
+     Condor can be configured to run jobs on VMware Server on Windows.
 
-     The three choices:
-     \begin{description}
-     \item[After 15 minutes of no console activity and low CPU activity.]
-     \item[Always run Condor jobs.]
-     \item[After 15 minutes of no console activity.]
-     \end{description}
+     In addition to having VMware Server installed, Condor also needs
+     Perl installed to run VM universe jobs on Windows.
 
-\index{Console activity}
-     Console activity is the use of the mouse or keyboard.  For instance,
-	 if you are reading this document on line, and are using either the
-	 mouse or the keyboard to change your position, you are generating
-	 Console activity.
-
-\index{CPU activity}
-     Low CPU activity is defined as a load of less than 30\Percent
-	 (and is configurable in your \File{condor\_config} file).  If you have
-	 a multiple processor machine, this is the average percentage of
-	 CPU activity for both processors.
-
-	For testing purposes, it is often helpful to use use the Always run Condor
-	jobs option.  For production mode, however, most people chose the
-	After 15 minutes of no console activity and low CPU activity.
-
-\item[STEP 10: Job Vacate Policy.]
-     This step is omitted if Condor jobs are always run as
-     the option chosen in STEP 9.
-
-     If Condor is executing a job and the user returns,
-	 Condor will immediately suspend the job, and after five minutes
-	 Condor will decide what to do with the partially completed job.
-     There are currently two options for the job.
+     The resources available for VM universe jobs can be tuned with these settings.
 
      \begin{description}
-     \item[The job is killed 5 minutes after your return.]
-     The job is suspended immediately once there is console activity.
-     If the console activity continues, then the job is
-     vacated (killed) after 5 minutes. 
-     Since this version does not include check-pointing, the job will
-     be restarted from the beginning at a later time.
-     The job will be placed back into the queue.
-     \item[ Suspend job, leaving it in memory.]
-     The job is suspended immediately.  At a later time, when the
-	 console activity has stopped for ten minutes, the execution of
-	 Condor job will be resumed (the job will be unsuspended).
-	 The drawback to this option is that since the job will remain
-	 in memory, it will occupy swap space.  In many instances, however,
-	 the amount of swap space that the job will occupy is small.
+     \item[Version]
+     This value is extraneous and can be left to the default.
+     \item[Maximum Memory]
+     Maximum memory each VM run on the target machine.
+     \item[Maximum Number of VMs]
+     Number of VMs that can be run in parallel on the target machine.
+     \item[Networking Support]
+     The VMware instances can be configured to use network support. Four options exist.
+          \begin{itemize}
+          \item None: No networking support.
+          \item NAT: Network address translation.
+          \item Bridged: Bridged mode.
+          \item NAT and Bridged: Allow both methods.
+          \end{itemize}
+     \item[Path to Perl Executable]
+     The path to where Perl is installed.
      \end{description}
 
-%    Advice on which to choose goes here.
-     So which one do you choose?  Killing a job is less intrusive
-	 on the workstation owner than leaving it in memory for a later time.
-     A suspended job left in memory will require swap space,
-     which could possibly be a scarce resource.
-     Leaving a job in memory, however, has the benefit that accumulated
-     run time is not lost for a partially completed job.
+\item[STEP 9: HDFS.]
+     Condor is able to run HDFS in either name node or data node mode.
+
+     Running HDFS requires Java to be installed and Condor must know where the installation is.
+     Running HDFS in data node mode also requires the installation of Cygwin, and the path
+     to the Cygwin directory must be added to the global PATH environment variable.
+
+     HDFS has several configuration options that must be filled in to be used.
+     \begin{description}
+     \item[Primary Name Node]
+     The address of the primary name node.
+     \item[Name Node Port]
+     The port the name node is listening on.
+     \item[Name Node Web Port]
+     The port the name node's web interface is bound to.
+     It should be different from the name node's main port.
+     \end{description}
+
+\item[STEP 10: Where will Condor be installed?]
+
+\index{Windows!installation!location of files}
+The next step is where the destination of the Condor files will be
+decided.
+It is recommended that Condor be installed in the location shown as the default in the dialog box:
+\verb@C:\Condor@, which is selected when you click the Install button. This is due to several hard coded
+paths in scripts and configuration files. Clicking the Custom button will allow you to change the install
+directory.
+
+Installation on the local disk is chosen for several reasons.
+
+The Condor services run as local system, and within Microsoft Windows, local system has no network privileges.
+Therefore, for Condor to operate, Condor should be installed on a local hard drive as opposed to a network drive (file server).
+
+The second reason for installation on the local disk is that
+the Windows usage of drive letters has implications for where
+Condor is placed.
+The drive letter used must be not change, even when different users are
+logged in.
+Local drive letters do not change under normal operation of Windows.
+
+While it is strongly discouraged, it may be possible to place Condor on a hard drive that is not local,  if a dependency is added to the service control manager
+such that Condor starts after the required file services
+are available.
+
+%  !! goes in C:/condor   (default)
+%  !! advice is really should go on local hard drive,
+%  as opposed to a network drive (also called file server)
+%  Because,
+%    1. Condor runs as local system, and accesses to a network
+%      drive can't be authenticated  -- local system has
+%      no network privileges.
+%    2.  it is likely that you don't have this set up:
+%    (and you need it to make it work)
+%    you can add a dependency in the service control manager
+%    that condor should start after the file services are
+%    available
+%    3. drive letters are "system-wide"
+%    Must have dedicated letter (for all users), that remains
+%    intact for all time, or condor won't know where
+%    things are and can't get access (without its "letter")
 
 \item[STEP 11: Review entered information.]
      Check that the entered information is correctly entered.
@@ -447,6 +477,11 @@ set ARGS=%ARGS% VMVERSION="server1.4"
 set ARGS=%ARGS% VMMEMORY="128"
 set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
 set ARGS=%ARGS% VMNETWORKING="N"
+set ARGS=%ARGS% HADOOP="N"
+set ARGS=%ARGS% NAMENODE=""
+set ARGS=%ARGS% NAMEDATA="HDFS_NAMENODE"
+set ARGS=%ARGS% NAMEPORT="5000"
+set ARGS=%ARGS% NAMEWEBPORT="4000"
 
 msiexec /qb /l* condor-install-log.txt /i condor-7.1.0-winnt50-x86.msi %ARGS%
 \end{verbatim}
@@ -557,6 +592,21 @@ will cause the installer to enable VM Universe jobs on the target machine.
 \item[PERLLOCATION]
 defines the path to \Prog{Perl} on the target machine. This is required in
 order to use the \SubmitCmd{vm} universe.
+
+\item[HADOOP = $<$ Y \Bar\ N $>$]
+determines if HDFS is run.
+
+\item[NAMEDATA $<$ HDFS\_DATANODE \Bar\ HDFS\_NAMENODE $>$]
+mode HDFS runs in.
+
+\item[NAMENODE]
+address of the primary name node.
+
+\item[NAMEPORT]
+port the primary name node listens to.
+
+\item [NAMEWEBPORT]
+port the name node web interface is bound to.
 \end {description}
 
 After defining each of these properties for the MSI installer, the
