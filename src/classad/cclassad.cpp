@@ -93,8 +93,10 @@ int cclassad_match( struct cclassad *a, struct cclassad *b )
 	}
 
 	if(!cclassad_evaluate_to_bool(b,expr,&result)) {
-		free(expr);
-		if(!result) return 0;
+		if(!result) {
+			free(expr);
+			return 0;
+		}
 	}
 	free(expr);
 
