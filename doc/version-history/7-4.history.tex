@@ -107,6 +107,16 @@ This problem has existed since before Condor 7.0.0.
 \item \Condor{preen} was not able to clean up files in the \MacroNI{EXECUTE}
 directory when in privsep mode.
 
+% gittrac #1589
+\item A problem was fixed that could cause a Condor daemon that
+  connects to other daemons via CCB to permanently run out of space
+  for more registered sockets until restarted.  This problem appeared
+  in the logs as the following message:
+
+\begin{verbatim}
+file descriptor safety level exceeded
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
