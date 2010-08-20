@@ -5041,14 +5041,6 @@ SetGridParams()
 		has_userdatafile = true;
 	}
 	
-	if (has_userdata && has_userdatafile) {
-		// two attributes appear in the same submit file
-		fprintf(stderr, "\nERROR: Parameters \"%s\" and \"%s\" exist in same Amazon job\n", 
-						AmazonUserData, AmazonUserDataFile);
-		DoCleanup( 0, 0, NULL );
-		exit(1);
-	}
-
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
