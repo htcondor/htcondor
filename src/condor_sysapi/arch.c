@@ -23,6 +23,10 @@
 #include "match_prefix.h"
 #include "sysapi.h"
 
+#if defined(Darwin)
+#include <sys/sysctl.h>
+#endif
+
 /* ok, here's the deal with these. For some reason, gcc on IRIX is just old
 	enough to where it doesn't understand things like static const FALSE = 0.
 	So these two things used to be defined as the above, but it would fail with
@@ -198,25 +202,26 @@ sysapi_translate_arch( const char *machine, const char *sysname )
 		sprintf( tmp, "INTEL" );
 	}
 	else if( !strcmp(machine, "i386") ) { //LDAP entry
-/* force INTEL only for now, until I resolve what to do about the mess
-between I386 and X86_64 detection on macosx. */
-#if 0 && defined(Darwin)
-/* According to the web, uname -a (including the uname call) will return
-	i386 ALWAYS, regardless if the OS is actually on an x86_64 machine. So here
-	we use a more platform specific method to determine it */
-#include <sys/sysctl.h>
-		{
-			int ret;
-			int val;
-			size_t len = sizeof(int);
+#if defined(Darwin)
+		/* Mac OS X often claims to be i386 in uname, even if the
+		 * hardware is x86_64 and the OS can run 64-bit binaries.
+		 * We'll base our architecture name on the default build
+		 * target for gcc. In 10.5 and earlier, that's i386.
+		 * On 10.6, it's x86_64.
+		 * The value we're querying is the kernel version.
+		 * 10.6 kernels have a version that starts with "10."
+		 * Older versions have a lower first number.
+		 */
+		int ret;
+		char val[32];
+		size_t len = sizeof(val);
 
-			/* assume x86 */
-			sprintf( tmp, "INTEL" );
-			ret = sysctlbyname("hw.optional.x86_64", &val, &len, NULL, 0);
-			if (ret == 0 && val == 1) {
-				/* but we could be proven wrong */
-				sprintf( tmp, "X86_64" );
-			}
+		/* assume x86 */
+		sprintf( tmp, "INTEL" );
+		ret = sysctlbyname("kern.osrelease", &val, &len, NULL, 0);
+		if (ret == 0 && strncmp(val, "10.", 3) == 0) {
+			/* but we could be proven wrong */
+			sprintf( tmp, "X86_64" );
 		}
 #else
 		sprintf( tmp, "INTEL" );
