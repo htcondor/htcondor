@@ -30,7 +30,8 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		$(CONDOR_AUTH_OBJ) $(CONDOR_TYPE_OBJ) condor_rw.o \
 		SafeMsg.o condor_crypt.o $(CONDOR_CRYPT_OBJ) CryptKey.o \
 		condor_secman.o cedar_no_ckpt.o \
-		shared_port_server.o shared_port_endpoint.o shared_port_client.o
+		shared_port_server.o shared_port_endpoint.o shared_port_client.o \
+		condor_ipv6.o condor_ipaddress.o
 /*		autoTest.o manTest.o */
 
 library_target(libcedar.a,$(OBJ))

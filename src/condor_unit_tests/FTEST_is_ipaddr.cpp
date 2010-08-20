@@ -35,6 +35,7 @@ static bool test_upper_bound(void);
 static bool test_lower_bound(void);
 static bool test_only_wildcard(void);
 static bool test_start_wildcard(void);
+static bool test_ipv6_normal(void);
 
 bool FTEST_is_ipaddr(void) {
 		// beginning junk for getPortFromAddr(() {
@@ -50,9 +51,32 @@ bool FTEST_is_ipaddr(void) {
 	driver.register_function(test_lower_bound);
 	driver.register_function(test_only_wildcard);
 	driver.register_function(test_start_wildcard);
+	//driver.register_function(test_ipv6_normal); // TODO: Enabled. As of 2010-08-20 is_ipaddr doesn't yet know about ipv6 addresses
 	
 		// run the tests
 	return driver.do_all_functions();
+}
+
+static bool test_ipv6_normal() {
+	emit_test("Is simple IPv6 input identified correctly?");
+	char* input = strdup( "fe80::21e:4fff:fef0:90c7" );
+	emit_input_header();
+	emit_param("IP", input);
+	struct in_addr ipv6;
+	unsigned char* byte = (unsigned char*) &ipv6;
+	int result = is_ipaddr( input, &ipv6);
+	//free(input);
+	emit_output_expected_header();
+	emit_retval("%s", tfstr(TRUE));
+	emit_output_actual_header();
+	emit_retval("%s", tfstr(result));
+	if (result!=TRUE) {
+		emit_result_failure(__LINE__);
+		return false;
+	}
+	emit_result_success(__LINE__);
+	free(input);
+	return true;
 }
 
 static bool test_normal_case() {
