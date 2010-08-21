@@ -1020,6 +1020,9 @@ mergeClassAd (CollectorHashTable &hashTable,
     {	 	
 		dprintf (D_ALWAYS, "%s: Failed to merge update for ** \"%s\" because "
 				 "no existing ad matches.\n", adType, hashString.Value() );
+			// We should _NOT_ delete new_ad if we return NULL
+			// because our caller will delete it in that case.
+		return NULL;
 	}
 	else
     {
