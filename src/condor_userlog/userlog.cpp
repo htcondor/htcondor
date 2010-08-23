@@ -362,13 +362,17 @@ read_log(const char *filename, int select_cluster, int select_proc)
 {
 	ReadUserLog ulog;
 	ULogEventOutcome result;
-	ULogEvent *event;
+	ULogEvent *event=NULL;
 	char hash[40];
 	HashTable<HashKey, ExecuteEvent *> ExecRecs(1024, hashFunction);
 	HashTable<HashKey, CheckpointedEvent *> CkptRecs(1024, hashFunction);
-
-	ulog.initialize(filename);
-
+	
+	if (ulog.initialize(filename,0,false,true)==false) {
+		fprintf(stderr,
+			"Error: unable to read log file.\n");
+			exit(0);			
+			}		
+	
 	while ((result = ulog.readEvent(event)) != ULOG_NO_EVENT) {
 		if ((result == ULOG_OK) &&
 			(select_cluster == -1 || select_cluster == event->cluster) &&
@@ -586,7 +590,14 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			}
 			}
 		} else {
-			delete event;
+			
+			if (event!=NULL) delete event;
+			if ((result==ULOG_RD_ERROR) || (result == ULOG_UNK_ERROR)) {
+				fprintf(stderr,
+						"Error: unable to read log file.\n");
+				exit(0);
+			
+			}
 		}
 	}
 
