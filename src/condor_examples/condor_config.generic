@@ -2404,6 +2404,16 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 
 ##
 ##--------------------------------------------------------------------
+##  KBDD - keyboard activity detection daemon
+##--------------------------------------------------------------------
+##  When the KBDD starts up, it can place it's address (IP and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need an additional "-n host:port" command line option.  This
+##  feature can be turned off by commenting out this setting.
+KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
+
+##
+##--------------------------------------------------------------------
 ##  condor_ssh_to_job
 ##--------------------------------------------------------------------
 # NOTE: condor_ssh_to_job is not supported under Windows.
