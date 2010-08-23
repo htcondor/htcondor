@@ -1,10 +1,13 @@
-Changes for version 1.0.9 (Released ????-??-??)
+Changes for version 1.0.9 (Released 2010-08-23)
 * Fix interval() function to omit leading zeros and spaces.
 * Allow semicolons to separate function arguments when
   _useOldClassAdSemantics is true.
+* Don't recognize octal or hex literals when _useOldClassAdSemantics is true.
 * Parse negative numbers as such, rather than as negated positive numbers.
 * When parsing integers larger than 32 bits, use INT_MAX and INT_MIN
   rather than truncating to 32 bits.
+* Fix Literal::MakeRelTime(time_t), which used random data to construct a
+  time when given a non-negative value.
 
 Changes for version 1.0.8 (Released 2010-06-10)
 * Set a version (1.0.0) on the .so (thanks Steve Traylen)
