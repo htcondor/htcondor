@@ -200,11 +200,11 @@ const char *filename;
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif
-		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,%p) failed\n",
-													filename, &statfsbuf );
-		dprintf(D_ALWAYS, "errno = %d\n", errno );
-
 		if (errno != EOVERFLOW) {
+			dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,%p) failed\n",
+													filename, &statfsbuf );
+			dprintf(D_ALWAYS, "errno = %d\n", errno );
+
 			return(0);
 		}
 
@@ -212,7 +212,7 @@ const char *filename;
 		// there are more free blocks than can be represented
 		// in a long.  Let's lie and make it INT_MAX - 1.
 
-		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs overflowed, setting to %d\n", (INT_MAX - 1));
+		dprintf(D_FULLDEBUG, "sysapi_disk_space_raw: statfs overflowed, setting to %d\n", (INT_MAX - 1));
 		statfsbuf.f_bavail = (INT_MAX - 1);	
 		statfsbuf.f_bsize = 1024; // this isn't set if result < 0, guess
 	}
