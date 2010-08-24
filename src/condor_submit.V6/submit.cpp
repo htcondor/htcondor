@@ -1474,6 +1474,8 @@ SetExecutable()
 
 	if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
 		InsertJobExpr ("WantIOProxy = TRUE");
+		buffer.sprintf("%s = TRUE", ATTR_JOB_REQUIRES_SANDBOX);
+		InsertJobExpr (buffer);
 	}
 
 	InsertJobExpr ("CurrentHosts = 0");

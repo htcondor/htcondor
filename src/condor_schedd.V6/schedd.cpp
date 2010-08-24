@@ -2126,16 +2126,16 @@ jobIsSandboxed( ClassAd * ad )
 	if( ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr ) &&
 	    never_create_sandbox_expr == TRUE ) {
 	  // As this function stands now, we could return the result of 
-	  // evaluating ATTR_WANT_IO_PROXY here.  (We must create a sandbox for  
-	  // parallel universe jobs because the scripts and chirp depend on one.)
+	  // evaluating ATTR_JOB_REQUIRES_SANDBOX here.  (We must create a sandbox for  
+	  // some jobs, including parallel universe jobs, because the scriptsdepend on one.)
 	  // But if the sandbox logic becomes more complicated in the
 	  // future --- notably, if there might be a case in which
 	  // we'd want to always create a sandbox for non-PU jobs even if
 	  // ATTR_NEVER_CREATE_JOB_SANDBOX were set --- then we'd want
 	  // to be sure to ensure that we weren't in such a case.
-	  int want_io_proxy_expr = 0;
+	  int job_requires_sandbox_expr = 0;
 
-	  create_sandbox = (ad->EvalBool(ATTR_WANT_IO_PROXY, NULL, want_io_proxy_expr) && want_io_proxy_expr);
+	  create_sandbox = (ad->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) && job_requires_sandbox_expr);
 	}
 
 	int univ = CONDOR_UNIVERSE_VANILLA;
@@ -2146,7 +2146,6 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_GRID:
-	case CONDOR_UNIVERSE_PARALLEL: // MPI scripts require a spool directory
 		return false;
 		break;
 
@@ -2154,8 +2153,10 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_VM:
+	case CONDOR_UNIVERSE_PARALLEL: // MPI scripts require a spool directory, so create_sandbox will always be true
 	  // True by default for jobs in these universes, but false if
-	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad.
+	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad and 
+	  // ATTR_JOB_REQUIRES_SANDBOX is not.
 		return create_sandbox;
 		break;
 
