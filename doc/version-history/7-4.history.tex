@@ -75,6 +75,15 @@ as the rest of Condor configuration variables can be.
 
 \begin{itemize}
 
+\item
+When using file transfer semantics,
+if the job exits in such a manner so as to not produce all
+output files specified in \SubmitCmd{transfer\_output\_files},
+then the files which are not able to be transferred back due to non-existence
+will appear as zero length files.
+An example of when this occurred would be the job dumping core
+and then being placed on hold.
+
 % gittrac 1185
 \item
 Fetch work hooks to prepare are now invoked as the \Login{condor} user,
