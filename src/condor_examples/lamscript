@@ -80,7 +80,7 @@ export CONDOR_CONTACT_FILE
 
 # The second field in the contact file is the machine name
 # that condor_ssh knows how to use
-sort -n +0 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
+sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
 
 
 # start the lam environment
