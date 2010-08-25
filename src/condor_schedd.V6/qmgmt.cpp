@@ -3537,12 +3537,14 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			        ATTR_OWNER);
 			Q_SOCK->getReliSock()->put(-1);
 			Q_SOCK->getReliSock()->end_of_message();
+			free(path);
 			return -1;
 		}
 		if (!OwnerCheck(&ad, Q_SOCK->getOwner())) {
 			dprintf(D_ALWAYS, "SendSpoolFileIfNeeded: OwnerCheck failure\n");
 			Q_SOCK->getReliSock()->put(-1);
 			Q_SOCK->getReliSock()->end_of_message();
+			free(path);
 			return -1;
 		}
 		hash = ickpt_share_get_hash(ad);
@@ -3564,6 +3566,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			{
 				Q_SOCK->getReliSock()->put(1);
 				Q_SOCK->getReliSock()->end_of_message();
+				free(path);
 				return 0;
 			}
 		}
