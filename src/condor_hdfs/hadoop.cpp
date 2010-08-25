@@ -571,6 +571,7 @@ MyString Hadoop::runDFSAdmin( const char * cmd) {
 	       dprintf( D_ALWAYS, "Failed to execute %s %s\n",
                      arglist.GetArg( arglist.Count()-2), 
                      arglist.GetArg( arglist.Count()-1) );
+		   free(args);
 	       return "";
 	}
 
