@@ -34,6 +34,8 @@ Emitter::Emitter() {
 	failed_tests = 0;
 	aborted_tests = 0;
 	skipped_tests = 0;
+	buf = 0;
+	test_buf = 0;
 }
 
 Emitter::~Emitter() {
