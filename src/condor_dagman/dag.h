@@ -258,7 +258,7 @@ class Dag {
 	/** Process a held event for a job.
 		@param The job corresponding to this event.
 	*/
-	void ProcessHeldEvent(Job *job);
+	void ProcessHeldEvent(Job *job, const ULogEvent *event);
 
 	/** Process a released event for a job.
 		@param The job corresponding to this event.
@@ -631,7 +631,13 @@ class Dag {
 	// node, unless it is an absolute path, in which case we ignore it.
 	void PropogateDirectoryToAllNodes(void);
 
-  private:
+	/** Set the maximum number of job holds before a node is declared
+		a failure.
+		@param the maximum number of job holds before failure
+	*/
+	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
+
+  protected:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
 	// defaults to ".".
@@ -1002,6 +1008,10 @@ class Dag {
 		// initialize the ID for subsequent fake events so IDs don't
 		// collide).
 	int _recoveryMaxfakeID;
+
+		// The maximum number of times a node job can go on hold before
+		// we declare it a failure and remove it; 0 means no limit.
+	int _maxJobHolds;
 };
 
 #endif /* #ifndef DAG_H */

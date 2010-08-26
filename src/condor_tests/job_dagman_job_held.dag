@@ -1,0 +1,6 @@
+CONFIG job_dagman_job_held.config
+
+JOB A job_dagman_job_held-nodeA.cmd
+
+# This is a parallel job.
+JOB B job_dagman_job_held-nodeB.cmd

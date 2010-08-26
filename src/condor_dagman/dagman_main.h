@@ -189,6 +189,10 @@ class Dagman {
 	SubmitDagDeepOptions _submitDagDeepOpts;
 
     bool Config();
+
+		// The maximum number of times a node job can go on hold before
+		// we declare it a failure and remove it; 0 means no limit.
+	int _maxJobHolds;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
