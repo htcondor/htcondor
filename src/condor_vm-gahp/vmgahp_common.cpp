@@ -520,7 +520,7 @@ bool canSwitchUid(void)
  * that wish to have the old behavior, where stderr and stdout were
  * both added to the same StringList.
  */
-int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList * cmd_in,
+int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringList * cmd_in,
 		   StringList *cmd_err, bool merge_stderr_with_stdout)
 {
 	int result = 0;
@@ -536,10 +536,20 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	int stdout_pipes[2];
 	int stdin_pipes[2];
 	int pid;
-	if( is_root ) {
+	bool use_privsep = false;
+	switch ( priv ) {
+	case PRIV_ROOT:
 		prev = set_root_priv();
-	}else {
+	case PRIV_USER:
+	case PRIV_USER_FINAL:
 		prev = set_user_priv();
+		if ( privsep_enabled() && (job_user_uid != get_condor_uid()) ) {
+			use_privsep = true;
+		}
+		break;
+	default:
+		// Stay as Condor user
+		;
 	}
 #if defined(WIN32)
 	if((cmd_in != NULL) || (cmd_err != NULL))
@@ -547,7 +557,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	    vmprintf(D_ALWAYS, "Invalid use of systemCommand() in Windows.\n");
 	    return -1;
 	  }
-	//if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	//if ( use_privsep ) {
 	//	fp = privsep_popen(args, "r", want_stderr, job_user_uid);
 	//}
 	//else {
@@ -583,7 +593,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	    return -1;
 	  }
 
-	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	if ( use_privsep ) {
 	  if(!psforkexec.init())
 	    {
 	      vmprintf(D_ALWAYS,
@@ -649,7 +659,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 
 	    MyString cmd = args_array[0];
 
-	    if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	    if ( use_privsep ) {
 	    
 	      ArgList al;
 	      psforkexec.in_child(cmd, al);
@@ -680,7 +690,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	      }
 	  }
 
-	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	if ( use_privsep ) {
 	  FILE* _fp = psforkexec.parent_begin();
 	  privsep_exec_set_uid(_fp, job_user_uid);
 	  privsep_exec_set_path(_fp, args_array[0]);
