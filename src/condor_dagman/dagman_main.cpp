@@ -1,4 +1,3 @@
-//TEMPTEMP -- implementing gittrac #1480 (remove jobs held too many times)
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

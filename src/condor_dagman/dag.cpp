@@ -1,4 +1,3 @@
-//TEMPTEMP -- wrong number of job procs held -- aborted needs to count against held jobs if job is held
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -619,6 +618,15 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 	if ( job ) {
 		DecrementJobCounts( job );
 
+			// This code is here because if a held job is removed, we
+			// don't get a released event for that job.  This may not
+			// work exactly right if some procs of a cluster are held
+			// and some are not.  wenger 2010-08-26
+		if ( job->_jobProcsOnHold > 0 ) {
+			_numHeldJobProcs--;
+			job->_jobProcsOnHold--;
+		}
+
 			// Only change the node status, error info,
 			// etc., if we haven't already gotten an error
 			// from another job proc in this job cluster
@@ -1133,19 +1141,19 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 		return;
 	}
 
-	debug_printf( DEBUG_VERBOSE, "DIAG HELD event for %d.%d.%d\n", event->cluster, event->proc, event->subproc );//TEMPTEMP
-
 	_numHeldJobProcs++;
 
-	job->_heldCount++;//TEMPTEMP
-	if ( _maxJobHolds > 0 && job->_heldCount >= _maxJobHolds ) {
-		debug_printf( DEBUG_VERBOSE, "Job proc %d.%d.%d has been held DAGMAN_MAX_JOB_HOLDS (%d) times ... TEMPTEMP add more here...\n", event->cluster, event->proc, event->subproc, _maxJobHolds );
-		//TEMPTEMP -- delete the node job...
+	job->_timesHeld++;
+	job->_jobProcsOnHold++;
+	if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
+		debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
+					"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
+					"proc(s) for this node will now be removed\n",
+					event->cluster, job->GetJobName(), _maxJobHolds );
 		RemoveBatchJob( job );
 	}
 }
 
-//TEMPTEMP -- hmm -- if the job goes on hold and then we remove it, is there still a released event?
 //---------------------------------------------------------------------------
 void
 Dag::ProcessReleasedEvent(Job *job) {
@@ -1154,6 +1162,7 @@ Dag::ProcessReleasedEvent(Job *job) {
 		return;
 	}
 
+	job->_jobProcsOnHold--;
 	_numHeldJobProcs--;
 }
 

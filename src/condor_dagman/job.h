@@ -441,11 +441,15 @@ class Job {
 		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
 
-		//TEMPTEMP -- change this to an ExtArray or something for parallel jobs?
-	int _heldCount;
+		// The number of times this job has been held.  (Note: the current
+		// implementation counts holds for all procs in a multi-proc cluster
+		// together -- that should get changed eventually.)
+	int _timesHeld;
 
-		//TEMPTEMP -- change this to an ExtArray or something for parallel jobs?
-	bool _isHeld;
+		// The number of jobs procs of this node that are currently held.
+		// (Note: we may need to track the hold state of each proc in a
+		// cluster separately to correctly deal with multi-proc clusters.)
+	int _jobProcsOnHold;
 
 private:
 
