@@ -1162,8 +1162,9 @@ Dag::ProcessReleasedEvent(Job *job) {
 		return;
 	}
 
-	job->_jobProcsOnHold--;
 	_numHeldJobProcs--;
+
+	job->_jobProcsOnHold--;
 }
 
 //---------------------------------------------------------------------------
