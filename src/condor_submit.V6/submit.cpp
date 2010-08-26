@@ -2115,38 +2115,25 @@ SetImageSize()
 					executablesize);
 	InsertJobExpr (buffer);
 
-	if( JobUniverse == CONDOR_UNIVERSE_VM) {
+	tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
+
+	if( tmp ) {
+		disk_usage = atoi(tmp);
+
+		if( disk_usage < 1 ) {
+			fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		free( tmp );
+	} else {
 		// In vm universe, when a VM is suspended, 
 		// memory being used by the VM will be saved into a file. 
 		// So we need as much disk space as the memory.
-		int vm_disk_space = executablesize + TransferInputSize + VMMemory*1024;
-
-		// In vmware vm universe, vmware disk may be a sparse disk or 
-		// snapshot disk. So we can't estimate the disk space in advanace 
-		// because the sparse disk or snapshot disk will grow up 
-		// as a VM runs. So we will add 100MB to disk space.
-		if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
-			vm_disk_space += 100*1024;
-		}
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
-	}else {
-		tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
-
-		if( tmp ) {
-			disk_usage = atoi(tmp);
-
-			if( disk_usage < 1 ) {
-				fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-			}
-			free( tmp );
-		} else {
-			disk_usage = executablesize + TransferInputSize;
-		}
-
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
+		// For non-vm jobs, VMMemory is 0.
+		disk_usage = executablesize + TransferInputSize + VMMemory*1024;
 	}
+	buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
 	InsertJobExpr (buffer);
 
 
