@@ -657,7 +657,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	    }
 
 
-	    execvp(args_array[0], args_array);
+	    execvp(cmd.Value(), args_array);
 	    vmprintf(D_ALWAYS, "Could not execute %s: %s\n", args_array[0], strerror(errno));
 	    exit(-1);
 	  }
