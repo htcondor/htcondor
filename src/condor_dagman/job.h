@@ -381,13 +381,13 @@ class Job {
 		@return The Pegasus site (can be "local"; if no site is specified,
 			the value will be "-").
 	*/
-	const char *PegasusSite() /*TEMPTEMP? const*/;
+	const char *PegasusSite();
 
 	//TEMPTEMP -- document -- should these really be const?
-	int PegasusSequenceNum() /*TEMPTEMP? const*/;
+	int PegasusSequenceNum();
 	
 	//TEMPTEMP -- document -- should these really be const?
-	void ResetPegasusSequenceNum() /*TEMPTEMP? const*/ { _pegasusSeqNum = 0; }
+	void ResetPegasusSequenceNum() { _pegasusSeqNum = 0; }
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
@@ -541,10 +541,7 @@ private:
 
 		// The Pegasus site for this node ("-" if nothing is specified;
 		// can also be "local").
-		// This is mutable because it's only caching the value, so we
-		// don't have to waste time checking the submit file every time
-		// PegasusSite() is called.
-	/*TEMPTEMP? mutable*/ char *_pegasusSite;
+	char *_pegasusSite;
 
 		//TEMPTEMP -- document
 	int _pegasusSeqNum;

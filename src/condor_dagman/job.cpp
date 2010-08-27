@@ -895,7 +895,7 @@ Job::LogMonitorFailed()
 
 //---------------------------------------------------------------------------
 const char *
-Job::PegasusSite() //TEMPTEMP const
+Job::PegasusSite()
 {
 	if ( !_pegasusSite ) {
 		MyString tmpPegasusSite = MultiLogFiles::loadValueFromSubFile(
@@ -919,7 +919,7 @@ Job::PegasusSite() //TEMPTEMP const
 
 //---------------------------------------------------------------------------
 int
-Job::PegasusSequenceNum() /*TEMPTEMP? const*/
+Job::PegasusSequenceNum()
 {
 	if ( _pegasusSeqNum == 0 ) {
 		_pegasusSeqNum = _nextPegasusSeqNum++;
