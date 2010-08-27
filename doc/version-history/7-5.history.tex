@@ -203,6 +203,11 @@ via the grid\_resource submit attribute.
 \item The new job ClassAd attribute \AdAttr{NumPids} is the total number of 
  child processes a running job has.
 
+%gittrac #1480
+\item The new configuration variable \MacroNI{DAGMAN\_MAX\_JOB\_HOLDS}
+specifies the maximum number of times a DAG node job is allowed to go
+on hold.  See section~\ref{param:DAGManMaxJobHolds} for details.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

@@ -8445,6 +8445,20 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
   in \File{.condor.sub} are considered nested DAGs.
   The default value if not defined is \Expr{True}.
 
+\label{param:DAGManMaxJobHolds}
+\item[\Macro{DAGMAN\_MAX\_JOB\_HOLDS}]
+  An integer value defining the maximum number of times a node job is
+  allowed to go on hold -- once a job has gone on hold this number of
+  times, it will be removed from the queue.  (For example, if the value
+  is 2, any job that has gone on hold twice will be removed.)  At this
+  time, this feature is not fully compatible with multi-proc node jobs
+  -- the number of holds of any proc in the cluster count towards the
+  total, rather than counting each proc individually.  So if you are
+  using multi-proc node jobs, you may want to use a higher value for
+  this setting.  A value of 0 allows the job to go on hold any number
+  of times.
+  The default value if not defined is 100.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
