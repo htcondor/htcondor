@@ -93,8 +93,10 @@ static bool test_null() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -110,8 +112,10 @@ static bool test_empty_string() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -127,8 +131,10 @@ static bool test_current_directory() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -144,8 +150,10 @@ static bool test_simple_path_1() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -161,8 +169,10 @@ static bool test_simple_path_2() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -178,8 +188,10 @@ static bool test_simple_directory_1() {
 	char *expect = "/";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -195,8 +207,10 @@ static bool test_simple_directory_2() {
 	char *expect = "\\";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -212,8 +226,10 @@ static bool test_directory_and_file_1() {
 	char *expect = "foo";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -229,8 +245,10 @@ static bool test_directory_and_file_2() {
 	char *expect = "/foo";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -246,8 +264,10 @@ static bool test_root_directory() {
 	char *expect = "\\foo";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -263,8 +283,10 @@ static bool test_directory_and_directory() {
 	char *expect = "foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -280,8 +302,10 @@ static bool test_directory_and_directory_in_root() {
 	char *expect = "/foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -297,8 +321,10 @@ static bool test_forward_slash() {
 	char *expect = "/";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -314,8 +340,10 @@ static bool test_backslash() {
 	char *expect = "\\";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -331,8 +359,10 @@ static bool test_period_and_forward_slash_1() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -348,8 +378,10 @@ static bool test_period_and_backslash_1() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -365,8 +397,10 @@ static bool test_period_and_forward_slash_2() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -382,8 +416,10 @@ static bool test_period_and_backslash_2() {
 	char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -399,8 +435,10 @@ static bool test_backslash_and_period() {
 	char *expect = "\\";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -416,8 +454,10 @@ static bool test_forward_slash_and_file_extension() {
 	char *expect = "foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -433,8 +473,10 @@ static bool test_backslash_and_file_extension() {
 	char *expect = "foo\\bar";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -450,8 +492,10 @@ static bool test_period_and_forward_slash() {
 	char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -467,8 +511,10 @@ static bool test_period_and_backslash() {
 	char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -484,8 +530,10 @@ static bool test_period_and_forward_slash_with_special_file() {
 	char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -501,8 +549,10 @@ static bool test_period_and_backslash_with_special_file() {
 	char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -518,8 +568,10 @@ static bool test_double_forward_slash() {
 	char *expect = "//foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
@@ -535,8 +587,10 @@ static bool test_double_backslash() {
 	char *expect = "\\\\foo\\bar";
 	emit_input_header();
 	emit_param("STRING", param);
-	char *path = condor_dirname(param);
 	emit_output_expected_header();
+	emit_retval("%s", expect);
+	char *path = condor_dirname(param);
+	emit_output_actual_header();
 	emit_retval("%s", path);
 	if(strcmp(path, expect) != MATCH) {
 		free(path);
