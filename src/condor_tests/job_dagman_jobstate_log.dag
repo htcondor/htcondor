@@ -20,5 +20,3 @@ Parent NodeA Child NodeB
 Parent NodeB Child NodeC
 
 #TEMPTEMP -- add nodes that generate fake globus and grid submit events
-
-#TEMPTEMP -- add submit files that have fake pegasus_site entries

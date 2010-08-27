@@ -56,22 +56,22 @@ public:
 		@param The event.
 		@param The DAG node corresponding to the event.
 	*/
-	void WriteEvent( const ULogEvent *event, const Job *node );
+	void WriteEvent( const ULogEvent *event, Job *node );
 
 	/** Write the JOB_SUCCESS or JOB_FAILURE "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WriteJobSuccessOrFailure( const Job *node );
+	void WriteJobSuccessOrFailure( Job *node );
 
 	/** Write the POST_SCRIPT_STARTED "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WritePostStart( const Job *node );
+	void WritePostStart( Job *node );
 
 	/** Write the POST_SCRIPT_SUCCESS or POST_SCRIPT_FAILURE "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WritePostSuccessOrFailure( const Job *node );
+	void WritePostSuccessOrFailure( Job *node );
 
 	/** Write the DAGMAN_FINISHED "event".
 		@param The DAGMan exit code.
@@ -89,7 +89,7 @@ private:
 		@param The event name.
 		@param The Condor ID string (or other data).
 	*/
-	void Write( const Job *node, const char *eventName,
+	void Write( Job *node, const char *eventName,
 				const char *condorID );
 
 	/** Write an event to the jobstate.log file.

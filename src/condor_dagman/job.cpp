@@ -1,3 +1,5 @@
+//TEMPTEMP -- pegasus sequence numbers must continue for rescue DAG! (put nextPegasusSeqNum in rescue DAG?)
+//TEMPTEMP -- retries should get new sequence number
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -31,6 +33,7 @@
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 int Job::NOOP_NODE_PROCID = INT_MAX;
+int Job::_nextPegasusSeqNum = 1;
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the queue_t enum
@@ -170,7 +173,9 @@ void Job::Init( const char* jobName, const char* directory,
 	_logFileIsXml = false;
 
 	_noop = false;
+
 	_pegasusSite = NULL;
+	_pegasusSeqNum = 0;
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
@@ -890,7 +895,7 @@ Job::LogMonitorFailed()
 
 //---------------------------------------------------------------------------
 const char *
-Job::PegasusSite() const
+Job::PegasusSite() //TEMPTEMP const
 {
 	if ( !_pegasusSite ) {
 		MyString tmpPegasusSite = MultiLogFiles::loadValueFromSubFile(
@@ -910,4 +915,15 @@ Job::PegasusSite() const
 	}
 
 	return _pegasusSite;
+}
+
+//---------------------------------------------------------------------------
+int
+Job::PegasusSequenceNum() /*TEMPTEMP? const*/
+{
+	if ( _pegasusSeqNum == 0 ) {
+		_pegasusSeqNum = _nextPegasusSeqNum++;
+	}
+
+	return _pegasusSeqNum;
 }

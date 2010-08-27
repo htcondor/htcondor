@@ -2100,6 +2100,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
 		node->_CondorID = _defaultCondorId;
+		node->ResetPegasusSequenceNum();//TEMPTEMP?
 		(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 					_nfsLogIsError, recovery, _defaultNodeLog );
 	}
@@ -3257,6 +3258,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		ASSERT( removeResult == 0 );
 	}
 	node->_CondorID = _defaultCondorId;
+	node->ResetPegasusSequenceNum();//TEMPTEMP?
 
 		// sleep for a specified time before submitting
 	if( dm.submit_delay != 0 ) {

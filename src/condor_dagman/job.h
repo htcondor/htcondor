@@ -381,7 +381,13 @@ class Job {
 		@return The Pegasus site (can be "local"; if no site is specified,
 			the value will be "-").
 	*/
-	const char *PegasusSite() const;
+	const char *PegasusSite() /*TEMPTEMP? const*/;
+
+	//TEMPTEMP -- document -- should these really be const?
+	int PegasusSequenceNum() /*TEMPTEMP? const*/;
+	
+	//TEMPTEMP -- document -- should these really be const?
+	void ResetPegasusSequenceNum() /*TEMPTEMP? const*/ { _pegasusSeqNum = 0; }
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
@@ -538,7 +544,13 @@ private:
 		// This is mutable because it's only caching the value, so we
 		// don't have to waste time checking the submit file every time
 		// PegasusSite() is called.
-	mutable char *_pegasusSite;
+	/*TEMPTEMP? mutable*/ char *_pegasusSite;
+
+		//TEMPTEMP -- document
+	int _pegasusSeqNum;
+
+		//TEMPTEMP -- document
+	static int _nextPegasusSeqNum;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

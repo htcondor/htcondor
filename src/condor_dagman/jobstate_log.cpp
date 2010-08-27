@@ -65,7 +65,7 @@ JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteEvent( const ULogEvent *event, const Job *node )
+JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 {
 	ASSERT( node );
 
@@ -109,7 +109,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, const Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteJobSuccessOrFailure( const Job *node )
+JobstateLog::WriteJobSuccessOrFailure( Job *node )
 {
 	ASSERT( node );
 
@@ -124,7 +124,7 @@ JobstateLog::WriteJobSuccessOrFailure( const Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WritePostStart( const Job *node )
+JobstateLog::WritePostStart( Job *node )
 {
 	ASSERT( node );
 
@@ -134,7 +134,7 @@ JobstateLog::WritePostStart( const Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WritePostSuccessOrFailure( const Job *node )
+JobstateLog::WritePostSuccessOrFailure( Job *node )
 {
 	ASSERT( node );
 
@@ -156,13 +156,13 @@ JobstateLog::WriteDagmanFinished( int exitCode )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::Write( const Job *node, const char *eventName,
+JobstateLog::Write( Job *node, const char *eventName,
 			const char *condorID )
 {
 	MyString info;
 
-	info.sprintf( "%s %s %s %s -", node->GetJobName(), eventName,
-				condorID, node->PegasusSite() );
+	info.sprintf( "%s %s %s %s - %d", node->GetJobName(), eventName,
+				condorID, node->PegasusSite(), node->PegasusSequenceNum() );
 	Write( info );
 }
 
