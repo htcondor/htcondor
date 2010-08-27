@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_io.h"
+#include "std_univ_io.h"
 #include "condor_ckpt_name.h"
 #include "condor_debug.h"
 #include "internet.h"
@@ -204,8 +204,8 @@ int MaxDiscardedRunTime = 3600;
 extern "C" int ExceptCleanup(int,int,char*);
 extern int Termlog;
 
-ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
-ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);
+StdUnivSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
+StdUnivSock	*RSC_MyShadowInit(int rscsock, int errsock);
 int HandleLog();
 void RemoveNewShadowDroppings(char *cluster, char *proc);
 

@@ -25,7 +25,7 @@
 */
 
 #include "condor_common.h"
-#include "condor_io.h"
+#include "std_univ_io.h"
 #include "condor_sys.h"
 #include "condor_debug.h"
 #include "exit.h"
@@ -34,7 +34,7 @@
 #include "condor_netdb.h"
 #include "simplelist.h"
 
-extern	ReliSock* syscall_sock;
+extern	StdUnivSock* syscall_sock;
 
 extern "C" {
 

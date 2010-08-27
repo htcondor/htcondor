@@ -38,12 +38,15 @@
 #include "GCB.h"
 #endif
 
+#ifdef HAVE_EXT_OPENSSL
+#include "condor_crypt_blowfish.h"
+#include "condor_crypt_3des.h"
+#include "condor_md.h"                // Message authentication stuff
+#endif
+
 #if !defined(WIN32)
 #define closesocket close
 #endif
-
-// initialize static data members
-int Sock::timeout_multiplier = 0;
 
 DaemonCoreSockAdapterClass daemonCoreSockAdapter;
 
@@ -55,11 +58,15 @@ Sock::Sock() : Stream() {
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
 	_tried_authentication = false;
-	ignore_timeout_multiplier = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
+
+    crypto_ = NULL;
+    mdMode_ = MD_OFF;
+    mdKey_ = 0;
+
 	m_connect_addr = NULL;
     addr_changed();
 }
@@ -78,6 +85,11 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
+
+    crypto_ = NULL;
+    mdMode_ = MD_OFF;
+    mdKey_ = 0;
+
 	m_connect_addr = NULL;
     addr_changed();
 
@@ -117,6 +129,11 @@ Sock::Sock(const Sock & orig) : Stream() {
 
 Sock::~Sock()
 {
+    delete crypto_;
+	crypto_ = NULL;
+    delete mdKey_;
+	mdKey_ = NULL;
+
 	if ( connect_state.host ) free(connect_state.host);
 	if ( connect_state.connect_failure_reason) {
 		free(connect_state.connect_failure_reason);
@@ -1271,14 +1288,6 @@ int Sock::close()
 #endif
 
 int
-Sock::set_timeout_multiplier(int secs)
-{
-   int old_val = timeout_multiplier;
-   timeout_multiplier = secs;
-   return old_val;
-}
-
-int
 Sock::bytes_available_to_read()
 {
 	/*	Does this platform have FIONREAD? 
@@ -2258,4 +2267,147 @@ Sock::isAuthenticated() const
 		return false;
 	}
 	return strcmp(_fqu,UNAUTHENTICATED_FQU) != 0;
+}
+
+bool 
+Sock::wrap(unsigned char* d_in,int l_in, 
+                    unsigned char*& d_out,int& l_out)
+{    
+    bool coded = false;
+#ifdef HAVE_EXT_OPENSSL
+    if (get_encryption()) {
+        coded = crypto_->encrypt(d_in, l_in, d_out, l_out);
+    }
+#endif
+    return coded;
+}
+
+bool 
+Sock::unwrap(unsigned char* d_in,int l_in,
+                      unsigned char*& d_out, int& l_out)
+{
+    bool coded = false;
+#ifdef HAVE_EXT_OPENSSL
+    if (get_encryption()) {
+        coded = crypto_->decrypt(d_in, l_in, d_out, l_out);
+    }
+#endif
+    return coded;
+}
+
+void Sock::resetCrypto()
+{
+#ifdef HAVE_EXT_OPENSSL
+  if (crypto_) {
+    crypto_->resetState();
+  }
+#endif
+}
+
+bool 
+Sock::initialize_crypto(KeyInfo * key) 
+{
+    delete crypto_;
+    crypto_ = 0;
+	crypto_mode_ = false;
+
+    // Will try to do a throw/catch later on
+    if (key) {
+        switch (key->getProtocol()) 
+        {
+#ifdef HAVE_EXT_OPENSSL
+        case CONDOR_BLOWFISH :
+            crypto_ = new Condor_Crypt_Blowfish(*key);
+            break;
+        case CONDOR_3DES:
+            crypto_ = new Condor_Crypt_3des(*key);
+            break;
+#endif
+        default:
+            break;
+        }
+    }
+
+    return (crypto_ != 0);
+}
+
+bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
+{
+    mdMode_ = mode;
+    delete mdKey_;
+    mdKey_ = 0;
+    if (key) {
+      mdKey_  = new KeyInfo(*key);
+    }
+
+    return init_MD(mode, mdKey_, keyId);
+}
+
+const KeyInfo& Sock :: get_crypto_key() const
+{
+#ifdef HAVE_EXT_OPENSSL
+    if (crypto_) {
+        return crypto_->get_key();
+    }
+#endif
+    ASSERT(0);	// This does not return...
+	return  crypto_->get_key();  // just to make compiler happy...
+}
+
+const KeyInfo& Sock :: get_md_key() const
+{
+#ifdef HAVE_EXT_OPENSSL
+    if (mdKey_) {
+        return *mdKey_;
+    }
+#endif
+    ASSERT(0);
+    return *mdKey_;
+}
+
+
+bool 
+Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
+{
+    bool inited = true;
+#ifdef HAVE_EXT_OPENSSL
+
+    if (key != 0) {
+        inited = initialize_crypto(key);
+    }
+    else {
+        // We are turning encryption off
+        if (crypto_) {
+            delete crypto_;
+            crypto_ = 0;
+			crypto_mode_ = false;
+        }
+        ASSERT(keyId == 0);
+        ASSERT(enable == false);
+        inited = true;
+    }
+
+    // More check should be done here. what if keyId is NULL?
+    if (inited) {
+		if( enable ) {
+				// We do not set the encryption id if the default crypto
+				// mode is off, because setting the encryption id causes
+				// the UDP packet header to contain the encryption id,
+				// which causes a pre 7.1.3 receiver to think that encryption
+				// is turned on by default, even if that is not what was
+				// previously negotiated.
+			set_encryption_id(keyId);
+		}
+		set_crypto_mode(enable);
+    }
+
+#endif /* HAVE_EXT_OPENSSL */
+
+    return inited;
+}
+
+bool
+Sock::canEncrypt()
+{
+	return crypto_ != NULL;
 }

@@ -11,7 +11,7 @@
 #endif
 
 #define StdUnvProgs shadow.std starter.std
-#define StdUnvLibs ckpt syscall_lib
+#define StdUnvLibs io.std ckpt syscall_lib
 
 #if HAVE_EXT_GLOBUS
 #define CreddProgs credd
@@ -324,6 +324,7 @@ condor_object_target(ckpt)
 condor_object_target(syscall_lib)
 
 condor_object_target(io)
+condor_object_target(io.std)
 object_target(target-ccb,ccb)
 #if WANT_OLD_CLASSADS
 object_target(target-classad.old,classad.old)

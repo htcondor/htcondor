@@ -98,7 +98,7 @@ extern sigset_t	ChildSigMask;
 extern NameTable SigNames;
 extern char *ThisHost;
 extern char *InitiatingHost;
-extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
+extern StdUnivSock	*SyscallStream;	// stream to shadow for remote system calls
 extern int EventSigs[];
 int UserProc::proc_index = 1;
 

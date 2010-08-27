@@ -17,34 +17,12 @@
  *
  ***************************************************************/
 
+#ifndef STD_UNIV_IO_H
+#define STD_UNIV_IO_H
 
- 
 #include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_syscall_mode.h"
-#include "condor_sys.h"
-#include "std_univ_io.h"
 
+#include "std_univ_buffers.h"
+#include "std_univ_sock.h"
 
-StdUnivSock *syscall_sock;
-
-static int RSCSock;
-static int ErrSock;
-
-int InDebugMode;
-
-extern "C" {
-
-StdUnivSock *
-RSC_Init( int rscsock, int errsock )
-{
-	RSCSock     = rscsock;
-	syscall_sock = new StdUnivSock();
-	syscall_sock->attach_to_file_desc(rscsock);
-
-	ErrSock = errsock;
-
-	return( syscall_sock );
-}
-
-} /* extern "C" */
+#endif /* STD_UNIV_IO_H */

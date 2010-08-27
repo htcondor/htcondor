@@ -31,10 +31,11 @@
 #include "basename.h"
 #include "internet.h"
 #include "subsystem_info.h"
+#include "std_univ_io.h"
 
 extern int		EventSigs[];
 extern char*	InitiatingHost;
-extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
+extern StdUnivSock	*SyscallStream;	// stream to shadow for remote system calls
 extern char*	UidDomain;				// Machines we share UID space with
 extern bool		TrustUidDomain;	// Should we trust what the submit side claims?
 
