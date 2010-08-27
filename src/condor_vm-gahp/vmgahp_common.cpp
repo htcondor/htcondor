@@ -543,9 +543,11 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	case PRIV_USER:
 	case PRIV_USER_FINAL:
 		prev = set_user_priv();
+#if !defined(WIN32)
 		if ( privsep_enabled() && (job_user_uid != get_condor_uid()) ) {
 			use_privsep = true;
 		}
+#endif
 		break;
 	default:
 		// Stay as Condor user
