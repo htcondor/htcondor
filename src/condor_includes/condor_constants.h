@@ -114,14 +114,12 @@ static const char NiceUserName[] = "nice-user";
 /* Max space needed to hold an IP string, as
  * returned by inet_ntoa().
  */
-// *IPV6* The length extended to 40 
-static const size_t IP_STRING_BUF_SIZE = 40;
+static const size_t IP_STRING_BUF_SIZE = 16;
 
 /* Max space needed to hold a sinful string, as
  * returned by sin_to_string()
  */
-// *IPV6* SINFUL string also extended to 50
-#define SINFUL_STRING_BUF_SIZE 50 
+#define SINFUL_STRING_BUF_SIZE 24
 
 #define MYPROXY_MAX_PASSWORD_BUFLEN 256
 

@@ -2345,14 +2345,6 @@ AS_IF([test "x$enable_kbdd" = xyes],
    AC_SUBST(X11_LIBS,"")
    AC_SUBST(X11_LDFLAGS, "")])
 
-AC_ARG_ENABLE([ipv6],
-  AC_HELP_STRING([--enable-ipv6],
-    [enable IPv6 for TCP/UDP connection (default: no)]),
-  [],
-  [enable_ipv6=no])
-AS_IF([test "x$enable_ipv6" = xyes],
-  [AC_DEFINE([CONDOR_IPV6], [1], [Define if enabling IPV6])])		
-
 AC_ARG_ENABLE([hdfs],
   AC_HELP_STRING([--enable-hdfs],
     [enable hadoop filesystem functionality (default: yes)]),
