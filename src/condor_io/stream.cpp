@@ -220,7 +220,7 @@ Stream::code( unsigned long	&l)
 }
 
 
-#if !defined(__LP64__)
+#if !defined(__LP64__) || defined(Darwin)
 int 
 Stream::code( int64_t	&l)
 {
@@ -1127,7 +1127,7 @@ Stream::put( unsigned long	l)
 }
 
 
-#if !defined(__LP64__)
+#if !defined(__LP64__) || defined(Darwin)
 int 
 Stream::put( int64_t	l)
 {
@@ -1636,7 +1636,7 @@ Stream::get( unsigned long	&l)
 }
 
 
-#if !defined(__LP64__)
+#if !defined(__LP64__) || defined(Darwin)
 int 
 Stream::get( int64_t	&l)
 {

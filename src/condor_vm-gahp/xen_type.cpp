@@ -395,7 +395,7 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
       classad_string += "\"\n";
     }
   input_strings.append(classad_string.Value());
-  int ret = systemCommand(args, true, &output_strings, &input_strings, &error_strings, false);
+  int ret = systemCommand(args, PRIV_ROOT, &output_strings, &input_strings, &error_strings, false);
   error_strings.rewind();
   if(ret != 0)
     {
@@ -438,7 +438,7 @@ VirshType::ResumeFromSoftSuspend(void)
 // 		systemcmd.AppendArg("unpause");
 // 		systemcmd.AppendArg(m_configfile);
 
-// 		int result = systemCommand(systemcmd, true);
+// 		int result = systemCommand(systemcmd, PRIV_ROOT);
 
 		priv_state priv = set_root_priv();
 		virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
@@ -490,7 +490,7 @@ VirshType::SoftSuspend()
 // 	systemcmd.AppendArg("pause");
 // 	systemcmd.AppendArg(m_configfile);
 
-// 	int result = systemCommand(systemcmd, true);
+// 	int result = systemCommand(systemcmd, PRIV_ROOT);
 
 	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
@@ -558,7 +558,7 @@ VirshType::Suspend()
 // 	systemcmd.AppendArg(m_configfile);
 // 	systemcmd.AppendArg(tmpfilename);
 
-// 	int result = systemCommand(systemcmd, true, &cmd_out);
+// 	int result = systemCommand(systemcmd, PRIV_ROOT, &cmd_out);
 
 	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
@@ -630,7 +630,7 @@ VirshType::Resume()
 // 	systemcmd.AppendArg("resume");
 // 	systemcmd.AppendArg(m_suspendfile);
 
-// 	int result = systemCommand(systemcmd, true, &cmd_out);
+// 	int result = systemCommand(systemcmd, PRIV_ROOT, &cmd_out);
 
 	priv_state priv = set_root_priv();
 	int result = virDomainRestore(m_libvirt_connection, m_suspendfile.Value());
@@ -1425,7 +1425,7 @@ VirshType::testXen(VMGahpConfig* config)
 	systemcmd.AppendArg(config->m_vm_script);
 	systemcmd.AppendArg("check");
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, PRIV_ROOT);
 	if( result != 0 ) {
 		vmprintf( D_ALWAYS, "Virsh script check failed:\n" );
 		return false;
@@ -1637,7 +1637,7 @@ VirshType::createISO()
 	systemcmd.AppendArg(tmp_config);
 	systemcmd.AppendArg(tmp_file);
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, m_file_owner);
 	if( result != 0 ) {
 		return false;
 	}
