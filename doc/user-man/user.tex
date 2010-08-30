@@ -1065,11 +1065,11 @@ Condor's File Transfer Mechanism}
 \index{transferring files}
 
 Condor works well without a shared file system.
-The Condor file transfer mechanism is utilized by the user
-when the user submits jobs.
-Condor will transfer any files needed by a job from
+The Condor file transfer mechanism permits the user to select which files are
+transferred and under which circumstances.
+Condor can transfer any files needed by a job from
 the machine where the job was submitted into a
-temporary working directory on the machine where the
+remote scratch directory on the machine where the
 job is to be executed.
 Condor executes the job
 and transfers output back to the submitting machine.
@@ -1078,26 +1078,28 @@ and at what point the output files should be copied back to the
 submitting machine.
 This specification is done within the job's submit description file.
 
-The default behavior of the file transfer mechanism
-varies across the
-different Condor universes, and it differs between UNIX and Windows machines.
-
 %%%%%%%%%%%% 
 \subsubsection{Default Behavior across Condor Universes and Platforms}
 %%%%%%%%%%%%
 
-For jobs submitted under the standard universe,
+The default behavior of the file transfer mechanism
+varies across the different Condor universes,
+and it differs between Unix and Windows machines.
+
+For jobs submitted under the \SubmitCmd{standard} universe,
 the existence of a shared file system is not relevant.
 Access to files (input and output) is handled through Condor's
 remote system call mechanism.
 The executable and checkpoint files are transferred automatically, when
 needed. 
 Therefore, the user does not need to change the submit description
-file if there is no shared file system.
+file if there is no shared file system,
+as the file transfer mechanism is not utilized.
 
-For the vanilla, java, and parallel universes, access to files (including
-the executable) through a shared file system is presumed as a default
-on UNIX machines.
+For the \SubmitCmd{vanilla}, \SubmitCmd{java}, and \SubmitCmd{parallel}
+universes, access to input files and the executable
+through a shared file system is presumed as a default 
+on jobs submitted from Unix machines.
 If there is no shared file system, then Condor's file transfer
 mechanism must be explicitly enabled.
 When submitting a job from a Windows machine,
@@ -1121,83 +1123,90 @@ Therefore, the existence of a shared file system is not relevant.
 \label{sec:file-transfer-if-when}}
 %%%%%%%%%%%%
 
-To enable the file transfer mechanism, two commands are
-placed in the job's submit description file:
+To enable the file transfer mechanism, place two commands
+in the job's submit description file:
 \SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}.
 \index{submit commands!should\_transfer\_files}
 \index{submit commands!when\_to\_transfer\_output}
-An example is:
+In the common case, they will be set as:
 
 \begin{verbatim}
   should_transfer_files = YES
   when_to_transfer_output = ON_EXIT
 \end{verbatim}
 
-The \SubmitCmd{should\_transfer\_files} command specifies
-whether Condor should
-transfer input files from the submit machine to the remote machine
-where the job executes.
-It also specifies whether the output files are transferred 
-back to the submit machine.
+Setting the \SubmitCmd{should\_transfer\_files} command explicitly
+enables or disables the file transfer mechanism.
 The command takes on one of three possible values:
 \begin{enumerate}
 
-\item \verb@YES@: Condor always transfers both input and output files.
+\item \verb@YES@: Condor transfers both the executable and the file
+defined by the \SubmitCmd{input} command from the machine where the job is
+submitted to the remote machine where the job is to be executed.
+The file defined by the \SubmitCmd{output} command as well as any files
+created by the execution of the job are transferred back to the machine
+where the job was submitted.
+When they are transferred and the directory location of the files
+is determined by the command \SubmitCmd{when\_to\_transfer\_output}.
 
 \item \verb@IF_NEEDED@: Condor transfers files if the job is
-matched with (and to be executed on) a machine in a
+matched with and to be executed on a machine in a
 different \Attr{FileSystemDomain} than the
-one the submit machine belongs to.
+one the submit machine belongs to, the same as if 
+\verb@should_transfer_files = YES@.
 If the job is matched with a machine in the local \Attr{FileSystemDomain},
 Condor will not transfer files and relies
-on a shared file system.
+on the shared file system.
 
 \item \verb@NO@: Condor's file transfer mechanism is disabled. 
 
 \end{enumerate}
 
 The \SubmitCmd{when\_to\_transfer\_output} command tells Condor when output
-files are to be transferred back to the submit machine after the job
-has executed on a remote machine.
+files are to be transferred back to the submit machine.
 The command takes on one of two possible values:
 
 \begin{enumerate}
-\item \verb@ON_EXIT@: Condor transfers output files back to the submit
-machine only when the job exits on its own.
+\item \verb@ON_EXIT@: Condor transfers the file defined by the
+\SubmitCmd{output} command,
+ as well as any other files in the remote scratch directory created by the job,
+back to the submit machine only when the job exits on its own.
 
 \item \verb@ON_EXIT_OR_EVICT@:
-Condor will always do the transfer,
-whether the job completes on its own, is preempted by another job, 
-vacates the machine, or is killed.
-As the job completes on its own, files are transferred back
-to the directory where the job was submitted, as expected.
-For the other cases, \emph{files are transferred back at eviction time}.
-These files are placed in
-the directory defined by the configuration
-variable \MacroNI{SPOOL}, not the directory from which the
-job was submitted.
-The transferred files are named using the
+Condor behaves the same as described for the value \verb@ON_EXIT@
+when the job exits on its own. 
+However, if, and each time the job is evicted from a machine,
+\emph{files are transferred back at eviction time}.
+The location is different.
+As the job is then matched and begins running on a potentially different
+machine, the files transferred upon eviction are all transferred
+to the new execute machine.
+Upon eviction,
+the files are placed in a directory within that defined by the configuration
+variable \MacroNI{SPOOL}.
+The directory is named using the
 \Attr{ClusterId} and \Attr{ProcId} job ClassAd attributes. 
-The file name takes the form:
+The directory name takes the form:
 \begin{verbatim}
    cluster<X>.proc<Y>.subproc0
 \end{verbatim}
 where \verb@<X>@ is the value of \Attr{ClusterId}, and 
 \verb@<Y>@ is the value of \Attr{ProcId}. 
-As an example, job 735.0 may produce the file
+As an example, if job 735.0 is evicted, it will produce the directory
 \begin{verbatim}
    $(SPOOL)/cluster735.proc0.subproc0
 \end{verbatim}
 
-This is only useful if partial runs of the job are valuable.
-An example of valuable partial runs is when the application
+This value for \SubmitCmd{when\_to\_transfer\_output}
+is only useful if partial runs of the job are valuable.
+The example of a valuable partial run is when the application
 produces its own checkpoints.
 \end{enumerate}
 
 There is no default value for \SubmitCmd{when\_to\_transfer\_output}.
 If using the file transfer mechanism, 
 this command must be defined.
-If \SubmitCmd{when\_to\_transfer\_output} is specified in the submit
+However, if \SubmitCmd{when\_to\_transfer\_output} is specified in the submit
 description file,
 but \SubmitCmd{should\_transfer\_files} is not, Condor assumes a
 value of \verb@YES@ for \SubmitCmd{should\_transfer\_files}.
@@ -1210,19 +1219,11 @@ value of \verb@YES@ for \SubmitCmd{should\_transfer\_files}.
 would produce undefined file access semantics.
 Therefore, this combination is prohibited by \Condor{submit}.
 
-When submitting from a Unix platform,
-the file transfer mechanism is unused by default.
-If neither \SubmitCmd{when\_to\_transfer\_output} or \SubmitCmd{should\_transfer\_files} 
-are defined, Condor assumes
-\verb@should_transfer_files = NO@.
-
 When submitting from a Windows platform,
-Condor does not provide any way to use a shared file
-system for jobs. 
-Therefore, if 
-neither \SubmitCmd{when\_to\_transfer\_output} or \SubmitCmd{should\_transfer\_files}
-are defined, the file
-transfer mechanism is enabled by default with the following values:
+the file transfer mechanism is enabled by default.
+If the two commands \SubmitCmd{when\_to\_transfer\_output} and
+\SubmitCmd{should\_transfer\_files} are \emph{not} in the job's
+submit description file, then Condor uses the values:
 
 \begin{verbatim}
   should_transfer_files = YES
