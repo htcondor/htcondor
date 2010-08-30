@@ -113,8 +113,21 @@ public:
 
 		/** Once all the jobs are done, and after the optional
 			HOOK_JOB_EXIT has returned, initiate the file transfer.
+			If you call this, you MUST use transferOutputMopUp() afterwards
+			to handle problems the file transfer may have had.
 		*/
 	bool transferOutput( void );
+
+		/** After transferOutput returns, we need to handle what happens
+			if the transfer actually failed. This call is separate from the
+			one above since it allows us to talk to the shadow in the time
+			between the failure of the transfer and the disconnection of the
+			shadow when the starter notifies it of the file transfer error.
+			This call will put the job on hold and cause the shadow to
+			disconnect from the starter if something went wrong. If 
+			the file transfer went right, then it is a noop.
+		*/
+	bool transferOutputMopUp( void );
 
 		/** The last job this starter is controlling has been
    			completely cleaned up.  We don't care, since we just wait
@@ -142,13 +155,31 @@ public:
 		 */
 	void notifyJobPreSpawn( void );
 
-		/** Notify the shadow that the job exited
+		/** Notify the shadow that the job exited. This will not only
+			update the job ad with the termination information of the job,
+			but also write terminate events into the job log, and do the
+			rest of the machinery for when a job finishes and is likely to
+			leave the queue.
+
 			@param exit_status The exit status from wait()
 			@param reason The Condor-defined exit reason
 			@param user_proc The UserProc that was running the job
 		*/
 	bool notifyJobExit( int exit_status, int reason,
 						UserProc* user_proc );
+	
+		/** The sutble distinction between notifyJobTermination() and
+			notifyJobExit() is that notifyJobTermination() will only update the
+			U_TERMINATE attributes in the job ad on the submit machine based
+			upon the exit_status and reason and do nothing else! An example
+			use is when a job coredumps and due to this causes the 
+			file transfer to fail since some files might not exist if 
+			directly specified in transfer_output_files. This allows the
+			job ad to contain the exit status of the job while it is on hold.
+			Basically this is used to preserve the termination of the job in
+			the face of Condor then messing stuff up terribly around it.
+		*/
+	int notifyJobTermination( UserProc* user_proc );
 
 		/** Tell the shadow to log an error event in the user log.
 			@param err_msg A desription of the error
@@ -403,6 +434,10 @@ private:
 	IOProxy io_proxy;
 
 	FileTransfer *filetrans;
+	bool m_ft_rval;
+	FileTransfer::FileTransferInfo m_ft_info;
+	bool m_did_transfer;
+
 
 		// specially made security sessions if we are doing
 		// SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION

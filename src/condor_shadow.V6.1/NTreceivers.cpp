@@ -51,6 +51,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_get_job_info: return "get_job_info";
         case CONDOR_get_user_info: return "get_user_info";
         case CONDOR_job_exit: return "job_exit";
+        case CONDOR_job_termination: return "job_termination";
         case CONDOR_begin_execution: return "begin_execution";
         case CONDOR_open: return "open";
         case CONDOR_close: return "close";
@@ -268,6 +269,31 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return -1;
+	}
+
+	case CONDOR_job_termination:
+	{
+		ClassAd ad;
+		result = ( ad.initFromStream(*syscall_sock) );
+		ASSERT( result );
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+
+		errno = 0;
+		rval = pseudo_job_termination( &ad );
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		result = ( syscall_sock->code(rval) );
+		ASSERT( result );
+		if( rval < 0 ) {
+			result = ( syscall_sock->code( terrno ) );
+			ASSERT( result );
+		}
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+		return 0;
 	}
 
 	case CONDOR_begin_execution:

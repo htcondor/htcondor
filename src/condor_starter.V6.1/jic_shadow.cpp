@@ -66,6 +66,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 	shadow = NULL;
 	shadow_version = NULL;
 	filetrans = NULL;
+	m_did_transfer = false;
 	m_filetrans_sec_session = NULL;
 	m_reconnect_sec_session = NULL;
 	
@@ -370,11 +371,13 @@ JICShadow::Continue( void )
 bool
 JICShadow::transferOutput( void )
 {
-		// make sure we only do this step once.
-	static bool did_transfer = false;
-	if (did_transfer) {
+	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutput(void)\n");
+
+	if (m_did_transfer) {
 		return true;
 	}
+
+	dprintf(D_FULLDEBUG, "JICShadow::transferOutput(void): Transferring...\n");
 
 		// transfer output files back if requested job really
 		// finished.  may as well do this in the foreground,
@@ -416,49 +419,22 @@ JICShadow::transferOutput( void )
 			// by the user, so set_user_priv here.
 		priv_state saved_priv = set_user_priv();
 
+		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
 			// this will block
-		bool rval = filetrans->UploadFiles( true, final_transfer );
+		m_ft_rval = filetrans->UploadFiles( true, final_transfer );
+		m_ft_info = filetrans->GetInfo();
+		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
 		set_priv(saved_priv);
 
-		if( rval ) {
-			FileTransfer::FileTransferInfo ft_info = filetrans->GetInfo();
-			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,ft_info.spooled_files.Value());
-		}
-
-		if( ! rval ) {
-				// Failed to transfer.  See if there is a reason to put
-				// the job on hold.
-			FileTransfer::FileTransferInfo ft_info = filetrans->GetInfo();
-			if(!ft_info.success && !ft_info.try_again) {
-				ASSERT(ft_info.hold_code != 0);
-				notifyStarterError(ft_info.error_desc.Value(), true,
-				                   ft_info.hold_code,ft_info.hold_subcode);
-				return false;
-			}
-
-				// Some other kind of error.  Would like to know
-				// for sure whether this really means we are disconnected
-				// from the shadow, but for now, force the socket to
-				// disconnect by closing it.
-
-				// Please forgive us these hacks
-				// as we forgive those who hack against us
-			static int timesCalled = 0;
-			timesCalled++;
-			if (timesCalled < 5) {
-					dprintf(D_ALWAYS,"File transfer failed, forcing disconnect.\n");
-
-					if (syscall_sock != NULL) {
-							syscall_sock->close();
-					}
-
-					job_cleanup_disconnected = true;
-					return false;
-			}
-
-				// We tried 5 times and kept failing
-				// now just tell the user we're giving up
-			notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
+		if( m_ft_rval ) {
+			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES, 
+							m_ft_info.spooled_files.Value());
+		} else {
+			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
+			// Failed to transfer.
+			// JICShadow::transferOutputMopUp() will figure out what to do
+			// when you call it after JICShadow::transferOutput() returns.
+			m_did_transfer = false;
 			return false;
 		}
 	}
@@ -466,7 +442,64 @@ JICShadow::transferOutput( void )
 		// In both cases, we should record that we were successful so
 		// that if we ever come through here again to retry the whole
 		// job cleanup process we don't attempt to transfer again.
-	did_transfer = true;
+	m_did_transfer = true;
+	return true;
+}
+
+bool
+JICShadow::transferOutputMopUp(void)
+{
+	static int timesCalled = 0;
+
+	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputMopUp(void)\n");
+
+	if (m_did_transfer) {
+		/* nothing was marked wrong if we were able to do the transfer */
+		return true;
+	}
+
+	// We saved the return value of the last filetransfer attempt...
+	// We also saved the ft_info structure when we did the file transfer.
+	if( ! m_ft_rval ) {
+		dprintf(D_FULLDEBUG, "JICShadow::transferOutputMopUp(void): "
+			"Mopping up failed transfer...\n");
+
+		// Failed to transfer.  See if there is a reason to put
+		// the job on hold.
+		if(!m_ft_info.success && !m_ft_info.try_again) {
+			ASSERT(m_ft_info.hold_code != 0);
+			// The shadow will immediately cut the connection to the
+			// starter when this is called. 
+			notifyStarterError(m_ft_info.error_desc.Value(), true,
+			                   m_ft_info.hold_code,m_ft_info.hold_subcode);
+			return false;
+		}
+
+		// Some other kind of error.  Would like to know
+		// for sure whether this really means we are disconnected
+		// from the shadow, but for now, force the socket to
+		// disconnect by closing it.
+
+		// Please forgive us these hacks
+		// as we forgive those who hack against us
+		timesCalled++;
+		if (timesCalled < 5) {
+				dprintf(D_ALWAYS,"File transfer failed, forcing disconnect.\n");
+
+				if (syscall_sock != NULL) {
+						syscall_sock->close();
+				}
+
+				job_cleanup_disconnected = true;
+				return false;
+		}
+
+		// We tried 5 times and kept failing
+		// now just tell the user we're giving up
+		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
+		return false;
+	}
+
 	return true;
 }
 
@@ -685,6 +718,26 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 	}
 
 	return true;
+}
+
+int
+JICShadow::notifyJobTermination( UserProc *user_proc )
+{
+	int rval = 0;
+	ClassAd ad;
+
+	dprintf(D_FULLDEBUG, "Inside JICShadow::notifyJobTermination()\n");
+
+	if (shadow_version && shadow_version->built_since_version(7,4,4)) {
+		dprintf(D_ALWAYS, "JICShadow::notifyJobTermination(): "
+			"Sending mock terminate event.\n");
+
+		user_proc->PublishUpdateAd( &ad );
+
+		rval = REMOTE_CONDOR_job_termination(&ad);
+	}
+
+	return rval;
 }
 
 void

@@ -176,6 +176,19 @@ class BaseShadow : public Service
 		*/
 	void terminateJob( update_style_t kind = US_NORMAL );
 
+		/** The job exited, but it _isn't_ ready to leave the queue.
+
+			For example, the job segfaulted and didn't produce all of the
+			output files specifically labeled in transfer_output_files, so
+			this causes file transfer to fail which puts the job on hold
+			(as of 7.4.4). However, the user would like to write periodic or
+			exit policies about the job and for that we need to know exactly
+			how the job exited. So this call places how the job exited into
+			the jobad, but doesn't write any events about it.
+		*/
+	void mockTerminateJob( MyString exit_reason, bool exited_by_signal, 
+		int exit_code, int exit_signal, bool core_dumped );
+
 		/** Set a timer to call terminateJob() so we retry
 		    our attempts to update the job queue etc.
 		*/

@@ -2276,6 +2276,7 @@ CStarter::Reaper(int pid, int exit_status)
 				// so, we can directly call allJobsDone() to do final
 				// cleanup.
 			if( !allJobsDone() ) {
+				dprintf(D_ALWAYS, "Returning from CStarter::JobReaper()\n");
 				return 0;
 			}
 		}
@@ -2285,6 +2286,7 @@ CStarter::Reaper(int pid, int exit_status)
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
 		StarterExit(0);
 	}
+
 	return 0;
 }
 
@@ -2317,7 +2319,34 @@ CStarter::allJobsDone( void )
 bool
 CStarter::transferOutput( void )
 {
-	if (!jic->transferOutput()) {
+	char *ver;
+	UserProc *job;
+
+	if (jic->transferOutput() == false) {
+
+		// Send, if the JIC thinks it is talking to a shadow of the right
+		// version, a message about the termination of the job to the shadow in
+		// the event of a file transfer failure.  The UserProc's classad which
+		// has an ATTR_JOB_PID attribute is the actual job the starter ran on
+		// behalf of the user. For other types of jobs like pre/post scripts,
+		// that attribute is name mangled and won't be present as ATTR_JOB_PID
+		// in the published ad.
+		//
+		// See the usage of the "name" variable in user_proc.h/cpp
+
+		m_reaped_job_list.Rewind();
+		while ((job = m_reaped_job_list.Next()) != NULL) {
+			ClassAd ad;
+			int pid;
+			job->PublishUpdateAd(&ad);
+			if (ad.LookupInteger(ATTR_JOB_PID, pid)) {
+				jic->notifyJobTermination(job);
+				break;
+			}
+		}
+
+		jic->transferOutputMopUp();
+
 			/*
 			  there was an error with the JIC in this step.  at this
 			  point, the only possible reason is if we're talking to a
@@ -2330,6 +2359,8 @@ CStarter::transferOutput( void )
 				 "lease to expire or for a reconnect attempt\n" );
 		return false;
 	}
+
+	jic->transferOutputMopUp();
 
 		// If we're here, the JIC successfully transfered output.
 		// We're ready to move on to the next cleanup stage.
