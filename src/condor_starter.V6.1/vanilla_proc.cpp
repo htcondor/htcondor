@@ -245,7 +245,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 bool
 VanillaProc::JobReaper(int pid, int status)
 {
-	dprintf(D_FULLDEBUG,"in VanillaProc::JobReaper()\n");
+	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
 	if (pid == JobPid) {
 			// Make sure that nothing was left behind.

@@ -212,6 +212,7 @@ public:
 			in all JICs so that the code path during cleanup is sane.
 		*/
 	virtual bool transferOutput( void ) = 0;
+	virtual bool transferOutputMopUp( void ) = 0;
 
 		/** The last job this starter is controlling has been
 			completely cleaned up.  Do whatever final work we want to
@@ -258,6 +259,8 @@ public:
 		*/
 	virtual bool notifyJobExit( int exit_status, int reason, 
 								UserProc* user_proc ) = 0;
+
+	virtual int notifyJobTermination( UserProc* user_proc ) = 0;
 
 	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode ) = 0;
 
