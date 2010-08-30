@@ -8448,15 +8448,17 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManMaxJobHolds}
 \item[\Macro{DAGMAN\_MAX\_JOB\_HOLDS}]
   An integer value defining the maximum number of times a node job is
-  allowed to go on hold -- once a job has gone on hold this number of
-  times, it will be removed from the queue.  (For example, if the value
-  is 2, any job that has gone on hold twice will be removed.)  At this
-  time, this feature is not fully compatible with multi-proc node jobs
-  -- the number of holds of any proc in the cluster count towards the
-  total, rather than counting each proc individually.  So if you are
-  using multi-proc node jobs, you may want to use a higher value for
-  this setting.  A value of 0 allows the job to go on hold any number
-  of times.
+  allowed to go on hold. As a job goes on hold this number of
+  times, it is removed from the queue.  For example, if the value
+  is 2, as the job goes on hold for the second time,
+  it will be removed.
+  At this time, this feature is not fully compatible with node jobs
+  that have more than one \Attr{ProcID}.
+  The number of holds of each process in the cluster count towards the
+  total, rather than counting individually.
+  So, this setting should take that possibility into account,
+  possibly using a larger value.
+  A value of 0 allows a job to go on hold any number of times.
   The default value if not defined is 100.
 
 \end{description}
