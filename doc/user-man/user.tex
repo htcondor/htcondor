@@ -1239,42 +1239,43 @@ If the file transfer mechanism is enabled,
 Condor will transfer the following files before the job
 is run on a remote machine.
 \begin{enumerate}
-  \item the executable
+  \item the executable, as defined with the \SubmitCmd{executable} command
   \item the input, as defined with the \SubmitCmd{input} command
-  \item any jar files (for the Java universe)
+  \item any jar files, for the \SubmitCmd{java} universe,
+  as defined with the \SubmitCmd{jar\_files} command
 \end{enumerate}
-If the job requires any other input files,
+If the job requires other input files,
 the submit description file should utilize the
 \SubmitCmd{transfer\_input\_files} command.
 This comma-separated list specifies any other files that Condor is to
-transfer to a remote site to set up the execution environment for the
-job before it is run.
-These files are placed in the same temporary working directory
-as the job's executable.
+transfer to the remote scratch directory,
+to set up the execution environment for the job before it is run.
+These files are placed in the same directory as the job's executable.
 At this time, directories can not be transferred in this way.
 For example:
 
 \begin{verbatim}
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT
   transfer_input_files = file1,file2 
 \end{verbatim}
+This example explicitly enables the file transfer mechanism,
+and it transfers the executable, the file specified by the \SubmitCmd{input}
+command, any jar files specified by the \SubmitCmd{jar\_files} command,
+and files \File{file1} and \File{file2}.
 
 As a default, for jobs other than those submitted to the grid universe,
-any files that are modified or created by the job in the
-temporary directory at the remote site are transferred back
+any files that are modified or created by the job as it runs
+are transferred back
 to the machine from which the job was submitted.
 Most of the time, this is the best option.
-To restrict the files that are transferred,
+To \emph{restrict} the files that are transferred,
 specify the exact list of files with  \SubmitCmd{transfer\_output\_files}.
-Delimit these file names with a comma.
+Delimit file names with a comma.
 When this list is defined, and any of the files do not exist as the
-job exits, Condor considers this an error, and re-runs the job.
+job exits, Condor considers this an error, and places the job on hold.
 
-\Warn Do not specify \SubmitCmd{transfer\_output\_files} (for other than
-grid universe jobs) unless there is a
-really good reason -- it is best to let Condor figure things out by
-itself based upon what output the job produces.
-
-For grid universe jobs, files to be transferred 
+For \SubmitCmd{grid} universe jobs, files to be transferred 
 (other than standard output and standard error)
 must be specified using \SubmitCmd{transfer\_output\_files}
 in the submit description file. 
