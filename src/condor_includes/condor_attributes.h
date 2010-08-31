@@ -292,6 +292,7 @@ extern const char * const  ATTR_JOB_STATUS_ON_RELEASE;
 extern const char * const  ATTR_JOB_UNIVERSE;
 extern const char * const  ATTR_JOB_WALL_CLOCK_CKPT;
 extern const char * const  ATTR_JOB_QUEUE_BIRTHDATE;
+extern const char * const  ATTR_JOB_REQUIRES_SANDBOX;
 extern const char * const  ATTR_JOB_VM_TYPE;
 extern const char * const  ATTR_JOB_VM_MEMORY;
 extern const char * const  ATTR_JOB_VM_VCPUS;

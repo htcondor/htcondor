@@ -338,6 +338,7 @@ const char * const ATTR_JOB_LEAVE_IN_QUEUE		 = "LeaveJobInQueue";
 const char * const ATTR_JOB_REMOTE_SYS_CPU		 = "RemoteSysCpu";
 const char * const ATTR_JOB_REMOTE_USER_CPU		 = "RemoteUserCpu";
 const char * const ATTR_JOB_REMOTE_WALL_CLOCK	 = "RemoteWallClockTime";
+const char * const ATTR_JOB_REQUIRES_SANDBOX	 = "JobRequiresSandbox";
 const char * const ATTR_JOB_ROOT_DIR			 = "RootDir";
 const char * const ATTR_JOB_RUN_COUNT			 = "JobRunCount";
 const char * const ATTR_JOB_SANDBOX_JOBAD		= "DropJobAdInSandbox";
