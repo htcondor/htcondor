@@ -1361,7 +1361,12 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
 			hk.sprint( hkString );
-			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+			if( timeStamp == 0 ) {
+				dprintf (D_ALWAYS,"\t\t**** Removing invalidated ad: \"%s\"\n", hkString.Value() );
+			}
+			else {
+				dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+			}
 			if (hashTable.remove (hk) == -1)
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
