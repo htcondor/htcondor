@@ -218,17 +218,6 @@ Directory::Recursive_Chown(uid_t src_uid, uid_t dst_uid, gid_t dst_gid,
 }
 #endif /* ! defined(WIN32) */
 
-
-bool 
-Directory::Remove_Entry( const char* name )
-{
-	MyString path;
-	path = curr_dir;
-	path += DIR_DELIM_CHAR;
-	path += name;
-	return do_remove( path.Value(), false );
-}
-
 bool
 Directory::Remove_Full_Path( const char *path )
 {

@@ -88,7 +88,7 @@ public:
 
 	/** Restart the iteration.  After calling Rewind(), the next 
 		call to Next() will return the first file in the directory again.
-		@return Always returns true (for now)
+		@return true on successful rewind, otherwise false
 		@see Next()
 	*/
 	bool Rewind();
@@ -163,12 +163,6 @@ public:
 		@return true on successful removal, otherwise false
 	*/
 	bool Remove_Full_Path( const char *path );
-
-	/** Remove the specified directory entry.  If the given file is a
-		subdirectory, then the subdirectory (and all files beneath it)
-		are removed. @param path The full path to the file to remove
-		@return true on successful removal, otherwise false */
-	bool Remove_Entry( const char* name );
 
 	/** Remove the all the files and subdirectories in the directory
 		specified by the constructor.  Upon success, the subdirectory
