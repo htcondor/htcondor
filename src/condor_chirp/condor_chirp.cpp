@@ -209,7 +209,8 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 void usage() {
 	printf("Usage:\n");
 	printf("condor_chirp fetch  remote_file local_file\n");
-	printf("condor_chirp put    local_file remote_file\n");
+	printf("condor_chirp put [-mode mode] [-perm perm] local_file "
+		   "remote_file\n");
 	printf("condor_chirp remove remote_file\n");
 	printf("condor_chirp get_job_attr job_attribute\n");
 	printf("condor_chirp set_job_attr job_attribute attribute_value\n");
@@ -236,28 +237,35 @@ int chirp_fetch(int argc, char **argv) {
  *  chirp_put_one_file to do the real work
  */
 
-int chirp_put(int /* argc */, char **argv) {
+int chirp_put(int argc, char **argv) {
 	
 	int fileOffset = 2;
 	char *mode = "cwat";
 	int  perm = 0777;
 
 	bool more = true;
-	while (more) {
+	while (more && fileOffset + 1 < argc) {
 
-		more = false;
 		if (strcmp(argv[fileOffset], "-mode") == 0) {
 			mode = argv[fileOffset + 1];
 			fileOffset += 2;
 			more = true;
 		}
-
-		if (strcmp(argv[fileOffset], "-perm") == 0) {
+		else if (strcmp(argv[fileOffset], "-perm") == 0) {
 			char *permStr = argv[fileOffset + 1];
 			perm = strtol(permStr, NULL, 0);
 			fileOffset += 2;
 			more = true;
 		}
+		else {
+			more = false;
+		}
+	}
+	
+	if(fileOffset + 1 >= argc) {
+		printf("condor_chirp put  [-mode mode] [-perm perm] local_file "
+			   "remote_file\n");
+		return -1;
 	}
 
 	return chirp_put_one_file(argv[fileOffset], argv[fileOffset + 1], mode, perm);
