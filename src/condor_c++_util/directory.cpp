@@ -170,6 +170,7 @@ Directory::GetDirectorySize()
 bool
 Directory::Find_Named_Entry( const char *name )
 {
+	ASSERT(name);
 	const char* entry = NULL;
 	bool ret_value = false;
 
