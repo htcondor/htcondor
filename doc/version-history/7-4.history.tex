@@ -52,10 +52,10 @@ was only supported by the Windows version of \Condor{submit}.
 \begin{itemize}
 
 % gittrac 1631
-\item Fixed an erroneous error message from \Condor{run} which stated
-that the ``DAGMan job was aborted by the user" when the job submitted
-by \Condor{run} was aborted by the user. It now states that ``The job
-was aborted by the user".
+\item Fixed an misleading error message issued by \Condor{run} which stated the 
+\verb@DAGMan job was aborted by the user@ when the job submitted
+by \Condor{run} was aborted by the user.
+It now states \verb@The job was aborted by the user@.
 
 % gittrac 1543
 \item When the \Condor{startd} daemon is running with an execute directory on
