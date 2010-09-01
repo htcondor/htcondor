@@ -1292,19 +1292,19 @@ in the submit description file.
 The file transfer mechanism specifies file names and/or paths on
 both the file system of the submit machine and on the
 file system of the execute machine.
-Care must be taken to know which machine (submit or execute)
+Care must be taken to know which machine, submit or execute,
 is utilizing the file name and/or path. 
 
 Files in the \SubmitCmd{transfer\_input\_files} command
 are specified as they are accessed on the submit machine.
-The program (as it executes) accesses files as they are
+The job, as it executes, accesses files as they are
 found on the execute machine.
 
 There are three ways to specify files and paths
 for \SubmitCmd{transfer\_input\_files}:
 \begin{enumerate}
-\item Relative to the submit directory, if the submit command
-\SubmitCmd{initialdir} is not specified.
+\item Relative to the current working directory as the job is submitted,
+if the submit command \SubmitCmd{initialdir} is not specified.
 \item Relative to the initial directory, if the submit command 
 \SubmitCmd{initialdir} is specified.
 \item Absolute.
@@ -1316,7 +1316,7 @@ by the submit command \SubmitCmd{input},
 along with any input files specified 
 by \SubmitCmd{transfer\_input\_files}.
 All these files are placed into
-a temporary directory (on the execute machine)
+a remote scratch directory on the execute machine,
 in which the program runs.
 Therefore,
 the executing program must access input files \emph{without} paths.
@@ -1328,26 +1328,24 @@ A collision causes the last file in the list to
 overwrite the earlier one.
 
 If the program creates output files during execution,
-it must create them within the temporary working directory.
-Condor transfers back all files within the temporary
-working directory that have been modified or created.
+it must create them within the remote scratch directory.
+Condor transfers back all files within the remote scratch
+directory that have been modified or created.
 To transfer back only a subset of these files,
 the submit command
 \SubmitCmd{transfer\_output\_files}
 is defined.
-Transfer of files that exist,
-but are not within the temporary working directory is not supported.
-Condor's behavior in this instance is undefined.
+Transfer of files outside
+the remote scratch directory is not supported.
 
-It is
-okay to create files outside the temporary working directory
-on the file system of the execute machine,
-(in a directory such as \File{/tmp})
+A job may create files outside the remote scratch directory
+but within the file system of the execute machine,
+in a directory such as \File{/tmp},
 if this directory is guaranteed to exist and be
 accessible on all possible execute machines.
 However,
 transferring such a file back after execution completes
-may not be done.
+may not be done, as it is not supported.
 
 Here are several examples to illustrate the use of file transfer.
 The program executable is called \Prog{my\_program},
@@ -1357,7 +1355,8 @@ The program executable and the submit description file
 for this job are located in directory
 \File{/scratch/test}. 
 
-The directory tree for all these examples:
+Here is the directory tree as it exists on the submit machine,
+for all the examples:
 \begin{verbatim}
 /scratch/test (directory)
       my_program.condor (the submit description file)
@@ -1373,12 +1372,12 @@ The directory tree for all these examples:
 \begin{description}
 \item[Example 1]
 
-This simple example explicitly transfers input files.
+This first example explicitly transfers input files.
 These input files to be transferred
 are specified relative to the directory where the job is submitted.
-The single output file, \File{out1}, created when the job is executed
-will be transferred back into the directory
-\File{/scratch/test}, \emph{not} the \File{files} directory. 
+An output file specified in the \SubmitCmd{arguments} command, \File{out1},
+is created when the job is executed.
+It will be transferred back into the directory \File{/scratch/test}.
 
 \footnotesize
 \begin{verbatim}
@@ -1585,6 +1584,11 @@ Queue
 \normalsize
 
 \end{description}
+
+%%%%%%%%%%%%
+\subsubsection{Behavior for Error Cases}
+%%%%%%%%%%%%
+\Todo
 
 %%%%%%%%%%%%
 \subsubsection{Input File Transfer Using a URL}
