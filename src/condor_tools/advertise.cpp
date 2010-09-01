@@ -107,10 +107,9 @@ int main( int argc, char *argv[] )
 	}
 
 	FILE *file;
-	ClassAd *ad;
+	ClassAdList ads;
 	Daemon *collector;
 	Sock *sock;
-	int eof,error,empty;
 
 	switch( command ) {
 	case UPDATE_STARTD_AD_WITH_ACK:
@@ -133,25 +132,24 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	ad = new ClassAd(file,"***",eof,error,empty);
-	if(error) {
-		fprintf(stderr,"couldn't parse ClassAd in %s\n",filename);
-		delete ad;
-		return 1;
+	while(!feof(file)) {
+		int eof=0,error=0,empty=0;
+		ClassAd *ad = new ClassAd(file,"\n",eof,error,empty);
+		if(error) {
+			fprintf(stderr,"couldn't parse ClassAd in %s\n",filename);
+			delete ad;
+			return 1;
+		}
+		if( empty ) {
+			delete ad;
+			break;
+		}
+		ads.Insert(ad);
 	}
 
-	if(empty) {
+	if(ads.Length() == 0) {
 		fprintf(stderr,"%s is empty\n",filename);
-		delete ad;
 		return 1;
-	}
-
-	// If there's no "MyAddress", generate one..
-	MyString tmp = "";
-	ad->LookupString( ATTR_MY_ADDRESS, tmp );
-	if ( tmp.Length() == 0 ) {
-		tmp.sprintf( "<%s:0>", my_ip_string() );
-		ad->Assign( ATTR_MY_ADDRESS, tmp.Value() );
 	}
 
 	CollectorList * collectors;
@@ -178,41 +176,82 @@ int main( int argc, char *argv[] )
 
 		dprintf(D_FULLDEBUG,"collector is %s located at %s\n",
 				collector->hostname(),collector->addr());
-	
-		if ( use_tcp ) {
-			sock = collector->startCommand(command,Stream::reli_sock,20);
-		} else {
-			sock = collector->startCommand(command,Stream::safe_sock,20);
-		}
 
-		int result = 0;
-		if ( sock ) {
-			result += ad->put( *sock );
-			result += sock->end_of_message();
-		}
-		if ( result != 2 ) {
-			fprintf(stderr,"failed to send classad to %s\n",collector->addr());
-			had_error = true;
-			delete sock;
-			continue;
-		}
+		sock = NULL;
 
-		if( with_ack ) {
-			sock->decode();
-			int ok = 0;
-			if( !sock->get(ok) || !sock->end_of_message() ) {
-				fprintf(stderr,"failed to get ack from %s\n",collector->addr());
-				had_error = true;
+		ClassAd *ad;
+		int success_count = 0;
+		int failure_count = 0;
+		ads.Rewind();
+		while( (ad=ads.Next()) ) {
+
+				// If there's no "MyAddress", generate one..
+			if( !ad->Lookup( ATTR_MY_ADDRESS ) ) {
+				MyString tmp;
+				tmp.sprintf( "<%s:0>", my_ip_string() );
+				ad->Assign( ATTR_MY_ADDRESS, tmp.Value() );
+			}
+
+			if ( use_tcp ) {
+				if( !sock ) {
+					sock = collector->startCommand(command,Stream::reli_sock,20);
+				}
+				else {
+						// Use existing connection.
+					sock->encode();
+					sock->put(command);
+				}
+			} else {
+					// We must open a new UDP socket each time.
 				delete sock;
+				sock = collector->startCommand(command,Stream::safe_sock,20);
+			}
+
+			int result = 0;
+			if ( sock ) {
+				result += ad->put( *sock );
+				result += sock->end_of_message();
+			}
+			if ( result != 2 ) {
+				fprintf(stderr,"failed to send classad to %s\n",collector->addr());
+				had_error = true;
+				failure_count++;
+				delete sock;
+				sock = NULL;
 				continue;
 			}
-		}
 
+			if( with_ack ) {
+				sock->decode();
+				int ok = 0;
+				if( !sock->get(ok) || !sock->end_of_message() ) {
+					fprintf(stderr,"failed to get ack from %s\n",collector->addr());
+					had_error = true;
+					failure_count++;
+					delete sock;
+					sock = NULL;
+					continue;
+				}
+
+					// ack protocol does not allow for multiple updates,
+					// so close the socket now
+				delete sock;
+				sock = NULL;
+			}
+
+			success_count++;
+		}
 		delete sock;
+		sock = NULL;
+
+		printf("Sent %d of %d ad%s to %s.\n",
+			   success_count,
+			   success_count + failure_count,
+			   success_count+failure_count == 1 ? "" : "s",
+			   collector->name());
 	}
 
 	delete collectors;
-	delete ad;
 
 	return (had_error)?1:0;
 }
