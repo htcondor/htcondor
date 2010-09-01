@@ -197,7 +197,9 @@ Directory::Remove_Entire_Directory( void )
 
 	Set_Access_Priv();
 
-	Rewind();
+	if(!Rewind()) {
+		return_and_resetpriv(false);
+	}
 
 	while ( (thefile=Next()) ) {
 		if( ! Remove_Current_File() ) {
