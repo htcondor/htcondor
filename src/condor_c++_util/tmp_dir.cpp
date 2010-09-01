@@ -68,7 +68,7 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 		// Don't do anything if the directory path is "" or "."
 		// (in DAGMan we get a directory of "" if no directory is
 		// specified for a node, and -usedagdir is not set).
-	if ( strcmp( directory, "" ) != MATCH &&
+	if ( directory != NULL && strcmp( directory, "" ) != MATCH &&
 			strcmp( directory, "." ) != MATCH ) {
 		if ( !hasMainDir ) {
 			if ( !condor_getcwd( mainDir ) ) {
