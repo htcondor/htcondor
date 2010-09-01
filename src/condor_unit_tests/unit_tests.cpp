@@ -63,6 +63,7 @@ bool OTEST_ArgList(void);
 bool OTEST_Iso_Dates(void);
 bool OTEST_UserPolicy(void);
 bool OTEST_Directory(void);
+bool OTEST_TmpDir(void);
 
 	// function map that maps testing function names to testing functions
 const static struct {
@@ -98,6 +99,7 @@ const static struct {
 	map(OTEST_Iso_Dates),
 	map(OTEST_UserPolicy),
 	map(OTEST_Directory),
+	map(OTEST_TmpDir),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 
