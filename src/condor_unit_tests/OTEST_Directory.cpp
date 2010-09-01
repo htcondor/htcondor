@@ -1613,7 +1613,7 @@ static bool test_get_full_path_file() {
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(full_path.Value(), ret_val)) {
+	if(niceStrCmp(full_path.Value(), ret_val) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1634,7 +1634,7 @@ static bool test_get_full_path_dir() {
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(full_path.Value(), ret_val)) {
+	if(niceStrCmp(full_path.Value(), ret_val) != MATCH) {
 		FAIL;
 	}
 	PASS;
