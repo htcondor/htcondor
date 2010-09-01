@@ -989,6 +989,8 @@ GetIds( const char *path, uid_t *owner, gid_t *group )
 char*
 dircat( const char *dirpath, const char *filename )
 {
+	ASSERT(dirpath);
+	ASSERT(filename);
 	bool needs_delim = true;
 	int extra = 2, dirlen = strlen(dirpath);
 	char* rval;
