@@ -79,6 +79,7 @@ Directory::Directory( const char *name, priv_state priv )
 
 Directory::Directory( StatInfo* info, priv_state priv ) 
 {
+	ASSERT(info);
 	initialize( priv );
 
 	curr_dir = strnewp( info->FullPath() );
