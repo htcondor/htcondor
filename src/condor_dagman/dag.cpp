@@ -1830,6 +1830,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 		
 	}
 
+	//
+	// Print the node status file, if any.
+	//
+	if ( _statusFileName ) {
+		fprintf( fp, "NODE_STATUS_FILE %s\n\n", _statusFileName );
+	}
+
     //
     // Print per-node information.
     //
