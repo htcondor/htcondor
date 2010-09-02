@@ -273,6 +273,10 @@ StatInfo::init( StatWrapper *statbuf )
 char*
 StatInfo::make_dirpath( const char* dir ) 
 {
+	if(!dir) {
+		return NULL;
+	}
+
 	char* rval;
 	int dirlen = strlen(dir);
 	if( dir[dirlen - 1] == DIR_DELIM_CHAR ) {

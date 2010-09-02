@@ -215,6 +215,10 @@ private:
 	void stat_file( const char *path );
 	void stat_file( int fd );
 	void init( StatWrapper *buf = NULL );
+
+	/** Checks for and adds the directory delimiter to the string if needed.
+		Returns NULL if passed NULL (See ticket #1619).
+	*/
 	char* make_dirpath( const char* dir );
 };
 
