@@ -89,8 +89,8 @@ bool FTEST_dirname(void) {
 
 static bool test_null() {
 	emit_test("Does a NULL path return a period?");
-	char *param = "NULL";
-	char *expect = ".";
+	const char *param = "NULL";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -108,8 +108,8 @@ static bool test_null() {
 
 static bool test_empty_string() {
 	emit_test("Does an empty path return a period?");
-	char *param = "";
-	char *expect = ".";
+	const char *param = "";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -127,8 +127,8 @@ static bool test_empty_string() {
 
 static bool test_current_directory() {
 	emit_test("Does the current directory return the current directory?");
-	char *param = ".";
-	char *expect = ".";
+	const char *param = ".";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -146,8 +146,8 @@ static bool test_current_directory() {
 
 static bool test_simple_path_1() {
 	emit_test("Does a single character path return the current directory?");
-	char *param = "f";
-	char *expect = ".";
+	const char *param = "f";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -165,8 +165,8 @@ static bool test_simple_path_1() {
 
 static bool test_simple_path_2() {
 	emit_test("Does a multiple character path return the currect directory?");
-	char *param = "foo";
-	char *expect = ".";
+	const char *param = "foo";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -184,8 +184,8 @@ static bool test_simple_path_2() {
 
 static bool test_simple_directory_1() {
 	emit_test("Does a path with starting with a forward slash return a forward slash?");
-	char *param = "/foo";
-	char *expect = "/";
+	const char *param = "/foo";
+	const char *expect = "/";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -203,8 +203,8 @@ static bool test_simple_directory_1() {
 
 static bool test_simple_directory_2() {
 	emit_test("Does a path starting with a backslash return a backslash?");
-	char *param = "\\foo";
-	char *expect = "\\";
+	const char *param = "\\foo";
+	const char *expect = "\\";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -222,8 +222,8 @@ static bool test_simple_directory_2() {
 
 static bool test_directory_and_file_1() {
 	emit_test("Does a path with both a directory and file return the parent directory?");
-	char *param = "foo/bar";
-	char *expect = "foo";
+	const char *param = "foo/bar";
+	const char *expect = "foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -241,8 +241,8 @@ static bool test_directory_and_file_1() {
 
 static bool test_directory_and_file_2() {
 	emit_test("Does a path with both a directory and file in the root directory return the parent directory?");
-	char *param = "/foo/bar";
-	char *expect = "/foo";
+	const char *param = "/foo/bar";
+	const char *expect = "/foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -260,8 +260,8 @@ static bool test_directory_and_file_2() {
 
 static bool test_root_directory() {
 	emit_test("Does a path with a backslash in the root directory return the parent directory?");
-	char *param = "\\foo\\bar";
-	char *expect = "\\foo";
+	const char *param = "\\foo\\bar";
+	const char *expect = "\\foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -279,8 +279,8 @@ static bool test_root_directory() {
 
 static bool test_directory_and_directory() {
 	emit_test("Does a path with two directories return the full parent directory?");
-	char *param = "foo/bar/";
-	char *expect = "foo/bar";
+	const char *param = "foo/bar/";
+	const char *expect = "foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -298,8 +298,8 @@ static bool test_directory_and_directory() {
 
 static bool test_directory_and_directory_in_root() {
 	emit_test("Does a path with two directories in the root directory return the full parent directory?");
-	char *param = "/foo/bar/";
-	char *expect = "/foo/bar";
+	const char *param = "/foo/bar/";
+	const char *expect = "/foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -317,8 +317,8 @@ static bool test_directory_and_directory_in_root() {
 
 static bool test_forward_slash() {
 	emit_test("Does a path with only a forward slash return a forward slash?");
-	char *param = "/";
-	char *expect = "/";
+	const char *param = "/";
+	const char *expect = "/";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -336,8 +336,8 @@ static bool test_forward_slash() {
 
 static bool test_backslash() {
 	emit_test("Does a path with only a backslash return a backslash?");
-	char *param = "\\";
-	char *expect = "\\";
+	const char *param = "\\";
+	const char *expect = "\\";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -355,8 +355,8 @@ static bool test_backslash() {
 
 static bool test_period_and_forward_slash_1() {
 	emit_test("Does a path with a period and backslash return a period?");
-	char *param = "./bar";
-	char *expect = ".";
+	const char *param = "./bar";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -374,8 +374,8 @@ static bool test_period_and_forward_slash_1() {
 
 static bool test_period_and_backslash_1() {
 	emit_test("Does a path with a period and forwardslash return a period?");
-	char *param = ".\\bar";
-	char *expect = ".";
+	const char *param = ".\\bar";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -393,8 +393,8 @@ static bool test_period_and_backslash_1() {
 
 static bool test_period_and_forward_slash_2() {
 	emit_test("Does a path with only a period then forwardslash return a period?");
-	char *param = "./";
-	char *expect = ".";
+	const char *param = "./";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -412,8 +412,8 @@ static bool test_period_and_forward_slash_2() {
 
 static bool test_period_and_backslash_2() {
 	emit_test("Does a path with only a period then backslash return a period?");
-	char *param = ".\\";
-	char *expect = ".";
+	const char *param = ".\\";
+	const char *expect = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -431,8 +431,8 @@ static bool test_period_and_backslash_2() {
 
 static bool test_backslash_and_period() {
 	emit_test("Does a path with only a backslash then a period return a backslash?");
-	char *param = "\\.";
-	char *expect = "\\";
+	const char *param = "\\.";
+	const char *expect = "\\";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -450,8 +450,8 @@ static bool test_backslash_and_period() {
 
 static bool test_forward_slash_and_file_extension() {
 	emit_test("Does a path with two directories and a file extension return the the full parent directory?");
-	char *param = "foo/bar/zap.txt";
-	char *expect = "foo/bar";
+	const char *param = "foo/bar/zap.txt";
+	const char *expect = "foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -469,8 +469,8 @@ static bool test_forward_slash_and_file_extension() {
 
 static bool test_backslash_and_file_extension() {
 	emit_test("Does a path with two directories and a file extension using backslashes return the full parent directory?");
-	char *param = "foo\\bar\\zap.txt";
-	char *expect = "foo\\bar";
+	const char *param = "foo\\bar\\zap.txt";
+	const char *expect = "foo\\bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -488,8 +488,8 @@ static bool test_backslash_and_file_extension() {
 
 static bool test_period_and_forward_slash() {
 	emit_test("Does a path using both a period and a forward slash return the parent directory");
-	char *param = ".foo/bar";
-	char *expect = ".foo";
+	const char *param = ".foo/bar";
+	const char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -507,8 +507,8 @@ static bool test_period_and_forward_slash() {
 
 static bool test_period_and_backslash() {
 	emit_test("Does a path using both a period and a backslash return the parent directory?");
-	char *param = ".foo\\bar";
-	char *expect = ".foo";
+	const char *param = ".foo\\bar";
+	const char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -526,8 +526,8 @@ static bool test_period_and_backslash() {
 
 static bool test_period_and_forward_slash_with_special_file() {
 	emit_test("Does a path using both a period and a forward slash return the parent directory?");
-	char *param = ".foo/.bar.txt";
-	char *expect = ".foo";
+	const char *param = ".foo/.bar.txt";
+	const char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -545,8 +545,8 @@ static bool test_period_and_forward_slash_with_special_file() {
 
 static bool test_period_and_backslash_with_special_file() {
 	emit_test("Does a path using a period and a backslash return the parent directory?");
-	char *param = ".foo\\.bar.txt";
-	char *expect = ".foo";
+	const char *param = ".foo\\.bar.txt";
+	const char *expect = ".foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -564,8 +564,8 @@ static bool test_period_and_backslash_with_special_file() {
 
 static bool test_double_forward_slash() {
 	emit_test("Does a path with one directory using a double forward slash and the other using a single forward slashe return the full parent directory?");
-	char *param = "//foo/bar/zap.txt";
-	char *expect = "//foo/bar";
+	const char *param = "//foo/bar/zap.txt";
+	const char *expect = "//foo/bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();
@@ -583,8 +583,8 @@ static bool test_double_forward_slash() {
 
 static bool test_double_backslash() {
 	emit_test("Does a path with one directory using a double backslash and the other using a single backslash return the full parent directory?");
-	char *param = "\\\\foo\\bar\\zap.txt";
-	char *expect = "\\\\foo\\bar";
+	const char *param = "\\\\foo\\bar\\zap.txt";
+	const char *expect = "\\\\foo\\bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	emit_output_expected_header();

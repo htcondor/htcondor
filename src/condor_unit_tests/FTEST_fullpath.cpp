@@ -58,7 +58,7 @@ bool FTEST_fullpath(void) {
 
 static bool test_forward_slash() {
 	emit_test("Does a path starting with a forward slash return true?");
-	char *param = "/tmp/foo";
+	const char *param = "/tmp/foo";
 	int expected = 1;
 	emit_input_header();
 	emit_param("STRING", param);
@@ -75,7 +75,7 @@ static bool test_forward_slash() {
 
 static bool test_name() {
 	emit_test("Does a path starting with a name return false?");
-	char *param = "tmp/foo";
+	const char *param = "tmp/foo";
 	int expected = 0;
 	emit_input_header();
 	emit_param("STRING", param);
@@ -91,7 +91,7 @@ static bool test_name() {
 }
 static bool test_drive_path_backslash() {
 	emit_test("Does a path with a drive letter followed by a colon and backslash return true?");
-	char *param = "c:\\";
+	const char *param = "c:\\";
 	int expected = 1;
 	emit_input_header();
 	emit_param("STRING", param);
@@ -108,7 +108,7 @@ static bool test_drive_path_backslash() {
 
 static bool test_colon_backslash() {
 	emit_test("Does a path starting with a colon followed by a backslash return false?");
-	char *param = ":\\";
+	const char *param = ":\\";
 	int expected = 0;
 	emit_input_header();
 	emit_param("STRING", param);
@@ -125,7 +125,7 @@ static bool test_colon_backslash() {
 
 static bool test_backslash() {
 	emit_test("Does a path with only a backslash return true?");
-	char *param = "\\";
+	const char *param = "\\";
 	int expected = 1;
 	emit_input_header();
 	emit_param("STRING", param);
@@ -142,7 +142,7 @@ static bool test_backslash() {
 
 static bool test_drive_path_forward_slash() {
 	emit_test("Does a path with a drive letter followed by a colon and forward slash return true?");
-	char *param = "x:/";
+	const char *param = "x:/";
 	int expected = 1;
 	emit_input_header();
 	emit_param("STRING", param);
@@ -159,7 +159,7 @@ static bool test_drive_path_forward_slash() {
 
 static bool test_colon_forward_slash() {
 	emit_test("Does a path with a colon followed by a forward slash return false?");
-	char *param = ":/";
+	const char *param = ":/";
 	int expected = 0;
 	emit_input_header();
 	emit_param("STRING", param);

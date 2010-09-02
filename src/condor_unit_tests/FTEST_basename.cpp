@@ -98,8 +98,8 @@ bool FTEST_basename(void) {
 
 static bool test_null() {
 	emit_test("Does a NULL path return the empty string?");
-	char *param = NULL;
-	char *expected = "";
+	const char *param = NULL;
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", "NULL");
 	const char *path = condor_basename(param);
@@ -115,8 +115,8 @@ static bool test_null() {
 
 static bool test_empty_string() {
 	emit_test("Does a empty path return the empty string?");
-	char *param = "";
-	char *expected = "";
+	const char *param = "";
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -132,8 +132,8 @@ static bool test_empty_string() {
 
 static bool test_current_directory() {
 	emit_test("Does the current directory return the current directory");
-	char *param = ".";
-	char *expected = ".";
+	const char *param = ".";
+	const char *expected = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -149,8 +149,8 @@ static bool test_current_directory() {
 
 static bool test_simple_path_1() {
 	emit_test("Does a single character path return the base name?");
-	char *param = "f";
-	char *expected = "f";
+	const char *param = "f";
+	const char *expected = "f";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -166,8 +166,8 @@ static bool test_simple_path_1() {
 
 static bool test_simple_path_2() {
 	emit_test("Does a multiple character path return the base name?");
-	char *param = "foo";
-	char *expected = "foo";
+	const char *param = "foo";
+	const char *expected = "foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -183,8 +183,8 @@ static bool test_simple_path_2() {
 
 static bool test_simple_directory_1() {
 	emit_test("Does a path with a directory return the directory base name?");
-	char *param = "/foo";
-	char *expected = "foo";
+	const char *param = "/foo";
+	const char *expected = "foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -200,8 +200,8 @@ static bool test_simple_directory_1() {
 
 static bool test_simple_directory_2() {
 	emit_test("Does a path with a backslash return the directory base name?");
-	char *param = "\\foo";
-	char *expected = "foo";
+	const char *param = "\\foo";
+	const char *expected = "foo";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -217,8 +217,8 @@ static bool test_simple_directory_2() {
 
 static bool test_directory_and_file_1() {
 	emit_test("Does a path with both a directory and file return the file base?");
-	char *param = "foo/bar";
-	char *expected = "bar";
+	const char *param = "foo/bar";
+	const char *expected = "bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -234,8 +234,8 @@ static bool test_directory_and_file_1() {
 
 static bool test_directory_and_file_2() {
 	emit_test("Does a path with both a directory and file in the root directory return the base name?");
-	char *param = "/foo/bar";
-	char *expected = "bar";
+	const char *param = "/foo/bar";
+	const char *expected = "bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -251,8 +251,8 @@ static bool test_directory_and_file_2() {
 
 static bool test_root_directory() {
 	emit_test("Does a path with a backslash in the root directory return the base name?");
-	char *param = "\\foo\\bar";
-	char *expected = "bar";
+	const char *param = "\\foo\\bar";
+	const char *expected = "bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -268,8 +268,8 @@ static bool test_root_directory() {
 
 static bool test_directory_and_directory() {
 	emit_test("Does a path with two directories return the empty string?");
-	char *param = "foo/bar/";
-	char *expected = "";
+	const char *param = "foo/bar/";
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -285,8 +285,8 @@ static bool test_directory_and_directory() {
 
 static bool test_directory_and_directory_in_root() {
 	emit_test("Does a path with two directories in the root directory return the empty string?");
-	char *param = "/foo/bar/";
-	char *expected = "";
+	const char *param = "/foo/bar/";
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -302,8 +302,8 @@ static bool test_directory_and_directory_in_root() {
 
 static bool test_forward_slash() {
 	emit_test("Does a path with only a forward slash return the empty string?");
-	char *param = "/";
-	char *expected = "";
+	const char *param = "/";
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -319,8 +319,8 @@ static bool test_forward_slash() {
 
 static bool test_backslash() {
 	emit_test("Does a path with only a backslash return the empty string?");
-	char *param = "\\";
-	char *expected = "";
+	const char *param = "\\";
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -336,8 +336,8 @@ static bool test_backslash() {
 
 static bool test_period_and_forward_slash_1() {
 	emit_test("Does a path with a period and backslash return the directory base name?");
-	char *param = "./bar";
-	char *expected = "bar";
+	const char *param = "./bar";
+	const char *expected = "bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -353,8 +353,8 @@ static bool test_period_and_forward_slash_1() {
 
 static bool test_period_and_backslash_1() {
 	emit_test("Does a path with a period and forwardslash return the directory base name?");
-	char *param = ".\\bar";
-	char *expected = "bar";
+	const char *param = ".\\bar";
+	const char *expected = "bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -370,8 +370,8 @@ static bool test_period_and_backslash_1() {
 
 static bool test_period_and_forward_slash_2() {
 	emit_test("Does a path with only a period then forwardslash return the empty string?");
-	char *param = "./";
-	char *expected = "";
+	const char *param = "./";
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -387,8 +387,8 @@ static bool test_period_and_forward_slash_2() {
 
 static bool test_period_and_backslash_2() {
 	emit_test("Does a path with only a period then backslash return the empty string?");
-	char *param = ".\\";
-	char *expected = "";
+	const char *param = ".\\";
+	const char *expected = "";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -404,8 +404,8 @@ static bool test_period_and_backslash_2() {
 
 static bool test_backslash_and_period() {
 	emit_test("Does a path with only a backslash then a period return a period?");
-	char *param = "\\.";
-	char *expected = ".";
+	const char *param = "\\.";
+	const char *expected = ".";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -421,8 +421,8 @@ static bool test_backslash_and_period() {
 
 static bool test_forward_slash_and_file_extension() {
 	emit_test("Does a path with two directories and a file extension return the file name and its extension?");
-	char *param = "foo/bar/zap.txt";
-	char *expected = "zap.txt";
+	const char *param = "foo/bar/zap.txt";
+	const char *expected = "zap.txt";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -438,8 +438,8 @@ static bool test_forward_slash_and_file_extension() {
 
 static bool test_backslash_and_file_extension() {
 	emit_test("Does a path with two directories and a file extension using backslashes return the file name and its extension?");
-	char *param = "foo\\bar\\zap.txt";
-	char *expected = "zap.txt";
+	const char *param = "foo\\bar\\zap.txt";
+	const char *expected = "zap.txt";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -455,8 +455,8 @@ static bool test_backslash_and_file_extension() {
 
 static bool test_period_and_forward_slash() {
 	emit_test("Does a path using both a period and a forwardslash return the base name?");
-	char *param = ".foo/bar";
-	char *expected = "bar";
+	const char *param = ".foo/bar";
+	const char *expected = "bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -472,8 +472,8 @@ static bool test_period_and_forward_slash() {
 
 static bool test_period_and_backslash() {
 	emit_test("Does a path with one directory using a period and another using a backslash return the base name?");
-	char *param = ".foo\\bar";
-	char *expected = "bar";
+	const char *param = ".foo\\bar";
+	const char *expected = "bar";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -489,8 +489,8 @@ static bool test_period_and_backslash() {
 
 static bool test_period_and_forward_slash_with_special_file() {
 	emit_test("Does a path with one directory using a period and another using a forwardslash return the file name starting with a period and its extension?");
-	char *param = ".foo/.bar.txt";
-	char *expected = ".bar.txt";
+	const char *param = ".foo/.bar.txt";
+	const char *expected = ".bar.txt";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -506,8 +506,8 @@ static bool test_period_and_forward_slash_with_special_file() {
 
 static bool test_period_and_backslash_with_special_file() {
 	emit_test("Does a path with one directory using a period and another using a backslash return the file name starting with a period and its extension?");
-	char *param = ".foo\\.bar.txt";
-	char *expected = ".bar.txt";
+	const char *param = ".foo\\.bar.txt";
+	const char *expected = ".bar.txt";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -523,8 +523,8 @@ static bool test_period_and_backslash_with_special_file() {
 
 static bool test_double_forward_slash() {
 	emit_test("Does a path with one directory using a double forwardslash and the others using single forwardslashes return the file name and its extension?");
-	char *param = "//foo/bar/zap.txt";
-	char *expected = "zap.txt";
+	const char *param = "//foo/bar/zap.txt";
+	const char *expected = "zap.txt";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -540,8 +540,8 @@ static bool test_double_forward_slash() {
 
 static bool test_double_backslash() {
 	emit_test("Does a path with one directory using a double backslash and the othere using single backslashes return the file name and its extension?");
-	char *param = "\\\\foo\\bar\\zap.txt";
-	char *expected = "zap.txt";
+	const char *param = "\\\\foo\\bar\\zap.txt";
+	const char *expected = "zap.txt";
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);

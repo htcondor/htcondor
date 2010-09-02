@@ -1199,7 +1199,7 @@ static bool test_split_args_args_array() {
 	emit_test("Test that split_args() adds the correct args to the string array"
 		" for a valid arg string.");
 	char **string_array;
-	char *expect1 = "This", *expect2 = "'quoted'", *expect3 = "arg string", 
+	const char *expect1 = "This", *expect2 = "'quoted'", *expect3 = "arg string", 
 		*expect4 = "contains 'many' \"\"surprises\\";
 	split_args(test_string, &string_array, NULL);
 	emit_input_header();
