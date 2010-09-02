@@ -162,7 +162,8 @@ JobstateLog::Write( Job *node, const char *eventName,
 	MyString info;
 
 	info.sprintf( "%s %s %s %s - %d", node->GetJobName(), eventName,
-				condorID, node->PegasusSite(), node->PegasusSequenceNum() );
+				condorID, node->PegasusSite(),
+				node->GetPegasusSequenceNum() );
 	Write( info );
 }
 

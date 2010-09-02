@@ -384,10 +384,16 @@ class Job {
 	const char *PegasusSite();
 
 	//TEMPTEMP -- document -- should these really be const?
-	int PegasusSequenceNum();
+	int GetPegasusSequenceNum();
 	
 	//TEMPTEMP -- document -- should these really be const?
 	void ResetPegasusSequenceNum() { _pegasusSeqNum = 0; }
+
+	//TEMPTEMP -- document
+	static bool SavePegasusNextSequenceNum( const char *primaryDagFile );
+
+	//TEMPTEMP -- document
+	static bool RestorePegasusNextSequenceNum( const char *primaryDagFile );
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
@@ -548,6 +554,9 @@ private:
 
 		//TEMPTEMP -- document
 	static int _nextPegasusSeqNum;
+
+		//TEMPTEMP -- document
+	static const char *SEQ_NUM_KEYWORD;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

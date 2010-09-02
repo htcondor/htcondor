@@ -435,7 +435,7 @@ class Dag {
 		@param multiDags Whether we have multiple DAGs
 		@param maxRescueDagNum the maximum legal rescue DAG number
     */
-    void Rescue (const char * datafile, bool multiDags,
+    void Rescue (const char * dagFile, bool multiDags,
 				int maxRescueDagNum) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
@@ -444,7 +444,7 @@ class Dag {
         @param datafile The original DAG file
     */
     void WriteRescue (const char * rescue_file,
-				const char * datafile) /* const */;
+				const char * dagFile) /* const */;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );

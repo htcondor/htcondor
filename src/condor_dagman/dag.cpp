@@ -1,3 +1,5 @@
+//TEMPTEMP -- should we save and restore the sequence number only if there is a jobstate.log file?
+//TEMPTEMP -- maybe make sequence number file configurable -- or base it on jobstate.log file name...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1756,24 +1758,24 @@ void Dag::RemoveRunningScripts ( ) const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue ( const char * datafile, bool multiDags,
+void Dag::Rescue ( const char * dagFile, bool multiDags,
 			int maxRescueDagNum ) /* const */
 {
-	int nextRescue = FindLastRescueDagNum( datafile, multiDags,
+	int nextRescue = FindLastRescueDagNum( dagFile, multiDags,
 				maxRescueDagNum ) + 1;
 	if ( nextRescue > maxRescueDagNum ) nextRescue = maxRescueDagNum;
-	MyString rescueDagFile = RescueDagName( datafile, multiDags, nextRescue );
+	MyString rescueDagFile = RescueDagName( dagFile, multiDags, nextRescue );
 
 		// Note: there could possibly be a race condition here if two
 		// DAGMans are running on the same DAG at the same time.  That
 		// should be avoided by the lock file, though, so I'm not doing
 		// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue( rescueDagFile.Value(), datafile );
+	WriteRescue( rescueDagFile.Value(), dagFile );
 }
 
 //-----------------------------------------------------------------------------
-void Dag::WriteRescue (const char * rescue_file, const char * datafile)
+void Dag::WriteRescue (const char * rescue_file, const char * dagFile)
 			/* const */
 {
 	debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
@@ -1791,7 +1793,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 
     fprintf(fp, "# Rescue DAG file, created after running\n");
-    fprintf(fp, "#   the %s DAG file\n", datafile);
+    fprintf(fp, "#   the %s DAG file\n", dagFile);
 
 	time_t timestamp;
 	(void)time( &timestamp );
@@ -1825,6 +1827,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 	if ( _configFile ) {
     	fprintf( fp, "CONFIG %s\n\n", _configFile );
 		
+	}
+
+	//
+	// Print the jobstate.log file, if any.
+	//
+	if ( _jobstateLog ) {
+		fprintf( fp, "JOBSTATE_LOG %s\n\n", _jobstateLog->LogFile() );
 	}
 
     //
@@ -1975,7 +1984,10 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 	//
 	_catThrottles.PrintThrottles( fp );
 
-    fclose(fp);
+    fclose( fp );
+
+	//TEMPTEMP -- check return value?
+	Job::SavePegasusNextSequenceNum( dagFile );
 }
 
 //===========================================================================
