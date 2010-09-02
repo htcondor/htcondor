@@ -5,6 +5,7 @@
 \oOptArg{-pool}{centralmanagerhostname[:portname]}
 \oOpt{-debug}
 \oOpt{-tcp}
+\oOpt{-multiple}
 \Arg{update-command}
 \oArg{classad-filename}
 
@@ -12,14 +13,22 @@
 \index{condor\_advertise command}
 
 \Description
-\Condor{advertise} sends a ClassAd to the \Condor{collector} daemon on
+\Condor{advertise} sends one or more ClassAds to the \Condor{collector} daemon on
 the central manager machine.
 The required argument \Arg{update-command} says what daemon type's ClassAd
 is to be updated.
 The optional argument \Arg{classad-filename} is the file from which the
-ClassAd should be read.
+ClassAds should be read.
 If \Arg{classad-filename} is omitted or is ``-'', then the
-ClassAd is read from standard input.
+ClassAds are read from standard input.
+
+When \Opt{-multiple} is specified, multiple ads may be published.
+Publishing many ads in a single invocation of \Condor{advertise} is
+more efficient than invoking \Condor{advertise} once per ad.  The ads
+are expected to be separated by one or more blank lines.  When
+\Opt{-multiple} is not specified, blank lines are ignored (for
+backward compatibility).  It is best not to rely on blank lines being
+ignored, as this may change in the future.
 
 The \Arg{update-command} may be one of the following strings:
 \begin{description}

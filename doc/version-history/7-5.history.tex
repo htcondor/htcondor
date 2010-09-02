@@ -114,6 +114,11 @@ section~\ref{sec:DAG-node-status} for details).
 \item The grid universe's 'amazon' grid-type can now be used to submit
 virtual machine jobs to Eucalyptus systems via the EC2 interface.
 
+% gittrack #1496
+\item \Condor{advertise} has a new option \Opt{-multiple}, which
+allows multiple ads to be published.  This is more efficient that
+publishing each ad in a separate invocation of \Condor{advertise}.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
