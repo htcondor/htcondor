@@ -41,6 +41,7 @@ usage( char *cmd )
 	fprintf(stderr,"    -pool <hostname>  Use this central manager\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
 	fprintf(stderr,"    -tcp              Ship classad via TCP (default is UDP)\n");
+	fprintf(stderr,"    -multiple         Publish multiple ads, separated by blank lines\n");
 	fprintf(stderr,"\nExample: %s -debug UPDATE_STORAGE_AD adfile\n\n",cmd);
 }
 
@@ -58,6 +59,7 @@ int main( int argc, char *argv[] )
 	int i;
 	bool use_tcp = false;
 	bool with_ack = false;
+	bool allow_multiple = false;
 
 
 	myDistro->Init( argc, argv );
@@ -77,6 +79,11 @@ int main( int argc, char *argv[] )
 			pool = argv[i];
 		} else if(!strncmp(argv[i],"-tcp",strlen(argv[i]))) {
 			use_tcp = true;
+		} else if(!strncmp(argv[i],"-multiple",strlen(argv[i]))) {
+				// We don't set allow_multiple=true by default, because
+				// existing users (e.g. glideinWMS) have stray blank lines
+				// in the input file.
+			allow_multiple = true;
 		} else if(!strcmp(argv[i],"-version")) {
 			version();
 			exit(0);
@@ -134,7 +141,11 @@ int main( int argc, char *argv[] )
 
 	while(!feof(file)) {
 		int eof=0,error=0,empty=0;
-		ClassAd *ad = new ClassAd(file,"\n",eof,error,empty);
+		char const *delim = "\n";
+		if( !allow_multiple ) {
+			delim = "***";
+		}
+		ClassAd *ad = new ClassAd(file,(char *)delim,eof,error,empty);
 		if(error) {
 			fprintf(stderr,"couldn't parse ClassAd in %s\n",filename);
 			delete ad;
@@ -143,6 +154,11 @@ int main( int argc, char *argv[] )
 		if( empty ) {
 			delete ad;
 			break;
+		}
+		if( !allow_multiple && ads.Length() > 0 ) {
+			fprintf(stderr,"ERROR: failed to parse '%s' as a ClassAd attribute\n",delim);
+			delete ad;
+			return 1;
 		}
 		ads.Insert(ad);
 	}
