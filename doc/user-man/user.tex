@@ -1235,6 +1235,7 @@ submit description file, then Condor uses the values:
 \subsubsection{Specifying What Files to Transfer}
 %%%%%%%%%%%%
 
+% transfers before execution
 If the file transfer mechanism is enabled,
 Condor will transfer the following files before the job
 is run on a remote machine.
@@ -1264,11 +1265,33 @@ and it transfers the executable, the file specified by the \SubmitCmd{input}
 command, any jar files specified by the \SubmitCmd{jar\_files} command,
 and files \File{file1} and \File{file2}.
 
-As a default, for jobs other than those submitted to the grid universe,
-any files that are modified or created by the job as it runs
-are transferred back
-to the machine from which the job was submitted.
-Most of the time, this is the best option.
+% transfers back after execution
+If the file transfer mechanism is enabled,
+Condor will transfer the following files from the execute machine
+back to the submit machine after the job exits.
+\begin{enumerate}
+  \item the output file, as defined with the \SubmitCmd{output} command
+  \item the error file, as defined with the \SubmitCmd{error} command
+  \item any files created by the job in the remote scratch directory
+\end{enumerate}
+
+This occurs for jobs other than those submitted to the \SubmitCmd{grid}
+universe.
+
+A path given for \SubmitCmd{output} and \SubmitCmd{error} commands represents
+a path on the submit machine.
+At the time the job is submitted, zero-length files are created
+on the submit machine, at the given path for the files defined by the  
+\SubmitCmd{output} and \SubmitCmd{error} commands.
+This permits job submission failure, if these files cannot be written.
+As the job executes, these files and any others created by the job,
+are written in the flat, remote scratch directory on the execute machine.
+So, care must be taken to avoid file name collision.
+The files are transferred back to the submit machine after job execution;
+files created by the job other than those specified with the
+\SubmitCmd{output} and \SubmitCmd{error} commands are placed into the
+directory where the job was submitted.
+
 To \emph{restrict} the files that are transferred,
 specify the exact list of files with  \SubmitCmd{transfer\_output\_files}.
 Delimit file names with a comma.
@@ -1391,13 +1414,15 @@ Log             = logs/log.$(cluster)
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
-transfer_input_files = files/in1, files/in2
+transfer_input_files = files/in1,files/in2
 
 Arguments       = in1 in2 out1
 Queue
 \end{verbatim}
 \normalsize
 
+The log file is written on the submit machine, and is not involved
+with the file transfer mechanism.
 %--------------------------
 \item[Example 2]
 
@@ -1417,7 +1442,7 @@ Log             = logs/log.$(cluster)
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
-transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
+transfer_input_files = /scratch/test/files/in1,/scratch/test/files/in2
 
 Arguments       = in1 in2 out1
 Queue
@@ -1434,8 +1459,7 @@ The expected location of the
 executable is not affected by the 
 \SubmitCmd{initialdir} command.
 All other files
-(specified by \SubmitCmd{input},
-\SubmitCmd{output},
+(specified by \SubmitCmd{input}, \SubmitCmd{output}, \SubmitCmd{error},
 \SubmitCmd{transfer\_input\_files},
 as well as files modified or created by the job
 and automatically transferred back)
@@ -1459,7 +1483,7 @@ initialdir      = files
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
-transfer_input_files = in1, in2
+transfer_input_files = in1,in2
 
 Arguments       = in1 in2 out1
 Queue
@@ -1479,8 +1503,8 @@ relative paths to files in the
 cause the executing program to fail.
 The file system on the submission side may utilize
 relative paths to files,
-however those files are placed into a single,
-flat, temporary directory on the execute machine.
+however those files are placed into the single,
+flat, remote scratch directory on the execute machine.
 
 Note that this specification and submission will cause the
 job to fail and re-execute.
@@ -1497,7 +1521,7 @@ Log             = logs/log.$(cluster)
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
-transfer_input_files = files/in1, files/in2
+transfer_input_files = files/in1,files/in2
 
 Arguments       = files/in1 files/in2 files/out1
 Queue
@@ -1545,14 +1569,12 @@ err: /scratch/test/files/out1: No such file or directory.
 \end{verbatim}
 \normalsize
 
-% Karen has editted to this point in the file transfer sections.
-
 %--------------------------
 \item[Example 6 -- Illustrates an Error]
 
 This example illustrates a failure case
 where the executing program creates an output file in a directory
-other than within the single, flat, temporary directory that the 
+other than within the single, flat, remote scratch directory that the 
 program executes within.
 The file creation may or may not cause an error,
 depending on the existence and permissions
@@ -1575,7 +1597,7 @@ Log             = logs/log.$(cluster)
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
-transfer_input_files = files/in1, files/in2
+transfer_input_files = files/in1,files/in2
 transfer_output_files = /tmp/out1
 
 Arguments       = in1 in2 /tmp/out1
