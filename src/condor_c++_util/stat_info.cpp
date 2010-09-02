@@ -127,14 +127,7 @@ StatInfo::stat_file( const char *path )
 		// Only lstat if it's a directory  - or - 
 		// the "only lstat() if dir" flag isn't set
 		const StatStructType *sb = statbuf.GetBuf( StatWrapper::STATOP_STAT );
-		bool do_lstat = S_ISDIR( sb->st_mode );
-		if ( !m_onlyLstatIfDir ) {
-			do_lstat = true;
-		}
-
-		if ( do_lstat ) {
-			status = statbuf.Stat( StatWrapper::STATOP_LSTAT );
-		}
+		status = statbuf.Stat( StatWrapper::STATOP_LSTAT );
 	}
 # endif
 
@@ -225,7 +218,6 @@ StatInfo::init( StatWrapper *statbuf )
 		access_time = 0;
 		modify_time = 0;
 		create_time = 0;
-		m_onlyLstatIfDir = false;
 		m_isDirectory = false;
 		m_isExecutable = false;
 		m_isSymlink = false;

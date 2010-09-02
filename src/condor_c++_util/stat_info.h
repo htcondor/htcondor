@@ -92,14 +92,6 @@ public:
 	/// Destructor<p>
 	~StatInfo( void );
 
-
-	/** Only do lstat() if the path is a directory?
-		@param true: don't lstat unless 
-		@return void
-	 */
-	void OnlyStatIfDir( bool only_stat_if_dir )
-		{ m_onlyLstatIfDir = only_stat_if_dir; };
-
 	/** Shows the possible error condition of this StatInfo object.
 	    If the appropriate stat() call failed when creating this
 		object, its return value is returned here.  Note, the value of
@@ -195,7 +187,6 @@ public:
 private:
 	si_error_t si_error;
 	int si_errno;
-	bool m_onlyLstatIfDir;
 	bool m_isDirectory;
 	bool m_isExecutable;
 	bool m_isSymlink; //m_isDirectory may also be set if this points to a dir
