@@ -2631,7 +2631,7 @@ static bool test_create_temp_file() {
 	emit_retval("%s", ret_val);
 	emit_param("Successfully Created", "%s", tfstr(found));
 	if(!ret_val || !found) {
-		niceFree(ret_val); free(temp_dir);
+		free(ret_val); free(temp_dir);
 		FAIL;
 	}
 	free(temp_dir); free(ret_val);
@@ -2654,7 +2654,7 @@ static bool test_create_temp_file_dir() {
 	emit_retval("%s", ret_val);
 	emit_param("Successfully Created", "%s", tfstr(found));
 	if(!ret_val || !found) {
-		niceFree(ret_val); free(temp_dir);
+		free(ret_val); free(temp_dir);
 		FAIL;
 	}
 	free(temp_dir); free(ret_val);

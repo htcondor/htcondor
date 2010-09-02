@@ -93,12 +93,6 @@ int niceStrCmp(const char* str1, const char* str2) {
 	return strcmp(str1, str2);
 }
 
-/* Exactly like free, but only frees when not null */
-void niceFree(char* str) {
-	if(str != NULL)
-		free(str);
-}
-
 /* Returns  a char** representation of the StringList starting at the string 
    at index start
 */

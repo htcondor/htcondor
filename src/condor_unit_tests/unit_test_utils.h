@@ -49,9 +49,6 @@ const char* nicePrint(const char* str);
 /* Exactly like strcmp, but treats NULL and "" as equal */
 int niceStrCmp(const char* str1, const char* str2);
 
-/* Exactly like free, but only frees when not null */
-void niceFree(char* str);
-
 /* Returns  a char** representation of the StringList starting at the string 
    at index start
 */

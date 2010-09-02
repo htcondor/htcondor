@@ -467,10 +467,10 @@ static bool test_constructor() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -488,10 +488,10 @@ static bool test_constructor_empty_list() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -509,10 +509,10 @@ static bool test_constructor_empty_delim() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -530,10 +530,10 @@ static bool test_constructor_empty_both() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -550,10 +550,10 @@ static bool test_constructor_null_list() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -571,10 +571,10 @@ static bool test_constructor_null_delim() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -591,10 +591,10 @@ static bool test_constructor_null_both() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -612,10 +612,10 @@ static bool test_copy_constructor_value() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -632,10 +632,10 @@ static bool test_copy_constructor_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -652,10 +652,10 @@ static bool test_copy_constructor_pointer() {
 	emit_output_actual_header();
 	emit_retval("%x", &copy);
 	if(&sl == &copy) {	//compares pointers
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -673,10 +673,10 @@ static bool test_initialize_from_string_empty_valid() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -696,10 +696,10 @@ static bool test_initialize_from_string_empty_empty() {
 	emit_param("StringList", nicePrint(retVal));
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -722,10 +722,10 @@ static bool test_initialize_from_string_empty_null() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 */
 }
@@ -748,10 +748,10 @@ static bool test_initialize_from_string_non_empty_valid() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -771,10 +771,10 @@ static bool test_initialize_from_string_non_empty_empty() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -798,10 +798,10 @@ static bool test_initialize_from_string_non_empty_null() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 */
 }
@@ -819,10 +819,10 @@ static bool test_clear_all_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -839,10 +839,10 @@ static bool test_clear_all_non_empty_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -860,10 +860,10 @@ static bool test_clear_all_non_empty_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -883,10 +883,10 @@ static bool test_create_union_return_true() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(add);
+		free(orig); free(add);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add);
+	free(orig); free(add);
 	PASS;
 }
 
@@ -907,10 +907,10 @@ static bool test_create_union_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(add);
+		free(orig); free(add);
 		FAIL;
 	}
-	niceFree(orig);	niceFree(add);
+	free(orig);	free(add);
 	PASS;
 }
 
@@ -933,10 +933,10 @@ static bool test_create_union_duplicates_all() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -959,10 +959,10 @@ static bool test_create_union_duplicates_some() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -985,10 +985,10 @@ static bool test_create_union_duplicates_all_ignore() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -1011,10 +1011,10 @@ static bool test_create_union_duplicates_some_ignore() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -1036,10 +1036,10 @@ static bool test_create_union_empty_current() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -1060,10 +1060,10 @@ static bool test_create_union_empty_subset() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -1084,10 +1084,10 @@ static bool test_contains_list_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1108,10 +1108,10 @@ static bool test_contains_list_return_false_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1132,10 +1132,10 @@ static bool test_contains_list_return_false_almost() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1156,10 +1156,10 @@ static bool test_contains_list_return_false_reverse() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1180,10 +1180,10 @@ static bool test_contains_list_return_true_not() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1204,10 +1204,10 @@ static bool test_contains_list_return_true_consecutive() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1228,10 +1228,10 @@ static bool test_contains_list_return_true_not_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1252,10 +1252,10 @@ static bool test_contains_list_return_true_consecutive_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1274,10 +1274,10 @@ static bool test_contains_list_return_true_itself() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1298,10 +1298,10 @@ static bool test_contains_list_return_true_copy() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1320,10 +1320,10 @@ static bool test_contains_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1342,10 +1342,10 @@ static bool test_contains_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1364,10 +1364,10 @@ static bool test_contains_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1386,10 +1386,10 @@ static bool test_contains_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1413,10 +1413,10 @@ static bool test_contains_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1440,10 +1440,10 @@ static bool test_contains_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1468,10 +1468,10 @@ static bool test_contains_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1490,10 +1490,10 @@ static bool test_contains_anycase_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1512,10 +1512,10 @@ static bool test_contains_anycase_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1534,10 +1534,10 @@ static bool test_contains_anycase_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1563,10 +1563,10 @@ static bool test_contains_anycase_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1590,10 +1590,10 @@ static bool test_contains_anycase_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1618,10 +1618,10 @@ static bool test_contains_anycase_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1642,10 +1642,10 @@ static bool test_remove_invalid() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1666,10 +1666,10 @@ static bool test_remove_case() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1691,10 +1691,10 @@ static bool test_remove_substring() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1713,10 +1713,10 @@ static bool test_remove_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1736,10 +1736,10 @@ static bool test_remove_first() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1759,10 +1759,10 @@ static bool test_remove_last() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1788,10 +1788,10 @@ static bool test_remove_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1812,10 +1812,10 @@ static bool test_remove_anycase_invalid() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1839,10 +1839,10 @@ static bool test_remove_anycase_substring() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1861,10 +1861,10 @@ static bool test_remove_anycase_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1884,10 +1884,10 @@ static bool test_remove_anycase_first() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1907,10 +1907,10 @@ static bool test_remove_anycase_last() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1939,10 +1939,10 @@ static bool test_remove_anycase_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1961,10 +1961,10 @@ static bool test_substring_return_false_invalid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1983,10 +1983,10 @@ static bool test_substring_return_false_almost() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2005,10 +2005,10 @@ static bool test_substring_return_false_reverse() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2027,10 +2027,10 @@ static bool test_substring_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2050,10 +2050,10 @@ static bool test_substring_return_true_identical() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2077,10 +2077,10 @@ static bool test_substring_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2104,10 +2104,10 @@ static bool test_substring_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2132,10 +2132,10 @@ static bool test_substring_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -2155,10 +2155,10 @@ static bool test_contains_withwildcard_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2177,10 +2177,10 @@ static bool test_contains_withwildcard_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2199,10 +2199,10 @@ static bool test_contains_withwildcard_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2221,10 +2221,10 @@ static bool test_contains_withwildcard_return_false_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2243,10 +2243,10 @@ static bool test_contains_withwildcard_return_true_no_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2265,10 +2265,10 @@ static bool test_contains_withwildcard_return_true_only_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2287,10 +2287,10 @@ static bool test_contains_withwildcard_return_true_start() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2309,10 +2309,10 @@ static bool test_contains_withwildcard_return_true_mid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2331,10 +2331,10 @@ static bool test_contains_withwildcard_return_true_end() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2353,10 +2353,10 @@ static bool test_contains_withwildcard_return_true_same_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2375,10 +2375,10 @@ static bool test_contains_withwildcard_return_true_multiple() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2403,10 +2403,10 @@ static bool test_contains_withwildcard_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2430,10 +2430,10 @@ static bool test_contains_withwildcard_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2458,10 +2458,10 @@ static bool test_contains_withwildcard_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -2480,10 +2480,10 @@ static bool test_contains_anycase_wwc_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2502,10 +2502,10 @@ static bool test_contains_anycase_wwc_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2524,10 +2524,10 @@ static bool test_contains_anycase_wwc_return_false_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2546,10 +2546,10 @@ static bool test_contains_anycase_wwc_return_true_no_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2568,10 +2568,10 @@ static bool test_contains_anycase_wwc_return_true_only_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2590,10 +2590,10 @@ static bool test_contains_anycase_wwc_return_true_start() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2613,10 +2613,10 @@ static bool test_contains_anycase_wwc_return_true_mid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2636,10 +2636,10 @@ static bool test_contains_anycase_wwc_return_true_end() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2658,10 +2658,10 @@ static bool test_contains_anycase_wwc_return_true_same_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2680,10 +2680,10 @@ static bool test_contains_anycase_wwc_return_true_multiple() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2708,10 +2708,10 @@ static bool test_contains_anycase_wwc_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2735,10 +2735,10 @@ static bool test_contains_anycase_wwc_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2763,10 +2763,10 @@ static bool test_contains_anycase_wwc_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -2786,10 +2786,10 @@ static bool test_find_matches_any_wwc_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2809,10 +2809,10 @@ static bool test_find_matches_any_wwc_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2832,10 +2832,10 @@ static bool test_find_matches_any_wwc_return_false_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2855,10 +2855,10 @@ static bool test_find_matches_any_wwc_return_true_no_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2878,10 +2878,10 @@ static bool test_find_matches_any_wwc_return_true_only_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2901,10 +2901,10 @@ static bool test_find_matches_any_wwc_return_true_start() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2925,10 +2925,10 @@ static bool test_find_matches_any_wwc_return_true_mid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2949,10 +2949,10 @@ static bool test_find_matches_any_wwc_return_true_end() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2972,10 +2972,10 @@ static bool test_find_matches_any_wwc_return_true_same_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2995,10 +2995,10 @@ static bool test_find_matches_any_wwc_return_true_multiple() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3026,10 +3026,10 @@ static bool test_find_matches_any_wwc_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3051,10 +3051,10 @@ static bool test_find_matches_any_wwc_none() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, "") != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3077,10 +3077,10 @@ static bool test_find_matches_any_wwc_one() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3104,10 +3104,10 @@ static bool test_find_matches_any_wwc_one_exist() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(list); niceFree(matches);
+		free(orig); free(list); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(list); niceFree(matches);
+	free(orig); free(list); free(matches);
 	PASS;
 }
 
@@ -3131,10 +3131,10 @@ static bool test_find_matches_any_wwc_wild_start() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3158,10 +3158,10 @@ static bool test_find_matches_any_wwc_wild_mid() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3185,10 +3185,10 @@ static bool test_find_matches_any_wwc_wild_end() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3211,10 +3211,10 @@ static bool test_find_matches_any_wwc_multiple() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3239,10 +3239,10 @@ static bool test_find_matches_any_wwc_multiple_exist() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(list); niceFree(matches);
+		free(orig); free(list); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(list); niceFree(matches);
+	free(orig); free(list); free(matches);
 	PASS;
 }
 
@@ -3262,10 +3262,10 @@ static bool test_find_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3285,10 +3285,10 @@ static bool test_find_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3308,10 +3308,10 @@ static bool test_find_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3331,10 +3331,10 @@ static bool test_find_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3361,10 +3361,10 @@ static bool test_find_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3384,10 +3384,10 @@ static bool test_find_anycase_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3408,10 +3408,10 @@ static bool test_find_anycase_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3431,10 +3431,10 @@ static bool test_find_anycase_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3464,10 +3464,10 @@ static bool test_find_anycase_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3489,10 +3489,10 @@ static bool test_identical_return_false_same() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3513,10 +3513,10 @@ static bool test_identical_return_false_not_same() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3537,10 +3537,10 @@ static bool test_identical_return_false_almost() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3561,10 +3561,10 @@ static bool test_identical_return_false_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3585,10 +3585,10 @@ static bool test_identical_return_false_subset() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3609,10 +3609,10 @@ static bool test_identical_return_true_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3633,10 +3633,10 @@ static bool test_identical_return_true_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3655,10 +3655,10 @@ static bool test_identical_return_true_itself() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3679,10 +3679,10 @@ static bool test_identical_return_true_copy() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3700,10 +3700,10 @@ static bool test_print_to_string_empty() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3719,10 +3719,10 @@ static bool test_print_to_string_one() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3738,10 +3738,10 @@ static bool test_print_to_string_many() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3760,10 +3760,10 @@ static bool test_print_to_delimed_string_empty() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3781,10 +3781,10 @@ static bool test_print_to_delimed_string_one() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3803,10 +3803,10 @@ static bool test_print_to_delimed_string_many_short() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(orig); niceFree(ps);
+		free(orig); free(ps);
 		FAIL;
 	}
-	niceFree(orig); niceFree(ps);
+	free(orig); free(ps);
 	PASS;
 }
 
@@ -3825,10 +3825,10 @@ static bool test_print_to_delimed_string_many_long() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(orig); niceFree(ps);
+		free(orig); free(ps);
 		FAIL;
 	}
-	niceFree(orig); niceFree(ps);
+	free(orig); free(ps);
 	PASS;
 }
 
@@ -3849,10 +3849,10 @@ static bool test_print_to_delimed_string_many_null() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(orig); niceFree(ps);
+		free(orig); free(ps);
 		FAIL;
 	}
-	niceFree(orig); niceFree(ps);
+	free(orig); free(ps);
 	PASS;
 }
 
@@ -3874,10 +3874,10 @@ static bool test_delete_current_before() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3905,10 +3905,10 @@ static bool test_delete_current_after_no_match() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3932,10 +3932,10 @@ static bool test_delete_current_one_first() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3959,10 +3959,10 @@ static bool test_delete_current_one_mid() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3986,10 +3986,10 @@ static bool test_delete_current_one_last() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4019,10 +4019,10 @@ static bool test_delete_current_all() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4044,10 +4044,10 @@ static bool test_string_compare_equal_same_beg() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs, 3);
+		free(list); free_helper(strs, 3);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs, 3);
+	free(list); free_helper(strs, 3);
 	PASS;
 }
 
@@ -4069,10 +4069,10 @@ static bool test_string_compare_equal_same_mid() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs, 2);
+		free(list); free_helper(strs, 2);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs, 2);
+	free(list); free_helper(strs, 2);
 	PASS;
 }
 
@@ -4094,10 +4094,10 @@ static bool test_string_compare_equal_same_end() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs, 1);
+		free(list); free_helper(strs, 1);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs, 1);
+	free(list); free_helper(strs, 1);
 	PASS;
 }
 
@@ -4123,11 +4123,11 @@ static bool test_string_compare_equal_different_list() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list1); niceFree(list2); 
+		free(list1); free(list2); 
 		free_helper(strs1, 2); free_helper(strs2, 2); 
 		FAIL;
 	}
-	niceFree(list1); niceFree(list2); 
+	free(list1); free(list2); 
 	free_helper(strs1, 2); free_helper(strs2, 2);
 	PASS;
 }
@@ -4153,11 +4153,11 @@ static bool test_string_compare_copy() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list1); niceFree(list2); 
+		free(list1); free(list2); 
 		free_helper(strs1, 3); free_helper(strs2, 3);
 		FAIL;
 	}
-	niceFree(list1); niceFree(list2); 
+	free(list1); free(list2); 
 	free_helper(strs1, 3); free_helper(strs2, 3);
 	PASS;
 }
@@ -4181,10 +4181,10 @@ static bool test_string_compare_not_equal_same() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
-		niceFree(list); free_helper(strs1, 3); free_helper(strs2, 2);
+		free(list); free_helper(strs1, 3); free_helper(strs2, 2);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs1, 3); free_helper(strs2, 2);
+	free(list); free_helper(strs1, 3); free_helper(strs2, 2);
 	PASS;
 }
 
@@ -4210,11 +4210,11 @@ static bool test_string_compare_not_equal_different() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
-		niceFree(list1); niceFree(list2); 
+		free(list1); free(list2); 
 		free_helper(strs1, 2); free_helper(strs2, 3);
 		FAIL;
 	}
-	niceFree(list1); niceFree(list2); 
+	free(list1); free(list2); 
 	free_helper(strs1, 2); free_helper(strs2, 3);
 	PASS;
 }
@@ -4233,10 +4233,10 @@ static bool test_qsort_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4254,10 +4254,10 @@ static bool test_qsort_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4275,10 +4275,10 @@ static bool test_qsort_already() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4299,10 +4299,10 @@ static bool test_qsort_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed2));
 	if(niceStrCmp(changed2, expect) != MATCH) {
-		niceFree(orig); niceFree(changed1); niceFree(changed2);
+		free(orig); free(changed1); free(changed2);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed1); niceFree(changed2);
+	free(orig); free(changed1); free(changed2);
 	PASS;
 }
 
@@ -4320,10 +4320,10 @@ static bool test_qsort_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4343,10 +4343,10 @@ static bool test_qsort_many_shuffle() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4364,10 +4364,10 @@ static bool test_shuffle_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4385,10 +4385,10 @@ static bool test_shuffle_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4408,10 +4408,10 @@ static bool test_shuffle_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, notExpect) == MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4431,10 +4431,10 @@ static bool test_rewind_empty() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4454,10 +4454,10 @@ static bool test_rewind_non_empty() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4479,10 +4479,10 @@ static bool test_rewind_after_contains_true() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4504,10 +4504,10 @@ static bool test_rewind_after_contains_false() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4526,10 +4526,10 @@ static bool test_append_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4548,10 +4548,10 @@ static bool test_append_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4574,10 +4574,10 @@ static bool test_append_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4598,10 +4598,10 @@ static bool test_append_contains() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4623,10 +4623,10 @@ static bool test_append_rewind() {
 	emit_param("StringList", nicePrint(changed));
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4648,10 +4648,10 @@ static bool test_append_current() {
 	emit_output_actual_header();
 	emit_param("StrinList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4670,10 +4670,10 @@ static bool test_insert_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4696,10 +4696,10 @@ static bool test_insert_head() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4724,10 +4724,10 @@ static bool test_insert_middle() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4755,10 +4755,10 @@ static bool test_insert_end() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4782,10 +4782,10 @@ static bool test_insert_current() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4819,10 +4819,10 @@ static bool test_insert_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4839,10 +4839,10 @@ static bool test_next_empty() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4863,10 +4863,10 @@ static bool test_next_beginning() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4887,10 +4887,10 @@ static bool test_next_middle() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4911,10 +4911,10 @@ static bool test_next_end() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4931,10 +4931,10 @@ static bool test_number_empty() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4951,10 +4951,10 @@ static bool test_number_one() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4971,10 +4971,10 @@ static bool test_number_many() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4998,10 +4998,10 @@ static bool test_number_after_delete() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5022,10 +5022,10 @@ static bool test_number_after_clear_all() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5047,10 +5047,10 @@ static bool test_number_after_append() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5072,10 +5072,10 @@ static bool test_number_after_insert() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5098,10 +5098,10 @@ static bool test_number_copy() {
 	emit_retval("%d", num1);
 	emit_retval("%d", num2);
 	if(num1 != expect || num2 != expect) {
-		niceFree(orig1); niceFree(orig2);
+		free(orig1); free(orig2);
 		FAIL;
 	}
-	niceFree(orig1); niceFree(orig2);
+	free(orig1); free(orig2);
 	PASS;
 }
 
@@ -5118,10 +5118,10 @@ static bool test_is_empty_empty() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5142,10 +5142,10 @@ static bool test_is_empty_clear() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5163,10 +5163,10 @@ static bool test_is_empty_one() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5184,10 +5184,10 @@ static bool test_is_empty_many() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5209,10 +5209,10 @@ static bool test_is_empty_append() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5233,10 +5233,10 @@ static bool test_is_empty_insert() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5255,10 +5255,10 @@ static bool test_get_list_empty() {
 	emit_output_actual_header();
 	emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(!isEmpty) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5277,10 +5277,10 @@ static bool test_get_list_non_empty() {
 	emit_output_actual_header();
 	emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(isEmpty) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5299,10 +5299,10 @@ static bool test_get_delimiters_empty_no() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5321,10 +5321,10 @@ static bool test_get_delimiters_empty_yes() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5343,10 +5343,10 @@ static bool test_get_delimiters_non_empty_no() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5365,9 +5365,9 @@ static bool test_get_delimiters_non_empty_yes() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
