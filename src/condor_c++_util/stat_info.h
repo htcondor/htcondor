@@ -104,7 +104,8 @@ public:
 
 	/** This function returns the errno as set from the attempt to get
 	    information about this file.  If there was no error, this will
-		return 0.
+		return 0. Note that this value is only valid when Error() returns
+		SINoFile or SIFailure.
 		@return The errno from getting info for this StatInfo object.
 	*/
 	int Errno() { return si_errno; };

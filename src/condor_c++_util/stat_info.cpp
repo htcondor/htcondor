@@ -124,8 +124,6 @@ StatInfo::stat_file( const char *path )
 
 # if (! defined WIN32)
 	if ( !status ) {
-		// Only lstat if it's a directory  - or - 
-		// the "only lstat() if dir" flag isn't set
 		const StatStructType *sb = statbuf.GetBuf( StatWrapper::STATOP_STAT );
 		status = statbuf.Stat( StatWrapper::STATOP_LSTAT );
 	}
