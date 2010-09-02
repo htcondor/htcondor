@@ -264,9 +264,7 @@ StatInfo::init( StatWrapper *statbuf )
 char*
 StatInfo::make_dirpath( const char* dir ) 
 {
-	if(!dir) {
-		return NULL;
-	}
+	ASSERT(dir);
 
 	char* rval;
 	int dirlen = strlen(dir);
