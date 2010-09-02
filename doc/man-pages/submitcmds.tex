@@ -199,6 +199,12 @@ commands).
 A path and file name used by Condor to capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
+A path is given with respect to the file system of the machine
+on which the job is submitted.
+The file is written (by the job)
+in the remote scratch directory of the machine where the job is executed. 
+When the job exits, the resulting file is transferred back to the machine
+where the job was submitted, and the path is utilized for file placement.
 If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
 If not specified, error messages are ignored
@@ -272,6 +278,10 @@ the terminal, (\File{stdin}, \File{stdout}, and \File{stderr}),
 must refer to files. Thus,
 the file name specified with \SubmitCmd{input} should contain any keyboard
 input the program requires (that is, this file becomes \File{stdin}).
+A path is given with respect to the file system of the machine
+on which the job is submitted.
+The file is transferred before execution
+to the remote scratch directory of the machine where the job is executed. 
 If not specified, the default value
 of \File{/dev/null} is used for submission to a Unix machine.
 If not specified, input is ignored
@@ -366,6 +376,12 @@ job-owner@submit-machine-name
 The \SubmitCmd{output} file captures
 any information the program would ordinarily write to the screen
 (that is, this file becomes \File{stdout}).
+A path is given with respect to the file system of the machine
+on which the job is submitted.
+The file is written (by the job)
+in the remote scratch directory of the machine where the job is executed. 
+When the job exits, the resulting file is transferred back to the machine
+where the job was submitted, and the path is utilized for file placement.
 If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
 If not specified, output is ignored
