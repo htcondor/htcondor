@@ -290,6 +290,10 @@ StatInfo::GetMode( void )
 	if(!valid) {
 		stat_file( fullpath );
 	}
+	if(!valid) {
+		EXCEPT("Avoiding a use of an undefined mode");
+	}
+
 	return file_mode;	
 }
 
