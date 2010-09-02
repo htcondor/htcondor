@@ -181,7 +181,7 @@ public:
 	/** Get the group owner of the entry.
 		@return the gid of the entry's group id
 	*/
-	gid_t GetGroup( void ) { return group; };
+	gid_t GetGroup();
 #endif
 
 private:

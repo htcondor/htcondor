@@ -307,4 +307,16 @@ StatInfo::GetOwner( void )
 
 	return owner;
 }
+
+gid_t
+StatInfo::GetGroup( void )
+{
+	// This is defensive programming, but it's better than returning an
+	// undefined value.
+	if(!valid) {
+		EXCEPT("Avoiding a use of an undefined gid");
+	}
+
+	return group;
+}
 #endif
