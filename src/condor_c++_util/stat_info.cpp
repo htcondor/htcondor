@@ -88,7 +88,7 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 	access_time = time_access;
 	modify_time = time_modify;
 	create_time = time_create;
-	mode_set = false;
+	valid = false;
 	file_size = fsize;
 	m_isDirectory = is_dir;
 	m_isSymlink = is_symlink;
@@ -222,7 +222,7 @@ StatInfo::init( StatWrapper *statbuf )
 		m_isDirectory = false;
 		m_isExecutable = false;
 		m_isSymlink = false;
-		mode_set = false;
+		valid = false;
 	}
 	else
 	{
@@ -246,7 +246,7 @@ StatInfo::init( StatWrapper *statbuf )
 		modify_time = sb->st_mtime;
 		file_size = sb->st_size;
 		file_mode = sb->st_mode;
-		mode_set = true;
+		valid = true;
 # if (! defined WIN32)
 		m_isDirectory = S_ISDIR(sb->st_mode);
 		// On Unix, if any execute bit is set (user, group, other), we
@@ -289,9 +289,22 @@ StatInfo::make_dirpath( const char* dir )
 mode_t
 StatInfo::GetMode( void ) 
 {
-	if( ! mode_set ) {
+	if(!valid) {
 		stat_file( fullpath );
 	}
 	return file_mode;	
 }
 
+#ifndef WIN32
+uid_t
+StatInfo::GetOwner( void )
+{
+	// This is defensive programming, but it's better than returning an
+	// undefined value.
+	if(!valid) {
+		EXCEPT("Avoiding a use of an undefined uid");
+	}
+
+	return owner;
+}
+#endif

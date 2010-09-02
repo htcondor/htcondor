@@ -176,7 +176,7 @@ public:
 	/** Get the owner of the entry.
 		@return the uid of the entry's owner
 	*/
-	uid_t GetOwner( void ) { return owner; };
+	uid_t GetOwner();
 
 	/** Get the group owner of the entry.
 		@return the gid of the entry's group id
@@ -197,7 +197,7 @@ private:
 	uid_t owner;
 	gid_t group;
 #endif
-	bool mode_set;
+	bool valid;
 	mode_t file_mode;
 	filesize_t file_size;
 	char* dirpath;
