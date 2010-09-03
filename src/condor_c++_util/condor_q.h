@@ -78,13 +78,13 @@ class CondorQ
 
 	// add constraints
 	int add (CondorQIntCategories, int);
-	int add (CondorQStrCategories, char *);
+	int add (CondorQStrCategories, const char *);
 	int add (CondorQFltCategories, float);
-	int addAND (char *);  // custom
-	int addOR (char *);  // custom
+	int addAND (const char *);  // custom
+	int addOR (const char *);  // custom
 	int addDBConstraint (CondorQIntCategories, int);
 
-	int addSchedd (char *);  // what schedd are we querying?
+	int addSchedd (const char *);  // what schedd are we querying?
 	int addScheddBirthdate (time_t value);  // what 
 	// fetch the job ads from the schedd corresponding to the given classad
 	// which pass the criterion specified by the constraints; default is
@@ -94,11 +94,11 @@ class CondorQ
 	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack = 0);
 	
 		// fetch the job ads from database 	
-	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, char * = 0, CondorError* errstack = 0);
-	int fetchQueueFromDBAndProcess ( char *, char *&lastUpdate, process_function process_func, CondorError* errstack = 0);
+	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
+	int fetchQueueFromDBAndProcess ( const char *, char *&lastUpdate, process_function process_func, CondorError* errstack = 0);
 
 		// return the results from a DB query directly to user
-	void rawDBQuery(char *, CondorQQueryType);
+	void rawDBQuery(const char *, CondorQQueryType);
 
   private:
 	GenericQuery query;
