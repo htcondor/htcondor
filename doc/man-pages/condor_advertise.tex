@@ -152,7 +152,11 @@ This file is used with the command:
 
 \ExitStatus
 
-\Condor{advertise} will exit with a status value of 0 (zero) upon success,
-and it will exit with the value 1 (one) upon failure.
+\Condor{advertise} will exit with a status value of 0 (zero) upon
+success, and it will exit with the value 1 (one) upon failure.
+Success means that all ads were successfully sent to all collectors.
+When there are multiple ads or multiple collectors, it is possible that
+some but not all publications succeed; in this case, the exit status is 1,
+indicating failure.
 
 \end{ManPage}
