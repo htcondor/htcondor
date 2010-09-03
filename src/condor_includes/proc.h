@@ -59,7 +59,8 @@ template <class Item> class ExtArray;
 #define REMOVED			3
 #define COMPLETED		4
 #define	HELD			5
-#define JOB_STATUS_MAX  5 /* Largest valid job status value */
+#define STAGING_OUT		6
+#define JOB_STATUS_MAX  6 /* Largest valid job status value */
 
 // Put C funtion definitions here
 BEGIN_C_DECLS

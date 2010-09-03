@@ -108,6 +108,7 @@ NeedsBasicAnalysis( ClassAd *request ) {
   case HELD:
   case REMOVED:
   case COMPLETED:
+  case STAGING_OUT:
     return false;
   default:
     return true;

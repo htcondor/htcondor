@@ -1306,7 +1306,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	if ( new_remote_state == IDLE ) {
 		JobIdle();
 	}
-	if ( new_remote_state == RUNNING ) {
+	if ( new_remote_state == RUNNING || new_remote_state == STAGING_OUT ) {
 		JobRunning();
 	}
 	// If the job has been removed locally, don't propagate a hold from

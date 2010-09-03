@@ -74,6 +74,7 @@ static const char* JobStatusNames[] = {
     "REMOVED",
     "COMPLETED",
 	"HELD",
+	"STAGING_OUT",
 };
 
 

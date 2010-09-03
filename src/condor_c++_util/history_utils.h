@@ -228,6 +228,8 @@ encode_status( int status )
                 return 'C';
           case REMOVED:
                 return 'X';
+          case STAGING_OUT:
+                return '>';
           default:
                 return ' ';
         }

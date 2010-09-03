@@ -244,6 +244,7 @@ ErrorPolicy::analyzePolicy( )
 				//
 			switch ( this->job_state ) {
 				case RUNNING:
+				case STAGING_OUT:
 					ret = STAYS_IN_QUEUE;
 					break;
 				case HELD:
