@@ -51,6 +51,12 @@ was only supported by the Windows version of \Condor{submit}.
 
 \begin{itemize}
 
+% gittrac 1631
+\item Fixed an misleading error message issued by \Condor{run} which stated the 
+\verb@DAGMan job was aborted by the user@ when the job submitted
+by \Condor{run} was aborted by the user.
+It now states \verb@The job was aborted by the user@.
+
 % gittrac 1543
 \item When the \Condor{startd} daemon is running with an execute directory on
 a very large file system, with more than 32 bits worth of free blocks
@@ -107,6 +113,21 @@ This problem has existed since before Condor 7.0.0.
 \item \Condor{preen} was not able to clean up files in the \MacroNI{EXECUTE}
 directory when in privsep mode.
 
+% gittrac #1589
+\item A problem was fixed that could cause a Condor daemon that
+  connects to other daemons via CCB to permanently run out of space
+  for more registered sockets until restarted.  This problem appeared
+  in the logs as the following message:
+
+\begin{verbatim}
+file descriptor safety level exceeded
+\end{verbatim}
+
+% gittrac #1596
+\item Fixed a problem that could cause the \Condor{collector} to crash in
+when receiving updated matchmaking information for offline ads that do
+not exist.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -121,7 +142,10 @@ directory when in privsep mode.
 
 \begin{itemize}
 
-\item None.
+\item The Windows platform installation instructions have been updated.
+
+\item Section~\ref{sec:file-transfer} on Condor's File Transfer Mechanism
+has been revised and updated.
 
 \end{itemize}
 
@@ -185,6 +209,17 @@ as the rest of Condor configuration variables can be.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item
+When using file transfer semantics,
+if the job exited in such a manner so as to not produce all
+output files specified in \SubmitCmd{transfer\_output\_files},
+then which files were transferred was potentially incorrect.
+Now, all existing files are transferred back,
+and the files which are not able to be transferred back due to non-existence
+appear as zero length files.
+An example of when this occurred would be the job dumping core
+and then being placed on hold.
 
 % gittrac 1185
 \item

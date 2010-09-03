@@ -236,6 +236,15 @@ universe jobs,
 a string containing a name of
 a signal to be sent to the job if the job is put on hold.
 
+%%% ClassAd attribute: HoldReason
+\index{ClassAd job attribute!HoldReason}
+\index{HoldReason!job ClassAd attribute}
+\item[\AdAttr{HoldReason}:]    A string containing a human-readable
+message about why a job is on hold.
+This is the message that will be displayed in response to
+the command \verb@condor_q -hold@.
+It can be used to determine if a job should be released or not.
+
 %%% ClassAd attribute: HoldReasonCode
 \index{ClassAd job attribute!HoldReasonCode}
 \index{HoldReasonCode!job ClassAd attribute}
@@ -292,15 +301,6 @@ reason that a job was put on hold.
 information to go along with the \Attr{HoldReasonCode}, for
 some values of \Attr{HoldReasonCode}.
 See \Attr{HoldReasonCode} for the values.
-
-%%% ClassAd attribute: HoldReason
-\index{ClassAd job attribute!HoldReason}
-\index{HoldReason!job ClassAd attribute}
-\item[\AdAttr{HoldReason}:]    A string containing a human-readable
-message about why a job is on hold.
-This is the message that will be displayed in response to
-the command \verb@condor_q -hold@.
-It can be used to determine if a job should be released or not.
 
 %%% ClassAd attribute: HookKeyword
 \index{ClassAd machine attribute!HookKeyword}
