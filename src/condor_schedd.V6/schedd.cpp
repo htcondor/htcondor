@@ -1284,7 +1284,7 @@ count( ClassAd *job )
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
-		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
+		max_hosts = ((status == IDLE) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
@@ -1337,7 +1337,7 @@ count( ClassAd *job )
 		if( universe == CONDOR_UNIVERSE_SCHEDULER ) 
 		{
 			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+			if (status == IDLE || status == RUNNING) {
 				scheduler.SchedUniverseJobsRunning += cur_hosts;
 				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 			}
@@ -1345,7 +1345,7 @@ count( ClassAd *job )
 		if( universe == CONDOR_UNIVERSE_LOCAL ) 
 		{
 			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+			if (status == IDLE || status == RUNNING) {
 				scheduler.LocalUniverseJobsRunning += cur_hosts;
 				scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 			}
@@ -1433,7 +1433,7 @@ count( ClassAd *job )
 		status = real_status;	// set status back for below logic...
 	}
 
-	if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+	if (status == IDLE || status == RUNNING) {
 		scheduler.JobsRunning += cur_hosts;
 		scheduler.JobsIdle += (max_hosts - cur_hosts);
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
@@ -1888,7 +1888,6 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 		return 1;
 	} else {
 		switch(status) {
-			case UNEXPANDED:
 			case HELD:
 			case IDLE:
 			case COMPLETED:
@@ -6172,7 +6171,7 @@ find_idle_local_jobs( ClassAd *job )
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
-		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
+		max_hosts = ((status == IDLE) ? 1 : 0);
 	}
 	
 		//
@@ -6181,7 +6180,7 @@ find_idle_local_jobs( ClassAd *job )
 		// We do not count REMOVED or HELD jobs
 		//
 	if ( max_hosts > cur_hosts &&
-		(status == IDLE || status == UNEXPANDED || status == RUNNING) ) {
+		(status == IDLE || status == RUNNING) ) {
 			//
 			// The jobs will now attempt to have their requirements
 			// evalulated. We first check to see if the requirements are defined.
@@ -6738,7 +6737,6 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 				cluster, proc, ATTR_JOB_STATUS );
 	}
 	switch( status ) {
-	case UNEXPANDED:
 	case IDLE:
 	case RUNNING:
 			// these are the cases we expect.  if it's local
@@ -6757,7 +6755,6 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 		break;
 
 	case COMPLETED:
-	case SUBMISSION_ERR:
 		EXCEPT( "IMPOSSIBLE: status for job %d.%d is %s "
 				"but we're trying to start a shadow for it!", 
 				cluster, proc, getJobStatusString(status) );
@@ -8675,7 +8672,7 @@ mark_serial_job_running( PROC_ID *job_id )
 }
 
 /*
-** Mark a job as stopped, (Idle or Unexpanded).  Do not call directly.  
+** Mark a job as stopped, (Idle).  Do not call directly.  
 ** Call the non-underscore version below instead.
 */
 void
@@ -9876,7 +9873,7 @@ Scheduler::kill_zombie(int, PROC_ID* job_id )
 
 /*
 ** The shadow running this job has died.  If things went right, the job
-** has been marked as idle, unexpanded, or completed as appropriate.
+** has been marked as idle or completed as appropriate.
 ** However, if the shadow terminated abnormally, the job might still
 ** be marked as running (a zombie).  Here we check for that conditon,
 ** and mark the job with the appropriate status.
@@ -10997,11 +10994,6 @@ prio_compar(prio_rec* a, prio_rec* b)
 	 }
 
 	 /* here,updown priority and job_priority are both equal */
-	 /* check existence of checkpoint files */
-	 if (( a->status == UNEXPANDED) && ( b->status != UNEXPANDED))
-		  return ( 1);
-	 if (( a->status != UNEXPANDED) && ( b->status == UNEXPANDED))
-		  return (-1);
 
 	 /* check for job submit times */
 	 if( a->qdate < b->qdate ) {

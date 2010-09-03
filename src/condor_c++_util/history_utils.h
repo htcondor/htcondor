@@ -220,8 +220,6 @@ static char
 encode_status( int status )
 {
         switch( status ) {
-          case UNEXPANDED:
-                return 'U';
           case IDLE:
                 return 'I';
           case RUNNING:

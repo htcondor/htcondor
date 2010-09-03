@@ -1961,9 +1961,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 	else if ( strcasecmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
 			// If the status is being set, let's record the previous
-			// status. If there is no status we'll default to
-			// UNEXPANDED.
-		int status = UNEXPANDED;
+			// status. If there is no status, we default to an unused
+			// value.
+		int status = 0;
 		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
 	}
@@ -3643,7 +3643,7 @@ int get_job_prio(ClassAd *job)
         cur_hosts = ((job_status == RUNNING) ? 1 : 0);
     }
     if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
-        max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
+        max_hosts = ((job_status == IDLE) ? 1 : 0);
     }
 	// Figure out if we should contine and put this job into the PrioRec array
 	// or not.
@@ -3788,11 +3788,6 @@ int mark_idle(ClassAd *job)
 				 "cleaning up now\n", cluster, proc );
 		scheduler.WriteAbortToUserLog( job_id );
 		DestroyProc( cluster, proc );
-	} else if ( status == UNEXPANDED ) {
-		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
-		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
-						 (int)time(0) );
-		SetAttributeInt( cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0);
 	}
 	else if ( status == RUNNING || hosts > 0 ) {
 		if( universeCanReconnect(universe) &&
@@ -4238,8 +4233,7 @@ int Runnable(PROC_ID* id)
 }
 
 // From the priority records, find the runnable job with the highest priority
-// use the function prio_compar. By runnable I mean that its status is either
-// UNEXPANDED or IDLE.
+// use the function prio_compar. By runnable I mean that its status is IDLE.
 void FindPrioJob(PROC_ID & job_id)
 {
 	int			i;								// iterator over all prio rec

@@ -136,7 +136,7 @@ static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_h
 static  int use_xml = 0;
 static  bool expert = false;
 
-static 	int malformed, unexpanded, running, idle, held;
+static 	int malformed, running, idle, held;
 
 static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
@@ -1926,7 +1926,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	output_buffer->setFiller( (clusterProcString *) NULL );
 
 		// initialize counters
-	unexpanded = idle = running = held = malformed = 0;
+	idle = running = held = malformed = 0;
 	output_buffer_empty = true;
 
 	if ( run || goodput ) {
@@ -2106,9 +2106,8 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		if( summarize ) {
 			printf( "\n%d jobs; "
 					"%d idle, %d running, %d held",
-					unexpanded+idle+running+held+malformed,
+					idle+running+held+malformed,
 					idle,running,held);
-			if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
 			if (malformed>0) printf( ", %d malformed",malformed);
            	printf("\n");
 		}
@@ -2156,7 +2155,6 @@ process_buffer_line( ClassAd *job )
 
 	switch (status)
 	{
-		case UNEXPANDED: unexpanded++; break;
 		case IDLE:       idle++;       break;
 		case RUNNING:    running++;    break;
 		case HELD:		 held++;	   break;
@@ -2369,7 +2367,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 
 			// initialize counters
-		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
+		malformed = 0; idle = 0; running = 0; held = 0;
 		
 		if( verbose || use_xml ) {
 			StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
@@ -2474,9 +2472,8 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		if( summarize ) {
 			printf( "\n%d jobs; "
 					"%d idle, %d running, %d held",
-					unexpanded+idle+running+held+malformed,
+					idle+running+held+malformed,
 					idle,running,held);
-			if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
 			if (malformed>0) printf( ", %d malformed",malformed);
 
             printf("\n");

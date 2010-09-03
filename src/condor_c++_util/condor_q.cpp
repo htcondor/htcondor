@@ -603,8 +603,6 @@ char
 encode_status( int status )
 {
 	switch( status ) {
-	  case UNEXPANDED:
-		return 'U';
 	  case IDLE:
 		return 'I';
 	  case RUNNING:
@@ -615,8 +613,6 @@ encode_status( int status )
 		return 'X';
 	  case HELD:
 		return 'H';
-	  case SUBMISSION_ERR:
-		return 'E';
 	  default:
 		return ' ';
 	}

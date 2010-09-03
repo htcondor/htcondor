@@ -6,13 +6,11 @@
 # each classad described one schedd's glidded in startds and workloads.
 
 # from h/proc.h
-#define UNEXPANDED  0
 #define IDLE        1
 #define RUNNING     2
 #define REMOVED     3
 #define COMPLETED   4
 #define HELD        5
-#define SUBMISSION_ERR  6
 
 my $condor_q_cmd = "/home/condor/bin/condor_q";
 my $condor_status_cmd = "/home/condor/bin/condor_status";
