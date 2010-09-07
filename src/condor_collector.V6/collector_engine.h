@@ -54,9 +54,11 @@ class CollectorEngine : public Service
     * TARGET.Name && TARGET.MyAddress
 	* @param t_AddType - the add type used to determine the hashtable to search
     * @param c_query - classad query 
+	* @param query_contains_hash_key - will be set to true if hash key for a
+	*                                 specific ad was specified in the query ad
     * @return - the number of records removed.
 	*/
-	int remove (AdTypes t_AddType, const ClassAd & c_query);
+	int remove (AdTypes t_AddType, const ClassAd & c_query, bool *hash_key_specified);
 
 	// remove classad in the specified table with the given hashkey
 	int remove (AdTypes, AdNameHashKey &);

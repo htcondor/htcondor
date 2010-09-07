@@ -961,7 +961,9 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
-    if ( 0 == ( __numAds__ = collector.remove( whichAds, query ) ) )
+	bool query_contains_hash_key = false;
+	__numAds__ = collector.remove( whichAds, query, &query_contains_hash_key );
+    if ( !query_contains_hash_key )
 	{
 		dprintf ( D_ALWAYS, "Walking tables to invalidate... O(n)\n" );
 
