@@ -263,6 +263,14 @@ encountered, the largest 32-bit integer (with matching sign) is used.
 \item Fixed a bug that caused the condor\_gridmanager to exit when
 receiving badly-formatted error messages from the nordugrid\_gahp.
 
+% gittrac #1342
+% gittrac #1644
+\item Fixed a problem affecting the use of 7.5.3 \Condor{startd} and
+  \Condor{master} daemons in a pool with a collector from before
+  7.5.2.  On shutdown, \Condor{startd} and \Condor{master} caused
+  all startd and master ads respectively to be removed from the
+  collector.
+
 \end{itemize}
 
 \noindent Known Bugs:
