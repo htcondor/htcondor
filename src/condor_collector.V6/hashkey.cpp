@@ -342,7 +342,7 @@ makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
     MyString tmp;
     
     // get the hash name of the the resource
-    if ( !adLookup( "Grid", ad, "HashName", NULL, hk.name ) ) {
+    if ( !adLookup( "Grid", ad, ATTR_HASH_NAME, NULL, hk.name ) ) {
         return false;
     }
     

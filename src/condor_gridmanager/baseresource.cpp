@@ -170,11 +170,16 @@ bool BaseResource::Invalidate () {
     line.sprintf ( 
         "((TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\") && "
 		 "(TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\"))",
-        "HashName", GetHashName (),
+        ATTR_HASH_NAME, GetHashName (),
         ATTR_SCHEDD_NAME, ScheddObj->name (),
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
         ATTR_OWNER, myUserName );
-    ad.Assign ( ATTR_REQUIREMENTS, line );
+    ad.AssignExpr ( ATTR_REQUIREMENTS, line );
+
+	ad.Assign( ATTR_HASH_NAME, GetHashName() );
+	ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
+	ad.Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
+	ad.Assign( ATTR_OWNER, myUserName );
 
     dprintf (
         D_FULLDEBUG,

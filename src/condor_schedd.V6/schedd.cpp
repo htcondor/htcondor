@@ -11229,6 +11229,8 @@ Scheduler::invalidate_ads()
         // Invalidate the schedd ad
     line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
     m_ad->Insert( line.Value() );
+	m_ad->Assign( ATTR_NAME, Name );
+	m_ad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
 
 		// Update collectors
@@ -11237,18 +11239,28 @@ Scheduler::invalidate_ads()
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
 		// Invalidate all our submittor ads.
-	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
-				  Name );
-    m_ad->InsertOrUpdate( line.Value() );
 
-	daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false);
+	m_ad->Assign( ATTR_SCHEDD_NAME, Name );
+	m_ad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
+	for( i=0; i<N_Owners; i++ ) {
+		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false);
+		MyString owner;
+		owner.sprintf("%s@%s", Owners[i].Name, UidDomain);
+		m_ad->Assign( ATTR_NAME, owner.Value() );
 
-	Daemon* d;
-	if( FlockCollectors && FlockLevel > 0 ) {
-		for( i=1, FlockCollectors->rewind();
-			 i <= FlockLevel && FlockCollectors->next(d); i++ ) {
-			((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false );
+		line.sprintf( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
+					  ATTR_REQUIREMENTS,
+					  ATTR_SCHEDD_NAME, Name,
+					  ATTR_NAME, owner.Value() );
+		m_ad->InsertOrUpdate( line.Value() );
+
+		Daemon* d;
+		if( FlockCollectors && FlockLevel > 0 ) {
+			for( i=1, FlockCollectors->rewind();
+				 i <= FlockLevel && FlockCollectors->next(d); i++ ) {
+				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false );
+			}
 		}
 	}
 }

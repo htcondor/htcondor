@@ -863,3 +863,5 @@ const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH = "JobMachineAttrsHisto
 const char * const ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0 = "MachineAttrSlotWeight0";
 const char * const ATTR_CUMULATIVE_SLOT_TIME = "CumulativeSlotTime";
 const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";
+
+const char * const ATTR_HASH_NAME = "HashName";
