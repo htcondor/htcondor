@@ -168,8 +168,8 @@ bool BaseResource::Invalidate () {
        (HashName,SchedName,Owner) as unique id. */
     MyString line;
     line.sprintf ( 
-        "((%s =?= \"%s\") && (%s =?= \"%s\") && "
-		 "(%s =?= \"%s\") && (%s =?= \"%s\"))",
+        "((TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\") && "
+		 "(TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\"))",
         "HashName", GetHashName (),
         ATTR_SCHEDD_NAME, ScheddObj->name (),
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),

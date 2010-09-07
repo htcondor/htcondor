@@ -11227,7 +11227,7 @@ Scheduler::invalidate_ads()
     m_ad->SetTargetTypeName( SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
-    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
+    line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
     m_ad->Insert( line.Value() );
 
 
@@ -11237,7 +11237,7 @@ Scheduler::invalidate_ads()
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
 		// Invalidate all our submittor ads.
-	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
+	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
 				  Name );
     m_ad->InsertOrUpdate( line.Value() );
 
