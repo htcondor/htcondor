@@ -174,7 +174,7 @@ bool BaseResource::Invalidate () {
         ATTR_SCHEDD_NAME, ScheddObj->name (),
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
         ATTR_OWNER, myUserName );
-    ad.AssignExpr ( ATTR_REQUIREMENTS, line );
+    ad.AssignExpr ( ATTR_REQUIREMENTS, line.Value() );
 
 	ad.Assign( ATTR_HASH_NAME, GetHashName() );
 	ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
