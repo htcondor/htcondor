@@ -1291,13 +1291,14 @@ files created by the job other than those specified with the
 \SubmitCmd{output} and \SubmitCmd{error} commands are placed into the
 directory where the job was submitted.
 
-To \emph{restrict} the files that are transferred,
+To \emph{restrict} the files and directories that are transferred,
 specify the exact list of files with  \SubmitCmd{transfer\_output\_files}.
 Delimit file names with a comma.
 When this list is defined, and any of the files do not exist as the
 job exits, Condor considers this an error, and places the job on hold.
 
-For \SubmitCmd{grid} universe jobs, files to be transferred 
+For \SubmitCmd{grid} universe jobs other than than Condor-C grid jobs,
+files to be transferred 
 (other than standard output and standard error)
 must be specified using \SubmitCmd{transfer\_output\_files}
 in the submit description file. 
@@ -1353,8 +1354,8 @@ overwrite the earlier one.
 If the program creates output files during execution,
 it must create them within the remote scratch directory.
 Condor transfers back all files within the remote scratch
-directory that have been modified or created ignoring
-subdirectories.
+directory that have been modified or created,
+ignoring subdirectories.
 To transfer back only a subset of these files,
 the submit command
 \SubmitCmd{transfer\_output\_files}
@@ -1362,8 +1363,8 @@ is defined.
 
 Both relative and absolute paths may be used in
 \SubmitCmd{transfer\_output\_files}.  Relative paths are relative to
-the job's temporary working directory on the execute machine.  When
-the files and directories are copied back to the submit machine, they
+the job's remote scratch directory on the execute machine.
+When the files and directories are copied back to the submit machine, they
 are placed in the job's initial working directory as the base name of
 the original path.  An alternate name or path may be specified by using
 \SubmitCmd{transfer\_output\_remaps}.
@@ -1374,8 +1375,9 @@ in a directory such as \File{/tmp},
 if this directory is guaranteed to exist and be
 accessible on all possible execute machines.
 However,
-transferring such a file back after execution completes
-may not be done, as it is not supported.
+Condor will not automatically
+transfer such files back after execution completes, nor will it clean
+up these files.
 
 Here are several examples to illustrate the use of file transfer.
 The program executable is called \Prog{my\_program},
