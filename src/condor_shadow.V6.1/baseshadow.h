@@ -256,11 +256,11 @@ class BaseShadow : public Service
 			after the header and before the text of a dprintf
 			message.
 		*/
-	virtual void dprintf_va( int flags, char* fmt, va_list args );
+	virtual void dprintf_va( int flags, const char* fmt, va_list args );
 
 		/** A local dprintf maker that uses dprintf_va...
 		 */
-	void dprintf( int flags, char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void dprintf( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }

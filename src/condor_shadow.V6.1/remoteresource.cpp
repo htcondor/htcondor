@@ -42,7 +42,7 @@ extern int do_REMOTE_syscall();
 ReliSock *syscall_sock;
 RemoteResource *thisRemoteResource;
 
-static char *Resource_State_String [] = {
+static const char *Resource_State_String [] = {
 	"PRE", 
 	"EXECUTING", 
 	"PENDING_DEATH", 

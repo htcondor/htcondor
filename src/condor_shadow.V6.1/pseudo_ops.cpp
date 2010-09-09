@@ -36,10 +36,10 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
-static void append_buffer_info( MyString &url, char *method, char const *path );
-static int use_append( char *method, const char *path );
-static int use_compress( char *method, const char *path );
-static int use_fetch( char *method, const char *path );
+static void append_buffer_info( MyString &url, const char *method, char const *path );
+static int use_append( const char *method, const char *path );
+static int use_compress( const char *method, const char *path );
+static int use_fetch( const char *method, const char *path );
 static int use_local_access( const char *file );
 static int use_special_access( const char *file );
 static int access_via_afs( const char *file );
@@ -254,7 +254,7 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	MyString	full_path;
 	MyString	remap;
 	MyString urlbuf;
-	char	*method;
+	const char	*method;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
 
@@ -338,7 +338,7 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	return 0;
 }
 
-static void append_buffer_info( MyString &url, char *method, char const *path )
+static void append_buffer_info( MyString &url, const char *method, char const *path )
 {
 	MyString buffer_list;
 	MyString buffer_string;
@@ -400,17 +400,17 @@ static int attr_list_has_file( const char *attr, const char *path )
 	}
 }
 
-static int use_append( char * /* method */, const char *path )
+static int use_append( const char * /* method */, const char *path )
 {
 	return attr_list_has_file( ATTR_APPEND_FILES, path );
 }
 
-static int use_compress( char * /* method */, const char *path )
+static int use_compress( const char * /* method */, const char *path )
 {
 	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
 }
 
-static int use_fetch( char * /* method */, const char *path )
+static int use_fetch( const char * /* method */, const char *path )
 {
 	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
