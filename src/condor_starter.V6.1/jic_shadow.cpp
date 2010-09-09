@@ -701,7 +701,7 @@ JICShadow::notifyJobPreSpawn( void )
 
 bool
 JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
-						  user_proc )
+						  /* user_proc */ )
 {
 	static bool wrote_local_log_event = false;
 
@@ -2070,8 +2070,8 @@ JICShadow::initMatchSecuritySession()
 		// options here if we wanted to get an effect similar to
 		// security negotiation, but currently we just take the
 		// defaults from the shadow.
-	char *starter_reconnect_session_info = "";
-	char *starter_filetrans_session_info = "";
+	const char *starter_reconnect_session_info = "";
+	const char *starter_filetrans_session_info = "";
 
 	int rc = REMOTE_CONDOR_get_sec_session_info(
 		starter_reconnect_session_info,
