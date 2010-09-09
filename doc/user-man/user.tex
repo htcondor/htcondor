@@ -1278,11 +1278,9 @@ back to the submit machine after the job exits.
 \begin{enumerate}
   \item the output file, as defined with the \SubmitCmd{output} command
   \item the error file, as defined with the \SubmitCmd{error} command
-  \item any files created by the job in the remote scratch directory
+  \item any files created by the job in the remote scratch directory; this
+only occurs for non-grid jobs and for Condor-C grid jobs
 \end{enumerate}
-
-This occurs for jobs other than those submitted to the \SubmitCmd{grid}
-universe.
 
 A path given for \SubmitCmd{output} and \SubmitCmd{error} commands represents
 a path on the submit machine.
