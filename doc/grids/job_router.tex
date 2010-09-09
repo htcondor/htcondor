@@ -11,8 +11,8 @@ jobs from one type into another according to a configurable policy.
 This process of transforming the jobs is called \emph{job routing}.
 
 One example of how the Job Router can be used is for the task of sending
-excess vanilla universe jobs to one or more remote grid sites.
-The Job Router can transform the vanilla universe jobs into grid universe
+excess jobs to one or more remote grid sites.
+The Job Router can transform the jobs such as vanilla universe jobs into grid universe
 jobs that use any of the grid types supported by Condor.  The rate at
 which jobs are routed can be matched roughly to the rate at which the
 site is able to start running them.  This makes it possible to balance
@@ -37,9 +37,9 @@ as well as whether the site has experienced recent job failures.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The \Condor{job\_router} daemon and configuration determine a policy
-for which vanilla universe jobs may be transformed and sent to 
+for which jobs may be transformed and sent to 
 grid sites.
-A vanilla universe job is transformed into a grid universe job
+A job is transformed into a grid universe job
 by making a copy of the original job ClassAd, 
 modifying some attributes of the job.
 The copy is called the routed copy,
@@ -48,8 +48,7 @@ and it shows up in the job queue under a new job id.
 Until the routed copy finishes or is removed,
 the original copy of the job passively mirrors the state of the routed job.
 During this time,
-the original job is not available for matchmaking 
-as a normal vanilla universe job,
+the original job is not available for matchmaking,
 because it is tied to the routed copy.
 The original jobs also does not evaluate periodic expressions,
 such as \Attr{PeriodicHold}.
@@ -98,7 +97,7 @@ rather than embedding them in the Condor configuration file.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If Job Routing is set up, then the following items
-ought to be considered for vanilla universe jobs to have the
+ought to be considered for jobs to have the
 necessary prerequisites to be considered for routing.
 
 \begin{itemize}
@@ -119,13 +118,14 @@ transfer_input_files = input1, input2
 transfer_output_files = output1, output2
 \end{verbatim}
 
-Vanilla universe jobs and grid universe jobs differ in the
+Vanilla universe jobs and most types of grid universe jobs differ in the
 set of files transferred back when the job completes.
 Vanilla universe jobs transfer back all files created or modified,
-while grid universe jobs only transfer back the file mapped with
-\SubmitCmd{output}, as well as those explicitly listed
+while all grid universe jobs except for Condor-C only transfer back the \SubmitCmd{output} file,
+as well as those explicitly listed
 with \SubmitCmd{transfer\_output\_files}.
-To work properly as a routed copy, explicitly specify all
+Therefore, when routing jobs to grid universes other than Condor-C, it is
+important to explicitly specify all
 output files that must be transferred upon job completion.
 
 An additional difference between the vanilla universe jobs
@@ -321,20 +321,20 @@ MAX_HISTORY_ROTATIONS = 20
 \subsection{\label{RoutingTableAttributes} Routing Table Entry ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The conversion of a vanilla job to a routed copy requires the
+The conversion of a job to a routed copy may require the
 job ClassAd to be modified.
-Defaults for routed copy attributes,
-as well as instructions for creating needed attributes 
-are listed in the Routing Table.
+The Routing Table specifies attributes of the different possible
+routes and it may specify specific modifications that should be made
+to the job when it is sent along a specific route.
 
-The following attributes and instructions for creating attributes
+The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.
 
 \begin{description}
 
 \index{Job Router Routing Table ClassAd attribute!GridResource}
 \item[GridResource] Specifies the value for the \Attr{GridResource}
-attribute that will be inserted into the routed copy ClassAd.
+attribute that will be inserted into the routed copy of the job's ClassAd.
 
 \index{Job Router Routing Table ClassAd attribute!Name}
 \item[Name] An optional identifier that will be used in log
