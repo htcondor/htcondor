@@ -51,6 +51,11 @@ public:
 
 	virtual void startUpdateTimer( void );
 
+		/** Reset the timer for periodic updates to the schedd to fire
+			immediately.
+		 */
+	virtual void resetUpdateTimer( void );
+
 		/** Connect to the job queue and update all relevent
 			attributes of the job class ad.  This checks our job
 			classad to find any dirty attributes, and compares them
