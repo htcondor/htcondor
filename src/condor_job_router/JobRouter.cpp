@@ -1089,8 +1089,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += " )";
 
 	//Add on basic requirements to keep things sane.
-	//For now, require vanilla universe, but in future this may be removed.
-	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.JobUniverse == 5 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\" && other.Owner isnt Undefined)";
+	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\" && other.Owner isnt Undefined)";
 
 	if(!can_switch_ids()) {
 			// We are not running as root.  Ensure that we only try to
