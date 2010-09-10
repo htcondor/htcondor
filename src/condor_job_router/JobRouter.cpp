@@ -859,7 +859,7 @@ JobRouter::AdoptOrphans() {
 
 	// Find all jobs submitted by a JobRouter with same name as me.
 	// Maybe some of them were from a previous life and are now orphans.
-	dest_jobs += "other.ProcId >= 0 && other.";
+	dest_jobs += "target.ProcId >= 0 && target.";
 	dest_jobs += JR_ATTR_ROUTED_BY;
 	dest_jobs += " == \"";
 	dest_jobs += m_job_router_name;
@@ -867,7 +867,7 @@ JobRouter::AdoptOrphans() {
 		//Have observed problems in which we get inconsistent snapshot
 		//of the job queue; ensure that we at least have the Owner
 		//attribute, or we'll run into trouble.
-	dest_jobs += " && other.Owner isnt Undefined";
+	dest_jobs += " && target.Owner isnt Undefined";
 
 	constraint_tree = parser.ParseExpression(dest_jobs.c_str());
 	if(!constraint_tree) {
@@ -969,13 +969,13 @@ JobRouter::AdoptOrphans() {
 	} while (query.Next(dest_key));
 
 
-	src_jobs = "other.Managed == \"External\" && other.ManagedManager == \"";
+	src_jobs = "target.Managed == \"External\" && target.ManagedManager == \"";
 	src_jobs += m_job_router_name;
 	src_jobs += "\"";
 		//Have observed problems in which we get inconsistent snapshot
 		//of the job queue; ensure that we at least have the Owner
 		//attribute, or we'll run into trouble.
-	src_jobs += " && other.Owner isnt Undefined";
+	src_jobs += " && target.Owner isnt Undefined";
 
 	constraint_tree = parser.ParseExpression(src_jobs.c_str());
 	if(!constraint_tree) {
@@ -1089,7 +1089,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += " )";
 
 	//Add on basic requirements to keep things sane.
-	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\" && other.Owner isnt Undefined && other.";
+	umbrella_constraint += " && (target.ProcId >= 0 && target.JobStatus == 1 && target.Managed isnt \"ScheddDone\" && target.Managed isnt \"External\" && target.Owner isnt Undefined && target.";
 	umbrella_constraint += JR_ATTR_ROUTED_BY;
 	umbrella_constraint += " isnt \"";
 	umbrella_constraint += m_job_router_name;
@@ -1104,13 +1104,13 @@ JobRouter::GetCandidateJobs() {
 
 		ASSERT(username);
 
-		umbrella_constraint += " && (other.";
+		umbrella_constraint += " && (target.";
 		umbrella_constraint += ATTR_OWNER;
 		umbrella_constraint += " == \"";
 		umbrella_constraint += username;
 		umbrella_constraint += "\"";
 		if(domain) {
-			umbrella_constraint += " && other.";
+			umbrella_constraint += " && target.";
 			umbrella_constraint += ATTR_NT_DOMAIN;
 			umbrella_constraint += " == \"";
 			umbrella_constraint += domain;
