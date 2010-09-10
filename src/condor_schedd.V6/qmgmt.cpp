@@ -2120,10 +2120,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	free( round_param );
 
 	if( !PrioRecArrayIsDirty ) {
-		if( stricmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
+		if( stricmp(attr_name, ATTR_ACCOUNTING_GROUP) == 0 ||
+            stricmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
 			PrioRecArrayIsDirty = true;
-		}
-		if( stricmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
+		} else if( stricmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
 			if( atoi(attr_value) == IDLE ) {
 				PrioRecArrayIsDirty = true;
 			}
