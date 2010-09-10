@@ -393,7 +393,7 @@ The default value if no expression is defined
 assumes all jobs are successful.
 Routed jobs that are removed are considered to be failures.
 An example expression to treat all jobs running for less than 30 minutes as
-failures is \Expr{other.RemoteWallClockTime < 1800}.  A more flexible
+failures is \Expr{target.RemoteWallClockTime < 1800}.  A more flexible
 expression might reference a property or expression of the job that
 specifies a failure condition specific to the type of job.
 
@@ -415,7 +415,7 @@ Instead,
 require users to submit jobs with \Attr{X509UserProxy}
 set in the submit description  file.
 If this feature is needed,
-use the boolean expression to only allow specific values of \Expr{other.Owner}
+use the boolean expression to only allow specific values of \Expr{target.Owner}
 to use this shared proxy file.
 The shared proxy file should be owned by the \Login{condor} user.
 Currently, to use a shared proxy, the job must also
