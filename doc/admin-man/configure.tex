@@ -7602,9 +7602,14 @@ These macros affect the \Condor{job\_router} daemon.
 
 \label{JobRouterSourceJobConstraint}
 \item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
-  Specifies a global \Attr{Requirements} expression that will be appended
-  to all routed jobs,
+  Specifies a global \Attr{Requirements} expression that must be true
+  for all newly routed jobs,
   in addition to any \Attr{Requirements} specified within a routing table entry.
+  In addition to the configurable constraints, the
+ \Condor{job\_router} also has some hard-coded constraints.  It avoids
+ recursively routing jobs by requiring that the job's attribute \Attr{RoutedBy}
+ does not match \Macro{JOB\_ROUTER\_NAME}.  When not running as root,
+ it also avoids routing jobs belonging to other users.
 
 \label{JobRouterMaxJobs}
 \item[\Macro{JOB\_ROUTER\_MAX\_JOBS}]
