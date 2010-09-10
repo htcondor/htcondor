@@ -1089,7 +1089,11 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += " )";
 
 	//Add on basic requirements to keep things sane.
-	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\" && other.Owner isnt Undefined)";
+	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\" && other.Owner isnt Undefined && other.";
+	umbrella_constraint += JR_ATTR_ROUTED_BY;
+	umbrella_constraint += " isnt \"";
+	umbrella_constraint += m_job_router_name;
+	umbrella_constraint += "\")";
 
 	if(!can_switch_ids()) {
 			// We are not running as root.  Ensure that we only try to
