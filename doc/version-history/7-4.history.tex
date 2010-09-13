@@ -124,9 +124,13 @@ file descriptor safety level exceeded
 \end{verbatim}
 
 % gittrac #1596
-\item Fixed a problem that could cause the \Condor{collector} to crash in
+\item Fixed a problem that could cause the \Condor{collector} to crash
 when receiving updated matchmaking information for offline ads that do
 not exist.
+
+% gittrac #1518
+\item \Condor{ssh\_to\_job} did not work when
+\MacroNI{SEC\_DEFAULT\_NEGOTIATION} was set to \MacroNI{OPTIONAL}.
 
 \end{itemize}
 

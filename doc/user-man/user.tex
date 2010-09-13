@@ -1172,21 +1172,33 @@ The command takes on one of two possible values:
  as well as any other files in the remote scratch directory created by the job,
 back to the submit machine only when the job exits on its own.
 
-\item \verb@ON_EXIT_OR_EVICT@:
-Condor behaves the same as described for the value \verb@ON_EXIT@
-when the job exits on its own. 
+\item \verb@ON_EXIT_OR_EVICT@: Condor behaves the same as described
+for the value \verb@ON_EXIT@ when the job exits on its own.
 However, if, and each time the job is evicted from a machine,
-\emph{files are transferred back at eviction time}.
-The location is different.
-As the job is then matched and begins running on a potentially different
-machine, the files transferred upon eviction are all transferred
-to the new execute machine.
-Upon eviction,
-the files are placed in a directory within that defined by the configuration
-variable \MacroNI{SPOOL}.
-The directory is named using the
-\Attr{ClusterId} and \Attr{ProcId} job ClassAd attributes. 
-The directory name takes the form:
+\emph{files are transferred back at eviction time}.  The files that
+are transferred back at eviction time may include intermediate files
+that are not part of the final output of the job.  Before the job
+starts running again, all of the files that were stored when the job
+was last evicted are copied to the job's new remote scratch
+directory.
+
+The purpose of saving files at eviction time is to allow the job to
+resume from where it left off.
+This is similar to using the checkpoint feature of the standard universe,
+but just specifying \verb@ON_EXIT_OR_EVICT@ is not enough to make a job 
+capable of producing or utilizing checkpoints.
+The job must be designed to save and restore its state
+using the files that are saved at eviction time.
+
+The files that are transferred back at eviction time are not stored in
+the location where the job's final output will be written when the job exits.
+Condor manages these files automatically,
+so usually the only reason for a user to worry about them 
+is to make sure that there is enough space to store them.
+The files are stored on the submit machine in a temporary directory within the
+directory defined by the configuration variable \MacroNI{SPOOL}. 
+The directory is named using the \Attr{ClusterId} and \Attr{ProcId} job
+ClassAd attributes.  The directory name takes the form:
 \begin{verbatim}
    cluster<X>.proc<Y>.subproc0
 \end{verbatim}
@@ -1197,10 +1209,6 @@ As an example, if job 735.0 is evicted, it will produce the directory
    $(SPOOL)/cluster735.proc0.subproc0
 \end{verbatim}
 
-This value for \SubmitCmd{when\_to\_transfer\_output}
-is only useful if partial runs of the job are valuable.
-The example of a valuable partial run is when the application
-produces its own checkpoints.
 \end{enumerate}
 
 There is no default value for \SubmitCmd{when\_to\_transfer\_output}.
@@ -1271,11 +1279,10 @@ back to the submit machine after the job exits.
 \begin{enumerate}
   \item the output file, as defined with the \SubmitCmd{output} command
   \item the error file, as defined with the \SubmitCmd{error} command
-  \item any files created by the job in the remote scratch directory
+  \item any files created by the job in the remote scratch directory;
+this only occurs for jobs other than \SubmitCmd{grid}
+universe, and for Condor-C \SubmitCmd{grid} universe jobs
 \end{enumerate}
-
-This occurs for jobs other than those submitted to the non-Condor-C \SubmitCmd{grid}
-universe.
 
 A path given for \SubmitCmd{output} and \SubmitCmd{error} commands represents
 a path on the submit machine.  If no path is specified, the directory
