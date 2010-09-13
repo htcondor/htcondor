@@ -1183,19 +1183,21 @@ was last evicted are copied to the job's new remote scratch
 directory.
 
 The purpose of saving files at eviction time is to allow the job to
-resume from where it left off.  This is similar to using the
-checkpointing feature of standard universe, but just specifying
-\verb@ON_EXIT_OR_EVICT@ is not enough to make a job capable of
-checkpointing.  The job must be designed to save and restore its state
+resume from where it left off.
+This is similar to using the checkpoint feature of the standard universe,
+but just specifying \verb@ON_EXIT_OR_EVICT@ is not enough to make a job 
+capable of producing or utilizing checkpoints.
+The job must be designed to save and restore its state
 using the files that are saved at eviction time.
 
 The files that are transferred back at eviction time are not stored in
-the location where the job's final output will be written when the job
-finishes.  Condor manages these files automatically, so usually the only
-reason for a user to worry about them is to make sure there is enough space
-to store them.  The files are stored in a temporary directory within the
-directory defined by the configuration variable \MacroNI{SPOOL}.  The
-directory is named using the \Attr{ClusterId} and \Attr{ProcId} job
+the location where the job's final output will be written when the job exits.
+Condor manages these files automatically,
+so usually the only reason for a user to worry about them 
+is to make sure that there is enough space to store them.
+The files are stored on the submit machine in a temporary directory within the
+directory defined by the configuration variable \MacroNI{SPOOL}. 
+The directory is named using the \Attr{ClusterId} and \Attr{ProcId} job
 ClassAd attributes.  The directory name takes the form:
 \begin{verbatim}
    cluster<X>.proc<Y>.subproc0
@@ -1278,8 +1280,9 @@ back to the submit machine after the job exits.
 \begin{enumerate}
   \item the output file, as defined with the \SubmitCmd{output} command
   \item the error file, as defined with the \SubmitCmd{error} command
-  \item any files created by the job in the remote scratch directory; this
-only occurs for non-grid jobs and for Condor-C grid jobs
+  \item any files created by the job in the remote scratch directory;
+this only occurs for jobs other than \SubmitCmd{grid}
+universe, and for Condor-C \SubmitCmd{grid} universe jobs
 \end{enumerate}
 
 A path given for \SubmitCmd{output} and \SubmitCmd{error} commands represents
