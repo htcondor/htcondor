@@ -2477,15 +2477,23 @@ DedicatedScheduler::computeSchedule( void )
 		job->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING_GROUPS, want_groups);
 
 		if (want_groups) {
-			satisfyJobWithGroups(jobs, cluster, nprocs);
-			
- 				// we're done with these, safe to delete
-			delete idle_candidates;
-			idle_candidates = NULL;
+			bool foundMatch = false;
+			bool psgIsPreferred = false; 
+			psgIsPreferred = job->LookupBool(ATTR_PREFER_PARALLEL_SCHEDULING_GROUP, psgIsPreferred);
 
-			delete idle_candidates_jobs;
-			idle_candidates_jobs = NULL;
-			continue; // on to the next job
+			foundMatch = satisfyJobWithGroups(jobs, cluster, nprocs);
+			
+				// If we found a matching set of machines, or PSG is a hard requirement, we're
+				// done now.  Otherwise, keep looking.
+			if (foundMatch || !psgIsPreferred) {
+ 				// we're done with these, safe to delete
+				delete idle_candidates;
+				idle_candidates = NULL;
+
+				delete idle_candidates_jobs;
+				idle_candidates_jobs = NULL;
+				continue; // on to the next job
+			}
 		}
 
 			// First, try to satisfy the requirements of this cluster
@@ -3088,13 +3096,13 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 }
 
 
-void
+bool
 DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) {
 	dprintf(D_ALWAYS, "Trying to satisfy job with group scheduling\n");
 
 	if (scheduling_groups.number() == 0) {
 		dprintf(D_ALWAYS, "Job requested parallel scheduling groups, but no groups found\n");
-		return;
+		return false; 
 	}
 
 	scheduling_groups.rewind();
@@ -3134,7 +3142,7 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 							   cluster, nprocs, false );
 
 				// We successfully allocated machines, our work here is done
-			return;
+			return true;
 		}
 	}
 
@@ -3204,12 +3212,12 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 			printSatisfaction( cluster, &idle_candidate_machines, NULL, &unclaimed_candidate_machines, NULL );
 
 				// We successfully allocated machines, our work here is done
-			return;
+			return true;
 		}
 	}
 
 		// Could not schedule this job.
-	return;
+	return false;
 }
 
 // This function is used to deactivate all the claims used by a

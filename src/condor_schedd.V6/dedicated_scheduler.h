@@ -386,7 +386,7 @@ class DedicatedScheduler : public Service {
 
 	void holdAllDedicatedJobs( void );
 
-	void satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
+	bool satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
 
 		// // // // // // 
 		// Data members 

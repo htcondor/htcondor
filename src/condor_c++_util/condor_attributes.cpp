@@ -465,6 +465,7 @@ const char * const ATTR_PREEMPTING_RANK			 = "PreemptingRank";
 const char * const ATTR_PREEMPTING_OWNER		 = "PreemptingOwner";
 const char * const ATTR_PREEMPTING_USER          = "PreemptingUser";
 const char * const ATTR_PREFERENCES				 = "Preferences";
+const char * const ATTR_PREFER_PARALLEL_SCHEDULING_GROUP	 = "PreferParallelSchedulingGroup";
 const char * const ATTR_PREV_SEND_ESTIMATE		 = "PrevSendEstimate";
 const char * const ATTR_PREV_RECV_ESTIMATE		 = "PrevRecvEstimate";
 const char * const ATTR_PRIO                     = "Prio";

@@ -404,6 +404,7 @@ extern const char * const  ATTR_PREEMPTING_RANK;
 extern const char * const  ATTR_PREEMPTING_OWNER;
 extern const char * const  ATTR_PREEMPTING_USER;
 extern const char * const  ATTR_PREFERENCES;
+extern const char * const  ATTR_PREFER_PARALLEL_SCHEDULING_GROUP;
 extern const char * const  ATTR_PREV_SEND_ESTIMATE;
 extern const char * const  ATTR_PREV_RECV_ESTIMATE;
 extern const char * const  ATTR_PRIO;
