@@ -3142,6 +3142,7 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 							   cluster, nprocs, false );
 
 				// We successfully allocated machines, our work here is done
+			dprintf(D_FULLDEBUG, "Found matching ParallelSchedulingGroup for job\n");
 			return true;
 		}
 	}
@@ -3217,6 +3218,7 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 	}
 
 		// Could not schedule this job.
+	dprintf(D_FULLDEBUG, "Could not find matching ParallelSchedulingGroup for job\n");
 	return false;
 }
 
