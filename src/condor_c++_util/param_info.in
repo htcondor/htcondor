@@ -9911,3 +9911,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
 id=600
+
+[GRAM_VERSION_DETECTION]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Gram Version Detection
+usage=true if gridmanager should automatically detect the version of GRAM servers, false otherwise
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager
+id=600
