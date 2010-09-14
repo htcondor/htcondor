@@ -1281,12 +1281,14 @@ back to the submit machine after the job exits.
   \item the error file, as defined with the \SubmitCmd{error} command
   \item any files created by the job in the remote scratch directory;
 this only occurs for jobs other than \SubmitCmd{grid}
-universe, and for Condor-C \SubmitCmd{grid} universe jobs
+universe, and for Condor-C \SubmitCmd{grid} universe jobs;
+directories created by the job within the remote scratch directory
+are ignored for this automatic detection of files to be transferred.
 \end{enumerate}
 
 A path given for \SubmitCmd{output} and \SubmitCmd{error} commands represents
 a path on the submit machine.  If no path is specified, the directory
-specified as \SubmitCmd{initialdir} is used, and if that is not specified,
+specified with \SubmitCmd{initialdir} is used, and if that is not specified,
 the directory from which the job was submitted is used.
 At the time the job is submitted, zero-length files are created
 on the submit machine, at the given path for the files defined by the  
@@ -1294,19 +1296,26 @@ on the submit machine, at the given path for the files defined by the
 This permits job submission failure, if these files cannot be written by
 Condor.
 
-To \emph{restrict} the output files and directories that are transferred,
+To \emph{restrict} the output files 
+or permit entire directory contents to be transferred,
 specify the exact list with  \SubmitCmd{transfer\_output\_files}.
-Delimit file names with a comma.
-When this list is defined, and any of the files do not exist as the
-job exits, Condor considers this an error, and places the job on hold.
+Delimit the list of file names, directory names, or paths with commas.
+When this list is defined, and any of the files or directories
+do not exist as the job exits,
+Condor considers this an error, and places the job on hold.
 When this list is defined, automatic detection of output files created by
 the job is disabled.
 Paths specified in this list refer to locations on the execute
-machine.  On the submit machine, the transferred files (or
-directories) are named using just the final name in the specified
-path; the directories leading up to that name in the path are stripped
-off.  Therefore, each output file must have a different name, even if
-they originate from different paths.
+machine.  
+The naming and placement of files and directories relies on the
+term \Term{base name}.  
+By example, the path \File{a/b/c} has the base name \File{c}.
+It is the file name or directory name with all directories
+leading up to that name stripped off.
+On the submit machine, the transferred files or directories
+are named using only the base name.
+Therefore, each output file or directory must have a different name,
+even if they originate from different paths.
 
 For \SubmitCmd{grid} universe jobs other than than Condor-C grid jobs,
 files to be transferred 
@@ -1314,6 +1323,51 @@ files to be transferred
 must be specified using \SubmitCmd{transfer\_output\_files}
 in the submit description file, because automatic detection of new files
 created by the job does not take place.
+
+Here are examples to promote understanding of what files and
+directories are transferred, and how they are named after transfer.
+Assume that the job produces the following structure within the
+remote scratch directory:
+\begin{verbatim}
+      o1
+      o2
+      d1 (directory)
+          o3
+          o4 
+\end{verbatim}
+
+If the submit description file sets
+\begin{verbatim}
+   transfer_output_files = o1,o2,d1
+\end{verbatim}
+then transferred back to the submit machine will be
+\begin{verbatim}
+      o1
+      o2
+      d1 (directory)
+          o3
+          o4 
+\end{verbatim}
+Note that the directory \File{d1} and all its contents are specified,
+and therefore transferred.  
+If the directory \File{d1} is not created by the job before exit,
+then the job is placed on hold. 
+If the directory \File{d1} is created by the job before exit,
+but is empty, this is not an error.
+
+If, instead, the submit description file sets
+\begin{verbatim}
+   transfer_output_files = o1,o2,d1/o3
+\end{verbatim}
+then transferred back to the submit machine will be
+\begin{verbatim}
+      o1
+      o2
+      o3
+\end{verbatim}
+Note that only the base name is used in the naming and placement
+of the file specified with \File{d1/o3}.
+
 
 %%%%%%%%%%%%
 \subsubsection{File Paths for File Transfer}
@@ -1362,16 +1416,6 @@ inputs must be uniquely named to
 avoid collision when transferred.
 A collision causes the last file in the list to
 overwrite the earlier one.
-
-If the program creates output files during execution,
-it should normally create them within the remote scratch directory.
-Condor transfers back all files within the remote scratch
-directory that have been modified or created,
-ignoring subdirectories.
-To transfer back only a subset of these files,
-the submit command
-\SubmitCmd{transfer\_output\_files}
-is defined.
 
 Both relative and absolute paths may be used in
 \SubmitCmd{transfer\_output\_files}.  Relative paths are relative to
@@ -1592,7 +1636,7 @@ err: /scratch/test/files/out1: No such file or directory.
 
 This example illustrates a case
 where the executing program creates an output file in a directory
-other than within the single, flat, remote scratch directory that the 
+other than within the remote scratch directory that the 
 program executes within.
 The file creation may or may not cause an error,
 depending on the existence and permissions
