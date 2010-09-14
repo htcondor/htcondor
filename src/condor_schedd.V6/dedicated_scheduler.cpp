@@ -144,6 +144,51 @@ AllocationNode::display( void )
 	}
 }
 
+
+bool satisfies(ClassAd* job, ClassAd* candidate) {
+	// Make sure the job requirements are satisfied with this resource.
+    int satisfied_req = 1;
+	if (job->EvalBool(ATTR_REQUIREMENTS, candidate, satisfied_req) == 0) { 
+		// If it's undefined, treat it as false.
+		satisfied_req = 0;
+	}
+    // if reqs weren't satisfied, it's an immediate failure
+    if (!satisfied_req) return false;
+
+
+    // Concurrency limit checking
+    // This is relevant for reused claim candidates
+    bool satisfied_lim = true;
+    MyString resource_state;
+    candidate->LookupString(ATTR_STATE, resource_state);
+    resource_state.lower_case();
+    if ((resource_state == "claimed") && param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
+        dprintf(D_FULLDEBUG, "Entering ded-schedd concurrency limit check...\n");
+        MyString jobLimits, resourceLimits;
+		job->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
+		candidate->LookupString(ATTR_CONCURRENCY_LIMITS, resourceLimits);
+		jobLimits.lower_case();
+		resourceLimits.lower_case();
+
+        dprintf(D_FULLDEBUG, "job limit: \"%s\"\n", jobLimits.Value());
+        dprintf(D_FULLDEBUG, "candidate limit: \"%s\"\n", resourceLimits.Value());
+
+        // a claimed resource with limits that are equal is considered a match
+		if (jobLimits == resourceLimits) {
+			dprintf(D_FULLDEBUG, "ConcurrencyLimits match, can reuse claim\n");
+		} else {
+			dprintf(D_FULLDEBUG, "ConcurrencyLimits do not match, cannot reuse claim\n");
+            satisfied_lim = false;
+		}
+        dprintf(D_FULLDEBUG, "Leaving ded-schedd concurrency limit check...\n");
+	}
+
+
+    // We already satisfied requirements; did we also satisfy concurrency limits?
+    return satisfied_lim;
+}
+
+
 // Save for later
 #if 0
 //////////////////////////////////////////////////////////////
@@ -312,14 +357,10 @@ ResTimeNode::satisfyJob( ClassAd* job, int max_hosts,
 	res_list->Rewind();
 	num_matches = 0;
 	while( (candidate = res_list->Next()) ) {
-			// Make sure the job requirements are satisfied with this
-			// resource.
-		if( job->EvalBool(ATTR_REQUIREMENTS, candidate, req) == 0 ) { 
-				// If it's undefined, treat it as false.
-			req = 0;
-		}
-		if( req ) {
-				// There's a match
+        // Make sure the job requirements are satisfied with this
+        // resource.
+        if (satisfies(job, candidate)) {
+            // There's a match
 			candidates->Insert( candidate );
 			num_matches++;
 		}
@@ -376,9 +417,6 @@ ResList::satisfyJobs( CAList *jobs,
 					  CAList* candidates_jobs,
 					  bool sort /* = false */ )
 {
-	ClassAd* candidate;
-	int req;
-	
 	jobs->Rewind();
 
 		// Pull the first job off the list, and use its RANK to rank
@@ -403,16 +441,9 @@ ResList::satisfyJobs( CAList *jobs,
 		// Foreach job in the given list
 	while (ClassAd *job = jobs->Next()) {
 		this->Rewind();
-		while( (candidate = this->Next()) ) {
-				// Make sure the job requirements are satisfied with this
-				// resource.
-			if( job->EvalBool(ATTR_REQUIREMENTS, candidate, req) == 0 ) { 
-					// If it's undefined, treat it as false.
-				req = 0;
-			}
-
-			if( req ) {
-					// There's a match
+		while (ClassAd* candidate = this->Next()) {
+			if (satisfies(job, candidate)) {
+                // There's a match
 				candidates->Insert( candidate );
 				candidates_jobs->Insert( job );
 
@@ -2739,17 +2770,10 @@ DedicatedScheduler::computeSchedule( void )
 				qsort( preempt_candidate_array, num_candidates,
 					   sizeof(struct PreemptCandidateNode), RankSorter );
 
-				int req;
 				int num_preemptions = 0;
 				for( int cand = 0; cand < num_candidates; cand++) {
-					if( job->EvalBool(ATTR_REQUIREMENTS,
-							   preempt_candidate_array[cand].machine_ad,
-							   req) == 0) 
-					{
-						req = 0;
-					}
-					if( req ) {
-							// And we found a victim to preempt
+                    if (satisfies(job, preempt_candidate_array[cand].machine_ad)) {
+                        // And we found a victim to preempt
 						preempt_candidates->Append(preempt_candidate_array[cand].machine_ad);
 						num_preemptions++;
 						jobs->DeleteCurrent();
@@ -3786,7 +3810,6 @@ bool
 DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts ) 
 {
 	ClassAd* candidate;
-	int req;
 	StringList names;
 	char name_buf[512];
 	match_rec* mrec;
@@ -3811,13 +3834,8 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	while( (job = jobs->Next()) ) {
 		candidate_resources.Rewind();
 		while( (candidate = candidate_resources.Next()) ) {
-				// Make sure the job requirements are satisfied with this
-				// resource.
-			if( job->EvalBool(ATTR_REQUIREMENTS, candidate, req) == 0 ) { 
-					// If it's undefined, treat it as false.
-				req = 0;
-			}
-			if( req ) {
+            // Make sure the job requirements are satisfied with this resource.
+            if (satisfies(job, candidate)) {
 				candidate_resources.DeleteCurrent();
 				matchCount++;
 				name_buf[0] = '\0';
@@ -4454,9 +4472,19 @@ RankSorter(const void *ptr1, const void *ptr2) {
 }
 
 ClassAd *
-DedicatedScheduler::GetMatchRequestAd( match_rec * /*mrec*/ ) {
-	ClassAd *ad = new ClassAd();
-	*ad = dummy_job;
-	return ad;
+DedicatedScheduler::GetMatchRequestAd( match_rec* qmrec ) {
+	ClassAd* ad = new ClassAd(dummy_job);
+
+    if ((NULL == qmrec) || (NULL == qmrec->my_match_ad)) {
+        dprintf(D_ALWAYS, "qmrec or match ad was NULL\n");
+        return ad;
+    }
+
+    // startd looks for and advertises attribute ATTR_CONCURRENCY_LIMITS, so set that:
+    MyString limits;
+    qmrec->my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
+    if (limits != "") ad->Assign(ATTR_CONCURRENCY_LIMITS, limits);
+
+    return ad;
 }
 
