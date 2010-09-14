@@ -743,42 +743,27 @@ Stream::code(struct utimbuf &ut)
 int 
 Stream::code(struct rlimit &rl)
 {
-#ifdef LINUX
-	// Cedar is too damn smart for us.  
-	// The issue is Linux changed the type for rlimits
-	// from a signed long (RedHat 6.2 and before) into
-	// an unsigned long (starting w/ RedHat 7.x).  So if
-	// the shadow is on RedHat 7.2 and sends the results
-	// of getrlimits to a RedHat 6.2 syscall lib, for instance,
-	// it could overflow.  And Cedar is sooo smart.  Sooo very, very
-	// smart.  It return an error if there is an overflow, which
-	// in turn causes an ASSERT to fail in senders/receivers land,
-	// which is bad news for us.  Thus this hack.  -Todd,Erik,Hao Feb 2002
+	// There used to be a piece of code here which implemented backwards
+	// compatibility between redhat 6.2 and 7.x on account of the type of
+	// the rlimit members changing from signed in 6.2 to unsigned in 7.x.
+	// If the shadow thought it was unsigned, but the stduniv executable
+	// thought it was signed, then an overflow error could happen in the 
+	// stduniv executable and this made people upset.
 	//
-	// Note: This has the unfortunate side effect of limitting the 'rlimit'
-	// that Condor supports to 2^31.  -Nick
-	if( is_encode() ) {
-		const unsigned long MAX_RLIMIT = 0x7fffffffLU;
-		long				max_rlimit = (long) MAX_RLIMIT;
+	// Unfortunately, not only did the backwards compatibility code limit
+	// the rlimit to less than 2^31, it also screwed up RLIM_INFINITY, which
+	// is represented as the (now unsigned bit pattern) of -1.
+	//
+	// It has been MANY years since the original backwards compatiblity fix
+	// and I would be very surprised if any redhat 6.2 stduniv executables
+	// are still running! Hence, I've returned the code back to the original
+	// form since both sides will assume the type to be unsigned.
+	//
+	// You can dig into the log history of this file to find the old
+	// compatibility codes.
 	
-		if ( ((unsigned long)rl.rlim_cur) > MAX_RLIMIT ) {
-			STREAM_ASSERT(code(max_rlimit));
-		} else {
-			STREAM_ASSERT(code(rl.rlim_cur));
-		}
-		if ( ((unsigned long)rl.rlim_max) > MAX_RLIMIT ) {
-			STREAM_ASSERT(code(max_rlimit));
-		} else {
-		STREAM_ASSERT(code(rl.rlim_max));
-		}
-	} else {
-		STREAM_ASSERT(code(rl.rlim_cur));
-		STREAM_ASSERT(code(rl.rlim_max));
-	}
-#else
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
-#endif
 
 	return TRUE;
 }
