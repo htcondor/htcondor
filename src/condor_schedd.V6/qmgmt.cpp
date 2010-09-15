@@ -3985,7 +3985,7 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
  * any user; o.w. only get jobs for specified user.
  */
 void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
-					 char * user)
+					 char const * user)
 {
 	ClassAd				*ad;
 	bool match_any_user = (user == NULL) ? true : false;

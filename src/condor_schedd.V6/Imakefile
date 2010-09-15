@@ -28,7 +28,7 @@ OBJ = schedd.o schedd_main.o schedd_td.o tdman.o $(QMGMT_OBJ) \
 	 \
 	schedd_cronmgr.o schedd_cronjob.o \
 	dedicated_scheduler.o grid_universe.o shadow_mgr.o autocluster.o \
-	transfer_queue.o \
+	transfer_queue.o schedd_negotiate.o \
 	$(ScheddPluginObj) \
 	$(SOAP_OBJS2)
 

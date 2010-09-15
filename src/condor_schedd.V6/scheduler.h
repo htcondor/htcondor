@@ -120,7 +120,7 @@ struct OwnerData {
 class match_rec: public ClaimIdParser
 {
  public:
-    match_rec(char*, char*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
+    match_rec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
 	~match_rec();
 
     char*   		peer; //sinful address of startd
@@ -237,7 +237,7 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char* the_claim_id, char* sinful, bool is_dedicated );
+	ContactStartdArgs( char const* the_claim_id, char* sinful, bool is_dedicated );
 	~ContactStartdArgs();
 
 	char*		claimId( void )		{ return csa_claim_id; };
@@ -272,10 +272,10 @@ class Scheduler : public Service
 	void			update_local_ad_file(); // warning, may be removed
 	
 	// negotiation
-	int				doNegotiate(int, Stream *);
 	int				negotiatorSocketHandler(Stream *);
 	int				negotiate(int, Stream *);
 	int				reschedule_negotiator(int, Stream *);
+	void			negotiationFinished( char const *owner, char const *remote_pool, bool satisfied );
 
 	void				reschedule_negotiator_timer() { reschedule_negotiator(0, NULL); }
 	void			release_claim(int, Stream *);
@@ -318,7 +318,7 @@ class Scheduler : public Service
 	// match managing
 	int 			publish( ClassAd *ad );
 	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
-    match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
+    match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
     int         	DelMrec(char const*);
@@ -466,8 +466,7 @@ class Scheduler : public Service
 
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
-	bool canSpawnShadow( int started_jobs, int total_jobs );  
-	void addActiveShadows( int num ) { CurNumActiveShadows += num; };
+	bool canSpawnShadow();
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
@@ -517,7 +516,7 @@ private:
 	int				SwapSpaceExhausted;	// True if job died due to lack of swap space
 	int				ReservedSwap;		// for non-condor users
 	int				MaxShadowsForSwap;
-	int				CurNumActiveShadows;
+	bool			RecentlyWarnedMaxJobsRunning;
 	int				JobsIdle; 
 	int				JobsRunning;
 	int				JobsHeld;

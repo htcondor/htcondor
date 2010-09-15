@@ -131,6 +131,7 @@ public:
 	char const *getSecSessionId() {
 		return m_sec_session_id.Value()[0] ? m_sec_session_id.Value() : NULL;
 	}
+	int getCommand() {return m_cmd;}
 
 
 	enum MessageClosureEnum {
