@@ -5722,6 +5722,8 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		return;
 	}
 
+	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );
+
 	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
 		(DCMsgCallback::CppFunction)&Scheduler::claimedStartd,
 		this,

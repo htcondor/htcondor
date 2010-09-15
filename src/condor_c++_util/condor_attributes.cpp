@@ -521,6 +521,7 @@ const char * const ATTR_START_LOCAL_UNIVERSE	 = "StartLocalUniverse";
 const char * const ATTR_START_SCHEDULER_UNIVERSE = "StartSchedulerUniverse";
 const char * const ATTR_STARTD_IP_ADDR           = "StartdIpAddr";
 const char * const ATTR_STARTD_PRINCIPAL         = "StartdPrincipal";
+const char * const ATTR_STARTD_SENDS_ALIVES      = "StartdSendsAlives";
 const char * const ATTR_STATE                    = "State";
 const char * const ATTR_STARTER_IP_ADDR          = "StarterIpAddr";
 const char * const ATTR_STARTER_ABILITY_LIST     = "StarterAbilityList";
