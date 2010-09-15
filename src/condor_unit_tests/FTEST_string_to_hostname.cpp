@@ -48,19 +48,29 @@ bool FTEST_string_to_hostname(void) {
 }
 
 static bool test_normal_case() {
+	char *who = "cs.wisc.edu";
+	char buf[1024];
+
 	e.emit_test("Is normal input converted correctly?");
 	char instring[35];
 	char* input = &instring[0];
-	char* host_to_test = strdup( "north.cs.wisc.edu" );
+	char* host_to_test = strdup( who );
 	struct hostent *h;
 	h = gethostbyname(host_to_test);
+	if (h == NULL) {
+		sprintf(buf, "A reverse lookup for '%s' which *must* succeed for this "
+				"unit test to function has failed! Test FAILED.", who);
+		e.emit_alert(buf);
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
 	free(host_to_test);
 	e.emit_input_header();
 	sprintf(instring, "<%s:100>",inet_ntoa(*((in_addr*) h->h_addr)));
 	e.emit_param("IP", instring);
 	e.emit_output_expected_header();
 	char expected[30];
-	sprintf(expected, "north.cs.wisc.edu");
+	sprintf(expected, who);
 	e.emit_retval(expected);
 	e.emit_output_actual_header();
 	char* hostname = string_to_hostname(input);
