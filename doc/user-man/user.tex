@@ -1670,7 +1670,23 @@ Queue
 %%%%%%%%%%%%
 \subsubsection{Behavior for Error Cases}
 %%%%%%%%%%%%
-\Todo
+This section describes Condor's behavior for some error cases
+in dealing with the transfer of files.
+\begin{description}
+\item[Disk Full on Execute Machine]
+  When transferring any files from the submit machine to the remote scratch
+  directory,
+  if the disk is full on the execute machine,
+  then the job is place on hold.
+\item[Error Creating Zero-Length Files on Submit Machine]
+  As a job is submitted, Condor creates zero-length files as placeholders
+  on the submit machine for the files defined by 
+  \SubmitCmd{output} and \SubmitCmd{error}.
+  If these files cannot be created, then job submission fails.
+
+  This job submission failure avoids having the job run to completion,
+  only to be unable to transfer the job's output due to permission errors.
+\end{description}
 
 %%%%%%%%%%%%
 \subsubsection{Input File Transfer Using a URL}
