@@ -461,6 +461,7 @@ extern const char * const  ATTR_START_LOCAL_UNIVERSE;
 extern const char * const  ATTR_START_SCHEDULER_UNIVERSE;
 extern const char * const  ATTR_STARTD_IP_ADDR;
 extern const char * const  ATTR_STARTD_PRINCIPAL;
+extern const char * const  ATTR_STARTD_SENDS_ALIVES;
 extern const char * const  ATTR_STATE;
 extern const char * const  ATTR_STARTER_IP_ADDR;
 extern const char * const  ATTR_STARTER_ABILITY_LIST;

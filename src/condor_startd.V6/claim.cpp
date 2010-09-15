@@ -839,23 +839,19 @@ Claim::startLeaseTimer()
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
 	
+	// Figure out who's sending 
 	bool startd_sends_alives;
 	std::string value;
 	param( value, "STARTD_SENDS_ALIVES", "peer" );
-	if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
+	if ( c_ad && c_ad->LookupBool( ATTR_STARTD_SENDS_ALIVES, startd_sends_alives ) ) {
+		// Use value from ad
+	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
 		startd_sends_alives = false;
 	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
 		startd_sends_alives = true;
-	} else if ( c_ad && c_ad->LookupString( ATTR_VERSION, value ) ) {
-		CondorVersionInfo ver( value.c_str() );
-		if ( ver.built_since_version( 7, 5, 4 ) ) {
-			startd_sends_alives = true;
-		} else {
-			startd_sends_alives = false;
-		}
 	} else {
-		// Don't know the version of the schedd, assume true
-		startd_sends_alives = true;
+		// No direction from the schedd or config file. 
+		startd_sends_alives = false;
 	}
 	if ( startd_sends_alives &&
 		 c_type != CLAIM_COD &&
