@@ -51,6 +51,13 @@ was only supported by the Windows version of \Condor{submit}.
 
 \begin{itemize}
 
+% gittrac 1654
+\item Fixed a bug with how the remote system call \Syscall{getrlimit}
+functioned in the Standard Universe.  Under certain conditions with
+32-bit and 64-bit Standard Universe binaries, \Syscall{getrlimit}
+would erroneously report 2147483647 bytes as a limit when
+\textbf{RLIM\_INFINITY} should have been the correct response.
+
 % gittrac 1631
 \item Fixed an misleading error message issued by \Condor{run} which stated the 
 \verb@DAGMan job was aborted by the user@ when the job submitted
