@@ -4832,10 +4832,10 @@ SetGridParams()
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 			buffer.sprintf( "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
 			free(tmp);
-			InsertJobExpr (buffer, false );
+			InsertJobExpr (buffer);
 		} else {
 			buffer.sprintf( "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
-			InsertJobExpr (buffer, false );
+			InsertJobExpr (buffer);
 		}
 	}
 
@@ -4858,7 +4858,7 @@ SetGridParams()
 		InsertJobExpr (buffer);
 
 		buffer.sprintf( "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
-		InsertJobExpr (buffer, false );
+		InsertJobExpr (buffer);
 	}
 
 	buffer.sprintf( "%s = False", ATTR_WANT_CLAIMING );
@@ -4867,7 +4867,7 @@ SetGridParams()
 	if( (tmp = condor_param(GlobusRematch,ATTR_REMATCH_CHECK)) ) {
 		buffer.sprintf( "%s = %s", ATTR_REMATCH_CHECK, tmp );
 		free(tmp);
-		InsertJobExpr (buffer, false );
+		InsertJobExpr (buffer);
 	}
 
 	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
@@ -7282,7 +7282,7 @@ SetVMParams()
 
 			buffer.sprintf( "%s = \"%s\"", ATTR_JOB_VM_NETWORKING_TYPE, 
 					VMNetworkType.Value());
-			InsertJobExpr(buffer, false );
+			InsertJobExpr(buffer);
 		}else {
 			VMNetworkType = "";
 		}
@@ -7309,7 +7309,7 @@ SetVMParams()
 		exit(1);
 	}
 	buffer.sprintf( "%s = %d", ATTR_JOB_VM_MEMORY, VMMemory);
-	InsertJobExpr( buffer, false );
+	InsertJobExpr( buffer );
 
 	/* 
 	 * Set the number of VCPUs for this virtual machine
@@ -7326,7 +7326,7 @@ SetVMParams()
 	    VMVCPUS = 1;
 	  }
 	buffer.sprintf("%s = %d", ATTR_JOB_VM_VCPUS, VMVCPUS);
-	InsertJobExpr(buffer, false);
+	InsertJobExpr(buffer);
 
 	/*
 	 * Set the MAC address for this VM.
@@ -7335,7 +7335,7 @@ SetVMParams()
 	if(tmp_ptr)
 	  {
 	    buffer.sprintf("%s = \"%s\"", ATTR_JOB_VM_MACADDR, tmp_ptr);
-	    InsertJobExpr(buffer, false);
+	    InsertJobExpr(buffer);
 	  }
 
 	/* 
@@ -7355,7 +7355,7 @@ SetVMParams()
 		free(tmp_ptr);
 		if( vm_no_output_vm ) {
 			buffer.sprintf( "%s = TRUE", VMPARAM_NO_OUTPUT_VM);
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 		}
 	}
 
@@ -7390,7 +7390,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = %s", VMPARAM_TRANSFER_CDROM_FILES,
 				vm_should_transfer_cdrom_files ? "TRUE" : "FALSE");
-		InsertJobExpr( buffer, false);
+		InsertJobExpr( buffer );
 
 		if( vm_should_transfer_cdrom_files == false ) {
 			vm_need_fsdomain = true;
@@ -7447,7 +7447,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = \"%s\"", VMPARAM_CDROM_FILES, 
 				final_cdrom_files.Value());
-		InsertJobExpr( buffer, false );
+		InsertJobExpr( buffer );
 		has_vm_cdrom_files = true;
 		free(vm_cdrom_files);
 	}
@@ -7502,7 +7502,7 @@ SetVMParams()
 			}
 			buffer.sprintf( "%s = \"%s\"", transf_attr_name, 
 					final_output.Value());
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 			free(transfer_files);
 		}
 		
@@ -7536,7 +7536,7 @@ SetVMParams()
 					need_xen_root_device = false;
 					VMHardwareVT = true;
 					buffer.sprintf( "%s = TRUE", ATTR_JOB_VM_HARDWARE_VT);
-					InsertJobExpr( buffer, false );
+					InsertJobExpr( buffer );
 				}else {
 					// real kernel file
 					if( make_vm_file_path(xen_kernel, fixedname) 
@@ -7549,7 +7549,7 @@ SetVMParams()
 				}
 				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
 						fixedname.Value());
-				InsertJobExpr(buffer, false);
+				InsertJobExpr(buffer);
 				free(xen_kernel);
 			}
 
@@ -7572,7 +7572,7 @@ SetVMParams()
 				}
 				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_INITRD, 
 						fixedname.Value());
-				InsertJobExpr(buffer, false);
+				InsertJobExpr(buffer);
 				free(xen_initrd);
 			}
 
@@ -7590,7 +7590,7 @@ SetVMParams()
 					MyString fixedvalue = delete_quotation_marks(xen_root);
 					buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_ROOT, 
 							fixedvalue.Value());
-					InsertJobExpr(buffer, false);
+					InsertJobExpr(buffer);
 					free(xen_root);
 				}
 			}
@@ -7632,7 +7632,7 @@ SetVMParams()
 			}
 
 			buffer.sprintf( "%s = \"%s\"", disk_attr_name, fixedvalue.Value());
-			InsertJobExpr( buffer, false);
+			InsertJobExpr( buffer );
 			free(disk);
 		}
 
@@ -7645,7 +7645,7 @@ SetVMParams()
 				MyString fixedvalue = delete_quotation_marks(xen_kernel_params);
 				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
 						fixedvalue.Value());
-				InsertJobExpr( buffer, false);
+				InsertJobExpr( buffer );
 				free(xen_kernel_params);
 			}
 		}
@@ -7686,7 +7686,7 @@ SetVMParams()
 
 			buffer.sprintf( "%s = \"%s\"", cdrom_attr_name,
 					xen_cdrom_string.Value());
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 		}
 
 	}else if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
@@ -7714,7 +7714,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = %s", VMPARAM_VMWARE_TRANSFER, 
 				vmware_should_transfer_files ? "TRUE" : "FALSE");
-		InsertJobExpr( buffer, false);
+		InsertJobExpr( buffer );
 
 		if( vmware_should_transfer_files == false ) {
 			vm_need_fsdomain = true;
@@ -7750,7 +7750,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = %s", VMPARAM_VMWARE_SNAPSHOTDISK,
 				vmware_snapshot_disk? "TRUE" : "FALSE");
-		InsertJobExpr( buffer, false );
+		InsertJobExpr( buffer );
 
 		// vmware_dir is a directory that includes vmx file and vmdk files.
 		char *vmware_dir = NULL;
@@ -7763,7 +7763,7 @@ SetVMParams()
 			check_and_universalize_path(f_dirname);
 
 			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 
 			Directory dir( f_dirname.Value() );
 			dir.Rewind();
@@ -7806,12 +7806,12 @@ SetVMParams()
 			vmx_files.rewind();
 			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
 					condor_basename(vmx_files.next()));
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 		}
 
 		tmp_ptr = vmdk_files.print_to_string();
 		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-		InsertJobExpr( buffer, false );
+		InsertJobExpr( buffer );
 		free( tmp_ptr );
 	}
 
