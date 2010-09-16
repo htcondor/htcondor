@@ -2,6 +2,8 @@
 {Send a ClassAd to the \Condor{collector} daemon}
 \Synopsis \SynProg{\Condor{advertise}}
 \ToolArgsBase
+
+\SynProg{\Condor{advertise}}
 \oOptArg{-pool}{centralmanagerhostname[:portname]}
 \oOpt{-debug}
 \oOpt{-tcp}
@@ -18,17 +20,18 @@ the central manager machine.
 The required argument \Arg{update-command} says what daemon type's ClassAd
 is to be updated.
 The optional argument \Arg{classad-filename} is the file from which the
-ClassAds should be read.
-If \Arg{classad-filename} is omitted or is ``-'', then the
-ClassAds are read from standard input.
+ClassAd(s) should be read.
+If \Arg{classad-filename} is omitted or is the dash character ('-'),
+then the ClassAd(s) are read from standard input.
 
-When \Opt{-multiple} is specified, multiple ads may be published.
-Publishing many ads in a single invocation of \Condor{advertise} is
-more efficient than invoking \Condor{advertise} once per ad.  The ads
-are expected to be separated by one or more blank lines.  When
-\Opt{-multiple} is not specified, blank lines are ignored (for
-backward compatibility).  It is best not to rely on blank lines being
-ignored, as this may change in the future.
+When \Opt{-multiple} is specified, multiple ClassAds may be published.
+Publishing many ClassAds in a single invocation of \Condor{advertise} is
+more efficient than invoking \Condor{advertise} once per ClassAd.
+The ClassAds are expected to be separated by one or more blank lines.
+When \Opt{-multiple} is not specified, blank lines are ignored (for
+backward compatibility).  
+It is best not to rely on blank lines being ignored,
+as this may change in the future.
 
 The \Arg{update-command} may be one of the following strings:
 \begin{description}
@@ -88,6 +91,10 @@ A full example is given below.
 
 \begin{Options}
     \ToolArgsBaseDesc
+    \OptItem{\Opt{-debug}}{Print debugging information as the command
+            executes.}
+    \OptItem{\Opt{-multiple}}{Send more than one ClassAd, where the boundary
+        between ClassAds is one or more blank lines.}
     \OptItem{\OptArgnm{-pool}{centralmanagerhostname[:portname]}}
             {Specify a pool by
             giving the central manager's host name and an optional port
@@ -95,8 +102,6 @@ A full example is given below.
 	    \MacroNI{COLLECTOR\_HOST} specified in the configuration file.}
     \OptItem{\Opt{-tcp}}{Use TCP for communication. Without this
         option, UDP is used.}
-    \OptItem{\Opt{-debug}}{Print debugging information as the command
-            executes.}
 \end{Options}
 
 \GenRem
@@ -108,27 +113,28 @@ or administrators will ever have a use for this command.
 If it is desired to update or set a ClassAd attribute, the
 \Condor{config\_val} command is the proper command to use.
 
-For those administrators who do need \Condor{advertise}, you can 
-optionally include these attributes:
+For those administrators who do need \Condor{advertise}, the following
+attributes may be included:
 
-DaemonStartTime - The time the service you are advertising
+\Attr{DaemonStartTime} - The time the service being advertised 
 started running.  Measured in seconds since the Unix epoch.
 
-UpdateSequenceNumber - An integer that begins at 0 and increments by
-one each time you re-advertise the same ad.
+\Attr{UpdateSequenceNumber} - An integer that begins at 0 and increments by
+one each time the same ClassAd is again advertised.
 
 If both of the above are included, the \Condor{collector} will
 automatically include the following attributes:
 
-UpdatesTotal - The actual number of advertisements for this
+\Attr{UpdatesTotal} - The actual number of advertisements for this
 daemon that the \Condor{collector} has seen.
 
-UpdatesLost - The number of advertisements that for this daemon
+\Attr{UpdatesLost} - The number of advertisements that for this daemon
 that the \Condor{collector} expected to see, but did not.
 
-UpdatesSequenced - The total of UpdatesTotal and UpdatesLost.
+\Attr{UpdatesSequenced} - The total of \Attr{UpdatesTotal} and 
+\Attr{UpdatesLost}.
 
-UpdatesHistory - See \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} in
+\Attr{UpdatesHistory} - See \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} in
 section~\ref{sec:Collector-Config-File-Entries}.
 
 \Examples
@@ -154,9 +160,10 @@ This file is used with the command:
 
 \Condor{advertise} will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
-Success means that all ads were successfully sent to all collectors.
-When there are multiple ads or multiple collectors, it is possible that
-some but not all publications succeed; in this case, the exit status is 1,
-indicating failure.
+Success means that all ClassAds were successfully sent to all 
+\Condor{collector} daemons.
+When there are multiple ClassAds or multiple \Condor{collector} daemons,
+it is possible that some but not all publications succeed;
+in this case, the exit status is 1, indicating failure.
 
 \end{ManPage}

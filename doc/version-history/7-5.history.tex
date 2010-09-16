@@ -121,8 +121,8 @@ virtual machine jobs to Eucalyptus systems via the EC2 interface.
 
 % gittrack #1496
 \item \Condor{advertise} has a new option \Opt{-multiple}, which
-allows multiple ads to be published.  This is more efficient that
-publishing each ad in a separate invocation of \Condor{advertise}.
+allows multiple ClassAds to be published.  This is more efficient than
+publishing each ClassAd in a separate invocation of \Condor{advertise}.
 
 % gittrack #1647
 \item \Condor{job\_router} is no longer restricted to routing only vanilla
@@ -138,7 +138,7 @@ universe jobs.  It also now automatically avoids recursively routing jobs.
 \item The new configuration variable \MacroNI{SOAP\_SSL\_SKIP\_HOST\_CHECK}
 can be used to disable the standard check that a SOAP server's hostname
 matches the hostname in its X509 certificate. This is useful when submitting
-grid-type amazon jobs to Eucalyptus servers, which often have certificaates
+grid-type amazon jobs to Eucalyptus servers, which often have certificates
 with a hostname of 'localhost'.
 
 % gittrac #61
