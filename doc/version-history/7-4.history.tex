@@ -51,11 +51,25 @@ was only supported by the Windows version of \Condor{submit}.
 
 \begin{itemize}
 
+% gittrac 1654
+\item Fixed a bug with how the \SubmitCmd{standard} universe 
+remote system call \Syscall{getrlimit} functioned.
+Under certain conditions with
+32-bit and 64-bit \SubmitCmd{standard} universe binaries,
+\Syscall{getrlimit} would erroneously report 2147483647 bytes as a limit,
+when \Expr{RLIM\_INFINITY} should have been the correct response.
+
 % gittrac 1631
-\item Fixed an misleading error message issued by \Condor{run} which stated the 
-\verb@DAGMan job was aborted by the user@ when the job submitted
-by \Condor{run} was aborted by the user.
-It now states \verb@The job was aborted by the user@.
+\item Fixed a misleading error message issued by \Condor{run},
+which stated
+\begin{verbatim}
+The DAGMan job was aborted by the user.
+\end{verbatim}
+when the job submitted by \Condor{run} was aborted by the user.
+It now states 
+\begin{verbatim}
+The job was aborted by the user.
+\end{verbatim}
 
 % gittrac 1543
 \item When the \Condor{startd} daemon is running with an execute directory on
@@ -90,16 +104,17 @@ should have been seconds, but instead was \Expr{Undefined}.
 the \Env{SHELL} environment variable was set to \Prog{/bin/csh}.
 
 % gittrac 1567
-\item Submission of vm universe jobs via Globus was not possible, because
-the Globus Condor jobmanager explicitly set the input, output, and error files
-to \File{/dev/null}, and \Condor{submit} refused any setting of these files for
-VM universe jobs.  
+\item Submission of \SubmitCmd{vm} universe jobs via Globus was not possible,
+because the Globus Condor jobmanager explicitly set the input, output,
+and error files to \File{/dev/null},
+and \Condor{submit} refused any setting of these files for
+\SubmitCmd{vm} universe jobs.  
 Now, \File{/dev/null} is an allowed setting for the input, output,
-and error files for vm universe jobs.
+and error files for \SubmitCmd{vm} universe jobs.
 
 % gittrac #1564
-\item Fixed a bug that caused a vm universe job's output files to be
-incorrectly transferred back to the submit machine 
+\item Fixed a bug that caused a \SubmitCmd{vm} universe job's output files
+to be incorrectly transferred back to the submit machine, 
 when the submit description file command \SubmitCmd{vm\_no\_output\_vm}
 was set to \Expr{false},
 indicating that no files should be transferred.
@@ -125,7 +140,7 @@ file descriptor safety level exceeded
 
 % gittrac #1596
 \item Fixed a problem that could cause the \Condor{collector} to crash
-when receiving updated matchmaking information for offline ads that do
+when receiving updated matchmaking information for offline ClassAds that do
 not exist.
 
 % gittrac #1518
