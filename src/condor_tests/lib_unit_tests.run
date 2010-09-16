@@ -33,7 +33,7 @@ while(<ELOG>) {
 }
 close(ELOG);
 
-my $objects = "";
+my $objects = 0;
 my $total = 0;
 my $passed = 0;
 my $failed = 0;
@@ -59,8 +59,10 @@ foreach $line (@got) {
 	}
 }
 
+print "\n";
+print "[$0]\n";
 print "There were $total tests including $objects objects\n";
-if($total == $passed) {
+if($total == $passed && $total != 0) {
 	print "Tests passed($passed) ALL did pass so Success\n";
 	print "Failed($failed) / Aborted($aborted) / Skipped($skipped) \n";
 } else {
