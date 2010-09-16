@@ -1633,6 +1633,21 @@ in dealing with the transfer of files.
 
   This job submission failure avoids having the job run to completion,
   only to be unable to transfer the job's output due to permission errors.
+\item[Error When Transferring Files from Execute Machine to Submit Machine]
+  When a job exits, or potentially when a job is evicted from an execute
+  machine, one or more files may be transferred from the execute machine
+  back to the machine on which the job was submitted.
+
+  During transfer, if any of the following three similar types of errors occur,
+  the job is put on hold as the error occurs.
+  \begin{enumerate}
+  \item If the file cannot be opened on the submit machine, for example
+    because the system is out of inodes.
+  \item If the file cannot be written on the submit machine, for example
+    because the permissions do not permit it.
+  \item If the write of the file on the submit machine fails, for example
+    because the system is out of disk space.
+  \end{enumerate}
 \end{description}
 
 %%%%%%%%%%%%
