@@ -657,6 +657,7 @@ preserve_log_file(int debug_level)
 	int         rename_failed = 0;
 	char		*timestamp;
 	int			result;
+	int			file_there = 0;
 #ifndef WIN32
 	struct stat buf;
 #endif
@@ -715,10 +716,15 @@ preserve_log_file(int debug_level)
 		errno = 0;
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
+			file_there = 1;
 			save_errno = errno;
-			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!", 
+			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
 					 DebugFile[debug_level] );
-			_condor_dprintf_exit( save_errno, msg_buf );
+			/* We should not exit here - file did rotate but something else created it newly. We
+			 therefore won't grow without bounds, we "just" lost control over creating the file.
+			 We should happily continue anyway and just put a log message into the system telling
+			 about this incident.
+			 */
 		}
 	}
 
@@ -738,6 +744,12 @@ preserve_log_file(int debug_level)
 
 	if ( !still_in_old_file ) {
 		fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
+	}
+
+	// We may have a message left over from the succeeded rename after which the file
+	// may have been recreated by another process. Tell user about it.
+	if (file_there > 0) {
+		fprintf(DebugFP, "WARNING: %s", msg_buf);
 	}
 
 	if ( failed_to_rotate || rename_failed ) {
