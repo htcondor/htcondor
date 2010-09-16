@@ -247,12 +247,14 @@ bool OTEST_StatInfo(void) {
 		empty_dir/
 		full_dir/
 			empty_file
+			executable_file
 			full_file
 			link_dir/
 
  */
 static bool setup() {
 	bool ret_val = true;
+	int tmp_fd;
 
 	//Get the current working directory
 	ret_val &= condor_getcwd(original_dir);
@@ -285,11 +287,18 @@ static bool setup() {
 	ret_val &= !symlink(link.Value(), "symlink_dir");
 	
 	ret_val &= !chdir("full_dir");
+
+	// Make a zero length, but executable, file
+	tmp_fd = safe_open_wrapper("executable_file", O_RDWR | O_CREAT);
+	ret_val &= !close(tmp_fd);
+	ret_val &= !chmod("executable_file", 0755);
+
+	// Make an empty file, leave the fd open.
 	ret_val &= !mkdir("link_dir", 0700);
 	fd = safe_open_wrapper("empty_file", O_RDWR | O_CREAT);
-	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
 
 	//Add some text
+	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
 	ASSERT(file_1);
 	fprintf(file_1, "This is some text!");
 	ret_val &= !chdir("..");
@@ -318,9 +327,12 @@ static bool cleanup() {
 	//Just in case any of these weren't removed...
 	remove("empty_file");
 	remove("full_file");
+	remove("executable_file");
 	chdir("..");
 	rmdir("full_dir");
 	chdir("..");
+
+	close(fd);
 	
 	return rmdir("tmp") == 0;
 }
@@ -1529,11 +1541,11 @@ static bool test_is_executable_true() {
 	emit_test("Test that IsExecutable() returns true for a file that is "
 		"executable.");
 	emit_input_header();
-	emit_param("Directory Path", "%s", original_dir.Value());
-	emit_param("File Name", "condor_unit_tests");
+	emit_param("Directory Path", "%s", full_dir.Value());
+	emit_param("File Name", "executable_file");
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	StatInfo info(original_dir.Value(), "condor_unit_tests");
+	StatInfo info(full_dir.Value(), "executable_file");
 	bool ret_val = info.IsExecutable();
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
