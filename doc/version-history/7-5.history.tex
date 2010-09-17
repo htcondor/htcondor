@@ -37,7 +37,7 @@ in libcondorapi. Some headers were missing starting in Condor 7.5.1.
 
 % gittrac #1447
 
-\item The Concurrency limits now work with parallel jobs
+\item Concurrency limits now work with parallel universe jobs
 scheduled by the dedicated scheduler.
 
 % gittrac #1522
@@ -45,7 +45,7 @@ scheduled by the dedicated scheduler.
   \SubmitCmd{transfer\_input\_files} and
   \SubmitCmd{transfer\_output\_files} for non-grid universes and
   Condor-C.  The auto-selection of output files, however, remains the
-  same: new directories in the job's output sandbox are not
+  same: new directories in the job's output sandbox are \emph{not}
   automatically selected as outputs to be transferred.
 
 % gittrac #1520
@@ -95,6 +95,11 @@ even if the difference is permissible.
 rewrite a file that lists the status of all nodes within a DAG.
 See section~\ref{sec:DAG-node-status} for details.
 
+%gittrac #1483
+\item Added the capability for \Condor{dagman} to create a node status
+file that is continually updated as the DAG runs (see 
+section~\ref{sec:DAG-node-status} for details).
+
 %gittrac #1560
 \item The \Condor{schedd} daemon now uses a better algorithm for
 determining which flocking level is being negotiated.  No special
@@ -104,28 +109,23 @@ configuration of \MacroNI{NEGOTIATOR\_HOST} and
 \MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.  In some networking environments
 (such as a multi-homed central manager), it was difficult to
 configure things correctly.  When wrongly configured, negotiation
-would be aborted with the message, ``Unknown negotiator.''  The new
+would be aborted with the message, \Expr{Unknown negotiator}.  The new
 algorithm is only used when the negotiator is version 7.5.4 or
 newer.  Of course, the \Condor{schedd} daemon must still be configured to
 authorize the \Condor{negotiator} daemon at the \DCPerm{NEGOTIATOR}
 authorization level.
 
-%gittrac #1483
-\item Added the capability for \Condor{dagman} to create a node status
-file that is continually updated as the DAG runs (see 
-section~\ref{sec:DAG-node-status} for details).
-
 % gittrac #1545
-\item The grid universe's 'amazon' grid-type can now be used to submit
+\item The grid universe's amazon grid type can now be used to submit
 virtual machine jobs to Eucalyptus systems via the EC2 interface.
 
 % gittrack #1496
-\item \Condor{advertise} has a new option \Opt{-multiple}, which
+\item \Condor{advertise} has a new option, \Opt{-multiple}, which
 allows multiple ClassAds to be published.  This is more efficient than
 publishing each ClassAd in a separate invocation of \Condor{advertise}.
 
 % gittrack #1647
-\item \Condor{job\_router} is no longer restricted to routing only vanilla
+\item The \Condor{job\_router} is no longer restricted to routing only vanilla
 universe jobs.  It also now automatically avoids recursively routing jobs.
 
 \end{itemize}
@@ -135,11 +135,11 @@ universe jobs.  It also now automatically avoids recursively routing jobs.
 \begin{itemize}
 
 % gittrac #1545
-\item The new configuration variable \MacroNI{SOAP\_SSL\_SKIP\_HOST\_CHECK}
-can be used to disable the standard check that a SOAP server's hostname
-matches the hostname in its X509 certificate. This is useful when submitting
-grid-type amazon jobs to Eucalyptus servers, which often have certificates
-with a hostname of 'localhost'.
+\item The new configuration variable \Macro{SOAP\_SSL\_SKIP\_HOST\_CHECK}
+can be used to disable the standard check that a SOAP server's host name
+matches the host name in its X.509 certificate. This is useful when submitting
+grid type amazon jobs to Eucalyptus servers, which often have certificates
+with a host name of \Expr{localhost}.
 
 % gittrac #61
 \item Added default values for \MacroNI{<SUBSYS>\_LOG} configuration variables.
@@ -185,7 +185,7 @@ per-job basis by using the new submit file command
 \item The new configuration variable
   \Macro{NEGOTIATION\_CYCLE\_STATS\_LENGTH} specifies how many
   recent negotiation cycles should be included in the history that is
-  published in the \Condor{negotiator}'s ad.  The default is 3.  See
+  published in the \Condor{negotiator}'s ClassAd.  The default is 3.  See
   page~\pageref{param:NegotiationCycleStatsLength} for the
   definition of this configuration variable, and see
   page~\pageref{attr:LastNegotiationCycleActiveSubmitterCount<X>} for a
@@ -210,8 +210,8 @@ for \MacroNI{FLOCK\_COLLECTOR\_HOSTS} and \MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.
 % gittrac #1257
 \item The configuration variable \MacroNI{AMAZON\_EC2\_URL} is now only used
 for previously-submitted jobs when upgrading Condor to version 7.5.4 or
-beyond. New grid-type amazon jobs must specify which EC2 service to use
-via the grid\_resource submit attribute.
+beyond. New grid type amazon jobs must specify which EC2 service to use
+by setting the \SubmitCmd{grid\_resource} submit description file command.
 
 %gittrack #121
 \item The new job ClassAd attribute \AdAttr{NumPids} is the total number of 
@@ -233,7 +233,8 @@ on hold.  See section~\ref{param:DAGManMaxJobHolds} for details.
   \Attr{JobShouldBeSandboxed}, and \Attr{JobFailureTest}.
 
 % gittrack #1561
-\item \SubmitCmd{copy\_to\_spool} did not work properly in 7.5.3.
+\item The submit description file command \SubmitCmd{copy\_to\_spool}
+  did not work properly in Condor version 7.5.3.
   When sending the executable to the execute machine, it was
   transferred from the original path rather than from the spooled copy
   of the file.
@@ -242,43 +243,44 @@ on hold.  See section~\ref{param:DAGManMaxJobHolds} for details.
 \item When output files were auto-selected and spooled, Condor-C and
   \Condor{transfer\_data} would copy back both the output files and
   all other contents of the job's spool directory, which typically
-  included the spooled input and the user log.  Now just the output
-  files are retrieved.  To adjust which files are retrieved, the job
+  included the spooled input and the user log.  
+  Now, only the output files are retrieved.
+  To adjust which files are retrieved, the job
   attribute \Attr{SpooledOutputFiles} can be manipulated, but this
-  typically should just be managed by Condor.
+  typically should be managed by Condor.
 
 % gittrac 1139
-\item \Condor{master} now invalidates its ad in the collector before it shuts
-  down.
+\item \Condor{master} now invalidates its ClassAd, as represented in the 
+  \Condor{collector} daemon before it shuts down.
 
 % gittrac #1563
-\item Fixed a bug that caused vm universe jobs to not run if the VMware
-.vmx file contained a space.
+\item Fixed a bug that caused \SubmitCmd{vm} universe jobs to not run
+if the VMware \File{.vmx} file contained a space.
 
 % gittrac #1549
-\item Fixed a bug introduced in 7.5.1 that caused integers in ClassAd
-expressions that had leading zeros to be read as octal (base eight).
+\item Fixed a bug introduced in Condor version 7.5.1 that caused integers 
+in ClassAd expressions that had leading zeros to be read as octal (base eight).
 
 % gittrac #1516
-\item Fixed a bug introduced in 7.5.1 that didn't recognize semicolon
-as a separator of function arguments in ClassAds.
+\item Fixed a bug introduced in Condor version 7.5.1 that did not recognize 
+a semicolon as a separator of function arguments in ClassAds.
 
 % gittrac #1544
-\item Fixed a bug that caused integers larger than +/-2\^31 in a ClassAd
+\item Fixed a bug that caused integers larger than $\pm2^{31}$ in a ClassAd
 expression to be parsed incorrectly. Now, when these integers are
 encountered, the largest 32-bit integer (with matching sign) is used.
 
 % gittrac #1537
-\item Fixed a bug that caused the condor\_gridmanager to exit when
-receiving badly-formatted error messages from the nordugrid\_gahp.
+\item Fixed a bug that caused the \Condor{gridmanager} to exit when
+receiving badly-formatted error messages from the \Prog{nordugrid\_gahp}.
 
 % gittrac #1342
 % gittrac #1644
-\item Fixed a problem affecting the use of 7.5.3 \Condor{startd} and
-  \Condor{master} daemons in a pool with a collector from before
-  7.5.2.  On shutdown, \Condor{startd} and \Condor{master} caused
-  all startd and master ads respectively to be removed from the
-  collector.
+\item Fixed a problem affecting the use of version 7.5.3 \Condor{startd} and
+  \Condor{master} daemons in a pool with a \Condor{collector} from before
+  version 7.5.2.  On shutdown, the \Condor{startd} and the \Condor{master}
+  caused all \Condor{startd} and \Condor{master} ClassAds, respectively,
+  to be removed from the \Condor{collector}.
 
 \end{itemize}
 
