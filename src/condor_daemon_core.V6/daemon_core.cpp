@@ -3643,29 +3643,35 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// request number and calls any registered command
 		// handler.
 
-		// log a message
-	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-		{
-			dprintf(D_DAEMONCORE,
-					"Calling Handler <%s> for Socket <%s>\n",
-					(*sockTable)[i].handler_descrip,
-					(*sockTable)[i].iosock_descrip);
-			handlerName = strdup((*sockTable)[i].handler_descrip);
-			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
-		}
-
 		// Update curr_dataptr for GetDataPtr()
 	curr_dataptr = &( (*sockTable)[i].data_ptr);
 
-	if ( (*sockTable)[i].handler ) {
-			// a C handler
-		result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-		dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
-		free(handlerName);
-	} else if ( (*sockTable)[i].handlercpp ) {
-			// a C++ handler
-		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
-		dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
+		// log a message
+	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
+	{
+		dprintf(D_DAEMONCORE,
+				"Calling Handler <%s> for Socket <%s>\n",
+				(*sockTable)[i].handler_descrip,
+				(*sockTable)[i].iosock_descrip);
+		handlerName = strdup((*sockTable)[i].handler_descrip);
+		dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
+
+		UtcTime handler_start_time;
+		handler_start_time.getTime();
+
+		if ( (*sockTable)[i].handler ) {
+				// a C handler
+			result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
+		} else if ( (*sockTable)[i].handlercpp ) {
+				// a C++ handler
+			result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+		}
+
+		UtcTime handler_stop_time;
+		handler_stop_time.getTime();
+		float handler_time = handler_stop_time.difference(&handler_start_time);
+
+		dprintf(D_COMMAND, "Return from Handler <%s> %.4fs\n", handlerName, handler_time);
 		free(handlerName);
 	}
 	else if( default_to_HandleCommand ) {
