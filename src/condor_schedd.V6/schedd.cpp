@@ -8332,7 +8332,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	if( new_rec->pid ) {
 		dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 				 new_rec->pid, cluster, proc );
-		scheduler.display_shadow_recs();
+		//scheduler.display_shadow_recs();
 	}
 	RecomputeAliveInterval(cluster,proc);
 	return new_rec;
@@ -8348,7 +8348,7 @@ Scheduler::add_shadow_rec_pid( shadow_rec* new_rec )
 	shadowsByPid->insert(new_rec->pid, new_rec);
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			 new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
-	scheduler.display_shadow_recs();
+	//scheduler.display_shadow_recs();
 }
 
 
@@ -8614,7 +8614,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		return;
 	}
 	if( pid ) {
-		display_shadow_recs();
+	  //display_shadow_recs();
 	}
 
 	dprintf( D_FULLDEBUG, "Exited delete_shadow_rec( %d )\n", pid );
