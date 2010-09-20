@@ -2198,6 +2198,14 @@ set_persistent_config(char *admin, char *config)
 	priv_state priv;
 
 	if (!admin || !admin[0] || !enable_persistent) {
+		if (!enable_persistent) {
+			dprintf( D_ALWAYS, "set_persistent_config(): "
+				"ENABLE_PERSISTENT_CONFIG is false. "
+				"Not setting persistent config file param: "
+				"Name = %s, Value = %s\n",
+				admin?admin:"(null pointer)",
+				config?config:"(null pointer)");
+		}
 		if (admin)  { free(admin);  }
 		if (config) { free(config); }
 		return -1;
