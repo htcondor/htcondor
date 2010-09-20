@@ -96,8 +96,12 @@ public:
 protected:
 
 	void clearArray();
-	ExtArray<MyString*>   array;
-	ExtArray<bool> mark_array;
+
+	typedef std::map<std::string,int> AutoClusterMap;
+	AutoClusterMap cluster_map;           // map of signature to ids
+	typedef std::set<int> AutoClusterIDs;
+	AutoClusterIDs cluster_in_use; // id in list if in use
+	int next_id;
 
 	StringList* significant_attrs;
 	char *old_sig_attrs;
