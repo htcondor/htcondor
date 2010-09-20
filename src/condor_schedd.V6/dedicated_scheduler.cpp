@@ -519,7 +519,7 @@ ResList::machineSortByRank(const void *left, const void *right) {
 
 void
 ResList::selectGroup( CAList *group,
-					  char   *groupName) {
+					  const char   *groupName) {
 	this->Rewind();
 	ClassAd *machine;
 
@@ -3132,13 +3132,49 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 	scheduling_groups.rewind();
 	char *groupName = 0;
 
-		// For each of our scheduling groups...
+		// Build a res list with one machine per scheduling group
+		// for RANKing purposes
+	ResList exampleSchedulingGroup;
+	scheduling_groups.rewind();
 	while ((groupName = scheduling_groups.next())) {
-		dprintf(D_ALWAYS, "Attempting to find enough idle machines in group %s to run job.\n", groupName);
+		ClassAd *machine;
+		idle_resources->Rewind();
+		while ((machine = idle_resources->Next())) {
+			char *machineGroupName = 0;
+			machine->LookupString(ATTR_PARALLEL_SCHEDULING_GROUP, &machineGroupName);
+
+			bool foundOne = false;
+				// if the group name in the machine name == this one, add it to the list
+			if (machineGroupName && (strcmp(machineGroupName, groupName) == 0)) {
+				foundOne = true;
+				exampleSchedulingGroup.Append(machine);
+			}
+			if (machineGroupName) free(machineGroupName);
+			if (foundOne) break; // just add one per group
+		}
+	}
+
+	jobs->Rewind();
+	ClassAd *jobAd = jobs->Next();
+	jobs->Rewind();
+
+		// Now sort the list of scheduling group example ads by this machine's rank
+	exampleSchedulingGroup.sortByRank(jobAd);
+	exampleSchedulingGroup.Rewind();
+
+	ClassAd *machineAd;
+	exampleSchedulingGroup.Rewind();
+
+		// For each of our scheduling groups...
+	while ((machineAd = exampleSchedulingGroup.Next())) {
+		MyString groupStr;
+		machineAd->LookupString(ATTR_PARALLEL_SCHEDULING_GROUP, groupStr);
+
+		dprintf(D_ALWAYS, "Attempting to find enough idle machines in group %s to run job.\n", groupStr.Value());
 
 			// From all the idle machines, select just those machines that are in this group
 		ResList group; 
-		idle_resources->selectGroup(&group, groupName);
+		idle_resources->selectGroup(&group, groupStr.Value());
 
 			// And try to match the jobs in the cluster to the machine just in this group
 		CandidateList candidate_machines;

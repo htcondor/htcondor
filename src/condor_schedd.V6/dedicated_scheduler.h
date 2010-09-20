@@ -118,7 +118,7 @@ class ResList : public CAList {
 	
 	static int machineSortByRank(const void *lhs, const void *rhs);
 
-	void selectGroup( CAList *group, char   *groupName);
+	void selectGroup( CAList *group, const char   *groupName);
 };
 
 class CandidateList : public CAList {
