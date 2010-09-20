@@ -86,6 +86,9 @@ Second, the data can be
 stored in a file, and the file name is specified with the
 \SubmitCmd{amazon\_user\_data\_file} submit description file command.
 This second option allows the use of binary data.
+If both options are used, the two blocks of
+data are concatenated, with the data from \SubmitCmd{amazon\_user\_data}
+occurring first.
 Condor performs the base64 encoding that EC2 expects on the data.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

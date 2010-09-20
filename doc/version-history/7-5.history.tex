@@ -128,6 +128,10 @@ publishing each ClassAd in a separate invocation of \Condor{advertise}.
 \item The \Condor{job\_router} is no longer restricted to routing only vanilla
 universe jobs.  It also now automatically avoids recursively routing jobs.
 
+% gittrac #1441
+\item The \Condor{schedd} now writes the submit event to the user job log.
+Previously, \Condor{submit} wrote the event.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -222,6 +226,25 @@ by setting the \SubmitCmd{grid\_resource} submit description file command.
 specifies the maximum number of times a DAG node job is allowed to go
 on hold.  See section~\ref{param:DAGManMaxJobHolds} for details.
 
+% gittrac #1652
+\item The configuration parameter \MacroNI{STARTD\_SENDS\_ALIVES} now only
+needs to be set for the \Condor{schedd}. Also, the default value has
+changed to \Expr{True}.
+
+% gittrac #1593
+\item The job attributes \SubmitCmd{amazon\_user\_data} and
+\SubmitCmd{amazon\_user\_data\_file} can now both be used for the same
+job. When both are provided, the two blocks of data are concatenated,
+with the value of \SubmitCmd{amazon\_user\_data} occurring first.
+
+% gittrac #1653
+\item The new configuration parameter \MacroNI{GRAM\_VERSION\_DETECTION}
+can be used to disable Condor's attempts to distinguish between \Expr{gt2}
+(i.e. GRAM2) and \Expr{gt5} (i.e. GRAM5) servers.
+The default value is \Expr{True}.
+If set to \Expr{False}, Condor trusts the \Expr{gt2} or \Expr{gt5} value
+provided in the job's \SubmitCmd{grid\_resource} attribute.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -281,6 +304,29 @@ receiving badly-formatted error messages from the \Prog{nordugrid\_gahp}.
   version 7.5.2.  On shutdown, the \Condor{startd} and the \Condor{master}
   caused all \Condor{startd} and \Condor{master} ClassAds, respectively,
   to be removed from the \Condor{collector}.
+
+% gittrac #1590
+\item Fixed a bug that caused delegation of an X.509 RFC proxy between
+two Condor processes to fail.
+
+% gittrac #1563
+\item Fixed a bug in \Condor{submit} that would cause failures if a file
+containing a space was used with the submit attributes
+\SubmitCmd{append\_files}, \SubmitCmd{jar\_files} or
+\SubmitCmd{vmware\_dir}.
+
+% gittrac #890
+\item Fixed a bug that could cause the \Condor{gridmanager} to lock up if
+a GAHP server it's using writes a large amount of data to its stderr.
+
+% gittrac #1653
+% gittarc #1475
+\item Fixed a bug that could cause the \Condor{gridmanager} to wrongly
+conclude that a \Expr{gt2} (i.e. GRAM2) server was a \Expr{gt5} (i.e. GRAM5)
+server. Such a conclusion can be disastrous, as Condor's mechanisms to
+prevent overloading a \Expr{gt2} server are then disabled. New configuration
+parameter \MacroNI{GRAM\_VERSION\_DETECTION} can be used to disable Condor's
+attempts to distinguish between the two.
 
 \end{itemize}
 

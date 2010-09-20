@@ -1418,6 +1418,10 @@ names, which should be associated with the job.
 \item[amazon\_user\_data = $<$data$>$]
 Used for \SubmitCmd{amazon} jobs. A block of data that can be accessed
 by the virtual machine job inside Amazon EC2.
+If both \SubmitCmd{amazon\_user\_data} and
+\SubmitCmd{amazon\_user\_data\_file} are provided, the two blocks of
+data are concatenated, with the data from \SubmitCmd{amazon\_user\_data}
+occurring first.
 
 %%%%%%%%%%%%%%%%%%%
 %% amazon_user_data_file
@@ -1428,6 +1432,10 @@ by the virtual machine job inside Amazon EC2.
 Used for \SubmitCmd{amazon} jobs.
 A file containing data that can be accessed
 by the virtual machine job inside Amazon EC2.
+If both \SubmitCmd{amazon\_user\_data} and
+\SubmitCmd{amazon\_user\_data\_file} are provided, the two blocks of
+data are concatenated, with the data from \SubmitCmd{amazon\_user\_data}
+occurring first.
 
 %%%%%%%%%%%%%%%%%%%
 %% cream_attributes

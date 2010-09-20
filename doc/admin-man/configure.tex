@@ -3836,16 +3836,6 @@ WANT_HOLD_REASON = \
   This macro is described in section~\ref{param:SubsysAddressFile} as
   \MacroNI{<SUBSYS>\_ADDRESS\_FILE} 
 
-\label{param:StartdSendsAlives}
-\item[\Macro{STARTD\_SENDS\_ALIVES}]
-  A boolean value that defaults to \Expr{False},
-  such that the \Condor{schedd} daemon sends keep alive signals
-  to the \Condor{startd} daemon.
-  When \Expr{True}, the \Condor{startd} daemon sends keep alive signals
-  to the \Condor{schedd} daemon, reversing the direction.
-  This may be useful if the \Condor{startd} daemon is on a private
-  network or behind a firewall.
-
 \label{param:StartdShouldWriteClaimIdFile}
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}]
   The \Condor{startd} can be configured
@@ -5254,20 +5244,17 @@ MAX_JOBS_RUNNING	= \
   The macro is defined in terms of seconds and defaults to 300, which is
   5 minutes.
 
-%\label{param:StartdSendAlives}
-%\item[\Macro{STARTD\_SEND\_ALIVES}]
-%  A boolean value that defaults to \Expr{False}.
-%  When \Expr{True}, the \Condor{startd} will send alive updates
-%  to the \Condor{schedd}, instead of the other way around.
-%  These alive upates are delivered via TCP.
-%  The alive interval for these updates is the
-%  claim lease duration divided by 3.
-%  This configuration variable must be set globally to be
-%  visible to all \Condor{schedd} and \Condor{startd} daemons that
-%  communicate.  If not visible, or if the two have
-%  different settings for this value, there is a good chance that
-%  keep alive updates will either never be sent, or will be dropped,
-%  resulting in expiring and evicted active claims.
+\label{param:StartdSendsAlives}
+\item[\Macro{STARTD\_SENDS\_ALIVES}]
+  A boolean value that defaults to \Expr{True},
+  which controls the direction in which keep alive messages are sent
+  between the \Condor{schedd} and \Condor{startd} during a claim.
+  Having the \Condor{startd} send the messages (the default) is usually
+  the better option. If the messages need to be sent by the \Condor{schedd},
+  this parameter can be set to \Expr{False}.
+  If both daemons are Condor 7.5.4 or later, this parameter only needs
+  to be set for the \Condor{schedd}. Otherwise, it must be set for both
+  daemons, and to the same value.
 
 \label{param:RequestClaimTimeout}
 \item[\Macro{REQUEST\_CLAIM\_TIMEOUT}]
@@ -7395,6 +7382,18 @@ These macros affect the \Condor{gridmanager}.
   The number of seconds after which if a gt2 grid
   universe job fails to ping the gatekeeper, the job will be put on hold.
   Defaults to 5 days (in seconds).
+
+\label{param:GramVersionDetection}
+\item[\Macro{GRAM\_VERSION\_DETECTION}]
+  A boolean parameter that defaults to \Expr{True}.
+  If set to \Expr{True}, the \Condor{gridmanager} treats grid-types
+  \Expr{gt2} and \Expr{gt5} identically, and queries each server to
+  determine which protocol it's using.
+  If set to \Expr{False}, the \Condor{gridmanager} trusts the grid-type
+  provided in job attribute \Attr{GridResource}, and treats the server
+  accordingly.
+  Beware that identifying a \Expr{gt2} server as \Expr{gt5} can result in
+  the server being overloaded if a large number of jobs are submitted.
 
 \label{param:GridftpUrlBase} 
 \item[\Macro{GRIDFTP\_URL\_BASE}]
