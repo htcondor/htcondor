@@ -898,6 +898,13 @@ recursive_chown_win32(const char * path, perm *po) {
 bool 
 IsDirectory( const char *path )
 {
+	if (path == NULL) {
+		// Don't really know if it is better to ASSERT this or simply
+		// return false. Returning false is technically correct since the path
+		// definitely wouldn't be a directory...
+		return false;
+	}
+
 	StatInfo si( path );
 	switch( si.Error() ) {
 	case SIGood:
