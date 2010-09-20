@@ -9784,13 +9784,14 @@ Configuration File Macros Affecting APIs}
   containing keys for a DH key exchange.
   There is no default value.
 
-\label{param:SoapSslSkipHostCheck}]
+\label{param:SoapSslSkipHostCheck}
 \item[\Macro{SOAP\_SSL\_SKIP\_HOST\_CHECK}]
-  When a SOAP server is authenticated via SSL, the server's hostname
-  is normally compared with the hostname contained in the server's
-  X509 credential. If the two don't match, authentication fails.
-  When this parameter is set to \Expr{True}, the hostname comparison is
-  disabled. The default value is \Expr{False}.
+  When a SOAP server is authenticated via SSL, the server's host name
+  is normally compared with the host name contained in the server's
+  X.509 credential. If the two do not match, authentication fails.
+  When this boolean variable is set to \Expr{True},
+  the host name comparison is disabled.
+  The default value is \Expr{False}.
 
 \end{description}
 
