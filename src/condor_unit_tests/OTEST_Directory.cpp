@@ -2240,16 +2240,19 @@ static bool test_recursive_chown() {
 	emit_comment("This test doesn't actually do anything because "
 		"Recursive_Chown() needs root access in order to change ownership. See "
 		"ticket #1609.");
-	uid_t src_uid = getuid();
+	StatInfo old_info(full_dir.Value());
+	uid_t src_uid = old_info.GetOwner();
+	gid_t src_gid = old_info.GetGroup();
 	emit_input_header();
 	emit_param("Directory", "%s", full_dir.Value());
 	emit_param("Source uid_t", "%d", src_uid);
+	emit_param("Source gid_t", "%d", src_gid);
 	emit_param("Destination uid_t", "%d", src_uid);
-	emit_param("Destination gid_t", "%d", src_uid);
+	emit_param("Destination gid_t", "%d", src_gid);
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Result uid_t", "%u", src_uid);
-	emit_param("Result gid_t", "%u", src_uid);
+	emit_param("Result gid_t", "%u", src_gid);
 	Directory dir(full_dir.Value());
 	bool ret_val = dir.Recursive_Chown(src_uid, src_uid, src_uid);
 	StatInfo info(full_dir.Value());
@@ -2259,7 +2262,7 @@ static bool test_recursive_chown() {
 	emit_retval("%s", tfstr(ret_val));
 	emit_param("Result uid_t", "%u", new_uid);
 	emit_param("Result gid_t", "%u", new_gid);
-	if(!ret_val || new_uid != src_uid || new_gid != src_uid) {
+	if(!ret_val || new_uid != src_uid || new_gid != src_gid) {
 		FAIL;
 	}
 	PASS;
