@@ -228,7 +228,9 @@ static bool cleanup() {
 		ret_val &= !rmdir("tmp");
 	}
 	
-	ret_val &= !chdir(deep_dir_long.Value());
+	for(int i = 0; i < 10; i++) {
+		ret_val &= !chdir(long_dir);
+	}
 	
 	//Remove the directories
 	for(int i = 0; i < 10; i++) {
