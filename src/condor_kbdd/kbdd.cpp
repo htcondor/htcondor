@@ -186,6 +186,15 @@ main_pre_command_sock_init( )
 #ifdef WIN32
 int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
 {
+   #ifdef WIN32
+	// t1031 - tell dprintf not to exit if it can't write to the log
+	// we have to do this before dprintf_config is called 
+	// (which happens inside dc_main), otherwise KBDD on Win32 will 
+	// except in dprintf_config if the log directory isn't writable
+	// by the current user.
+	dprintf_config_ContinueOnFailure( TRUE );
+   #endif
+
 	// cons up a "standard" argv for dc_main.
 	char **parameters = (char**)malloc(sizeof(char*)*2);
 	parameters[0] = "condor_kbdd";
