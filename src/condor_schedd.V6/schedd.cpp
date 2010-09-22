@@ -1281,7 +1281,7 @@ count( ClassAd *job )
 	}
 
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
-		cur_hosts = ((status == RUNNING || status == STAGING_OUT) ? 1 : 0);
+		cur_hosts = ((status == RUNNING || status == TRANSFERRING_OUTPUT) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
 		max_hosts = ((status == IDLE) ? 1 : 0);
@@ -1337,7 +1337,7 @@ count( ClassAd *job )
 		if( universe == CONDOR_UNIVERSE_SCHEDULER ) 
 		{
 			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == RUNNING || status == STAGING_OUT) {
+			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 				scheduler.SchedUniverseJobsRunning += cur_hosts;
 				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 			}
@@ -1345,7 +1345,7 @@ count( ClassAd *job )
 		if( universe == CONDOR_UNIVERSE_LOCAL ) 
 		{
 			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == RUNNING || status == STAGING_OUT) {
+			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 				scheduler.LocalUniverseJobsRunning += cur_hosts;
 				scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 			}
@@ -1433,7 +1433,7 @@ count( ClassAd *job )
 		status = real_status;	// set status back for below logic...
 	}
 
-	if (status == IDLE || status == RUNNING || status == STAGING_OUT) {
+	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 		scheduler.JobsRunning += cur_hosts;
 		scheduler.JobsIdle += (max_hosts - cur_hosts);
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
@@ -4131,7 +4131,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_VACATE_FAST_JOBS:
 				// Only vacate running/staging jobs
 			snprintf( buf, 256, "(%s==%d || %s==%d) && (", ATTR_JOB_STATUS,
-					  RUNNING, ATTR_JOB_STATUS, STAGING_OUT );
+					  RUNNING, ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
@@ -4294,7 +4294,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			switch( action ) {
 			case JA_VACATE_JOBS:
 			case JA_VACATE_FAST_JOBS:
-				if( status != RUNNING && status != STAGING_OUT ) {
+				if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
 					results.record( tmp_id, AR_BAD_STATUS );
 					continue;
 				}
@@ -6169,7 +6169,7 @@ find_idle_local_jobs( ClassAd *job )
 	job->LookupInteger(ATTR_JOB_STATUS, status);
 
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
-		cur_hosts = ((status == RUNNING || status == STAGING_OUT) ? 1 : 0);
+		cur_hosts = ((status == RUNNING || status == TRANSFERRING_OUTPUT) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
 		max_hosts = ((status == IDLE) ? 1 : 0);
@@ -6181,7 +6181,7 @@ find_idle_local_jobs( ClassAd *job )
 		// We do not count REMOVED or HELD jobs
 		//
 	if ( max_hosts > cur_hosts &&
-		(status == IDLE || status == RUNNING || status == STAGING_OUT) ) {
+		(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) ) {
 			//
 			// The jobs will now attempt to have their requirements
 			// evalulated. We first check to see if the requirements are defined.
@@ -6740,7 +6740,7 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 	switch( status ) {
 	case IDLE:
 	case RUNNING:
-	case STAGING_OUT:
+	case TRANSFERRING_OUTPUT:
 			// these are the cases we expect.  if it's local
 			// universe, it'll still be IDLE.  if it's not local,
 			// it'll already be marked as RUNNING...  just break
@@ -8399,7 +8399,7 @@ CkptWallClock()
 		first_time = 0;
 		int status = IDLE;
 		ad->LookupInteger(ATTR_JOB_STATUS, status);
-		if (status == RUNNING || status == STAGING_OUT) {
+		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
 			int bday = 0;
 			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
 			int run_time = current_time - bday;
@@ -8712,7 +8712,7 @@ _mark_job_stopped(PROC_ID* job_id)
 	DeleteAttribute( job_id->cluster, job_id->proc, ATTR_SHADOW_BIRTHDATE );
 
 	// if job isn't RUNNING, then our work is already done
-	if (status == RUNNING || status == STAGING_OUT) {
+	if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
@@ -9025,7 +9025,7 @@ Scheduler::shadow_prio_recs_consistent()
 			BadProc = srp->job_id.proc;
 			universe = srp->universe;
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
-			if (status != RUNNING && status != STAGING_OUT &&
+			if (status != RUNNING && status != TRANSFERRING_OUTPUT &&
 				universe!=CONDOR_UNIVERSE_MPI &&
 				universe!=CONDOR_UNIVERSE_PARALLEL) {
 				// display_shadow_recs();
@@ -9902,7 +9902,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 
 	switch( status ) {
 	case RUNNING:
-	case STAGING_OUT: {
+	case TRANSFERRING_OUTPUT: {
 			//
 			// If the job is running, we are in middle of executing
 			// a graceful shutdown, and the job has a lease, then we 
@@ -12032,7 +12032,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				}
 			}
 		}
-		else if (job_status != RUNNING && job_status != STAGING_OUT) {
+		else if (job_status != RUNNING && job_status != TRANSFERRING_OUTPUT) {
 			retry_is_sensible = true;
 		}
 		break;
@@ -12068,7 +12068,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			jobad->LookupString(ATTR_REMOTE_HOST,startd_name);
 			job_is_suitable = true;
 		}
-		else if (job_status != RUNNING && job_status != STAGING_OUT) {
+		else if (job_status != RUNNING && job_status != TRANSFERRING_OUTPUT) {
 			retry_is_sensible = true;
 		}
 		break;
@@ -13218,7 +13218,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				 ATTR_JOB_STATUS);
 		return ( false );
 	}
-	if ( status == RUNNING || status == STAGING_OUT ) {
+	if ( status == RUNNING || status == TRANSFERRING_OUTPUT ) {
 		return ( true );
 	}
 

@@ -53,14 +53,14 @@ template <class Item> class ExtArray;
 ** Warning!  Keep these consistent with the strings defined in the
 ** JobStatusNames array defined in condor_util_lib/proc.c
 */
-#define JOB_STATUS_MIN	1 /* Smallest valid job status value */
-#define IDLE			1
-#define RUNNING			2
-#define REMOVED			3
-#define COMPLETED		4
-#define	HELD			5
-#define STAGING_OUT		6
-#define JOB_STATUS_MAX  6 /* Largest valid job status value */
+#define JOB_STATUS_MIN		1 /* Smallest valid job status value */
+#define IDLE				1
+#define RUNNING				2
+#define REMOVED				3
+#define COMPLETED			4
+#define	HELD				5
+#define	TRANSFERRING_OUTPUT	6
+#define JOB_STATUS_MAX  	6 /* Largest valid job status value */
 
 // Put C funtion definitions here
 BEGIN_C_DECLS

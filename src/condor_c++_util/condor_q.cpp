@@ -613,7 +613,7 @@ encode_status( int status )
 		return 'X';
 	  case HELD:
 		return 'H';
-	  case STAGING_OUT:
+	  case TRANSFERRING_OUTPUT:
 		return '>';
 	  default:
 		return ' ';

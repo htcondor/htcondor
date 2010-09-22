@@ -1196,7 +1196,7 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg, "run")) {
 			std::string expr;
 			sprintf( expr, "%s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
-					 ATTR_JOB_STATUS, STAGING_OUT );
+					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 			Q.addAND( expr.c_str() );
 			run = true;
 			attrs.append( ATTR_REMOTE_HOST );
@@ -1345,7 +1345,7 @@ job_time(float cpu_time,ClassAd *ad)
 	 * is not zero and the job status is RUNNING.  -Todd <tannenba@cs.wisc.edu>
 	 */
 	float total_wall_time = previous_runs;
-	if ( ( job_status == RUNNING || job_status == STAGING_OUT ) && shadow_bday ) {
+	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) && shadow_bday ) {
 		total_wall_time += cur_time - shadow_bday;
 	}
 
@@ -1615,7 +1615,7 @@ format_goodput (int job_status, AttrList *ad)
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	if ((job_status == RUNNING || job_status == STAGING_OUT) &&
+	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) &&
 		shadow_bday && last_ckpt > shadow_bday)
 	{
 		wall_clock += last_ckpt - shadow_bday;
@@ -1638,7 +1638,7 @@ format_mbps (float bytes_sent, AttrList *ad)
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
 	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
-	if ((job_status == RUNNING || job_status == STAGING_OUT) && shadow_bday && last_ckpt > shadow_bday) {
+	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
 	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
@@ -2162,10 +2162,10 @@ process_buffer_line( ClassAd *job )
 
 	switch (status)
 	{
-		case IDLE:        idle++;      break;
-		case RUNNING:     running++;   break;
-		case STAGING_OUT: running++;   break;
-		case HELD:		  held++;	   break;
+		case IDLE:                idle++;      break;
+		case RUNNING:             running++;   break;
+		case TRANSFERRING_OUTPUT: running++;   break;
+		case HELD:		          held++;	   break;
 	}
 
 	// If it's not a DAGMan job (and this includes the DAGMan process
@@ -2679,7 +2679,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	request->LookupBool( ATTR_JOB_MATCHED, jobMatched );
-	if( jobState == RUNNING || jobState == STAGING_OUT ) {
+	if( jobState == RUNNING || jobState == TRANSFERRING_OUTPUT ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
 			proc );
@@ -3265,7 +3265,7 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 		int status = -1;
 		job->LookupInteger(ATTR_JOB_STATUS,status);
-		if( status != RUNNING && status != STAGING_OUT ) {
+		if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
 
 			int universe = -1;
 			job->LookupInteger(ATTR_JOB_UNIVERSE,universe);
