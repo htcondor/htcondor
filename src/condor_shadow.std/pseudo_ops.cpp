@@ -727,7 +727,10 @@ pseudo_get_file_stream(
 				sleep(retry_wait);
 				retry_wait *= 2;
 				if (retry_wait > MaxRetryWait) {
-					EXCEPT("ckpt server restore failed");
+					struct in_addr taddr;
+					taddr.s_addr = *ip_addr;
+					MyString buf(inet_ntoa(taddr));
+					EXCEPT("ckpt server restore to %s failed", buf.Value());
 				}
 			}
 		} while (rval);
@@ -854,7 +857,10 @@ pseudo_put_file_stream(
 				sleep(retry_wait);
 				retry_wait *= 2;
 				if (retry_wait > MaxRetryWait) {
-					EXCEPT("ckpt server store failed");
+					struct in_addr taddr;
+					taddr.s_addr = *ip_addr;
+					MyString buf(inet_ntoa(taddr));
+					EXCEPT("ckpt server store to %s failed", buf.Value());
 				}
 			}
 		} while (rval);
