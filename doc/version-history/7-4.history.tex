@@ -184,6 +184,11 @@ entries and cause daemons to exit when the log is rotated.
 \SubmitCmd{grid\_resource} attribute included a port as part of the server
 host name.
 
+% gittrac #1672
+\item Fixed a confusing error message mentioning
+  \verb@LocalUserLog::logStarterError()@ when the \Condor{starter} fails to
+  communicate with the \Condor{shadow} before the job has started.
+
 \end{itemize}
 
 \noindent Known Bugs:
