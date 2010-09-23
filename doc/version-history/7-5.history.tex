@@ -36,7 +36,6 @@ in libcondorapi. Some headers were missing starting in Condor 7.5.1.
 \begin{itemize}
 
 % gittrac #1447
-
 \item Concurrency limits now work with parallel universe jobs
 scheduled by the dedicated scheduler.
 
@@ -250,6 +249,12 @@ provided in the job's \SubmitCmd{grid\_resource} attribute.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrack #1667
+\item Fixed the output in the \Condor{master} daemon log file to be
+  clearer when an authorized user tries to use \Condor{config\_val}
+  \Opt{-set} and \Attr{ENABLE\_PERSISTENT\_CONFIG} is false. The previous
+  output implied that the operation succeeded when in fact it did not.
 
 \item Since 7.5.2, the following \Condor{job\_router} features were
   effectively non-functional: \Attr{UseSharedX509UserProxy},
