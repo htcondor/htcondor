@@ -195,7 +195,7 @@ static bool setup() {
 	}
 	deep_dir.sprintf_cat("tmp");
 	
-	for(int i = 0; i < 9; i++) {
+	for(int i = 0; i < 3; i++) {
 		deep_dir_long.sprintf_cat("%s%c", long_dir, DIR_DELIM_CHAR);
 	}
 	deep_dir_long.sprintf_cat("%s", long_dir);
@@ -208,7 +208,7 @@ static bool setup() {
 	ret_val &= !chdir(original_dir.Value());
 
 	//Make some directories to test
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < 4; i++) {
 		ret_val &= !mkdir(long_dir, 0700);
 		ret_val &= !chdir(long_dir);
 	}
@@ -228,12 +228,12 @@ static bool cleanup() {
 		ret_val &= !rmdir("tmp");
 	}
 	
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < 4; i++) {
 		ret_val &= !chdir(long_dir);
 	}
 	
 	//Remove the directories
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < 4; i++) {
 		ret_val &= !chdir("..");
 		ret_val &= !rmdir(long_dir);
 	}
