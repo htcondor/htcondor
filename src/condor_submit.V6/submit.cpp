@@ -86,7 +86,7 @@
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
-//   CheckFilesRead, CheckFilesWrite, and ClusterAdAttrs should be
+//   CheckFilesRead and CheckFilesWrite should be
 //   either completely case-sensitive (and use MyStringHash()) or
 //   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
 static unsigned int hashFunction( const MyString& );
@@ -95,7 +95,9 @@ static unsigned int hashFunction( const MyString& );
 HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
-HashTable<MyString,int> ClusterAdAttrs( 31, hashFunction );
+
+StringList NoClusterCheckAttrs;
+ClassAd *ClusterAd = NULL;
 
 // Explicit template instantiation
 
@@ -2459,7 +2461,7 @@ SetTransferFiles()
 				//filename containing $(Process)).  At this time, the
 				//check in InsertJobExpr() is not smart enough to
 				//notice that.
-			InsertJobExprString(ATTR_JOB_OUTPUT, working_name,false);
+			InsertJobExprString(ATTR_JOB_OUTPUT, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
@@ -2480,7 +2482,7 @@ SetTransferFiles()
 				//filename containing $(Process)).  At this time, the
 				//check in InsertJobExpr() is not smart enough to
 				//notice that.
-			InsertJobExprString(ATTR_JOB_ERROR, working_name,false);
+			InsertJobExprString(ATTR_JOB_ERROR, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
@@ -5638,8 +5640,9 @@ queue(int num)
 			} else {
 				ProcId = -1;
 			}
-			ClusterAdAttrs.clear();
 		}
+
+		NoClusterCheckAttrs.clearAll();
 
 		if ( !DumpClassAdToFile ) {
 			if ( ClusterId == -1 ) {
@@ -5871,6 +5874,19 @@ queue(int num)
 		if ( DumpClassAdToFile ) {
 			job->fPrint ( DumpFile );
 			fprintf ( DumpFile, "\n" );
+		}
+
+		if ( ProcId == 0 ) {
+			delete ClusterAd;
+			ClusterAd = new ClassAd( *job );
+
+			// Remove attributes that were forced into the proc 0 ad
+			// from our copy of the cluster ad.
+			const char *attr;
+			NoClusterCheckAttrs.rewind();
+			while ( (attr = NoClusterCheckAttrs.next()) ) {
+				ClusterAd->Delete( attr );
+			}
 		}
 
 		if ( job_ad_saved == false ) {
@@ -6695,20 +6711,26 @@ SaveClassAd ()
 					 ClusterId, ProcId );
 			retval = -1;
 		} else {
-			// To facilitate processing of job status from the
-			// job_queue.log, the ATTR_JOB_STATUS attribute should not
-			// be stored within the cluster ad. Instead, it should be
-			// directly part of each job ad. This change represents an
-			// increase in size for the job_queue.log initially, but
-			// the ATTR_JOB_STATUS is guaranteed to be specialized for
-			// each job so the two approaches converge. Further
-			// optimization should focus on sending only the
-			// attributes required for the job to run. -matt 1 June 09
-			// Mostly the same rational for ATTR_JOB_SUBMISSION.
-			// -matt // 24 June 09
 			int tmpProcId = myprocid;
-			if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ||
-				strcasecmp(lhstr, ATTR_JOB_SUBMISSION) == 0 ) myprocid = ProcId;
+			// Check each attribute against the version in the cluster ad.
+			// If the values match, don't add the attribute to the proc ad.
+			// NoClusterCheckAttrs is a list of attributes that should
+			// always go into the proc ad. For proc 0, this means
+			// inserting the attribute into the proc ad instead of the
+			// cluster ad.
+			if ( ProcId > 0 ) {
+				if ( !NoClusterCheckAttrs.contains_anycase( lhstr ) ) {
+					ExprTree *cluster_tree = ClusterAd->LookupExpr( lhstr );
+					if ( cluster_tree && *tree == *cluster_tree ) {
+						continue;
+					}
+				}
+			} else {
+				if ( NoClusterCheckAttrs.contains_anycase( lhstr ) ) {
+					myprocid = ProcId;
+				}
+			}
+
 			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
 				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
 						 lhstr, rhstr, ClusterId, ProcId, errno );
@@ -6767,17 +6789,6 @@ InsertJobExpr (const char *expr, bool clustercheck)
 
 	MyString hashkey(expr);
 
-	if ( clustercheck && ProcId > 0 ) {
-		// We are inserting proc 1 or above.  So before we actually stick
-		// this into the job ad, make certain we did not already place it
-		// into the cluster ad.  We do this via a hashtable lookup.
-
-		if ( ClusterAdAttrs.lookup(hashkey,unused) == 0 ) {
-			// found it.  so it is already in the cluster ad; we're done.
-			return;
-		}
-	}
-
 	int pos = 0;
 	int retval = Parse (expr, attr_name, tree, &pos);
 
@@ -6793,22 +6804,15 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		exit( 1 );
 	}
 
+	if ( clustercheck == false ) {
+		NoClusterCheckAttrs.append( attr_name.Value() );
+	}
+
 	if (!job->Insert (attr_name.Value(), tree))
 	{	
 		fprintf(stderr,"\nERROR: Unable to insert expression: %s\n", expr);
 		DoCleanup(0,0,NULL);
 		exit( 1 );
-	}
-
-	if ( clustercheck && ProcId < 1 ) {
-		// We are working on building the ad which will serve as our
-		// cluster ad.  Thus insert this expr into our hashtable.
-		if ( ClusterAdAttrs.insert(hashkey,unused) < 0 ) {
-			fprintf( stderr,"\nERROR: Unable to insert expression into "
-					 "hashtable: %s\n", expr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
 	}
 }
 
@@ -6956,7 +6960,7 @@ void transfer_vm_file(const char *filename)
 	tmp_ptr = transfer_file_list.print_to_string();
 
 	buffer.sprintf( "%s = \"%s\"", ATTR_TRANSFER_INPUT_FILES, tmp_ptr);
-	InsertJobExpr(buffer, false);
+	InsertJobExpr(buffer);
 	free(tmp_ptr);
 
 	SetImageSize();
