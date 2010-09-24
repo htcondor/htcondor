@@ -26,6 +26,9 @@ The details of each version are described below.
 \item Condor version 7.4.4 not yet released.
 %\item Condor version 7.4.4 released on Month Date, 2010.
 
+% gittrac #1524
+\item Condor can now be built on Mac OS X 10.6.
+
 \end{itemize}
 
 
@@ -36,6 +39,8 @@ The details of each version are described below.
 \item \SubmitCmd{load\_profile} is now supported by the Unix version of
 \Condor{submit} when submitting jobs to Windows.  Previously, this command
 was only supported by the Windows version of \Condor{submit}.
+
+\item Added an example Mac OS X launchd configuration file for starting Condor.
 
 \end{itemize}
 
@@ -146,6 +151,43 @@ not exist.
 % gittrac #1518
 \item \Condor{ssh\_to\_job} did not work when
 \MacroNI{SEC\_DEFAULT\_NEGOTIATION} was set to \MacroNI{OPTIONAL}.
+
+% gittrac #1611 #1612
+\item The \SubmitCmd{vm} universe now works properly on machines that 
+have Condor's Privilege Separation mechanism enabled.
+
+% gittrac #1624
+\item \Condor{submit} no longer pads a \SubmitCmd{vm} universe job's disk usage
+estimation by 100MB.
+
+% gittrac #1553
+\item Fixed a bug with the \Macro{vm\_cdrom\_files} submit file
+command, that caused VMware \SubmitCmd{vm} universe jobs to fail if the virtual
+machine already had a CD-ROM image associated with it.
+
+% gittrac #1508
+\item Fixed permissions of a ssh private key file that is created for 
+Amazon EC2 jobs. Previously, the permissions were too lax.
+
+% gittrac #1465
+\item Configuration variables \Macro{SOAP\_SSL\_CA\_DIR} and
+\Macro{SOAP\_SSL\_CA\_FILE} are now properly used when authenticating
+with Amazon EC2 servers.
+
+% gittrac #1484
+\item Fix a bug with the \Macro{<subsys>\_LOCK} configuration variable.
+It could let daemons writing to the same daemon log overwrite each other's
+entries and cause daemons to exit when the log is rotated.
+
+% gittrac #1557
+\item Fixed a bug that caused nordugrid jobs to fail if the
+\SubmitCmd{grid\_resource} attribute included a port as part of the server
+host name.
+
+% gittrac #1672
+\item Fixed a confusing error message mentioning
+  \verb@LocalUserLog::logStarterError()@ when the \Condor{starter} fails to
+  communicate with the \Condor{shadow} before the job has started.
 
 \end{itemize}
 
