@@ -928,6 +928,13 @@ IsDirectory( const char *path )
 bool 
 IsSymlink( const char *path )
 {
+	if (path == NULL) {
+		// Don't really know if it is better to ASSERT this or simply
+		// return false. Returning false is technically correct since the path
+		// definitely wouldn't be a symlink...
+		return false;
+	}
+
 	StatInfo si( path );
 	switch( si.Error() ) {
 	case SIGood:
