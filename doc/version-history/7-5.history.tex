@@ -131,6 +131,10 @@ universe jobs.  It also now automatically avoids recursively routing jobs.
 \item The \Condor{schedd} now writes the submit event to the user job log.
 Previously, \Condor{submit} wrote the event.
 
+% gittrac #1665
+\item The \Condor{schedd} daemon now scales better when there are many
+job auto clusters.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
