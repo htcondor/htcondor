@@ -1,3 +1,6 @@
+Changes for version 1.0.10 (Released ????-??-??)
+* Fix infinite loop in FunctionCall::SameAs().
+
 Changes for version 1.0.9 (Released 2010-08-23)
 * Fix interval() function to omit leading zeros and spaces.
 * Allow semicolons to separate function arguments when

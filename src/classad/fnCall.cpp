@@ -258,6 +258,8 @@ SameAs(const ExprTree *tree) const
                     is_same = false;
                     break;
                 }
+				a1++;
+				a2++;
             }
         } else {
             is_same = false;
