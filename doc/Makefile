@@ -2,7 +2,7 @@ SUBDIR = v7.5.4
 SUBVER = V7_5_4
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
-LOCALDIR = ref-master
+LOCALDIR = ref-v754
 
 # NOTE: older latex versions do not support -halt-on-error
 #       including /p/condor/workspaces/build/bin/latex, unfortunately
