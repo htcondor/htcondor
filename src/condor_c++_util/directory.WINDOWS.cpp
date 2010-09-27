@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include "directory.h"
+#include "directory_util.h"
 #include "remote_close.WINDOWS.h"
 #include "string_conversion.WINDOWS.h"
 #include "security.WINDOWS.h"

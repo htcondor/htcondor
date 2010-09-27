@@ -26,6 +26,7 @@
 #include "../condor_procd/proc_family_client.h"
 #include "setenv.h"
 #include "directory.h"
+#include "directory_util.h"
 #include "basename.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "procd_config.h"

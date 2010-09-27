@@ -30,6 +30,7 @@
 #include "filename_tools.h"
 #include "job_lease.h"
 #include "directory.h"
+#include "directory_util.h"
 
 #include "gridmanager.h"
 #include "gt4job.h"
