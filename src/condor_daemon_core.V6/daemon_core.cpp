@@ -8881,7 +8881,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 	if( dc_rsock ) {
 		const unsigned int my_ip = dc_rsock->get_ip_int();
-		const unsigned int loopback_ip = ntohl( inet_addr( "127.0.0.1" ) );
+		const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
 
 		if( my_ip == loopback_ip ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
