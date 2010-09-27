@@ -2359,6 +2359,14 @@ AC_ARG_ENABLE([hdfs],
 AS_IF([test "x$enable_hdfs" = xyes],
   [AC_DEFINE([WANT_HDFS], [1], [Define if enabling HDFS])])
 
+AC_ARG_ENABLE([ipv6],
+  AC_HELP_STRING([--enable-ipv6],
+    [enable IPv6 for TCP/UDP connection (default: no)]),
+  [],
+  [enable_ipv6=no])
+AS_IF([test "x$enable_ipv6" = xyes],
+  [AC_DEFINE([CONDOR_IPV6], [1], [Define if enabling IPV6])])
+
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
 # package them into a tarball. for example, if say objcopy's debuglink flag

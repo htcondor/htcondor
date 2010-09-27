@@ -267,6 +267,7 @@ UdpWakeOnLanWaker::initializeBroadcastAddress ()
 {
     bool        ok = false;
     sockaddr_in public_ip_address;
+    int ret;
 
     memset ( &m_broadcast, 0, sizeof ( sockaddr_in ) );
     m_broadcast.sin_family = AF_INET;
@@ -277,9 +278,7 @@ UdpWakeOnLanWaker::initializeBroadcastAddress ()
 
         m_broadcast.sin_addr.s_addr = htonl ( INADDR_BROADCAST );
 
-    } else if ( INADDR_NONE ==
-        ( m_broadcast.sin_addr.s_addr = inet_addr ( m_subnet ) ) ) {
-
+    } else if ( (ret = inet_pton( AF_INET, m_subnet, &m_broadcast.sin_addr.s_addr)) <= 0 ) {
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker::doWake: Malformed subnet "
@@ -310,7 +309,7 @@ UdpWakeOnLanWaker::initializeBroadcastAddress ()
     m_broadcast.sin_addr.s_addr ^= 0xffffffff;
 
     /* logically or the IP address with the inverted subnet mast */
-    public_ip_address.sin_addr.s_addr = inet_addr ( m_public_ip );
+    inet_pton(AF_INET, m_public_ip, &public_ip_address.sin_addr.s_addr);
     m_broadcast.sin_addr.s_addr |= public_ip_address.sin_addr.s_addr;
 
     /* log display broadcast address */
