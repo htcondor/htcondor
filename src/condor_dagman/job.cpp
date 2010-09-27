@@ -1,6 +1,3 @@
-//TEMPTEMP -- writing the jobstate.log file just failed on a rescue DAG (100901)
-//TEMPTEMP -- pegasus sequence numbers must continue for rescue DAG! (put nextPegasusSeqNum in rescue DAG?)
-//TEMPTEMP -- retries should get new sequence number
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

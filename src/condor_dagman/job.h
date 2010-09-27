@@ -383,16 +383,30 @@ class Job {
 	*/
 	const char *PegasusSite();
 
-	//TEMPTEMP -- document -- should these really be const?
+	/** Get the Pegasus sequence number for this node, assigning one
+		if we haven't already.
+	*/
 	int GetPegasusSequenceNum();
 	
-	//TEMPTEMP -- document -- should these really be const?
+	/** Reset the Pegasus sequence number for this node, so we get a
+		new sequence number for node retries, etc.
+	*/
 	void ResetPegasusSequenceNum() { _pegasusSeqNum = 0; }
 
-	//TEMPTEMP -- document
+	/** Save the next Pegasus sequence number, so we can pick up from
+		where we left off when running a rescue DAG.  (Note that we save
+		the next sequence number in a separate file, whose name is based
+		on the filename of the "primary" DAG file.)
+		@param The "primary" DAG file name
+		@return true if the operation succeeds, false otherwise
+	*/
 	static bool SavePegasusNextSequenceNum( const char *primaryDagFile );
 
-	//TEMPTEMP -- document
+	/** Restore the next Pegasus sequence number.  (Note that it is *not*
+		an error for the sequence number file to not exist.)
+		@param The "primary" DAG file name
+		@return true if the operation succeeds, false otherwise
+	*/
 	static bool RestorePegasusNextSequenceNum( const char *primaryDagFile );
 
     /** */ CondorID _CondorID;
@@ -549,13 +563,17 @@ private:
 		// can also be "local").
 	char *_pegasusSite;
 
-		//TEMPTEMP -- document
+		// The Pegasus sequence number for this node (used if we are
+		// writing the jobstate.log file for Pegasus to read).
 	int _pegasusSeqNum;
 
-		//TEMPTEMP -- document
+		// The next Pegasus sequence number for the entire DAG.  Note
+		// that, when we run a rescue DAG, we pick up the sequence numbers
+		// from where we left off when we originally ran the DAG.
 	static int _nextPegasusSeqNum;
 
-		//TEMPTEMP -- document
+		// The sequence number keyword for the file in which we save
+		// the sequence number.
 	static const char *SEQ_NUM_KEYWORD;
 };
 

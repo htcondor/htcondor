@@ -89,7 +89,10 @@ MyString RescueDagName(const char *primaryDagFile,
 void RenameRescueDagsAfter(const char *primaryDagFile,
 			bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
-//TEMPTEMP -- document
+/** Get the name of the file holding the next Pegasus sequence number.
+	@param The name of the "primary" DAG file
+	@return The name of the Pegasus sequence number file.
+*/
 MyString SeqNumFileName(const char *primaryDagFile);
 
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

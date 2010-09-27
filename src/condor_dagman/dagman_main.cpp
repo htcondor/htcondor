@@ -956,7 +956,6 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
-	//TEMPTEMP -- check return value here
 	Job::RestorePegasusNextSequenceNum( dagman.primaryDagFile.Value() );
 
     //
