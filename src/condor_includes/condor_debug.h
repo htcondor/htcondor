@@ -91,6 +91,8 @@ void set_debug_flags( const char *strflags );
 void _condor_fd_panic( int line, char *file );
 void _condor_set_debug_flags( const char *strflags );
 
+int  dprintf_config_ContinueOnFailure( int fContinue );
+
 /* must call this before clone(CLONE_VM|CLONE_VFORK) */
 void dprintf_before_shared_mem_clone( void );
 

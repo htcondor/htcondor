@@ -522,7 +522,8 @@ pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_
 	if( stat(ICkptName,&st_buf) == 0 ) {
 		a_out = strdup( ICkptName );
 	} else {
-		EXCEPT( "Can't find a.out file" );
+		EXCEPT( "Can't find initial checkpoint file %s",
+			ICkptName?ICkptName:"(null pointer)");
 	}
 
 		/* Copy current checkpoint name into space provided */
@@ -531,7 +532,10 @@ pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_
 	} else if( stat(ICkptName,&st_buf) == 0 ) {
 		orig = strdup( ICkptName );
 	} else {
-		EXCEPT( "Can't find checkpoint file" );
+		EXCEPT( "Can't find any checkpoint file: CkptFile='%s' "
+			"or ICkptFile='%s'", 
+			CkptName?CkptName:"(null pointer)",
+			ICkptName?ICkptName:"(null pointer)" );
 	}
 
 		/* Copy next checkpoint name into space provided */
@@ -712,6 +716,8 @@ pseudo_get_file_stream(
 	bool	CkptFile = is_ckpt_file(file);
 	bool	ICkptFile = is_ickpt_file(file);
 	priv_state	priv;
+	struct in_addr taddr;
+	MyString buf;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
@@ -729,13 +735,18 @@ pseudo_get_file_stream(
 								  								  scheddName,
 								  file,len,
 								  (struct in_addr*)ip_addr,port);
+			taddr.s_addr = *ip_addr;
+			buf = inet_ntoa(taddr);
+
 			if (rval) { // network error, try again
-				dprintf(D_ALWAYS, "ckpt server restore failed, trying again"
-						" in %d seconds\n", retry_wait);
+				dprintf(D_ALWAYS, "ckpt server restore to %s failed, "
+						"trying again in %d seconds\n", 
+						buf.Value(),
+						retry_wait);
 				sleep(retry_wait);
 				retry_wait *= 2;
 				if (retry_wait > MaxRetryWait) {
-					EXCEPT("ckpt server restore failed");
+					EXCEPT("ckpt server restore to %s failed", buf.Value());
 				}
 			}
 		} while (rval);
@@ -837,6 +848,8 @@ pseudo_put_file_stream(
 	int		retry_wait = 5;
 	priv_state	priv;
 	mode_t	omask;
+	struct in_addr taddr;
+	MyString buf;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
@@ -856,13 +869,18 @@ pseudo_put_file_stream(
             // ip_addr is set within RequestStore
 			rval = RequestStore(p->owner, scheddName, file, len,
 								(struct in_addr*)ip_addr, port);
+			taddr.s_addr = *ip_addr;
+			buf = inet_ntoa(taddr);
+
 			if (rval) {	/* request denied or network error, try again */
-				dprintf(D_ALWAYS, "store request to ckpt server failed, "
-						"trying again in %d seconds\n", retry_wait);
+				dprintf(D_ALWAYS, "store request to ckpt server %s failed, "
+						"trying again in %d seconds\n", 
+						buf.Value(),
+						retry_wait);
 				sleep(retry_wait);
 				retry_wait *= 2;
 				if (retry_wait > MaxRetryWait) {
-					EXCEPT("ckpt server store failed");
+					EXCEPT("ckpt server store to %s failed", buf.Value());
 				}
 			}
 		} while (rval);
@@ -1021,7 +1039,8 @@ create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 
         /* create a tcp socket */
     if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
-        EXCEPT( "socket" );
+        EXCEPT( "create_tcp_port(): socket() failed: %d(%s)", 
+			errno, strerror(errno) );
     }
     dprintf( D_FULLDEBUG, "\tconnect_sock = %d\n", *fd );
 
@@ -1029,20 +1048,22 @@ create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 
         /* FALSE means this is an incoming connection */
     if( ! _condor_local_bind(FALSE, *fd) ) {
-        EXCEPT( "bind" );
+        EXCEPT( "create_tcp_port(): bind() failed: %d(%s)",
+			errno, strerror(errno) );
     }
 
         /* determine which local port number we were assigned to */
     struct sockaddr_in *tmp = getSockAddr(*fd);
     if (tmp == NULL) {
-        EXCEPT("getSockAddr failed");
+        EXCEPT("create_tcp_port(): getSockAddr() failed");
     }
     *ip = ntohl(tmp->sin_addr.s_addr);
     *port = ntohs(tmp->sin_port);
 
         /* Get ready to accept a connection */
     if( listen(*fd,1) < 0 ) {
-        EXCEPT( "listen" );
+        EXCEPT( "create_tcp_port(): listen() failed: %d(%s)", 
+			errno, strerror(errno) );
     }
     dprintf( D_FULLDEBUG, "\tListening...\n" );
 
@@ -1844,12 +1865,12 @@ has_ckpt_file()
 			}
 		}
 		if(rval == -1 && LastCkptServer && accum_usage > MaxDiscardedRunTime) {
-			dprintf(D_ALWAYS, "failed to contact ckpt server, trying again"
-					" in %d seconds\n", retry_wait);
+			dprintf(D_ALWAYS, "failed to contact last ckpt server at %s, "
+					"trying again in %d seconds\n", LastCkptServer, retry_wait);
 			sleep(retry_wait);
 			retry_wait *= 2;
 			if (retry_wait > MaxRetryWait) {
-				EXCEPT("failed to contact ckpt server");
+				EXCEPT("failed to contact last ckpt server %s", LastCkptServer);
 			}
 		}
 	} while(rval == -1 && LastCkptServer && accum_usage > MaxDiscardedRunTime);
@@ -1909,13 +1930,13 @@ simp_log( const char *msg )
 
 	if( !fp ) {
 		if( (fd=safe_open_wrapper(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
-			EXCEPT( name );
+			EXCEPT( "Can't create/open \"%s\"", name );
 		}
 		close( fd );
 
 		fp = safe_fopen_wrapper( name, "a" );
 		if( fp == NULL ) {
-			EXCEPT( "Can't open \"%s\" for appending\n", name );
+			EXCEPT( "Can't open \"%s\" for appending", name );
 		}
 	}
 
