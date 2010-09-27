@@ -244,6 +244,7 @@ ErrorPolicy::analyzePolicy( )
 				//
 			switch ( this->job_state ) {
 				case RUNNING:
+				case TRANSFERRING_OUTPUT:
 					ret = STAYS_IN_QUEUE;
 					break;
 				case HELD:

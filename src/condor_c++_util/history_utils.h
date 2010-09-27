@@ -220,8 +220,6 @@ static char
 encode_status( int status )
 {
         switch( status ) {
-          case UNEXPANDED:
-                return 'U';
           case IDLE:
                 return 'I';
           case RUNNING:
@@ -230,6 +228,8 @@ encode_status( int status )
                 return 'C';
           case REMOVED:
                 return 'X';
+          case TRANSFERRING_OUTPUT:
+                return '>';
           default:
                 return ' ';
         }

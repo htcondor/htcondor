@@ -1696,7 +1696,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 		GracefullyRemoveJob(job);
 		return;
 	}
-	job->is_running = (job_status == RUNNING);
+	job->is_running = (job_status == RUNNING || job_status == TRANSFERRING_OUTPUT);
 
 	int job_finished = 0;
 	if( !ad->EvaluateAttrInt( ATTR_JOB_FINISHED_HOOK_DONE, job_finished ) ) {

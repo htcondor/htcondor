@@ -368,6 +368,20 @@ JICShadow::Continue( void )
 }
 
 
+bool JICShadow::allJobsDone( void )
+{
+	bool r1, r2;
+	ClassAd update_ad;
+
+	r1 = JobInfoCommunicator::allJobsDone();
+
+	publishJobExitAd( &update_ad );
+	r2 = updateShadow( &update_ad, true );
+
+	return r1;
+}
+
+
 bool
 JICShadow::transferOutput( void )
 {
@@ -687,7 +701,7 @@ JICShadow::notifyJobPreSpawn( void )
 
 bool
 JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
-						  user_proc )
+						  /* user_proc */ )
 {
 	static bool wrote_local_log_event = false;
 
@@ -1749,6 +1763,46 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 
 
 bool
+JICShadow::publishJobExitAd( ClassAd* ad )
+{
+	filesize_t execsz = 0;
+	char buf[200];
+
+	// if there is a filetrans object, then let's send the current
+	// size of the starter execute directory back to the shadow.  this
+	// way the ATTR_DISK_USAGE will be updated, and we won't end
+	// up on a machine without enough local disk space.
+	if ( filetrans ) {
+		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
+		execsz = starter_dir.GetDirectorySize();
+		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
+		ad->InsertOrUpdate( buf );
+
+	}
+	MyString spooled_files;
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+	{
+		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
+	}
+
+	// Insert the starter's address into the update ad, because all
+	// parties who subscribe to updates (shadow & startd) also should
+	// be informed of any changes in the starter's contact info
+	// (important for CCB and shadow-starter reconnect, because startd
+	// needs to relay starter's full contact info to the shadow when
+	// queried).  It's a bit of a hack to do it through this channel,
+	// but better than nothing.
+	ad->Assign( ATTR_STARTER_IP_ADDR, daemonCore->publicNetworkIpAddr() );
+
+		// Now, get our Starter object to publish, as well.  This will
+		// walk through all the UserProcs and have those publish, as
+		// well.  It returns true if there was anything published,
+		// false if not.
+	return Starter->publishJobExitAd( ad );
+}
+
+
+bool
 JICShadow::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
 {
 	bool r1, r2;
@@ -2016,8 +2070,8 @@ JICShadow::initMatchSecuritySession()
 		// options here if we wanted to get an effect similar to
 		// security negotiation, but currently we just take the
 		// defaults from the shadow.
-	char *starter_reconnect_session_info = "";
-	char *starter_filetrans_session_info = "";
+	const char *starter_reconnect_session_info = "";
+	const char *starter_filetrans_session_info = "";
 
 	int rc = REMOTE_CONDOR_get_sec_session_info(
 		starter_reconnect_session_info,

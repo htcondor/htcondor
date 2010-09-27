@@ -156,7 +156,7 @@ add (CondorQIntCategories cat, int value)
 
 
 int CondorQ::
-add (CondorQStrCategories cat, char *value)
+add (CondorQStrCategories cat, const char *value)
 {  
 	switch (cat) {
 	case CQ_OWNER:
@@ -178,19 +178,19 @@ add (CondorQFltCategories cat, float value)
 
 
 int CondorQ::
-addOR (char *value)
+addOR (const char *value)
 {
 	return query.addCustomOR (value);
 }
 
 int CondorQ::
-addAND (char *value)
+addAND (const char *value)
 {
 	return query.addCustomAND (value);
 }
 
 int CondorQ::
-addSchedd (char *value)
+addSchedd (const char *value)
 {  
 	strncpy(schedd, value, MAXSCHEDDLEN - 1);
 	return 0;
@@ -289,7 +289,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 }
 
 int CondorQ::
-fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorError*  /*errstack*/)
+fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, const char *dbconn, CondorError*  /*errstack*/)
 {
 #ifdef HAVE_EXT_POSTGRESQL
 	int     		result;
@@ -373,7 +373,7 @@ fetchQueueFromHostAndProcess ( const char *host, StringList &attrs, process_func
 }
 
 int CondorQ::
-fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function process_func, CondorError*  /*errstack*/ )
+fetchQueueFromDBAndProcess ( const char *dbconn, char *&lastUpdate, process_function process_func, CondorError*  /*errstack*/ )
 {
 #ifdef HAVE_EXT_POSTGRESQL
 	int     		result;
@@ -432,7 +432,7 @@ fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function p
 	return Q_OK;
 }
 
-void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
+void CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType) {
 #ifdef HAVE_EXT_POSTGRESQL
 
 	JobQueueDatabase *DBObj = NULL;
@@ -603,8 +603,6 @@ char
 encode_status( int status )
 {
 	switch( status ) {
-	  case UNEXPANDED:
-		return 'U';
 	  case IDLE:
 		return 'I';
 	  case RUNNING:
@@ -615,8 +613,8 @@ encode_status( int status )
 		return 'X';
 	  case HELD:
 		return 'H';
-	  case SUBMISSION_ERR:
-		return 'E';
+	  case TRANSFERRING_OUTPUT:
+		return '>';
 	  default:
 		return ' ';
 	}

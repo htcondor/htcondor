@@ -42,7 +42,7 @@ extern int do_REMOTE_syscall();
 ReliSock *syscall_sock;
 RemoteResource *thisRemoteResource;
 
-static char *Resource_State_String [] = {
+static const char *Resource_State_String [] = {
 	"PRE", 
 	"EXECUTING", 
 	"PENDING_DEATH", 
@@ -1070,6 +1070,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			new_state = RR_EXECUTING;
 		} else if ( strcasecmp(job_state, "Checkpointed") == MATCH ) {
 			new_state = RR_CHECKPOINTED;
+		} else if ( strcasecmp(job_state, "Exited") == MATCH ) {
+			jobAd->Assign( ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 		} else { 
 				// For our purposes in here, we don't care about any
 				// other possible states at the moment.  If the job
