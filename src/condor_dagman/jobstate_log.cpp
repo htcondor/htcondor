@@ -25,15 +25,11 @@
 #include "jobstate_log.h"
 #include "dagman_main.h"
 
-const char *JobstateLog::SUBMIT_NAME = "SUBMIT";
-const char *JobstateLog::EXECUTE_NAME = "EXECUTE";
-const char *JobstateLog::GLOBUS_SUBMIT_NAME = "GLOBUS_SUBMIT";
-const char *JobstateLog::GRID_SUBMIT_NAME = "GRID_SUBMIT";
-const char *JobstateLog::JOB_TERMINATED_NAME = "JOB_TERMINATED";
 const char *JobstateLog::JOB_SUCCESS_NAME = "JOB_SUCCESS";
 const char *JobstateLog::JOB_FAILURE_NAME = "JOB_FAILURE";
-const char *JobstateLog::POST_SCRIPT_TERMINATED_NAME =
-			"POST_SCRIPT_TERMINATED";
+const char *JobstateLog::PRE_SCRIPT_STARTED_NAME = "PRE_SCRIPT_STARTED";
+const char *JobstateLog::PRE_SCRIPT_SUCCESS_NAME = "PRE_SCRIPT_SUCCESS";
+const char *JobstateLog::PRE_SCRIPT_FAILURE_NAME = "PRE_SCRIPT_FAILURE";
 const char *JobstateLog::POST_SCRIPT_STARTED_NAME = "POST_SCRIPT_STARTED";
 const char *JobstateLog::POST_SCRIPT_SUCCESS_NAME = "POST_SCRIPT_SUCCESS";
 const char *JobstateLog::POST_SCRIPT_FAILURE_NAME = "POST_SCRIPT_FAILURE";
@@ -65,39 +61,47 @@ JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 
 //---------------------------------------------------------------------------
 void
+JobstateLog::WriteDagmanFinished( int exitCode )
+{
+	MyString info;
+
+	info.sprintf( "INTERNAL *** DAGMAN_FINISHED %d ***", exitCode );
+	Write( info );
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::WriteRecoveryStarted()
+{
+	MyString info;
+
+	info.sprintf( "INTERNAL *** RECOVERY_STARTED ***" );
+	Write( info );
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::WriteRecoveryFinished()
+{
+	MyString info;
+
+	info.sprintf( "INTERNAL *** RECOVERY_FINISHED ***" );
+	Write( info );
+}
+
+//---------------------------------------------------------------------------
+void
 JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 {
 	ASSERT( node );
 
-	const char *eventName = NULL;
-	switch ( event->eventNumber ) {
-	case ULOG_SUBMIT:
-		eventName = SUBMIT_NAME;
-		break;
-
-	case ULOG_EXECUTE:
-		eventName = EXECUTE_NAME;
-		break;
-
-	case ULOG_GLOBUS_SUBMIT:
-		eventName = GLOBUS_SUBMIT_NAME;
-		break;
-
-	case ULOG_GRID_SUBMIT:
-		eventName = GRID_SUBMIT_NAME;
-		break;
-
-	case ULOG_JOB_TERMINATED:
-		eventName = JOB_TERMINATED_NAME;
-		break;
-
-	case ULOG_POST_SCRIPT_TERMINATED:
-		eventName = POST_SCRIPT_TERMINATED_NAME;
-		break;
-
-	default:
-		// All other events we don't want to log...
-		break;
+	const char *prefix = "ULOG_";
+	const char *eventName = ULogEventNumberNames[event->eventNumber];
+	if ( strstr( eventName, prefix ) != eventName ) {
+       	debug_printf( DEBUG_QUIET, "Warning: didn't find expected prefix "
+					"%s in event name %s\n", prefix, eventName );
+	} else {
+		eventName = eventName + strlen( prefix );
 	}
 
 	if ( eventName != NULL ) {
@@ -121,37 +125,33 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 	Write( node, eventName, retval.Value() );
 }
 
-
 //---------------------------------------------------------------------------
 void
-JobstateLog::WritePostStart( Job *node )
+JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 {
 	ASSERT( node );
 
-	Write( node, POST_SCRIPT_STARTED_NAME, "-" );
-}
-
-
-//---------------------------------------------------------------------------
-void
-JobstateLog::WritePostSuccessOrFailure( Job *node )
-{
-	ASSERT( node );
-
-	const char *eventName = node->retval == 0 ? POST_SCRIPT_SUCCESS_NAME :
-				POST_SCRIPT_FAILURE_NAME;
-
+	const char *eventName = isPost ? POST_SCRIPT_STARTED_NAME :
+				PRE_SCRIPT_STARTED_NAME;
 	Write( node, eventName, "-" );
 }
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteDagmanFinished( int exitCode )
+JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 {
-	MyString info;
+	ASSERT( node );
 
-	info.sprintf( "INTERNAL *** DAGMAN_FINISHED %d ***", exitCode );
-	Write( info );
+	const char *eventName;
+	if ( isPost ) {
+		eventName = (node->retval == 0) ? POST_SCRIPT_SUCCESS_NAME :
+					POST_SCRIPT_FAILURE_NAME;
+	} else {
+		eventName = (node->retval == 0) ? PRE_SCRIPT_SUCCESS_NAME :
+					PRE_SCRIPT_FAILURE_NAME;
+	}
+
+	Write( node, eventName, "-" );
 }
 
 //---------------------------------------------------------------------------

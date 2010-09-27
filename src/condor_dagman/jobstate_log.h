@@ -51,6 +51,19 @@ public:
 	*/
 	void WriteDagmanStarted( const CondorID &DAGManJobId );
 
+	/** Write the DAGMAN_FINISHED "event".
+		@param The DAGMan exit code.
+	*/
+	void WriteDagmanFinished( int exitCode );
+
+	/** Write the RECOVERY_STARTED "event".
+	*/
+	void WriteRecoveryStarted();
+
+	/** Write the RECOVERY_FINISHED "event".
+	*/
+	void WriteRecoveryFinished();
+
 	/** Write an actual event.  Note that not all events will be written
 		-- only the ones that Pegasus cares about.
 		@param The event.
@@ -63,20 +76,16 @@ public:
 	*/
 	void WriteJobSuccessOrFailure( Job *node );
 
-	/** Write the POST_SCRIPT_STARTED "event".
+	/** Write the [PRE|POST]_SCRIPT_STARTED "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WritePostStart( Job *node );
+	void WriteScriptStarted( Job *node, bool isPost );
 
-	/** Write the POST_SCRIPT_SUCCESS or POST_SCRIPT_FAILURE "event".
+	/** Write the [PRE|POST]_SCRIPT_SUCCESS or [PRE|POST]_SCRIPT_FAILURE
+		"event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WritePostSuccessOrFailure( Job *node );
-
-	/** Write the DAGMAN_FINISHED "event".
-		@param The DAGMan exit code.
-	*/
-	void WriteDagmanFinished( int exitCode );
+	void WriteScriptSuccessOrFailure( Job *node, bool isPost );
 
 	/** Get the jobstate.log file.
 		@return The jobstate.log file we're writing to.
@@ -100,15 +109,13 @@ private:
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
 
-		// The names of the events we're going to write.
-	static const char *SUBMIT_NAME;
-	static const char *EXECUTE_NAME;
-	static const char *GLOBUS_SUBMIT_NAME;
-	static const char *GRID_SUBMIT_NAME;
-	static const char *JOB_TERMINATED_NAME;
+		// The names of the pseudo-events we're going to write (for "real"
+		// events, we use the event names defined in condor_event.h).
 	static const char *JOB_SUCCESS_NAME;
 	static const char *JOB_FAILURE_NAME;
-	static const char *POST_SCRIPT_TERMINATED_NAME;
+	static const char *PRE_SCRIPT_STARTED_NAME;
+	static const char *PRE_SCRIPT_SUCCESS_NAME;
+	static const char *PRE_SCRIPT_FAILURE_NAME;
 	static const char *POST_SCRIPT_STARTED_NAME;
 	static const char *POST_SCRIPT_SUCCESS_NAME;
 	static const char *POST_SCRIPT_FAILURE_NAME;

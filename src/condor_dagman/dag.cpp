@@ -249,6 +249,9 @@ bool Dag::Bootstrap (bool recovery)
 
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
 					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
+		if ( _jobstateLog ) {
+			_jobstateLog->WriteRecoveryStarted();
+		}
 
 		// as we read the event log files, we emit lots of imformation into
 		// the logfile. If this is on NFS, then we pay a *very* large price
@@ -307,6 +310,9 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_stop_caching();
 
+		if ( _jobstateLog ) {
+			_jobstateLog->WriteRecoveryFinished();
+		}
         debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
 					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
 		print_status();
@@ -944,7 +950,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 				// Log post script success or failure if necessary.
 			if ( _jobstateLog ) {
-				_jobstateLog->WritePostSuccessOrFailure( job );
+				_jobstateLog->WriteScriptSuccessOrFailure( job, true );
 			}
 
 				//
@@ -1001,7 +1007,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 				// Log post script success or failure if necessary.
 			if ( _jobstateLog ) {
-				_jobstateLog->WritePostSuccessOrFailure( job );
+				_jobstateLog->WriteScriptSuccessOrFailure( job, true );
 			}
 
 			TerminateJob( job, recovery );
@@ -1499,11 +1505,13 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 
         job->_Status = Job::STATUS_ERROR;
 		_preRunNodeCount--;
+		if ( _jobstateLog ) {
+			_jobstateLog->WriteScriptSuccessOrFailure( job, false );
+		}
 
 		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, false );
-		}
-		else {
+		} else {
 			_numNodesFailed++;
 			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
@@ -1514,13 +1522,15 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				delete [] tmp;   
 			}
 		}
-	}
-	else {
+	} else {
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
 					  "successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
 		_preRunNodeCount--;
+		if ( _jobstateLog ) {
+			_jobstateLog->WriteScriptSuccessOrFailure( job, false );
+		}
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
@@ -2097,6 +2107,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
+	node->ResetPegasusSequenceNum();//TEMPTEMP?
 
 	if( !recovery ) {
 		debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
@@ -3270,7 +3281,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		ASSERT( removeResult == 0 );
 	}
 	node->_CondorID = _defaultCondorId;
-	node->ResetPegasusSequenceNum();//TEMPTEMP?
+	//node->ResetPegasusSequenceNum();//TEMPTEMP?
 
 		// sleep for a specified time before submitting
 	if( dm.submit_delay != 0 ) {
