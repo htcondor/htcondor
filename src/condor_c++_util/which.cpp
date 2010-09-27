@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "which.h"
 #include "directory.h"
+#include "directory_util.h"
 #include "condor_environ.h"
 
 #ifdef WIN32

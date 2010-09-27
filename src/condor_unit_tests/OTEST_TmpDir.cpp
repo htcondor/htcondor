@@ -31,6 +31,7 @@
 #include "condor_getcwd.h"
 #include "basename.h"
 #include "directory.h"
+#include "directory_util.h"
 
 static bool setup(void);
 static bool cleanup(void);

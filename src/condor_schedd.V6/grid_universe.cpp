@@ -25,6 +25,7 @@
 #include "globus_utils.h"
 #include "grid_universe.h"
 #include "directory.h"
+#include "directory_util.h"
 #include "MyString.h"
 #include "condor_ver_info.h"
 #include "condor_attributes.h"

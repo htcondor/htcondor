@@ -9927,3 +9927,20 @@ usage=true if gridmanager should automatically detect the version of GRAM server
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager
 id=600
+
+[CREATE_LOCKS_ON_LOCAL_DISK]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=true if userlog file locks should be create in temp folder on local disk, false otherwise
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=600
+

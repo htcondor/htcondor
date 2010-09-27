@@ -680,6 +680,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\directory_util.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\directory_util.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\directory.WINDOWS.cpp"
 			>
 		</File>

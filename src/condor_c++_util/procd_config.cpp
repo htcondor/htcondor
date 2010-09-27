@@ -21,6 +21,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "directory.h"
+#include "directory_util.h"
 #include "procd_config.h"
 
 MyString
