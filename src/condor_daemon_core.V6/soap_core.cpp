@@ -24,7 +24,6 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "directory.h"
-#include "directory_util.h"
 #include "stdsoap2.h"
 #include "soap_core.h"
 #include "condor_open.h"
