@@ -23,7 +23,6 @@ a single file named similar to:
 \begin{verbatim}
   condor-7.4.3-winnt50-x86.msi
 \end{verbatim}
-
 \index{Windows!installation!initial file size}
 This file is approximately 80 Mbytes in size, and it may be
 removed once Condor is fully installed.
@@ -34,6 +33,11 @@ used to announce new releases of Condor.
 To subscribe, follow the directions given at
 \URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 
+For any installation, Condor services are installed and run as the
+Local System account.
+Running the Condor services as any other account (such as a domain user) 
+is not supported and could be problematic.
+ 
 \subsubsection{Installation Requirements}
 
 \begin{itemize}
