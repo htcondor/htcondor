@@ -28,7 +28,6 @@
 #include "unit_test_utils.h"
 #include "emit.h"
 #include "directory.h"
-#include "directory_util.h"
 #include "condor_getcwd.h"
 
 static bool setup(void);

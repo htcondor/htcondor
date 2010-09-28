@@ -519,16 +519,9 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		if ( ! m_lock ) {
 			dprintf( D_FULLDEBUG, "Creating file lock(%d,%p,%s)\n",
 					 m_fd, m_fp, m_state->CurPath() );
-			bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
-#if defined(WIN32)
-			new_locking = false;
-#endif
+			bool new_locking = param_boolean("NEW_LOCKING", false);
 			if (new_locking) {
 				m_lock = new FileLock(m_state->CurPath(), true, false);
-				if (! m_lock->initSucceeded() ) {
-					delete m_lock;
-					m_lock = new FileLock( m_fd, m_fp, m_state->CurPath() );
-				}
 			} else {
 				m_lock = new FileLock( m_fd, m_fp, m_state->CurPath() );
 			}

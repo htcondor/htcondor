@@ -30,7 +30,6 @@
 #include "my_username.h"
 #include "my_popen.h"
 #include "directory.h"
-#include "directory_util.h"
 
 StatInfo::StatInfo( const char *path )
 {

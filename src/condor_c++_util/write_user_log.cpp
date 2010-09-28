@@ -243,13 +243,10 @@ WriteUserLog::Configure( bool force )
 	m_global_state = new WriteUserLogState( );
 
 #if !defined(WIN32)	
-	bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
+	bool new_locking = param_boolean("NEW_LOCKING", false);
 	if (new_locking){
 		m_rotation_lock = new FileLock(m_global_path, true, false);
-		if (m_rotation_lock->initSucceeded()) {
 			goto newLockingContinue;			
-		}
-		delete m_rotation_lock;
 	}
 #endif	
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
@@ -522,13 +519,11 @@ WriteUserLog::openFile(
 	// prepare to lock the file.
 	if ( use_lock ) {
 #if !defined(WIN32)
-		bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
+		bool new_locking = param_boolean("NEW_LOCKING", false);
 			
 		if (new_locking) {
 			lock = new FileLock(file, true, false);
-			if ( lock->initSucceeded() )
-				return true;
-			delete lock;
+			return true;
 		}		
 #endif	
 		lock = new FileLock( fd, fp, file );

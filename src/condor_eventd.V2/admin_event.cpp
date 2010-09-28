@@ -30,7 +30,6 @@
 #include "admin_event.h"
 #include "classad_hashtable.h"
 #include "directory.h"
-#include "directory_util.h"
 
 int numStartdStats = 0;
 int ClaimRunTimeSort(ClassAd *job1, ClassAd *job2, void *data);

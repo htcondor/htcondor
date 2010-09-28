@@ -25,7 +25,6 @@
 #include "condor_attributes.h"
 #include "basename.h"
 #include "directory.h"
-#include "directory_util.h"
 #include "build_job_env.h"
 
 #define X509_USER_PROXY "X509_USER_PROXY"

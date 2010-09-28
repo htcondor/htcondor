@@ -22,7 +22,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "directory.h"
-#include "directory_util.h"
 #include "my_hostname.h"
 #include "MyString.h"
 #include "classad_visa.h"
