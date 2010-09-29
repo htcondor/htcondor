@@ -48,7 +48,12 @@ less prone to falling behind on communication with \Condor{shadow} processes.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1681
+\item Improved the way Condor daemons send heartbeat messages to their parent
+process.  This resolves a problem observed on busy submit machines using
+\Condor{shared\_port}.  The \Condor{master} daemon sometimes incorrectly
+determined that \Condor{shared\_schedd} was hung and would kill and restart
+it.
 
 \end{itemize}
 
