@@ -2973,7 +2973,7 @@ void TTManager::handleErrorSqlLog()
 	MyString sql_stmt;
 	struct stat file_status;
 	time_t f_ts; 
-	int src;
+	int src = -1;
 	char buffer[2050];
 	int rv;
 	FILESQL *filesqlobj = NULL;
@@ -3016,10 +3016,30 @@ void TTManager::handleErrorSqlLog()
 		dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
 		goto ERROREXIT;
 	}	
-	
+
 		/* copy the body in the sql log to the LogBody field of the entry */
 	src = safe_open_wrapper (currentSqlLog.Value(), O_RDONLY);
 
+#if 0
+/* This piece of code is commented out because when there is an error, we
+	create a new row in the sql log and place the ENTIRE log file into
+	the newly created row. Under conditions where the condor_quilld is
+	down for a long time, the log file may have grown to hundreds of
+	megabytes.  Additionally, if a stable error rate is being produced
+	by quill, like say thousands of jobs in schedd_sql.log have a
+	type constraint error for a jobad attribute and those jobs aren't
+	leaving the queue anytime soon, you'll get thousands of copies
+	of the log file inserted into the database when condor_quilld
+	is restarted. This will easily fill most reasonable disk volumes.
+	This scenario actually happened at a customer's site and it took
+	*days* to figure it out and recover from it.
+
+	A better fix isn't being produced since, A) quill is going dark,
+	B) we know of noone using this functionality, and C) this is a
+	stable series and a small patch is needing to be produced.
+
+	-psilord 09/29/2010
+*/
 	rv = read(src, buffer, 2048);
 
 	while(rv > 0) {
@@ -3041,7 +3061,8 @@ void TTManager::handleErrorSqlLog()
 		
 		rv = read(src, buffer, 2048);
 	}
-	
+#endif 
+
 	if ((DBObj->commitTransaction()) == QUILL_FAILURE) {
 		goto ERROREXIT;
 	}
@@ -3059,7 +3080,9 @@ void TTManager::handleErrorSqlLog()
 		delete filesqlobj;
 	}
 
-	close (src);
+	if (src != -1) {
+		close (src);
+	}
 
 }
 
