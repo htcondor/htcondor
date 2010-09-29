@@ -190,6 +190,71 @@ main_init( int, char* argv[] )
 		// variable in a similar fasion to the X11 condor_kbdd, and
 		// thus it must be initialized.
 	command_x_event( 0, 0, 0 );
+#ifdef WIN32
+	HKEY hStart;
+
+	LONG regResult = RegOpenKeyEx(
+		HKEY_LOCAL_MACHINE,
+		"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+		0,
+		KEY_READ,
+		&hStart);
+
+	if(regResult != ERROR_SUCCESS)
+	{
+		dprintf(D_ALWAYS, "ERROR: Failed to open registry for checking: %d\n", regResult);
+	}
+	else
+	{
+		regResult = RegGetValue(
+			hStart,
+			NULL,
+			"CONDOR_KBDD",
+			RRF_RT_REG_SZ,
+			NULL,
+			NULL,
+			NULL);
+
+		RegCloseKey(hStart);
+		if(regResult == ERROR_FILE_NOT_FOUND)
+		{
+			regResult = RegOpenKeyEx(
+				HKEY_LOCAL_MACHINE,
+				"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+				0,
+				KEY_SET_VALUE,
+				&hStart);
+
+			if(regResult != ERROR_SUCCESS)
+			{
+				dprintf(D_ALWAYS, "Error: Failed to open login startup registry key for writing: %d\n", regResult);
+			}
+			else
+			{
+				char* kbddPath = param("KBDD");
+				int pathSize = strlen(kbddPath);
+				
+				if(!kbddPath)
+				{
+					dprintf(D_ALWAYS, "Error: Unable to find path to KBDD executable.\n");
+				}
+				else
+				{
+					regResult = RegSetValueEx(hStart,
+						"CONDOR_KBDD",
+						0,
+						REG_SZ,
+						(byte*)kbddPath,
+						pathSize + 1);
+
+					free(kbddPath);
+				}
+
+				RegCloseKey(hStart);
+			}
+		}
+	}
+#endif
 #endif
 
 		// Instantiate Resource objects in the ResMgr
