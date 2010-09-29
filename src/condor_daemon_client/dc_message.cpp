@@ -726,6 +726,9 @@ bool
 ChildAliveMsg::readMsg( DCMessenger * /*messenger*/, Sock * /*sock*/ )
 {
 	EXCEPT("unused");
+	// fix Windows build with a return value -- can never be reached but the Win compiler is
+	// not that smart ... 
+	return false;
 }
 
 bool
