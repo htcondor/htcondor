@@ -54,6 +54,15 @@ DCMsg::setDeadlineTimeout(int timeout)
 	}
 }
 
+bool
+DCMsg::getDeadlineExpired()
+{
+	if( m_deadline && m_deadline < time(NULL) ) {
+		return true;
+	}
+	return false;
+}
+
 void
 DCMsg::setCallback(classy_counted_ptr<DCMsgCallback> cb)
 {
@@ -221,6 +230,12 @@ DCMsg::addError( int code, char const *format, ... )
 	m_errstack.push( "CEDAR", code, msg.Value() );
 
 	va_end(args);
+}
+
+char const *
+DCMsg::getErrorStackText()
+{
+	return m_errstack.getFullText();
 }
 
 void
@@ -695,4 +710,62 @@ ClassAdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 		return false;
 	}
 	return true;
+}
+
+ChildAliveMsg::ChildAliveMsg( int mypid, int max_hang_time, int max_tries, bool blocking ):
+	DCMsg(DC_CHILDALIVE),
+	m_mypid(mypid),
+	m_max_hang_time(max_hang_time),
+	m_max_tries(max_tries),
+	m_tries(0),
+	m_blocking(blocking)
+{
+}
+
+bool
+ChildAliveMsg::readMsg( DCMessenger * /*messenger*/, Sock * /*sock*/ )
+{
+	EXCEPT("unused");
+	// fix Windows build with a return value -- can never be reached but the Win compiler is
+	// not that smart ... 
+	return false;
+}
+
+bool
+ChildAliveMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
+{
+	if ( !sock->code(m_mypid) ||
+		 !sock->code(m_max_hang_time) )
+	{
+		dprintf(D_FULLDEBUG,"ChildAliveMsg: Could not write to parent %s.\n",
+				sock->peer_description());
+		return false;
+	}
+	return true;
+}
+
+void
+ChildAliveMsg::messageSendFailed( DCMessenger *messenger )
+{
+	m_tries++;
+
+	dprintf(D_ALWAYS,
+			"ChildAliveMsg: failed to send DC_CHILDALIVE to parent %s "
+			"(try %d of %d): %s\n",
+			messenger->peerDescription(),
+			m_tries,
+			m_max_tries,
+			getErrorStackText());
+
+	if( m_tries < m_max_tries ) {
+		if( getDeadlineExpired() ) {
+			dprintf(D_ALWAYS,"ChildAliveMsg: giving up because deadline expired for sending DC_CHILDALIVE to parent.\n");
+		}
+		else if( m_blocking ) {
+			messenger->sendBlockingMsg( this );
+		}
+		else {
+			messenger->startCommandAfterDelay( 5, this );
+		}
+	}
 }

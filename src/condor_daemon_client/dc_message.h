@@ -127,6 +127,7 @@ public:
 	Stream::stream_type getStreamType() {return m_stream_type;}
 	int getTimeout() {return m_timeout;}
 	time_t getDeadline() {return m_deadline;}
+	bool getDeadlineExpired();
 	bool getRawProtocol() {return m_raw_protocol;}
 	char const *getSecSessionId() {
 		return m_sec_session_id.Value()[0] ? m_sec_session_id.Value() : NULL;
@@ -210,6 +211,8 @@ public:
 
 		/* add an error message to the error stack */
 	void addError( int code, char const *format, ... );
+
+	char const *getErrorStackText();
 
 		/* this calls addError() after a failed call to sock->put()/get() */
 	void sockFailed( Sock *sock );
@@ -443,5 +446,23 @@ private:
 	ClassAd m_msg;
 };
 
+class ChildAliveMsg: public DCMsg {
+public:
+	ChildAliveMsg( int mypid, int max_hang_time, int max_tries, bool blocking );
+
+		////////// virtual methods for DCMsg //////////
+	virtual bool writeMsg( DCMessenger *messenger, Sock *sock );
+
+	virtual bool readMsg( DCMessenger *messenger, Sock *sock );
+
+	virtual void messageSendFailed( DCMessenger *messenger );
+
+private:
+	int m_mypid;
+	int m_max_hang_time;
+	int m_max_tries;
+	int m_tries;
+	bool m_blocking;
+};
 
 #endif

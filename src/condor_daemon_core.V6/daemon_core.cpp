@@ -9623,7 +9623,7 @@ int DaemonCore::SendAliveToParent()
 	char const *tmp;
 	int ret_val;
 	static bool first_time = true;
-	int number_of_tries;
+	int number_of_tries = 3;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
 
@@ -9670,66 +9670,26 @@ int DaemonCore::SendAliveToParent()
 		first_time = false;
 	}
 
-		// If this is our first keepalive, try three times.
-	if ( first_time ) {
-		number_of_tries = 3;
-	} else {
-		number_of_tries = 1;
+	bool blocking = first_time;
+	classy_counted_ptr<Daemon> d = new Daemon(DT_ANY,parent_sinful_string);
+	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,blocking);
+
+	msg->setDeadlineTimeout( 300 );
+	if( blocking || !d->hasUDPCommandPort() || !m_wants_dc_udp ) {
+		msg->setStreamType( Stream::reli_sock );
+	}
+	else {
+		msg->setStreamType( Stream::safe_sock );
 	}
 
-	Daemon d(DT_ANY,parent_sinful_string);
-	for (;;) {
-		Sock* sock = NULL;
-		if (m_wants_dc_udp && d.hasUDPCommandPort()) {
-			sock = d.safeSock();
-		}
-		else {
-			if (first_time) {
-				dprintf(D_FULLDEBUG, "DaemonCore::SendAliveToParent(): "
-						"Using TCP to connect to parent %s.\n",
-						parent_sinful_string);
-			}
-			sock = d.reliSock();
-		}
+	if( blocking ) {
+		d->sendBlockingMsg( msg.get() );
+		ret_val = msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED;
+	}
+	else {
+		d->sendMsg( msg.get() );
 		ret_val = TRUE;
-
-		if (!sock) {
-			dprintf(D_ALWAYS,"DaemonCore: Could not connect to parent %s. "
-				"SendAliveToParent() failed.\n",parent_sinful_string);
-			ret_val = FALSE;
-		}
-
-		if( ret_val == TRUE ) {
-			if (!d.startCommand(DC_CHILDALIVE, sock, 0)) {
-				dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
-				        "SendAliveToParent() failed.\n",parent_sinful_string);
-				ret_val = FALSE;
-			}
-		}
-
-		if( ret_val == TRUE ) {
-			sock->encode();
-			if ( !sock->code(mypid) || !sock->code(max_hang_time) 
-			     || !sock->end_of_message())
-			{
-				dprintf(D_FULLDEBUG,"DaemonCore: Could not write to parent %s. "
-						"SendAliveToParent() failed.\n",parent_sinful_string);
-				ret_val = FALSE;
-			}
-		}
-
-		delete sock;
-		sock = NULL;
-
-		number_of_tries--;
-		if ( number_of_tries == 0 || ret_val == TRUE ) {
-			break;	// if we were success, or out of tries, break
-		}
-
-		dprintf(D_ALWAYS,"Failed to send alive to %s, will try again...\n",
-			parent_sinful_string);
-		sleep(5);	// block for 5 seconds before trying again
-	}	// end of loop
+	}
 
 	if ( first_time ) {
 		first_time = false;
@@ -9743,11 +9703,13 @@ int DaemonCore::SendAliveToParent()
 		dprintf(D_ALWAYS,"DaemonCore: Leaving SendAliveToParent() - "
 			"FAILED sending to %s\n",
 			parent_sinful_string);
-	} else {
+	} else if( msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED ) {
 		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - success\n");
+	} else {
+		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - pending\n");
 	}
 
-	return ret_val;
+	return TRUE;
 }
 
 #ifndef WIN32

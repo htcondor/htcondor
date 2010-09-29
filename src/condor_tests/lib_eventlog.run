@@ -135,14 +135,18 @@ if( $result == 0 ) {
 	foreach $line (@got) {
 		my $desired = shift(@want);
 		if($desired ne $line) {
-			CondorTest::debug("Result Mismatch!:$desired ne $line!!!!\n",1);
+			chomp $line;
+			chomp $desired;
+			CondorTest::debug("Result Mismatch: '$desired' != '$line'!!!!\n",1);
 			$result = 1;
 			last;
 		} else {
 			#print "Result Match!:$desired eq $line!!!!\n";
 		}
 	}
-	CondorTest::debug("Results all Match! Test is a success.\n",1);
+	if ( $result == 0 ) {
+		CondorTest::debug("Results all Match! Test is a success.\n",1);
+	}
 }
 #fails due to directory matching pattern
 runcmd("cp *lib_eventlog* $mysaveme", {expect_result=>\&ANY});
