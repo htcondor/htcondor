@@ -29,7 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac 1069
+\item Negotiation is now handled asynchronously in the \Condor{schedd} daemon.
+This means \Condor{schedd} remains responsive during negotiation and is
+less prone to falling behind on communication with \Condor{shadow} processes.
 
 \end{itemize}
 
