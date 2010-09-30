@@ -57,12 +57,12 @@ was only supported by the Windows version of \Condor{submit}.
 \begin{itemize}
 
 % gittrac 1434
-\item Fixed bad behavior in \Condor{quilld} where, under certain error
+\item Fixed bad behavior in \Condor{quill} where, under certain error
 conditions, many copies of the \File{schedd\_sql.log} file would be
-inserted into the database filling up the disk volume used by the
-database. As a consequence of this bug fix, the \Attr{LogBody} column
-for each row in the \Attr{Error\_SqlLogs} table will be empty. Please
-consult the \Condor{quilld} daemon log file for the error instead.
+inserted into the database, filling up the disk volume used by the
+database. As a consequence of this bug fix, the \verb@LogBody@ column
+for each row in the \verb@Error_SqlLogs@ table will be empty. Please
+consult the \Condor{quill} daemon log file for the error instead.
 
 % gittrac 1654
 \item Fixed a bug with how the \SubmitCmd{standard} universe 
