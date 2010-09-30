@@ -585,7 +585,7 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs,
-				perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
+				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			# I've removed x86_64_rhas_3 for now, as per git trac #482
 			'xtests'	=> [ 
