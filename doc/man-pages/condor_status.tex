@@ -258,21 +258,34 @@ slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:10:32
 
 \underline{Constraint option examples}
 
-To use the constraint option to see all machines with the \Attr{OpSys}
-of \AdStr{LINUX}, use
+Further explanation and examples are in section~\ref{classad-query-examples}.
+
+The Unix command
+to use the constraint option to see all machines with the \Attr{OpSys}
+of \AdStr{LINUX}:
 \begin{verbatim}
 % condor_status -constraint OpSys==\"LINUX\"
 \end{verbatim}
 Note that quotation marks must be escaped with the backslash characters
 for most shells.
 
-To see all machines that are currently in the Idle state, use
+The Windows command to do the same thing:
+\begin{verbatim}
+>condor_status -constraint " OpSys==""LINUX"" "
+\end{verbatim}
+Note that quotation marks are used to delimit the single argument which
+is the expression, and the quotation marks that identify the string
+must be escaped by using a set of two double quote marks without
+any intervening spaces.
+
+To see all machines that are currently in the Idle state,
+the Unix command is
 \begin{verbatim}
 % condor_status -constraint State==\"Idle\"
 \end{verbatim}
 
 To see all machines that are bench marked to have a MIPS rating
-of more than 750, use
+of more than 750, the Unix command is
 \begin{verbatim}
 % condor_status -constraint 'Mips>750' 
 \end{verbatim}
