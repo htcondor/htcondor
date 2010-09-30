@@ -4719,6 +4719,10 @@ public:
 		char const *remote_pool
 	): ScheddNegotiate(cmd,jobs,owner,remote_pool) {}
 
+		// returns true if no job similar to job_id may be started right now
+		// (e.g. MAX_JOBS_RUNNING could cause this to return true)
+	bool skipAllSuchJobs(PROC_ID job_id);
+
 		// Define the virtual functions required by ScheddNegotiate //
 
 	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad );
@@ -4757,6 +4761,12 @@ MainScheddNegotiate::scheduler_skipJob(PROC_ID job_id)
 		return true;
 	}
 
+	return skipAllSuchJobs(job_id);
+}
+
+bool
+MainScheddNegotiate::skipAllSuchJobs(PROC_ID job_id)
+{
 		// Figure out if this request would result in another shadow
 		// process if matched.  If Grid, the answer is no.  Otherwise,
 		// always yes.
@@ -4779,7 +4789,6 @@ MainScheddNegotiate::scheduler_skipJob(PROC_ID job_id)
 	if( shadow_num_increment ) {
 		if( !scheduler.canSpawnShadow() ) {
 			return true;
-
 		}
 	}
 
@@ -4795,8 +4804,20 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,C
 	dprintf(D_FULLDEBUG,"Received match for job %d.%d: %s\n",
 			job_id.cluster, job_id.proc, slot_name);
 
-	while( scheduler_skipJob(job_id) ) {
+	if( scheduler_skipJob(job_id) ) {
+
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
+			if( skipAllSuchJobs(job_id) ) {
+					// No point in trying to find a different job,
+					// because we've hit MAX_JOBS_RUNNING or something
+					// like that.
+				dprintf(D_FULLDEBUG,
+					"Rejecting match to %s "
+					"because no job may be started to run on it right now.\n",
+					slot_name);
+				return false;
+			}
+
 			dprintf(D_FULLDEBUG,
 					"Skipping job %d.%d because it no longer needs a match.\n",
 					job_id.cluster,job_id.proc);
@@ -4807,9 +4828,6 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,C
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
 			dprintf(D_FULLDEBUG,"Rematched %s to job %d.%d\n",
 					slot_name, job_id.cluster, job_id.proc );
-		}
-		else {
-			break;
 		}
 	}
 	if( job_id.cluster == -1 || job_id.proc == -1 ) {
