@@ -2779,9 +2779,9 @@ DaemonCore::reconfig(void) {
 		if ( !max_hang_time ) {
 			max_hang_time = 60 * 60;	// default to 1 hour
 		}
-		int send_update = (max_hang_time / 3) - 30;
-		if ( send_update < 1 )
-			send_update = 1;
+		m_child_alive_period = (max_hang_time / 3) - 30;
+		if ( m_child_alive_period < 1 )
+			m_child_alive_period = 1;
 		if ( send_child_alive_timer == -1 ) {
 
 				// 2008-06-18 7.0.3: commented out direct call to
@@ -2795,7 +2795,8 @@ DaemonCore::reconfig(void) {
 				// in which we hang before the first CHILDALIVE.  If
 				// that happens, our parent will never kill us.
 
-			send_child_alive_timer = Register_Timer(0, (unsigned)send_update,
+			send_child_alive_timer = Register_Timer(0,
+					(unsigned)m_child_alive_period,
 					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
 					"DaemonCore::SendAliveToParent", this );
 
@@ -2804,7 +2805,7 @@ DaemonCore::reconfig(void) {
 				// (Commented out.  See reason above.)
 				// SendAliveToParent();
 		} else {
-			Reset_Timer(send_child_alive_timer, 1, send_update);
+			Reset_Timer(send_child_alive_timer, 1, m_child_alive_period);
 		}
 	}
 
@@ -9674,7 +9675,13 @@ int DaemonCore::SendAliveToParent()
 	classy_counted_ptr<Daemon> d = new Daemon(DT_ANY,parent_sinful_string);
 	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,blocking);
 
-	msg->setDeadlineTimeout( 300 );
+	int timeout = m_child_alive_period / number_of_tries;
+	if( timeout < 60 ) {
+		timeout = 60;
+	}
+	msg->setDeadlineTimeout( timeout );
+	msg->setTimeout( timeout );
+
 	if( blocking || !d->hasUDPCommandPort() || !m_wants_dc_udp ) {
 		msg->setStreamType( Stream::reli_sock );
 	}
