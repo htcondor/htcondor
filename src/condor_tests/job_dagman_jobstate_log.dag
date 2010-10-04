@@ -16,5 +16,9 @@ Script Pre NodeC job_dagman_jobstate_log-pre.pl $(JOB)
 Script Post NodeC job_dagman_jobstate_log-nodeC-post.pl $(JOB) $RETRY
 Retry NodeC 1
 
+# This node will hold and release the DAG.
+Job NodeD job_dagman_jobstate_log-nodeD.cmd
+
 Parent NodeA Child NodeB
 Parent NodeB Child NodeC
+Parent NodeC Child NodeD
