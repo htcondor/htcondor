@@ -9543,6 +9543,7 @@ int DaemonCore::HungChildTimeout()
 	pid_t hung_child_pid;
 	pid_t *hung_child_pid_ptr;
 	PidEntry *pidentry;
+	bool first_time = true;
 
 	/* get the pid out of the allocated memory it was placed into */
 	hung_child_pid_ptr = (pid_t*)GetDataPtr();
@@ -9566,7 +9567,12 @@ int DaemonCore::HungChildTimeout()
 
 	// set a flag in the PidEntry so a reaper can discover it was killed
 	// because it was hung.
-	pidentry->was_not_responding = TRUE;
+	if( pidentry->was_not_responding ) {
+		first_time = false;
+	}
+	else {
+		pidentry->was_not_responding = TRUE;
+	}
 
 	// now we give the child one last chance to save itself.  we do this by
 	// servicing any waiting commands, since there could be a child_alive
@@ -9598,6 +9604,29 @@ int DaemonCore::HungChildTimeout()
 
 	// and hardkill the bastard!
 	bool want_core = param_boolean( "NOT_RESPONDING_WANT_CORE", false );
+#ifndef WIN32
+	if( want_core ) {
+		// On multiple occassions, I have observed the child process
+		// get hung while writing its core file.  If we never follow
+		// up with a hard-kill, this can result in the service going
+		// down for days, which is terrible.  Therefore, set a timer
+		// to call us again and follow up with a hard-kill.
+		if( !first_time ) {
+			dprintf(D_ALWAYS,
+					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n");
+			want_core = false;
+		}
+		else {
+			const int want_core_timeout = 600;
+			pidentry->hung_tid =
+				Register_Timer(want_core_timeout,
+							   (TimerHandlercpp) &DaemonCore::HungChildTimeout,
+							   "DaemonCore::HungChildTimeout", this);
+			ASSERT( pidentry->hung_tid != -1 );
+			Register_DataPtr( &pidentry->pid );
+		}
+	}
+#endif
 	Shutdown_Fast(hung_child_pid, want_core );
 
 	return TRUE;
