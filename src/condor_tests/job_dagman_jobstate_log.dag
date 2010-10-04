@@ -18,5 +18,3 @@ Retry NodeC 1
 
 Parent NodeA Child NodeB
 Parent NodeB Child NodeC
-
-#TEMPTEMP -- add nodes that generate fake globus and grid submit events

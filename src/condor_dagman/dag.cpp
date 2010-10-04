@@ -1,4 +1,3 @@
-//TEMPTEMP -- should we save and restore the sequence number only if there is a jobstate.log file?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

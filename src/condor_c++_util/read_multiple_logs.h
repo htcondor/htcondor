@@ -68,7 +68,13 @@ public:
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			const MyString &directory, bool &isXml);
 
-		//TEMPTEMP -- document
+		/** Gets the specified value from a submit file (looking for the
+			syntax <keyword> = <value>).
+			@param strSubFilename: the submit file name
+			@param directory: the directory of the submit file (can be blank)
+			@param The keyword of the value we need
+			@return The value, or "" if there is an error
+		*/
     static MyString loadValueFromSubFile(const MyString &strSubFilename,
 			const MyString &directory, const char *keyword);
 
