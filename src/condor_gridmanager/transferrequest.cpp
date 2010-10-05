@@ -107,7 +107,7 @@ void TransferRequest::CheckRequest()
 			return;
 		}
 		if ( rc != 0 ) {
-			sprintf( m_errMsg, "Transfer failed: %s\n", m_gahp->getErrorString() );
+			sprintf( m_errMsg, "Transfer failed: %s", m_gahp->getErrorString() );
 			m_status = TransferFailed;
 			daemonCore->Reset_Timer( m_notify_tid, 0 );
 			return;
