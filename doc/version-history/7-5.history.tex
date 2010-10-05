@@ -337,6 +337,11 @@ prevent overloading a \Expr{gt2} server are then disabled. New configuration
 parameter \MacroNI{GRAM\_VERSION\_DETECTION} can be used to disable Condor's
 attempts to distinguish between the two.
 
+% gittrac #1689
+\item Fixed a bug introduced in Condor 7.5.3. When file transfer failed
+for a Cream grid universe job, Condor would write a hold event to the job
+log, but not actually put the job on hold.
+
 \end{itemize}
 
 \noindent Known Bugs:
