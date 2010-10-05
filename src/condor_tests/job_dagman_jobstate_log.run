@@ -34,7 +34,8 @@ $dagman_args = "-verbose";
 @outfiles = ("job_dagman_jobstate_log.dag.jobstate.log");
 
 # Note: we must find these lines *in the specified order*.
-#TEMPTEMP -- need changes here...
+# Pre script events, and POST_SCRIPT_STARTED events, are not currently
+# generated in recovery mode.
 @outlines = ('^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
 	'^\d+ NodeA PRE_SCRIPT_STARTED - local - 1$',
 	'^\d+ NodeA PRE_SCRIPT_SUCCESS - local - 1$',
@@ -128,7 +129,13 @@ $dagman_args = "-verbose";
 	'^\d+ NodeD EXECUTE \d+.0 - - 5$',
 	'^\d+ INTERNAL \*\*\* RECOVERY_FINISHED \*\*\*$',
 	'^\d+ NodeD JOB_TERMINATED \d+.0 - - 5$',
-	'^\d+ NodeD JOB_SUCCESS 0 - - 5$',
+	'^\d+ NodeD JOB_FAILURE 1 - - 5$',
+	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 1 \*\*\*$',
+	'^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
+	'^\d+ NodeD SUBMIT \d+.0 - - 6$',
+	'^\d+ NodeD EXECUTE \d+.0 - - 6$',
+	'^\d+ NodeD JOB_TERMINATED \d+.0 - - 6$',
+	'^\d+ NodeD JOB_SUCCESS 0 - - 6$',
 	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 0 \*\*\*$');
 
 my $killedchosen = 0;
