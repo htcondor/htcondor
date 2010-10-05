@@ -196,10 +196,49 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
    #endif
 
 	// cons up a "standard" argv for dc_main.
-	char **parameters = (char**)malloc(sizeof(char*)*2);
+	char **parameters;
+	LPWSTR cmdLine = NULL;
+	LPWSTR* cmdArgs = NULL;
+	int nArgs;
+
+	/*
+	Due to the risk of spaces in paths on Windows, we use the function
+	CommandLineToArgvW to extract a list of arguments instead of parsing
+	the string using a delimiter.
+	*/
+	cmdLine = GetCommandLineW();
+	if(!cmdLine)
+	{
+		return GetLastError();
+	}
+	cmdArgs = CommandLineToArgvW(cmdLine, &nArgs);
+	if(!cmdArgs)
+	{
+		return GetLastError();
+	}
+	parameters = (char**)malloc(sizeof(char*)*nArgs + 1);
 	parameters[0] = "condor_kbdd";
-	parameters[1] = NULL;
-	dc_main(1, parameters);
+	parameters[nArgs] = NULL;
+
+	/*
+	List of strings is in unicode so we need to downconvert it into ascii strings.
+	*/
+	for(int counter = 1; counter < nArgs; ++counter)
+	{
+		//There's a *2 on the size to provide some leeway for non-ascii characters being split.  Suggested by TJ.
+		int argSize = ((wcslen(cmdArgs[counter]) + 1) * sizeof(char)) * 2;
+		parameters[counter] = (char*)malloc(argSize);
+		int converted = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, cmdArgs[counter], -1, parameters[counter], argSize, NULL, NULL);
+		if(converted == 0)
+		{
+			return GetLastError();
+		}
+	}
+	LocalFree((HLOCAL)cmdLine);
+	LocalFree((HLOCAL)cmdArgs);
+
+	//nArgs includes the first argument, the program name, in the count.
+	dc_main(nArgs, parameters);
 
 	// dc_main should exit() so we probably never get here.
 	return 0;

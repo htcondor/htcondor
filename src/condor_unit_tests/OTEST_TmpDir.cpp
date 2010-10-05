@@ -95,6 +95,7 @@ static char
 	non_existent[14],
 	non_existent_file[26];
 
+static int long_dir_depth = 10;
 
 bool OTEST_TmpDir(void) {
 	emit_object("TmpDir");
@@ -168,6 +169,16 @@ bool OTEST_TmpDir(void) {
 static bool setup() {
 	bool ret_val = true;
 
+	if ( PATH_MAX >= 4096 ) {
+		long_dir_depth = 10;
+	} else {
+#if defined(AIX)
+		long_dir_depth = 3;
+#else
+		long_dir_depth = 4;
+#endif
+	}
+
 	//Get current working directory
 	ret_val &= condor_getcwd(original_dir);
 
@@ -195,7 +206,7 @@ static bool setup() {
 	}
 	deep_dir.sprintf_cat("tmp");
 	
-	for(int i = 0; i < 3; i++) {
+	for(int i = 0; i < long_dir_depth - 1; i++) {
 		deep_dir_long.sprintf_cat("%s%c", long_dir, DIR_DELIM_CHAR);
 	}
 	deep_dir_long.sprintf_cat("%s", long_dir);
@@ -208,7 +219,7 @@ static bool setup() {
 	ret_val &= !chdir(original_dir.Value());
 
 	//Make some directories to test
-	for(int i = 0; i < 4; i++) {
+	for(int i = 0; i < long_dir_depth; i++) {
 		ret_val &= !mkdir(long_dir, 0700);
 		ret_val &= !chdir(long_dir);
 	}
@@ -228,12 +239,12 @@ static bool cleanup() {
 		ret_val &= !rmdir("tmp");
 	}
 	
-	for(int i = 0; i < 4; i++) {
+	for(int i = 0; i < long_dir_depth; i++) {
 		ret_val &= !chdir(long_dir);
 	}
 	
 	//Remove the directories
-	for(int i = 0; i < 4; i++) {
+	for(int i = 0; i < long_dir_depth; i++) {
 		ret_val &= !chdir("..");
 		ret_val &= !rmdir(long_dir);
 	}

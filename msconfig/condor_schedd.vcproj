@@ -226,6 +226,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_schedd.V6\schedd_negotiate.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_schedd.V6\schedd_negotiate.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_schedd.V6\grid_universe.cpp"
 			>
 		</File>

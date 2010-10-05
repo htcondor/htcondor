@@ -904,6 +904,7 @@ void GridftpServer::SetJobStatus( int new_status )
 		m_jobCondition = CONDITION_IDLE;
 		break;
 	case RUNNING:
+	case TRANSFERRING_OUTPUT:
 		m_jobCondition = CONDITION_ACTIVE;
 		break;
 	case REMOVED:

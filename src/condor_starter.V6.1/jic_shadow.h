@@ -111,6 +111,11 @@ public:
 		*/
 	void Continue( void );
 
+		/** All the jobs are done. We need to send an update ad to the
+		 *  shadow before starting the transfer of output files.
+		 */
+	bool allJobsDone( void );
+
 		/** Once all the jobs are done, and after the optional
 			HOOK_JOB_EXIT has returned, initiate the file transfer.
 			If you call this, you MUST use transferOutputMopUp() afterwards
@@ -246,6 +251,8 @@ private:
 			@return true if success, false if failure
 		*/ 
 	bool publishUpdateAd( ClassAd* ad );
+
+	bool publishJobExitAd( ClassAd* ad );
 
 		/** Send an update ClassAd to the shadow.  The "insure_update"
 			just means do we make sure the update gets there.  It has

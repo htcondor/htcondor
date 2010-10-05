@@ -1751,6 +1751,7 @@ class DaemonCore : public Service
     int HungChildTimeout();
     int SendAliveToParent();
     unsigned int max_hang_time;
+	int m_child_alive_period;
     int send_child_alive_timer;
 	bool m_want_send_child_alive;
 

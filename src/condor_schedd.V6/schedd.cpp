@@ -89,14 +89,11 @@
 #include "classadHistory.h"
 #include "forkwork.h"
 #include "condor_open.h"
+#include "schedd_negotiate.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
-#endif
-
-#ifndef max
-#define max(x,y) (((x) < (y)) ? (y) : (x))
 #endif
 
 #define DEFAULT_SHADOW_SIZE 800
@@ -204,7 +201,7 @@ struct job_data_transfer_t {
 	ExtArray<PROC_ID> *jobs;
 };
 
-match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
+match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id, 
 					  const ClassAd *match, char const *the_user, char const *my_pool,
 					  bool is_dedicated_arg ):
 	ClaimIdParser(claim_id)
@@ -375,7 +372,7 @@ match_rec::setStatus( int stat )
 }
 
 
-ContactStartdArgs::ContactStartdArgs( char* the_claim_id, char* sinfulstr, bool is_dedicated ) 
+ContactStartdArgs::ContactStartdArgs( char const* the_claim_id, char* sinfulstr, bool is_dedicated ) 
 {
 	csa_claim_id = strdup( the_claim_id );
 	csa_sinful = strdup( sinfulstr );
@@ -423,6 +420,7 @@ Scheduler::Scheduler() :
 	LocalUnivExecuteDir = NULL;
 	ReservedSwap = 0;
 	SwapSpace = 0;
+	RecentlyWarnedMaxJobsRunning = true;
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
 
@@ -1281,10 +1279,10 @@ count( ClassAd *job )
 	}
 
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
-		cur_hosts = ((status == RUNNING) ? 1 : 0);
+		cur_hosts = ((status == RUNNING || status == TRANSFERRING_OUTPUT) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
-		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
+		max_hosts = ((status == IDLE) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
@@ -1337,7 +1335,7 @@ count( ClassAd *job )
 		if( universe == CONDOR_UNIVERSE_SCHEDULER ) 
 		{
 			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 				scheduler.SchedUniverseJobsRunning += cur_hosts;
 				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 			}
@@ -1345,7 +1343,7 @@ count( ClassAd *job )
 		if( universe == CONDOR_UNIVERSE_LOCAL ) 
 		{
 			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 				scheduler.LocalUniverseJobsRunning += cur_hosts;
 				scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 			}
@@ -1433,7 +1431,7 @@ count( ClassAd *job )
 		status = real_status;	// set status back for below logic...
 	}
 
-	if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 		scheduler.JobsRunning += cur_hosts;
 		scheduler.JobsIdle += (max_hosts - cur_hosts);
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
@@ -1888,7 +1886,6 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 		return 1;
 	} else {
 		switch(status) {
-			case UNEXPANDED:
 			case HELD:
 			case IDLE:
 			case COMPLETED:
@@ -4130,8 +4127,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
-				// Only vacate running jobs
-			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, RUNNING );
+				// Only vacate running/staging jobs
+			snprintf( buf, 256, "(%s==%d || %s==%d) && (", ATTR_JOB_STATUS,
+					  RUNNING, ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
@@ -4294,7 +4292,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			switch( action ) {
 			case JA_VACATE_JOBS:
 			case JA_VACATE_FAST_JOBS:
-				if( status != RUNNING ) {
+				if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
 					results.record( tmp_id, AR_BAD_STATUS );
 					continue;
 				}
@@ -4632,7 +4630,8 @@ int
 Scheduler::negotiatorSocketHandler (Stream *stream)
 {
 	int command = -1;
-	int rval;
+
+	daemonCore->Cancel_Socket( stream );
 
 	dprintf (D_ALWAYS, "Activity on stashed negotiator socket: %s\n", ((Sock *)stream)->get_sinful_peer());
 
@@ -4642,30 +4641,19 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	{
 		dprintf (D_ALWAYS, "Socket activated, but could not read command\n");
 		dprintf (D_ALWAYS, "(Negotiator probably invalidated cached socket)\n");
-		return (!KEEP_STREAM);
+	}
+	else {
+		negotiate(command, stream);
 	}
 
-	rval = negotiate(command, stream);
-	return rval;	
-}
+		// We called incRefCount() when registering this socket, so
+		// release it here.
+	stream->decRefCount();
 
-int
-Scheduler::doNegotiate (int i, Stream *s)
-{
-	int rval = negotiate(i, s);
-	if (rval == KEEP_STREAM)
-	{
-		dprintf (D_FULLDEBUG,
-				 "Stashing socket to negotiator for future reuse\n");
-		daemonCore->
-				Register_Socket(s, "<Negotiator Socket>", 
-				(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-				"<Negotiator Command>",
-				this, ALLOW);
-	}
-	return rval;
+		// We have either deleted the socket or registered it again,
+		// so tell our caller to just leave it alone.
+	return KEEP_STREAM;
 }
-
 
 /* 
    Helper function used by both DedicatedScheduler::negotiate() and
@@ -4674,14 +4662,16 @@ Scheduler::doNegotiate (int i, Stream *s)
    (MAX_JOBS_RUNNING, swap space problems, etc), and returns true if
    we can proceed or false if we can't start another shadow.  */
 bool
-Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
+Scheduler::canSpawnShadow()
 {
-	int idle_jobs = total_jobs - started_jobs;
+	int shadows = numShadows + RunnableJobQueue.Length() + num_pending_startd_contacts + startdContactQueue.Length();
 
 		// First, check if we have reached our maximum # of shadows 
-	if( CurNumActiveShadows >= MaxJobsRunning ) {
-		dprintf( D_ALWAYS, "Reached MAX_JOBS_RUNNING: no more can run, %d jobs matched, "
-				 "%d jobs idle\n", started_jobs, idle_jobs ); 
+	if( shadows >= MaxJobsRunning ) {
+		if( !RecentlyWarnedMaxJobsRunning ) {
+			dprintf( D_ALWAYS, "Reached MAX_JOBS_RUNNING: no more can run\n" );
+		}
+		RecentlyWarnedMaxJobsRunning = true;
 		return false;
 	}
 
@@ -4693,16 +4683,20 @@ Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
 
 		// Now, see if we ran out of swap space already.
 	if( SwapSpaceExhausted) {
-		dprintf( D_ALWAYS, "Swap space exhausted! No more jobs can be run!\n" );
-        dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
-        dprintf( D_ALWAYS, "    %d jobs matched, %d jobs idle\n", started_jobs, idle_jobs ); 
+		if( !RecentlyWarnedMaxJobsRunning ) {
+			dprintf( D_ALWAYS, "Swap space exhausted! No more jobs can be run!\n" );
+			dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
+		}
+		RecentlyWarnedMaxJobsRunning = true;
 		return false;
 	}
 
-	if( ShadowSizeEstimate && started_jobs >= MaxShadowsForSwap ) {
-		dprintf( D_ALWAYS, "Swap space estimate reached! No more jobs can be run!\n" );
-        dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
-        dprintf( D_ALWAYS, "    %d jobs matched, %d jobs idle\n", started_jobs, idle_jobs ); 
+	if( ShadowSizeEstimate && shadows >= MaxShadowsForSwap ) {
+		if( !RecentlyWarnedMaxJobsRunning ) {
+			dprintf( D_ALWAYS, "Swap space estimate reached! No more jobs can be run!\n" );
+			dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
+		}
+		RecentlyWarnedMaxJobsRunning = true;
 		return false;
 	}
 	
@@ -4710,6 +4704,290 @@ Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
 	return true;
 }
 
+
+/* MainScheddNegotiate is a class that overrides virtual methods
+   called by ScheddNegotiate when it requires actions to be taken by
+   the schedd during negotiation.  See the definition of
+   ScheddNegotiate for a description of these functions.
+*/
+class MainScheddNegotiate: public ScheddNegotiate {
+public:
+	MainScheddNegotiate(
+		int cmd,
+		ResourceRequestList *jobs,
+		char const *owner,
+		char const *remote_pool
+	): ScheddNegotiate(cmd,jobs,owner,remote_pool) {}
+
+		// returns true if no job similar to job_id may be started right now
+		// (e.g. MAX_JOBS_RUNNING could cause this to return true)
+	bool skipAllSuchJobs(PROC_ID job_id);
+
+		// Define the virtual functions required by ScheddNegotiate //
+
+	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad );
+
+	virtual bool scheduler_skipJob(PROC_ID job_id);
+
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
+
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name);
+
+	virtual void scheduler_handleNegotiationFinished( Sock *sock );
+
+};
+
+bool
+MainScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
+{
+	ClassAd *ad = GetJobAd( job_id.cluster, job_id.proc );
+	if( !ad ) {
+		return false;
+	}
+
+	job_ad = *ad;
+
+	FreeJobAd( ad );
+	return true;
+}
+
+bool
+MainScheddNegotiate::scheduler_skipJob(PROC_ID job_id)
+{
+	if( scheduler.AlreadyMatched(&job_id) ) {
+		return true;
+	}
+	if( !Runnable(&job_id) ) {
+		return true;
+	}
+
+	return skipAllSuchJobs(job_id);
+}
+
+bool
+MainScheddNegotiate::skipAllSuchJobs(PROC_ID job_id)
+{
+		// Figure out if this request would result in another shadow
+		// process if matched.  If Grid, the answer is no.  Otherwise,
+		// always yes.
+
+	int job_universe;
+
+	if (GetAttributeInt(job_id.cluster, job_id.proc,
+						ATTR_JOB_UNIVERSE, &job_universe) < 0) {
+		dprintf(D_FULLDEBUG, "Failed to get universe for job %d.%d\n",
+				job_id.cluster, job_id.proc);
+		return true;
+	}
+	int shadow_num_increment = 1;
+	if(job_universe == CONDOR_UNIVERSE_GRID) {
+		shadow_num_increment = 0;
+	}
+
+		// Next, make sure we could start another shadow without
+		// violating some limit.
+	if( shadow_num_increment ) {
+		if( !scheduler.canSpawnShadow() ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool
+MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name)
+{
+	ASSERT( claim_id );
+	ASSERT( slot_name );
+
+	dprintf(D_FULLDEBUG,"Received match for job %d.%d: %s\n",
+			job_id.cluster, job_id.proc, slot_name);
+
+	if( scheduler_skipJob(job_id) ) {
+
+		if( job_id.cluster != -1 && job_id.proc != -1 ) {
+			if( skipAllSuchJobs(job_id) ) {
+					// No point in trying to find a different job,
+					// because we've hit MAX_JOBS_RUNNING or something
+					// like that.
+				dprintf(D_FULLDEBUG,
+					"Rejecting match to %s "
+					"because no job may be started to run on it right now.\n",
+					slot_name);
+				return false;
+			}
+
+			dprintf(D_FULLDEBUG,
+					"Skipping job %d.%d because it no longer needs a match.\n",
+					job_id.cluster,job_id.proc);
+		}
+
+		FindRunnableJob(job_id,&match_ad,getOwner());
+
+		if( job_id.cluster != -1 && job_id.proc != -1 ) {
+			dprintf(D_FULLDEBUG,"Rematched %s to job %d.%d\n",
+					slot_name, job_id.cluster, job_id.proc );
+		}
+	}
+	if( job_id.cluster == -1 || job_id.proc == -1 ) {
+		dprintf(D_FULLDEBUG,"No job found to run on %s\n",slot_name);
+		return false;
+	}
+
+	if ( strcasecmp(claim_id,"null") == 0 ) {
+			// No ClaimId given by the matchmaker.  This means
+			// the resource we were matched with does not support
+			// the claiming protocol.
+			//
+			// So, set the matched attribute in our classad to be true,
+			// and store a copy of match_ad in a hashtable.
+
+		scheduler.InsertMachineAttrs(job_id.cluster,job_id.proc,&match_ad);
+
+		ClassAd *tmp_ad = NULL;
+		scheduler.resourcesByProcID->lookup(job_id,tmp_ad);
+		if ( tmp_ad ) delete tmp_ad;
+		tmp_ad = new ClassAd( match_ad );
+		scheduler.resourcesByProcID->insert(job_id,tmp_ad);
+
+			// Update matched attribute in job ad
+		SetAttribute(job_id.cluster,job_id.proc,
+					 ATTR_JOB_MATCHED,"True",NONDURABLE);
+		SetAttributeInt(job_id.cluster,job_id.proc,
+						ATTR_CURRENT_HOSTS,1,NONDURABLE);
+
+		return true;
+	}
+
+	Daemon startd(&match_ad,DT_STARTD,NULL);
+	if( !startd.addr() ) {
+		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+		match_ad.dPrint(D_ALWAYS);
+		return false;
+	}
+
+	match_rec *mrec = scheduler.AddMrec(
+		claim_id, startd.addr(), &job_id, &match_ad,
+		getOwner(), getRemotePool() );
+
+	if( !mrec ) {
+			// There is already a match for this claim id.
+		return false;
+	}
+
+	ContactStartdArgs *args = new ContactStartdArgs( claim_id, startd.addr(), false );
+
+	if( !scheduler.enqueueStartdContact(args) ) {
+		delete args;
+		scheduler.DelMrec( mrec );
+		return false;
+	}
+
+	return true;
+}
+
+void
+MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reason)
+{
+	ASSERT( reason );
+
+	dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
+			job_id.cluster, job_id.proc, reason);
+
+	SetAttributeString(
+		job_id.cluster, job_id.proc,
+		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
+
+	SetAttributeInt(
+		job_id.cluster, job_id.proc,
+		ATTR_LAST_REJ_MATCH_TIME, (int)time(0), NONDURABLE);
+}
+
+void
+MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
+{
+	bool satisfied = getNumJobsRejected() == 0;
+	char const *remote_pool = getRemotePool();
+
+	dprintf(D_ALWAYS,"Finished negotiating for %s%s%s: %d matched, %d rejected\n",
+			getOwner(),
+			remote_pool ? " in pool " : "",
+			remote_pool ? remote_pool : " in local pool",
+			getNumJobsMatched(), getNumJobsRejected() );
+
+	scheduler.negotiationFinished( getOwner(), remote_pool, satisfied );
+
+	int rval =
+		daemonCore->Register_Socket(
+			sock, "<Negotiator Socket>", 
+			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
+			"<Negotiator Command>", &scheduler, ALLOW);
+
+	if( rval >= 0 ) {
+			// do not delete this sock until we get called back
+		sock->incRefCount();
+	}
+}
+
+void
+Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool satisfied )
+{
+	int owner_num;
+	for (owner_num = 0;
+		 owner_num < N_Owners && strcmp(Owners[owner_num].Name, owner);
+		 owner_num++) ;
+	if (owner_num == N_Owners) {
+		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
+		return;
+	}
+
+	Daemon *flock_col = NULL;
+	int n,flock_level = 0;
+	if( remote_pool && *remote_pool ) {
+		for( n=1, FlockCollectors->rewind();
+			 FlockCollectors->next(flock_col);
+			 n++)
+		{
+			if( !flock_col->name() ) {
+				continue;
+			}
+			if( !strcmp(remote_pool,flock_col->name()) ) {
+				flock_level = n;
+				break;
+			}
+		}
+		if( flock_level != n ) {
+			dprintf(D_ALWAYS,
+				"Warning: did not find flocking level for remote pool %s\n",
+				remote_pool );
+		}
+	}
+
+	Owners[owner_num].NegotiationTimestamp = time(0);
+	if( satisfied ) {
+		// We are out of jobs.  Stop flocking with less desirable pools.
+		if (Owners[owner_num].FlockLevel > flock_level ) {
+			Owners[owner_num].FlockLevel = flock_level;
+			dprintf(D_ALWAYS,
+					"Decreasing flock level for %s to %d.\n",
+					owner, Owners[owner_num].FlockLevel);
+		}
+
+		timeout(); // invalidate our ads immediately
+	} else {
+		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
+		    Owners[owner_num].FlockLevel == flock_level)
+		{ 
+			Owners[owner_num].FlockLevel++;
+			dprintf(D_ALWAYS,
+					"Increasing flock level for %s to %d.\n",
+					owner, Owners[owner_num].FlockLevel);
+
+			timeout(); // flock immediately
+		}
+	}
+}
 
 /*
 ** The negotiator wants to give us permission to run a job on some
@@ -4735,34 +5013,15 @@ Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
 int
 Scheduler::negotiate(int command, Stream* s)
 {
-	int		i;
-	int		op = -1;
-	PROC_ID	id;
-	char*	claim_id = NULL;			// claim_id for each match made
-	char*	sinful = NULL;
+	int		job_index;
 	int		jobs;						// # of jobs that CAN be negotiated
-	int		cur_cluster = -1;
-	int		cur_hosts;
-	int		max_hosts;
-	int		host_cnt;
-	int		perm_rval;
-	int		shadow_num_increment;
-	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
 	MyString remote_pool_buf;
 	char const *remote_pool = NULL;
 	Daemon*	neg_host = NULL;	
 	int		owner_num;
-	int		JobsRejected = 0;
 	Sock*	sock = (Sock*)s;
-	ContactStartdArgs * args = NULL;
-	match_rec *mrec;
-	ClassAd* my_match_ad;
-	ClassAd* cad;
-	bool cant_spawn_shadow = false;
 	bool skip_negotiation = false;
-	match_rec *pre_existing_match = NULL;
-	int num_pre_existing_matches_received = 0;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -4795,20 +5054,16 @@ Scheduler::negotiate(int command, Stream* s)
 		// set stop/start times on the negotiate timeslice object
 	ScopedTimesliceStopwatch negotiate_stopwatch( &m_negotiate_timeslice );
 
-	// BIOTECH
-	bool	biotech = false;
-	char *bio_param = param("BIOTECH");
-	if (bio_param) {
-		free(bio_param);
-		biotech = true;
-	}
-	
 		//
 		// CronTab Jobs
 		//
 	this->calculateCronTabSchedules();		
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
+
+		// reset this flag so the next time we bump into a limit
+		// we issue a log message
+	RecentlyWarnedMaxJobsRunning = false;
 
  	/* if ReservedSwap is 0, then we are not supposed to make any
  	 * swap check, so we can avoid the expensive sysapi_swap_space
@@ -4819,22 +5074,16 @@ Scheduler::negotiate(int command, Stream* s)
  		SwapSpace = INT_MAX;
  	}
 
-	// figure out the number of active shadows. we do this by
-	// adding the number of existing shadows + the number of shadows
-	// queued up to run in the future.
-	CurNumActiveShadows = numShadows + RunnableJobQueue.Length() + num_pending_startd_contacts + startdContactQueue.Length();
-
 	SwapSpaceExhausted = FALSE;
 	if( ShadowSizeEstimate ) {
 		MaxShadowsForSwap = (SwapSpace - ReservedSwap) / ShadowSizeEstimate;
+		MaxShadowsForSwap += numShadows;
 		dprintf( D_FULLDEBUG, "*** SwapSpace = %d\n", SwapSpace );
 		dprintf( D_FULLDEBUG, "*** ReservedSwap = %d\n", ReservedSwap );
 		dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",
 				 ShadowSizeEstimate );
 		dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
 				 MaxShadowsForSwap );
-		dprintf( D_FULLDEBUG, "*** Current num of active shadows = %d\n",
-				 CurNumActiveShadows );
 	}
 
 		// We want to read the owner off the wire ASAP, since if we're
@@ -4996,7 +5245,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if (sig_attrs_from_cm) {
 			free(sig_attrs_from_cm);
 		}
-		return dedicated_scheduler.negotiate( s, remote_pool );
+		return dedicated_scheduler.negotiate( command, sock, remote_pool );
 	}
 
 		// If we got this far, we're negotiating for a regular user,
@@ -5014,7 +5263,7 @@ Scheduler::negotiate(int command, Stream* s)
 		sig_attrs_from_cm = NULL;
 	}
 
-	bool prio_rec_array_is_stale = !BuildPrioRecArray();
+	BuildPrioRecArray();
 	jobs = N_PrioRecs;
 
 	JobsStarted = 0;
@@ -5024,7 +5273,7 @@ Scheduler::negotiate(int command, Stream* s)
 	if (at_sign) *at_sign = '\0';
 	for (owner_num = 0;
 		 owner_num < N_Owners && strcmp(Owners[owner_num].Name, owner);
-		 owner_num++);
+		 owner_num++) ;
 	if (owner_num == N_Owners) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		jobs = 0;
@@ -5037,603 +5286,46 @@ Scheduler::negotiate(int command, Stream* s)
 	} else if (Owners[owner_num].FlockLevel == which_negotiator) {
 		Owners[owner_num].NegotiationTimestamp = time(0);
 	}
-	if (at_sign) *at_sign = '@';
 
-	/* Try jobs in priority order */
-	for( i=0; i < N_PrioRecs && !skip_negotiation; i++ ) {
-	
-		// BIOTECH
-		if ( JobsRejected > 0 && biotech ) {
-			continue;
-		}
+	ResourceRequestList *resource_requests = new ResourceRequestList;
+	ResourceRequestCluster *cluster = NULL;
+	int next_cluster = 0;
 
-		char tmpstr[200];
-		snprintf(tmpstr,200,"%s@%s",PrioRec[i].owner,UidDomain);
-		if(strcmp(owner,tmpstr)!=0)
+	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
+		prio_rec *prec = &PrioRec[job_index];
+		if(strcmp(owner,prec->owner)!=0)
 		{
-			dprintf( D_FULLDEBUG, "Job %d.%d skipped ---  belongs to %s\n", 
-				PrioRec[i].id.cluster, PrioRec[i].id.proc, tmpstr);
 			jobs--;
 			continue;
 		}
 
-		if(AlreadyMatched(&PrioRec[i].id))
+		int auto_cluster_id;
+		if( NegotiateAllJobsInCluster ) {
+				// give every job a new auto cluster
+			auto_cluster_id = ++next_cluster;
+		}
+		else {
+			auto_cluster_id = prec->auto_cluster_id;
+		}
+
+		if( !cluster || cluster->getAutoClusterId() != auto_cluster_id )
 		{
-			dprintf( D_FULLDEBUG, "Job already matched\n");
-			continue;
+			cluster = new ResourceRequestCluster( auto_cluster_id );
+			resource_requests->push_back( cluster );
 		}
-
-		id = PrioRec[i].id;
-
-		int junk; // don't care about the value
-		if ( PrioRecAutoClusterRejected->lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
-				// We have already failed to match a job from this same
-				// autocluster with this machine.  Skip it.
-			continue;
-		}
-
-		if ( prio_rec_array_is_stale ) {
-			// check and make certain the job is still
-			// runnable, since things may have changed since we built the 
-			// prio_rec array (like, perhaps condor_hold or condor_rm was done).
-			if ( Runnable(&id) == FALSE ) {
-				continue;
-			}
-		}
-
-
-		cad = GetJobAd( id.cluster, id.proc );
-		if (!cad) {
-			dprintf(D_ALWAYS,"Can't get job ad %d.%d\n",
-					id.cluster, id.proc );
-			continue;
-		}	
-
-		cur_hosts = 0;
-		cad->LookupInteger(ATTR_CURRENT_HOSTS,cur_hosts);
-		max_hosts = 1;
-		cad->LookupInteger(ATTR_MAX_HOSTS,max_hosts);
-		job_universe = 0;
-		cad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
-
-			// Figure out if this request would result in another shadow
-			// process if matched.
-			// If Grid, the answer is no.
-			// Otherwise, always yes.
-		shadow_num_increment = 1;
-		if(job_universe == CONDOR_UNIVERSE_GRID) {
-			shadow_num_increment = 0;
-		}
-
-			// Next, make sure we could start another
-			// shadow without violating some limit.
-		if ( shadow_num_increment ) {
-			if ( cant_spawn_shadow ) {
-					// We can't start another shadow.
-					// Continue on to the next job.
-				continue;
-			}
-			if( ! canSpawnShadow(JobsStarted, jobs) ) {
-					// We can't start another shadow.
-					// Continue on to the next job.
-					// Once canSpawnShadow() returns false, save the result
-					// and don't call it again for the rest of this
-					// negotiation cycle. Otherwise, it will spam the log
-					// with the same message for every shadow-based job
-					// left in PrioRec.
-				cant_spawn_shadow = true;
-				continue;
-			}
-		}
-
-		for (host_cnt = cur_hosts; host_cnt < max_hosts && !skip_negotiation;) {
-
-			/* Wait for manager to request job info */
-
-			s->decode();
-			if( !s->code(op) ) {
-				dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-				s->end_of_message();
-				return (!(KEEP_STREAM));
-			}
-				// All commands from CM during the negotiation cycle
-				// just send the command followed by eom, except
-				// PERMISSION, PERMISSION_AND_AD, and REJECTED_WITH_REASON
-				// Do the end_of_message here, except for
-				// those commands.
-			if( (op != PERMISSION) && (op != PERMISSION_AND_AD) &&
-				(op != REJECTED_WITH_REASON) ) {
-				if( !s->end_of_message() ) {
-					dprintf( D_ALWAYS, "Can't receive eom from manager\n" );
-					return (!(KEEP_STREAM));
-				}
-			}
-
-			switch( op ) {
-				 case REJECTED_WITH_REASON: {
-					 char *diagnostic_message = NULL;
-					 if( !s->code(diagnostic_message) ||
-						 !s->end_of_message() ) {
-						 dprintf( D_ALWAYS,
-								  "Can't receive request from manager\n" );
-						 return (!(KEEP_STREAM));
-					 }
-					 dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
-							 id.cluster, id.proc, diagnostic_message);
-					 SetAttributeString(
-						id.cluster,id.proc,
-						ATTR_LAST_REJ_MATCH_REASON,
-						diagnostic_message,NONDURABLE);
-					 free(diagnostic_message);
-				 }
-					 // don't break: fall through to REJECTED case
-				 case REJECTED:
-					if ( !NegotiateAllJobsInCluster ) {
-						PrioRecAutoClusterRejected->insert( cur_cluster, 1 );
-					}
-					host_cnt = max_hosts + 1;
-					JobsRejected++;
-					SetAttributeInt(
-						id.cluster,id.proc,
-						ATTR_LAST_REJ_MATCH_TIME,(int)time(0),NONDURABLE);
-					break;
-				case SEND_JOB_INFO: {
-						// The Negotiator wants us to send it a job. 
-
-					/* Send a job description */
-					s->encode();
-					if( !s->put(JOB_INFO) ) {
-						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
-						return (!(KEEP_STREAM));
-					}
-
-					// request match diagnostics
-					cad->Assign(ATTR_WANT_MATCH_DIAGNOSTICS, true);
-
-					// Send the ad to the negotiator
-					if( !cad->put(*s) ) {
-						dprintf( D_ALWAYS,
-								"Can't send job ad to mgr\n" );
-						// FreeJobAd(cad);
-						s->end_of_message();
-						return (!(KEEP_STREAM));
-					}
-					// FreeJobAd(cad);
-					if( !s->end_of_message() ) {
-						dprintf( D_ALWAYS,
-								"Can't send job eom to mgr\n" );
-						return (!(KEEP_STREAM));
-					}
-					cur_cluster = PrioRec[i].auto_cluster_id;
-					dprintf( D_FULLDEBUG,
-							"Sent job %d.%d (autocluster=%d)\n", id.cluster, 
-							id.proc, cur_cluster );
-					break;
-				}
-				case PERMISSION:
-						// No negotiator since 7.1.3 should ever send this
-						// command, and older ones should not send it either,
-						// since we advertise WantResAd=True.
-					dprintf( D_ALWAYS, "Negotiator sent PERMISSION rather than expected PERMISSION_AND_AD!  Aborting.\n");
-					return !(KEEP_STREAM);
-					break;
-				case PERMISSION_AND_AD:
-					/*
-					 * If things are cool, contact the startd.
-					 * But... of the claim_id is the string "null", that means
-					 * the resource does not support the claiming protocol.
-					 */
-					dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
-
-					SetAttributeInt(
-						id.cluster,id.proc,
-						ATTR_LAST_MATCH_TIME,(int)time(0),NONDURABLE);
-
-					if( !s->get_secret(claim_id) ) {
-						dprintf( D_ALWAYS,
-								"Can't receive ClaimId from mgr\n" );
-						return (!(KEEP_STREAM));
-					}
-					my_match_ad = NULL;
-
-					// get startd ad from negotiator as well
-					my_match_ad = new ClassAd();
-					if( !my_match_ad->initFromStream(*s) ) {
-						dprintf( D_ALWAYS,
-							"Can't get my match ad from mgr\n" );
-						delete my_match_ad;
-						FREE( claim_id );
-						return (!(KEEP_STREAM));
-					}
-					if( !s->end_of_message() ) {
-						dprintf( D_ALWAYS,
-								"Can't receive eom from mgr\n" );
-						if (my_match_ad)
-							delete my_match_ad;
-						FREE( claim_id );
-						return (!(KEEP_STREAM));
-					}
-#if !defined(WANT_OLD_CLASSADS)
-					my_match_ad->AddTargetRefs( TargetJobAttrs );
-#endif
-
-					{
-					int is_partitionable = 0;
-					my_match_ad->LookupBool(ATTR_SLOT_PARTITIONABLE,
-											is_partitionable);
-					if (is_partitionable) {
-							// We want to avoid re-using a claim to a
-							// partitionable slot for jobs that do not
-							// fit the dynamicly created slot. Since
-							// we simply compare requirements in
-							// FindRunnableJob we need to make sure
-							// the my_match_ad accurately reflects the
-							// dynamic slot. So, Temporarily
-							// (Condor-style), we will massage
-							// my_match_ad to look like the dynamic
-							// slot will once the claim is requested.
-
-					int cpus, memory, disk;
-
-					cpus = 1;
-					cad->EvalInteger(ATTR_REQUEST_CPUS, my_match_ad, cpus);
-					my_match_ad->Assign(ATTR_CPUS, cpus);
-
-					memory = -1;
-					if (cad->EvalInteger(ATTR_REQUEST_MEMORY,
-										 my_match_ad,
-										 memory)) {
-						my_match_ad->Assign(ATTR_MEMORY, memory);
-					} else {
-						dprintf(D_ALWAYS, "Claim massaging: No memory request on Job ad, skipping...\n");
-						delete my_match_ad;
-						FREE( claim_id );
-						return (!(KEEP_STREAM));
-					}
-
-					if (cad->EvalInteger(ATTR_REQUEST_DISK,
-										 my_match_ad,
-										 disk)) {
-						float total_disk = disk;
-						my_match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
-						disk = (max((int) ceil((disk / total_disk) * 100), 1) / 100.0) * total_disk;
-						my_match_ad->Assign(ATTR_DISK, disk);
-					} else {
-						dprintf(D_ALWAYS, "Claim massaging: No disk request on Job ad, skipping...\n");
-						delete my_match_ad;
-						FREE( claim_id );
-						return (!(KEEP_STREAM));
-					}
-
-					dprintf(D_FULLDEBUG, "claim massaged: cpus = %d, memory = %d, disk = %d\n", cpus, memory, disk);
-					}
-					}
-
-
-					{
-						ClaimIdParser idp(claim_id);
-						dprintf( D_PROTOCOL, 
-						         "## 4. Received ClaimId %s\n", idp.publicClaimId() );
-					}
-
-					{
-
-							// Look to see if the job wants info about 
-							// old matches.  If so, store info about old
-							// matches in the job ad as:
-							//   LastMatchName0 = "some-startd-ad-name"
-							//   LastMatchName1 = "some-other-startd-ad-name"
-							//   ....
-							// LastMatchName0 will hold the most recent.  The
-							// list will be rotated with a max length defined
-							// by attribute ATTR_JOB_LAST_MATCH_LIST_LENGTH, which
-							// has a default of 0 (i.e. don't keep this info).
-						int list_len = 0;
-						bool in_transaction = false;
-						cad->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
-						if ( list_len > 0 ) {								
-							int list_index;
-							char attr_buf[100];
-							char *last_match = NULL;
-							my_match_ad->LookupString(ATTR_NAME,&last_match);
-							for (list_index=0; 
-								 last_match && (list_index < list_len); 
-								 list_index++) 
-							{
-								char *curr_match = last_match;
-								last_match = NULL;
-								snprintf(attr_buf,100,"%s%d",
-									ATTR_LAST_MATCH_LIST_PREFIX,list_index);
-								cad->LookupString(attr_buf,&last_match);
-								if( !in_transaction ) {
-									in_transaction = true;
-									BeginTransaction();
-								}
-								SetAttributeString(
-									id.cluster,id.proc,
-									attr_buf,curr_match);
-								free(curr_match);
-							}
-							if (last_match) free(last_match);
-						}
-							// Increment ATTR_NUM_MATCHES
-						int num_matches = 0;
-						cad->LookupInteger(ATTR_NUM_MATCHES,num_matches);
-						num_matches++;
-
-						SetAttributeInt(
-							id.cluster,id.proc,
-							ATTR_NUM_MATCHES,num_matches,NONDURABLE);
-
-						if( in_transaction ) {
-							in_transaction = false;
-							CommitTransaction(NONDURABLE);
-						}
-					}
-
-					if( my_match_ad ) {
-						int offline = false;
-						my_match_ad->EvalBool(ATTR_OFFLINE,NULL,offline);
-
-						if( offline ) {
-							MyString name;
-							if( my_match_ad ) {
-								my_match_ad->LookupString(ATTR_NAME,name);
-							}
-							dprintf(D_ALWAYS,"Job %d.%d matched to offline machine %s.\n",id.cluster,id.proc,name.Value());
-							FREE( claim_id );
-							claim_id = NULL;
-							host_cnt++;
-							break;
-						}
-					}
-
-					if ( strcasecmp(claim_id,"null") == 0 ) {
-						// No ClaimId given by the matchmaker.  This means
-						// the resource we were matched with does not support
-						// the claiming protocol.
-						//
-						// So, set the matched attribute in our classad to be true,
-						// and store the my_match_ad (if exists) in a hashtable.
-						if ( my_match_ad ) {
-							ClassAd *tmp_ad = NULL;
-							InsertMachineAttrs(id.cluster,id.proc,my_match_ad);
-							resourcesByProcID->lookup(id,tmp_ad);
-							if ( tmp_ad ) delete tmp_ad;
-							resourcesByProcID->insert(id,my_match_ad);
-								// set my_match_ad to NULL, since we stashed it
-								// in our hashtable -- i.e. dont deallocate!!
-							my_match_ad = NULL;	
-						} else {
-							EXCEPT("Negotiator messed up - gave null ClaimId & no match ad");
-						}
-						// Update matched attribute in job ad
-						SetAttribute(
-							id.cluster,id.proc,
-							ATTR_JOB_MATCHED,"True",NONDURABLE);
-						SetAttributeInt(
-							id.cluster,id.proc,
-							ATTR_CURRENT_HOSTS,1,NONDURABLE);
-						// Break before we fall into the Claiming Logic section below...
-						FREE( claim_id );
-						claim_id = NULL;
-						JobsStarted += 1;
-						host_cnt++;
-						break;
-					}
-
-					/////////////////////////////////////////////
-					////// CLAIMING LOGIC  
-					/////////////////////////////////////////////
-
-					{
-						Daemon startd(my_match_ad,DT_STARTD,NULL);
-						if( !startd.addr() ) {
-							dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
-							my_match_ad->dPrint(D_ALWAYS);
-							delete my_match_ad;
-							my_match_ad = NULL;
-							break;
-						}
-						sinful = strdup( startd.addr() );
-					}
-
-						// sinful should now point to the sinful string
-						// of the startd we were matched with.
-					pre_existing_match = NULL;
-					mrec = AddMrec( claim_id, sinful, &id, my_match_ad,
-									owner,remote_pool,&pre_existing_match);
-
-						/* if AddMrec returns NULL, it means we can't
-						   use that match.  in that case, we'll skip
-						   over the attempt to stash the info, go
-						   straight to deallocating memory we used in
-						   this protocol, and break out of this case
-
-						   One reason this can happen is that the
-						   negotiator handed us a claim id that we
-						   already have.  If that happens a lot, it
-						   probably means the negotiator has a lot of
-						   stale info about the startds.  One
-						   pathalogical case where that can happen is
-						   when the negotiatior is configured to not
-						   send match info to the startds, so the
-						   startds keep advertising the same claimid
-						   until they get the claim request from the
-						   schedd.  If this schedd is behind on
-						   requesting claims and it starts negotiating
-						   for more jobs, only to receive a lot of
-						   stale claim ids, it will have wasted more
-						   than the usual amount of time in
-						   negotiation and so may fall even further
-						   behind in requesting claims.
-
-						   Therefore, if we get more than a handfull
-						   of claimids for startds we have not yet
-						   requested, abort this round of negotiation.
-						*/
-
-					if( !mrec && pre_existing_match &&
-						(pre_existing_match->status==M_UNCLAIMED ||
-						 pre_existing_match->status==M_STARTD_CONTACT_LIMBO))
-					{
-						if( ++num_pre_existing_matches_received > 10 ) {
-							dprintf(D_ALWAYS,"Too many pre-existing matches "
-							        "received (due to stale info in "
-							        "negotiator), so ending this round of "
-							        "negotiation.\n");
-							skip_negotiation = true;
-						}
-					}
-
-						// clear this out so we know if we use it...
-					args = NULL;
-
-					if( mrec ) {
-							/*
-							  Here we don't want to call contactStartd
-							  directly because we do not want to block
-							  the negotiator for this, and because we
-							  want to minimize the possibility that
-							  the startd will have to block/wait for
-							  the negotiation cycle to finish before
-							  it can finish the claim protocol.
-							  So...we enqueue the args for a later
-							  call.  (The later call will be made from
-							  the startdContactSockHandler)
-							*/
-						args = new ContactStartdArgs( claim_id, sinful,
-													  false );
-					}
-
-						/*
-						  either we already saved all this info in the
-						  ContactStartdArgs object, or we're going to
-						  throw away the match.  either way, we're
-						  done with all this memory and need to
-						  deallocate it now.
-						*/
-					free( sinful );
-					sinful = NULL;
-					free( claim_id );
-					claim_id = NULL;
-					if( my_match_ad ) {
-						delete my_match_ad;
-						my_match_ad = NULL;
-					}
-
-					if( ! mrec ) {
-						ASSERT( ! args );
-							// we couldn't use this match, so we're done.
-						break;
-					}
-
-					if( enqueueStartdContact(args) ) {
-						perm_rval = 1;	// happiness
-					} else {
-						perm_rval = 0;	// failure
-						delete( args );
-					}
-					JobsStarted += perm_rval;
-					addActiveShadows( perm_rval * shadow_num_increment ); 
-					host_cnt++;
-
-					/////////////////////////////////////////////
-					////// END OF CLAIMING LOGIC  
-					/////////////////////////////////////////////
-
-					break;
-
-				case END_NEGOTIATE:
-					dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
-							JobsStarted );
-
-					// We are unsatisfied in this pool.  Flock with
-					// less desirable pools.  Note that the current
-					// negotiator may "spin the pie" and negotiate with
-					// us again shortly.  If that happens, and we end up
-					// starting all of our jobs in the local pool, then
-					// we'll set FlockLevel back to its original value below.
-					if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
-						Owners[owner_num].FlockLevel == which_negotiator) { 
-						Owners[owner_num].FlockLevel++;
-						Owners[owner_num].NegotiationTimestamp = time(0);
-						dprintf(D_ALWAYS,
-								"Increasing flock level for %s to %d.\n",
-								owner, Owners[owner_num].FlockLevel);
-						if (JobsStarted == 0) {
-							timeout(); // flock immediately
-						}
-					}
-
-					return KEEP_STREAM;
-				default:
-					dprintf( D_ALWAYS, "Got unexpected request (%d)\n", op );
-					return (!(KEEP_STREAM));
-			}
-		}
+		cluster->addJob( prec->id );
 	}
 
-		// We've broken out of our loops here because we're out of
-		// jobs.  The Negotiator has either asked us for one more job
-		// or has told us to END_NEGOTIATE.  In either case, we need
-		// to pull this command off the wire and flush it down the
-		// bit-bucket before we stash this socket for future use.  If
-		// we got told SEND_JOB_INFO, we need to tell the negotiator
-		// we have NO_MORE_JOBS.	-Derek Wright 1/8/98
-	s->decode();
-	if( !s->code(op) || !s->end_of_message() ) {
-		dprintf( D_ALWAYS, "Error: Can't read command from negotiator.\n" );
-		return (!(KEEP_STREAM));
-	}		
-	switch( op ) {
-	case SEND_JOB_INFO: 
-		if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-			dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" );
-			return (!(KEEP_STREAM));
-		}
-		break;
-	case END_NEGOTIATE:
-		break;
-	default: 
-		dprintf( D_ALWAYS, 
-				 "Got unexpected command (%d) from negotiator.\n", op );
-		break;
-	}
+	classy_counted_ptr<MainScheddNegotiate> sn =
+		new MainScheddNegotiate(
+			command,
+			resource_requests,
+			owner,
+			remote_pool
+		);
 
-		// It addition to checking to see if we started all of our
-		// jobs, check also if any jobs were rejected.  This handles
-		// the case when we requested more than one CPU for a job and
-		// failed to get all the CPUs we wanted (i.e., PVM jobs).
-	if( JobsStarted < jobs || JobsRejected > 0 ) {
-		dprintf( D_ALWAYS,
-		"Out of servers - %d jobs matched, %d jobs idle, %d jobs rejected\n",
-							JobsStarted, jobs - JobsStarted, JobsRejected );
-
-		// We are unsatisfied in this pool.  Flock with less desirable pools.
-		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
-			Owners[owner_num].FlockLevel == which_negotiator) { 
-			Owners[owner_num].FlockLevel++;
-			Owners[owner_num].NegotiationTimestamp = time(0);
-			dprintf(D_ALWAYS, "Increasing flock level for %s to %d.\n",
-					owner, Owners[owner_num].FlockLevel);
-			if (JobsStarted == 0) {
-				timeout(); // flock immediately
-			}
-		}
-	} else {
-		// We are out of jobs.  Stop flocking with less desirable pools.
-		if (Owners[owner_num].FlockLevel >= which_negotiator) {
-			Owners[owner_num].FlockLevel = which_negotiator;
-			Owners[owner_num].NegotiationTimestamp = time(0);
-		}
-
-		dprintf( D_ALWAYS,
-		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
-		 JobsStarted, jobs - JobsStarted, Owners[owner_num].FlockLevel );
-
-		timeout();				// invalidate our ads immediately
-	}
+		// handle the rest of the negotiation protocol asynchronously
+	sn->negotiate(sock);
 
 	return KEEP_STREAM;
 }
@@ -6171,10 +5863,10 @@ find_idle_local_jobs( ClassAd *job )
 	job->LookupInteger(ATTR_JOB_STATUS, status);
 
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
-		cur_hosts = ((status == RUNNING) ? 1 : 0);
+		cur_hosts = ((status == RUNNING || status == TRANSFERRING_OUTPUT) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
-		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
+		max_hosts = ((status == IDLE) ? 1 : 0);
 	}
 	
 		//
@@ -6183,7 +5875,7 @@ find_idle_local_jobs( ClassAd *job )
 		// We do not count REMOVED or HELD jobs
 		//
 	if ( max_hosts > cur_hosts &&
-		(status == IDLE || status == UNEXPANDED || status == RUNNING) ) {
+		(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) ) {
 			//
 			// The jobs will now attempt to have their requirements
 			// evalulated. We first check to see if the requirements are defined.
@@ -6740,9 +6432,9 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 				cluster, proc, ATTR_JOB_STATUS );
 	}
 	switch( status ) {
-	case UNEXPANDED:
 	case IDLE:
 	case RUNNING:
+	case TRANSFERRING_OUTPUT:
 			// these are the cases we expect.  if it's local
 			// universe, it'll still be IDLE.  if it's not local,
 			// it'll already be marked as RUNNING...  just break
@@ -6759,7 +6451,6 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 		break;
 
 	case COMPLETED:
-	case SUBMISSION_ERR:
 		EXCEPT( "IMPOSSIBLE: status for job %d.%d is %s "
 				"but we're trying to start a shadow for it!", 
 				cluster, proc, getJobStatusString(status) );
@@ -8200,6 +7891,48 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 		return;
 	}
 
+	bool already_in_transaction = InTransaction();
+	if( !already_in_transaction ) {
+	    BeginTransaction();
+	}
+
+		// First do the old-style match_list stuff
+
+		// Look to see if the job wants info about 
+		// old matches.  If so, store info about old
+		// matches in the job ad as:
+		//   LastMatchName0 = "some-startd-ad-name"
+		//   LastMatchName1 = "some-other-startd-ad-name"
+		//   ....
+		// LastMatchName0 will hold the most recent.  The
+		// list will be rotated with a max length defined
+		// by attribute ATTR_JOB_LAST_MATCH_LIST_LENGTH, which
+		// has a default of 0 (i.e. don't keep this info).
+	int list_len = 0;
+	job->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
+	if ( list_len > 0 ) {
+		RotateAttributeList(cluster,proc,ATTR_LAST_MATCH_LIST_PREFIX,0,list_len);
+		std::string attr_buf;
+		std::string slot_name;
+		machine_ad->LookupString(ATTR_NAME,slot_name);
+
+		sprintf(attr_buf,"%s0",ATTR_LAST_MATCH_LIST_PREFIX);
+		SetAttributeString(cluster,proc,attr_buf.c_str(),slot_name.c_str());
+	}
+
+		// End of old-style match_list stuff
+
+		// Increment ATTR_NUM_MATCHES
+	int num_matches = 0;
+	job->LookupInteger(ATTR_NUM_MATCHES,num_matches);
+	num_matches++;
+
+	SetAttributeInt(cluster,proc,ATTR_NUM_MATCHES,num_matches);
+
+	SetAttributeInt(cluster,proc,ATTR_LAST_MATCH_TIME,(int)time(0));
+
+		// Now handle JOB_MACHINE_ATTRS
+
 	MyString user_machine_attrs;
 	GetAttributeString(cluster,proc,ATTR_JOB_MACHINE_ATTRS,user_machine_attrs);
 
@@ -8238,6 +7971,10 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 	}
 
 	FreeJobAd( job );
+
+	if( !already_in_transaction ) {
+		CommitTransaction(NONDURABLE);
+	}
 }
 
 struct shadow_rec *
@@ -8402,7 +8139,7 @@ CkptWallClock()
 		first_time = 0;
 		int status = IDLE;
 		ad->LookupInteger(ATTR_JOB_STATUS, status);
-		if (status == RUNNING) {
+		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
 			int bday = 0;
 			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
 			int run_time = current_time - bday;
@@ -8677,7 +8414,7 @@ mark_serial_job_running( PROC_ID *job_id )
 }
 
 /*
-** Mark a job as stopped, (Idle or Unexpanded).  Do not call directly.  
+** Mark a job as stopped, (Idle).  Do not call directly.  
 ** Call the non-underscore version below instead.
 */
 void
@@ -8715,7 +8452,7 @@ _mark_job_stopped(PROC_ID* job_id)
 	DeleteAttribute( job_id->cluster, job_id->proc, ATTR_SHADOW_BIRTHDATE );
 
 	// if job isn't RUNNING, then our work is already done
-	if (status == RUNNING) {
+	if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
@@ -9028,7 +8765,7 @@ Scheduler::shadow_prio_recs_consistent()
 			BadProc = srp->job_id.proc;
 			universe = srp->universe;
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
-			if (status != RUNNING &&
+			if (status != RUNNING && status != TRANSFERRING_OUTPUT &&
 				universe!=CONDOR_UNIVERSE_MPI &&
 				universe!=CONDOR_UNIVERSE_PARALLEL) {
 				// display_shadow_recs();
@@ -9878,7 +9615,7 @@ Scheduler::kill_zombie(int, PROC_ID* job_id )
 
 /*
 ** The shadow running this job has died.  If things went right, the job
-** has been marked as idle, unexpanded, or completed as appropriate.
+** has been marked as idle or completed as appropriate.
 ** However, if the shadow terminated abnormally, the job might still
 ** be marked as running (a zombie).  Here we check for that conditon,
 ** and mark the job with the appropriate status.
@@ -9904,7 +9641,8 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0, NONDURABLE ); 
 
 	switch( status ) {
-	case RUNNING: {
+	case RUNNING:
+	case TRANSFERRING_OUTPUT: {
 			//
 			// If the job is running, we are in middle of executing
 			// a graceful shutdown, and the job has a lease, then we 
@@ -10753,11 +10491,11 @@ Scheduler::Register()
 	 // message handlers for schedd commands
 	 daemonCore->Register_Command( NEGOTIATE_WITH_SIGATTRS, 
 		 "NEGOTIATE_WITH_SIGATTRS", 
-		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
+		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
 		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( NEGOTIATE, 
 		 "NEGOTIATE", 
-		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
+		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
 		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
@@ -10999,11 +10737,6 @@ prio_compar(prio_rec* a, prio_rec* b)
 	 }
 
 	 /* here,updown priority and job_priority are both equal */
-	 /* check existence of checkpoint files */
-	 if (( a->status == UNEXPANDED) && ( b->status != UNEXPANDED))
-		  return ( 1);
-	 if (( a->status != UNEXPANDED) && ( b->status == UNEXPANDED))
-		  return (-1);
 
 	 /* check for job submit times */
 	 if( a->qdate < b->qdate ) {
@@ -11380,7 +11113,7 @@ Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 
 
 match_rec*
-Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
+Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
 				   char const *user, char const *pool, match_rec **pre_existing)
 {
 	match_rec *rec;
@@ -12051,7 +11784,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				}
 			}
 		}
-		else if (job_status != RUNNING) {
+		else if (job_status != RUNNING && job_status != TRANSFERRING_OUTPUT) {
 			retry_is_sensible = true;
 		}
 		break;
@@ -12087,7 +11820,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			jobad->LookupString(ATTR_REMOTE_HOST,startd_name);
 			job_is_suitable = true;
 		}
-		else if (job_status != RUNNING) {
+		else if (job_status != RUNNING && job_status != TRANSFERRING_OUTPUT) {
 			retry_is_sensible = true;
 		}
 		break;
@@ -13237,7 +12970,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				 ATTR_JOB_STATUS);
 		return ( false );
 	}
-	if ( status == RUNNING ) {
+	if ( status == RUNNING || status == TRANSFERRING_OUTPUT ) {
 		return ( true );
 	}
 

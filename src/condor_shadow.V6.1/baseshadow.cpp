@@ -1217,14 +1217,14 @@ BaseShadow::publishShadowAttrs( ClassAd* ad )
 }
 
 
-void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
+void BaseShadow::dprintf_va( int flags, const char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow
 		// might like to say ::dprintf( flags, "(res %d)"
 	::_condor_dprintf_va( flags, fmt, args );
 }
 
-void BaseShadow::dprintf( int flags, char* fmt, ... )
+void BaseShadow::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

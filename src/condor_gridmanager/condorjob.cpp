@@ -87,7 +87,7 @@ static const char *GMStateNames[] = {
 };
 
 #define JOB_STATE_UNKNOWN				-1
-#define JOB_STATE_UNSUBMITTED			UNEXPANDED
+#define JOB_STATE_UNSUBMITTED			0
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -1306,7 +1306,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	if ( new_remote_state == IDLE ) {
 		JobIdle();
 	}
-	if ( new_remote_state == RUNNING ) {
+	if ( new_remote_state == RUNNING || new_remote_state == TRANSFERRING_OUTPUT ) {
 		JobRunning();
 	}
 	// If the job has been removed locally, don't propagate a hold from

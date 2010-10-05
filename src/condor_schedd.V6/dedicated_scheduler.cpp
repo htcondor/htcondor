@@ -49,6 +49,7 @@
 #include "exit.h"
 #include "dc_startd.h"
 #include "qmgmt.h"
+#include "schedd_negotiate.h"
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -614,7 +615,6 @@ DedicatedScheduler::DedicatedScheduler()
 		( 199, hashFunction );
 	all_matches_by_id = new HashTable < HashKey, match_rec*>
 		( 199, hashFunction );
-	resource_requests = new Queue<PROC_ID>(64);
 
 	num_matches = 0;
 
@@ -674,7 +674,6 @@ DedicatedScheduler::~DedicatedScheduler()
 
 		// Clear out the resource_requests queue
 	clearResourceRequests();  	// Delete classads in the queue
-	delete resource_requests;	// Delete the queue itself 
 }
 
 
@@ -801,486 +800,175 @@ DedicatedScheduler::shutdown_graceful( void )
 }
 
 
-/* 
-   The dedicated scheduler's negotiate() method.  This is based heavily
-   on Scheduler::negotiate().  However, b/c we're not really
-   negotiating for jobs, but for resource requests, and since a
-   million other things are different, these have to be seperate
-   methods.  However, any changes to the protocol *MUST* be changed in
-   *BOTH* methods, so please be careful!
-   
-   Also, to handle our requests and memory in a good way, we have a
-   seperate function that does the negotiation for a particular
-   request, negotiateRequest().  That has all the meat of the
-   negotiation protocol in it.  This function just sets everything up,
-   iterates over the requests, and deals with the results of each
-   negotiation.
+/* DedicatedScheddNegotiate is a class that overrides virtual methods
+   called by ScheddNegotiate when it requires actions to be taken by
+   the schedd during negotiation.  See the definition of
+   ScheddNegotiate for a description of these functions.
 */
+class DedicatedScheddNegotiate: public ScheddNegotiate {
+public:
+	DedicatedScheddNegotiate(
+		int cmd,
+		ResourceRequestList *jobs,
+		char const *owner,
+		char const *remote_pool
+	): ScheddNegotiate(cmd,jobs,owner,remote_pool) {}
+
+		// Define the virtual functions required by ScheddNegotiate //
+
+	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad );
+
+	virtual bool scheduler_skipJob(PROC_ID job_id);
+
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
+
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name);
+
+	virtual void scheduler_handleNegotiationFinished( Sock *sock );
+
+};
+
+bool
+DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
+{
+	ClassAd *ad = GetJobAd( job_id.cluster, job_id.proc );
+	if( !ad ) {
+		return false;
+	}
+
+	ClassAd *generic_ad = dedicated_scheduler.makeGenericAdFromJobAd( ad );
+	FreeJobAd( ad );
+
+	if( !generic_ad ) {
+		return false;
+	}
+
+	job_ad = *generic_ad;
+	delete generic_ad;
+
+	return true;
+}
+
+bool
+DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID job_id)
+{
+	return false;
+}
+
+bool
+DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name)
+{
+	ASSERT( claim_id );
+	ASSERT( slot_name );
+
+	dprintf(D_FULLDEBUG,
+			"DedicatedScheduler: Received match for job %d.%d: %s\n",
+			job_id.cluster, job_id.proc, slot_name);
+
+	if( scheduler_skipJob(job_id) ) {
+		dprintf(D_FULLDEBUG,
+				"DedicatedScheduler: job %d.%d no longer needs a match.\n",
+				job_id.cluster,job_id.proc);
+			// TODO: see if one of the other parallel jobs matches this machine
+		return false;
+	}
+
+	Daemon startd(&match_ad,DT_STARTD,NULL);
+	if( !startd.addr() ) {
+		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+		match_ad.dPrint(D_ALWAYS);
+		return false;
+	}
+
+	match_rec *mrec = dedicated_scheduler.AddMrec(claim_id,startd.addr(),slot_name,job_id,&match_ad,getRemotePool());
+	if( !mrec ) {
+		return false;
+	}
+
+	ContactStartdArgs *args = new ContactStartdArgs( claim_id, startd.addr(), true );
+
+	if( !scheduler.enqueueStartdContact(args) ) {
+		delete args;
+		dedicated_scheduler.DelMrec( mrec );
+		return false;
+	}
+
+	return true;
+}
+
+void
+DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reason)
+{
+	ASSERT( reason );
+
+	dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
+			job_id.cluster, job_id.proc, reason);
+
+	SetAttributeString(
+		job_id.cluster, job_id.proc,
+		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
+
+	SetAttributeInt(
+		job_id.cluster, job_id.proc,
+		ATTR_LAST_REJ_MATCH_TIME, (int)time(0), NONDURABLE);
+}
+
+void
+DedicatedScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
+{
+	char const *remote_pool = getRemotePool();
+
+	dprintf(D_ALWAYS,"Finished negotiating for %s%s%s: %d matched, %d rejected\n",
+			getOwner(),
+			remote_pool ? " in pool " : "",
+			remote_pool ? remote_pool : " in local pool",
+			getNumJobsMatched(), getNumJobsRejected() );
+
+	int rval =
+		daemonCore->Register_Socket(
+			sock, "<Negotiator Socket>", 
+			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
+			"<Negotiator Command>", &scheduler, ALLOW);
+
+	if( rval >= 0 ) {
+			// do not delete this sock until we get called back
+		sock->incRefCount();
+	}
+}
+
 int
-DedicatedScheduler::negotiate( Stream* s, char const* remote_pool )
+DedicatedScheduler::negotiate( int command, Sock* sock, char const* remote_pool )
 {
 		// At this point, we've already read the command int, the
 		// owner to negotiate for, and an eom off the wire.  
 		// Now, we've just got to handle the per-job negotiation
 		// protocol itself.
 
-	ClassAd	*req;
-	HashKey	key;
-	int		max_reqs;
-	int		reqs_rejected = 0;
-	int		reqs_matched = 0;
-	int		op = -1;
-	PROC_ID	id;
-	NegotiationResult result;
+	ResourceRequestList *requests = new ResourceRequestList;
+	int next_cluster = 0;
+	std::list<PROC_ID>::iterator id;
 
-	id.cluster = id.proc = 0;
-
-	max_reqs = resource_requests->Length();
-	
-		// Create a queue for unfulfilled requests
-	Queue<PROC_ID>* unmet_requests;
-	if( max_reqs > 4 ) {
-		unmet_requests = new Queue<PROC_ID>( max_reqs ); 
-	} else {
-		unmet_requests = new Queue<PROC_ID>( 4 ); 
+	for( id = resource_requests.begin();
+		 id != resource_requests.end();
+		 id++ )
+	{
+		ResourceRequestCluster *cluster = new ResourceRequestCluster( ++next_cluster );
+		requests->push_back( cluster );
+		cluster->addJob( *(id) );
 	}
 
+	classy_counted_ptr<DedicatedScheddNegotiate> neg_handler =
+		new DedicatedScheddNegotiate(
+			command,
+			requests,
+			owner(),
+			remote_pool
+		);
 
-	while( resource_requests->dequeue(id) >= 0 ) {
-
-			// TODO: All of this is different for these resource
-			// request ads.  We should try to handle rm or hold, but
-			// we can't do it with this mechanism.
-
-		ClassAd *job = GetJobAd(id.cluster, id.proc);
-
-		if (job == NULL) {
-			dprintf(D_ALWAYS, "Can't get job ad for cluster %d.%d -- skipping\n", id.cluster, id.proc);
-			continue;
-		}
-
-		req = makeGenericAdFromJobAd(job);
-
-		result = negotiateRequest(req, s, remote_pool,
-								  reqs_matched, max_reqs);
-
-		delete req;
-		req = 0;
-
-		switch( result ) {
-		case NR_ERROR:
-				// Error communicating w/ the central manager.  We
-				// need to move over all the requests to the unmet
-				// list, then make the unmet list our real list, then 
-				// return !KEEP_STREAM to let everyone else know we
-				// couldn't talk to the CM.
-
-				// Don't break, just fall through to the END_NEGOTIATE
-				// case because most of the code is shared.  We'll
-				// check result again when it matters...
-		case NR_END_NEGOTIATE:
-				// The CM told us we had to stop negotiating.
-
-				// First of all, the current request is still unmet. 
-			unmet_requests->enqueue( id );
-
-				// Now, the rest of the requests still in our list are
-				// also unmet...
-			while( resource_requests->dequeue(id) >= 0 ) {
-				unmet_requests->enqueue( id );
-			}
-			
-				// Now, switch over our queue of unmet requests to be 
-				// the main queue, and deallocate the old main one.
-			delete resource_requests;
-			resource_requests = unmet_requests;
-
-				// If we had a communication error, we need to just
-				// return right now w/ (!KEEP_STREAM) so we close the
-				// socket and don't try to re-use the connection.
-			if( result == NR_ERROR ) {
-				return( (!KEEP_STREAM) );
-			} else {
-					// Otherwise, we were told to END_NEGOTIATE, so we
-					// can safely return KEEP_STREAM and try to re-use
-					// the socket the next time around
-				return( KEEP_STREAM );
-					// TODO: Do we want to deal w/ flocking and/or
-					// other reporting before we return?
-			}
-			break;
-
-		case NR_MATCHED:
-				// We got matched.  We're done with this request.
-			reqs_matched++;
-				// That's all we need to do, go onto the next req. 
-			break;
-
-		case NR_REJECTED:
-				// This request was rejected.  Save it in our list
-				// of unmet requests.
-			reqs_rejected++;
-			unmet_requests->enqueue( id );
-
-				// That's all we can do, go onto the next req.
-			break;
-
-		case NR_LIMIT_REACHED:
-				// TODO!!!
-				// Pretty unclear right now how, exactly, we want to
-				// handle this.  For now, just EXCEPT(), since
-				// negotiateRequest() shouldn't be returning this.
-			EXCEPT( "DedicatedScheduler::negotiateRequest() returned "
-					"unsupported value: NR_LIMIT_REACHED" );
-
-		default:
-			EXCEPT( "Unknown return value (%d) from "
-					"DedicatedScheduler::negotiateRequest()",
-					(int)result );
-		}
-	}
-
-		/*
-		  If we broke out of here, we ran out of resource requests.
-		  If there's anything in unmet_requests, we want that to be
-		  our new resource_requests queue.  In fact, even if
-		  unmet_requests is empty, we still want to use that, since we
-		  need to delete one of them to avoid leaking memory, and we
-		  might as well just always use unmet_requests as the requests
-		  we need to service in the future.
-		*/
-	delete resource_requests;
-	resource_requests = unmet_requests;
-
-		/*
-		  We've broken out of our loops here because we're out of
-		  requests.  The Negotiator has either asked us for one more
-		  job or has told us to END_NEGOTIATE.  In either case, we
-		  need to pull this command off the wire and flush it down the
-		  bit-bucket before we stash this socket for future use.  If
-		  we got told SEND_JOB_INFO, we need to tell the negotiator we
-		  have NO_MORE_JOBS. -Derek Wright 1/8/98
-		*/
-	s->decode();
-	if( !s->code(op) || !s->end_of_message() ) {
-		dprintf( D_ALWAYS, "Error: Can't read command from negotiator.\n" );
-		return( !(KEEP_STREAM) );
-	}		
-	switch( op ) {
-	case SEND_JOB_INFO: 
-		if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-			dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" );
-			return( !(KEEP_STREAM) );
-		}
-		break;
-	case END_NEGOTIATE:
-		break;
-	default: 
-		dprintf( D_ALWAYS, 
-				 "Got unexpected command (%d) from negotiator.\n", op );
-		break;
-	}
-
-	if( reqs_matched < max_reqs || reqs_rejected > 0 ) {
-		dprintf( D_ALWAYS, "Out of servers - %d reqs matched, %d reqs idle, "
-				 "%d reqs rejected\n", reqs_matched, max_reqs -
-				 reqs_matched, reqs_rejected ); 
-	} else {
-		// We are out of requests
-		dprintf( D_ALWAYS, "Out of requests - %d reqs matched, "
-				 "%d reqs idle\n", reqs_matched, max_reqs -
-				 reqs_matched ); 
-	}
+		// handle the rest of the negotiation protocol asynchronously
+	neg_handler->negotiate(sock);
 
 	return KEEP_STREAM;
-}
-
-
-/*
-  This function handles the negotiation protocol for a given request
-  ClassAd.  It returns an enum that describes the results.
-*/
-NegotiationResult
-DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s, 
-									  char const* remote_pool, 
-									  int reqs_matched, int /*max_reqs*/ )
-{
-	char	*claim_id = NULL;	// ClaimId for each match made
-	char	*sinful;
-	char	*machine_name;
-	int		perm_rval;
-	int		op;
-	PROC_ID	id;
-	match_rec *mrec;
-
-		// TODO: Can we do anything smarter w/ cluster and proc with
-		// all of this stuff?
-	id.cluster = id.proc = -1;
-
-	ContactStartdArgs *args;
-	ClassAd *my_match_ad;
-
-		// We're just going to return out of here when we're supposed
-		// to. 
-	while(1) {
-			/* Wait for manager to request job info */
-		
-		s->decode();
-		if( !s->code(op) ) {
-			dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-			s->end_of_message();
-			return NR_ERROR;
-		}
-
-			// All commands from CM during the negotiation cycle just
-			// send the command followed by eom, except PERMISSION,
-			// PERMISSION_AND_AD, and REJECTED_WITH_REASON. Do the
-			// end_of_message here, except for those commands.
-		if( (op != PERMISSION) && (op != PERMISSION_AND_AD) &&
-			(op != REJECTED_WITH_REASON) ) {
-			if( !s->end_of_message() ) {
-				dprintf( D_ALWAYS, "Can't receive eom from manager\n" );
-				return NR_ERROR;
-			}
-		}
-		
-		switch( op ) {
-		case REJECTED_WITH_REASON: {
-			char *diagnostic_message = NULL;
-			if( !s->code(diagnostic_message) ||
-				!s->end_of_message() ) {
-				dprintf( D_ALWAYS,
-						 "Can't receive request from manager\n" );
-				return NR_ERROR;
-			}
-				// TODO: Identify request in logfile
-			dprintf( D_FULLDEBUG, "Request rejected: %s\n",
-					 diagnostic_message );
-			req->Assign( ATTR_LAST_REJ_MATCH_REASON,
-						 diagnostic_message );
-			free(diagnostic_message);
-		}
-			// don't break: fall through to REJECTED case
-		case REJECTED:
-			req->Assign( ATTR_LAST_REJ_MATCH_TIME,
-						 (int)time(0) ); 
-
-			return NR_REJECTED;
-			break;
-
-		case SEND_JOB_INFO: {
-				// The Negotiator wants us to send it a job. 
-#if 0
-				// TODO: Figure out how all this stuff should work. 
-				// For now, we just don't do the checks.
-
-				// First, make sure we could start another
-				// shadow without violating some limit.
-			if( ! scheduler.canSpawnShadow(reqs_matched, max_reqs) ) { 
-					// We can't start another shadow.  Tell the
-					// negotiator we're done.
-				if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-						// We failed to talk to the CM
-					dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" ); 
-					return NR_ERROR;
-				} else {
-					return NR_LIMIT_REACHED;
-				}
-			}
-#endif // 0
-
-				// If we got this far, we can spawn another
-				// shadow, so keep going w/ our regular work. 
-
-				/* Send a job description */
-			s->encode();
-			if( !s->put(JOB_INFO) ) {
-				dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
-				return NR_ERROR;
-			}
-
-				// request match diagnostics
-			req->Assign(ATTR_WANT_MATCH_DIAGNOSTICS, true);
-
-					// Send the ad to the negotiator
-			if( !req->put(*s) ) {
-				dprintf( D_ALWAYS, "Can't send job ad to mgr\n" ); 
-				s->end_of_message();
-				return NR_ERROR;
-			}
-			if( !s->end_of_message() ) {
-				dprintf( D_ALWAYS, "Can't send job eom to mgr\n" );
-				return NR_ERROR;
-			}
-
-				// TODO: How to identify this request in the logs? 
-			dprintf( D_FULLDEBUG, "Sent request\n" );
-			break;
-		}
-
-		case PERMISSION:
-				// No negotiator since 7.1.3 should ever send this
-				// command, and older ones should not send it either,
-				// since we advertise WantResAd=True.
-			dprintf( D_ALWAYS, "Negotiator sent PERMISSION rather than expected PERMISSION_AND_AD!  Aborting.\n");
-			return NR_ERROR;
-		case PERMISSION_AND_AD:
-				// If things are cool, contact the startd.
-			dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
-
-#if 0
-			SetAttributeInt( id.cluster, id.proc,
-							 ATTR_LAST_MATCH_TIME, (int)time(0) );
-#endif
-
-			if( !s->get_secret(claim_id) ) {
-				dprintf( D_ALWAYS, "Can't receive ClaimId from mgr\n" ); 
-				return NR_ERROR;
-			}
-			my_match_ad = NULL;
-
-				// get startd ad from negotiator as well
-			my_match_ad = new ClassAd();
-			if( !my_match_ad->initFromStream(*s) ) {
-				dprintf( D_ALWAYS, "Can't get my match ad from mgr\n" ); 
-				delete my_match_ad;
-				free( claim_id );
-				return NR_ERROR;
-			}
-
-			if( !s->end_of_message() ) {
-				dprintf( D_ALWAYS, "Can't receive eom from mgr\n" );
-				if( my_match_ad ) {
-					delete my_match_ad;
-				}
-				free( claim_id );
-				return NR_ERROR;
-			}
-
-			{
-				ClaimIdParser idp( claim_id );
-				dprintf( D_PROTOCOL, "## 4. Received ClaimId %s\n",
-						 idp.publicClaimId() ); 
-			}
-
-			{
-				Daemon startd(my_match_ad,DT_STARTD,NULL);
-				if( !startd.addr() ) {
-					dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
-					my_match_ad->dPrint(D_ALWAYS);
-					delete my_match_ad;
-					my_match_ad = NULL;
-					break;
-				}
-				sinful = strdup( startd.addr() );
-			}
-
-				// sinful should now point to the sinful string of the
-				// startd we were matched with.
-			
-                // Now, create a match_rec for this resource
-				// Note, we want to claim this startd as the
-				// "DedicatedScheduler" owner, which is why we call
-				// owner() here...
-			mrec = new match_rec( claim_id, sinful, &id,
-			                       my_match_ad, owner(), remote_pool, true );
-
-			machine_name = NULL;
-			if( ! mrec->my_match_ad->LookupString(ATTR_NAME, &machine_name) ) {
-				dprintf( D_ALWAYS, "ERROR: No %s in resource ad: "
-						 "Aborting dedicated scheduler claim\n", ATTR_NAME );
-				delete mrec;
-					// it's lame we have to keep duplicating this code
-					// block, it'd be better if all these we MyString
-					// objects on the stack...
-				free( sinful );
-				free( claim_id );
-				sinful = NULL;
-				claim_id = NULL;
-				if( my_match_ad ) {
-					delete my_match_ad;
-					my_match_ad = NULL;
-				}
-				break;
-			}
-
-			match_rec *dummy;
-
-			if( all_matches->lookup(HashKey(machine_name), dummy) == 0) {
-					// Already have this match
-				dprintf(D_ALWAYS, "DedicatedScheduler::negotiate sent match for %s, but we've already got it, deleting old one\n", machine_name);
-				DelMrec(dummy);
-			}
-
-				// Next, insert this match_rec into our hashtables
-			all_matches->insert( HashKey(machine_name), mrec );
-			all_matches_by_id->insert( HashKey(mrec->claimId()), mrec );
-			num_matches++;
-			
-				/* 
-				   Here we don't want to call contactStartd directly
-				   because we do not want to block the negotiator for
-				   this, and because we want to minimize the
-				   possibility that the startd will have to block/wait
-				   for the negotiation cycle to finish before it can
-				   finish the claim protocol.  So...we enqueue the
-				   args for a later call.  (The later call will be
-				   made from the startdContactSockHandler)
-				*/
-
-			args = new ContactStartdArgs( claim_id, sinful, true );
-
-
-
-				// Now that the info is stored in the above
-				// object, we can deallocate all of our strings
-				// and other memory.
-
-			free( sinful );
-			sinful = NULL;
-			free( claim_id );
-			claim_id = NULL;
-			if( my_match_ad ) {
-				delete my_match_ad;
-				my_match_ad = NULL;
-			}
-			free(machine_name);
-			machine_name = NULL;
-				
-			if( scheduler.enqueueStartdContact(args) ) {
-				perm_rval = 1;	// happiness
-			} else {
-				perm_rval = 0;	// failure
-				delete( args );
-			}
-				
-			reqs_matched += perm_rval;
-#if 0 
-				// Once we've got all this buisness w/ "are we
-				// spawning a new shadow?" worked out, we'll need to
-				// do this so our MAX_JOBS_RUNNING check still works. 
-			scheduler.addActiveShadows( perm_rval *
-										shadow_num_increment );  
-#endif
-				// We're done, return success
-			return NR_MATCHED;
-			break;
-
-		case END_NEGOTIATE:
-			dprintf( D_ALWAYS, "Lost priority - %d requests matched\n", 
-					 reqs_matched );
-
-			return NR_END_NEGOTIATE;
-			break;
-
-		default:
-			dprintf( D_ALWAYS, "Got unexpected request (%d)\n", op );
-			return NR_ERROR;
-			break;
-		}
-	}
-	EXCEPT( "while(1) loop exited!" );
-	return NR_ERROR;
 }
 
 void
@@ -3318,6 +3006,39 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 	}
 }
 
+match_rec *
+DedicatedScheduler::AddMrec(
+	char const* claim_id,
+	char const* startd_addr,
+	char const* slot_name,
+	PROC_ID job_id,
+	const ClassAd* match_ad,
+	char const *remote_pool
+)
+{
+		// Now, create a match_rec for this resource
+		// Note, we want to claim this startd as the
+		// "DedicatedScheduler" owner, which is why we call
+		// owner() here...
+	match_rec *mrec = new match_rec( claim_id, startd_addr, &job_id,
+									 match_ad,owner(),remote_pool,true);
+
+	match_rec *existing_mrec;
+	if( all_matches->lookup(HashKey(slot_name), existing_mrec) == 0) {
+			// Already have this match
+		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, deleting old one\n", slot_name);
+		DelMrec(existing_mrec);
+	}
+
+		// Next, insert this match_rec into our hashtables
+	all_matches->insert( HashKey(slot_name), mrec );
+	all_matches_by_id->insert( HashKey(mrec->claimId()), mrec );
+
+	removeRequest( job_id );
+
+	return mrec;
+}
+
 
 bool
 DedicatedScheduler::DelMrec( match_rec* rec )
@@ -3488,7 +3209,7 @@ DedicatedScheduler::publishRequestAd( void )
 		// Finally, we need to tell it how many "jobs" we want to
 		// negotiate.  These are really how many resource requests
 		// we've got. 
-	ad.Assign( ATTR_IDLE_JOBS, resource_requests->Length() ); 
+	ad.Assign( ATTR_IDLE_JOBS, resource_requests.size() ); 
 	
 		// TODO: Eventually, we could try to publish this info as
 		// well, so condor_status -sub and friends could tell people
@@ -3512,8 +3233,25 @@ DedicatedScheduler::generateRequest( ClassAd* job )
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
-	resource_requests->enqueue(id);
+	resource_requests.push_back(id);
 	return;
+}
+
+void
+DedicatedScheduler::removeRequest( PROC_ID job_id )
+{
+		// Remove the first instance of the specified job id.
+
+	std::list<PROC_ID>::iterator id;
+	for(id = resource_requests.begin();
+		id != resource_requests.end();
+		id++)
+	{
+		if( *(id) == job_id ) {
+			resource_requests.erase( id );
+			break;
+		}
+	}
 }
 
    
@@ -3572,17 +3310,14 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 void
 DedicatedScheduler::clearResourceRequests( void )
 {
-	PROC_ID id;
-	while( resource_requests->dequeue(id) >= 0 ) {
-		;
-	}
+	resource_requests.clear();
 }
 
 
 bool
 DedicatedScheduler::requestResources( void )
 {
-	if( resource_requests->Length() > 0 ) {
+	if( resource_requests.size() > 0 ) {
 			// If we've got things we want to grab, publish a ClassAd
 			// to ask to negotiate for them...
 		displayResourceRequests();
@@ -3624,7 +3359,7 @@ DedicatedScheduler::displayResourceRequests( void )
 {
 	dprintf( D_FULLDEBUG,
 			 "Waiting to negotiate for %d dedicated resource request(s)\n",
-			 resource_requests->Length() );
+			 resource_requests.size() );
 }
 
 

@@ -108,6 +108,7 @@ NeedsBasicAnalysis( ClassAd *request ) {
   case HELD:
   case REMOVED:
   case COMPLETED:
+  case TRANSFERRING_OUTPUT:
     return false;
   default:
     return true;

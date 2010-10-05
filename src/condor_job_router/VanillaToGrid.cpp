@@ -332,6 +332,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 			set_job_status_idle(orig,update);
 			break;
 		case RUNNING:
+		case TRANSFERRING_OUTPUT:
 			set_job_status_running(orig,update);
 			break;
 		case HELD:

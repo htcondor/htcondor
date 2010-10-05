@@ -251,13 +251,15 @@ SameAs(const ExprTree *tree) const
             ArgumentList::const_iterator a1 = arguments.begin();
             ArgumentList::const_iterator a2 = other_fn->arguments.begin();
             while (a1 != arguments.end()) {
-                if (a2 == arguments.end()) {
+                if (a2 == other_fn->arguments.end()) {
                     is_same = false;
                     break;
                 } else if (!(*a1)->SameAs((*a2))) {
                     is_same = false;
                     break;
                 }
+				a1++;
+				a2++;
             }
         } else {
             is_same = false;

@@ -1,0 +1,179 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#ifndef DC_SCHEDD_NEGOTIATE_H
+#define DC_SCHEDD_NEGOTIATE_H
+
+#include "dc_message.h"
+#include "prio_rec.h"
+
+/*
+ * ResourceRequestCluster
+ *
+ * Represents a set of jobs sharing the same priority and auto cluster id.
+ *
+ * The auto cluster ids are only assumed to be internally consistent
+ * at the time the snapshot of the job queue was taken.  They are not used
+ * to reference any external data structure.
+ */
+class ResourceRequestCluster {
+ public:
+	ResourceRequestCluster(int auto_cluster_id);
+
+		// appends a job to this cluster
+	void addJob(PROC_ID job_id);
+
+		// returns true if a job was found; o.w. false
+	bool popJob(PROC_ID &job_id);
+
+		// returns number of jobs in this cluster
+	size_t size() { return m_job_ids.size(); }
+
+		// returns the auto cluster id for this cluster
+	int getAutoClusterId() { return m_auto_cluster_id; }
+ private:
+
+	int m_auto_cluster_id;
+	std::list<PROC_ID> m_job_ids;
+};
+
+/*
+ * ResourceRequestList
+ *
+ * Contains an ordered list of job auto clusters for matchmaking.  All
+ * jobs in the list are owned by the same user (or accounting group).
+ * 
+ * The ResourceRequestClusters in this list are deleted when the list
+ * is deleted.
+ */
+class ResourceRequestList: public std::list<ResourceRequestCluster *> {
+ public:
+	~ResourceRequestList();
+};
+
+/*
+ * ScheddNegotiate
+ *
+ * This class handles the schedd-side of the negotiation loop.  It is
+ * derived from DCMsg in order to take advantage of its asynchronous
+ * message passing framework.  Essentially, there is a non-blocking read
+ * before each negotiation operation that we receive from the negotiator.
+ * This allows the schedd to do other things while the negotiator is
+ * busy finding a match for the job.
+ *
+ * Rather than directly calling functions of the schedd, virtual methods
+ * are used for this purpose, making this class reusable for both the
+ * main schedd, the dedicated schedd, and possibly other cases.
+ *
+ */
+
+class ScheddNegotiate: public DCMsg {
+ public:
+	ScheddNegotiate(
+		int cmd,
+		ResourceRequestList *jobs,
+		char const *owner,
+		char const *remote_pool
+	);
+
+	virtual ~ScheddNegotiate();
+
+		// Begins asynchronously processing negotiation operations
+		// sent by the negotiator.  Assumes that the initial
+		// negotiation header has already been read (the owner,
+		// significant attributes, etc).
+	void negotiate(Sock *sock);
+
+		// returns the job owner name (or accounting group) we are serving
+	char const *getOwner();
+
+		// returns name of remote pool or NULL if none
+	char const *getRemotePool();
+
+	int getNumJobsMatched() { return m_jobs_matched; }
+
+	int getNumJobsRejected() { return m_jobs_rejected; }
+
+		///////////// virtual functions for scheduler to define  //////////////
+
+		// Returns false if job does not exist.  Otherwise, job_ad is
+		// made to be a copy of the requested job.
+	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad ) = 0;
+
+		// returns false if we should still try getting a match
+	virtual bool scheduler_skipJob(PROC_ID job_id) = 0;
+
+		// a job was rejected by the negotiator
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason) = 0;
+
+		// returns true if the match was successfully handled (so far)
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name) = 0;
+
+	virtual void scheduler_handleNegotiationFinished( Sock *sock ) = 0;
+
+		///////// end of virtual functions for scheduler to define  //////////
+
+ private:
+	ResourceRequestList *m_jobs;
+	std::set<int> m_rejected_auto_clusters;
+
+	std::string m_owner;
+	std::string m_remote_pool;
+
+	int m_current_auto_cluster_id;
+	PROC_ID m_current_job_id;
+	ClassAd m_current_job_ad;
+
+	int m_jobs_rejected;
+	int m_jobs_matched;
+
+	bool m_negotiation_finished;
+
+		// data in message received from negotiator
+	int m_operation;             // the negotiation operation
+	std::string m_reject_reason; // why the job was rejected
+	std::string m_claim_id;      // the string "null" if none
+	ClassAd m_match_ad;          // the machine we matched to
+
+		// Updates m_current_job_id to next job in the list
+		// returns false if no more jobs
+	bool nextJob();
+
+		// returns true if the specified cluster was rejected
+	bool getAutoClusterRejected(int auto_cluster_id);
+
+		// marks the specified cluster as rejected
+	void setAutoClusterRejected(int auto_cluster_id);
+
+	bool sendJobInfo(Sock *sock);
+
+	bool fixupPartitionableSlot(PROC_ID job_id, ClassAd *job_ad, ClassAd *match_ad, char const *slot_name);
+
+		/////////////// DCMsg hooks ///////////////
+
+	virtual bool readMsg( DCMessenger *messenger, Sock *sock );
+
+	virtual bool writeMsg( DCMessenger *messenger, Sock *sock );
+
+	virtual MessageClosureEnum messageReceived( DCMessenger *, Sock *);
+
+		/////////// End of DCMsg hooks ////////////
+};
+
+#endif
