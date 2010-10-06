@@ -29,6 +29,11 @@ The details of each version are described below.
 % gittrac #1524
 \item Condor can now be built on Mac OS X 10.6.
 
+\item The \Condor{master} ``shutdown program'' (configured via 
+  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$}) is now run with root (UNIX)
+  or administrator (Windows) privileges.  The adminstrator must insure
+  that this cannot be used in such a way as to violate system integrity.
+
 \end{itemize}
 
 
@@ -204,6 +209,11 @@ its checkpoint or from which it might have failed to restore its checkpoint.
 
 \item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
 while handling grid-type cream jobs.
+
+% gittrac #1696
+\item Fixed a bug in the \Condor{master} that prevented it from
+  executing the ``shutdown program'' as root (UNIX) or administrator
+  (Windows).
 
 \end{itemize}
 

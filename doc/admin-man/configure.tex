@@ -1,4 +1,4 @@
->%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-Condor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -3142,6 +3142,10 @@ NEGOTIATOR_USERID = condor
   The manual page for \Condor{set\_shutdown} on
   page~\pageref{man-condor-set-shutdown} contains details on the use
   of this program.
+
+  \Note This program will be run with root (UNIX) or administrator
+  (Windows) privileges.  The adminstrator must insure that this cannot
+  be used in such a way as to violate system integrity.
 
 \label{param:MasterBackoffConstant}
 \item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
