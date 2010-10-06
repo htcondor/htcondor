@@ -100,6 +100,14 @@ time_t	DebugLastMod = 0;
 int		DebugUseTimestamps = 0;
 
 /*
+ * When true, don't exit even if we fail to open the debug output file.
+ * Added so that on Win32 the kbdd (which is running as a user) won't quit 
+ * if it does't have access to the directory where log files live.
+ *
+ */
+int      DebugContinueOnOpenFailure = 0;
+
+/*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
@@ -548,7 +556,12 @@ debug_lock(int debug_level, const char *mode)
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
 			save_errno = errno;
-#if !defined(WIN32)
+#ifdef WIN32
+			if (DebugContinueOnOpenFailure) {
+				_set_priv(priv, __FILE__, __LINE__, 0);
+				return NULL;
+			}
+#else
 			if( errno == EMFILE ) {
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
@@ -880,9 +893,12 @@ open_debug_file(int debug_level, char flags[])
 		if( debug_level == 0 ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 DebugFile[debug_level] );
-			_condor_dprintf_exit( save_errno, msg_buf );
+
+			if ( ! DebugContinueOnOpenFailure) {
+			    _condor_dprintf_exit( save_errno, msg_buf );
+			}
 		}
-		return NULL;
+		// fp is guaranteed to be NULL here.
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);

@@ -719,7 +719,14 @@ drop_core_in_log( void )
 	char* ptmp = param("LOG");
 	if ( ptmp ) {
 		if ( chdir(ptmp) < 0 ) {
-			EXCEPT("cannot chdir to dir <%s>",ptmp);
+#ifdef WIN32
+			if (MATCH == strcmpi(get_mySubSystem()->getName(), "KBDD")) {
+				dprintf (D_FULLDEBUG, "chdir() to LOG directory failed for KBDD, "
+					     "cannot drop core in LOG dir\n");
+				return;
+			}
+#endif
+    	EXCEPT("cannot chdir to dir <%s>",ptmp);
 		}
 	} else {
 		dprintf( D_FULLDEBUG, 

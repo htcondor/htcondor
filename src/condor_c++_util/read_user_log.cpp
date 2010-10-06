@@ -872,7 +872,20 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	if ( !m_fp ) {
 		return ULOG_NO_EVENT;
 	}
-
+	
+	/*
+		09/27/2010 (cweiss): Added this check because so far the reader could get stuck
+		in a non-recoverable state when ending up in feof. (Example scenario: XML writer 
+		and reader on the same file, reader reads in 
+			while (reader.readEvent(event) == ULOG_OK) ...
+		mode, locks are *not* on the file but on  designated local disk lock files, which
+		means that the reader's file pointer is not tampered with. Then XML writer
+		writes another event -- this will never be discovered by the reader.)
+	*/
+	if ( feof(m_fp) ) {
+		clearerr(m_fp);
+	}
+	
 	ULogEventOutcome	outcome = ULOG_OK;
 	if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_UNKNOWN ) ) {
 	    if( !determineLogType() ) {

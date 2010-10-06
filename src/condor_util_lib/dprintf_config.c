@@ -27,7 +27,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_string.h"
+#include "condor_string.h" 
 #include "condor_sys_types.h"
 
 #if HAVE_BACKTRACE
@@ -45,6 +45,7 @@ extern char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;
 extern time_t	DebugLastMod;
 extern int		DebugUseTimestamps;
+extern int      DebugContinueOnOpenFailure;
 
 extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
@@ -85,6 +86,14 @@ install_backtrace_handler(void)
 	install_sig_handler_with_mask(SIGBUS, &fullset, sig_backtrace_handler);
 }
 #endif
+
+int
+dprintf_config_ContinueOnFailure ( int fContinue )
+{
+    int fOld = DebugContinueOnOpenFailure;
+	DebugContinueOnOpenFailure = fContinue;
+	return fOld;
+}
 
 void
 dprintf_config( const char *subsys )
@@ -199,8 +208,28 @@ dprintf_config( const char *subsys )
 				}
 
 				if( DebugFP == NULL && debug_level == 0 ) {
-					EXCEPT("Cannot open log file '%s'",
-						   DebugFile[debug_level]);
+                   #ifdef WIN32
+					/*
+					** If we could not open the log file, we might want to keep running anyway.
+					** If we do, then set the log filename to NUL so we don't keep trying
+					** (and failing) to open the file.
+					*/
+					if (DebugContinueOnOpenFailure) {
+
+						// change the debug file to point to the NUL device.
+						static const char strDevNull[] = "NUL";//"\\\\.\\Device\\Null";
+						char * psz = (char*)malloc(sizeof(strDevNull));
+						strcpy(psz, strDevNull);
+						if (DebugFile[debug_level]) 
+							free(DebugFile[debug_level]);
+						DebugFile[debug_level] = psz;
+
+					} else
+                   #endif
+					{
+					    EXCEPT("Cannot open log file '%s'",
+						       DebugFile[debug_level]);
+					}
 				}
 
 				if (DebugFP) (void)debug_unlock( debug_level );
