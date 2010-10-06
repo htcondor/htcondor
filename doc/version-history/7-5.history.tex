@@ -342,6 +342,10 @@ attempts to distinguish between the two.
 for a Cream grid universe job, Condor would write a hold event to the job
 log, but not actually put the job on hold.
 
+% gittrac #1694
+\item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
+while handling grid-type cream jobs destined for different resources.
+
 \end{itemize}
 
 \noindent Known Bugs:
