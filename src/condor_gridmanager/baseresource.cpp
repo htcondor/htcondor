@@ -629,7 +629,7 @@ dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 
 void BaseResource::StartBatchStatusTimer()
 {
-	if(m_batchPollTid) {
+	if(m_batchPollTid != TIMER_UNSET) {
 		EXCEPT("BaseResource::StartBatchStatusTimer called more than once!");
 	}
 	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());
