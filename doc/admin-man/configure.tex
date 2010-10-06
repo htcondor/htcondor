@@ -3137,8 +3137,8 @@ NEGOTIATOR_USERID = condor
   \Condor{master} will log an error and ignore the command.  If a
   match is found, the \Condor{master} will attempt to verify the
   program, and it will store the path and program name.  When the
-  \Condor{master} shuts down, the program is then executed as
-  described above.
+  \Condor{master} shuts down (i.e. just before it exits),
+  the program is then executed as described above.
   The manual page for \Condor{set\_shutdown} on
   page~\pageref{man-condor-set-shutdown} contains details on the use
   of this program.
