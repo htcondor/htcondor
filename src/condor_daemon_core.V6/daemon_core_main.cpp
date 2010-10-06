@@ -289,7 +289,9 @@ DC_Exit( int status, const char *shutdown_program )
 		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
+		priv_state p = set_root_priv( );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		set_priv( p );
 		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
 				 exec_status, errno, strerror(errno) );
 #     elif defined(WIN32)
@@ -297,7 +299,9 @@ DC_Exit( int status, const char *shutdown_program )
 				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
+		priv_state p = set_root_priv( );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		set_priv( p );
 		if ( exec_status ) {
 			dprintf( D_ALWAYS, "**** _execl() FAILED %d %d %s\n",
 					 exec_status, errno, strerror(errno) );
