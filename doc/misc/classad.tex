@@ -1005,7 +1005,7 @@ through the \Condor{status} and \Condor{q} tools which allow users to
 supply ClassAd constraint expressions from the command line.
 
 Needed syntax is different on Unix and Windows platforms, 
-due to the interpretation characters in forming command-line arguments.
+due to the interpretation of characters in forming command-line arguments.
 The expression must be a single command-line argument,
 and the resulting examples differ for the platforms.
 For Unix shells,
@@ -1013,10 +1013,10 @@ single quote marks are used to delimit a single argument.
 For a Windows command window,
 double quote marks are used to delimit a single argument.
 Within the argument,
-Unix escapes the double quote mark with a backslash followed by a double
+Unix escapes the double quote mark by prepending a backslash to the double
 quote mark.
-Windows escapes the double quote mark with two consecutive double
-quote marks (no spaces in between).
+Windows escapes the double quote mark by prepending another double
+quote mark. There may not be spaces in between.
 
 Here are several examples.
 To find all computers which have had their keyboards idle for 
