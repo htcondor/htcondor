@@ -260,7 +260,8 @@ provided in the job's \SubmitCmd{grid\_resource} attribute.
   \Opt{-set} and \Macro{ENABLE\_PERSISTENT\_CONFIG} is false. The previous
   output implied that the operation succeeded when in fact it did not.
 
-\item Since 7.5.2, the following \Condor{job\_router} features were
+\item Since Condor version 7.5.2,
+  the following \Condor{job\_router} features were
   effectively non-functional: \Attr{UseSharedX509UserProxy},
   \Attr{JobShouldBeSandboxed}, and \Attr{JobFailureTest}.
 
@@ -331,20 +332,23 @@ a GAHP server it's using writes a large amount of data to its stderr.
 % gittrac #1653
 % gittarc #1475
 \item Fixed a bug that could cause the \Condor{gridmanager} to wrongly
-conclude that a \Expr{gt2} (i.e. GRAM2) server was a \Expr{gt5} (i.e. GRAM5)
-server. Such a conclusion can be disastrous, as Condor's mechanisms to
-prevent overloading a \Expr{gt2} server are then disabled. New configuration
-parameter \MacroNI{GRAM\_VERSION\_DETECTION} can be used to disable Condor's
-attempts to distinguish between the two.
+conclude that a \Expr{gt2} (that is, GRAM2) server was a \Expr{gt5}
+(that is, GRAM5) server.
+Such a conclusion can be disastrous, as Condor's mechanisms to
+prevent overloading a \Expr{gt2} server are then disabled. The new
+configuration variable \Macro{GRAM\_VERSION\_DETECTION} can be used 
+to disable Condor's attempts to distinguish between the two.
 
 % gittrac #1689
-\item Fixed a bug introduced in Condor 7.5.3. When file transfer failed
-for a Cream grid universe job, Condor would write a hold event to the job
-log, but not actually put the job on hold.
+\item Fixed a bug introduced in Condor version 7.5.3. 
+When file transfer failed for a \SubmitCmd{grid} universe job of grid type 
+cream,
+Condor would write a hold event to the job log,
+but not actually put the job on hold.
 
 % gittrac #1694
 \item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
-while handling grid-type cream jobs destined for different resources.
+while handling cream grid type jobs destined for different resources.
 
 \end{itemize}
 
