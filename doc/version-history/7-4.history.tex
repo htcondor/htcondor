@@ -56,6 +56,14 @@ was only supported by the Windows version of \Condor{submit}.
 
 \begin{itemize}
 
+% gittrac 1434
+\item Fixed bad behavior in \Condor{quill} where, under certain error
+conditions, many copies of the \File{schedd\_sql.log} file would be
+inserted into the database, filling up the disk volume used by the
+database. As a consequence of this bug fix, the \verb@LogBody@ column
+for each row in the \verb@Error_SqlLogs@ table will be empty. Please
+consult the \Condor{quill} daemon log file for the error instead.
+
 % gittrac 1654
 \item Fixed a bug with how the \SubmitCmd{standard} universe 
 remote system call \Syscall{getrlimit} functioned.
@@ -189,6 +197,14 @@ host name.
   \verb@LocalUserLog::logStarterError()@ when the \Condor{starter} fails to
   communicate with the \Condor{shadow} before the job has started.
 
+% gittrac #1602
+\item Fixed the event log and shadow log for standard universe jobs to 
+identify the checkpoint server on which a job might have failed to store 
+its checkpoint or from which it might have failed to restore its checkpoint.
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
+while handling grid-type cream jobs.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -207,6 +223,11 @@ host name.
 
 \item Section~\ref{sec:file-transfer} on Condor's File Transfer Mechanism
 has been revised and updated.
+
+\item Section~\ref{classad-query-examples}, providing examples of utilizing
+ClassAd expressions within the \Opt{-constraint} option of \Condor{q}
+or \Condor{status} commands has been expanded to clarify both
+Unix and Windows platform specifics.
 
 \end{itemize}
 

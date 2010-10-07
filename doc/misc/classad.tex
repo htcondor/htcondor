@@ -1102,14 +1102,36 @@ respectively.  If the actual type of the expression is not of the expected
 type, the value is assumed to be zero.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Querying with ClassAd Expressions}
+\subsubsection{\label{classad-query-examples}Querying with ClassAd Expressions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The flexibility of this system may also be used when querying ClassAds
 through the \Condor{status} and \Condor{q} tools which allow users to
 supply ClassAd constraint expressions from the command line.
 
-For example, to find all computers which have had their keyboards idle for 
-more than 20 minutes and have more than 100 MB of memory:
+Needed syntax is different on Unix and Windows platforms, 
+due to the interpretation of characters in forming command-line arguments.
+The expression must be a single command-line argument,
+and the resulting examples differ for the platforms.
+For Unix shells,
+single quote marks are used to delimit a single argument.
+For a Windows command window,
+double quote marks are used to delimit a single argument.
+Within the argument,
+Unix escapes the double quote mark by prepending a backslash to the double
+quote mark.
+Windows escapes the double quote mark by prepending another double
+quote mark. There may not be spaces in between.
+
+Here are several examples.
+To find all computers which have had their keyboards idle for 
+more than 20 minutes and have more than 100 MB of memory,
+the desired ClassAd expression is
+\footnotesize
+\begin{verbatim}
+KeyboardIdle > 20*60 && Memory > 100
+\end{verbatim}
+\normalsize
+On a Unix platform, the command appears as
 \footnotesize
 \begin{verbatim}
 % condor_status -const 'KeyboardIdle > 20*60 && Memory > 100'
@@ -1134,7 +1156,14 @@ beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
 \end{verbatim}
 \normalsize
 
-Here is an example that utilizes a regular expression
+The Windows equivalent command is
+\footnotesize
+\begin{verbatim}
+>condor_status -const "KeyboardIdle > 20*60 && Memory > 100"
+\end{verbatim}
+\normalsize
+
+Here is an example for a Unix platform that utilizes a regular expression
 ClassAd function to list specific information.
 A file contains ClassAd information.
 \Condor{advertise} is used to inject this information,
@@ -1163,6 +1192,41 @@ Generic              None                 random-test
 \end{verbatim}
 \normalsize
 
-Similar flexibility exists in querying job queues in the Condor system.
+The ClassAd expression describing a machine that
+advertises a Windows NT operating system:
+\footnotesize
+\begin{verbatim}
+OpSys == "WINNT51"
+\end{verbatim}
+\normalsize
+Here are three equivalent ways on a Unix platform to list all machines
+advertising a Windows NT operating system.
+Spaces appear in these examples to show where they are permitted.
+\footnotesize
+\begin{verbatim}
+% condor_status -constraint ' OpSys == "WINNT51"  '
+\end{verbatim}
+\normalsize
+\footnotesize
+\begin{verbatim}
+% condor_status -constraint OpSys==\"WINNT51\"
+\end{verbatim}
+\normalsize
+\footnotesize
+\begin{verbatim}
+% condor_status -constraint "OpSys==\"WINNT51\""
+\end{verbatim}
+\normalsize
+
+The equivalent command on a Windows platform to list all machines
+advertising a Windows NT operating system must delimit the single
+argument with double quote marks, and then escape the needed
+double quote marks that identify the string within the expression. 
+Spaces appear in this example where they are permitted.
+\footnotesize
+\begin{verbatim}
+>condor_status -constraint " OpSys == ""WINNT51"" "
+\end{verbatim}
+\normalsize
 
 \index{ClassAd|)}
