@@ -7385,15 +7385,15 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:GramVersionDetection}
 \item[\Macro{GRAM\_VERSION\_DETECTION}]
-  A boolean parameter that defaults to \Expr{True}.
-  If set to \Expr{True}, the \Condor{gridmanager} treats grid-types
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, the \Condor{gridmanager} treats grid types
   \Expr{gt2} and \Expr{gt5} identically, and queries each server to
-  determine which protocol it's using.
-  If set to \Expr{False}, the \Condor{gridmanager} trusts the grid-type
+  determine which protocol it is using.
+  When \Expr{False}, the \Condor{gridmanager} trusts the grid type
   provided in job attribute \Attr{GridResource}, and treats the server
   accordingly.
   Beware that identifying a \Expr{gt2} server as \Expr{gt5} can result in
-  the server being overloaded if a large number of jobs are submitted.
+  overloading the server, if a large number of jobs are submitted.
 
 \label{param:GridftpUrlBase} 
 \item[\Macro{GRIDFTP\_URL\_BASE}]
