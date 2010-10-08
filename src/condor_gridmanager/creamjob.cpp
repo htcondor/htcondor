@@ -910,7 +910,7 @@ void CreamJob::doEvaluateState()
 			// jobmanager occassionally to make it's still alive.
 			if ( remoteState == CREAM_JOB_STATE_DONE_OK ) {
 				gmState = GM_STAGE_OUT;
-			} else if ( remoteState == CREAM_JOB_STATE_DONE_FAILED || remoteState == CREAM_JOB_STATE_ABORTED ) {
+			} else if ( remoteState == CREAM_JOB_STATE_DONE_FAILED || remoteState == CREAM_JOB_STATE_ABORTED || remoteState == CREAM_JOB_STATE_CANCELLED ) {
 				gmState = GM_PURGE;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
