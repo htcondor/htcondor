@@ -1001,7 +1001,15 @@ They are not needed for remote I/O or for the condor daemons.
 			alloc( rlp, RLIMIT_SIZE );
 		}
 
-	int getrlimit( int resource, struct rlimit *rlp ) {
+	int getrlimit( int resource, struct rlimit *rlp )
+#	if defined(LINUX) && defined(I386)
+	/* We use a local_name of ugetrlimit here because SYS_getrlimit on
+		i386 systems is fixated to a 2gb maximum. SYS_ugetrlimit
+		is the preferred system call interface into the i386 kernel to
+		get/set the higher values and deal with RLIM_INFINITY properly. */
+	: local_name(ugetrlimit)
+#	endif
+	{
 		out code( rlp );
 		alloc( rlp, RLIMIT_SIZE );
 	}

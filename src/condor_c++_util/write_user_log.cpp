@@ -243,10 +243,13 @@ WriteUserLog::Configure( bool force )
 	m_global_state = new WriteUserLogState( );
 
 #if !defined(WIN32)	
-	bool new_locking = param_boolean("NEW_LOCKING", false);
+	bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (new_locking){
 		m_rotation_lock = new FileLock(m_global_path, true, false);
+		if (m_rotation_lock->initSucceeded()) {
 			goto newLockingContinue;			
+		}
+		delete m_rotation_lock;
 	}
 #endif	
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
@@ -457,7 +460,12 @@ WriteUserLog::openFile(
 	(void)  log_as_user;	// Quiet warning
 	int 	fd = 0;
 
-	if ( file && strcmp(file,UNIX_NULL_FILE)==0 ) {
+	if ( file == NULL ) {
+		dprintf( D_ALWAYS, "WriteUserLog::openFile: NULL filename!\n" );
+		return false;
+	}
+
+	if ( strcmp(file,UNIX_NULL_FILE)==0 ) {
 		// special case - deal with /dev/null.  we don't really want
 		// to open /dev/null, but we don't want to fail in this case either
 		// because this is common when the user does not want a log, but
@@ -514,11 +522,13 @@ WriteUserLog::openFile(
 	// prepare to lock the file.
 	if ( use_lock ) {
 #if !defined(WIN32)
-		bool new_locking = param_boolean("NEW_LOCKING", false);
+		bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 			
 		if (new_locking) {
 			lock = new FileLock(file, true, false);
-			return true;
+			if ( lock->initSucceeded() )
+				return true;
+			delete lock;
 		}		
 #endif	
 		lock = new FileLock( fd, fp, file );

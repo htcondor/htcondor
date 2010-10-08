@@ -738,7 +738,7 @@ static bool test_lookup_integer_first() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "A";
+	const char* attribute_name = "A";
 	int actual = -1;
 	classad.LookupInteger(attribute_name, actual);
 	int expect = 1;
@@ -761,7 +761,7 @@ static bool test_lookup_integer_middle() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "B";
+	const char* attribute_name = "B";
 	int actual = -1;
 	classad.LookupInteger(attribute_name, actual);
 	int expect = 2;
@@ -784,7 +784,7 @@ static bool test_lookup_integer_last() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "C";
+	const char* attribute_name = "C";
 	int actual = -1;
 	classad.LookupInteger(attribute_name, actual);
 	int expect = 3;
@@ -809,7 +809,7 @@ static bool test_eval_bool_true() {
 		"machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "DoesMatch";
+	const char* attribute_name = "DoesMatch";
 	int actual = -1;
 	classad.EvalBool(attribute_name, NULL, actual);
 	int expect = 1;
@@ -833,7 +833,7 @@ static bool test_eval_bool_false() {
 	const char* classad_string = "\tDoesntMatch = \"a\" =?= \"A\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "DoesntMatch";
+	const char* attribute_name = "DoesntMatch";
 	int actual = -1;
 	classad.EvalBool(attribute_name, NULL, actual);
 	int expect = 0;
@@ -857,7 +857,7 @@ static bool test_lookup_expr_error_or_false() {
 	const char* classad_string = "\tE = FALSE || ERROR";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "E";
+	const char* attribute_name = "E";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
 	EvalResult val;
 	int actual1 = EvalExprTree(tree, &classad, NULL, &val);
@@ -884,7 +884,7 @@ static bool test_lookup_expr_error_and() {
 	const char* classad_string = "\tL = \"foo\" && ERROR";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "L";
+	const char* attribute_name = "L";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
 	EvalResult val;
 	int actual1 = EvalExprTree(tree, &classad, NULL, &val);
@@ -911,7 +911,7 @@ static bool test_lookup_expr_error_and_true() {
 	const char* classad_string = "\tM = TRUE && ERROR";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "M";
+	const char* attribute_name = "M";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
 	EvalResult val;
 	int actual1 = EvalExprTree(tree, &classad, NULL, &val);
@@ -938,9 +938,9 @@ static bool test_lookup_string_normal() {
 	const char* classad_string = "\tD = \"alain\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "D";
+	const char* attribute_name = "D";
 	int expectInt = 1;
-	char* expectString = "alain";
+	const char* expectString = "alain";
 	char* result;
 	int found = classad.LookupString(attribute_name, &result);
 	emit_input_header();
@@ -1002,9 +1002,9 @@ static bool test_lookup_string_file() {
 	emit_test("Test LookupString() on an attribute in a classad that was read"
 		" from a file.");
 	compat_classad::ClassAd* classad = get_classad_from_file();
-	char* attribute_name = "D";
+	const char* attribute_name = "D";
 	int expectInt = 1;
-	char* expectString = "alain";
+	const char* expectString = "alain";
 	char* result;
 	int found = classad->LookupString(attribute_name, &result);
 	emit_input_header();
@@ -1031,7 +1031,7 @@ static bool test_get_my_type_name_no() {
 		"D='2001-04-05T12:14:15'\n\t\tG=GetTime(1)\n\t\tH=foo(1)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* expect = "";
+	const char* expect = "";
 	const char* result = classad.GetMyTypeName();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -1051,7 +1051,7 @@ static bool test_get_my_type_name_yes() {
 		"\n\t\tMyType=\"foo\"\n\t\tTargetType=\"blah\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* expect = "foo";
+	const char* expect = "foo";
 	const char* result = classad.GetMyTypeName();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -1072,7 +1072,7 @@ static bool test_get_target_type_name_no() {
 		"D='2001-04-05T12:14:15'\n\t\tG=GetTime(1)\n\t\tH=foo(1)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* expect = "";
+	const char* expect = "";
 	const char* result = classad.GetTargetTypeName();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -1093,7 +1093,7 @@ static bool test_get_target_type_name_yes() {
 		"D = \"alain\"\n\t\tMyType=\"foo\"\n\t\tTargetType=\"blah\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* expect = "blah";
+	const char* expect = "blah";
 	const char* result = classad.GetTargetTypeName();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -1110,9 +1110,9 @@ static bool test_get_target_type_name_yes() {
 static bool test_is_a_match_true() {
 	emit_test("Test that IsAMatch() returns true for two classads that "
 		"match.");
-    char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
+    const char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
-    char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
+    const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner == \"alain\")";
 	compat_classad::ClassAd classad1, classad2;
 	classad1.initFromString(classad_string1, NULL);
@@ -1135,9 +1135,9 @@ static bool test_is_a_match_true() {
 static bool test_is_a_match_true_reverse() {
 	emit_test("Test that IsAMatch() returns true for two classads that "
 		"match with the arguments in reverse order.");
-    char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
+    const char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
-    char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
+    const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner == \"alain\")";
 	compat_classad::ClassAd classad1, classad2;
 	classad1.initFromString(classad_string2, NULL);
@@ -1160,9 +1160,9 @@ static bool test_is_a_match_true_reverse() {
 static bool test_is_a_match_false_memory() {
 	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a memory attribute difference.");
-    char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
+    const char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
-    char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
+    const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 40\n\t\tRequirements = (TARGET.owner == \"alain\")";
 	compat_classad::ClassAd classad1, classad2;
 	classad1.initFromString(classad_string1, NULL);
@@ -1186,9 +1186,9 @@ static bool test_is_a_match_false_memory_reverse() {
 	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a memory attribute difference with the arguments "
 		"in reverse order.");
-    char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
+    const char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
-    char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
+    const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 40\n\t\tRequirements = (TARGET.owner == \"alain\")";
 	compat_classad::ClassAd classad1, classad2;
 	classad1.initFromString(classad_string2, NULL);
@@ -1211,9 +1211,9 @@ static bool test_is_a_match_false_memory_reverse() {
 static bool test_is_a_match_false_owner() {
 	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a owner requirement difference.");
-    char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
+    const char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
-    char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
+    const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner != \"alain\")";
 	compat_classad::ClassAd classad1, classad2;
 	classad1.initFromString(classad_string1, NULL);
@@ -1237,9 +1237,9 @@ static bool test_is_a_match_false_owner_reverse() {
 	emit_test("Test that IsAMatch() returns false for two classads that "
 		"don't match due to a owner requirement difference with the arguments "
 		"in reverse order.");
-    char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
+    const char* classad_string1 = "\tMyType=\"Job\"\n\t\tTargetType=\"Machine\"\n\t\t"
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
-    char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
+    const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner != \"alain\")";
 	compat_classad::ClassAd classad1, classad2;
 	classad1.initFromString(classad_string2, NULL);
@@ -1266,9 +1266,9 @@ static bool test_expr_tree_to_string_short() {
     const char* classad_string = "\tRank = ( Memory >= 50 )";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "Rank";
+	const char* attribute_name = "Rank";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-	char* expect = "( Memory >= 50 )";
+	const char* expect = "( Memory >= 50 )";
 	const char* result = ExprTreeToString(expr);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -1295,9 +1295,9 @@ static bool test_expr_tree_to_string_long() {
 		"usr/X11R6/bin:/unsup/condor/bin:.\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "Env";
+	const char* attribute_name = "Env";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-	char* expect =  "\"CPUTYPE=i86pc;GROUP=unknown;"
+	const char* expect =  "\"CPUTYPE=i86pc;GROUP=unknown;"
 		"LM_LICENSE_FILE=/p/multifacet/projects/simics/dist10/v9-sol7-gcc/sys/"
 		"flexlm/license.dat;SIMICS_HOME=.;SIMICS_EXTRA_LIB=./modules;"
 		"PYTHONPATH=./modules;MACHTYPE=i386;SHELL=/bin/tcsh;"
@@ -1328,9 +1328,9 @@ static bool test_expr_tree_to_string_long2() {
 		"j == true";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char* attribute_name = "Requirements";
+	const char* attribute_name = "Requirements";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-    char* expect = "( a > 3 ) && ( b >= 1.300000 ) && "
+    const char* expect = "( a > 3 ) && ( b >= 1.300000 ) && "
 		"( c < MY.rank ) && ( ( d <= TARGET.RANK ) || ( g == \"alain\" ) || "
 		"( g != \"roy\" ) || ( h =?= 5 ) || ( i =!= 6 ) ) && "
 		"( ( a + b ) < ( c - d ) ) && ( ( e * false ) > ( g / h ) ) && "
@@ -1562,7 +1562,7 @@ static bool test_get_references_complex_true_internal() {
 static bool test_get_references_complex_true_external() {
 	emit_test("Test that GetReferences() puts the references of the classad "
 		"into the StringList for external references.");
-    char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux\n\t\t"
+    const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux\n\t\t"
 		"Requirements = ((TARGET.ImageSize > Memory) && (AvailableDisk > Disk) "
 		"&& (TARGET.AvailableDisk > Memory) && (TARGET.ImageSize > Disk)) "
 	    "&& foo(TARGET.X, TARGET.XX)";
@@ -3147,7 +3147,7 @@ static bool test_if_then_else_false() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "small";
+	const char* expect = "small";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3175,7 +3175,7 @@ static bool test_if_then_else_false_error() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "small";
+	const char* expect = "small";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3202,7 +3202,7 @@ static bool test_if_then_else_false_constant() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "else";
+	const char* expect = "else";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3229,7 +3229,7 @@ static bool test_if_then_else_true() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "big";
+	const char* expect = "big";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3257,7 +3257,7 @@ static bool test_if_then_else_true_error() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "big";
+	const char* expect = "big";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3284,7 +3284,7 @@ static bool test_if_then_else_true_constant1() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "then";
+	const char* expect = "then";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3311,7 +3311,7 @@ static bool test_if_then_else_true_constant2() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "then";
+	const char* expect = "then";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4588,7 +4588,7 @@ static bool test_strcat_short() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "-33";
+	const char* expect = "-33";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4615,7 +4615,7 @@ static bool test_strcat_long() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "abcdefg";
+	const char* expect = "abcdefg";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5705,7 +5705,7 @@ static bool test_substr_end() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "defg";
+	const char* expect = "defg";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5731,7 +5731,7 @@ static bool test_substr_middle() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "de";
+	const char* expect = "de";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5757,7 +5757,7 @@ static bool test_substr_negative_index() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "f";
+	const char* expect = "f";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5783,7 +5783,7 @@ static bool test_substr_negative_length() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "def";
+	const char* expect = "def";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5809,7 +5809,7 @@ static bool test_substr_out_of_bounds() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "";
+	const char* expect = "";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5981,7 +5981,7 @@ static bool test_formattime_int() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "03/24/07";
+	const char* expect = "03/24/07";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -6483,7 +6483,7 @@ static bool test_regexps_match() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "one is mat two is h";
+	const char* expect = "one is mat two is h";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -6510,7 +6510,7 @@ static bool test_regexps_match_case() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "one is mat two is h";
+	const char* expect = "one is mat two is h";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -7406,7 +7406,7 @@ static bool test_interval_minute() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "1:00";
+	const char* expect = "1:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -7435,7 +7435,7 @@ static bool test_interval_hour() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "1:00:00";
+	const char* expect = "1:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -7464,7 +7464,7 @@ static bool test_interval_day() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "1+00:00:00";
+	const char* expect = "1+00:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -7490,7 +7490,7 @@ static bool test_to_upper() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "ABCDEFG";
+	const char* expect = "ABCDEFG";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -7516,7 +7516,7 @@ static bool test_to_lower() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	char actual[1024];
-	char* expect = "abcdefg";
+	const char* expect = "abcdefg";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);

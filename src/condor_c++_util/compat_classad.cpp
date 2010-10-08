@@ -676,7 +676,7 @@ ClassAd::~ClassAd()
 }
 
 ClassAd::
-ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
+ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();

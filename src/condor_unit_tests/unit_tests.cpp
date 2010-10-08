@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /*
-	This code tests the sin_to_string() function implementation.
+	This code contains the main() function for running the unit tests.
  */
 
 #include "condor_common.h"
@@ -42,7 +42,6 @@ bool FTEST_is_ipaddr(void);
 bool FTEST_is_valid_sinful(void);
 bool FTEST_is_valid_network(void);
 bool FTEST_sin_to_string(void);
-bool FTEST_string_to_hostname(void);
 bool FTEST_string_to_ip(void);
 bool FTEST_string_to_sin(void);
 bool FTEST_string_to_port(void);
@@ -53,7 +52,6 @@ bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
 bool FTEST_flatten_and_inline(void);
 bool FTEST_stl_string_utils(void);
-bool FTEST_fdpass_recv(void);
 bool OTEST_HashTable(void);
 bool OTEST_MyString(void);
 bool OTEST_StringList(void);
@@ -63,6 +61,9 @@ bool OTEST_FileLock(void);
 bool OTEST_ArgList(void);
 bool OTEST_Iso_Dates(void);
 bool OTEST_UserPolicy(void);
+bool OTEST_Directory(void);
+bool OTEST_TmpDir(void);
+bool OTEST_StatInfo(void);
 
 	// function map that maps testing function names to testing functions
 const static struct {
@@ -76,7 +77,6 @@ const static struct {
 	map(FTEST_is_valid_sinful),
 	map(FTEST_is_valid_network),
 	map(FTEST_sin_to_string),
-	map(FTEST_string_to_hostname),
 	map(FTEST_string_to_ip),
 	map(FTEST_string_to_sin),
 	map(FTEST_string_to_port),
@@ -97,6 +97,9 @@ const static struct {
 	map(OTEST_ArgList),
 	map(OTEST_Iso_Dates),
 	map(OTEST_UserPolicy),
+	map(OTEST_Directory),
+	map(OTEST_TmpDir),
+	map(OTEST_StatInfo),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 
@@ -105,7 +108,7 @@ int main(int argc, char *argv[]) {
 	int num_tests = INT_MAX, num_funcs_or_objs = INT_MAX;
 	bool only_functions = false, only_objects = false, 
 		failures_printed = true, successes_printed = true;
-	char* test_to_run = NULL;
+	StringList tests_to_run("");
 	
 	//Checks arguments
 	if(argc >= 2) {
@@ -143,12 +146,20 @@ int main(int argc, char *argv[]) {
 			}
 			else if(strcmp(argv[i], "-t") == MATCH) {
 				if(i >= argc - 1) {
-					printf("Missing additional argument for '%s'.\n", argv[i]);
+					printf("Missing additional argument(s) for '%s'.\n", 
+						argv[i]);
 					print_usage();
 					return EXIT_FAILURE;
 				}
-				test_to_run = argv[i+1];
+				
 				i++;
+				int j = i;
+				//Adds specific tests to list
+				while(j < argc && argv[j][0] != '-') {
+					tests_to_run.append(argv[j]);
+					j++;
+				}
+				i = j - 1;
 			}
 			else if(strcmp(argv[i], "-h") == MATCH || 
 				strcmp(argv[i], "--help") == MATCH) 
@@ -175,20 +186,28 @@ int main(int argc, char *argv[]) {
 	FunctionDriver driver(num_funcs_or_objs);
 	driver.init(num_tests);
 	
-	//Specific test to run
-	if(test_to_run != NULL) {
+	//Specific test(s) to run
+	if(!tests_to_run.isEmpty()) {
+		char* test = NULL;
 		int i = 0;
-		while(i < function_map_num_elems)
-		{
-			if(strcmp(function_map[i].name, test_to_run) == MATCH) {
-				driver.register_function(function_map[i].func);
-				break;
+		tests_to_run.rewind();
+		while((test = tests_to_run.next())) {
+			i = 0;
+			while(i < function_map_num_elems)
+			{
+				if(strcmp(function_map[i].name, test) == MATCH) {
+					driver.register_function(function_map[i].func);
+					break;
+				}
+				i++;
 			}
-			i++;
-		}
-		if(i >= function_map_num_elems) {
-			printf("Invalid test '%s'.\n", test_to_run);
-			return EXIT_SUCCESS;
+			
+			//Invalid test
+			if(i >= function_map_num_elems) {
+				printf("Invalid test '%s'.\n", test);
+				return EXIT_FAILURE;
+	    	}
+
 		}
 	}
 	//Many tests to run
@@ -223,7 +242,7 @@ void print_usage(void) {
 	printf("condor_unit_tests\n\t"
 		"-n x: Run x number of tests\n\t"
 		"-N x: Test x number of functions/objects\n\t"
-		"-t x: Run test x (x is a function or object)\n\t"
+		"-t x: Run test(s) x (x is a test name FTEST_ or OTEST_)\n\t"
 		"-F: Only test functions\n\t"
 		"-O: Only test objects\n\t"
 		"-f: Only show output for tests that fail\n\t"

@@ -64,4 +64,9 @@ void trim(std::string &str);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
 
+void Tokenize(const MyString &str);
+void Tokenize(const std::string &str);
+void Tokenize(const char *str);
+const char *GetNextToken(const char *delim, bool skipBlankTokens);
+
 #endif // _stl_string_utils_h_

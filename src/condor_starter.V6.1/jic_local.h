@@ -128,6 +128,7 @@ public:
 		   just return true so we move directly onto the next stage.
 		*/
 	bool transferOutput( void ) { return true; };
+	bool transferOutputMopUp( void ) { return true; };
 
 		/** The last job this starter is controlling has been
    			completely cleaned up.  Since there's no shadow to tell us
@@ -155,6 +156,8 @@ public:
 		*/
 	bool notifyJobExit( int exit_status, int reason, 
 						UserProc* user_proc );  
+
+	int notifyJobTermination( UserProc* user_proc ) { return 0; };
 
 	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
 

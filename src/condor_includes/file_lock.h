@@ -69,6 +69,9 @@ class FileLockBase
 		{ return ( UN_LOCK == m_state ); };
 	LOCK_TYPE	getState(void) const	// cur state {READ,WRITE,UN}_LOCK
 		{ return m_state; };
+	
+	virtual bool initSucceeded(void) = 0;	
+	
 	virtual bool isFakeLock(void) const = 0;	// true if this is a fake lock
 
 		// Control functions
@@ -143,6 +146,10 @@ class FileLock : public FileLockBase
 	FileLock( const char* filePath, bool doDelete , bool useLiteralPath = false ); // will set m_self_open to 1 
 	~FileLock(void);
 
+	// for the lock-on-local disk version: check whether init succeeded, i.e. whether we
+	// were able to create all necessary temp folders. If not, can fall back on old behavior.
+	bool initSucceeded(void);
+	
 		// Not a fake lock
 	bool isFakeLock(void) const { return false; };
 
@@ -173,11 +180,12 @@ class FileLock : public FileLockBase
 	int			 m_use_kernel_mutex;	// -1=unitialized,0=false,1=true
 	int 		m_delete;  // delete file upon object destruction; 1= true, 0=false
 							// as another effect, this means that we create the lock file ourselves.
-
+	bool 		m_init_succeeded;
+	
 	//
 	// Private methods
 	//
-	char* 		CreateHashName(const char *orig);
+	char* 		CreateHashName(const char *orig, bool useDefault = false);
 	void		Reset( void );
 	void		SetPath(const char *);
 
@@ -194,6 +202,8 @@ class FakeFileLock : public FileLockBase
 	FakeFileLock( void ) : FileLockBase( ) { };
 	FakeFileLock( const char* /*path*/ ) : FileLockBase( ) { };
 	~FakeFileLock( void ) { };
+
+	bool initSucceeded(void) { return true; };
 
 		// Is a fake lock
 	bool isFakeLock(void) const { return true; };

@@ -38,19 +38,16 @@ const char* tfstr(int);
 const char* tfnze(int);
 
 /* For MyString, calls vsprintf on the given str */
-bool vsprintfHelper(MyString* str, char* format, ...);
+bool vsprintfHelper(MyString* str, const char* format, ...);
 
 /* For MyString, calls vsprintf_cat on the given str */
-bool vsprintf_catHelper(MyString* str, char* format, ...);
+bool vsprintf_catHelper(MyString* str, const char* format, ...);
 
 /* Returns the empty string when the passed string is null */
 const char* nicePrint(const char* str);
 
 /* Exactly like strcmp, but treats NULL and "" as equal */
 int niceStrCmp(const char* str1, const char* str2);
-
-/* Exactly like free, but only frees when not null */
-void niceFree(char* str);
 
 /* Returns  a char** representation of the StringList starting at the string 
    at index start
@@ -80,7 +77,7 @@ bool strings_similar(const char* str1, const char* str2,
 	const char* delims = " ");
 
 /* Converts the given char** into a MyString seperated by the given delims */
-MyString* convert_string_array(char** str, int size, char* delim = " ");
+MyString* convert_string_array(char** str, int size, const char* delim = " ");
 
 /* Converts the given char** into a MyString seperated by the given delims */
 MyString* convert_string_array(const char** str, int size, 

@@ -3889,18 +3889,16 @@ init_public_ad()
 	publicAd->SetMyTypeName(NEGOTIATOR_ADTYPE);
 	publicAd->SetTargetTypeName("");
 
-	char* defaultName = NULL;
-	if( NegotiatorName ) {
-		line.sprintf("%s = \"%s\"", ATTR_NAME, NegotiatorName );
-	} else {
+	if( !NegotiatorName ) {
+		char* defaultName = NULL;
 		defaultName = default_daemon_name();
 		if( ! defaultName ) {
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
-		line.sprintf("%s = \"%s\"", ATTR_NAME, defaultName );
+		NegotiatorName = strdup( defaultName );
 		delete [] defaultName;
 	}
-	publicAd->Insert(line.Value());
+	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
 	line.sprintf ("%s = \"%s\"", ATTR_NEGOTIATOR_IP_ADDR,
 			daemonCore->InfoCommandSinfulString() );
@@ -3947,18 +3945,19 @@ Matchmaker::invalidateNegotiatorAd( void )
 	ClassAd cmd_ad;
 	MyString line;
 
+	if( !NegotiatorName ) {
+		return;
+	}
+
 		// Set the correct types
 	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
 	cmd_ad.SetTargetTypeName( NEGOTIATOR_ADTYPE );
 
-		// We only want to invalidate this negotiator.  using our
-		// sinful string seems like the safest bet for that, since
-		// even if the names somehow get messed up, at least the
-		// sinful string should be unique...
-	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS,
-				  ATTR_NEGOTIATOR_IP_ADDR,
-				  daemonCore->InfoCommandSinfulString() );
+	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS,
+				  ATTR_NAME,
+				  NegotiatorName );
 	cmd_ad.Insert( line.Value() );
+	cmd_ad.Assign( ATTR_NAME, NegotiatorName );
 
 	daemonCore->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &cmd_ad, NULL, false );
 }

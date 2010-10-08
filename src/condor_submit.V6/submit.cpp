@@ -86,7 +86,7 @@
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
-//   CheckFilesRead, CheckFilesWrite, and ClusterAdAttrs should be
+//   CheckFilesRead and CheckFilesWrite should be
 //   either completely case-sensitive (and use MyStringHash()) or
 //   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
 static unsigned int hashFunction( const MyString& );
@@ -95,7 +95,9 @@ static unsigned int hashFunction( const MyString& );
 HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
-HashTable<MyString,int> ClusterAdAttrs( 31, hashFunction );
+
+StringList NoClusterCheckAttrs;
+ClassAd *ClusterAd = NULL;
 
 // Explicit template instantiation
 
@@ -446,6 +448,7 @@ int 	whitespace( const char *str);
 void 	delete_commas( char *ptr );
 void 	compress( MyString &path );
 char const*full_path(const char *name, bool use_iwd=true);
+void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
 void	InsertJobExpr (const char *expr, bool clustercheck = true);
@@ -1044,6 +1047,15 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "\n");
 	}
 
+	// CRUFT Before 7.5.4, condor_submit wrote the submit event to the
+	// user log. If the schedd is older than that, we need to write
+	// the submit event here.
+	if (!DumpClassAdToFile && UserLogSpecified && MySchedd->version()) {
+		CondorVersionInfo vers( MySchedd->version() );
+		if ( !vers.built_since_version( 7, 5, 4 ) ) {
+			log_submit();
+		}
+	}
 
 	if (Quiet) {
 		int this_cluster = -1, job_count=0;
@@ -1480,6 +1492,8 @@ SetExecutable()
 
 	if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
 		InsertJobExpr ("WantIOProxy = TRUE");
+		buffer.sprintf("%s = TRUE", ATTR_JOB_REQUIRES_SANDBOX);
+		InsertJobExpr (buffer);
 	}
 
 	InsertJobExpr ("CurrentHosts = 0");
@@ -2079,38 +2093,25 @@ SetImageSize()
 					executablesize);
 	InsertJobExpr (buffer);
 
-	if( JobUniverse == CONDOR_UNIVERSE_VM) {
+	tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
+
+	if( tmp ) {
+		disk_usage = atoi(tmp);
+
+		if( disk_usage < 1 ) {
+			fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		free( tmp );
+	} else {
 		// In vm universe, when a VM is suspended, 
 		// memory being used by the VM will be saved into a file. 
 		// So we need as much disk space as the memory.
-		int vm_disk_space = executablesize + TransferInputSize + VMMemory*1024;
-
-		// In vmware vm universe, vmware disk may be a sparse disk or 
-		// snapshot disk. So we can't estimate the disk space in advanace 
-		// because the sparse disk or snapshot disk will grow up 
-		// as a VM runs. So we will add 100MB to disk space.
-		if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
-			vm_disk_space += 100*1024;
-		}
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
-	}else {
-		tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
-
-		if( tmp ) {
-			disk_usage = atoi(tmp);
-
-			if( disk_usage < 1 ) {
-				fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-			}
-			free( tmp );
-		} else {
-			disk_usage = executablesize + TransferInputSize;
-		}
-
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
+		// For non-vm jobs, VMMemory is 0.
+		disk_usage = executablesize + TransferInputSize + VMMemory*1024;
 	}
+	buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
 	InsertJobExpr (buffer);
 
 
@@ -2460,7 +2461,7 @@ SetTransferFiles()
 				//filename containing $(Process)).  At this time, the
 				//check in InsertJobExpr() is not smart enough to
 				//notice that.
-			InsertJobExprString(ATTR_JOB_OUTPUT, working_name,false);
+			InsertJobExprString(ATTR_JOB_OUTPUT, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
@@ -2481,7 +2482,7 @@ SetTransferFiles()
 				//filename containing $(Process)).  At this time, the
 				//check in InsertJobExpr() is not smart enough to
 				//notice that.
-			InsertJobExprString(ATTR_JOB_ERROR, working_name,false);
+			InsertJobExprString(ATTR_JOB_ERROR, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
@@ -3697,28 +3698,19 @@ SetDAGManJobId()
 void
 SetLogNotes()
 {
-	LogNotesVal = condor_param( LogNotesCommand );
-	// just in case the user forgets the underscores
-	if( !LogNotesVal ) {
-		LogNotesVal = condor_param( "SubmitEventNotes" );
-	}
-	if (LogNotesVal) {
-		MyString buffer;
-		(void) buffer.sprintf( "LogNotes = \"%s\"", LogNotesVal);
-		InsertJobExpr( buffer );
+	LogNotesVal = condor_param( LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES );
+	if ( LogNotesVal ) {
+		InsertJobExprString( ATTR_SUBMIT_EVENT_NOTES, LogNotesVal );
 	}
 }
 
 void
 SetUserNotes()
 {
-	UserNotesVal = condor_param( UserNotesCommand, "SubmitEventUserNotes" );
-	if (UserNotesVal) {
-		MyString buffer;
-		(void) buffer.sprintf( "UserNotes = \"%s\"", UserNotesVal);
-		InsertJobExpr( buffer );
+	UserNotesVal = condor_param( UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES );
+	if ( UserNotesVal ) {
+		InsertJobExprString( ATTR_SUBMIT_EVENT_USER_NOTES, UserNotesVal );
 	}
-	
 }
 
 void
@@ -4842,10 +4834,10 @@ SetGridParams()
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 			buffer.sprintf( "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
 			free(tmp);
-			InsertJobExpr (buffer, false );
+			InsertJobExpr (buffer);
 		} else {
 			buffer.sprintf( "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
-			InsertJobExpr (buffer, false );
+			InsertJobExpr (buffer);
 		}
 	}
 
@@ -4868,7 +4860,7 @@ SetGridParams()
 		InsertJobExpr (buffer);
 
 		buffer.sprintf( "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
-		InsertJobExpr (buffer, false );
+		InsertJobExpr (buffer);
 	}
 
 	buffer.sprintf( "%s = False", ATTR_WANT_CLAIMING );
@@ -4877,7 +4869,7 @@ SetGridParams()
 	if( (tmp = condor_param(GlobusRematch,ATTR_REMATCH_CHECK)) ) {
 		buffer.sprintf( "%s = %s", ATTR_REMATCH_CHECK, tmp );
 		free(tmp);
-		InsertJobExpr (buffer, false );
+		InsertJobExpr (buffer);
 	}
 
 	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
@@ -5040,14 +5032,6 @@ SetGridParams()
 		has_userdatafile = true;
 	}
 	
-	if (has_userdata && has_userdatafile) {
-		// two attributes appear in the same submit file
-		fprintf(stderr, "\nERROR: Parameters \"%s\" and \"%s\" exist in same Amazon job\n", 
-						AmazonUserData, AmazonUserDataFile);
-		DoCleanup( 0, 0, NULL );
-		exit(1);
-	}
-
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
@@ -5656,8 +5640,9 @@ queue(int num)
 			} else {
 				ProcId = -1;
 			}
-			ClusterAdAttrs.clear();
 		}
+
+		NoClusterCheckAttrs.clearAll();
 
 		if ( !DumpClassAdToFile ) {
 			if ( ClusterId == -1 ) {
@@ -5807,6 +5792,8 @@ queue(int num)
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
 		SetVMParams();
+		SetLogNotes();
+		SetUserNotes();
 
 			// This must come after all things that modify the input file list
 		FixupTransferInputFiles();
@@ -5815,12 +5802,9 @@ queue(int num)
 			// set by normal submit attributes
 		SetForcedAttributes();
 		rval = 0; // assume success
-		SetLogNotes();
-		SetUserNotes();
 		if ( !DumpClassAdToFile ) {
 			rval = SaveClassAd();
 		}
-		
 
 		switch( rval ) {
 		case 0:			/* Success */
@@ -5891,8 +5875,19 @@ queue(int num)
 			job->fPrint ( DumpFile );
 			fprintf ( DumpFile, "\n" );
 		}
-		
-		
+
+		if ( ProcId == 0 ) {
+			delete ClusterAd;
+			ClusterAd = new ClassAd( *job );
+
+			// Remove attributes that were forced into the proc 0 ad
+			// from our copy of the cluster ad.
+			const char *attr;
+			NoClusterCheckAttrs.rewind();
+			while ( (attr = NoClusterCheckAttrs.next()) ) {
+				ClusterAd->Delete( attr );
+			}
+		}
 
 		if ( job_ad_saved == false ) {
 			delete job;
@@ -6593,6 +6588,91 @@ extern "C" {
 int SetSyscalls( int foo ) { return foo; }
 }
 
+void
+log_submit()
+{
+	 char	 *simple_name;
+
+		// don't write to the EVENT_LOG in condor_submit; that is done by 
+		// the condor_schedd (since submit likely does not have permission).
+	 WriteUserLog usr_log(true);
+	 SubmitEvent jobSubmit;
+
+	 usr_log.setUseXML(UseXMLInLog);
+
+	if( Quiet ) {
+		fprintf(stdout, "Logging submit event(s)");
+	}
+
+	if ( DumpClassAdToFile ) {
+		// we just put some arbitrary string here: it doesn't actually mean 
+		// anything since we will never communicate the resulting ad to 
+		// to anyone (we make the name obviously unresolvable so we know
+		// this was a generated file).
+		strcpy (jobSubmit.submitHost, "localhost-used-to-dump");
+	} else {
+		strcpy (jobSubmit.submitHost, MySchedd->addr());
+	}
+
+	if( LogNotesVal ) {
+		jobSubmit.submitEventLogNotes = strnewp( LogNotesVal );
+		free( LogNotesVal );
+		LogNotesVal = NULL;
+	}
+
+	if( UserNotesVal ) {
+		jobSubmit.submitEventUserNotes = strnewp( UserNotesVal );
+		free( UserNotesVal );
+		UserNotesVal = NULL;
+	}
+
+	for (int i=0; i <= CurrentSubmitInfo; i++) {
+
+		if ((simple_name = SubmitInfo[i].logfile) != NULL) {
+			if( jobSubmit.submitEventLogNotes ) {
+				delete[] jobSubmit.submitEventLogNotes;
+			}
+			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
+
+			if( jobSubmit.submitEventUserNotes ) {
+				delete[] jobSubmit.submitEventUserNotes;
+			}
+			jobSubmit.submitEventUserNotes = strnewp( SubmitInfo[i].usernotes );
+			
+			// we don't know the gjid here, so pass in NULL as the last 
+			// parameter - epaulson 2/09/2007
+			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
+									  0, 0, 0, NULL) ) {
+				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+			} else {
+				// Output the information
+				for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob;
+							j++) {
+					if ( ! usr_log.initialize(SubmitInfo[i].cluster,
+								j, 0, NULL) ) {
+						fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+					} else {
+							// for efficiency, only fsync on the final event
+							// being written to this log
+						bool enable_fsync = j == SubmitInfo[i].lastjob;
+						usr_log.setEnableFsync( enable_fsync );
+
+						if( ! usr_log.writeEvent(&jobSubmit,job) ) {
+							fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+						}
+						if( Quiet ) {
+							fprintf(stdout, ".");
+						}
+					}
+				}
+			}
+		}
+	}
+	if( Quiet ) {
+		fprintf( stdout, "\n" );
+	}
+}
+
 
 int
 SaveClassAd ()
@@ -6631,20 +6711,26 @@ SaveClassAd ()
 					 ClusterId, ProcId );
 			retval = -1;
 		} else {
-			// To facilitate processing of job status from the
-			// job_queue.log, the ATTR_JOB_STATUS attribute should not
-			// be stored within the cluster ad. Instead, it should be
-			// directly part of each job ad. This change represents an
-			// increase in size for the job_queue.log initially, but
-			// the ATTR_JOB_STATUS is guaranteed to be specialized for
-			// each job so the two approaches converge. Further
-			// optimization should focus on sending only the
-			// attributes required for the job to run. -matt 1 June 09
-			// Mostly the same rational for ATTR_JOB_SUBMISSION.
-			// -matt // 24 June 09
 			int tmpProcId = myprocid;
-			if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ||
-				strcasecmp(lhstr, ATTR_JOB_SUBMISSION) == 0 ) myprocid = ProcId;
+			// Check each attribute against the version in the cluster ad.
+			// If the values match, don't add the attribute to the proc ad.
+			// NoClusterCheckAttrs is a list of attributes that should
+			// always go into the proc ad. For proc 0, this means
+			// inserting the attribute into the proc ad instead of the
+			// cluster ad.
+			if ( ProcId > 0 ) {
+				if ( !NoClusterCheckAttrs.contains_anycase( lhstr ) ) {
+					ExprTree *cluster_tree = ClusterAd->LookupExpr( lhstr );
+					if ( cluster_tree && *tree == *cluster_tree ) {
+						continue;
+					}
+				}
+			} else {
+				if ( NoClusterCheckAttrs.contains_anycase( lhstr ) ) {
+					myprocid = ProcId;
+				}
+			}
+
 			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
 				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
 						 lhstr, rhstr, ClusterId, ProcId, errno );
@@ -6703,17 +6789,6 @@ InsertJobExpr (const char *expr, bool clustercheck)
 
 	MyString hashkey(expr);
 
-	if ( clustercheck && ProcId > 0 ) {
-		// We are inserting proc 1 or above.  So before we actually stick
-		// this into the job ad, make certain we did not already place it
-		// into the cluster ad.  We do this via a hashtable lookup.
-
-		if ( ClusterAdAttrs.lookup(hashkey,unused) == 0 ) {
-			// found it.  so it is already in the cluster ad; we're done.
-			return;
-		}
-	}
-
 	int pos = 0;
 	int retval = Parse (expr, attr_name, tree, &pos);
 
@@ -6729,22 +6804,15 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		exit( 1 );
 	}
 
+	if ( clustercheck == false ) {
+		NoClusterCheckAttrs.append( attr_name.Value() );
+	}
+
 	if (!job->Insert (attr_name.Value(), tree))
 	{	
 		fprintf(stderr,"\nERROR: Unable to insert expression: %s\n", expr);
 		DoCleanup(0,0,NULL);
 		exit( 1 );
-	}
-
-	if ( clustercheck && ProcId < 1 ) {
-		// We are working on building the ad which will serve as our
-		// cluster ad.  Thus insert this expr into our hashtable.
-		if ( ClusterAdAttrs.insert(hashkey,unused) < 0 ) {
-			fprintf( stderr,"\nERROR: Unable to insert expression into "
-					 "hashtable: %s\n", expr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
 	}
 }
 
@@ -6892,7 +6960,7 @@ void transfer_vm_file(const char *filename)
 	tmp_ptr = transfer_file_list.print_to_string();
 
 	buffer.sprintf( "%s = \"%s\"", ATTR_TRANSFER_INPUT_FILES, tmp_ptr);
-	InsertJobExpr(buffer, false);
+	InsertJobExpr(buffer);
 	free(tmp_ptr);
 
 	SetImageSize();
@@ -7218,7 +7286,7 @@ SetVMParams()
 
 			buffer.sprintf( "%s = \"%s\"", ATTR_JOB_VM_NETWORKING_TYPE, 
 					VMNetworkType.Value());
-			InsertJobExpr(buffer, false );
+			InsertJobExpr(buffer);
 		}else {
 			VMNetworkType = "";
 		}
@@ -7245,7 +7313,7 @@ SetVMParams()
 		exit(1);
 	}
 	buffer.sprintf( "%s = %d", ATTR_JOB_VM_MEMORY, VMMemory);
-	InsertJobExpr( buffer, false );
+	InsertJobExpr( buffer );
 
 	/* 
 	 * Set the number of VCPUs for this virtual machine
@@ -7262,7 +7330,7 @@ SetVMParams()
 	    VMVCPUS = 1;
 	  }
 	buffer.sprintf("%s = %d", ATTR_JOB_VM_VCPUS, VMVCPUS);
-	InsertJobExpr(buffer, false);
+	InsertJobExpr(buffer);
 
 	/*
 	 * Set the MAC address for this VM.
@@ -7271,7 +7339,7 @@ SetVMParams()
 	if(tmp_ptr)
 	  {
 	    buffer.sprintf("%s = \"%s\"", ATTR_JOB_VM_MACADDR, tmp_ptr);
-	    InsertJobExpr(buffer, false);
+	    InsertJobExpr(buffer);
 	  }
 
 	/* 
@@ -7291,7 +7359,7 @@ SetVMParams()
 		free(tmp_ptr);
 		if( vm_no_output_vm ) {
 			buffer.sprintf( "%s = TRUE", VMPARAM_NO_OUTPUT_VM);
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 		}
 	}
 
@@ -7326,7 +7394,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = %s", VMPARAM_TRANSFER_CDROM_FILES,
 				vm_should_transfer_cdrom_files ? "TRUE" : "FALSE");
-		InsertJobExpr( buffer, false);
+		InsertJobExpr( buffer );
 
 		if( vm_should_transfer_cdrom_files == false ) {
 			vm_need_fsdomain = true;
@@ -7383,7 +7451,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = \"%s\"", VMPARAM_CDROM_FILES, 
 				final_cdrom_files.Value());
-		InsertJobExpr( buffer, false );
+		InsertJobExpr( buffer );
 		has_vm_cdrom_files = true;
 		free(vm_cdrom_files);
 	}
@@ -7438,7 +7506,7 @@ SetVMParams()
 			}
 			buffer.sprintf( "%s = \"%s\"", transf_attr_name, 
 					final_output.Value());
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 			free(transfer_files);
 		}
 		
@@ -7472,7 +7540,7 @@ SetVMParams()
 					need_xen_root_device = false;
 					VMHardwareVT = true;
 					buffer.sprintf( "%s = TRUE", ATTR_JOB_VM_HARDWARE_VT);
-					InsertJobExpr( buffer, false );
+					InsertJobExpr( buffer );
 				}else {
 					// real kernel file
 					if( make_vm_file_path(xen_kernel, fixedname) 
@@ -7485,7 +7553,7 @@ SetVMParams()
 				}
 				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
 						fixedname.Value());
-				InsertJobExpr(buffer, false);
+				InsertJobExpr(buffer);
 				free(xen_kernel);
 			}
 
@@ -7508,7 +7576,7 @@ SetVMParams()
 				}
 				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_INITRD, 
 						fixedname.Value());
-				InsertJobExpr(buffer, false);
+				InsertJobExpr(buffer);
 				free(xen_initrd);
 			}
 
@@ -7526,7 +7594,7 @@ SetVMParams()
 					MyString fixedvalue = delete_quotation_marks(xen_root);
 					buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_ROOT, 
 							fixedvalue.Value());
-					InsertJobExpr(buffer, false);
+					InsertJobExpr(buffer);
 					free(xen_root);
 				}
 			}
@@ -7568,7 +7636,7 @@ SetVMParams()
 			}
 
 			buffer.sprintf( "%s = \"%s\"", disk_attr_name, fixedvalue.Value());
-			InsertJobExpr( buffer, false);
+			InsertJobExpr( buffer );
 			free(disk);
 		}
 
@@ -7581,7 +7649,7 @@ SetVMParams()
 				MyString fixedvalue = delete_quotation_marks(xen_kernel_params);
 				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
 						fixedvalue.Value());
-				InsertJobExpr( buffer, false);
+				InsertJobExpr( buffer );
 				free(xen_kernel_params);
 			}
 		}
@@ -7622,7 +7690,7 @@ SetVMParams()
 
 			buffer.sprintf( "%s = \"%s\"", cdrom_attr_name,
 					xen_cdrom_string.Value());
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 		}
 
 	}else if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
@@ -7650,7 +7718,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = %s", VMPARAM_VMWARE_TRANSFER, 
 				vmware_should_transfer_files ? "TRUE" : "FALSE");
-		InsertJobExpr( buffer, false);
+		InsertJobExpr( buffer );
 
 		if( vmware_should_transfer_files == false ) {
 			vm_need_fsdomain = true;
@@ -7686,7 +7754,7 @@ SetVMParams()
 
 		buffer.sprintf( "%s = %s", VMPARAM_VMWARE_SNAPSHOTDISK,
 				vmware_snapshot_disk? "TRUE" : "FALSE");
-		InsertJobExpr( buffer, false );
+		InsertJobExpr( buffer );
 
 		// vmware_dir is a directory that includes vmx file and vmdk files.
 		char *vmware_dir = NULL;
@@ -7699,7 +7767,7 @@ SetVMParams()
 			check_and_universalize_path(f_dirname);
 
 			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 
 			Directory dir( f_dirname.Value() );
 			dir.Rewind();
@@ -7742,12 +7810,12 @@ SetVMParams()
 			vmx_files.rewind();
 			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
 					condor_basename(vmx_files.next()));
-			InsertJobExpr( buffer, false );
+			InsertJobExpr( buffer );
 		}
 
 		tmp_ptr = vmdk_files.print_to_string();
 		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-		InsertJobExpr( buffer, false );
+		InsertJobExpr( buffer );
 		free( tmp_ptr );
 	}
 

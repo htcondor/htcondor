@@ -119,7 +119,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_submitDagDeepOpts	  (submitDagDeepOpts),
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
-	_recoveryMaxfakeID	  (0)
+	_recoveryMaxfakeID	  (0),
+	_maxJobHolds		  (0)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -580,7 +581,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_HELD:
-				ProcessHeldEvent(job);
+				ProcessHeldEvent(job, event);
 				ProcessIsIdleEvent(job);
 				break;
 
@@ -630,6 +631,15 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 
 	if ( job ) {
 		DecrementJobCounts( job );
+
+			// This code is here because if a held job is removed, we
+			// don't get a released event for that job.  This may not
+			// work exactly right if some procs of a cluster are held
+			// and some are not.  wenger 2010-08-26
+		if ( job->_jobProcsOnHold > 0 ) {
+			_numHeldJobProcs--;
+			job->_jobProcsOnHold--;
+		}
 
 			// Only change the node status, error info,
 			// etc., if we haven't already gotten an error
@@ -1136,14 +1146,26 @@ Dag::ProcessNotIdleEvent(Job *job) {
 }
 
 //---------------------------------------------------------------------------
+// We need the event here so we can tell which process has been held for
+// multi-process jobs.
 void
-Dag::ProcessHeldEvent(Job *job) {
+Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 
 	if ( !job ) {
 		return;
 	}
 
 	_numHeldJobProcs++;
+
+	job->_timesHeld++;
+	job->_jobProcsOnHold++;
+	if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
+		debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
+					"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
+					"proc(s) for this node will now be removed\n",
+					event->cluster, job->GetJobName(), _maxJobHolds );
+		RemoveBatchJob( job );
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -1155,6 +1177,8 @@ Dag::ProcessReleasedEvent(Job *job) {
 	}
 
 	_numHeldJobProcs--;
+
+	job->_jobProcsOnHold--;
 }
 
 //---------------------------------------------------------------------------
@@ -1804,6 +1828,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 	if ( _configFile ) {
     	fprintf( fp, "CONFIG %s\n\n", _configFile );
 		
+	}
+
+	//
+	// Print the node status file, if any.
+	//
+	if ( _statusFileName ) {
+		fprintf( fp, "NODE_STATUS_FILE %s\n\n", _statusFileName );
 	}
 
     //

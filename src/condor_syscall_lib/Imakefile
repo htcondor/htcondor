@@ -34,7 +34,7 @@ CFLAGS = $(STD_C_FLAGS) $(DL_EXTRACT) $(FILE_TABLE) $(REMOTE_SYSCALLS)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT) \
 	$(FILE_TABLE) $(REMOTE_SYSCALLS) $(SAVE_SIGSTATE) -I../condor_ckpt \
-	-fno-exceptions -DHEADER_DES_LOCL_H
+	$(STD_UNIV_IO_FLAGS) -fno-exceptions -DHEADER_DES_LOCL_H
 
 #ifdef DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
@@ -163,7 +163,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o \
 	strupr.o strcasestr.o \
-	mark_thread.o
+	mark_thread.o get_random_num.o
 
 CPP_UTIL_OBJ = \
 	condor_version.o condor_ver_info.o \
@@ -172,42 +172,14 @@ CPP_UTIL_OBJ = \
 	MyString.o subsystem_info.o \
 	HashTable.o
 
-CONDOR_TYPE_OBJ = sig_num.o open_flags.o fcntl_cmd.o errno_num.o
+CONDOR_IO_OBJ = stream.o sig_num.o open_flags.o fcntl_cmd.o errno_num.o condor_rw.o
 
-IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o
+STD_UNIV_IO_OBJ = std_univ_sock.o std_univ_buffers.o
 
-#if HAVE_EXT_OPENSSL
-   CONDOR_DES_OBJ = condor_crypt_3des.o
-   CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
-#endif
-
-OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
-	buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o \
-	bio_lib.o bss_file.o ex_data.o mem_clr.o eng_init.o tb_rand.o \
-	digest.o m_sha1.o rand_unix.o eng_lib.o eng_table.o eng_list.o \
-	tb_digest.o rsa_sign.o rand_egd.o obj_dat.o x_sig.o rsa_lib.o \
-	a_object.o obj_lib.o asn1_lib.o tasn_dec.o x_algor.o tasn_typ.o \
-	rsa_eay.o tb_rsa.o bn_lib.o bn_blind.o bn_ctx.o tasn_enc.o \
-	tasn_new.o tasn_fre.o bn_rand.o bn_gcd.o tasn_utl.o a_type.o \
-	a_bitstr.o a_int.o bn_mod.o bn_mont.o bn_div.o bn_word.o bn_shift.o \
-	bn_add.o bn_asm.o bn_sqr.o bn_exp.o rsa_none.o rsa_pk1.o rsa_oaep.o \
-	rsa_ssl.o a_dup.o bn_recp.o bn_mul.o rsa_x931.o sha512.o sha256.o \
-	eng_ctrl.o bn_print.o evp_lib.o evp_asn1.o a_bytes.o
-
-#if HAVE_EXT_OPENSSL
-CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
-	$(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) $(OPENSSL_OBJ)
-#else 
-CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
-	$(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) 
-#endif
-
-SPECIAL_IO_OBJ = authentication.o $(CONDOR_CRYPT_OBJ)
-
-SPECIAL_OBJ = special_stubs.o cedar_no_ckpt_stubs.o
+SPECIAL_OBJ = special_stubs.o
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
-	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ) $(SPECIAL_IO_OBJ) \
+	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(STD_UNIV_IO_OBJ) $(CONDOR_IO_OBJ) \
 	$(CPP_UTIL_OBJ) $(SPECIAL_OBJ)
 
 SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
@@ -494,7 +466,8 @@ clean::
 /*depend_target($(SRC)) */
 
 IMPORT_LINKS = ../../config/import_links
-import_objs(../condor_io,$(IO_OBJ))
+import_objs(../condor_io.std,$(STD_UNIV_IO_OBJ))
+import_objs(../condor_io,$(CONDOR_IO_OBJ))
 import_objs(../condor_util_lib,$(UTIL_OBJ))
 import_objs(../condor_c++_util,$(CPP_UTIL_OBJ))
 import_objs(../condor_ckpt,condor_rt0.o)
@@ -513,29 +486,9 @@ XCOMM to link against libcondorapi.a, which lives in the same place.
 all_symlink_target($(ZLIB_LIB)/libz.a,libcondor_z.a)
 #endif
 
-authentication.o: ../condor_io/authentication.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/authentication.cpp
-
 condor_md.o: ../condor_c++_util/condor_md.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_c++_util \
 	        -DSKIP_AUTHENTICATION -c ../condor_c++_util/condor_md.cpp
-
-condor_crypt_3des.o: ../condor_io/condor_crypt_3des.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_3des.cpp
-
-condor_crypt_blowfish.o: ../condor_io/condor_crypt_blowfish.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_blowfish.cpp
-
-CryptKey.o: ../condor_io/CryptKey.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/CryptKey.cpp
-
-condor_crypt.o: ../condor_io/condor_crypt.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt.cpp
 
 #ifdef DOES_COMPRESS_CKPT
 $(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
@@ -552,10 +505,6 @@ DEPEND_SRC = C_getenv.c extern_path.c file_stream.c getcwd.c remote_startup.c \
 remote_syscall.cpp switches.special.cpp syscall_connect.cpp xfer_file.c
 
 depend_source_target($(DEPEND_SRC))
-
-#if HAVE_EXT_OPENSSL
-obj_extract($(OPENSSL_MD_LIB),$(OPENSSL_OBJ))
-#endif
 
 
 #if ! IS_CLIPPED && IS_GLIBC

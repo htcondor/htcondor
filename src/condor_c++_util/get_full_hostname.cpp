@@ -90,7 +90,7 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
             inaddr = (struct in_addr *)*pptr;
             dprintf( D_HOSTNAME, "Found IP addr in hostent: %s\n", inet_ntoa(*inaddr) );
             // check if loopback
-            if (inaddr->s_addr == inet_addr("127.0.0.1")) {
+            if (inaddr->s_addr == INADDR_LOOPBACK) {
                 // we don't want to return loopback address when we have other
                 // addresses
                 if (!found) {

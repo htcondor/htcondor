@@ -1961,9 +1961,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 	else if ( strcasecmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
 			// If the status is being set, let's record the previous
-			// status. If there is no status we'll default to
-			// UNEXPANDED.
-		int status = UNEXPANDED;
+			// status. If there is no status, we default to an unused
+			// value.
+		int status = 0;
 		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
 	}
@@ -2126,10 +2126,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	free( round_param );
 
 	if( !PrioRecArrayIsDirty ) {
-		if( strcasecmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
+		if( strcasecmp(attr_name, ATTR_ACCOUNTING_GROUP) == 0 ||
+            strcasecmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
 			PrioRecArrayIsDirty = true;
-		}
-		if( strcasecmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
+		} else if( strcasecmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
 			if( atoi(attr_value) == IDLE ) {
 				PrioRecArrayIsDirty = true;
 			}
@@ -2428,31 +2428,32 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 		ClassAd *clusterad;
 		bool has_event_log = false;
 		char *evt_log = param("EVENT_LOG");
-		if (evt_log != NULL){
+		if (evt_log != NULL) {
 			has_event_log = true;
 			free(evt_log);
 		}
 			// keep usr_log in outer scope so we don't open/close the 
 			// event log over and over.
-		WriteUserLog usr_log; 
-	
-		std::list<std::string>::iterator it;
+		WriteUserLog usr_log;
+		usr_log.setCreatorName( Name );
+
 		int counter = 0;
 		int ad_keys_size = new_ad_keys.size();
+		std::list<std::string>::iterator it;
 		for( it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
 			++counter;
 			char const *key = it->c_str();
 			StrToId(key,cluster_id,proc_id);
 			// do we want to fsync the userLog?
-			bool doFsync = false; 
+			bool doFsync = false;
 			if( proc_id == -1 ) {
 				continue; // skip over cluster ads
 			}
-			//we want to fsync per cluster
-			if (old_cluster_id == -10)
+			// we want to fsync per cluster and on the last ad
+			if ( old_cluster_id == -10 ) {
 				old_cluster_id = cluster_id;
-				
-			if ( (old_cluster_id != cluster_id) || (counter == ad_keys_size) ) {
+			}
+			if ( old_cluster_id != cluster_id || counter == ad_keys_size ) {
 				doFsync = true;
 				old_cluster_id = cluster_id;
 			}
@@ -2463,7 +2464,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			if ( JobQueue->LookupClassAd(cluster_key, clusterad) &&
 				 JobQueue->LookupClassAd(key,procad))
 			{
-			 
+				dprintf(D_FULLDEBUG,"New job: %s",key);
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
@@ -2472,32 +2473,46 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				ConvertOldJobAdAttrs(procad, false);
 
 					// write submit event to global event log
-
-				std::string owner, ntdomain, simple_name, gjid, submitUserNotes, submitEventNotes;
-				bool use_xml = false;	
+				std::string owner, ntdomain, simple_name, gjid, submitUserNotes, submitEventNotes, version;
+				bool use_xml = false;
 				SubmitEvent jobSubmit;
-				jobSubmit.initFromClassAd(procad);
-				usr_log.Configure(true);
-				clusterad->LookupString(ATTR_ULOG_FILE, simple_name);
-				
+				procad->LookupString(ATTR_ULOG_FILE, simple_name);
+
+				if ( procad->LookupString( ATTR_VERSION, version ) ) {
+					CondorVersionInfo vers( version.c_str() );
+					// CRUFT If the submitter is older than 7.5.4, then
+					// they are responsible for writing the submit event
+					// to the user log.
+					if ( !vers.built_since_version( 7, 5, 4 ) ) {
+						simple_name = "";
+					}
+				}
+
+				strcpy (jobSubmit.submitHost, daemonCore->privateNetworkIpAddr());
+				if ( procad->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
+					jobSubmit.submitEventLogNotes = strnewp(submitEventNotes.c_str());
+				}
+				if ( procad->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
+					jobSubmit.submitEventUserNotes = strnewp(submitUserNotes.c_str());
+				}
+
 					// userLog is defined in the job ad
-				if (simple_name.size() > 0)	 {
-					
-					strcpy (jobSubmit.submitHost, daemonCore->privateNetworkIpAddr());
-					clusterad->LookupString(ATTR_OWNER, owner);
-					clusterad->LookupString(ATTR_NT_DOMAIN, ntdomain);
-					clusterad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-					clusterad->LookupBool(ATTR_ULOG_USE_XML, use_xml);
-					
-					usr_log.setEnableUserLog(true);	
-					usr_log.setUseXML(use_xml);	
+				if (simple_name.size() > 0) {
+
+					procad->LookupString(ATTR_OWNER, owner);
+					procad->LookupString(ATTR_NT_DOMAIN, ntdomain);
+					procad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
+					procad->LookupBool(ATTR_ULOG_USE_XML, use_xml);
+
+					usr_log.setEnableUserLog(true); 
+					usr_log.setUseXML(use_xml);     
 					usr_log.setEnableFsync(doFsync);
 					usr_log.initialize(owner.c_str(), ntdomain.c_str(), simple_name.c_str(),
-						0, 0, 0, gjid.c_str());
-					
+									   0, 0, 0, gjid.c_str());
+                                       
 				} else if (has_event_log) {  // EventLog is defined but not UserLog
 					usr_log.setEnableUserLog(false);
--					usr_log.initialize(0,0,0,NULL);
+					usr_log.initialize(0,0,0,NULL);
 				}
 				// we only want to write if there is something to write to - either UserLog or 
 				if (has_event_log || (simple_name.size() > 0) ) {
@@ -2505,7 +2520,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					usr_log.setGlobalProc(proc_id);
 					usr_log.writeEvent(&jobSubmit,procad);
 				}
-				
 			}	
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
@@ -3523,12 +3537,14 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			        ATTR_OWNER);
 			Q_SOCK->getReliSock()->put(-1);
 			Q_SOCK->getReliSock()->end_of_message();
+			free(path);
 			return -1;
 		}
 		if (!OwnerCheck(&ad, Q_SOCK->getOwner())) {
 			dprintf(D_ALWAYS, "SendSpoolFileIfNeeded: OwnerCheck failure\n");
 			Q_SOCK->getReliSock()->put(-1);
 			Q_SOCK->getReliSock()->end_of_message();
+			free(path);
 			return -1;
 		}
 		hash = ickpt_share_get_hash(ad);
@@ -3550,6 +3566,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			{
 				Q_SOCK->getReliSock()->put(1);
 				Q_SOCK->getReliSock()->end_of_message();
+				free(path);
 				return 0;
 			}
 		}
@@ -3623,10 +3640,10 @@ int get_job_prio(ClassAd *job)
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
-        cur_hosts = ((job_status == RUNNING) ? 1 : 0);
+        cur_hosts = ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) ? 1 : 0);
     }
     if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
-        max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
+        max_hosts = ((job_status == IDLE) ? 1 : 0);
     }
 	// Figure out if we should contine and put this job into the PrioRec array
 	// or not.
@@ -3771,13 +3788,8 @@ int mark_idle(ClassAd *job)
 				 "cleaning up now\n", cluster, proc );
 		scheduler.WriteAbortToUserLog( job_id );
 		DestroyProc( cluster, proc );
-	} else if ( status == UNEXPANDED ) {
-		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
-		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
-						 (int)time(0) );
-		SetAttributeInt( cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0);
 	}
-	else if ( status == RUNNING || hosts > 0 ) {
+	else if ( status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
 		if( universeCanReconnect(universe) &&
 			jobLeaseIsValid(job, cluster, proc) )
 		{
@@ -3973,7 +3985,7 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
  * any user; o.w. only get jobs for specified user.
  */
 void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
-					 char * user)
+					 char const * user)
 {
 	ClassAd				*ad;
 	bool match_any_user = (user == NULL) ? true : false;
@@ -4221,8 +4233,7 @@ int Runnable(PROC_ID* id)
 }
 
 // From the priority records, find the runnable job with the highest priority
-// use the function prio_compar. By runnable I mean that its status is either
-// UNEXPANDED or IDLE.
+// use the function prio_compar. By runnable I mean that its status is IDLE.
 void FindPrioJob(PROC_ID & job_id)
 {
 	int			i;								// iterator over all prio rec

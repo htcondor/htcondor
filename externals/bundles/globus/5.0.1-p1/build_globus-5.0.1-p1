@@ -17,6 +17,13 @@ if [ `uname` = "SunOS" ] ; then
   fi
 fi
 
+patch -i rfc_proxy.patch -p0
+if [ $? -ne 0 ]
+then
+  echo "patch rfc_proxy.patch failed"
+  exit 1
+fi
+
 # The XIO module usually wants to dlopen its GSI and popen drivers at
 # runtime. Since we want to statically link in all of the Globus libraries,
 # convince XIO to include these drivers as built-ins.

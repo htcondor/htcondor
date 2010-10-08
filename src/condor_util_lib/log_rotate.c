@@ -83,6 +83,11 @@ int doalphasort(const void *a, const void *b) {
 #endif
 
 void setBaseName(char *baseName) {
+	// Since one log file can have different ones per debug level, 
+	// we need to check whether we want to deal with a different base name
+	if  ( (isInitialized == 1) && (strcmp(baseName, logBaseName) != 0) )  {
+		isInitialized = 0;
+	}
 	if (isInitialized == 0) {
 		char *tmpDir;
 

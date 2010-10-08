@@ -88,7 +88,7 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 	access_time = time_access;
 	modify_time = time_modify;
 	create_time = time_create;
-	mode_set = false;
+	valid = false;
 	file_size = fsize;
 	m_isDirectory = is_dir;
 	m_isSymlink = is_symlink;
@@ -124,17 +124,8 @@ StatInfo::stat_file( const char *path )
 
 # if (! defined WIN32)
 	if ( !status ) {
-		// Only lstat if it's a directory  - or - 
-		// the "only lstat() if dir" flag isn't set
 		const StatStructType *sb = statbuf.GetBuf( StatWrapper::STATOP_STAT );
-		bool do_lstat = S_ISDIR( sb->st_mode );
-		if ( !m_onlyLstatIfDir ) {
-			do_lstat = true;
-		}
-
-		if ( do_lstat ) {
-			status = statbuf.Stat( StatWrapper::STATOP_LSTAT );
-		}
+		status = statbuf.Stat( StatWrapper::STATOP_LSTAT );
 	}
 # endif
 
@@ -225,11 +216,11 @@ StatInfo::init( StatWrapper *statbuf )
 		access_time = 0;
 		modify_time = 0;
 		create_time = 0;
-		m_onlyLstatIfDir = false;
+		file_size = 0;
 		m_isDirectory = false;
 		m_isExecutable = false;
 		m_isSymlink = false;
-		mode_set = false;
+		valid = false;
 	}
 	else
 	{
@@ -253,7 +244,7 @@ StatInfo::init( StatWrapper *statbuf )
 		modify_time = sb->st_mtime;
 		file_size = sb->st_size;
 		file_mode = sb->st_mode;
-		mode_set = true;
+		valid = true;
 # if (! defined WIN32)
 		m_isDirectory = S_ISDIR(sb->st_mode);
 		// On Unix, if any execute bit is set (user, group, other), we
@@ -273,6 +264,8 @@ StatInfo::init( StatWrapper *statbuf )
 char*
 StatInfo::make_dirpath( const char* dir ) 
 {
+	ASSERT(dir);
+
 	char* rval;
 	int dirlen = strlen(dir);
 	if( dir[dirlen - 1] == DIR_DELIM_CHAR ) {
@@ -292,9 +285,38 @@ StatInfo::make_dirpath( const char* dir )
 mode_t
 StatInfo::GetMode( void ) 
 {
-	if( ! mode_set ) {
+	if(!valid) {
 		stat_file( fullpath );
 	}
+	if(!valid) {
+		EXCEPT("Avoiding a use of an undefined mode");
+	}
+
 	return file_mode;	
 }
 
+#ifndef WIN32
+uid_t
+StatInfo::GetOwner( void )
+{
+	// This is defensive programming, but it's better than returning an
+	// undefined value.
+	if(!valid) {
+		EXCEPT("Avoiding a use of an undefined uid");
+	}
+
+	return owner;
+}
+
+gid_t
+StatInfo::GetGroup( void )
+{
+	// This is defensive programming, but it's better than returning an
+	// undefined value.
+	if(!valid) {
+		EXCEPT("Avoiding a use of an undefined gid");
+	}
+
+	return group;
+}
+#endif

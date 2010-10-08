@@ -58,7 +58,7 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-	condor_event.o \
+	condor_event.o directory_util.o \
 	write_user_log.o \
 	write_user_log_state.o \
 	user_log_header.o \
@@ -171,6 +171,7 @@ CLASSAD_OBJ = \
 
 CONLIBAPI_OBJ = \
 	condor_event.o \
+	directory_util.o \
 	file_sql.o \
 	misc_utils.o \
 	user_log_header.o \
@@ -227,7 +228,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	alarm.o user_job_policy.o classad_support.o \
 	directory.o stat_info.o stat_wrapper.o stat_wrapper_internal.o \
 	my_hostname.o file_lock.o sig_name.o \
-	email_cpp.o env.o \
+	email_cpp.o env.o directory_util.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
 	write_user_log.o \

@@ -4091,10 +4091,10 @@ static bool test_insert_env_into_classad_version_v1_error_v2() {
 	emit_output_actual_header();
 	emit_param("Error MyString", "%s", error.Value());
 	if(error.IsEmpty()) {
-		niceFree(actual); free(version);
+		free(actual); free(version);
 		FAIL;
 	}
-	niceFree(actual); free(version);
+	free(actual); free(version);
 	PASS;
 }
 

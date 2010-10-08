@@ -34,6 +34,8 @@ Emitter::Emitter() {
 	failed_tests = 0;
 	aborted_tests = 0;
 	skipped_tests = 0;
+	buf = 0;
+	test_buf = 0;
 }
 
 Emitter::~Emitter() {
@@ -53,6 +55,8 @@ void Emitter::init(bool failures_printed, bool successes_printed) {
 	set_debug_flags("D_ALWAYS");
 	set_debug_flags("D_NOHEADER");
 	config();
+	gettimeofday(&tm_start, NULL);
+	start_time = tm_start.tv_sec + (tm_start.tv_usec / 1000000.0);
 }
 
 /* Formats and prints a parameter and its value as a sub-point of input,
@@ -62,6 +66,7 @@ void Emitter::emit_param(const char* pname, const char* format, va_list args) {
 	buf->sprintf_cat("    %s:  ",pname);
 	buf->vsprintf_cat(format, args);
 	buf->sprintf_cat("\n");
+	print_now_if_possible();
 }
 
 /* A version of emit_param() for return values. */
@@ -69,18 +74,27 @@ void Emitter::emit_retval(const char* format, va_list args) {
 	buf->sprintf_cat("    RETURN:  ");
 	buf->vsprintf_cat(format, args);
 	buf->sprintf_cat("\n");
+	print_now_if_possible();
 }
 
 /* Emits a heading and the function string.
  */
 void Emitter::emit_function(const char* function) {
 	test_buf->sprintf("---------------------\nFUNCTION:  %s\n", function);
+	if(print_failures && print_successes) {
+		dprintf(D_ALWAYS, "%s", test_buf->Value());
+		test_buf->setChar(0, '\0');
+	}
 }
 
 /* Emits a heading and the object string.
  */
 void Emitter::emit_object(const char* object) {
 	test_buf->sprintf("---------------------\nOBJECT:  %s\n", object);
+	if(print_failures && print_successes) {
+		dprintf(D_ALWAYS, "%s", test_buf->Value());
+		test_buf->setChar(0, '\0');
+	}
 	object_tests++;
 }
 
@@ -89,52 +103,55 @@ void Emitter::emit_object(const char* object) {
  */
 void Emitter::emit_comment(const char* comment) {
 	buf->sprintf_cat("COMMENT:  %s\n", comment);
+	print_now_if_possible();
 }
 
 /* Prints a known problem of the function.
  */
 void Emitter::emit_problem(const char* problem) {
 	buf->sprintf_cat("KNOWN PROBLEM:  %s\n", problem);
+	print_now_if_possible();
 }
 
 /* Shows exactly what is going to be tested.
  */
 void Emitter::emit_test(const char* test) {
+	emit_test_break();
 	function_tests++;
 	buf->sprintf_cat("TEST:  %s\n", test);
-	start = time(0);
-}
-
-void Emitter::emit_name(const char* test_name) {
-	buf->sprintf_cat("TESTNAME:  %s\n", test_name);
+	print_now_if_possible();
+	gettimeofday(&tm_start, NULL);
 }
 
 /* A header saying that the function's input is going to follow.
  */
 void Emitter::emit_input_header() {
 	buf->sprintf_cat("INPUT:\n");
+	print_now_if_possible();
 }
 
 /* A header saying that the function's expected output is going to follow.
  */
 void Emitter::emit_output_expected_header() {
 	buf->sprintf_cat("EXPECTED OUTPUT:\n");
+	print_now_if_possible();
 }
 
 /* A header saying that the function's actual output is going to follow.
  */
 void Emitter::emit_output_actual_header() {
 	buf->sprintf_cat("ACTUAL OUTPUT:\n");
+	print_now_if_possible();
 }
 
-/* Prints out a message saying that the test succeeded.  The function should
- * be called like "emit_result_success(__LINE__);"
+/* Prints out a message saying that the test succeeded. The function should
+ * be called via the PASS macro."
  */
 void Emitter::emit_result_success(int line) {
-	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n", 
-		line, time(0) - start);
-	Emitter::emit_test_break();
-	if(print_successes) {
+	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%f seconds)\n", 
+		line, get_completion_time());
+	print_now_if_possible();
+	if(print_successes && !print_failures) {
 		if(!test_buf->IsEmpty()) {
 			dprintf(D_ALWAYS, "%s", test_buf->Value());
 			test_buf->setChar(0, '\0');
@@ -145,24 +162,25 @@ void Emitter::emit_result_success(int line) {
 	passed_tests++;
 }
 
-/* Prints out a message saying that the test failed.  The function should
- * be called like "emit_result_failure(__LINE__);"
+/* Prints out a message saying that the test failed. The function should
+ * be called via the PASS macro."
  */
 void Emitter::emit_result_failure(int line) {
-	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%ld seconds)\n", 
-		line, time(0) - start);
-	Emitter::emit_test_break();
+	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%f seconds)\n", 
+		line, get_completion_time());
+	print_now_if_possible();
 	print_result_failure();
 	failed_tests++;
 }
 
 /* Prints out a message saying that the test was aborted for some unknown
  * reason, probably given by emit_abort() before this function call.  The
- * function should be called like "emit_result_abort(__LINE__);"
+ * function should be called via the ABORT macro."
  */
 void Emitter::emit_result_abort(int line) {
-	buf->sprintf_cat("RESULT:  ABORTED, test failed at line %d\n", line);
-	Emitter::emit_test_break();
+	buf->sprintf_cat("RESULT:  ABORTED, test failed at line %d (%f seconds)\n",
+		line, get_completion_time());
+	print_now_if_possible();
 	print_result_failure();
 	aborted_tests++;
 }
@@ -172,7 +190,7 @@ void Emitter::emit_result_abort(int line) {
  */
 void Emitter::emit_skipped(const char* skipped) {
 	buf->sprintf_cat("SKIPPED:  %s", skipped);
-	Emitter::emit_test_break();
+	print_now_if_possible();
 	print_result_failure();
 	skipped_tests++;
 }
@@ -183,16 +201,21 @@ void Emitter::emit_skipped(const char* skipped) {
  */
 void Emitter::emit_alert(const char* alert) {
 	buf->sprintf_cat("ALERT:  %s\n", alert);
+	print_now_if_possible();
 }
 
 /* Emits a break between two tests of the same function.
  */
 void Emitter::emit_test_break() {
 	buf->sprintf_cat("\n");
+	print_now_if_possible();
 }
 
 void Emitter::emit_summary() {
-	dprintf(D_ALWAYS, "---------------------\nSUMMARY:\n");
+	gettimeofday(&tm_finish, NULL);
+	double finish_time = tm_finish.tv_sec + (tm_finish.tv_usec / 1000000.0);
+	
+	dprintf(D_ALWAYS, "\n---------------------\nSUMMARY:\n");
 	dprintf(D_ALWAYS, "========\n");
 	dprintf(D_ALWAYS, "    Total Tested Objects:  %d\n", object_tests);
 	dprintf(D_ALWAYS, "    Total Unit Tests:      %d\n", function_tests);
@@ -200,10 +223,11 @@ void Emitter::emit_summary() {
 	dprintf(D_ALWAYS, "    Failed Unit Tests:     %d\n", failed_tests);
 	dprintf(D_ALWAYS, "    Aborted Unit Tests:    %d\n", aborted_tests);
 	dprintf(D_ALWAYS, "    Skipped Unit Tests:    %d\n", skipped_tests);
+	dprintf(D_ALWAYS, "    Total Time Taken:      %f seconds\n", finish_time - start_time);
 }
 
 void Emitter::print_result_failure() {
-	if(print_failures) {
+	if(print_failures && !print_successes) {
 		if(!test_buf->IsEmpty()) {
 			dprintf(D_ALWAYS, "%s", test_buf->Value());
 			test_buf->setChar(0, '\0');
@@ -211,6 +235,30 @@ void Emitter::print_result_failure() {
 		dprintf(D_ALWAYS, "%s", buf->Value());
 	}
 	buf->setChar(0, '\0');
+}
+
+void Emitter::print_now_if_possible() {
+	if(print_failures && print_successes) {
+		dprintf(D_ALWAYS, "%s", buf->Value());
+		buf->setChar(0, '\0');
+	}
+}
+
+double Emitter::get_completion_time() {
+	gettimeofday(&tm_finish, NULL);
+
+	long seconds, microseconds;
+	seconds = tm_finish.tv_sec - tm_start.tv_sec;
+	if(tm_finish.tv_usec < tm_start.tv_usec) {
+		microseconds = 1000000 - tm_start.tv_usec + tm_finish.tv_usec;
+		seconds--;
+	}
+	else {
+		microseconds = tm_finish.tv_usec - tm_start.tv_usec;
+	}
+	
+	return seconds + (microseconds / 1000000.0);
+
 }
 
 void init(bool failures_printed, bool successes_printed) {
@@ -251,10 +299,6 @@ void emit_test(const char* test) {
 	e.emit_test(test);
 }
 
-void emit_name(const char* test_name) {
-	e.emit_name(test_name);
-}
-	
 void emit_skipped(const char* skipped) {
 	e.emit_skipped(skipped);
 }

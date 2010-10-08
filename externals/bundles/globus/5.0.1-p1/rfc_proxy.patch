@@ -1,0 +1,32 @@
+--- gt5.0.1-all-source-installer/source-trees/gsi/proxy/proxy_core/source/library/globus_gsi_proxy_handle.c	2008-09-15 10:06:26.000000000 -0500
++++ gt5.0.1-all-source-installer.patched/source-trees/gsi/proxy/proxy_core/source/library/globus_gsi_proxy_handle.c	2010-08-19 12:06:24.000000000 -0500
+@@ -1809,7 +1809,13 @@
+ 
+     if(is_limited == GLOBUS_TRUE)
+     {
+-        if(GLOBUS_GSI_CERT_UTILS_IS_GSI_3_PROXY(handle->type))
++        if(GLOBUS_GSI_CERT_UTILS_IS_RFC_PROXY(handle->type))
++        {
++            result = globus_gsi_proxy_handle_set_type(
++                handle,
++                GLOBUS_GSI_CERT_UTILS_TYPE_RFC_LIMITED_PROXY);
++        }
++        else if(GLOBUS_GSI_CERT_UTILS_IS_GSI_3_PROXY(handle->type))
+         {
+             result = globus_gsi_proxy_handle_set_type(
+                 handle,
+@@ -1824,7 +1830,13 @@
+     }
+     else
+     {
+-        if(GLOBUS_GSI_CERT_UTILS_IS_GSI_3_PROXY(handle->type))
++        if(GLOBUS_GSI_CERT_UTILS_IS_RFC_PROXY(handle->type))
++        {
++            result = globus_gsi_proxy_handle_set_type(
++                handle,
++                GLOBUS_GSI_CERT_UTILS_TYPE_RFC_IMPERSONATION_PROXY);
++        }
++        else if(GLOBUS_GSI_CERT_UTILS_IS_GSI_3_PROXY(handle->type))
+         {
+             result = globus_gsi_proxy_handle_set_type(
+                 handle,

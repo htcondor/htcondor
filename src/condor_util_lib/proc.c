@@ -68,20 +68,20 @@ format_time( float fp_secs )
 
 
 static const char* JobStatusNames[] = {
-    "UNEXPANDED",
+    NULL,
     "IDLE",
     "RUNNING",
     "REMOVED",
     "COMPLETED",
 	"HELD",
-    "SUBMISSION_ERR",
+	"TRANSFERRING_OUTPUT",
 };
 
 
 const char*
 getJobStatusString( int status )
 {
-	if( status<0 || status>=JOB_STATUS_MAX ) {
+	if( status < JOB_STATUS_MIN || status > JOB_STATUS_MAX ) {
 		return "UNKNOWN";
 	}
 	return JobStatusNames[status];
@@ -91,29 +91,14 @@ getJobStatusString( int status )
 int
 getJobStatusNum( const char* name )
 {
+	int i;
 	if( ! name ) {
 		return -1;
 	}
-	if( strcasecmp(name,"UNEXPANDED") == MATCH ) {
-		return UNEXPANDED;
-	}
-	if( strcasecmp(name,"IDLE") == MATCH ) {
-		return IDLE;
-	}
-	if( strcasecmp(name,"RUNNING") == MATCH ) {
-		return RUNNING;
-	}
-	if( strcasecmp(name,"REMOVED") == MATCH ) {
-		return REMOVED;
-	}
-	if( strcasecmp(name,"COMPLETED") == MATCH ) {
-		return COMPLETED;
-	}
-	if( strcasecmp(name,"HELD") == MATCH ) {
-		return HELD;
-	}
-	if( strcasecmp(name,"SUBMISSION_ERR") == MATCH ) {
-		return SUBMISSION_ERR;
+	for ( i = JOB_STATUS_MIN; i <= JOB_STATUS_MAX; i++ ) {
+		if ( strcasecmp( name, JobStatusNames[i] ) == MATCH ) {
+			return i;
+		}
 	}
 	return -1;
 }

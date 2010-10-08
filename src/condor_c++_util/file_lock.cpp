@@ -24,6 +24,7 @@
 #include "condor_uid.h"
 #include "file_lock.h"
 #include "utc_time.h"
+#include "directory_util.h"
 
 extern "C" int lock_file( int fd, LOCK_TYPE type, BOOLEAN do_block );
 
@@ -192,16 +193,34 @@ FileLock::FileLock( const char *path , bool deleteFile, bool useLiteralPath)
 		m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );
 		if (m_fd < 0) {
 			if (!useLiteralPath) {
-				dprintf(D_FULLDEBUG, "Destination path for lock file %s does not seem to exist - trying to create.\n", m_path);
+				dprintf(D_FULLDEBUG, "FileLock::FileLock: Destination path for lock file %s does not seem to exist - trying to create.\n", m_path);
 				char *dPath = GetTempPath();
+				mode_t old_umask = umask(0);
 				int mdir = mkdir(dPath, 0777);
 				if (mdir < 0) {
-					dprintf(D_FULLDEBUG, "Destination path directory %s cannot be created. Failure.\n", dPath);
-					EXCEPT("FileLock::FileLock(): You must have a valid or creatable directory path set as tmp path.");
+					dprintf(D_FULLDEBUG, "FileLock::FileLock: Destination path directory %s cannot be created. Failure. Will retry to create folder in /tmp. \n", dPath);
+					// try again with defaulting to /tmp : 
+					hPath = CreateHashName(path, true);
+					SetPath(hPath);
+					delete []hPath;
+					mdir = mkdir("/tmp/condorLocks/", 0777);
+					if (mdir < 0) { 
+						//EXCEPT("FileLock::FileLock(): You must have a valid or creatable directory path set as tmp path. Backup creating in /tmp failed as well.");		
+						
+						dprintf(D_FULLDEBUG, "FileLock::FileLock: Folder creation in /tmp was not successful. It may already exist... If you do not see any further messages, locking on local disk will work as expected in backup /tmp folder. \n");
+					}
 				}
 				delete []dPath;
+				umask(old_umask);
+				
 			// now let's try again.
-				m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );	 
+				m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );
+				if ( m_fd < 0 ) {
+					dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will likely fall back on traditional locking. \n");
+					m_init_succeeded = false;
+					m_delete = 0;
+					return;
+				}
 			} else {
 				EXCEPT("FileLock::FileLock(): You must have a valid file path as argument.");
 			}
@@ -259,6 +278,7 @@ FileLock::~FileLock( void )
 void
 FileLock::Reset( void )
 {
+	m_init_succeeded = true;
 	m_delete = 0;
 	m_fd = -1;
 	m_fp = NULL;
@@ -269,6 +289,12 @@ FileLock::Reset( void )
 #ifdef WIN32
 	m_debug_win32_mutex = NULL;
 #endif
+}
+
+bool
+FileLock::initSucceeded( void ) 
+{ 
+	return m_init_succeeded; 
 }
 
 	// This method manages settings data member m_path.  The real
@@ -598,37 +624,25 @@ FileLock::updateLockTimestamp(void)
 
 
 // create a temporary lock path
+// return value must be freed via delete[] by caller.
 char * 
 FileLock::GetTempPath() 
 {
+
+	char *path = temp_dir_path();
 	char *suffix = "condorLocks";
-	char *tmp = param("TEMP_DIR");
-	char *tempPath;	
 	
-	if (tmp == NULL) {
-		tmp = param("TMP_DIR");
-		if (tmp == NULL) {
-			tempPath = "/tmp";
-		}
-	}
+	if (path == NULL)
+		return NULL;
 	
-	if (tmp != NULL)
-		tempPath = tmp;
+	char *full_path = dirscat(path, suffix);
+	free(path);
 	
-	int len = strlen(tempPath) + strlen(suffix) + 3;
-	char *path = new char[len];
-	if (tempPath[strlen(tempPath)-1] == DIR_DELIM_CHAR)
-		snprintf(path, len-1, "%s%s%c", tempPath, suffix, DIR_DELIM_CHAR);
-	else 
-		snprintf(path, len, "%s%c%s%c", tempPath, DIR_DELIM_CHAR, suffix, DIR_DELIM_CHAR);
-	
-	if (tmp != NULL)
-		free(tmp);
-	return path;
+	return full_path;
 }
 
 char *
-FileLock::CreateHashName(const char *orig)
+FileLock::CreateHashName(const char *orig, bool useDefault)
 {
 	char *path = GetTempPath();
 	
@@ -655,7 +669,12 @@ FileLock::CreateHashName(const char *orig)
 	hash = hash % 1000;
 	int len = strlen(path) + 10;
 	char *dest = new char[len];
-	sprintf(dest, "%s%u%s", path , hash, ".lockc");
+#if !defined(WIN32)
+	if (useDefault) 
+		sprintf(dest, "%s%u%s", "/tmp/condorLocks/", hash, ".lockc");
+	else 
+#endif
+		sprintf(dest, "%s%u%s", path , hash, ".lockc");
 	delete []temp_filename; 
 	delete []path; 
 	return dest;

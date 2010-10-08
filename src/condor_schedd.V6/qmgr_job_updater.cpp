@@ -192,6 +192,19 @@ QmgrJobUpdater::startUpdateTimer( void )
 }
 
 
+void
+QmgrJobUpdater::resetUpdateTimer( void )
+{
+	if ( q_update_tid < 0 ) {
+		startUpdateTimer();
+		return;
+	}
+
+	int q_interval = param_integer( "SHADOW_QUEUE_UPDATE_INTERVAL", 15*60 );
+	daemonCore->Reset_Timer( q_update_tid, 0, q_interval );
+}
+
+
 /*
   WARNING: This method is BAD NEWS for schedd scalability.  We make a
   whole new qmgmt connection for *every* attribute we update.  Worse

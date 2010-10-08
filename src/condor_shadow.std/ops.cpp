@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "fileno.h"
-#include "condor_io.h"
+#include "std_univ_io.h"
 #include "structproc.h"
 
 FILE	*fdopen();
@@ -39,7 +39,7 @@ extern int UsePipes;
 
 extern V2_PROC *Proc;
 
-ReliSock *syscall_sock = NULL;
+StdUnivSock *syscall_sock = NULL;
 
 /* This is a nasty hack that allows the shadow to record into the user log when 
 the starter suspends its job. It is such a bad hack because the starter
@@ -52,11 +52,11 @@ function name denotates my dislike for this feature to be here.
 -psilord 2/1/2001 */
 extern "C" void log_old_starter_shadow_suspend_event_hack(char *s1, char *s2);
 
-ReliSock *
+StdUnivSock *
 RSC_ShadowInit( int rscsock, int errsock )
 {
 	RSCSock = rscsock;
-	syscall_sock = new ReliSock();
+	syscall_sock = new StdUnivSock();
 	syscall_sock->attach_to_file_desc(RSCSock);
 
 	syscall_sock->encode();

@@ -22,7 +22,7 @@
 
 #include "condor_uid.h"
 #include "stat_info.h"
-
+#include "directory_util.h"
 
 /** Class to iterate filenames in a subdirectory.  Given a subdirectory
 	path, this class can iterate the names of the files in the directory,
@@ -88,7 +88,7 @@ public:
 
 	/** Restart the iteration.  After calling Rewind(), the next 
 		call to Next() will return the first file in the directory again.
-		@return Always returns true (for now)
+		@return true on successful rewind, otherwise false
 		@see Next()
 	*/
 	bool Rewind();
@@ -163,12 +163,6 @@ public:
 		@return true on successful removal, otherwise false
 	*/
 	bool Remove_Full_Path( const char *path );
-
-	/** Remove the specified directory entry.  If the given file is a
-		subdirectory, then the subdirectory (and all files beneath it)
-		are removed. @param path The full path to the file to remove
-		@return true on successful removal, otherwise false */
-	bool Remove_Entry( const char* name );
 
 	/** Remove the all the files and subdirectories in the directory
 		specified by the constructor.  Upon success, the subdirectory
@@ -289,21 +283,7 @@ bool IsDirectory( const char* path );
 */
 bool IsSymlink( const char* path );
 
-/** Take two strings, a directory path, and a filename, and
-  concatenate them together.  If the directory path doesn't end with
-  the appropriate directory deliminator for this platform, this
-  function will ensure that the directory delimiter is included in the
-  resulting full path.
-  @param dirpath The directory path.
-  @param filename The filename.
-  @return A string created with new() that contains the full pathname.
-*/
-char* dircat( const char* dirpath, const char* filename );
 
-/** Returns a path to subdirectory to use for temporary files.
-  @return The pointer returned must be de-allocated by the caller w/ free()
-*/
-char* temp_dir_path();
 
 #if ! defined(WIN32)
 /** Recursively change ownership of a file or directory tree

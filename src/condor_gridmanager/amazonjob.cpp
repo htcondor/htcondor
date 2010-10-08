@@ -186,14 +186,13 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	m_user_data = NULL;
 	m_user_data_file = NULL;	
 	
-	// if user assigns both user_data and user_data_file, only user_data_file
-	// will be used.
+	// if user assigns both user_data and user_data_file, the two will
+	// be concatenated by the gahp
 	if ( jobAd->LookupString( ATTR_AMAZON_USER_DATA_FILE, buff ) ) {
 		m_user_data_file = strdup(buff);	
-	} else {
-		if ( jobAd->LookupString( ATTR_AMAZON_USER_DATA, buff ) ) {
-			m_user_data = strdup(buff);
-		}
+	}
+	if ( jobAd->LookupString( ATTR_AMAZON_USER_DATA, buff ) ) {
+		m_user_data = strdup(buff);
 	}
 	
 	// get VM instance type

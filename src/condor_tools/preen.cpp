@@ -47,6 +47,7 @@
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
+#include "../condor_privsep/condor_privsep.h"
 
 State get_machine_state();
 
@@ -622,7 +623,7 @@ void check_tmp_dir(){
 #if !defined(WIN32)
 	const char *file;
 	char *tmpDir = NULL;
-	bool newLock = param_boolean("NEW_LOCKING", false);
+	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
 				// create a dummy FileLock for TmpPath access
 		FileLock *lock = new FileLock(-1, NULL, NULL);
@@ -750,7 +751,16 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	}
 
 	if( RmFlag ) {
-		if( dir.Remove_Full_Path( pathname.Value() ) ) {
+		bool removed = dir.Remove_Full_Path( pathname.Value() );
+		if( !removed && privsep_enabled() ) {
+			removed = privsep_remove_dir( pathname.Value() );
+			if( VerboseFlag ) {
+				if( removed ) {
+					printf( "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
+				}
+			}
+		}
+		if( removed ) {
 			buf.sprintf( "%s - Removed", pathname.Value() );
 		} else {
 			buf.sprintf( "%s - Can't Remove", pathname.Value() );

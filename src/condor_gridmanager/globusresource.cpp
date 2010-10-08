@@ -84,12 +84,16 @@ GlobusResource::GlobusResource( const char *resource_name,
 	proxySubject = strdup( proxy->subject->subject_name );
 	proxyFQAN = strdup( proxy->subject->fqan );
 
-	m_isGt5 = is_gt5;
+	if ( param_boolean( "GRAM_VERSION_DETECTION", true ) ) {
+		m_isGt5 = false;
+		m_versionKnown = false;
+	} else {
+		m_isGt5 = is_gt5;
+		m_versionKnown = true;
+	}
 
 	submitJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE / 2;
 	restartJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE - submitJMLimit;
-
-	m_versionKnown = false;
 
 	checkMonitorTid = daemonCore->Register_Timer( TIMER_NEVER,
 							(TimerHandlercpp)&GlobusResource::CheckMonitor,
@@ -405,12 +409,27 @@ void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
 		ping_complete = true;
 		ping_succeeded = false;
 	} else {
-		if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_HTTP_UNPACK_FAILED ) {
-			m_isGt5 = false;
-		} else {
-			m_isGt5 = true;
+		if ( !m_versionKnown ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_HTTP_UNPACK_FAILED ) {
+				m_isGt5 = false;
+				m_versionKnown = true;
+			} else if ( rc == GLOBUS_SUCCESS ) {
+				m_isGt5 = true;
+				m_versionKnown = true;
+
+				// Any jobs queued up under gt2 throttles need to signaled.
+				GlobusJob *job;
+				submitJMsWanted.Rewind();
+				while ( submitJMsWanted.Next( job ) ) {
+					job->SetEvaluateState();
+				}
+
+				restartJMsWanted.Rewind();
+				while ( restartJMsWanted.Next( job ) ) {
+					job->SetEvaluateState();
+				}
+			}
 		}
-		m_versionKnown = true;
 
 		ping_complete = true;
 		ping_succeeded = true;

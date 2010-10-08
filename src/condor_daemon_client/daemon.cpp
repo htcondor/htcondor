@@ -1235,8 +1235,6 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 			query.addANDConstraint( buf.Value() );
 		} else if ( _type == DT_GENERIC ) {
 			query.setGenericQueryType(_subsys);
-			buf.sprintf("TARGET.%s == \"%s\"", ATTR_TARGET_TYPE, _subsys);
-			query.addANDConstraint( buf.Value() );
 		} else if ( _name ) {
 			buf.sprintf( "%s == \"%s\"", ATTR_NAME, _name ); 
 			query.addANDConstraint( buf.Value() );

@@ -1125,8 +1125,6 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 
 	if (adtype == GENERIC_AD) {
 		query.setGenericQueryType(subsys);
-		buffer.sprintf("TARGET.%s == \"%s\"", ATTR_TARGET_TYPE, subsys);
-		query.addANDConstraint(buffer.Value());
 	}
 	if (constraint!=NULL) {
 	  query.addANDConstraint(constraint);

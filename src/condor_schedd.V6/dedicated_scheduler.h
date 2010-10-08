@@ -118,7 +118,7 @@ class ResList : public CAList {
 	
 	static int machineSortByRank(const void *lhs, const void *rhs);
 
-	void selectGroup( CAList *group, char   *groupName);
+	void selectGroup( CAList *group, const char   *groupName);
 };
 
 class CandidateList : public CAList {
@@ -185,7 +185,7 @@ class DedicatedScheduler : public Service {
 		// jobs.  This is called by Scheduler::negotiate() if the
 		// owner we get off the wire matches the "owner" string we're
 		// using. 
-	int negotiate( Stream* s, char const* remote_pool );
+	int negotiate( int command, Sock* s, char const* remote_pool );
 
 		// Called everytime we want to process the job queue and
 		// schedule/spawn MPI jobs.
@@ -233,6 +233,8 @@ class DedicatedScheduler : public Service {
 
 	void generateRequest( ClassAd* job );
 
+	void removeRequest( PROC_ID job_id );
+
 	ClassAd *makeGenericAdFromJobAd(ClassAd *job);
 
 		/** Clear out all existing resource requests.  Used at the
@@ -243,7 +245,7 @@ class DedicatedScheduler : public Service {
 			things.
 		*/
 	void clearResourceRequests( void );
- 
+
 		// Set the correct value of ATTR_SCHEDULER in the queue for
 		// the given job ad.
 	bool setScheduler( ClassAd* job_ad );
@@ -273,25 +275,18 @@ class DedicatedScheduler : public Service {
 		// it is caller's responsibility to delete returned ClassAd
 	ClassAd *GetMatchRequestAd( match_rec *mrec );
 
+	match_rec *AddMrec(char const* claim_id,
+					   char const* startd_addr,
+					   char const* slot_name,
+					   PROC_ID job_id,
+					   const ClassAd* match_ad,
+					   char const *remote_pool );
+
 	void			checkReconnectQueue( void );
 
 	int		rid;			// DC reaper id
 
  private:
-
-	/** Used to handle the negotiation protocol for a given
-		resource request.  
-		@param req ClassAd holding the resource request
-		@param s The Stream to communicate with the CM
-		@param remote_pool The pool we are negotiating with
-		@param reqs_matched How many requests have been matched already.
-		@param max_reqs Total number of requests we're trying to meet. 
-		@return An enum describing the results.
-	*/
-	NegotiationResult negotiateRequest( ClassAd* req, Stream* s, 
-										char const *remote_pool, 
-										int reqs_matched, 
-										int max_reqs ); 
 
 		// This gets a list of all dedicated resources we control.
 		// This is called at the begining of each handleDedicatedJobs
@@ -386,7 +381,7 @@ class DedicatedScheduler : public Service {
 
 	void holdAllDedicatedJobs( void );
 
-	void satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
+	bool satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
 
 		// // // // // // 
 		// Data members 
@@ -449,7 +444,7 @@ class DedicatedScheduler : public Service {
 	HashTable <HashKey, match_rec*>* all_matches_by_id;
 
 		// Queue for resource requests we need to negotiate for. 
-	Queue<PROC_ID>* resource_requests;
+	std::list<PROC_ID> resource_requests;
 
 	int		num_matches;	// Total number of matches in all_matches 
 

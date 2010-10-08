@@ -74,6 +74,16 @@
 #include "condor_debug.h"
 #endif
 
+#ifdef WIN32
+/*********************************************************************
+** On Windows Server 2003 SDK, it does not have inet_pton/inet_ntop
+** Instead, they have windows version of it.
+** Here, it includes condor_win_ipv6.h which implements inet_pton/
+** inet_ntop using Winsock function.
+** Currently, only inet_pton is implemented.
+*********************************************************************/
+#include "condor_win_ipv6.h"
+#endif
 
 
 #endif /* CONDOR_COMMON_H */

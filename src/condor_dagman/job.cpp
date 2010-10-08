@@ -174,6 +174,9 @@ void Job::Init( const char* jobName, const char* directory,
 
 	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
 
+	_timesHeld = 0;
+	_jobProcsOnHold = 0;
+
 	return;
 }
 //---------------------------------------------------------------------------

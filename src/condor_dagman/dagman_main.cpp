@@ -341,6 +341,8 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n",
 				_generateSubdagSubmits ? "True" : "False" );
 
+	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", 100, 0, 1000000 );
+
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
 				debugSetting ? debugSetting : "" );
@@ -941,6 +943,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
+	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 
     //
     // Parse the input files.  The parse() routine

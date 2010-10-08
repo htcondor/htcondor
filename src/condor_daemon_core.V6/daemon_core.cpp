@@ -2779,9 +2779,9 @@ DaemonCore::reconfig(void) {
 		if ( !max_hang_time ) {
 			max_hang_time = 60 * 60;	// default to 1 hour
 		}
-		int send_update = (max_hang_time / 3) - 30;
-		if ( send_update < 1 )
-			send_update = 1;
+		m_child_alive_period = (max_hang_time / 3) - 30;
+		if ( m_child_alive_period < 1 )
+			m_child_alive_period = 1;
 		if ( send_child_alive_timer == -1 ) {
 
 				// 2008-06-18 7.0.3: commented out direct call to
@@ -2795,7 +2795,8 @@ DaemonCore::reconfig(void) {
 				// in which we hang before the first CHILDALIVE.  If
 				// that happens, our parent will never kill us.
 
-			send_child_alive_timer = Register_Timer(0, (unsigned)send_update,
+			send_child_alive_timer = Register_Timer(0,
+					(unsigned)m_child_alive_period,
 					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
 					"DaemonCore::SendAliveToParent", this );
 
@@ -2804,7 +2805,7 @@ DaemonCore::reconfig(void) {
 				// (Commented out.  See reason above.)
 				// SendAliveToParent();
 		} else {
-			Reset_Timer(send_child_alive_timer, 1, send_update);
+			Reset_Timer(send_child_alive_timer, 1, m_child_alive_period);
 		}
 	}
 
@@ -3643,29 +3644,35 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// request number and calls any registered command
 		// handler.
 
-		// log a message
-	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-		{
-			dprintf(D_DAEMONCORE,
-					"Calling Handler <%s> for Socket <%s>\n",
-					(*sockTable)[i].handler_descrip,
-					(*sockTable)[i].iosock_descrip);
-			handlerName = strdup((*sockTable)[i].handler_descrip);
-			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
-		}
-
 		// Update curr_dataptr for GetDataPtr()
 	curr_dataptr = &( (*sockTable)[i].data_ptr);
 
-	if ( (*sockTable)[i].handler ) {
-			// a C handler
-		result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-		dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
-		free(handlerName);
-	} else if ( (*sockTable)[i].handlercpp ) {
-			// a C++ handler
-		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
-		dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
+		// log a message
+	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
+	{
+		dprintf(D_DAEMONCORE,
+				"Calling Handler <%s> for Socket <%s>\n",
+				(*sockTable)[i].handler_descrip,
+				(*sockTable)[i].iosock_descrip);
+		handlerName = strdup((*sockTable)[i].handler_descrip);
+		dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
+
+		UtcTime handler_start_time;
+		handler_start_time.getTime();
+
+		if ( (*sockTable)[i].handler ) {
+				// a C handler
+			result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
+		} else if ( (*sockTable)[i].handlercpp ) {
+				// a C++ handler
+			result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+		}
+
+		UtcTime handler_stop_time;
+		handler_stop_time.getTime();
+		float handler_time = handler_stop_time.difference(&handler_start_time);
+
+		dprintf(D_COMMAND, "Return from Handler <%s> %.4fs\n", handlerName, handler_time);
 		free(handlerName);
 	}
 	else if( default_to_HandleCommand ) {
@@ -8875,7 +8882,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 	if( dc_rsock ) {
 		const unsigned int my_ip = dc_rsock->get_ip_int();
-		const unsigned int loopback_ip = ntohl( inet_addr( "127.0.0.1" ) );
+		const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
 
 		if( my_ip == loopback_ip ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
@@ -9536,6 +9543,7 @@ int DaemonCore::HungChildTimeout()
 	pid_t hung_child_pid;
 	pid_t *hung_child_pid_ptr;
 	PidEntry *pidentry;
+	bool first_time = true;
 
 	/* get the pid out of the allocated memory it was placed into */
 	hung_child_pid_ptr = (pid_t*)GetDataPtr();
@@ -9559,7 +9567,12 @@ int DaemonCore::HungChildTimeout()
 
 	// set a flag in the PidEntry so a reaper can discover it was killed
 	// because it was hung.
-	pidentry->was_not_responding = TRUE;
+	if( pidentry->was_not_responding ) {
+		first_time = false;
+	}
+	else {
+		pidentry->was_not_responding = TRUE;
+	}
 
 	// now we give the child one last chance to save itself.  we do this by
 	// servicing any waiting commands, since there could be a child_alive
@@ -9591,6 +9604,29 @@ int DaemonCore::HungChildTimeout()
 
 	// and hardkill the bastard!
 	bool want_core = param_boolean( "NOT_RESPONDING_WANT_CORE", false );
+#ifndef WIN32
+	if( want_core ) {
+		// On multiple occassions, I have observed the child process
+		// get hung while writing its core file.  If we never follow
+		// up with a hard-kill, this can result in the service going
+		// down for days, which is terrible.  Therefore, set a timer
+		// to call us again and follow up with a hard-kill.
+		if( !first_time ) {
+			dprintf(D_ALWAYS,
+					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n");
+			want_core = false;
+		}
+		else {
+			const int want_core_timeout = 600;
+			pidentry->hung_tid =
+				Register_Timer(want_core_timeout,
+							   (TimerHandlercpp) &DaemonCore::HungChildTimeout,
+							   "DaemonCore::HungChildTimeout", this);
+			ASSERT( pidentry->hung_tid != -1 );
+			Register_DataPtr( &pidentry->pid );
+		}
+	}
+#endif
 	Shutdown_Fast(hung_child_pid, want_core );
 
 	return TRUE;
@@ -9617,7 +9653,7 @@ int DaemonCore::SendAliveToParent()
 	char const *tmp;
 	int ret_val;
 	static bool first_time = true;
-	int number_of_tries;
+	int number_of_tries = 3;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
 
@@ -9664,66 +9700,32 @@ int DaemonCore::SendAliveToParent()
 		first_time = false;
 	}
 
-		// If this is our first keepalive, try three times.
-	if ( first_time ) {
-		number_of_tries = 3;
-	} else {
-		number_of_tries = 1;
+	bool blocking = first_time;
+	classy_counted_ptr<Daemon> d = new Daemon(DT_ANY,parent_sinful_string);
+	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,blocking);
+
+	int timeout = m_child_alive_period / number_of_tries;
+	if( timeout < 60 ) {
+		timeout = 60;
+	}
+	msg->setDeadlineTimeout( timeout );
+	msg->setTimeout( timeout );
+
+	if( blocking || !d->hasUDPCommandPort() || !m_wants_dc_udp ) {
+		msg->setStreamType( Stream::reli_sock );
+	}
+	else {
+		msg->setStreamType( Stream::safe_sock );
 	}
 
-	Daemon d(DT_ANY,parent_sinful_string);
-	for (;;) {
-		Sock* sock = NULL;
-		if (m_wants_dc_udp && d.hasUDPCommandPort()) {
-			sock = d.safeSock();
-		}
-		else {
-			if (first_time) {
-				dprintf(D_FULLDEBUG, "DaemonCore::SendAliveToParent(): "
-						"Using TCP to connect to parent %s.\n",
-						parent_sinful_string);
-			}
-			sock = d.reliSock();
-		}
+	if( blocking ) {
+		d->sendBlockingMsg( msg.get() );
+		ret_val = msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED;
+	}
+	else {
+		d->sendMsg( msg.get() );
 		ret_val = TRUE;
-
-		if (!sock) {
-			dprintf(D_ALWAYS,"DaemonCore: Could not connect to parent %s. "
-				"SendAliveToParent() failed.\n",parent_sinful_string);
-			ret_val = FALSE;
-		}
-
-		if( ret_val == TRUE ) {
-			if (!d.startCommand(DC_CHILDALIVE, sock, 0)) {
-				dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
-				        "SendAliveToParent() failed.\n",parent_sinful_string);
-				ret_val = FALSE;
-			}
-		}
-
-		if( ret_val == TRUE ) {
-			sock->encode();
-			if ( !sock->code(mypid) || !sock->code(max_hang_time) 
-			     || !sock->end_of_message())
-			{
-				dprintf(D_FULLDEBUG,"DaemonCore: Could not write to parent %s. "
-						"SendAliveToParent() failed.\n",parent_sinful_string);
-				ret_val = FALSE;
-			}
-		}
-
-		delete sock;
-		sock = NULL;
-
-		number_of_tries--;
-		if ( number_of_tries == 0 || ret_val == TRUE ) {
-			break;	// if we were success, or out of tries, break
-		}
-
-		dprintf(D_ALWAYS,"Failed to send alive to %s, will try again...\n",
-			parent_sinful_string);
-		sleep(5);	// block for 5 seconds before trying again
-	}	// end of loop
+	}
 
 	if ( first_time ) {
 		first_time = false;
@@ -9737,11 +9739,13 @@ int DaemonCore::SendAliveToParent()
 		dprintf(D_ALWAYS,"DaemonCore: Leaving SendAliveToParent() - "
 			"FAILED sending to %s\n",
 			parent_sinful_string);
-	} else {
+	} else if( msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED ) {
 		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - success\n");
+	} else {
+		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - pending\n");
 	}
 
-	return ret_val;
+	return TRUE;
 }
 
 #ifndef WIN32

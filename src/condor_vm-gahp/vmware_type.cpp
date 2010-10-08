@@ -963,7 +963,7 @@ VMwareType::CombineDisks()
 	systemcmd.AppendArg("commit");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, m_file_owner);
 	if( result != 0 ) {
 		return false;
 	}
@@ -987,7 +987,7 @@ VMwareType::Unregister()
 	systemcmd.AppendArg("unregister");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, m_file_owner);
 	if( result != 0 ) {
 		return false;
 	}
@@ -1013,7 +1013,7 @@ VMwareType::Snapshot()
 	systemcmd.AppendArg("snapshot");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false, &cmd_out);
+	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
 		m_result_msg = temp;
@@ -1066,6 +1066,7 @@ VMwareType::Start()
 					m_result_msg = VMGAHP_ERR_CRITICAL;
 					return false;
 				}
+				m_file_owner = PRIV_CONDOR;
 			}
 #endif
 
@@ -1092,6 +1093,7 @@ VMwareType::Start()
 			m_result_msg = VMGAHP_ERR_CRITICAL;
 			return false;
 		}
+		m_file_owner = PRIV_USER;
 	}
 #endif
 
@@ -1110,7 +1112,7 @@ VMwareType::Start()
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false, &cmd_out);
+	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		Unregister();
 		char *temp = cmd_out.print_to_delimed_string("/");
@@ -1171,7 +1173,7 @@ VMwareType::ShutdownGraceful()
 	systemcmd.AppendArg("stop");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, m_file_owner);
 	if( result != 0 ) {
 		return false; 
 	}
@@ -1196,6 +1198,7 @@ VMwareType::Shutdown()
 			m_result_msg = VMGAHP_ERR_CRITICAL;
 			return false;
 		}
+		m_file_owner = PRIV_CONDOR;
 	}
 #endif
 
@@ -1382,7 +1385,7 @@ VMwareType::Suspend()
 	systemcmd.AppendArg("suspend");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false, &cmd_out);
+	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
 		m_result_msg = temp;
@@ -1431,7 +1434,7 @@ VMwareType::Resume()
 	systemcmd.AppendArg("resume");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false, &cmd_out);
+	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
 		m_result_msg = temp;
@@ -1504,7 +1507,7 @@ VMwareType::Status()
 	}
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false, &cmd_out);
+	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
 		m_result_msg = temp;
@@ -1690,7 +1693,7 @@ VMwareType::getPIDofVM(int &vm_pid)
 	systemcmd.AppendArg("getpid");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false, &cmd_out);
+	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		return false;
 	}
@@ -2085,7 +2088,7 @@ VMwareType::testVMware(VMGahpConfig* config)
 	systemcmd.AppendArg(config->m_vm_script);
 	systemcmd.AppendArg("check");
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, PRIV_USER);
 	if( result != 0 ) {
 		vmprintf( D_ALWAYS, "VMware script check failed:\n" );
 		return false;
@@ -2128,7 +2131,7 @@ VMwareType::killVMFast(const char* prog_for_script, const char* script,
 	systemcmd.AppendArg("killvm");
 	systemcmd.AppendArg(matchstring);
 
-	int result = systemCommand(systemcmd, is_root);
+	int result = systemCommand(systemcmd, is_root ? PRIV_ROOT : PRIV_USER);
 	if( result != 0 ) {
 		return false;
 	}

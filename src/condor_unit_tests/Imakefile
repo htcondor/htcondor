@@ -12,7 +12,7 @@ OBJ = FTEST_string_to_sin.o FTEST_sin_to_string.o FTEST_getHostFromAddr.o \
 	  FTEST_fullpath.o OTEST_MyString.o FTEST_flatten_and_inline.o \
 	  OTEST_StringList.o FTEST_stl_string_utils.o OTEST_Old_Classads.o \
 	  OTEST_Env.o OTEST_FileLock.o OTEST_ArgList.o OTEST_Iso_Dates.o \
-	  OTEST_UserPolicy.o
+	  OTEST_UserPolicy.o OTEST_Directory.o OTEST_TmpDir.o OTEST_StatInfo.o
 
 UNIT_TEST_DEPENDENCY_OBJ = emit.o function_test_driver.o unit_tests.o \
 	unit_test_utils.o 

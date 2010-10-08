@@ -30,7 +30,7 @@
 #include "perm.h"
 #include "my_username.h"
 #include "my_popen.h"
-
+#include "directory_util.h"
 
 // Set DEBUG_DIRECTORY_CLASS to 1 to not actually remove
 // files, but instead print out to the log file what would get
@@ -79,6 +79,7 @@ Directory::Directory( const char *name, priv_state priv )
 
 Directory::Directory( StatInfo* info, priv_state priv ) 
 {
+	ASSERT(info);
 	initialize( priv );
 
 	curr_dir = strnewp( info->FullPath() );
@@ -169,6 +170,7 @@ Directory::GetDirectorySize()
 bool
 Directory::Find_Named_Entry( const char *name )
 {
+	ASSERT(name);
 	const char* entry = NULL;
 	bool ret_value = false;
 
@@ -195,7 +197,9 @@ Directory::Remove_Entire_Directory( void )
 
 	Set_Access_Priv();
 
-	Rewind();
+	if(!Rewind()) {
+		return_and_resetpriv(false);
+	}
 
 	while ( (thefile=Next()) ) {
 		if( ! Remove_Current_File() ) {
@@ -215,17 +219,6 @@ Directory::Recursive_Chown(uid_t src_uid, uid_t dst_uid, gid_t dst_gid,
 		src_uid, dst_uid, dst_gid, non_root_okay);
 }
 #endif /* ! defined(WIN32) */
-
-
-bool 
-Directory::Remove_Entry( const char* name )
-{
-	MyString path;
-	path = curr_dir;
-	path += DIR_DELIM_CHAR;
-	path += name;
-	return do_remove( path.Value(), false );
-}
 
 bool
 Directory::Remove_Full_Path( const char *path )
@@ -905,6 +898,13 @@ recursive_chown_win32(const char * path, perm *po) {
 bool 
 IsDirectory( const char *path )
 {
+	if (path == NULL) {
+		// Don't really know if it is better to ASSERT this or simply
+		// return false. Returning false is technically correct since the path
+		// definitely wouldn't be a directory...
+		return false;
+	}
+
 	StatInfo si( path );
 	switch( si.Error() ) {
 	case SIGood:
@@ -928,6 +928,13 @@ IsDirectory( const char *path )
 bool 
 IsSymlink( const char *path )
 {
+	if (path == NULL) {
+		// Don't really know if it is better to ASSERT this or simply
+		// return false. Returning false is technically correct since the path
+		// definitely wouldn't be a symlink...
+		return false;
+	}
+
 	StatInfo si( path );
 	switch( si.Error() ) {
 	case SIGood:
@@ -977,66 +984,6 @@ GetIds( const char *path, uid_t *owner, gid_t *group )
 #endif
 
 
-/*
-  Concatenates a given directory path and filename into a single
-  string, stored in space allocated with new[].  This function makes
-  sure that if the given directory path doesn't end with the
-  appropriate directory delimiter for this platform, that the new
-  string includes that.  Delete return string with delete[].
-*/
-char*
-dircat( const char *dirpath, const char *filename )
-{
-	bool needs_delim = true;
-	int extra = 2, dirlen = strlen(dirpath);
-	char* rval;
-	if( dirpath[dirlen - 1] == DIR_DELIM_CHAR ) {
-		needs_delim = false;
-		extra = 1;
-	}
-	rval = new char[ extra + dirlen + strlen(filename)];
-	if( needs_delim ) {
-		sprintf( rval, "%s%c%s", dirpath, DIR_DELIM_CHAR, filename );
-	} else {
-		sprintf( rval, "%s%s", dirpath, filename );
-	}
-	return rval;
-}
-
-/*
-  Returns a path to subdirectory to use for temporary files.
-  The pointer returned must be de-allocated by the caller w/ free().
-*/
-char*
-temp_dir_path()
-{
-	char *prefix = param("TMP_DIR");
-	if  (!prefix) {
-		prefix = param("TEMP_DIR");
-	}
-	if (!prefix) {
-#ifndef WIN32
-		prefix = strdup("/tmp");
-#else
-			// try to get the temp dir, then try SPOOL,
-			// then use the root directory
-		char buf[MAX_PATH];
-		int len;
-		if ((len = GetTempPath(sizeof(buf), buf)) <= sizeof(buf)) {
-			buf[len - 1] = '\0';
-			prefix = strdup(buf);
-		} else {
-			dprintf(D_ALWAYS, "GetTempPath: buffer of size %d too small\n", sizeof(buf));
-
-			prefix = param("SPOOL");
-			if (!prefix) {
-				prefix = strdup("\\");
-			}
-		}
-#endif
-	}
-	return prefix;
-}
 
 /*
   Atomically creates a unique file or subdirectory in the temporary directory 

@@ -29,7 +29,7 @@ AutoCluster::AutoCluster()
 	significant_attrs = NULL;
 	old_sig_attrs = NULL; 
 	sig_attrs_came_from_config_file = false;
-	array.fill(NULL);
+	next_id = 1;
 }
 
 
@@ -43,15 +43,9 @@ AutoCluster::~AutoCluster()
 
 void AutoCluster::clearArray()
 {
-	int i;
-	int size = array.getlast() + 1;
-	for (i=0; i < size ; i++) {
-		if ( array[i] ) {
-			delete array[i];
-			array[i] = NULL;
-		}
-	}
-	array.truncate(-1);
+	cluster_map.clear();
+	cluster_in_use.clear();
+	next_id = 1;
 }
 	
 bool AutoCluster::config(const char* significant_target_attrs)
@@ -93,14 +87,18 @@ bool AutoCluster::config(const char* significant_target_attrs)
 		sig_attrs_came_from_config_file = false;
 	}
 
+		// If we are in danger of running out of IDs, clear all auto clusters
+		// and reset next_id so we can reclaim unused IDs.
+	bool next_id_exhausted = next_id > INT_MAX/2;
+
 		// If no new_sig_attrs, and sig_attrs_changed not flagged, then
 		// nothing is new and we have nothing more to do.
-	if ( !new_sig_attrs && !sig_attrs_changed ) {
+	if ( !new_sig_attrs && !sig_attrs_changed && !next_id_exhausted ) {
 		return false;
 	}
 
 
-	if ( significant_attrs && old_sig_attrs  && (strcasecmp(new_sig_attrs,old_sig_attrs)==0) )
+	if ( significant_attrs && old_sig_attrs  && (strcasecmp(new_sig_attrs,old_sig_attrs)==0) && !next_id_exhausted )
 	{
 		/* 	Just compare new and old attr strings directly.
 			If they match, then we already have dealt with the
@@ -129,7 +127,7 @@ bool AutoCluster::config(const char* significant_target_attrs)
 	
 		// the SIGNIFICANT_ATTRIBUTES setting changed, purge our
 		// state.
-	if ( sig_attrs_changed ) {
+	if ( sig_attrs_changed || next_id_exhausted ) {
 		clearArray();
 	}
 
@@ -156,28 +154,26 @@ bool AutoCluster::config(const char* significant_target_attrs)
 
 void AutoCluster::mark()
 {
-	int i;
-	int size = array.getlast() + 1;
-	for (i=0; i < size ; i++) {
-		mark_array[i] = true;
-	}
-	mark_array.truncate(size - 1);
+	cluster_in_use.clear();
 }
 
 void AutoCluster::sweep()
 {
-	int i;
-	int size = mark_array.getlast() + 1;
-		// now remove any entries still marked
-	for (i=0; i < size ; i++) {
-		if ( mark_array[i] ) {
+	AutoClusterMap::iterator it,next;
+	for( it = cluster_map.begin();
+		 it != cluster_map.end();
+		 it = next )
+	{
+		next = it;
+		next++; // avoid invalid iterator if we delete this element
+
+		int id = it->second;
+		AutoClusterIDs::iterator in_use;
+		in_use = cluster_in_use.find(id);
+		if( in_use == cluster_in_use.end() ) {
 				// found an entry to remove.
-			mark_array[i] = false;
-			dprintf(D_FULLDEBUG,"removing auto cluster id %d\n",i);
-			if ( array[i] ) {
-				delete array[i];
-				array[i] = NULL;
-			}
+			dprintf(D_FULLDEBUG,"removing auto cluster id %d\n",id);
+			cluster_map.erase( it );
 		}
 	}
 }
@@ -185,7 +181,6 @@ void AutoCluster::sweep()
 int AutoCluster::getAutoClusterid( ClassAd *job )
 {
 	int cur_id = -1;
-	int i;
 
 		// first check if condor_config file even desires this
 		// functionality...
@@ -198,15 +193,14 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 			// we've previously figured it out...
 		
 			// tag it as touched
-		mark_array[cur_id] = false;
+		cluster_in_use.insert(cur_id);
 
-		ASSERT( array[cur_id] != NULL );
 		return cur_id;
 	}
 
 		// summarize job into a string "signature"
 		// first put significant attrs from target into the signature
-	MyString signature;
+	std::string signature;
 	char *buf;
 	significant_attrs->rewind();
 	const char* next_attr = NULL;
@@ -250,29 +244,27 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 	}
 
 		// try to find a fit
-	int size = array.getlast() + 1;
-	for (i=0; i < size ; i++) {
-		if ( array[i] == NULL ) {
-			continue;
-		}
-		if ( signature == *(array[i]) ) {
-				// found a match... update job ad
-			cur_id = i;
-		}
+	AutoClusterMap::iterator it;
+	it = cluster_map.find(signature);
+	if( it != cluster_map.end() ) {
+		cur_id = it->second;
 	}
+	else {
+		cur_id = next_id++;
+		if( next_id < cur_id ) {
+				// We've wrapped around MAX_INT!
+				// In config() we take steps to avoid this unlikely condition.
+			EXCEPT("Auto cluster IDs exhausted! (allocated %d)",cur_id);
+		}
 
-	if ( cur_id == -1 ) {
-			// failed to find a fit; need to create a new "cluster"
-		for (i=0; array[i]; i++);	// set i to first NULL entry
-		cur_id = i;
-		array[cur_id] = new MyString(signature);
+		cluster_map.insert(AutoClusterMap::value_type(signature,cur_id));
 	}
 
 		// put the new auto cluster id into the job ad to cache it.
 	job->Assign(ATTR_AUTO_CLUSTER_ID,cur_id);
 
 		// tag it as touched
-	mark_array[cur_id] = false;
+	cluster_in_use.insert(cur_id);
 
 		// for some nice feedback, place the final list of attrs used to create this
 		// signature into the job ad.

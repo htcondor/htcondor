@@ -2399,8 +2399,18 @@ LeaseManager.DEBUG_ADS		= False
 
 LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 #LeaseManager.QUERY_ADTYPE	= Any
-#LeaseManager.QUERY_CONSTRAINTS	= target.MyType == "SomeType"
-#LeaseManager.QUERY_CONSTRAINTS	= target.TargetType == "SomeType"
+#LeaseManager.QUERY_CONSTRAINTS	= MyType == "SomeType"
+#LeaseManager.QUERY_CONSTRAINTS	= TargetType == "SomeType"
+
+##
+##--------------------------------------------------------------------
+##  KBDD - keyboard activity detection daemon
+##--------------------------------------------------------------------
+##  When the KBDD starts up, it can place it's address (IP and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need an additional "-n host:port" command line option.  This
+##  feature can be turned off by commenting out this setting.
+KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 
 ##
 ##--------------------------------------------------------------------

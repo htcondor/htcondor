@@ -50,8 +50,7 @@ static bool test_normal_case() {
 	in_addr ip;
 	if(inet_aton("192.168.0.2", &ip) == 0) {
 		emit_alert("inet_aton() returned failure.");
-		emit_result_abort(__LINE__);
-		FAIL;
+		ABORT;
 	}
 	unsigned int port = 47;
 	emit_input_header();

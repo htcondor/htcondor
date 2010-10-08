@@ -315,6 +315,47 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 	return rval;
 }
 
+int
+REMOTE_CONDOR_job_termination( ClassAd* ad )
+{
+	condor_errno_t		terrno;
+	int		rval=-1;
+	int result = 0;
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_job_termination\n" );
+
+	CurrentSysCall = CONDOR_job_termination;
+
+	if( ! ad ) {
+		EXCEPT( "CONDOR_job_termination called with NULL ClassAd!" ); 
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ASSERT( result );
+	result = ad->put(*syscall_sock);
+	ASSERT( result );
+	result = syscall_sock->end_of_message();
+	ASSERT( result );
+
+	syscall_sock->decode();
+	result =  syscall_sock->code(rval);
+	ASSERT( result );
+	if( rval < 0 ) {
+		result = syscall_sock->code(terrno);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ASSERT( result );
+		errno = terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		return rval;
+	}
+	result = syscall_sock->end_of_message();
+	ASSERT( result );
+	return rval;
+}
+
 
 int
 REMOTE_CONDOR_begin_execution( void )

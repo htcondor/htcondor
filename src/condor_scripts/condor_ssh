@@ -19,15 +19,18 @@
 ##
 ##**************************************************************
 
-set -x
-
 # condor_ssh wrapper
+# format of contact file is
+# node hostname port cwd username
+
 # This script assumes the existance of a contact file
 # and uses it to map a hostname into 
 # the correct hostname/port of a listening sshd
 
-# format of contact file is
-# node hostname port cwd username
+# Uncomment the following line to have the shell print out
+# each command to stderr before running it, useful for
+# debugging
+#set -x
 
 if [ $# -lt 2 ]
 then

@@ -25,16 +25,13 @@
 #include "condor_debug.h"
 #include "MyString.h"
 
-#ifdef HAVE_EXT_OPENSSL
-#include "condor_crypt_blowfish.h"
-#include "condor_crypt_3des.h"
-#include "condor_md.h"                // Message authentication stuff
-#endif
-
 /* The macro definition and file was added for debugging purposes */
 
 int putcount =0;
 int getcount = 0;
+
+// initialize static data members
+int Stream::timeout_multiplier = 0;
 
 #if 0
 static int shipcount =0;
@@ -61,10 +58,9 @@ Stream :: Stream(stream_code c) :
 		// I love individual coding style!
 		// You put _ in the front, I put in the
 		// back, very consistent, isn't it?	
-    crypto_(NULL),
+	encrypt_(false),
     crypto_mode_(false),
-    mdMode_(MD_OFF),
-    mdKey_(0),
+	m_crypto_state_before_secret(false),
     _code(c), 
     _coding(stream_encode),
 	allow_empty_message_flag(FALSE),
@@ -73,8 +69,7 @@ Stream :: Stream(stream_code c) :
 	m_peer_description_str(NULL),
 	m_peer_version(NULL),
 	m_deadline_time(0),
-	m_crypto_state_before_secret(false),
-	encrypt_(false)
+	ignore_timeout_multiplier(false)
 {
 }
 
@@ -88,8 +83,6 @@ Stream::code( void *&)
 
 Stream :: ~Stream()
 {
-    delete crypto_;
-    delete mdKey_;
 	if( decrypt_buf ) {
 		free( decrypt_buf );
 	}
@@ -750,42 +743,27 @@ Stream::code(struct utimbuf &ut)
 int 
 Stream::code(struct rlimit &rl)
 {
-#ifdef LINUX
-	// Cedar is too damn smart for us.  
-	// The issue is Linux changed the type for rlimits
-	// from a signed long (RedHat 6.2 and before) into
-	// an unsigned long (starting w/ RedHat 7.x).  So if
-	// the shadow is on RedHat 7.2 and sends the results
-	// of getrlimits to a RedHat 6.2 syscall lib, for instance,
-	// it could overflow.  And Cedar is sooo smart.  Sooo very, very
-	// smart.  It return an error if there is an overflow, which
-	// in turn causes an ASSERT to fail in senders/receivers land,
-	// which is bad news for us.  Thus this hack.  -Todd,Erik,Hao Feb 2002
+	// There used to be a piece of code here which implemented backwards
+	// compatibility between redhat 6.2 and 7.x on account of the type of
+	// the rlimit members changing from signed in 6.2 to unsigned in 7.x.
+	// If the shadow thought it was unsigned, but the stduniv executable
+	// thought it was signed, then an overflow error could happen in the 
+	// stduniv executable and this made people upset.
 	//
-	// Note: This has the unfortunate side effect of limitting the 'rlimit'
-	// that Condor supports to 2^31.  -Nick
-	if( is_encode() ) {
-		const unsigned long MAX_RLIMIT = 0x7fffffffLU;
-		long				max_rlimit = (long) MAX_RLIMIT;
+	// Unfortunately, not only did the backwards compatibility code limit
+	// the rlimit to less than 2^31, it also screwed up RLIM_INFINITY, which
+	// is represented as the (now unsigned bit pattern) of -1.
+	//
+	// It has been MANY years since the original backwards compatiblity fix
+	// and I would be very surprised if any redhat 6.2 stduniv executables
+	// are still running! Hence, I've returned the code back to the original
+	// form since both sides will assume the type to be unsigned.
+	//
+	// You can dig into the log history of this file to find the old
+	// compatibility codes.
 	
-		if ( ((unsigned long)rl.rlim_cur) > MAX_RLIMIT ) {
-			STREAM_ASSERT(code(max_rlimit));
-		} else {
-			STREAM_ASSERT(code(rl.rlim_cur));
-		}
-		if ( ((unsigned long)rl.rlim_max) > MAX_RLIMIT ) {
-			STREAM_ASSERT(code(max_rlimit));
-		} else {
-		STREAM_ASSERT(code(rl.rlim_max));
-		}
-	} else {
-		STREAM_ASSERT(code(rl.rlim_cur));
-		STREAM_ASSERT(code(rl.rlim_max));
-	}
-#else
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
-#endif
 
 	return TRUE;
 }
@@ -2063,11 +2041,10 @@ Stream::allow_one_empty_message()
 	allow_empty_message_flag = TRUE;
 }
 
-
 void 
 Stream::set_crypto_mode(bool enabled)
 {
-	if (crypto_ && enabled) {
+	if (canEncrypt() && enabled) {
 		crypto_mode_ = true;
 	} else {
 		if (enabled) {
@@ -2083,142 +2060,6 @@ Stream::get_encryption() const
     return (crypto_mode_);
 }
 
-bool 
-Stream::wrap(unsigned char* d_in,int l_in, 
-                    unsigned char*& d_out,int& l_out)
-{    
-    bool coded = false;
-#ifdef HAVE_EXT_OPENSSL
-    if (get_encryption()) {
-        coded = crypto_->encrypt(d_in, l_in, d_out, l_out);
-    }
-#endif
-    return coded;
-}
-
-bool 
-Stream::unwrap(unsigned char* d_in,int l_in,
-                      unsigned char*& d_out, int& l_out)
-{
-    bool coded = false;
-#ifdef HAVE_EXT_OPENSSL
-    if (get_encryption()) {
-        coded = crypto_->decrypt(d_in, l_in, d_out, l_out);
-    }
-#endif
-    return coded;
-}
-
-void Stream::resetCrypto()
-{
-#ifdef HAVE_EXT_OPENSSL
-  if (crypto_) {
-    crypto_->resetState();
-  }
-#endif
-}
-
-bool 
-Stream::initialize_crypto(KeyInfo * key) 
-{
-    delete crypto_;
-    crypto_ = 0;
-	crypto_mode_ = false;
-
-    // Will try to do a throw/catch later on
-    if (key) {
-        switch (key->getProtocol()) 
-        {
-#ifdef HAVE_EXT_OPENSSL
-        case CONDOR_BLOWFISH :
-            crypto_ = new Condor_Crypt_Blowfish(*key);
-            break;
-        case CONDOR_3DES:
-            crypto_ = new Condor_Crypt_3des(*key);
-            break;
-#endif
-        default:
-            break;
-        }
-    }
-
-    return (crypto_ != 0);
-}
-
-bool Stream::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
-{
-    mdMode_ = mode;
-    delete mdKey_;
-    mdKey_ = 0;
-    if (key) {
-      mdKey_  = new KeyInfo(*key);
-    }
-
-    return init_MD(mode, mdKey_, keyId);
-}
-
-const KeyInfo& Stream :: get_crypto_key() const
-{
-#ifdef HAVE_EXT_OPENSSL
-    if (crypto_) {
-        return crypto_->get_key();
-    }
-#endif
-    ASSERT(0);	// This does not return...
-	return  crypto_->get_key();  // just to make compiler happy...
-}
-
-const KeyInfo& Stream :: get_md_key() const
-{
-#ifdef HAVE_EXT_OPENSSL
-    if (mdKey_) {
-        return *mdKey_;
-    }
-#endif
-    ASSERT(0);
-    return *mdKey_;
-}
-
-
-bool 
-Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
-{
-    bool inited = true;
-#ifdef HAVE_EXT_OPENSSL
-
-    if (key != 0) {
-        inited = initialize_crypto(key);
-    }
-    else {
-        // We are turning encryption off
-        if (crypto_) {
-            delete crypto_;
-            crypto_ = 0;
-			crypto_mode_ = false;
-        }
-        ASSERT(keyId == 0);
-        ASSERT(enable == false);
-        inited = true;
-    }
-
-    // More check should be done here. what if keyId is NULL?
-    if (inited) {
-		if( enable ) {
-				// We do not set the encryption id if the default crypto
-				// mode is off, because setting the encryption id causes
-				// the UDP packet header to contain the encryption id,
-				// which causes a pre 7.1.3 receiver to think that encryption
-				// is turned on by default, even if that is not what was
-				// previously negotiated.
-			set_encryption_id(keyId);
-		}
-		set_crypto_mode(enable);
-    }
-
-#endif /* HAVE_EXT_OPENSSL */
-
-    return inited;
-}
 
 char const *
 Stream::peer_description() {
@@ -2292,4 +2133,52 @@ bool
 Stream::deadline_expired()
 {
 	return m_deadline_time != 0 && time(NULL) > m_deadline_time;
+}
+
+bool
+Stream::prepare_crypto_for_secret_is_noop()
+{
+	CondorVersionInfo const *peer_ver = get_peer_version();
+	if( !peer_ver || peer_ver->built_since_version(7,1,3) ) {
+		if( !get_encryption() ) {
+			if( canEncrypt() ) {
+					// do turn on encryption before sending secret
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+void
+Stream::prepare_crypto_for_secret()
+{
+	m_crypto_state_before_secret = true;
+	if( !prepare_crypto_for_secret_is_noop() ) {
+		dprintf(D_NETWORK,"encrypting secret\n");
+		m_crypto_state_before_secret = get_encryption(); // always false
+		set_crypto_mode(true);
+	}
+}
+
+void
+Stream::restore_crypto_after_secret()
+{
+	if( !m_crypto_state_before_secret ) {
+		set_crypto_mode(false); //restore crypto mode
+	}
+}
+
+int
+Stream::set_timeout_multiplier(int secs)
+{
+   int old_val = timeout_multiplier;
+   timeout_multiplier = secs;
+   return old_val;
+}
+
+int
+Stream::get_timeout_multiplier()
+{
+	return timeout_multiplier;
 }

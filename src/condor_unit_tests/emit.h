@@ -28,6 +28,10 @@
 	e.emit_result_success(__LINE__); \
 	return true
 
+#define ABORT \
+	e.emit_result_abort(__LINE__); \
+	return false
+
 #include "condor_common.h"
 
 // Global emitter declaration
@@ -48,9 +52,15 @@ private:
 
 	MyString *buf, *test_buf;
 
-	time_t start;
+	timeval tm_start, tm_finish;
+	double start_time;
 
-	void print_result_failure();
+	void print_result_failure(void);
+	
+	void print_now_if_possible(void);
+
+	double get_completion_time(void);
+
 public:
 		// constructor and destructor
 	Emitter();
@@ -89,10 +99,6 @@ public:
 	 */
 	void emit_test(const char* test);
 	
-	/* Print out name of test function.
-	 */
-	void emit_name(const char* test_name);
-	
 	/* Shows exactly what is going to be tested.
 	 */
 	void emit_skipped(const char* skipped);
@@ -110,18 +116,18 @@ public:
 	void emit_output_actual_header(void);
 
 	/* Prints out a message saying that the test succeeded.  The function should
-	 * be called like "emit_result_success(__LINE__);"
+	 * be called via the PASS macro."
 	 */
 	void emit_result_success(int line);
 
 	/* Prints out a message saying that the test failed.  The function should
-	 * be called like "emit_result_failure(__LINE__);"
+	 * be called via the FAIL macro."
 	 */
 	void emit_result_failure(int line);
 
 	/* Prints out a message saying that the test was aborted for some unknown
 	 * reason, probably given by emit_abort() before this function call.  The
-	 * function should be called like "emit_result_abort(__LINE__);"
+	 * function should be called via the ABORT macro."
 	 */
 	void emit_result_abort(int line);
 
@@ -159,8 +165,6 @@ void emit_problem(const char* problem);
 
 void emit_test(const char* test);
 	
-void emit_name(const char* test_name);
-	
 void emit_skipped(const char* skipped);
 
 void emit_input_header(void);
@@ -180,5 +184,5 @@ void emit_alert(const char* alert);
 void emit_test_break(void);
 
 void emit_summary(void);
-
+	
 #endif

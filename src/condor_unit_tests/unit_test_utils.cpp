@@ -52,7 +52,7 @@ const char* tfnze( int var ) {
 	return "FALSE";
 }
 
-bool vsprintfHelper(MyString* str, char* format, ...) {
+bool vsprintfHelper(MyString* str, const char* format, ...) {
 	va_list args;
 	bool toReturn;
 
@@ -63,7 +63,7 @@ bool vsprintfHelper(MyString* str, char* format, ...) {
 	return toReturn;
 }
 
-bool vsprintf_catHelper(MyString* str, char* format, ...) {
+bool vsprintf_catHelper(MyString* str, const char* format, ...) {
 	va_list args;
 	bool toReturn;
 
@@ -91,12 +91,6 @@ int niceStrCmp(const char* str1, const char* str2) {
 	if(!str2)
 		return strcmp(str1, "");	//NULL, ""
 	return strcmp(str1, str2);
-}
-
-/* Exactly like free, but only frees when not null */
-void niceFree(char* str) {
-	if(str != NULL)
-		free(str);
 }
 
 /* Returns  a char** representation of the StringList starting at the string 
@@ -158,7 +152,7 @@ compat_classad::ClassAd* get_classad_from_file(){
 
 	FILE* classad_file;
 	ClassAd* classad_from_file;
-	char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
+	const char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
 		"MyType=\"foo\"\n TargetType=\"blah\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
@@ -200,7 +194,7 @@ bool strings_similar(const char* str1, const char* str2, const char* delims)
 		sl2.contains_list(sl1, false);
 }
 
-MyString* convert_string_array(char** str, int size, char* delim){
+MyString* convert_string_array(char** str, int size, const char* delim){
 	MyString* toReturn = new MyString;
 	
 	for(int i = 0; i < size && str[i] && str[i][0]; i++) {

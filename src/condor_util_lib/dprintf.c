@@ -101,6 +101,14 @@ time_t	DebugLastMod = 0;
 int		DebugUseTimestamps = 0;
 
 /*
+ * When true, don't exit even if we fail to open the debug output file.
+ * Added so that on Win32 the kbdd (which is running as a user) won't quit 
+ * if it does't have access to the directory where log files live.
+ *
+ */
+int      DebugContinueOnOpenFailure = 0;
+
+/*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
@@ -550,7 +558,12 @@ debug_lock(int debug_level, const char *mode)
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
 			save_errno = errno;
-#if !defined(WIN32)
+#ifdef WIN32
+			if (DebugContinueOnOpenFailure) {
+				_set_priv(priv, __FILE__, __LINE__, 0);
+				return NULL;
+			}
+#else
 			if( errno == EMFILE ) {
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
@@ -657,6 +670,7 @@ preserve_log_file(int debug_level)
 	int         rename_failed = 0;
 	char		*timestamp;
 	int			result;
+	int			file_there = 0;
 #ifndef WIN32
 	struct stat buf;
 #endif
@@ -715,10 +729,15 @@ preserve_log_file(int debug_level)
 		errno = 0;
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
+			file_there = 1;
 			save_errno = errno;
-			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!", 
+			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
 					 DebugFile[debug_level] );
-			_condor_dprintf_exit( save_errno, msg_buf );
+			/* We should not exit here - file did rotate but something else created it newly. We
+			 therefore won't grow without bounds, we "just" lost control over creating the file.
+			 We should happily continue anyway and just put a log message into the system telling
+			 about this incident.
+			 */
 		}
 	}
 
@@ -738,6 +757,12 @@ preserve_log_file(int debug_level)
 
 	if ( !still_in_old_file ) {
 		fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
+	}
+
+	// We may have a message left over from the succeeded rename after which the file
+	// may have been recreated by another process. Tell user about it.
+	if (file_there > 0) {
+		fprintf(DebugFP, "WARNING: %s", msg_buf);
 	}
 
 	if ( failed_to_rotate || rename_failed ) {
@@ -858,9 +883,12 @@ open_debug_file(int debug_level, char flags[])
 		if( debug_level == 0 ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 DebugFile[debug_level] );
-			_condor_dprintf_exit( save_errno, msg_buf );
+
+			if ( ! DebugContinueOnOpenFailure) {
+			    _condor_dprintf_exit( save_errno, msg_buf );
+			}
 		}
-		return NULL;
+		// fp is guaranteed to be NULL here.
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);

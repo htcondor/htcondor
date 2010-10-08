@@ -457,7 +457,7 @@ bool OTEST_StringList(void) {
 static bool test_constructor() {
 	emit_test("Test the StringList constructor.");
 	StringList sl("a;b;c", ";");
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", "a;b;c");
@@ -467,10 +467,10 @@ static bool test_constructor() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -478,7 +478,7 @@ static bool test_constructor_empty_list() {
 	emit_test("Test the StringList constructor when passed an empty list with"
 		" a non-empty delimiter.");
 	StringList sl("", ";");
-	char* expect = "";
+	const char* expect = "";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", expect);
@@ -488,10 +488,10 @@ static bool test_constructor_empty_list() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -499,7 +499,7 @@ static bool test_constructor_empty_delim() {
 	emit_test("Test the StringList constructor when passed a non-empty list "
 		"with an empty delimiter.");
 	StringList sl("abc", "");
-	char* expect = "abc";
+	const char* expect = "abc";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", "abc");
@@ -509,10 +509,10 @@ static bool test_constructor_empty_delim() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -520,7 +520,7 @@ static bool test_constructor_empty_both() {
 	emit_test("Test the StringList constructor when passed both an empty list"
 		" and an empty delimiter.");
 	StringList sl("", "");
-	char* expect = "";
+	const char* expect = "";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", "");
@@ -530,10 +530,10 @@ static bool test_constructor_empty_both() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -550,10 +550,10 @@ static bool test_constructor_null_list() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -561,7 +561,7 @@ static bool test_constructor_null_delim() {
 	emit_test("Test the StringList constructor when passed a null string for "
 		"the delimiter of the StringList.");
 	StringList sl("abc", NULL);
-	char* expect = "abc";
+	const char* expect = "abc";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", "abc");
@@ -571,10 +571,10 @@ static bool test_constructor_null_delim() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -591,10 +591,10 @@ static bool test_constructor_null_both() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -603,7 +603,7 @@ static bool test_copy_constructor_value() {
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	StringList copy(sl);
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* retVal = copy.print_to_string();
 	emit_input_header();
 	emit_param("StringList", "a,b,c");
@@ -612,10 +612,10 @@ static bool test_copy_constructor_value() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -632,10 +632,10 @@ static bool test_copy_constructor_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -652,10 +652,10 @@ static bool test_copy_constructor_pointer() {
 	emit_output_actual_header();
 	emit_retval("%x", &copy);
 	if(&sl == &copy) {	//compares pointers
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -664,7 +664,7 @@ static bool test_initialize_from_string_empty_valid() {
 		" a valid string.");
 	StringList sl("", ";");
 	sl.initializeFromString("a;b;c");
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", "a;b;c");
@@ -673,10 +673,10 @@ static bool test_initialize_from_string_empty_valid() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -685,7 +685,7 @@ static bool test_initialize_from_string_empty_empty() {
 		" an empty string.");
 	StringList sl("", ";");
 	sl.initializeFromString("");
-	char* expect = "";
+	const char* expect = "";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", "");
@@ -696,10 +696,10 @@ static bool test_initialize_from_string_empty_empty() {
 	emit_param("StringList", nicePrint(retVal));
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 }
 
@@ -722,10 +722,10 @@ static bool test_initialize_from_string_empty_null() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(retVal);
+		free(retVal);
 		FAIL;
 	}
-	niceFree(retVal);
+	free(retVal);
 	PASS;
 */
 }
@@ -738,7 +738,7 @@ static bool test_initialize_from_string_non_empty_valid() {
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	sl.initializeFromString("d;e;f");
-	char* expect = "a,b,c,d,e,f";
+	const char* expect = "a,b,c,d,e,f";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -748,10 +748,10 @@ static bool test_initialize_from_string_non_empty_valid() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -761,7 +761,7 @@ static bool test_initialize_from_string_non_empty_empty() {
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	sl.initializeFromString("");
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -771,10 +771,10 @@ static bool test_initialize_from_string_non_empty_empty() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -798,10 +798,10 @@ static bool test_initialize_from_string_non_empty_null() {
 	emit_output_actual_header();
 	emit_retval("%s", nicePrint(retVal));
 	if(niceStrCmp(expect, retVal) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 */
 }
@@ -819,10 +819,10 @@ static bool test_clear_all_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -839,10 +839,10 @@ static bool test_clear_all_non_empty_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -860,10 +860,10 @@ static bool test_clear_all_non_empty_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, "") != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -883,10 +883,10 @@ static bool test_create_union_return_true() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(add);
+		free(orig); free(add);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add);
+	free(orig); free(add);
 	PASS;
 }
 
@@ -907,10 +907,10 @@ static bool test_create_union_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(add);
+		free(orig); free(add);
 		FAIL;
 	}
-	niceFree(orig);	niceFree(add);
+	free(orig);	free(add);
 	PASS;
 }
 
@@ -923,7 +923,7 @@ static bool test_create_union_duplicates_all() {
 	char* add = toAdd.print_to_string();
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("SUBSET", add);
@@ -933,10 +933,10 @@ static bool test_create_union_duplicates_all() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -949,7 +949,7 @@ static bool test_create_union_duplicates_some() {
 	char* add = toAdd.print_to_string();
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
-	char* expect = "a,b,c,d";
+	const char* expect = "a,b,c,d";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("SUBSET", add);
@@ -959,10 +959,10 @@ static bool test_create_union_duplicates_some() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -975,7 +975,7 @@ static bool test_create_union_duplicates_all_ignore() {
 	char* add = toAdd.print_to_string();
 	sl.create_union(toAdd, true);
 	char* retVal = sl.print_to_string();
-	char* expect = "A,b,c,D";
+	const char* expect = "A,b,c,D";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("SUBSET", add);
@@ -985,10 +985,10 @@ static bool test_create_union_duplicates_all_ignore() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -1001,7 +1001,7 @@ static bool test_create_union_duplicates_some_ignore() {
 	char* add = toAdd.print_to_string();
 	sl.create_union(toAdd, true);
 	char* retVal = sl.print_to_string();
-	char* expect = "A,b,c,D,E";
+	const char* expect = "A,b,c,D,E";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("SUBSET", add);
@@ -1011,10 +1011,10 @@ static bool test_create_union_duplicates_some_ignore() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -1026,7 +1026,7 @@ static bool test_create_union_empty_current() {
 	char* add = toAdd.print_to_string();
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_param("SUBSET", add);
@@ -1036,10 +1036,10 @@ static bool test_create_union_empty_current() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(add); niceFree(retVal);
+		free(orig); free(add); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(add); niceFree(retVal);
+	free(orig); free(add); free(retVal);
 	PASS;
 }
 
@@ -1050,7 +1050,7 @@ static bool test_create_union_empty_subset() {
 	char* orig = sl.print_to_string();
 	sl.create_union(toAdd, false);
 	char* retVal = sl.print_to_string();
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("SUBSET", "");
@@ -1060,10 +1060,10 @@ static bool test_create_union_empty_subset() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(retVal));
 	if(niceStrCmp(retVal, expect) != MATCH) {
-		niceFree(orig); niceFree(retVal);
+		free(orig); free(retVal);
 		FAIL;
 	}
-	niceFree(orig); niceFree(retVal);
+	free(orig); free(retVal);
 	PASS;
 }
 
@@ -1084,10 +1084,10 @@ static bool test_contains_list_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1108,10 +1108,10 @@ static bool test_contains_list_return_false_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1132,10 +1132,10 @@ static bool test_contains_list_return_false_almost() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1156,10 +1156,10 @@ static bool test_contains_list_return_false_reverse() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1180,10 +1180,10 @@ static bool test_contains_list_return_true_not() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1204,10 +1204,10 @@ static bool test_contains_list_return_true_consecutive() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1228,10 +1228,10 @@ static bool test_contains_list_return_true_not_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1252,10 +1252,10 @@ static bool test_contains_list_return_true_consecutive_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1274,10 +1274,10 @@ static bool test_contains_list_return_true_itself() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1298,10 +1298,10 @@ static bool test_contains_list_return_true_copy() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -1310,7 +1310,7 @@ static bool test_contains_return_false() {
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.contains(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1320,10 +1320,10 @@ static bool test_contains_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1332,7 +1332,7 @@ static bool test_contains_return_false_substring() {
 		"StringList, but the StringList has a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "boo";
+	const char* check = "boo";
 	bool retVal = sl.contains(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1342,10 +1342,10 @@ static bool test_contains_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1354,7 +1354,7 @@ static bool test_contains_return_false_case() {
 		"StringList when ignoring case?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	bool retVal = sl.contains(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1364,10 +1364,10 @@ static bool test_contains_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1376,7 +1376,7 @@ static bool test_contains_return_true_one() {
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	bool retVal = sl.contains(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1386,10 +1386,10 @@ static bool test_contains_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1398,9 +1398,9 @@ static bool test_contains_return_true_many() {
 		"strings in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "a";
-	char* check2 = "b";
-	char* check3 = "c";
+	const char* check1 = "a";
+	const char* check2 = "b";
+	const char* check3 = "c";
 	bool retVal = sl.contains(check3) && sl.contains(check2) 
 		&& sl.contains(check1);
 	emit_input_header();
@@ -1413,10 +1413,10 @@ static bool test_contains_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1428,10 +1428,10 @@ static bool test_contains_current_single() {
 		" to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	sl.contains(check); 
 	char* next = sl.next();
-	char* expect = "b";
+	const char* expect = "b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -1440,10 +1440,10 @@ static bool test_contains_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1455,11 +1455,11 @@ static bool test_contains_current_multiple() {
 		" to fail.");
 	StringList sl("a;b;a;b", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	sl.contains(check); 
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	char* expect = "b,a,b";
+	const char* expect = "b,a,b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -1468,10 +1468,10 @@ static bool test_contains_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1480,7 +1480,7 @@ static bool test_contains_anycase_return_false() {
 		"in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.contains_anycase(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1490,10 +1490,10 @@ static bool test_contains_anycase_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1502,7 +1502,7 @@ static bool test_contains_anycase_return_false_substring() {
 		"in the StringList, but the StringList has a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "boo";
+	const char* check = "boo";
 	bool retVal = sl.contains_anycase(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1512,10 +1512,10 @@ static bool test_contains_anycase_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1524,7 +1524,7 @@ static bool test_contains_anycase_return_true_one() {
 		"the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	bool retVal = sl.contains_anycase(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1534,10 +1534,10 @@ static bool test_contains_anycase_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1546,10 +1546,10 @@ static bool test_contains_anycase_return_true_many() {
 		"different strings in the StringList?");
 	StringList sl("a;b;C;D", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "a";
-	char* check2 = "B";
-	char* check3 = "C";
-	char* check4 = "d";
+	const char* check1 = "a";
+	const char* check2 = "B";
+	const char* check3 = "C";
+	const char* check4 = "d";
 	bool retVal = sl.contains_anycase(check4) && sl.contains_anycase(check3) 
 		&& sl.contains_anycase(check2) && sl.contains_anycase(check1);
 	emit_input_header();
@@ -1563,10 +1563,10 @@ static bool test_contains_anycase_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1578,10 +1578,10 @@ static bool test_contains_anycase_current_single() {
 		" to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	sl.contains_anycase(check); 
 	char* next = sl.next();
-	char* expect = "b";
+	const char* expect = "b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -1590,10 +1590,10 @@ static bool test_contains_anycase_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1605,11 +1605,11 @@ static bool test_contains_anycase_current_multiple() {
 		" to fail.");
 	StringList sl("A;B;a;b", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	sl.contains_anycase(check); 
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	char* expect = "B,a,b";
+	const char* expect = "B,a,b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -1618,10 +1618,10 @@ static bool test_contains_anycase_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1630,9 +1630,9 @@ static bool test_remove_invalid() {
 		"with a string not in the list.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "d";
+	const char* remove = "d";
 	sl.remove(remove);
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1642,10 +1642,10 @@ static bool test_remove_invalid() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1654,9 +1654,9 @@ static bool test_remove_case() {
 		"with a string in the list when ignoring case.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "A";
+	const char* remove = "A";
 	sl.remove(remove);
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1666,10 +1666,10 @@ static bool test_remove_case() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1679,9 +1679,9 @@ static bool test_remove_substring() {
 		"the string.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "boo";
+	const char* remove = "boo";
 	sl.remove(remove);
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1691,10 +1691,10 @@ static bool test_remove_substring() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1702,7 +1702,7 @@ static bool test_remove_empty() {
 	emit_test("Test remove() on an empty StringList.");
 	StringList sl("", "");
 	char* orig = sl.print_to_string();
-	char* remove = "b";
+	const char* remove = "b";
 	sl.remove(remove);
 	char* changed = sl.print_to_string();
 	emit_input_header();
@@ -1713,10 +1713,10 @@ static bool test_remove_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1724,9 +1724,9 @@ static bool test_remove_first() {
 	emit_test("Does remove() successfully remove the first string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "a";
+	const char* remove = "a";
 	sl.remove(remove);
-	char* expect = "b,c";
+	const char* expect = "b,c";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1736,10 +1736,10 @@ static bool test_remove_first() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1747,9 +1747,9 @@ static bool test_remove_last() {
 	emit_test("Does remove() successfully remove the last string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "c";
+	const char* remove = "c";
 	sl.remove(remove);
-	char* expect = "a,b";
+	const char* expect = "a,b";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1759,10 +1759,10 @@ static bool test_remove_last() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1770,13 +1770,13 @@ static bool test_remove_many() {
 	emit_test("Does remove() successfully remove many strings?");
 	StringList sl("a;b;c;d;e;f", ";");
 	char* orig = sl.print_to_string();
-	char* remove1 = "f";
-	char* remove2 = "d";
-	char* remove3 = "b";
+	const char* remove1 = "f";
+	const char* remove2 = "d";
+	const char* remove3 = "b";
 	sl.remove(remove1);
 	sl.remove(remove2);
 	sl.remove(remove3);
-	char* expect = "a,c,e";
+	const char* expect = "a,c,e";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1788,10 +1788,10 @@ static bool test_remove_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1800,9 +1800,9 @@ static bool test_remove_anycase_invalid() {
 		"remove_anycase() with a string not in the list.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "d";
+	const char* remove = "d";
 	sl.remove_anycase(remove);
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1812,10 +1812,10 @@ static bool test_remove_anycase_invalid() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1827,9 +1827,9 @@ static bool test_remove_anycase_substring() {
 		"a substring of the string.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "Boo";
+	const char* remove = "Boo";
 	sl.remove_anycase(remove);
-	char* expect = "a,b,c";
+	const char* expect = "a,b,c";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1839,10 +1839,10 @@ static bool test_remove_anycase_substring() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1850,7 +1850,7 @@ static bool test_remove_anycase_empty() {
 	emit_test("Test remove_anycase() on an empty StringList.");
 	StringList sl("", "");
 	char* orig = sl.print_to_string();
-	char* remove = "b";
+	const char* remove = "b";
 	sl.remove_anycase(remove);
 	char* changed = sl.print_to_string();
 	emit_input_header();
@@ -1861,10 +1861,10 @@ static bool test_remove_anycase_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, "") != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1872,9 +1872,9 @@ static bool test_remove_anycase_first() {
 	emit_test("Does remove_anycase() successfully remove the first string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "A";
+	const char* remove = "A";
 	sl.remove_anycase(remove);
-	char* expect = "b,c";
+	const char* expect = "b,c";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1884,10 +1884,10 @@ static bool test_remove_anycase_first() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1895,9 +1895,9 @@ static bool test_remove_anycase_last() {
 	emit_test("Does remove_anycase() successfully remove the last string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* remove = "C";
+	const char* remove = "C";
 	sl.remove_anycase(remove);
-	char* expect = "a,b";
+	const char* expect = "a,b";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1907,10 +1907,10 @@ static bool test_remove_anycase_last() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1918,15 +1918,15 @@ static bool test_remove_anycase_many() {
 	emit_test("Does remove_anycase() successfully remove many strings?");
 	StringList sl("a;b;c;d;E;F;G;H", ";");
 	char* orig = sl.print_to_string();
-	char* remove1 = "h";
-	char* remove2 = "F";
-	char* remove3 = "D";
-	char* remove4 = "b";
+	const char* remove1 = "h";
+	const char* remove2 = "F";
+	const char* remove3 = "D";
+	const char* remove4 = "b";
 	sl.remove_anycase(remove1);
 	sl.remove_anycase(remove2);
 	sl.remove_anycase(remove3);
 	sl.remove_anycase(remove4);
-	char* expect = "a,c,E,G";
+	const char* expect = "a,c,E,G";
 	char* changed = sl.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1939,10 +1939,10 @@ static bool test_remove_anycase_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(expect, changed) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -1951,7 +1951,7 @@ static bool test_substring_return_false_invalid() {
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.substring(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1961,10 +1961,10 @@ static bool test_substring_return_false_invalid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1973,7 +1973,7 @@ static bool test_substring_return_false_almost() {
 		"string that is almost a substring of the string?");
 	StringList sl("abc;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "abd";
+	const char* check = "abd";
 	bool retVal = sl.substring(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -1983,10 +1983,10 @@ static bool test_substring_return_false_almost() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -1995,7 +1995,7 @@ static bool test_substring_return_false_reverse() {
 		"substring of one of the StringList's strings?");
 	StringList sl("aah;boo;car", ";");
 	char* orig = sl.print_to_string();
-	char* check = "bo";
+	const char* check = "bo";
 	bool retVal = sl.substring(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2005,10 +2005,10 @@ static bool test_substring_return_false_reverse() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2017,7 +2017,7 @@ static bool test_substring_return_false_case() {
 		"string that is a substring of the string when ignoring case?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "B";
+	const char* check = "B";
 	bool retVal = sl.substring(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2027,10 +2027,10 @@ static bool test_substring_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2040,7 +2040,7 @@ static bool test_substring_return_true_identical() {
 		"the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	bool retVal = sl.substring(check);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2050,10 +2050,10 @@ static bool test_substring_return_true_identical() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2062,9 +2062,9 @@ static bool test_substring_return_true_many() {
 		"substrings of the string for multiple calls?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "car";
-	char* check2 = "bar";
-	char* check3 = "aar";
+	const char* check1 = "car";
+	const char* check2 = "bar";
+	const char* check3 = "aar";
 	bool retVal = sl.substring(check1) && sl.substring(check2) 
 		&& sl.substring(check3);
 	emit_input_header();
@@ -2077,10 +2077,10 @@ static bool test_substring_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2092,10 +2092,10 @@ static bool test_substring_current_single() {
 		" to fail.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "are";
+	const char* check = "are";
 	sl.substring(check); 
 	char* next = sl.next();
-	char* expect = "b";
+	const char* expect = "b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2104,10 +2104,10 @@ static bool test_substring_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2119,11 +2119,11 @@ static bool test_substring_current_multiple() {
 		" to fail.");
 	StringList sl("a;b;a;b", ";");
 	char* orig = sl.print_to_string();
-	char* check = "are";
+	const char* check = "are";
 	sl.substring(check); 
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	char* expect = "b,a,b";
+	const char* expect = "b,a,b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2132,10 +2132,10 @@ static bool test_substring_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -2145,7 +2145,7 @@ static bool test_contains_withwildcard_return_false() {
 		" not in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2155,10 +2155,10 @@ static bool test_contains_withwildcard_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2167,7 +2167,7 @@ static bool test_contains_withwildcard_return_false_substring() {
 		"contains a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "boo";
+	const char* check = "boo";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2177,10 +2177,10 @@ static bool test_contains_withwildcard_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2189,7 +2189,7 @@ static bool test_contains_withwildcard_return_false_case() {
 		"contains the string when ignoring case?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2199,10 +2199,10 @@ static bool test_contains_withwildcard_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2211,7 +2211,7 @@ static bool test_contains_withwildcard_return_false_wild() {
 		"string is not in the StringList when using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d*";
+	const char* check = "d*";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2221,10 +2221,10 @@ static bool test_contains_withwildcard_return_false_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2233,7 +2233,7 @@ static bool test_contains_withwildcard_return_true_no_wild() {
 		"contains the string when not using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2243,10 +2243,10 @@ static bool test_contains_withwildcard_return_true_no_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2255,7 +2255,7 @@ static bool test_contains_withwildcard_return_true_only_wild() {
 		"passed contains a string consisting of only the wildcard?");
 	StringList sl("*;a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "foo";
+	const char* check = "foo";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2265,10 +2265,10 @@ static bool test_contains_withwildcard_return_true_only_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2277,7 +2277,7 @@ static bool test_contains_withwildcard_return_true_start() {
 		"contains the string with a wildcard at the start?");
 	StringList sl("a;*r;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2287,10 +2287,10 @@ static bool test_contains_withwildcard_return_true_start() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2299,7 +2299,7 @@ static bool test_contains_withwildcard_return_true_mid() {
 		"contains the string with a wildcard in the middle of the string?");
 	StringList sl("a;b*r;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2309,10 +2309,10 @@ static bool test_contains_withwildcard_return_true_mid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2321,7 +2321,7 @@ static bool test_contains_withwildcard_return_true_end() {
 		"contains the string with a wildcard at the end of the string?");
 	StringList sl("a;b*;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2331,10 +2331,10 @@ static bool test_contains_withwildcard_return_true_end() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2343,7 +2343,7 @@ static bool test_contains_withwildcard_return_true_same_wild() {
 		"contains the string but the wildcard is used too?");
 	StringList sl("a*;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2353,10 +2353,10 @@ static bool test_contains_withwildcard_return_true_same_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2365,7 +2365,7 @@ static bool test_contains_withwildcard_return_true_multiple() {
 		"contains multiple matches of the string?");
 	StringList sl("a*;ar*;are*;", ";");
 	char* orig = sl.print_to_string();
-	char* check = "are";
+	const char* check = "are";
 	bool retVal = sl.contains_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2375,10 +2375,10 @@ static bool test_contains_withwildcard_return_true_multiple() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2387,9 +2387,9 @@ static bool test_contains_withwildcard_return_true_many() {
 		"contains the strings for many calls?");
 	StringList sl("a*;ba*;car*", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "car";
-	char* check2 = "bar";
-	char* check3 = "aar";
+	const char* check1 = "car";
+	const char* check2 = "bar";
+	const char* check3 = "aar";
 	bool retVal = sl.contains_withwildcard(check1) 
 		&& sl.contains_withwildcard(check2) 
 		&& sl.contains_withwildcard(check3);
@@ -2403,10 +2403,10 @@ static bool test_contains_withwildcard_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2418,10 +2418,10 @@ static bool test_contains_withwildcard_current_single() {
 		" to fail.");
 	StringList sl("a*;b;c*", ";");
 	char* orig = sl.print_to_string();
-	char* check = "aar";
+	const char* check = "aar";
 	sl.contains_withwildcard(check); 
 	char* next = sl.next();
-	char* expect = "b";
+	const char* expect = "b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2430,10 +2430,10 @@ static bool test_contains_withwildcard_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2445,11 +2445,11 @@ static bool test_contains_withwildcard_current_multiple() {
 		" to fail.");
 	StringList sl("a*;b;aa*;b", ";");
 	char* orig = sl.print_to_string();
-	char* check = "aar";
+	const char* check = "aar";
 	sl.contains_withwildcard(check); 
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	char* expect = "b,aa*,b";
+	const char* expect = "b,aa*,b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2458,10 +2458,10 @@ static bool test_contains_withwildcard_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -2470,7 +2470,7 @@ static bool test_contains_anycase_wwc_return_false() {
 		"a string not in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2480,10 +2480,10 @@ static bool test_contains_anycase_wwc_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2492,7 +2492,7 @@ static bool test_contains_anycase_wwc_return_false_substring() {
 		"StringList contains a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "boo";
+	const char* check = "boo";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2502,10 +2502,10 @@ static bool test_contains_anycase_wwc_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2514,7 +2514,7 @@ static bool test_contains_anycase_wwc_return_false_wild() {
 		"passed string is not in the StringList when using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d*";
+	const char* check = "d*";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2524,10 +2524,10 @@ static bool test_contains_anycase_wwc_return_false_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2536,7 +2536,7 @@ static bool test_contains_anycase_wwc_return_true_no_wild() {
 		"StringList contains the string when not using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2546,10 +2546,10 @@ static bool test_contains_anycase_wwc_return_true_no_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2558,7 +2558,7 @@ static bool test_contains_anycase_wwc_return_true_only_wild() {
 		"StringList passed contains a string consisting of only the wildcard?");
 	StringList sl("*;a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "foo";
+	const char* check = "foo";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2568,10 +2568,10 @@ static bool test_contains_anycase_wwc_return_true_only_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2580,7 +2580,7 @@ static bool test_contains_anycase_wwc_return_true_start() {
 		"StringList contains the string with a wildcard at the start?");
 	StringList sl("A;*R;C", ";");
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2590,10 +2590,10 @@ static bool test_contains_anycase_wwc_return_true_start() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2603,7 +2603,7 @@ static bool test_contains_anycase_wwc_return_true_mid() {
 		"string?");
 	StringList sl("a;b*r;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "Bar";
+	const char* check = "Bar";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2613,10 +2613,10 @@ static bool test_contains_anycase_wwc_return_true_mid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2626,7 +2626,7 @@ static bool test_contains_anycase_wwc_return_true_end() {
 		"string?");
 	StringList sl("a;b*;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "BAR";
+	const char* check = "BAR";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2636,10 +2636,10 @@ static bool test_contains_anycase_wwc_return_true_end() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2648,7 +2648,7 @@ static bool test_contains_anycase_wwc_return_true_same_wild() {
 		"StringList contains the string but the wildcard is used too?");
 	StringList sl("a*;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2658,10 +2658,10 @@ static bool test_contains_anycase_wwc_return_true_same_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2670,7 +2670,7 @@ static bool test_contains_anycase_wwc_return_true_multiple() {
 		"StringList contains multiple matches of the string?");
 	StringList sl("a*;AR*;Are*;", ";");
 	char* orig = sl.print_to_string();
-	char* check = "are";
+	const char* check = "are";
 	bool retVal = sl.contains_anycase_withwildcard(check); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2680,10 +2680,10 @@ static bool test_contains_anycase_wwc_return_true_multiple() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2692,9 +2692,9 @@ static bool test_contains_anycase_wwc_return_true_many() {
 		"StringList contains the strings for many calls?");
 	StringList sl("a*;ba*;CAR*", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "car";
-	char* check2 = "bar";
-	char* check3 = "AAR";
+	const char* check1 = "car";
+	const char* check2 = "bar";
+	const char* check3 = "AAR";
 	bool retVal = sl.contains_anycase_withwildcard(check1) 
 		&& sl.contains_anycase_withwildcard(check2) 
 		&& sl.contains_anycase_withwildcard(check3);
@@ -2708,10 +2708,10 @@ static bool test_contains_anycase_wwc_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2723,10 +2723,10 @@ static bool test_contains_anycase_wwc_current_single() {
 		" to fail.");
 	StringList sl("a*;b;c*", ";");
 	char* orig = sl.print_to_string();
-	char* check = "AAR";
+	const char* check = "AAR";
 	sl.contains_anycase_withwildcard(check); 
 	char* next = sl.next();
-	char* expect = "b";
+	const char* expect = "b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2735,10 +2735,10 @@ static bool test_contains_anycase_wwc_current_single() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2750,11 +2750,11 @@ static bool test_contains_anycase_wwc_current_multiple() {
 		" to fail.");
 	StringList sl("A*;b;Aa*;b", ";");
 	char* orig = sl.print_to_string();
-	char* check = "aar";
+	const char* check = "aar";
 	sl.contains_anycase_withwildcard(check); 
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	char* expect = "b,Aa*,b";
+	const char* expect = "b,Aa*,b";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2763,10 +2763,10 @@ static bool test_contains_anycase_wwc_current_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -2775,7 +2775,7 @@ static bool test_find_matches_any_wwc_return_false() {
 		"passed a string not in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2786,10 +2786,10 @@ static bool test_find_matches_any_wwc_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2798,7 +2798,7 @@ static bool test_find_matches_any_wwc_return_false_substring() {
 		" StringList contains a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "boo";
+	const char* check = "boo";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2809,10 +2809,10 @@ static bool test_find_matches_any_wwc_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2821,7 +2821,7 @@ static bool test_find_matches_any_wwc_return_false_wild() {
 		" passed string is not in the StringList when using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d*";
+	const char* check = "d*";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2832,10 +2832,10 @@ static bool test_find_matches_any_wwc_return_false_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2844,7 +2844,7 @@ static bool test_find_matches_any_wwc_return_true_no_wild() {
 		"StringList contains the string when not using a wildcard?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2855,10 +2855,10 @@ static bool test_find_matches_any_wwc_return_true_no_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2867,7 +2867,7 @@ static bool test_find_matches_any_wwc_return_true_only_wild() {
 		"StringList passed contains a string consisting of only the wildcard?");
 	StringList sl("*;a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "foo";
+	const char* check = "foo";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2878,10 +2878,10 @@ static bool test_find_matches_any_wwc_return_true_only_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2890,7 +2890,7 @@ static bool test_find_matches_any_wwc_return_true_start() {
 		"StringList contains the string with a wildcard at the start?");
 	StringList sl("A;*R;C", ";");
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2901,10 +2901,10 @@ static bool test_find_matches_any_wwc_return_true_start() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2914,7 +2914,7 @@ static bool test_find_matches_any_wwc_return_true_mid() {
 		"string?");
 	StringList sl("a;b*r;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "Bar";
+	const char* check = "Bar";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2925,10 +2925,10 @@ static bool test_find_matches_any_wwc_return_true_mid() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2938,7 +2938,7 @@ static bool test_find_matches_any_wwc_return_true_end() {
 		"string?");
 	StringList sl("a;b*;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "BAR";
+	const char* check = "BAR";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2949,10 +2949,10 @@ static bool test_find_matches_any_wwc_return_true_end() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2961,7 +2961,7 @@ static bool test_find_matches_any_wwc_return_true_same_wild() {
 		"StringList contains the string but the wildcard is used too?");
 	StringList sl("a*;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2972,10 +2972,10 @@ static bool test_find_matches_any_wwc_return_true_same_wild() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -2984,7 +2984,7 @@ static bool test_find_matches_any_wwc_return_true_multiple() {
 		"StringList contains multiple matches of the string?");
 	StringList sl("a*;AR*;Are*;", ";");
 	char* orig = sl.print_to_string();
-	char* check = "are";
+	const char* check = "are";
 	bool retVal = sl.find_matches_anycase_withwildcard(check, NULL); 
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -2995,10 +2995,10 @@ static bool test_find_matches_any_wwc_return_true_multiple() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3007,9 +3007,9 @@ static bool test_find_matches_any_wwc_return_true_many() {
 		"StringList contains the strings for many calls?");
 	StringList sl("a*;ba*;CAR*", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "car";
-	char* check2 = "bar";
-	char* check3 = "AAR";
+	const char* check1 = "car";
+	const char* check2 = "bar";
+	const char* check3 = "AAR";
 	bool retVal = sl.find_matches_anycase_withwildcard(check1, NULL) 
 		&& sl.find_matches_anycase_withwildcard(check2, NULL) 
 		&& sl.find_matches_anycase_withwildcard(check3, NULL);
@@ -3026,10 +3026,10 @@ static bool test_find_matches_any_wwc_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3039,7 +3039,7 @@ static bool test_find_matches_any_wwc_none() {
 	StringList sl("a;b;c", ";");
 	StringList m;
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	sl.find_matches_anycase_withwildcard(check, &m); 
 	char* matches = m.print_to_string();
 	emit_input_header();
@@ -3051,10 +3051,10 @@ static bool test_find_matches_any_wwc_none() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, "") != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3064,9 +3064,9 @@ static bool test_find_matches_any_wwc_one() {
 	StringList sl("a;b;c", ";");
 	StringList m;
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	sl.find_matches_anycase_withwildcard(check, &m); 
-	char* expect = "a";
+	const char* expect = "a";
 	char* matches = m.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3077,10 +3077,10 @@ static bool test_find_matches_any_wwc_one() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3091,9 +3091,9 @@ static bool test_find_matches_any_wwc_one_exist() {
 	StringList m("1;2;3", ";");
 	char* orig = sl.print_to_string();
 	char* list = m.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	sl.find_matches_anycase_withwildcard(check, &m); 
-	char* expect = "1,2,3,a";
+	const char* expect = "1,2,3,a";
 	char* matches = m.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3104,10 +3104,10 @@ static bool test_find_matches_any_wwc_one_exist() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(list); niceFree(matches);
+		free(orig); free(list); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(list); niceFree(matches);
+	free(orig); free(list); free(matches);
 	PASS;
 }
 
@@ -3118,9 +3118,9 @@ static bool test_find_matches_any_wwc_wild_start() {
 	StringList sl("a;*R;c", ";");
 	StringList m;
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	sl.find_matches_anycase_withwildcard(check, &m); 
-	char* expect = "*R";
+	const char* expect = "*R";
 	char* matches = m.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3131,10 +3131,10 @@ static bool test_find_matches_any_wwc_wild_start() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3145,9 +3145,9 @@ static bool test_find_matches_any_wwc_wild_mid() {
 	StringList sl("a;B*r;c", ";");
 	StringList m;
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	sl.find_matches_anycase_withwildcard(check, &m); 
-	char* expect = "B*r";
+	const char* expect = "B*r";
 	char* matches = m.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3158,10 +3158,10 @@ static bool test_find_matches_any_wwc_wild_mid() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3172,9 +3172,9 @@ static bool test_find_matches_any_wwc_wild_end() {
 	StringList sl("a;b*;c", ";");
 	StringList m;
 	char* orig = sl.print_to_string();
-	char* check = "bar";
+	const char* check = "bar";
 	sl.find_matches_anycase_withwildcard(check, &m); 
-	char* expect = "b*";
+	const char* expect = "b*";
 	char* matches = m.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3185,10 +3185,10 @@ static bool test_find_matches_any_wwc_wild_end() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3198,9 +3198,9 @@ static bool test_find_matches_any_wwc_multiple() {
 	StringList sl("a*;AR*;Are*;are", ";");
 	StringList m;
 	char* orig = sl.print_to_string();
-	char* check = "are";
+	const char* check = "are";
 	sl.find_matches_anycase_withwildcard(check, &m); 
-	char* expect = "a*,AR*,Are*,are";
+	const char* expect = "a*,AR*,Are*,are";
 	char* matches = m.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3211,10 +3211,10 @@ static bool test_find_matches_any_wwc_multiple() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(matches);
+		free(orig); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(matches);
+	free(orig); free(matches);
 	PASS;
 }
 
@@ -3226,9 +3226,9 @@ static bool test_find_matches_any_wwc_multiple_exist() {
 	StringList m("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	char* list = m.print_to_string();
-	char* check = "are";
+	const char* check = "are";
 	sl.find_matches_anycase_withwildcard(check, &m); 
-	char* expect = "a,b,c,a*,AR*,Are*,are";
+	const char* expect = "a,b,c,a*,AR*,Are*,are";
 	char* matches = m.print_to_string();
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3239,10 +3239,10 @@ static bool test_find_matches_any_wwc_multiple_exist() {
 	emit_output_actual_header();
 	emit_param("MATCHES", nicePrint(matches));
 	if(niceStrCmp(matches, expect) != MATCH) {
-		niceFree(orig); niceFree(list); niceFree(matches);
+		free(orig); free(list); free(matches);
 		FAIL;
 	}
-	niceFree(orig); niceFree(list); niceFree(matches);
+	free(orig); free(list); free(matches);
 	PASS;
 }
 
@@ -3251,7 +3251,7 @@ static bool test_find_return_false() {
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.find(check, false);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3262,10 +3262,10 @@ static bool test_find_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3274,7 +3274,7 @@ static bool test_find_return_false_substring() {
 		"StringList, but the StringList has a substring of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "boo";
+	const char* check = "boo";
 	bool retVal = sl.find(check, false);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3285,10 +3285,10 @@ static bool test_find_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3297,7 +3297,7 @@ static bool test_find_return_false_case() {
 		"StringList when ignoring case, but anycase is false?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "A";
+	const char* check = "A";
 	bool retVal = sl.find(check, false);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3308,10 +3308,10 @@ static bool test_find_return_false_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3320,7 +3320,7 @@ static bool test_find_return_true_one() {
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	bool retVal = sl.find(check, false);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3331,10 +3331,10 @@ static bool test_find_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3343,9 +3343,9 @@ static bool test_find_return_true_many() {
 		"strings in the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "a";
-	char* check2 = "b";
-	char* check3 = "c";
+	const char* check1 = "a";
+	const char* check2 = "b";
+	const char* check3 = "c";
 	bool retVal = sl.find(check3, false) && sl.find(check2, false) 
 		&& sl.find(check1, false);
 	emit_input_header();
@@ -3361,10 +3361,10 @@ static bool test_find_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3373,7 +3373,7 @@ static bool test_find_anycase_return_false() {
 		"StringList when anycase is true?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "d";
+	const char* check = "d";
 	bool retVal = sl.find(check, true);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3384,10 +3384,10 @@ static bool test_find_anycase_return_false() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3397,7 +3397,7 @@ static bool test_find_anycase_return_false_substring() {
 		"of the string?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "boo";
+	const char* check = "boo";
 	bool retVal = sl.find(check, true);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3408,10 +3408,10 @@ static bool test_find_anycase_return_false_substring() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3420,7 +3420,7 @@ static bool test_find_anycase_return_true_one() {
 		"StringList when anycase is true?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* check = "a";
+	const char* check = "a";
 	bool retVal = sl.find(check, true);
 	emit_input_header();
 	emit_param("StringList", orig);
@@ -3431,10 +3431,10 @@ static bool test_find_anycase_return_true_one() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3443,10 +3443,10 @@ static bool test_find_anycase_return_true_many() {
 		"strings in the StringList when anycase is true?");
 	StringList sl("a;b;C;D", ";");
 	char* orig = sl.print_to_string();
-	char* check1 = "a";
-	char* check2 = "B";
-	char* check3 = "C";
-	char* check4 = "d";
+	const char* check1 = "a";
+	const char* check2 = "B";
+	const char* check3 = "C";
+	const char* check4 = "d";
 	bool retVal = sl.find(check4, true) && sl.find(check3, true) 
 		&& sl.find(check2, true) && sl.find(check1, true);
 	emit_input_header();
@@ -3464,10 +3464,10 @@ static bool test_find_anycase_return_true_many() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3489,10 +3489,10 @@ static bool test_identical_return_false_same() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3513,10 +3513,10 @@ static bool test_identical_return_false_not_same() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3537,10 +3537,10 @@ static bool test_identical_return_false_almost() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3561,10 +3561,10 @@ static bool test_identical_return_false_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3585,10 +3585,10 @@ static bool test_identical_return_false_subset() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3609,10 +3609,10 @@ static bool test_identical_return_true_case() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3633,10 +3633,10 @@ static bool test_identical_return_true_ignore() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3655,10 +3655,10 @@ static bool test_identical_return_true_itself() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -3679,10 +3679,10 @@ static bool test_identical_return_true_copy() {
 	emit_output_actual_header();
 	emit_retval(tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig); niceFree(check);
+		free(orig); free(check);
 		FAIL;
 	}
-	niceFree(orig); niceFree(check);
+	free(orig); free(check);
 	PASS;
 }
 
@@ -3692,7 +3692,7 @@ static bool test_print_to_string_empty() {
 		"StringList, so this will fail if that changes.");
 	StringList sl("", "");
 	char* ps = sl.print_to_string();
-	char* expect = "";
+	const char* expect = "";
 	emit_input_header();
 	emit_param("StringList", expect);
 	emit_output_expected_header();
@@ -3700,10 +3700,10 @@ static bool test_print_to_string_empty() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3711,7 +3711,7 @@ static bool test_print_to_string_one() {
 	emit_test("Test print_to_string() on a StringList with only one string.");
 	StringList sl("foo", "");
 	char* ps = sl.print_to_string();
-	char* expect = "foo";
+	const char* expect = "foo";
 	emit_input_header();
 	emit_param("StringList", expect);
 	emit_output_expected_header();
@@ -3719,10 +3719,10 @@ static bool test_print_to_string_one() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3730,7 +3730,7 @@ static bool test_print_to_string_many() {
 	emit_test("Test print_to_string() on a StringList with many strings.");
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* ps = sl.print_to_string();
-	char* expect = "a,b,c,dog,eel,fish,goat";
+	const char* expect = "a,b,c,dog,eel,fish,goat";
 	emit_input_header();
 	emit_param("StringList", expect);
 	emit_output_expected_header();
@@ -3738,10 +3738,10 @@ static bool test_print_to_string_many() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3751,7 +3751,7 @@ static bool test_print_to_delimed_string_empty() {
 		"empty StringList, so this will fail if that changes.");
 	StringList sl("", "");
 	char* ps = sl.print_to_delimed_string(",");
-	char* expect = "";
+	const char* expect = "";
 	emit_input_header();
 	emit_param("StringList", expect);
 	emit_param("DELIM", ",");
@@ -3760,10 +3760,10 @@ static bool test_print_to_delimed_string_empty() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3772,7 +3772,7 @@ static bool test_print_to_delimed_string_one() {
 		"string.");
 	StringList sl("foo", "");
 	char* ps = sl.print_to_delimed_string("!");
-	char* expect = "foo";
+	const char* expect = "foo";
 	emit_input_header();
 	emit_param("StringList", expect);
 	emit_param("DELIM", "!");
@@ -3781,10 +3781,10 @@ static bool test_print_to_delimed_string_one() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(ps);
+		free(ps);
 		FAIL;
 	}
-	niceFree(ps);
+	free(ps);
 	PASS;
 }
 
@@ -3794,7 +3794,7 @@ static bool test_print_to_delimed_string_many_short() {
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* orig = sl.print_to_delimed_string();
 	char* ps = sl.print_to_delimed_string("&");
-	char* expect = "a&b&c&dog&eel&fish&goat";
+	const char* expect = "a&b&c&dog&eel&fish&goat";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("DELIM", "&");
@@ -3803,10 +3803,10 @@ static bool test_print_to_delimed_string_many_short() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(orig); niceFree(ps);
+		free(orig); free(ps);
 		FAIL;
 	}
-	niceFree(orig); niceFree(ps);
+	free(orig); free(ps);
 	PASS;
 }
 
@@ -3816,7 +3816,7 @@ static bool test_print_to_delimed_string_many_long() {
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* orig = sl.print_to_string();
 	char* ps = sl.print_to_delimed_string(" and ");
-	char* expect = "a and b and c and dog and eel and fish and goat";
+	const char* expect = "a and b and c and dog and eel and fish and goat";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("DELIM", " and ");
@@ -3825,10 +3825,10 @@ static bool test_print_to_delimed_string_many_long() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(orig); niceFree(ps);
+		free(orig); free(ps);
 		FAIL;
 	}
-	niceFree(orig); niceFree(ps);
+	free(orig); free(ps);
 	PASS;
 }
 
@@ -3840,7 +3840,7 @@ static bool test_print_to_delimed_string_many_null() {
 	StringList sl("a;b;c;dog;eel;fish;goat", ";");
 	char* ps = sl.print_to_delimed_string(NULL);
 	char* orig = sl.print_to_string();
-	char* expect = "a;b;c;dog;eel;fish;goat";
+	const char* expect = "a;b;c;dog;eel;fish;goat";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("DELIM", "NULL");
@@ -3849,10 +3849,10 @@ static bool test_print_to_delimed_string_many_null() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(ps));
 	if(niceStrCmp(ps, expect) != MATCH) {
-		niceFree(orig); niceFree(ps);
+		free(orig); free(ps);
 		FAIL;
 	}
-	niceFree(orig); niceFree(ps);
+	free(orig); free(ps);
 	PASS;
 }
 
@@ -3864,7 +3864,7 @@ static bool test_delete_current_before() {
 		"string added.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* expect = "a,b";
+	const char* expect = "a,b";
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	emit_input_header();
@@ -3874,10 +3874,10 @@ static bool test_delete_current_before() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3893,7 +3893,7 @@ static bool test_delete_current_after_no_match() {
 		"here.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* expect = "a,b";
+	const char* expect = "a,b";
 	sl.contains("d");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
@@ -3905,10 +3905,10 @@ static bool test_delete_current_after_no_match() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3920,7 +3920,7 @@ static bool test_delete_current_one_first() {
 		"here.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* expect = "b,c";
+	const char* expect = "b,c";
 	sl.contains("a");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
@@ -3932,10 +3932,10 @@ static bool test_delete_current_one_first() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3947,7 +3947,7 @@ static bool test_delete_current_one_mid() {
 		"here.");
 	StringList sl("a;b;c;d;e", ";");
 	char* orig = sl.print_to_string();
-	char* expect = "a,b,d,e";
+	const char* expect = "a,b,d,e";
 	sl.contains("c");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
@@ -3959,10 +3959,10 @@ static bool test_delete_current_one_mid() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -3974,7 +3974,7 @@ static bool test_delete_current_one_last() {
 		"here.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* expect = "a,b";
+	const char* expect = "a,b";
 	sl.contains("c");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
@@ -3986,10 +3986,10 @@ static bool test_delete_current_one_last() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4001,7 +4001,7 @@ static bool test_delete_current_all() {
 		"here.");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
-	char* expect = "";
+	const char* expect = "";
 	sl.contains("a");
 	sl.deleteCurrent();
 	sl.contains("b");
@@ -4019,10 +4019,10 @@ static bool test_delete_current_all() {
 	emit_output_actual_header();
 	emit_retval(nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4044,10 +4044,10 @@ static bool test_string_compare_equal_same_beg() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs, 3);
+		free(list); free_helper(strs, 3);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs, 3);
+	free(list); free_helper(strs, 3);
 	PASS;
 }
 
@@ -4069,10 +4069,10 @@ static bool test_string_compare_equal_same_mid() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs, 2);
+		free(list); free_helper(strs, 2);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs, 2);
+	free(list); free_helper(strs, 2);
 	PASS;
 }
 
@@ -4094,10 +4094,10 @@ static bool test_string_compare_equal_same_end() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list); free_helper(strs, 1);
+		free(list); free_helper(strs, 1);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs, 1);
+	free(list); free_helper(strs, 1);
 	PASS;
 }
 
@@ -4123,11 +4123,11 @@ static bool test_string_compare_equal_different_list() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list1); niceFree(list2); 
+		free(list1); free(list2); 
 		free_helper(strs1, 2); free_helper(strs2, 2); 
 		FAIL;
 	}
-	niceFree(list1); niceFree(list2); 
+	free(list1); free(list2); 
 	free_helper(strs1, 2); free_helper(strs2, 2);
 	PASS;
 }
@@ -4153,11 +4153,11 @@ static bool test_string_compare_copy() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal != MATCH) {
-		niceFree(list1); niceFree(list2); 
+		free(list1); free(list2); 
 		free_helper(strs1, 3); free_helper(strs2, 3);
 		FAIL;
 	}
-	niceFree(list1); niceFree(list2); 
+	free(list1); free(list2); 
 	free_helper(strs1, 3); free_helper(strs2, 3);
 	PASS;
 }
@@ -4181,10 +4181,10 @@ static bool test_string_compare_not_equal_same() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
-		niceFree(list); free_helper(strs1, 3); free_helper(strs2, 2);
+		free(list); free_helper(strs1, 3); free_helper(strs2, 2);
 		FAIL;
 	}
-	niceFree(list); free_helper(strs1, 3); free_helper(strs2, 2);
+	free(list); free_helper(strs1, 3); free_helper(strs2, 2);
 	PASS;
 }
 
@@ -4210,11 +4210,11 @@ static bool test_string_compare_not_equal_different() {
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
 	if(retVal == MATCH) {
-		niceFree(list1); niceFree(list2); 
+		free(list1); free(list2); 
 		free_helper(strs1, 2); free_helper(strs2, 3);
 		FAIL;
 	}
-	niceFree(list1); niceFree(list2); 
+	free(list1); free(list2); 
 	free_helper(strs1, 2); free_helper(strs2, 3);
 	PASS;
 }
@@ -4225,7 +4225,7 @@ static bool test_qsort_empty() {
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
-	char* expect  = "";
+	const char* expect  = "";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4233,10 +4233,10 @@ static bool test_qsort_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4246,7 +4246,7 @@ static bool test_qsort_one() {
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
-	char* expect  = "foo";
+	const char* expect  = "foo";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -4254,10 +4254,10 @@ static bool test_qsort_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4267,7 +4267,7 @@ static bool test_qsort_already() {
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,c";
+	const char* expect  = "a,b,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -4275,10 +4275,10 @@ static bool test_qsort_already() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4291,7 +4291,7 @@ static bool test_qsort_multiple() {
 	char* changed1  = sl.print_to_string();
 	sl.qsort();
 	char* changed2  = sl.print_to_string();
-	char* expect  = "a,b,c";
+	const char* expect  = "a,b,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -4299,10 +4299,10 @@ static bool test_qsort_multiple() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed2));
 	if(niceStrCmp(changed2, expect) != MATCH) {
-		niceFree(orig); niceFree(changed1); niceFree(changed2);
+		free(orig); free(changed1); free(changed2);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed1); niceFree(changed2);
+	free(orig); free(changed1); free(changed2);
 	PASS;
 }
 
@@ -4312,7 +4312,7 @@ static bool test_qsort_many() {
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,aah,b,bah,c,cool,d,door,e,eat,f,foo";
+	const char* expect  = "a,aah,b,bah,c,cool,d,door,e,eat,f,foo";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -4320,10 +4320,10 @@ static bool test_qsort_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4335,7 +4335,7 @@ static bool test_qsort_many_shuffle() {
 	char* orig  = sl.print_to_string();
 	sl.qsort();
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z";
+	const char* expect  = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -4343,10 +4343,10 @@ static bool test_qsort_many_shuffle() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4356,7 +4356,7 @@ static bool test_shuffle_empty() {
 	char* orig  = sl.print_to_string();
 	sl.shuffle();
 	char* changed  = sl.print_to_string();
-	char* expect  = "";
+	const char* expect  = "";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4364,10 +4364,10 @@ static bool test_shuffle_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4377,7 +4377,7 @@ static bool test_shuffle_one() {
 	char* orig  = sl.print_to_string();
 	sl.shuffle();
 	char* changed  = sl.print_to_string();
-	char* expect  = "foo";
+	const char* expect  = "foo";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4385,10 +4385,10 @@ static bool test_shuffle_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4400,7 +4400,7 @@ static bool test_shuffle_many() {
 	char* orig  = sl.print_to_string();
 	sl.shuffle();
 	char* changed  = sl.print_to_string();
-	char* notExpect  = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z";
+	const char* notExpect  = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -4408,10 +4408,10 @@ static bool test_shuffle_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, notExpect) == MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4423,7 +4423,7 @@ static bool test_rewind_empty() {
 	char* orig  = sl.print_to_string();
 	sl.rewind();
 	char* next = sl.next();
-	char* expect  = "";
+	const char* expect  = "";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4431,10 +4431,10 @@ static bool test_rewind_empty() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4446,7 +4446,7 @@ static bool test_rewind_non_empty() {
 	char* orig  = sl.print_to_string();
 	sl.rewind();
 	char* next = sl.next();
-	char* expect  = "a";
+	const char* expect  = "a";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -4454,10 +4454,10 @@ static bool test_rewind_non_empty() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4470,7 +4470,7 @@ static bool test_rewind_after_contains_true() {
 	bool retVal = sl.contains("b");
 	sl.rewind();
 	char* next = sl.next();
-	char* expect  = "a";
+	const char* expect  = "a";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("contains(\"b\")", tfstr(retVal));
@@ -4479,10 +4479,10 @@ static bool test_rewind_after_contains_true() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4495,7 +4495,7 @@ static bool test_rewind_after_contains_false() {
 	bool retVal = sl.contains("d");
 	sl.rewind();
 	char* next = sl.next();
-	char* expect  = "a";
+	const char* expect  = "a";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("contains(\"d\")", tfstr(retVal));
@@ -4504,10 +4504,10 @@ static bool test_rewind_after_contains_false() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4517,7 +4517,7 @@ static bool test_append_empty() {
 	char* orig  = sl.print_to_string();
 	sl.append("a");
 	char* changed  = sl.print_to_string();
-	char* expect  = "a";
+	const char* expect  = "a";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_param("STRING", "a");
@@ -4526,10 +4526,10 @@ static bool test_append_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4539,7 +4539,7 @@ static bool test_append_one() {
 	char* orig  = sl.print_to_string();
 	sl.append("d");
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,c,d";
+	const char* expect  = "a,b,c,d";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4548,10 +4548,10 @@ static bool test_append_one() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4563,7 +4563,7 @@ static bool test_append_many() {
 	sl.append("e");
 	sl.append("f");
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,c,d,e,f";
+	const char* expect  = "a,b,c,d,e,f";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4574,10 +4574,10 @@ static bool test_append_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4588,7 +4588,7 @@ static bool test_append_contains() {
 	bool retVal = sl.contains("b");
 	sl.append("d");
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,c,d";
+	const char* expect  = "a,b,c,d";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("contains(\"b\")", tfstr(retVal));
@@ -4598,10 +4598,10 @@ static bool test_append_contains() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4613,7 +4613,7 @@ static bool test_append_rewind() {
 	sl.append("d");
 	char* next = sl.next();
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,c,d";
+	const char* expect  = "a,b,c,d";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4623,10 +4623,10 @@ static bool test_append_rewind() {
 	emit_param("StringList", nicePrint(changed));
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4639,7 +4639,7 @@ static bool test_append_current() {
 	sl.append("d");
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
-	char* expect  = "a,b,c";
+	const char* expect  = "a,b,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4648,10 +4648,10 @@ static bool test_append_current() {
 	emit_output_actual_header();
 	emit_param("StrinList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4661,7 +4661,7 @@ static bool test_insert_empty() {
 	char* orig  = sl.print_to_string();
 	sl.insert("a");
 	char* changed  = sl.print_to_string();
-	char* expect  = "a";
+	const char* expect  = "a";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_param("STRING", "a");
@@ -4670,10 +4670,10 @@ static bool test_insert_empty() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4687,7 +4687,7 @@ static bool test_insert_head() {
 	sl.next();	//current=a
 	sl.insert("d");
 	char* changed  = sl.print_to_string();
-	char* expect  = "d,a,b,c";
+	const char* expect  = "d,a,b,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4696,10 +4696,10 @@ static bool test_insert_head() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4715,7 +4715,7 @@ static bool test_insert_middle() {
 	sl.next();	//current=c
 	sl.insert("d");
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,d,c";
+	const char* expect  = "a,b,d,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4724,10 +4724,10 @@ static bool test_insert_middle() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4746,7 +4746,7 @@ static bool test_insert_end() {
 	sl.next();	//current=c
 	sl.insert("d");
 	char* changed  = sl.print_to_string();
-	char* expect  = "a,b,d,c";
+	const char* expect  = "a,b,d,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4755,10 +4755,10 @@ static bool test_insert_end() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4773,7 +4773,7 @@ static bool test_insert_current() {
 	sl.next();	//current=b
 	sl.insert("d");
 	char* next = sl.next();	//current=c
-	char* expect  = "c";
+	const char* expect  = "c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", "d");
@@ -4782,10 +4782,10 @@ static bool test_insert_current() {
 	emit_output_actual_header();
 	emit_param("next", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4804,7 +4804,7 @@ static bool test_insert_many() {
 	sl.next();	//current=c
 	sl.insert("3");
 	char* changed  = sl.print_to_string();
-	char* expect  = "0,1,a,2,b,3,c";
+	const char* expect  = "0,1,a,2,b,3,c";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("'current'", "a");
@@ -4819,10 +4819,10 @@ static bool test_insert_many() {
 	emit_output_actual_header();
 	emit_param("StringList", nicePrint(changed));
 	if(niceStrCmp(changed, expect) != MATCH) {
-		niceFree(orig); niceFree(changed);
+		free(orig); free(changed);
 		FAIL;
 	}
-	niceFree(orig); niceFree(changed);
+	free(orig); free(changed);
 	PASS;
 }
 
@@ -4831,7 +4831,7 @@ static bool test_next_empty() {
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	char* next = sl.next();
-	char* expect  = "";
+	const char* expect  = "";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4839,10 +4839,10 @@ static bool test_next_empty() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4855,7 +4855,7 @@ static bool test_next_beginning() {
 	char* orig  = sl.print_to_string();
 	sl.rewind();
 	char* next = sl.next();
-	char* expect  = "a";
+	const char* expect  = "a";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4863,10 +4863,10 @@ static bool test_next_beginning() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4879,7 +4879,7 @@ static bool test_next_middle() {
 	char* orig  = sl.print_to_string();
 	sl.contains("b");
 	char* next = sl.next();
-	char* expect  = "c";
+	const char* expect  = "c";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4887,10 +4887,10 @@ static bool test_next_middle() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4903,7 +4903,7 @@ static bool test_next_end() {
 	char* orig  = sl.print_to_string();
 	sl.contains("c");
 	char* next = sl.next();
-	char* expect  = "";
+	const char* expect  = "";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -4911,10 +4911,10 @@ static bool test_next_end() {
 	emit_output_actual_header();
 	emit_param("STRING", nicePrint(next));
 	if(niceStrCmp(next, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4931,10 +4931,10 @@ static bool test_number_empty() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4951,10 +4951,10 @@ static bool test_number_one() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4971,10 +4971,10 @@ static bool test_number_many() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -4998,10 +4998,10 @@ static bool test_number_after_delete() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5022,10 +5022,10 @@ static bool test_number_after_clear_all() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5047,10 +5047,10 @@ static bool test_number_after_append() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5072,10 +5072,10 @@ static bool test_number_after_insert() {
 	emit_output_actual_header();
 	emit_retval("%d", num);
 	if(num != expect) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5098,10 +5098,10 @@ static bool test_number_copy() {
 	emit_retval("%d", num1);
 	emit_retval("%d", num2);
 	if(num1 != expect || num2 != expect) {
-		niceFree(orig1); niceFree(orig2);
+		free(orig1); free(orig2);
 		FAIL;
 	}
-	niceFree(orig1); niceFree(orig2);
+	free(orig1); free(orig2);
 	PASS;
 }
 
@@ -5118,10 +5118,10 @@ static bool test_is_empty_empty() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5142,10 +5142,10 @@ static bool test_is_empty_clear() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(!retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5163,10 +5163,10 @@ static bool test_is_empty_one() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5184,10 +5184,10 @@ static bool test_is_empty_many() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5209,10 +5209,10 @@ static bool test_is_empty_append() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5233,10 +5233,10 @@ static bool test_is_empty_insert() {
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(retVal));
 	if(retVal) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5255,10 +5255,10 @@ static bool test_get_list_empty() {
 	emit_output_actual_header();
 	emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(!isEmpty) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5277,10 +5277,10 @@ static bool test_get_list_non_empty() {
 	emit_output_actual_header();
 	emit_param("Is Empty", "%s", tfstr(isEmpty));
 	if(isEmpty) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5291,7 +5291,7 @@ static bool test_get_delimiters_empty_no() {
 	StringList sl("", "");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
-	char* expect = "";
+	const char* expect = "";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -5299,10 +5299,10 @@ static bool test_get_delimiters_empty_no() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5313,7 +5313,7 @@ static bool test_get_delimiters_empty_yes() {
 	StringList sl("", ";");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
-	char* expect = ";";
+	const char* expect = ";";
 	emit_input_header();
 	emit_param("StringList", nicePrint(orig));
 	emit_output_expected_header();
@@ -5321,10 +5321,10 @@ static bool test_get_delimiters_empty_yes() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5335,7 +5335,7 @@ static bool test_get_delimiters_non_empty_no() {
 	StringList sl("a;b;c", "");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
-	char* expect = "";
+	const char* expect = "";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -5343,10 +5343,10 @@ static bool test_get_delimiters_non_empty_no() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }
 
@@ -5357,7 +5357,7 @@ static bool test_get_delimiters_non_empty_yes() {
 	StringList sl("a;b,c!d", ";!,");
 	char* orig  = sl.print_to_string();
 	const char* delims = sl.getDelimiters();
-	char* expect = ";!,";
+	const char* expect = ";!,";
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_output_expected_header();
@@ -5365,9 +5365,9 @@ static bool test_get_delimiters_non_empty_yes() {
 	emit_output_actual_header();
 	emit_param("DELIMS", delims);
 	if(strcmp(delims, expect) != MATCH) {
-		niceFree(orig);
+		free(orig);
 		FAIL;
 	}
-	niceFree(orig);
+	free(orig);
 	PASS;
 }

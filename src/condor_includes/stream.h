@@ -519,9 +519,6 @@ public:
 	/// get number of bytes currently available to read, -1 on failure
 	virtual int bytes_available_to_read() = 0;
 
-	/// get timeout time for pending connect operation;
-	virtual time_t connect_timeout_time() = 0;
-
 	/// set timeout in seconds for sum of all socket operations
 	/// After this amount of time (from now), all operations on
 	/// this socket (including non-blocking read/write) will
@@ -592,99 +589,36 @@ public:
     ///
 	int rcv_int(int &val, int end_of_record);
 
-        //------------------------------------------
-        // Encryption support below
-        //------------------------------------------
-        bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
-        //------------------------------------------
-        // PURPOSE: set sock to use a particular encryption key
-        // REQUIRE: KeyInfo -- a wrapper for keyData
-        // RETURNS: true -- success; false -- failure
-        //------------------------------------------
-
-        void set_crypto_mode(bool enable);
-        //------------------------------------------
-        // PURPOSE: enable or disable encryption
-        // REQUIRE: bool, true -- on; false -- off
-        // RETURNS:
-        //------------------------------------------
-
-        bool get_encryption() const;
+	bool get_encryption() const;
         //------------------------------------------
         // PURPOSE: Return encryption mode
         // REQUIRE: None
         // RETURNS: true -- on, false -- off
         //------------------------------------------
 
-        bool wrap(unsigned char* input, int input_len, 
-                  unsigned char*& output, int& outputlen);
+	void set_crypto_mode(bool enable);
         //------------------------------------------
-        // PURPOSE: encrypt some data
-        // REQUIRE: Protocol, keydata. set_encryption_procotol
-        //          must have been called and encryption_mode is on
-        // RETURNS: TRUE -- success, FALSE -- failure
+        // PURPOSE: enable or disable encryption
+        // REQUIRE: bool, true -- on; false -- off
+        // RETURNS:
         //------------------------------------------
 
-        bool unwrap(unsigned char* input, int input_len, 
-                    unsigned char*& output, int& outputlen);
-        //------------------------------------------
-        // PURPOSE: decrypt some data
-        // REQUIRE: Protocol, keydata. set_encryption_procotol
-        //          must have been called and encryption_mode is on
-        // RETURNS: TRUE -- success, FALSE -- failure
-        //------------------------------------------
+	/** Returns true if this stream can turn on encryption. */
+	virtual bool canEncrypt() = 0;
 
-        //----------------------------------------------------------------------
-        // MAC/MD related stuff
-        //----------------------------------------------------------------------
-        bool set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key = 0, const char * keyid = 0);    
-        //virtual bool set_MD_off() = 0;
-        //------------------------------------------
-        // PURPOSE: set mode for MAC (on or off)
-        // REQUIRE: mode -- see the enumeration defined above
-        //          key  -- an optional key for the MAC. if null (by default)
-        //                  all CEDAR does is send a Message Digest over
-        //                  When key is specified, this is essentially a MAC
-        // RETURNS: true -- success; false -- false
-        //------------------------------------------
+	static int set_timeout_multiplier(int secs);
+	static int get_timeout_multiplier();
 
-        bool isOutgoing_MD5_on() const { return (mdMode_ == MD_ALWAYS_ON); }
-        //------------------------------------------
-        // PURPOSE: whether MD is turned on or not
-        // REQUIRE: None
-        // RETURNS: true -- MD is on; 
-        //          false -- MD is off
-        //------------------------------------------
-
-        virtual const char * isIncomingDataMD5ed() = 0;
-        //------------------------------------------
-        // PURPOSE: To check to see if incoming data
-        //          has MD5 checksum/. NOTE! Currently,
-        //          this method should be used with UDP only!
-        // REQUIRE: None
-        // RETURNS: NULL -- data does not contain MD5
-        //          key id -- if the data is checksumed
-        //------------------------------------------
+	void ignoreTimeoutMultiplier() { ignore_timeout_multiplier = true; }
+	
     //@}
  private:
-        bool initialize_crypto(KeyInfo * key);
-        //------------------------------------------
-        // PURPOSE: initialize crypto
-        // REQUIRE: KeyInfo
-        // RETURNS: None
-        //------------------------------------------
         
 /*
 **		PRIVATE INTERFACE TO ALL STREAMS
 */
 protected:
 
-        virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId) = 0;
-        virtual bool set_encryption_id(const char * keyId) = 0;
-        const KeyInfo& get_crypto_key() const;
-        const KeyInfo& get_md_key() const;
-      
-        void resetCrypto();
 
 	// serialize object (save/restore object state to an ascii string)
 	//
@@ -709,11 +643,9 @@ protected:
 	**	Data structures
 	*/
 
-        Condor_Crypt_Base * crypto_;         // The actual crypto
-        bool                crypto_mode_;    // true == enabled, false == disabled.
-        CONDOR_MD_MODE      mdMode_;        // MAC mode
-        KeyInfo           * mdKey_;
-        bool                encrypt_;        // Encryption mode
+	bool                encrypt_;        // Encryption mode
+	bool                crypto_mode_;    // true == enabled, false == disabled.
+	bool m_crypto_state_before_secret;
 	stream_code	    _code;
 	stream_coding	    _coding;
 
@@ -722,10 +654,11 @@ protected:
 	char *decrypt_buf;
 	int decrypt_buf_len;
 	char *m_peer_description_str;
-	bool m_crypto_state_before_secret;
 	CondorVersionInfo *m_peer_version;
 
 	time_t m_deadline_time;
+	static int timeout_multiplier;
+	bool ignore_timeout_multiplier;
 };
 
 
