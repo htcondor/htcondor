@@ -86,7 +86,7 @@ class CreamJob : public BaseJob
 	char *resourceQueueString;
 	char *uploadUrl;
 	GridftpServer *gridftpServer;
-
+	int m_numCleanupAttempts;
 
 	Proxy *jobProxy;
 	GahpClient *gahp;

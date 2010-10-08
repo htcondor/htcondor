@@ -109,6 +109,7 @@ const char *ATTR_CREAM_LEASE_ID = "CreamLeaseId";
 #define DEFAULT_LEASE_DURATION	6*60*60 //6 hr
 
 #define CLEANUP_DELAY	5
+#define MAX_CLEANUP_ATTEMPTS 3
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -223,6 +224,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	delegatedCredentialURI = NULL;
 	gridftpServer = NULL;
 	leaseId = NULL;
+	m_numCleanupAttempts = 0;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -1077,9 +1079,19 @@ int CreamJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
+			m_numCleanupAttempts++;
 			if ( rc != GLOBUS_SUCCESS ) {
 				if ( strstr( gahp->getErrorString(), "job does not exist" ) ) {
 					// Job already gone, treat as success
+				} else if ( strstr( gahp->getErrorString(),
+									"job status does not match" ) && 
+							m_numCleanupAttempts < MAX_CLEANUP_ATTEMPTS ) {
+					// The server is probably taking a while to process
+					// job cancellation. Give it a little more time, then
+					// retry the purge request.
+					enteredCurrentGmState = now;
+					reevaluate_state = true;
+					break;
 				} else {
 					// unhandled error
 					LOG_CREAM_ERROR( "cream_job_purge", rc );
@@ -1235,6 +1247,7 @@ int CreamJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
+			m_numCleanupAttempts = 0;
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;
