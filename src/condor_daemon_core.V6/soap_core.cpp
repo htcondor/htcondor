@@ -505,19 +505,25 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
   size_t r;
 
   char bbb[4096];
+  char buf[PATH_MAX];
   
   char * web_root_dir = param("WEB_ROOT_DIR");
-  char * web_root_realpath;
+  char * web_root_realpath = NULL;
 
   if (!web_root_dir) {
     return 404;
   } 
   
-  web_root_realpath = realpath(web_root_dir, NULL);
+  if (realpath(web_root_dir, buf)) {
+    web_root_realpath = strdup(buf);
+  }
   free(web_root_dir);
   
   char * full_name = dircat(web_root_realpath,name);
-  char * full_name_realpath = realpath(full_name, NULL);
+  char * full_name_realpath = NULL;
+  if (realpath(full_name, buf)) {
+    full_name_realpath = strdup(buf);
+  }
 
   delete [] full_name;
 
