@@ -2059,14 +2059,13 @@ which use DaemonCore).
 
 \label{param:NotRespondingWantCore}
 \item[\Macro{NOT\_RESPONDING\_WANT\_CORE}]
-  A boolean parameter with a default value of false.
-  This parameter is for debugging purposes on UNIX systems, and
-  controls the behavior of the parent process when it determines that
-  a child process is not responding (see
-  \pageref{param:NotRespondingTimeout}).
-  If \MacroNI{NOT\_RESPONDING\_WANT\_CORE} is true, the parent 
+  A boolean value with a default value of \Expr{False}.
+  This parameter is for debugging purposes on Unix systems, and it
+  controls the behavior of the parent process when the parent process
+  determines that a child process is not responding.
+  If \MacroNI{NOT\_RESPONDING\_WANT\_CORE} is \Expr{True}, the parent 
   will send a SIGABRT instead of SIGKILL to the child process.
-  If the child process is configured with
+  If the child process is configured with the configuration variable
   \MacroNI{CREATE\_CORE\_FILES} enabled, the child process will then
   generate a core dump.
   See \MacroNI{NOT\_RESPONDING\_TIMEOUT} on page

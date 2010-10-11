@@ -55,12 +55,11 @@ process.  This resolves a problem observed on busy submit machines using the
 determined that the \Condor{schedd} was hung and would kill and restart it.
 
 % gittrac #1688
-
-\item When \MacroNI{NOT\_RESPONDING\_WANT\_CORE} is \Expr{True}, the
+\item When \Macro{NOT\_RESPONDING\_WANT\_CORE} is \Expr{True}, the
 \Condor{master} daemon now follows up with a \Expr{SIGKILL} if the
 child process does not exit within ten minutes of receiving
 \Expr{SIGABRT}.  This addresses cases that have been observed in
-which the child process gets hung while writing a core file.
+which the child process hangs while writing a core file.
 
 \end{itemize}
 
