@@ -323,6 +323,11 @@ provided in the job's \SubmitCmd{grid\_resource} attribute.
 
 \begin{itemize}
 
+% gittrac #1500
+\item Fixed a bug in the user privilege switching code in Windows that 
+  caused the \Condor{shadow} daemon to except when the \Condor{schedd} 
+  daemon attempted to re-use it. 
+
 % gittrack #1667
 \item Fixed the output in the \Condor{master} daemon log file to be
   clearer when an authorized user tries to use \Condor{config\_val}
