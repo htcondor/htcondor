@@ -1672,6 +1672,8 @@ class DaemonCore : public Service
 			of this pid (where applicable) */
 		PidEnvID penvid;
 		MyString shared_port_fname;
+		//Session ID and key for child process.
+		char* child_session_id;
     };
 
 	int m_refresh_dns_timer;
