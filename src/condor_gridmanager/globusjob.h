@@ -145,9 +145,9 @@ class GlobusJob : public BaseJob
 	Proxy *jobProxy;
 	GahpClient *gahp;
 
-	MyString *buildSubmitRSL();
-	MyString *buildRestartRSL();
-	MyString *buildStdioUpdateRSL();
+	std::string *buildSubmitRSL();
+	std::string *buildRestartRSL();
+	std::string *buildStdioUpdateRSL();
 	bool GetOutputSize( int& output, int& error );
 	void DeleteOutput();
 
@@ -156,8 +156,8 @@ class GlobusJob : public BaseJob
 		// the RSL is stored here (so that we don't have to reconstruct the
 		// RSL every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
-	MyString *RSL;
-	MyString errorString;
+	std::string *RSL;
+	std::string errorString;
 	char *localOutput;
 	char *localError;
 	bool streamOutput;
@@ -171,7 +171,7 @@ class GlobusJob : public BaseJob
 
 	int numGlobusSubmits;
 
-	MyString outputClassadFilename;
+	std::string outputClassadFilename;
 	bool useGridShell;
 
 	int jmShouldBeStoppingTime;
@@ -201,7 +201,7 @@ bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad,
 											int failure_code,
 											const char *failure_mesg);
 
-const char *rsl_stringify( const MyString& src );
+const char *rsl_stringify( const std::string& src );
 const char *rsl_stringify( const char *string );
 
 #endif

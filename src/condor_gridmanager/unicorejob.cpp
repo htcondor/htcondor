@@ -225,17 +225,17 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	if ( !buff.IsEmpty() ) {
 		const char *token;
 
-		buff.Tokenize();
+		Tokenize( buff );
 
-		token = buff.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "unicore" ) ) {
 			sprintf( error_string, "%s not of type unicore", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
-		buff.GetNextToken( " ", false );
-		buff.GetNextToken( " ", false );
-		token = buff.GetNextToken( " ", false );
+		GetNextToken( " ", false );
+		GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token ) {
 			sprintf( error_string, "%s missing job ID",
 								  ATTR_GRID_JOB_ID );

@@ -218,18 +218,17 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		Tokenize( buff );
 
-		token = str.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "nordugrid" ) ) {
 			sprintf( error_string, "%s not of type nordugrid",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {

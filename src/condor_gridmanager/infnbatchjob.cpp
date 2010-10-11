@@ -687,7 +687,6 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 {
 	int new_remote_state;
-	MyString buff;
 	ExprTree *new_expr, *old_expr;
 
 	int index;

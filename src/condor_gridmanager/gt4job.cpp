@@ -259,7 +259,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	std::string job_output;
 	std::string job_error;
 	std::string job_proxy_subject;
-	MyString grid_resource;
+	std::string grid_resource;
 	std::string grid_job_id;
 	std::string gridftp_url_base;
 	std::string globus_delegation_uri;
@@ -327,18 +327,18 @@ GT4Job::GT4Job( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
-	if ( grid_resource.Length() ) {
+	if ( grid_resource.length() ) {
 		const char *token;
 
-		grid_resource.Tokenize();
+		Tokenize( grid_resource );
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "gt4" ) ) {
 			sprintf( error_string, "%s not of type gt4", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			// If the resource url is missing a scheme, insert one
 			if ( strncmp( token, "http://", 7 ) == 0 ||
@@ -355,7 +355,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			goto error_exit;
 		}
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			jobmanagerType = strdup( token );
 		} else {
@@ -1629,7 +1629,7 @@ std::string *GT4Job::buildSubmitRSL()
 	}
 
 	//Start off the RSL
-	rsl = "<job>";
+	*rsl = "<job>";
 
 
 	//We're assuming all job clasads have a command attribute

@@ -157,16 +157,16 @@ bool GT4Resource::Init()
 		// TODO This assumes that at least one GT4Job has already
 		// instantiated a GahpClient. Need a better solution.
 /*
-	MyString gahp_name;
-	gahp_name.sprintf( "GT4/%s", proxyFQAN );
+	std::string gahp_name;
+	sprintf( gahp_name, "GT4/%s", proxyFQAN );
 
-	gahp = new GahpClient( gahp_name.Value() );
+	gahp = new GahpClient( gahp_name.c_str() );
 
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	deleg_gahp = new GahpClient( gahp_name.Value() );
+	deleg_gahp = new GahpClient( gahp_name.c_str() );
 
 	deleg_gahp->setNotificationTimerId( delegationTimerId );
 	deleg_gahp->setMode( GahpClient::normal );
@@ -214,18 +214,18 @@ const char *GT4Resource::ResourceType()
 const char *GT4Resource::CanonicalName( const char *name )
 {
 /*
-	static MyString canonical;
+	static std::string canonical;
 	char *host;
 	char *port;
 
 	parse_resource_manager_string( name, &host, &port, NULL, NULL );
 
-	canonical.sprintf( "%s:%s", host, *port ? port : "2119" );
+	sprintf( canonical, "%s:%s", host, *port ? port : "2119" );
 
 	free( host );
 	free( port );
 
-	return canonical.Value();
+	return canonical.c_str();
 */
 	return name;
 }

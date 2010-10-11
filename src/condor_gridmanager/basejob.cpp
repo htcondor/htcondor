@@ -1237,7 +1237,7 @@ bool
 WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1254,14 +1254,14 @@ WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 	GlobusResourceUpEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.IsEmpty() ) {
+	if ( contact.empty() ) {
 			// Not a Globus job, don't log the event
 		delete ulog;
 		return true;
 	}
-	contact.Tokenize();
-	contact.GetNextToken( " ", false );
-	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
+	Tokenize( contact );
+	GetNextToken( " ", false );
+	event.rmContact =  strnewp(GetNextToken( " ", false ));
 
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
@@ -1282,7 +1282,7 @@ bool
 WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1299,14 +1299,14 @@ WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 	GlobusResourceDownEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.IsEmpty() ) {
+	if ( contact.empty() ) {
 			// Not a Globus job, don't log the event
 		delete ulog;
 		return true;
 	}
-	contact.Tokenize();
-	contact.GetNextToken( " ", false );
-	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
+	Tokenize( contact );
+	GetNextToken( " ", false );
+	event.rmContact =  strnewp(GetNextToken( " ", false ));
 
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
@@ -1327,7 +1327,7 @@ bool
 WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1344,16 +1344,16 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 	GlobusSubmitEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	contact.Tokenize();
-	contact.GetNextToken( " ", false );
-	event.rmContact = strnewp(contact.GetNextToken( " ", false ));
+	Tokenize( contact );
+	GetNextToken( " ", false );
+	event.rmContact = strnewp(GetNextToken( " ", false ));
 
 	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
-	contact.Tokenize();
-	if ( strcasecmp( contact.GetNextToken( " ", false ), "gt2" ) == 0 ) {
-		contact.GetNextToken( " ", false );
+	Tokenize( contact );
+	if ( strcasecmp( GetNextToken( " ", false ), "gt2" ) == 0 ) {
+		GetNextToken( " ", false );
 	}
-	event.jmContact = strnewp(contact.GetNextToken( " ", false ));
+	event.jmContact = strnewp(GetNextToken( " ", false ));
 
 	event.restartableJM = true;
 

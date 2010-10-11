@@ -143,7 +143,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	int gahp_worker_cnt = 0;
 	char *gahp_debug = NULL;
 	ArgList args;
-	MyString value;
+	std::string value;
 	
 	remoteJobId = NULL;
 	remoteJobState = "";
@@ -236,19 +236,19 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	}
 
 	jobAd->LookupString( ATTR_GRID_RESOURCE, value );
-	if ( value.Length() ) {
+	if ( value.length() ) {
 		const char *token;
 
-		value.Tokenize();
+		Tokenize( value );
 
-		token = value.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "amazon" ) ) {
 			sprintf( error_string, "%s not of type amazon",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = value.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			m_serviceUrl = token;
 		} else {
@@ -305,26 +305,26 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	myResource->RegisterJob( this );
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
-	if ( value.Length() ) {
+	if ( value.length() ) {
 		const char *token;
 
-		value.Tokenize();
+		Tokenize( value );
 
-		token = value.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "amazon" ) ) {
 			sprintf( error_string, "%s not of type amazon", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
 			// Skip the service URL
-		value.GetNextToken( " ", false );
+		GetNextToken( " ", false );
 
-		token = value.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token ) {
 			m_key_pair = token;
 		}
 
-		token = value.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token ) {
 			remoteJobId = strdup( token );
 		}

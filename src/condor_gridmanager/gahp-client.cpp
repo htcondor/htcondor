@@ -5035,14 +5035,14 @@ GahpClient::gridftp_transfer(const char *src_url, const char *dst_url)
 		// Generate request line
 	if (!src_url) src_url=NULLSTRING;
 	if (!dst_url) dst_url=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(src_url) );
 	char *esc2 = strdup( escapeGahpString(dst_url) );
-	bool x = reqline.sprintf( "%s %s", esc1, esc2 );
+	int x = sprintf( reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
