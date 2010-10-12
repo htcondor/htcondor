@@ -86,7 +86,7 @@ extern "C" {
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
 	FILE	*fdopen(int, const char *);
-	int		whoami(FILE*);
+	int		whoami(char **buf,int *bufpos,int *buflen);
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
 	void update_job_rusage( struct rusage *localp, struct rusage *remotep );
 	int DoCleanup();

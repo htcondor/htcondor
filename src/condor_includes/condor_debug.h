@@ -78,7 +78,14 @@ extern "C" {
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
-extern int (*DebugId)(FILE *);		/* set header message */
+
+
+/* DebugId is a function that may be registered to be called to insert text
+ * into the header of a line that is about to be logged to the debug log file.
+ * It should treat its arguments similarly to how sprintf_realloc() does.
+ * It should also set its return value similarly to sprintf_realloc().
+ */
+extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 
