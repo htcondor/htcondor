@@ -136,6 +136,11 @@ $dagman_args = "-verbose";
 	'^\d+ NodeD EXECUTE \d+.0 - - 6$',
 	'^\d+ NodeD JOB_TERMINATED \d+.0 - - 6$',
 	'^\d+ NodeD JOB_SUCCESS 0 - - 6$',
+	'^\d+ NodeE SUBMIT_FAILED - - - 7$',
+	'^\d+ NodeE SUBMIT_FAILED - - - 7$',
+	'^\d+ NodeE POST_SCRIPT_STARTED - - - 7$',
+	'^\d+ NodeE POST_SCRIPT_TERMINATED - - - 7$',
+	'^\d+ NodeE POST_SCRIPT_SUCCESS - - - 7$',
 	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 0 \*\*\*$');
 
 my $killedchosen = 0;

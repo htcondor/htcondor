@@ -3426,6 +3426,10 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	// to parse a splice.
 	ASSERT( _isSplice == false );
 
+	if ( _jobstateLog ) {
+		_jobstateLog->WriteSubmitFailure( node );
+	}
+
 		// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;

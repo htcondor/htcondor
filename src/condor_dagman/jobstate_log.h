@@ -87,6 +87,11 @@ public:
 	*/
 	void WriteScriptSuccessOrFailure( Job *node, bool isPost );
 
+	/** Write the SUBMIT_FAILED "event".
+		@param The DAG node corresponding to the "event".
+	*/
+	void WriteSubmitFailure( Job *node );
+
 	/** Get the jobstate.log file.
 		@return The jobstate.log file we're writing to.
 	*/
@@ -119,6 +124,9 @@ private:
 	static const char *POST_SCRIPT_STARTED_NAME;
 	static const char *POST_SCRIPT_SUCCESS_NAME;
 	static const char *POST_SCRIPT_FAILURE_NAME;
+
+		// Default Condor ID to use to check for invalid IDs.
+	static const CondorID _defaultCondorID;
 };
 
 #endif	// _JOBSTATE_LOG_H

@@ -34,6 +34,8 @@ const char *JobstateLog::POST_SCRIPT_STARTED_NAME = "POST_SCRIPT_STARTED";
 const char *JobstateLog::POST_SCRIPT_SUCCESS_NAME = "POST_SCRIPT_SUCCESS";
 const char *JobstateLog::POST_SCRIPT_FAILURE_NAME = "POST_SCRIPT_FAILURE";
 
+const CondorID JobstateLog::_defaultCondorID;
+
 //---------------------------------------------------------------------------
 JobstateLog::JobstateLog( const char *jobstateLogFile )
 {
@@ -106,7 +108,12 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 
 	if ( eventName != NULL ) {
 		MyString condorID;
-		condorID.sprintf( "%d.%d", event->cluster, event->proc );
+			// Make sure Condor ID is valid.
+		if ( event->cluster != _defaultCondorID._cluster ) {
+			condorID.sprintf( "%d.%d", event->cluster, event->proc );
+		} else {
+			condorID = "-";
+		}
 		struct tm eventTm = event->eventTime;
 		time_t eventTime = mktime( &eventTm );
 		Write( &eventTime, node, eventName, condorID.Value() );
@@ -154,6 +161,13 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 	}
 
 	Write( NULL, node, eventName, "-" );
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::WriteSubmitFailure( Job *node )
+{
+	Write( NULL, node, "SUBMIT_FAILED", "-" );
 }
 
 //---------------------------------------------------------------------------
