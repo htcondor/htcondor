@@ -205,6 +205,17 @@ its checkpoint or from which it might have failed to restore its checkpoint.
 \item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
 while handling grid-type cream jobs.
 
+% gittrac #1699
+% gittrac #1700
+\item Improved the \Condor{gridmanager}'s handling of grid-type cream jobs
+that are held or removed by the user. Canceling the cream job is much less
+likely to fail and jobs can no longer get stuck in the cream state of
+CANCELLED.
+
+% gittrac #1701
+\item Fixed the web server feature controlled by \Macro{ENABLE\_WEB\_SERVER}.
+Previously, all HTTP GET requests would fail on non-linux unix machines.
+
 \end{itemize}
 
 \noindent Known Bugs:
