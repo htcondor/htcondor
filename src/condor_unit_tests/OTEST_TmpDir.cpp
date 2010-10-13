@@ -172,7 +172,7 @@ static bool setup() {
 	if ( PATH_MAX >= 4096 ) {
 		long_dir_depth = 10;
 	} else {
-#if defined(AIX)
+#if defined(AIX) || defined(Solaris)
 		long_dir_depth = 3;
 #else
 		long_dir_depth = 4;
