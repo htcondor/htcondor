@@ -34,7 +34,7 @@ enum condor__UniverseType {
   GRID = 9,
   JAVA = 10,
   PARALLEL = 11,
-  LOCALUNIVESE = 12,
+  LOCAL = 12,
   VM = 13
 };
 
