@@ -56,7 +56,7 @@ JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 
 	info.sprintf( "INTERNAL *** DAGMAN_STARTED %d.%d ***",
 				DAGManJobId._cluster, DAGManJobId._proc );
-	Write( info );
+	Write( NULL, info );
 }
 
 //---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ JobstateLog::WriteDagmanFinished( int exitCode )
 	MyString info;
 
 	info.sprintf( "INTERNAL *** DAGMAN_FINISHED %d ***", exitCode );
-	Write( info );
+	Write( NULL, info );
 }
 
 //---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ JobstateLog::WriteRecoveryStarted()
 	MyString info;
 
 	info.sprintf( "INTERNAL *** RECOVERY_STARTED ***" );
-	Write( info );
+	Write( NULL, info );
 }
 
 //---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ JobstateLog::WriteRecoveryFinished()
 	MyString info;
 
 	info.sprintf( "INTERNAL *** RECOVERY_FINISHED ***" );
-	Write( info );
+	Write( NULL, info );
 }
 
 //---------------------------------------------------------------------------
@@ -107,7 +107,9 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 	if ( eventName != NULL ) {
 		MyString condorID;
 		condorID.sprintf( "%d.%d", event->cluster, event->proc );
-		Write( node, eventName, condorID.Value() );
+		struct tm eventTm = event->eventTime;
+		time_t eventTime = mktime( &eventTm );
+		Write( &eventTime, node, eventName, condorID.Value() );
 	}
 }
 
@@ -122,7 +124,7 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 	MyString retval;
 	retval.sprintf( "%d", node->retval );
 
-	Write( node, eventName, retval.Value() );
+	Write( NULL, node, eventName, retval.Value() );
 }
 
 //---------------------------------------------------------------------------
@@ -133,7 +135,7 @@ JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 
 	const char *eventName = isPost ? POST_SCRIPT_STARTED_NAME :
 				PRE_SCRIPT_STARTED_NAME;
-	Write( node, eventName, "-" );
+	Write( NULL, node, eventName, "-" );
 }
 
 //---------------------------------------------------------------------------
@@ -151,25 +153,25 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 					PRE_SCRIPT_FAILURE_NAME;
 	}
 
-	Write( node, eventName, "-" );
+	Write( NULL, node, eventName, "-" );
 }
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::Write( Job *node, const char *eventName,
-			const char *condorID )
+JobstateLog::Write( const time_t *eventTimeP, Job *node,
+			const char *eventName, const char *condorID )
 {
 	MyString info;
 
 	info.sprintf( "%s %s %s %s - %d", node->GetJobName(), eventName,
 				condorID, node->PegasusSite(),
 				node->GetPegasusSequenceNum() );
-	Write( info );
+	Write( eventTimeP, info );
 }
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::Write( const MyString &info )
+JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 {
 	FILE *outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );
 	if ( !outfile ) {
@@ -180,7 +182,12 @@ JobstateLog::Write( const MyString &info )
 		return;
 	}
 
-	time_t eventTime = time( NULL );
+	time_t eventTime;
+	if ( eventTimeP != NULL ) {
+		eventTime = *eventTimeP;
+	} else {
+		eventTime = time( NULL );
+	}
 	fprintf( outfile, "%lu %s\n",
 				(unsigned long)eventTime, info.Value() );
 	fclose( outfile );

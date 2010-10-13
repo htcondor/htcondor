@@ -98,13 +98,13 @@ private:
 		@param The event name.
 		@param The Condor ID string (or other data).
 	*/
-	void Write( Job *node, const char *eventName,
-				const char *condorID );
+	void Write( const time_t *eventTimeP, Job *node,
+				const char *eventName, const char *condorID );
 
 	/** Write an event to the jobstate.log file.
 		@param The string we want to write to the file.
 	*/
-	void Write( const MyString &info );
+	void Write( const time_t *eventTimeP, const MyString &info );
 
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
