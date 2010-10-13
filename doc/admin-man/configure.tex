@@ -5702,6 +5702,20 @@ SYSTEM_PERIODIC_REMOVE = \
   number of the job id will be equal to the previous cluster number used
   plus the value of this setting.
 
+\label{param:ScheddClusterMaximumValue}
+\item[\Macro{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE}]
+  An integer that specifies an upper bound on the job cluster id. If this 
+  parameter is set to a value (M), the maximum job cluster id assigned to 
+  any job will be (M-1). When the maximum id is reached, job ids will 
+  wrap around back to \Macro{SCHEDD\_CLUSTER\_INITIAL\_VALUE}. The 
+  default value is zero, in which case behavior is no maximum cluster id. 
+
+  Caveat: If you set this parameter to a non-zero value, you are
+  responsible for ensuring that old jobs don't stay in the queue long
+  enough for cluster ids of new jobs to wrap around and reuse the 
+  same id. Otherwise, it is possible for jobs to be erroneously assigned 
+  duplicate cluster ids, which will result in the correupt job queue.
+
 \label{param:GridManagerSelectionExpr}
 \item[\Macro{GRIDMANAGER\_SELECTION\_EXPR}]
   By default, the \Condor{schedd} daemon will start a new 

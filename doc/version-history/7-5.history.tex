@@ -135,6 +135,11 @@ Previously, \Condor{submit} wrote the event.
 \item The \Condor{schedd} daemon now scales better when there are many
 job auto clusters.
 
+% gittrac #1173
+\item The \Condor{q} command with option \Opt{-run}, \Opt{-hold}, 
+\Opt{-goodput}, \Opt{-cputime}, \Opt{-currentrun} or \Opt{-io}
+is now much more efficient in its communication with the \Condor{schedd}.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -248,6 +253,30 @@ The default value is \Expr{True}.
 If set to \Expr{False}, Condor trusts the \Expr{gt2} or \Expr{gt5} value
 provided in the job's \SubmitCmd{grid\_resource} attribute.
 
+% gittrac #1390
+\item The new job ClassAd attribute \AdAttr{ResidentSetSize} is an integer
+measuring the amount of physical memory in use by the job on the execute
+machine in kilobytes.
+
+% gittrac #1502
+\item The new job ClassAd attribute \AdAttr{x509UserProxyExpiration} is an
+integer representing when the job's X.509 proxy credential will expire,
+measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+% gittrac #1315
+\item The new configuration parameter \MacroNI{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE}
+is an upper bound on the job cluster id. If this parameter is set to a
+value (M), the maximum job cluster id assigned to any job will be (M-1).
+When the maximum id is reached, job ids will wrap around back to
+\MacroNI{SCHEDD\_CLUSTER\_INITIAL\_VALUE}. The default value is zero,
+in which case behavior is no maximum cluster id. 
+
+% gittrac #1348
+% gittrac #1487
+\item The default value of configuration parameter 
+\MacroNI{MAX\_ACCEPTS\_PER\_CYCLE} has been changed from 1 to 4.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -260,6 +289,7 @@ provided in the job's \SubmitCmd{grid\_resource} attribute.
   \Opt{-set} and \Macro{ENABLE\_PERSISTENT\_CONFIG} is false. The previous
   output implied that the operation succeeded when in fact it did not.
 
+% gittrac #1523
 \item Since Condor version 7.5.2,
   the following \Condor{job\_router} features were
   effectively non-functional: \Attr{UseSharedX509UserProxy},
@@ -349,6 +379,28 @@ but not actually put the job on hold.
 % gittrac #1694
 \item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
 while handling cream grid type jobs destined for different resources.
+
+% gittrac #1481
+\item Fixed a bug that prevented the \Condor{shadow} from managing
+additional jobs after its first job completed when 
+\Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} was set to \Expr{True}.
+
+% gittrac #1533
+\item The timestamps in the ProcdLog now print the real time.
+
+% gittrac #1580
+\item Fixed how some daemons advertise themselves to the collector.
+Now, all daemons set the attribute \AdAttr{MyType} to indicate what
+type of daemon they are.
+
+% gittrac #1630
+\item \Condor{chirp} no longer crashes on a put operation if the remote
+filename is omitted.
+
+% gittrac #1489
+% gittrac #1494
+\item Fixed packaging of Hadoop File System support in Condor. This includes
+updating to HDFS 0.20.2 and making the HDFS web interface work properly.
 
 \end{itemize}
 
