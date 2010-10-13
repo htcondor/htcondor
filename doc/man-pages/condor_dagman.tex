@@ -90,18 +90,23 @@ Level values and what they produce is described as
        \Condor{dagman} to automatically generate an appropriate
        rescue DAG name.}
     \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
-       jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
-       idle jobs start to run, \Condor{dagman} will resume submitting jobs.
+       jobs allowed before \Condor{dagman} stops submitting more jobs.  
+       If DAG nodes have a cluster with more than one job in it,
+       each job in the cluster is counted individually. 
+       Once idle jobs start to run, \Condor{dagman} will resume submitting jobs.
        \Arg{NumberOfJobs} is a positive integer.
        This command-line option to \Condor{submit\_dag} is passed to
        \Condor{dagman}.
        If not specified, the number of idle jobs is unlimited.  }
-    \OptItem{\OptArg{-maxjobs}{numberOfJobs}}{Sets the maximum number of jobs
+    \OptItem{\OptArg{-maxjobs}{numberOfJobs}}{Sets the maximum number of 
+       clusters
        within the DAG that will be submitted to Condor at one time.
        \Arg{numberOfJobs} is a positive integer.
        This command-line option to \Condor{submit\_dag} is passed to
        \Condor{dagman}.
-       If not specified, the default number of jobs is unlimited.  }
+       If not specified, the default number of clusters is unlimited.
+       If a cluster contains more than one job, 
+       only the cluster is counted for purposes of \Opt{maxjobs}.  }
     \OptItem{\OptArg{-maxpre}{NumberOfPREscripts}}{Sets the maximum number
        of PRE
        scripts within the DAG that may be running at one time.
@@ -147,7 +152,7 @@ Level values and what they produce is described as
     \OptItem{\OptArg{-dorescuefrom}{number}}{Forces \Condor{dagman} to
        run the specified rescue DAG number for the given DAG.  A value
        of 0 is the same as not specifying this option.  Specifying a
-       non-existant rescue DAG is a fatal error.}
+       nonexistent rescue DAG is a fatal error.}
     \OptItem{\OptArg{-csdversion}{version\_string}}{\Arg{version\_string}
        is the version of the \Condor{submit\_dag} program.  At startup,
        \Condor{dagman} checks for a version mismatch with the
