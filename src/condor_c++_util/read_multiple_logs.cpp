@@ -466,7 +466,7 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 		MyString	currentDir;
 		if ( !condor_getcwd(currentDir) ) {
 			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
-						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d\n",
+						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d",
 						errno, strerror(errno), __FILE__, __LINE__);
 			return false;
 		}
