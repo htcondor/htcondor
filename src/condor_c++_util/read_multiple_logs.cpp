@@ -197,8 +197,8 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 	int flags = O_WRONLY;
 	if ( truncate ) {
 		flags |= O_TRUNC;
-		dprintf(D_ALWAYS, "MultiLogFiles: truncating log file %s\n",
-					filename);
+		dprintf( D_ALWAYS, "MultiLogFiles: truncating log file %s\n",
+					filename );
 	}
 	int fd = safe_create_keep_if_exists( filename, flags );
 	if ( fd < 0 ) {
