@@ -55,9 +55,9 @@ void
 JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 {
 	MyString info;
-
 	info.sprintf( "INTERNAL *** DAGMAN_STARTED %d.%d ***",
 				DAGManJobId._cluster, DAGManJobId._proc );
+
 	Write( NULL, info );
 }
 
@@ -66,8 +66,8 @@ void
 JobstateLog::WriteDagmanFinished( int exitCode )
 {
 	MyString info;
-
 	info.sprintf( "INTERNAL *** DAGMAN_FINISHED %d ***", exitCode );
+
 	Write( NULL, info );
 }
 
@@ -75,9 +75,7 @@ JobstateLog::WriteDagmanFinished( int exitCode )
 void
 JobstateLog::WriteRecoveryStarted()
 {
-	MyString info;
-
-	info.sprintf( "INTERNAL *** RECOVERY_STARTED ***" );
+	MyString info( "INTERNAL *** RECOVERY_STARTED ***" );
 	Write( NULL, info );
 }
 
@@ -85,9 +83,7 @@ JobstateLog::WriteRecoveryStarted()
 void
 JobstateLog::WriteRecoveryFinished()
 {
-	MyString info;
-
-	info.sprintf( "INTERNAL *** RECOVERY_FINISHED ***" );
+	MyString info( "INTERNAL *** RECOVERY_FINISHED ***" );
 	Write( NULL, info );
 }
 
@@ -108,12 +104,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 
 	if ( eventName != NULL ) {
 		MyString condorID;
-			// Make sure Condor ID is valid.
-		if ( event->cluster != _defaultCondorID._cluster ) {
-			condorID.sprintf( "%d.%d", event->cluster, event->proc );
-		} else {
-			condorID = "-";
-		}
+		CondorID2Str( event->cluster, event->proc, condorID );
 		struct tm eventTm = event->eventTime;
 		time_t eventTime = mktime( &eventTm );
 		Write( &eventTime, node, eventName, condorID.Value() );
@@ -142,7 +133,13 @@ JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 
 	const char *eventName = isPost ? POST_SCRIPT_STARTED_NAME :
 				PRE_SCRIPT_STARTED_NAME;
-	Write( NULL, node, eventName, "-" );
+	MyString condorID( "-" );
+	if ( isPost ) {
+			// See Dag::PostScriptReaper().
+		int procID = node->GetNoop() ? node->_CondorID._proc : 0;
+		CondorID2Str( node->_CondorID._cluster, procID, condorID );
+	}
+	Write( NULL, node, eventName, condorID.Value() );
 }
 
 //---------------------------------------------------------------------------
@@ -160,7 +157,14 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 					PRE_SCRIPT_FAILURE_NAME;
 	}
 
-	Write( NULL, node, eventName, "-" );
+	MyString condorID( "-" );
+	if ( isPost ) {
+			// See Dag::PostScriptReaper().
+		int procID = node->GetNoop() ? node->_CondorID._proc : 0;
+		CondorID2Str( node->_CondorID._cluster, procID, condorID );
+	}
+
+	Write( NULL, node, eventName, condorID.Value() );
 }
 
 //---------------------------------------------------------------------------
@@ -205,4 +209,16 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 	fprintf( outfile, "%lu %s\n",
 				(unsigned long)eventTime, info.Value() );
 	fclose( outfile );
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
+{
+		// Make sure Condor ID is valid.
+	if ( cluster != _defaultCondorID._cluster ) {
+		idStr.sprintf( "%d.%d", cluster, proc );
+	} else {
+		idStr = "-";
+	}
 }

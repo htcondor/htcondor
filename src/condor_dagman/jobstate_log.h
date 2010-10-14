@@ -111,6 +111,13 @@ private:
 	*/
 	void Write( const time_t *eventTimeP, const MyString &info );
 
+	/** Convert a CondorID to a string.
+		@param The cluster part of the CondorID.
+		@param The proc part of the CondorID.
+		@param A MyString to receive the resulting string.
+	*/
+	void CondorID2Str( int cluster, int proc, MyString &idStr );
+
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
 
