@@ -26,6 +26,29 @@ The details of each version are described below.
 \item Condor version 7.4.4 not yet released.
 %\item Condor version 7.4.4 released on Month Date, 2010.
 
+% gittrac #1508
+\item \Security 
+This release fixes a bug in which Amazon EC2 jobs
+(jobs with \SubmitCmd{universe = grid} and \SubmitCmd{grid\_resource = amazon})
+that use the \SubmitCmd{amazon\_keypair\_file}
+command may expose the private SSH key to other users.
+The created file had insecure permissions,
+allowing other users on the submit host to read the file.
+Any other user who could see the file could learn about these EC2 jobs
+using \Condor{q}, 
+and the other user could then connect to them with the private SSH key.
+
+To work around the bug without installing this release,
+do one or both of the following:
+\begin{itemize}
+\item Do not use the submit description file command
+\SubmitCmd{amazon\_keypair\_file}.
+\item Ensure that the directory holding the private SSH key 
+has suitably restrictive permissions,
+such that other users cannot read files inside the directory.
+\end{itemize}
+
+
 % gittrac #1524
 \item Condor can now be built on Mac OS X 10.6.
 
@@ -173,10 +196,6 @@ estimation by 100MB.
 command, that caused VMware \SubmitCmd{vm} universe jobs to fail if the virtual
 machine already had a CD-ROM image associated with it.
 
-% gittrac #1508
-\item Fixed permissions of a ssh private key file that is created for 
-Amazon EC2 jobs. Previously, the permissions were too lax.
-
 % gittrac #1465
 \item Configuration variables \Macro{SOAP\_SSL\_CA\_DIR} and
 \Macro{SOAP\_SSL\_CA\_FILE} are now properly used when authenticating
@@ -210,11 +229,11 @@ while handling grid-type cream jobs.
 \item Improved the \Condor{gridmanager}'s handling of grid-type cream jobs
 that are held or removed by the user. Canceling the cream job is much less
 likely to fail and jobs can no longer get stuck in the cream state of
-CANCELLED.
+CANCELED.
 
 % gittrac #1701
 \item Fixed the web server feature controlled by \Macro{ENABLE\_WEB\_SERVER}.
-Previously, all HTTP GET requests would fail on non-linux unix machines.
+Previously, all HTTP GET requests would fail on non-linux Unix machines.
 
 \end{itemize}
 
