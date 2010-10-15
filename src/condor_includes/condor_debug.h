@@ -78,6 +78,7 @@ extern "C" {
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
+extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
 
 
 /* DebugId is a function that may be registered to be called to insert text

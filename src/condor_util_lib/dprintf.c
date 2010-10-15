@@ -53,7 +53,7 @@
 #include "condor_threads.h"
 #include "log_rotate.h"
 
-FILE *debug_lock(int debug_level, const char *mode);
+FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
@@ -81,6 +81,8 @@ extern	int		DebugFlags;
 */
 extern int _condor_dprintf_works;
 
+int DebugShouldLockToAppend = 0;
+static int DebugIsLocked = 0;
 
 FILE	*DebugFP = 0;
 
@@ -449,7 +451,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 			(DebugFile[debug_level] && (flags&(1<<(debug_level-1))))) {
 
 				/* Open and lock the log file */
-			(void)debug_lock(debug_level, NULL);
+			(void)debug_lock(debug_level, NULL, 0);
 
 			if (DebugFP) {
 #ifdef va_copy
@@ -573,22 +575,16 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 	return lock_fd;
 }
 
-FILE *
-debug_lock(int debug_level, const char *mode)
+/* debug_open_lock
+ * - assumes correct priv state (PRIV_CONDOR) has already been set
+ * - aborts the program on error
+ */
+static void
+debug_open_lock(void)
 {
-	off_t		length = 0; // this gets assigned return value from lseek()
-	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
 	struct stat fstatus;
-
-	if ( mode == NULL ) {
-		mode = "a";
-	}
-
-	if ( DebugFP == NULL ) {
-		DebugFP = stderr;
-	}
 
 	if ( use_kernel_mutex == -1 ) {
 #ifdef WIN32
@@ -603,8 +599,6 @@ debug_lock(int debug_level, const char *mode)
 		use_kernel_mutex = FALSE;
 #endif
 	}
-
-	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 		/* Acquire the lock */
 	if( DebugLock ) {
@@ -639,6 +633,33 @@ debug_lock(int debug_level, const char *mode)
 					 "LockFd: %d\n", DebugLock, LockFd );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
+
+		DebugIsLocked = 1;
+	}
+}
+
+FILE *
+debug_lock(int debug_level, const char *mode, int force_lock )
+{
+	off_t		length = 0; // this gets assigned return value from lseek()
+	priv_state	priv;
+	int save_errno;
+	char msg_buf[DPRINTF_ERR_MAX];
+	int locked = 0;
+
+	if ( mode == NULL ) {
+		mode = "a";
+	}
+
+	if ( DebugFP == NULL ) {
+		DebugFP = stderr;
+	}
+
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+
+	if( DebugShouldLockToAppend || force_lock ) {
+		debug_open_lock();
+		locked = 1;
 	}
 
 	if( DebugFile[debug_level] ) {
@@ -677,6 +698,20 @@ debug_lock(int debug_level, const char *mode)
 
 			/* If it's too big, preserve it and start a new one */
 		if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
+
+			if( !locked ) {
+					/* We need to redo everything we just did but with a lock
+					 * to prevent a race in which multiple processes rotate
+					 * the file.
+					 */
+
+				_set_priv(priv, __FILE__, __LINE__, 0);
+
+				debug_unlock(debug_level);
+
+				return debug_lock(debug_level, mode, 1);
+			}
+
 				// Casting length to int to get rid of compile warning.
 				// Probably format should be %ld, and we should cast to
 				// long int, but I'm afraid of changing the output format.
@@ -714,7 +749,7 @@ debug_unlock(int debug_level)
 		}
 	}
 
-	if( DebugLock ) {
+	if( DebugIsLocked ) {
 			/* Don't forget to unlock the file */
 		errno = 0;
 
@@ -816,7 +851,7 @@ preserve_log_file(int debug_level)
 	   should be skipped, because it is expected that a new file may
 	   have already been created by now. */
 
-	if( DebugLock) {
+	if( DebugLock && DebugShouldLockToAppend ) {
 		errno = 0;
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
