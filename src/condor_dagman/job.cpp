@@ -862,10 +862,9 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 	}
 
-	delete [] _logFile;
-	_logFile = NULL;
-
 	if ( result ) {
+		delete [] _logFile;
+		_logFile = NULL;
 		_logIsMonitored = false;
 	}
 
