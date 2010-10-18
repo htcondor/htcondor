@@ -268,12 +268,12 @@ measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
 % gittrac #1315
-\item The new configuration parameter \MacroNI{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE}
-is an upper bound on the job cluster id. If this parameter is set to a
-value (M), the maximum job cluster id assigned to any job will be (M-1).
-When the maximum id is reached, job ids will wrap around back to
-\MacroNI{SCHEDD\_CLUSTER\_INITIAL\_VALUE}. The default value is zero,
-in which case behavior is no maximum cluster id. 
+\item The new configuration variable \Macro{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE}
+is an upper bound on assigned job cluster ids. If set to
+value $M$, the maximum job cluster id assigned to any job will be $M-1$.
+When the maximum id is reached, assignment of cluster ids will wrap around 
+back to \MacroNI{SCHEDD\_CLUSTER\_INITIAL\_VALUE}. The default value is zero,
+which does not set a maximum cluster id. 
 
 % gittrac #1348
 % gittrac #1487
