@@ -121,6 +121,13 @@ void dprintf_dump_stack(void);
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
 
+/* reset statistics about delays acquiring the debug file lock */
+void dprintf_reset_lock_delay(void);
+
+/* return fraction of time spent waiting for debug file lock since
+   start of program or last call to dprintf_reset_lock_delay */
+double dprintf_get_lock_delay(void);
+
 /* wrapper for fclose() that soaks up EINTRs up to maxRetries number of times.
  */
 int fclose_wrapper( FILE *stream, int maxRetries );

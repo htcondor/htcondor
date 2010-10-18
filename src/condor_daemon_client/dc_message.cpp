@@ -712,13 +712,14 @@ ClassAdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 	return true;
 }
 
-ChildAliveMsg::ChildAliveMsg( int mypid, int max_hang_time, int max_tries, bool blocking ):
+ChildAliveMsg::ChildAliveMsg( int mypid, int max_hang_time, int max_tries, double dprintf_lock_delay, bool blocking ):
 	DCMsg(DC_CHILDALIVE),
 	m_mypid(mypid),
 	m_max_hang_time(max_hang_time),
 	m_max_tries(max_tries),
 	m_tries(0),
-	m_blocking(blocking)
+	m_blocking(blocking),
+	m_dprintf_lock_delay(dprintf_lock_delay)
 {
 }
 
@@ -735,7 +736,8 @@ bool
 ChildAliveMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
 	if ( !sock->code(m_mypid) ||
-		 !sock->code(m_max_hang_time) )
+		 !sock->code(m_max_hang_time) ||
+		 !sock->code(m_dprintf_lock_delay) )
 	{
 		dprintf(D_FULLDEBUG,"ChildAliveMsg: Could not write to parent %s.\n",
 				sock->peer_description());

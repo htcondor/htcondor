@@ -84,6 +84,9 @@ extern int _condor_dprintf_works;
 int DebugShouldLockToAppend = 0;
 static int DebugIsLocked = 0;
 
+static int DebugLockDelay = 0.0; /* seconds spent waiting for lock */
+static time_t DebugLockDelayPeriodStarted = 0;
+
 FILE	*DebugFP = 0;
 
 /*
@@ -585,6 +588,7 @@ debug_open_lock(void)
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
 	struct stat fstatus;
+	time_t start_time,end_time;
 
 	if ( use_kernel_mutex == -1 ) {
 #ifdef WIN32
@@ -621,6 +625,11 @@ debug_open_lock(void)
 			}	
 		}
 
+		start_time = time(NULL);
+		if( DebugLockDelayPeriodStarted == 0 ) {
+			DebugLockDelayPeriodStarted = start_time;
+		}
+
 		errno = 0;
 #ifdef WIN32
 		if( lock_or_mutex_file(LockFd,WRITE_LOCK,TRUE) < 0 ) 
@@ -635,7 +644,28 @@ debug_open_lock(void)
 		}
 
 		DebugIsLocked = 1;
+
+			/* Update DebugLockDelay.  Ignore delays that are less than
+			 * two seconds because the resolution is only 1s.
+			 */
+		end_time = time(NULL);
+		if( end_time-start_time > 1 ) {
+			DebugLockDelay += end_time-start_time;
+		}
 	}
+}
+
+void dprintf_reset_lock_delay(void) {
+	DebugLockDelay = 0;
+	DebugLockDelayPeriodStarted = 0;
+}
+
+double dprintf_get_lock_delay(void) {
+	time_t now = time(NULL);
+	if( now - DebugLockDelayPeriodStarted <= 0 ) {
+		return 0;
+	}
+	return ((double)DebugLockDelay)/(now-DebugLockDelayPeriodStarted);
 }
 
 FILE *
