@@ -9673,6 +9673,8 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 			// things are looking serious, so let's send mail
 		static time_t last_email = 0;
 		if( last_email == 0 || time(NULL)-last_email > 60 ) {
+			last_email = time(NULL);
+
 			std::string subject;
 			sprintf(subject,"Condor process reports long locking delays!");
 
