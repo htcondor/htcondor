@@ -1410,9 +1410,9 @@ This macro
   If \Expr{False}, Condor will not lock the file before writing.
 
 \label{param:NewLocking}
-\item[\Macro{NEW\_LOCKING}]
+\item[\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK}]
   A boolean value utilized only for Unix operating systems, 
-  that defaults to \Expr{False}. 
+  that defaults to \Expr{True}. 
   This variable is only relevant if \MacroNI{ENABLE\_USERLOG\_LOCKING}
   is \Expr{True}.
   When \Expr{True}, job user logs and the global job event log are
