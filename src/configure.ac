@@ -2591,6 +2591,8 @@ else
 fi
 rm -f affinity_test.cpp affinity_test.o
 
+AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], , ,[[#include <netinet/in.h>]])
+
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
 # error here.  Under IA64, there is a different interface to clone
