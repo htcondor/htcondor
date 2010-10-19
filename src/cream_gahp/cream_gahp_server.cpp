@@ -1487,7 +1487,7 @@ int thread_cream_ping( Request *req )
 	
 	ServiceInfoWrapper siw;
 	try {
-		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
+		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,0,
 														   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
@@ -1536,7 +1536,7 @@ int thread_cream_does_accept_job_submissions( Request *req )
 
 	ServiceInfoWrapper siw;
 	try {
-		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
+		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,0,
 														   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
@@ -1663,7 +1663,7 @@ int thread_cream_get_CEMon_url( Request *req )
 	
 	ServiceInfoWrapper siw;
 	try {
-		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
+		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,0,
 														   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());

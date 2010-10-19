@@ -1,14 +1,17 @@
 NAME = cream_gahp
 all_target($(NAME))
 
+/* To work on ia64 rhel3, we need to add -D_REENTRANT */
 /* We pick out the specific LIB targets we need to avoid accidently
  * linking against any of the Condor libraries, which we don't want.
  */
-C_PLUS_FLAGS = -pthread -I$(CREAM_DIR)/include -I$(GLOBUS_DIR)/include/$(GlobusThrFlavor) $(STD_C_PLUS_FLAGS)
+C_PLUS_FLAGS = -D_REENTRANT 
+-pthread -I$(LOG4CPP_DIR)/include -I$(BOOST_DIR)/include -I$(CREAM_DIR)/include -I$(GLOBUS_DIR)/include/$(GlobusThrFlavor) $(STD_C_PLUS_FLAGS)
 LIB = $(PRE_EXT_LIBS) \
 	$(CREAM_DIR)/lib/libglite_ce_cream_client_soap.a \
 	$(CREAM_DIR)/lib/libglite_ce_cream_client_util.a \
 	$(CREAM_DIR)/lib/libglite_security_gsoap_plugin_$(GlobusThrFlavor).a \
+	$(CREAM_DIR)/lib/libglite_security_gss_$(GlobusThrFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusThrFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_$(GlobusThrFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusThrFlavor).a \
@@ -26,10 +29,10 @@ LIB = $(PRE_EXT_LIBS) \
 	$(VOMS_DIR)/lib/libvomsapi_$(GlobusThrFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusThrFlavor).a \
 	$(GLOBUS_DIR)/lib/libglobus_callout_$(GlobusThrFlavor).a \
-	$(CREAM_DIR)/lib/liblog4cpp.a \
+	$(LOG4CPP_DIR)/lib/liblog4cpp.a \
 	$(CREAM_DIR)/lib/libgridsite.a \
-	$(CREAM_DIR)/lib/libares.a \
-	$(CREAM_DIR)/lib/libboost_thread-gcc-mt-d.a \
+	$(CARES_DIR)/lib/libcares.a \
+	$(BOOST_DIR)/lib/libboost_thread-gcc-mt-d.a \
 	$(OPENSSL_DIR)/lib/libssl.a \
 	$(OPENSSL_DIR)/lib/libcrypto.a \
 	$(EXPAT_LIB) \
