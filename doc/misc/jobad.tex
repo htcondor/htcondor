@@ -748,6 +748,12 @@ the job is evicted without a checkpoint.
 a string containing a name of
 a signal to be sent to the job if the job is removed.
 
+%%% ClassAd attribute: ResidentSetSize
+\index{ClassAd job attribute!ResidentSetSize}
+\index{ResidentSetSize!job ClassAd attribute}
+\item[\AdAttr{ResidentSetSize}:]  Estimate of the physical memory
+in use by the job in Kbytes while it is running.
+
 %%% ClassAd attribute: StageOutFinish
 \index{ClassAd job attribute!StageOutFinish}
 \index{StageOutFinish!job ClassAd attribute}
@@ -878,6 +884,15 @@ platform type of the machine upon which this job is submitted,
 representing a minor version number (currently 0, 1, or 2)
 for a Windows operating system.
 This attribute only exists for jobs submitted from Windows machines.
+
+%%% ClassAd attribute: X509UserProxyExpiration
+\index{ClassAd job attribute!X509UserProxyExpiration}
+\index{X509UserProxyExpiration!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyExpiration}:]   
+For a job that defines the submit description file command
+\SubmitCmd{x509userproxy}, this is the time at which the indicated
+X.509 proxy credential will expire, measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
 %%% ClassAd attribute: X509UserProxyFirstFQAN
 \index{ClassAd job attribute!X509UserProxyFirstFQAN}

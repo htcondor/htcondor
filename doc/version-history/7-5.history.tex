@@ -89,8 +89,10 @@ which the child process hangs while writing a core file.
 
 \begin{itemize}
 
-\item Condor version 7.5.4 not yet released.
-%\item Condor version 7.5.4 released on Month Date, 2010.
+\item Condor version 7.5.4 released on October 20, 2010.
+
+\item All of the bug fixes and features which are in
+Condor version 7.4.4 are in this 7.5.4 release.
 
 % gittrac #1539
 \item The release now contains all header files necessary to compile
@@ -138,6 +140,10 @@ grid type. The server's URL must be specified via the \SubmitCmd{grid\_resource}
 submit description file command for each job.
 See section~\ref{sec:Amazon} for details.
 
+% gittrac #1545
+\item The grid universe's amazon grid type can now be used to submit
+virtual machine jobs to Eucalyptus systems via the EC2 interface.
+
 %gittrac #1179
 \item \Condor{q} now uses the queue-management API's projection feature when 
   used with \Opt{-run}, \Opt{-hold}, \Opt{-goodput}, \Opt{-cputime}, 
@@ -161,31 +167,23 @@ even if the difference is permissible.
 %gittrac #1483
 \item Added the capability for \Condor{dagman} to create and periodically
 rewrite a file that lists the status of all nodes within a DAG.
+Alternatively, the file may be continually updated as the DAG runs.
 See section~\ref{sec:DAG-node-status} for details.
-
-%gittrac #1483
-\item Added the capability for \Condor{dagman} to create a node status
-file that is continually updated as the DAG runs (see 
-section~\ref{sec:DAG-node-status} for details).
 
 %gittrac #1560
 \item The \Condor{schedd} daemon now uses a better algorithm for
 determining which flocking level is being negotiated.  No special
 configuration is required for the new algorithm to work.  In the
-past, the algorithm that was used depended on DNS and the
-configuration of \MacroNI{NEGOTIATOR\_HOST} and
-\MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.  In some networking environments
-(such as a multi-homed central manager), it was difficult to
+past, the algorithm depended on DNS and the
+configuration variables \MacroNI{NEGOTIATOR\_HOST} and
+\MacroNI{FLOCK\_NEGOTIATOR\_HOSTS}.  In some networking environments,
+such as that of a multi-homed central manager, it was difficult to
 configure things correctly.  When wrongly configured, negotiation
 would be aborted with the message, \Expr{Unknown negotiator}.  The new
-algorithm is only used when the negotiator is version 7.5.4 or
+algorithm is only used when the \Condor{negotiator} is version 7.5.4 or
 newer.  Of course, the \Condor{schedd} daemon must still be configured to
 authorize the \Condor{negotiator} daemon at the \DCPerm{NEGOTIATOR}
 authorization level.
-
-% gittrac #1545
-\item The grid universe's amazon grid type can now be used to submit
-virtual machine jobs to Eucalyptus systems via the EC2 interface.
 
 % gittrack #1496
 \item \Condor{advertise} has a new option, \Opt{-multiple}, which
@@ -203,6 +201,11 @@ Previously, \Condor{submit} wrote the event.
 % gittrac #1665
 \item The \Condor{schedd} daemon now scales better when there are many
 job auto clusters.
+
+% gittrac #1173
+\item The \Condor{q} command with option \Opt{-run}, \Opt{-hold}, 
+\Opt{-goodput}, \Opt{-cputime}, \Opt{-currentrun} or \Opt{-io}
+is now much more efficient in its communication with the \Condor{schedd}.
 
 \end{itemize}
 
@@ -271,11 +274,12 @@ per-job basis by using the new submit file command
 \item The configuration variable \Macro{FLOCK\_NEGOTIATOR\_HOSTS} is now
 optional.  Previously, the \Condor{schedd} daemon refused to flock without
 this setting.  When this is not set, the addresses of the flocked
-\Condor{negotiator} daemons are found by querying the flocked collectors.
+\Condor{negotiator} daemons are found by querying the flocked 
+\Condor{collector} daemons.
 Of course, the \Condor{schedd} daemon must still be configured to
 authorize the \Condor{negotiator} daemon at the \DCPerm{NEGOTIATOR}
 authorization level.  Therefore, when using host-based security,
-\Macro{FLOCK\_NEGOTIATOR\_HOSTS} may still be useful as a macro for inserting
+\MacroNI{FLOCK\_NEGOTIATOR\_HOSTS} may still be useful as a macro for inserting
 the negotiator hosts into the relevant authorization lists.
 
 %gittrack #1312
@@ -299,23 +303,48 @@ specifies the maximum number of times a DAG node job is allowed to go
 on hold.  See section~\ref{param:DAGManMaxJobHolds} for details.
 
 % gittrac #1652
-\item The configuration parameter \MacroNI{STARTD\_SENDS\_ALIVES} now only
-needs to be set for the \Condor{schedd}. Also, the default value has
+\item The configuration variable \Macro{STARTD\_SENDS\_ALIVES} now only
+needs to be set for the \Condor{schedd} daemon. Also, the default value has
 changed to \Expr{True}.
 
 % gittrac #1593
-\item The job attributes \SubmitCmd{amazon\_user\_data} and
+\item The job ClassAd attributes \SubmitCmd{amazon\_user\_data} and
 \SubmitCmd{amazon\_user\_data\_file} can now both be used for the same
 job. When both are provided, the two blocks of data are concatenated,
-with the value of \SubmitCmd{amazon\_user\_data} occurring first.
+with the value of the one specified by \SubmitCmd{amazon\_user\_data}
+occurring first.
 
 % gittrac #1653
-\item The new configuration parameter \MacroNI{GRAM\_VERSION\_DETECTION}
+\item The new configuration variable \Macro{GRAM\_VERSION\_DETECTION}
 can be used to disable Condor's attempts to distinguish between \Expr{gt2}
-(i.e. GRAM2) and \Expr{gt5} (i.e. GRAM5) servers.
+(GRAM2) and \Expr{gt5} (GRAM5) servers.
 The default value is \Expr{True}.
 If set to \Expr{False}, Condor trusts the \Expr{gt2} or \Expr{gt5} value
 provided in the job's \SubmitCmd{grid\_resource} attribute.
+
+% gittrac #1390
+\item The new job ClassAd attribute \AdAttr{ResidentSetSize} is an integer
+measuring the amount of physical memory in use by the job on the execute
+machine in kilobytes.
+
+% gittrac #1502
+\item The new job ClassAd attribute \AdAttr{X509UserProxyExpiration} is an
+integer representing when the job's X.509 proxy credential will expire,
+measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+% gittrac #1315
+\item The new configuration variable \Macro{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE}
+is an upper bound on assigned job cluster ids. If set to
+value $M$, the maximum job cluster id assigned to any job will be $M-1$.
+When the maximum id is reached, assignment of cluster ids will wrap around 
+back to \MacroNI{SCHEDD\_CLUSTER\_INITIAL\_VALUE}. The default value is zero,
+which does not set a maximum cluster id. 
+
+% gittrac #1348
+% gittrac #1487
+\item The default value of configuration variable 
+\MacroNI{MAX\_ACCEPTS\_PER\_CYCLE} has been changed from 1 to 4.
 
 \end{itemize}
 
@@ -331,9 +360,11 @@ provided in the job's \SubmitCmd{grid\_resource} attribute.
 % gittrack #1667
 \item Fixed the output in the \Condor{master} daemon log file to be
   clearer when an authorized user tries to use \Condor{config\_val}
-  \Opt{-set} and \Macro{ENABLE\_PERSISTENT\_CONFIG} is false. The previous
-  output implied that the operation succeeded when in fact it did not.
+  \Opt{-set} and \Macro{ENABLE\_PERSISTENT\_CONFIG} is \Expr{False}.
+  The previous
+  output implied that the operation succeeded when, in fact, it did not.
 
+% gittrac #1523
 \item Since Condor version 7.5.2,
   the following \Condor{job\_router} features were
   effectively non-functional: \Attr{UseSharedX509UserProxy},
@@ -357,8 +388,8 @@ provided in the job's \SubmitCmd{grid\_resource} attribute.
   typically should be managed by Condor.
 
 % gittrac 1139
-\item \Condor{master} now invalidates its ClassAd, as represented in the 
-  \Condor{collector} daemon before it shuts down.
+\item The \Condor{master} daemon now invalidates its ClassAd,
+  as represented in the \Condor{collector} daemon, before it shuts down.
 
 % gittrac #1563
 \item Fixed a bug that caused \SubmitCmd{vm} universe jobs to not run
@@ -395,13 +426,13 @@ two Condor processes to fail.
 
 % gittrac #1563
 \item Fixed a bug in \Condor{submit} that would cause failures if a file
-containing a space was used with the submit attributes
+name containing a space was used with the submit description file commands
 \SubmitCmd{append\_files}, \SubmitCmd{jar\_files} or
 \SubmitCmd{vmware\_dir}.
 
 % gittrac #890
 \item Fixed a bug that could cause the \Condor{gridmanager} to lock up if
-a GAHP server it's using writes a large amount of data to its stderr.
+a GAHP server it was using wrote a large amount of data to its \File{stderr}.
 
 % gittrac #1653
 % gittarc #1475
@@ -423,6 +454,29 @@ but not actually put the job on hold.
 % gittrac #1694
 \item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
 while handling cream grid type jobs destined for different resources.
+
+% gittrac #1481
+\item Fixed a bug that prevented the \Condor{shadow} from managing
+additional jobs after its first job completed when 
+\Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} was set to \Expr{True}.
+
+% gittrac #1533
+\item The timestamps in the log defined by \Macro{PROCD\_LOG}
+now print the real time.
+
+% gittrac #1580
+\item Fixed how some daemons advertise themselves to the \Condor{collector}.
+Now, all daemons set the attribute \AdAttr{MyType} to indicate what
+type of daemon they are.
+
+% gittrac #1630
+\item \Condor{chirp} no longer crashes on a put operation,
+if the remote file name is omitted.
+
+% gittrac #1489
+% gittrac #1494
+\item Fixed the packaging of Hadoop File System support in Condor. This includes
+updating to HDFS 0.20.2 and making the HDFS web interface work properly.
 
 \end{itemize}
 
