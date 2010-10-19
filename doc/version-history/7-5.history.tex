@@ -61,6 +61,10 @@ child process does not exit within ten minutes of receiving
 \Expr{SIGABRT}.  This addresses cases that have been observed in
 which the child process hangs while writing a core file.
 
+% gittrac #1720
+\item Hostname-based authorization failed in Condor 7.5.4 under Mac OS X 10.4
+because lookups of the hostname for incoming connections failed.
+
 \end{itemize}
 
 \noindent Known Bugs:
