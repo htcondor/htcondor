@@ -1548,6 +1548,8 @@ SetExecutable()
 	}
 
 	// generate initial checkpoint file
+	// This is ignored by the schedd in 7.5.5+.  Prior to that, the
+	// basename must match the name computed by the schedd.
 	IckptName = gen_ckpt_name(0,ClusterId,ICKPT,0);
 
 	// ensure the executables exist and spool them only if no 

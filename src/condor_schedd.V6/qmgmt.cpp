@@ -3487,27 +3487,14 @@ RecvSpoolFileBytes(const char *path)
 }
 
 int
-SendSpoolFile(char const *filename)
+SendSpoolFile(char const *)
 {
 	char * path;
 
-		/* We are passed in a filename to use to save the ICKPT file.
-		   However, we should NOT trust this filename since it comes from 
-		   the client!  So here we generate what we think the filename should
-		   be based upon the current active_cluster_num in the transaction.
-		   If the client does not send what we are expecting, we do the
-		   paranoid thing and abort.  Once we are certain that my understanding
-		   of this is correct, we could even just ignore the passed-in 
-		   filename parameter completely. -Todd Tannenbaum, 2/2005
-		*/
+		// We ignore the filename that was passed by the client.
+		// It is only there for backward compatibility reasons.
+
 	path = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
-	if ( filename && strcmp(filename, condor_basename(path)) ) {
-		dprintf(D_ALWAYS, 
-				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
-				filename);
-		free(path);
-		return -1;
-	}
 
 	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
 		EXCEPT( "SendSpoolFile called when Q_SOCK is NULL" );
