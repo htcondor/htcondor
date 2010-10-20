@@ -34,13 +34,39 @@ The details of each version are described below.
 This means \Condor{schedd} remains responsive during negotiation and is
 less prone to falling behind on communication with \Condor{shadow} processes.
 
+% gittrac 1707
+\item Improved monitoring and avoidance of a ``lock convoy'' problem observed
+when there were over 30 thousand shadow processes.  At this scale,
+locking the shadow log on each write to the log file has been observed
+under Linux to sometimes result in a situation where the system does
+very little productive work and is instead consumed by rapid context
+switching between the shadows that are waiting for the lock.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
-\item None.
+% gittrac 1707
+\item The new configuration variable
+\MacroNI{LOCK\_DEBUG\_LOG\_TO\_APPEND} controls whether a daemon's
+debug lock is used when appending to the log.  When \Expr{false} (the
+default), the debug lock is only used when rotating the log file.
+This is more efficient, especially when many processes share the same
+log file.  When \Expr{true}, the debug lock is used when writing to
+the log as well as when rotating the log file.  This setting is
+ignored under Windows, and the behavior is as though this setting were
+true.  Under unix, the default value of \Expr{false} is appropriate
+when logging to filesystems that support the POSIX semantics of
+\Expr{O\_APPEND}.  On non-POSIX-compliant filesystems, it is possible
+for the characters in log messages from multiple processes sharing the
+same log to be interleaved unless locking is used.  Since Condor does
+not support sharing of debug logs between processes running on
+different machines, many non-POSIX-compliant filesystems will still
+avoid interleaved messages without requiring Condor to use a lock.
+Our tests of AFS and NFS, for example, have not revealed any problems
+when appending to the log without locking.
 
 \end{itemize}
 
