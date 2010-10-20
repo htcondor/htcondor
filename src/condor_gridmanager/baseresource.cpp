@@ -68,7 +68,7 @@ BaseResource::BaseResource( const char *resource_name )
 		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
 
 	m_batchStatusActive = false;
-	m_batchPollTid = 0;
+	m_batchPollTid = TIMER_UNSET;
 }
 
 BaseResource::~BaseResource()
@@ -82,6 +82,9 @@ BaseResource::~BaseResource()
 	}
 	if ( _updateCollectorTimerId != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer ( _updateCollectorTimerId );
+	}
+	if ( m_batchPollTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer ( m_batchPollTid );
 	}
 	if ( resourceName != NULL ) {
 		free( resourceName );
@@ -626,7 +629,7 @@ dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 
 void BaseResource::StartBatchStatusTimer()
 {
-	if(m_batchPollTid) {
+	if(m_batchPollTid != TIMER_UNSET) {
 		EXCEPT("BaseResource::StartBatchStatusTimer called more than once!");
 	}
 	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());

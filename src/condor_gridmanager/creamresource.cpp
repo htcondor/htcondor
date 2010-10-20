@@ -149,7 +149,7 @@ dprintf(D_FULLDEBUG,"*** ~CreamResource\n");
 	CreamProxyDelegation *next_deleg;
 	delegatedProxies.Rewind();
 	while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
-dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
+dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri?next_deleg->deleg_uri:"(undelegated)");
 		delegatedProxies.DeleteCurrent();
 		free( next_deleg->deleg_uri );
 		ReleaseProxy( next_deleg->proxy,
@@ -268,7 +268,8 @@ void CreamResource::UnregisterJob( CreamJob *job )
 		CreamJob *next_job;
 		registeredJobs.Rewind();
 		while ( (next_job = (CreamJob*)registeredJobs.Next()) != NULL ) {
-			if ( strcmp( job->delegatedCredentialURI,
+			if ( next_job->delegatedCredentialURI != NULL &&
+				 strcmp( job->delegatedCredentialURI,
 						 next_job->delegatedCredentialURI ) == 0 ) {
 				delete_deleg = false;
 				break;
@@ -279,7 +280,8 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 			CreamProxyDelegation *next_deleg;
 			delegatedProxies.Rewind();
 			while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
-				if ( strcmp( job->delegatedCredentialURI,
+				if ( next_deleg->deleg_uri != NULL &&
+					 strcmp( job->delegatedCredentialURI,
 							 next_deleg->deleg_uri ) == 0 ) {
 					delegatedProxies.DeleteCurrent();
 					if ( activeDelegationCmd == next_deleg ) {
@@ -321,7 +323,8 @@ dprintf(D_FULLDEBUG,"*** registerDelegationURI(%s,%s)\n",deleg_uri,job_proxy->pr
 	delegatedProxies.Rewind();
 
 	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
-		if ( strcmp( deleg_uri, next_deleg->deleg_uri ) == 0 ) {
+		if ( next_deleg->deleg_uri != NULL &&
+			 strcmp( deleg_uri, next_deleg->deleg_uri ) == 0 ) {
 dprintf(D_FULLDEBUG,"    found CreamProxyDelegation\n");
 			return;
 		}

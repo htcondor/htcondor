@@ -2591,6 +2591,8 @@ else
 fi
 rm -f affinity_test.cpp affinity_test.o
 
+AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], , ,[[#include <netinet/in.h>]])
+
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
 # error here.  Under IA64, there is a different interface to clone
@@ -3086,7 +3088,7 @@ else
 fi
 
 if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
-  CHECK_EXTERNAL([cream],[1.10.1-p6], [soft])
+  CHECK_EXTERNAL([cream],[1.10.1-p7], [soft])
 fi
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],

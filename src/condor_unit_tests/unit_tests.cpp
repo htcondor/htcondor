@@ -42,7 +42,6 @@ bool FTEST_is_ipaddr(void);
 bool FTEST_is_valid_sinful(void);
 bool FTEST_is_valid_network(void);
 bool FTEST_sin_to_string(void);
-bool FTEST_string_to_hostname(void);
 bool FTEST_string_to_ip(void);
 bool FTEST_string_to_sin(void);
 bool FTEST_string_to_port(void);
@@ -78,7 +77,6 @@ const static struct {
 	map(FTEST_is_valid_sinful),
 	map(FTEST_is_valid_network),
 	map(FTEST_sin_to_string),
-	map(FTEST_string_to_hostname),
 	map(FTEST_string_to_ip),
 	map(FTEST_string_to_sin),
 	map(FTEST_string_to_port),

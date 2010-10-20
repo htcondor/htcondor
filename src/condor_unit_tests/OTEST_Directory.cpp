@@ -30,8 +30,8 @@
 #include "directory.h"
 #include "condor_getcwd.h"
 
-static bool setup(void);
-static bool cleanup(void);
+static void setup(void);
+static void cleanup(void);
 static bool test_path_constructor_null(void);
 static bool test_path_constructor_current(void);
 static bool test_path_constructor_file(void);
@@ -292,19 +292,11 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_delete_file_later_file);
 	driver.register_function(test_delete_file_later_dir);
 
-	// If setup fails, abort since many of the tests will fail
-	if(!setup()) {
-		emit_alert("Setup failed, aborting.");
-		cleanup();
-		ABORT;
-	}
+	setup();
 
 	int status = driver.do_all_functions();
 	
-	if(!cleanup()) {
-		emit_alert("Cleanup failed, aborting.");
-		ABORT;
-	}
+	cleanup();
 
 	return status;
 }
@@ -344,97 +336,95 @@ bool OTEST_Directory(void) {
 			link_dir/
 
  */
-static bool setup() {
-	bool ret_val = true;
-
+static void setup() {
+	
 	// Get the current working directory
-	ret_val &= condor_getcwd(original_dir);
+	cut_assert_true( condor_getcwd(original_dir) );
 	
 	// Directory strings
-	sprintf(tmp, "tmp%c", DIR_DELIM_CHAR);
+	cut_assert_gz( sprintf(tmp, "tmp%c", DIR_DELIM_CHAR) );
 	
 	// Make a temporary directory to test
-	ret_val &= !mkdir(tmp, 0700);
-	ret_val &= !chdir(tmp);
+	cut_assert_z( mkdir(tmp, 0700) );
+	cut_assert_z( chdir(tmp) );
 	
 	// Store some directories
-	ret_val &= condor_getcwd(tmp_dir);
-	empty_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir");
-	full_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
-	invalid_dir.sprintf("%s%c", "DoesNotExist", DIR_DELIM_CHAR);
-	file_dir.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file");
+	cut_assert_true( condor_getcwd(tmp_dir) );
+	cut_assert_gz( empty_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir") );
+	cut_assert_gz( full_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir") );
+	cut_assert_gz( invalid_dir.sprintf("%s%c", "DoesNotExist", DIR_DELIM_CHAR) );
+	cut_assert_gz( file_dir.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
 	
 	// Put some files/directories in there
-	ret_val &= !mkdir("empty_dir", 0700);
-	ret_val &= !mkdir("full_dir", 0700);
+	cut_assert_z( mkdir("empty_dir", 0700) );
+	cut_assert_z( mkdir("full_dir", 0700) );
 	
-	ret_val &= !chdir("full_dir");
-	ret_val &= !mkdir("link_dir", 0700);
-	ret_val &= !mkdir("delete_dir_1", 0700);
-	ret_val &= !mkdir("delete_dir_2", 0700);
-	ret_val &= !mkdir("delete_dir_3", 0700);
-	ret_val &= !mkdir("delete_dir_4", 0700);
-	ret_val &= !mkdir("delete_dir_11", 0700);
-	ret_val &= !chdir("delete_dir_11");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= !mkdir("delete_dir_12", 0700);
-	ret_val &= !chdir("delete_dir_12");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= !mkdir("delete_dir_13", 0700);
-	ret_val &= !chdir("delete_dir_13");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= !chdir("dir");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= (safe_fopen_wrapper("delete_file_1", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_2", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_3", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_4", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_5", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_6", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("empty_file", "w+") != NULL);
+	cut_assert_z( chdir("full_dir") );
+	cut_assert_z( mkdir("link_dir", 0700) );
+	cut_assert_z( mkdir("delete_dir_1", 0700) );
+	cut_assert_z( mkdir("delete_dir_2", 0700) );
+	cut_assert_z( mkdir("delete_dir_3", 0700) );
+	cut_assert_z( mkdir("delete_dir_4", 0700) );
+	cut_assert_z( mkdir("delete_dir_11", 0700) );
+	cut_assert_z( chdir("delete_dir_11") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	cut_assert_z( mkdir("delete_dir_12", 0700) );
+	cut_assert_z( chdir("delete_dir_12") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	cut_assert_z( mkdir("delete_dir_13", 0700) );
+	cut_assert_z( chdir("delete_dir_13") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	cut_assert_z( mkdir("dir", 0700) );
+	cut_assert_z( chdir("dir") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	create_empty_file("delete_file_1");
+	create_empty_file("delete_file_2");
+	create_empty_file("delete_file_3");
+	create_empty_file("delete_file_4");
+	create_empty_file("delete_file_5");
+	create_empty_file("delete_file_6");
+	create_empty_file("empty_file");
 	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
 
 	// Add some text
-	ASSERT(file_1);
-	fprintf(file_1, "This is some text!");
-	ret_val &= !chdir("..");
+	cut_assert_not_null( file_1 );
+	cut_assert_gz( fprintf(file_1, "This is some text!") );
+	cut_assert_z( chdir("..") );
 	
 	// Create some symbolic links
 	MyString link;
-	link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file");
-	ret_val &= !symlink(link.Value(), "symlink_file");
-	link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir");
-	ret_val &= !symlink(link.Value(), "symlink_dir");
+	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
+	cut_assert_z( symlink(link.Value(), "symlink_file") );
+	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
+	cut_assert_z( symlink(link.Value(), "symlink_dir") );
 	
 	// Get back to original directory
-	ret_val &= !chdir(original_dir.Value());
+	cut_assert_z( chdir(original_dir.Value()) );
 
 	// Close FILE* that was written to
-	ret_val &= !fclose(file_1);
+	cut_assert_z( fclose(file_1) );
 	
 	// Get the current time
 	current_time = time(NULL);
 
-	return ret_val;
 }
 
-static bool cleanup() {
+static void cleanup() {
 	// Remove the created files/directories/symlinks
-	chdir(tmp);
-	rmdir("empty_dir");
-	remove("symlink_file");
-	remove("symlink_dir");
-	chdir("full_dir");
-	rmdir("link_dir");
+	cut_assert_z( chdir(tmp) );
+	cut_assert_z( rmdir("empty_dir") );
+	cut_assert_z( remove("symlink_file") );
+	cut_assert_z( remove("symlink_dir") );
+	cut_assert_z( chdir("full_dir") );
+	cut_assert_z( rmdir("link_dir") );
 	
 	// Just in case any of these weren't removed...
 	rmdir("delete_dir_1");
@@ -472,13 +462,13 @@ static bool cleanup() {
 	remove("delete_file_5");
 	remove("delete_file_6");
 	
-	remove("empty_file");
-	remove("full_file");
-	chdir("..");
-	rmdir("full_dir");
-	chdir("..");
+	cut_assert_z( remove("empty_file") );
+	cut_assert_z( remove("full_file") );
+	cut_assert_z( chdir("..") );
+	cut_assert_z( rmdir("full_dir") );
+	cut_assert_z( chdir("..") );
 	
-	return (rmdir(tmp) == 0);
+	cut_assert_z( rmdir(tmp) );
 }
 
 static bool test_path_constructor_null() {

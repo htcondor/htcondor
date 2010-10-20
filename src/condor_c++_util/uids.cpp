@@ -216,9 +216,14 @@ init_user_ids(const char username[], const char domain[])
 	   	return 0;
    	}
 
-		// we default to true, and only set this to false in the few
-		// cases where this method would return failure.
-	UserIdsInited = true;
+	// we have to be very careful calling dprintf in this function, because dprintf
+	// will try and _set_priv to root and then back to what it was.  so we need to
+	// make sure that our global variables are always in a state where that doesn't
+	// except.
+
+	// TJ:2010: Can't do this here, UserIdsInited must never be true 
+	// while CurrUserHandle is NULL or dprintf will EXCEPT.
+	// UserIdsInited = true;
 	
 	// see if we already have a user handle for the requested user.
 	// if so, just return 1. 
@@ -229,12 +234,21 @@ init_user_ids(const char username[], const char domain[])
 		username, domain, UserLoginName, UserDomainName);
 	
 	if ( CurrUserHandle = cached_tokens.getToken(username, domain)) {
+		UserIdsInited = true; // do this before we call dprintf
+		// when we uninit_user_ids we can end up CurrUserHandle in the cache
+		// but UserLoginName and UserDomainName not set, if that happens
+		// we need to set them here.
+		if ( ! UserLoginName) UserLoginName = strdup(username);
+		if ( ! UserDomainName) UserDomainName = strdup(domain);
 		dprintf(D_FULLDEBUG, "init_user_ids: Already have handle for %s@%s,"
 			" so returning.\n", username, domain);
 		return 1;
 	} else {
 		char* myusr = my_username();
 		char* mydom = my_domainname();
+
+		// we cleared CurrUserHandle, so we aren't inited.
+		UserIdsInited = false;
 
 		// see if our calling thread matches the user and domain
 		// we want a token for. This happens if we're submit for example.
@@ -244,7 +258,9 @@ init_user_ids(const char username[], const char domain[])
 			dprintf(D_FULLDEBUG, "init_user_ids: Calling thread has token "
 					"we want, so returning.\n");
 			CurrUserHandle = my_usertoken();
-			if (! CurrUserHandle ) {
+			if (CurrUserHandle) {
+				UserIdsInited = true;
+			} else {
 				dprintf(D_FULLDEBUG, "init_user_ids: handle is null!\n");
 			}
 			
@@ -267,6 +283,9 @@ init_user_ids(const char username[], const char domain[])
 			return 1;
 		}
 	}
+
+	// at this point UserIdsInited should be false.
+	ASSERT( ! UserIdsInited);
 
 	// anything beyond this requires user switching
 	if (!can_switch_ids()) {
@@ -359,7 +378,6 @@ init_user_ids(const char username[], const char domain[])
 		if ( ! got_password ) {
 			dprintf(D_ALWAYS, "ERROR: Could not locate valid credential for user "
 				"'%s@%s'\n", username, domain);
-			UserIdsInited = false;
 			return 0;
 		} else {
 			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
@@ -398,12 +416,12 @@ init_user_ids(const char username[], const char domain[])
 			if ( !retval ) {
 				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
 					GetLastError());
-				UserIdsInited = false;
 				retval =  0;	// return of 0 means FAILURE
 			} else {
 				// stash the new token in our cache
 				cached_tokens.storeToken(UserLoginName, UserDomainName,
 					   	CurrUserHandle);
+				UserIdsInited = true;
 
 				// if we got the password from the credd, and the admin wants passwords stashed
 				// locally on this machine, then do it.
@@ -468,6 +486,7 @@ init_user_ids(const char username[], const char domain[])
 		// drop the handle in our cache too
 		cached_tokens.storeToken(UserLoginName, UserDomainName,
 			   		CurrUserHandle);
+		UserIdsInited = true;
 		return 1;
 	}
 }
@@ -534,9 +553,16 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 				}
 				ImpersonateLoggedOnUser(CurrUserHandle);
 			} else {
-				// Tried to set_user_priv() but it failed, so bail out!
-
-				EXCEPT("set_user_priv() failed!");
+				// we don't want to exit here because reusing the shadow in 7.5.4
+				// ends up here because of a dprintf inside uninit_user_ids
+				if ( ! UserIdsInited) {
+					if (dologging) {
+						dprintf(D_ALWAYS, "set_user_priv() called when UserIds not inited!\n");
+					}
+				}  else { 
+					// Tried to set_user_priv() but it failed, so bail out!
+					EXCEPT("set_user_priv() failed!");
+				}
 			}
 			break;
 		case PRIV_UNKNOWN:		/* silently ignore */

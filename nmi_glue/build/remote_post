@@ -108,7 +108,11 @@ if( $ENV{NMI_PLATFORM} ne "x86_winnt_5.1" ) {
 # tar up build results
 ######################################################################
 
+my $retryCount = 0;
 print "Tarring up results\n";
+
+tryAgain:
+
 open( TAR, "tar zcvf results.tar.gz public|" ) || 
     die "Can't open tar as a pipe: $!\n";
 while( <TAR> ) { 
@@ -117,6 +121,17 @@ while( <TAR> ) {
 close( TAR );
 $tarstatus = $? >> 8;
 if( $tarstatus ) {
+	$retryCount++;
+
+	# Sometimes, for no apparent reason, tar fails on Windows with
+	# file changed as we read it.  The tar docs claim this can happen if the
+	# mtime alone changes on an input file.  So, if tar fails, retry again
+
+	if ($retryCount < 5) {
+    	print "Can't tar zcf results.tar.gz public: status $tarstatus, trying again...\n";
+		sleep(5);
+		goto tryAgain;
+	}
     die "Can't tar zcf results.tar.gz public: status $tarstatus\n";
 }
 print "Done tarring results\n";

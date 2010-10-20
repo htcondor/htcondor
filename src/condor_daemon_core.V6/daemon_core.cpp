@@ -108,6 +108,9 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
 #include "filename_tools.h"
+#include "authentication.h"
+#include "condor_claimid_parser.h"
+#include "condor_email.h"
 
 #include "valgrind.h"
 
@@ -5633,7 +5636,10 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	else {
 		msg->setStreamType(Stream::reli_sock);
 	}
-
+	if(pidinfo->child_session_id)
+	{
+		msg->setSecSessionId(pidinfo->child_session_id);
+	}
 	msg->messengerDelivery( true ); // we really are sending this message
 	if( nonblocking ) {
 		d->sendMsg( msg.get() );
@@ -7025,7 +7031,9 @@ int DaemonCore::Create_Process(
 	time_t time_of_fork;
 	unsigned int mii;
 	pid_t forker_pid;
-
+	//Security session ID and key for daemon core processes.  Not used on Solaris.
+	std::string session_id;
+	MyString privateinheritbuf;
 
 #ifdef WIN32
 
@@ -7190,7 +7198,57 @@ int DaemonCore::Create_Process(
 		}
 	}
 	inheritbuf += " 0";
+	/*
+	Due to the belief that on Solaris there are no private environments, the passing of
+	security keys through the environment is a bad idea.  Thus we do not attempt this on
+	Solaris.
+	*/
+#ifndef Solaris
+	/*
+	Currently there is no way to detect if we are starting a daemon core process
+	or not.  The closest thing is so far all daemons the master starts will receive
+	a command port, whereas non-daemon core processes would not know what to do with
+	one.  Since these security sessions are for communication between daemons, this
+	is the best that can currently be done to make sure non-daemon core processes
+	don't get a session key.
+	*/
+	if(want_command_port != FALSE)
+	{
+		char* c_session_id = Condor_Crypt_Base::randomHexKey();
+		char* c_session_key = Condor_Crypt_Base::randomHexKey();
 
+		session_id.assign(c_session_id);
+		std::string session_key(c_session_key);
+
+		free(c_session_id);
+		free(c_session_key);
+		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
+			DAEMON,
+			session_id.c_str(),
+			session_key.c_str(),
+			NULL,
+			CONDOR_CHILD_FQU,
+			NULL,
+			0);
+
+		if(!rc)
+		{
+			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
+			goto wrapup;
+		}
+		privateinheritbuf += " SessionKey:";
+
+		MyString session_info;
+		rc = getSecMan()->ExportSecSessionInfo(session_id.c_str(), session_info);
+		if(!rc)
+		{
+			dprintf(D_ALWAYS, "ERROR: Create_Process failed to export security session for child daemon.\n");
+			goto wrapup;
+		}
+		ClaimIdParser claimId(session_id.c_str(), session_info.Value(), session_key.c_str());
+		privateinheritbuf += claimId.claimId();
+	}
+#endif
 	// now process fd_inherit_list, which allows the caller the specify
 	// arbitrary file descriptors to be passed through to the child process
 	// (currently only implemented on UNIX)
@@ -7399,6 +7457,9 @@ int DaemonCore::Create_Process(
 
 			// now, add in the inherit buf
 		job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+
+		if( !privateinheritbuf.IsEmpty() )
+			job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -8129,6 +8190,10 @@ int DaemonCore::Create_Process(
 	pidtmp->reaper_id = reaper_id;
 	pidtmp->hung_tid = -1;
 	pidtmp->was_not_responding = FALSE;
+	if(!session_id.empty())
+	{
+		pidtmp->child_session_id = strdup(session_id.c_str());
+	}
 #ifdef WIN32
 	pidtmp->hProcess = piProcess.hProcess;
 	pidtmp->hThread = piProcess.hThread;
@@ -8745,8 +8810,8 @@ DaemonCore::Inherit( void )
 			dc_rsock = new ReliSock();
 			((ReliSock *)dc_rsock)->serialize(ptmp);
 			dc_rsock->set_inheritable(FALSE);
+			ptmp=inherit_list.next();
 		}
-		ptmp=inherit_list.next();
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			if( !m_wants_dc_udp_self ) {
 					// we don't want a UDP command socket, but our parent
@@ -8759,9 +8824,52 @@ DaemonCore::Inherit( void )
 				dc_ssock->serialize(ptmp);
 				dc_ssock->set_inheritable(FALSE);
 			}
-		}
 
+			ptmp=inherit_list.next();
+		}
 	}	// end of if we read out CONDOR_INHERIT ok
+	/*
+	This environment variable is never set on Solaris so
+	don't check for it.  Since environments are apparently
+	public on Solaris, we can't use it to securely pass
+	information around.
+	*/
+#ifndef Solaris
+	const char *privEnvName = EnvGetName( ENV_PRIVATE );
+	const char *privTmp = GetEnv( privEnvName );
+	if(!privTmp)
+	{
+		return;
+	}
+
+	StringList private_list(privTmp, " ");
+	UnsetEnv( privEnvName );
+
+	private_list.rewind();
+	while((ptmp = private_list.next()) != NULL)
+	{
+		if( ptmp && strncmp(ptmp,"SessionKey:",11)==0 ) {
+			dprintf(D_DAEMONCORE, "Removing session key.\n");
+			ClaimIdParser claimid(ptmp+11);
+			bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
+				DAEMON,
+				claimid.secSessionId(),
+				claimid.secSessionKey(),
+				claimid.secSessionInfo(),
+				CONDOR_PARENT_FQU,
+				NULL,
+				0);
+			if(!rc)
+			{
+				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
+			}
+			IpVerify* ipv = getSecMan()->getIpVerify();
+			MyString id;
+			id.sprintf("%s", CONDOR_PARENT_FQU);
+			ipv->PunchHole(DAEMON, id);
+		}
+	}
+#endif
 }
 
 void
@@ -9441,7 +9549,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			        pid);
 		}
 	}
-
+	//Delete the session information.
+	if(pidentry->child_session_id)
+		getSecMan()->session_cache->remove(pidentry->child_session_id);
 	// Now remove this pid from our tables ----
 		// remove from hash table
 	pidTable->remove(pid);
@@ -9501,9 +9611,11 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	unsigned int timeout_secs = 0;
 	PidEntry *pidentry;
 	int ret_value;
+	double dprintf_lock_delay = 0.0;
 
 	if (!stream->code(child_pid) ||
 		!stream->code(timeout_secs) ||
+		!stream->code(dprintf_lock_delay) ||
 		!stream->end_of_message()) {
 		dprintf(D_ALWAYS,"Failed to read ChildAlive packet\n");
 		return FALSE;
@@ -9532,7 +9644,53 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	pidentry->was_not_responding = FALSE;
 
 	dprintf(D_DAEMONCORE,
-		"received childalive, pid=%d, secs=%d\n",child_pid,timeout_secs);
+			"received childalive, pid=%d, secs=%d, dprintf_lock_delay=%f\n",child_pid,timeout_secs,dprintf_lock_delay);
+
+		/* The Lock Convoy of Shadowy Doom.  Once upon a time, there
+		 * was a submit machine that melted down for hours with high
+		 * load and no way for the admins to bring it back to normal
+		 * without rebooting it.  There were 30k-40k shadows running.
+		 * During that time, some of the shadows waited for hours to
+		 * get a lock to the shadow log, while others experienced much
+		 * less wait time, indicating a high degree of unfairness.
+		 * Further analysis revealed that the system was likely
+		 * spending most of its time context switching whenever the
+		 * lock was freed and was rarely actually getting any real
+		 * work done.  This is known as the lock convoy problem.
+		 *
+		 * To address this, we made unix daemons append without
+		 * locking (using O_APPEND).  A lock is still used for
+		 * rotation, but this should not lead to the lock convoy
+		 * problem unless rotation is happening in a matter of
+		 * seconds.  Just in case the shadowy convoy ever returns,
+		 * we want to leave some better clues behind.
+		 */
+
+	if( dprintf_lock_delay > 0.01 ) {
+		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its debug file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
+	}
+	if( dprintf_lock_delay > 0.1 ) {
+			// things are looking serious, so let's send mail
+		static time_t last_email = 0;
+		if( last_email == 0 || time(NULL)-last_email > 60 ) {
+			last_email = time(NULL);
+
+			std::string subject;
+			sprintf(subject,"Condor process reports long locking delays!");
+
+			FILE *mailer = email_admin_open(subject.c_str());
+			if( mailer ) {
+				fprintf(mailer,
+						"\n\nThe %s's child process with pid %d has spent %.1f%% of its time waiting\n"
+						"for a lock to its debug file.  This could indicate a scalability limit\n"
+						"that could cause system stability problems.\n",
+						get_mySubSystem()->getName(),
+						child_pid,
+						dprintf_lock_delay*100);
+				email_close( mailer );
+			}
+		}
+	}
 
 	return TRUE;
 
@@ -9700,9 +9858,12 @@ int DaemonCore::SendAliveToParent()
 		first_time = false;
 	}
 
+	double dprintf_lock_delay = dprintf_get_lock_delay();
+	dprintf_reset_lock_delay();
+
 	bool blocking = first_time;
 	classy_counted_ptr<Daemon> d = new Daemon(DT_ANY,parent_sinful_string);
-	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,blocking);
+	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,dprintf_lock_delay,blocking);
 
 	int timeout = m_child_alive_period / number_of_tries;
 	if( timeout < 60 ) {
@@ -10612,6 +10773,7 @@ DaemonCore::PidEntry::PidEntry() {
 		std_pipes[i] = DC_STD_FD_NOPIPE;
 	}
 	stdin_offset = 0;
+	child_session_id = NULL;
 }
 
 
@@ -10636,6 +10798,8 @@ DaemonCore::PidEntry::~PidEntry() {
 		SharedPortEndpoint::RemoveSocket( shared_port_fname.Value() );
 #endif
 	}
+	if(child_session_id)
+		free(child_session_id);
 }
 
 

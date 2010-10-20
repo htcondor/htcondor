@@ -797,6 +797,7 @@ extern const char * const ATTR_CUMULATIVE_SLOT_TIME;
 extern const char * const ATTR_COMMITTED_SLOT_TIME;
 
 extern const char * const ATTR_HASH_NAME;
+extern const char * const ATTR_AUTHENTICATED_IDENTITY;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

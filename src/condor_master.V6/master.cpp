@@ -619,7 +619,7 @@ handle_shutdown_program( int cmd, Stream* stream )
 		free( shutdown_program );
 	}
 	shutdown_program = path;
-	dprintf( D_FULLDEBUG,
+	dprintf( D_ALWAYS,
 			 "Shutdown program path set to %s\n", shutdown_program );
 	return TRUE;
 }

@@ -1918,6 +1918,8 @@ SetMachineCount()
 	wantParallelString = condor_param("WantParallelScheduling");
 	if (wantParallelString && (wantParallelString[0] == 'T' || wantParallelString[0] == 't')) {
 		wantParallel = true;
+		buffer.sprintf(" WantParallelScheduling = true");
+		InsertJobExpr (buffer);
 	}
  
 	if (JobUniverse == CONDOR_UNIVERSE_MPI ||

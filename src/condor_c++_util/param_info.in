@@ -9944,3 +9944,19 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=600
 
+
+[LOCK_DEBUG_LOG_TO_APPEND]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=
+tags=
+id=600
