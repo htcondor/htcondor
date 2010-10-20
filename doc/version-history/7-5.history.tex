@@ -91,6 +91,11 @@ which the child process hangs while writing a core file.
 \item Hostname-based authorization failed in Condor 7.5.4 under Mac OS X 10.4
 because lookups of the hostname for incoming connections failed.
 
+% gittrac #1724
+\item A bug introduced in 7.5.0 caused \AdAttr{MyType} and \AdAttr{TargetType}
+in offline ads to get set to ``(unknown type)'' when the offline ad was
+matched to a job.
+
 \end{itemize}
 
 \noindent Known Bugs:
