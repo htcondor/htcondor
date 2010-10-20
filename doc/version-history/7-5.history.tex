@@ -415,7 +415,11 @@ updating to HDFS 0.20.2 and making the HDFS web interface work properly.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1720
+\item Using hostnames for host-based authentication (i.e. in the
+\Macro{ALLOW\_*} and \Macro{DENY\_*} configuration parameters)
+doesn't work on Mac OS X 10.4. Later versions of the OS are not
+affected. As a workaround, IP addresses can be used instead.
 
 \end{itemize}
 
