@@ -409,6 +409,10 @@ if the remote file name is omitted.
 \item Fixed the packaging of Hadoop File System support in Condor. This includes
 updating to HDFS 0.20.2 and making the HDFS web interface work properly.
 
+% gittrac #1717
+\item Condor no longer tries to invoke glexec if the job's X.509 proxy
+is expired.
+
 \end{itemize}
 
 \noindent Known Bugs:
