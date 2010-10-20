@@ -3214,7 +3214,7 @@ CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
 # Only build hadoop external if hdfs is enabled
 AS_IF([test "x$enable_hdfs" = xyes], 
-  [CHECK_EXTERNAL([hadoop],[0.20.2],[soft])])
+  [CHECK_EXTERNAL([hadoop],[0.21.0],[soft])])
 
 if test "x$_cv_opsys" = "xLINUX" ; then
   CHECK_EXTERNAL([libxml2],[2.7.3],[soft],
