@@ -25,7 +25,6 @@
 #include "condor_config.h"
 #include "condor_getmnt.h"
 #include "condor_types.h"
-#include "condor_ckpt_name.h"
 #include "condor_header_features.h"
 
 #if defined(__cplusplus)

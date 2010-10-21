@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "condor_network.h"
 #include "condor_string.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "subsystem_info.h"
 #include "env.h"
 #include "basename.h"

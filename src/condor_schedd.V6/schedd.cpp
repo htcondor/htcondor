@@ -42,7 +42,7 @@
 #include "write_user_log.h"
 #include "access.h"
 #include "internet.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "generic_query.h"
 #include "condor_query.h"
@@ -2253,147 +2253,15 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 		return TRUE;
 	}
 
-	MyString sandbox;
-	if( ! getSandbox(cluster, proc, sandbox) ) {
-		dprintf( D_ALWAYS, "Failed to find sandbox for job %d.%d. "
-				 "Cannot chown sandbox to user. Job may run into "
-				 "permissions problems when it starts.\n", cluster, proc );
-		FreeJobAd( job_ad );
-		return FALSE;
-	}
+	bool retval =
+		SpooledJobFiles::createJobSpoolDirectory(job_ad,PRIV_USER);
 
-	MyString sandbox_tmp = sandbox.Value();
-	sandbox_tmp += ".tmp";
-
-#ifndef WIN32
-	uid_t sandbox_uid;
-	uid_t sandbox_tmp_uid;
-#endif
-
-	bool mkdir_rval = true;
-
-		// if we got this far, we know we'll need a sandbox.  if it
-		// doesn't yet exist, we have to create it as PRIV_CONDOR so
-		// that spool can still be chmod 755...
-	StatInfo si( sandbox.Value() );
-	if( si.Error() == SINoFile ) {
-		priv_state saved_priv = set_condor_priv();
-		if( (mkdir(sandbox.Value(),0777) < 0) ) {
-				// mkdir can return 17 = EEXIST (dirname exists) or 2
-				// = ENOENT (path not found)
-			dprintf( D_FULLDEBUG, "ERROR in aboutToSpawnJobHandler(): "
-					 "mkdir(%s) failed: %s (errno: %d)\n",
-					 sandbox.Value(), strerror(errno), errno );
-			mkdir_rval = false;
-		}
-#ifndef WIN32
-		sandbox_uid = get_condor_uid();
-#endif
-		set_priv( saved_priv );
-	} else { 
-#ifndef WIN32
-			// sandbox already exists, check owner
-	sandbox_uid = si.GetOwner();
-#endif
-	}
-
-	StatInfo si_tmp( sandbox_tmp.Value() );
-	if( si_tmp.Error() == SINoFile ) {
-		priv_state saved_priv = set_condor_priv();
-		if( (mkdir(sandbox_tmp.Value(),0777) < 0) ) {
-				// mkdir can return 17 = EEXIST (dirname exists) or 2
-				// = ENOENT (path not found)
-			dprintf( D_FULLDEBUG, "ERROR in aboutToSpawnJobHandler(): "
-					 "mkdir(%s) failed: %s (errno: %d)\n",
-					 sandbox_tmp.Value(), strerror(errno), errno );
-			mkdir_rval = false;
-		}
-#ifndef WIN32
-		sandbox_tmp_uid = get_condor_uid();
-#endif
-		set_priv( saved_priv );
-	} else { 
-#ifndef WIN32
-			// sandbox already exists, check owner
-	sandbox_tmp_uid = si_tmp.GetOwner();
-#endif
-	}
-
-	if( ! mkdir_rval ) {
-		return FALSE;
-	}
-
-#ifndef WIN32
-
-	MyString owner;
-	job_ad->LookupString( ATTR_OWNER, owner );
-
-	uid_t src_uid = get_condor_uid();
-	uid_t dst_uid;
-	gid_t dst_gid;
-	passwd_cache* p_cache = pcache();
-	if( ! p_cache->get_user_ids(owner.Value(), dst_uid, dst_gid) ) {
-		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
-				 "user %s. Cannot chown %s to user. Job may run "
-				 "into permissions problems when it starts.\n", 
-				 cluster, proc, owner.Value(), sandbox.Value() );
-		FreeJobAd( job_ad );
-		return FALSE;
-	}
-
-	if( (sandbox_uid != dst_uid) && 
-		!recursive_chown(sandbox.Value(),src_uid,dst_uid,dst_gid,true) )
-	{
-		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d. "
-				 "Job may run into permissions problems when it starts.\n",
-				 cluster, proc, sandbox.Value(), src_uid, dst_uid, dst_gid );
-	}
-
-	if( (sandbox_tmp_uid != dst_uid) && 
-		!recursive_chown(sandbox_tmp.Value(),src_uid,dst_uid,dst_gid,true) )
-	{
-		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d. "
-				 "Job may run into permissions problems when it starts.\n",
-				 cluster, proc, sandbox_tmp.Value(), src_uid, dst_uid, 
-				 dst_gid );
-	}
 	FreeJobAd(job_ad);
 	job_ad = 0;
-#else	/* WIN32 */
 
-	MyString owner;
-	job_ad->LookupString(ATTR_OWNER, owner);
-
-	MyString nt_domain;
-
-	job_ad->LookupString(ATTR_NT_DOMAIN, nt_domain);
-
-
-
-	if (!recursive_chown(sandbox.Value(), owner.Value(), nt_domain.Value())) {
-
-		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
-
-		         "Job may run into permissions problems when it starts.\n",
-
-		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
-
+	if( retval ) {
+		return FALSE;
 	}
-
-
-
-	if (!recursive_chown(sandbox_tmp.Value(), owner.Value(), nt_domain.Value())) {
-
-		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
-
-		         "Job may run into permissions problems when it starts.\n",
-
-		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
-
-	}
-
-
-#endif
 	return 0;
 }
 
@@ -9742,87 +9610,33 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		}
 	}
 
-	// only need to contact the ckpt server for standard universe jobs
+		/* Remove any checkpoint files.  If for some reason we do 
+		 * not know the owner, don't bother sending to the ckpt
+		 * server.
+		 */
 	GetAttributeInt(cluster,proc,ATTR_JOB_UNIVERSE,&universe);
-	if (universe == CONDOR_UNIVERSE_STANDARD) {
+	if ( universe == CONDOR_UNIVERSE_STANDARD && owner ) {
+		char *ckpt_name_mem = gen_ckpt_name(Spool,cluster,proc,0);
+		ckpt_name_buf = ckpt_name_mem;
+		free(ckpt_name_mem); ckpt_name_mem = NULL;
+		ckpt_name = ckpt_name_buf.Value();
+
 		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
 							   server) == 0) {
 			SetCkptServerHost(server.Value());
 		} else {
 			SetCkptServerHost(NULL); // no ckpt on ckpt server
 		}
+
+		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+
+		ckpt_name_buf += ".tmp";
+		ckpt_name = ckpt_name_buf.Value();
+
+		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
 	}
 
-		  /* Remove any checkpoint files.  If for some reason we do 
-		 * not know the owner, don't bother sending to the ckpt
-		 * server.
-		 */
-	char *ckpt_name_mem = gen_ckpt_name(Spool,cluster,proc,0);
-	ckpt_name_buf = ckpt_name_mem;
-	free(ckpt_name_mem); ckpt_name_mem = NULL;
-	ckpt_name = ckpt_name_buf.Value();
-	if ( owner ) {
-		if ( IsDirectory(ckpt_name) ) {
-			if ( param_boolean("KEEP_OUTPUT_SANDBOX",false) ) {
-				// Blow away only the input files from the job's spool.
-				// The user is responsible for garbage collection of the
-				// rest of the sandbox.  Good luck.  
-				FileTransfer sandbox;
-				ClassAd *ad = GetJobAd(cluster,proc);
-				if ( ad ) {
-					sandbox.SimpleInit(ad,
-								false,  // want_check_perms
-								true,	// is_server
-								NULL,	// sock_to_use
-								PRIV_CONDOR		// priv_state to use
-								);
-					sandbox.RemoveInputFiles(ckpt_name);
-				}
-			} else {
-				// Blow away entire sandbox.  This is the default.
-				{
-					// Must put this in braces so the Directory object
-					// destructor is called, which will free the iterator
-					// handle.  If we didn't do this, the below rmdir 
-					// would fail.
-					Directory ckpt_dir(ckpt_name);
-					ckpt_dir.Remove_Entire_Directory();
-				}
-				rmdir(ckpt_name);
-			}
-		} else {
-			if (universe == CONDOR_UNIVERSE_STANDARD) {
-				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
-			} else {
-				unlink(ckpt_name);
-			}
-		}
-	} else
-		unlink(ckpt_name);
-
-		  /* Remove any temporary checkpoint files */
-	ckpt_name_buf += ".tmp";
-	ckpt_name = ckpt_name_buf.Value();
-	if ( owner ) {
-		if ( IsDirectory(ckpt_name) ) {
-			{
-				// Must put this in braces so the Directory object
-				// destructor is called, which will free the iterator
-				// handle.  If we didn't do this, the below rmdir 
-				// would fail.
-				Directory ckpt_dir(ckpt_name);
-				ckpt_dir.Remove_Entire_Directory();
-			}
-			rmdir(ckpt_name);
-		} else {
-			if (universe == CONDOR_UNIVERSE_STANDARD) {
-				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
-			} else {
-				unlink(ckpt_name);
-			}
-		}
-	} else
-		unlink(ckpt_name);
+	SpooledJobFiles::removeJobSpoolDirectory(cluster,proc);
 }
 
 

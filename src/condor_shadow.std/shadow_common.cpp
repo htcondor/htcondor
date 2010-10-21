@@ -28,7 +28,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_uid.h"
