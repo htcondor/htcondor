@@ -1404,22 +1404,26 @@ This macro
 
 \label{param:LockDebugLogToAppend}
 \item[\Macro{LOCK\_DEBUG\_LOG\_TO\_APPEND}]
-  This setting controls whether a daemon's debug lock is used when
-  appending to the log.  When \Expr{false} (the default), the debug
-  lock is only used when rotating the log file.  This is more
-  efficient, especially when many processes share the same log file.
-  When \Expr{true}, the debug lock is used when writing to the log as
-  well as when rotating the log file.  This setting is ignored under
-  Windows, and the behavior is as though this setting were true.
-  Under unix, the default value of \Expr{false} is appropriate when
-  logging to filesystems that support the POSIX semantics of
-  \Expr{O\_APPEND}.  On non-POSIX-compliant filesystems, it is
-  possible for the characters in log messages from multiple processes
-  sharing the same log to be interleaved unless locking is used.
+  A boolean value that defaults to \Expr{False}.
+  This variable controls whether a daemon's debug lock is used when
+  appending to the log.  
+  When \Expr{False}, the debug lock is only used when rotating the log file.
+  This is more efficient, 
+  especially when many processes share the same log file.
+  When \Expr{True}, the debug lock is used when writing to the log,
+  as well as when rotating the log file.  
+  This setting is ignored under Windows,
+  and the behavior of Windows platforms is as though 
+  this variable were \Expr{True}.
+  Under Unix, the default value of \Expr{False} is appropriate when
+  logging to file systems that support the POSIX semantics of \Expr{O\_APPEND}.
+  On non-POSIX-compliant file systems, 
+  it is possible for the characters in log messages from multiple processes
+  sharing the same log to be interleaved, unless locking is used.
   Since Condor does not support sharing of debug logs between
   processes running on different machines, many non-POSIX-compliant
-  filesystems will still avoid interleaved messages without requiring
-  Condor to use a lock.  Our tests of AFS and NFS, for example, have
+  file systems will still avoid interleaved messages without requiring
+  Condor to use a lock.  Tests of AFS and NFS have
   not revealed any problems when appending to the log without locking.
 
 \label{param:EnableUserlogLocking}
