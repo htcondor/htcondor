@@ -278,9 +278,9 @@ which does not set a maximum cluster id.
 \MacroNI{MAX\_ACCEPTS\_PER\_CYCLE} has been changed from 1 to 4.
 
 %gittrac #1310
-\item The configuration variable \MacroNI{NEW\_LOCKING}, introduced in
-  version 7.5.2, has been changed to
-  \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and now defaults to \Expr{True}.
+\item The configuration variable \Macro{NEW\_LOCKING}, introduced in
+  Condor version 7.5.2, has been changed to
+  \Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and now defaults to \Expr{True}.
 
 \end{itemize}
 
@@ -410,7 +410,7 @@ if the remote file name is omitted.
 updating to HDFS 0.20.2 and making the HDFS web interface work properly.
 
 % gittrac #1717
-\item Condor no longer tries to invoke glexec if the job's X.509 proxy
+\item Condor no longer tries to invoke \Prog{glexec} if the job's X.509 proxy
 is expired.
 
 \end{itemize}
@@ -420,10 +420,12 @@ is expired.
 \begin{itemize}
 
 % gittrac #1720
-\item Using hostnames for host-based authentication (i.e. in the
-\Macro{ALLOW\_*} and \Macro{DENY\_*} configuration parameters)
-doesn't work on Mac OS X 10.4. Later versions of the OS are not
-affected. As a workaround, IP addresses can be used instead.
+\item Using host names for host-based authentication,
+such as in the definitions of configuration variables 
+\MacroNI{ALLOW\_*} and \MacroNI{DENY\_*},
+does not work on Mac OS X 10.4.
+Later versions of the OS are not affected.
+As a work around, IP addresses can be used instead of host names.
 
 \end{itemize}
 
