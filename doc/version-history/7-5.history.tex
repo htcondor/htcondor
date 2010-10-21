@@ -31,16 +31,19 @@ The details of each version are described below.
 
 % gittrac 1069
 \item Negotiation is now handled asynchronously in the \Condor{schedd} daemon.
-This means \Condor{schedd} remains responsive during negotiation and is
-less prone to falling behind on communication with \Condor{shadow} processes.
+This means that the \Condor{schedd} remains responsive during 
+negotiation and is less prone to falling behind on communication 
+with \Condor{shadow} processes.
 
 % gittrac 1707
-\item Improved monitoring and avoidance of a ``lock convoy'' problem observed
-when there were over 30 thousand shadow processes.  At this scale,
-locking the shadow log on each write to the log file has been observed
+\item Improved monitoring and avoidance of a \Term{lock convoy} problem
+observed when there were over 30 thousand \Condor{shadow} processes.
+At this scale,
+locking the \Condor{shadow} daemon's log on each write to the log file
+has been observed
 under Linux to sometimes result in a situation where the system does
-very little productive work and is instead consumed by rapid context
-switching between the shadows that are waiting for the lock.
+very little productive work, and is instead consumed by rapid context
+switching between the \Condor{shadow} daemons that are waiting for the lock.
 
 \end{itemize}
 
@@ -49,24 +52,13 @@ switching between the shadows that are waiting for the lock.
 \begin{itemize}
 
 % gittrac 1707
-\item The new configuration variable
-\MacroNI{LOCK\_DEBUG\_LOG\_TO\_APPEND} controls whether a daemon's
-debug lock is used when appending to the log.  When \Expr{false} (the
-default), the debug lock is only used when rotating the log file.
-This is more efficient, especially when many processes share the same
-log file.  When \Expr{true}, the debug lock is used when writing to
-the log as well as when rotating the log file.  This setting is
-ignored under Windows, and the behavior is as though this setting were
-true.  Under unix, the default value of \Expr{false} is appropriate
-when logging to filesystems that support the POSIX semantics of
-\Expr{O\_APPEND}.  On non-POSIX-compliant filesystems, it is possible
-for the characters in log messages from multiple processes sharing the
-same log to be interleaved unless locking is used.  Since Condor does
-not support sharing of debug logs between processes running on
-different machines, many non-POSIX-compliant filesystems will still
-avoid interleaved messages without requiring Condor to use a lock.
-Our tests of AFS and NFS, for example, have not revealed any problems
-when appending to the log without locking.
+\item The new configuration variable \Macro{LOCK\_DEBUG\_LOG\_TO\_APPEND}
+controls whether a daemon's debug lock is used when appending to the log.
+When \Expr{False} (the default),
+the debug lock is only used when rotating the log file.
+When \Expr{True}, the debug lock is used when writing to
+the log as well as when rotating the log file.
+See section~\ref{param:LockDebugLogToAppend} for the complete definition.
 
 \end{itemize}
 
@@ -82,19 +74,21 @@ determined that the \Condor{schedd} was hung and would kill and restart it.
 
 % gittrac #1688
 \item When \Macro{NOT\_RESPONDING\_WANT\_CORE} is \Expr{True}, the
-\Condor{master} daemon now follows up with a \Expr{SIGKILL} if the
-child process does not exit within ten minutes of receiving
-\Expr{SIGABRT}.  This addresses cases that have been observed in
+\Condor{master} daemon now follows up with a \Expr{SIGKILL}, if the
+child process does not exit within ten minutes of receiving \Expr{SIGABRT}.
+This addresses observed cases in
 which the child process hangs while writing a core file.
 
 % gittrac #1720
-\item Hostname-based authorization failed in Condor 7.5.4 under Mac OS X 10.4
-because lookups of the hostname for incoming connections failed.
+\item Host name-based authorization failed in Condor version 7.5.4
+under Mac OS X 10.4,
+because look ups of the host name for incoming connections failed.
 
 % gittrac #1724
-\item A bug introduced in 7.5.0 caused \AdAttr{MyType} and \AdAttr{TargetType}
-in offline ads to get set to ``(unknown type)'' when the offline ad was
-matched to a job.
+\item A bug introduced in Condor version 7.5.0 caused
+the attributes \AdAttr{MyType} and \AdAttr{TargetType}
+in offline ClassAds to get set to \Expr{"(unknown type)"}
+when the offline ClassAd was matched to a job.
 
 \end{itemize}
 
