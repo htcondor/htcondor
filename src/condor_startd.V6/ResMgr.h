@@ -52,6 +52,9 @@
 #  endif /* HAVE_BOINC */
 #endif /* HAVE_BACKFILL */
 
+#ifndef NUM_ELEMENTS
+#define NUM_ELEMENTS(_ary)   (sizeof(_ary) / sizeof((_ary)[0]))
+#endif
 
 typedef float (Resource::*ResourceFloatMember)();
 typedef void (Resource::*ResourceMaskMember)(amask_t);
