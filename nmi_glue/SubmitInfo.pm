@@ -59,7 +59,6 @@ our %build_and_test_sets = (
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
 	# are those platforms.
 	'nmi_one_offs' => [
-		'sun4u_sol_5.8',
 		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'ia64_sles_9',
@@ -300,7 +299,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 'ia64_rhas_4' ],
+			'xtests'	=> [ 'ia64_rhas_4', 'ia64_sles_9' ],
 		},
 
 		'test' => {
@@ -317,7 +316,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> undef,
-			'xtests'	=> undef,
+			'xtests'	=> [ 'ps3_fedora_9' ],
 		},
 
 		'test' => {
@@ -397,7 +396,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				'libtool-1.5.26', # used for the blahp
 			],
-			'xtests'	=> undef,
+			'xtests'	=> [ 'x86_64_ubuntu_10.04', 'x86_64_ubuntu_8.04.3' ],
 		},
 
 		'test' => {
@@ -415,7 +414,16 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
+			'xtests'	=> [ 
+				'x86_64_ubuntu_8.04.3',
+				'x86_64_ubuntu_10.04',
+				'x86_64_sl_5.5', 
+				'x86_64_rhap_5.4', 'x86_64_sl_5.3',
+				'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
+				'x86_64_fedora_13', 'x86_64_rhap_5.2',
+				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
+				'x86_64_fedora_11', 'x86_64_fedora_8', 'x86_64_fedora_9' 
+			],
 		},
 
 		'test' => {
@@ -435,7 +443,19 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				@default_prereqs
 			],
-			'xtests'	=> [ 'x86_64_rhas_4' ],
+			'xtests'	=> [ 
+				'x86_64_ubuntu_8.04.3',
+				'x86_64_ubuntu_10.04',
+				'x86_64_sles_9',
+				'x86_64_slc_4',
+				'x86_64_sl_5.5',
+				'x86_64_sl_5.3',
+				'x86_64_sl_4.4',
+				'x86_64_rhap_5.4',
+				'x86_64_rhap_5.3-updated',
+				'x86_64_rhap_5.2', 'x86_64_rhap_5.3',
+				'x86_64_fedora_12-updated', 'x86_64_fedora_13',
+				'x86_64_fedora_11', 'x86_64_fedora_12', 'x86_64_rhas_4' ],
 		},
 
 		'test' => {
@@ -472,7 +492,10 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				'libtool-1.5.26',
 			],
-			'xtests'	=> undef,
+			'xtests'	=> [ 
+				'x86_ubuntu_10.04',
+				'x86_64_ubuntu_10.04',
+				'x86_64_ubuntu_8.04.3' ],
 		},
 
 		'test' => {
@@ -492,7 +515,11 @@ our %submit_info = (
 				@default_prereqs,
 				'coreutils-5.2.1',
 			],
-			'xtests'	=> [ 'x86_64_macos_10.5' ],
+			'xtests'	=> [ 
+				'x86_64_macos_10.5', 
+				'x86_64_macos_10.6', 
+				'x86_64_macos_10.6-updated',
+			],
 		},
 
 		'test' => {
@@ -549,7 +576,17 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'unmanaged-x86_rhap_5',
+				'x86_ubuntu_10.04',
+				'x86_64_ubuntu_8.04.3',
+				'x86_64_ubuntu_10.04',
+				'x86_64_sl_5.5', 
+				'x86_64_rhap_5.4', 'x86_64_sl_5.3',
+				'x86_64_rhap_5.3-updated',
+				'x86_64_rhap_5.2', 'x86_64_rhap_5.3',
+				'x86_64_fedora_12-updated', 'x86_64_fedora_13', 
+				'x86_64_fedora_11', 'x86_64_fedora_12',
+				'unmanaged-x86_rhap_5', 'x86_64_fc_5', 'x86_fc_5',
+				'x86_64_fedora_8', 'x86_64_fedora_9',
 			],
 		},
 
@@ -590,10 +627,31 @@ our %submit_info = (
 				@default_prereqs,
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
-			# I've removed x86_64_rhas_3 for now, as per git trac #482
 			'xtests'	=> [ 
-			 	'x86_rhas_4', 'x86_suse_10.0', 'x86_sles_9', 'x86_ubuntu_5.10',
-			 	'x86_64_rhas_4',
+				'x86_64_ubuntu_8.04.3',
+				'x86_64_ubuntu_10.04',
+				'x86_ubuntu_10.04',
+				'x86_64_sles_9',
+				'x86_64_slc_4',
+				'x86_64_sl_5.5',
+				'x86_64_sl_5.3',
+				'x86_64_sl_4.4',
+				'x86_64_rhap_5.4',
+				'x86_64_rhap_5.3-updated', 
+				'x86_64_rhap_5.2', 
+				'x86_64_rhap_5.3',
+				'unmanaged-x86_rhap_5',
+				'x86_64_fedora_11',
+				'x86_64_fedora_12',
+				'x86_64_fedora_12-updated',
+				'x86_64_fedora_13',
+			 	'x86_rhas_4', 
+				'x86_suse_10.0', 
+				'x86_suse_10.2', 
+				'x86_sles_9',
+				'x86_ubuntu_5.10',
+			 	'x86_64_rhas_3',
+				'x86_64_rhas_4',
 			],
 		},
 
@@ -1251,7 +1309,7 @@ our %submit_info = (
 			},
 
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
+			'xtests'	=> [ 'x86_suse_10.2' ],
 		},
 
 		'test' => {
