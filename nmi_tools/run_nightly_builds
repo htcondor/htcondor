@@ -22,14 +22,15 @@ use warnings;
 
 $| = 1;
 
-my ($opt_platforms, $opt_desc);
+my ($opt_platforms, $opt_desc, $opt_logfile);
 
 my $home = "/home/cndrauto/condor";
 # next line is used for testing out of the home directory...
 #$home = ".";
 
 my $logfh;
-my $log_file = "$home/nightly.log";
+# logfile may be changed by command line arguments.
+my $log_file = "$home/default-nightly.log";
 my $CNS = "nmi_tools/condor_nmi_submit";
 my $tags_file = "/space/git/nwo-build-tags.git";
 my $GIT="/prereq/git-1.5.4/bin/git";
@@ -66,7 +67,15 @@ sub parse_command_line
             'platforms=s' => \$opt_platforms,
             # specifies a description for the builds to be passed 
             # to condor_nmi_submit
-            'desc=s' => \$opt_desc);
+            'desc=s' => \$opt_desc,
+			# specifies a log file to which we can write.
+			'logfile=s' => \$opt_logfile,
+			);
+	
+	# If this is not set here, we use a default.
+	if (defined($opt_logfile)) {
+		$log_file = $opt_logfile;
+	}
 }
 
 sub open_log
