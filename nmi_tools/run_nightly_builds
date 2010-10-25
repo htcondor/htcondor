@@ -72,9 +72,14 @@ sub parse_command_line
 			'logfile=s' => \$opt_logfile,
 			);
 	
-	# If this is not set here, we use a default.
+	# If this is not set here, we use a default. Otherwise use either the
+	# absolute path or have it be relative to $home.
 	if (defined($opt_logfile)) {
-		$log_file = $opt_logfile;
+		if ($opt_logfile =~ m/^\//) {
+			$log_file = $opt_logfile;
+		} else {
+			$log_file = "$home/$opt_logfile";
+		}
 	}
 }
 
