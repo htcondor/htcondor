@@ -22,7 +22,7 @@
 
 
 sshd_cleanup() {
-	rm -f $hostkey ${hostkey}.pub ${idkey} ${idkey}.pub sshd.out $_CONDOR_SCRATCH_DIR/contact
+	rm -f $hostkey ${hostkey}.pub ${idkey} ${idkey}.pub $_CONDOR_SCRATCH_DIR/tmp/sshd.out $_CONDOR_SCRATCH_DIR/contact
 }
 
 trap sshd_cleanup 15
@@ -81,13 +81,13 @@ while [ $done -eq 0 ]
 do
 
 # Try to launch sshd on this port
-$SSHD -p$PORT -oAuthorizedKeysFile=${idkey}.pub -h$hostkey -De -f/dev/null -oStrictModes=no -oPidFile=/dev/null -oAcceptEnv=_CONDOR < /dev/null > sshd.out 2>&1 &
+$SSHD -p$PORT -oAuthorizedKeysFile=${idkey}.pub -h$hostkey -De -f/dev/null -oStrictModes=no -oPidFile=/dev/null -oAcceptEnv=_CONDOR < /dev/null > $_CONDOR_SCRATCH_DIR/tmp/sshd.out 2>&1 &
 
 pid=$!
 
 # Give sshd some time
 sleep 2
-if grep "Server listening" sshd.out > /dev/null 2>&1
+if grep "Server listening" $_CONDOR_SCRATCH_DIR/tmp/sshd.out > /dev/null 2>&1
 then
 	done=1
 else
@@ -99,7 +99,7 @@ fi
 done
 
 # Don't need this anymore
-rm sshd.out
+rm $_CONDOR_SCRATCH_DIR/tmp/sshd.out
 
 # create contact file
 hostname=`hostname`
