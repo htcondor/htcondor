@@ -129,7 +129,7 @@ sub log_cmd
 
 	logit "$cmd\n";
     if (!defined(open(OUT, "( $cmd ) 2>&1|"))) {
-        logit "ERROR: $error ($!)";
+        logit "ERROR: $error ($!)\n";
         return -1;
     }
 
@@ -226,7 +226,7 @@ sub submit_builds
 		# Verify we can submit the build
 		##############
 		if (!( -f $CNS && -x $CNS)) {
-			logit "ALERT: No $CNS command found! Skipping submission!";
+			logit "ALERT: No $CNS command found! Skipping submission!\n";
 			next;
 		}
 
