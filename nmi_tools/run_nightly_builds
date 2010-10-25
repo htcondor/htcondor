@@ -104,22 +104,41 @@ sub close_log
 	close($logfh);
 }
 
-# emit some information into the log file about the command, and then
+# Emit some information into the log file about the command, and then
 # run the command putting all of its output into the log file.
+#
+# If something went wrong with executing command, we return -1. Otherwise
+# it'll be the return code of the process.
+#
+# Note: perl's open has some noninntuitive behavior:
+#  If the command that is being run looks "simple", meaning no shell characters
+#  or whatever, then perl will itself fork/exec the process and if the
+#  executable doesn't exist, open will return undefined.
+#  HOWEVER
+#  If perl's open notices shell syntax in the string, then it'll act like
+#  POSIX and invoke the command via /bin/sh. In this case, if the executable
+#  doesn't exist, then sh returns non-zero, and open return a nonzero exit
+#  code insted of undefined. 
+# 
+# Beware of this fact and one day we should get rid of this form of calling
+# open and replace it with open(IN, "-|", "arg0", "arg1", "arg2", ...);
 sub log_cmd
 {
 	my ($cmd, $error) = (@_);
 	my $ret;
 
 	logit "$cmd\n";
-	open(OUT, "$cmd 2>&1|") || fail "ERROR: $error ($!)";
-
-	$ret = $?;
+    if (!defined(open(OUT, "( $cmd ) 2>&1|"))) {
+        logit "ERROR: $error ($!)";
+        return -1;
+    }
 
 	while (<OUT>) {
 		logit $_;
 	}
 	close(OUT);
+	# $? is set by close..
+	$ret = $?;
 
 	return $ret;
 }
@@ -186,6 +205,10 @@ sub submit_builds
 
 	foreach $tag (sort keys %tags) {
 
+		logit "*************************************************************\n";
+		logit "Trying to submit build for tag $tag with module $tags{$tag}\n";
+		logit "*************************************************************\n";
+
 		##############
 		# Clean the sandbox for the correct revision of the nmi_tools.
 		##############
@@ -200,14 +223,21 @@ sub submit_builds
 				"Can't checkout cns from $tag");
 
 		##############
+		# Verify we can submit the build
+		##############
+		if (!( -f $CNS && -x $CNS)) {
+			logit "ALERT: No $CNS command found! Skipping submission!";
+			next;
+		}
+
+		##############
 		# Actually submit the build.
 		##############
 		logit "Submitting nightly build for tag: '$tag', " .
 			"module: '$tags{$tag}'\n";
-		# cnd_cmd already contains a huge command line!
+		# cns_cmd already contains a huge command line!
 		log_cmd("$cns_cmd --tag=$tag --module=$tags{$tag}",
 				"Failure to submit build: $tag, $tags{$tag}.");
-		log_cmd("sync");
 	}
 }
 
