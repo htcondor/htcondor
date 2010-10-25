@@ -26,6 +26,7 @@
 #include "condor_blkng_full_disk_io.h"
 #include "fdpass.h"
 #include "my_popen.h"
+#include "globus_utils.h"
 
 GLExecPrivSepHelper::GLExecPrivSepHelper() :
 	m_glexec(0), m_proxy(0), m_sandbox(0), m_sandbox_owned_by_user(false), m_initialized(false)
@@ -41,9 +42,41 @@ GLExecPrivSepHelper::~GLExecPrivSepHelper()
 	}
 }
 
+
+/* proxy_valid_right_now()
+
+   this function is used in this object to determine if glexec should actually
+   be invoked.  glexec will always fail with an expired proxy, and there is
+   overhead in invoking it.
+*/
+int
+GLExecPrivSepHelper::proxy_valid_right_now()
+{
+	if (!m_proxy) {
+		dprintf(D_FULLDEBUG, "GLExecPrivSepHelper::proxy_valid_right_now: no proxy defined\n");
+		return FALSE;
+	} else {
+		time_t expiration_time = x509_proxy_expiration_time(m_proxy);
+		time_t now = time(NULL);
+
+		if (expiration_time < now) {
+			dprintf(D_FULLDEBUG, "GLExecPrivSepHelper::proxy_valid_right_now: proxy %s already expired!\n", m_proxy);
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+
 int
 GLExecPrivSepHelper::run_script(ArgList& args)
 {
+	if (!proxy_valid_right_now()) {
+		dprintf(D_ALWAYS, "GLExecPrivSepHelper::run_script: not invoking glexec since the proxy is not valid!\n");
+		return -1;
+	}
+
 	FILE* fp = my_popen(args, "r", TRUE);
 	if (fp == NULL) {
 		dprintf(D_ALWAYS,
@@ -193,6 +226,11 @@ GLExecPrivSepHelper::create_process(const char* path,
 									int *       affinity_mask)
 {
 	ASSERT(m_initialized);
+
+	if (!proxy_valid_right_now()) {
+		dprintf(D_ALWAYS, "GLExecPrivSepHelper::create_process: not invoking glexec since the proxy is not valid!\n");
+		return -1;
+	}
 
 	// make a copy of std FDs so we're not messing w/ our caller's
 	// memory
