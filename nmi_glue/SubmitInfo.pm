@@ -65,6 +65,8 @@ our %build_and_test_sets = (
 		'x86_64_sles_9',
 		'x86_sles_9',
 		'ppc_macos_10.4',
+		'sun4u_sol_5.10',
+		'x86_64_sol_5.11',
 	],
 
 	'psilord' => [
@@ -371,7 +373,7 @@ our %submit_info = (
 				'gcc-4.1.2', 'binutils-2.16', 'perl-5.8.5', 'gzip-1.3.3',
 				'wget-1.9.1', 'coreutils-5.2.1',
 			],
-			'xtests'	=> undef,
+			'xtests'	=> [ 'sun4u_sol_5.10' ],
 		},
 
 		'test' => {
@@ -987,6 +989,24 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Solais 11 on x86_64
+	# This might work.
+	##########################################################################
+	'x86_64_sol_5.11'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
