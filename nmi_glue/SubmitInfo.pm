@@ -69,6 +69,8 @@ our %build_and_test_sets = (
 		'x86_64_macos_10.6',
 		'hppa_hpux_11',
 		'x86_64_fedora_12-updated',
+		'sun4u_sol_5.10',
+		'x86_64_sol_5.11',
 	],
 
 	'psilord' => [
@@ -299,7 +301,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 'ia64_rhas_4', 'ia64_sles_9' ],
+			'xtests'	=> [ 'ia64_sles_9' ],
 		},
 
 		'test' => {
@@ -375,7 +377,7 @@ our %submit_info = (
 				'gcc-4.1.2', 'binutils-2.16', 'perl-5.8.5', 'gzip-1.3.3',
 				'wget-1.9.1', 'coreutils-5.2.1',
 			],
-			'xtests'	=> undef,
+			'xtests'	=> [ 'sun4u_sol_5.10' ],
 		},
 
 		'test' => {
@@ -418,12 +420,10 @@ our %submit_info = (
 				'x86_64_ubuntu_8.04.3',
 				'x86_64_ubuntu_10.04',
 				'x86_64_sl_5.5', 
-				'x86_64_rhap_5.4', 'x86_64_sl_5.3',
-				'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
+				'x86_64_sl_5.3',
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
-				'x86_64_fedora_11', 'x86_64_fedora_8', 'x86_64_fedora_9' 
-			],
+				'x86_64_fedora_11' ],
 		},
 
 		'test' => {
@@ -447,13 +447,9 @@ our %submit_info = (
 				'x86_64_ubuntu_8.04.3',
 				'x86_64_ubuntu_10.04',
 				'x86_64_sles_9',
-				'x86_64_slc_4',
 				'x86_64_sl_5.5',
 				'x86_64_sl_5.3',
-				'x86_64_sl_4.4',
-				'x86_64_rhap_5.4',
-				'x86_64_rhap_5.3-updated',
-				'x86_64_rhap_5.2', 'x86_64_rhap_5.3',
+				'x86_64_rhap_5.2',
 				'x86_64_fedora_12-updated', 'x86_64_fedora_13',
 				'x86_64_fedora_11', 'x86_64_fedora_12', 'x86_64_rhas_4' ],
 		},
@@ -597,13 +593,11 @@ our %submit_info = (
 				'x86_64_ubuntu_8.04.3',
 				'x86_64_ubuntu_10.04',
 				'x86_64_sl_5.5', 
-				'x86_64_rhap_5.4', 'x86_64_sl_5.3',
-				'x86_64_rhap_5.3-updated',
-				'x86_64_rhap_5.2', 'x86_64_rhap_5.3',
+				'x86_64_sl_5.3',
+				'x86_64_rhap_5.2',
 				'x86_64_fedora_12-updated', 'x86_64_fedora_13', 
 				'x86_64_fedora_11', 'x86_64_fedora_12',
-				'unmanaged-x86_rhap_5', 'x86_64_fc_5', 'x86_fc_5',
-				'x86_64_fedora_8', 'x86_64_fedora_9',
+				'unmanaged-x86_rhap_5'
 			],
 		},
 
@@ -649,14 +643,9 @@ our %submit_info = (
 				'x86_64_ubuntu_10.04',
 				'x86_ubuntu_10.04',
 				'x86_64_sles_9',
-				'x86_64_slc_4',
 				'x86_64_sl_5.5',
 				'x86_64_sl_5.3',
-				'x86_64_sl_4.4',
-				'x86_64_rhap_5.4',
-				'x86_64_rhap_5.3-updated', 
 				'x86_64_rhap_5.2', 
-				'x86_64_rhap_5.3',
 				'unmanaged-x86_rhap_5',
 				'x86_64_fedora_11',
 				'x86_64_fedora_12',
@@ -666,7 +655,6 @@ our %submit_info = (
 				'x86_suse_10.0', 
 				'x86_suse_10.2', 
 				'x86_sles_9',
-				'x86_ubuntu_5.10',
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
 			],
@@ -969,6 +957,24 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Solais 11 on x86_64
+	# This might work.
+	##########################################################################
+	'x86_64_sol_5.11'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
