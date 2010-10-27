@@ -982,13 +982,16 @@ our %submit_info = (
 	'sun4u_sol_5.10'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1' ],
 			'xtests'	=> undef,
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
+			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'java-1.4.2_05',
+							 'perl-5.8.5', 'gzip-1.3.3', 'wget-1.9.1',
+							 'coreutils-5.2.1' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -1000,13 +1003,15 @@ our %submit_info = (
 	'x86_64_sol_5.11'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
 			'xtests'	=> undef,
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9' ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
