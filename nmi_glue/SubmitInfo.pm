@@ -197,10 +197,23 @@ my @default_build_configure_args =
 our %submit_info = (
 
 	##########################################################################
-	# Default platform chosen for an unknown nmi platform.
-	# This might work.
+	# Default platform chosen for an unknown platform.
+	# This might or might not work. If it doesn't work, then likely
+	# real changes to configure must be made to identify the platform, or
+	# additional arguments specified to configure to set the arch, opsys, 
+	# distro, etc, etc, etc.
+	# A good sample of stuff to add in case it doesn't work is:
+	# --with-arch=X86_64 \
+	# --with-os=LINUX \
+	# --with-kernel=2.6.18-194.3.1.el5 \        
+	# --with-os_version=LINUX_UNKNOWN \               
+	# --with-sysname=unknown \
+	# <the big pile of other arguments>
+	# 
+	# See:
+	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=BuildingCondorOnUnix
 	##########################################################################
-	'default_nmi_platform'	=> {
+	'default_minimal_platform'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
