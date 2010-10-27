@@ -407,7 +407,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				'libtool-1.5.26', # used for the blahp
 			],
-			'xtests'	=> [ 'x86_64_ubuntu_10.04', 'x86_64_ubuntu_8.04.3' ],
+			'xtests'	=> [ 'x86_64_ubuntu_10.04' ],
 		},
 
 		'test' => {
@@ -426,7 +426,6 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_ubuntu_8.04.3',
 				'x86_64_ubuntu_10.04',
 				'x86_64_sl_5.5', 
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
@@ -452,7 +451,6 @@ our %submit_info = (
 				@default_prereqs
 			],
 			'xtests'	=> [ 
-				'x86_64_ubuntu_8.04.3',
 				'x86_64_ubuntu_10.04',
 				'x86_64_sles_9',
 				'x86_64_sl_5.5',
@@ -497,8 +495,7 @@ our %submit_info = (
 			],
 			'xtests'	=> [ 
 				'x86_ubuntu_10.04',
-				'x86_64_ubuntu_10.04',
-				'x86_64_ubuntu_8.04.3' ],
+				'x86_64_ubuntu_10.04' ],
 		},
 
 		'test' => {
@@ -597,7 +594,6 @@ our %submit_info = (
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
 				'x86_ubuntu_10.04',
-				'x86_64_ubuntu_8.04.3',
 				'x86_64_ubuntu_10.04',
 				'x86_64_sl_5.5', 
 				'x86_64_rhap_5.2',
@@ -645,7 +641,6 @@ our %submit_info = (
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			'xtests'	=> [ 
-				'x86_64_ubuntu_8.04.3',
 				'x86_64_ubuntu_10.04',
 				'x86_ubuntu_10.04',
 				'x86_64_sles_9',
