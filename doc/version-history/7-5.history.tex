@@ -66,6 +66,11 @@ See section~\ref{param:LockDebugLogToAppend} for the complete definition.
 
 \begin{itemize}
 
+% gittrac #1737
+
+\item A bug introduced in 7.5.4 prevented parallel jobs with multiple queue
+statements from working with dagman.  This is now fixed.
+
 % gittrac #1681
 \item Improved the way Condor daemons send heartbeat messages to their parent
 process.  This resolves a problem observed on busy submit machines using the
