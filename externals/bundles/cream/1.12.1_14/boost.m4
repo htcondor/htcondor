@@ -48,7 +48,7 @@ AC_DEFUN(AC_BOOST,
   if test -r $ac_boost_version_file; then
     ac_boost_version=`cat $ac_boost_version_file \
       | grep  '^# *define  *BOOST_VERSION  *[0-9]\+$' \
-      | sed 's,^# *define  *BOOST_VERSION  *\([0-9]\+\)$,\1,'`
+      | sed 's,^# *define  *BOOST_VERSION  *\([0-9][0-9]*\)$,\1,'`
   fi
   if test -z $ac_boost_version; then
     AC_MSG_ERROR(unknow version of boost, [1])

@@ -491,6 +491,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				@default_prereqs,
 				'coreutils-5.2.1',
+				'libtool-1.5.26',
 			],
 			'xtests'	=> [ 'x86_64_macos_10.5' ],
 		},
@@ -513,7 +514,10 @@ our %submit_info = (
 	'x86_64_macos_10.5'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, ],
+			'prereqs'	=> [
+				@default_prereqs,
+				'libtool-1.5.26',
+			],
 			'xtests'	=> undef,
 		},
 
@@ -530,7 +534,10 @@ our %submit_info = (
 	'x86_64_macos_10.6'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, ],
+			'prereqs'	=> [
+				@default_prereqs,
+				'libtool-1.5.26',
+			],
 			'xtests'	=> undef,
 		},
 

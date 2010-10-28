@@ -3075,7 +3075,7 @@ AC_SUBST(CLASSADS_CFLAGS, $CLASSADS_CFLAGS)
 CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
 AC_MSG_CHECKING([if VOMS should be compiled (linux only)])
-if test "$_cv_opsys" = "LINUX" ; then
+if test "$_cv_opsys" = "LINUX" -o "$_cv_opsys" = "DARWIN" ; then
 	_cv_including_voms=yes
 	AC_MSG_RESULT([$_cv_including_voms])
 	CHECK_EXTERNAL([expat], [2.0.1], [soft])
@@ -3085,7 +3085,7 @@ else
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
-if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" != "xX86_64" ; then
+if test "$os" = "Linux" -o "$os" = "Darwin" ; then
   CHECK_EXTERNAL([boost],[1.33.1], [soft])
   CHECK_EXTERNAL([log4cpp],[1.0], [soft])
   CHECK_EXTERNAL([cares],[1.3.0], [soft])
@@ -3219,7 +3219,7 @@ CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
 AS_IF([test "x$enable_hdfs" = xyes], 
   [CHECK_EXTERNAL([hadoop],[0.20.2],[soft])])
 
-if test "x$_cv_opsys" = "xLINUX" ; then
+if test "x$_cv_opsys" = "xLINUX" -o "x$_cv_opsys" = "xDARWIN"  ; then
   CHECK_EXTERNAL([libxml2],[2.7.3],[soft],
                  [libxml2 for libvirt],
                  [MF_LIB_CHECK([libxml2],

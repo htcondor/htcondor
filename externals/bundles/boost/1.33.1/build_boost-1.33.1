@@ -4,6 +4,15 @@
 
 tar zxvf boost_1_33_1.tar.gz
 
+if [ `uname` = "Darwin" ] ; then
+	patch -p0 -i macos.patch
+	if [ $? -ne 0 ]
+	then
+		echo "patch macos.patch failed!"
+		exit 1
+	fi
+fi
+
 cd boost_1_33_1 && echo Changed directory to `pwd`
 
 # This version of boost is used to build the CREAM client libraries.
@@ -23,7 +32,7 @@ PATH=`pwd`/`ls -d bin.*/`:$PATH
 export PATH
 cd ../../..
 
-bjam -sNO_COMPRESSION=1 -sTOOLS=gcc --prefix=$PACKAGE_INSTALL_DIR install
+bjam --with-thread -sNO_COMPRESSION=1 -sTOOLS=gcc --prefix=$PACKAGE_INSTALL_DIR install
 if [ $? -ne 0 ]
 then
 	echo "bjam failed!"

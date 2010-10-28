@@ -4,6 +4,20 @@
 
 tar zxvf log4cpp-1.0-3.tar.gz
 
+patch -p0 -i errors.patch
+if [ $? -ne 0 ]
+then
+	echo "patch errors.patch failed!"
+	exit 1
+fi
+
+patch -p0 -i configure.patch
+if [ $? -ne 0 ]
+then
+	echo "patch configure.patch failed!"
+	exit 1
+fi
+
 cd log4cpp-1.0 && echo Changed directory to `pwd`
 
 # This version of log4cpp is used to build the CREAM client libraries.

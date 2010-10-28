@@ -50,10 +50,14 @@ cd ..
 # between system and externals
 tar zxvf gridsite-1.6.0.src.tar.gz
 cd org.gridsite.core/src
+MYCFLAGS="-I. -I../interface -I$EXTERNALS_INSTALL_DIR/$EXT_LIBXML2_VERSION/include/libxml2"
+export MYCFLAGS
 make libgridsite.a
 cp libgridsite.a $stage_dir/lib
 cp ../interface/*.h $stage_dir/include
 cd ../..
+unset MYCFLAGS
+export MYCFLAGS
 
 # Build org.glite.security.gss
 tar zxvf org.glite.security.gss-2.0.1-1.tar.gz
@@ -104,6 +108,11 @@ ln -s share/wsdl $stage_dir/interface
 # Build cream api...
 tar zxvf org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
 patch -p0 -i cream.patch
+# BSD-based systems use a different flag to suppress a SIGPIPE when
+# sending on a closed connection.
+if [ `uname` = "Darwin" ] ; then
+  patch -p0 -i bsd.patch
+fi
 cp *.m4 org.glite.ce.cream-client-api-c/project
 cd org.glite.ce.cream-client-api-c
 ./bootstrap

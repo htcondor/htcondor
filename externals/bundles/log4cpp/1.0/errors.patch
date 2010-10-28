@@ -1,0 +1,23 @@
+diff -u -r log4cpp-1.0/src/BasicLayout.cpp log4cpp-1.0-patched/src/BasicLayout.cpp
+--- log4cpp-1.0/src/BasicLayout.cpp	2006-09-30 01:03:20.000000000 -0500
++++ log4cpp-1.0-patched/src/BasicLayout.cpp	2010-10-19 22:06:50.000000000 -0500
+@@ -14,6 +14,7 @@
+ #ifdef LOG4CPP_HAVE_SSTREAM
+ #include <sstream>
+ #endif
++#include <memory>
+ 
+ namespace log4cpp {
+ 
+diff -u -r log4cpp-1.0/src/PatternLayout.cpp log4cpp-1.0-patched/src/PatternLayout.cpp
+--- log4cpp-1.0/src/PatternLayout.cpp	2007-08-28 02:54:12.000000000 -0500
++++ log4cpp-1.0-patched/src/PatternLayout.cpp	2010-10-19 22:07:03.000000000 -0500
+@@ -370,7 +370,7 @@
+                         literal = "";
+                     }
+                     if ((minWidth != 0) || (maxWidth != 0)) {
+-                        component = new FormatModifierComponent(component, std::abs(minWidth), maxWidth, minWidth < 0);
++                        component = new FormatModifierComponent(component, std::abs((double)minWidth), maxWidth, minWidth < 0);
+                         minWidth = maxWidth = 0;
+                     }
+                     _components.push_back(component);
