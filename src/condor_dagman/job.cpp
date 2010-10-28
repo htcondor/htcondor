@@ -825,6 +825,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 		LogMonitorFailed();
+		EXCEPT( "Fatal log file monitoring error!\n" );
 		return false;
 	}
 
@@ -860,6 +861,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					"ERROR: Unable to unmonitor log " "file for node %s",
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		EXCEPT( "Fatal log file monitoring error!\n" );
 	}
 
 	if ( result ) {
