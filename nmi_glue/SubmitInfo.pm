@@ -40,17 +40,13 @@ our %build_and_test_sets = (
 	# If you don't specify what platforms you'd like built, then this is the
 	# list to which we default.
 	'official_ports' => [
-		'ia64_rhas_3',
 		'ppc64_sles_9',
 		'ppc_aix_5.2-pl5',
-		'ps3_ydl_5.0',
 		'sun4u_sol_5.9',
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
-		'x86_deb_4.0',
 		'x86_deb_5.0',
-		'x86_macos_10.4',
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
@@ -62,9 +58,6 @@ our %build_and_test_sets = (
 		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'ia64_sles_9',
-		'x86_64_sles_9',
-		'x86_sles_9',
-		'ppc_macos_10.4',
 		'x86_64_macos_10.5',
 		'x86_64_macos_10.6',
 		'x86_64_fedora_12-updated',
@@ -73,7 +66,7 @@ our %build_and_test_sets = (
 	],
 
 	'psilord' => [
-		'ppc_macos_10.4',
+		'x86_64_rhap_5',
 	],
 
 	'stduniv' => [
@@ -455,7 +448,6 @@ our %submit_info = (
 			],
 			'xtests'	=> [ 
 				'x86_64_ubuntu_10.04',
-				'x86_64_sles_9',
 				'x86_64_sl_5.5',
 				'x86_64_rhap_5.2',
 				'x86_64_fedora_12-updated', 'x86_64_fedora_13',
@@ -646,7 +638,6 @@ our %submit_info = (
 			'xtests'	=> [ 
 				'x86_64_ubuntu_10.04',
 				'x86_ubuntu_10.04',
-				'x86_64_sles_9',
 				'x86_64_sl_5.5',
 				'x86_64_rhap_5.2', 
 				'unmanaged-x86_rhap_5',
@@ -657,7 +648,6 @@ our %submit_info = (
 			 	'x86_rhas_4', 
 				'x86_suse_10.0', 
 				'x86_suse_10.2', 
-				'x86_sles_9',
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
 			],
