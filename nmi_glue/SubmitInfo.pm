@@ -740,6 +740,7 @@ our %submit_info = (
 				'--without-hadoop'				=> undef,
 				'--without-postgresql'			=> undef,
 				'--without-curl'				=> undef,
+				'--without-cream'				=> undef,
 				'--with-pcre'					=> undef,
 				'--disable-quill'				=> undef,
 				# identification of the platform.
@@ -1000,7 +1001,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_sol_5.11'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+								  '--disable-static' => undef,
+								  '--without-openssl' => undef,
+			},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
 			'xtests'	=> undef,
@@ -1746,6 +1750,3 @@ if (!defined($main::slaved_module)) {
 }
 
 1;
-
-
-
