@@ -34,7 +34,7 @@ using namespace std;
   #define FLT_MIN  __FLT_MIN__
 #endif
 #if !defined(FLT_MAX) && defined(__FLT_MAX__)
-  #define FLT_MIN  __FLT_MAX__
+  #define FLT_MAX  __FLT_MAX__
 #endif
 
 namespace compat_classad {
