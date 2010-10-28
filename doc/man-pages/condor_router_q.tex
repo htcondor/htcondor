@@ -7,16 +7,23 @@
 \oOpt{-R}
 \oOpt{-I}
 \oOpt{-H}
-\oOptArg{-route}{<name>}
+\oOptArg{-route}{name}
 \oOpt{-idle}
 \oOpt{-held}
-\oOptArg{-constraint}{x}
+\oOptArg{-constraint}{X}
+\oOpt{condor\_q options}
 
 \index{Job Router commands!condor\_router\_q}
 \index{condor\_router\_q}
 
 \Description
-Description of what this command does here.
+\Condor{router\_q} displays information about jobs managed by the
+\Condor{job\_router} that are in the Condor job queue.
+The functionality of this tool is that of \Condor{q},
+with additional options specialized for routed jobs.
+Therefore, any of the options for \Condor{q} may also be used
+with \Condor{router\_q}. 
+
 
 \begin{Options}
   \OptItem{\Opt{-S}}{
@@ -31,8 +38,8 @@ Description of what this command does here.
   \OptItem{\Opt{-H}}{
     Summarize the held jobs on each route.
   }
-  \OptItem{\OptArg{-route}{<name>}}{
-    Display only the jobs on the named route.
+  \OptItem{\OptArg{-route}{name}}{
+    Display only the jobs on the route identified by \Arg{name}.
   }
   \OptItem{\Opt{-idle}}{
     Display only the idle jobs.
