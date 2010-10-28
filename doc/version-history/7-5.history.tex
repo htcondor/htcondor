@@ -95,6 +95,11 @@ the attributes \AdAttr{MyType} and \AdAttr{TargetType}
 in offline ClassAds to get set to \Expr{"(unknown type)"}
 when the offline ClassAd was matched to a job.
 
+% gittrac #1715
+\item \Condor{dagman} now excepts in the case of certain log file errors,
+when continuing would be likely to put DAGMan into an incorrect internal
+state.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -474,7 +479,7 @@ name containing a space was used with the submit description file commands
 a GAHP server it was using wrote a large amount of data to its \File{stderr}.
 
 % gittrac #1653
-% gittarc #1475
+% gittrac #1475
 \item Fixed a bug that could cause the \Condor{gridmanager} to wrongly
 conclude that a \Expr{gt2} (that is, GRAM2) server was a \Expr{gt5}
 (that is, GRAM5) server.
