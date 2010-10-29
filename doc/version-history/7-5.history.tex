@@ -67,9 +67,14 @@ See section~\ref{param:LockDebugLogToAppend} for the complete definition.
 \begin{itemize}
 
 % gittrac #1737
+\item A bug introduced in Condor version 7.5.4 prevented parallel jobs
+with multiple \SubmitCmd{queue} statements in the submit description file
+from working with \Condor{dagman}.  This is now fixed.
 
-\item A bug introduced in 7.5.4 prevented parallel jobs with multiple queue
-statements from working with dagman.  This is now fixed.
+% gittrac #1715
+\item \Condor{dagman} now excepts in the case of certain log file errors,
+when continuing would be likely to put \Condor{dagman} into an incorrect 
+internal state.
 
 % gittrac #1681
 \item Improved the way Condor daemons send heartbeat messages to their parent
@@ -78,9 +83,11 @@ process.  This resolves a problem observed on busy submit machines using the
 determined that the \Condor{schedd} was hung and would kill and restart it.
 
 % gittrac #1688
-\item When \Macro{NOT\_RESPONDING\_WANT\_CORE} is \Expr{True}, the
-\Condor{master} daemon now follows up with a \Expr{SIGKILL}, if the
-child process does not exit within ten minutes of receiving \Expr{SIGABRT}.
+\item When the configuration variable \Macro{NOT\_RESPONDING\_WANT\_CORE}
+is \Expr{True},
+the \Condor{master} daemon now follows up with a \Expr{SIGKILL},
+if the child process does not exit within ten minutes of receiving
+\Expr{SIGABRT}.
 This addresses observed cases in
 which the child process hangs while writing a core file.
 
@@ -94,11 +101,6 @@ because look ups of the host name for incoming connections failed.
 the attributes \AdAttr{MyType} and \AdAttr{TargetType}
 in offline ClassAds to get set to \Expr{"(unknown type)"}
 when the offline ClassAd was matched to a job.
-
-% gittrac #1715
-\item \Condor{dagman} now excepts in the case of certain log file errors,
-when continuing would be likely to put DAGMan into an incorrect internal
-state.
 
 \end{itemize}
 
