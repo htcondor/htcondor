@@ -22,6 +22,22 @@ The details of each version are described below.
 \item Condor version 7.5.5 not yet released.
 %\item Condor version 7.5.5 released on Month Date, 2010.
 
+\item This version of Condor uses a different layout in the spool
+  directory for storing files belonging to jobs that are in the queue.
+  Conversion of the spool directory is automatic when upgrading, but
+  be aware that \emph{downgrading to a previous version of Condor
+  requires extra effort}.  The procedure for downgrading is either
+  to drain all jobs with spooled files from the queue or to manually
+  convert the spool back to the older format.  To manually convert
+  back to the older format, stop Condor and backup the spool directory
+  in case of problems.  Then move all subdirectories matching the form
+  \verb|$(SPOOL)/<#>/<#>/cluster<#>.proc<#>.subproc<#>| into
+  \verb|$(SPOOL)|.  Also do this for any files of the form
+  \verb|$(SPOOL)/<#>/cluster<#>.ickpt.subproc<#>|.  Then edit
+  \verb|$(SPOOL)/job_queue.log| with a text editor and change all
+  references to the old paths to the new paths.  Then remove
+  \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
+
 \end{itemize}
 
 
@@ -44,6 +60,18 @@ has been observed
 under Linux to sometimes result in a situation where the system does
 very little productive work, and is instead consumed by rapid context
 switching between the \Condor{shadow} daemons that are waiting for the lock.
+
+% gittrac 1706
+\item Under Linux, if the \Condor{schedd} daemon's spool directory is
+  on an ext3 filesystem, Condor can now scale to a larger number
+  of spooled jobs.  Previously, Condor created two sub-directories
+  within the spool directory for each spooled job and for each running
+  job.  The ext3 filesystem only supports 31997 sub-directories.  This
+  effectively limited the number of spooled jobs to less than 16
+  thousand.  Now, Condor creates a hieararchy of sub-directories within
+  the spool directory to increase the limit of number of spooled jobs
+  in ext3 to 320 million, which is likely to be larger than other limits
+  on the size of the job queue, such as memory.
 
 \end{itemize}
 

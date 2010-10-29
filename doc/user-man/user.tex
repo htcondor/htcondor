@@ -1200,13 +1200,13 @@ directory defined by the configuration variable \MacroNI{SPOOL}.
 The directory is named using the \Attr{ClusterId} and \Attr{ProcId} job
 ClassAd attributes.  The directory name takes the form:
 \begin{verbatim}
-   cluster<X>.proc<Y>.subproc0
+   <X mod 10000>/<Y mod 10000>/cluster<X>.proc<Y>.subproc0
 \end{verbatim}
 where \verb@<X>@ is the value of \Attr{ClusterId}, and 
 \verb@<Y>@ is the value of \Attr{ProcId}. 
 As an example, if job 735.0 is evicted, it will produce the directory
 \begin{verbatim}
-   $(SPOOL)/cluster735.proc0.subproc0
+   $(SPOOL)/735/0/cluster735.proc0.subproc0
 \end{verbatim}
 
 \end{enumerate}
