@@ -1,0 +1,54 @@
+diff -u -r log4cpp-1.0/configure log4cpp-1.0-patched/configure
+--- log4cpp-1.0/configure	2007-08-29 04:33:57.000000000 -0500
++++ log4cpp-1.0-patched/configure	2010-10-20 17:23:26.000000000 -0500
+@@ -1706,6 +1706,7 @@
+ # WARNING: Use '\'' to represent an apostrophe within the trap.
+ # WARNING: Do not start the trap code with a newline, due to a FreeBSD 4.0 bug.
+ trap 'exit_status=$?
++  echo JEF
+   # Save into config.log some information that might help in debugging.
+   {
+     echo
+@@ -4866,7 +4867,7 @@
+ else
+   ac_cv_header_stdc=no
+ fi
+-rm -f conftest*
++rm -rf conftest*
+ 
+ fi
+ 
+@@ -4887,7 +4888,7 @@
+ else
+   ac_cv_header_stdc=no
+ fi
+-rm -f conftest*
++rm -rf conftest*
+ 
+ fi
+ 
+@@ -6368,7 +6369,7 @@
+   # Check to see that the pipe works correctly.
+   pipe_works=no
+ 
+-  rm -f conftest*
++  rm -rf conftest*
+   cat > conftest.$ac_ext <<EOF
+ #ifdef __cplusplus
+ extern "C" {
+@@ -6465,7 +6466,7 @@
+     echo "$progname: failed program was:" >&5
+     cat conftest.$ac_ext >&5
+   fi
+-  rm -f conftest* conftst*
++  rm -rf conftest* conftst*
+ 
+   # Do not use the global_symbol_pipe unless it works.
+   if test "$pipe_works" = yes; then
+@@ -23876,5 +23877,5 @@
+ echo "$as_me: error: input file $ac_prefix_conf_IN does not exist,     skip generating $ac_prefix_conf_OUT" >&2;}
+    { (exit 1); exit 1; }; }
+   fi
+-  rm -f conftest.*
++  rm -rf conftest.*
+ fi

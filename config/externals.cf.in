@@ -43,6 +43,9 @@ EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
 EXT_COREDUMPER_VERSION = @ext_coredumper_version@
 EXT_BLAHP_VERSION = @ext_blahp_version@
 EXT_CURL_VERSION = @ext_curl_version@
+EXT_BOOST_VERSION = @ext_boost_version@
+EXT_LOG4CPP_VERSION = @ext_log4cpp_version@
+EXT_CARES_VERSION = @ext_cares_version@
 EXT_CREAM_VERSION = @ext_cream_version@
 EXT_HADOOP_VERSION = @ext_hadoop_version@
 EXT_LIBXML2_VERSION = @ext_libxml2_version@
@@ -142,6 +145,18 @@ UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)
 
 #if HAVE_EXT_BLAHP
 BLAHP_DIR = $(EXT_INSTALL)/$(EXT_BLAHP_VERSION)
+#endif
+
+#if HAVE_EXT_BOOST
+BOOST_DIR = $(EXT_INSTALL)/$(EXT_BOOST_VERSION)
+#endif
+
+#if HAVE_EXT_LOG4CPP
+LOG4CPP_DIR = $(EXT_INSTALL)/$(EXT_LOG4CPP_VERSION)
+#endif
+
+#if HAVE_EXT_CARES
+CARES_DIR = $(EXT_INSTALL)/$(EXT_CARES_VERSION)
 #endif
 
 #if HAVE_EXT_CREAM
