@@ -65,8 +65,6 @@ our %build_and_test_sets = (
 		'x86_64_macos_10.5',
 		'x86_64_macos_10.6',
 		'x86_64_fedora_12-updated',
-		'x86_64_sles_9',
-		'x86_sles_9',
 		'ppc_macos_10.4',
 		'sun4u_sol_5.10',
 		'x86_64_sol_5.11',
