@@ -39,6 +39,9 @@ our %build_and_test_sets = (
 	# on our download site.
 	# If you don't specify what platforms you'd like built, then this is the
 	# list to which we default.
+
+	# NOTE: Keep the stable or developer release branches synchronized with
+	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
 	'official_ports' => [
 		'ia64_rhas_3',
 		'ppc64_sles_9',
