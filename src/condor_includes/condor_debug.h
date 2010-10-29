@@ -78,7 +78,15 @@ extern "C" {
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
-extern int (*DebugId)(FILE *);		/* set header message */
+extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
+
+
+/* DebugId is a function that may be registered to be called to insert text
+ * into the header of a line that is about to be logged to the debug log file.
+ * It should treat its arguments similarly to how sprintf_realloc() does.
+ * It should also set its return value similarly to sprintf_realloc().
+ */
+extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 
@@ -112,6 +120,13 @@ void dprintf_dump_stack(void);
 
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
+
+/* reset statistics about delays acquiring the debug file lock */
+void dprintf_reset_lock_delay(void);
+
+/* return fraction of time spent waiting for debug file lock since
+   start of program or last call to dprintf_reset_lock_delay */
+double dprintf_get_lock_delay(void);
 
 /* wrapper for fclose() that soaks up EINTRs up to maxRetries number of times.
  */

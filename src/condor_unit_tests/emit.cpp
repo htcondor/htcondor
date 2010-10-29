@@ -55,8 +55,6 @@ void Emitter::init(bool failures_printed, bool successes_printed) {
 	set_debug_flags("D_ALWAYS");
 	set_debug_flags("D_NOHEADER");
 	config();
-	gettimeofday(&tm_start, NULL);
-	start_time = tm_start.tv_sec + (tm_start.tv_usec / 1000000.0);
 }
 
 /* Formats and prints a parameter and its value as a sub-point of input,
@@ -120,7 +118,7 @@ void Emitter::emit_test(const char* test) {
 	function_tests++;
 	buf->sprintf_cat("TEST:  %s\n", test);
 	print_now_if_possible();
-	gettimeofday(&tm_start, NULL);
+	start = time(0);
 }
 
 /* A header saying that the function's input is going to follow.
@@ -148,8 +146,8 @@ void Emitter::emit_output_actual_header() {
  * be called via the PASS macro."
  */
 void Emitter::emit_result_success(int line) {
-	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%f seconds)\n", 
-		line, get_completion_time());
+	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n", 
+		line, time(0) - start);
 	print_now_if_possible();
 	if(print_successes && !print_failures) {
 		if(!test_buf->IsEmpty()) {
@@ -166,8 +164,8 @@ void Emitter::emit_result_success(int line) {
  * be called via the PASS macro."
  */
 void Emitter::emit_result_failure(int line) {
-	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%f seconds)\n", 
-		line, get_completion_time());
+	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%ld seconds)\n", 
+		line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
 	failed_tests++;
@@ -178,8 +176,8 @@ void Emitter::emit_result_failure(int line) {
  * function should be called via the ABORT macro."
  */
 void Emitter::emit_result_abort(int line) {
-	buf->sprintf_cat("RESULT:  ABORTED, test failed at line %d (%f seconds)\n",
-		line, get_completion_time());
+	buf->sprintf_cat("RESULT:  ABORTED, test failed at line %d (%ld seconds)\n", 
+		line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
 	aborted_tests++;
@@ -212,9 +210,6 @@ void Emitter::emit_test_break() {
 }
 
 void Emitter::emit_summary() {
-	gettimeofday(&tm_finish, NULL);
-	double finish_time = tm_finish.tv_sec + (tm_finish.tv_usec / 1000000.0);
-	
 	dprintf(D_ALWAYS, "\n---------------------\nSUMMARY:\n");
 	dprintf(D_ALWAYS, "========\n");
 	dprintf(D_ALWAYS, "    Total Tested Objects:  %d\n", object_tests);
@@ -223,7 +218,6 @@ void Emitter::emit_summary() {
 	dprintf(D_ALWAYS, "    Failed Unit Tests:     %d\n", failed_tests);
 	dprintf(D_ALWAYS, "    Aborted Unit Tests:    %d\n", aborted_tests);
 	dprintf(D_ALWAYS, "    Skipped Unit Tests:    %d\n", skipped_tests);
-	dprintf(D_ALWAYS, "    Total Time Taken:      %f seconds\n", finish_time - start_time);
 }
 
 void Emitter::print_result_failure() {
@@ -242,23 +236,6 @@ void Emitter::print_now_if_possible() {
 		dprintf(D_ALWAYS, "%s", buf->Value());
 		buf->setChar(0, '\0');
 	}
-}
-
-double Emitter::get_completion_time() {
-	gettimeofday(&tm_finish, NULL);
-
-	long seconds, microseconds;
-	seconds = tm_finish.tv_sec - tm_start.tv_sec;
-	if(tm_finish.tv_usec < tm_start.tv_usec) {
-		microseconds = 1000000 - tm_start.tv_usec + tm_finish.tv_usec;
-		seconds--;
-	}
-	else {
-		microseconds = tm_finish.tv_usec - tm_start.tv_usec;
-	}
-	
-	return seconds + (microseconds / 1000000.0);
-
 }
 
 void init(bool failures_printed, bool successes_printed) {

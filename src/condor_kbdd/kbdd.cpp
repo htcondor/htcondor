@@ -317,6 +317,7 @@ static void hack_kbdd_registry()
 					if(!kbddPath)
 					{
 						dprintf(D_ALWAYS, "Error: Unable to find path to KBDD executable.\n");
+						RegCloseKey(hStart);
 						return;
 					}
 					int pathSize = GetModuleFileName(NULL, kbddPath, MAX_PATH);

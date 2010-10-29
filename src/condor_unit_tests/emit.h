@@ -52,15 +52,11 @@ private:
 
 	MyString *buf, *test_buf;
 
-	timeval tm_start, tm_finish;
-	double start_time;
+	time_t start;
 
 	void print_result_failure(void);
 	
 	void print_now_if_possible(void);
-
-	double get_completion_time(void);
-
 public:
 		// constructor and destructor
 	Emitter();
@@ -184,5 +180,5 @@ void emit_alert(const char* alert);
 void emit_test_break(void);
 
 void emit_summary(void);
-	
+
 #endif

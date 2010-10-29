@@ -32,8 +32,8 @@
 #include "basename.h"
 #include "directory.h"
 
-static bool setup(void);
-static bool cleanup(void);
+static void setup(void);
+static void cleanup(void);
 static bool test_cd2tmpdir_null(void);
 static bool test_cd2tmpdir_empty(void);
 static bool test_cd2tmpdir_dot(void);
@@ -149,30 +149,21 @@ bool OTEST_TmpDir(void) {
 	driver.register_function(test_cd2maindir_error_good);
 	driver.register_function(test_cd2maindir_error_bad);
 
-	//If setup fails, abort since many of the tests will fail
-	if(!setup()) {
-		emit_alert("Setup failed, aborting.");
-		cleanup();
-		ABORT;
-	}
-	
+	setup();
+
 	int status = driver.do_all_functions();
 	
-	if(!cleanup()) {
-		emit_alert("Cleanup failed, aborting.");
-		ABORT;
-	}
+	cleanup();
 
 	return status;
 }
 
-static bool setup() {
-	bool ret_val = true;
+static void setup() {
 
 	if ( PATH_MAX >= 4096 ) {
 		long_dir_depth = 10;
 	} else {
-#if defined(AIX)
+#if defined(AIX) || defined(Solaris)
 		long_dir_depth = 3;
 #else
 		long_dir_depth = 4;
@@ -180,12 +171,12 @@ static bool setup() {
 	}
 
 	//Get current working directory
-	ret_val &= condor_getcwd(original_dir);
+	cut_assert_true( condor_getcwd(original_dir) );
 
 	//Get parent directory
-	ret_val &= !chdir("..");
-	ret_val &= condor_getcwd(parent_dir);
-	ret_val &= !chdir(original_dir.Value());
+	cut_assert_z( chdir("..") );
+	cut_assert_true( condor_getcwd(parent_dir) );
+	cut_assert_z( chdir(original_dir.Value()) );
 
 	//Create a long string
 	for(int i = 0; i < 256; i++) {
@@ -194,62 +185,59 @@ static bool setup() {
 	long_dir[255] = '\0';
 	
 	//Create some non-existent files
-	sprintf(non_existent, "DoesNotExist%c", DIR_DELIM_CHAR);
-	sprintf(non_existent_file, "DoesNotExist%cDoesNotExist", 
-		DIR_DELIM_CHAR);
+	cut_assert_gz( sprintf(non_existent, "DoesNotExist%c", DIR_DELIM_CHAR) );
+	cut_assert_gz( sprintf(non_existent_file, "DoesNotExist%cDoesNotExist", 
+				   DIR_DELIM_CHAR) );
 	non_existent[13] = '\0';
 	non_existent_file[25] = '\0';
 	
 	//Get deep directories
 	for(int i = 0; i < 9; i++) {
-		deep_dir.sprintf_cat("tmp%c", DIR_DELIM_CHAR);
+		cut_assert_true( deep_dir.sprintf_cat("tmp%c", DIR_DELIM_CHAR) );
 	}
-	deep_dir.sprintf_cat("tmp");
+	cut_assert_true( deep_dir.sprintf_cat("tmp") );
 	
 	for(int i = 0; i < long_dir_depth - 1; i++) {
-		deep_dir_long.sprintf_cat("%s%c", long_dir, DIR_DELIM_CHAR);
+		cut_assert_true( deep_dir_long.sprintf_cat("%s%c", long_dir,
+						 DIR_DELIM_CHAR) );
 	}
-	deep_dir_long.sprintf_cat("%s", long_dir);
+	cut_assert_true( deep_dir_long.sprintf_cat("%s", long_dir) );
 	
 	//Make some directories to test
 	for(int i = 0; i < 10; i++) {
-		ret_val &= !mkdir("tmp", 0700);
-		ret_val &= !chdir("tmp");
+		cut_assert_z( mkdir("tmp", 0700) );
+		cut_assert_z( chdir("tmp") );
 	}
-	ret_val &= !chdir(original_dir.Value());
+	cut_assert_z( chdir(original_dir.Value()) );
 
 	//Make some directories to test
 	for(int i = 0; i < long_dir_depth; i++) {
-		ret_val &= !mkdir(long_dir, 0700);
-		ret_val &= !chdir(long_dir);
+		cut_assert_z( mkdir(long_dir, 0700) );
+		cut_assert_z( chdir(long_dir) );
 	}
-	ret_val &= !chdir(original_dir.Value());
-
-	return ret_val;
+	cut_assert_z( chdir(original_dir.Value()) );
 }
 
-static bool cleanup() {
-	bool ret_val = true;
+static void cleanup() {
 	
-	ret_val &= !chdir(deep_dir.Value());
+	cut_assert_z( chdir(deep_dir.Value()) );
 
 	//Remove the directories
 	for(int i = 0; i < 10; i++) {
-		ret_val &= !chdir("..");
-		ret_val &= !rmdir("tmp");
+		cut_assert_z( chdir("..") );
+		cut_assert_z( rmdir("tmp") );
 	}
 	
 	for(int i = 0; i < long_dir_depth; i++) {
-		ret_val &= !chdir(long_dir);
+		cut_assert_z( chdir(long_dir) );
 	}
 	
 	//Remove the directories
 	for(int i = 0; i < long_dir_depth; i++) {
-		ret_val &= !chdir("..");
-		ret_val &= !rmdir(long_dir);
+		cut_assert_z( chdir("..") );
+		cut_assert_z( rmdir(long_dir) );
 	}
 
-	return ret_val;
 }
 
 static bool test_cd2tmpdir_null() {

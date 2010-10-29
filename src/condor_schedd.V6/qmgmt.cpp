@@ -2469,6 +2469,16 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
 
+					// Skip writing submit events for procid != 0 for parallel jobs
+				int universe = -1;
+				procad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+				if ( universe == CONDOR_UNIVERSE_PARALLEL) {
+					doFsync = true; // only writing first proc, make sure to sync
+					if ( proc_id > 0) {
+						continue;
+					}
+				}
+	
 					// convert any old attributes for backwards compatbility
 				ConvertOldJobAdAttrs(procad, false);
 

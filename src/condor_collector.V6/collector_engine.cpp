@@ -1039,8 +1039,14 @@ mergeClassAd (CollectorHashTable &hashTable,
 		dprintf (D_FULLDEBUG, "%s: Merging update for ... \"%s\"\n",
 				 adType, hashString.Value() );
 
+			// Do not allow changes to some attributes
+		ClassAd new_ad_copy(*new_ad);
+		new_ad_copy.Delete(ATTR_AUTHENTICATED_IDENTITY);
+		new_ad_copy.Delete(ATTR_MY_TYPE);
+		new_ad_copy.Delete(ATTR_TARGET_TYPE);
+
 		// Now, finally, merge the new ClassAd into the old one
-		MergeClassAds(old_ad,new_ad,true);
+		MergeClassAds(old_ad,&new_ad_copy,true);
 	}
 	delete new_ad;
 	return old_ad;

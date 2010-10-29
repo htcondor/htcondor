@@ -34,7 +34,7 @@ DECL_SUBSYSTEM( "GRIDMANAGER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
 char *myUserName = NULL;
 
 // this appears at the bottom of this file
-extern "C" int display_dprintf_header(FILE *fp);
+extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 
 void
 usage( char *name )
@@ -177,7 +177,7 @@ main_pre_command_sock_init( )
 // log entries. 
 extern "C" 
 int
-display_dprintf_header(FILE *fp)
+display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;
 
@@ -185,7 +185,5 @@ display_dprintf_header(FILE *fp)
 		mypid = daemonCore->getpid();
 	}
 
-	fprintf( fp, "[%ld] ", (long)mypid );
-
-	return TRUE;
+	return sprintf_realloc( buf, bufpos, buflen, "[%ld] ", (long)mypid );
 }
