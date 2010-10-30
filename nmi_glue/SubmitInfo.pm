@@ -71,6 +71,7 @@ our %build_and_test_sets = (
 		'ppc_macos_10.4',
 		'sun4u_sol_5.10',
 		'x86_64_sol_5.11',
+		'x86_64_macos_10.5-updated',
 	],
 
 	'psilord' => [
@@ -521,7 +522,7 @@ our %submit_info = (
 				'libtool-1.5.26',
 			],
 			'xtests'	=> [ 
-				'x86_64_macos_10.5', 
+				'x86_64_macos_10.5-updated', 
 				'x86_64_macos_10.6', 
 				'x86_64_macos_10.6-updated',
 			],
@@ -549,6 +550,24 @@ our %submit_info = (
 				@default_prereqs,
 				'libtool-1.5.26',
 			],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_13'],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Mac OSX 10.5 on x86_64 with updates
+	# condor actually builds naturally for this one, we just don't release it
+	##########################################################################
+	'x86_64_macos_10.5-updated'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
 			'xtests'	=> undef,
 		},
 
