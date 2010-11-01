@@ -73,6 +73,8 @@ CStarter::CStarter()
 	suspended = false;
 	m_privsep_helper = NULL;
 	m_configured = false;
+	m_job_environment_is_ready = false;
+	m_all_jobs_done = false;
 }
 
 
@@ -819,6 +821,14 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	if( !jic || !jobad ) {
 		return SSHDRetry(s,"Rejecting request, because job not yet initialized.");
 	}
+	if( !m_job_environment_is_ready ) {
+			// This can happen if file transfer is still in progress.
+			// At this stage, the sandbox might not even be owned by the user.
+		return SSHDRetry(s,"Rejecting request, because the job execution environment is not yet ready.");
+	}
+	if( m_all_jobs_done ) {
+		return SSHDFailed(s,"Rejecting request, because the job is finished.");
+	}
 	if( suspended ) {
 			// Better to reject them with a clear explanation rather
 			// than to allow them to connect and then immediately
@@ -1511,6 +1521,8 @@ CStarter::jobEnvironmentReady( void )
 			m_privsep_helper->set_sandbox_owned_by_user();
 		}
 	}
+
+	m_job_environment_is_ready = true;
 
 		//
 		// The Starter will determine when the job 
@@ -2291,6 +2303,8 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
+	m_all_jobs_done = true;
+
 		// now that all user processes are complete, change the
 		// sandbox ownership back over to condor. if this is a VM
 		// universe job, this chown will have already been
