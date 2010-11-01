@@ -383,9 +383,11 @@ bool JICShadow::allJobsDone( void )
 
 
 bool
-JICShadow::transferOutput( void )
+JICShadow::transferOutput( bool &transient_failure )
 {
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutput(void)\n");
+
+	transient_failure = false;
 
 	if (m_did_transfer) {
 		return true;
@@ -448,6 +450,35 @@ JICShadow::transferOutput( void )
 			// Failed to transfer.
 			// JICShadow::transferOutputMopUp() will figure out what to do
 			// when you call it after JICShadow::transferOutput() returns.
+
+			if( !m_ft_info.success && m_ft_info.try_again ) {
+				// Some kind of transient error, such as a timeout or
+				// disconnect.  Would like to know for sure whether
+				// this really means we are disconnected from the
+				// shadow, but for now, force the socket to disconnect
+				// by closing it.
+
+				// Please forgive us these hacks
+				// as we forgive those who hack against us
+
+				static int timesCalled = 0;
+				timesCalled++;
+				if (timesCalled < 5) {
+					dprintf(D_ALWAYS,"File transfer failed, forcing disconnect.\n");
+
+					if (syscall_sock != NULL) {
+						syscall_sock->close();
+					}
+
+						// trigger retransfer on reconnect
+					job_cleanup_disconnected = true;
+
+						// inform our caller that transfer will be retried
+						// when the shadow reconnects
+					transient_failure = true;
+				}
+			}
+
 			m_did_transfer = false;
 			return false;
 		}
@@ -463,7 +494,6 @@ JICShadow::transferOutput( void )
 bool
 JICShadow::transferOutputMopUp(void)
 {
-	static int timesCalled = 0;
 
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputMopUp(void)\n");
 
@@ -489,27 +519,8 @@ JICShadow::transferOutputMopUp(void)
 			return false;
 		}
 
-		// Some other kind of error.  Would like to know
-		// for sure whether this really means we are disconnected
-		// from the shadow, but for now, force the socket to
-		// disconnect by closing it.
-
-		// Please forgive us these hacks
-		// as we forgive those who hack against us
-		timesCalled++;
-		if (timesCalled < 5) {
-				dprintf(D_ALWAYS,"File transfer failed, forcing disconnect.\n");
-
-				if (syscall_sock != NULL) {
-						syscall_sock->close();
-				}
-
-				job_cleanup_disconnected = true;
-				return false;
-		}
-
-		// We tried 5 times and kept failing
-		// now just tell the user we're giving up
+		// We hit some "transient" error, but we've retried too many times,
+		// so tell the shadow we are giving up.
 		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 		return false;
 	}
