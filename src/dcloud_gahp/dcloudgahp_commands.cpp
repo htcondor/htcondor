@@ -455,6 +455,7 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     int rc;
     bool ret = FALSE;
     char *esc_id;
+    struct deltacloud_error *last;
 
     dcloudprintf("called\n");
 
@@ -496,25 +497,29 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     }
 
     rc = deltacloud_get_instance_by_name(&api, name, &inst);
-    if (rc < 0 && rc != DELTACLOUD_FIND_ERROR) {
-        dcloudprintf("Could not get all instances\n");
-        output_string = create_failure(reqid, "Instance_Fetch_Failure");
-        goto cleanup_library;
-    }
-
-    output_string += itoa(reqid);
-    output_string += " NULL ";
     if (rc == 0) {
+        /* found the instance, output the id */
+        output_string = itoa(reqid);
+        output_string += " NULL ";
         esc_id = escape_id(inst.id);
         output_string += esc_id;
         free(esc_id);
-    } else {
-        output_string += "NULL";
-    }
-    output_string += '\n';
-
-    if (rc == 0) {
+        output_string += '\n';
         deltacloud_free_instance(&inst);
+    }
+    else if (rc < 0) {
+        last = deltacloud_get_last_error();
+        if (!last || last->error_num != DELTACLOUD_NAME_NOT_FOUND_ERROR) {
+            /* failed to find the instance, output an error */
+            dcloudprintf("Could not find instance by name\n");
+            output_string = create_failure(reqid, "Instance_Fetch_Failure");
+            goto cleanup_library;
+        }
+        else {
+            /* could not find the instance, which is not an error */
+            output_string = itoa(reqid);
+            output_string += " NULL NULL\n";
+        }
     }
 
     ret = TRUE;
