@@ -19,18 +19,11 @@ void dcloudprintf_internal(const char *function, const char *fmt, ...)
     pthread_mutex_unlock(&dcloudprintf_mutex);
 }
 
-const char *itoa( int i )
-{
-    static char buf[20];
-    snprintf( buf, sizeof(buf), "%d", i );
-    return buf;
-}
-
-std::string create_failure(int req_id, const char *err_msg)
+std::string create_failure(const char *req_id, const char *err_msg)
 {
     std::string buffer;
 
-    buffer += itoa(req_id);
+    buffer += req_id;
     buffer += ' ';
 
     buffer += err_msg;

@@ -56,15 +56,15 @@ static char *escape_id(const char *id)
     return ret;
 }
 
-static std::string create_instance_output(int reqid,
-                                       struct deltacloud_instance *inst)
+static std::string create_instance_output(char * reqid,
+					  struct deltacloud_instance *inst)
 {
     struct deltacloud_action *act;
     struct deltacloud_address *addr;
     std::string output_string;
     char *esc_id;
 
-    output_string += itoa(reqid);
+    output_string += reqid;
     output_string += " NULL ";
 
     esc_id = escape_id(inst->id);
@@ -120,20 +120,19 @@ static std::string create_instance_output(int reqid,
  */
 bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 {
-    char *url, *user, *password, *image_id, *name, *realm_id, *hwp_id;
+    char *url, *user, *password, *image_id, *name, *realm_id, *hwp_id, *reqid;
     struct deltacloud_api api;
     struct deltacloud_instance inst;
-    int reqid;
     bool ret = FALSE;
 
     dcloudprintf("called\n");
 
     if (!verify_number_args(9, argc)) {
-        output_string = create_failure(0, "Wrong_Argument_Number");
+        output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
     }
 
-    reqid = atoi(argv[1]);
+    reqid = argv[1];
     url = argv[2];
     user = argv[3];
     password = argv[4];
@@ -203,21 +202,20 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
  */
 bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
 {
-    char *url, *user, *password, *instance_id, *action;
+    char *url, *user, *password, *instance_id, *action, *reqid;
     struct deltacloud_api api;
     struct deltacloud_instance instance;
     int action_ret;
-    int reqid;
     bool ret = FALSE;
 
     dcloudprintf("called\n");
 
     if (!verify_number_args(7, argc)) {
-        output_string = create_failure(0, "Wrong_Argument_Number");
+        output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
     }
 
-    reqid = atoi(argv[1]);
+    reqid = argv[1];
     url = argv[2];
     user = argv[3];
     password = argv[4];
@@ -281,7 +279,7 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
         goto cleanup_instance;
     }
 
-    output_string += itoa(reqid);
+    output_string += reqid;
     output_string += " NULL\n";
 
     ret = TRUE;
@@ -301,20 +299,19 @@ cleanup_library:
  */
 bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
 {
-    char *url, *user, *password, *instance_id;
+    char *url, *user, *password, *instance_id, *reqid;
     struct deltacloud_api api;
     struct deltacloud_instance inst;
-    int reqid;
     bool ret = FALSE;
 
     dcloudprintf("called\n");
 
     if (!verify_number_args(6, argc)) {
-        output_string = create_failure(0, "Wrong_Argument_Number");
+        output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
     }
 
-    reqid = atoi(argv[1]);
+    reqid = argv[1];
     url = argv[2];
     user = argv[3];
     password = argv[4];
@@ -370,22 +367,21 @@ cleanup_library:
  */
 bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
 {
-    char *url, *user, *password;
+    char *url, *user, *password, *reqid;
     struct deltacloud_api api;
     struct deltacloud_instance *instances;
     struct deltacloud_instance *curr;
-    int reqid;
     bool ret = FALSE;
     char *esc_id;
 
     dcloudprintf("called\n");
 
     if (!verify_number_args(5, argc)) {
-        output_string = create_failure(0, "Wrong_Argument_Number");
+        output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
     }
 
-    reqid = atoi(argv[1]);
+    reqid = argv[1];
     url = argv[2];
     user = argv[3];
     password = argv[4];
@@ -417,7 +413,7 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
         goto cleanup_library;
     }
 
-    output_string += itoa(reqid);
+    output_string += reqid;
     output_string += " NULL";
 
     curr = instances;
@@ -448,8 +444,7 @@ cleanup_library:
  */
 bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
 {
-    char *url, *user, *password, *name;
-    int reqid;
+    char *url, *user, *password, *name, *reqid;
     struct deltacloud_api api;
     struct deltacloud_instance inst;
     int rc;
@@ -460,11 +455,11 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     dcloudprintf("called\n");
 
     if (!verify_number_args(6, argc)) {
-        output_string = create_failure(0, "Wrong_Argument_Number");
+        output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
     }
 
-    reqid = atoi(argv[1]);
+    reqid = argv[1];
     url = argv[2];
     user = argv[3];
     password = argv[4];
@@ -499,7 +494,7 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     rc = deltacloud_get_instance_by_name(&api, name, &inst);
     if (rc == 0) {
         /* found the instance, output the id */
-        output_string = itoa(reqid);
+        output_string = reqid;
         output_string += " NULL ";
         esc_id = escape_id(inst.id);
         output_string += esc_id;
@@ -517,7 +512,7 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
         }
         else {
             /* could not find the instance, which is not an error */
-            output_string = itoa(reqid);
+            output_string = reqid;
             output_string += " NULL NULL\n";
         }
     }
