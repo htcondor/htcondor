@@ -363,7 +363,7 @@ void DCloudJob::doEvaluateState()
 
 				errorString = "";
 
-				if ( m_instanceName == NULL ) {
+				if ( m_instanceName == NULL || strcmp(m_instanceName, "NULL") == 0) {
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( m_instanceId == NULL ) {
 					gmState = GM_CHECK_VM;
@@ -439,7 +439,7 @@ void DCloudJob::doEvaluateState()
 					break;
 				}
 
-				if ( m_instanceName == NULL ) {
+				if ( m_instanceName == NULL || strcmp(m_instanceName, "NULL") == 0) {
 					SetInstanceName( build_instance_name().Value() );
 				}
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
