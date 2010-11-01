@@ -69,7 +69,6 @@ static const char *GMStateNames[] = {
 
 #define DCLOUD_VM_STATE_RUNNING			"RUNNING"
 #define DCLOUD_VM_STATE_PENDING			"PENDING"
-#define DCLOUD_VM_STATE_SHUTTINGDOWN	"SHUTTING-DOWN"
 #define DCLOUD_VM_STATE_STOPPED			"STOPPED"
 #define DCLOUD_VM_STATE_FINISH			"FINISH"
 
@@ -960,6 +959,9 @@ void DCloudJob::StatusUpdate( const char *new_status )
 		// TODO Should 'shutting-down' be treated as running?
 		if ( strcasecmp( new_status, DCLOUD_VM_STATE_RUNNING ) == 0 ) {
 			JobRunning();
+		}
+		else if ( strcasecmp( new_status, DCLOUD_VM_STATE_STOPPED ) == 0 ) {
+			JobTerminated();
 		}
 		remoteJobState = new_status;
 		probeNow = true;
