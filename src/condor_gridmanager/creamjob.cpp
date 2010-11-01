@@ -1540,7 +1540,12 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 		enteredCurrentRemoteState = time(NULL);
 		SetRemoteJobStatus( remoteState.Value() );
 
-		if ( failure_reason ) {
+		// When a job is in DONE-OK state, Cream will often set a
+		// failure message of "reason=0", even though there is no
+		// failure. If there is a subsequent failure (say in staging
+		// output files), having remoteStateFaultString set to a
+		// non-empty value will hide the real failure message.
+		if ( failure_reason && remoteState != CREAM_JOB_STATE_DONE_OK ) {
 			remoteStateFaultString = failure_reason;
 		} else {
 			remoteStateFaultString = "";
