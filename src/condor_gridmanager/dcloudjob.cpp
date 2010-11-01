@@ -219,13 +219,19 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( token ) {
-			m_hwpId = strdup( token );
+			m_instanceName = strdup( token );
 		}
 
 		token = str.GetNextToken( " ", false );
 		if ( token ) {
 			m_realmId = strdup( token );
 		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token ) {
+			m_hwpId = strdup( token );
+		}
+
 	}
 	if ( m_realmId == NULL ) {
 		error_string.sprintf( "%s missing or incomplete", ATTR_GRID_RESOURCE );
