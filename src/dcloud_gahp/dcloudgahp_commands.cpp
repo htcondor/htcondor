@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <dcloudapi/dcloudapi.h>
+#include <libdeltacloud/libdeltacloud.h>
 #include <string>
 #include <stdlib.h>
 #include <strings.h>

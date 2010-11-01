@@ -6,7 +6,7 @@ all_target($(NAME))
  */
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = -ldcloudapi -lpthread
+LIB = -ldeltacloud -lpthread
 
 OBJ = dcloudgahp_main.o dcloudgahp_commands.o PipeBuffer.o dcloudgahp_common.o
 
