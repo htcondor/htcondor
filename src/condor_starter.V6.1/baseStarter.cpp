@@ -2318,8 +2318,14 @@ CStarter::transferOutput( void )
 {
 	char *ver;
 	UserProc *job;
+	bool transient_failure = false;
 
-	if (jic->transferOutput() == false) {
+	if (jic->transferOutput(transient_failure) == false) {
+
+		if( transient_failure ) {
+				// we will retry the transfer when (if) the shadow reconnects
+			return false;
+		}
 
 		// Send, if the JIC thinks it is talking to a shadow of the right
 		// version, a message about the termination of the job to the shadow in
