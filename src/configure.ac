@@ -3076,8 +3076,8 @@ AC_SUBST(CLASSADS_CFLAGS, $CLASSADS_CFLAGS)
 
 CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
-AC_MSG_CHECKING([if VOMS should be compiled (linux only)])
-if test "$_cv_opsys" = "LINUX" -o "$_cv_opsys" = "DARWIN" ; then
+AC_MSG_CHECKING([if VOMS should be compiled (linux and macos only)])
+if test "x$_cv_has_globus" = "xyes" -a \( "$_cv_opsys" = "LINUX" -o "$_cv_opsys" = "DARWIN" \) ; then
 	_cv_including_voms=yes
 	AC_MSG_RESULT([$_cv_including_voms])
 	CHECK_EXTERNAL([expat], [2.0.1], [soft])
@@ -3087,7 +3087,7 @@ else
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
-if test "$os" = "Linux" -o "$os" = "Darwin" ; then
+if test "x$_cv_has_globus" = "xyes" -a \( "$os" = "Linux" -o "$os" = "Darwin" \) ; then
   CHECK_EXTERNAL([boost],[1.33.1], [soft])
   CHECK_EXTERNAL([log4cpp],[1.0], [soft])
   CHECK_EXTERNAL([cares],[1.3.0], [soft])
