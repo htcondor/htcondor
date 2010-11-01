@@ -110,8 +110,11 @@ tar zxvf org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
 patch -p0 -i cream.patch
 # BSD-based systems use a different flag to suppress a SIGPIPE when
 # sending on a closed connection.
+# Mac OS X's libc doesn't have a timezone variable. It has a function by
+# the same time. Fortunately, Cream doesn't actually use timezone.
 if [ `uname` = "Darwin" ] ; then
   patch -p0 -i bsd.patch
+  patch -p0 -i macos.patch
 fi
 cp *.m4 org.glite.ce.cream-client-api-c/project
 cd org.glite.ce.cream-client-api-c
