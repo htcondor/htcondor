@@ -63,14 +63,14 @@ switching between the \Condor{shadow} daemons that are waiting for the lock.
 
 % gittrac 1706
 \item Under Linux, if the \Condor{schedd} daemon's spool directory is
-  on an ext3 filesystem, Condor can now scale to a larger number
-  of spooled jobs.  Previously, Condor created two sub-directories
+  on an ext3 file system, Condor can now scale to a larger number
+  of spooled jobs.  Previously, Condor created two subdirectories
   within the spool directory for each spooled job and for each running
-  job.  The ext3 filesystem only supports 31997 sub-directories.  This
-  effectively limited the number of spooled jobs to less than 16
-  thousand.  Now, Condor creates a hieararchy of sub-directories within
-  the spool directory to increase the limit of number of spooled jobs
-  in ext3 to 320 million, which is likely to be larger than other limits
+  job.  The ext3 file system only supports 31997 subdirectories.  This
+  effectively limited the number of spooled jobs to less than 16,000.
+  Now, Condor creates a hierarchy of subdirectories within
+  the spool directory, to increase the limit on the number of spooled jobs
+  in ext3 to 320,000,000, which is likely to be larger than other limits
   on the size of the job queue, such as memory.
 
 \end{itemize}
