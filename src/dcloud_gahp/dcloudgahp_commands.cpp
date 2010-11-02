@@ -142,22 +142,18 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     hwp_id = argv[8];
 
     if (STRCASEEQ(url, NULLSTRING)) {
-        dcloudprintf("URL cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
     }
     if (STRCASEEQ(user, NULLSTRING)) {
-        dcloudprintf("User cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_User");
         return FALSE;
     }
     if (STRCASEEQ(password, NULLSTRING)) {
-        dcloudprintf("Password cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Password");
         return FALSE;
     }
     if (STRCASEEQ(image_id, NULLSTRING)) {
-        dcloudprintf("Image ID cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Image_ID");
         return FALSE;
     }
@@ -172,15 +168,15 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     dcloudprintf("Arguments: reqid %d, url %s, user %s, password %s, image_id %s, name %s, realm_id %s, hwp_id %s\n", reqid, url, user, password, image_id, name, realm_id, hwp_id);
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
-        dcloudprintf("Could not initialize deltacloud\n");
-        output_string = create_failure(reqid, "Deltacloud_Init_Failure");
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
         return FALSE;
     }
 
     if (deltacloud_create_instance(&api, image_id, name, realm_id, hwp_id,
                                    &inst) < 0) {
-        dcloudprintf("Could not create_instance\n");
-        output_string = create_failure(reqid, "Create_Instance_Failure");
+        output_string = create_failure(reqid, "Create_Instance_Failure: %s",
+                                       deltacloud_get_last_error_string());
         goto cleanup_library;
     }
 
@@ -222,40 +218,35 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
     instance_id = argv[5];
     action = argv[6];
     if (STRCASEEQ(url, NULLSTRING)) {
-        dcloudprintf("URL cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
     }
     if (STRCASEEQ(user, NULLSTRING)) {
-        dcloudprintf("User cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_User");
         return FALSE;
     }
     if (STRCASEEQ(password, NULLSTRING)) {
-        dcloudprintf("Password cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Password");
         return FALSE;
     }
     if (STRCASEEQ(instance_id, NULLSTRING)) {
-        dcloudprintf("Instance ID cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Instance_ID");
         return FALSE;
     }
     if (STRCASEEQ(action, NULLSTRING)) {
-        dcloudprintf("Action cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid action");
         return FALSE;
     }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
-        dcloudprintf("Could not initialize deltacloud\n");
-        output_string = create_failure(reqid, "Deltacloud_Init_Failure");
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
         return FALSE;
     }
 
     if (deltacloud_get_instance_by_id(&api, instance_id, &instance) < 0) {
-        dcloudprintf("Failed to find instance id %s\n", instance_id);
-        output_string = create_failure(reqid, "Instance_Lookup_Failure");
+        output_string = create_failure(reqid, "Instance_Lookup_Failure: %s",
+                                       deltacloud_get_last_error_string());
         goto cleanup_library;
     }
 
@@ -268,14 +259,15 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
     else if (STRCASEEQ(action, "DESTROY"))
         action_ret = deltacloud_instance_destroy(&api, &instance);
     else {
-        dcloudprintf("Invalid action %s\n", action);
-        output_string = create_failure(reqid, "Invalid_Action");
+        output_string = create_failure(reqid, "Invalid_Action %s", action);
         goto cleanup_instance;
     }
 
     if (action_ret < 0) {
-        dcloudprintf("Failed to perform action on instance %s\n", instance_id);
-        output_string = create_failure(reqid, "Action_Failure");
+        output_string = create_failure(reqid,
+                                       "Action_Failure for instance %s: %s",
+                                       instance_id,
+                                       deltacloud_get_last_error_string());
         goto cleanup_instance;
     }
 
@@ -317,35 +309,32 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
     password = argv[4];
     instance_id = argv[5];
     if (STRCASEEQ(url, NULLSTRING)) {
-        dcloudprintf("URL cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
     }
     if (STRCASEEQ(user, NULLSTRING)) {
-        dcloudprintf("User cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_User");
         return FALSE;
     }
     if (STRCASEEQ(password, NULLSTRING)) {
-        dcloudprintf("Password cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Password");
         return FALSE;
     }
     if (STRCASEEQ(instance_id, NULLSTRING)) {
-        dcloudprintf("Instance ID cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Instance_ID");
         return FALSE;
     }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
-        dcloudprintf("Could not initialize deltacloud\n");
-        output_string = create_failure(reqid, "Deltacloud_Init_Failure");
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
         return FALSE;
     }
 
     if (deltacloud_get_instance_by_id(&api, instance_id, &inst) < 0) {
-        dcloudprintf("Failed to find instance id %s\n", instance_id);
-        output_string = create_failure(reqid, "Instance_Lookup_Failure");
+        output_string = create_failure(reqid, "Instance_Lookup_Failure %s: %s",
+                                       instance_id,
+                                       deltacloud_get_last_error_string());
         goto cleanup_library;
     }
 
@@ -386,30 +375,27 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
     user = argv[3];
     password = argv[4];
     if (STRCASEEQ(url, NULLSTRING)) {
-        dcloudprintf("URL cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
     }
     if (STRCASEEQ(user, NULLSTRING)) {
-        dcloudprintf("User cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_User");
         return FALSE;
     }
     if (STRCASEEQ(password, NULLSTRING)) {
-        dcloudprintf("Password cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Password");
         return FALSE;
     }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
-        dcloudprintf("Could not initialize deltacloud\n");
-        output_string = create_failure(reqid, "Deltacloud_Init_Failure");
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
         return FALSE;
     }
 
     if (deltacloud_get_instances(&api, &instances) < 0) {
-        dcloudprintf("Could not get all instances\n");
-        output_string = create_failure(reqid, "Instance_Fetch_Failure");
+        output_string = create_failure(reqid, "Instance_Fetch_Failure: %s",
+                                       deltacloud_get_last_error_string());
         goto cleanup_library;
     }
 
@@ -465,29 +451,25 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     password = argv[4];
     name = argv[5];
     if (STRCASEEQ(url, NULLSTRING)) {
-        dcloudprintf("URL cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
     }
     if (STRCASEEQ(user, NULLSTRING)) {
-        dcloudprintf("User cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_User");
         return FALSE;
     }
     if (STRCASEEQ(password, NULLSTRING)) {
-        dcloudprintf("Password cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Password");
         return FALSE;
     }
     if (STRCASEEQ(name, NULLSTRING)) {
-        dcloudprintf("Name cannot be NULL\n");
         output_string = create_failure(reqid, "Invalid_Name");
         return FALSE;
     }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
-        dcloudprintf("Could not initialize deltacloud\n");
-        output_string = create_failure(reqid, "Deltacloud_Init_Failure");
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
         return FALSE;
     }
 
@@ -506,8 +488,9 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
         last = deltacloud_get_last_error();
         if (!last || last->error_num != DELTACLOUD_NAME_NOT_FOUND_ERROR) {
             /* failed to find the instance, output an error */
-            dcloudprintf("Could not find instance by name\n");
-            output_string = create_failure(reqid, "Instance_Fetch_Failure");
+            output_string = create_failure(reqid,
+                                           "Instance_Fetch_Failure %s: %s",
+                                           name, last->details);
             goto cleanup_library;
         }
         else {
