@@ -15,7 +15,7 @@ void dcloudprintf_internal(const char *function, const char *fmt, ...);
 
 extern FILE *logfp;
 
-std::string create_failure(const char *req_id, const char *err_msg);
+std::string create_failure(const char *req_id, const char *err_msg, ...);
 
 /* Users of GahpArgs should not manipulate the class data members directly.
  * Changing the object should only be done via the member functions.

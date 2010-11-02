@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 #include "dcloudgahp_common.h"
 
 static pthread_mutex_t dcloudprintf_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -19,15 +20,30 @@ void dcloudprintf_internal(const char *function, const char *fmt, ...)
     pthread_mutex_unlock(&dcloudprintf_mutex);
 }
 
-std::string create_failure(const char *req_id, const char *err_msg)
+std::string create_failure(const char *req_id, const char *err_msg, ...)
 {
     std::string buffer;
+    va_list ap;
+    char *tmp;
+    unsigned int i;
 
     buffer += req_id;
     buffer += ' ';
 
-    buffer += err_msg;
+    va_start(ap, err_msg);
+    vasprintf(&tmp, err_msg, ap);
+    va_end(ap);
+
+    for (i = 0; i < strlen(tmp); i++) {
+      if (tmp[i] == ' ')
+          buffer += '\\';
+      buffer += tmp[i];
+    }
+    free(tmp);
+
     buffer += '\n';
+
+    dcloudprintf(buffer.c_str());
 
     return buffer;
 }
