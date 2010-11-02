@@ -6,8 +6,8 @@ log = job_filexfer_md5-remote_van.log
 Notification         = NEVER
 getenv               = false
 
-TransferFiles        = ALWAYS
-Transfer_Input_Files = data,datamd5
+should_transfer_files = YES
+transfer_input_files = data,datamd5
 when_to_transfer_output = ON_EXIT_OR_EVICT
 
 output = job_filexfer_md5-remote_van.out
