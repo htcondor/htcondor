@@ -62,6 +62,12 @@ case of certain log file errors.
   for the \Condor{shadow} to reconnect.  This problem was introduced
   in 7.4.4.
 
+% gittrac #1743
+\item If \Condor{ssh\_to\_job} attempted to connect to a job while the
+  job's input files were being transferred, this caused the file
+  transfer to fail, which resulted in the job returning to the idle
+  state in the queue.
+
 \end{itemize}
 
 \noindent Known Bugs:
