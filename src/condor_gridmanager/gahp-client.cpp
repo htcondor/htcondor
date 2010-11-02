@@ -8889,6 +8889,7 @@ int GahpClient::dcloud_submit( const char *service_url,
 							   const char *instance_name,
 							   const char *realm_id,
 							   const char *hwp_id,
+							   const char *keyname,
 							   StringList &attrs )
 {
 	// DCLOUD_VM_SUBMIT <req_id> <serviceurl> <username> <password> \
@@ -8908,6 +8909,7 @@ int GahpClient::dcloud_submit( const char *service_url,
 	if ( !instance_name ) instance_name = NULLSTRING;
 	if ( !realm_id ) realm_id = NULLSTRING;
 	if ( !hwp_id ) hwp_id = NULLSTRING;
+	if ( !keyname ) keyname = NULLSTRING;
 
 	MyString reqline;
 
@@ -8918,8 +8920,9 @@ int GahpClient::dcloud_submit( const char *service_url,
 	char* esc5 = strdup( escapeGahpString(instance_name) );
 	char* esc6 = strdup( escapeGahpString(realm_id) );
 	char* esc7 = strdup( escapeGahpString(hwp_id) );
+	char* esc8 = strdup( escapeGahpString(keyname) );
 
-	bool x = reqline.sprintf("%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
+	bool x = reqline.sprintf("%s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8);
 
 	free( esc1 );
 	free( esc2 );
@@ -8928,6 +8931,7 @@ int GahpClient::dcloud_submit( const char *service_url,
 	free( esc5 );
 	free( esc6 );
 	free( esc7 );
+	free( esc8 );
 	ASSERT( x == true );
 
 	const char *buf = reqline.Value();

@@ -153,6 +153,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	m_hwpId = NULL;
 	m_username = NULL;
 	m_password = NULL;
+	m_keyname = NULL;
 
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -231,6 +232,10 @@ DCloudJob::DCloudJob( ClassAd *classad )
 			m_hwpId = strdup( token );
 		}
 
+		token = str.GetNextToken( " ", false );
+		if ( token ) {
+			m_keyname = strdup( token );
+		}
 	}
 	if ( m_realmId == NULL ) {
 		error_string.sprintf( "%s missing or incomplete", ATTR_GRID_RESOURCE );
@@ -302,6 +307,7 @@ DCloudJob::~DCloudJob()
 	free( m_hwpId );
 	free( m_username );
 	free( m_password );
+	free( m_keyname );
 }
 
 
@@ -485,6 +491,7 @@ void DCloudJob::doEvaluateState()
 											  m_instanceName,
 											  m_realmId,
 											  m_hwpId,
+											  m_keyname,
 											  instance_attrs );
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {

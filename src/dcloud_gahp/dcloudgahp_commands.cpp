@@ -112,22 +112,23 @@ static std::string create_instance_output(char * reqid,
 }
 
 /*
- * DCLOUD_VM_SUBMIT <reqid> <url> <user> <password> <image_id> <name> <realm_id> <hwp_id>
+ * DCLOUD_VM_SUBMIT <reqid> <url> <user> <password> <image_id> <name> <realm_id> <hwp_id> <keyname>
  *  where all arguments are required.  <reqid>, <url>, <user>, <password>, and
- *  <image_id> all have to be non-NULL; <name>, <realm_id>, and <hwp_id>
- *  should either be the string "NULL" to let deltacloud pick, or a particular
- *  name, realm_id, or hwp_id to specify.
+ *  <image_id> all have to be non-NULL; <name>, <realm_id>, <hwp_id>,
+ *  and <keyname> should either be the string "NULL" to let deltacloud pick,
+ *  or a particular name, realm_id, hwp_id, or keyname to specify.
  */
 bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 {
     char *url, *user, *password, *image_id, *name, *realm_id, *hwp_id, *reqid;
+    char *keyname;
     struct deltacloud_api api;
     struct deltacloud_instance inst;
     bool ret = FALSE;
 
     dcloudprintf("called\n");
 
-    if (!verify_number_args(9, argc)) {
+    if (!verify_number_args(10, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
     }
@@ -140,6 +141,7 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     name = argv[6];
     realm_id = argv[7];
     hwp_id = argv[8];
+    keyname = argv[9];
 
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
@@ -164,8 +166,10 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
         realm_id = NULL;
     if (STRCASEEQ(hwp_id, NULLSTRING))
         hwp_id = NULL;
+    if (STRCASEEQ(keyname, NULLSTRING))
+        keyname = NULL;
 
-    dcloudprintf("Arguments: reqid %d, url %s, user %s, password %s, image_id %s, name %s, realm_id %s, hwp_id %s\n", reqid, url, user, password, image_id, name, realm_id, hwp_id);
+    dcloudprintf("Arguments: reqid %d, url %s, user %s, password %s, image_id %s, name %s, realm_id %s, hwp_id %s, keyname %s\n", reqid, url, user, password, image_id, name, realm_id, hwp_id, keyname);
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
@@ -174,7 +178,7 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     }
 
     if (deltacloud_create_instance(&api, image_id, name, realm_id, hwp_id,
-                                   &inst) < 0) {
+                                   keyname, &inst) < 0) {
         output_string = create_failure(reqid, "Create_Instance_Failure: %s",
                                        deltacloud_get_last_error_string());
         goto cleanup_library;

@@ -91,6 +91,7 @@ private:
 	char *m_hwpId;
 	char *m_username;
 	char *m_password;
+	char *m_keyname;
 
 	void ProcessInstanceAttrs( StringList &attrs );
 	MyString build_instance_name();

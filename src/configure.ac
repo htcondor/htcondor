@@ -3250,7 +3250,7 @@ AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$enable_proper" = xyes],
   [AC_CHECK_HEADERS([openssl/ssl.h], [],
     [AC_MSG_ERROR([gsoap in proper mode requires openssl/ssl.h])])])
 
-CHECK_EXTERNAL([libdeltacloud],[0.3],[soft],
+CHECK_EXTERNAL([libdeltacloud],[0.5],[soft],
                [libdeltacloud for deltacloud],
                [MF_LIB_CHECK([libdeltacloud],
                              [[deltacloud deltacloud_initialize]], [libdeltacloud])])
