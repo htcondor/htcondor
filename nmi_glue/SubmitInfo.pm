@@ -62,6 +62,8 @@ our %build_and_test_sets = (
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
 	# are those platforms.
 	'nmi_one_offs' => [
+		'unmanaged-x86_rhap_5',
+		'x86_64_rhap_5.3-updated',
 		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'ia64_sles_9',
@@ -1046,14 +1048,14 @@ our %submit_info = (
 	##########################################################################
 	'unmanaged-x86_rhap_5'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
 		
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -1188,14 +1190,14 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_rhap_5.3-updated'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
