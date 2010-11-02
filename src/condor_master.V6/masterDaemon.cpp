@@ -1878,6 +1878,7 @@ Daemons::StopDaemon( char* name )
 			iter->second->Stop();
 		}
 		else {
+			iter->second->CancelAllTimers();
 			delete iter->second;
 		}
 	}
