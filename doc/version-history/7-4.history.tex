@@ -55,7 +55,12 @@ case of certain log file errors.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1750
+\item A network disconnect between the submit machine and execute
+  machine during the transfer of output files caused the
+  \Condor{starter} daemon to immediately give up rather than waiting
+  for the \Condor{shadow} to reconnect.  This problem was introduced
+  in 7.4.4.
 
 \end{itemize}
 
