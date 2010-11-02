@@ -65,7 +65,6 @@ our %build_and_test_sets = (
 		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'ia64_sles_9',
-		'x86_64_macos_10.5',
 		'x86_64_macos_10.6',
 		'x86_64_fedora_12-updated',
 		'ppc_macos_10.4',
