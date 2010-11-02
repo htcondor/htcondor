@@ -567,7 +567,7 @@ our %submit_info = (
 	'x86_64_macos_10.5-updated'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, ],
+			'prereqs'	=> [ @default_prereqs, 'libtool-1.5.26' ],
 			'xtests'	=> undef,
 		},
 
