@@ -126,8 +126,6 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     struct deltacloud_instance inst;
     bool ret = FALSE;
 
-    dcloudprintf("called\n");
-
     if (!verify_number_args(10, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
@@ -142,6 +140,8 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     realm_id = argv[7];
     hwp_id = argv[8];
     keyname = argv[9];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, image_id %s, name %s, realm_id %s, hwp_id %s, keyname %s\n", reqid, url, user, password, image_id, name, realm_id, hwp_id, keyname);
 
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
@@ -168,8 +168,6 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
         hwp_id = NULL;
     if (STRCASEEQ(keyname, NULLSTRING))
         keyname = NULL;
-
-    dcloudprintf("Arguments: reqid %d, url %s, user %s, password %s, image_id %s, name %s, realm_id %s, hwp_id %s, keyname %s\n", reqid, url, user, password, image_id, name, realm_id, hwp_id, keyname);
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
@@ -208,8 +206,6 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
     int action_ret;
     bool ret = FALSE;
 
-    dcloudprintf("called\n");
-
     if (!verify_number_args(7, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
@@ -221,6 +217,9 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
     password = argv[4];
     instance_id = argv[5];
     action = argv[6];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, instance_id %s, action %s\n", reqid, url, user, password, instance_id, action);
+
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
@@ -300,8 +299,6 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
     struct deltacloud_instance inst;
     bool ret = FALSE;
 
-    dcloudprintf("called\n");
-
     if (!verify_number_args(6, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
@@ -312,6 +309,9 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
     user = argv[3];
     password = argv[4];
     instance_id = argv[5];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, instance_id %s\n", reqid, url, user, password, instance_id);
+
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
@@ -367,8 +367,6 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
     bool ret = FALSE;
     char *esc_id;
 
-    dcloudprintf("called\n");
-
     if (!verify_number_args(5, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
@@ -378,6 +376,9 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
     url = argv[2];
     user = argv[3];
     password = argv[4];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s\n", reqid, url, user, password);
+
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
@@ -442,8 +443,6 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     char *esc_id;
     struct deltacloud_error *last;
 
-    dcloudprintf("called\n");
-
     if (!verify_number_args(6, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
         return FALSE;
@@ -454,6 +453,9 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     user = argv[3];
     password = argv[4];
     name = argv[5];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, name %s\n", reqid, url, user, password, name);
+
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
         return FALSE;
