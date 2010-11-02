@@ -335,7 +335,6 @@ struct tm *localtime();
 void
 _condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
-	static int in_nonreentrant_part = 0;
 	struct tm *tm;
 	time_t clock_now;
 #if !defined(WIN32)
@@ -416,11 +415,6 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 	saved_errno = errno;
 
-	if( in_nonreentrant_part ) {
-		goto cleanup;
-	}
-	in_nonreentrant_part = 1;       /* Limit recursive calls */
-
 
 	/* log files owned by condor system acct */
 
@@ -436,49 +430,64 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		goto cleanup;
 	}
 
-		/* avoid priv macros so we can bypass priv logging */
-	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-
-		/* Grab the time info only once, instead of inside the for
-		   loop.  -Derek 9/14 */
-	memset((void*)&clock_now,0,sizeof(time_t)); // just to stop Purify UMR errors
-	(void)time(  &clock_now );
-	if ( ! DebugUseTimestamps ) {
-		tm = localtime( &clock_now );
-      }
-	
-		/* print debug message to catch-all debug file plus files */
-		/* registered for other debug levels */
-	for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
-		if ((debug_level == 0) ||
-			(DebugFile[debug_level] && (flags&(1<<(debug_level-1))))) {
-
-				/* Open and lock the log file */
-			(void)debug_lock(debug_level, NULL, 0);
-
-			if (DebugFP) {
-#ifdef va_copy
-				va_list copyargs;
-				va_copy(copyargs, args);
-				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,DebugFP,fmt,copyargs);
-				va_end(copyargs);
-#else
-				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,DebugFP,fmt,args);
-#endif
-			}
-
-			/* Close and unlock the log file */
-			debug_unlock(debug_level);
-
+	{
+		static int in_nonreentrant_part = 0;
+		if( in_nonreentrant_part ) {
+			/* Some of the following code messes with global state and
+			 * does not expect to be called recursively.  Note that if
+			 * we do get called recursively, the locking that happens
+			 * before this point is expected to work correctly (avoid
+			 * self-deadlock).
+			 */
+			goto cleanup;
 		}
-	}
+		in_nonreentrant_part = 1;
 
-		/* restore privileges */
-	_set_priv(priv, __FILE__, __LINE__, 0);
+			/* avoid priv macros so we can bypass priv logging */
+		priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+
+			/* Grab the time info only once, instead of inside the for
+			   loop.  -Derek 9/14 */
+		memset((void*)&clock_now,0,sizeof(time_t)); // just to stop Purify UMR errors
+		(void)time(  &clock_now );
+		if ( ! DebugUseTimestamps ) {
+			tm = localtime( &clock_now );
+		}
+	
+			/* print debug message to catch-all debug file plus files */
+			/* registered for other debug levels */
+		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
+			if ((debug_level == 0) ||
+				(DebugFile[debug_level] && (flags&(1<<(debug_level-1))))) {
+
+					/* Open and lock the log file */
+				(void)debug_lock(debug_level, NULL, 0);
+
+				if (DebugFP) {
+#ifdef va_copy
+					va_list copyargs;
+					va_copy(copyargs, args);
+					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,DebugFP,fmt,copyargs);
+					va_end(copyargs);
+#else
+					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,DebugFP,fmt,args);
+#endif
+				}
+
+					/* Close and unlock the log file */
+				debug_unlock(debug_level);
+
+			}
+		}
+
+			/* restore privileges */
+		_set_priv(priv, __FILE__, __LINE__, 0);
+
+		in_nonreentrant_part = 0;
+	}
 
 	cleanup:
 
-	in_nonreentrant_part = 0;
 	errno = saved_errno;
 
 #if !defined(WIN32) // umasks don't exist in WIN32
