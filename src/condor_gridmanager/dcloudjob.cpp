@@ -967,9 +967,6 @@ void DCloudJob::StatusUpdate( const char *new_status )
 		if ( strcasecmp( new_status, DCLOUD_VM_STATE_RUNNING ) == 0 ) {
 			JobRunning();
 		}
-		else if ( strcasecmp( new_status, DCLOUD_VM_STATE_STOPPED ) == 0 ) {
-			JobTerminated();
-		}
 		remoteJobState = new_status;
 		probeNow = true;
 		SetEvaluateState();
