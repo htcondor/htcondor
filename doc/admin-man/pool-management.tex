@@ -6,32 +6,21 @@ Condor provides administrative tools to help with
 pool management.
 The following sections describe some of these various tasks.
 
-\Todo
-%All of the commands described in this section must be run from an
-%authorized machine. 
-%An authorized machine is one that is listed in the 
-%\Macro{HOSTALLOW\_ADMINISTRATOR} configuration variable,
-%such that IP/host-based security allows the
-%administrator commands to be serviced.
-%See section~\ref{sec:Host-Security} on
-%page~\pageref{sec:Host-Security} for full details about IP/host-based
-%security in Condor.
+All of the commands described in this section are subject to the
+security policy chosen for the Condor pool.
+As such, the commands must be either run from a
+machine that has the proper authorization, 
+or run by a user that is authorized to issue the commands.
+Section~\ref{sec:Security} on
+page~\pageref{sec:Security} details the implementation of 
+security in Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Pool-Shutdown-and-Restart}
 Shutting Down and Restarting a Condor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%The installation of new binaries is a situation in which the
-%shutdown and restart of an entire Condor pool is appropriate.
-%It is generally
-%best to make sure no jobs are running, shut down Condor, and then
-%install the new daemons.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Pool-Shutdown}Shutting Down a Condor Pool}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+\Todo
 %The best way to shut down a pool is to take advantage of the remote
 %administration capabilities of the \Condor{master}.
 %The first step is to save the IP address and port of the
@@ -84,77 +73,6 @@ Shutting Down and Restarting a Condor Pool}
 %to another host, or any other task that requires the pool to be
 %shut down to successfully complete.
 %
-%If planning to install a new \Condor{master} binary, be
-%sure to read the following section to learn of the special considerations 
-%associated with
-%this somewhat delicate task.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:New-Master}Installing a New \Condor{master}}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%To install a new \Condor{master} binary, follow a
-%a few more steps.
-%When the \Condor{master} restarts, it will listen on a new port,
-%so the \File{addresses} file will contain stale information.
-%Moreover, when the \Condor{master} restarts,
-%it does not know of the previously issued
-%\Condor{off} command, and will just start up all the daemons
-%it is configured to spawn.
-%It must be explicitly told otherwise.
-
-%If it is desired that the pool completely restart itself whenever the
-%\Condor{master} notices its new binary, 
-%then neither of these issues are of any
-%concern: skip this (and the next) section.
-%Just be sure installing the new \Condor{master} binary is the final step,
-%and once the new binary is in place, the pool will
-%restart itself over the next 5 minutes (whenever all the \Condor{master}
-%daemons
-%notice the new binary, which they each check for once every 5 minutes
-%by default).
-%
-%However, to have absolute control over when the rest of
-%the daemons restart, take a few steps:
-
-%\begin{enumerate}
-%\item Place the following in the global configuration file:
-%\begin{verbatim}
-  %START_DAEMONS = False
-%\end{verbatim}
-%This will make sure that when the master restarts itself, it 
-%does not also start up the rest of its daemons.
-%\item Install the new \Condor{master} binary.
-%\item Start up Condor on the central manager machine.
-%This is done manually by logging into the machine and
-%sending commands locally.
-%First, send a \Condor{restart} to make sure you have the new \Condor{master},
-%then send a \Condor{on} to start up the other daemons (including, most
-%importantly, the \Condor{collector}).
-%\item Wait 5 minutes, such that all the \Condor{master} daemons have a chance to
-%notice the new binary, restart themselves, and send an update with
-%their new address.  Make sure that: 
-%\begin{verbatim}
-  %% condor_status -master
-%\end{verbatim}
-%lists all the machines in the pool.
-%\item Remove the special setting from the global configuration file.
-%\item Recreate the \File{addresses} file as described above:
-%\footnotesize
-%\begin{verbatim}
-  %% condor_status -master -format "%s\n" MasterIpAddr > addresses
-%\end{verbatim}
-%\normalsize
-%\end{enumerate}
-%
-%Once the new master is in place,
-%and you are ready to start up the
-%pool again, restart your whole pool by following the
-%steps in the next section.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Pool-Restart}Restarting a Condor Pool}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Once all preliminary tasks are done and
 %it is time to restart the pool, send a
@@ -171,21 +89,30 @@ Shutting Down and Restarting a Condor Pool}
 \subsection{\label{sec:Reconfigure-Pool}Reconfiguring a Condor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%To change a global configuration file setting and have all the
-%machines start to use the new setting, send a
-%\Condor{reconfig} command to each host.
-%Do this with a single command, issued from an authorized
-%administrator machine:
-%\begin{verbatim}
-  %% condor_reconfig -all
-%\end{verbatim}
-%
-%If the global configuration file is not shared among all the machines
-%(using a shared file system), the change must be made to each
-%copy of the global configuration file before issuing the \Condor{reconfig}
-%command.
+To change a global configuration variable and have all the
+machines start to use the new setting, send a
+\Condor{reconfig} command to each host.
+Do this with a \emph{single} command,
+\begin{verbatim}
+  condor_reconfig -all
+\end{verbatim}
+
+If the global configuration file is not shared among all the machines,
+as it will be if using a shared file system,
+the change must be made to each copy of the global configuration file
+before issuing the \Condor{reconfig} command.
+
+Issuing a \Condor{reconfig} command is inadequate for some
+configuration variables.
+For those, a restart of Condor is required.
+Those configuration variables that require a restart are listed in
+section~\ref{sec:Macros-Requiring-Restart}
+on page~\pageref{sec:Macros-Requiring-Restart}.
+The manual page for \Condor{restart} is at
+~\ref{man-condor-restart}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/dynamic-attributes.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
