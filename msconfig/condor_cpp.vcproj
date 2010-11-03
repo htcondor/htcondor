@@ -672,6 +672,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\directory_util.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\directory_util.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\directory.cpp"
 			>
 		</File>
@@ -761,6 +769,14 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\file_sql.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\spooled_job_files.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\spooled_job_files.h"
 			>
 		</File>
 		<File

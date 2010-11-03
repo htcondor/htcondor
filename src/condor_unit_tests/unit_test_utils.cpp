@@ -23,6 +23,7 @@
 
 #include "unit_test_utils.h"
 #include "emit.h"
+#include "condor_attributes.h"
 
 bool utest_sock_eq_octet( 	struct in_addr* address,
 							unsigned char oct1,
@@ -51,7 +52,7 @@ const char* tfnze( int var ) {
 	return "FALSE";
 }
 
-bool vsprintfHelper(MyString* str, char* format, ...) {
+bool vsprintfHelper(MyString* str, const char* format, ...) {
 	va_list args;
 	bool toReturn;
 
@@ -62,7 +63,7 @@ bool vsprintfHelper(MyString* str, char* format, ...) {
 	return toReturn;
 }
 
-bool vsprintf_catHelper(MyString* str, char* format, ...) {
+bool vsprintf_catHelper(MyString* str, const char* format, ...) {
 	va_list args;
 	bool toReturn;
 
@@ -90,12 +91,6 @@ int niceStrCmp(const char* str1, const char* str2) {
 	if(!str2)
 		return strcmp(str1, "");	//NULL, ""
 	return strcmp(str1, str2);
-}
-
-/* Exactly like free, but only frees when not null */
-void niceFree(char* str) {
-	if(str != NULL)
-		free(str);
 }
 
 /* Returns  a char** representation of the StringList starting at the string 
@@ -157,7 +152,7 @@ compat_classad::ClassAd* get_classad_from_file(){
 
 	FILE* classad_file;
 	ClassAd* classad_from_file;
-	char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
+	const char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
 		"MyType=\"foo\"\n TargetType=\"blah\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
@@ -199,7 +194,7 @@ bool strings_similar(const char* str1, const char* str2, const char* delims)
 		sl2.contains_list(sl1, false);
 }
 
-MyString* convert_string_array(char** str, int size, char* delim){
+MyString* convert_string_array(char** str, int size, const char* delim){
 	MyString* toReturn = new MyString;
 	
 	for(int i = 0; i < size && str[i] && str[i][0]; i++) {
@@ -242,4 +237,205 @@ void get_tm(ISO8601Type type, const struct tm &time, MyString* str)
 		}
 	}
 
+}
+
+bool user_policy_ad_checker(ClassAd* ad,
+						 	bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check) 
+{
+	int val1, val2, val3, val4, val5;
+	bool found = ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1) &&
+				 ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2) &&
+				 ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3) &&
+				 ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4) &&
+				 ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5);
+	
+	return found && val1 == periodic_hold && val2 == periodic_remove && 
+		   val3 == periodic_release && val4 == hold_check && 
+		   val5 == remove_check;
+}
+
+bool user_policy_ad_checker(ClassAd* ad,
+							bool timer_remove,
+							bool periodic_hold,
+							bool periodic_remove,
+							bool periodic_release,
+							bool hold_check,
+							bool remove_check) 
+{
+	int val;
+	bool found = ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val);
+	
+	return found && val == timer_remove &&
+		user_policy_ad_checker(ad, 
+							   periodic_hold,
+							   periodic_remove,
+							   periodic_release,
+							   hold_check,
+							   remove_check);
+}
+
+void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {
+	MyString buf;
+
+	buf.sprintf("%s = %s", attribute, value);
+	ad->Insert(buf.Value());
+}
+
+/* don't return anything: the process will die if value not zero */
+void cut_assert_z_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value != 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_z(%s) with value %d at line %d in "
+			"file %s.\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+}
+
+int cut_assert_nz_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value == 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_nz(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_gz_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value <= 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_gz(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_lz_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value >= 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_lz(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_gez_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value < 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_gez(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_lez_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value > 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_lez(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+bool cut_assert_true_impl(bool value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (!value) {
+		dprintf(D_ALWAYS, "Failed cut_assert_true(%s) with value %s at %d in %s"
+			".\n", expr, tfstr(value), line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+bool cut_assert_false_impl(bool value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value) {
+		dprintf(D_ALWAYS, "Failed cut_assert_false(%s) with value %s at %d in "
+			"%s.\n", expr, tfstr(value), line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+void* cut_assert_not_null_impl(void *value, char *expr, char *file, int line) {
+	int tmp_errno = errno;
+
+	if (value == NULL) {
+		dprintf(D_ALWAYS, "Failed cut_assert_not_null(%s) with value %p at %d "
+			"in %s.\n",	expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+/* don't return anything: the process will die if value is not NULL */
+void cut_assert_null_impl(void *value, char *expr, char *file, int line) {
+	int tmp_errno = errno;
+
+	if (value != NULL) {
+		dprintf(D_ALWAYS, "Failed cut_assert_not_null(%s) with value %p at %d "
+			"in %s.\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+}
+
+/* Safely creates an empty file */
+void create_empty_file(char *file)
+{
+	FILE *f = NULL;
+	cut_assert_not_null( f = safe_fopen_wrapper(file, "w+") );
+	cut_assert_z( fclose(f) );
 }

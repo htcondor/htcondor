@@ -246,7 +246,7 @@ setFloatKwList (char **value)
 
 // make query
 int GenericQuery::
-makeQuery (ExprTree *&tree, bool use_target)
+makeQuery (ExprTree *&tree)
 {
 	int		i, value;
 	char	*item;
@@ -268,9 +268,8 @@ makeQuery (ExprTree *&tree, bool use_target)
 			req += firstCategory ? "(" : " && (";
 			while ((item = stringConstraints [i].Next ()))
 			{
-				req.sprintf_cat ("%s(%s%s == \"%s\")", 
+				req.sprintf_cat ("%s(%s == \"%s\")", 
 						 firstTime ? " " : " || ", 
-						 use_target ? "TARGET." : "",
 						 stringKeywordList [i], item);
 				firstTime = false;
 				firstCategory = false;
@@ -289,9 +288,8 @@ makeQuery (ExprTree *&tree, bool use_target)
 			req += firstCategory ? "(" : " && (";
 			while (integerConstraints [i].Next (value))
 			{
-				req.sprintf_cat ("%s(%s%s == %d)", 
+				req.sprintf_cat ("%s(%s == %d)", 
 						 firstTime ? " " : " || ",
-						 use_target ? "TARGET." : "",
 						 integerKeywordList [i], value);
 				firstTime = false;
 				firstCategory = false;
@@ -310,9 +308,8 @@ makeQuery (ExprTree *&tree, bool use_target)
 			req += firstCategory ? "(" : " && (";
 			while (floatConstraints [i].Next (fvalue))
 			{
-				req.sprintf_cat ("%s(%s%s == %f)", 
+				req.sprintf_cat ("%s(%s == %f)", 
 						 firstTime ? " " : " || ",
-						 use_target ? "TARGET." : "",
 						 floatKeywordList [i], fvalue);
 				firstTime = false;
 				firstCategory = false;

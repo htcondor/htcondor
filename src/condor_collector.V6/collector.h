@@ -141,6 +141,8 @@ protected:
 	static List<ClassAd>* __ClassAdResultList__;
 	static int __numAds__;
 	static int __failed__;
+	static std::string __adType__;
+	static ExprTree *__filter__;
 
 	static TrackTotals* normalTotals;
 	static int submittorRunningJobs;

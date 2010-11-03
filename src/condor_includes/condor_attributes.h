@@ -292,6 +292,7 @@ extern const char * const  ATTR_JOB_STATUS_ON_RELEASE;
 extern const char * const  ATTR_JOB_UNIVERSE;
 extern const char * const  ATTR_JOB_WALL_CLOCK_CKPT;
 extern const char * const  ATTR_JOB_QUEUE_BIRTHDATE;
+extern const char * const  ATTR_JOB_REQUIRES_SANDBOX;
 extern const char * const  ATTR_JOB_VM_TYPE;
 extern const char * const  ATTR_JOB_VM_MEMORY;
 extern const char * const  ATTR_JOB_VM_VCPUS;
@@ -403,6 +404,7 @@ extern const char * const  ATTR_PREEMPTING_RANK;
 extern const char * const  ATTR_PREEMPTING_OWNER;
 extern const char * const  ATTR_PREEMPTING_USER;
 extern const char * const  ATTR_PREFERENCES;
+extern const char * const  ATTR_PREFER_PARALLEL_SCHEDULING_GROUP;
 extern const char * const  ATTR_PREV_SEND_ESTIMATE;
 extern const char * const  ATTR_PREV_RECV_ESTIMATE;
 extern const char * const  ATTR_PRIO;
@@ -459,6 +461,7 @@ extern const char * const  ATTR_START_LOCAL_UNIVERSE;
 extern const char * const  ATTR_START_SCHEDULER_UNIVERSE;
 extern const char * const  ATTR_STARTD_IP_ADDR;
 extern const char * const  ATTR_STARTD_PRINCIPAL;
+extern const char * const  ATTR_STARTD_SENDS_ALIVES;
 extern const char * const  ATTR_STATE;
 extern const char * const  ATTR_STARTER_IP_ADDR;
 extern const char * const  ATTR_STARTER_ABILITY_LIST;
@@ -470,6 +473,8 @@ extern const char * const  ATTR_STATUS;
 extern const char * const  ATTR_STREAM_INPUT;
 extern const char * const  ATTR_STREAM_OUTPUT;
 extern const char * const  ATTR_STREAM_ERROR;
+extern const char * const  ATTR_SUBMIT_EVENT_NOTES;
+extern const char * const  ATTR_SUBMIT_EVENT_USER_NOTES;
 extern const char * const  ATTR_SUBMITTER_ID;
 extern const char * const ATTR_SUBMITTER_TAG;
 extern const char * const  ATTR_SUBMITTOR_PRIO;  // old-style for ATTR_SUBMITTER_USER_PRIO
@@ -787,6 +792,12 @@ extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
 extern const char * const ATTR_JOB_MACHINE_ATTRS;
 extern const char * const ATTR_MACHINE_ATTR_PREFIX;
 extern const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH;
+extern const char * const ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0;
+extern const char * const ATTR_CUMULATIVE_SLOT_TIME;
+extern const char * const ATTR_COMMITTED_SLOT_TIME;
+
+extern const char * const ATTR_HASH_NAME;
+extern const char * const ATTR_AUTHENTICATED_IDENTITY;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

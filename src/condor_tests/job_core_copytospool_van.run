@@ -56,7 +56,9 @@ my $submitted = sub {
 	my $hexexemd5 = $datamd5->hexdigest;
 	CondorTest::debug("executable md5: $hexexemd5\n",$debuglevel);
 
-	my $spoolfile = $spool . "/cluster$cluster" . ".ickpt.subproc0";
+	my $shared_cluster_dir = $cluster % 10000;
+
+	my $spoolfile = $spool . "/${shared_cluster_dir}/cluster$cluster" . ".ickpt.subproc0";
 	CondorTest::debug("Spool file should be $spoolfile\n",$debuglevel);
 	#system("ls $spool");
 

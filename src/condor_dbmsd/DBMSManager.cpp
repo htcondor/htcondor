@@ -198,8 +198,9 @@ DBMSManager::InvalidatePublicAd() {
     query_ad.SetTargetTypeName(DBMSD_ADTYPE);
 
     MyString line;
-    line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value());
+    line.sprintf("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value());
     query_ad.Insert(line.Value());
+	query_ad.Assign(ATTR_NAME,m_name.Value());
 
     m_collectors->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
 	

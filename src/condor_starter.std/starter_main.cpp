@@ -68,7 +68,7 @@ DECL_SUBSYSTEM( "STARTER", SUBSYSTEM_TYPE_STARTER );
 	// Constants
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
-ReliSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
+StdUnivSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
 int		ExecTransferAttempts;	// How many attempts at getting the initial ckpt

@@ -58,7 +58,7 @@ class GenericQuery
 	void setFloatKwList (char **);
 	
 	// make the query expression
-	int makeQuery (ExprTree *&tree, bool use_target);
+	int makeQuery (ExprTree *&tree);
 
 	// overloaded operators
     // friend ostream &operator<< (ostream &, GenericQuery &);  // display

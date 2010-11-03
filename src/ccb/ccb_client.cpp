@@ -690,8 +690,19 @@ CCBClient::RegisterReverseConnectCallback()
 			ALLOW);
 	}
 
-	if( m_deadline_timer == -1 && m_target_sock->get_deadline() ) {
-		int timeout = m_target_sock->get_deadline() - time(NULL) + 1;
+	time_t deadline = m_target_sock->get_deadline();
+	if( deadline == 0 ) {
+			// Having no deadline at all is problematic.  We can end
+			// up waiting forever.  This can happen when the target daemon
+			// succeeds in its connect() operation to us but then we fail
+			// to successfully process the reverse-connect command for some
+			// reason (e.g. timeout reading the command).
+
+			// Therefore, if no deadline was specified, set one now.
+		deadline = time(NULL) + DEFAULT_SHORT_COMMAND_DEADLINE;
+	}
+	if( m_deadline_timer == -1 && deadline ) {
+		int timeout = deadline - time(NULL) + 1;
 		if( timeout < 0 ) {
 			timeout = 0;
 		}

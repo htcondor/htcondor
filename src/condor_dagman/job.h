@@ -441,6 +441,16 @@ class Job {
 		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
 
+		// The number of times this job has been held.  (Note: the current
+		// implementation counts holds for all procs in a multi-proc cluster
+		// together -- that should get changed eventually.)
+	int _timesHeld;
+
+		// The number of jobs procs of this node that are currently held.
+		// (Note: we may need to track the hold state of each proc in a
+		// cluster separately to correctly deal with multi-proc clusters.)
+	int _jobProcsOnHold;
+
 private:
 
 		// Note: Init moved to private section because calling int more than
@@ -501,10 +511,6 @@ private:
         by one for every Job object that is constructed
     */
     static JobID_t _jobID_counter;
-
-		// the number of my parents that have yet to complete
-		// successfully
-	int _waitingCount;
 
 		// True if the node job has been submitted and is idle.
 	bool _isIdle;

@@ -31,7 +31,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
-#include "condor_io.h"
+#include "std_univ_io.h"
 #include "condor_config.h"
 #include "condor_qmgr.h"
 #include "classad_helpers.h"
@@ -47,7 +47,7 @@ extern int JobStatus;
 extern "C" PROC  *Proc;
 extern ClassAd *JobAd;
 
-extern ReliSock *syscall_sock;
+extern StdUnivSock *syscall_sock;
 
 /* This used to be static, but now handle_terminate_pending() can modify this
 variable to true so it doesn't get emitted when it isn't supposed to. */

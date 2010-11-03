@@ -157,6 +157,8 @@ protected:
 	MyString m_last_status_result;
 	int m_vcpus;
 	MyString m_vm_job_mac;
+
+	priv_state m_file_owner;
 private:
 	void createInitialFileList();
 };

@@ -245,8 +245,7 @@ static bool test_remove_normal() {
 	int remove_result = table->remove(30);
 	if(remove_result != 0) {
 		emit_alert("Insert operation failed on the HashTable.");
-		emit_result_abort(__LINE__);
-		FAIL;
+		ABORT;
 	}
 	emit_input_header();
 	emit_param("Index", "30");
@@ -328,8 +327,7 @@ static bool test_num_elems_collision() {
 	int result = table->insert(30, 197);
 	if(result != 0) {
 		emit_alert("Inserting into the hash table failed, error in the unit test.");
-		emit_result_abort(__LINE__);
-		FAIL;
+		ABORT;
 	}
 	result = table->getNumElements();
 	emit_output_expected_header();

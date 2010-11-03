@@ -346,9 +346,11 @@ setMode (Mode mod, int i, char *argv)
         setBy = i;
         setArg = argv;
     } else {
-        fprintf (stderr, "Error:  Arg %d (%s) contradicts arg %d (%s)\n",
-                            i, argv, setBy, setArg);
-        exit (1);
+		if( strcmp(argv,setArg)!=0 ) {
+			fprintf (stderr, "Error:  Arg %d (%s) contradicts arg %d (%s)\n",
+					 i, argv, setBy, setArg);
+			exit (1);
+		}
     }
 }
 

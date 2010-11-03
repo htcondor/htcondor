@@ -75,7 +75,7 @@ REMOTE_CONDOR_send_a_file(char *local, char *remote, mode_t mode)
 {
 	int		loc_fd;
 	int		read_status = 0, write_status;
-	char	buf[ CONDOR_IO_BUF_SIZE ];
+	char	buf[ STD_UNIV_IO_BUF_SIZE ];
 	int		len;
 	int		bytes_to_go;
 	int		file_size;
@@ -177,7 +177,7 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 {
 	int		loc_fd;
 	int		write_status = 0, read_status;
-	char	buf[ CONDOR_IO_BUF_SIZE ];
+	char	buf[ STD_UNIV_IO_BUF_SIZE ];
 	int		checksum;
 	size_t		len;
 	size_t		file_size;

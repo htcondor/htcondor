@@ -30,7 +30,7 @@ extern "C" {
    CreateProcess(), but the person who calls CreateProcess has
    to do the param'ing themself.  -MEY 4-16-1999 */
 
-int renice_self(char*);
+int renice_self(const char*);
 
 #ifdef __cplusplus
 }

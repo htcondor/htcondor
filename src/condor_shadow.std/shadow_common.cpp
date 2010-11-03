@@ -28,7 +28,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_uid.h"
@@ -63,7 +63,7 @@ extern "C" {
 				  int reason_code, int reason_subcode );
 	char *d_format_time( double dsecs );
 	int unlink_local_or_ckpt_server( char *file );
-	int whoami( FILE *fp );
+	int whoami( char **buf,int *bufpos,int *buflen);
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char const *coredir );
@@ -462,12 +462,12 @@ unlink_local_or_ckpt_server( char *file )
 ** dprintf().
 */
 int
-whoami( FILE *fp )
+whoami( char **buf,int *bufpos,int *buflen)
 {
         if ((Proc) && (Proc->id.cluster || Proc->id.proc)) {
-                fprintf( fp, "(%d.%d) (%d):", Proc->id.cluster, Proc->id.proc, MyPid );
+                return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%d):", Proc->id.cluster, Proc->id.proc, MyPid );
         } else {
-                fprintf( fp, "(?.?) (%d):", MyPid );
+                return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%d):", MyPid );
         }
 		return 0;
 }

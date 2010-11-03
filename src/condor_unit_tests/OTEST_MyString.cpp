@@ -1160,7 +1160,7 @@ static bool equals_operator_string_empty_non_empty() {
 	emit_test("Does the = operator work correctly when an empty MyString gets"
 		" assigned a non empty string?");
 	MyString a;
-	char* b = "bar";
+	const char* b = "bar";
 	a = b;
 	emit_input_header();
 	emit_param("STRING", "%s", b);
@@ -1178,7 +1178,7 @@ static bool equals_operator_string_non_empty_non_empty() {
 	emit_test("Does the = operator work correctly when a non empty MyString "
 		"gets assigned a non empty string?");
 	MyString a("foo");
-	char* b = "bar";
+	const char* b = "bar";
 	a = b;
 	emit_input_header();
 	emit_param("STRING", "%s", b);
@@ -1196,7 +1196,7 @@ static bool equals_operator_string_non_empty_empty() {
 	emit_test("Does the = operator work correctly when a non empty MyString "
 		"gets assigned an empty string?");
 	MyString a("foo");
-	char* b = "";
+	const char* b = "";
 	a = b;
 	emit_input_header();
 	emit_param("STRING", "%s", b);
@@ -1605,7 +1605,7 @@ static bool concatenation_string_empty_non_empty() {
 	emit_test("Test concatenating an empty MyString with a non-empty "
 		"string.");
 	MyString a;
-	char* b = "foo";
+	const char* b = "foo";
 	a += b;
 	emit_input_header();
 	emit_param("STRING", "%s", b);
@@ -1624,7 +1624,7 @@ static bool concatenation_string_non_empty_non_empty() {
 	emit_test("Test concatenating a non-empty MyString with a non-empty "
 		"string.");
 	MyString a("blah");
-	char* b = "baz";
+	const char* b = "baz";
 	a += b;
 	emit_input_header();
 	emit_param("STRING", "%s", b);
@@ -3250,7 +3250,7 @@ static bool equality_mystring_two_empty() {
 static bool equality_string_one_char() {
 	emit_test("Test == between a MyString and a string of one character.");
 	MyString a("1");
-	char* b = "1";
+	const char* b = "1";
 	bool result = (a == b);
 	emit_input_header();
 	emit_param("MyString", "%s", a.Value());
@@ -3269,7 +3269,7 @@ static bool equality_string_one_char() {
 static bool equality_string_two_char() {
 	emit_test("Test == between a MyString and a string of two characters.");
 	MyString a("12");
-	char* b = "12";
+	const char* b = "12";
 	bool result = (a == b);
 	emit_input_header();
 	emit_param("MyString", "%s", a.Value());
@@ -3288,7 +3288,7 @@ static bool equality_string_two_char() {
 static bool equality_string_copied_delete() {
 	emit_test("Test == between two MyStrings after using the copy constructor"
 		" and then deleting the original MyString.");
-	char* b = "12";
+	const char* b = "12";
 	MyString* b_ms = new MyString(b);
 	MyString b_dup(*b_ms);
 	delete b_ms;
@@ -3310,7 +3310,7 @@ static bool equality_string_substring() {
 	emit_test("Test == between a String that is a substring of the "
 		"MyString.");
 	MyString a("12345");
-	char* b = "123";
+	const char* b = "123";
 	bool result = (a == b);
 	emit_input_header();
 	emit_param("MyString", "%s", a.Value());
@@ -3329,7 +3329,7 @@ static bool equality_string_one_empty() {
 	emit_test("Test == between a MyString that is empty and a string that "
 		"isn't.");
 	MyString a;
-	char* b = "12345";
+	const char* b = "12345";
 	bool result = (a == b);
 	emit_input_header();
 	emit_param("MyString", "%s", a.Value());
@@ -3347,7 +3347,7 @@ static bool equality_string_one_empty() {
 static bool equality_string_two_empty() {
 	emit_test("Test == between an empty MyString and an empty string.");
 	MyString a;
-	char* b = "\0";
+	const char* b = "\0";
 	bool result = (a == b);
 	emit_input_header();
 	emit_param("MyString", "%s", a.Value());
@@ -3403,7 +3403,7 @@ static bool inequality_mystring_not_equal() {
 static bool inequality_string_equal() {
 	emit_test("Test != between a MyString and a string that are equal.");
 	MyString a("123");
-	char* b = "123";
+	const char* b = "123";
 	bool result = (a != b);
 	emit_input_header();
 	emit_param("MyString", "%s", a.Value());
@@ -3422,7 +3422,7 @@ static bool inequality_string_equal() {
 static bool inequality_string_not_equal() {
 	emit_test("Test != between a MyString and a string that are not equal.");
 	MyString a("12");
-	char* b = "1";
+	const char* b = "1";
 	bool result = (a != b);
 	emit_input_header();
 	emit_param("MyString", "%s", a.Value());

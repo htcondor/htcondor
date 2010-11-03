@@ -2399,8 +2399,18 @@ LeaseManager.DEBUG_ADS		= False
 
 LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 #LeaseManager.QUERY_ADTYPE	= Any
-#LeaseManager.QUERY_CONSTRAINTS	= target.MyType == "SomeType"
-#LeaseManager.QUERY_CONSTRAINTS	= target.TargetType == "SomeType"
+#LeaseManager.QUERY_CONSTRAINTS	= MyType == "SomeType"
+#LeaseManager.QUERY_CONSTRAINTS	= TargetType == "SomeType"
+
+##
+##--------------------------------------------------------------------
+##  KBDD - keyboard activity detection daemon
+##--------------------------------------------------------------------
+##  When the KBDD starts up, it can place it's address (IP and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need an additional "-n host:port" command line option.  This
+##  feature can be turned off by commenting out this setting.
+KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 
 ##
 ##--------------------------------------------------------------------
@@ -2484,10 +2494,23 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 HDFS_NAMENODE = hdfs://example.com:9000
 HDFS_NAMENODE_WEB = example.com:8000
 
+HDFS_BACKUPNODE = hdfs://example.com:50100
+HDFS_BACKUPNODE_WEB = example.com:50105
+
 ## You need to pick one machine as name node by setting this parameter
 ## to HDFS_NAMENODE. The remaining machines in a storage cluster will
 ## act as data nodes (HDFS_DATANODE).
-HDFS_SERVICES = HDFS_DATANODE
+HDFS_NODETYPE = HDFS_DATANODE
+
+## If machine is selected to be NameNode then by a role should defined.
+## If it selected to be DataNode then this paramer is ignored.
+## Available options:
+## ACTIVE: Active NameNode role (default value)
+## BACKUP: Always synchronized with the active NameNode state, thus 
+##         creating a backup of the namespace. Currently the NameNode
+##         supports one Backup node at a time.
+## CHECKPOINT: Periodically creates checkpoints of the namespace. 
+HDFS_NAMENODE_ROLE = ACTIVE
 
 ## The two set of directories that are required by HDFS are for name 
 ## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
@@ -2527,4 +2550,4 @@ HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 #HDFS_DFSADMIN_CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
 
 ## In case an old name for hdfs configuration files is required.
-#HDFS_SITE_FILE = hadoop-site.xml
+#HDFS_SITE_FILE = hdfs-site.xml

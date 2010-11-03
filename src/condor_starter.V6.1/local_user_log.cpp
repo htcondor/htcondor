@@ -219,7 +219,9 @@ bool
 LocalUserLog::logStarterError( const char* err_msg, bool critical )
 {
 	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logStarterError(%s) called before init()",err_msg );
+			// This can happen if we hit an error talking to the shadow
+			// before we get the job ad.  Just ignore it.
+		return false;
 	}
 	if( ! should_log ) {
 		return true;

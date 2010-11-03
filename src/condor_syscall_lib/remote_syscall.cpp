@@ -23,10 +23,10 @@
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
 #include "condor_sys.h"
-#include "condor_io.h"
+#include "std_univ_io.h"
 
 
-ReliSock *syscall_sock;
+StdUnivSock *syscall_sock;
 
 static int RSCSock;
 static int ErrSock;
@@ -35,11 +35,11 @@ int InDebugMode;
 
 extern "C" {
 
-ReliSock *
+StdUnivSock *
 RSC_Init( int rscsock, int errsock )
 {
 	RSCSock     = rscsock;
-	syscall_sock = new ReliSock();
+	syscall_sock = new StdUnivSock();
 	syscall_sock->attach_to_file_desc(rscsock);
 
 	ErrSock = errsock;

@@ -68,7 +68,7 @@ BaseResource::BaseResource( const char *resource_name )
 		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
 
 	m_batchStatusActive = false;
-	m_batchPollTid = 0;
+	m_batchPollTid = TIMER_UNSET;
 }
 
 BaseResource::~BaseResource()
@@ -82,6 +82,9 @@ BaseResource::~BaseResource()
 	}
 	if ( _updateCollectorTimerId != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer ( _updateCollectorTimerId );
+	}
+	if ( m_batchPollTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer ( m_batchPollTid );
 	}
 	if ( resourceName != NULL ) {
 		free( resourceName );
@@ -168,13 +171,18 @@ bool BaseResource::Invalidate () {
        (HashName,SchedName,Owner) as unique id. */
     MyString line;
     line.sprintf ( 
-        "((%s =?= \"%s\") && (%s =?= \"%s\") && "
-		 "(%s =?= \"%s\") && (%s =?= \"%s\"))",
-        "HashName", GetHashName (),
+        "((TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\") && "
+		 "(TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\"))",
+        ATTR_HASH_NAME, GetHashName (),
         ATTR_SCHEDD_NAME, ScheddObj->name (),
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
         ATTR_OWNER, myUserName );
-    ad.Assign ( ATTR_REQUIREMENTS, line );
+    ad.AssignExpr ( ATTR_REQUIREMENTS, line.Value() );
+
+	ad.Assign( ATTR_HASH_NAME, GetHashName() );
+	ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
+	ad.Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
+	ad.Assign( ATTR_OWNER, myUserName );
 
     dprintf (
         D_FULLDEBUG,
@@ -621,7 +629,7 @@ dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 
 void BaseResource::StartBatchStatusTimer()
 {
-	if(m_batchPollTid) {
+	if(m_batchPollTid != TIMER_UNSET) {
 		EXCEPT("BaseResource::StartBatchStatusTimer called more than once!");
 	}
 	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());

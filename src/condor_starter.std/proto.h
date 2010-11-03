@@ -22,7 +22,7 @@
 
 #include <signal.h>
 
-#include "condor_io.h"
+#include "std_univ_io.h"
 
 #include "limit.h"
 
@@ -30,7 +30,7 @@ extern "C" {
 	int SetSyscalls( int );
 	void InitStaticFile( int, int );
 	void set_debug_flags( const char * );
-	ReliSock *RSC_Init( int rscsock, int errsock );
+	StdUnivSock *RSC_Init( int rscsock, int errsock );
 	int get_file( char *remote, char *local, int mode );
 	int send_a_file( const char *local_name, const char *remote_name, int mode );
 }
@@ -116,7 +116,7 @@ extern "C" {
 	void AllowAsynchEvents();
 	void BlockAsynchEvents();
 	char *sig_name( int );
-	ReliSock	 *init_syscall_connection( int );
+	StdUnivSock	 *init_syscall_connection( int );
 
 	/* these are the remote system calls that we use in the starter */
 	int REMOTE_CONDOR_image_size(int kbytes);

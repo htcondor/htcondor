@@ -114,7 +114,6 @@ void Job::Init( const char* jobName, const char* directory,
     _Status = STATUS_READY;
 	_isIdle = false;
 	countedAsDone = false;
-	_waitingCount = 0;
 
     _jobName = strnewp (jobName);
 	_directory = strnewp (directory);
@@ -174,6 +173,9 @@ void Job::Init( const char* jobName, const char* directory,
 	varValsFromDag = new List<MyString>;
 
 	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
+
+	_timesHeld = 0;
+	_jobProcsOnHold = 0;
 
 	return;
 }
@@ -308,12 +310,6 @@ Job::SanityCheck() const
 {
 	bool result = true;
 
-	if( _waitingCount < 0 ) {
-		dprintf( D_ALWAYS, "BADNESS 10000: _waitingCount = %d\n",
-				 _waitingCount );
-		result = false;
-	}
-
 	if( countedAsDone == true && _Status != STATUS_DONE ) {
 		dprintf( D_ALWAYS, "BADNESS 10000: countedAsDone == true but "
 				 "_Status != STATUS_DONE\n" );
@@ -390,7 +386,6 @@ Job::AddParent( Job* parent, MyString &whynot )
 						parent->GetJobName(), GetJobName() );
 			return false;
 		}
-		_waitingCount++;
 	}
 	whynot = "n/a";
     return true;
@@ -830,6 +825,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 		LogMonitorFailed();
+		EXCEPT( "Fatal log file monitoring error!\n" );
 		return false;
 	}
 
@@ -865,12 +861,12 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					"ERROR: Unable to unmonitor log " "file for node %s",
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		EXCEPT( "Fatal log file monitoring error!\n" );
 	}
 
-	delete [] _logFile;
-	_logFile = NULL;
-
 	if ( result ) {
+		delete [] _logFile;
+		_logFile = NULL;
 		_logIsMonitored = false;
 	}
 

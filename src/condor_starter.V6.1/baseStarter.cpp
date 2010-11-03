@@ -73,6 +73,8 @@ CStarter::CStarter()
 	suspended = false;
 	m_privsep_helper = NULL;
 	m_configured = false;
+	m_job_environment_is_ready = false;
+	m_all_jobs_done = false;
 }
 
 
@@ -819,6 +821,14 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	if( !jic || !jobad ) {
 		return SSHDRetry(s,"Rejecting request, because job not yet initialized.");
 	}
+	if( !m_job_environment_is_ready ) {
+			// This can happen if file transfer is still in progress.
+			// At this stage, the sandbox might not even be owned by the user.
+		return SSHDRetry(s,"Rejecting request, because the job execution environment is not yet ready.");
+	}
+	if( m_all_jobs_done ) {
+		return SSHDFailed(s,"Rejecting request, because the job is finished.");
+	}
 	if( suspended ) {
 			// Better to reject them with a clear explanation rather
 			// than to allow them to connect and then immediately
@@ -1511,6 +1521,8 @@ CStarter::jobEnvironmentReady( void )
 			m_privsep_helper->set_sandbox_owned_by_user();
 		}
 	}
+
+	m_job_environment_is_ready = true;
 
 		//
 		// The Starter will determine when the job 
@@ -2276,6 +2288,7 @@ CStarter::Reaper(int pid, int exit_status)
 				// so, we can directly call allJobsDone() to do final
 				// cleanup.
 			if( !allJobsDone() ) {
+				dprintf(D_ALWAYS, "Returning from CStarter::JobReaper()\n");
 				return 0;
 			}
 		}
@@ -2285,6 +2298,7 @@ CStarter::Reaper(int pid, int exit_status)
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
 		StarterExit(0);
 	}
+
 	return 0;
 }
 
@@ -2292,6 +2306,8 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
+	m_all_jobs_done = true;
+
 		// now that all user processes are complete, change the
 		// sandbox ownership back over to condor. if this is a VM
 		// universe job, this chown will have already been
@@ -2317,7 +2333,40 @@ CStarter::allJobsDone( void )
 bool
 CStarter::transferOutput( void )
 {
-	if (!jic->transferOutput()) {
+	char *ver;
+	UserProc *job;
+	bool transient_failure = false;
+
+	if (jic->transferOutput(transient_failure) == false) {
+
+		if( transient_failure ) {
+				// we will retry the transfer when (if) the shadow reconnects
+			return false;
+		}
+
+		// Send, if the JIC thinks it is talking to a shadow of the right
+		// version, a message about the termination of the job to the shadow in
+		// the event of a file transfer failure.  The UserProc's classad which
+		// has an ATTR_JOB_PID attribute is the actual job the starter ran on
+		// behalf of the user. For other types of jobs like pre/post scripts,
+		// that attribute is name mangled and won't be present as ATTR_JOB_PID
+		// in the published ad.
+		//
+		// See the usage of the "name" variable in user_proc.h/cpp
+
+		m_reaped_job_list.Rewind();
+		while ((job = m_reaped_job_list.Next()) != NULL) {
+			ClassAd ad;
+			int pid;
+			job->PublishUpdateAd(&ad);
+			if (ad.LookupInteger(ATTR_JOB_PID, pid)) {
+				jic->notifyJobTermination(job);
+				break;
+			}
+		}
+
+		jic->transferOutputMopUp();
+
 			/*
 			  there was an error with the JIC in this step.  at this
 			  point, the only possible reason is if we're talking to a
@@ -2330,6 +2379,8 @@ CStarter::transferOutput( void )
 				 "lease to expire or for a reconnect attempt\n" );
 		return false;
 	}
+
+	jic->transferOutputMopUp();
 
 		// If we're here, the JIC successfully transfered output.
 		// We're ready to move on to the next cleanup stage.

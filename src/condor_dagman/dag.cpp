@@ -119,7 +119,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_submitDagDeepOpts	  (submitDagDeepOpts),
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
-	_recoveryMaxfakeID	  (0)
+	_recoveryMaxfakeID	  (0),
+	_maxJobHolds		  (0)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -168,6 +169,12 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_update_dot_file       = false;
 	_overwrite_dot_file    = true;
 	_dot_file_name_suffix  = 0;
+
+	_statusFileName = NULL;
+	_statusFileOutdated = true;
+	_minStatusUpdateTime = 0;
+	_lastStatusUpdateTimestamp = 0;
+
 	_nextSubmitTime = 0;
 	_nextSubmitDelay = 1;
 	_recovery = false;
@@ -205,6 +212,8 @@ Dag::~Dag() {
 
 	delete[] _dot_file_name;
 	delete[] _dot_include_file_name;
+
+	delete[] _statusFileName;
     
     return;
 }
@@ -529,6 +538,12 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 			} 
 
+				// Note: this is a bit conservative -- some events (e.g.,
+				// ImageSizeUpdate) don't actually outdate the status file.
+				// If we need to, we could move this down to the cases
+				// where it's strictly necessary.
+			_statusFileOutdated = true;
+
 			switch(event->eventNumber) {
 
 			case ULOG_EXECUTABLE_ERROR:
@@ -566,7 +581,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_HELD:
-				ProcessHeldEvent(job);
+				ProcessHeldEvent(job, event);
 				ProcessIsIdleEvent(job);
 				break;
 
@@ -616,6 +631,15 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 
 	if ( job ) {
 		DecrementJobCounts( job );
+
+			// This code is here because if a held job is removed, we
+			// don't get a released event for that job.  This may not
+			// work exactly right if some procs of a cluster are held
+			// and some are not.  wenger 2010-08-26
+		if ( job->_jobProcsOnHold > 0 ) {
+			_numHeldJobProcs--;
+			job->_jobProcsOnHold--;
+		}
 
 			// Only change the node status, error info,
 			// etc., if we haven't already gotten an error
@@ -1122,14 +1146,26 @@ Dag::ProcessNotIdleEvent(Job *job) {
 }
 
 //---------------------------------------------------------------------------
+// We need the event here so we can tell which process has been held for
+// multi-process jobs.
 void
-Dag::ProcessHeldEvent(Job *job) {
+Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 
 	if ( !job ) {
 		return;
 	}
 
 	_numHeldJobProcs++;
+
+	job->_timesHeld++;
+	job->_jobProcsOnHold++;
+	if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
+		debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
+					"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
+					"proc(s) for this node will now be removed\n",
+					event->cluster, job->GetJobName(), _maxJobHolds );
+		RemoveBatchJob( job );
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -1141,6 +1177,8 @@ Dag::ProcessReleasedEvent(Job *job) {
 	}
 
 	_numHeldJobProcs--;
+
+	job->_jobProcsOnHold--;
 }
 
 //---------------------------------------------------------------------------
@@ -1792,6 +1830,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 		
 	}
 
+	//
+	// Print the node status file, if any.
+	//
+	if ( _statusFileName ) {
+		fprintf( fp, "NODE_STATUS_FILE %s\n\n", _statusFileName );
+	}
+
     //
     // Print per-node information.
     //
@@ -2286,6 +2331,192 @@ Dag::DumpDotFile(void)
 	}
 	return;
 }
+
+//===========================================================================
+// Methods for node status files.
+//===========================================================================
+
+/** Set the filename of the node status file.
+	@param the filename to which to dump node status information
+	@param the minimum interval, in seconds, at which to update the
+		status file (0 means no limit)
+*/
+void 
+Dag::SetNodeStatusFileName( const char *statusFileName,
+			int minUpdateTime )
+{
+	if ( _statusFileName != NULL ) {
+		debug_printf( DEBUG_NORMAL, "Attempt to set NODE_STATUS_FILE "
+					"to %s does not override existing value of %s\n",
+					statusFileName, _statusFileName );
+		return;
+	}
+	_statusFileName = strnewp( statusFileName );
+	_minStatusUpdateTime = minUpdateTime;
+}
+
+/** Dump the node status.
+	@param whether the DAG has just been held
+	@param whether the DAG has just been removed
+*/
+void
+Dag::DumpNodeStatus( bool held, bool removed )
+{
+		//
+		// Decide whether to update the file.
+		//
+	if ( _statusFileName == NULL ) {
+		return;
+	}
+	
+	if ( !_statusFileOutdated && !held && !removed ) {
+		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+					"because it is not yet outdated\n" );
+		return;
+	}
+	
+	time_t startTime = time( NULL );
+	bool tooSoon = (_minStatusUpdateTime > 0) &&
+				((startTime - _lastStatusUpdateTimestamp) <
+				_minStatusUpdateTime);
+	if ( tooSoon && !held && !removed && !FinishedRunning() ) {
+		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+					"because min. status update time has not yet passed\n" );
+		return;
+	}
+
+		//
+		// If we made it to here, we want to actually update the
+		// file.  We do that by actually writing to a temporary file,
+		// and then renaming that to the "real" file, so that the
+		// "real" file is always complete.
+		//
+	debug_printf( DEBUG_DEBUG_1, "Updating node status file\n" );
+
+	MyString tmpStatusFile( _statusFileName );
+	tmpStatusFile += ".tmp";
+		// Note: it's not an error if this fails (file may not
+		// exist).
+	unlink( tmpStatusFile.Value() );
+
+	FILE *outfile = safe_fopen_wrapper( tmpStatusFile.Value(), "w" );
+	if ( outfile == NULL ) {
+		debug_printf( DEBUG_NORMAL,
+					  "Warning: can't create node status file '%s': %s\n", 
+					  tmpStatusFile.Value(), strerror( errno ) );
+		return;
+	}
+
+		//
+		// Print header.
+		//
+	char *timeStr = ctime( &startTime );
+	char *newline = strchr(timeStr, '\n');
+	if (newline != NULL) {
+		*newline = 0;
+	}
+	fprintf( outfile, "BEGIN %lu (%s)\n",
+				(unsigned long)startTime, timeStr );
+	fprintf( outfile, "Status of nodes of DAG(s): " );
+	char *dagFile;
+	_dagFiles.rewind();
+	while ( (dagFile = _dagFiles.next()) ) {
+		fprintf( outfile, "%s ", dagFile );
+	}
+	fprintf( outfile, "\n\n" );
+
+		//
+		// Print status of all nodes.
+		//
+	ListIterator<Job> it ( _jobs );
+	Job *node;
+	while ( it.Next( node ) ) {
+		const char *statusStr = Job::status_t_names[node->GetStatus()];
+		const char *nodeNote = "";
+		if ( node->GetStatus() == Job::STATUS_READY ) {
+			if ( !node->CanSubmit() ) {
+				// See Job::_job_type_names for other strings.
+				statusStr = "STATUS_UNREADY  ";
+			}
+		} else if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
+			nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
+			// Note: add info here about whether the job(s) are
+			// held, once that code is integrated.
+		} else if ( node->GetStatus() == Job::STATUS_ERROR ) {
+			nodeNote = node->error_text;
+		}
+		fprintf( outfile, "JOB %s %s (%s)\n", node->GetJobName(),
+					statusStr, nodeNote );
+	}
+
+		//
+		// Print overall DAG status.
+		//
+	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
+	const char *statusNote = "";
+	if ( DoneSuccess() ) {
+		dagStatus = Job::STATUS_DONE;
+		statusNote = "success";
+	} else if ( DoneFailed() ) {
+		dagStatus = Job::STATUS_ERROR;
+		statusNote = "failed";
+	} else if ( DoneCycle() ) {
+		dagStatus = Job::STATUS_ERROR;
+		statusNote = "cycle";
+	} else if ( held ) {
+		statusNote = "held";
+	} else if ( removed ) {
+		dagStatus = Job::STATUS_ERROR;
+		statusNote = "removed";
+	}
+	fprintf( outfile, "\nDAG status: %s (%s)\n",
+				Job::status_t_names[dagStatus], statusNote );
+
+		//
+		// Print footer.
+		//
+	time_t endTime = time( NULL );
+
+	fprintf( outfile, "Next scheduled update: " );
+	if ( FinishedRunning() || removed ) {
+		fprintf( outfile, "none\n" );
+	} else {
+		time_t nextTime = endTime + _minStatusUpdateTime;
+		timeStr = ctime( &nextTime );
+		newline = strchr(timeStr, '\n');
+		if (newline != NULL) {
+			*newline = 0;
+		}
+		fprintf( outfile, "%lu (%s)\n", (unsigned long)nextTime, timeStr );
+	}
+
+	timeStr = ctime( &endTime );
+	newline = strchr(timeStr, '\n');
+	if (newline != NULL) {
+		*newline = 0;
+	}
+	fprintf( outfile, "END %lu (%s)\n",
+				(unsigned long)endTime, timeStr );
+
+	fclose( outfile );
+
+		//
+		// Now rename the temporary file to the "real" file.
+		//
+	if ( rename( tmpStatusFile.Value(), _statusFileName ) != 0 ) {
+		debug_printf( DEBUG_NORMAL,
+					  "Warning: can't rename temporary node status "
+					  "file (%s) to permanent file (%s): %s\n",
+					  tmpStatusFile.Value(), _statusFileName,
+					  strerror( errno ) );
+		return;
+	}
+
+	_statusFileOutdated = false;
+	_lastStatusUpdateTimestamp = startTime;
+}
+
+//===========================================================================
 
 //-------------------------------------------------------------------------
 // 

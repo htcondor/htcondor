@@ -42,7 +42,7 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
 // this appears at the bottom of this file:
-extern "C" int display_dprintf_header(FILE *fp);
+extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 extern bool sendUpdatesToSchedd;
 
 // some helper functions
@@ -382,6 +382,51 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 	DC_Exit( JOB_SHOULD_HOLD );
 }
 
+void
+BaseShadow::mockTerminateJob( MyString exit_reason, 
+		bool exited_by_signal, int exit_code, int exit_signal, 
+		bool core_dumped )
+{
+	if (exit_reason == "") {
+		exit_reason = "Exited normally";
+	}
+	
+	dprintf( D_ALWAYS, "Mock terminating job %d.%d: "
+			"exited_by_signal=%s, exit_code=%d OR exit_signal=%d, "
+			"core_dumped=%s, exit_reason=\"%s\"\n", 
+			 getCluster(),
+			 getProc(), 
+			 exited_by_signal ? "TRUE" : "FALSE",
+			 exit_code,
+			 exit_signal,
+			 core_dumped ? "TRUE" : "FALSE",
+			 exit_reason.Value());
+
+	if( ! jobAd ) {
+		dprintf(D_ALWAYS, "BaseShadow::mockTerminateJob(): NULL JobAd! "
+			"Holding Job!");
+		DC_Exit( JOB_SHOULD_HOLD );
+	}
+
+	// Insert the various exit attributes into our job ad.
+	jobAd->Assign( ATTR_JOB_CORE_DUMPED, core_dumped );
+	jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal );
+
+	if (exited_by_signal) {
+		jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exit_signal );
+	} else {
+		jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
+	}
+
+	jobAd->Assign( ATTR_EXIT_REASON, exit_reason );
+
+		// update the job queue for the attributes we care about
+	if( !updateJobInQueue(U_TERMINATE) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+}
+
 
 void
 BaseShadow::removeJob( const char* reason )
@@ -543,8 +588,16 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
     if( int_value > 0 ) {
         int job_committed_time = 0;
         jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
-        job_committed_time += (int)time(NULL) - int_value;
+		int delta = (int)time(NULL) - int_value;
+        job_committed_time += delta;
         jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+
+		float slot_weight = 1;
+		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
+		float slot_time = 0;
+		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
+		slot_time += slot_weight * delta;
+		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
     }
 
 	CommitSuspensionTime(jobAd);
@@ -1164,14 +1217,14 @@ BaseShadow::publishShadowAttrs( ClassAd* ad )
 }
 
 
-void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
+void BaseShadow::dprintf_va( int flags, const char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow
 		// might like to say ::dprintf( flags, "(res %d)"
 	::_condor_dprintf_va( flags, fmt, args );
 }
 
-void BaseShadow::dprintf( int flags, char* fmt, ... )
+void BaseShadow::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -1188,7 +1241,7 @@ extern BaseShadow *Shadow;
 // and pid in our log entries. 
 extern "C" 
 int
-display_dprintf_header(FILE *fp)
+display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;
 	int mycluster = -1;
@@ -1204,12 +1257,12 @@ display_dprintf_header(FILE *fp)
 	}
 
 	if ( mycluster != -1 ) {
-		fprintf( fp, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
+		return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
 	} else {
-		fprintf( fp, "(?.?) (%ld): ", (long)mypid );
+		return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%ld): ", (long)mypid );
 	}	
 
-	return TRUE;
+	return 0;
 }
 
 bool

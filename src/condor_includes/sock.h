@@ -155,9 +155,6 @@ public:
 	*/
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
 
-	static int set_timeout_multiplier(int secs);
-	static int get_timeout_multiplier() { return timeout_multiplier; }
-	
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 
 	int close();
@@ -187,6 +184,66 @@ public:
 	/**	@return true if > 0 bytes ready to read without blocking
 	*/
 	bool readReady();
+
+        //------------------------------------------
+        // Encryption support below
+        //------------------------------------------
+        bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
+        //------------------------------------------
+        // PURPOSE: set sock to use a particular encryption key
+        // REQUIRE: KeyInfo -- a wrapper for keyData
+        // RETURNS: true -- success; false -- failure
+        //------------------------------------------
+
+        bool wrap(unsigned char* input, int input_len, 
+                  unsigned char*& output, int& outputlen);
+        //------------------------------------------
+        // PURPOSE: encrypt some data
+        // REQUIRE: Protocol, keydata. set_encryption_procotol
+        //          must have been called and encryption_mode is on
+        // RETURNS: TRUE -- success, FALSE -- failure
+        //------------------------------------------
+
+        bool unwrap(unsigned char* input, int input_len, 
+                    unsigned char*& output, int& outputlen);
+        //------------------------------------------
+        // PURPOSE: decrypt some data
+        // REQUIRE: Protocol, keydata. set_encryption_procotol
+        //          must have been called and encryption_mode is on
+        // RETURNS: TRUE -- success, FALSE -- failure
+        //------------------------------------------
+
+        //----------------------------------------------------------------------
+        // MAC/MD related stuff
+        //----------------------------------------------------------------------
+        bool set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key = 0, const char * keyid = 0);    
+        //virtual bool set_MD_off() = 0;
+        //------------------------------------------
+        // PURPOSE: set mode for MAC (on or off)
+        // REQUIRE: mode -- see the enumeration defined above
+        //          key  -- an optional key for the MAC. if null (by default)
+        //                  all CEDAR does is send a Message Digest over
+        //                  When key is specified, this is essentially a MAC
+        // RETURNS: true -- success; false -- false
+        //------------------------------------------
+
+        bool isOutgoing_MD5_on() const { return (mdMode_ == MD_ALWAYS_ON); }
+        //------------------------------------------
+        // PURPOSE: whether MD is turned on or not
+        // REQUIRE: None
+        // RETURNS: true -- MD is on; 
+        //          false -- MD is off
+        //------------------------------------------
+
+        virtual const char * isIncomingDataMD5ed() = 0;
+        //------------------------------------------
+        // PURPOSE: To check to see if incoming data
+        //          has MD5 checksum/. NOTE! Currently,
+        //          this method should be used with UDP only!
+        // REQUIRE: None
+        // RETURNS: NULL -- data does not contain MD5
+        //          key id -- if the data is checksumed
+        //------------------------------------------
 
 	/*
 	**	Stream protocol
@@ -258,8 +315,6 @@ public:
 	Sock(const Sock &);
 
 	void doNotEnforceMinimalCONNECT_TIMEOUT() ;		// Used by HA Daemon
-
-	void ignoreTimeoutMultiplier() { ignore_timeout_multiplier = true; }
 
 	const char * getFullyQualifiedUser() const;
 
@@ -385,7 +440,7 @@ protected:
 
     ///
 	bool test_connection();
-	///
+	/// get timeout time for pending connect operation;
 	time_t connect_timeout_time();
 
 	///
@@ -399,6 +454,13 @@ protected:
 	virtual bool sendTargetSharedPortID() = 0;
 
 	bool enter_connected_state(char const *op="CONNECT");
+
+	virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId) = 0;
+	virtual bool set_encryption_id(const char * keyId) = 0;
+	const KeyInfo& get_crypto_key() const;
+	const KeyInfo& get_md_key() const;
+	void resetCrypto();
+	virtual bool canEncrypt();
 
 	/*
 	**	Data structures
@@ -414,16 +476,23 @@ protected:
 	char *          _fqu_domain_part;
 	bool            _tried_authentication;
 
-	static int timeout_multiplier;
-
 	bool ignore_connect_timeout;	// Used by HA Daemon
-
-	bool ignore_timeout_multiplier;
 
 	// Buffer to hold the string version of our own IP address. 
 	char _my_ip_buf[IP_STRING_BUF_SIZE];	
 
+	Condor_Crypt_Base * crypto_;         // The actual crypto
+	CONDOR_MD_MODE      mdMode_;        // MAC mode
+	KeyInfo           * mdKey_;
+
 private:
+	bool initialize_crypto(KeyInfo * key);
+        //------------------------------------------
+        // PURPOSE: initialize crypto
+        // REQUIRE: KeyInfo
+        // RETURNS: None
+        //------------------------------------------
+
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
 	int bindWithin(const int low, const int high, bool outbound);

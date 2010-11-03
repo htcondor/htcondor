@@ -22,7 +22,7 @@
 #include "condor_nfs.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_io.h"
+#include "std_univ_io.h"
 #include "condor_sys.h"
 #include "condor_mmap.h"
 #include "startup.h"
@@ -98,7 +98,7 @@ int getdents64( int fd, struct dirent64 *buf, size_t nbytes );
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
-extern ReliSock *syscall_sock;
+extern StdUnivSock *syscall_sock;
 
 #if defined(SYSCALL_DEBUG)
 	extern char *SyscallLabel;
@@ -155,7 +155,7 @@ extern struct tagJobList	*JobList;
 #include "prototypes.h"
 
 int
-do_REMOTE_syscall(ReliSock *sock, int process)
+do_REMOTE_syscall(StdUnivSock *sock, int process)
 {
 	int condor_sysnum;
 	int rval;

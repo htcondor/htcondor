@@ -99,6 +99,7 @@ CollectorEngine::
 	killHashTable (StorageAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
+	killHashTable (CollectorAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
 	killHashTable (XferServiceAds);
@@ -891,7 +892,7 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 	return val;
 }
 
-int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
+int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *query_contains_hash_key)
 {
 	int iRet = 0;
 	AdNameHashKey hk;
@@ -899,17 +900,26 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
 	HashFunc makeKey;
 	MyString hkString;
 
+	if( query_contains_hash_key ) {
+		*query_contains_hash_key = false;
+	}
+
 	// making it generic so any would be invalid query can contain these params.
 	if ( LookupByAdType (t_AddType, table, makeKey) )
 	{
 		ClassAd * pAd=0;
 		// try to create a hk from the query ad if it is possible.
-		if ( (*makeKey) (hk, (ClassAd*) &c_query, NULL) && table->lookup(hk, pAd) != -1 )
-		{
-			hk.sprint( hkString );
-			iRet = !table->remove(hk);
-			dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.Value() );
-			delete pAd;
+		if ( (*makeKey) (hk, (ClassAd*) &c_query, NULL) ) {
+			if( query_contains_hash_key ) {
+				*query_contains_hash_key = true;
+			}
+			if( table->lookup(hk, pAd) != -1 )
+			{
+				hk.sprint( hkString );
+				iRet = !table->remove(hk);
+				dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.Value() );
+				delete pAd;
+			}
 		}
 	}
 
@@ -1019,6 +1029,9 @@ mergeClassAd (CollectorHashTable &hashTable,
     {	 	
 		dprintf (D_ALWAYS, "%s: Failed to merge update for ** \"%s\" because "
 				 "no existing ad matches.\n", adType, hashString.Value() );
+			// We should _NOT_ delete new_ad if we return NULL
+			// because our caller will delete it in that case.
+		return NULL;
 	}
 	else
     {
@@ -1026,8 +1039,14 @@ mergeClassAd (CollectorHashTable &hashTable,
 		dprintf (D_FULLDEBUG, "%s: Merging update for ... \"%s\"\n",
 				 adType, hashString.Value() );
 
+			// Do not allow changes to some attributes
+		ClassAd new_ad_copy(*new_ad);
+		new_ad_copy.Delete(ATTR_AUTHENTICATED_IDENTITY);
+		new_ad_copy.Delete(ATTR_MY_TYPE);
+		new_ad_copy.Delete(ATTR_TARGET_TYPE);
+
 		// Now, finally, merge the new ClassAd into the old one
-		MergeClassAds(old_ad,new_ad,true);
+		MergeClassAds(old_ad,&new_ad_copy,true);
 	}
 	delete new_ad;
 	return old_ad;
@@ -1142,7 +1161,12 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey)
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
 			hk.sprint( hkString );
-			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+			if( timeStamp == 0 ) {
+				dprintf (D_ALWAYS,"\t\t**** Removing invalidated ad: \"%s\"\n", hkString.Value() );
+			}
+			else {
+				dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+			}
 			if (hashTable.remove (hk) == -1)
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
@@ -1249,6 +1273,7 @@ killHashTable (CollectorHashTable &table)
 {
 	ClassAd *ad;
 
+	table.startIterations();
 	while (table.iterate (ad))
 	{
 		delete ad;

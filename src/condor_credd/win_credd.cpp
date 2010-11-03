@@ -146,8 +146,9 @@ CredDaemon::invalidate_ad()
 	query_ad.SetTargetTypeName(CREDD_ADTYPE);
 
 	MyString line;
-	line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
+	line.sprintf("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
     query_ad.Insert(line.Value());
+	query_ad.Assign(ATTR_NAME,m_name);
 
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
 }

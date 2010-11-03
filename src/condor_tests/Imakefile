@@ -393,6 +393,9 @@ TESTCLASS(lib_auth_protocol-gsi,quicknolink)
 
 #endif
 
+/* These guys are triggering a massive memory leak
+   which is shutting down NMI.  Turn them off until
+   we figure it out. -- GGT
 DESC(lib_auth_protocol-negot,"4 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
@@ -420,6 +423,7 @@ TESTCLASS(lib_auth_protocol-negot-prt4,core)
 TESTCLASS(lib_auth_protocol-negot-prt4,quick)
 TESTCLASS(lib_auth_protocol-negot-prt4,full)
 TESTCLASS(lib_auth_protocol-negot-prt4,quicknolink)
+*/
 
 /* Turned off on Free BSD port GNATS 766 */
 
@@ -579,22 +583,18 @@ TESTCLASS(cmd_q_shows-format,quicknolink)
 
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
-DEPS(lib_userlog,x_read_joblog.exe)
-DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 TESTCLASS(lib_userlog,quick)
 TESTCLASS(lib_userlog,full)
 
 DESC(lib_eventlog,"Basic Event Log Test")
 RUN(lib_eventlog)
-DEPS(lib_eventlog,x_read_joblog.exe)
 TESTCLASS(lib_eventlog,core)
 TESTCLASS(lib_eventlog,quick)
 TESTCLASS(lib_eventlog,full)
 
 DESC(lib_eventlog-xml,"Basic XML Event Log Test")
 RUN(lib_eventlog-xml)
-DEPS(lib_eventlog-xml,x_read_joblog.exe)
 TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 TESTCLASS(lib_eventlog-xml,full)
@@ -603,8 +603,6 @@ TESTCLASS(lib_eventlog-xml,full)
    cause seg faults */
 DESC(lib_eventlog_base,"Test re-initialization of eventlog reader")
 RUN(lib_eventlog_base)
-DEPS(lib_eventlog_base,lib_eventlog_base.exe)
-DEPS(lib_eventlog_base,lib_eventlog_base.exe)
 TESTCLASS(lib_eventlog_base,lib)
 TESTCLASS(lib_eventlog_base,quick)
 TESTCLASS(lib_eventlog_base,full)
@@ -782,7 +780,8 @@ TESTCLASS(lib_lease_manager-get_rel_5,core)
 TESTCLASS(lib_lease_manager-get_rel_5,quick)
 TESTCLASS(lib_lease_manager-get_rel_5,full)
 
-#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_CONDOR_FREEBSD) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
+/* Quill is now unsupported, stop running the tests */
+#if defined(NEVER_RUN)
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
 TESTCLASS(job_quill_basic,core)
@@ -1636,31 +1635,26 @@ TESTCLASS(job_filexfer_md5-remote_van,quicknolink)
 /* new condor_wait tests */
 
 DESC(cmd_wait_shows-all,"")
-DEPS(cmd_wait_shows-all,x_write_joblog_events.exe)
 RUN(cmd_wait_shows-all)
 TESTCLASS(cmd_wait_shows-all,quick)
 TESTCLASS(cmd_wait_shows-all,full)
 
 DESC(cmd_wait_shows-base,"")
-DEPS(cmd_wait_shows-base,x_write_joblog_events.exe)
 RUN(cmd_wait_shows-base)
 TESTCLASS(cmd_wait_shows-base,quick)
 TESTCLASS(cmd_wait_shows-base,full)
 
 DESC(cmd_wait_shows-notimeout,"")
-DEPS(cmd_wait_shows-notimeout,x_write_joblog_events.exe)
 RUN(cmd_wait_shows-notimeout)
 TESTCLASS(cmd_wait_shows-notimeout,quick)
 TESTCLASS(cmd_wait_shows-notimeout,full)
 
 DESC(cmd_wait_shows-partial,"")
-DEPS(cmd_wait_shows-partial,x_write_joblog_events.exe)
 RUN(cmd_wait_shows-partial)
 TESTCLASS(cmd_wait_shows-partial,quick)
 TESTCLASS(cmd_wait_shows-partial,full)
 
 DESC(cmd_wait_shows-timeout,"")
-DEPS(cmd_wait_shows-timeout,x_write_joblog_events.exe)
 RUN(cmd_wait_shows-timeout)
 TESTCLASS(cmd_wait_shows-timeout,quick)
 TESTCLASS(cmd_wait_shows-timeout,full)
@@ -1668,7 +1662,6 @@ TESTCLASS(cmd_wait_shows-timeout,full)
 /* Dagman Tests */
 
 DESC(job_dagman_comlog,"Run a dag with multiple nodes sharing a common log")
-DEPS(job_dagman_comlog,x_read_joblog.exe)
 RUN(job_dagman_comlog)
 TESTCLASS(job_dagman_comlog,dagman)
 TESTCLASS(job_dagman_comlog,quick)
@@ -1676,7 +1669,6 @@ TESTCLASS(job_dagman_comlog,full)
 TESTCLASS(job_dagman_comlog,quicknolink)
 
 DESC(job_dagman_fullremove,"Ensure a removed dag is completely removed")
-DEPS(job_dagman_fullremove,x_read_joblog.exe)
 RUN(job_dagman_fullremove)
 TESTCLASS(job_dagman_fullremove,dagman)
 TESTCLASS(job_dagman_fullremove,quick)
@@ -1712,7 +1704,6 @@ TESTCLASS(job_dagman_prepost,full)
 TESTCLASS(job_dagman_prepost,quicknolink)
 
 DESC(job_dagman_retry,"Make sure a retry dag runs correctly.")
-DEPS(job_dagman_retry,x_read_joblog.exe)
 RUN(job_dagman_retry)
 TESTCLASS(job_dagman_retry,dagman)
 TESTCLASS(job_dagman_retry,quick)
@@ -1720,14 +1711,12 @@ TESTCLASS(job_dagman_retry,full)
 TESTCLASS(job_dagman_retry,quicknolink)
 
 DESC(job_dagman_throttle,"Test Dagman throttling ability")
-DEPS(job_dagman_throttle,x_read_joblog.exe)
 RUN(job_dagman_throttle)
 TESTCLASS(job_dagman_throttle,dagman)
 TESTCLASS(job_dagman_throttle,long)
 TESTCLASS(job_dagman_throttle,full)
 
 DESC(job_dagman_uncomlog,"Test Dagmans ability to have sepaarate job log files")
-DEPS(job_dagman_uncomlog,x_read_joblog.exe)
 RUN(job_dagman_uncomlog)
 TESTCLASS(job_dagman_uncomlog,dagman)
 TESTCLASS(job_dagman_uncomlog,quick)
@@ -1735,7 +1724,6 @@ TESTCLASS(job_dagman_uncomlog,full)
 TESTCLASS(job_dagman_uncomlog,quicknolink)
 
 DESC(job_dagman_unlessexit,"Test that the retries can be stopped with particular exit values from node.")
-DEPS(job_dagman_unlessexit,x_read_joblog.exe)
 RUN(job_dagman_unlessexit)
 TESTCLASS(job_dagman_unlessexit,dagman)
 TESTCLASS(job_dagman_unlessexit,quick)
@@ -1933,6 +1921,20 @@ TESTCLASS(job_dagman_noop_node,quick)
 TESTCLASS(job_dagman_noop_node,full)
 TESTCLASS(job_dagman_noop_node,quicknolink)
 
+DESC(job_dagman_node_status,"Test noop nodes")
+RUN(job_dagman_node_status)
+TESTCLASS(job_dagman_node_status,dagman)
+TESTCLASS(job_dagman_node_status,quick)
+TESTCLASS(job_dagman_node_status,full)
+TESTCLASS(job_dagman_node_status,quicknolink)
+
+DESC(job_dagman_job_held,"Test removing jobs held too many times")
+RUN(job_dagman_job_held)
+TESTCLASS(job_dagman_job_held,dagman)
+TESTCLASS(job_dagman_job_held,quick)
+TESTCLASS(job_dagman_job_held,full)
+TESTCLASS(job_dagman_job_held,quicknolink)
+
 /* Sample performance tests */
 
 /*
@@ -2085,6 +2087,10 @@ TESTCLASS(job_core_shadow-lessthan-memlimit_van,btdebug)
 lib_eventlog_build.exe : lib_eventlog_base.o
 	$(CPlusPlus) -o $@ $< ../release_dir/lib/libcondorapi.a $(TEST_LDFLAGS)
 
+testbin_target(x_write_joblog.exe,755)
+testbin_target(x_write_joblog_events.exe,755)
+testbin_target(x_read_joblog.exe,755)
+testbin_target(lib_eventlog_base.exe,755)
 
 /************************************************************************
    Settings specific to compiler-specific subdirectories

@@ -95,6 +95,7 @@ class CreamJob : public BaseJob
 	char *uploadUrl;
 	char *downloadUrl;
 	int connectFailureCount;
+	int m_numCleanupAttempts;
 
 	Proxy *jobProxy;
 	GahpClient *gahp;

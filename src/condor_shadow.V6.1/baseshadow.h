@@ -176,6 +176,19 @@ class BaseShadow : public Service
 		*/
 	void terminateJob( update_style_t kind = US_NORMAL );
 
+		/** The job exited, but it _isn't_ ready to leave the queue.
+
+			For example, the job segfaulted and didn't produce all of the
+			output files specifically labeled in transfer_output_files, so
+			this causes file transfer to fail which puts the job on hold
+			(as of 7.4.4). However, the user would like to write periodic or
+			exit policies about the job and for that we need to know exactly
+			how the job exited. So this call places how the job exited into
+			the jobad, but doesn't write any events about it.
+		*/
+	void mockTerminateJob( MyString exit_reason, bool exited_by_signal, 
+		int exit_code, int exit_signal, bool core_dumped );
+
 		/** Set a timer to call terminateJob() so we retry
 		    our attempts to update the job queue etc.
 		*/
@@ -243,11 +256,11 @@ class BaseShadow : public Service
 			after the header and before the text of a dprintf
 			message.
 		*/
-	virtual void dprintf_va( int flags, char* fmt, va_list args );
+	virtual void dprintf_va( int flags, const char* fmt, va_list args );
 
 		/** A local dprintf maker that uses dprintf_va...
 		 */
-	void dprintf( int flags, char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void dprintf( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }

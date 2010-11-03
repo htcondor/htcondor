@@ -198,3 +198,57 @@ void lower_case( std::string &str )
 		}
 	}
 }
+
+static char *tokenBuf = NULL;
+static char *nextToken = NULL;
+
+void Tokenize(const MyString &str)
+{
+	Tokenize( str.Value() );
+}
+
+void Tokenize(const std::string &str)
+{
+	Tokenize( str.c_str() );
+}
+
+void Tokenize(const char *str)
+{
+	free( tokenBuf );
+	tokenBuf = NULL;
+	nextToken = NULL;
+	if ( str ) {
+		tokenBuf = strdup( str );
+		if ( strlen( tokenBuf ) > 0 ) {
+			nextToken = tokenBuf;
+		}
+	}
+}
+
+const char *GetNextToken(const char *delim, bool skipBlankTokens)
+{
+	const char *result = nextToken;
+
+	if ( !delim || strlen(delim) == 0 ) {
+		result = NULL;
+	}
+
+	if ( result != NULL ) {
+		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
+			nextToken++;
+		}
+
+		if ( *nextToken != '\0' ) {
+			*nextToken = '\0';
+			nextToken++;
+		} else {
+			nextToken = NULL;
+		}
+	}
+
+	if ( skipBlankTokens && result && strlen(result) == 0 ) {
+		result = GetNextToken(delim, skipBlankTokens);
+	}
+
+	return result;
+}

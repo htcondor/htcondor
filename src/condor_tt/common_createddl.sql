@@ -203,13 +203,11 @@ description     varchar(4000),
 primary key	(jobstatus)
 );
 
-INSERT INTO l_jobstatus VALUES(0, 'U', 'UNEXPANDED');
 INSERT INTO l_jobstatus VALUES(1, 'I', 'IDLE');
 INSERT INTO l_jobstatus VALUES(2, 'R', 'RUNNING');
 INSERT INTO l_jobstatus VALUES(3, 'X', 'REMOVED');
 INSERT INTO l_jobstatus VALUES(4, 'C', 'COMPLETED');
 INSERT INTO l_jobstatus VALUES(5, 'H', 'HELD');
-INSERT INTO l_jobstatus VALUES(6, 'E', 'SUBMISSION_ERROR');
 
 --END Eric
 

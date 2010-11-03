@@ -251,13 +251,15 @@ SameAs(const ExprTree *tree) const
             ArgumentList::const_iterator a1 = arguments.begin();
             ArgumentList::const_iterator a2 = other_fn->arguments.begin();
             while (a1 != arguments.end()) {
-                if (a2 == arguments.end()) {
+                if (a2 == other_fn->arguments.end()) {
                     is_same = false;
                     break;
                 } else if (!(*a1)->SameAs((*a2))) {
                     is_same = false;
                     break;
                 }
+				a1++;
+				a2++;
             }
         } else {
             is_same = false;
@@ -442,6 +444,7 @@ _Evaluate( EvalState &state, Value &value, ExprTree *& tree ) const
 	}
 	
 	if( !_Evaluate( state, value ) ) {
+		delete tmpSig;
 		return false;
 	}
 
@@ -513,6 +516,7 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, int* ) const
 	if( fold ) {
 			// flattened to a value
 		if(!(*function)(functionName.c_str(),arguments,state,value)) {
+			delete newCall;
 			return false;
 		}
 		tree = NULL;

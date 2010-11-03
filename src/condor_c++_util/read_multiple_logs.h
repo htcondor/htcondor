@@ -225,12 +225,12 @@ public:
 	int activeLogFileCount() const { return activeLogFiles.getNumElements(); }
 
 		/** Print information about all LogMonitor objects.
-			@param the stream to print to.
+			@param the stream to print to.  If NULL, do dprintf().
 		*/
 	void printAllLogMonitors( FILE *stream ) const;
 
 		/** Print information about active LogMonitor objects.
-			@param the stream to print to.
+			@param the stream to print to.  If NULL, do dprintf().
 		*/
 	void printActiveLogMonitors( FILE *stream ) const;
 
@@ -317,6 +317,11 @@ private:
 		 */
 	ULogEventOutcome readEventFromLog( LogFileMonitor *monitor );
 
+		/** Print information about the LogMonitor objects in the
+			given logTable.
+			@param the stream to print to.  If NULL, do dprintf().
+			@param the logTable to print (all or active only).
+		*/
 	void printLogMonitors(FILE *stream,
 				HashTable<MyString, LogFileMonitor *> logTable) const;
 

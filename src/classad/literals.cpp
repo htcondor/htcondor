@@ -255,8 +255,10 @@ MakeRelTime( time_t secs )
 	if( secs<0 ) {
 		time(&secs );
 		getLocalTime( &secs, &lt );
+		val.SetRelativeTimeValue((time_t) (lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec));
+	} else {
+		val.SetRelativeTimeValue((time_t) secs);
 	}
-	val.SetRelativeTimeValue((time_t) (lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec));
 	return( MakeLiteral( val ) );
 }
 

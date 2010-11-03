@@ -82,9 +82,10 @@ GetLowDoubleValue ( Interval * i, double &result )
 	if( i->lower.IsNumber( low ) ) {
 		result = low;
 		return true;
-	}
-	else if( i->lower.IsAbsoluteTimeValue( lowAbsTime ) ||
-			 i->lower.IsRelativeTimeValue( lowTime ) ) {
+	} else if( i->lower.IsAbsoluteTimeValue( lowAbsTime ) ) {
+		result = ( double )lowAbsTime.secs;
+		return true;
+	} else if( i->lower.IsRelativeTimeValue( lowTime ) ) {
 		result = ( double )lowTime;
 		return true;
 	}
@@ -106,9 +107,10 @@ GetHighDoubleValue ( Interval * i, double &result )
 	if( i->upper.IsNumber( high ) ) {
 		result = high;
 		return true;
-	}
-	else if( i->upper.IsAbsoluteTimeValue( highAbsTime ) ||
-			 i->upper.IsRelativeTimeValue( highTime ) ) {
+	} else if( i->upper.IsAbsoluteTimeValue( highAbsTime ) ) {
+		result = (double )highAbsTime.secs;
+		return true;
+	} else if(i->upper.IsRelativeTimeValue( highTime ) ) {
 		result = ( double )highTime;
 		return true;
 	}
@@ -416,9 +418,10 @@ GetDoubleValue ( classad::Value &val, double &d )
 	classad::abstime_t dAbsTime;
 	if( val.IsNumber( d ) ) {
 		return true;
-	}
-	else if( val.IsAbsoluteTimeValue( dAbsTime ) ||
-			 val.IsRelativeTimeValue( dTime ) ) {
+	} else if( val.IsAbsoluteTimeValue( dAbsTime ) ) {
+		d = ( double )dAbsTime.secs;
+		return true;
+	} else if( val.IsRelativeTimeValue( dTime ) ) {
 		d = ( double )dTime;
 		return true;
 	}

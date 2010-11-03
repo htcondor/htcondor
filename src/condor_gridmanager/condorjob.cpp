@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "daemon.h"
 #include "dc_schedd.h"
 #include "job_lease.h"
@@ -87,7 +87,7 @@ static const char *GMStateNames[] = {
 };
 
 #define JOB_STATE_UNKNOWN				-1
-#define JOB_STATE_UNSUBMITTED			UNEXPANDED
+#define JOB_STATE_UNSUBMITTED			0
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -1306,7 +1306,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	if ( new_remote_state == IDLE ) {
 		JobIdle();
 	}
-	if ( new_remote_state == RUNNING ) {
+	if ( new_remote_state == RUNNING || new_remote_state == TRANSFERRING_OUTPUT ) {
 		JobRunning();
 	}
 	// If the job has been removed locally, don't propagate a hold from
@@ -1435,6 +1435,8 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
 	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
 	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+	submit_ad->Assign( ATTR_COMMITTED_SLOT_TIME, 0 );
+	submit_ad->Assign( ATTR_CUMULATIVE_SLOT_TIME, 0 );
 	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
 	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );

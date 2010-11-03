@@ -40,3 +40,10 @@ privsep_spawn_procd(const char*, ArgList&, int[3], int)
 {
 	return FALSE;
 }
+
+bool
+privsep_remove_dir(const char* /*pathname*/)
+{
+	EXCEPT("privsep_remove_dir() not supported on this platform");
+	return false;
+}

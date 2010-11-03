@@ -2210,7 +2210,7 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 				  "SECMAN: unable to create security session to %s via TCP, "
 		          "failing.\n", m_sock->get_sinful_peer() );
 		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
-		                 "Failed to create security session to %s with TCP.",
+		                 "Failed to create security session to %s with TCP.\n",
 		                 m_sock->get_sinful_peer());
 		rc = StartCommandFailed;
 	}
@@ -2841,6 +2841,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 
 	FillInSecurityPolicyAd( auth_level, &policy, false );
+
+		// Make sure security negotiation is turned on within this
+		// security session.  If it is not, we will just use the raw
+		// CEDAR command protocol, which defeats the whole purpose of
+		// having a security session.
+	policy.Assign(ATTR_SEC_NEGOTIATION,SecMan::sec_req_rev[SEC_REQ_REQUIRED]);
 
 	ClassAd *auth_info = ReconcileSecurityPolicyAds(policy,policy);
 	if(!auth_info) {

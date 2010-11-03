@@ -210,6 +210,15 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		if (tmp) {
 			cad->Assign(ATTR_CONCURRENCY_LIMITS, tmp);
 		}
+
+		int numJobPids = c_client->numPids();
+		
+		//In standard universe, numJobPids should be 1
+		if(c_universe == CONDOR_UNIVERSE_STANDARD) {
+			numJobPids = 1;
+		}
+		line.sprintf("%s=%d", ATTR_NUM_PIDS, numJobPids);
+		cad->Insert( line.Value() );
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -697,6 +706,18 @@ Claim::loadRequestInfo()
 }
 
 void
+Claim::loadStatistics()
+{
+		// Stash the ATTR_NUM_PIDS, necessary to advertise
+		// them if they exist
+	if ( c_client ) {
+		int numJobPids = 0;
+		c_ad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
+		c_client->setNumPids(numJobPids);
+	}
+}
+
+void
 Claim::beginActivation( time_t now )
 {
 	loadAccountingInfo();
@@ -820,7 +841,21 @@ Claim::startLeaseTimer()
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
 	
-	if ( param_boolean("STARTD_SENDS_ALIVES",false) &&
+	// Figure out who's sending 
+	bool startd_sends_alives;
+	std::string value;
+	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	if ( c_ad && c_ad->LookupBool( ATTR_STARTD_SENDS_ALIVES, startd_sends_alives ) ) {
+		// Use value from ad
+	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
+		startd_sends_alives = false;
+	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
+		startd_sends_alives = true;
+	} else {
+		// No direction from the schedd or config file. 
+		startd_sends_alives = false;
+	}
+	if ( startd_sends_alives &&
 		 c_type != CLAIM_COD &&
 		 c_lease_duration > 0 )	// prevent divide by zero
 	{
@@ -1099,10 +1134,11 @@ Claim::finishKillClaim()
 }
 
 void
-Claim::alive()
+Claim::alive( bool alive_from_schedd )
 {
-	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s job %d.%d\n", 
-		publicClaimId(), c_cluster, c_proc );
+	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s job %d.%d%s\n", 
+			 publicClaimId(), c_cluster, c_proc,
+			 alive_from_schedd ? ", received from schedd" : "" );
 
 		// Process an alive command.  This is called whenever we
 		// "heard" from the schedd since a claim was created, 
@@ -1124,9 +1160,17 @@ Claim::alive()
 		// it is possible that c_lease_duration changed on activation
 		// of a claim, so our timer reset here will handle that case
 		// as well since alive() is called upon claim activation.
+		// If we got an alive message from the schedd, send our own
+		// alive message soon, since that should cause the schedd to
+		// stop sending them (since we're supposed to be sending them).
 	if ( c_sendalive_tid != -1 ) {
-		daemonCore->Reset_Timer(c_sendalive_tid, c_lease_duration / 3, 
-							c_lease_duration / 3);
+		if ( alive_from_schedd ) {
+			daemonCore->Reset_Timer(c_sendalive_tid, 10, 
+									c_lease_duration / 3);
+		} else {
+			daemonCore->Reset_Timer(c_sendalive_tid, c_lease_duration / 3, 
+									c_lease_duration / 3);
+		}
 	}
 }
 
@@ -1949,6 +1993,7 @@ Client::Client()
 	c_host = NULL;
 	c_proxyfile = NULL;
 	c_concurrencyLimits = NULL;
+	c_numPids = 0;
 }
 
 
@@ -2055,6 +2100,12 @@ Client::setConcurrencyLimits( const char* limits )
 	} else {
 		c_concurrencyLimits = NULL;
 	}
+}
+
+void
+Client::setNumPids( int numJobPids )
+{
+	c_numPids = numJobPids;
 }
 
 void
@@ -2292,6 +2343,7 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 			delete new_expr;
 		}
 	}
+	loadStatistics();
 	if( DebugFlags & D_JOB ) {
 		dprintf(D_JOB,"Updated job ClassAd:\n");
 		c_ad->dPrint(D_JOB);

@@ -92,14 +92,6 @@ public:
 	/// Destructor<p>
 	~StatInfo( void );
 
-
-	/** Only do lstat() if the path is a directory?
-		@param true: don't lstat unless 
-		@return void
-	 */
-	void OnlyStatIfDir( bool only_stat_if_dir )
-		{ m_onlyLstatIfDir = only_stat_if_dir; };
-
 	/** Shows the possible error condition of this StatInfo object.
 	    If the appropriate stat() call failed when creating this
 		object, its return value is returned here.  Note, the value of
@@ -112,7 +104,8 @@ public:
 
 	/** This function returns the errno as set from the attempt to get
 	    information about this file.  If there was no error, this will
-		return 0.
+		return 0. Note that this value is only valid when Error() returns
+		SINoFile or SIFailure.
 		@return The errno from getting info for this StatInfo object.
 	*/
 	int Errno() { return si_errno; };
@@ -184,18 +177,17 @@ public:
 	/** Get the owner of the entry.
 		@return the uid of the entry's owner
 	*/
-	uid_t GetOwner( void ) { return owner; };
+	uid_t GetOwner();
 
 	/** Get the group owner of the entry.
 		@return the gid of the entry's group id
 	*/
-	gid_t GetGroup( void ) { return group; };
+	gid_t GetGroup();
 #endif
 
 private:
 	si_error_t si_error;
 	int si_errno;
-	bool m_onlyLstatIfDir;
 	bool m_isDirectory;
 	bool m_isExecutable;
 	bool m_isSymlink; //m_isDirectory may also be set if this points to a dir
@@ -206,7 +198,7 @@ private:
 	uid_t owner;
 	gid_t group;
 #endif
-	bool mode_set;
+	bool valid;
 	mode_t file_mode;
 	filesize_t file_size;
 	char* dirpath;
@@ -215,6 +207,10 @@ private:
 	void stat_file( const char *path );
 	void stat_file( int fd );
 	void init( StatWrapper *buf = NULL );
+
+	/** Checks for and adds the directory delimiter to the string if needed.
+		Returns NULL if passed NULL (See ticket #1619).
+	*/
 	char* make_dirpath( const char* dir );
 };
 

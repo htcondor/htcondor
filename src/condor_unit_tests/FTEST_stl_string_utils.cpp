@@ -51,6 +51,12 @@ static bool test_trim_end(void);
 static bool test_trim_none(void);
 static bool test_trim_beginning(void);
 static bool test_trim_empty(void);
+static bool tokenize_null(void);
+static bool tokenize_skip(void);
+static bool tokenize_multiple_calls(void);
+static bool tokenize_end(void);
+static bool tokenize_empty(void);
+static bool tokenize_empty_delimiter(void);
 
 bool FTEST_stl_string_utils(void) {
 		// beginning junk for getPortFromAddr(() {
@@ -79,6 +85,12 @@ bool FTEST_stl_string_utils(void) {
 	driver.register_function(test_trim_none);
 	driver.register_function(test_trim_beginning);
 	driver.register_function(test_trim_empty);
+	driver.register_function(tokenize_null);
+	driver.register_function(tokenize_skip);
+	driver.register_function(tokenize_multiple_calls);
+	driver.register_function(tokenize_end);
+	driver.register_function(tokenize_empty);
+	driver.register_function(tokenize_empty_delimiter);
 	
 		// run the tests
 	return driver.do_all_functions();
@@ -594,6 +606,152 @@ static bool test_trim_empty() {
 	emit_output_actual_header();
 	emit_retval("%s", a.c_str());
 	if(strcmp(a.c_str(), "") != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool tokenize_null() {
+	emit_test("Does calling GetNextToken() before calling Tokenize() return "
+		"NULL?");
+	const char* tok = GetNextToken(",", false);
+	emit_input_header();
+	emit_param("delim", "%s", ",");
+	emit_param("skipBlankTokens", "%d", false);
+	emit_output_expected_header();
+	emit_retval("%s", "NULL");
+	if(tok != NULL) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool tokenize_skip() {
+	emit_test("Test GetNextToken() when skipping blank tokens.");
+	const char *a = "     Ottavio Bottechia_";
+	Tokenize(a);
+	const char* tok = GetNextToken(" ", true);
+	emit_input_header();
+	emit_param("delim", "%s", " ");
+	emit_param("skipBlankTokens", "%d", true);
+	emit_output_expected_header();
+	emit_retval("%s", "Ottavio");
+	emit_output_actual_header();
+	emit_retval("%s", tok);
+	if(strcmp(tok, "Ottavio") != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool tokenize_multiple_calls() {
+	emit_test("Test multiple calls to GetNextToken().");
+	const char *a = "To  be or not to be; that is the question";
+	Tokenize(a);
+	const char* expectedTokens[] = {"To", "", "be", "or", "not", "to", "be", ""
+		, "that", "is", "the", "question"};
+	const char* resultToken0 = GetNextToken(" ;", false);
+	const char* resultToken1 = GetNextToken(" ;", false);
+	const char* resultToken2 = GetNextToken(" ;", false);
+	const char* resultToken3 = GetNextToken(" ;", false);
+	const char* resultToken4 = GetNextToken(" ;", false);
+	const char* resultToken5 = GetNextToken(" ;", false);
+	const char* resultToken6 = GetNextToken(" ;", false);
+	const char* resultToken7 = GetNextToken(" ;", false);
+	const char* resultToken8 = GetNextToken(" ;", false);
+	const char* resultToken9 = GetNextToken(" ;", false);
+	const char* resultToken10 = GetNextToken(" ;", false);
+	const char* resultToken11 = GetNextToken(" ;", false);
+	emit_input_header();
+	emit_param("delim", "%s", " ;");
+	emit_param("skipBlankTokens", "%d", false);
+	emit_output_expected_header();
+	emit_param("Token 1", "%s", expectedTokens[0]);
+	emit_param("Token 2", "%s", expectedTokens[1]);
+	emit_param("Token 3", "%s", expectedTokens[2]);
+	emit_param("Token 4", "%s", expectedTokens[3]);
+	emit_param("Token 5", "%s", expectedTokens[4]);
+	emit_param("Token 6", "%s", expectedTokens[5]);
+	emit_param("Token 7", "%s", expectedTokens[6]);
+	emit_param("Token 8", "%s", expectedTokens[7]);
+	emit_param("Token 9", "%s", expectedTokens[8]);
+	emit_param("Token 10", "%s", expectedTokens[9]);
+	emit_param("Token 11", "%s", expectedTokens[10]);
+	emit_param("Token 12", "%s", expectedTokens[11]);
+	emit_output_actual_header();
+	emit_param("Token 1", "%s", resultToken0);
+	emit_param("Token 2", "%s", resultToken1);
+	emit_param("Token 3", "%s", resultToken2);
+	emit_param("Token 4", "%s", resultToken3);
+	emit_param("Token 5", "%s", resultToken4);
+	emit_param("Token 6", "%s", resultToken5);
+	emit_param("Token 7", "%s", resultToken6);
+	emit_param("Token 8", "%s", resultToken7);
+	emit_param("Token 9", "%s", resultToken8);
+	emit_param("Token 10", "%s", resultToken9);
+	emit_param("Token 11", "%s", resultToken10);
+	emit_param("Token 12", "%s", resultToken11);
+	if(strcmp(expectedTokens[0], resultToken0) != MATCH || 
+			strcmp(expectedTokens[1], resultToken1) != MATCH ||
+			strcmp(expectedTokens[2], resultToken2) != MATCH ||
+			strcmp(expectedTokens[3], resultToken3) != MATCH ||
+			strcmp(expectedTokens[4], resultToken4) != MATCH ||
+			strcmp(expectedTokens[5], resultToken5) != MATCH ||
+			strcmp(expectedTokens[6], resultToken6) != MATCH ||
+			strcmp(expectedTokens[7], resultToken7) != MATCH ||
+			strcmp(expectedTokens[8], resultToken8) != MATCH ||
+			strcmp(expectedTokens[9], resultToken9) != MATCH ||
+			strcmp(expectedTokens[10], resultToken10) != MATCH ||
+			strcmp(expectedTokens[11], resultToken11) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool tokenize_end() {
+	emit_test("Test GetNextToken() after getting to the end.");
+	const char *a = "foo;";
+	Tokenize(a);
+	const char* tok = GetNextToken(";", false);
+	tok = GetNextToken(";", false);
+	tok = GetNextToken(";", false);
+	emit_input_header();
+	emit_param("delim", "%s", ";");
+	emit_param("skipBlankTokens", "%d", false);
+	emit_output_expected_header();
+	emit_retval("%s", "NULL");
+	if(tok != NULL) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool tokenize_empty() {
+	emit_test("Test GetNextToken() on an empty MyString.");
+	Tokenize("");
+	const char* tok = GetNextToken(" ", false);
+	emit_input_header();
+	emit_param("delim", "%s", " ");
+	emit_param("skipBlankTokens", "%d", false);
+	emit_output_expected_header();
+	emit_retval("%s", "NULL");
+	if(tok != NULL) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool tokenize_empty_delimiter() {
+	emit_test("Test GetNextToken() on an empty delimiter string.");
+	const char *a = "foobar";
+	Tokenize(a);
+	const char* tok = GetNextToken("", false);
+	emit_input_header();
+	emit_param("delim", "%s", " ");
+	emit_param("skipBlankTokens", "%d", false);
+	emit_output_expected_header();
+	emit_retval("%s", "NULL");
+	if(tok != NULL) {
 		FAIL;
 	}
 	PASS;

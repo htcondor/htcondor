@@ -144,7 +144,7 @@ class ClassAd : public classad::ClassAd
 		//@{
 
 		/** A constructor that reads old ClassAds from a FILE */
-	ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
+	ClassAd(FILE*,const char*,int&,int&,int&);	// Constructor, read from file.
 
 		/* This is a pass-through to ClassAd::Insert(). Because we define
 		 * our own Insert() below, our parent's Insert() won't be found

@@ -4902,7 +4902,7 @@ id=277
 
 [STARTD_SENDS_ALIVES]
 aliases=
-default=false
+default=peer
 version=0.0.0
 range=.*
 state=default
@@ -8535,22 +8535,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=520
 
-[FLOCK_HOSTS]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Flock Hosts
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=schedd,schedd
-id=521
-
 [FLOCK_NEGOTIATOR_HOSTS]
 aliases=
 default=$(FLOCK_TO)
@@ -9926,4 +9910,53 @@ friendly_name=System Job Machine Attrs History Length
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
+id=600
+
+[GRAM_VERSION_DETECTION]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Gram Version Detection
+usage=true if gridmanager should automatically detect the version of GRAM servers, false otherwise
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager
+id=600
+
+[CREATE_LOCKS_ON_LOCAL_DISK]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=true if userlog file locks should be create in temp folder on local disk, false otherwise
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=600
+
+
+[LOCK_DEBUG_LOG_TO_APPEND]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=
+tags=
 id=600

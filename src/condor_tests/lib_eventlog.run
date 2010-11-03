@@ -122,7 +122,7 @@ if( $result == 0 ) {
 	my $expected = "x_lib_eventlog.expected";
 	my @want;
 	my @got;
-	open(ELOG,"./x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
+	open(ELOG,"../testbin_dir/x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
 	open(EXP,"<$expected") || die "Could not read expected values <<$expected>>: $!\n";
 	while(<ELOG>) {
 		push  @got, $_;
@@ -135,14 +135,18 @@ if( $result == 0 ) {
 	foreach $line (@got) {
 		my $desired = shift(@want);
 		if($desired ne $line) {
-			CondorTest::debug("Result Mismatch!:$desired ne $line!!!!\n",1);
+			chomp $line;
+			chomp $desired;
+			CondorTest::debug("Result Mismatch: '$desired' != '$line'!!!!\n",1);
 			$result = 1;
 			last;
 		} else {
 			#print "Result Match!:$desired eq $line!!!!\n";
 		}
 	}
-	CondorTest::debug("Results all Match! Test is a success.\n",1);
+	if ( $result == 0 ) {
+		CondorTest::debug("Results all Match! Test is a success.\n",1);
+	}
 }
 #fails due to directory matching pattern
 runcmd("cp *lib_eventlog* $mysaveme", {expect_result=>\&ANY});

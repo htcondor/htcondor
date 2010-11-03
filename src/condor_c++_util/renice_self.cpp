@@ -29,7 +29,7 @@
 extern "C" {
 
 int
-renice_self( char* param_name ) {
+renice_self( const char* param_name ) {
 	int i = 0;
 #ifndef WIN32
 	char* ptmp = param( param_name );

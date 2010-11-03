@@ -68,7 +68,6 @@ int ClassAdList::Remove(ClassAd* cad)
 			// or should I do *(*it) == *cad to
 			// do a deep comparison?
 		{
-			ClassAd* tmp = *it;
 			it = list.erase(it);
 			retval = TRUE;
 				// Now if this element that we deleted occurs

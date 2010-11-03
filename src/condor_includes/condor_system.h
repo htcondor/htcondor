@@ -183,6 +183,8 @@
    so the level of indirection is worth keeping around. */
 typedef fd_set *SELECT_FDSET_PTR;
 
+#include "condor_unsetenv.h"
+
 #endif /* UNIX */
 
 

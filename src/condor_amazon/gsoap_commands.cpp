@@ -445,32 +445,43 @@ AmazonVMStart::gsoapRequest(void)
 	}
 
 	// userData
-	if( user_data_file.empty() == false ) {
-		// Need to read file
+	if( user_data_file.empty() == false || user_data.empty() == false ) {
+		char *buffer;
 		int fd = -1;
-		fd = safe_open_wrapper(user_data_file.c_str(), O_RDONLY);
-		if( fd < 0 ) {
-			sprintf(m_error_msg,"failed to safe_open_wrapper file(%s) : "
-					"safe_open_wrapper returns %s", user_data_file.c_str(), 
-					strerror(errno));
-			dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
-			return false;
+		int file_size = 0;
+
+		if ( user_data_file.empty() == false ) {
+			// Need to read file
+			fd = safe_open_wrapper(user_data_file.c_str(), O_RDONLY);
+			if( fd < 0 ) {
+				sprintf(m_error_msg,"failed to safe_open_wrapper file(%s) : "
+						"safe_open_wrapper returns %s", user_data_file.c_str(), 
+						strerror(errno));
+				dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
+				return false;
+			}
+
+			StatWrapper swrap(fd);
+			file_size = swrap.GetBuf()->st_size;
+
+			if (file_size <= 0) {
+				dprintf(D_ALWAYS,
+						"WARNING: UserData file, %s, specified and empty\n",
+						user_data_file.c_str());
+				close( fd );
+				fd = -1;
+				file_size = 0;
+			}
 		}
 
-		int file_size = 0;
-		StatWrapper swrap(fd);
-		file_size = swrap.GetBuf()->st_size;
+		buffer = (char *)malloc( file_size + user_data.size() + 1 );
+		ASSERT( buffer );
 
-		if (file_size <= 0) {
-			dprintf(D_ALWAYS,
-					"WARNING: UserData file, %s, specified and empty\n",
-					user_data_file.c_str());
-			base64_userdata = NULL;
-		} else {
-			char *readbuffer = (char*)malloc(file_size);
-			ASSERT(readbuffer);
-
-			int ret = full_read(fd, readbuffer, file_size);
+		if ( user_data.empty() == false ) {
+			strcpy( buffer, user_data.c_str() );
+		}
+		if ( fd != -1 ) {
+			int ret = full_read( fd, buffer + user_data.size(), file_size );
 			close(fd);
 
 			if( ret != file_size ) {
@@ -479,18 +490,13 @@ AmazonVMStart::gsoapRequest(void)
 									file_size, ret, user_data_file.c_str());
 				dprintf(D_ALWAYS, "%s\n", m_error_msg.c_str());
 
-				free(readbuffer);
-				readbuffer = NULL;
+				free( buffer );
 				return false;
 			}
-	
-			base64_userdata = condor_base64_encode((unsigned char*)readbuffer, file_size);
-			free(readbuffer); readbuffer = NULL;
 		}
-	}else {
-		if( user_data.empty() == false ) { 
-			base64_userdata = condor_base64_encode((unsigned char*)user_data.c_str(), user_data.length());
-		}
+
+		base64_userdata = condor_base64_encode((unsigned char*)buffer, file_size + user_data.size());
+		free( buffer );
 	}
 
 	ec2__RunInstancesType request;

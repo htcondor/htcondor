@@ -26,7 +26,7 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "filename_tools.h"
 #include "job_lease.h"
 #include "condor_new_classads.h"
@@ -118,6 +118,7 @@ const char *ATTR_CREAM_LEASE_ID = "CreamLeaseId";
 #define DEFAULT_LEASE_DURATION	6*60*60 //6 hr
 
 #define CLEANUP_DELAY	5
+#define MAX_CLEANUP_ATTEMPTS 3
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -237,6 +238,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	connectFailureCount = 0;
 	doActivePoll = false;
 	m_xfer_request = NULL;
+	m_numCleanupAttempts = 0;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -910,7 +912,7 @@ void CreamJob::doEvaluateState()
 			// jobmanager occassionally to make it's still alive.
 			if ( remoteState == CREAM_JOB_STATE_DONE_OK ) {
 				gmState = GM_STAGE_OUT;
-			} else if ( remoteState == CREAM_JOB_STATE_DONE_FAILED || remoteState == CREAM_JOB_STATE_ABORTED ) {
+			} else if ( remoteState == CREAM_JOB_STATE_DONE_FAILED || remoteState == CREAM_JOB_STATE_ABORTED || remoteState == CREAM_JOB_STATE_CANCELLED ) {
 				gmState = GM_PURGE;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
@@ -1165,9 +1167,19 @@ void CreamJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
+			m_numCleanupAttempts++;
 			if ( rc != GLOBUS_SUCCESS ) {
 				if ( strstr( gahp->getErrorString(), "job does not exist" ) ) {
 					// Job already gone, treat as success
+				} else if ( strstr( gahp->getErrorString(),
+									"job status does not match" ) && 
+							m_numCleanupAttempts < MAX_CLEANUP_ATTEMPTS ) {
+					// The server is probably taking a while to process
+					// job cancellation. Give it a little more time, then
+					// retry the purge request.
+					enteredCurrentGmState = now;
+					reevaluate_state = true;
+					break;
 				} else if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
 					connect_failure = true;
 					break;
@@ -1347,6 +1359,7 @@ void CreamJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
+			m_numCleanupAttempts = 0;
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;
@@ -1527,7 +1540,12 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 		enteredCurrentRemoteState = time(NULL);
 		SetRemoteJobStatus( remoteState.Value() );
 
-		if ( failure_reason ) {
+		// When a job is in DONE-OK state, Cream will often set a
+		// failure message of "reason=0", even though there is no
+		// failure. If there is a subsequent failure (say in staging
+		// output files), having remoteStateFaultString set to a
+		// non-empty value will hide the real failure message.
+		if ( failure_reason && remoteState != CREAM_JOB_STATE_DONE_OK ) {
 			remoteStateFaultString = failure_reason;
 		} else {
 			remoteStateFaultString = "";

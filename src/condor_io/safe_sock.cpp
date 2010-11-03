@@ -257,13 +257,15 @@ int SafeSock::connect(
 	_who.sin_family = AF_INET;
 	_who.sin_port = htons((u_short)port);
 
+    int ret;
+
 	/* might be in <x.x.x.x:x> notation, i.e. sinfull string */
 	if (host[0] == '<') {
 		string_to_sin(host, &_who);
 		set_connect_addr(host);
 	}
 	/* try to get a decimal notation first 			*/
-	else if( (inaddr=inet_addr(host)) != (unsigned long)(-1L) ) {
+	else if( (ret = inet_pton(AF_INET, host, &inaddr)) > 0 ) {
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
 		set_connect_addr(sin_to_string(&_who));
 	} else {

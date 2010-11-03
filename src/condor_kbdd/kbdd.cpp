@@ -44,6 +44,10 @@
 XInterface *xinter = NULL;
 #endif
 
+#ifdef WIN32
+static void hack_kbdd_registry();
+#endif
+
 DECL_SUBSYSTEM( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 
 bool
@@ -186,14 +190,153 @@ main_pre_command_sock_init( )
 #ifdef WIN32
 int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
 {
+   #ifdef WIN32
+	// t1031 - tell dprintf not to exit if it can't write to the log
+	// we have to do this before dprintf_config is called 
+	// (which happens inside dc_main), otherwise KBDD on Win32 will 
+	// except in dprintf_config if the log directory isn't writable
+	// by the current user.
+	dprintf_config_ContinueOnFailure( TRUE );
+   #endif
+
 	// cons up a "standard" argv for dc_main.
-	char **parameters = (char**)malloc(sizeof(char*)*2);
+	char **parameters;
+	LPWSTR cmdLine = NULL;
+	LPWSTR* cmdArgs = NULL;
+	int nArgs;
+
+	/*
+	Due to the risk of spaces in paths on Windows, we use the function
+	CommandLineToArgvW to extract a list of arguments instead of parsing
+	the string using a delimiter.
+	*/
+	cmdLine = GetCommandLineW();
+	if(!cmdLine)
+	{
+		return GetLastError();
+	}
+	cmdArgs = CommandLineToArgvW(cmdLine, &nArgs);
+	if(!cmdArgs)
+	{
+		return GetLastError();
+	}
+	parameters = (char**)malloc(sizeof(char*)*nArgs + 1);
 	parameters[0] = "condor_kbdd";
-	parameters[1] = NULL;
-	dc_main(1, parameters);
+	parameters[nArgs] = NULL;
+
+	/*
+	List of strings is in unicode so we need to downconvert it into ascii strings.
+	*/
+	for(int counter = 1; counter < nArgs; ++counter)
+	{
+		//There's a *2 on the size to provide some leeway for non-ascii characters being split.  Suggested by TJ.
+		int argSize = ((wcslen(cmdArgs[counter]) + 1) * sizeof(char)) * 2;
+		parameters[counter] = (char*)malloc(argSize);
+		int converted = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, cmdArgs[counter], -1, parameters[counter], argSize, NULL, NULL);
+		if(converted == 0)
+		{
+			return GetLastError();
+		}
+	}
+	LocalFree((HLOCAL)cmdLine);
+	LocalFree((HLOCAL)cmdArgs);
+
+	hack_kbdd_registry();
+	//nArgs includes the first argument, the program name, in the count.
+	dc_main(nArgs, parameters);
 
 	// dc_main should exit() so we probably never get here.
 	return 0;
+}
+
+static void hack_kbdd_registry()
+{
+	HKEY hStart;
+
+	BOOL isService = FALSE;
+	SID_IDENTIFIER_AUTHORITY ntAuthority = SECURITY_NT_AUTHORITY;
+	PSID ServiceGroup;
+	isService = AllocateAndInitializeSid(
+		&ntAuthority,
+		1,
+		SECURITY_LOCAL_SYSTEM_RID,
+		0,0,0,0,0,0,0,
+		&ServiceGroup);
+	if(isService)
+	{
+		if(!CheckTokenMembership(NULL, ServiceGroup, &isService))
+		{
+			dprintf(D_ALWAYS, "Failed to check token membership.\n");
+			isService = FALSE;
+		}
+
+		FreeSid(ServiceGroup);
+	}
+
+	if(isService)
+	{
+		LONG regResult = RegOpenKeyEx(
+			HKEY_LOCAL_MACHINE,
+			"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+			0,
+			KEY_READ,
+			&hStart);
+
+		if(regResult != ERROR_SUCCESS)
+		{
+			dprintf(D_ALWAYS, "ERROR: Failed to open registry for checking: %d\n", regResult);
+		}
+		else
+		{
+			regResult = RegQueryValueEx(
+				hStart,
+				"CONDOR_KBDD",
+				NULL,
+				NULL,
+				NULL,
+				NULL);
+
+			RegCloseKey(hStart);
+			if(regResult == ERROR_FILE_NOT_FOUND)
+			{
+				regResult = RegOpenKeyEx(
+					HKEY_LOCAL_MACHINE,
+					"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+					0,
+					KEY_SET_VALUE,
+					&hStart);
+
+				if(regResult != ERROR_SUCCESS)
+				{
+					dprintf(D_DAEMONCORE, "Error: Failed to open login startup registry key for writing: %d\n", regResult);
+					return;
+				}
+				else
+				{
+					char* kbddPath = (char*)malloc(sizeof(char)*(MAX_PATH+1));
+					if(!kbddPath)
+					{
+						dprintf(D_ALWAYS, "Error: Unable to find path to KBDD executable.\n");
+						RegCloseKey(hStart);
+						return;
+					}
+					int pathSize = GetModuleFileName(NULL, kbddPath, MAX_PATH);
+					if(pathSize < MAX_PATH)
+					{
+						regResult = RegSetValueEx(hStart,
+							"CONDOR_KBDD",
+							0,
+							REG_SZ,
+							(byte*)kbddPath,
+							(pathSize + 1)*sizeof(char));
+					}
+					free(kbddPath);
+
+					RegCloseKey(hStart);
+				}
+			} //if(regResult == ERROR_FILE_NOT_FOUND)
+		} //if(regResult != ERROR_SUCCESS)
+	} //if(isService)
 }
 #endif
 

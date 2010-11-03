@@ -21,14 +21,14 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_io.h"
+#include "std_univ_io.h"
 #include "condor_syscall_mode.h"
 #include "condor_open.h"
 
 extern "C" {
 
 void open_named_pipe( const char *name, int access_mode, int target_fd );
-ReliSock *RSC_Init( int, int );
+StdUnivSock *RSC_Init( int, int );
 
 /*
   When we're debugging, we want to run the shadow and its client each
@@ -60,7 +60,7 @@ ReliSock *RSC_Init( int, int );
 extern int InDebugMode;
 
 
-ReliSock *
+StdUnivSock *
 init_syscall_connection( int want_debug_mode )
 {
 	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );

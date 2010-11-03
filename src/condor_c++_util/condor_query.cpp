@@ -282,9 +282,7 @@ CondorQuery::
 CondorQuery (const CondorQuery & /* from */)
 {
 		// Unimplemented!
-		genericQueryType = 0;
-		command = 0;
-		queryType = NO_AD;
+	EXCEPT( "CondorQuery copy constructor called, but unimplemented!\n" );
 }
 
 
@@ -302,6 +300,7 @@ CondorQuery &CondorQuery::
 operator= (const CondorQuery &)
 {
 		// Unimplemented!
+	EXCEPT( "CondorQuery operator= called, but unimplemented!\n" );
 	return *this;
 }
 
@@ -406,107 +405,8 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 
 
 	// make the query ad
-	result = (QueryResult) query.makeQuery (tree, true);
+	result = getQueryAd (queryAd);
 	if (result != Q_OK) return result;
-	queryAd.Insert(ATTR_REQUIREMENTS, tree);
-
-	// fix types
-	queryAd.SetMyTypeName (QUERY_ADTYPE);
-	switch (queryType) {
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUILL_AD:
-		queryAd.SetTargetTypeName (QUILL_ADTYPE);
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
-	  case STARTD_AD:
-	  case STARTD_PVT_AD:
-		queryAd.SetTargetTypeName (STARTD_ADTYPE);
-		break;
-
-	  case SCHEDD_AD:
-	  case SUBMITTOR_AD:
-		// CRUFT: Before 7.3.2, submitter ads had a MyType of
-		//   "Scheduler". The only way to tell the difference
-		//   was that submitter ads didn't have ATTR_NUM_USERS.
-		//   Newer collectors will coerce the TargetType to
-		//   "Submitter" for queries of submitter ads.
-		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
-		break;
-
-	  case LICENSE_AD:
-		queryAd.SetTargetTypeName (LICENSE_ADTYPE);
-		break;
-
-	  case MASTER_AD:
-		queryAd.SetTargetTypeName (MASTER_ADTYPE);
-		break;
-
-	  case CKPT_SRVR_AD:
-		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
-		break;
-
-	  case COLLECTOR_AD:
-		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
-		break;
-
-	  case NEGOTIATOR_AD:
-		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
-		break;
-
-	  case STORAGE_AD:
-		queryAd.SetTargetTypeName (STORAGE_ADTYPE);
-		break;
-
-	  case CREDD_AD:
-		queryAd.SetTargetTypeName (CREDD_ADTYPE);
-		break;
-
-	  case GENERIC_AD:
-		  // For now, at least, there is no separate QUERY_GENERIC_ADS
-		  // command, so send the ANY_ADTYPE
-		queryAd.SetTargetTypeName (GENERIC_ADTYPE);
-		break;
-
-	  case XFER_SERVICE_AD:
-		queryAd.SetTargetTypeName (XFER_SERVICE_ADTYPE);
-		break;
-
-	  case LEASE_MANAGER_AD:
-		queryAd.SetTargetTypeName (LEASE_MANAGER_ADTYPE);
-		break;
-
-	  case ANY_AD:
-		queryAd.SetTargetTypeName (ANY_ADTYPE);
-		break;
-
-	  case DATABASE_AD:
-		queryAd.SetTargetTypeName (DATABASE_ADTYPE);
-		break;
-
-	  case DBMSD_AD:
-		queryAd.SetTargetTypeName (DBMSD_ADTYPE);
-		break;
-
-	  case TT_AD:
-		queryAd.SetTargetTypeName (TT_ADTYPE);
-		break;
-
-      case GRID_AD:
-        queryAd.SetTargetTypeName (GRID_ADTYPE);
-        break;
-
-	  case HAD_AD:
-		queryAd.SetTargetTypeName (HAD_ADTYPE);
-		break;
-
-	  default:
-		return Q_INVALID_QUERY;
-	}
-
-#if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
-#endif
 
 	if( DebugFlags & D_HOSTNAME ) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
@@ -570,21 +470,32 @@ getQueryAd (ClassAd &queryAd)
 	QueryResult	result;
 	ExprTree *tree;
 
-	result = (QueryResult) query.makeQuery (tree, true);
+	queryAd = extraAttrs;
+
+	result = (QueryResult) query.makeQuery (tree);
 	if (result != Q_OK) return result;
 	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
 	// fix types
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
 	switch (queryType) {
+#ifdef HAVE_EXT_POSTGRESQL
+	  case QUILL_AD:
+		queryAd.SetTargetTypeName (QUILL_ADTYPE);
+		break;
+#endif /* HAVE_EXT_POSTGRESQL */
+
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
 		queryAd.SetTargetTypeName (STARTD_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:
-	  case SUBMITTOR_AD:
 		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
+		break;
+
+	  case SUBMITTOR_AD:
+		queryAd.SetTargetTypeName (SUBMITTER_ADTYPE);
 		break;
 
 	  case LICENSE_AD:
@@ -607,25 +518,57 @@ getQueryAd (ClassAd &queryAd)
 		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
 		break;
 
+      case STORAGE_AD:
+        queryAd.SetTargetTypeName (STORAGE_ADTYPE);
+        break;
+
+      case CREDD_AD:
+        queryAd.SetTargetTypeName (CREDD_ADTYPE);
+        break;
+
+	  case GENERIC_AD:
+		if ( genericQueryType ) {
+			queryAd.SetTargetTypeName (genericQueryType);
+		} else {
+			queryAd.SetTargetTypeName (GENERIC_ADTYPE);
+		}
+		break;
+
+      case XFER_SERVICE_AD:
+        queryAd.SetTargetTypeName (XFER_SERVICE_ADTYPE);
+        break;
+
+      case LEASE_MANAGER_AD:
+        queryAd.SetTargetTypeName (LEASE_MANAGER_ADTYPE);
+        break;
+
+	  case ANY_AD:
+		queryAd.SetTargetTypeName (ANY_ADTYPE);
+		break;
+
+	  case DATABASE_AD:
+		queryAd.SetTargetTypeName (DATABASE_ADTYPE);
+		break;
+
+	  case DBMSD_AD:
+		queryAd.SetTargetTypeName (DBMSD_ADTYPE);
+		break;
+
+	  case TT_AD:
+		queryAd.SetTargetTypeName (TT_ADTYPE);
+		break;
+
       case GRID_AD:
         queryAd.SetTargetTypeName (GRID_ADTYPE);
         break;
 
-	  case GENERIC_AD:
-		queryAd.SetTargetTypeName (GENERIC_ADTYPE);
-		break;
-
-	  case ANY_AD:
-		queryAd.SetTargetTypeName (genericQueryType);
+	  case HAD_AD:
+		queryAd.SetTargetTypeName (HAD_ADTYPE);
 		break;
 
 	  default:
 		return Q_INVALID_QUERY;
 	}
-
-#if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
-#endif
 
 	return Q_OK;
 }
@@ -639,13 +582,8 @@ filterAds (ClassAdList &in, ClassAdList &out)
 	ExprTree *tree;
 
 	// make the query ad
-	result = (QueryResult) query.makeQuery (tree, true);
+	result = getQueryAd (queryAd);
 	if (result != Q_OK) return result;
-	queryAd.Insert(ATTR_REQUIREMENTS, tree);
-
-#if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
-#endif
 
 	in.Open();
 	while( (candidate = (ClassAd *) in.Next()) )

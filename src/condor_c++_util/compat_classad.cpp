@@ -29,6 +29,14 @@
 
 using namespace std;
 
+// gcc 4.3.4 doesn't seem to define FLT_MIN on OpenSolaris 2009.06
+#if !defined(FLT_MIN) && defined(__FLT_MIN__)
+  #define FLT_MIN  __FLT_MIN__
+#endif
+#if !defined(FLT_MAX) && defined(__FLT_MAX__)
+  #define FLT_MAX  __FLT_MAX__
+#endif
+
 namespace compat_classad {
 
 // EvalResult ctor
@@ -272,7 +280,7 @@ void releaseTheMatchAd()
 }
 
 static
-bool stringListSize_func( const char *name,
+bool stringListSize_func( const char * /*name*/,
 						  const classad::ArgumentList &arg_list,
 						  classad::EvalState &state, classad::Value &result )
 {
@@ -497,7 +505,7 @@ static int regexp_str_to_options( const char *option_str )
 }
 
 static
-bool stringListRegexpMember_func( const char *name,
+bool stringListRegexpMember_func( const char * /*name*/,
 								  const classad::ArgumentList &arg_list,
 								  classad::EvalState &state,
 								  classad::Value &result )
@@ -556,7 +564,6 @@ bool stringListRegexpMember_func( const char *name,
 
 	sl.rewind();
 	char *entry;
-	int match = 0;
 	while( (entry = sl.next())) {
 		if (r.match(entry)) {
 			result.SetBooleanValue( true );
@@ -677,7 +684,7 @@ ClassAd::~ClassAd()
 }
 
 ClassAd::
-ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
+ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
@@ -686,6 +693,19 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 	}
 
 	m_privateAttrsAreInvisible = false;
+
+		// Compatibility ads are born with this to emulate the special
+		// CurrentTime in old ClassAds. We don't protect it afterwards,
+		// but that shouldn't be problem unless someone is deliberately
+		// trying to shoot themselves in the foot.
+	if ( !m_strictEvaluation ) {
+		AssignExpr( ATTR_CURRENT_TIME, "time()" );
+	}
+
+	ResetName();
+    ResetExpr();
+
+	EnableDirtyTracking();
 
 	nodeKind = CLASSAD_NODE;
 
@@ -743,19 +763,6 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 			empty = FALSE;
 		}
 	}
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
-	ResetName();
-    ResetExpr();
-
-	EnableDirtyTracking();
 }
 
 bool ClassAd::
@@ -1048,8 +1055,7 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 		return rc;
 	}
 
-
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
@@ -1092,7 +1098,7 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 
     if( this->Lookup(name) ) {
 
@@ -1158,7 +1164,7 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttrInt( name, tmp_val ) ) {
 			value = tmp_val;
@@ -1198,7 +1204,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
@@ -1253,7 +1259,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 		return rc;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( this, target );
+	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
@@ -2459,6 +2465,8 @@ static const char *job_attrs_list[]  = {
 	ATTR_NUM_RESTARTS,
 	ATTR_NUM_SYSTEM_HOLDS,
 	ATTR_JOB_COMMITTED_TIME,
+	ATTR_COMMITTED_SLOT_TIME,
+	ATTR_CUMULATIVE_SLOT_TIME,
 	ATTR_TOTAL_SUSPENSIONS,
 	ATTR_LAST_SUSPENSION_TIME,
 	ATTR_CUMULATIVE_SUSPENSION_TIME,

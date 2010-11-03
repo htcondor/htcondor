@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -107,6 +109,14 @@ fi
 
 pushd ${builddir} >> /dev/null
 
+mkdir tmp
+if [ $? != 0 ]
+then
+    echo "Unable to create ${builddir}/tmp"
+    exit 2
+fi
+tmppath="${builddir}/tmp"
+
 echo "*** Creating RPM build directories..."
 # Create RPM build directory
 mkdir -p rpmbuild/BUILD
@@ -191,8 +201,8 @@ echo "*** Building the RPM..."
 # The determination to use rpm, rpmbuild, or whatever happened with configure.
 RPMBUILD_CMD=${rpm_build_cmd}
 
-echo "$RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec"
-$RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec
+echo "$RPMBUILD_CMD --define "_topdir rpmbuild" --define "_tmppath ${tmppath}" -bb condor.spec"
+$RPMBUILD_CMD --define "_topdir rpmbuild" --define "_tmppath ${tmppath}" -bb condor.spec
 
 if [ $? != 0 ]; then
 	echo "Couldn't build rpm!"

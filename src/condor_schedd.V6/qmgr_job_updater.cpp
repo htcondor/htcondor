@@ -126,6 +126,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
 	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
+	common_job_queue_attrs->insert( ATTR_COMMITTED_SLOT_TIME );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -188,6 +189,19 @@ QmgrJobUpdater::startUpdateTimer( void )
     }
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater: started timer to update queue "
 			 "every %d seconds (tid=%d)\n", q_interval, q_update_tid );
+}
+
+
+void
+QmgrJobUpdater::resetUpdateTimer( void )
+{
+	if ( q_update_tid < 0 ) {
+		startUpdateTimer();
+		return;
+	}
+
+	int q_interval = param_integer( "SHADOW_QUEUE_UPDATE_INTERVAL", 15*60 );
+	daemonCore->Reset_Timer( q_update_tid, 0, q_interval );
 }
 
 

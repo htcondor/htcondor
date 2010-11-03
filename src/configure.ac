@@ -158,7 +158,7 @@ AC_PATH_PROG(ac_sysctl,sysctl,no,[$PATH])
 if test "x$ac_sysctl" = "xno" ; then
    SYSCTL=/bin/false
 else
-   STSCTL=$ac_sysctl
+   SYSCTL=$ac_sysctl
 fi
 
 AC_MSG_NOTICE([determining host platform])
@@ -465,23 +465,25 @@ elif test $os = "Darwin" ; then
 	##
 	## Figure out the architecture
 	##
+	AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
 	if test "$arch" = "i386"; then
-		# XXX This test is commented out because the externals aren't
-		# smart enough to figure out what platform they are on and Condor
-		# will fail to compile. So for now we lie and say INTEL. This
-		# could cause problems if a submit machine is x86_64 and the execute
-		# machines are x86 since both will report as INTEL.
-		# ok, test to see if the hw.optional.x86_64 key is present and 1, 
-		# if so, then this machine is actually an x86_64 machine, not an
-		# i386 machine.
-		#`$SYSCTL hw.optional.x86_64 2>&1 | $GREP '1\$' > /dev/null 2>&1`
-		#if test "x$?" = "x1"; then
-		#	_cv_arch="X86_64"
-		#	_cv_sysname="x86_64_macosx"
-		#else
+		# Mac OS X often says the architecture is i386 in uname
+		# when it's actually x86_64 and the system is capable of
+		# running 64-bit binaries.
+		# So we'll base the architecture value on the default
+		# code produced by gcc. On 10.5 and earlier, it's i386.
+		# On 10.6, it's x86_64.
+		$SW_VERS -productVersion | $GREP '^10.6' > /dev/null 2>&1
+		if test "x$?" = "x0" ; then
+			_cv_arch="X86_64"
+			_cv_sysname="x86_64_macosx"
+		else
 			_cv_arch="I386"
 			_cv_sysname="i386_macosx"
-		#fi	
+		fi
+	elif test "$arch" = "x86_64"; then
+		_cv_arch="X86_64"
+		_cv_sysname="x86_64_macosx"
 	elif test "$arch" = "Power Macintosh"; then
 		_cv_arch="PPC"
 		_cv_sysname="ppc_macosx"
@@ -493,7 +495,6 @@ elif test $os = "Darwin" ; then
 	_cv_op_sys="Darwin"
 	_cv_opsys="DARWIN"
 
-	AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
 	if test $SW_VERS = "no" ; then
     	_cv_opsys_vers="OSX_UNKNOWN"
 	else
@@ -1042,6 +1043,12 @@ case "$gcc_vers" in
     CompilerMajor="4"
     CompilerMinor="2"
     CompilerPatch="3"
+    ;;
+ "4.2.4" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="2"
+    CompilerPatch="4"
     ;;
  "4.2.1" )
     CompilerKind="GCC"
@@ -2352,6 +2359,14 @@ AC_ARG_ENABLE([hdfs],
 AS_IF([test "x$enable_hdfs" = xyes],
   [AC_DEFINE([WANT_HDFS], [1], [Define if enabling HDFS])])
 
+AC_ARG_ENABLE([ipv6],
+  AC_HELP_STRING([--enable-ipv6],
+    [enable IPv6 for TCP/UDP connection (default: no)]),
+  [],
+  [enable_ipv6=no])
+AS_IF([test "x$enable_ipv6" = xyes],
+  [AC_DEFINE([CONDOR_IPV6], [1], [Define if enabling IPV6])])
+
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
 # package them into a tarball. for example, if say objcopy's debuglink flag
@@ -2575,6 +2590,8 @@ else
   AC_MSG_RESULT([no])
 fi
 rm -f affinity_test.cpp affinity_test.o
+
+AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], , ,[[#include <netinet/in.h>]])
 
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
@@ -3028,8 +3045,8 @@ if test "x$_cv_ext_openssl_version" != x; then
   # have ssl.h) to make gsoap happy
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
-  # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[5.0.1], [soft])
+  # Globus is dependent on an external version of openssl
+  CHECK_EXTERNAL([globus],[5.0.1-p1], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -3050,7 +3067,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [1.0.7], [soft],
+CHECK_EXTERNAL([classads], [1.0.9], [soft],
                [use new ClassAds (provides -better-analyze and more)],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]], [classads]))
@@ -3059,19 +3076,22 @@ AC_SUBST(CLASSADS_CFLAGS, $CLASSADS_CFLAGS)
 
 CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
-AC_MSG_CHECKING([if VOMS should be compiled (linux only)])
-if test "$_cv_opsys" = "LINUX" ; then
+AC_MSG_CHECKING([if VOMS should be compiled (linux and macos only)])
+if test "x$_cv_has_globus" = "xyes" -a \( "$_cv_opsys" = "LINUX" -o "$_cv_opsys" = "DARWIN" \) ; then
 	_cv_including_voms=yes
 	AC_MSG_RESULT([$_cv_including_voms])
 	CHECK_EXTERNAL([expat], [2.0.1], [soft])
-	CHECK_EXTERNAL([voms], [1.8.8_2-p2], [soft])
+	CHECK_EXTERNAL([voms], [1.9.10_4], [soft])
 else
 	_cv_including_voms=no
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
-if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
-  CHECK_EXTERNAL([cream],[1.10.1-p6], [soft])
+if test "x$_cv_has_globus" = "xyes" -a \( "$os" = "Linux" -o "$os" = "Darwin" \) ; then
+  CHECK_EXTERNAL([boost],[1.33.1], [soft])
+  CHECK_EXTERNAL([log4cpp],[1.0], [soft])
+  CHECK_EXTERNAL([cares],[1.3.0], [soft])
+  CHECK_EXTERNAL([cream],[1.12.1_14], [soft])
 fi
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
@@ -3093,7 +3113,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.16.0], [soft])
+CHECK_EXTERNAL([blahp], [1.16.0-p2], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -3199,9 +3219,9 @@ CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
 # Only build hadoop external if hdfs is enabled
 AS_IF([test "x$enable_hdfs" = xyes], 
-  [CHECK_EXTERNAL([hadoop],[0.20.2],[soft])])
+  [CHECK_EXTERNAL([hadoop],[0.21.0],[soft])])
 
-if test "x$_cv_opsys" = "xLINUX" ; then
+if test "x$_cv_opsys" = "xLINUX" -o "x$_cv_opsys" = "xDARWIN"  ; then
   CHECK_EXTERNAL([libxml2],[2.7.3],[soft],
                  [libxml2 for libvirt],
                  [MF_LIB_CHECK([libxml2],

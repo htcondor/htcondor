@@ -37,7 +37,7 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_holdcodes.h"
 #include "condor_parameters.h"
 #include "string_list.h"

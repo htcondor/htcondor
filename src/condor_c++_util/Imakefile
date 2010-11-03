@@ -16,7 +16,12 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+#ifndef HAVE_UNSETENV
+UNSETENV_LIB = condor_unsetenv.a
+UNSETENV_OBJ = condor_unsetenv.o
+#endif
+
+all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) $(UNSETENV_LIB) )
 
 param_info_init.c: param_info.in param_info_c_generator.pl
 	chmod u+x param_info_c_generator.pl
@@ -53,7 +58,7 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-	condor_event.o \
+	condor_event.o directory_util.o \
 	write_user_log.o \
 	write_user_log_state.o \
 	user_log_header.o \
@@ -166,6 +171,7 @@ CLASSAD_OBJ = \
 
 CONLIBAPI_OBJ = \
 	condor_event.o \
+	directory_util.o \
 	file_sql.o \
 	misc_utils.o \
 	user_log_header.o \
@@ -222,7 +228,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	alarm.o user_job_policy.o classad_support.o \
 	directory.o stat_info.o stat_wrapper.o stat_wrapper_internal.o \
 	my_hostname.o file_lock.o sig_name.o \
-	email_cpp.o env.o \
+	email_cpp.o env.o directory_util.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
 	write_user_log.o \
@@ -244,6 +250,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o access.o subsystem_info.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
+	spooled_job_files.o \
 	str_isxxx.o \
 	uids.o passwd_cache.o \
 	metric_units.o condor_ver_info.o \
@@ -280,10 +287,15 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_threads.o \
 	classad_newold.o \
 	historyFileFinder.o \
-	socket_proxy.o condor_timeslice.o open_files_in_pid.o
+	socket_proxy.o condor_timeslice.o open_files_in_pid.o \
+	$(UNSETENV_OBJ)
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
+
+#ifndef HAVE_UNSETENV
+library_target(condor_unsetenv.a,$(UNSETENV_OBJ))
+#endif
 
 library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
 libcondorapi.a: Makefile

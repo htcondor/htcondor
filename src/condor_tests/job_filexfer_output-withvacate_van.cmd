@@ -7,8 +7,8 @@ output = job_filexfer_output-withvacate_van.out
 error = job_filexfer_output-withvacate_van.err
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
-transfer_output_files = submit_filetrans_output14821e.txt,submit_filetrans_output14821f.txt,submit_filetrans_output14821g.txt
+transfer_output_files = ,,
 Notification = NEVER
-arguments = --job=14821 --forever 
+arguments = --job=65626 --forever 
 queue
 

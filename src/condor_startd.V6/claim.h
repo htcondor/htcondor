@@ -91,6 +91,7 @@ public:
 	char*	addr() 	{return c_addr;};
 	char*   proxyFile() {return c_proxyfile; };
 	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
+	int     numPids() {return c_numPids;};
 
 	void	setuser(const char* user);
 	void	setowner(const char* owner);
@@ -99,6 +100,7 @@ public:
 	void	sethost(const char* host);
 	void    setProxyFile(const char* pf);
 	void    setConcurrencyLimits(const char* limits);
+	void    setNumPids(int numJobPids);
 
 		// send a message to the client and accountant that the claim
 		// is a being vacated
@@ -112,6 +114,7 @@ private:
 	char	*c_proxyfile;   // file holding delegated proxy
 		                // (used when using GLEXEC_STARTER)
 	char	*c_concurrencyLimits; // limits, if any
+	int     c_numPids;
 
 };
 
@@ -125,7 +128,7 @@ public:
 
 		// Operations you can perform on a Claim
 	void vacate();	// Send a vacate command to the client of this claim
-	void alive();	// Process a keep alive for this claim
+	void alive( bool alive_from_schedd = false );	// Process a keep alive for this claim
 
 	void publish( ClassAd*, amask_t );
 	void publishPreemptingClaim( ClassAd* ad, amask_t how_much );
@@ -151,6 +154,12 @@ public:
 		 * (c_client).
 		 */
 	void loadRequestInfo();
+	
+		/**
+		 * Load statistics from the request (c_ad) into the client
+		 * (c_client).
+		 */
+	void loadStatistics();
 
 		/** 
 			We're servicing a request to activate a claim and we want

@@ -726,39 +726,6 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
     return 0;
 }
 
-bool
-Stream::prepare_crypto_for_secret_is_noop()
-{
-	CondorVersionInfo const *peer_ver = get_peer_version();
-	if( !peer_ver || peer_ver->built_since_version(7,1,3) ) {
-		if( !get_encryption() ) {
-			if( crypto_ ) {
-					// do turn on encryption before sending secret
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
-void
-Stream::prepare_crypto_for_secret()
-{
-	m_crypto_state_before_secret = true;
-	if( !prepare_crypto_for_secret_is_noop() ) {
-		dprintf(D_NETWORK,"encrypting secret\n");
-		m_crypto_state_before_secret = get_encryption(); // always false
-		set_crypto_mode(true);
-	}
-}
-
-void
-Stream::restore_crypto_after_secret()
-{
-	if( !m_crypto_state_before_secret ) {
-		set_crypto_mode(false); //restore crypto mode
-	}
-}
 
 int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 {
