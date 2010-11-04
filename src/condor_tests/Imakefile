@@ -271,6 +271,15 @@ TESTCLASS(job_dagman_splice-O,quicknolink)
 #TESTCLASS(job_dagman_splice-P,full)
 #TESTCLASS(job_dagman_splice-P,quicknolink)
 
+# Commented out until the underlying bug gets fixed (see gittrac #1751).
+#DESC(job_dagman_splice-Q,"Simple Dagman Splice Q")
+#RUN(job_dagman_splice-Q)
+#TESTCLASS(job_dagman_splice-Q,core)
+#TESTCLASS(job_dagman_splice-Q,dagman)
+#TESTCLASS(job_dagman_splice-Q,quick)
+#TESTCLASS(job_dagman_splice-Q,full)
+#TESTCLASS(job_dagman_splice-Q,quicknolink)
+
 /* vmuniverse tests in larg repository */
 
 #if defined(HAVE_VMWARE)

@@ -1,0 +1,2 @@
+JOB  2_A  job_dagman_splice-Q.cmd
+VARS 2_A job="$(JOB)"
