@@ -412,7 +412,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				'libtool-1.5.26', # used for the blahp
 			],
-			'xtests'	=> [ 'x86_64_ubuntu_10.04' ],
+			'xtests'	=> [ 'x86_64_ubuntu_10.04', 'x86_64_ubuntu_8.04.3' ],
 		},
 
 		'test' => {
