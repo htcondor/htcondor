@@ -454,12 +454,9 @@ our %submit_info = (
 				@default_prereqs
 			],
 			'xtests'	=> [ 
-				'x86_64_ubuntu_10.04',
 				'x86_64_sles_9',
 				'x86_64_sl_5.5',
-				'x86_64_rhap_5.2',
-				'x86_64_fedora_12-updated', 'x86_64_fedora_13',
-				'x86_64_fedora_11', 'x86_64_fedora_12', 'x86_64_rhas_4' ],
+				'x86_64_rhas_4' ],
 		},
 
 		'test' => {
@@ -496,9 +493,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				'libtool-1.5.26',
 			],
-			'xtests'	=> [ 
-				'x86_ubuntu_10.04',
-				'x86_64_ubuntu_10.04' ],
+			'xtests'	=> [ 'x86_ubuntu_10.04' ],
 		},
 
 		'test' => {
@@ -662,16 +657,10 @@ our %submit_info = (
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			'xtests'	=> [ 
-				'x86_64_ubuntu_10.04',
-				'x86_ubuntu_10.04',
 				'x86_64_sles_9',
 				'x86_64_sl_5.5',
 				'x86_64_rhap_5.2', 
 				'unmanaged-x86_rhap_5',
-				'x86_64_fedora_11',
-				'x86_64_fedora_12',
-				'x86_64_fedora_12-updated',
-				'x86_64_fedora_13',
 			 	'x86_rhas_4', 
 				'x86_suse_10.0', 
 				'x86_suse_10.2', 
