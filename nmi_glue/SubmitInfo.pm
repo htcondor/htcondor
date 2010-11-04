@@ -62,7 +62,6 @@ our %build_and_test_sets = (
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
 	# are those platforms.
 	'nmi_one_offs' => [
-		'unmanaged-x86_rhap_5',
 		'x86_64_rhap_5.3-updated',
 		'x86_suse_10.2',
 		'x86_suse_10.0',

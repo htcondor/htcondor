@@ -411,9 +411,6 @@ TESTCLASS(lib_auth_protocol-gsi,quicknolink)
 
 #endif
 
-/* These guys are triggering a massive memory leak
-   which is shutting down NMI.  Turn them off until
-   we figure it out. -- GGT
 DESC(lib_auth_protocol-negot,"4 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
@@ -441,7 +438,6 @@ TESTCLASS(lib_auth_protocol-negot-prt4,core)
 TESTCLASS(lib_auth_protocol-negot-prt4,quick)
 TESTCLASS(lib_auth_protocol-negot-prt4,full)
 TESTCLASS(lib_auth_protocol-negot-prt4,quicknolink)
-*/
 
 /* Turned off on Free BSD port GNATS 766 */
 
