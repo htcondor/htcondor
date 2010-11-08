@@ -1334,19 +1334,17 @@ count( ClassAd *job )
 			// for Globus, which we deal with below.
 		if( universe == CONDOR_UNIVERSE_SCHEDULER ) 
 		{
-			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
-				scheduler.SchedUniverseJobsRunning += cur_hosts;
-				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
-			}
+			// Count REMOVED or HELD jobs that are in the process of being
+			// killed. cur_hosts tells us which these are.
+			scheduler.SchedUniverseJobsRunning += cur_hosts;
+			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 		}
 		if( universe == CONDOR_UNIVERSE_LOCAL ) 
 		{
-			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
-				scheduler.LocalUniverseJobsRunning += cur_hosts;
-				scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
-			}
+			// Count REMOVED or HELD jobs that are in the process of being
+			// killed. cur_hosts tells us which these are.
+			scheduler.LocalUniverseJobsRunning += cur_hosts;
+			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 		}
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
