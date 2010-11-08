@@ -413,12 +413,14 @@ TESTCLASS(lib_auth_protocol-gsi,quicknolink)
 
 #endif
 
+/* This does not really test what it says it does
 DESC(lib_auth_protocol-negot,"4 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
 TESTCLASS(lib_auth_protocol-negot,quick)
 TESTCLASS(lib_auth_protocol-negot,full)
 TESTCLASS(lib_auth_protocol-negot,quicknolink)
+*/
 
 DESC(lib_auth_protocol-negot-prt2,"4 way negotiation test - last 8")
 RUN(lib_auth_protocol-negot-prt2)
