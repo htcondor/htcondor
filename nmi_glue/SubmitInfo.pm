@@ -610,11 +610,8 @@ our %submit_info = (
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
 				'x86_ubuntu_10.04',
-				'x86_64_ubuntu_10.04',
 				'x86_64_sl_5.5', 
 				'x86_64_rhap_5.2',
-				'x86_64_fedora_12-updated', 'x86_64_fedora_13', 
-				'x86_64_fedora_11', 'x86_64_fedora_12',
 				'unmanaged-x86_rhap_5'
 			],
 		},
