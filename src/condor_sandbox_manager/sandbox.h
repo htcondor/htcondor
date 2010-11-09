@@ -43,7 +43,7 @@
 #include "enum_utils.h"
 #include "condor_version.h"
 #include "classad_command_util.h"
-#include<string>
+#include <string>
 #include <sstream>
 //#include<stringstream>
 

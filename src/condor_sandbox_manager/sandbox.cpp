@@ -44,9 +44,6 @@ CSandbox::CSandbox(const char* sDir, const int lifeTime, const int idLength)
 CSandbox::~CSandbox()
 {
 	printf("CSandbox::~CSandbox called\n");
-	//if (this->id) { free(this->id); }
-	//if (this->srcDir) { free(this->srcDir); }
-	//if (this->sandboxDir) { free(this->sandboxDir); }
 }
 
 
@@ -175,6 +172,9 @@ CSandbox::createId(const int length)
 	}
 	iden[length] = '\0';
 	idTmp.assign(iden);
+	if (iden) {
+		delete iden;
+	}
 
 	return idTmp;
 }

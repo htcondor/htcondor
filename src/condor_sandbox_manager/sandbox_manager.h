@@ -44,9 +44,10 @@
 #include "condor_version.h"
 #include "classad_command_util.h"
 #include "sandbox.h"
-#include <map>
 #include <string>
 #include <iostream>
+#include <map>
+#include <vector>
 using namespace std;
 
 /*
@@ -88,13 +89,19 @@ public:
 	virtual int transferSandbox(const char*);
 
 	// Return a list of ids containing expired sandboxes
-	virtual char* getExpiredSandboxIds(void);
+	virtual std::vector<string> getExpiredSandboxIds(void);
+
+	// List details about registered sandboxes
+	virtual void listRegisteredSandboxes(void);
 
 	// Unregister the sandbox with the given id
 	virtual void unregisterSandbox(const char*);
 
-	// List details about registered sandboxes
-	virtual void listRegisteredSandboxes(void);
+	// Unregister the sandbox with the given id
+	virtual void unregisterSandbox(const string);
+
+	// Unregister all sandboxes
+	virtual void unregisterAllSandboxes(void);
 
 protected:
 
@@ -103,7 +110,7 @@ private:
 	// Map of sandboxIds and a pointer to the sandbox object
 
 	std::map<string, CSandbox*>sandboxMap;
-
+	
 	void init(void);
 };
 #endif
