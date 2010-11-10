@@ -30,7 +30,7 @@ cmd_q_shows-format
 #cmd_status_shows-master
 #cmd_status_shows-schedd
 #cmd_status_shows-startd
-lib_auth_protocol-negot
+#lib_auth_protocol-negot
 #lib_auth_protocol-negot-prt2
 #lib_auth_protocol-negot-prt3
 #lib_auth_protocol-negot-prt4
