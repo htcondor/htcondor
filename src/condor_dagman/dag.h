@@ -63,8 +63,10 @@ class OwnedMaterials
 	public:
 		// this structure owns the containers passed to it, but not the memory 
 		// contained in the containers...
-		OwnedMaterials(ExtArray<Job*> *a, ThrottleByCategory *tr) :
-				nodes (a), throttles (tr) {};
+		OwnedMaterials(ExtArray<Job*> *a, ThrottleByCategory *tr,
+				bool reject, MyString firstRejectLoc ) :
+				nodes (a), throttles (tr), _reject(reject),
+				_firstRejectLoc(firstRejectLoc) {};
 		~OwnedMaterials() 
 		{
 			delete nodes;
@@ -72,6 +74,8 @@ class OwnedMaterials
 
 	ExtArray<Job*> *nodes;
 	ThrottleByCategory *throttles;
+	bool _reject;
+	MyString _firstRejectLoc;
 };
 
 //------------------------------------------------------------------------
@@ -433,17 +437,19 @@ class Dag {
         @param datafile The original DAG file
 		@param multiDags Whether we have multiple DAGs
 		@param maxRescueDagNum the maximum legal rescue DAG number
+		@param parseFailed whether parsing the DAG(s) failed
     */
     void Rescue (const char * datafile, bool multiDags,
-				int maxRescueDagNum) /* const */;
+				int maxRescueDagNum, bool parseFailed = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
         @param rescue_file The name of the rescue file to generate
         @param datafile The original DAG file
+		@param parseFailed whether parsing the DAG(s) failed
     */
     void WriteRescue (const char * rescue_file,
-				const char * datafile) /* const */;
+				const char * datafile, bool parseFailed = false) /* const */;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -474,6 +480,21 @@ class Dag {
 	void SetNodeStatusFileName( const char *statusFileName,
 				int minUpdateTime );
 	void DumpNodeStatus( bool held, bool removed );
+
+		/** Set the reject flag to true for this DAG; if it hasn't been
+			previously set, update the location info for the reject
+			directive.
+			@param location: the file and line # of the REJECT keyword
+		*/
+	void SetReject( const MyString &location );
+
+		/** Get the reject setting of this DAG (true means we shouldn't
+			actually run the DAG).
+			@param firstLocation: the location of the first REJECT
+				directive we encountered in parsing the DAG (including
+				splices)
+		*/
+	bool GetReject( MyString &firstLocation );
 
 	void CheckAllJobs();
 
@@ -1012,6 +1033,15 @@ class Dag {
 		// The maximum number of times a node job can go on hold before
 		// we declare it a failure and remove it; 0 means no limit.
 	int _maxJobHolds;
+
+		// If this flag is set, we shouldn't actually run this DAG file
+		// (this is set when running a "rescue" produced when DAGMan is
+		// run with -DumpRescue and parsing the DAG fails).
+	bool _reject;
+
+		// The file and line number where we first found a REJECT
+		// specification, if any.
+	MyString _firstRejectLoc;
 };
 
 #endif /* #ifndef DAG_H */

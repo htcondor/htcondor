@@ -120,7 +120,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_isSplice			  (isSplice),
 	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0),
-	_maxJobHolds		  (0)
+	_maxJobHolds		  (0),
+	_reject				  (false)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -1760,24 +1761,30 @@ void Dag::RemoveRunningScripts ( ) const {
 
 //-----------------------------------------------------------------------------
 void Dag::Rescue ( const char * datafile, bool multiDags,
-			int maxRescueDagNum ) /* const */
+			int maxRescueDagNum, bool parseFailed ) /* const */
 {
-	int nextRescue = FindLastRescueDagNum( datafile, multiDags,
-				maxRescueDagNum ) + 1;
-	if ( nextRescue > maxRescueDagNum ) nextRescue = maxRescueDagNum;
-	MyString rescueDagFile = RescueDagName( datafile, multiDags, nextRescue );
+	MyString rescueDagFile;
+	if ( parseFailed ) {
+		rescueDagFile = datafile;
+		rescueDagFile += ".parse_failed";
+	} else {
+		int nextRescue = FindLastRescueDagNum( datafile, multiDags,
+					maxRescueDagNum ) + 1;
+		if ( nextRescue > maxRescueDagNum ) nextRescue = maxRescueDagNum;
+		rescueDagFile = RescueDagName( datafile, multiDags, nextRescue );
+	}
 
 		// Note: there could possibly be a race condition here if two
 		// DAGMans are running on the same DAG at the same time.  That
 		// should be avoided by the lock file, though, so I'm not doing
 		// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue( rescueDagFile.Value(), datafile );
+	WriteRescue( rescueDagFile.Value(), datafile, parseFailed );
 }
 
 //-----------------------------------------------------------------------------
-void Dag::WriteRescue (const char * rescue_file, const char * datafile)
-			/* const */
+void Dag::WriteRescue (const char * rescue_file, const char * datafile,
+			bool parseFailed) /* const */
 {
 	debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
 				rescue_file );
@@ -1793,8 +1800,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 		param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
 
 
-    fprintf(fp, "# Rescue DAG file, created after running\n");
-    fprintf(fp, "#   the %s DAG file\n", datafile);
+	if ( parseFailed ) {
+    	fprintf(fp, "# \"Rescue\" DAG file, created after failure parsing\n");
+    	fprintf(fp, "#   the %s DAG file\n", datafile);
+	} else {
+    	fprintf(fp, "# Rescue DAG file, created after running\n");
+    	fprintf(fp, "#   the %s DAG file\n", datafile);
+	}
 
 	time_t timestamp;
 	(void)time( &timestamp );
@@ -1821,6 +1833,14 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
         }
     }
     fprintf(fp, "<ENDLIST>\n\n");
+
+	//
+	// REJECT tells DAGMan to reject this DAG if we try to run it
+	// (which we shouldn't).
+	//
+	if ( parseFailed ) {
+		fprintf(fp, "REJECT\n\n");
+	}
 
 	//
 	// Print the CONFIG file, if any.
@@ -2514,6 +2534,24 @@ Dag::DumpNodeStatus( bool held, bool removed )
 
 	_statusFileOutdated = false;
 	_lastStatusUpdateTimestamp = startTime;
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::SetReject( const MyString &location )
+{
+	if ( _firstRejectLoc == "" ) {
+		_firstRejectLoc = location;
+	}
+	_reject = true;
+}
+
+//-------------------------------------------------------------------------
+bool
+Dag::GetReject( MyString &firstLocation )
+{
+	firstLocation = _firstRejectLoc;
+	return _reject;
 }
 
 //===========================================================================
@@ -3640,7 +3678,8 @@ Dag::RelinquishNodeOwnership(void)
 	}
 
 	// shove it into a packet and give it back
-	return new OwnedMaterials(nodes, &_catThrottles);
+	return new OwnedMaterials(nodes, &_catThrottles, _reject,
+				_firstRejectLoc);
 }
 
 
@@ -3812,6 +3851,11 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 				"Found job id collision while taking ownership of node: %s\n",
 				(*nodes)[i]->GetJobName());
 		}
+	}
+
+	// 4. Copy any reject info from the splice.
+	if ( om->_reject ) {
+		SetReject( om->_firstRejectLoc );
 	}
 }
 

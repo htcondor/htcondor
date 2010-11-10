@@ -81,6 +81,8 @@ static bool parse_maxjobs(Dag *dag, const char *filename, int lineNumber);
 static bool parse_splice(Dag *dag, const char *filename, int lineNumber);
 static bool parse_node_status_file(Dag  *dag, const char *filename,
 		int  lineNumber);
+static bool parse_reject(Dag  *dag, const char *filename,
+		int  lineNumber);
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -305,6 +307,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a NODE_STATUS_FILE spec
 		else if(strcasecmp(token, "NODE_STATUS_FILE") == 0) {
 			parsed_line_successfully = parse_node_status_file(dag,
+						filename, lineNumber);
+		}
+
+		// Handle a REJECT spec
+		else if(strcasecmp(token, "REJECT") == 0) {
+			parsed_line_successfully = parse_reject(dag,
 						filename, lineNumber);
 		}
 		
@@ -1672,6 +1680,39 @@ parse_node_status_file(
 	}
 
 	dag->SetNodeStatusFileName( statusFileName, minUpdateTime );
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_reject
+// Purpose:  Parses a line specifying the REJECT directive for a DAG.
+//           The format of this line must be
+//           REJECT
+//-----------------------------------------------------------------------------
+static bool 
+parse_reject(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char * example = "REJECT";
+
+	char *token = strtok(NULL, DELIMITERS);
+	if ( token != NULL ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): REJECT should have "
+					"no additional tokens.\n",
+					filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	MyString location;
+	location.sprintf( "%s (line %d)", filename, lineNumber );
+	debug_printf( DEBUG_QUIET, "REJECT specification at %s "
+				"will cause this DAG to fail\n", location.Value() );
+
+	dag->SetReject( location );
 	return true;
 }
 

@@ -1949,6 +1949,13 @@ TESTCLASS(job_dagman_job_held,quick)
 TESTCLASS(job_dagman_job_held,full)
 TESTCLASS(job_dagman_job_held,quicknolink)
 
+DESC(job_dagman_reject,"Test the REJECT keyword, inside a splice")
+RUN(job_dagman_reject)
+TESTCLASS(job_dagman_reject,dagman)
+TESTCLASS(job_dagman_reject,quick)
+TESTCLASS(job_dagman_reject,full)
+TESTCLASS(job_dagman_reject,quicknolink)
+
 /* Sample performance tests */
 
 /*
