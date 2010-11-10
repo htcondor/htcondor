@@ -2024,6 +2024,29 @@ can be forced to the old behavior by setting the configuration variables
 to \Expr{True} and \Macro{DAGMAN\_AUTO\_RESCUE}
 (see~\pageref{param:DAGManAutoRescue}) to \Expr{False}.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:rescue_parse_error}Rescue DAGs from parse errors}
+
+As of version 7.5.5, the \Opt{-DumpRescue} flag takes effect even if
+parsing of a DAG file fails.  In this case, DAGMan dumps a DAG file
+containing whatever it had successfully parsed up until the error.
+This may be useful in debugging parse errors in complex DAGs, especially
+ones using splices.
+
+To avoid confusion, the "rescue" DAG generated in the case of a parse
+failure is named \Arg{dag\_file}.parse\_failed to avoid confusion with
+the "true" rescue DAGs generated when a DAG fails during execution.
+
+These parse failure DAGs also contain the keyword REJECT, which causes
+DAGMan to reject the DAG if you try to run it.  This is done because the
+parse failure DAG may be a syntactically correct DAG file.  However,
+it will also be incomplete relative to the original DAG, so if the
+parse failure DAG could be run it could erroneously be perceived as
+having suuccessfully executed the desired workflow, when, in fact,
+it did not.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGPaths}File Paths in DAGs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
