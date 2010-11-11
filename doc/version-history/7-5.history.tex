@@ -440,6 +440,14 @@ which does not set a maximum cluster id.
 
 \begin{itemize}
 
+% gittrac #1766
+\item Fixed a bug that occurred with x64 flavors of the Windows operating system. 
+  Condor was setting the default value of \AdAttr{Arch} to \Expr{INTEL} when it 
+  should have been \Expr{X86\_64}.  This was a consequence of the fact that the 
+  Condor runs in the WOW64 sandbox on 64-bit Windows.  This was fixed so that
+  \AdAttr{Arch} would contain the value for the native architecture rather than 
+  the WOW64 sandbox architecture.
+
 % gittrac #1500
 \item Fixed a bug in the user privilege switching code in Windows that 
   caused the \Condor{shadow} daemon to except when the \Condor{schedd} 
