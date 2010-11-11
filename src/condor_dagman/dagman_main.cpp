@@ -1230,6 +1230,7 @@ void
 main_pre_dc_init( int, char*[] )
 {
 	DC_Skip_Auth_Init();
+	DC_Skip_Core_Init();
 
 		// Convert the DAGMan log file name to an absolute path if it's
 		// not one already, so that we'll log things to the right file
