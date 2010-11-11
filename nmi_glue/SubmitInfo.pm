@@ -544,7 +544,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_13'],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -562,7 +562,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_13'],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
