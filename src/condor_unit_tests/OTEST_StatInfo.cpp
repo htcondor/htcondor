@@ -1002,7 +1002,7 @@ static bool test_get_modify_time_file_old() {
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
 	StatInfo info(original_dir.Value(), readme);
-	time_t time = info.GetAccessTime();
+	time_t time = info.GetModifyTime();
 	emit_output_actual_header();
 	emit_retval("%d", time);
 	if(time != st.st_mtime) {
@@ -1110,7 +1110,7 @@ static bool test_get_create_time_file_old() {
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
 	StatInfo info(original_dir.Value(), readme);
-	time_t time = info.GetAccessTime();
+	time_t time = info.GetCreateTime();
 	emit_output_actual_header();
 	emit_retval("%d", time);
 	if(time != st.st_ctime) {
