@@ -66,6 +66,10 @@ public:
 	                   FamilyInfo* family_info,
 					   int *       affinity_mask = 0);
 
+	// check if the proxy is currently valid
+	//
+	int proxy_valid_right_now();
+
 private:
 
 	// helper for calling out to scripts

@@ -132,6 +132,17 @@ dprintf_config( const char *subsys )
 		free( pval );
 	}
 
+#ifdef WIN32
+		/* Two reasons why we need to lock the log in Windows
+		 * (when a lock is configured)
+		 * 1) File rotation requires exclusive access in Windows.
+		 * 2) O_APPEND doesn't guarantee atomic writes in Windows
+		 */
+	DebugShouldLockToAppend = 1;
+#else
+	DebugShouldLockToAppend = param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+#endif
+
 	/*
 	**	If this is not going to the terminal, pick up the name
 	**	of the log file, maximum log size, and the name of the
@@ -248,9 +259,9 @@ dprintf_config( const char *subsys )
 				}
 
 				if( first_time && want_truncate ) {
-					DebugFP = debug_lock(debug_level, "w");
+					DebugFP = debug_lock(debug_level, "w", 0);
 				} else {
-					DebugFP = debug_lock(debug_level, "a");
+					DebugFP = debug_lock(debug_level, "a", 0);
 				}
 
 				if( DebugFP == NULL && debug_level == 0 ) {

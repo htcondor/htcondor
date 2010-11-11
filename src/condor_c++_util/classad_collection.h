@@ -147,9 +147,10 @@ public:
   bool LookupInTransaction(const char *key, const char *name, char *&val) { return (ClassAdLog::LookupInTransaction(key,name,val)==1); }
   
   /** Truncate the log file by creating a new "checkpoint" of the repository
-    @return nothing
+    @return true on success; false if log could not be rotated (in which
+	case we are continuing to use the old log file)
   */
-  void TruncLog() { ClassAdLog::TruncLog(); }
+  bool TruncLog() { return ClassAdLog::TruncLog(); }
 
   void SetMaxHistoricalLogs(int max) { ClassAdLog::SetMaxHistoricalLogs(max); }
   int GetMaxHistoricalLogs() { return ClassAdLog::GetMaxHistoricalLogs(); }

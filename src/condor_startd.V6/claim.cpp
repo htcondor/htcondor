@@ -710,9 +710,11 @@ Claim::loadStatistics()
 {
 		// Stash the ATTR_NUM_PIDS, necessary to advertise
 		// them if they exist
-	int numJobPids = 0;
-	c_ad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
-	c_client->setNumPids(numJobPids);
+	if ( c_client ) {
+		int numJobPids = 0;
+		c_ad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
+		c_client->setNumPids(numJobPids);
+	}
 }
 
 void

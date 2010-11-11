@@ -118,10 +118,11 @@ public:
 
 		/** Once all the jobs are done, and after the optional
 			HOOK_JOB_EXIT has returned, initiate the file transfer.
-			If you call this, you MUST use transferOutputMopUp() afterwards
-			to handle problems the file transfer may have had.
+			If you call this, and transient_failure is not true, you
+			MUST use transferOutputMopUp() afterwards to handle
+			problems the file transfer may have had.
 		*/
-	bool transferOutput( void );
+	bool transferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the

@@ -27,7 +27,7 @@
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 #include "my_hostname.h"
 #include "pseudo_ops.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_ckpt_mode.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "internet.h"
@@ -912,7 +912,31 @@ pseudo_put_file_stream(
 		// effects us, the shadow.  -Derek Wright 6/11/98
 	omask = umask( 022 );
 
-	if( (file_fd=safe_open_wrapper(file,O_WRONLY|O_CREAT|O_TRUNC,0664)) < 0 ) {
+	int open_attempts=0;
+	for(open_attempts=0;open_attempts<100;open_attempts++) {
+		file_fd=safe_open_wrapper(file,O_WRONLY|O_CREAT|O_TRUNC,0664);
+
+		if( file_fd < 0 && errno == ENOENT && (CkptFile || ICkptFile) ) {
+
+				// Perhaps the shared spool directory hierarchy does
+				// not yet exist for this job.  In case of a race in
+				// which we create the directory and something else
+				// removes it, we try multiple times.
+
+			if( !SpooledJobFiles::createJobSpoolDirectory( JobAd, PRIV_CONDOR ) ) {
+				dprintf(D_ALWAYS,"Failed to create parent spool directory for %s\n",file);
+				break;
+			}
+			continue;
+		}
+		break;
+	}
+
+	if( file_fd < 0 && open_attempts > 0 ) {
+		dprintf(D_ALWAYS,"Failed to open spool file %s after %d tries.\n",file,open_attempts);
+	}
+
+	if( file_fd < 0 ) {
 		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
 		(void)umask(omask);
 		return -1;

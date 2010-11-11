@@ -12,8 +12,8 @@ Executable				= ./x_time.pl
 Notification			= NEVER
 Log                     = job_core_max-running_local.log
 Error                   = job_core_max-running_local.error
-ShouldTransferFiles		= yes
-WhenToTransferOutput	= ON_EXIT_OR_EVICT
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT_OR_EVICT
 Requirements            = TotalLocalJobsRunning < 1
 Arguments				= 20
 

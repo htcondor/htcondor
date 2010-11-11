@@ -61,7 +61,6 @@ if (-e $rescue_file) {
 
 $abnormal = sub 
 {
-	CondorTest::debug("DIAG abnormal\n");
 	die "Want to see only submit, execute and successful completion\n";
 };
 

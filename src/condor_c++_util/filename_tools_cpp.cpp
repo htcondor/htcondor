@@ -40,6 +40,23 @@ int filename_split( const char *path, MyString &dir, MyString &file )
 	}
 }
 
+// keep this function in sync with filename_split() in filename_tools.c
+int filename_split( const char *path, std::string &dir, std::string &file ) {
+	char const *last_slash;
+
+	last_slash = strrchr(path,DIR_DELIM_CHAR);
+	if(last_slash) {
+		dir.append(path,last_slash-path);
+		last_slash++;
+		file = last_slash;
+		return 1;
+	} else {
+		file = path;
+		dir = ".";
+		return 0;
+	}
+}
+
 /* Copy in to out, removing whitespace. */
 
 // keep in sync with version in filename_tools.c

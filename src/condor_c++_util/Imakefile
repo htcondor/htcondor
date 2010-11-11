@@ -250,6 +250,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o access.o subsystem_info.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
+	spooled_job_files.o \
 	str_isxxx.o \
 	uids.o passwd_cache.o \
 	metric_units.o condor_ver_info.o \

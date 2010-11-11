@@ -25,7 +25,6 @@
 #include "condor_config.h"
 #include "condor_getmnt.h"
 #include "condor_types.h"
-#include "condor_ckpt_name.h"
 #include "condor_header_features.h"
 
 #if defined(__cplusplus)
@@ -58,7 +57,7 @@ void detach ( void );
 int do_connect ( const char *host, const char *service, u_short port );
 int udp_connect ( char *host, u_short port );
 void dprintf ( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-FILE * debug_lock ( int debug_level, const char *mode );
+FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 void debug_unlock ( int debug_level );
 void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void condor_except_should_dump_core( int flag );

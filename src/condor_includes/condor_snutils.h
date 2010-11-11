@@ -51,6 +51,36 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args);
 int printf_length(const char *format, ...);
 int vprintf_length(const char *format, va_list args);
 
+/*
+ * sprintf_realloc
+ - Calls sprintf to write to *buf at position *bufpos.
+ - Reallocs *buf if necessary; the caller must free() the buffer when finished.
+ - It is fine for *buf to be NULL and *buflen to be 0.
+ - On success, returns the number of characters written, not counting
+   the terminating '\0' and updates *bufpos to be the index of the
+   terminating '\0'.  On error, returns -1 and sets errno.  On error, the
+   caller should not assume that the buffer is null terminated, but the caller
+   should still free *buf.
+
+   This function does not abort on any errors except on some platforms
+   with broken sprintf() implementations, it could abort due to
+   failure to open /dev/null.
+ */
+int sprintf_realloc( char **buf, int *bufpos, int *buflen, const char *format, ...) CHECK_PRINTF_FORMAT(4,5);
+
+
+/* vsprintf_realloc
+ * This function is just like sprintf_realloc except it takes the arguments
+ * as a va_list.
+ *
+ * The caller of this function should not assume that args can be
+ * used again on systems where va_copy is required.  If the caller
+ * wishes to use args again, the caller should therefore pass in
+ * a copy of the args.
+ */
+int vsprintf_realloc( char **buf, int *bufpos, int *buflen, const char *format, va_list args);
+
+
 END_C_DECLS
 
 #endif /* CONDOR_SNUTILS_H */

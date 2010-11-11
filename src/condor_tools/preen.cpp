@@ -48,6 +48,7 @@
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "filename_tools.h"
 
 State get_machine_state();
 
@@ -215,6 +216,60 @@ produce_output()
 	}
 }
 
+bool
+check_job_spool_hierarchy( char const *parent, char const *child, StringList &bad_spool_files )
+{
+	ASSERT( parent );
+	ASSERT( child );
+
+		// We expect directories of the form produced by gen_ckpt_name().
+		// e.g. $(SPOOL)/<cluster mod 10000>/<proc mod 10000>/cluster<cluster>.proc<proc>.subproc<proc>
+		// or $(SPOOL)/<cluster mod 10000>/cluster<cluster>.ickpt.subproc<subproc>
+
+	char *end=NULL;
+	strtol(child,&end,10);
+	if( !end || *end != '\0' ) {
+		return false; // not part of the job spool hierarchy
+	}
+
+	std::string topdir;
+	sprintf(topdir,"%s%c%s",parent,DIR_DELIM_CHAR,child);
+	Directory dir(topdir.c_str(),PRIV_ROOT);
+	char const *f;
+	while( (f=dir.Next()) ) {
+
+			// see if it's a legitimate job spool file/directory
+		if( is_ckpt_file(f) ) {
+			good_file( topdir.c_str(), f );
+			continue;
+		}
+
+		if( IsDirectory(dir.GetFullPath()) && !IsSymlink(dir.GetFullPath()) ) {
+			if( check_job_spool_hierarchy( topdir.c_str(), f, bad_spool_files ) ) {
+				good_file( topdir.c_str(), f );
+				continue;
+			}
+		}
+
+		bad_spool_files.append( dir.GetFullPath() );
+	}
+
+		// By returning true here, we indicate that this directory is
+		// part of the spool directory hierarchy and should not be
+		// deleted.  We do return true even if the directory is empty.
+		// If we wanted to remove empty directories of this type, we
+		// would need to do so with rmdir(), not a recursive remove,
+		// because new job directories might show up inside this
+		// directory between the time we examine the directory
+		// contents and the time we remove the directory.  We don't
+		// bother dealing with that case, because if something ever
+		// causes the self-cleaning of these directories to fail, the
+		// self-cleaning will be tried again the next time the
+		// directory is used.  In the worst case, the spool hierarchy
+		// is self-limited in how many entries will be made anyway.
+
+	return true;
+}
 
 /*
   Check the condor spool directory for extraneous files.  Files found
@@ -251,6 +306,7 @@ check_spool_dir()
 		// add some reasonable defaults that we never want to remove
 	well_known_list.append( "job_queue.log" );
 	well_known_list.append( "job_queue.log.tmp" );
+	well_known_list.append( "spool_version" );
 	well_known_list.append( "Accountant.log" );
 	well_known_list.append( "Accountantnew.log" );
 	well_known_list.append( "local_univ_execute" );
@@ -325,6 +381,13 @@ check_spool_dir()
 		if ( is_ccb_file( f ) ) {
 			good_file( Spool, f );
 			continue;
+		}
+
+		if( IsDirectory( dir.GetFullPath() ) && !IsSymlink( dir.GetFullPath() ) ) {
+			if( check_job_spool_hierarchy( Spool, f, bad_spool_files ) ) {
+				good_file( Spool, f );
+				continue;
+			}
 		}
 
 			// We think it's bad.  For now, just append it to a
@@ -744,7 +807,12 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	MyString	pathname;
 	MyString	buf;
 
-	pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	if( is_relative_to_cwd( name ) ) {
+		pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	}
+	else {
+		pathname = name;
+	}
 
 	if( VerboseFlag ) {
 		printf( "%s - BAD\n", pathname.Value() );

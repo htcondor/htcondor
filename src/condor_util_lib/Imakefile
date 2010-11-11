@@ -60,7 +60,7 @@ FDPASS_OBJ = fdpass.o
 	email.o email_file.o \
 	$(GETDTABLESIZE_OBJ) $(MALLOC_OBJ)\
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
-	$(GETWD_OBJ) ckpt_name.o \
+	$(GETWD_OBJ) \
 	lock_file.NON_POSIX.o getmnt.o $(INET_NTOA_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_util.o get_random_num.o rotate_file.o \

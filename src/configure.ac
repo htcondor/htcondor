@@ -2591,6 +2591,8 @@ else
 fi
 rm -f affinity_test.cpp affinity_test.o
 
+AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], , ,[[#include <netinet/in.h>]])
+
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
 # error here.  Under IA64, there is a different interface to clone
@@ -3074,19 +3076,22 @@ AC_SUBST(CLASSADS_CFLAGS, $CLASSADS_CFLAGS)
 
 CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
-AC_MSG_CHECKING([if VOMS should be compiled (linux only)])
-if test "$_cv_opsys" = "LINUX" ; then
+AC_MSG_CHECKING([if VOMS should be compiled (linux and macos only)])
+if test "x$_cv_has_globus" = "xyes" -a \( "$_cv_opsys" = "LINUX" -o "$_cv_opsys" = "DARWIN" \) ; then
 	_cv_including_voms=yes
 	AC_MSG_RESULT([$_cv_including_voms])
 	CHECK_EXTERNAL([expat], [2.0.1], [soft])
-	CHECK_EXTERNAL([voms], [1.8.8_2-p2], [soft])
+	CHECK_EXTERNAL([voms], [1.9.10_4], [soft])
 else
 	_cv_including_voms=no
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
-if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
-  CHECK_EXTERNAL([cream],[1.10.1-p7], [soft])
+if test "x$_cv_has_globus" = "xyes" -a \( "$os" = "Linux" -o "$os" = "Darwin" \) ; then
+  CHECK_EXTERNAL([boost],[1.33.1], [soft])
+  CHECK_EXTERNAL([log4cpp],[1.0], [soft])
+  CHECK_EXTERNAL([cares],[1.3.0], [soft])
+  CHECK_EXTERNAL([cream],[1.12.1_14], [soft])
 fi
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
@@ -3214,9 +3219,9 @@ CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
 # Only build hadoop external if hdfs is enabled
 AS_IF([test "x$enable_hdfs" = xyes], 
-  [CHECK_EXTERNAL([hadoop],[0.20.2],[soft])])
+  [CHECK_EXTERNAL([hadoop],[0.21.0],[soft])])
 
-if test "x$_cv_opsys" = "xLINUX" ; then
+if test "x$_cv_opsys" = "xLINUX" -o "x$_cv_opsys" = "xDARWIN"  ; then
   CHECK_EXTERNAL([libxml2],[2.7.3],[soft],
                  [libxml2 for libvirt],
                  [MF_LIB_CHECK([libxml2],

@@ -60,7 +60,7 @@ PipeBuffer stdin_buffer;
 Worker workers[NUMBER_WORKERS];
 
 // this appears at the bottom of this file
-extern "C" int display_dprintf_header(FILE *fp);
+extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 
 #ifdef WIN32
 int STDIN_FILENO = fileno(stdin);
@@ -766,7 +766,7 @@ main_pre_command_sock_init( )
 // log entries.
 extern "C"
 int
-display_dprintf_header(FILE *fp)
+display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;
 
@@ -774,7 +774,5 @@ display_dprintf_header(FILE *fp)
 		mypid = daemonCore->getpid();
 	}
 
-	fprintf( fp, "[%ld] ", (long)mypid );
-
-	return TRUE;
+	return sprintf_realloc( buf, bufpos, buflen, "[%ld] ", (long)mypid );
 }

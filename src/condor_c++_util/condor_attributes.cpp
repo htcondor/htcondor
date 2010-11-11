@@ -867,3 +867,4 @@ const char * const ATTR_CUMULATIVE_SLOT_TIME = "CumulativeSlotTime";
 const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";
 
 const char * const ATTR_HASH_NAME = "HashName";
+const char * const ATTR_AUTHENTICATED_IDENTITY = "AuthenticatedIdentity";

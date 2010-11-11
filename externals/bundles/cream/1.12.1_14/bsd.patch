@@ -1,0 +1,12 @@
+diff -u -r org.glite.ce.cream-client-api-c/src/AbsCreamProxy.cpp org.glite.ce.cream-client-api-c-patched/src/AbsCreamProxy.cpp
+--- org.glite.ce.cream-client-api-c/src/AbsCreamProxy.cpp	2010-01-29 05:08:22.000000000 -0600
++++ org.glite.ce.cream-client-api-c-patched/src/AbsCreamProxy.cpp	2010-10-21 13:44:00.000000000 -0500
+@@ -124,7 +124,7 @@
+ 
+     m_soap->header = NULL;
+     
+-    m_soap->socket_flags = MSG_NOSIGNAL; // this setting will NOT generate a sigpipe
++    m_soap->socket_flags = SO_NOSIGPIPE; // this setting will NOT generate a sigpipe
+     // but read/write operations return SOAP_EOF instead.
+     
+     soap_set_namespaces(m_soap, CREAM_CLIENT_namespaces);

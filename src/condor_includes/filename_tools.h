@@ -70,9 +70,11 @@ END_C_DECLS
 
 // Put C++ definitions here
 #if defined(__cplusplus)
+#include <string>
 class MyString;
 
 int filename_split( const char *path, MyString &dir, MyString &file );
+int filename_split( const char *path, std::string &dir, std::string &file );
 
 /** 
 Take an input string which looks like this:
