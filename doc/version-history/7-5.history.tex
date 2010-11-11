@@ -139,6 +139,11 @@ the attributes \AdAttr{MyType} and \AdAttr{TargetType}
 in offline ClassAds to get set to \Expr{"(unknown type)"}
 when the offline ClassAd was matched to a job.
 
+% gittrac #1762
+\item Fixed a bug that caused DAG node jobs to have their coredumpsize
+limit set according to the \MacroNI{CREATE\_CORE\_FILES} configuration
+macro rather than the user's coredumpsize limit.
+
 \end{itemize}
 
 \noindent Known Bugs:
