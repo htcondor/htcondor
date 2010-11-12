@@ -74,13 +74,11 @@ switching between the \Condor{shadow} daemons that are waiting for the lock.
   on the size of the job queue, such as memory.
 
 %gittrac 1752
-\item The \Condor{dagman}/\Condor{submit\_dag} command-line flag
-\Opt{-DumpRescue} now works even if parsing of the DAG file fails (to
-help in figuring out what went wrong).  In this case, \Condor{dagman}
-produces a file called \Arg{dag\_file}.parse\_failed, which has the
-new \Macro{NO\_RUN} keyword (this prevents DAGMan from running the
-resulting DAG file, since it is likely to be syntactically correct,
-but incomplete).
+\item The \Condor{dagman} and \Condor{submit\_dag} command-line flag
+\Opt{-DumpRescue} causes the dump of an incomplete Rescue DAG,
+when the parsing of the DAG input file fails.
+This may help in figuring out what went wrong.
+See section~\ref{sec:DAGMan-rescue} for complete details on Rescue DAGs.
 
 \end{itemize}
 

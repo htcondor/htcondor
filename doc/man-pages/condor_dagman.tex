@@ -170,9 +170,11 @@ Level values and what they produce is described as
        is defined, and any \File{.condor.sub} file of that version or
        newer is accepted.)}
     \OptItem{\Opt{-DumpRescue}}{This optional argument causes
-       \Condor{dagman} to immediately dump a rescue DAG and then exit,
-       as opposed to actually running the DAG.  (This feature is mainly
-       intended for testing.)}
+       \Condor{dagman} to immediately dump a Rescue DAG and then exit,
+       as opposed to actually running the DAG.  This feature is mainly
+       intended for testing. The Rescue DAG file is produced whether or not
+       there are parse errors reading the original DAG input file.
+       The name of the file differs if there was a parse error.}
     \OptItem{\Opt{-verbose}}{(This argument is included only to be passed
        to \Condor{submit\_dag} if lazy submit file generation is used for
        nested DAGs.)  Cause \Condor{submit\_dag} to give verbose error

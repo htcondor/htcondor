@@ -246,8 +246,10 @@ description.
   }
   \OptItem{\Opt{-DumpRescue}}{This optional argument tells \Condor{dagman}
      to immediately dump a rescue DAG and then exit, as opposed to
-     actually running the DAG.  (This feature is mainly intended for
-     testing.)
+     actually running the DAG.  This feature is mainly intended for
+     testing.  The Rescue DAG file is produced whether or not
+       there are parse errors reading the original DAG input file.
+       The name of the file differs if there was a parse error.
   }
   \OptItem{\Opt{-valgrind}}{This optional argument causes the submit
      description file generated for the submission of \Condor{dagman}

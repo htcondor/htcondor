@@ -8421,27 +8421,29 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManOldRescue}
 \item[\Macro{DAGMAN\_OLD\_RESCUE}]
-  A boolean value that controls whether \Condor{dagman} uses old-style
-  rescue DAG naming when creating a rescue DAG.
-  In the old-style rescue DAG naming,
-  if a DAG file named \File{my.dag}, the rescue DAG file will
+  A boolean value that controls whether \Condor{dagman} uses 
+  Rescue DAG naming as defined in Condor versions from before 7.1.0 
+  when creating a Rescue DAG.
+  When \Expr{True}, the older style naming is used.
+  In this older style Rescue DAG file naming,
+  if a DAG input file is named \File{my.dag}, the rescue DAG file will
   be \File{my.dag.rescue}, and that file will be overwritten if the re-run
   \File{my.dag} fails again.  
-  With the new-style rescue DAG naming,
-  the first time a rescue DAG is created for \File{my.dag}, it will be
+  With the current Rescue DAG file naming,
+  the first time a Rescue DAG is created for \File{my.dag}, it will be
   named \File{my.dag.rescue001}, and subsequent failures of
-  \File{my.dag} will produce rescue DAGs named \File{my.dag.rescue002},
+  \File{my.dag} will produce Rescue DAGs named \File{my.dag.rescue002},
   \File{my.dag.rescue003}, etc.
   If not defined, \MacroNI{DAGMAN\_OLD\_RESCUE} defaults to \Expr{False}.
 
 \label{param:DAGManAutoRescue}
 \item[\Macro{DAGMAN\_AUTO\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} automatically
-  runs rescue DAGs.  If \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True}
-  and the DAG file \File{my.dag} is run,
-  if a rescue dag such as the examples \File{my.dag.rescue001} or
+  runs Rescue DAGs.  If \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True}
+  and the DAG input file \File{my.dag} is submitted,
+  and if a Rescue DAG such as the examples \File{my.dag.rescue001} or
   \File{my.dag.rescue002} exists, 
-  then the newest (highest-numbered) such rescue DAG will be run.
+  then the largest magnitude Rescue DAG will be run.
   If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{True}.
 
   Note: having \MacroNI{DAGMAN\_OLD\_RESCUE} and
@@ -8449,10 +8451,10 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManMaxRescueNum}
 \item[\Macro{DAGMAN\_MAX\_RESCUE\_NUM}]
-  An integer value that controls the maximum new-style rescue DAG
+  An integer value that controls the maximum rescue DAG
   number that will be written, 
   in the case that \MacroNI{DAGMAN\_OLD\_RESCUE} is \Expr{False},
-  or run if \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True}).
+  or run if \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True}.
   The maximum legal value is 999; the minimum value is 0,
   which prevents a rescue DAG from being written at all,
   or automatically run.
