@@ -1189,12 +1189,7 @@ else
   rm -f static_test.c static_test.o static_test > /dev/null 2>&1
   if test "x$gcc_static_ld_flag" = "x" ; then
     msg="can not find appropriate flags for $gcc_ld_prog!"
-    if test $os = "SunOS" && test "$arch" != "i86pc" ; then
-      # on Solaris, this is fatal, since we depend on this info
-      AC_MSG_ERROR([$msg])
-    else
-      AC_MSG_WARN([$msg])
-    fi
+    AC_MSG_WARN([$msg])
   else
     AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
