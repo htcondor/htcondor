@@ -341,8 +341,9 @@ OfflineCollectorPlugin::mergeClassAd (
 		}
 
 			// filter out stuff we never want to mess with
-		if( attr_name == ATTR_MY_TYPE ||
-			attr_name == ATTR_TARGET_TYPE )
+		if( !strcasecmp(attr_name,ATTR_MY_TYPE) ||
+			!strcasecmp(attr_name,ATTR_TARGET_TYPE) ||
+			!strcasecmp(attr_name,ATTR_AUTHENTICATED_IDENTITY) )
 		{
 			continue;
 		}

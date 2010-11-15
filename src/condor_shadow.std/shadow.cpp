@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "std_univ_io.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_uid.h"
@@ -86,7 +86,7 @@ extern "C" {
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
 	FILE	*fdopen(int, const char *);
-	int		whoami(FILE*);
+	int		whoami(char **buf,int *bufpos,int *buflen);
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
 	void update_job_rusage( struct rusage *localp, struct rusage *remotep );
 	int DoCleanup();

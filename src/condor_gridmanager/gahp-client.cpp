@@ -6066,7 +6066,9 @@ GahpClient::cream_job_status_all(const char *service,
 				status.job_id = result->argv[offset + 0];
 				status.job_status = result->argv[offset + 1];
 				status.exit_code = atoi(result->argv[offset + 2]);
-				status.failure_reason = result->argv[offset + 3];
+				if ( strcasecmp(result->argv[offset + 3], NULLSTRING) ) {
+					status.failure_reason = result->argv[offset + 3];
+				}
 
 				results[status.job_id] = status;
 			}

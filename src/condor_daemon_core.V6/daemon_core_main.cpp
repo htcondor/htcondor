@@ -121,6 +121,10 @@ int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 // It can be set to false by calling the DC_Skip_Auth_Init() function.
 static bool doAuthInit = true;
 
+// This flag tells daemoncore whether to do the core limit initialization.
+// It can be set to false by calling the DC_Skip_Core_Init() function.
+static bool doCoreInit = true;
+
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -335,6 +339,12 @@ void
 DC_Skip_Auth_Init()
 {
 	doAuthInit = false;
+}
+
+void
+DC_Skip_Core_Init()
+{
+	doCoreInit = false;
 }
 
 static void
@@ -1358,7 +1368,9 @@ dc_reconfig()
 	config(0);
 
 		// See if we're supposed to be allowing core files or not
-	check_core_files();
+	if ( doCoreInit ) {
+		check_core_files();
+	}
 
 		// If we're supposed to be using our own log file, reset that here. 
 	if( logDir ) {
@@ -1863,7 +1875,9 @@ int main( int argc, char** argv )
 	}
 
 		// See if we're supposed to be allowing core files or not
-	check_core_files();
+	if ( doCoreInit ) {
+		check_core_files();
+	}
 
 		// If we want to kill something, do that now.
 	if( wantsKill ) {

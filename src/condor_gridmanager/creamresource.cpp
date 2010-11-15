@@ -453,7 +453,12 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 				dprintf( D_ALWAYS, "delegate_credentials(%s) failed!\n",
 						 delegationServiceUri );
 				activeDelegationCmd = NULL;
-				next_deleg->error_message = "Failed to create proxy delegation";
+				const char *err = deleg_gahp->getErrorString();
+				if ( err ) {
+					next_deleg->error_message = err;
+				} else {
+					next_deleg->error_message = "Failed to create proxy delegation";
+				}
 				signal_jobs = true;
 			} else {
 dprintf(D_FULLDEBUG,"      %s\n",delegation_uri.c_str());

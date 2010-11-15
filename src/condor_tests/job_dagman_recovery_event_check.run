@@ -61,8 +61,7 @@ if (-e $rescue_file) {
 
 $abnormal = sub 
 {
-	CondorTest::debug("DIAG abnormal\n");
-	die "Want to see only submit, execute and successful completion\n";
+	die "Want to see only submit, execute and unsuccessful completion\n";
 };
 
 $failure = sub 
@@ -134,7 +133,7 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing, held, released, and unsuccessful completion\n",1);
 };
 
 $success = sub

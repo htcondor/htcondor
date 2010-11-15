@@ -197,8 +197,8 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 	int flags = O_WRONLY;
 	if ( truncate ) {
 		flags |= O_TRUNC;
-		dprintf(D_ALWAYS, "MultiLogFiles: truncating log file %s\n",
-					filename);
+		dprintf( D_ALWAYS, "MultiLogFiles: truncating log file %s\n",
+					filename );
 	}
 	int fd = safe_create_keep_if_exists( filename, flags );
 	if ( fd < 0 ) {
@@ -466,7 +466,7 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 		MyString	currentDir;
 		if ( !condor_getcwd(currentDir) ) {
 			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
-						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d\n",
+						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d",
 						errno, strerror(errno), __FILE__, __LINE__);
 			return false;
 		}
@@ -889,7 +889,7 @@ GetFileID( const MyString &filename, MyString &fileID,
 	char *tmpRealPath = realpath( filename.Value(), NULL );
 	if ( !tmpRealPath ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-					"Error (%d, %s) getting real path for specified path %s\n",
+					"Error (%d, %s) getting real path for specified path %s",
 					errno, strerror( errno ), filename.Value() );
 		return false;
 	}
@@ -1019,7 +1019,7 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	MyString fileID;
 	if ( !GetFileID( logfile, fileID, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-					"Error getting file ID in monitorLogFile()" );
+					"Error getting file ID in unmonitorLogFile()" );
 		return false;
 	}
 
@@ -1027,8 +1027,11 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	if ( activeLogFiles.lookup( fileID, monitor ) != 0 ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
-					"file %s (%s)!\n", logfile.Value(),
+					"file %s (%s)!", logfile.Value(),
 					fileID.Value() );
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs error: %s\n",
+					errstack.message() );
+		printAllLogMonitors( NULL );
 		return false;
 	}
 
@@ -1078,6 +1081,9 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error removing %s (%s) from activeLogFiles",
 						logfile.Value(), fileID.Value() );
+			dprintf( D_ALWAYS, "ReadMultipleUserLogs error: %s\n",
+						errstack.message() );
+			printAllLogMonitors( NULL );
 			return false;
 		}
 
@@ -1094,7 +1100,11 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 void
 ReadMultipleUserLogs::printAllLogMonitors( FILE *stream ) const
 {
-	fprintf( stream, "All log monitors:\n" );
+	if ( stream != NULL ) {
+		fprintf( stream, "All log monitors:\n" );
+	} else {
+		dprintf( D_ALWAYS, "All log monitors:\n" );
+	}
 	printLogMonitors( stream, allLogFiles );
 }
 
@@ -1103,7 +1113,11 @@ ReadMultipleUserLogs::printAllLogMonitors( FILE *stream ) const
 void
 ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream ) const
 {
-	fprintf( stream, "Active log monitors:\n" );
+	if ( stream != NULL ) {
+		fprintf( stream, "Active log monitors:\n" );
+	} else {
+		dprintf( D_ALWAYS, "Active log monitors:\n" );
+	}
 	printLogMonitors( stream, activeLogFiles );
 }
 
@@ -1117,10 +1131,18 @@ ReadMultipleUserLogs::printLogMonitors( FILE *stream,
 	MyString fileID;
 	LogFileMonitor *	monitor;
 	while ( logTable.iterate( fileID,  monitor ) ) {
-		fprintf( stream, "  File ID: %s\n", fileID.Value() );
-		fprintf( stream, "    Monitor: %p\n", monitor );
-		fprintf( stream, "    Log file: <%s>\n", monitor->logFile.Value() );
-		fprintf( stream, "    refCount: %d\n", monitor->refCount );
-		fprintf( stream, "    lastLogEvent: %p\n", monitor->lastLogEvent );
+		if ( stream != NULL ) {
+			fprintf( stream, "  File ID: %s\n", fileID.Value() );
+			fprintf( stream, "    Monitor: %p\n", monitor );
+			fprintf( stream, "    Log file: <%s>\n", monitor->logFile.Value() );
+			fprintf( stream, "    refCount: %d\n", monitor->refCount );
+			fprintf( stream, "    lastLogEvent: %p\n", monitor->lastLogEvent );
+		} else {
+			dprintf( D_ALWAYS, "  File ID: %s\n", fileID.Value() );
+			dprintf( D_ALWAYS, "    Monitor: %p\n", monitor );
+			dprintf( D_ALWAYS, "    Log file: <%s>\n", monitor->logFile.Value() );
+			dprintf( D_ALWAYS, "    refCount: %d\n", monitor->refCount );
+			dprintf( D_ALWAYS, "    lastLogEvent: %p\n", monitor->lastLogEvent );
+		}
 	}
 }

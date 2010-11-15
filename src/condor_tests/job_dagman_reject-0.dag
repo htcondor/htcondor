@@ -1,0 +1,6 @@
+Job NodeA job_dagman_reject.cmd
+Splice NodeB job_dagman_reject-1.dag
+Job NodeC job_dagman_reject.cmd
+
+Parent NodeA Child NodeB
+Parent NodeB Child NodeC

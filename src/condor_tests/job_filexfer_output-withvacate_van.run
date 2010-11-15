@@ -80,7 +80,9 @@ $execute = sub {
 		return(0);
 	}
 
-	$baseoutfile = $spool . "/cluster" . $cluster . ".proc0.subproc0/" . "submit_filetrans_output" . "$job";
+	my $shared_spool_dir = $cluster % 10000;
+
+	$baseoutfile = $spool . "/${shared_spool_dir}/0/cluster" . $cluster . ".proc0.subproc0/" . "submit_filetrans_output" . "$job";
 	$oute = "$baseoutfile"."e.txt";
 	$outf = "$baseoutfile"."f.txt";
 	$outg = "$baseoutfile"."g.txt";

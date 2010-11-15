@@ -967,6 +967,16 @@ void main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
 
     	if( !parse( dagman.dag, dagFile, dagman.useDagDir ) ) {
+			if ( dagman.dumpRescueDag ) {
+					// Dump the rescue DAG so we can see what we got
+					// in the failed parse attempt.
+    			debug_printf( DEBUG_QUIET, "Dumping rescue DAG "
+							"because of -DumpRescue flag\n" );
+				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+							dagman.multiDags, dagman.maxRescueDagNum,
+							true );
+			}
+
 				// Note: debug_error calls DC_Exit().
         	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 	dagFile );
@@ -990,6 +1000,17 @@ void main_init (int argc, char ** const argv) {
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
 				  dagman.dag->NumNodes() );
+
+	MyString firstLocation;
+	if ( dagman.dag->GetReject( firstLocation ) ) {
+    	debug_printf( DEBUG_QUIET, "Exiting because of REJECT "
+					"specification in %s.  This most likely means "
+					"that the DAG file was produced with the -DumpRescue "
+					"flag when parsing the original DAG failed.\n",
+					firstLocation.Value() );
+		DC_Exit( EXIT_ERROR );
+		return;
+	}
 
 	dagman.dag->DumpDotFile();
 
@@ -1209,6 +1230,7 @@ void
 main_pre_dc_init( int, char*[] )
 {
 	DC_Skip_Auth_Init();
+	DC_Skip_Core_Init();
 
 		// Convert the DAGMan log file name to an absolute path if it's
 		// not one already, so that we'll log things to the right file

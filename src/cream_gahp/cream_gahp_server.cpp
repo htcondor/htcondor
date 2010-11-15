@@ -475,6 +475,7 @@ bool cmp_request_2(Request * a, Request * b) {
 int handle_initialize_from_file(char **input_line)
 {
 	char *cert;
+	AbsCreamProxy* cp = NULL;
 	
 	if ( count_args( input_line) != 2 ) {
 		HANDLE_SYNTAX_ERROR();
@@ -487,12 +488,12 @@ int handle_initialize_from_file(char **input_line)
 	try {
 			// Check whether CreamProxy likes the proxy (we only use
 			// setCredential() for this - we DON'T want to execute())
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyDelegate("XXX", DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyDelegate("XXX", DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(cert);
 		delete cp;
 	} catch(std::exception& ex) {
+		delete cp;
 		gahp_printf("E\n");
 		free_args(input_line);
 		
@@ -528,24 +529,26 @@ int thread_cream_delegate( Request *req )
 {
 	char *reqid, *delgservice, *delgid;
 	string result_line;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &delgid );
 	process_string_arg( req->input_line[3], &delgservice);
 
 	try {
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyDelegate(delgid,
-			                                           DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyDelegate(delgid,
+														DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(delgservice);
 		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Delegate\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Delegate\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 
 		return 1;
 	}
@@ -589,6 +592,7 @@ int thread_cream_job_register( Request *req )
 
 	char *reqid, *service, *delgid, *jdl, *lease_id;
 	string result_line;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -606,22 +610,23 @@ int thread_cream_job_register( Request *req )
 		                          "JDI");  // job description ID
 		AbsCreamProxy::RegisterArrayRequest reqs;
 		reqs.push_back(&jdw);
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyRegister(&reqs,
-			                                           &resp,
-			                                           DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyRegister(&reqs,
+														&resp,
+														DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		if (resp["JDI"].get<0>() != JobIdWrapper::OK) {
 			throw runtime_error(resp["JDI"].get<2>());
 		}
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Job_Register\\ Error:\\ "+ escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Register\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 		
 		return 1;
 	}
@@ -692,6 +697,7 @@ int thread_cream_job_start( Request **reqlist )
 	char *service;
 	process_string_arg( reqlist[0]->input_line[2], &service );
 	string proxy = reqlist[0]->proxy;
+	AbsCreamProxy* cp = NULL;
 
 	vector<string> reqids;
 	
@@ -707,21 +713,23 @@ int thread_cream_job_start( Request **reqlist )
 		                     "",  // delegation ID constraint: none
 		                     ""); // lease ID constraint: none
 		ResultWrapper rw;
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyStart(&jfw,
-			                                        &rw,
-			                                        DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyStart(&jfw,
+													 &rw,
+													 DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		check_result_wrapper(rw);
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
+		delete cp;
 		for(vector<string>::const_iterator it = reqids.begin();
 			it != reqids.end(); it++) {
-			enqueue_result((*it) + " CREAM_Job_Start\\ Error:\\ " + escape_spaces(ex.what()));
+			
+			char *msg = escape_spaces(ex.what());
+			enqueue_result((*it) + " CREAM_Job_Start\\ Error:\\ " + msg);
+			free(msg);
 		}
 		
 		return 1;
@@ -779,6 +787,7 @@ int thread_cream_job_purge( Request **reqlist )
 	char *service;
 	process_string_arg( reqlist[0]->input_line[2], &service );
 	string proxy = reqlist[0]->proxy;
+	AbsCreamProxy* cp = NULL;
 
 	vector<string> reqids;
 	
@@ -794,22 +803,24 @@ int thread_cream_job_purge( Request **reqlist )
 							 "",  // delegation ID constraint: none
 							 ""); // lease ID constraint: none
 		ResultWrapper rw;
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyPurge(&jfw,
-													&rw,
-													DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyPurge(&jfw,
+													 &rw,
+													 DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		check_result_wrapper(rw);
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
+		delete cp;
 
 		for(vector<string>::const_iterator it = reqids.begin();
 			it != reqids.end(); it++) {
-			enqueue_result((*it) + " CREAM_Job_Purge\\ Error:\\ " + escape_spaces(ex.what()));
+
+			char *msg = escape_spaces(ex.what());
+			enqueue_result((*it) + " CREAM_Job_Purge\\ Error:\\ " + msg);
+			free(msg);
 		}
 		
 		return 1;
@@ -866,6 +877,7 @@ int thread_cream_job_cancel( Request **reqlist )
 	char *service;
 	process_string_arg( reqlist[0]->input_line[2], &service );
 	string proxy = reqlist[0]->proxy;
+	AbsCreamProxy* cp = NULL;
 
 	vector<string> reqids;
 
@@ -881,22 +893,24 @@ int thread_cream_job_cancel( Request **reqlist )
 		                     "",  // delegation ID constraint: none
 		                     ""); // lease ID constraint: none
 		ResultWrapper rw;
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyCancel(&jfw,
-			                                         &rw,
-			                                         DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyCancel(&jfw,
+													  &rw,
+													  DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		check_result_wrapper(rw);
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
+		delete cp;
 
 		for(vector<string>::const_iterator it = reqids.begin();
 			it != reqids.end(); it++) {
-			enqueue_result((*it) + " CREAM_Job_Cancel\\ Error:\\ " + escape_spaces(ex.what()));
+
+			char *msg = escape_spaces(ex.what());
+			enqueue_result((*it) + " CREAM_Job_Cancel\\ Error:\\ " + msg);
+			free(msg);
 		}
 		
 		return 1;
@@ -945,6 +959,7 @@ int thread_cream_job_suspend( Request *req )
 
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -970,20 +985,21 @@ int thread_cream_job_suspend( Request *req )
 		                     "",  // delegation ID constraint: none
 		                     ""); // lease ID constraint: none
 		ResultWrapper rw;
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxySuspend(&jfw,
-			                                          &rw,
-			                                          DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxySuspend(&jfw,
+													   &rw,
+													   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		check_result_wrapper(rw);
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Job_Suspend\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Suspend\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 		
 		return 1;
 	}
@@ -1029,6 +1045,7 @@ int thread_cream_job_resume( Request *req )
 
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -1054,20 +1071,21 @@ int thread_cream_job_resume( Request *req )
 		                     "",  // delegation ID constraint: none
 		                     ""); // lease ID constraint: none
 		ResultWrapper rw;
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyResume(&jfw,
-			                                         &rw,
-			                                         DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyResume(&jfw,
+													  &rw,
+													  DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		check_result_wrapper(rw);
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Job_Resume\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Resume\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 		
 		return 1;
 	}
@@ -1107,6 +1125,7 @@ int thread_cream_set_lease( Request *req )
 	char *reqid, *service, *lease_id;
 	int lease_expiry;
 	string result_line;
+	AbsCreamProxy *cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -1122,19 +1141,20 @@ int thread_cream_set_lease( Request *req )
 			cmd_input.first = "";
 		}
 		cmd_input.second = lease_expiry;
-		AbsCreamProxy *cp =
-			CreamProxyFactory::make_CreamProxyLease(cmd_input, &cmd_output,
-													DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyLease(cmd_input, &cmd_output,
+													 DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		lease_expiry = cmd_output.second;
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Set_Lease\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Set_Lease\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 		
 		return 1;
 	}
@@ -1181,6 +1201,7 @@ int thread_cream_job_status( Request *req )
 
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line, temp;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -1206,14 +1227,12 @@ int thread_cream_job_status( Request *req )
 		                     -1,  // to date: none
 		                     "",  // delegation ID constraint: none
 		                     ""); // lease ID constraint: none
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyStatus(&jfw,
-			                                         &sar,
-			                                         DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyStatus(&jfw,
+													  &sar,
+													  DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		for (AbsCreamProxy::StatusArrayResult::iterator i = sar.begin();
 		     i != sar.end();
 		     i++)
@@ -1222,11 +1241,14 @@ int thread_cream_job_status( Request *req )
 				throw runtime_error(i->second.get<2>());
 			}
 		}
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Job_Status\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Status\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 
 		return 1;
 	}
@@ -1310,6 +1332,7 @@ int thread_cream_job_info( Request *req )
 
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -1335,14 +1358,12 @@ int thread_cream_job_info( Request *req )
 		                     -1,  // to date: none
 		                     "",  // delegation ID constraint: none
 		                     ""); // lease ID constraint: none
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyInfo(&jfw,
-			                                       &iar,
-			                                       DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyInfo(&jfw,
+													&iar,
+													DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
-		delete cp;
 		for (AbsCreamProxy::InfoArrayResult::iterator i = iar.begin();
 		     i != iar.end();
 		     i++)
@@ -1351,11 +1372,14 @@ int thread_cream_job_info( Request *req )
 				throw runtime_error(i->second.get<2>());
 			}
 		}
+		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Job_Info\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Info\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 		
 		return 1;
 	}
@@ -1387,24 +1411,26 @@ int thread_cream_job_list( Request *req )
 {
 	char *reqid, *service;
 	string result_line, temp;
+	AbsCreamProxy* cp = NULL;
 
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 
 	vector<JobIdWrapper> jv;
 	try {
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyList(&jv,
-			                                       DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyList(&jv,
+													DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
 		delete cp;
 	}
 	catch(std::exception& ex) {
-
-		result_line = (string)reqid + " CREAM_Job_List\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_List\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 				
 		return 1;
 	}
@@ -1454,23 +1480,25 @@ int thread_cream_ping( Request *req )
 	// the "service info" command to detect whether CREAM is up
 
 	char *reqid, *service;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 	
 	ServiceInfoWrapper siw;
 	try {
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
-			                                              DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,0,
+														   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
 		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		enqueue_result((string)reqid + " " + escape_spaces(ex.what()));
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		enqueue_result((string)reqid + " " + msg);
+		free(msg);
 		
 		return 1;
 	}
@@ -1501,23 +1529,25 @@ int handle_cream_does_accept_job_submissions( char **input_line )
 int thread_cream_does_accept_job_submissions( Request *req )
 {
 	char *reqid, *service;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 
 	ServiceInfoWrapper siw;
 	try {
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
-			                                              DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,0,
+														   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
 		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		enqueue_result((string)reqid + " " + escape_spaces(ex.what()));
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		enqueue_result((string)reqid + " " + msg);
+		free(msg);
 		
 		return 1;
 	}
@@ -1567,6 +1597,7 @@ int thread_cream_proxy_renew( Request *req )
 	int arg_cnt = count_args( req->input_line );
 	char *reqid, *delgservice, *delgid;
 	string result_line;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 
@@ -1579,18 +1610,19 @@ int thread_cream_proxy_renew( Request *req )
 	}	
 
 	try {
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxy_ProxyRenew(delgid,
-			                                              DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxy_ProxyRenew(delgid,
+														   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(delgservice);
 		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Proxy_Renew\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Proxy_Renew\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 		
 		return 1;
 	}
@@ -1624,24 +1656,26 @@ int thread_cream_get_CEMon_url( Request *req )
 {
 	char *reqid, *service;
 	string result_line;
+	AbsCreamProxy* cp = NULL;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 	
 	ServiceInfoWrapper siw;
 	try {
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
-			                                              DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyServiceInfo(&siw,0,
+														   DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(req->proxy.c_str());
 		cp->execute(service);
 		delete cp;
 	}
 	catch(std::exception& ex) {
-		
-		result_line = (string)reqid + " CREAM_Get_CEMon_URL\\ Error:\\ " + escape_spaces(ex.what());
+		delete cp;
+		char *msg = escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Get_CEMon_URL\\ Error:\\ " + msg;
 		enqueue_result(result_line);
+		free(msg);
 		
 		return 1;
 	}
@@ -1802,6 +1836,7 @@ int handle_quit( char **input_line )
 int handle_cache_proxy_from_file( char **input_line)
 {
 	char *reqid, *filename;
+	AbsCreamProxy* cp = NULL;
 
 	if ( count_args( input_line ) != 3 ) {
 		HANDLE_SYNTAX_ERROR();
@@ -1816,12 +1851,12 @@ int handle_cache_proxy_from_file( char **input_line)
 	try {
 			// Check whether CreamProxy likes the proxy (we only use
 			// setCredential() for this - we DON'T want to execute())
-		AbsCreamProxy* cp =
-			CreamProxyFactory::make_CreamProxyDelegate("XXX", DEFAULT_TIMEOUT);
+		cp = CreamProxyFactory::make_CreamProxyDelegate("XXX", DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
 		cp->setCredential(filename);
 		delete cp;
 	} catch ( std::exception& ex ) {
+		delete cp;
 		gahp_printf("E\n");
 		free_args( input_line );
 
@@ -2095,8 +2130,9 @@ void *worker_main(void * /*ignored*/)
 				internal_error("Request lacks batch or single handler");
 			}
 		} catch ( std::exception& ex ) {
-			enqueue_result( (string)req->input_line[0] + " " +
-							escape_spaces( ex.what() ) );
+			char *msg = escape_spaces(ex.what());
+			enqueue_result( (string)req->input_line[0] + " " + msg );
+			free(msg);
 		}
 		for(vector<Request*>::iterator it = rv.begin(); it != rv.end(); it++) {
 			if(*it) { delete *it; }

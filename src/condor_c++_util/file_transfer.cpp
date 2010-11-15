@@ -29,7 +29,7 @@
 #include "basename.h"
 #include "directory.h"
 #include "condor_config.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_string.h"
 #include "util_lib_proto.h"
 #include "daemon.h"
@@ -356,28 +356,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 
-		priv_state saved_priv = PRIV_UNKNOWN;
-		if( want_priv_change ) {
-			saved_priv = set_priv( desired_priv_state );
-		}
-		if( (mkdir(SpoolSpace,0777) < 0) ) {
-			if( errno != EEXIST ) {
-				dprintf( D_ALWAYS, "FileTransfer::Init(): "
-				         "mkdir(%s) failed, %s (errno: %d)\n",
-				         SpoolSpace, strerror(errno), errno );
-			}
-		}
-		if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
-			if( errno != EEXIST ) {
-				dprintf( D_ALWAYS, "FileTransfer::Init(): "
-				         "mkdir(%s) failed, %s (errno: %d)\n",
-				         TmpSpoolSpace, strerror(errno), errno );
-			}
-		}
-		if( want_priv_change ) {
-			ASSERT( saved_priv != PRIV_UNKNOWN );
-			set_priv( saved_priv );
-		}
+		SpooledJobFiles::createJobSpoolDirectory(Ad,desired_priv_state);
 	}
 
 	if ( ((IsServer() && !simple_init) || (IsClient() && simple_init)) && 

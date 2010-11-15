@@ -772,6 +772,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\spooled_job_files.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\spooled_job_files.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\file_transfer.cpp"
 			>
 		</File>

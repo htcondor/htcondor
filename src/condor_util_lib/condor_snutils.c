@@ -233,3 +233,59 @@ vprintf_length(const char *format, va_list args)
 #endif /* ifdef HAVE_WORKING_SNPRINTF */
 
 #endif /* ifdef WIN32 */
+
+int vsprintf_realloc( char **buf, int *bufpos, int *buflen, const char *format, va_list args)
+{
+	int append_len,written;
+
+	if( !buf || !bufpos || !buflen || !format ) {
+		errno = EINVAL;
+		return -1;
+	}
+
+    append_len = vprintf_length(format,args);
+
+	if( append_len < 0 ) {
+		if( errno == 0 ) {
+			errno = EINVAL;
+		}
+		return -1;
+	}
+
+	if( *bufpos + append_len + 1 > *buflen || *buf == NULL ) {
+		char *realloc_buf;
+		int realloc_buflen = *bufpos + append_len + 1;
+		realloc_buf = (char *)realloc(*buf,realloc_buflen);
+		if( !realloc_buf ) {
+			errno = ENOMEM;
+			return -1;
+		}
+		*buf = realloc_buf;
+		*buflen = realloc_buflen;
+    }
+
+	written = vsprintf(*buf + *bufpos, format, args);
+
+	if( written != append_len ) {
+		if( errno == 0 ) {
+			errno = EINVAL;
+		}
+		return -1;
+	}
+
+	*bufpos += append_len;
+
+    return append_len;
+}
+
+int sprintf_realloc( char **buf, int *bufpos, int *buflen, const char *format, ...)
+{
+	va_list args;
+	int retval;
+
+	va_start(args, format);
+	retval = vsprintf_realloc(buf,bufpos,buflen,format,args);
+	va_end(args);
+
+	return retval;
+}

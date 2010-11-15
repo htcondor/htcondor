@@ -49,7 +49,7 @@ extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;
 
 // this appears at the bottom of this file:
-extern "C" int display_dprintf_header(FILE *fp);
+extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 static char* dprintf_header = NULL;
 
 int my_argc;
@@ -728,10 +728,10 @@ main_pre_command_sock_init( )
 
 extern "C" 
 int
-display_dprintf_header(FILE *fp)
+display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	if( dprintf_header ) {
-		fprintf( fp, "%s ", dprintf_header );
+		return sprintf_realloc( buf, bufpos, buflen, "%s ", dprintf_header );
 	}
-	return TRUE;
+	return 0;
 }

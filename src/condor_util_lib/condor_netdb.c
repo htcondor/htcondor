@@ -231,6 +231,10 @@ condor_gethostbyaddr_ipv6(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
 	sinaddr.sin_family = type;
 	sinaddr.sin_addr = *(const struct in_addr*)addr;
 
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+	sinaddr.sin_len = sizeof(struct sockaddr_in);
+#endif
+
 	e = getnameinfo((const struct sockaddr*)&sinaddr, sizeof(sinaddr), _hostname, sizeof(_hostname), NULL, 0, 0);
 	if (e != 0)
         return NULL;

@@ -57,33 +57,21 @@ while( <TARBALL_FILE> ) {
     chomp;
     $release_tarball = $_;
 }
+
+print "Release tarball is $release_tarball\n";
+
 if( ! $release_tarball ) {
     die "$tarball_file does not contain a filename!\n";
 }
 if( ! -f $release_tarball ) {
     die "$release_tarball (from $tarball_file) does not exist!\n";
 }
-my $configure;
-my $reltar;
-open( UNTAR, "tar -zxvf $release_tarball |" ) ||
-     die "Can't untar $release_tarball: $!\n";
+
+print "Release tarball file exists\n";
+
 print "Untarring $release_tarball ...\n";
-while( <UNTAR> ) {
-  if( /.*\/condor_configure/ ) {
-    $configure = "$BaseDir/$_";
-     chomp( $configure );
-  }
-  if( /.*\/release.tar/ ) {
-    $reltar = "$BaseDir/$_";
-    chomp( $reltar );
-  }
-  print;
-}
-# NOTE: if we ran out of space, then we should detect that in
-# the call to close, but our error message probably will not
-# get recorded anywhere.  Perhaps we should reserve some space
-# before untarring and free it up here.
-close UNTAR || die "Failed to untar $release_tarball: exit code $?\n";
+system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
+print "Untarred $release_tarball ...\n";
 
 
 ######################################################################

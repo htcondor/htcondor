@@ -1,0 +1,6 @@
+Job NodeA job_dagman_reject.cmd
+Job NodeB job_dagman_reject.cmd
+
+Parent NodeA Child NodeB
+
+Reject

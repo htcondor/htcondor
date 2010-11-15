@@ -22,7 +22,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_config.h"
 #include "classad_hashtable.h"
 #include "util_lib_proto.h"

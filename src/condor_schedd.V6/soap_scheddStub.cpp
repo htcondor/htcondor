@@ -33,7 +33,7 @@
 #include "classad_helpers.h"
 #include "log_transaction.h"
 
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_config.h"
 
 #include "loose_file_transfer.h"

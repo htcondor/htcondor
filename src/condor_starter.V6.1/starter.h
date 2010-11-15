@@ -368,6 +368,12 @@ private:
 		// Flag to indicate whether Config() has been run
 		//
 	bool m_configured;
+
+		// true if jobEnvironmentReady() has been called
+	bool m_job_environment_is_ready;
+
+		// true if allJobsDone() has been called
+	bool m_all_jobs_done;
 };
 
 #endif

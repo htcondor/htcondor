@@ -262,6 +262,26 @@ TESTCLASS(job_dagman_splice-O,quick)
 TESTCLASS(job_dagman_splice-O,full)
 TESTCLASS(job_dagman_splice-O,quicknolink)
 
+/* Commented out until the underlying bug gets fixed (see gittrac #1751).
+DESC(job_dagman_splice-P,"Simple Dagman Splice P")
+RUN(job_dagman_splice-P)
+TESTCLASS(job_dagman_splice-P,core)
+TESTCLASS(job_dagman_splice-P,dagman)
+TESTCLASS(job_dagman_splice-P,quick)
+TESTCLASS(job_dagman_splice-P,full)
+TESTCLASS(job_dagman_splice-P,quicknolink)
+*/
+
+/* Commented out until the underlying bug gets fixed (see gittrac #1751).
+DESC(job_dagman_splice-Q,"Simple Dagman Splice Q")
+RUN(job_dagman_splice-Q)
+TESTCLASS(job_dagman_splice-Q,core)
+TESTCLASS(job_dagman_splice-Q,dagman)
+TESTCLASS(job_dagman_splice-Q,quick)
+TESTCLASS(job_dagman_splice-Q,full)
+TESTCLASS(job_dagman_splice-Q,quicknolink)
+*/
+
 /* vmuniverse tests in larg repository */
 
 #if defined(HAVE_VMWARE)
@@ -393,6 +413,8 @@ TESTCLASS(lib_auth_protocol-gsi,quicknolink)
 
 #endif
 
+/* This does not really test what it says it does
+ * It's also buggy and overly-complicated
 DESC(lib_auth_protocol-negot,"4 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
@@ -420,6 +442,7 @@ TESTCLASS(lib_auth_protocol-negot-prt4,core)
 TESTCLASS(lib_auth_protocol-negot-prt4,quick)
 TESTCLASS(lib_auth_protocol-negot-prt4,full)
 TESTCLASS(lib_auth_protocol-negot-prt4,quicknolink)
+*/
 
 /* Turned off on Free BSD port GNATS 766 */
 
@@ -1930,6 +1953,13 @@ TESTCLASS(job_dagman_job_held,dagman)
 TESTCLASS(job_dagman_job_held,quick)
 TESTCLASS(job_dagman_job_held,full)
 TESTCLASS(job_dagman_job_held,quicknolink)
+
+DESC(job_dagman_reject,"Test the REJECT keyword, inside a splice")
+RUN(job_dagman_reject)
+TESTCLASS(job_dagman_reject,dagman)
+TESTCLASS(job_dagman_reject,quick)
+TESTCLASS(job_dagman_reject,full)
+TESTCLASS(job_dagman_reject,quicknolink)
 
 /* Sample performance tests */
 

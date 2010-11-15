@@ -210,8 +210,11 @@ public:
 			internal file transfer for the output.  This only makes
 			sense for JICShadow, but we need this step to be included
 			in all JICs so that the code path during cleanup is sane.
+			Returns false on failure and sets transient_failure to
+			true if the failure is deemed transient and will therefore
+			be automatically tried again (e.g. when the shadow reconnects).
 		*/
-	virtual bool transferOutput( void ) = 0;
+	virtual bool transferOutput( bool &transient_failure ) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 
 		/** The last job this starter is controlling has been

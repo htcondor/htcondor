@@ -62,11 +62,17 @@ static char const *windows_architectures[] = {
 // can tell the user as much:
 static char const *unknown_architecture = "unknown";
 
+#if _WIN32_WINNT < 0x0501
+// hoisted from winbase.h, we won't need to do this, once we formally
+// set the WINAPI target to 501
+VOID WINAPI GetNativeSystemInfo(LPSYSTEM_INFO lpSystemInfo);
+#endif
+
 const char *
 sysapi_condor_arch(void)
 {
 	SYSTEM_INFO info;
-	GetSystemInfo(&info);
+	GetNativeSystemInfo(&info);
 	if (   info.wProcessorArchitecture >= PROCESSOR_ARCHITECTURE_INTEL
 		&& info.wProcessorArchitecture <= PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 ) {
 		return windows_architectures[info.wProcessorArchitecture];

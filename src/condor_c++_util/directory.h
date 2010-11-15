@@ -273,7 +273,7 @@ class DeleteFileLater {
 /** Determine if the given file is the name of a subdirectory,
   or just a file.
   @param path The full path to the file to test
-  @return true if given file is a subdirectory name, false if not
+  @return true if given file is a subdirectory name (or symlink to one), false if not
 */
 bool IsDirectory( const char* path );
 
@@ -331,4 +331,21 @@ char * create_temp_file(bool create_as_subdirectory = false);
 */
 bool recursive_chown( const char *path, 
 					  const char *username, const char *domain );
+
+/** Create a directory any any missing parent directories with the specified
+    mode and priv state.  If the directory already exists, it is left as is
+    (no attempt to make the mode or ownership match).
+    Returns true on success; false on error and sets errno
+    Encountering a pre-existing directory is counted as success, but errno
+	will be set to EEXIST in that case.
+ */
+bool mkdir_and_parents_if_needed( const char *path, mode_t mode, priv_state priv = PRIV_UNKNOWN );
+
+/** Create parent directories of a path if they do not exist.
+    If the parent directory already exists, it is left as is
+    (no attempt to make the mode or ownership match).
+    Returns true on success; false on error and sets errno
+ */
+bool make_parents_if_needed( const char *path, mode_t mode, priv_state priv = PRIV_UNKNOWN );
+
 #endif

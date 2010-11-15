@@ -127,7 +127,7 @@ public:
 		   happen.  We don't do any file transfer for JICLocal, so
 		   just return true so we move directly onto the next stage.
 		*/
-	bool transferOutput( void ) { return true; };
+	bool transferOutput( bool &transient_failure ) { return true; };
 	bool transferOutputMopUp( void ) { return true; };
 
 		/** The last job this starter is controlling has been

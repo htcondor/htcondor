@@ -7,7 +7,7 @@ CC=gcc
 export CC
 
 # The tarball came from this URL:
-#   http://jra1mw.cvs.cern.ch/cgi-bin/jra1mw.cgi/org.glite.security.voms.tar.gz?view=tar&pathrev=glite-security-voms_R_1_8_8_2
+#   http://jra1mw.cvs.cern.ch/cgi-bin/jra1mw.cgi/org.glite.security.voms.tar.gz?view=tar&pathrev=glite-security-voms_R_1_9_10_4
 
 # Add our OpenSSL external to the include file search path, even when
 # building against Globus libraries.
@@ -18,15 +18,6 @@ then
     exit 1
 fi
 
-# Add some includes for system headers. Otherwise, the build fails on
-# some platforms.
-patch -p0 < includes.patch
-if [ $? -ne 0 ]
-then
-    echo "patch failed: includes.patch"
-    exit 1
-fi
-
 # One of the makefiles has some incorrect macro names.
 patch -p0 < makefile.patch
 if [ $? -ne 0 ]
@@ -34,6 +25,18 @@ then
     echo "patch failed: makefile.patch"
     exit 1
 fi
+
+# VOMS tries to use __attribute__ everywhere, but older versions of
+# gcc (e.g. 3.2.3) don't seemt to support it. This patch should be
+# applied selectively. So far, we know it's needed on rhel 3, but
+# not rhel 5.
+patch -p0 <private.patch
+if [ $? -ne 0 ]
+then
+    echo "patch failed: private.patch"
+    exit 1
+fi
+
 
 # Voms includes a modified version of the GSI oldgaa library, using
 # the same function names as the original. We need to statically link
