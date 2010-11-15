@@ -49,13 +49,19 @@ and error messages will be issued by Condor tools.
 
 Another way to upgrade leaves Condor running. 
 Condor will automatically restart itself if the \Condor{master} binary
-is updated.
-To take advantage of this, 
-configure Condor so that the path to binaries points to the new binaries.
+is updated,
+and this method takes advantage of this. 
+Download the newer version, placing it such that it does not 
+overwrite the currently running version.
+With the download will be a new set of configuration files;
+update this new set with any specializations implemented in the currently
+running version of Condor.
+Then, modify the currently running installation by changing its
+configuration such that the path to binaries points instead
+to the new binaries.
 One way to do that (under Unix) is to use a symbolic link that points 
 to the current Condor installation directory (for example, \File{/opt/condor}).
-Once the new files are in place, 
-change the symbolic link to point to the new directory. 
+Change the symbolic link to point to the new directory. 
 If Condor is configured to locate its binaries via the symbolic link, 
 then after the symbolic link changes, 
 the \Condor{master} daemon notices the new binaries and restarts itself. 
