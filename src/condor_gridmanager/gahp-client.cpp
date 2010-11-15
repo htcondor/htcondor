@@ -103,6 +103,7 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 {
 	m_gahp_pid = -1;
+	m_gahp_startup_failed = false;
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
 	m_gahp_errorfd = -1;
@@ -647,7 +648,10 @@ GahpServer::Startup()
 	char *tmp_char;
 
 		// Check if we already have spawned a GAHP server.  
-	if ( m_gahp_pid != -1 ) {
+	if ( m_gahp_startup_failed ) {
+			// Previous attempt to start GAHP failed. Don't retry...
+		return false;
+	} else if ( m_gahp_pid != -1 ) {
 			// GAHP already running...
 		return true;
 	}
@@ -807,6 +811,7 @@ GahpServer::Startup()
 	if ( command_version() == false ) {
 		dprintf(D_ALWAYS,"Failed to read GAHP server version\n");
 		// consider this a bad situation...
+		m_gahp_startup_failed = true;
 		return false;
 	} else {
 		dprintf(D_FULLDEBUG,"GAHP server version: %s\n",m_gahp_version);
@@ -814,6 +819,7 @@ GahpServer::Startup()
 
 		// Now see what commands this server supports.
 	if ( command_commands() == false ) {
+		m_gahp_startup_failed = true;
 		return false;
 	}
 
