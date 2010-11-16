@@ -2893,24 +2893,32 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 const char *ConvertEscapingOldToNew( const char *str )
 {
 	static std::string new_str;
-
 	new_str = "";
+	ConvertEscapingOldToNew( str, new_str );
+	return new_str.c_str();
+}
 
+void ConvertEscapingOldToNew( const char *str, std::string &buffer )
+{
 		// String escaping is different between new and old ClassAds.
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-		if ( str[i] == '\\' && 
-			 ( str[i + 1] != '"' ||
-			   str[i + 1] == '"' &&
-			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
-				 str[i + 2] == '\r') ) ) {
-			new_str.append( 1, '\\' );
+	while( *str ) {
+		size_t n = strcspn(str,"\\");
+		buffer.append(str,n);
+		str += n;
+		if ( *str == '\\' ) {
+			buffer.append( 1, '\\' );
+			str++;
+			if( ( *str != '"' ||
+				  *str == '"' &&
+				  ( str[1] == '\0' || str[1] == '\n' ||
+					str[1] == '\r') ) )
+			{
+				buffer.append( 1, '\\' );
+			}
 		}
-		new_str.append( 1, str[i] );
 	}
-
-	return new_str.c_str();
 }
 
 // end functions

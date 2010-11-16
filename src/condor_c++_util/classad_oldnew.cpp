@@ -60,7 +60,6 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	classad::ClassAdParser	parser;
 	int 					numExprs;
 	string					buffer;
-	classad::ClassAd		*upd=NULL;
 	MyString				inputLine;
 
 
@@ -73,21 +72,25 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 		// pack exprs into classad
 	buffer = "[";
 	for( int i = 0 ; i < numExprs ; i++ ) {
-		if( !sock->get( inputLine ) ) { 
+		char const *strptr = NULL;
+		if( !sock->get_string_ptr( strptr ) ) {
 			return( false );	 
 		}		
 
-        if(strcmp(inputLine.Value(),SECRET_MARKER) ==0 ){
-	    char *secret_line = NULL;
-            if( !sock->get_secret(secret_line) ) {
-                dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
-                break;
-            }
-	    inputLine = secret_line;
-	    free( secret_line );
-        }
+		if(strcmp(strptr,SECRET_MARKER) ==0 ){
+			char *secret_line = NULL;
+			if( !sock->get_secret(secret_line) ) {
+				dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
+				break;
+			}
+			compat_classad::ConvertEscapingOldToNew(secret_line,buffer);
+			free( secret_line );
+		}
+		else {
+			compat_classad::ConvertEscapingOldToNew(strptr,buffer);
+		}
 
-		buffer += string(compat_classad::ConvertEscapingOldToNew(inputLine.Value())) + ";";
+		buffer += ";";
 	}
 	buffer += "]";
 
@@ -101,13 +104,9 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	}
 
 		// parse ad
-	if( !( upd = parser.ParseClassAd( buffer ) ) ) {
+	if( !parser.ParseClassAd( buffer, ad ) ) {
 		return( false );
 	}
-
-		// put exprs into ad
-	ad.Update( *upd );
-	delete upd;
 
 	return true;
 }

@@ -549,6 +549,9 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
 
 const char *ConvertEscapingOldToNew( const char *str );
 
+// appends converted representation of str to buffer
+void ConvertEscapingOldToNew( const char *str, std::string &buffer );
+
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;
 
