@@ -136,7 +136,7 @@ static int dirty_notice_interval = 0;
 static void PeriodicDirtyAttributeNotification();
 static void ScheduleJobQueueLogFlush();
 
-static bool qmgmt_all_users_trusted = false;
+bool qmgmt_all_users_trusted = false;
 static char	**super_users = NULL;
 static int	num_super_users = 0;
 static char *default_super_user =
