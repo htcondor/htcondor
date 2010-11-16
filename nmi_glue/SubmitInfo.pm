@@ -652,8 +652,6 @@ our %submit_info = (
 			],
 			'xtests'	=> [ 
 				'x86_64_sles_9',
-				'x86_64_rhap_5.2', 
-				'unmanaged-x86_rhap_5',
 			 	'x86_rhas_4', 
 				'x86_suse_10.0', 
 				'x86_suse_10.2', 
