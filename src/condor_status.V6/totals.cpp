@@ -283,7 +283,7 @@ displayHeader(FILE *file)
 void StartdServerTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d %5d %7ld %11llu %11ld %11ld\n", machines, avail, memory,
+	fprintf (file, "%9d %5d %7ld %11llu %11ld %11llu\n", machines, avail, memory,
 					disk, condor_mips, kflops);
 }
 
@@ -332,7 +332,7 @@ displayHeader(FILE *file)
 void StartdRunTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d  %11ld  %11ld   %-.3f\n", machines, condor_mips, kflops, 
+	fprintf (file, "%9d  %11ld  %11llu   %-.3f\n", machines, condor_mips, kflops, 
 				(machines > 0) ? float(loadavg/machines) : 0);
 }
 
