@@ -1558,17 +1558,14 @@ GetTargetTypeName( ) const
 void ClassAd::
 ResetExpr()
 {
-	m_exprItr = begin();
-	m_exprItrInChain = false;
-    //this'll originally be null
+	m_exprItrState = ItrUninitialized;
     m_dirtyItrInit = false;
 }
 
 void ClassAd::
 ResetName()
 {
-	m_nameItr = begin();
-	m_nameItrInChain = false;
+	m_nameItrState = ItrUninitialized;
 }
 
 const char *ClassAd::
@@ -1576,14 +1573,20 @@ NextNameOriginal()
 {
 	const char *name = NULL;
 	classad::ClassAd *chained_ad = GetChainedParentAd();
+
+	if( m_nameItrState == ItrUninitialized ) {
+		m_nameItr = begin();
+		m_nameItrState = ItrInThisAd;
+	}
+
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
-	if ( chained_ad && !m_nameItrInChain && m_nameItr == end() ) {
+	if ( chained_ad && m_nameItrState != ItrInChain && m_nameItr == end() ) {
 		m_nameItr = chained_ad->begin();
-		m_nameItrInChain = true;
+		m_nameItrState = ItrInChain;
 	}
-	if ( ( !m_nameItrInChain && m_nameItr == end() ) ||
-		 ( m_nameItrInChain && m_nameItr == chained_ad->end() ) ) {
+	if ( ( m_nameItrState!=ItrInChain && m_nameItr == end() ) ||
+		 ( m_nameItrState==ItrInChain && m_nameItr == chained_ad->end() ) ) {
 		return NULL;
 	}
 	name = m_nameItr->first.c_str();
@@ -1878,14 +1881,20 @@ ClassAd::IsValidAttrName(const char *name) {
 bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 {
 	classad::ClassAd *chained_ad = GetChainedParentAd();
+
+	if( m_exprItrState == ItrUninitialized ) {
+		m_exprItr = begin();
+		m_exprItrState = ItrInThisAd;
+	}
+
 	// After iterating through all the attributes in this ad,
 	// get all the attributes in our chained ad as well.
-	if ( chained_ad && !m_exprItrInChain && m_exprItr == end() ) {
+	if ( chained_ad && m_exprItrState != ItrInChain && m_exprItr == end() ) {
 		m_exprItr = chained_ad->begin();
-		m_exprItrInChain = true;
+		m_exprItrState = ItrInChain;
 	}
-	if ( ( !m_exprItrInChain && m_exprItr == end() ) ||
-		 ( m_exprItrInChain && m_exprItr == chained_ad->end() ) ) {
+	if ( ( m_exprItrState!=ItrInChain && m_exprItr == end() ) ||
+		 ( m_exprItrState==ItrInChain && m_exprItr == chained_ad->end() ) ) {
 		return false;
 	}
 	name = m_exprItr->first.c_str();

@@ -513,11 +513,17 @@ class ClassAd : public classad::ClassAd
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
 
+	enum ItrStateEnum {
+		ItrUninitialized,
+		ItrInThisAd,
+		ItrInChain
+	};
+
 	classad::ClassAd::iterator m_nameItr;
-	bool m_nameItrInChain;
+	ItrStateEnum m_nameItrState;
 
 	classad::ClassAd::iterator m_exprItr;
-	bool m_exprItrInChain;
+	ItrStateEnum m_exprItrState;
 
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
