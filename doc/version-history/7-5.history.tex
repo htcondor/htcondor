@@ -149,6 +149,14 @@ when the offline ClassAd was matched to a job.
 limit set according to the \MacroNI{CREATE\_CORE\_FILES} configuration
 macro rather than the user's coredumpsize limit.
 
+% gittrac #1777
+\item Fixed a case introduced in 7.5.4 under Windows in which the following
+spurious log message was produced:
+
+\begin{verbatim}
+SharedPortEndpoint: Destructor: Problem in thread shutdown notification: 0
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
