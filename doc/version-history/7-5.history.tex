@@ -101,6 +101,13 @@ See section~\ref{param:LockDebugLogToAppend} for the complete definition.
 
 \begin{itemize}
 
+% gittrac 1773
+\item Since 7.5.2, \Condor{q} speed was not as high as earlier 7.5 and
+  7.4 releases, especially when retrieving large numbers of jobs.
+  Viewing 100k jobs took about four times longer.  This has been fixed
+  in this release, and performance should be about the same as before
+  7.5.2.
+
 % gittrac #1737
 \item A bug introduced in Condor version 7.5.4 prevented parallel jobs
 with multiple \SubmitCmd{queue} statements in the submit description file
