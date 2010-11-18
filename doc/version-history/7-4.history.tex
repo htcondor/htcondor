@@ -33,7 +33,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1713
+\item \Condor{dagman} now prints a message in the \File{dagman.out} file
+whenever it truncates a node job user log file.
+
+% gittrac #1715
+\item \Condor{dagman} now prints additional diagnostic information in the
+case of certain log file errors.
 
 \end{itemize}
 
@@ -49,7 +55,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1750
+\item A network disconnect between the submit machine and execute
+  machine during the transfer of output files caused the
+  \Condor{starter} daemon to immediately give up, rather than waiting
+  for the \Condor{shadow} to reconnect.  This problem was introduced
+  in Condor version 7.4.4.
+
+% gittrac #1743
+\item If \Condor{ssh\_to\_job} attempted to connect to a job while the
+  job's input files were being transferred, this caused the file
+  transfer to fail, which resulted in the job returning to the idle
+  state in the queue.
 
 \end{itemize}
 

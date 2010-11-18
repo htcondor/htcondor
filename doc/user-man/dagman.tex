@@ -1061,7 +1061,7 @@ The resulting values passed to the NodeB executable are
 \index{DAGMan input file!PRIORITY key word}
 
 The \Arg{PRIORITY} key word assigns a priority to a DAG node.
-The syntax for PRIORITY is
+The syntax for \Arg{PRIORITY} is
 
 \Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
 
@@ -1113,7 +1113,7 @@ Then, a maximum number of submitted clusters may be specified
 for each category.
 
 The \Arg{CATEGORY} key word assigns a category name to a DAG node.
-The syntax for CATEGORY is
+The syntax for \Arg{CATEGORY} is
 
 \Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
 
@@ -1147,22 +1147,20 @@ categories and splices.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-configuration}Configuration Specific to a DAG}
 \index{DAGMan input file!CONFIG key word}
-
 \index{DAGMan!CONFIG}
 
 The \Arg{CONFIG} keyword specifies a configuration file to be used
-to set \Condor{dagman} configuration options when running this DAG.
+to set configuration variables related to \Condor{dagman}
+when running this DAG.
 The syntax for \Arg{CONFIG} is
 
 \Opt{CONFIG} \Arg{ConfigFileName}
 
-If the DAG file contains a line like this:
-
+If the DAG file contains a line like this,
 \begin{verbatim}
     CONFIG dagman.config
 \end{verbatim}
-
-the configuration values in the file \File{dagman.config} will be used
+then the configuration values in the file \File{dagman.config} will be used
 for this DAG.
 
 Configuration macros for \Condor{dagman} can be specified in several
@@ -1172,30 +1170,39 @@ ways, as given within the ordered list:
 In a Condor configuration file.
 \item
 With an environment variable.
-Prepend the string \verb@"_CONDOR_"@ to the macro name.
+Prepend the string \verb@_CONDOR_@ to the configuration variable's name.
 \item
-In a \Condor{dagman}-specific configuration file specified in the DAG
-file or on the \Condor{submit\_dag} command line.
+As specified above, with a line in the DAG input file
+using the keyword \Arg{CONFIG}, such that there is a \Condor{dagman}-specific
+configuration file specified,
+or on the \Condor{submit\_dag} command line.
 \item
-For some configuration macros, there is a corresponding \Condor{submit\_dag}
-command line flag (for example, \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}/\Arg{-maxjobs}).
+For some configuration variables,
+there is a corresponding \Condor{submit\_dag} command line argument.
+For example, the configuration variable \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}
+has the corresponding command line argument \Arg{-maxjobs}.
 \end{enumerate}
 
 In the above list, configuration values specified later in the list
-override ones specified earlier (e.g., a value specified on the
+override ones specified earlier
+For example, a value specified on the
 \Condor{submit\_dag} command line overrides corresponding values in any
-configuration file; a value specified in a DAGMan-specific configuration
-file overrides values specified in a general Condor configuration file).
+configuration file.
+And, a value specified in a DAGMan-specific configuration
+file overrides values specified in a general Condor configuration file.
 
-Non-\Condor{dagman}, non-daemoncore configuration macros in a
+Configuration variables that are not for \Condor{dagman}
+and not utilized by DaemonCore, yet are specified in a
 \Condor{dagman}-specific configuration file are ignored.
 
 Only a single configuration file can be specified for a given
-\Condor{dagman} run.  For example, if one file is specified in a DAG,
+\Condor{dagman} run.  For example, if one file is specified within a DAG
+input file,
 and a different file is specified on the \Condor{submit\_dag} command
-line, this is a fatal error at submit time.  The same is true if
-different configuration files are specified in multiple DAG files
-referenced in a single \Condor{submit\_dag} command.
+line, this is a fatal error at submit time.
+The same is true if
+different configuration files are specified in multiple DAG input files,
+and referenced in a single \Condor{submit\_dag} command.
 
 If multiple DAGs are run in a single \Condor{dagman} run, the
 configuration options specified in the \Condor{dagman} configuration
