@@ -5342,16 +5342,18 @@ MAX_JOBS_RUNNING	= \
      
 \label{param:QueueSuperUsers}
 \item[\Macro{QUEUE\_SUPER\_USERS}]
-  This macro determines what user names on a given machine have
-  \Term{super-user access} to the job queue, meaning that they can
-  modify or delete the job ClassAds of other users.  (Normally, you
-  can only modify or delete ClassAds from the job queue that you own).
-  Whatever user name corresponds with the UID that Condor is running as
-  (usually the Unix user condor) will automatically be included in this list
-  because that is needed for Condor's proper functioning.  See
-  section~\ref{sec:uids} on UIDs in Condor for more details on
-  this.  By default, we give root the ability to remove other
-  user's jobs, in addition to user condor.
+  A comma and/or space separated list of user names on a given machine that
+  are given \Term{super-user access} to the job queue, meaning that they can
+  modify or delete the job ClassAds of other users.  When not on this list,
+  users can only modify or delete their own ClassAds from the job queue.
+  Whatever user name corresponds with the UID that Condor is running as --
+  usually user \Login{condor} --
+  will automatically be included in this list,
+  because that is needed for Condor's proper functioning.
+  See section~\ref{sec:uids} on UIDs in Condor for more details on this.
+  By default, the Unix user \Login{root} and the Windows user 
+  \Login{administrator} are given the ability to remove other user's jobs,
+  in addition to user \Login{condor}.
 
 \label{param:SystemJobMachineAttrs}
 \item[\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}]
@@ -8030,9 +8032,10 @@ Entries for DAGMan}
 These macros affect the operation of DAGMan and DAGMan
 jobs within Condor.
 
-Some of these configuration variables will be most appropriately set on
-a per DAG basis.
-Setting these is explained in section~\ref{sec:DAG-configuration}.
+\Bold{Note}: Many, if not all, of these configuration variables will
+be most appropriately set on a per DAG basis, rather than in the
+global Condor configuration files.  Per DAG configuration is explained
+in section~\ref{sec:DAG-configuration}.
 
 \begin{description}
 
