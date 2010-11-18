@@ -9,7 +9,7 @@
 
 %% How to locate the machines with which you want to mess.
 \newcommand{\ToolArgsLocate}{
-\Lbr \OptArg{-name}{name} $|$ \Arg{name} $|$ \OptArg{-addr}{"\SinfulAny"} $|$ \Arg{"\SinfulAny"} \Opt{\Dots} \Rbr $|$ \oOpt{-all} \\
+\Lbr \OptArg{-name}{hostname} $|$ \Arg{hostname} $|$ \OptArg{-addr}{"\SinfulAny"} $|$ \Arg{"\SinfulAny"} \Opt{\Dots} \Rbr $|$ \oOpt{-all} \\
 }
 %%%% Was:
 %%%%\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \oOptnm{ $|$ -all} \\
@@ -46,8 +46,7 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Which daemons you wish to affect. XXX maybe split up nicer...
 \newcommand{\ToolArgsAffect}{
-\oOptArgnm{-subsystem}{master $|$ startd $|$ schedd $|$ collector $|$ negotiator
-	$|$ kbdd $|$ quill}
+\oOptArgnm{-subsystem}{<subsystemname>}
 }
 
 %% This is the common set of arguments
@@ -77,8 +76,8 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 \newcommand{\ToolArgsLocateDesc}{
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Specify a pool by giving the
 	central manager's host name and an optional port number}
-\OptItem{\OptArg{-name}{name}}{Send the command to a machine identified by \Arg{name}}
-\OptItem{\Arg{name}}{Send the command to a machine identified by \Arg{name}}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Arg{hostname}}
+\OptItem{\Arg{hostname}}{Send the command to a machine identified by \Arg{hostname}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
 	to a machine's master located at \Arg{"\SinfulAny"}}
 \OptItem{\Arg{"\SinfulAny"}}{Send the command
@@ -100,8 +99,8 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Descriptions of Affected Daemons
 \newcommand{\ToolArgsAffectDesc}{
-\OptItem{\OptArg{-subsystem}{master $|$ startd $|$ schedd $|$ collector $|$ negotiator $|$ kbdd $|$ quill}}
-{Send the command to the named daemon. Without this option,
+\OptItem{\OptArg{-subsystem}{<subsystemname>}}
+{Send the command to the named subsystem. Without this option,
 the command is sent to the \Condor{master} daemon.}
 }
 

@@ -818,38 +818,11 @@ work for Condor \VersionNotice.
 \subsection{\label{sec:upgrade-directions}Upgrading - Installing a Newer
 Version of Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-An upgrade changes the running version of Condor 
+Section~\ref{sec:Pool-Upgrade}  on page~\pageref{sec:Pool-Upgrade}
+within the section on Pool Management describes 
+strategies for doing an upgrade:
+changing the running version of Condor 
 from the current installation to a newer version.
-The safe method 
-to install and start running a newer version of Condor 
-in essence is:
-shutdown the current installation of Condor,
-install the newer version,
-and then restart Condor using the newer version.
-
-To allow for falling back to the current version,
-place the new version in a separate directory.
-Copy the existing configuration files,
-and modify the copy to point to and use the new version.
-Set the \Env{CONDOR\_CONFIG} environment variable
-to point to the new copy of the configuration,
-so the new version of Condor will use the new configuration
-when restarted.
-
-When upgrading from version of Condor earlier than 6.8 to more recent version,
-note that the configuration settings must be modified for security reasons. 
-Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
-must be explicitly changed,
-or no jobs may be submitted,
-and error messages will be issued by Condor tools.
-
-The Condor Wiki provides administrators with information under the
-topic heading "How to upgrade Condor gracefully."
-Note that this page is most relevant for Unix systems.
-See all topics at 
-\URL{http://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes}.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/condor-view-client.tex}
