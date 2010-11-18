@@ -361,6 +361,12 @@ class ClassAd : public classad::ClassAd
 		 */
 	int put(Stream& s);
 
+		/** Send the ClassAd as an old ClassAd on the stream
+		 * @param s the stream
+		 * @param attr_whitelist list of attributes to send
+		 */
+	int put(Stream& s,StringList *attr_whitelist);
+
 		/** Read the old ClassAd from the stream, and fill in this ClassAd.
 		 * @param s the stream
 		 */

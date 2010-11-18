@@ -1355,6 +1355,15 @@ put( Stream &s )
 }
 
 int ClassAd::
+put( Stream &s, StringList *attr_whitelist )
+{
+	if( !putOldClassAd( &s, *this, m_privateAttrsAreInvisible, attr_whitelist ) ) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int ClassAd::
 initFromStream(Stream& s)
 {
 	if( !getOldClassAd( &s, *this ) ) {

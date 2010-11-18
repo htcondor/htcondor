@@ -23,6 +23,7 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "string_list.h"
 
 using namespace std;
 
@@ -174,10 +175,10 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  * It should also do encryption now.
  */
 
-bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
+bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
 {
     bool completion;
-    completion = _putOldClassAd(sock, ad, false, exclude_private);
+    completion = _putOldClassAd(sock, ad, false, exclude_private, attr_whitelist);
 
 
     //should be true by this point
@@ -187,22 +188,22 @@ bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 bool
 putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 {
-    return _putOldClassAd(sock, ad, true, exclude_private);
+    return _putOldClassAd(sock, ad, true, exclude_private, NULL);
 }
 
 bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
-					 bool exclude_private )
+					 bool exclude_private, StringList *attr_whitelist )
 {
 	classad::ClassAdUnParser	unp;
-	string						buf;
-	const classad::ExprTree		*expr;
+	std::string					buf;
     bool send_server_time = false;
 
 	unp.SetOldClassAd( true );
 
 	int numExprs=0;
 
-	classad::ClassAdIterator itor(ad);
+    classad::AttrList::const_iterator itor;
+    classad::AttrList::const_iterator itor_end;
 
     bool haveChainedAd = false;
     
@@ -212,7 +213,10 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
         haveChainedAd = true;
     }
 
-    for(int pass = 0; pass < 2; pass++){
+	if( attr_whitelist ) {
+		numExprs += attr_whitelist->number();
+	}
+	else for(int pass = 0; pass < 2; pass++){
 
         /* 
         * Count the number of chained attributes on the first
@@ -223,33 +227,33 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
             if(!haveChainedAd){
                 continue;
             }
-            itor.Initialize(*chainedAd);
+            itor = chainedAd->begin();
+			itor_end = chainedAd->end();
         }
         else {
-            itor.Initialize(ad);
+            itor = ad.begin();
+			itor_end = ad.end();
         }
 
-        while( !itor.IsAfterLast( ) ) {
-            itor.CurrentAttribute( buf, expr );
-
+		for(;itor != itor_end; itor++) {
+			std::string const &attr = itor->first;
 
             if(!exclude_private ||
-			   !compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
+			   !compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr.c_str()))
             {
                 if(excludeTypes)
                 {
-                    if(strcasecmp( "MyType", buf.c_str() ) != 0 &&
-                        strcasecmp( "TargetType", buf.c_str() ) != 0)
+                    if(strcasecmp( ATTR_MY_TYPE, attr.c_str() ) != 0 &&
+                        strcasecmp( ATTR_TARGET_TYPE, attr.c_str() ) != 0)
                     {
                         numExprs++;
                     }
                 }
                 else { numExprs++; }
             }
-	    if ( strcasecmp( ATTR_CURRENT_TIME, buf.c_str() ) == 0 ) {
-		numExprs--;
-	    }
-	    itor.NextAttribute( buf, expr );
+			if ( strcasecmp( ATTR_CURRENT_TIME, attr.c_str() ) == 0 ) {
+				numExprs--;
+			}
         }
     }
 
@@ -264,8 +268,35 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 		return false;
 	}
     
-    classad::ClassAdIterator attrItor; 
-    for(int pass = 0; pass < 2; pass++){
+	if( attr_whitelist ) {
+		attr_whitelist->rewind();
+		char const *attr;
+		while( (attr=attr_whitelist->next()) ) {
+			classad::ExprTree const *expr = ad.Lookup(attr);
+			buf = attr;
+			buf += " = ";
+            if( !expr || (exclude_private && compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr)) )
+			{
+				buf += "undefined";
+            }
+			else {
+				unp.Unparse( buf, expr );
+			}
+            ConvertDefaultIPToSocketIP(attr,buf,*sock);
+
+            if( ! sock->prepare_crypto_for_secret_is_noop() &&
+				compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr) )
+			{
+                sock->put(SECRET_MARKER);
+
+                sock->put_secret(buf.c_str());
+            }
+            else if (!sock->put(buf.c_str()) ){
+                return false;
+            }
+		}
+	}
+    else for(int pass = 0; pass < 2; pass++){
         if(pass == 0) {
             /* need to copy the chained attrs first, so if
              *  there are duplicates, the non-chained attrs
@@ -274,54 +305,49 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
             if(!haveChainedAd){
                 continue;
             }
-            attrItor.Initialize(*chainedAd);
+            itor = chainedAd->begin();
+			itor_end = chainedAd->end();
         } 
         else {
-            attrItor.Initialize(ad);
+            itor = ad.begin();
+			itor_end = ad.end();
         }
 
-        char *exprString;
-        for( attrItor.ToFirst();
-            !attrItor.IsAfterLast();
-            attrItor.NextAttribute(buf, expr) ) {
+		for(;itor != itor_end; itor++) {
+			std::string const &attr = itor->first;
+			classad::ExprTree const *expr = itor->second;
 
-            attrItor.CurrentAttribute( buf, expr );
-
-            //yea, these two if-statements could be combined into one, 
-            //but this is more readable.
-	    if(strcasecmp(ATTR_CURRENT_TIME,buf.c_str())==0) {
-		continue;
-	    }
-            if(exclude_private && compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
+			if(strcasecmp(ATTR_CURRENT_TIME,attr.c_str())==0) {
+				continue;
+			}
+            if(exclude_private && compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr.c_str())){
                 continue;
             }
 
             if(excludeTypes){
-                if(strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
-                        strcasecmp( "TargetType", buf.c_str( ) ) == 0 ){
+                if(strcasecmp( ATTR_MY_TYPE, attr.c_str( ) ) == 0 || 
+				   strcasecmp( ATTR_TARGET_TYPE, attr.c_str( ) ) == 0 )
+				{
                     continue;
                 }
             }
-            //store the name for later
-            string tmpAttrName(buf);
+
+			buf = attr;
             buf += " = ";
             unp.Unparse( buf, expr );
-            
-            //get buf's c_str in an editable format
-            exprString = (char*)malloc(buf.size() + 1);
-            strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
-            ConvertDefaultIPToSocketIP(tmpAttrName.c_str(),&exprString,*sock);
+
+            ConvertDefaultIPToSocketIP(attr.c_str(),buf,*sock);
+
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-				compat_classad::ClassAd::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
+				compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr.c_str()))
+			{
                 sock->put(SECRET_MARKER);
 
-                sock->put_secret(exprString);
+                sock->put_secret(buf.c_str());
             }
-            else if (!sock->put(exprString) ){
-                free(exprString);
+            else if (!sock->put(buf.c_str()) ){
                 return false;
             }
-            free(exprString);
         }
     }
 
@@ -350,14 +376,14 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
     if(!excludeTypes)
     {
         // Send the type
-        if (!ad.EvaluateAttrString("MyType",buf)) {
+        if (!ad.EvaluateAttrString(ATTR_MY_TYPE,buf)) {
             buf="(unknown type)";
         }
         if (!sock->put(buf.c_str())) {
             return false;
         }
 
-        if (!ad.EvaluateAttrString("TargetType",buf)) {
+        if (!ad.EvaluateAttrString(ATTR_TARGET_TYPE,buf)) {
             buf="(unknown type)";
         }
         if (!sock->put(buf.c_str())) {

@@ -61,6 +61,10 @@ void ConfigConvertDefaultIPToSocketIP();
 
 void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s);
 
+// This interface to ConvertDefaultIPToSocketIP() takes a std::string
+// and modifies its contents.
+void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s);
+
 #endif
 
 #endif /* MY_HOSTNAME_H */

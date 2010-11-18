@@ -41,7 +41,7 @@ void AttrList_setPublishServerTimeMangled( bool publish);
 classad::ClassAd* getOldClassAd( Stream *sock );
 bool getOldClassAd( Stream *sock, classad::ClassAd& ad );
 bool getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
-bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private );
+bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist=NULL );
 bool putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private );
 //DO NOT CALL THIS, EXCEPT IN THE ABOVE TWO putOldClassAds*!
 //the bool exclude types tells the function whether to exclude 
@@ -49,7 +49,7 @@ bool putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_pri
 //  true is the same as the old putOldClassAd()
 //  false is the same as the putOldClassAdNoTypes()
 bool _putOldClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes,
-					bool exclude_private);
+					bool exclude_private, StringList *attr_whitelist);
 
 //this is a shorthand version of EvalTree w/o a target ad.
 bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v);
