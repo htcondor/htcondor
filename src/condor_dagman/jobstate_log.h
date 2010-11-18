@@ -46,6 +46,9 @@ public:
 	*/
 	~JobstateLog();
 
+	//TEMPTEMP -- document
+	void InitializeRecovery();
+
 	/** Write the DAGMAN_STARTED "event".
 		@param The Condor ID of the DAGMan job itself.
 	*/
@@ -99,6 +102,7 @@ public:
 
 private:
 	/** Write an event to the jobstate.log file.
+		TEMPTEMP -- eventTimeP
 		@param The DAG node corresponding to the "event".
 		@param The event name.
 		@param The Condor ID string (or other data).
@@ -107,6 +111,7 @@ private:
 				const char *eventName, const char *condorID );
 
 	/** Write an event to the jobstate.log file.
+		TEMPTEMP -- eventTimeP
 		@param The string we want to write to the file.
 	*/
 	void Write( const time_t *eventTimeP, const MyString &info );
@@ -120,6 +125,9 @@ private:
 
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
+
+		//TEMPTEMP -- document -- applies only in recovery mode...
+	time_t _lastTimestampWritten;
 
 		// The names of the pseudo-events we're going to write (for "real"
 		// events, we use the event names defined in condor_event.h).

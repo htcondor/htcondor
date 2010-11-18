@@ -1,3 +1,4 @@
+//TEMPTEMP -- should JOB_SUCCESS, etc., have the same timestamp as the corresponding JOB_TERMINATED, etc., event? -- need to reset job timestamp on retry...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -42,12 +43,76 @@ JobstateLog::JobstateLog( const char *jobstateLogFile )
 	ASSERT( jobstateLogFile );
 
 	_jobstateLogFile = strnewp( jobstateLogFile );
+	_lastTimestampWritten = 0;
 }
 
 //---------------------------------------------------------------------------
 JobstateLog::~JobstateLog()
 {
 	delete [] _jobstateLogFile;
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::InitializeRecovery()
+{
+		//
+		// Find the timestamp of the last "real" event written to the
+		// jobstate.log file.  Any events that we see in recovery mode
+		// that have an earlier timestamp should *not* be re-written
+		// to the jobstate.log file.  Any events with later timestamps
+		// should be written.  Events with equal timestamps need to be
+		// tested individually.
+		//
+
+	FILE *infile = safe_fopen_wrapper( _jobstateLogFile, "r" );
+	if ( !infile ) {
+		//TEMPTEMP -- should this be a fatal error?? -- what if we end up in recovery mode before we've written any events? -- hmm -- we probably should at least have DAGMAN_STARTED...
+       	debug_printf( DEBUG_QUIET,
+					"Could not open jobstate log file %s for reading.\n",
+					_jobstateLogFile );
+		main_shutdown_graceful();
+		return;
+	}
+
+	MyString line;
+	off_t startOfLastTimestamp = 0;
+
+	while ( true ) {
+		off_t currentOffset = ftell( infile );
+		if ( !line.readLine( infile ) ) {
+			break;
+		}
+
+		line.Tokenize();
+		const char* timestamp = line.GetNextToken( " ", false );
+		const char* nodeName = line.GetNextToken( " ", false );
+
+			// We don't want to look at "INTERNAL" events here, or we'll
+			// get goofed up by our own DAGMAN_STARTED event, etc.
+		if ( strcmp( nodeName, "INTERNAL") != 0 ) {
+			time_t newTimestamp;
+			sscanf( timestamp, "%lu", &newTimestamp );
+			if ( newTimestamp > _lastTimestampWritten ) {
+				startOfLastTimestamp = currentOffset;
+				_lastTimestampWritten = newTimestamp;
+			}
+		}
+	}
+
+		//
+		// Now find all lines that match the last timestamp, and put
+		// them into a hash table for future reference.
+		//
+
+	//TEMPTEMP -- check return value? -- 0 is okay
+	fseek( infile, startOfLastTimestamp, SEEK_SET );
+	while ( line.readLine( infile ) ) {
+       	debug_printf( DEBUG_QUIET, "DIAG (last timestamp) line <%s>\n", line.Value() );//TEMPTEMP
+		//TEMPTEMP -- skip "INTERNAL" ones, or else only process ones with matching timestamp...
+	}
+
+	fclose( infile );
 }
 
 //---------------------------------------------------------------------------
@@ -122,7 +187,8 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 	MyString retval;
 	retval.sprintf( "%d", node->retval );
 
-	Write( NULL, node, eventName, retval.Value() );
+	time_t timestamp = node->GetLastEventTime();
+	Write( &timestamp, node, eventName, retval.Value() );
 }
 
 //---------------------------------------------------------------------------
@@ -139,7 +205,8 @@ JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 		int procID = node->GetNoop() ? node->_CondorID._proc : 0;
 		CondorID2Str( node->_CondorID._cluster, procID, condorID );
 	}
-	Write( NULL, node, eventName, condorID.Value() );
+	time_t timestamp = node->GetLastEventTime();
+	Write( &timestamp, node, eventName, condorID.Value() );
 }
 
 //---------------------------------------------------------------------------
@@ -164,14 +231,16 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 		CondorID2Str( node->_CondorID._cluster, procID, condorID );
 	}
 
-	Write( NULL, node, eventName, condorID.Value() );
+	time_t timestamp = node->GetLastEventTime();
+	Write( &timestamp, node, eventName, condorID.Value() );
 }
 
 //---------------------------------------------------------------------------
 void
 JobstateLog::WriteSubmitFailure( Job *node )
 {
-	Write( NULL, node, "SUBMIT_FAILED", "-" );
+	time_t timestamp = node->GetLastEventTime();
+	Write( &timestamp, node, "SUBMIT_FAILED", "-" );
 }
 
 //---------------------------------------------------------------------------
@@ -191,6 +260,16 @@ JobstateLog::Write( const time_t *eventTimeP, Job *node,
 void
 JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 {
+		// Avoid "re-writing" events in recovery mode:
+		// If the event time is *after* _lastTimestampWritten, we
+		// write the event.  If the event time is *before*
+		// _lastTimestampWritten, we don't write the event.  If
+		// the times are equal, we have to do a further test down
+		// below.
+	if ( (eventTimeP != NULL) && (*eventTimeP < _lastTimestampWritten) ) {
+		return;
+	}
+
 	FILE *outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );
 	if ( !outfile ) {
        	debug_printf( DEBUG_QUIET,
@@ -201,7 +280,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 	}
 
 	time_t eventTime;
-	if ( eventTimeP != NULL ) {
+	if ( eventTimeP != NULL && *eventTimeP != 0 ) {
 		eventTime = *eventTimeP;
 	} else {
 		eventTime = time( NULL );

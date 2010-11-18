@@ -249,6 +249,7 @@ bool Dag::Bootstrap (bool recovery)
 					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
 		if ( _jobstateLog ) {
 			_jobstateLog->WriteRecoveryStarted();
+			_jobstateLog->InitializeRecovery();
 		}
 
 		// as we read the event log files, we emit lots of imformation into
@@ -546,6 +547,11 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 					// ignore it and hope for the best...
 				break;
 			} 
+
+			//TEMPTEMP -- should be log event to jobstate.log here instead of in PrintEvent???
+
+			//TEMPTEMP -- save event timestamp in job here?
+			job->SetLastEventTime( event );
 
 				// Note: this is a bit conservative -- some events (e.g.,
 				// ImageSizeUpdate) don't actually outdate the status file.

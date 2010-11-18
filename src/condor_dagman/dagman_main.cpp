@@ -1,3 +1,4 @@
+//TEMPTEMP -- can we get interrupted in the middle of an event-reading loop?  if not, maybe I can not re-log events with timestamps matching the oldest timestamp -- hmm -- we almost certainly *can* get interrupted; the other thing is, I don't think we're guaranteed to re-read the events in the same order in recovery mode that we got them the first time around...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

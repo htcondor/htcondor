@@ -80,56 +80,17 @@ $dagman_args = "-verbose";
 	'^\d+ NodeC POST_SCRIPT_TERMINATED \d+.0 - - 4$',
 	'^\d+ NodeC POST_SCRIPT_SUCCESS \d+.0 - - 4$',
 	'^\d+ NodeD SUBMIT \d+.0 - - 5$',
+	'^\d+ NodeD EXECUTE \d+.0 - - 5$',
 	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 3 \*\*\*$',
 	'^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
 	'^\d+ INTERNAL \*\*\* RECOVERY_STARTED \*\*\*$',
-	# '^\d+ NodeA PRE_SCRIPT_STARTED - local - 1$',
-	# '^\d+ NodeA PRE_SCRIPT_SUCCESS - local - 1$',
-	'^\d+ NodeA SUBMIT \d+.\d local - 1$',
-	'^\d+ NodeA SUBMIT \d+.\d local - 1$',
-	'^\d+ NodeA EXECUTE \d+.\d local - 1$',
-	'^\d+ NodeA EXECUTE \d+.\d local - 1$',
-	'^\d+ NodeA JOB_TERMINATED \d+.\d local - 1$',
-	'^\d+ NodeA JOB_TERMINATED \d+.\d local - 1$',
-	'^\d+ NodeA JOB_FAILURE 2 local - 1$',
-	# '^\d+ NodeA POST_SCRIPT_STARTED \d+.0 local - 1$',
-	'^\d+ NodeA POST_SCRIPT_TERMINATED \d+.0 local - 1$',
-	'^\d+ NodeA POST_SCRIPT_SUCCESS \d+.0 local - 1$',
-	# '^\d+ NodeB PRE_SCRIPT_STARTED - viz - 2$',
-	# '^\d+ NodeB PRE_SCRIPT_SUCCESS - viz - 2$',
-	'^\d+ NodeB SUBMIT \d+.\d viz - 2$',
-	'^\d+ NodeB SUBMIT \d+.\d viz - 2$',
-	'^\d+ NodeB EXECUTE \d+.\d viz - 2$',
-	'^\d+ NodeB EXECUTE \d+.\d viz - 2$',
-	'^\d+ NodeB JOB_TERMINATED \d+.\d viz - 2$',
-	'^\d+ NodeB JOB_TERMINATED \d+.\d viz - 2$',
-	'^\d+ NodeB JOB_SUCCESS 0 viz - 2$',
-	# '^\d+ NodeB POST_SCRIPT_STARTED \d+.0 viz - 2$',
-	'^\d+ NodeB POST_SCRIPT_TERMINATED \d+.0 viz - 2$',
-	'^\d+ NodeB POST_SCRIPT_SUCCESS \d+.0 viz - 2$',
-	# '^\d+ NodeC PRE_SCRIPT_STARTED - - - 3$',
-	# '^\d+ NodeC PRE_SCRIPT_SUCCESS - - - 3$',
-	'^\d+ NodeC SUBMIT \d+.0 - - 3$',
-	'^\d+ NodeC EXECUTE \d+.0 - - 3$',
-	'^\d+ NodeC JOB_TERMINATED \d+.0 - - 3$',
-	'^\d+ NodeC JOB_SUCCESS 0 - - 3$',
-	# '^\d+ NodeC POST_SCRIPT_STARTED \d+.0 - - 3$',
-	'^\d+ NodeC POST_SCRIPT_TERMINATED \d+.0 - - 3$',
-	'^\d+ NodeC POST_SCRIPT_FAILURE \d+.0 - - 3$',
-	# '^\d+ NodeC PRE_SCRIPT_STARTED - - - 4$',
-	# '^\d+ NodeC PRE_SCRIPT_SUCCESS - - - 4$',
-	'^\d+ NodeC SUBMIT \d+.0 - - 4$',
-	'^\d+ NodeC EXECUTE \d+.0 - - 4$',
-	'^\d+ NodeC JOB_TERMINATED \d+.0 - - 4$',
-	'^\d+ NodeC JOB_SUCCESS 0 - - 4$',
-	# '^\d+ NodeC POST_SCRIPT_STARTED \d+.0 - - 4$',
-	'^\d+ NodeC POST_SCRIPT_TERMINATED \d+.0 - - 4$',
-	'^\d+ NodeC POST_SCRIPT_SUCCESS \d+.0 - - 4$',
+	#TEMPTEMP -- we should get rid of the line below....
 	'^\d+ NodeD SUBMIT \d+.0 - - 5$',
+	#TEMPTEMP -- we should get rid of the line below....
 	'^\d+ NodeD EXECUTE \d+.0 - - 5$',
-	'^\d+ INTERNAL \*\*\* RECOVERY_FINISHED \*\*\*$',
 	'^\d+ NodeD JOB_TERMINATED \d+.0 - - 5$',
 	'^\d+ NodeD JOB_FAILURE 1 - - 5$',
+	'^\d+ INTERNAL \*\*\* RECOVERY_FINISHED \*\*\*$',
 	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 1 \*\*\*$',
 	'^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
 	'^\d+ NodeD SUBMIT \d+.0 - - 6$',
@@ -235,6 +196,8 @@ $success = sub
 			chomp();
 			$line = $_;
 			$target = $outlines[$outindex];
+CondorTest::debug("\nline: $line\n");#TEMPTEMP
+CondorTest::debug("target: $target\n");#TEMPTEMP
 			if( $line =~ /$target/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				$outindex++;
@@ -242,6 +205,9 @@ $success = sub
 					$passed = 1;
 					break;
 				}
+			} else {
+				CondorTest::debug("failed: \"extra\" output line $line\n");
+				$diditpass = 0;
 			}
 		}
 		close(OUT);

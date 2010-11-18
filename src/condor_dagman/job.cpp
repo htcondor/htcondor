@@ -176,6 +176,7 @@ void Job::Init( const char* jobName, const char* directory,
 
 	_pegasusSite = NULL;
 	_pegasusSeqNum = 0;
+	_lastEventTime = 0;
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
@@ -994,4 +995,12 @@ Job::RestorePegasusNextSequenceNum( const char *primaryDagFile )
 	unlink( seqNumFile.Value() );
 
 	return true;
+}
+
+//---------------------------------------------------------------------------
+void
+Job::SetLastEventTime( const ULogEvent *event )
+{
+	struct tm eventTm = event->eventTime;
+	_lastEventTime = mktime( &eventTm );
 }

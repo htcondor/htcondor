@@ -409,6 +409,12 @@ class Job {
 	*/
 	static bool RestorePegasusNextSequenceNum( const char *primaryDagFile );
 
+		//TEMPTEMP -- document
+	void SetLastEventTime( const ULogEvent *event );
+
+		//TEMPTEMP -- document
+	time_t GetLastEventTime() { return _lastEventTime; }
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -575,6 +581,9 @@ private:
 		// The sequence number keyword for the file in which we save
 		// the sequence number.
 	static const char *SEQ_NUM_KEYWORD;
+
+		//TEMPTEMP -- document
+	time_t _lastEventTime;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
