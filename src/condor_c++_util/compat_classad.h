@@ -361,6 +361,12 @@ class ClassAd : public classad::ClassAd
 		 */
 	int put(Stream& s);
 
+		/** Send the ClassAd as an old ClassAd on the stream
+		 * @param s the stream
+		 * @param attr_whitelist list of attributes to send
+		 */
+	int put(Stream& s,StringList *attr_whitelist);
+
 		/** Read the old ClassAd from the stream, and fill in this ClassAd.
 		 * @param s the stream
 		 */
@@ -513,11 +519,17 @@ class ClassAd : public classad::ClassAd
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
 
+	enum ItrStateEnum {
+		ItrUninitialized,
+		ItrInThisAd,
+		ItrInChain
+	};
+
 	classad::ClassAd::iterator m_nameItr;
-	bool m_nameItrInChain;
+	ItrStateEnum m_nameItrState;
 
 	classad::ClassAd::iterator m_exprItr;
-	bool m_exprItrInChain;
+	ItrStateEnum m_exprItrState;
 
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
@@ -548,6 +560,9 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
 								  TargetAdType target_type );
 
 const char *ConvertEscapingOldToNew( const char *str );
+
+// appends converted representation of str to buffer
+void ConvertEscapingOldToNew( const char *str, std::string &buffer );
 
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;

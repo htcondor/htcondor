@@ -22,8 +22,7 @@
 
 #include "compat_classad.h"
 
-#include <vector>
-#include <algorithm>
+#include "HashTable.h"
 
 namespace compat_classad {
 
@@ -35,8 +34,7 @@ typedef int (*SortFunctionType)(compat_classad::ClassAd*,compat_classad::ClassAd
 class ClassAdList
 {
 private:
-	std::vector<ClassAd*> list;
-	int index;
+	HashTable<ClassAd*,bool> htable;
 
 		/* The following private class applies the user supplied
 		 * sort function and the user supplied context to compare
@@ -69,20 +67,20 @@ private:
 	};
 
 public:
-	ClassAdList()           { index = 0; }
+	ClassAdList();
 	~ClassAdList();
 	ClassAd* Next();
-	void Open()             { index = 0; }
+	void Open();
 		/*This Close() function is no longer really needed*/
-	void Close()            { index = 0; /*Just a safety measure*/ }
-	void Rewind()           { /*same as Open()*/ index = 0; }
-	int MyLength()          { /*Same as Length()*/ return list.size(); }
+	void Close();
+	void Rewind()           { Open(); }
+	int MyLength()          { return Length(); }
 		/* Removes ad from list and deletes it */
 	int Delete(ClassAd* cad);
 		/* Removes ad from list, but does not delete it */
 	int Remove(ClassAd* cad);
 	void Insert(ClassAd* cad);
-	int Length()            { /*Same as MyLength()*/ return list.size(); }
+	int Length();
 		/* Note on behaviour. The Sort function does not touch the
 		 * index, nor invalidate it. index will be within defined limits
 		 * but continuing an iteration from the index would be unwise.

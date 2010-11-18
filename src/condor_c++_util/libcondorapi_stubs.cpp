@@ -271,6 +271,10 @@ void ConvertDefaultIPToSocketIP(char const *,char **,Stream& ) {
 	not_impl();
 }
 
+void ConvertDefaultIPToSocketIP(char const *,std::string &,Stream&) {
+	not_impl();
+}
+
 #include "Regex.h"
 
 Regex::Regex() {not_impl();}

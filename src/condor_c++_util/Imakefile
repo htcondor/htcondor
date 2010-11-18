@@ -41,7 +41,7 @@ C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
 		$(POSTGRESQL_CFLAGS) \
 		$(CONFIGURE_PCRE_CFLAGS) \
-		$(TT_INC) -I../condor_tt
+		$(TT_INC) -I../condor_tt -O2
 
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)

@@ -116,7 +116,8 @@ extern "C"
  
 //----------------------------------------------------------------
 
-void computeProjection(ClassAd *shortAd, ClassAd *curr_ad, SimpleList<MyString> *projectionList);
+void
+computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection);
 
 void CollectorDaemon::Init()
 {
@@ -368,19 +369,15 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 	while ( (curr_ad=results.Next()) )
     {
-		ClassAd *ad_to_send = NULL;
-		ClassAd shortAd;
+		StringList expanded_projection;
+		StringList *attr_whitelist=NULL;
 
 		if (projectionList.Number() > 0) {
-			// compute projection, send thin ad
-			computeProjection(&shortAd, curr_ad, &projectionList);
-			ad_to_send = &shortAd;
-		} else {
-			// if no projection, send the full ad
-			ad_to_send = curr_ad;
+			computeProjection(curr_ad, &projectionList, expanded_projection);
+			attr_whitelist = &expanded_projection;
 		}
 		
-        if (!sock->code(more) || !ad_to_send->put(*sock))
+        if (!sock->code(more) || !curr_ad->put(*sock,attr_whitelist))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -1623,15 +1620,14 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	return 0;
 }
 
-	// Given a full ad, and a StringList of expressions, Project out of
-	// the full ad into the short ad all the attributes those expressions
-	// depend on.
+	// Given a full ad, and a StringList of expressions, compute
+	// the list of all attributes those exressions depend on.
 
 	// So, if the projection is passed in "foo", and foo is an expression
 	// that expands to bar, we return bar
 	
 void
-computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *projectionList) {
+computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection) {
     projectionList->Rewind();
 
 	// CRUFT: Before 7.3.2, submitter ads had a MyType of
@@ -1641,29 +1637,19 @@ computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *proj
 	//   older clients will morph scheduler ads into
 	//   submitter ads, regardless of MyType.
 	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
-		projectionList->Append(MyString(ATTR_NUM_USERS));
+		expanded_projection.append(ATTR_NUM_USERS);
 	}
 
 		// For each expression in the list...
 	MyString attr;
 	while (projectionList->Next(attr)) {
-		StringList internals;
 		StringList externals; // shouldn't have any
 
 			// Get the indirect attributes
-		if( !full_ad->GetExprReferences(attr.Value(), internals, externals) ) {
+		if( !full_ad->GetExprReferences(attr.Value(), expanded_projection, externals) ) {
 			dprintf(D_FULLDEBUG,
 				"computeProjection failed to parse "
 				"requested ClassAd expression: %s\n",attr.Value());
 		}
-		internals.rewind();
-
-		while (char *indirect_attr = internals.next()) {
-			ExprTree *tree = full_ad->LookupExpr(indirect_attr);
-			if (tree) shortAd->Insert(indirect_attr, tree->Copy());
-		}
 	}
-	shortAd->SetMyTypeName(full_ad->GetMyTypeName());
-	shortAd->SetTargetTypeName(full_ad->GetTargetTypeName());
-
 }

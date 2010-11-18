@@ -1355,6 +1355,15 @@ put( Stream &s )
 }
 
 int ClassAd::
+put( Stream &s, StringList *attr_whitelist )
+{
+	if( !putOldClassAd( &s, *this, m_privateAttrsAreInvisible, attr_whitelist ) ) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int ClassAd::
 initFromStream(Stream& s)
 {
 	if( !getOldClassAd( &s, *this ) ) {
@@ -1558,17 +1567,14 @@ GetTargetTypeName( ) const
 void ClassAd::
 ResetExpr()
 {
-	m_exprItr = begin();
-	m_exprItrInChain = false;
-    //this'll originally be null
+	m_exprItrState = ItrUninitialized;
     m_dirtyItrInit = false;
 }
 
 void ClassAd::
 ResetName()
 {
-	m_nameItr = begin();
-	m_nameItrInChain = false;
+	m_nameItrState = ItrUninitialized;
 }
 
 const char *ClassAd::
@@ -1576,14 +1582,20 @@ NextNameOriginal()
 {
 	const char *name = NULL;
 	classad::ClassAd *chained_ad = GetChainedParentAd();
+
+	if( m_nameItrState == ItrUninitialized ) {
+		m_nameItr = begin();
+		m_nameItrState = ItrInThisAd;
+	}
+
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
-	if ( chained_ad && !m_nameItrInChain && m_nameItr == end() ) {
+	if ( chained_ad && m_nameItrState != ItrInChain && m_nameItr == end() ) {
 		m_nameItr = chained_ad->begin();
-		m_nameItrInChain = true;
+		m_nameItrState = ItrInChain;
 	}
-	if ( ( !m_nameItrInChain && m_nameItr == end() ) ||
-		 ( m_nameItrInChain && m_nameItr == chained_ad->end() ) ) {
+	if ( ( m_nameItrState!=ItrInChain && m_nameItr == end() ) ||
+		 ( m_nameItrState==ItrInChain && m_nameItr == chained_ad->end() ) ) {
 		return NULL;
 	}
 	name = m_nameItr->first.c_str();
@@ -1878,14 +1890,20 @@ ClassAd::IsValidAttrName(const char *name) {
 bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 {
 	classad::ClassAd *chained_ad = GetChainedParentAd();
+
+	if( m_exprItrState == ItrUninitialized ) {
+		m_exprItr = begin();
+		m_exprItrState = ItrInThisAd;
+	}
+
 	// After iterating through all the attributes in this ad,
 	// get all the attributes in our chained ad as well.
-	if ( chained_ad && !m_exprItrInChain && m_exprItr == end() ) {
+	if ( chained_ad && m_exprItrState != ItrInChain && m_exprItr == end() ) {
 		m_exprItr = chained_ad->begin();
-		m_exprItrInChain = true;
+		m_exprItrState = ItrInChain;
 	}
-	if ( ( !m_exprItrInChain && m_exprItr == end() ) ||
-		 ( m_exprItrInChain && m_exprItr == chained_ad->end() ) ) {
+	if ( ( m_exprItrState!=ItrInChain && m_exprItr == end() ) ||
+		 ( m_exprItrState==ItrInChain && m_exprItr == chained_ad->end() ) ) {
 		return false;
 	}
 	name = m_exprItr->first.c_str();
@@ -2893,24 +2911,32 @@ classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_t
 const char *ConvertEscapingOldToNew( const char *str )
 {
 	static std::string new_str;
-
 	new_str = "";
+	ConvertEscapingOldToNew( str, new_str );
+	return new_str.c_str();
+}
 
+void ConvertEscapingOldToNew( const char *str, std::string &buffer )
+{
 		// String escaping is different between new and old ClassAds.
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-		if ( str[i] == '\\' && 
-			 ( str[i + 1] != '"' ||
-			   str[i + 1] == '"' &&
-			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
-				 str[i + 2] == '\r') ) ) {
-			new_str.append( 1, '\\' );
+	while( *str ) {
+		size_t n = strcspn(str,"\\");
+		buffer.append(str,n);
+		str += n;
+		if ( *str == '\\' ) {
+			buffer.append( 1, '\\' );
+			str++;
+			if( ( *str != '"' ||
+				  *str == '"' &&
+				  ( str[1] == '\0' || str[1] == '\n' ||
+					str[1] == '\r') ) )
+			{
+				buffer.append( 1, '\\' );
+			}
 		}
-		new_str.append( 1, str[i] );
 	}
-
-	return new_str.c_str();
 }
 
 // end functions

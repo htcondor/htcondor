@@ -405,3 +405,15 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream&
 		*expr_string = new_expr_string;
 	}
 }
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s)
+{
+	char *new_expr_string = NULL;
+	ConvertDefaultIPToSocketIP(attr_name,expr_string.c_str(),&new_expr_string,s);
+	if(new_expr_string) {
+		//The expression was updated.  Replace the old expression with
+		//the new one.
+		expr_string = new_expr_string;
+		free(new_expr_string);
+	}
+}
