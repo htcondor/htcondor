@@ -575,7 +575,9 @@ void CreamJob::doEvaluateState()
 					executeLogged = true;
 				}
 				
-				if ( remoteState == CREAM_JOB_STATE_UNSET ||
+				if ( condorState == COMPLETED ) {
+					gmState = GM_DONE_COMMIT;
+				} else if ( remoteState == CREAM_JOB_STATE_UNSET ||
 					 remoteState == CREAM_JOB_STATE_REGISTERED ) {
 					gmState = GM_RECOVER_POLL;
 				} else {
