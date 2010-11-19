@@ -32,16 +32,16 @@ typedef enum param_info_t_type_e {
 
 typedef struct param_info_t_s {
 
-	char*	name;
-    char* 	aliases;
+	char const *	name;
+    char const * 	aliases;
 	union {
 		int 	int_val;
-		char* 	str_val;
+		char const * 	str_val;
 		double  dbl_val;
 	} default_val;
-	char*   str_val;
+	char const *   str_val;
 	int		default_valid;
-    char* 	range;
+    char const * 	range;
 	union {
 		int		int_min;
 		double	dbl_min;
@@ -54,14 +54,14 @@ typedef struct param_info_t_s {
     int 	customization;
     int 	reconfig;
     int 	is_macro;
-    char* 	version;
+    char const * 	version;
     int 	state;
-    char*   friendly_name;
+    char const *   friendly_name;
     param_info_t_type_t  	type;
     int		id;
-    char*   usage;
-    char*   url;
-    char*   tags;
+    char const *   usage;
+    char const *   url;
+    char const *   tags;
 
 } param_info_t;
 
