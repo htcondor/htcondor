@@ -1,4 +1,3 @@
-//TEMPTEMP -- should JOB_SUCCESS, etc., have the same timestamp as the corresponding JOB_TERMINATED, etc., event? -- need to reset job timestamp on retry...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -66,6 +65,8 @@ JobstateLog::~JobstateLog()
 void
 JobstateLog::InitializeRecovery()
 {
+	debug_printf( DEBUG_DEBUG_2, "JobstateLog::InitializeRecovery()\n" );
+
 		//
 		// Find the timestamp of the last "real" event written to the
 		// jobstate.log file.  Any events that we see in recovery mode
@@ -77,8 +78,10 @@ JobstateLog::InitializeRecovery()
 
 	FILE *infile = safe_fopen_wrapper( _jobstateLogFile, "r" );
 	if ( !infile ) {
-		//TEMPTEMP -- should this be a fatal error?? -- what if we end up in recovery mode before we've written any events? -- hmm -- we probably should at least have DAGMAN_STARTED...
-       	debug_printf( DEBUG_QUIET,
+			// This is a fatal error, because by the time we get here,
+			// we should, at the very least, have written the
+			// DAGMAN_STARTED "event".
+		debug_printf( DEBUG_QUIET,
 					"Could not open jobstate log file %s for reading.\n",
 					_jobstateLogFile );
 		main_shutdown_graceful();
@@ -94,36 +97,45 @@ JobstateLog::InitializeRecovery()
 			break;
 		}
 
-		line.Tokenize();
-		const char* timestamp = line.GetNextToken( " ", false );
-		const char* nodeName = line.GetNextToken( " ", false );
-
-			// We don't want to look at "INTERNAL" events here, or we'll
-			// get goofed up by our own DAGMAN_STARTED event, etc.
-		if ( (nodeName != NULL) && (strcmp( nodeName, "INTERNAL") != 0) ) {
-			time_t newTimestamp;
-			sscanf( timestamp, "%lu", &newTimestamp );
-			if ( newTimestamp > _lastTimestampWritten ) {
-				startOfLastTimestamp = currentOffset;
-				_lastTimestampWritten = newTimestamp;
+		time_t newTimestamp;
+		MyString nodeName;
+		if ( ParseLine( line, newTimestamp, nodeName ) ) {
+				// We don't want to look at "INTERNAL" events here, or we'll
+				// get goofed up by our own DAGMAN_STARTED event, etc.
+			if ( nodeName != "INTERNAL" ) {
+				if ( newTimestamp > _lastTimestampWritten ) {
+					startOfLastTimestamp = currentOffset;
+					_lastTimestampWritten = newTimestamp;
+				}
 			}
 		}
 	}
 
-	debug_printf( DEBUG_QUIET, "_lastTimestampWritten: %lu\n", (unsigned long)_lastTimestampWritten );//TEMPTEMP
+	debug_printf( DEBUG_DEBUG_2, "_lastTimestampWritten: %ld\n",
+				(unsigned long)_lastTimestampWritten );
 
 		//
 		// Now find all lines that match the last timestamp, and put
 		// them into a hash table for future reference.
 		//
+	if ( fseek( infile, startOfLastTimestamp, SEEK_SET ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"Error seeking in jobstate log file %s.\n",
+					_jobstateLogFile );
+	}
 
-	//TEMPTEMP -- check return value? -- 0 is okay
-	fseek( infile, startOfLastTimestamp, SEEK_SET );
 	while ( line.readLine( infile ) ) {
-		line.chomp();
-       	debug_printf( DEBUG_QUIET, "DIAG (last timestamp) line <%s>\n", line.Value() );//TEMPTEMP
-		//TEMPTEMP -- skip "INTERNAL" ones, or else only process ones with matching timestamp...
-		_lastTimestampLines.append( line.Value() );
+		time_t newTimestamp;
+		MyString nodeName;
+		if ( ParseLine( line, newTimestamp, nodeName ) ) {
+			if ( (newTimestamp == _lastTimestampWritten) &&
+						(nodeName != "INTERNAL") ) {
+				_lastTimestampLines.append( line.Value() );
+				debug_printf( DEBUG_DEBUG_2,
+							"Appended <%s> to _lastTimestampLines\n",
+							line.Value() );
+			}
+		}
 	}
 
 	fclose( infile );
@@ -274,18 +286,12 @@ JobstateLog::Write( const time_t *eventTimeP, Job *node,
 void
 JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 {
-#if 0 //TEMPTEMP?
-		// Avoid "re-writing" events in recovery mode:
-		// If the event time is *after* _lastTimestampWritten, we
-		// write the event.  If the event time is *before*
-		// _lastTimestampWritten, we don't write the event.  If
-		// the times are equal, we have to do a further test down
-		// below.
-	if ( (eventTimeP != NULL) && (*eventTimeP < _lastTimestampWritten) ) {
-		return;
-	}
-#endif //TEMPTEMP?
-
+		//
+		// Here for "fake" events like JOB_SUCCESS, the event will get
+		// the timestamp of the last "real" event from the job; this is
+		// so that we can correctly avoid re-writing the "fake" events
+		// in recovery mode.
+		//
 	time_t eventTime;
 	if ( eventTimeP != NULL && *eventTimeP != 0 ) {
 		eventTime = *eventTimeP;
@@ -341,4 +347,33 @@ JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 	} else {
 		idStr = "-";
 	}
+}
+
+//---------------------------------------------------------------------------
+bool
+JobstateLog::ParseLine( MyString &line, time_t &timestamp,
+			MyString &nodeName )
+{
+	line.chomp();
+	line.Tokenize();
+	const char* timestampTok = line.GetNextToken( " ", false );
+	const char* nodeNameTok = line.GetNextToken( " ", false );
+
+	if ( (timestampTok == NULL) || (nodeNameTok == NULL) ) {
+		debug_printf( DEBUG_QUIET, "Warning: error parsing "
+					"jobstate.log file line <%s>\n", line.Value() );
+		return false;
+	}
+
+	int items = sscanf( timestampTok, "%lu", &timestamp );
+	if ( items != 1 ) {
+		debug_printf( DEBUG_QUIET, "Warning: error reading "
+					"timestamp in jobstate.log file line <%s>\n",
+					line.Value() );
+		return false;
+	}
+
+	nodeName = nodeNameTok;
+
+	return true;
 }

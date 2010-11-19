@@ -550,7 +550,6 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 
 			//TEMPTEMP -- should be log event to jobstate.log here instead of in PrintEvent???
 
-			//TEMPTEMP -- save event timestamp in job here?
 			job->SetLastEventTime( event );
 
 				// Note: this is a bit conservative -- some events (e.g.,

@@ -84,10 +84,6 @@ $dagman_args = "-verbose";
 	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 3 \*\*\*$',
 	'^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
 	'^\d+ INTERNAL \*\*\* RECOVERY_STARTED \*\*\*$',
-	#TEMPTEMP -- we should get rid of the line below....
-	#'^\d+ NodeD SUBMIT \d+.0 - - 5$',
-	#TEMPTEMP -- we should get rid of the line below....
-	#'^\d+ NodeD EXECUTE \d+.0 - - 5$',
 	'^\d+ NodeD JOB_TERMINATED \d+.0 - - 5$',
 	'^\d+ NodeD JOB_FAILURE 1 - - 5$',
 	'^\d+ INTERNAL \*\*\* RECOVERY_FINISHED \*\*\*$',
@@ -196,8 +192,6 @@ $success = sub
 			chomp();
 			$line = $_;
 			$target = $outlines[$outindex];
-CondorTest::debug("\nline: $line\n");#TEMPTEMP
-CondorTest::debug("target: $target\n");#TEMPTEMP
 			if( $line =~ /$target/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				$outindex++;

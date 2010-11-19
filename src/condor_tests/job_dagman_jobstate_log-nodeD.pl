@@ -22,9 +22,6 @@ if (-e $file) {
 	}
 	close (OUTPUT) or die "Condor_release failed: $?";
 
-	# Sleep here so DAGMan restarts before this node ends.
-	#TEMPTEMP? sleep 20;
-
 	print "Node D failed\n";
 	exit(1);
 } else {

@@ -46,7 +46,9 @@ public:
 	*/
 	~JobstateLog();
 
-	//TEMPTEMP -- document
+	/** Set up the data structures we need to avoid re-writing previously-
+		written events when we're in recovery mode.
+	*/
 	void InitializeRecovery();
 
 	/** Write the DAGMAN_STARTED "event".
@@ -102,7 +104,7 @@ public:
 
 private:
 	/** Write an event to the jobstate.log file.
-		TEMPTEMP -- eventTimeP
+		@param The time at which this event occurred (or NULL)
 		@param The DAG node corresponding to the "event".
 		@param The event name.
 		@param The Condor ID string (or other data).
@@ -111,7 +113,7 @@ private:
 				const char *eventName, const char *condorID );
 
 	/** Write an event to the jobstate.log file.
-		TEMPTEMP -- eventTimeP
+		@param The time at which this event occurred (or NULL)
 		@param The string we want to write to the file.
 	*/
 	void Write( const time_t *eventTimeP, const MyString &info );
@@ -123,13 +125,25 @@ private:
 	*/
 	void CondorID2Str( int cluster, int proc, MyString &idStr );
 
+	/** Parse (partially) a line of the jobstate.log file.
+		@param The line (altered by this method)
+		@param The time_t pointer to receive the timestamp of the event.
+		@param A MyString to receive the node name.
+		@return true if parsing succeeded, false otherwise.
+	*/
+	static bool ParseLine( MyString &line, time_t &timestamp,
+				MyString &nodeName );
+
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
 
-		//TEMPTEMP -- document -- applies only in recovery mode...
+		// When in recovery mode, this is the timestamp of the last
+		// pre-recovery "real" event (used to avoid re-writing events).
 	time_t _lastTimestampWritten;
 
-		//TEMPTEMP -- probably change this to something else after I get this working...
+		// A list of the line(s) in the jobstate.log file that have the
+		// timestamp _lastTimestampWritten (used to avoid re-writing
+		// events).
 	StringList _lastTimestampLines;
 
 		// The names of the pseudo-events we're going to write (for "real"

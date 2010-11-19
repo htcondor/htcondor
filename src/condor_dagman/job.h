@@ -409,10 +409,16 @@ class Job {
 	*/
 	static bool RestorePegasusNextSequenceNum( const char *primaryDagFile );
 
-		//TEMPTEMP -- document
+	/** Set the last event time for this job to be the time of the given
+		event (this is used as the time for jobstate.log pseudo-events like
+		JOB_SUCCESS).
+		@param The event whose time should be saved.
+	*/
 	void SetLastEventTime( const ULogEvent *event );
 
-		//TEMPTEMP -- document
+	/** Get the time at which the most recent event occurred for this job.
+		@return the last event time.
+	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
 
     /** */ CondorID _CondorID;
@@ -582,7 +588,7 @@ private:
 		// the sequence number.
 	static const char *SEQ_NUM_KEYWORD;
 
-		//TEMPTEMP -- document
+		// The time of the most recent event related to this job.
 	time_t _lastEventTime;
 };
 
