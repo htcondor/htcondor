@@ -32,6 +32,7 @@
 // Note: if a jobstate.log file is specified, failing to write to the
 // file is a fatal error.
 
+#include <set>
 #include "condor_event.h"
 #include "job.h"
 
@@ -144,7 +145,7 @@ private:
 		// A list of the line(s) in the jobstate.log file that have the
 		// timestamp _lastTimestampWritten (used to avoid re-writing
 		// events).
-	StringList _lastTimestampLines;
+	std::set<MyString> _lastTimestampLines;
 
 		// The names of the pseudo-events we're going to write (for "real"
 		// events, we use the event names defined in condor_event.h).

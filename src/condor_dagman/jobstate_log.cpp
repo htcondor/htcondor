@@ -130,7 +130,7 @@ JobstateLog::InitializeRecovery()
 		if ( ParseLine( line, newTimestamp, nodeName ) ) {
 			if ( (newTimestamp == _lastTimestampWritten) &&
 						(nodeName != "INTERNAL") ) {
-				_lastTimestampLines.append( line.Value() );
+				_lastTimestampLines.insert( line );
 				debug_printf( DEBUG_DEBUG_2,
 							"Appended <%s> to _lastTimestampLines\n",
 							line.Value() );
@@ -319,7 +319,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 		// and if it is we don't write it again.
 		//
 	if ( (eventTime == _lastTimestampWritten) &&
-				_lastTimestampLines.contains( outline.Value() ) ) {
+				(_lastTimestampLines.count( outline ) > 0) ) {
 		return;
 	}
 
