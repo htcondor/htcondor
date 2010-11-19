@@ -548,7 +548,10 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 			} 
 
-			//TEMPTEMP -- should be log event to jobstate.log here instead of in PrintEvent???
+				// Log this event if necessary.
+			if ( _jobstateLog && job ) {
+				_jobstateLog->WriteEvent( event, job );
+			}
 
 			job->SetLastEventTime( event );
 
@@ -2078,11 +2081,6 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 					  "ignoring...%s\n", event->eventName(),
 					  event->cluster, event->proc,
 					  event->subproc, recovStr );
-	}
-
-		// Log this event if necessary.
-	if ( _jobstateLog && node ) {
-		_jobstateLog->WriteEvent( event, node );
 	}
 }
 
