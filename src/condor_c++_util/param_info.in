@@ -9015,22 +9015,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,log
 id=550
 
-[NEGOTIATOR_MATCH_LOG]
-aliases=
-default=$(LOG)/MatchLog
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Match Log
-usage=Log files
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=negotiator,match,log
-id=550
-
 [SCHEDD_LOG]
 aliases=
 default=$(LOG)/SchedLog

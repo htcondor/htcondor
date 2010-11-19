@@ -171,8 +171,7 @@ dprintf_config( const char *subsys )
 
 				// NEGOTIATOR_MATCH_LOG is necessary by default, but debug_level
 				// is not 0
-				if(debug_level == 0 || 
-					strcmp(pname, "NEGOTIATOR_MATCH_LOG") == MATCH) 
+				if(debug_level == 0)
 				{
 					char	*tmp2 = param(pname);
 
@@ -188,18 +187,8 @@ dprintf_config( const char *subsys )
 							EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
 						}
 						
-						if(strcmp(pname, "NEGOTIATOR_MATCH_LOG") == MATCH) {
-							str = (char*)malloc(strlen(log) + strlen(subsys) 
-								+ 10);
-							sprintf(str, "%s%c%sMATCHLog", log, DIR_DELIM_CHAR, 
-									subsys);
-						}
-						else {
-							str = (char*)malloc(strlen(log) + strlen(subsys) 
-								+ 5);
-							sprintf(str, "%s%c%sLog", log, DIR_DELIM_CHAR, 
-									subsys);
-						}
+						str = (char*)malloc(strlen(log) + strlen(subsys) + 5);
+						sprintf(str, "%s%c%sLog", log, DIR_DELIM_CHAR, subsys);
 						
 						DebugFile[debug_level] = str;
 
