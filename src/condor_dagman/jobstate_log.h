@@ -129,6 +129,9 @@ private:
 		//TEMPTEMP -- document -- applies only in recovery mode...
 	time_t _lastTimestampWritten;
 
+		//TEMPTEMP -- probably change this to something else after I get this working...
+	StringList _lastTimestampLines;
+
 		// The names of the pseudo-events we're going to write (for "real"
 		// events, we use the event names defined in condor_event.h).
 	static const char *JOB_SUCCESS_NAME;

@@ -18,7 +18,6 @@
  *
  ***************************************************************/
 
-
 #include "condor_common.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "MyString.h"
@@ -53,6 +52,17 @@ JobstateLog::~JobstateLog()
 }
 
 //---------------------------------------------------------------------------
+// The purpose of this method is to allow us (in recovery mode) to avoid
+// re-writing duplicates of events that we already wrote in the pre-recovery
+// part of the jobstate.log file.  We do a two-part check: first, we find
+// the timestamp of the last "real" (not "INTERNAL") pre-recovery event.
+// Then, in recovery mode, any event that has a timestamp earlier than that
+// should *not* be written; any event that has a later timestamp *should*
+// be written.  The second part of the check is that we keep a copy of
+// every pre-recovery line with the same timestamp as the last timestamp.
+// Then, in recovery mode, if we get an event with a timestamp that matches
+// the last pre-recovery timestamp, we check it against the list of "last
+// timestamp" lines, and don't write it if it's in that list.
 void
 JobstateLog::InitializeRecovery()
 {
@@ -90,7 +100,7 @@ JobstateLog::InitializeRecovery()
 
 			// We don't want to look at "INTERNAL" events here, or we'll
 			// get goofed up by our own DAGMAN_STARTED event, etc.
-		if ( strcmp( nodeName, "INTERNAL") != 0 ) {
+		if ( (nodeName != NULL) && (strcmp( nodeName, "INTERNAL") != 0) ) {
 			time_t newTimestamp;
 			sscanf( timestamp, "%lu", &newTimestamp );
 			if ( newTimestamp > _lastTimestampWritten ) {
@@ -100,6 +110,8 @@ JobstateLog::InitializeRecovery()
 		}
 	}
 
+	debug_printf( DEBUG_QUIET, "_lastTimestampWritten: %lu\n", (unsigned long)_lastTimestampWritten );//TEMPTEMP
+
 		//
 		// Now find all lines that match the last timestamp, and put
 		// them into a hash table for future reference.
@@ -108,8 +120,10 @@ JobstateLog::InitializeRecovery()
 	//TEMPTEMP -- check return value? -- 0 is okay
 	fseek( infile, startOfLastTimestamp, SEEK_SET );
 	while ( line.readLine( infile ) ) {
+		line.chomp();
        	debug_printf( DEBUG_QUIET, "DIAG (last timestamp) line <%s>\n", line.Value() );//TEMPTEMP
 		//TEMPTEMP -- skip "INTERNAL" ones, or else only process ones with matching timestamp...
+		_lastTimestampLines.append( line.Value() );
 	}
 
 	fclose( infile );
@@ -260,6 +274,7 @@ JobstateLog::Write( const time_t *eventTimeP, Job *node,
 void
 JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 {
+#if 0 //TEMPTEMP?
 		// Avoid "re-writing" events in recovery mode:
 		// If the event time is *after* _lastTimestampWritten, we
 		// write the event.  If the event time is *before*
@@ -267,6 +282,38 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 		// the times are equal, we have to do a further test down
 		// below.
 	if ( (eventTimeP != NULL) && (*eventTimeP < _lastTimestampWritten) ) {
+		return;
+	}
+#endif //TEMPTEMP?
+
+	time_t eventTime;
+	if ( eventTimeP != NULL && *eventTimeP != 0 ) {
+		eventTime = *eventTimeP;
+	} else {
+		eventTime = time( NULL );
+	}
+
+		// Avoid "re-writing" events in recovery mode:
+		// If the event time is *after* _lastTimestampWritten, we
+		// write the event.  If the event time is *before*
+		// _lastTimestampWritten, we don't write the event.  If
+		// the times are equal, we have to do a further test down
+		// below.
+	if ( eventTime < _lastTimestampWritten ) {
+		return;
+	}
+
+	MyString outline;
+	outline.sprintf( "%lu %s", (unsigned long)eventTime, info.Value() );
+
+		//
+		// If this event's time matches the time of the last "real"
+		// event in the pre-recovery part of the file, we check whether
+		// this line is already in the pre-recovery part of the file,
+		// and if it is we don't write it again.
+		//
+	if ( (eventTime == _lastTimestampWritten) &&
+				_lastTimestampLines.contains( outline.Value() ) ) {
 		return;
 	}
 
@@ -279,14 +326,8 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 		return;
 	}
 
-	time_t eventTime;
-	if ( eventTimeP != NULL && *eventTimeP != 0 ) {
-		eventTime = *eventTimeP;
-	} else {
-		eventTime = time( NULL );
-	}
-	fprintf( outfile, "%lu %s\n",
-				(unsigned long)eventTime, info.Value() );
+	fprintf( outfile, "%s\n", outline.Value() );
+
 	fclose( outfile );
 }
 
