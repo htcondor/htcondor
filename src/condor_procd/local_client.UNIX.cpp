@@ -21,10 +21,10 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "local_client.h"
-#include "named_pipe_writer.h"
-#include "named_pipe_reader.h"
-#include "named_pipe_watchdog.h"
-#include "named_pipe_util.h"
+#include "named_pipe_writer.unix.h"
+#include "named_pipe_reader.unix.h"
+#include "named_pipe_watchdog.unix.h"
+#include "named_pipe_util.unix.h"
 
 int LocalClient::s_next_serial_number = 0;
 

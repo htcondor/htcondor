@@ -26,8 +26,8 @@
 #include "vmgahp_common.h"
 #include "vmgahp.h"
 #include "vmware_type.h"
-#if defined(LINUX)
-#  include "xen_type.h"
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
+#  include "xen_type.linux.h"
 #endif
 #include "subsystem_info.h"
 #include "../condor_privsep/condor_privsep.h"
@@ -374,7 +374,7 @@ void main_init(int argc, char *argv[])
 
 	initialize_uids();
 
-#if defined(LINUX)
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
 	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		// Xen requires root priviledge 
 		if( !canSwitchUid() ) {
@@ -396,7 +396,7 @@ void main_init(int argc, char *argv[])
 	set_condor_priv();
 
 	// Check if vm specific paramaters are valid in config file
-#if defined(LINUX)
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
 	// The calls to checkXenParams() were moved here because each
 	// call is specific to the subclass type that is calling it.
 	// These methods are static, so dynamic dispatch cannot be
@@ -427,7 +427,7 @@ void main_init(int argc, char *argv[])
 
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
-#if defined(LINUX)
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
 	  if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
 
@@ -486,7 +486,7 @@ void main_init(int argc, char *argv[])
 		// we will try to kill the VM that matches with given "matchstring".
 		set_root_priv();
 
-#if defined(LINUX)
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
 			XenType::killVMFast(matchstring.Value());
 		}else

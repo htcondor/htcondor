@@ -29,7 +29,7 @@
 #endif
 
 #if !defined(WIN32)
-#include "glexec_kill.h"
+#include "glexec_kill.unix.h"
 #endif
 
 // our "local server address"

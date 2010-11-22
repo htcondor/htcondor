@@ -67,7 +67,7 @@ LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 
 ##  Where are optional machine-specific local config files located?
 ##  Config files are included in lexicographic order.
-##  No default. $(LOCAL_DIR)/config is an example.
+LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
 #LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
 
 ## If the local config file is not present, is it an error?

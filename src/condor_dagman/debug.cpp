@@ -41,11 +41,11 @@ static int cache_size = 0;
 
 // from condor_util_lib/dprintf.c
 // from condor_util_lib/dprintf_common.c
-extern "C" {
+//extern "C" {
 extern int DebugFlags;
 extern int DebugUseTimestamps;
 extern FILE *DebugFP;
-}
+//}
 
 static void debug_cache_insert(int flags, const char *fmt, va_list args);
 

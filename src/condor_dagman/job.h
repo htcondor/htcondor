@@ -23,7 +23,7 @@
 
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_constants.h"   /* from condor_includes/ directory */
-#include "simplelist.h"         /* from condor_c++_util/ directory */
+#include "simplelist.h"         /* from condor_utils/ directory */
 #include "MyString.h"
 #include "list.h"
 #include "condor_id.h"

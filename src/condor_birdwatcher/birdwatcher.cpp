@@ -13,7 +13,7 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 
 int APIENTRY wWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
-                     LPTSTR    lpCmdLine,
+                     LPWSTR    lpCmdLine,
                      int       nCmdShow)
 {
 	MSG msg;

@@ -33,8 +33,8 @@
 #include "condor_query.h"
 
 #include "condor_daemon_core.h"
-#include "../condor_status.V6/status_types.h"
-#include "../condor_status.V6/totals.h"
+#include "status_types.h"
+#include "totals.h"
 
 #include "condor_collector.h"
 #include "collector_engine.h"

@@ -30,7 +30,7 @@
 
 #if defined(WIN32)
 
-#include "ntsysinfo.h"
+#include "ntsysinfo.WINDOWS.h"
 static CSysinfo ntSysInfo;
 
 int

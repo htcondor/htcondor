@@ -43,8 +43,8 @@
 
 #include "schedd_api.h"
 
-#include "../condor_c++_util/soap_helpers.cpp"
-#include "../condor_c++_util/dc_service.cpp"
+#include "../condor_utils/soap_helpers.cpp"
+#include "../condor_utils/dc_service.cpp"
 
 #include "qmgmt.h"
 

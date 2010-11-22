@@ -146,7 +146,7 @@ check_PROGRAMS =							\
 	$(TESTS)
 
 libclassad_la_SOURCES = \
-	attrrefs.cpp new_classad.cpp collection.cpp collectionBase.cpp new_classad_debug.cpp	\
+	attrrefs.cpp new_classad.cpp common.cpp collection.cpp collectionBase.cpp new_classad_debug.cpp	\
 	exprList.cpp exprTree.cpp fnCall.cpp indexfile.cpp lexer.cpp		\
 	lexerSource.cpp literals.cpp matchClassad.cpp new_classad_operators.cpp query.cpp	\
 	sink.cpp source.cpp transaction.cpp new_classad_util.cpp new_classad_value.cpp view.cpp xmlLexer.cpp	\

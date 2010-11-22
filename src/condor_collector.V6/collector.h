@@ -22,7 +22,7 @@
 
 #include "condor_classad.h"
 #include "condor_commands.h"
-#include "../condor_status.V6/totals.h"
+#include "totals.h"
 #include "forkwork.h"
 
 #include "collector_engine.h"

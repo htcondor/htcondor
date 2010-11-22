@@ -37,7 +37,7 @@ CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 my $socketname = "cmd_wait";
 my $resultfile = $curcwd . "/" . $pid . "/results";
 my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-all.log";
-my $writelog = "../testbin_dir/x_write_joblog_events.exe";
+my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 

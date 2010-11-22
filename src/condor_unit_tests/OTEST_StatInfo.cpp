@@ -29,6 +29,9 @@
 #include "emit.h"
 #include "stat_info.h"
 #include "condor_getcwd.h"
+#ifdef WIN32
+__inline __int64 abs(__int64 x) { return _abs64(x); }
+#endif
 
 static void setup(void);
 static void cleanup(void);
@@ -104,16 +107,19 @@ static bool test_is_symlink_dir(void);
 static bool test_is_symlink_symlink_file(void);
 static bool test_is_symlink_symlink_dir(void);
 static bool test_get_owner_not_exist(void);
+#ifndef WIN32
 static bool test_get_owner_file(void);
 static bool test_get_owner_dir(void);
 static bool test_get_owner_symlink_file(void);
 static bool test_get_owner_symlink_dir(void);
+#endif
 static bool test_get_group_not_exist(void);
+#ifndef WIN32
 static bool test_get_group_file(void);
 static bool test_get_group_dir(void);
 static bool test_get_group_symlink_file(void);
 static bool test_get_group_symlink_dir(void);
-
+#endif
 //Global variables
 static MyString
 	original_dir,
@@ -211,16 +217,19 @@ bool OTEST_StatInfo(void) {
 	driver.register_function(test_is_symlink_symlink_file);
 	driver.register_function(test_is_symlink_symlink_dir);
 	driver.register_function(test_get_owner_not_exist);
+#ifndef WIN32
 	driver.register_function(test_get_owner_file);
 	driver.register_function(test_get_owner_dir);
 	driver.register_function(test_get_owner_symlink_file);
 	driver.register_function(test_get_owner_symlink_dir);
+#endif
 	driver.register_function(test_get_group_not_exist);
+#ifndef WIN32
 	driver.register_function(test_get_group_file);
 	driver.register_function(test_get_group_dir);
 	driver.register_function(test_get_group_symlink_file);
 	driver.register_function(test_get_group_symlink_dir);
-
+#endif
 	setup();
 
 	int status = driver.do_all_functions();
@@ -275,6 +284,7 @@ static void setup() {
 	cut_assert_z( mkdir("full_dir", 0700) );
 	
 	//Create some symbolic links
+#ifndef WIN32
 	MyString link;
 	cut_assert_true( link.sprintf("%s%s", full_dir.Value(), "full_file") );
 	cut_assert_z( symlink(link.Value(), "symlink_file") );
@@ -282,7 +292,7 @@ static void setup() {
 	cut_assert_z( symlink(link.Value(), "symlink_dir") );
 	
 	cut_assert_z( chdir("full_dir") );
-
+#endif
 	// Make a zero length, but executable, file
 	tmp_fd = cut_assert_gez( safe_open_wrapper("executable_file", O_RDWR | 
 							 O_CREAT) );
@@ -1668,7 +1678,7 @@ static bool test_get_owner_not_exist() {
 	//emit_retval("%u", owner);
 	PASS;
 }
-
+#ifndef WIN32
 static bool test_get_owner_file() {
 	emit_test("Test GetOwner() returns the equivalent user id as using "
 		"stat() for a file.");
@@ -1756,7 +1766,7 @@ static bool test_get_owner_symlink_dir() {
 	}
 	PASS;
 }
-
+#endif
 static bool test_get_group_not_exist() {
 	emit_test("Test GetGroup() for a file that doesn't exist.");
 	emit_problem("By inspection, GetGroup() code correctly EXCEPTs when the "
@@ -1772,7 +1782,7 @@ static bool test_get_group_not_exist() {
 	//emit_retval("%u", owner);
 	PASS;
 }
-
+#ifndef WIN32
 static bool test_get_group_file() {
 	emit_test("Test that GetGroup() returns the equivalent user id as using "
 		"stat() for a file.");
@@ -1860,4 +1870,4 @@ static bool test_get_group_symlink_dir() {
 	}
 	PASS;
 }
-
+#endif

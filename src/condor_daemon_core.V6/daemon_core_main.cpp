@@ -188,8 +188,7 @@ char const* global_dc_sinful() {
 	}
 }
 
-void
-clean_files()
+void clean_files()
 {
 		// If we created a pid file, remove it.
 	if( pidFile ) {

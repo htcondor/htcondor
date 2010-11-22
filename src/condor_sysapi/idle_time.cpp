@@ -1118,10 +1118,9 @@ static time_t solaris_mouse_idle(void)
  out of this file. This will get a little ugly. The sysapi entry points
  are C linkage */
 
-BEGIN_C_DECLS
+extern "C" {
 
-void
-sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
+void sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 {
 
 
@@ -1140,12 +1139,11 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 #endif
 }
 
-void
-sysapi_idle_time(time_t *m_idle, time_t *m_console_idle)
+void sysapi_idle_time(time_t *m_idle, time_t *m_console_idle)
 {
 	sysapi_internal_reconfig();
 
 	sysapi_idle_time_raw(m_idle, m_console_idle);
 }
 
-END_C_DECLS
+}

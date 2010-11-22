@@ -40,7 +40,7 @@
 
 void ExitSuccess();
 
-	// From condor_c++_util/condor_config.C
+	// From condor_utils/condor_config.C
 	// Note: these functions are declared 'extern "C"' where they're
 	// implemented; if we don't do that here we get a link failure
 	// (I think because of the name mangling).  wenger 2007-02-09.

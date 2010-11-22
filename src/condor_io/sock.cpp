@@ -369,7 +369,7 @@ int Sock::assign(SOCKET sockd)
 
 		memset(&_who, 0, sizeof(struct sockaddr_in));
 		SOCKET_LENGTH_TYPE addrlen = sizeof(_who);
-		getpeername(_sock,(struct sockaddr *)&_who,&addrlen);
+		getpeername(_sock,(struct sockaddr *)&_who, (socklen_t*)&addrlen);
 
 		if ( _timeout > 0 ) {
 			timeout_no_timeout_multiplier( _timeout );
@@ -656,7 +656,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	// Log the current size since Todd is curious.  :^)
 	temp = sizeof(int);
 	::getsockopt(_sock,SOL_SOCKET,command,
-			(char*)&current_size,&temp);
+			(char*)&current_size,(socklen_t*)&temp);
 	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
 		current_size / 1024);
 	current_size = 0;
@@ -682,7 +682,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		previous_size = current_size;
 		temp = sizeof(int);
 		::getsockopt( _sock, SOL_SOCKET, command,
- 					  (char*)&current_size, &temp );
+ 					  (char*)&current_size, (socklen_t*)&temp );
 
 	} while ( ( previous_size < current_size ) &&
 			  ( attempt_size < desired_size  ) );
@@ -1235,7 +1235,7 @@ bool Sock::test_connection()
 
 	int error;
     SOCKET_LENGTH_TYPE len = sizeof(error);
-    if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0) {
+    if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, (socklen_t*)&len) < 0) {
 		connect_state.connect_failed = true;
 #if defined(WIN32)
 		setConnectFailureErrno(WSAGetLastError(),"getsockopt");

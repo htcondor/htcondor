@@ -47,8 +47,13 @@ bool FTEST_sin_to_string(void) {
 
 static bool test_normal_case() {
 	emit_test("Is normal input converted correctly?");
+#ifdef WIN32
+	unsigned long address = inet_addr("192.168.0.2");
+	if(address == INADDR_NONE || address == INADDR_ANY) {
+#else
 	in_addr ip;
 	if(inet_aton("192.168.0.2", &ip) == 0) {
+#endif
 		emit_alert("inet_aton() returned failure.");
 		ABORT;
 	}
@@ -61,7 +66,11 @@ static bool test_normal_case() {
 	emit_retval(expected);
 	emit_output_actual_header();
 	sockaddr_in sa_in;
+#ifdef WIN32
+	sa_in.sin_addr.s_addr = address;
+#else
 	sa_in.sin_addr.s_addr = ip.s_addr;
+#endif
 	sa_in.sin_port = htons(port);
 	char* sinstring = sin_to_string(&sa_in);
 	emit_retval(sinstring);
