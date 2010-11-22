@@ -188,8 +188,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 
-	_jobstateLog = NULL;
-
 	return;
 }
 
@@ -216,8 +214,6 @@ Dag::~Dag() {
 
 	delete[] _statusFileName;
 
-	delete _jobstateLog;
-    
     return;
 }
 
@@ -247,10 +243,12 @@ bool Dag::Bootstrap (bool recovery)
 
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
 					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
-		if ( _jobstateLog ) {
-			_jobstateLog->WriteRecoveryStarted();
-			_jobstateLog->InitializeRecovery();
-		}
+		_jobstateLog.WriteRecoveryStarted();
+		_jobstateLog.InitializeRecovery();
+//TEMPTEMP -- what about recovery finished if we return false? -- maybe make a 'recovery failed' meta-event
+//TEMPTEMP -- think about caching for jobstate.log
+//TEMPTEPM -- maybe don't open/close the file every time
+//TEMPTEMP -- test removing jobstate.log file while job is on hold
 
 		// as we read the event log files, we emit lots of imformation into
 		// the logfile. If this is on NFS, then we pay a *very* large price
@@ -309,9 +307,7 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_stop_caching();
 
-		if ( _jobstateLog ) {
-			_jobstateLog->WriteRecoveryFinished();
-		}
+		_jobstateLog.WriteRecoveryFinished();
         debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
 					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
 		print_status();
@@ -549,8 +545,8 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			} 
 
 				// Log this event if necessary.
-			if ( _jobstateLog && job ) {
-				_jobstateLog->WriteEvent( event, job );
+			if ( job ) {
+				_jobstateLog.WriteEvent( event, job );
 			}
 
 			job->SetLastEventTime( event );
@@ -824,9 +820,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 
 			// Log job success or failure if necessary.
-		if ( _jobstateLog ) {
-			_jobstateLog->WriteJobSuccessOrFailure( job );
-		}
+		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
 
 	//
@@ -955,9 +949,8 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			}
 
 				// Log post script success or failure if necessary.
-			if ( _jobstateLog ) {
-				_jobstateLog->WriteScriptSuccessOrFailure( job, true );
-			}
+//TEMPTEMP -- get rid of these ifs? -- just have call to unconfigured JobstateLog object be a noop?
+			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
 
 				//
 				// Deal with retries.
@@ -1012,9 +1005,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			job->retval = 0;
 
 				// Log post script success or failure if necessary.
-			if ( _jobstateLog ) {
-				_jobstateLog->WriteScriptSuccessOrFailure( job, true );
-			}
+			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
 
 			TerminateJob( job, recovery );
 		}
@@ -1511,9 +1502,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 
         job->_Status = Job::STATUS_ERROR;
 		_preRunNodeCount--;
-		if ( _jobstateLog ) {
-			_jobstateLog->WriteScriptSuccessOrFailure( job, false );
-		}
+		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 
 		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, false );
@@ -1534,9 +1523,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
 		_preRunNodeCount--;
-		if ( _jobstateLog ) {
-			_jobstateLog->WriteScriptSuccessOrFailure( job, false );
-		}
+		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
@@ -1848,8 +1835,8 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile)
 	//
 	// Print the jobstate.log file, if any.
 	//
-	if ( _jobstateLog ) {
-		fprintf( fp, "JOBSTATE_LOG %s\n\n", _jobstateLog->LogFile() );
+	if ( _jobstateLog.LogFile() ) {
+		fprintf( fp, "JOBSTATE_LOG %s\n\n", _jobstateLog.LogFile() );
 	}
 
     //
@@ -2540,13 +2527,13 @@ Dag::DumpNodeStatus( bool held, bool removed )
 void 
 Dag::SetJobstateLogFileName( const char *logFileName )
 {
-	if ( _jobstateLog != NULL ) {
+	if ( _jobstateLog.LogFile() != NULL ) {
 		debug_printf( DEBUG_NORMAL, "Attempt to set JOBSTATE_LOG "
 					"to %s does not override existing value of %s\n",
-					logFileName, _jobstateLog->LogFile() );
+					logFileName, _jobstateLog.LogFile() );
 		return;
 	}
-	_jobstateLog = new JobstateLog( logFileName );
+	_jobstateLog.SetLogFile( logFileName );
 }
 
 //-------------------------------------------------------------------------
@@ -3429,9 +3416,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	// to parse a splice.
 	ASSERT( _isSplice == false );
 
-	if ( _jobstateLog ) {
-		_jobstateLog->WriteSubmitFailure( node );
-	}
+	_jobstateLog.WriteSubmitFailure( node );
 
 		// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;

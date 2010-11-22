@@ -1,3 +1,4 @@
+//TEMPTEMP -- re-read the jobstate.log file instead of using the sequence number file...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -36,11 +37,9 @@ const char *JobstateLog::POST_SCRIPT_FAILURE_NAME = "POST_SCRIPT_FAILURE";
 const CondorID JobstateLog::_defaultCondorID;
 
 //---------------------------------------------------------------------------
-JobstateLog::JobstateLog( const char *jobstateLogFile )
+JobstateLog::JobstateLog()
 {
-	ASSERT( jobstateLogFile );
-
-	_jobstateLogFile = strnewp( jobstateLogFile );
+	_jobstateLogFile = NULL;
 	_lastTimestampWritten = 0;
 }
 
@@ -67,6 +66,10 @@ JobstateLog::InitializeRecovery()
 {
 	debug_printf( DEBUG_DEBUG_2, "JobstateLog::InitializeRecovery()\n" );
 
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 		//
 		// Find the timestamp of the last "real" event written to the
 		// jobstate.log file.  Any events that we see in recovery mode
@@ -91,6 +94,7 @@ JobstateLog::InitializeRecovery()
 	MyString line;
 	off_t startOfLastTimestamp = 0;
 
+//TEMPTEMP -- could events be out of order? -- maybe just put everything into the set of strings?
 	while ( true ) {
 		off_t currentOffset = ftell( infile );
 		if ( !line.readLine( infile ) ) {
@@ -145,6 +149,10 @@ JobstateLog::InitializeRecovery()
 void
 JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	MyString info;
 	info.sprintf( "INTERNAL *** DAGMAN_STARTED %d.%d ***",
 				DAGManJobId._cluster, DAGManJobId._proc );
@@ -156,6 +164,10 @@ JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 void
 JobstateLog::WriteDagmanFinished( int exitCode )
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	MyString info;
 	info.sprintf( "INTERNAL *** DAGMAN_FINISHED %d ***", exitCode );
 
@@ -166,6 +178,10 @@ JobstateLog::WriteDagmanFinished( int exitCode )
 void
 JobstateLog::WriteRecoveryStarted()
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	MyString info( "INTERNAL *** RECOVERY_STARTED ***" );
 	Write( NULL, info );
 }
@@ -174,6 +190,10 @@ JobstateLog::WriteRecoveryStarted()
 void
 JobstateLog::WriteRecoveryFinished()
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	MyString info( "INTERNAL *** RECOVERY_FINISHED ***" );
 	Write( NULL, info );
 }
@@ -182,6 +202,10 @@ JobstateLog::WriteRecoveryFinished()
 void
 JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	ASSERT( node );
 
 	const char *prefix = "ULOG_";
@@ -206,6 +230,10 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 void
 JobstateLog::WriteJobSuccessOrFailure( Job *node )
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	ASSERT( node );
 
 	const char *eventName = node->retval == 0 ?
@@ -221,6 +249,10 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 void
 JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	ASSERT( node );
 
 	const char *eventName = isPost ? POST_SCRIPT_STARTED_NAME :
@@ -239,6 +271,10 @@ JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 void
 JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	ASSERT( node );
 
 	const char *eventName;
@@ -265,6 +301,10 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 void
 JobstateLog::WriteSubmitFailure( Job *node )
 {
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
 	time_t timestamp = node->GetLastEventTime();
 	Write( &timestamp, node, "SUBMIT_FAILED", "-" );
 }
@@ -286,12 +326,14 @@ JobstateLog::Write( const time_t *eventTimeP, Job *node,
 void
 JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 {
+//TMEPTEMP -- it's important that any event writes the same string every time (e.g., recovery mode and "regular" mode)
 		//
 		// Here for "fake" events like JOB_SUCCESS, the event will get
 		// the timestamp of the last "real" event from the job; this is
 		// so that we can correctly avoid re-writing the "fake" events
 		// in recovery mode.
 		//
+//TEMPTEMP -- make sure time is valid if in recovery mode?
 	time_t eventTime;
 	if ( eventTimeP != NULL && *eventTimeP != 0 ) {
 		eventTime = *eventTimeP;
@@ -350,6 +392,7 @@ JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- partial parsing only -- for recovery mode...
 bool
 JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 			MyString &nodeName )

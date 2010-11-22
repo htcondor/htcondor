@@ -634,7 +634,7 @@ class Dag {
 	// node, unless it is an absolute path, in which case we ignore it.
 	void PropogateDirectoryToAllNodes(void);
 
-	JobstateLog *GetJobstateLog() { return _jobstateLog; }
+	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 
   private:
 
@@ -1009,7 +1009,7 @@ class Dag {
 	int _recoveryMaxfakeID;
 
 		// The object for logging to the jobstate.log file (for Pegasus).
-	JobstateLog *_jobstateLog;
+	JobstateLog _jobstateLog;
 };
 
 #endif /* #ifndef DAG_H */

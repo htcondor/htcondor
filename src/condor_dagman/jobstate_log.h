@@ -39,13 +39,23 @@
 class JobstateLog {
 public:
 	/** Constructor.
-		@param The name of the jobstate.log file to write to.
 	*/
-	JobstateLog( const char *jobstateLogFile );
+	JobstateLog();
 
 	/** Destructor.
 	*/
 	~JobstateLog();
+
+	/** Set the name of the jobstate.log file.
+		@param The name of the jobstate.log file to write to.
+	*/
+	void SetLogFile(const char *jobstateLogFile ) {
+				_jobstateLogFile = strnewp( jobstateLogFile ); }
+
+	/** Get the jobstate.log file.
+		@return The jobstate.log file we're writing to.
+	*/
+	const char *LogFile() { return _jobstateLogFile; }
 
 	/** Set up the data structures we need to avoid re-writing previously-
 		written events when we're in recovery mode.
@@ -97,11 +107,6 @@ public:
 		@param The DAG node corresponding to the "event".
 	*/
 	void WriteSubmitFailure( Job *node );
-
-	/** Get the jobstate.log file.
-		@return The jobstate.log file we're writing to.
-	*/
-	const char *LogFile() { return _jobstateLogFile; }
 
 private:
 	/** Write an event to the jobstate.log file.
