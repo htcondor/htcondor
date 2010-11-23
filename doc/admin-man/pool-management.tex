@@ -115,6 +115,8 @@ Shutting Down and Restarting a Condor Pool}
 \index{pool management!shutting down Condor}
 \index{pool management!restarting Condor}
 
+\begin{description}
+\item[Shutting Down Condor]
 There are a variety of ways to shut down all or parts of a Condor pool.
 All utilize the \Condor{off} tool.
 
@@ -170,6 +172,37 @@ and shut down the submission of jobs is
 Substitute the option \Opt{-all} for the host name,
 if all submit machines in the pool are to be shut down.
 
+\item[Restarting Condor, If Condor Daemons Are Not Running]
+If Condor is not running,
+perhaps because one of the \Condor{off} commands was used,
+then starting Condor daemons back up depends on which part of
+Condor is currently not running.
+
+If no Condor daemons are running, then starting Condor is a matter
+of executing the \Condor{master} daemon.
+The \Condor{master} daemon will then invoke all other specified daemons
+on that machine.
+The \Condor{master} daemon executes on every machine that is to run Condor.
+
+If a specific daemon needs to be started up, and the \Condor{master} daemon
+is already running, then issue the command on the specific machine with
+\begin{verbatim}
+  condor_on -subsystem <subsystemname>
+\end{verbatim}
+where \verb@<subsystemname>@ is replaced by the daemon's subsystem
+name.
+Or, this command might be issued from another machine in the pool
+(which has administrative authority) with
+\begin{verbatim}
+  condor_on <hostname> -subsystem <subsystemname>
+\end{verbatim}
+where \verb@<subsystemname>@ is replaced by the daemon's subsystem
+name, and \verb@<hostname>@ is replaced by the host name of the
+machine where this \Condor{on} command is to be directed.
+
+\item[Restarting Condor, If Condor Daemons Are Running]
+\MoreTodo
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Reconfigure-Pool}Reconfiguring a Condor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

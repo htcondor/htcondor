@@ -7,18 +7,12 @@
 \oOptnm{-help $|$ -version}
 }
 
-%% How to locate the machines with which you want to mess.
-\newcommand{\ToolArgsLocate}{
-\Lbr \OptArg{-name}{hostname} $|$ \Arg{hostname} $|$ \OptArg{-addr}{"\SinfulAny"} $|$ \Arg{"\SinfulAny"} \Opt{\Dots} \Rbr $|$ \oOpt{-all} \\
-}
-%%%% Was:
-%%%%\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \oOptnm{ $|$ -all} \\
-
-%% for checkpoint, off, on, reconfig, reschedule, restart and vacate
+%% for checkpoint, off, on, reconfig, reschedule, restart, set_shutdown,
+%% and vacate
 \newcommand{\ToolWhere}{
-\Lbr \OptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr}
-$|$ \OptArg{-name}{name} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
-\Optnm{\Dots} \oOptnm{ $|$ -all} \\
+\oOptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr} 
+\Lbr \OptArg{-name}{hostname} $|$ \Arg{hostname} $|$
+\OptArg{-addr}{"\SinfulAny"} $|$  \Arg{"\SinfulAny"} $|$ \Optnm{-all} \Rbr
 }
 %%%% Was:
 %%%%\Optnm{-pool centralmanagerhostname[:portnumber]}\\
@@ -46,7 +40,7 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Which daemons you wish to affect. XXX maybe split up nicer...
 \newcommand{\ToolArgsAffect}{
-\oOptArgnm{-subsystem}{<subsystemname>}
+\oOptArgnm{-subsystem}{subsystemname}
 }
 
 %% This is the common set of arguments
@@ -101,7 +95,7 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Descriptions of Affected Daemons
 \newcommand{\ToolArgsAffectDesc}{
-\OptItem{\OptArg{-subsystem}{<subsystemname>}}
+\OptItem{\OptArg{-subsystem}{subsystemname}}
 {Send the command to the named subsystem. Without this option,
 the command is sent to the \Condor{master} daemon.}
 }
