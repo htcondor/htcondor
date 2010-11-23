@@ -159,7 +159,6 @@ shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool getSandbox( int cluster, int proc, MyString & path );
-bool sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
@@ -2042,65 +2041,6 @@ jobCleanupNeedsThread( int /* cluster */, int /* proc */ )
 	See jobPrepNeedsThread for why we don't ever use threads.
 	*/
 	return false;
-}
-
-
-// returns true if the sandbox already exists *and* is owned by the
-// right owner, false if either of those conditions isn't true. 
-bool
-sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad )
-{
-	bool rval = true;  // we'll return false if needed...
-
-	if( ! job_ad ) {
-			// job is already gone, guess we don't need a thread. ;)
-		return false;
-	}
-
-	MyString sandbox;
-	if( ! getSandbox(cluster, proc, sandbox) ) {
-		EXCEPT( "getSandbox(%d.%d) returned FALSE!", cluster, proc );
-	}
-
-	StatInfo si( sandbox.Value() );
-	if( si.Error() == SINoFile ) {
-			// sandbox doesn't yet exist, we'll need to create it
-		FreeJobAd( job_ad );
-		return false;
-	}
-	
-		// if we got this far, we know the sandbox already exists for
-		// this cluster/proc.  if we're not WIN32, check the owner.
-
-#ifndef WIN32
-		// check the owner of the sandbox vs. what's in the job ad
-	uid_t sandbox_uid = si.GetOwner();
-	passwd_cache* p_cache = pcache();
-	uid_t job_uid;
-	char* job_owner = NULL;
-	job_ad->LookupString( ATTR_OWNER, &job_owner );
-	if( ! job_owner ) {
-		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, cluster, proc );
-	}
-	if( ! p_cache->get_user_uid(job_owner, job_uid) ) {
-			// failed to find uid for this owner, badness.
-		dprintf( D_ALWAYS, "Failed to find uid for user %s (job %d.%d), "
-				 "job sandbox ownership will probably be broken\n", 
-				 job_owner, cluster, proc );
-		free( job_owner );
-		FreeJobAd( job_ad );
-		return false;
-	}
-	free( job_owner );
-	job_owner = NULL;
-
-		// now that we have the right uids, see if they match.
-	rval = (job_uid == sandbox_uid);
-	
-#endif /* WIN32 */
-
-	FreeJobAd( job_ad );
-	return rval;
 }
 
 
