@@ -23,11 +23,13 @@ if ( NOT PROPER )
 
 	if (WITH_HADOOP)
 
-		set (HADOOP_VER hadoop-0.20.0)
+		set (HADOOP_VER hadoop-0.21.0)
 		set ( HADOOP_INSTALL mkdir -p ${EXTERNAL_STAGE}/hdfs/conf ${CMD_TERM}
 							 cp -r lib ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-							 cp ${HADOOP_VER}-p1-core.jar ${EXTERNAL_STAGE}/hdfs/lib ${CMD_TERM}
-							 cp src/hdfs/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf )
+							 cp -r webapps ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+							 cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs/ ${CMD_TERM}
+							 cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs/ ${CMD_TERM}
+							 cp hdfs/src/java/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf )
 
 		# a couple of odd things, this macro requires a configure and build command.  
 		ExternalProject_Add(hadoop
@@ -50,7 +52,11 @@ if ( NOT PROPER )
 		append_var(CONDOR_EXTERNALS hadoop)
 		message (STATUS "external configured (HADOOP_FOUND=${EXTERNAL_STAGE}/hdfs)")
 
-		install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION . )
+		if (WINDOWS)
+		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION . )
+		else()
+		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION ${C_LIBEXEC} )
+		endif()
 
 	else()
 		message (STATUS "external skiped (hadoop)")

@@ -357,7 +357,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 
 if (NOT WIN_EXEC_NODE_ONLY)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.20.0-p2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 endif(NOT WIN_EXEC_NODE_ONLY)
@@ -454,8 +454,8 @@ endif(HAVE_EXT_OPENSSL)
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND}")
-set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND}")
+set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 message(STATUS "----- Begin compiler options/flags check -----")

@@ -52,9 +52,9 @@ install (FILES MyString.h
 install ( TARGETS condorapi DESTINATION ${C_LIB} )
 
 add_definitions(-DENABLE_STATE_DUMP)
-condor_exe_test(test_log_reader "test_log_reader.cpp" "condorapi")
-condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "condorapi")
-condor_exe_test(test_log_writer "test_log_writer.cpp" "condorapi")
+condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}") #"condorapi")
+condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}") #"condorapi")
+condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}") #"condorapi")
 condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 ##################################################
 
