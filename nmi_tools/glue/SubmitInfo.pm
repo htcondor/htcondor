@@ -216,7 +216,7 @@ our %submit_info = (
 	'x86_winnt_6.0'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
-			'prereqs'	=> [ 'cmake-2.8.3' ],
+			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
 
@@ -234,7 +234,7 @@ our %submit_info = (
 	'x86_64_winnt_5.1'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
-			'prereqs'	=> [ 'cmake-2.8.3' ],
+			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
 
