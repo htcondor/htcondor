@@ -267,8 +267,8 @@ sysapi_swap_space_raw() {
         So I'm traversing the list in the safe way that I know how */
 
     /* get me the objects that are paging devices */
-    pret = odm_get_obj(cuat, "value='paging'", &paging_ent, ODM_FIRST);
-    while(pret != NULL)
+    pret = (struct CuAt *)odm_get_obj(cuat, "value='paging'", &paging_ent, ODM_FIRST);
+    while(pret != NULL && (int)pret != -1)
     {
 		memset(buf, 0, 1024);
 		snprintf(buf, 1024, "%s/%s", "/dev", paging_ent.name);
@@ -278,13 +278,13 @@ sysapi_swap_space_raw() {
         {
 			/* XXX when non root, some swap partitions cannot be inspected,
 				so skip them. */
-        	pret = odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
+        	pret = (struct CuAt *)odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
 			continue;
         }
 
         free_swap_space += p.free;
 
-        pret = odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
+        pret = (struct CuAt *)odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
     }
 
     if (odm_close_class(cuat) < 0)

@@ -22,10 +22,6 @@
 #include "internet.h"
 #include "network_adapter.unix.h"
 
-#if HAVE_NET_IF_H
-# include <net/if.h>
-#endif
-
 
 /***************************************************************
 * UnixNetworkAdapter class
@@ -186,7 +182,7 @@ UnixNetworkAdapter::resetName( bool init )
 //
 // This block of methods require 'struct ifreq' ...
 //
-#if HAVE_STRUCT_IFREQ
+#if defined(HAVE_STRUCT_IFREQ) && defined(HAVE_STRUCT_IFREQ_IFR_HWADDR)
 
 // Set the interface name from the ifreq
 void

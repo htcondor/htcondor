@@ -222,14 +222,14 @@ sysapi_phys_memory_raw_no_param(void)
 
 	/* get me the various memory entries that represent the full amount of 
 		memory on the machine */
-    mret = odm_get_obj(cuat, "name like mem? AND attribute='size'", 
+    mret = (struct CuAt *)odm_get_obj(cuat, "name like mem? AND attribute='size'", 
 		&mem_ent, ODM_FIRST);
-    while(mret != NULL)
+    while(mret != NULL && (int)mret != -1)
     {
 		/* This value appears to be in Megabytes. */
 		memory_size += atoi(mem_ent.value);
 
-        mret = odm_get_obj(cuat, NULL, &mem_ent, ODM_NEXT);
+        mret = (struct CuAt *)odm_get_obj(cuat, NULL, &mem_ent, ODM_NEXT);
     }
 
     if (odm_close_class(cuat) < 0)

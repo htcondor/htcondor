@@ -418,6 +418,9 @@
 /* Define to 1 if the system has the type `struct ifreq'. (USED)*/
 #cmakedefine HAVE_STRUCT_IFREQ 1
 
+/* Define to 1 if `ifr_hwaddr' is member of `struct ifreq' (USED)*/
+#cmakedefine HAVE_STRUCT_IFREQ_IFR_HWADDR 1
+
 /* Define to 1 if `f_fstyp' is member of `struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_FSTYP 1
 

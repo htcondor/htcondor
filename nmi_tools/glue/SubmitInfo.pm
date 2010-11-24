@@ -45,6 +45,7 @@ our %build_and_test_sets = (
 	'official_ports' => [
 		'ia64_rhas_3',
 		'ppc64_sles_9',
+		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.9', 
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
