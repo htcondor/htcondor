@@ -34,7 +34,7 @@ if ( HAVE_EXT_GSOAP )
 	add_custom_command(
 		OUTPUT ${${_DAEMON}_SOAP_SRCS} ${${_DAEMON}_SOAP_HDRS} condor.xsd
 		COMMAND ${SOAPCPP2}
-		ARGS -I ${DAEMON_CORE} -S -L -x -p soap_${_DAEMON} gsoap_${_DAEMON}.h
+		ARGS -I${DAEMON_CORE}:${CMAKE_CURRENT_SOURCE_DIR} -S -L -x -p soap_${_DAEMON} ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_${_DAEMON}.h
 		COMMENT "Generating ${_DAEMON} soap files" )
 	
 	add_custom_target(

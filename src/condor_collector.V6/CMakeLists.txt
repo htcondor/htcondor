@@ -19,6 +19,8 @@
 
 if (NOT WIN_EXEC_NODE_ONLY)
 
+	include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 	## create targets
 	file( GLOB collectorRmvElements Example* )
 	condor_daemon ( collector
@@ -27,6 +29,6 @@ if (NOT WIN_EXEC_NODE_ONLY)
 					${C_SBIN}
 					ON )
 
-	install ( FILES condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
 
 endif(NOT WIN_EXEC_NODE_ONLY)

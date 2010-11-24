@@ -132,7 +132,6 @@ my @minimal_build_configure_args =
 		'-DWITH_KRB5:BOOL=OFF'		=> undef,
 		'-DWITH_LIBVIRT:BOOL=OFF'		=> undef,
 		'-DWITH_LIBXML2:BOOL=OFF'		=> undef,
-		'-DWITH_OPENSSL:BOOL=OFF'		=> undef,
 		'-DWITH_UNICOREGAHP:BOOL=OFF'	=> undef,
 		'-DWITH_VOMS:BOOL=OFF'		=> undef,
 	);

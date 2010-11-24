@@ -333,8 +333,8 @@ if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
 		COMMENT "changing ownership on externals cache because so on multiple user machines they can take advantage" )
 	#endif(WINDOWS)
 else()
-	set (EXTERNAL_STAGE ${CONDOR_EXTERNAL_DIR}/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
-	set (EXTERNAL_DL ${CONDOR_EXTERNAL_DIR}/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})
+	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
+	set (EXTERNAL_DL ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})
 endif()
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
@@ -426,7 +426,7 @@ dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 
 ########################################################
 configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake
-${CONDOR_SOURCE_DIR}/src/condor_includes/config.h)
+${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h)
 add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################
@@ -437,14 +437,18 @@ link_directories(${EXTERNAL_STAGE}/lib)
 if ( $ENV{JAVA_HOME} )
 	include_directories($ENV{JAVA_HOME}/include)
 endif()
+
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_includes)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_utils)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_utils)
 set (DAEMON_CORE ${CONDOR_SOURCE_DIR}/src/condor_daemon_core.V6) #referenced elsewhere primarily for soap gen stuff 
 include_directories(${DAEMON_CORE})
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_daemon_client)
 include_directories(${CONDOR_SOURCE_DIR}/src/ccb)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 ###########################################
 
