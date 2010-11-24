@@ -30,9 +30,10 @@ if (HAVE_EXT_GSOAP AND HAVE_EXT_OPENSSL AND HAVE_PTHREADS)
 	condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
 	include_directories(${GSOAP_SHARE}/plugin/)
-	include_directories(${CONDOR_SOURCE_DIR}/src/condor_amazon)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-	command_target(gen_amazon_soapfiles ${SOAPCPP2} "-L;-w;-x;-I${GSOAP_SHARE}/import;gsoap_ec2.h" "${AMAZON_SOAP_FILES};soapServer.cpp;AmazonEC2.nsmap")
+	command_target(gen_amazon_soapfiles ${SOAPCPP2} "-L;-w;-x;-I${GSOAP_SHARE}/import:${CMAKE_CURRENT_SOURCE_DIR};${CMAKE_CURRENT_SOURCE_DIR}/gsoap_ec2.h" "${AMAZON_SOAP_FILES};soapServer.cpp;AmazonEC2.nsmap")
 
 	condor_exe( amazon_gahp
 	"${HeaderFiles};${SourceFiles};${AMAZON_SOAP_FILES};${WSSEAPI};${SMDEVP}" ${C_SBIN}

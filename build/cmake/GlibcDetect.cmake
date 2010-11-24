@@ -32,12 +32,12 @@ int main()
 }
 ")
 
-file (WRITE ${CONDOR_SOURCE_DIR}/build/cmake/glibc.cpp "${_GLIB_SOURCE_DETECT}\n")
+file (WRITE ${CMAKE_CURRENT_BINARY_DIR}/build/cmake/glibc.cpp "${_GLIB_SOURCE_DETECT}\n")
 
 try_run(POST26_GLIBC_DETECTED
 		POST26_GLIBC_COMPILE
-        ${CONDOR_SOURCE_DIR}/build/cmake
-		${CONDOR_SOURCE_DIR}/build/cmake/glibc.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/build/cmake
+		${CMAKE_CURRENT_BINARY_DIR}/build/cmake/glibc.cpp
         RUN_OUTPUT_VARIABLE GLIBC_VERSION )
 
 if (GLIBC_VERSION AND POST26_GLIBC_COMPILE )

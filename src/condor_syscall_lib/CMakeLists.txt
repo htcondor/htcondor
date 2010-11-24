@@ -34,7 +34,7 @@ if( STD_UNIVERSE )
 	# localized std:u compilation flags and settings
 	include (StdUnivExtractNToUpper)
 	add_definitions(${STD_U_C_FLAGS} -DREMOTE_SYSCALLS -DSKIP_AUTHENTICATION -DHEADER_DES_LOCL_H -DFILE_TABLE )
-	include_directories(${CONDOR_SOURCE_DIR}/src/condor_shadow.std ${CONDOR_SOURCE_DIR}/src/condor_ckpt)
+	include_directories(${CONDOR_SOURCE_DIR}/src/condor_shadow.std ${CONDOR_SOURCE_DIR}/src/condor_ckpt ${CMAKE_CURRENT_SOURCE_DIR})
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
 
 	###########################################################################
@@ -48,7 +48,7 @@ if( STD_UNIVERSE )
 	exec_program ( gcc ARGS -print-file-name=libgcc.a OUTPUT_VARIABLE LIBGCC )
 	exec_program ( gcc ARGS -print-file-name=libgcc_eh.a OUTPUT_VARIABLE LIBGCC_EH )
 	exec_program ( gcc ARGS -print-file-name=libstdc++.a OUTPUT_VARIABLE STDCPLUS )
-	exec_program ( objcopy ARGS --redefine-sym main=MAIN ${CRT1} ${CMAKE_CURRENT_SOURCE_DIR}/condor_rt0.o )
+	exec_program ( objcopy ARGS --redefine-sym main=MAIN ${CRT1} ${CMAKE_CURRENT_BINARY_DIR}/condor_rt0.o )
 
 	##################################################
 	# rip from custom built glibc and uppercase the defined symbols, yeah you read that correctly :-/
@@ -89,10 +89,10 @@ if( STD_UNIVERSE )
 	# begin all the stub-gen targets fyi - cmake's ";" == " "
 	get_target_property(STUB_GEN stub_gen LOCATION)
 	dump_local_flags(COMP_DEFS)
-	command_target (switches ${CMAKE_C_COMPILER} "-E;-x;c-header;-DSWITCH;${COMP_DEFS};syscall.tmpl;|;${STUB_GEN};-mode;switches;-p;switches.prologue;-e;switches.epilogue;>;switches.cpp" switches.cpp)
-	command_target (senders ${CMAKE_C_COMPILER} "-E;-x;c-header;-DSENDER;${COMP_DEFS};syscall.tmpl;|;${STUB_GEN};-mode;senders;-p;senders.prologue;-e;senders.epilogue;>;senders.cpp" senders.cpp)
-	command_target (receivers ${CMAKE_C_COMPILER} "-E;-x;c-header;-DRECEIVER;${COMP_DEFS};syscall.tmpl;|;${STUB_GEN};-mode;receivers;-p;receivers.prologue;-e;receivers.epilogue;-n;syscheck;>;receivers.cpp" receivers.cpp)
-	command_target (sys-list ${CMAKE_C_COMPILER} "-E;-x;c-header;-DSWITCH;${COMP_DEFS};syscall.tmpl;|;${STUB_GEN};-mode;listcalls;>;syscall-list" syscall-list)
+	command_target (switches ${CMAKE_C_COMPILER} "-E;-x;c-header;-DSWITCH;${COMP_DEFS};${CMAKE_CURRENT_SOURCE_DIR}/syscall.tmpl;|;${STUB_GEN};-mode;switches;-p;${CMAKE_CURRENT_SOURCE_DIR}/switches.prologue;-e;${CMAKE_CURRENT_SOURCE_DIR}/switches.epilogue;>;switches.cpp" switches.cpp)
+	command_target (senders ${CMAKE_C_COMPILER} "-E;-x;c-header;-DSENDER;${COMP_DEFS};${CMAKE_CURRENT_SOURCE_DIR}/syscall.tmpl;|;${STUB_GEN};-mode;senders;-p;${CMAKE_CURRENT_SOURCE_DIR}/senders.prologue;-e;${CMAKE_CURRENT_SOURCE_DIR}/senders.epilogue;>;senders.cpp" senders.cpp)
+	command_target (receivers ${CMAKE_C_COMPILER} "-E;-x;c-header;-DRECEIVER;${COMP_DEFS};${CMAKE_CURRENT_SOURCE_DIR}/syscall.tmpl;|;${STUB_GEN};-mode;receivers;-p;${CMAKE_CURRENT_SOURCE_DIR}/receivers.prologue;-e;${CMAKE_CURRENT_SOURCE_DIR}/receivers.epilogue;-n;syscheck;>;receivers.cpp" receivers.cpp)
+	command_target (sys-list ${CMAKE_C_COMPILER} "-E;-x;c-header;-DSWITCH;${COMP_DEFS};${CMAKE_CURRENT_SOURCE_DIR}/syscall.tmpl;|;${STUB_GEN};-mode;listcalls;>;syscall-list" syscall-list)
 
 	##################################################
 	# finally add in the local sources, remove stale stubs if they exist
@@ -120,7 +120,7 @@ if( STD_UNIVERSE )
 	#################################################
 	# here we begin the install target section
 	install ( TARGETS condorsyscall DESTINATION ${C_LIB} )
-	install ( FILES condor_rt0.o DESTINATION ${C_LIB} )
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_rt0.o DESTINATION ${C_LIB} )
 	install ( FILES ${LIBGCC} DESTINATION ${C_LIB} RENAME libcomp_libgcc.a )
 	install ( FILES ${LIBGCC_EH} DESTINATION ${C_LIB} RENAME libcomp_libgcc_eh.a )
 	install ( FILES ${STDCPLUS} DESTINATION ${C_LIB} RENAME libcomp_libstdc++.a )

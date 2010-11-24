@@ -22,7 +22,13 @@ file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs*
 soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c )
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
-command_target( utils_genparams perl param_info_c_generator.pl param_info_init.c )
+
+if (${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+        command_target( utils_genparams perl param_info_c_generator.pl param_info_init.c )
+else()
+        command_target( utils_genparams cd "${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
+endif()
+		
 condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
 add_dependencies(utils utils_genparams syscall_numbers )
 
@@ -59,8 +65,8 @@ condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 ##################################################
 
 if (STD_UNIVERSE)
-	command_target(y.tab yacc "-d;stub_gen_yacc.y" y.tab.c)
-	command_target(lex.yy lex "stub_gen_lex.l" lex.yy.c)
+	command_target(y.tab yacc "-d;${CMAKE_CURRENT_SOURCE_DIR}/stub_gen_yacc.y" y.tab.c)
+	command_target(lex.yy lex "${CMAKE_CURRENT_SOURCE_DIR}/stub_gen_lex.l" lex.yy.c)
 	condor_exe(stub_gen "lex.yy.c;y.tab.c;lex.yy.c" OFF "")
 endif(STD_UNIVERSE)
 
