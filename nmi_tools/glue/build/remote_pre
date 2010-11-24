@@ -48,7 +48,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 
 	# This is an incredible hack to get around
-	$ENV{PATH} ="C:\\prereq\\ActivePerl-5.10.1\\site\\bin;C:\\prereq\\ActivePerl-5.10.1\\bin;C:\\Perl\\site\\bin;C:\\Perl\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\Program Files\\CMake 2.8\\bin;C:\\Program Files\\7-Zip;$BaseDir/msconfig;$ENV{PATH}";
+	$ENV{PATH} ="C:\\Program Files\\Microsoft Visual Studio 9.0\\Common7\\IDE;C:\\prereq\\ActivePerl-5.10.1\\site\\bin;C:\\prereq\\ActivePerl-5.10.1\\bin;C:\\Perl\\site\\bin;C:\\Perl\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\Program Files\\CMake 2.8\\bin;C:\\Program Files\\7-Zip;$BaseDir/msconfig;$ENV{PATH}";
 	system("set");
 
 	# this can save on * etc from the web.

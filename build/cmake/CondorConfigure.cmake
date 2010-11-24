@@ -23,6 +23,26 @@ if(${OS_NAME} STREQUAL "DARWIN")
   if(${TEST_VER} MATCHES "10.6" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
+elseif(${OS_NAME} MATCHES "WIN")
+	cmake_minimum_required(VERSION 2.8.3)
+	set(WINDOWS ON)
+	add_definitions(-DWINDOWS)
+	# The following is necessary for sdk/ddk version to compile against.
+	# lowest common denominator is winxp (for now)
+	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
+	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
+	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+	set(CMD_TERM \r\n)
+	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
+	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
+	set(CMAKE_SUPPRESS_REGENERATION TRUE)
+
+	set (HAVE_SNPRINTF 1)
+	set (HAVE_WORKING_SNPRINTF 1)
+
+	set( CMAKE_INSTALL_PREFIX "C:/condor_test/${VERSION}")
+	dprint("TODO FEATURE-> Z:TANNENBA:TSTCLAIR Update registry + paths to use this prefixed debug loc")
 endif()
 
 message(STATUS "***********************************************************")
@@ -43,26 +63,7 @@ set( CMAKE_VERBOSE_MAKEFILE TRUE )
 set( BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
-if(${OS_NAME} MATCHES "WIN" AND NOT ${OS_NAME} MATCHES "DARWIN")
-
-	cmake_minimum_required(VERSION 2.8.3)
-	set(WINDOWS ON)
-	add_definitions(-DWINDOWS)
-	# The following is necessary for sdk/ddk version to compile against.
-	# lowest common denominator is winxp (for now)
-	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
-	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
-	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
-	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	set(CMD_TERM \r\n)
-	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
-	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
-	set(CMAKE_SUPPRESS_REGENERATION TRUE)
-
-	set (HAVE_SNPRINTF 1)
-	set (HAVE_WORKING_SNPRINTF 1)
-
-else()
+if( NOT WINDOWS)
 
 	set( CMD_TERM && )
 	
