@@ -254,8 +254,14 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_SOURCE_DIR}/build/packaging/rpm/condor.spec.in")
 
 		#Directory overrides
+
+		if (${BIT_MODE} MATCHES "64")
+			set( C_LIB			usr/lib64/condor )
+		else()
+			set( C_LIB			usr/lib/condor )
+		endif ()
+		
 		set( C_BIN			usr/bin )
-		set( C_LIB			usr/lib/condor )
 		set( C_LIBEXEC		usr/libexec/condor )
 		set( C_SBIN			usr/sbin )
 		set( C_INCLUDE		usr/include/condor )

@@ -109,7 +109,11 @@
 
 # Author: Eric Noulard with the help of Alexander Neundorf.
 
-MESSAGE(STATUS "This modified CPackRPM is based on CMake 2.8.0")
+MESSAGE("Using patched version of CPackRPM.cmake-2.8.0 located in build/cmake")
+# This patched version add support for CPACK_RPM_SPEC_IGNORE_FILES.
+# This allows us to specify config file manually in SPEC file.
+# In the future version of CPackRPM, we should be able to specify config file via
+# CMake instead of using this mechanism.
 
 IF(CMAKE_BINARY_DIR)
   MESSAGE(FATAL_ERROR "CPackRPM.cmake may only be used by CPack internally.")

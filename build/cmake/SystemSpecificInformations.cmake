@@ -25,7 +25,7 @@ set(SPECIFIC_COMPILER_NAME "")
 set(SPECIFIC_SYSTEM_VERSION_NAME "")
 set(LINUX_NAME "Unknown")
 
-#For Linux, the foloing varaible will be set
+#For Linux, the folowing varaible will be set
 #LINUX_NAME		= Fedora, CentOS, Redhat, Ubuntu, openSUSE
 #LINUX_VER		= 12 (Fedora), 5.0 (Debian, CentOS)
 #RPM_SYSTEM_NAME	= fc12, rhel5, ..
