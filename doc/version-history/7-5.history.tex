@@ -161,6 +161,14 @@ spurious log message was produced:
 SharedPortEndpoint: Destructor: Problem in thread shutdown notification: 0
 \end{verbatim}
 
+% gittrac #1088
+\item Since 7.4.1, Condor-C jobs submitted without file transfer enabled could
+fail with the following error in the \Condor{starter} log:
+
+\begin{verbatim}
+FileTransfer: DownloadFiles called on server side
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
