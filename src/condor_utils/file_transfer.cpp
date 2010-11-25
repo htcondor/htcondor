@@ -355,8 +355,6 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		SpoolSpace = gen_ckpt_name(Spool,Cluster,Proc,0);
 		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
-
-		SpooledJobFiles::createJobSpoolDirectory(Ad,desired_priv_state);
 	}
 
 	if ( ((IsServer() && !simple_init) || (IsClient() && simple_init)) && 
@@ -1599,6 +1597,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}	
+
+	if( !final_transfer && IsServer() ) {
+		SpooledJobFiles::createJobSpoolDirectory(&jobAd,desired_priv_state);
+	}
+
 	for (;;) {
 		if( !s->code(reply) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);

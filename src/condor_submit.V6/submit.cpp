@@ -2872,10 +2872,6 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 	InsertJobExpr( should.Value() );
 	if( should_transfer != STF_NO ) {
 		InsertJobExpr( when.Value() );
-	} else if (!Remote) {
-		MyString never_create_sandbox = ATTR_NEVER_CREATE_JOB_SANDBOX;
-		never_create_sandbox += " = true";
-		InsertJobExpr( never_create_sandbox.Value() );
 	}
 	InsertJobExpr( ft.Value() );
 }

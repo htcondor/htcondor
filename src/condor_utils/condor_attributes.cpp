@@ -418,7 +418,6 @@ const char * const ATTR_PARALLEL_SHUTDOWN_POLICY = "ParallelShutdownPolicy";
 const char * const ATTR_MY_CURRENT_TIME		 = "MyCurrentTime";
 const char * const ATTR_MY_TYPE					 = "MyType";
 const char * const ATTR_NAME                     = "Name";
-const char * const ATTR_NEVER_CREATE_JOB_SANDBOX = "NeverCreateJobSandbox";
 const char * const ATTR_NICE_USER			 	 = "NiceUser";
 const char * const ATTR_NEGOTIATOR_REQUIREMENTS  = "NegotiatorRequirements";
 const char * const ATTR_NEXT_CLUSTER_NUM		 = "NextClusterNum";
