@@ -598,7 +598,10 @@ both checkpoints and \SubmitCmd{vm} universe jobs in general.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1001
+\item When \MacroNI{WANT\_SUSPEND} evalutes to \Expr{UNDEFINED}, it is
+now treated as \Expr{FALSE}.  Previously, this was treated as an error,
+which caused the \Condor{startd} to exit with an error message.
 
 \end{itemize}
 

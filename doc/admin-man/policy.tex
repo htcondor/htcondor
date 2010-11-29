@@ -1083,7 +1083,7 @@ The startd evaluates the \MacroNI{WANT\_SUSPEND} expression to decide
 which other expressions to evaluate.  
 If \MacroNI{WANT\_SUSPEND} is TRUE, then the startd evaluates the
 \MacroNI{SUSPEND} expression.
-If \MacroNI{WANT\_SUSPEND} is FALSE, then the startd will
+If \MacroNI{WANT\_SUSPEND} is not TRUE (e.g. FALSE or UNDEFINED), then the startd will
 evaluate the \MacroNI{PREEMPT} expression and skip the Suspended activity
 entirely.
 By transition, the possible state/activity destinations from Claimed/Busy:

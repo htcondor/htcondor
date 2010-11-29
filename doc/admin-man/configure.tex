@@ -3540,7 +3540,10 @@ WANT_HOLD_REASON = \
 \label{param:WantSuspend}
 \item[\Macro{WANT\_SUSPEND}]
   A boolean expression that, when \Expr{True},
-  tells Condor to evaluate the \MacroNI{SUSPEND} expression.
+  tells Condor to evaluate the \MacroNI{SUSPEND} expression to decide
+  whether to suspend a running job.  When not
+  \Expr{True} (e.g. \Expr{False} or \Expr{Undefined}), the \MacroNI{SUSPEND}
+  expression is ignored.
 
 \label{param:WantVacate}
 \item[\Macro{WANT\_VACATE}]
