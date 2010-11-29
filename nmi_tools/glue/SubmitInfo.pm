@@ -601,7 +601,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_rhap_5'	=> {
 		'build' => {
-			'configure_args' => {  @default_build_configure_args },
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL=OFF' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
 				'x86_ubuntu_10.04',
@@ -624,7 +626,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_rhap_5.1'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args },
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL=OFF' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -642,7 +646,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_rhas_3'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args },
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL=OFF' => undef,
+			 },
 			'prereqs'	=> [ 
 				@default_prereqs,
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
