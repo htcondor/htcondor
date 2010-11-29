@@ -55,9 +55,8 @@ our %build_and_test_sets = (
 		'x86_macos_10.4',
 		'x86_rhap_5',
 		'x86_rhas_3',
-		#'ppc_aix_5.2-pl5', # this is a total fail for cmake builds. 
 		'x86_winnt_5.1-tst', 
-		#the below are commented out for speed.
+		#'x86_winnt_5.1',
 	],
 
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
