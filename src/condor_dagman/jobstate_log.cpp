@@ -1,4 +1,5 @@
 //TEMPTEMP -- re-read the jobstate.log file instead of using the sequence number file...
+//TEMPTEMP -- don't close the jobstate.log file between writes...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -40,6 +41,7 @@ const CondorID JobstateLog::_defaultCondorID;
 JobstateLog::JobstateLog()
 {
 	_jobstateLogFile = NULL;
+	_outfile = NULL;
 	_lastTimestampWritten = 0;
 }
 
@@ -47,6 +49,10 @@ JobstateLog::JobstateLog()
 JobstateLog::~JobstateLog()
 {
 	delete [] _jobstateLogFile;
+	if ( _outfile ) {
+		fclose( _outfile );
+		_outfile = NULL;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -107,6 +113,7 @@ JobstateLog::InitializeRecovery()
 				// We don't want to look at "INTERNAL" events here, or we'll
 				// get goofed up by our own DAGMAN_STARTED event, etc.
 			if ( nodeName != "INTERNAL" ) {
+				//TEMPTEMP -- > rather than != is important here if timestamps are out of order
 				if ( newTimestamp > _lastTimestampWritten ) {
 					startOfLastTimestamp = currentOffset;
 					_lastTimestampWritten = newTimestamp;
@@ -365,18 +372,18 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 		return;
 	}
 
-	FILE *outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );
-	if ( !outfile ) {
-       	debug_printf( DEBUG_QUIET,
-					"Could not open jobstate log file %s for writing.\n",
-					_jobstateLogFile );
-		main_shutdown_graceful();
-		return;
+	if ( !_outfile ) {
+		_outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );
+		if ( !_outfile ) {
+       		debug_printf( DEBUG_QUIET,
+						"Could not open jobstate log file %s for writing.\n",
+						_jobstateLogFile );
+			main_shutdown_graceful();
+			return;
+		}
 	}
 
-	fprintf( outfile, "%s\n", outline.Value() );
-
-	fclose( outfile );
+	fprintf( _outfile, "%s\n", outline.Value() );
 }
 
 //---------------------------------------------------------------------------

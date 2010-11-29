@@ -143,6 +143,9 @@ private:
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
 
+		// File pointer to the jobstate.log file.
+	FILE *_outfile;
+
 		// When in recovery mode, this is the timestamp of the last
 		// pre-recovery "real" event (used to avoid re-writing events).
 	time_t _lastTimestampWritten;
