@@ -246,10 +246,11 @@ if (BUILD_TESTS)
 	# Not in use till endurance testing done.
 	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
 	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")
-	condor_pl_test(lib_auth_protocol-negot "4 way negotiation test - frist 8" "core;quick;full;quicknolink")
-	condor_pl_test(lib_auth_protocol-negot-prt2 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
-	condor_pl_test(lib_auth_protocol-negot-prt3 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
-	condor_pl_test(lib_auth_protocol-negot-prt4 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
+	## Disabled due to bugginess and dubious worth
+	#condor_pl_test(lib_auth_protocol-negot "4 way negotiation test - frist 8" "core;quick;full;quicknolink")
+	#condor_pl_test(lib_auth_protocol-negot-prt2 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
+	#condor_pl_test(lib_auth_protocol-negot-prt3 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
+	#condor_pl_test(lib_auth_protocol-negot-prt4 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
 	##### generic cmd tests
 	condor_pl_test(cmd_status_shows-any "Condor_status -any works as expected" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status_shows-submitters "Condor_status -submitters works as expected" "core;quick;full;quicknolink")
