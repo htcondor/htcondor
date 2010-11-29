@@ -21,43 +21,30 @@
 #include "compat_classad_list.h"
 #include "condor_xml_classads.h"
 
-#include <vector>
-#include <algorithm>
-
 namespace compat_classad {
-
-static unsigned int ptr_hash_fn(ClassAd * const &index)
-{
-	intptr_t i = (intptr_t)index;
-	return (unsigned int)( i ^ (i>>32) );
-}
-
-ClassAdList::ClassAdList():
-	htable(ptr_hash_fn)
-{
-}
 
 ClassAdList::~ClassAdList()
 {
-	ClassAd *ad=NULL;
-	bool junk;
-
-	htable.startIterations();
-	while( htable.iterate(ad,junk) ) {
-		delete ad;
-		ad = NULL;
+		// This is to avoid the size lookup each time
+	int imax = list.size();
+	for (int i = 0; i < imax; i++)
+	{
+		if (list[i]) delete list[i];
+			// this transient state in the
+			// destructor is the only time
+			// NULL is put on the list.
+		list[i] = NULL;
 	}
 }
 
 ClassAd* ClassAdList::Next()
-{
-	ClassAd *ad=NULL;
-	bool junk;
-
-	if( htable.iterate(ad,junk) ) {
-		return ad;
+{  // Return this element _and_then_ push pointer
+	if (index < 0 || index >= list.size())
+	{ // This also handles the empty list case.
+		return NULL;
+	} else {
+		return list[index++]; // Note that it's postfix ++
 	}
-	return NULL;
 }
 
 int ClassAdList::Delete(ClassAd* cad)
@@ -71,56 +58,58 @@ int ClassAdList::Delete(ClassAd* cad)
 
 int ClassAdList::Remove(ClassAd* cad)
 {
-	if( htable.remove(cad)==0 ) {
-		return TRUE;
+	int retval = FALSE;
+	std::vector<ClassAd*>::iterator it = list.begin();
+		// This is to avoid the size lookup each time
+	int imax = list.size();
+	for (int i = 0; i < imax; i++)
+	{
+		if (*it == cad)
+			// or should I do *(*it) == *cad to
+			// do a deep comparison?
+		{
+			it = list.erase(it);
+			retval = TRUE;
+				// Now if this element that we deleted occurs
+				// at or after our index value, we're fine. But
+				// if that's not the case, we need to decrement
+				// the index to emulate old ClassAdList behaviour
+				// correctly.
+			if ( i < index ){ 
+				index--;  // This will not cause index to go below zero.
+			}
+		} else {
+			++it;
+		}
 	}
-	return FALSE;
+	return retval;
 }
 
 void ClassAdList::Insert(ClassAd* cad)
 {
-	htable.insert(cad,true);
-}
-
-void ClassAdList::Open()
-{
-	htable.startIterations();
-}
-
-void ClassAdList::Close()
-{
-}
-
-int ClassAdList::Length()
-{
-	return htable.getNumElements();
+	bool is_in_list = false;
+	std::vector<ClassAd*>::iterator it = list.begin();
+	int imax = list.size(); // Performance optimization
+	for(int i = 0; i < imax; i++)
+	{
+		if (*it == cad)
+			// or should I do *(*it) == *cad to
+			// do a deep comaprison?
+		{
+			is_in_list = true;
+			break;
+		}
+	}
+	if (!is_in_list)
+	{
+		list.push_back(cad);
+	}
 }
 
 void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
 {
 	ClassAdComparator isSmallerThan(userInfo, smallerThan);
-
-		// copy from htable into a vector; sort vector; copy back
-
-	std::vector<ClassAd *> vect;
-	ClassAd *ad=NULL;
-	bool junk;
-
-	htable.startIterations();
-	while( htable.iterate(ad,junk) ) {
-		vect.push_back(ad);
-	}
-
-	std::sort(vect.begin(), vect.end(), isSmallerThan);
-
-	htable.clear();
-	std::vector<ClassAd *>::iterator it;
-	for(it = vect.begin();
-		it != vect.end();
-		it++)
-	{
-		htable.insert(*it,true);
-	}
+	std::sort(list.begin(), list.end(), isSmallerThan);
 }
 
 void ClassAdList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_white_list)
