@@ -526,7 +526,14 @@ both checkpoints and \SubmitCmd{vm} universe jobs in general.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1001
+\item When \MacroNI{WANT\_SUSPEND} is defined and evaluates to anything
+other than the value \Expr{True},
+it is now utilized as if it were \Expr{False}.
+If \MacroNI{WANT\_SUSPEND} is not explicitly defined,
+the \Condor{startd} exits with an error message.
+Previously, if \Expr{Undefined}, it was treated as an error,
+which caused the \Condor{startd} to exit with an error message.
 
 \end{itemize}
 
