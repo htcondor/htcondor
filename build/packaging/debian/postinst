@@ -43,11 +43,12 @@ start_service(){
 
 change_permission() {
 	#Recreate empty dir because it is not part of the package
-	mkdir -p /var/run/condor /var/lock/condor /var/log/condor /var/lib/condor
+	mkdir -p /var/run/condor /var/lock/condor /var/log/condor /var/lib/condor/spool /var/lib/condor/execute
 	chown -R condor:condor /var/run/condor
 	chown -R condor:condor /var/lock/condor
 	chown -R condor:condor /var/log/condor
 	chown -R condor:condor /var/lib/condor
+	chmod 1777 /var/lib/condor/execute
 }
 
 case "$1" in

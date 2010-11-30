@@ -42,6 +42,7 @@ Buildroot:      @CPACK_RPM_DIRECTORY@/@CPACK_PACKAGE_FILE_NAME@
 
 %defattr(-,root,root,-)
 %dir %_sysconfdir/condor/
+%dir %_sysconfdir/condor/config.d/
 %config(noreplace) %_sysconfdir/condor/condor_config
 %config(noreplace) %_sysconfdir/condor/condor_config.local
 

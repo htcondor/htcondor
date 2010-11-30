@@ -159,7 +159,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	if ( ${LINUX_NAME} STREQUAL  "Debian" )
 
-		message (STATUS "Configuring for Debian package on ${LINUX_NAME}-${LINUX_VER}-${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+		message (STATUS "Configuring for Debian package on ${LINUX_NAME}-${LINUX_VER}-${DEBIAN_CODENAME}-${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
 
 		##############################################################
 		# For details on DEB package generation see:
@@ -172,7 +172,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		# Enable debug message
 		set ( CPACK_DEBIAN_PACKAGE_DEBUG 1 )
 
-		set (CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_REVISION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
+		set (CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_REVISION}${DEBIAN_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_DEBIAN_PACKAGE_SECTION "contrib/misc")
@@ -221,7 +221,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	elseif ( RPM_SYSTEM_NAME )
 		# This variable will be defined if the platfrom support RPM
-		message (STATUS "Configuring RPM package on ${LINUX_NAME}-${LINUX_VER}-${SYS_ARCH}")
+		message (STATUS "Configuring RPM package on ${LINUX_NAME}-${LINUX_VER} -> ${RPM_SYSTEM_NAME}.${SYS_ARCH}")
 
 		##############################################################
 		# For details on RPM package generation see:
@@ -234,7 +234,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		#Enable trace during packaging
 		set(CPACK_RPM_PACKAGE_DEBUG 1)
 
-		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${PACKAGE_REVISION}-${RPM_SYSTEM_NAME}-${SYS_ARCH}" )
+		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${PACKAGE_REVISION}.${RPM_SYSTEM_NAME}.${SYS_ARCH}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_RPM_PACKAGE_RELEASE ${PACKAGE_REVISION})
@@ -255,10 +255,10 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 		#Directory overrides
 
-		if (${BIT_MODE} MATCHES "64")
-			set( C_LIB			usr/lib64/condor )
+		if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
+			set( C_LIB			usr/lib/condor )	
 		else()
-			set( C_LIB			usr/lib/condor )
+			set( C_LIB			usr/lib64/condor )
 		endif ()
 		
 		set( C_BIN			usr/bin )
