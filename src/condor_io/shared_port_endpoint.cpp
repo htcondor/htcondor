@@ -115,10 +115,12 @@ SharedPortEndpoint::~SharedPortEndpoint()
 		delete wake_select_dest;
 	}
 
-	DWORD wait_result = WaitForSingleObject(thread_killed, 100);
-	if(wait_result != WAIT_OBJECT_0)
-		dprintf(D_ALWAYS, "SharedPortEndpoint: Destructor: Problem in thread shutdown notification: %d\n", GetLastError());
-	CloseHandle(thread_killed);
+	if( thread_killed != INVALID_HANDLE_VALUE ) {
+		DWORD wait_result = WaitForSingleObject(thread_killed, 100);
+		if(wait_result != WAIT_OBJECT_0)
+			dprintf(D_ALWAYS, "SharedPortEndpoint: Destructor: Problem in thread shutdown notification: %d\n", GetLastError());
+		CloseHandle(thread_killed);
+	}
 #endif
 }
 

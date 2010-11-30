@@ -29,6 +29,9 @@
 #include "emit.h"
 #include "directory.h"
 #include "condor_getcwd.h"
+#ifdef WIN32
+__inline __int64 abs(__int64 x) { return _abs64(x); }
+#endif
 
 static void setup(void);
 static void cleanup(void);
@@ -122,7 +125,9 @@ static bool test_remove_full_path_dir_current(void);
 static bool test_remove_entire_directory_filepath(void);
 static bool test_remove_entire_directory_dir_empty(void);
 static bool test_remove_entire_directory_dir_full(void);
-static bool test_recursive_chown(void);
+#ifndef WIN32
+static bool test_recursive_chown(void);	//This one might work if we rewrote it.
+#endif
 static bool test_standalone_is_directory_null(void);
 static bool test_standalone_is_directory_not_exist(void);
 static bool test_standalone_is_directory_file(void);
@@ -265,7 +270,9 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_remove_entire_directory_filepath);
 	driver.register_function(test_remove_entire_directory_dir_empty);
 	driver.register_function(test_remove_entire_directory_dir_full);
+#ifndef WIN32
 	driver.register_function(test_recursive_chown);
+#endif
 	driver.register_function(test_standalone_is_directory_null);
 	driver.register_function(test_standalone_is_directory_not_exist);
 	driver.register_function(test_standalone_is_directory_file);
@@ -400,12 +407,13 @@ static void setup() {
 	cut_assert_z( chdir("..") );
 	
 	// Create some symbolic links
+#ifndef WIN32
 	MyString link;
 	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
 	cut_assert_z( symlink(link.Value(), "symlink_file") );
 	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
 	cut_assert_z( symlink(link.Value(), "symlink_dir") );
-	
+#endif
 	// Get back to original directory
 	cut_assert_z( chdir(original_dir.Value()) );
 
@@ -2223,7 +2231,8 @@ static bool test_remove_entire_directory_dir_full() {
 	}
 	PASS;
 }
-
+//This test might work if we wrote another version of it for Windows.
+#ifndef WIN32
 static bool test_recursive_chown() {
 	emit_test("Test that Recursive_Chown() returns true and changes the owner "
 		"and group ids.");
@@ -2257,7 +2266,7 @@ static bool test_recursive_chown() {
 	}
 	PASS;
 }
-
+#endif
 static bool test_standalone_is_directory_null() {
 	emit_test("Test that the standalone IsDirectory() returns false for a NULL "
 		"path.");

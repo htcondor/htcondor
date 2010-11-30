@@ -1,0 +1,11 @@
+--- condor.boot.rpm	2010-08-12 17:31:24.000000000 -0500
++++ condor.boot.debian	2010-08-13 18:20:26.000000000 -0500
+@@ -29,7 +29,7 @@
+ # Description: Condor HTC computing platform
+ ### END INIT INFO
+ 
+-[ -f /etc/sysconfig/condor ] && . /etc/sysconfig/condor
++[ -f /etc/default/condor ] && . /etc/default/condor
+ 
+ # Ensure that the settings below are correct for your Condor
+ # installation.

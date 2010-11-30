@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_api.h"
+#include "condor_adtypes.h"
 #include "status_types.h"
 #include "totals.h"
 

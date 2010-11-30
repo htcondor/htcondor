@@ -172,6 +172,7 @@ class GahpServer : public Service {
 	int m_gahp_writefd;
 	int m_gahp_errorfd;
 	std::string m_gahp_error_buffer;
+	bool m_gahp_startup_failed;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
 	bool use_prefix;
@@ -309,7 +310,7 @@ class GahpClient : public Service {
 
 		Proxy *getMasterProxy();
 
-		bool isStarted() { return server->m_gahp_pid != -1; }
+		bool isStarted() { return server->m_gahp_pid != -1 && !server->m_gahp_startup_failed; }
 		bool isInitialized() { return server->is_initialized; }
 
 		const char *getErrorString();

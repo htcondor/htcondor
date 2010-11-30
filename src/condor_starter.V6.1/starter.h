@@ -28,7 +28,7 @@
 #include "condor_privsep_helper.h"
 
 #if defined(LINUX)
-#include "glexec_privsep_helper.h"
+#include "glexec_privsep_helper.linux.h"
 #endif
 
 /** The starter class.  Basically, this class does some initialization

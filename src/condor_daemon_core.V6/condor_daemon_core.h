@@ -46,7 +46,7 @@
 #include "Queue.h"
 #include "MapFile.h"
 #ifdef WIN32
-#include "ntsysinfo.h"
+#include "ntsysinfo.WINDOWS.h"
 #endif
 #include "self_monitor.h"
 //#include "stdsoap2.h"

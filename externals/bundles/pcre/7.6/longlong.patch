@@ -1,6 +1,5 @@
-diff -Naur pcre-7.6/configure pcre-7.6-patched/configure
---- pcre-7.6/configure	2008-01-28 08:50:17.000000000 -0600
-+++ pcre-7.6-patched/configure	2008-02-01 15:51:45.127935904 -0600
+--- configure.orig	2008-01-28 08:50:17.000000000 -0600
++++ configure	2008-02-01 15:51:45.127935904 -0600
 @@ -21153,12 +21153,8 @@
  { echo "$as_me:$LINENO: result: $ac_cv_type_long_long" >&5
  echo "${ECHO_T}$ac_cv_type_long_long" >&6; }

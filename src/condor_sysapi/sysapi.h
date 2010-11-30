@@ -18,9 +18,8 @@
  ***************************************************************/
 
 
-#ifndef SYSAPI_H
-#define SYSAPI_H
-
+#ifndef __CONDOR_SYSAPI_H__
+#define __CONDOR_SYSAPI_H__
 
 BEGIN_C_DECLS
 

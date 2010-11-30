@@ -564,7 +564,7 @@ int SafeSock::handle_incoming_packet()
 
 
 	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
-	                    0, (struct sockaddr *)&_who, fromlen );
+	                    0, (struct sockaddr *)&_who, (socklen_t*)fromlen );
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;

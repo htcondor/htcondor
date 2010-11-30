@@ -38,6 +38,7 @@
 
 #include "dc_lease_manager.h"
 
+using namespace std;
 
 const int dflag = D_ALWAYS | D_NOHEADER | D_FULLDEBUG;
 

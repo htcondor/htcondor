@@ -432,7 +432,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	peaceful_shutdown = false;
 
 #ifdef HAVE_EXT_GSOAP
-#ifdef COMPILE_SOAP_SSL
+#ifdef HAVE_EXT_OPENSSL
 	mapfile =  NULL;
 #endif
 #endif
@@ -2727,7 +2727,7 @@ DaemonCore::reconfig(void) {
 	}
 #endif
 #ifdef HAVE_EXT_GSOAP
-#ifdef COMPILE_SOAP_SSL
+#ifdef HAVE_EXT_OPENSSL
 	MyString subsys = MyString(get_mySubSystem()->getName());
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 
@@ -2755,7 +2755,7 @@ DaemonCore::reconfig(void) {
 			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
 		}
 	}
-#endif // COMPILE_SOAP_SSL
+#endif // HAVE_EXT_OPENSSL
 #endif // HAVE_EXT_GSOAP
 
 

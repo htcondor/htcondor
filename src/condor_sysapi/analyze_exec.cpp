@@ -47,11 +47,13 @@ sysapi_magic_check( char *executable )
 	if (!(buf.st_mode & S_IFREG)) {
 		return -1;
 	}
+
+#ifndef WINDOWS
 	if (!(buf.st_mode & S_IXUSR)) {
 		dprintf(D_ALWAYS, "Magic check warning. Executable '%s' not "
 			"executable\n", executable);
 	}
-
+#endif
 	return 0;
 }
 

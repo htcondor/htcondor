@@ -170,7 +170,7 @@ ReliSock::accept( ReliSock	&c )
 #ifndef WIN32 /* Unix */
 	errno = 0;
 #endif
-	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, &addr_sz)) < 0) {
+	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, (socklen_t*)&addr_sz)) < 0) {
 #ifndef WIN32 /* Unix */
 		if ( errno == EMFILE ) {
 			_condor_fd_panic ( __LINE__, __FILE__ ); /* This calls dprintf_exit! */

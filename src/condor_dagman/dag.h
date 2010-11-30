@@ -805,7 +805,7 @@ class Dag {
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
 
-    // Documentation on ReadUserLog is present in condor_c++_util
+    // Documentation on ReadUserLog is present in condor_utils
 	ReadMultipleUserLogs _condorLogRdr;
 
 		// Object to read events from Stork logs.
