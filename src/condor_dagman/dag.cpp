@@ -245,10 +245,6 @@ bool Dag::Bootstrap (bool recovery)
 					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
 		_jobstateLog.WriteRecoveryStarted();
 		_jobstateLog.InitializeRecovery();
-//TEMPTEMP -- what about recovery finished if we return false? -- maybe make a 'recovery failed' meta-event
-//TEMPTEMP -- think about caching for jobstate.log
-//TEMPTEPM -- maybe don't open/close the file every time
-//TEMPTEMP -- test removing jobstate.log file while job is on hold
 
 		// as we read the event log files, we emit lots of imformation into
 		// the logfile. If this is on NFS, then we pay a *very* large price
@@ -267,6 +263,7 @@ bool Dag::Bootstrap (bool recovery)
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 							_nfsLogIsError, recovery, _defaultNodeLog ) ) {
 					debug_cache_stop_caching();
+					_jobstateLog.WriteRecoveryFailure();
 					return false;
 				}
 			}
@@ -279,6 +276,7 @@ bool Dag::Bootstrap (bool recovery)
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
+				_jobstateLog.WriteRecoveryFailure();
 				return false;
 			}
 		}
@@ -286,6 +284,7 @@ bool Dag::Bootstrap (bool recovery)
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
+				_jobstateLog.WriteRecoveryFailure();
 				return false;
 			}
 		}
@@ -297,6 +296,7 @@ bool Dag::Bootstrap (bool recovery)
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 							_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
 					debug_cache_stop_caching();
+					_jobstateLog.WriteRecoveryFailure();
 					return false;
 				}
 				_postScriptQ->Run( job->_scriptPost );
@@ -467,6 +467,14 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
 		debug_printf( DEBUG_NORMAL, "       %s Recovery Complete\n", name);
 		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
+	}
+
+		// For performance reasons, we don't want to flush the jobstate
+		// log file in recovery mode.  Outside of recovery mode, though
+		// we want to do that so that the jobstate log file stays
+		// current with the status of the workflow.
+	if ( !_recovery ) {
+		_jobstateLog.Flush();
 	}
 
 	return result;
@@ -949,7 +957,6 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			}
 
 				// Log post script success or failure if necessary.
-//TEMPTEMP -- get rid of these ifs? -- just have call to unconfigured JobstateLog object be a noop?
 			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
 
 				//

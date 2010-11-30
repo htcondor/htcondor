@@ -1124,25 +1124,25 @@ void condor_event_timer () {
 					  justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
 
-    // If the log has grown
-    if( dagman.dag->DetectCondorLogGrowth() ) {
+	// If the log has grown
+	if( dagman.dag->DetectCondorLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_rescue( EXIT_ERROR );
 			return;
-        }
-    }
+		}
+	}
 
-    if( dagman.dag->DetectDaPLogGrowth() ) {
-      if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
-	debug_printf( DEBUG_NORMAL,
-			"ProcessLogEvents(DAPLOG) returned false\n");
-	dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-	main_shutdown_rescue( EXIT_ERROR );
-	return;
-      }
-    }
-  
+	if( dagman.dag->DetectDaPLogGrowth() ) {
+		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
+			debug_printf( DEBUG_NORMAL,
+						"ProcessLogEvents(DAPLOG) returned false\n");
+			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+			main_shutdown_rescue( EXIT_ERROR );
+			return;
+		}
+	}
+
     // print status if anything's changed (or we're in a high debug level)
     if( prevJobsDone != dagman.dag->NumNodesDone()
         || prevJobs != dagman.dag->NumNodes()
@@ -1150,7 +1150,7 @@ void condor_event_timer () {
         || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumNodesReady()
         || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
-	|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
+		|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
 
@@ -1160,7 +1160,7 @@ void condor_event_timer () {
         prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumNodesReady();
         prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
-	prevJobsHeld = dagman.dag->NumHeldJobProcs();
+		prevJobsHeld = dagman.dag->NumHeldJobProcs();
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();

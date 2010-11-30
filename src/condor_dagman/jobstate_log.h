@@ -57,12 +57,18 @@ public:
 	*/
 	const char *LogFile() { return _jobstateLogFile; }
 
+	//TEMPTEMP -- document
+	void Flush();
+
 	/** Set up the data structures we need to avoid re-writing previously-
 		written events when we're in recovery mode.
 	*/
 	void InitializeRecovery();
 
-		//TEMPTEMP -- document
+	/** Initialize the Pegasus sequence number to the correct value
+		when we're running a rescue DAG (start up one after the last
+		sequence number we've already written).
+	*/
 	void InitializeRescue();
 
 	/** Write the DAGMAN_STARTED "event".
@@ -82,6 +88,10 @@ public:
 	/** Write the RECOVERY_FINISHED "event".
 	*/
 	void WriteRecoveryFinished();
+
+	/** Write the RECOVERY_FAILURE "event".
+	*/
+	void WriteRecoveryFailure();
 
 	/** Write an actual event.  Note that not all events will be written
 		-- only the ones that Pegasus cares about.
@@ -169,6 +179,13 @@ private:
 	static const char *POST_SCRIPT_STARTED_NAME;
 	static const char *POST_SCRIPT_SUCCESS_NAME;
 	static const char *POST_SCRIPT_FAILURE_NAME;
+	static const char *INTERNAL_NAME;
+	static const char *DAGMAN_STARTED_NAME;
+	static const char *DAGMAN_FINISHED_NAME;
+	static const char *RECOVERY_STARTED_NAME;
+	static const char *RECOVERY_FINISHED_NAME;
+	static const char *RECOVERY_FAILURE_NAME;
+	static const char *SUBMIT_FAILURE_NAME;
 
 		// Default Condor ID to use to check for invalid IDs.
 	static const CondorID _defaultCondorID;

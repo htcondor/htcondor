@@ -1,6 +1,6 @@
 //TEMPTEMP -- test what happens with an existing jobstate.log file, but just re-running the DAG normally...
-//TEMPTEMP -- re-read the jobstate.log file instead of using the sequence number file...
 //TEMPTEMP -- test running a rescue DAG in recovery mode...
+//TEMPTEMP -- might have to do some fflushes
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -35,6 +35,13 @@ const char *JobstateLog::PRE_SCRIPT_FAILURE_NAME = "PRE_SCRIPT_FAILURE";
 const char *JobstateLog::POST_SCRIPT_STARTED_NAME = "POST_SCRIPT_STARTED";
 const char *JobstateLog::POST_SCRIPT_SUCCESS_NAME = "POST_SCRIPT_SUCCESS";
 const char *JobstateLog::POST_SCRIPT_FAILURE_NAME = "POST_SCRIPT_FAILURE";
+const char *JobstateLog::INTERNAL_NAME = "INTERNAL";
+const char *JobstateLog::DAGMAN_STARTED_NAME = "DAGMAN_STARTED";
+const char *JobstateLog::DAGMAN_FINISHED_NAME = "DAGMAN_FINISHED";
+const char *JobstateLog::RECOVERY_STARTED_NAME = "RECOVERY_STARTED";
+const char *JobstateLog::RECOVERY_FINISHED_NAME = "RECOVERY_FINISHED";
+const char *JobstateLog::RECOVERY_FAILURE_NAME = "RECOVERY_FAILURE";
+const char *JobstateLog::SUBMIT_FAILURE_NAME = "SUBMIT_FAILURE";
 
 const CondorID JobstateLog::_defaultCondorID;
 
@@ -57,6 +64,22 @@ JobstateLog::~JobstateLog()
 }
 
 //---------------------------------------------------------------------------
+void
+JobstateLog::Flush()
+{
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
+	if ( fflush( _outfile ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"Error flushing output to jobstate log file %s.\n",
+					_jobstateLogFile );
+		main_shutdown_graceful();
+	}
+}
+
+//---------------------------------------------------------------------------
 // The purpose of this method is to allow us (in recovery mode) to avoid
 // re-writing duplicates of events that we already wrote in the pre-recovery
 // part of the jobstate.log file.  We do a two-part check: first, we find
@@ -68,6 +91,11 @@ JobstateLog::~JobstateLog()
 // Then, in recovery mode, if we get an event with a timestamp that matches
 // the last pre-recovery timestamp, we check it against the list of "last
 // timestamp" lines, and don't write it if it's in that list.
+
+// Note: for this to work correctly, it's vital that the events we generate
+// in recovery mode exactly match how they were output in "non-recovery"
+// mode, so we can compare timestamps, and, if the timestamp matches
+// the last pre-recovery timestamp, the entire event string.
 void
 JobstateLog::InitializeRecovery()
 {
@@ -101,7 +129,6 @@ JobstateLog::InitializeRecovery()
 	MyString line;
 	off_t startOfLastTimestamp = 0;
 
-//TEMPTEMP -- could events be out of order? -- maybe just put everything into the set of strings?
 	while ( true ) {
 		off_t currentOffset = ftell( infile );
 		if ( !line.readLine( infile ) ) {
@@ -114,8 +141,10 @@ JobstateLog::InitializeRecovery()
 		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
 				// We don't want to look at "INTERNAL" events here, or we'll
 				// get goofed up by our own DAGMAN_STARTED event, etc.
-			if ( nodeName != "INTERNAL" ) {
-				//TEMPTEMP -- > rather than != is important here if timestamps are out of order
+			if ( nodeName != INTERNAL_NAME ) {
+					// Note: we don't absolutely rely on the timestamps
+					// being in order -- the > below rather than == is
+					// important in that case.
 				if ( newTimestamp > _lastTimestampWritten ) {
 					startOfLastTimestamp = currentOffset;
 					_lastTimestampWritten = newTimestamp;
@@ -143,7 +172,7 @@ JobstateLog::InitializeRecovery()
 		int seqNum;
 		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
 			if ( (newTimestamp == _lastTimestampWritten) &&
-						(nodeName != "INTERNAL") ) {
+						(nodeName != INTERNAL_NAME) ) {
 				_lastTimestampLines.insert( line );
 				debug_printf( DEBUG_DEBUG_2,
 							"Appended <%s> to _lastTimestampLines\n",
@@ -156,7 +185,8 @@ JobstateLog::InitializeRecovery()
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- get the next sequence number...
+// Here we re-read the jobstate.log file to find out what sequence number
+// we should start with when running a rescue DAG.
 void
 JobstateLog::InitializeRescue()
 {
@@ -207,10 +237,11 @@ JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 	}
 
 	MyString info;
-	info.sprintf( "INTERNAL *** DAGMAN_STARTED %d.%d ***",
+	info.sprintf( "%s *** %s %d.%d ***", INTERNAL_NAME, DAGMAN_STARTED_NAME,
 				DAGManJobId._cluster, DAGManJobId._proc );
 
 	Write( NULL, info );
+	Flush();
 }
 
 //---------------------------------------------------------------------------
@@ -222,9 +253,11 @@ JobstateLog::WriteDagmanFinished( int exitCode )
 	}
 
 	MyString info;
-	info.sprintf( "INTERNAL *** DAGMAN_FINISHED %d ***", exitCode );
+	info.sprintf( "%s *** %s %d ***", INTERNAL_NAME, DAGMAN_FINISHED_NAME,
+				exitCode );
 
 	Write( NULL, info );
+	Flush();
 }
 
 //---------------------------------------------------------------------------
@@ -235,7 +268,8 @@ JobstateLog::WriteRecoveryStarted()
 		return;
 	}
 
-	MyString info( "INTERNAL *** RECOVERY_STARTED ***" );
+	MyString info;
+	info.sprintf( "%s *** %s ***", INTERNAL_NAME, RECOVERY_STARTED_NAME );
 	Write( NULL, info );
 }
 
@@ -247,8 +281,24 @@ JobstateLog::WriteRecoveryFinished()
 		return;
 	}
 
-	MyString info( "INTERNAL *** RECOVERY_FINISHED ***" );
+	MyString info;
+	info.sprintf( "%s *** %s ***", INTERNAL_NAME, RECOVERY_FINISHED_NAME );
 	Write( NULL, info );
+	Flush();
+}
+
+//---------------------------------------------------------------------------
+void
+JobstateLog::WriteRecoveryFailure()
+{
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
+	MyString info;
+	info.sprintf( "%s *** %s ***", INTERNAL_NAME, RECOVERY_FAILURE_NAME );
+	Write( NULL, info );
+	Flush();
 }
 
 //---------------------------------------------------------------------------
@@ -360,7 +410,7 @@ JobstateLog::WriteSubmitFailure( Job *node )
 	}
 
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, "SUBMIT_FAILED", "-" );
+	Write( &timestamp, node, SUBMIT_FAILURE_NAME, "-" );
 }
 
 //---------------------------------------------------------------------------
@@ -380,14 +430,12 @@ JobstateLog::Write( const time_t *eventTimeP, Job *node,
 void
 JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 {
-//TMEPTEMP -- it's important that any event writes the same string every time (e.g., recovery mode and "regular" mode)
 		//
 		// Here for "fake" events like JOB_SUCCESS, the event will get
 		// the timestamp of the last "real" event from the job; this is
 		// so that we can correctly avoid re-writing the "fake" events
 		// in recovery mode.
 		//
-//TEMPTEMP -- make sure time is valid if in recovery mode?
 	time_t eventTime;
 	if ( eventTimeP != NULL && *eventTimeP != 0 ) {
 		eventTime = *eventTimeP;
@@ -446,7 +494,8 @@ JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- partial parsing only -- for recovery mode & rescue...
+// This does only partial parsing -- only what we need for recovery mode
+// and rescue initialization.
 bool
 JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 			MyString &nodeName, int &seqNum )
