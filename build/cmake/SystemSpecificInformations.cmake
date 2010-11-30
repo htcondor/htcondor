@@ -114,6 +114,7 @@ if(UNIX)
 	set(RPM_SYSTEM_NAME "fc${CMAKE_MATCH_1}")
       endif(LINUX_ISSUE MATCHES "Fedora")
       # Scientific Linux case
+      # Scientific Linux SL release 5.5 (Boron)
       if(LINUX_ISSUE MATCHES "Scientific Linux")
         string(REGEX MATCH "release ([0-9]+\\.[0-9]+)" CENTOS "${LINUX_ISSUE}")
         set(LINUX_NAME "ScientificLinux")        
@@ -121,6 +122,7 @@ if(UNIX)
 	set(RPM_SYSTEM_NAME "rhel${CMAKE_MATCH_1}")
       endif(LINUX_ISSUE MATCHES "Scientific Linux")
       # CentOS case
+      # CentOS release 5.5 (Final)
       if(LINUX_ISSUE MATCHES "CentOS")
         string(REGEX MATCH "release ([0-9]+\\.[0-9]+)" CENTOS "${LINUX_ISSUE}")
         set(LINUX_NAME "CentOS")        
@@ -128,8 +130,9 @@ if(UNIX)
 	set(RPM_SYSTEM_NAME "rhel${CMAKE_MATCH_1}")
       endif(LINUX_ISSUE MATCHES "CentOS")
       # Redhat case
+      # Red Hat Enterprise Linux Server release 5 (Tikanga)
       if(LINUX_ISSUE MATCHES "Red Hat")
-        string(REGEX MATCH "release ([0-9]+\\.[0-9]+)" REDHAT "${LINUX_ISSUE}")
+        string(REGEX MATCH "release ([0-9]+\\.*[0-9]*)" REDHAT "${LINUX_ISSUE}")
         set(LINUX_NAME "Redhat")        
 	set(LINUX_VER "${CMAKE_MATCH_1}")
 	set(RPM_SYSTEM_NAME "rhel${CMAKE_MATCH_1}")
@@ -182,6 +185,20 @@ if(UNIX)
 	  ENDIF(NOT DPKG_CMD)
 	  EXECUTE_PROCESS(COMMAND "${DPKG_CMD}" --print-architecture
 		 OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+		 OUTPUT_STRIP_TRAILING_WHITESPACE
+		 )
+	endif ()
+	
+	#Find Codename for Debian system 
+	if ((LINUX_NAME STREQUAL "Debian") OR (LINUX_NAME STREQUAL "Ubuntu"))
+	  # $ lsb_release -cs
+	  FIND_PROGRAM(LSB_CMD lsb_release)
+	  IF(NOT LSB_CMD)
+		 # Cannot find lsb_release in your path, default to none
+		 SET(DEBIAN_CODENAME "")
+	  ENDIF(NOT LSB_CMD)
+	  EXECUTE_PROCESS(COMMAND "${LSB_CMD}" -cs
+		 OUTPUT_VARIABLE DEBIAN_CODENAME
 		 OUTPUT_STRIP_TRAILING_WHITESPACE
 		 )
 	endif ()

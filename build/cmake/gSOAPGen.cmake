@@ -28,13 +28,21 @@ if ( HAVE_EXT_GSOAP )
 	set ( ${_DAEMON}_SOAP_HDRS
 		soap_${_DAEMON}H.h
 		soap_${_DAEMON}Stub.h )
+		
+	if (WINDOWS)
+	  set(ISEP "\;")
+	else()
+	  set(ISEP :)
+	endif()
+	
+	#dprint("ISEP=${ISEP}")
 
 	#TODO update all the output targets so clean will 
 	#remove all soap generated things.  
 	add_custom_command(
 		OUTPUT ${${_DAEMON}_SOAP_SRCS} ${${_DAEMON}_SOAP_HDRS} condor.xsd
 		COMMAND ${SOAPCPP2}
-		ARGS -I${DAEMON_CORE}:${CMAKE_CURRENT_SOURCE_DIR} -S -L -x -p soap_${_DAEMON} ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_${_DAEMON}.h
+		ARGS -I${DAEMON_CORE}${ISEP}${CMAKE_CURRENT_SOURCE_DIR} -S -L -x -p soap_${_DAEMON} ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_${_DAEMON}.h
 		COMMENT "Generating ${_DAEMON} soap files" )
 	
 	add_custom_target(

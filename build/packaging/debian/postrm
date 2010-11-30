@@ -32,15 +32,15 @@ deconfigure_condor(){
 
 purge_files(){
         #deluser --quiet --system condor
+        #Remove only files for folder that is created as part of package
         rm -rf /etc/condor/*
         rm -rf /usr/share/doc/condor/*
-        rm -rf /var/lib/condor/spool/*
-        rm -rf /var/lib/condor/execute/*
-        rm -rf /var/lib/condor/log/*
-        rm -rf /var/run/condor/*
-        rm -rf /var/log/condor/*
-        rm -rf /var/log/condor/.[a-z]*
-        rm -rf /var/lock/condor/*       
+
+        #Remove directories that we create manually        
+        rm -rf /var/run/condor
+        rm -rf /var/lock/condor
+        rm -rf /var/log/condor
+        rm -rf /var/lib/condor
 }
 
 
