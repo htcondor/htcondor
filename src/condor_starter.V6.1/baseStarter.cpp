@@ -54,6 +54,9 @@
 extern "C" int get_random_int();
 extern void main_shutdown_fast();
 
+const char* JOB_AD_FILENAME = ".job.ad";
+const char* MACHINE_AD_FILENAME = ".machine.ad";
+
 /* CStarter class implementation */
 
 CStarter::CStarter()
@@ -1352,8 +1355,8 @@ CStarter::createTempExecuteDir( void )
 	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
 	if (cpsh != NULL) {
 		cpsh->initialize_sandbox(WorkingDir.Value());
-	}
-	else {
+		WriteAdFiles();
+	} else {
 		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
@@ -1362,6 +1365,7 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
+		WriteAdFiles();
 #if !defined(WIN32)
 		if (use_chown) {
 			priv_state p = set_root_priv();
@@ -2790,3 +2794,65 @@ CStarter::exitAfterGlexec( int code )
 	exit( code );
 }
 #endif
+
+bool
+CStarter::WriteAdFiles()
+{
+
+	ClassAd* ad;
+	const char* dir = this->GetWorkingDir();
+	MyString ad_str, filename;
+	FILE* fp;
+	bool ret_val = true;
+
+	// Write the job ad first
+	ad = this->jic->jobClassAd();
+	if (ad != NULL)
+	{
+		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+		fp = safe_fopen_wrapper(filename.Value(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job ad: "
+						"%s (errno %d)\n", filename.Value(),
+						strerror(errno), errno);
+			ret_val = false;
+		}
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
+	}
+	else
+	{
+		// If there is no job ad, this is a problem
+		ret_val = false;
+	}
+
+	// Write the machine ad
+	ad = this->jic->machClassAd();
+	if (ad != NULL)
+	{
+		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
+		fp = safe_fopen_wrapper(filename.Value(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "
+						"ad: %s (errno %d)\n", filename.Value(),
+					strerror(errno), errno);
+			ret_val = false;
+		}
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
+	}
+
+	return ret_val;
+}

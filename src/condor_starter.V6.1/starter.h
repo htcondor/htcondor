@@ -326,6 +326,7 @@ private:
 	bool getJobClaimId(MyString &result);
 
 
+	bool WriteAdFiles();
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
