@@ -879,6 +879,7 @@ void main_init (int argc, char ** const argv) {
 		// files list accordingly.
 		//
 	if ( rescueDagNum > 0 ) {
+//TEMPTEMP -- need to update seq nums in here somewhere?
 		dagman.rescueFileToRun = RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
@@ -946,7 +947,6 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
-	Job::RestorePegasusNextSequenceNum( dagman.primaryDagFile.Value() );
 
     //
     // Parse the input files.  The parse() routine
@@ -977,6 +977,9 @@ void main_init (int argc, char ** const argv) {
 	}
 
 	dagman.dag->GetJobstateLog().WriteDagmanStarted( dagman.DAGManJobId );
+	if ( rescueDagNum > 0 ) {
+		dagman.dag->GetJobstateLog().InitializeRescue();
+	}
 
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);

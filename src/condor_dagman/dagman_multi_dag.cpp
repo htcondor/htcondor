@@ -219,13 +219,3 @@ RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
 		}
 	}
 }
-
-//-------------------------------------------------------------------------
-MyString
-SeqNumFileName(const char *primaryDagFile)
-{
-	MyString fileName( primaryDagFile );
-	fileName += ".seq_num";
-
-	return fileName;
-}

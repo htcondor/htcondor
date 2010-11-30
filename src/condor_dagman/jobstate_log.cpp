@@ -1,5 +1,6 @@
+//TEMPTEMP -- test what happens with an existing jobstate.log file, but just re-running the DAG normally...
 //TEMPTEMP -- re-read the jobstate.log file instead of using the sequence number file...
-//TEMPTEMP -- don't close the jobstate.log file between writes...
+//TEMPTEMP -- test running a rescue DAG in recovery mode...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -109,7 +110,8 @@ JobstateLog::InitializeRecovery()
 
 		time_t newTimestamp;
 		MyString nodeName;
-		if ( ParseLine( line, newTimestamp, nodeName ) ) {
+		int seqNum;
+		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
 				// We don't want to look at "INTERNAL" events here, or we'll
 				// get goofed up by our own DAGMAN_STARTED event, etc.
 			if ( nodeName != "INTERNAL" ) {
@@ -122,7 +124,7 @@ JobstateLog::InitializeRecovery()
 		}
 	}
 
-	debug_printf( DEBUG_DEBUG_2, "_lastTimestampWritten: %ld\n",
+	debug_printf( DEBUG_DEBUG_2, "_lastTimestampWritten: %lu\n",
 				(unsigned long)_lastTimestampWritten );
 
 		//
@@ -138,7 +140,8 @@ JobstateLog::InitializeRecovery()
 	while ( line.readLine( infile ) ) {
 		time_t newTimestamp;
 		MyString nodeName;
-		if ( ParseLine( line, newTimestamp, nodeName ) ) {
+		int seqNum;
+		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
 			if ( (newTimestamp == _lastTimestampWritten) &&
 						(nodeName != "INTERNAL") ) {
 				_lastTimestampLines.insert( line );
@@ -150,6 +153,49 @@ JobstateLog::InitializeRecovery()
 	}
 
 	fclose( infile );
+}
+
+//---------------------------------------------------------------------------
+//TEMPTEMP -- get the next sequence number...
+void
+JobstateLog::InitializeRescue()
+{
+	debug_printf( DEBUG_DEBUG_2, "JobstateLog::InitializeRescue()\n" );
+
+	if ( !_jobstateLogFile ) {
+		return;
+	}
+
+	FILE *infile = safe_fopen_wrapper( _jobstateLogFile, "r" );
+	if ( !infile ) {
+			// This is a fatal error, because by the time we get here,
+			// we should, at the very least, have written the
+			// DAGMAN_STARTED "event".
+		debug_printf( DEBUG_QUIET,
+					"Could not open jobstate log file %s for reading.\n",
+					_jobstateLogFile );
+		main_shutdown_graceful();
+		return;
+	}
+
+	int maxSeqNum = 0;
+	MyString line;
+
+	while ( line.readLine( infile ) ) {
+		time_t newTimestamp;
+		MyString nodeName;
+		int seqNum;
+		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
+			maxSeqNum = MAX( maxSeqNum, seqNum );
+		}
+	}
+
+	fclose( infile );
+
+	debug_printf( DEBUG_DEBUG_2,
+				"Max sequence num in jobstate.log file: %d\n", maxSeqNum );
+
+	Job::SetPegasusNextSequenceNum( maxSeqNum + 1 );
 }
 
 //---------------------------------------------------------------------------
@@ -224,6 +270,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 		eventName = eventName + strlen( prefix );
 	}
 
+//TEMPTEMP -- document format: <timestamp> <node name> <event name> <condor id> <pegasus site> <?> <sequence number> (varies some)
 	if ( eventName != NULL ) {
 		MyString condorID;
 		CondorID2Str( event->cluster, event->proc, condorID );
@@ -399,15 +446,20 @@ JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- partial parsing only -- for recovery mode...
+//TEMPTEMP -- partial parsing only -- for recovery mode & rescue...
 bool
 JobstateLog::ParseLine( MyString &line, time_t &timestamp,
-			MyString &nodeName )
+			MyString &nodeName, int &seqNum )
 {
 	line.chomp();
 	line.Tokenize();
 	const char* timestampTok = line.GetNextToken( " ", false );
 	const char* nodeNameTok = line.GetNextToken( " ", false );
+	(void)line.GetNextToken( " ", false ); // event name
+	(void)line.GetNextToken( " ", false ); // condor id
+	(void)line.GetNextToken( " ", false ); // pegasus site
+	(void)line.GetNextToken( " ", false ); //TEMPTEMP
+	const char* seqNumTok = line.GetNextToken( " ", false );
 
 	if ( (timestampTok == NULL) || (nodeNameTok == NULL) ) {
 		debug_printf( DEBUG_QUIET, "Warning: error parsing "
@@ -424,6 +476,17 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 	}
 
 	nodeName = nodeNameTok;
+
+	seqNum = 0;
+	if ( seqNumTok ) {
+		items = sscanf( seqNumTok, "%d", &seqNum );
+		if ( items != 1 ) {
+			debug_printf( DEBUG_QUIET, "Warning: error reading "
+						"sequence number in jobstate.log file line <%s>\n",
+						line.Value() );
+			return false;
+		}
+	}
 
 	return true;
 }

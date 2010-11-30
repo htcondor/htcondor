@@ -430,9 +430,6 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 			RenameRescueDagsAfter(shallowOpts.primaryDagFile.Value(),
 						shallowOpts.dagFiles.number() > 1, 0, maxRescueDagNum);
 		}
-		MyString seqNumFile = SeqNumFileName(
-					shallowOpts.primaryDagFile.Value() );
-		unlink( seqNumFile.Value() );
 	}
 
 		// Check whether we're automatically running a rescue DAG -- if

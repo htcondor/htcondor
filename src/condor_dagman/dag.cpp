@@ -1988,8 +1988,6 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile)
 	_catThrottles.PrintThrottles( fp );
 
     fclose( fp );
-
-	Job::SavePegasusNextSequenceNum( dagFile );
 }
 
 //===========================================================================

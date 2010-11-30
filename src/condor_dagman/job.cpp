@@ -33,7 +33,6 @@
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 int Job::NOOP_NODE_PROCID = INT_MAX;
 int Job::_nextPegasusSeqNum = 1;
-const char *Job::SEQ_NUM_KEYWORD = "next_seq_num";
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the queue_t enum
@@ -927,74 +926,6 @@ Job::GetPegasusSequenceNum()
 	}
 
 	return _pegasusSeqNum;
-}
-
-//---------------------------------------------------------------------------
-bool
-Job::SavePegasusNextSequenceNum( const char *primaryDagFile )
-{
-	MyString seqNumFile = SeqNumFileName( primaryDagFile );
-
-	FILE *fp = safe_fopen_wrapper( seqNumFile.Value(), "w" );
-	if ( fp == NULL ) {
-		debug_printf( DEBUG_QUIET, "Could not open sequence number file %s "
-					"for writing.\n", seqNumFile.Value() );
-		return false;
-	}
-
-	fprintf( fp, "%s %d\n", SEQ_NUM_KEYWORD, _nextPegasusSeqNum );
-
-	fclose( fp );
-
-	return true;
-}
-
-//---------------------------------------------------------------------------
-bool
-Job::RestorePegasusNextSequenceNum( const char *primaryDagFile )
-{
-	MyString seqNumFile = SeqNumFileName( primaryDagFile );
-
-	if ( access( seqNumFile.Value(), F_OK ) != 0 ) {
-			// File not existing is not an error -- that's the normal case.
-		return true;
-	}
-
-	StringList seqNumList;
-	MyString msg = MultiLogFiles::getValuesFromFile( seqNumFile,
-				SEQ_NUM_KEYWORD, seqNumList );
-	if ( msg != "" ) {
-		debug_printf( DEBUG_QUIET, "Could not get next sequence number "
-					"value from file %s\n", seqNumFile.Value() );
-		return false;
-	}
-
-	if ( seqNumList.number() > 1 ) {
-		debug_printf( DEBUG_QUIET, "Error: file %s contains more than "
-					"one %s value\n", seqNumFile.Value(),
-					SEQ_NUM_KEYWORD );
-		return false;
-	}
-
-	seqNumList.rewind();
-	const char *seqNum = seqNumList.next();
-	char *tmp;
-	_nextPegasusSeqNum = strtol( seqNum, &tmp, 10 );
-	if ( tmp == seqNum ) {
-		debug_printf( DEBUG_QUIET, "Invalid sequence number value (%s)\n",
-					seqNum );
-		return false;
-	}
-
-	debug_printf( DEBUG_NORMAL, "Set next Pegasus sequence number "
-				"to %d (from file %s)\n", _nextPegasusSeqNum,
-				seqNumFile.Value() );
-
-		// Sequence number becomes invalid as soon as this DAG starts
-		// successfully.
-	unlink( seqNumFile.Value() );
-
-	return true;
 }
 
 //---------------------------------------------------------------------------

@@ -62,6 +62,9 @@ public:
 	*/
 	void InitializeRecovery();
 
+		//TEMPTEMP -- document
+	void InitializeRescue();
+
 	/** Write the DAGMAN_STARTED "event".
 		@param The Condor ID of the DAGMan job itself.
 	*/
@@ -133,12 +136,13 @@ private:
 
 	/** Parse (partially) a line of the jobstate.log file.
 		@param The line (altered by this method)
-		@param The time_t pointer to receive the timestamp of the event.
+		@param The time_t reference to receive the timestamp of the event.
 		@param A MyString to receive the node name.
+		@param An int reference to receive the sequence number.
 		@return true if parsing succeeded, false otherwise.
 	*/
 	static bool ParseLine( MyString &line, time_t &timestamp,
-				MyString &nodeName );
+				MyString &nodeName, int &seqNum );
 
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;

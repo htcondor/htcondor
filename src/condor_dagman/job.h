@@ -393,21 +393,10 @@ class Job {
 	*/
 	void ResetPegasusSequenceNum() { _pegasusSeqNum = 0; }
 
-	/** Save the next Pegasus sequence number, so we can pick up from
-		where we left off when running a rescue DAG.  (Note that we save
-		the next sequence number in a separate file, whose name is based
-		on the filename of the "primary" DAG file.)
-		@param The "primary" DAG file name
-		@return true if the operation succeeds, false otherwise
-	*/
-	static bool SavePegasusNextSequenceNum( const char *primaryDagFile );
-
-	/** Restore the next Pegasus sequence number.  (Note that it is *not*
-		an error for the sequence number file to not exist.)
-		@param The "primary" DAG file name
-		@return true if the operation succeeds, false otherwise
-	*/
-	static bool RestorePegasusNextSequenceNum( const char *primaryDagFile );
+	//TEMPTEMP -- document
+	static void SetPegasusNextSequenceNum( int nextSeqNum ) {
+		_nextPegasusSeqNum = nextSeqNum;
+	}
 
 	/** Set the last event time for this job to be the time of the given
 		event (this is used as the time for jobstate.log pseudo-events like
