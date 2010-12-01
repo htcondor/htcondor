@@ -3637,7 +3637,11 @@ WANT_HOLD_REASON = \
 \label{param:WantSuspend}
 \item[\Macro{WANT\_SUSPEND}]
   A boolean expression that, when \Expr{True},
-  tells Condor to evaluate the \MacroNI{SUSPEND} expression.
+  tells Condor to evaluate the \MacroNI{SUSPEND} expression to decide
+  whether to suspend a running job.
+  When not explicitly set, the \Condor{startd} exits with an error.
+  When explicitly set, but the evaluated value is anything other than
+  \Expr{True}, the value is utilized as if it were \Expr{False}.
 
 \label{param:WantVacate}
 \item[\Macro{WANT\_VACATE}]
@@ -10325,8 +10329,8 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   Use of these hooks requires the explicit definition of the
   keyword and the corresponding hook paths.
 
-\label{param:HookTranslate}
-\item[\Macro{<Keyword>\_HOOK\_TRANSLATE}]
+\label{param:HookTranslateJob}
+\item[\Macro{<Keyword>\_HOOK\_TRANSLATE\_JOB}]
   A Job Router hook,
   the full path to the program invoked when the Job Router has determined
   that a job meets the definition for a route.  
