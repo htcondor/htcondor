@@ -67,7 +67,19 @@ if( ! defined $ENV{_NMI_TASKNAME} ) {
 # Checking task type
 if ($taskname eq $TAR_TASK) { 
 	#Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
-	$execstr= "make externals && make -j4 package && make install && make tests";
+	#Reconfigure cmake variables for stripped tarball build
+
+	#Read back configuration from remote_pre stage
+	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+	while(<CMAKECONFIG>){
+		my($line) = $_;
+		$execstr = $line;
+		last;
+	}
+	close (CMAKECONFIG);
+
+	#Append extra argument
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 package && make install && make tests";
 
 } elsif  ($taskname eq $CONFIG_TASK){
 	#Reconfigure cmake variables for native package build
@@ -97,7 +109,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 package";
 } elsif  ($taskname eq $RPM_TASK){
 	#Building RPM
 	$execstr= "make -j4 package";

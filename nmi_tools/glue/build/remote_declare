@@ -51,24 +51,24 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	print TASKLIST $TAR_TASK;
 } else {
 	#Everything else
-	print TASKLIST $TAR_TASK;
 	print TASKLIST $UNSTRIPPED_TASK;
-}
 
-#Add native package build on Debian and Redhat
-if ($ENV{NMI_PLATFORM} =~ /deb/) {
-	#Debian
-	print TASKLIST $CONFIG_TASK;
-	print TASKLIST $DEB_TASK;
-	print TASKLIST $DEB_CHECK_TASK;
+	#Add native package build on Debian and Redhat
+	if ($ENV{NMI_PLATFORM} =~ /deb/) {
+		#Debian
+		print TASKLIST $CONFIG_TASK;
+		print TASKLIST $DEB_TASK;
+		print TASKLIST $DEB_CHECK_TASK;
 	
-} elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
-	#Redhat (3,4,5)
-	print TASKLIST $CONFIG_TASK;
-	print TASKLIST $RPM_TASK;
-	print TASKLIST $RPM_CHECK_TASK;
-}
+	} elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
+		#Redhat (3,4,5)
+		print TASKLIST $CONFIG_TASK;
+		print TASKLIST $RPM_TASK;
+		print TASKLIST $RPM_CHECK_TASK;
+	}
 
+	print TASKLIST $TAR_TASK;
+}
 
 close (TASKLIST);
 
