@@ -5,6 +5,7 @@
 
 \SynProg{\Condor{restart}}
 \ToolDebugOption
+\oOptnm{-graceful $|$ -fast  $|$ -peaceful}
 \ToolWhere
 \ToolArgsAffect
 
@@ -46,8 +47,15 @@ for further explanation.
 \begin{Options}
 	\ToolArgsDesc
 	\ToolDebugDesc
+        \OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)
+before restarting them}
+        \OptItem{\Opt{-fast}}{Quickly shutdown daemons
+before restarting them}
+        \OptItem{\Opt{-peaceful}}{Wait indefinitely for jobs to finish
+before shutting down daemons, prior to restarting them}
         \OptItem{\OptArg{-constraint}{expression}}{Apply this command only
         to machines matching the given ClassAd \Arg{expression}}
+
 \end{Options}
 
 \ExitStatus
