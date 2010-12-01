@@ -84,6 +84,9 @@ if (WITH_KRB5)
 
 		else()
 			set(KRB5_FOUND "${EXTERNAL_STAGE}/lib/libkrb5.a;${EXTERNAL_STAGE}/lib/libk5crypto.a;${EXTERNAL_STAGE}/lib/libcom_err.a;${EXTERNAL_STAGE}/lib/libkrb5support.a")
+			if ( AIX )
+				set (KRB5_FOUND "-Wl,-bstatic;${KRB5_FOUND};-Wl,-bdynamic")
+			endif()
 		endif()
 
 		append_var(CONDOR_EXTERNALS krb5)

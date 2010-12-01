@@ -196,7 +196,7 @@ int sysapi_disk_space_raw(const char * filename)
 #if defined(Solaris)
 	if(statvfs(filename, &statfsbuf) < 0) {
 #elif defined(AIX)
-		if(statfs((char *)filename, &statfsbuf) < 0) {
+	if(statfs((char *)filename, &statfsbuf) < 0) {
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif

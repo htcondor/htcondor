@@ -67,6 +67,9 @@
 
 		else()
 			set(PCRE_FOUND "${EXTERNAL_STAGE}/lib/libpcre.a")
+			if ( AIX )
+				set (PCRE_FOUND "-Wl,-bstatic;${PCRE_FOUND};-Wl,-bdynamic")
+			endif()
 		endif()
 
 		append_var(CONDOR_EXTERNALS pcre)
