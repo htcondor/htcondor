@@ -111,7 +111,7 @@ usage()
 	fprintf( stderr, "   -unset\t\t(unset a persistent config file expression)\n" );
 	fprintf( stderr, "   -runset\t\t(unset a runtime config file expression)\n" );
 
-	fprintf( stderr, "   -master\t\t(query the master [default])\n" );
+	fprintf( stderr, "   -master\t\t(query the master)\n" );
 	fprintf( stderr, "   -schedd\t\t(query the schedd)\n" );
 	fprintf( stderr, "   -startd\t\t(query the startd)\n" );
 	fprintf( stderr, "   -collector\t\t(query the collector)\n" );
