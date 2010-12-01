@@ -1708,6 +1708,18 @@ parse_jobstate_log(
 		return false;
 	}
 
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Extra token (%s) on JOBSTATE_LOG line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+
 	dag->SetJobstateLogFileName( logFileName );
 	return true;
 }

@@ -26,7 +26,6 @@
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
 #include "dag.h"
-#include "dagman_multi_dag.h"
 #include <set>
 
 //---------------------------------------------------------------------------
