@@ -31,10 +31,23 @@ namespace compat_classad {
 // about other return values.
 typedef int (*SortFunctionType)(compat_classad::ClassAd*,compat_classad::ClassAd*,void*);
 
+class ClassAdListItem {
+public:
+	ClassAd *ad;
+	ClassAdListItem *prev;
+	ClassAdListItem *next;
+};
+
 class ClassAdList
 {
 private:
-	HashTable<ClassAd*,bool> htable;
+		/* For fast lookups (required in Insert() and Remove()),
+		 * we maintain a hash table that indexes into the list
+		 * via a pointer to the classad.
+		 */
+	HashTable<ClassAd*,ClassAdListItem*> htable;
+	ClassAdListItem list_head; // double-linked list
+	ClassAdListItem *list_cur; // current position in list
 
 		/* The following private class applies the user supplied
 		 * sort function and the user supplied context to compare
@@ -58,9 +71,9 @@ private:
 			 * @return true if a comes before b in sorted order,
 			 *  false otherwise.
 			 */
-		bool operator() (compat_classad::ClassAd* a, compat_classad::ClassAd* b)
+		bool operator() (compat_classad::ClassAdListItem* a, compat_classad::ClassAdListItem* b)
 		{
-			int res = this->smallerThan(a,b,this->userInfo);
+			int res = this->smallerThan(a->ad,b->ad,this->userInfo);
 			if (res == 1) return true;
 			return false;
 		}

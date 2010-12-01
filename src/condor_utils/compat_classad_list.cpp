@@ -26,7 +26,7 @@
 
 namespace compat_classad {
 
-static unsigned int ptr_hash_fn(ClassAd * const &index)
+static unsigned int ptr_hash_fn(ClassAd* const &index)
 {
 	intptr_t i = (intptr_t)index;
 	return (unsigned int)( i ^ (i>>32) );
@@ -35,29 +35,28 @@ static unsigned int ptr_hash_fn(ClassAd * const &index)
 ClassAdList::ClassAdList():
 	htable(ptr_hash_fn)
 {
+	list_head.ad = NULL;
+	list_head.next = &list_head; // beginning of list
+	list_head.prev = &list_head; // end of list
+	list_cur = &list_head;
 }
 
 ClassAdList::~ClassAdList()
 {
-	ClassAd *ad=NULL;
-	bool junk;
-
-	htable.startIterations();
-	while( htable.iterate(ad,junk) ) {
-		delete ad;
-		ad = NULL;
+	for(list_cur=list_head.next;
+		list_cur!=&list_head;
+		list_cur=list_cur->next)
+	{
+		delete list_cur->ad;
+		delete list_cur;
 	}
 }
 
 ClassAd* ClassAdList::Next()
 {
-	ClassAd *ad=NULL;
-	bool junk;
-
-	if( htable.iterate(ad,junk) ) {
-		return ad;
-	}
-	return NULL;
+	ASSERT( list_cur );
+	list_cur = list_cur->next;
+	return list_cur->ad;
 }
 
 int ClassAdList::Delete(ClassAd* cad)
@@ -71,7 +70,16 @@ int ClassAdList::Delete(ClassAd* cad)
 
 int ClassAdList::Remove(ClassAd* cad)
 {
-	if( htable.remove(cad)==0 ) {
+	ClassAdListItem *item = NULL;
+	if( htable.lookup(cad,item) == 0 ) {
+		htable.remove(cad);
+		ASSERT( item );
+		item->prev->next = item->next;
+		item->next->prev = item->prev;
+		if( list_cur == item ) {
+			list_cur = item->prev;
+		}
+		delete item;
 		return TRUE;
 	}
 	return FALSE;
@@ -79,12 +87,23 @@ int ClassAdList::Remove(ClassAd* cad)
 
 void ClassAdList::Insert(ClassAd* cad)
 {
-	htable.insert(cad,true);
+	ClassAdListItem *item = new ClassAdListItem;
+	item->ad = cad;
+
+	if( htable.insert(cad,item) == -1 ) {
+		delete item;
+		return; // already in list
+	}
+		// append to end of list
+	item->next = &list_head;
+	item->prev = list_head.prev;
+	item->prev->next = item;
+	item->next->prev = item;
 }
 
 void ClassAdList::Open()
 {
-	htable.startIterations();
+	list_cur = &list_head;
 }
 
 void ClassAdList::Close()
@@ -100,26 +119,36 @@ void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
 {
 	ClassAdComparator isSmallerThan(userInfo, smallerThan);
 
-		// copy from htable into a vector; sort vector; copy back
+		// copy into an STL vector for convenient sorting
 
-	std::vector<ClassAd *> vect;
-	ClassAd *ad=NULL;
-	bool junk;
+	std::vector<ClassAdListItem *> tmp_vect;
+	ClassAdListItem *item;
 
-	htable.startIterations();
-	while( htable.iterate(ad,junk) ) {
-		vect.push_back(ad);
+	for(item=list_head.next;
+		item!=&list_head;
+		item=item->next)
+	{
+		tmp_vect.push_back(item);
 	}
 
-	std::sort(vect.begin(), vect.end(), isSmallerThan);
+	std::sort(tmp_vect.begin(), tmp_vect.end(), isSmallerThan);
 
-	htable.clear();
-	std::vector<ClassAd *>::iterator it;
-	for(it = vect.begin();
-		it != vect.end();
+		// empty our list
+	list_head.next = &list_head;
+	list_head.prev = &list_head;
+
+		// arrange our list in same order as tmp_vect
+	std::vector<ClassAdListItem *>::iterator it;
+	for(it = tmp_vect.begin();
+		it != tmp_vect.end();
 		it++)
 	{
-		htable.insert(*it,true);
+		item = *(it);
+			// append to end of our list
+		item->next = &list_head;
+		item->prev = list_head.prev;
+		item->prev->next = item;
+		item->next->prev = item;
 	}
 }
 
