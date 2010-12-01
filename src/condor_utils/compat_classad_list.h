@@ -22,8 +22,7 @@
 
 #include "compat_classad.h"
 
-#include <vector>
-#include <algorithm>
+#include "HashTable.h"
 
 namespace compat_classad {
 
@@ -32,11 +31,23 @@ namespace compat_classad {
 // about other return values.
 typedef int (*SortFunctionType)(compat_classad::ClassAd*,compat_classad::ClassAd*,void*);
 
+class ClassAdListItem {
+public:
+	ClassAd *ad;
+	ClassAdListItem *prev;
+	ClassAdListItem *next;
+};
+
 class ClassAdList
 {
 private:
-	std::vector<ClassAd*> list;
-	int index;
+		/* For fast lookups (required in Insert() and Remove()),
+		 * we maintain a hash table that indexes into the list
+		 * via a pointer to the classad.
+		 */
+	HashTable<ClassAd*,ClassAdListItem*> htable;
+	ClassAdListItem list_head; // double-linked list
+	ClassAdListItem *list_cur; // current position in list
 
 		/* The following private class applies the user supplied
 		 * sort function and the user supplied context to compare
@@ -60,29 +71,29 @@ private:
 			 * @return true if a comes before b in sorted order,
 			 *  false otherwise.
 			 */
-		bool operator() (compat_classad::ClassAd* a, compat_classad::ClassAd* b)
+		bool operator() (compat_classad::ClassAdListItem* a, compat_classad::ClassAdListItem* b)
 		{
-			int res = this->smallerThan(a,b,this->userInfo);
+			int res = this->smallerThan(a->ad,b->ad,this->userInfo);
 			if (res == 1) return true;
 			return false;
 		}
 	};
 
 public:
-	ClassAdList()           { index = 0; }
+	ClassAdList();
 	~ClassAdList();
 	ClassAd* Next();
-	void Open()             { index = 0; }
+	void Open();
 		/*This Close() function is no longer really needed*/
-	void Close()            { index = 0; /*Just a safety measure*/ }
-	void Rewind()           { /*same as Open()*/ index = 0; }
-	int MyLength()          { /*Same as Length()*/ return list.size(); }
+	void Close();
+	void Rewind()           { Open(); }
+	int MyLength()          { return Length(); }
 		/* Removes ad from list and deletes it */
 	int Delete(ClassAd* cad);
 		/* Removes ad from list, but does not delete it */
 	int Remove(ClassAd* cad);
 	void Insert(ClassAd* cad);
-	int Length()            { /*Same as MyLength()*/ return list.size(); }
+	int Length();
 		/* Note on behaviour. The Sort function does not touch the
 		 * index, nor invalidate it. index will be within defined limits
 		 * but continuing an iteration from the index would be unwise.
