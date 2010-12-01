@@ -1,6 +1,3 @@
-//TEMPTEMP -- test what happens with an existing jobstate.log file, but just re-running the DAG normally...
-//TEMPTEMP -- test running a rescue DAG in recovery mode...
-//TEMPTEMP -- might have to do some fflushes
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -320,7 +317,6 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 		eventName = eventName + strlen( prefix );
 	}
 
-//TEMPTEMP -- document format: <timestamp> <node name> <event name> <condor id> <pegasus site> <?> <sequence number> (varies some)
 	if ( eventName != NULL ) {
 		MyString condorID;
 		CondorID2Str( event->cluster, event->proc, condorID );
@@ -507,7 +503,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 	(void)line.GetNextToken( " ", false ); // event name
 	(void)line.GetNextToken( " ", false ); // condor id
 	(void)line.GetNextToken( " ", false ); // pegasus site
-	(void)line.GetNextToken( " ", false ); //TEMPTEMP
+	(void)line.GetNextToken( " ", false ); // unused
 	const char* seqNumTok = line.GetNextToken( " ", false );
 
 	if ( (timestampTok == NULL) || (nodeNameTok == NULL) ) {

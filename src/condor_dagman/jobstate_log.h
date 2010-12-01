@@ -32,6 +32,14 @@
 // Note: if a jobstate.log file is specified, failing to write to the
 // file is a fatal error.
 
+// The format of the lines in the jobstate.log file is as follows:
+// Normal: <timestamp> <node name> <event name> <condor id>
+//   <pegasus site> <(unused -- dash)> <sequence number>
+// DAGMan start: <timestamp> INTERNAL *** DAGMAN_STARTED <condor id> ***
+// DAGMan exit: <timestamp> INTERNAL *** DAGMAN_FINISHED <exit code> ***
+// Recovery started: <timestamp> INTERNAL *** RECOVERY_STARTED ***
+// Recovery finished: <timestamp> INTERNAL *** RECOVERY_FINISHED ***
+
 #include <set>
 #include "condor_event.h"
 #include "job.h"
@@ -57,7 +65,8 @@ public:
 	*/
 	const char *LogFile() { return _jobstateLogFile; }
 
-	//TEMPTEMP -- document
+	/** Flush all pending output to the jobstate log file.
+	*/
 	void Flush();
 
 	/** Set up the data structures we need to avoid re-writing previously-

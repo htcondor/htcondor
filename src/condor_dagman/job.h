@@ -393,7 +393,9 @@ class Job {
 	*/
 	void ResetPegasusSequenceNum() { _pegasusSeqNum = 0; }
 
-	//TEMPTEMP -- document
+	/** Set the master Pegasus sequence number.
+		@param The next sequence number that should be given out.
+	*/
 	static void SetPegasusNextSequenceNum( int nextSeqNum ) {
 		_nextPegasusSeqNum = nextSeqNum;
 	}
