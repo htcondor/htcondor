@@ -28,7 +28,8 @@ if (NOT WIN_EXEC_NODE_ONLY)
 					"${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND}"
 					${C_SBIN}
 					ON )
-
-	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
+	if (WITH_GSOAP)
+		install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
+	endif(WITH_GSOAP)
 
 endif(NOT WIN_EXEC_NODE_ONLY)

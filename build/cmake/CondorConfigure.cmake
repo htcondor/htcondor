@@ -349,7 +349,7 @@ file (MAKE_DIRECTORY ${EXTERNAL_DL}
 	${EXTERNAL_STAGE}/src )
 
 include_directories( ${EXTERNAL_STAGE}/include )
-link_directories( ${EXTERNAL_STAGE}/lib ${EXTERNAL_STAGE}/lib64 )
+link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.33.1)
