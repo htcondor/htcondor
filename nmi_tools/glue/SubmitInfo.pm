@@ -374,10 +374,9 @@ our %submit_info = (
 				'-DCONDOR_CXX_FLAGS:STRING=-B$PATH' 	=> undef,
 			},
 			'prereqs'	=> [ 
-				'tar-1.14', 'patch-2.5.4', 'cmake-2.8.2', 'flex-2.5.4a',
-				'make-3.80', 'byacc-1.9', 'bison-1.25', 'm4-1.4.1',
+				@default_prereqs, 
 				'gcc-4.1.2', 'binutils-2.16', 'perl-5.8.5', 'gzip-1.3.3',
-				'wget-1.9.1', 'coreutils-5.2.1',
+				'coreutils-5.2.1',
 			],
 			'xtests'	=> [ 'sun4u_sol_5.10' ],
 		},
