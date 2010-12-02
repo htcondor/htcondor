@@ -47,6 +47,8 @@ public:
 
 	int end_of_message();
 
+	virtual bool peek_end_of_message();
+
 	virtual int put_bytes(const void *, int);
 
 	virtual int get_bytes(void *, int);
