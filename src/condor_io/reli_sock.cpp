@@ -501,6 +501,16 @@ ReliSock::end_of_message()
 	return ret_val;
 }
 
+bool
+ReliSock::peek_end_of_message()
+{
+	if ( rcv_msg.ready ) {
+		if ( rcv_msg.buf.consumed() ) {
+			return true;
+		}
+	}
+	return false;
+}
 
 const char * ReliSock :: isIncomingDataMD5ed()
 {

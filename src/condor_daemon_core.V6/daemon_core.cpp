@@ -9614,12 +9614,27 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	double dprintf_lock_delay = 0.0;
 
 	if (!stream->code(child_pid) ||
-		!stream->code(timeout_secs) ||
-		!stream->code(dprintf_lock_delay) ||
-		!stream->end_of_message()) {
-		dprintf(D_ALWAYS,"Failed to read ChildAlive packet\n");
+		!stream->code(timeout_secs)) {
+		dprintf(D_ALWAYS,"Failed to read ChildAlive packet (1)\n");
 		return FALSE;
 	}
+
+		// There is an optional additional dprintf_lock_delay in the
+		// message.  It is optional so that external programs can send
+		// simple alive messages using condor_squawk.
+	if( stream->peek_end_of_message() ) {
+		if( !stream->end_of_message() ) {
+			dprintf(D_ALWAYS,"Failed to read ChildAlive packet (2)\n");
+			return FALSE;
+		}
+	}
+	else if( !stream->code(dprintf_lock_delay) ||
+			 !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS,"Failed to read ChildAlive packet (3)\n");
+		return FALSE;
+	}
+
 
 	if ((pidTable->lookup(child_pid, pidentry) < 0)) {
 		// we have no information on this pid
