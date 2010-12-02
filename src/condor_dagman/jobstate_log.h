@@ -178,6 +178,7 @@ private:
 		// events).
 	std::set<MyString> _lastTimestampLines;
 
+//TEMPTEMP -- move these out of class, into .cpp file?
 		// The names of the pseudo-events we're going to write (for "real"
 		// events, we use the event names defined in condor_event.h).
 	static const char *JOB_SUCCESS_NAME;

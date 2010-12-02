@@ -892,6 +892,10 @@ Job::LogMonitorFailed()
 	}
 }
 
+//TEMPTEMP -- add jobstate.log site indirection...
+//TEMPTEMP -- change PegasusSite to something like GridSite or even more generic -- JobTag?
+//TEMPTEMP -- look for +job_tag_name; if that doesn't exist, look for +pegasus_site
+//TEMPTEMP -- make strings into consts.
 //---------------------------------------------------------------------------
 const char *
 Job::PegasusSite()
