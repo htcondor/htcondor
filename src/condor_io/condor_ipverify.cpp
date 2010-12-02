@@ -683,15 +683,25 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	if ( PunchedHoleArray[perm] != NULL ) {
 		HolePunchTable_t* hpt = PunchedHoleArray[perm];
 		char* ip_str = inet_ntoa(sin->sin_addr);
+		MyString id_with_ip;
 		MyString id;
 		int count;
 		if ( who != TotallyWild ) {
-			id.sprintf("%s/%s", who, ip_str);
-			if ( hpt->lookup(id, count) != -1 ) {
+			id_with_ip.sprintf("%s/%s", who, ip_str);
+			id = who;
+			if ( hpt->lookup(id, count) != -1 )	{
 				if( allow_reason ) {
 					allow_reason->sprintf(
 						"%s authorization has been made automatic for %s",
 						PermString(perm), id.Value() );
+				}
+				return USER_AUTH_SUCCESS;
+			}
+			if ( hpt->lookup(id_with_ip, count) != -1 ) {
+				if( allow_reason ) {
+					allow_reason->sprintf(
+						"%s authorization has been made automatic for %s",
+						PermString(perm), id_with_ip.Value() );
 				}
 				return USER_AUTH_SUCCESS;
 			}

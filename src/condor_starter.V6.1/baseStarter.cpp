@@ -592,9 +592,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		// instead.
 
 	IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-	MyString auth_hole_id;
-	auth_hole_id.sprintf("%s/*",fqu.Value());
-	bool rc = ipv->PunchHole(READ, auth_hole_id);
+	bool rc = ipv->PunchHole(READ, fqu);
 	if( !rc ) {
 		error_msg = "Starter failed to create authorization entry for job owner.";
 	}
