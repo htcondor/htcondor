@@ -45,7 +45,7 @@ if ( WITH_BLAHP )
 	#dprint("we ingore the return param from bootstrap.. there are errors!")
 
 	ExternalProject_Add(blahp
-						DEPENDS classads openssl globus popt
+						DEPENDS openssl globus popt
 					    PREFIX ${EXTERNAL_BUILD_PREFIX}/${BLAHP_VER}
 					    #-- Download Step ----------
 						DOWNLOAD_COMMAND wget -N http://pages.cs.wisc.edu/~jfrey/externals/${BLAHP_VER}.tar.gz ${CMD_TERM}
@@ -74,6 +74,7 @@ if ( WITH_BLAHP )
 						#--install Step ----------
 						INSTALL_DIR ${EXTERNAL_STAGE}
 						INSTALL_COMMAND cd org.glite.ce.blahp && make install )
+	add_dependencies(blahp classads)	
 
 	message( STATUS "external configured (blahp)" )
 	set( HAVE_EXT_BLAHP ON PARENT_SCOPE )

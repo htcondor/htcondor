@@ -178,7 +178,7 @@ if ( WITH_CREAM )
 		endif(DARWIN)
 
 		ExternalProject_Add(cream
-				    DEPENDS classads voms cream_soap boost log4cpp gridsite c-ares cream_soap_plugin cream_wsdl
+				    DEPENDS voms cream_soap boost log4cpp gridsite c-ares cream_soap_plugin cream_wsdl
 				    PREFIX ${EXTERNAL_BUILD_PREFIX}/cream
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz ${CMD_TERM}
@@ -199,6 +199,8 @@ if ( WITH_CREAM )
 				    INSTALL_COMMAND cd org.glite.ce.cream-client-api-c &&
 						make install
 				)
+
+		add_dependencies(cream classads)
 
 	# Set the target dependencies which the rest of condor depends on.
 	if(DARWIN)
