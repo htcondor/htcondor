@@ -61,7 +61,7 @@ class CondorResource : public BaseResource
 	static int scheddPollInterval;
 
 	StringList submitter_ids;
-	MyString submitter_constraint;
+	std::string submitter_constraint;
 	int scheddPollTid;
 	char *scheddName;
 	char *poolName;

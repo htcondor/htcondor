@@ -137,11 +137,11 @@ void NordugridJobReconfig()
 
 bool NordugridJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "nordugrid ", 10 ) == 0 ) {
+		 strncasecmp( resource.c_str(), "nordugrid ", 10 ) == 0 ) {
 
 		return true;
 	}
@@ -162,7 +162,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 
 	remoteJobId = NULL;
@@ -193,7 +193,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			error_string.sprintf( "%s is not set in the job ad",
+			sprintf( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -218,28 +218,27 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		Tokenize( buff );
 
-		token = str.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "nordugrid" ) ) {
-			error_string.sprintf( "%s not of type nordugrid",
+			sprintf( error_string, "%s not of type nordugrid",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing server name",
+			sprintf( error_string, "%s missing server name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -263,8 +262,8 @@ NordugridJob::NordugridJob( ClassAd *classad )
 
  error_exit:
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }
@@ -437,7 +436,7 @@ void NordugridJob::doEvaluateState()
 				}
 				rc = gahp->nordugrid_submit( 
 										resourceManagerString,
-										RSL->Value(),
+										RSL->c_str(),
 										job_id );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -457,7 +456,7 @@ void NordugridJob::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s\n",
 							procID.cluster, procID.proc,
-							errorString.Value() );
+							errorString.c_str() );
 					myResource->CancelSubmit( this );
 					gmState = GM_UNSUBMITTED;
 				}
@@ -501,7 +500,7 @@ void NordugridJob::doEvaluateState()
 			} else if ( rc != 0 ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) file stage in failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_SUBMITTED;
@@ -551,9 +550,13 @@ void NordugridJob::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
 							 procID.cluster, procID.proc,
-							 errorString.Value() );
+							 errorString.c_str() );
 				} else {
-					remoteJobState = new_status;
+					if ( new_status ) {
+						remoteJobState = new_status;
+					} else {
+						remoteJobState = "";
+					}
 					SetRemoteJobStatus( new_status );
 				}
 				if ( new_status ) {
@@ -564,19 +567,19 @@ void NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_EXIT_INFO: {
-			MyString filter;
+			std::string filter;
 			StringList reply;
-			filter.sprintf( "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
+			sprintf( filter, "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
 							resourceManagerString, remoteJobId );
 
-			rc = gahp->nordugrid_ldap_query( resourceManagerString, "mds-vo-name=local,o=grid", filter.Value(), "nordugrid-job-usedcputime,nordugrid-job-usedwalltime,nordugrid-job-exitcode", reply );
+			rc = gahp->nordugrid_ldap_query( resourceManagerString, "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-usedcputime,nordugrid-job-usedwalltime,nordugrid-job-exitcode", reply );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != 0 ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
 			} else {
 				int exit_code = -1;
@@ -640,7 +643,7 @@ void NordugridJob::doEvaluateState()
 			} else if ( rc != 0 ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_DONE_SAVE;
@@ -667,7 +670,7 @@ void NordugridJob::doEvaluateState()
 			} else if ( rc != 0 ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) job cleanup failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -694,7 +697,7 @@ void NordugridJob::doEvaluateState()
 				// What to do about a failed cancel?
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_FAILED;
 			}
 			} break;
@@ -828,7 +831,7 @@ void NordugridJob::doEvaluateState()
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' ) {
@@ -885,25 +888,24 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 		remoteJobId = NULL;
 	}
 
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "nordugrid %s %s", resourceManagerString,
+		sprintf( full_job_id, "nordugrid %s %s", resourceManagerString,
 							 job_id );
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
-MyString *NordugridJob::buildSubmitRSL()
+std::string *NordugridJob::buildSubmitRSL()
 {
 	int transfer_exec = TRUE;
-	MyString *rsl = new MyString;
-	MyString buff;
+	std::string *rsl = new std::string;
 	StringList *stage_list = NULL;
 	StringList *stage_local_list = NULL;
 	char *attr_value = NULL;
-	MyString rsl_suffix;
-	MyString iwd;
-	MyString executable;
+	std::string rsl_suffix;
+	std::string iwd;
+	std::string executable;
 
 	if ( jobAd->LookupString( ATTR_NORDUGRID_RSL, rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
@@ -919,7 +921,7 @@ MyString *NordugridJob::buildSubmitRSL()
 
 	//Start off the RSL
 	attr_value = param( "FULL_HOSTNAME" );
-	rsl->sprintf( "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
+	sprintf( *rsl, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
 	free( attr_value );
 	attr_value = NULL;
 
@@ -931,7 +933,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	// If we're transferring the executable, strip off the path for the
 	// remote machine, since it refers to the submit machine.
 	if ( transfer_exec ) {
-		*rsl += condor_basename( executable.Value() );
+		*rsl += condor_basename( executable.c_str() );
 	} else {
 		*rsl += executable;
 	}
@@ -943,7 +945,7 @@ MyString *NordugridJob::buildSubmitRSL()
 		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
 					procID.cluster, procID.proc, arg_errors.Value());
-			errorString.sprintf("Failed to read job arguments: %s\n",
+			sprintf(errorString,"Failed to read job arguments: %s\n",
 					arg_errors.Value());
 			delete rsl;
 			return NULL;
@@ -955,7 +957,7 @@ MyString *NordugridJob::buildSubmitRSL()
 					dprintf(D_ALWAYS,
 							"(%d.%d) Failed to get job arguments: %s\n",
 							procID.cluster,procID.proc,arg_errors.Value());
-					errorString.sprintf("Failed to get job arguments: %s\n",
+					sprintf(errorString,"Failed to get job arguments: %s\n",
 							arg_errors.Value());
 					delete rsl;
 					return NULL;
@@ -979,7 +981,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	// execute bit on the transferred executable.
 	if ( transfer_exec ) {
 		*rsl += ")(executables=";
-		*rsl += condor_basename( executable.Value() );
+		*rsl += condor_basename( executable.c_str() );
 	}
 
 	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
@@ -1004,7 +1006,7 @@ MyString *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( file ) ) {
-				rsl->sprintf_cat( " \"%s\")", file );
+				sprintf_cat( *rsl, " \"%s\")", file );
 			} else {
 				*rsl += " \"\")";
 			}
@@ -1047,7 +1049,7 @@ MyString *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( local_file ) ) {
-				rsl->sprintf_cat( " \"%s\")", local_file );
+				sprintf_cat( *rsl, " \"%s\")", local_file );
 			} else {
 				*rsl += " \"\")";
 			}
@@ -1061,11 +1063,11 @@ MyString *NordugridJob::buildSubmitRSL()
 
 	*rsl += ')';
 
-	if ( !rsl_suffix.IsEmpty() ) {
+	if ( !rsl_suffix.empty() ) {
 		*rsl += rsl_suffix;
 	}
 
-dprintf(D_FULLDEBUG,"*** RSL='%s'\n",rsl->Value());
+dprintf(D_FULLDEBUG,"*** RSL='%s'\n",rsl->c_str());
 	return rsl;
 }
 
@@ -1074,24 +1076,24 @@ StringList *NordugridJob::buildStageInList()
 	StringList *tmp_list = NULL;
 	StringList *stage_list = NULL;
 	char *filename = NULL;
-	MyString buf;
-	MyString iwd;
+	std::string buf;
+	std::string iwd;
 	int transfer = TRUE;
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
-		if ( iwd.Length() > 1 && iwd[iwd.Length() - 1] != '/' ) {
+		if ( iwd.length() > 1 && iwd[iwd.length() - 1] != '/' ) {
 			iwd += '/';
 		}
 	}
 
 	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, buf );
-	tmp_list = new StringList( buf.Value(), "," );
+	tmp_list = new StringList( buf.c_str(), "," );
 
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer );
 	if ( transfer ) {
 		jobAd->LookupString( ATTR_JOB_CMD, buf );
-		if ( !tmp_list->file_contains( buf.Value() ) ) {
-			tmp_list->append( buf.Value() );
+		if ( !tmp_list->file_contains( buf.c_str() ) ) {
+			tmp_list->append( buf.c_str() );
 		}
 	}
 
@@ -1099,9 +1101,9 @@ StringList *NordugridJob::buildStageInList()
 	jobAd->LookupBool( ATTR_TRANSFER_INPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_INPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(buf.Value()) ) {
-			if ( !tmp_list->file_contains( buf.Value() ) ) {
-				tmp_list->append( buf.Value() );
+		if ( ! nullFile(buf.c_str()) ) {
+			if ( !tmp_list->file_contains( buf.c_str() ) ) {
+				tmp_list->append( buf.c_str() );
 			}
 		}
 	}
@@ -1111,11 +1113,11 @@ StringList *NordugridJob::buildStageInList()
 	tmp_list->rewind();
 	while ( ( filename = tmp_list->next() ) ) {
 		if ( filename[0] == '/' || IsUrl( filename ) ) {
-			buf.sprintf( "%s", filename );
+			sprintf( buf, "%s", filename );
 		} else {
-			buf.sprintf( "%s%s", iwd.Value(), filename );
+			sprintf( buf, "%s%s", iwd.c_str(), filename );
 		}
-		stage_list->append( buf.Value() );
+		stage_list->append( buf.c_str() );
 	}
 
 	delete tmp_list;
@@ -1126,23 +1128,16 @@ StringList *NordugridJob::buildStageInList()
 StringList *NordugridJob::buildStageOutList()
 {
 	StringList *stage_list = NULL;
-	MyString buf;
-	MyString iwd = "/";
+	std::string buf;
 	bool transfer = TRUE;
 
-	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
-		if ( iwd.Length() > 1 && iwd[iwd.Length() - 1] != '/' ) {
-			iwd += '/';
-		}
-	}
-
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
-	stage_list = new StringList( buf.Value(), "," );
+	stage_list = new StringList( buf.c_str(), "," );
 
 	jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(buf.Value()) ) {
+		if ( ! nullFile(buf.c_str()) ) {
 			if ( !stage_list->file_contains( REMOTE_STDOUT_NAME ) ) {
 				stage_list->append( REMOTE_STDOUT_NAME );
 			}
@@ -1153,7 +1148,7 @@ StringList *NordugridJob::buildStageOutList()
 	jobAd->LookupBool( ATTR_TRANSFER_ERROR, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(buf.Value()) ) {
+		if ( ! nullFile(buf.c_str()) ) {
 			if ( !stage_list->file_contains( REMOTE_STDERR_NAME ) ) {
 				stage_list->append( REMOTE_STDERR_NAME );
 			}
@@ -1169,13 +1164,13 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 	char *remaps = NULL;
 	MyString local_name;
 	char *remote_name;
-	MyString stdout_name = "";
-	MyString stderr_name = "";
-	MyString buff;
-	MyString iwd = "/";
+	std::string stdout_name = "";
+	std::string stderr_name = "";
+	std::string buff;
+	std::string iwd = "/";
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
-		if ( iwd.Length() > 1 && iwd[iwd.Length() - 1] != '/' ) {
+		if ( iwd.length() > 1 && iwd[iwd.length() - 1] != '/' ) {
 			iwd += '/';
 		}
 	}
@@ -1192,9 +1187,9 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
 		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
-			local_name = stdout_name.Value();
+			local_name = stdout_name.c_str();
 		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
-			local_name = stderr_name.Value();
+			local_name = stderr_name.c_str();
 		} else if( remaps && filename_remap_find( remaps, remote_name,
 												  local_name ) ) {
 				// file is remapped
@@ -1206,9 +1201,9 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 			 || IsUrl( local_name.Value() ) ) {
 			buff = local_name;
 		} else {
-			buff.sprintf( "%s%s", iwd.Value(), local_name.Value() );
+			sprintf( buff, "%s%s", iwd.c_str(), local_name.Value() );
 		}
-		stage_local_list->append( buff.Value() );
+		stage_local_list->append( buff.c_str() );
 	}
 
 	if ( remaps ) {

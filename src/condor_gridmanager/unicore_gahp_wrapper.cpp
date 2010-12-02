@@ -67,13 +67,13 @@ main( int, char** ) {
 		command_line.append( tmp );
 	}
 
-	MyString classpath;
+	std::string classpath;
 
 	classpath += liblocation;
 	classpath += "/ugahp.jar";
 
 	command_line.append ("-classpath");
-	command_line.append (classpath.Value());
+	command_line.append (classpath.c_str());
 
 	command_line.append ("condor.gahp.Gahp");
 	command_line.append ("condor/gahp/unicore/command-map.properties");

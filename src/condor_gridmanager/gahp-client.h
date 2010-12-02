@@ -171,8 +171,8 @@ class GahpServer : public Service {
 	int m_gahp_readfd;
 	int m_gahp_writefd;
 	int m_gahp_errorfd;
+	std::string m_gahp_error_buffer;
 	bool m_gahp_startup_failed;
-	MyString m_gahp_error_buffer;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
 	bool use_prefix;
@@ -607,12 +607,12 @@ class GahpClient : public Service {
 							 char **job_status, int *exit_code, char **failure_reason);
 
 		struct CreamJobStatus {
-			MyString job_id;
-			MyString job_status;
+			std::string job_id;
+			std::string job_status;
 			int exit_code;
-			MyString failure_reason;
+			std::string failure_reason;
 		};
-		typedef std::map<MyString, CreamJobStatus> CreamJobStatusMap;
+		typedef std::map<std::string, CreamJobStatus> CreamJobStatusMap;
 		int cream_job_status_all(const char *service, CreamJobStatusMap & job_ids);
 		
 		int cream_proxy_renew(const char *delg_service, const char *delg_id);
@@ -1092,7 +1092,7 @@ class GahpClient : public Service {
 		GahpProxyInfo *normal_proxy;
 		GahpProxyInfo *deleg_proxy;
 		GahpProxyInfo *pending_proxy;
-		MyString error_string;
+		std::string error_string;
 
 			// These data members all deal with the GAHP
 			// server.  Since there is only one instance of the GAHP
