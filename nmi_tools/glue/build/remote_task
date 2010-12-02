@@ -133,14 +133,10 @@ if ($taskname eq $TAR_TASK) {
 print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	#path hack b/c nmi pre-reqs & paths are broken on windows.
-	$ENV{PATH} ="C:\\Program Files\\Microsoft Visual Studio 9.0\\Common7\\IDE;C:\\prereq\\ActivePerl-5.10.1\\site\\bin;C:\\prereq\\ActivePerl-5.10.1\\bin;C:\\Perl\\site\\bin;C:\\Perl\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\Program Files\\CMake
- 2.8\\bin;C:\\Program Files\\7-Zip;$BaseDir/msconfig;$ENV{PATH}";
-    system("set");
-    print(`cmd /c cd`);
-    print(`cmd /c dir /b /s munge.bat`);
-    $execstr= "munge.bat"; ##devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE";
-    ## TJ: Quit here rather than building.
-    exit 89;
+	$ENV{BASE_DIR} = "$BaseDir";
+    system("env");
+    print(`cmd /c dir /b /s build.win.bat`);
+    $execstr= "build.win.bat"; ##devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE";
 	# need to make the tests here. 
 
 } else {
