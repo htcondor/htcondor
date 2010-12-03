@@ -456,6 +456,66 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Note: this method should get speeded up (see Gnats PR 846).
+
+MyString
+MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
+		const MyString &directory, const char *keyword)
+{
+	dprintf( D_FULLDEBUG, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",
+				strSubFilename.Value(), directory.Value(), keyword );
+
+	TmpDir		td;
+	if ( directory != "" ) {
+		MyString	errMsg;
+		if ( !td.Cd2TmpDir(directory.Value(), errMsg) ) {
+			dprintf(D_ALWAYS, "Error from Cd2TmpDir: %s\n", errMsg.Value());
+			return "";
+		}
+	}
+
+	StringList	logicalLines;
+	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
+		return "";
+	}
+
+	MyString	value("");
+
+		// Now look through the submit file logical lines to find the
+		// value corresponding to the keyword.
+	const char *logicalLine;
+	while( (logicalLine = logicalLines.next()) != NULL ) {
+		MyString	submitLine(logicalLine);
+		MyString	tmpValue = getParamFromSubmitLine(submitLine, keyword);
+		if ( tmpValue != "" ) {
+			value = tmpValue;
+		}
+	}
+
+		//
+		// Check for macros in the value -- we currently don't
+		// handle those.
+		//
+	if ( value != "" ) {
+		if ( strchr(value.Value(), '$') ) {
+			dprintf(D_ALWAYS, "MultiLogFiles: macros not allowed "
+						"in %s in DAG node submit files\n", keyword);
+			value = "";
+		}
+	}
+
+	if ( directory != "" ) {
+		MyString	errMsg;
+		if ( !td.Cd2MainDir(errMsg) ) {
+			dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.Value());
+			return "";
+		}
+	}
+
+	return value;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 bool
 MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)

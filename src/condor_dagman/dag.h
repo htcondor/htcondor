@@ -36,6 +36,7 @@
 #include "throttle_by_category.h"
 #include "MyString.h"
 #include "dagman_recursive_submit.h"
+#include "jobstate_log.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -439,7 +440,7 @@ class Dag {
 		@param maxRescueDagNum the maximum legal rescue DAG number
 		@param parseFailed whether parsing the DAG(s) failed
     */
-    void Rescue (const char * datafile, bool multiDags,
+    void Rescue (const char * dagFile, bool multiDags,
 				int maxRescueDagNum, bool parseFailed = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
@@ -449,7 +450,7 @@ class Dag {
 		@param parseFailed whether parsing the DAG(s) failed
     */
     void WriteRescue (const char * rescue_file,
-				const char * datafile, bool parseFailed = false) /* const */;
+				const char * dagFile, bool parseFailed = false) /* const */;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -495,6 +496,8 @@ class Dag {
 				splices)
 		*/
 	bool GetReject( MyString &firstLocation );
+
+	void SetJobstateLogFileName( const char *logFileName );
 
 	void CheckAllJobs();
 
@@ -658,7 +661,9 @@ class Dag {
 	*/
 	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
 
-  protected:
+	JobstateLog &GetJobstateLog() { return _jobstateLog; }
+
+  private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
 	// defaults to ".".
@@ -1042,6 +1047,9 @@ class Dag {
 		// The file and line number where we first found a REJECT
 		// specification, if any.
 	MyString _firstRejectLoc;
+
+		// The object for logging to the jobstate.log file (for Pegasus).
+	JobstateLog _jobstateLog;
 };
 
 #endif /* #ifndef DAG_H */
