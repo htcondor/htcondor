@@ -16,8 +16,14 @@
  # 
  ############################################################### 
 
-add_definitions(-DCLASSAD_DISTRIBUTION)
-add_definitions(-DWANT_CLASSAD_NAMESPACE=1)
+add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 -DDISABLE_DLOPEN_CHECK )
+
+# disable PCRE build unless dep added to externals.
+#if(PCRE_FOUND)
+#	add_definitions(-DUSE_PCRE -DHAVE_PCRE_H)
+#else()
+	add_definitions(-DUSE_POSIX_REGEX) 
+#endif(PCRE_FOUND)
 
 # in order to update configure
 if (NOT WINDOWS)
