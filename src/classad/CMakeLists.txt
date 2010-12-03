@@ -16,44 +16,38 @@
  # 
  ############################################################### 
 
+add_definitions(-DCLASSAD_DISTRIBUTION)
+add_definitions(-DWANT_CLASSAD_NAMESPACE=1)
 
 # in order to update configure
-#
 if (NOT WINDOWS)
-	ExternalProject_Add(classads
-						PREFIX ${EXTERNAL_BUILD_PREFIX}/classads-devel
-						#--Configure step ----------
-						SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
-						CONFIGURE_COMMAND
-							#m4 Makefile.am.m4 > Makefile.am &&
-							#autoreconf --install &&
-							#rm -rf autom4te.cache &&
-							./configure --without-pcre --disable-shared --enable-static --enable-namespace --prefix=${EXTERNAL_STAGE} CXXFLAGS=-DWANT_CLASSAD_NAMESPACE=1 CC=g++
-						#--Build Step ----------
-						BUILD_COMMAND make && make check
-						BUILD_IN_SOURCE 1
-						#--install Step ----------
-						INSTALL_DIR ${EXTERNAL_STAGE}
-						INSTALL_COMMAND make install)
 
-	# Set the target dependencies which the rest of condor depends on.
-	set(CLASSADS_FOUND "${EXTERNAL_STAGE}/lib/libclassad.a;${EXTERNAL_STAGE}/lib/libclassad_ns.a")	
+  # because of the external dependencies on classads we need to be careful to make it look like a normal install
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
+
+  condor_selective_glob("attrrefs.*;new_classad.*;collection.*;collectionBase.*;new_classad_debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;new_classad_operators.*;query.*;sink.*;source.*;transaction.*;new_classad_util.*;new_classad_value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
+
+  add_library( classads STATIC ${ClassadSrcs} )
+  set_target_properties( classads
+	PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib 
+	LIBRARY_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib
+	RUNTIME_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib
+	OUTPUT_NAME classad_ns)
 
 else()
-	
-	add_definitions(-DCLASSAD_DISTRIBUTION)
-	add_definitions(-DWANT_CLASSAD_NAMESPACE=1)
 	
 	# I should probably just add all and subtract tests.
 	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;new_classad*;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
-	add_dependencies( classads pcre )
-	
-	set( CLASSADS_FOUND classads )
-	
 	set_property( TARGET classads PROPERTY FOLDER "libraries" )
-	
+
 endif()
+
+set( CLASSADS_FOUND classads )
+
+if (NOT PROPER)
+  add_dependencies( classads pcre )
+endif(NOT PROPER)
 
 message (STATUS "external configured (CLASSADS_FOUND=${CLASSADS_FOUND})")
 set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
