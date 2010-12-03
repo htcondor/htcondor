@@ -15,10 +15,11 @@ set WIX_PATH=%WIX%
 set MSCONFIG_TOOLS_DIR=%HOME%\userdir\msconfig
 set CMAKE_BIN=%ProgramFiles%\CMake 2.8\bin
 
-set PATH=%SystemRoot\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN%;%ZIP_PATH%;%WIX_PATH%
+set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN%;%ZIP_PATH%;%WIX_PATH%
+@echo PATH=%PATH%
 
 @echo ----  build.win.bat ENVIRONMENT --------------------------------
-env
+set
 @echo ----  end build.win.bat ENVIRONMENT ----------------------------
 
 @echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
