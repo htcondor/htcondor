@@ -18,6 +18,9 @@ set CMAKE_BIN=%ProgramFiles%\CMake 2.8\bin
 set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN%;%ZIP_PATH%;%WIX_PATH%
 @echo PATH=%PATH%
 
+set INCLUDE=%BASE_DIR%\src\condor_utils
+@echo INCLUDE=%INCLUDE%
+
 @echo ----  build.win.bat ENVIRONMENT --------------------------------
 set
 @echo ----  end build.win.bat ENVIRONMENT ----------------------------
