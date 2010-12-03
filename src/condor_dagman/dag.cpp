@@ -2099,7 +2099,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
-	node->ResetPegasusSequenceNum();
+	node->ResetJobstateSequenceNum();
 
 	if( !recovery ) {
 		debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",

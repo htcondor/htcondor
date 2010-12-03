@@ -28,10 +28,13 @@
 #include "dag.h"
 #include <set>
 
+static const char *JOB_TAG_NAME = "+job_tag_name";
+static const char *PEGASUS_SITE = "+pegasus_site";
+
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 int Job::NOOP_NODE_PROCID = INT_MAX;
-int Job::_nextPegasusSeqNum = 1;
+int Job::_nextJobstateSeqNum = 1;
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the queue_t enum
@@ -90,7 +93,7 @@ Job::~Job() {
 	delete _scriptPre;
 	delete _scriptPost;
 
-	delete [] _pegasusSite;
+	delete [] _jobTag;
 }
 
 //---------------------------------------------------------------------------
@@ -172,8 +175,8 @@ void Job::Init( const char* jobName, const char* directory,
 
 	_noop = false;
 
-	_pegasusSite = NULL;
-	_pegasusSeqNum = 0;
+	_jobTag = NULL;
+	_jobstateSeqNum = 0;
 	_lastEventTime = 0;
 
 	varNamesFromDag = new List<MyString>;
@@ -892,43 +895,49 @@ Job::LogMonitorFailed()
 	}
 }
 
-//TEMPTEMP -- add jobstate.log site indirection...
-//TEMPTEMP -- change PegasusSite to something like GridSite or even more generic -- JobTag?
-//TEMPTEMP -- look for +job_tag_name; if that doesn't exist, look for +pegasus_site
-//TEMPTEMP -- make strings into consts.
 //---------------------------------------------------------------------------
 const char *
-Job::PegasusSite()
+Job::GetJobstateJobTag()
 {
-	if ( !_pegasusSite ) {
-		MyString tmpPegasusSite = MultiLogFiles::loadValueFromSubFile(
-					_cmdFile, _directory, "+pegasus_site" );
-
-		if ( tmpPegasusSite == "" ) {
-			tmpPegasusSite = "-";
+	if ( !_jobTag ) {
+		MyString jobTagName = MultiLogFiles::loadValueFromSubFile(
+					_cmdFile, _directory, JOB_TAG_NAME );
+		if ( jobTagName == "" ) {
+			jobTagName = PEGASUS_SITE;
 		} else {
 				// Remove double-quotes
-			int begin = tmpPegasusSite[0] == '\"' ? 1 : 0;
-			int last = tmpPegasusSite.Length() - 1;
-			int end = tmpPegasusSite[last] == '\"' ? last - 1 : last;
-
-			tmpPegasusSite = tmpPegasusSite.Substr( begin, end );
+			int begin = jobTagName[0] == '\"' ? 1 : 0;
+			int last = jobTagName.Length() - 1;
+			int end = jobTagName[last] == '\"' ? last - 1 : last;
+			jobTagName = jobTagName.Substr( begin, end );
 		}
-		_pegasusSite = strnewp( tmpPegasusSite.Value() );
+
+		MyString tmpJobTag = MultiLogFiles::loadValueFromSubFile(
+					_cmdFile, _directory, jobTagName.Value() );
+		if ( tmpJobTag == "" ) {
+			tmpJobTag = "-";
+		} else {
+				// Remove double-quotes
+			int begin = tmpJobTag[0] == '\"' ? 1 : 0;
+			int last = tmpJobTag.Length() - 1;
+			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
+			tmpJobTag = tmpJobTag.Substr( begin, end );
+		}
+		_jobTag = strnewp( tmpJobTag.Value() );
 	}
 
-	return _pegasusSite;
+	return _jobTag;
 }
 
 //---------------------------------------------------------------------------
 int
-Job::GetPegasusSequenceNum()
+Job::GetJobstateSequenceNum()
 {
-	if ( _pegasusSeqNum == 0 ) {
-		_pegasusSeqNum = _nextPegasusSeqNum++;
+	if ( _jobstateSeqNum == 0 ) {
+		_jobstateSeqNum = _nextJobstateSeqNum++;
 	}
 
-	return _pegasusSeqNum;
+	return _jobstateSeqNum;
 }
 
 //---------------------------------------------------------------------------

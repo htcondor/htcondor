@@ -24,23 +24,26 @@
 #include "jobstate_log.h"
 #include "dagman_main.h"
 
-const char *JobstateLog::JOB_SUCCESS_NAME = "JOB_SUCCESS";
-const char *JobstateLog::JOB_FAILURE_NAME = "JOB_FAILURE";
-const char *JobstateLog::PRE_SCRIPT_STARTED_NAME = "PRE_SCRIPT_STARTED";
-const char *JobstateLog::PRE_SCRIPT_SUCCESS_NAME = "PRE_SCRIPT_SUCCESS";
-const char *JobstateLog::PRE_SCRIPT_FAILURE_NAME = "PRE_SCRIPT_FAILURE";
-const char *JobstateLog::POST_SCRIPT_STARTED_NAME = "POST_SCRIPT_STARTED";
-const char *JobstateLog::POST_SCRIPT_SUCCESS_NAME = "POST_SCRIPT_SUCCESS";
-const char *JobstateLog::POST_SCRIPT_FAILURE_NAME = "POST_SCRIPT_FAILURE";
-const char *JobstateLog::INTERNAL_NAME = "INTERNAL";
-const char *JobstateLog::DAGMAN_STARTED_NAME = "DAGMAN_STARTED";
-const char *JobstateLog::DAGMAN_FINISHED_NAME = "DAGMAN_FINISHED";
-const char *JobstateLog::RECOVERY_STARTED_NAME = "RECOVERY_STARTED";
-const char *JobstateLog::RECOVERY_FINISHED_NAME = "RECOVERY_FINISHED";
-const char *JobstateLog::RECOVERY_FAILURE_NAME = "RECOVERY_FAILURE";
-const char *JobstateLog::SUBMIT_FAILURE_NAME = "SUBMIT_FAILURE";
+	// The names of the pseudo-events we're going to write (for "real"
+	// events, we use the event names defined in condor_event.h).
+static const char *JOB_SUCCESS_NAME = "JOB_SUCCESS";
+static const char *JOB_FAILURE_NAME = "JOB_FAILURE";
+static const char *PRE_SCRIPT_STARTED_NAME = "PRE_SCRIPT_STARTED";
+static const char *PRE_SCRIPT_SUCCESS_NAME = "PRE_SCRIPT_SUCCESS";
+static const char *PRE_SCRIPT_FAILURE_NAME = "PRE_SCRIPT_FAILURE";
+static const char *POST_SCRIPT_STARTED_NAME = "POST_SCRIPT_STARTED";
+static const char *POST_SCRIPT_SUCCESS_NAME = "POST_SCRIPT_SUCCESS";
+static const char *POST_SCRIPT_FAILURE_NAME = "POST_SCRIPT_FAILURE";
+static const char *INTERNAL_NAME = "INTERNAL";
+static const char *DAGMAN_STARTED_NAME = "DAGMAN_STARTED";
+static const char *DAGMAN_FINISHED_NAME = "DAGMAN_FINISHED";
+static const char *RECOVERY_STARTED_NAME = "RECOVERY_STARTED";
+static const char *RECOVERY_FINISHED_NAME = "RECOVERY_FINISHED";
+static const char *RECOVERY_FAILURE_NAME = "RECOVERY_FAILURE";
+static const char *SUBMIT_FAILURE_NAME = "SUBMIT_FAILURE";
 
-const CondorID JobstateLog::_defaultCondorID;
+	// Default Condor ID to use to check for invalid IDs.
+static const CondorID DEFAULT_CONDOR_ID;
 
 //---------------------------------------------------------------------------
 JobstateLog::JobstateLog()
@@ -222,7 +225,7 @@ JobstateLog::InitializeRescue()
 	debug_printf( DEBUG_DEBUG_2,
 				"Max sequence num in jobstate.log file: %d\n", maxSeqNum );
 
-	Job::SetPegasusNextSequenceNum( maxSeqNum + 1 );
+	Job::SetJobstateNextSequenceNum( maxSeqNum + 1 );
 }
 
 //---------------------------------------------------------------------------
@@ -417,8 +420,8 @@ JobstateLog::Write( const time_t *eventTimeP, Job *node,
 	MyString info;
 
 	info.sprintf( "%s %s %s %s - %d", node->GetJobName(), eventName,
-				condorID, node->PegasusSite(),
-				node->GetPegasusSequenceNum() );
+				condorID, node->GetJobstateJobTag(),
+				node->GetJobstateSequenceNum() );
 	Write( eventTimeP, info );
 }
 
@@ -482,7 +485,7 @@ void
 JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 {
 		// Make sure Condor ID is valid.
-	if ( cluster != _defaultCondorID._cluster ) {
+	if ( cluster != DEFAULT_CONDOR_ID._cluster ) {
 		idStr.sprintf( "%d.%d", cluster, proc );
 	} else {
 		idStr = "-";
@@ -502,7 +505,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 	const char* nodeNameTok = line.GetNextToken( " ", false );
 	(void)line.GetNextToken( " ", false ); // event name
 	(void)line.GetNextToken( " ", false ); // condor id
-	(void)line.GetNextToken( " ", false ); // pegasus site
+	(void)line.GetNextToken( " ", false ); // job tag (pegasus site)
 	(void)line.GetNextToken( " ", false ); // unused
 	const char* seqNumTok = line.GetNextToken( " ", false );
 

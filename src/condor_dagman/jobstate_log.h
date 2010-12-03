@@ -34,7 +34,8 @@
 
 // The format of the lines in the jobstate.log file is as follows:
 // Normal: <timestamp> <node name> <event name> <condor id>
-//   <pegasus site> <(unused -- dash)> <sequence number>
+//   <job tag> <(unused -- dash)> <sequence number>
+//   (note that the default for the <job tag> is the Pegasus site).
 // DAGMan start: <timestamp> INTERNAL *** DAGMAN_STARTED <condor id> ***
 // DAGMan exit: <timestamp> INTERNAL *** DAGMAN_FINISHED <exit code> ***
 // Recovery started: <timestamp> INTERNAL *** RECOVERY_STARTED ***
@@ -74,7 +75,7 @@ public:
 	*/
 	void InitializeRecovery();
 
-	/** Initialize the Pegasus sequence number to the correct value
+	/** Initialize the jobstate.log sequence number to the correct value
 		when we're running a rescue DAG (start up one after the last
 		sequence number we've already written).
 	*/
@@ -177,28 +178,6 @@ private:
 		// timestamp _lastTimestampWritten (used to avoid re-writing
 		// events).
 	std::set<MyString> _lastTimestampLines;
-
-//TEMPTEMP -- move these out of class, into .cpp file?
-		// The names of the pseudo-events we're going to write (for "real"
-		// events, we use the event names defined in condor_event.h).
-	static const char *JOB_SUCCESS_NAME;
-	static const char *JOB_FAILURE_NAME;
-	static const char *PRE_SCRIPT_STARTED_NAME;
-	static const char *PRE_SCRIPT_SUCCESS_NAME;
-	static const char *PRE_SCRIPT_FAILURE_NAME;
-	static const char *POST_SCRIPT_STARTED_NAME;
-	static const char *POST_SCRIPT_SUCCESS_NAME;
-	static const char *POST_SCRIPT_FAILURE_NAME;
-	static const char *INTERNAL_NAME;
-	static const char *DAGMAN_STARTED_NAME;
-	static const char *DAGMAN_FINISHED_NAME;
-	static const char *RECOVERY_STARTED_NAME;
-	static const char *RECOVERY_FINISHED_NAME;
-	static const char *RECOVERY_FAILURE_NAME;
-	static const char *SUBMIT_FAILURE_NAME;
-
-		// Default Condor ID to use to check for invalid IDs.
-	static const CondorID _defaultCondorID;
 };
 
 #endif	// _JOBSTATE_LOG_H

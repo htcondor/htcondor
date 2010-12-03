@@ -377,27 +377,27 @@ class Job {
 	*/
 	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
-	/** Get the Pegasus site for this node.
-		@return The Pegasus site (can be "local"; if no site is specified,
+	/** Get the jobstate.log job tag for this node.
+		@return The job tag (can be "local"; if no tag is specified,
 			the value will be "-").
 	*/
-	const char *PegasusSite();
+	const char *GetJobstateJobTag();
 
-	/** Get the Pegasus sequence number for this node, assigning one
+	/** Get the jobstate.log sequence number for this node, assigning one
 		if we haven't already.
 	*/
-	int GetPegasusSequenceNum();
+	int GetJobstateSequenceNum();
 	
-	/** Reset the Pegasus sequence number for this node, so we get a
+	/** Reset the jobstate.log sequence number for this node, so we get a
 		new sequence number for node retries, etc.
 	*/
-	void ResetPegasusSequenceNum() { _pegasusSeqNum = 0; }
+	void ResetJobstateSequenceNum() { _jobstateSeqNum = 0; }
 
-	/** Set the master Pegasus sequence number.
+	/** Set the master jobstate.log sequence number.
 		@param The next sequence number that should be given out.
 	*/
-	static void SetPegasusNextSequenceNum( int nextSeqNum ) {
-		_nextPegasusSeqNum = nextSeqNum;
+	static void SetJobstateNextSequenceNum( int nextSeqNum ) {
+		_nextJobstateSeqNum = nextSeqNum;
 	}
 
 	/** Set the last event time for this job to be the time of the given
@@ -562,22 +562,18 @@ private:
 		// to Condor).
 	bool _noop;
 
-		// The Pegasus site for this node ("-" if nothing is specified;
+		// The job tag for this node ("-" if nothing is specified;
 		// can also be "local").
-	char *_pegasusSite;
+	char *_jobTag;
 
-		// The Pegasus sequence number for this node (used if we are
-		// writing the jobstate.log file for Pegasus to read).
-	int _pegasusSeqNum;
+		// The jobstate.log sequence number for this node (used if we are
+		// writing the jobstate.log file for Pegasus or others to read).
+	int _jobstateSeqNum;
 
-		// The next Pegasus sequence number for the entire DAG.  Note
+		// The next jobstate.log sequence number for the entire DAG.  Note
 		// that, when we run a rescue DAG, we pick up the sequence numbers
 		// from where we left off when we originally ran the DAG.
-	static int _nextPegasusSeqNum;
-
-		// The sequence number keyword for the file in which we save
-		// the sequence number.
-	static const char *SEQ_NUM_KEYWORD;
+	static int _nextJobstateSeqNum;
 
 		// The time of the most recent event related to this job.
 	time_t _lastEventTime;
