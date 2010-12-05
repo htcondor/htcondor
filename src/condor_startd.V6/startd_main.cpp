@@ -735,7 +735,7 @@ shutdown_reaper(Service *, int pid, int status)
 
 
 int
-do_cleanup(int,int,char*)
+do_cleanup(int line, int err,char* msg)
 {
 	static int already_excepted = FALSE;
 
@@ -746,6 +746,9 @@ do_cleanup(int,int,char*)
 			// Otherwise, quickly kill all the active starters.
 		resmgr->walk( &Resource::void_kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
+		dprintf( D_FAILURE|D_ALWAYS, "error line = %d\n", line);
+		dprintf( D_FAILURE|D_ALWAYS, "error code = %d\n", err);
+		dprintf( D_FAILURE|D_ALWAYS, "error message = %s\n", msg);
 	}
 
 	return TRUE;

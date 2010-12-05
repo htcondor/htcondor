@@ -24,6 +24,7 @@
 extern "C" {
 #endif
 
+// every func here is obsolete.
 extern	char*	my_hostname( void );
 extern	char*	my_full_hostname( void );
 extern	unsigned int	my_ip_addr( void );

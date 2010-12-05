@@ -22,7 +22,8 @@
 #include "url_condor.h"
 #include "internet.h"
 #include "condor_debug.h"
-#include "condor_netdb.h"
+#include "ipv6_addrinfo.h"
+#include "condor_sockfunc.h"
 
 /*
 *	A full fledged ftp url looks like:
@@ -67,13 +68,11 @@ char *get_ftpd_response(int sock_fd, int resp_val)
 static
 int open_ftp( const char *name, int flags )
 {
-	struct sockaddr_in	sin;
-	int		sock_fd;
+	int		sock_fd = -1;
 	int		status;
 	//char	*port_sep; // commented out, because it is unused, avoiding warning
 	char	*end_of_addr;
 	int		port_num = FTP_PORT;
-	struct hostent *he;
 	char	ftp_cmd[1024];
 	//int		read_count; // commented out, because it is unused, avoiding warning
 	char	*ftp_resp;
@@ -85,19 +84,6 @@ int open_ftp( const char *name, int flags )
 /*	if (flags & O_WRONLY) {
 		return -1;
 	} */
-
-	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock_fd < 0) {
-		fprintf(stderr, "socket() failed, errno = %d\n", errno);
-		fflush(stderr);
-		return sock_fd;
-	}
-
-	/* TRUE means this is an outgoing connection */
-	if( ! _condor_local_bind(TRUE, sock_fd) ) {
-		close( sock_fd );
-		return -1;
-	}
 
 	if (name[0] != '/' || name[1] != '/') {
 		return -1;
@@ -113,24 +99,40 @@ int open_ftp( const char *name, int flags )
 	}
 	*end_of_addr = '\0';
 
-	sin.sin_port = htons(port_num);
-
-	he = condor_gethostbyname( name );
-	if ( he ) {
-		sin.sin_family = he->h_addrtype;
-		sin.sin_addr = *((struct in_addr *) he->h_addr_list[0]);
-	} else {
+	addrinfo_iterator iter;
+	int ret = ipv6_getaddrinfo(name, NULL, iter);
+	*end_of_addr = '/';
+	if (ret != 0) {
+		fprintf(stderr, "ftp getaddrinfo() FAILED, return code = %d "
+				"errno = %d\n", ret, errno);
+		fflush(stderr);
 		return -1;
 	}
+	while(addrinfo* ai = iter.next()) {
+		if (ai->ai_socktype != SOCK_STREAM || ai->ai_protocol != 0)
+			continue;
 
-	*end_of_addr = '/';
+		sock_fd = socket(ai->ai_family, SOCK_STREAM, 0);
+		if (sock_fd < 0)
+			continue;
 
-	status = connect(sock_fd, (struct sockaddr *) &sin, sizeof(sin));
-	if (status < 0) {
-		fprintf(stderr, "http connect() FAILED, errno = %d\n", errno);
-		fflush(stderr);
-		close( sock_fd );
-		return status;
+		if (!_condor_local_bind(TRUE, sock_fd)) {
+			close(sock_fd);
+			sock_fd = -1;
+			continue;
+		}
+		ipaddr addr(ai->ai_addr);
+		addr.set_port(port_num);
+		status = condor_connect(sock_fd, addr);
+		if (status < 0) {
+			fprintf(stderr, "ftp connect() FAILED, ip = %s errno = %d\n",
+					addr.to_ip_string().Value(),
+					errno);
+			fflush(stderr);
+			close( sock_fd );
+			sock_fd = -1;
+			continue;
+		}
 	}
 
 	name = end_of_addr;

@@ -31,6 +31,7 @@
 #include "condor_string.h"
 #include "condor_netdb.h"
 #include "selector.h"
+#include "condor_sockfunc.h"
 
 _condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
 unsigned long SafeSock::_noMsgs = 0;
@@ -237,7 +238,7 @@ SafeSock::my_ip_str()
 		return NULL;
 	}
 
-	if(::connect(s._sock, (sockaddr *)&_who, sizeof(sockaddr_in)) != 0) {
+	if (condor_connect(s._sock, _who) != 0) {
 #if defined(WIN32)
 		int lasterr = WSAGetLastError();
 		dprintf( D_ALWAYS, "SafeSock::my_ip_str() failed to connect, errno = %d\n",
@@ -249,12 +250,9 @@ SafeSock::my_ip_str()
 		return NULL;
 	}
 
-	struct sockaddr_in sin;
-	if(s.my_addr(&sin) == -1) {
-		return NULL;
-	}
-	strncpy( _my_ip_buf, inet_ntoa(sin.sin_addr), IP_STRING_BUF_SIZE );
-    _my_ip_buf[IP_STRING_BUF_SIZE-1] = '\0';
+	ipaddr addr;
+	addr = s.my_addr();
+	strcpy(_my_ip_buf, addr.to_ip_string().Value());
 	return _my_ip_buf;
 }
 
@@ -264,37 +262,17 @@ int SafeSock::connect(
 	bool
 	)
 {
-	struct hostent	*hostp = NULL;
-	unsigned long	inaddr = 0;
-
 	if (!host || port < 0) return FALSE;
 
-	memset(&_who, 0, sizeof(sockaddr_in));
-	_who.sin_family = AF_INET;
-	_who.sin_port = htons((u_short)port);
+	_who.clear();
+	if (!Sock::guess_address_string(host, _who))
+		return FALSE;
 
-    int ret;
-
-	/* might be in <x.x.x.x:x> notation, i.e. sinfull string */
 	if (host[0] == '<') {
-		string_to_sin(host, &_who);
 		set_connect_addr(host);
-	}
-	/* try to get a decimal notation first 			*/
-	else if( (ret = inet_pton(AF_INET, host, &inaddr)) > 0 ) {
-		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
-		set_connect_addr(sin_to_string(&_who));
-	} else {
-		/* if dotted notation fails, try host database	*/
-		hostp = condor_gethostbyname(host);
-		if( hostp == (struct hostent *)0 ) {
-			return FALSE;
 		} else {
-			memcpy(&_who.sin_addr, hostp->h_addr, sizeof(hostp->h_addr));
-		}
-		set_connect_addr(sin_to_string(&_who));
+		set_connect_addr(_who.to_sinful().Value());
 	}
-
     addr_changed();
 
 	// now that we have set _who (useful for getting informative
@@ -527,19 +505,19 @@ int SafeSock::peek(char &c)
 int SafeSock::handle_incoming_packet()
 {
 
-#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
+//#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
 	/* SOCKET_ALTERNATE_LENGTH_TYPE is void on this platform, and
 		since noone knows what that void* is supposed to point to
 		in recvfrom, I'm going to predict the "fromlen" variable
 		the recvfrom uses is a size_t sized quantity since
 		size_t is how you count bytes right?  Stupid Solaris. */
-	size_t len = sizeof(struct sockaddr_in);
-#else
-	SOCKET_ALTERNATE_LENGTH_TYPE len = sizeof(struct sockaddr_in);
-#endif
+//	size_t len = sizeof(struct sockaddr_in);
+//#else
+//	SOCKET_ALTERNATE_LENGTH_TYPE len = sizeof(struct sockaddr_in);
+//#endif
 
-	SOCKET_ALTERNATE_LENGTH_TYPE *fromlen = 
-		(SOCKET_ALTERNATE_LENGTH_TYPE *)&len;
+//	SOCKET_ALTERNATE_LENGTH_TYPE *fromlen = 
+//		(SOCKET_ALTERNATE_LENGTH_TYPE *)&len;
 
 	bool last;
 	int seqNo, length;
@@ -579,8 +557,9 @@ int SafeSock::handle_incoming_packet()
 	}
 
 
-	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
-	                    0, (struct sockaddr *)&_who, (socklen_t*)fromlen );
+	received = condor_recvfrom(_sock, _shortMsg.dataGram, 
+							   SAFE_MSG_MAX_PACKET_SIZE, 0, _who);
+
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
@@ -588,7 +567,7 @@ int SafeSock::handle_incoming_packet()
     char str[50];
     sprintf(str, sock_to_string(_sock));
     dprintf( D_NETWORK, "RECV %d bytes at %s from %s\n",
-            received, str, sin_to_string(&_who));
+			 received, str, _who.to_sinful().Value());
     //char temp_str[10000];
     //temp_str[0] = 0;
     //for (int i=0; i<received; i++) { sprintf(&temp_str[strlen(temp_str)], "%02x,", _shortMsg.dataGram[i]); }
@@ -748,7 +727,7 @@ char * SafeSock::serialize() const
 
     memset(outbuf, 0, 50);
 
-	sprintf(outbuf,"%d*%s*",_special_state,sin_to_string(&_who));
+	sprintf(outbuf,"%d*%s*", _special_state, _who.to_sinful().Value());
 	strcat(parent_state,outbuf);
 
 	return( parent_state );
@@ -783,7 +762,7 @@ char * SafeSock::serialize(char *buf)
         sscanf(ptmp,"%s",sinful_string);
     }
 
-	string_to_sin(sinful_string, &_who);
+	_who.from_sinful(sinful_string);
 
 	return NULL;
 }

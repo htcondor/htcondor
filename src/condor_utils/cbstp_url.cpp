@@ -22,18 +22,20 @@
 #include "url_condor.h"
 #include "internet.h"
 #include "condor_debug.h"
+#include "condor_ipaddr.h"
+#include "condor_sockfunc.h"
 
 // We need to match a function prototype in class URLProtocol, but we
 // don't care about flags, as we're just going to connect to a socket
 // and puke bytes at it.
 int condor_bytes_stream_open_ckpt_file( const char *name, int /* flags */ )
 {
-	struct sockaddr_in	sin;
 	int		sock_fd;
 	int		status;
 
-	string_to_sin(name, &sin);
-	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+	ipaddr addr;
+	addr.from_sinful(name);
+	sock_fd = socket(addr.get_aftype(), SOCK_STREAM, 0);
 	if (sock_fd < 0) {
 		fprintf(stderr, "socket() failed, errno = %d\n", errno);
 		fflush(stderr);
@@ -46,8 +48,7 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int /* flags */ )
 		return -1;
 	}
 
-	sin.sin_family = AF_INET;
-	status = connect(sock_fd, (struct sockaddr *) &sin, sizeof(sin));
+	status = condor_connect(sock_fd, addr);
 	if (status < 0) {
 		fprintf(stderr, "cbstp connect() FAILED, errno = %d\n", errno);
 		fflush(stderr);

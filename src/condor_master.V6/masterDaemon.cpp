@@ -25,7 +25,6 @@
 #include "master.h"
 #include "condor_daemon_core.h"
 #include "exit.h"
-#include "my_hostname.h"
 #include "basename.h"
 #include "condor_email.h"
 #include "condor_environ.h"
@@ -39,6 +38,8 @@
 #include "file_lock.h"
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
+#include "condor_ipaddr.h"
+#include "ipv6_hostname.h"
 
 #if HAVE_DLOPEN
 #include "MasterPlugin.h"
@@ -217,8 +218,8 @@ daemon::runs_on_this_host()
 {
 	char	*tmp;
 	char	hostname[512];
-	static char	**this_host_addr_list = 0;
-	static int		host_addr_count;
+	static bool this_host_addr_cached = false;
+	static std::vector<ipaddr> this_host_addr;
 	struct hostent	*hp;
 	int		i, j;
 
@@ -232,26 +233,14 @@ daemon::runs_on_this_host()
 				runs_here = FALSE;
 			}
 		} else {
-			if (this_host_addr_list == 0) {
-				if (condor_gethostname(hostname, sizeof(hostname)) < 0) {
-					EXCEPT( "gethostname(0x%p,%d)", hostname, 
-						   sizeof(hostname));
-				}
-				if( (hp=condor_gethostbyname(hostname)) == 0 ) {
-					EXCEPT( "gethostbyname(%s)", hostname );
-				}
-				for (host_addr_count = 0; hp->h_addr_list[host_addr_count];
-					 host_addr_count++ ) {
-					/* Empty Loop */
-				}
-				this_host_addr_list = (char **) malloc(host_addr_count * 
-													   sizeof (char *));
-				for (i = 0; i < host_addr_count; i++) {
-					this_host_addr_list[i] = (char *) malloc(hp->h_length);
-					memcpy(this_host_addr_list[i], hp->h_addr_list[i],
-						   hp->h_length);
+			if (!this_host_addr_cached) {
+				MyString local_hostname = get_local_hostname();
+				this_host_addr = resolve_hostname(local_hostname);
+				if (!this_host_addr.empty()) {
+					this_host_addr_cached = true;
 				}
 			}
+			
 			/* Get the name of the host on which this daemon should run */
 			tmp = param( flag_in_config_file );
 			if (!tmp) {
@@ -260,15 +249,15 @@ daemon::runs_on_this_host()
 				return FALSE;
 			}
 			runs_here = FALSE;
-			hp = condor_gethostbyname( tmp );
-			if (hp == 0) {
+
+			std::vector<ipaddr> addrs = resolve_hostname(tmp);
+			if (addrs.empty()) {
 				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
 				return FALSE;
 			} 
-			for (i = 0; i < host_addr_count; i++) {
-				for (j = 0; hp->h_addr_list[j]; j++) {
-					if (memcmp(this_host_addr_list[i], hp->h_addr_list[j],
-							   hp->h_length) == MATCH) {
+			for (i = 0; i < this_host_addr.size(); ++i) {
+				for (j = 0; j < addrs.size(); ++j) {
+					if (this_host_addr[i].compare_address(addrs[j])) {
 						runs_here = TRUE;
 						break;
 					}
@@ -628,10 +617,11 @@ int daemon::RealStart( )
 		dprintf ( 
 			D_FULLDEBUG, 
 			"Looking for matching Collector on '%s' ...\n", 
-			my_full_hostname () );
+			get_local_fqdn().Value());
 		CollectorList* collectors = NULL;
 		if ((collectors = daemonCore->getCollectorList())) {
-			char * my_hostname = my_full_hostname();
+			MyString my_fqdn_str = get_local_fqdn();
+			const char * my_hostname = my_fqdn_str.Value();
 			Daemon * my_daemon;
 			collectors->rewind();
 			while (collectors->next (my_daemon)) {
@@ -1210,7 +1200,8 @@ daemon::Obituary( int status )
     char buf[1000];
 
 	MyString email_subject;
-	email_subject.sprintf("Problem %s: %s ", my_full_hostname(), condor_basename(process_name));
+	email_subject.sprintf("Problem %s: %s ", get_local_fqdn().Value(), 
+						  condor_basename(process_name));
 	if ( was_not_responding ) {
 		email_subject += "killed (unresponsive)";
 	} else {
@@ -1236,8 +1227,8 @@ daemon::Obituary( int status )
         return;
     }
 
-	fprintf( mailer, "\"%s\" on \"%s\" ",process_name,
-		my_full_hostname());
+	fprintf( mailer, "\"%s\" on \"%s\" ",process_name, 
+			 get_local_fqdn().Value() );
 
 	if ( was_not_responding ) {
 		fprintf( mailer, "was killed because\nit was no longer responding.\n");

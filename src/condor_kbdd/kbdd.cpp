@@ -27,7 +27,6 @@
 #include "XInterface.unix.h"
 #endif
 
-#include "my_hostname.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "subsystem_info.h"

@@ -36,7 +36,6 @@
 #include "condor_string.h"
 #include "condor_email.h"
 #include "condor_uid.h"
-#include "my_hostname.h"
 #include "get_daemon_name.h"
 #include "renice_self.h"
 #include "write_user_log.h"
@@ -90,6 +89,7 @@
 #include "forkwork.h"
 #include "condor_open.h"
 #include "schedd_negotiate.h"
+#include "ipv6_hostname.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -1335,16 +1335,16 @@ count( ClassAd *job )
 		{
 			// Count REMOVED or HELD jobs that are in the process of being
 			// killed. cur_hosts tells us which these are.
-			scheduler.SchedUniverseJobsRunning += cur_hosts;
-			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
-		}
+				scheduler.SchedUniverseJobsRunning += cur_hosts;
+				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
+			}
 		if( universe == CONDOR_UNIVERSE_LOCAL ) 
 		{
 			// Count REMOVED or HELD jobs that are in the process of being
 			// killed. cur_hosts tells us which these are.
-			scheduler.LocalUniverseJobsRunning += cur_hosts;
-			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
-		}
+				scheduler.LocalUniverseJobsRunning += cur_hosts;
+				scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
+			}
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
 
@@ -2070,7 +2070,7 @@ jobIsSandboxed( ClassAd * ad )
 		// sshd work.  For backward compatibility with prior releases,
 		// we assume all parallel jobs require this unless they explicitly
 		// specify otherwise.
-	int job_requires_sandbox_expr = 0;
+	  int job_requires_sandbox_expr = 0;
 	bool create_sandbox = univ == CONDOR_UNIVERSE_PARALLEL ? true : false;
 
 	if( ad->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) )
@@ -2078,7 +2078,7 @@ jobIsSandboxed( ClassAd * ad )
 		create_sandbox = job_requires_sandbox_expr ? true : false;
 	}
 
-	return create_sandbox;
+		return create_sandbox;
 }
 
 
@@ -2123,7 +2123,7 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 
 	SpooledJobFiles::createJobSpoolDirectory(job_ad,PRIV_USER);
 
-	FreeJobAd(job_ad);
+		FreeJobAd( job_ad );
 
 	return TRUE;
 }
@@ -4384,7 +4384,7 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 		// We have either deleted the socket or registered it again,
 		// so tell our caller to just leave it alone.
 	return KEEP_STREAM;
-}
+	}
 
 /* 
    Helper function used by both DedicatedScheduler::negotiate() and
@@ -4415,8 +4415,8 @@ Scheduler::canSpawnShadow()
 		// Now, see if we ran out of swap space already.
 	if( SwapSpaceExhausted) {
 		if( !RecentlyWarnedMaxJobsRunning ) {
-			dprintf( D_ALWAYS, "Swap space exhausted! No more jobs can be run!\n" );
-			dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
+		dprintf( D_ALWAYS, "Swap space exhausted! No more jobs can be run!\n" );
+        dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
 		}
 		RecentlyWarnedMaxJobsRunning = true;
 		return false;
@@ -4424,8 +4424,8 @@ Scheduler::canSpawnShadow()
 
 	if( ShadowSizeEstimate && shadows >= MaxShadowsForSwap ) {
 		if( !RecentlyWarnedMaxJobsRunning ) {
-			dprintf( D_ALWAYS, "Swap space estimate reached! No more jobs can be run!\n" );
-			dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
+		dprintf( D_ALWAYS, "Swap space estimate reached! No more jobs can be run!\n" );
+        dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
 		}
 		RecentlyWarnedMaxJobsRunning = true;
 		return false;
@@ -4905,8 +4905,12 @@ Scheduler::negotiate(int command, Stream* s)
 			// and FLOCK_NEGOTIATOR_HOSTS.
 
 		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
-		struct hostent *hent;
+		//sockaddr_in sin = sock->peer_addr().to_sin();
+		//struct in_addr endpoint_addr = sin.sin_addr;
+		//struct hostent *hent;
+		ipaddr endpoint_addr = sock->peer_addr();
+		std::vector<ipaddr> addrs;
+		std::vector<ipaddr>::iterator iter;
 		bool match = false;
 		Daemon negotiator (DT_NEGOTIATOR);
 		char *negotiator_hostname = negotiator.fullHostname();
@@ -4914,25 +4918,52 @@ Scheduler::negotiate(int command, Stream* s)
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
 			return (!(KEEP_STREAM));
 		}
-		hent = condor_gethostbyname(negotiator_hostname);
-		if (!hent) {
-			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
-					"  Aborting negotiation.\n", negotiator_hostname);
-			return (!(KEEP_STREAM));
+		addrs = resolve_hostname(negotiator_hostname);
+		if (addrs.empty()) {
+			dprintf(D_ALWAYS, "resolve_hostname for local negotiator (%s) "
+					" returned nothing. Aborting negotiation.\n",
+					negotiator_hostname);
+			return !(KEEP_STREAM);
 		}
-		char *addr;
-		if (hent->h_addrtype == AF_INET) {
-			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
-				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
+			//hent = condor_gethostbyname(negotiator_hostname);
+			//if (!hent) {
+			//dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
+			//		"  Aborting negotiation.\n", negotiator_hostname);
+			//return (!(KEEP_STREAM));
+			//}
+
+		for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
+			const ipaddr& addr = *iter;
+			if (addr.compare_address(endpoint_addr)) {
 					match = true;
+				break;
 				}
 			}
-		}
+			//char *addr;
+			//if (hent->h_addrtype == AF_INET) {
+			//for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
+			//	if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
+			//		match = true;
+			//	}
+			//}
+			//}
 		// if it isn't our local negotiator, check the FlockNegotiators list.
 		if (!match) {
 			int n;
 			for( n=1, FlockNegotiators->rewind();
 				 !match && FlockNegotiators->next(neg_host); n++) {
+				addrs = resolve_hostname(neg_host->fullHostname());
+				for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
+					const ipaddr& addr = *iter;
+					if (addr.compare_address(endpoint_addr)) {
+						match = true;
+						which_negotiator = n;
+						remote_pool_buf = neg_host->pool();
+						remote_pool = remote_pool_buf.Value();
+						break;
+					}
+				}
+					/*
 				hent = condor_gethostbyname(neg_host->fullHostname());
 				if (hent && hent->h_addrtype == AF_INET) {
 					for (int a=0;
@@ -4947,6 +4978,7 @@ Scheduler::negotiate(int command, Stream* s)
 						}
 					}
 				}
+					*/
 			}
 		}
 		if (!match) {
@@ -5004,7 +5036,7 @@ Scheduler::negotiate(int command, Stream* s)
 	if (at_sign) *at_sign = '\0';
 	for (owner_num = 0;
 		 owner_num < N_Owners && strcmp(Owners[owner_num].Name, owner);
-		 owner_num++) ;
+		 owner_num++);
 	if (owner_num == N_Owners) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		jobs = 0;
@@ -5021,7 +5053,7 @@ Scheduler::negotiate(int command, Stream* s)
 	ResourceRequestList *resource_requests = new ResourceRequestList;
 	ResourceRequestCluster *cluster = NULL;
 	int next_cluster = 0;
-
+	
 	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
 		prio_rec *prec = &PrioRec[job_index];
 		if(strcmp(owner,prec->owner)!=0)
@@ -5037,15 +5069,15 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 		else {
 			auto_cluster_id = prec->auto_cluster_id;
-		}
+					}
 
 		if( !cluster || cluster->getAutoClusterId() != auto_cluster_id )
-		{
+					{
 			cluster = new ResourceRequestCluster( auto_cluster_id );
 			resource_requests->push_back( cluster );
-		}
+					}
 		cluster->addJob( prec->id );
-	}
+					}
 
 	classy_counted_ptr<MainScheddNegotiate> sn =
 		new MainScheddNegotiate(
@@ -7762,18 +7794,16 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 					 "for of remote resource for setting %s, using "
 					 "inferior alternatives!\n", ATTR_NAME, 
 					 ATTR_REMOTE_HOST );
-			struct sockaddr_in sin;
-			if( mrec->peer && mrec->peer[0] && 
-				string_to_sin(mrec->peer, &sin) == 1 ) {
+			ipaddr addr;
+			if( mrec->peer && mrec->peer[0] && addr.from_sinful(mrec->peer) ) {
 					// make local copy of static hostname buffer
-				char *tmp, *hostname;
-				if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-					hostname = strdup( tmp );
+				char *tmp;
+				MyString hostname = get_hostname(addr);
+				if (hostname.Length() > 0) {
 					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST,
-										hostname );
+										hostname.Value() );
 					dprintf( D_FULLDEBUG, "Used inverse DNS lookup (%s)\n",
-							 hostname );
-					free(hostname);
+							 hostname.Value() );
 				} else {
 						// Error looking up host info...
 						// Just use the sinful string
@@ -9473,31 +9503,31 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		}
 	}
 
-		/* Remove any checkpoint files.  If for some reason we do 
+		  /* Remove any checkpoint files.  If for some reason we do 
 		 * not know the owner, don't bother sending to the ckpt
 		 * server.
 		 */
 	GetAttributeInt(cluster,proc,ATTR_JOB_UNIVERSE,&universe);
 	if ( universe == CONDOR_UNIVERSE_STANDARD && owner ) {
-		char *ckpt_name_mem = gen_ckpt_name(Spool,cluster,proc,0);
-		ckpt_name_buf = ckpt_name_mem;
-		free(ckpt_name_mem); ckpt_name_mem = NULL;
-		ckpt_name = ckpt_name_buf.Value();
+	char *ckpt_name_mem = gen_ckpt_name(Spool,cluster,proc,0);
+	ckpt_name_buf = ckpt_name_mem;
+	free(ckpt_name_mem); ckpt_name_mem = NULL;
+	ckpt_name = ckpt_name_buf.Value();
 
 		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
 							   server) == 0) {
 			SetCkptServerHost(server.Value());
-		} else {
+			} else {
 			SetCkptServerHost(NULL); // no ckpt on ckpt server
-		}
+				}
 
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
 
-		ckpt_name_buf += ".tmp";
-		ckpt_name = ckpt_name_buf.Value();
+	ckpt_name_buf += ".tmp";
+	ckpt_name = ckpt_name_buf.Value();
 
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
-	}
+				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+			}
 
 	SpooledJobFiles::removeJobSpoolDirectory(cluster,proc);
 }
@@ -11472,7 +11502,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			retry_is_sensible = true;
 		}
 		else {
-			startd_name = my_full_hostname();
+			startd_name = get_local_fqdn();
 				// NOTE: this does not get the CCB address of the starter.
 				// If there is one, we'll get it when we call the starter
 				// below.  (We don't need it ourself, because it is on the

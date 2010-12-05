@@ -22,7 +22,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_uid.h"
-#include "my_hostname.h"
 #include "condor_string.h"
 #include "basename.h"
 #include "master.h"

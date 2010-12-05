@@ -22,7 +22,8 @@
 #include "url_condor.h"
 #include "internet.h"
 #include "condor_debug.h"
-#include "condor_netdb.h"
+#include "ipv6_addrinfo.h"
+#include "condor_sockfunc.h"
 
 #define HTTP_PORT	80
 
@@ -55,7 +56,6 @@ readline(int fd, char *buf)
 static
 int open_http( const char *name, int flags )
 {
-	struct sockaddr_in	sin;
 	int		sock_fd;
 	int		status;
 	char	*port_sep;
@@ -66,19 +66,6 @@ int open_http( const char *name, int flags )
 	
 	/* We can only read via http */
 	if (flags & O_WRONLY) {
-		return -1;
-	}
-
-	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock_fd < 0) {
-		fprintf(stderr, "socket() failed, errno = %d\n", errno);
-		fflush(stderr);
-		return sock_fd;
-	}
-
-	/* TRUE means this is an outgoing connection */
-	if( ! _condor_local_bind(TRUE, sock_fd) ) {
-		close( sock_fd );
 		return -1;
 	}
 
@@ -102,24 +89,42 @@ int open_http( const char *name, int flags )
 		port_sep++;
 		port_num = atoi(port_sep);
 	}
-	sin.sin_port = htons(port_num);
 
-	he = condor_gethostbyname( name );
-	if ( he ) {
-		sin.sin_family = he->h_addrtype;
-		sin.sin_addr = *((struct in_addr *) he->h_addr_list[0]);
-	} else {
-		return -1;
-	}
-
+	addrinfo_iterator iter;
+	int ret = ipv6_getaddrinfo(name, NULL, iter);
 	*end_of_addr = '/';
 
-	status = connect(sock_fd, (struct sockaddr *) &sin, sizeof(sin));
-	if (status < 0) {
-		fprintf(stderr, "http connect() FAILED, errno = %d\n", errno);
+	if (ret != 0) {
+		fprintf(stderr, "http getaddrinfo() FAILED, return code = %d "
+				"errno = %d\n", ret, errno);
 		fflush(stderr);
-		close( sock_fd );
-		return status;
+		return -1;
+	}
+	while(addrinfo* ai = iter.next()) {
+		if (ai->ai_socktype != SOCK_STREAM || ai->ai_protocol != 0)
+			continue;
+
+		sock_fd = socket(ai->ai_family, SOCK_STREAM, 0);
+		if (sock_fd < 0)
+			continue;
+
+		if (!_condor_local_bind(TRUE, sock_fd)) {
+			close(sock_fd);
+			sock_fd = -1;
+			continue;
+		}
+		ipaddr addr(ai->ai_addr);
+		addr.set_port(port_num);
+		status = condor_connect(sock_fd, addr);
+		if (status < 0) {
+			fprintf(stderr, "http connect() FAILED, ip = %s errno = %d\n",
+					addr.to_ip_string().Value(),
+					errno);
+			fflush(stderr);
+			close( sock_fd );
+			sock_fd = -1;
+			continue;
+		}
 	}
 
 	name = end_of_addr;

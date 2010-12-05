@@ -294,7 +294,6 @@ testSocks( Daemon* d )
 void
 testAPI( char* my_name, bool do_socks )
 {
-	struct sockaddr_in sock;
 	char *name, *addr, *fullhost, *host, *pool, *error, *id;
 
 	Daemon startd( DT_STARTD, my_name );

@@ -70,27 +70,27 @@ convert_hostname_to_ip(const char *name,
 struct hostent * get_nodns_hostent(const char* name)
 {
 		// We simulate at most 1 addr
-	#define MAXSIMULATEDADDRS 2
+	#define MAXSIMULATEDADDRS 2 
 
 	static struct hostent hostent;
 	static char *h_aliases[1] = {NULL};
 	static char *h_addr_list[MAXSIMULATEDADDRS];
-	static char h_name[MAXSIMULATEDADDRS];
+	static char h_name[NI_MAXHOST];
 
-    if (convert_hostname_to_ip(name, h_addr_list, MAXSIMULATEDADDRS)) {
-            // We've failed
-        return NULL;
-    } else {
-        memset(h_name, 0, MAXSIMULATEDADDRS);
-        strncpy(h_name, name, MAXSIMULATEDADDRS - 1);
-        hostent.h_name = h_name;
-        hostent.h_aliases = h_aliases;
-        hostent.h_addrtype = AF_INET;
-        hostent.h_length = sizeof(struct in_addr);
-        hostent.h_addr_list = h_addr_list;
+		if (convert_hostname_to_ip(name, h_addr_list, MAXSIMULATEDADDRS)) {
+				// We've failed
+			return NULL;
+		} else {
+			memset(h_name, 0, MAXSIMULATEDADDRS);
+        strncpy(h_name, name, NI_MAXHOST - 1);
+			hostent.h_name = h_name;
+			hostent.h_aliases = h_aliases;
+			hostent.h_addrtype = AF_INET;
+			hostent.h_length = sizeof(struct in_addr);
+			hostent.h_addr_list = h_addr_list;
 
-        return &hostent;
-    }
+			return &hostent;
+		}
 }
 
 struct hostent *
@@ -102,7 +102,7 @@ condor_gethostbyname_ipv4(const char *name) {
 	}
 }
 
-struct hostent*
+struct hostent *
 condor_gethostbyname_ipv6(const char* name) {
     #define MAXADDR 16
     static struct hostent hostent;
@@ -189,18 +189,18 @@ struct hostent* get_nodns_addr(const char* addr) {
 	static char *h_aliases[1] = {NULL};
 	static char h_name[NI_MAXHOST]; // from /usr/include/sys/param.h
 
-    if (convert_ip_to_hostname(addr, h_name, MAXHOSTNAMELEN)) {
-            // We've failed
-        return NULL;
-    } else {
-        hostent.h_name = h_name;
-        hostent.h_aliases = h_aliases;
-        hostent.h_addrtype = AF_INET;
-        hostent.h_length = 0;
-        hostent.h_addr_list = NULL;
+		if (convert_ip_to_hostname(addr, h_name, MAXHOSTNAMELEN)) {
+				// We've failed
+			return NULL;
+		} else {
+			hostent.h_name = h_name;
+			hostent.h_aliases = h_aliases;
+			hostent.h_addrtype = AF_INET;
+			hostent.h_length = 0;
+			hostent.h_addr_list = NULL;
 
-        return &hostent;
-    }
+			return &hostent;
+		}
 }
 
 struct hostent *

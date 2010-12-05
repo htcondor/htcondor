@@ -838,7 +838,7 @@ ReliSock::serialize() const
     // now concatenate our state
 	char * outbuf = new char[50];
     memset(outbuf, 0, 50);
-	sprintf(outbuf,"%d*%s*",_special_state,sin_to_string(&_who));
+	sprintf(outbuf,"%d*%s*",_special_state,_who.to_sinful().Value());
 	strcat(parent_state,outbuf);
 
     // Serialize crypto stuff
@@ -902,8 +902,8 @@ ReliSock::serialize(char *buf)
         // we are 6.2, this is the end of it.
         sscanf(ptmp,"%s",sinful_string);
     }
-    
-    string_to_sin(sinful_string, &_who);
+
+	_who.from_sinful(sinful_string);
     
     return NULL;
 }
