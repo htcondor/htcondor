@@ -170,7 +170,12 @@ std::vector<MyString> get_hostname_with_alias(const ipaddr& addr)
 
 	hostent* ent;
 	int aftype = addr.get_aftype();
+#ifdef WIN32
+	// unfortunately Windows does not define gethostybname2
+	ent = gethostbyname(hostname.Value());
+#else
 	ent = gethostbyname2(hostname.Value(), addr.get_aftype());
+#endif
 	if (!ent)
 		return ret;
 

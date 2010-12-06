@@ -65,6 +65,6 @@ int condor_getsockaddr(int fd, ipaddr& addr);
 // moved to my_hostname.h --> ipv6_hostname.h
 //ipaddr ipv6_my_ip_addr();
 int ipv6_is_ipaddr(const char* host, ipaddr& addr);
-const char* ipv6_addr_to_hostname(const ipaddr& addr, char* buf, int len);
+//const char* ipv6_addr_to_hostname(const ipaddr& addr, char* buf, int len);
 
 #endif // CONDOR_SOCKFUNC_H

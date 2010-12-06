@@ -70,7 +70,7 @@ int condor_socket(int socket_type, int protocol)
 int condor_sendto(int sockfd, const void* buf, size_t len, int flags,
 				  const ipaddr& addr)
 {
-	int ret = sendto(sockfd, buf, len, flags, addr.to_sockaddr(),
+	int ret = sendto(sockfd, (const char*)buf, len, flags, addr.to_sockaddr(),
 					 addr.get_socklen());
 	return ret;
 }
@@ -85,7 +85,8 @@ int condor_recvfrom(int sockfd, void* buf, size_t buf_size, int flags,
 	socklen_t fromlen = sizeof(ss);
 	memset(&ss, 0, sizeof(ss));
 
-	ret = recvfrom(sockfd, buf, buf_size, flags, (sockaddr*)&ss, &fromlen);
+	ret = recvfrom(sockfd, (char*)buf, buf_size, flags, (sockaddr*)&ss, 
+		&fromlen);
 	if (ret>=0) {
 		addr = ipaddr( (sockaddr*)&ss );
 	}
@@ -154,25 +155,36 @@ int condor_getaddrinfo(const char *node,
 hostent* condor_gethostbyaddr_ipv6(const ipaddr& addr)
 {
 	sockaddr* sa = addr.to_sockaddr();
-	socklen_t len = addr.get_socklen();
 	int type = sa->sa_family;
 	hostent* ret;
+	const char* p_addr = NULL;
+	int len;
 
-	ret = gethostbyaddr(sa, len, type);
+	if (type == AF_INET) {
+		sockaddr_in* sin4 = (sockaddr_in*)sa;
+		p_addr = (const char*)&sin4->sin_addr;
+		len = sizeof(in_addr);
+	} else if (type == AF_INET6) {
+		sockaddr_in6* sin6 = (sockaddr_in6*)sa;
+		p_addr = (const char*)&sin6->sin6_addr;
+		len = sizeof(in6_addr);
+	}
+
+	ret = gethostbyaddr(p_addr, len, type);
 	return ret;
 }
 
-const char* ipv6_addr_to_hostname(const ipaddr& addr, char* buf, int len)
-{
-    struct hostent  *hp;
-    struct sockaddr_in caddr;
-
-	if ( !addr.is_valid() ) return NULL;
-
-	hp = condor_gethostbyaddr_ipv6(addr);
-	if (!hp) return NULL;
-	return hp->h_name;
-}
+//const char* ipv6_addr_to_hostname(const ipaddr& addr, char* buf, int len)
+//{
+//    struct hostent  *hp;
+//    struct sockaddr_in caddr;
+//
+//	if ( !addr.is_valid() ) return NULL;
+//
+//	hp = condor_gethostbyaddr_ipv6(addr);
+//	if (!hp) return NULL;
+//	return hp->h_name;
+//}
 
 int ipv6_is_ipaddr(const char* host, ipaddr& addr)
 {
