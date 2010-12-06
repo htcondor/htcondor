@@ -174,6 +174,10 @@ fail with the following error in the \Condor{starter} log:
 FileTransfer: DownloadFiles called on server side
 \end{verbatim}
 
+% gittrac #1796
+\item Fixed a memory leak caused by use of the ClassAd \Expr{eval()}
+  function.  This problem was introduced in 7.5.2.
+
 \end{itemize}
 
 \noindent Known Bugs:
