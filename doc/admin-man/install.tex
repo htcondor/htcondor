@@ -37,8 +37,8 @@ Please choose the site nearest to you.
 
 Make note of the location of where you download the binary into.
 
-The Condor binary distribution is packaged in the following 5 files
-and 2 directories:
+The Condor binary distribution is packaged in the following files
+and directories:
 
 \begin{description}
 \item[\File{DOC}] directions on where to find Condor documentation
@@ -208,6 +208,15 @@ centralized can make administration easier, but also concentrates the
 resource usage such that you potentially need a lot of space for a
 single shared home directory.  See the section below on
 machine-specific directories for more details.
+
+Note that the user condor must not be an account into which a person
+can log in.
+If a person can log in as user condor, 
+it permits a major security breach,
+in that the user condor could submit jobs that run as any other user,
+providing complete access to the user's data by the jobs. 
+A standard way of not allowing log in to an account on Unix platforms
+is to enter an invalid shell in the password file.
 
 If you choose not to create a user named condor,
 then you must specify either via the
