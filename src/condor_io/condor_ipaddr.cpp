@@ -3,33 +3,6 @@
 #include "condor_ipaddr.h"
 #include "ipv6_hostname.h"
 
-/*
-const unsigned char* ipaddr::get_addr() const {
-	// field name of in6_addr is different from platform to platform
-	return (const unsigned char*)&storage.sin6_addr;
-}
-
-unsigned char* ipaddr::get_addr() {
-	// field name of in6_addr is different from platform to platform
-	return (unsigned char*)&storage.sin6_addr;
-}
-
-unsigned int& ipaddr::get_addr_header()
-{
-	return *(unsigned int*)get_addr();
-}
-
-const unsigned int& ipaddr::get_v4_addr() const
-{
-	return *(const unsigned int*)(get_addr()+12);
-}
-
-unsigned int& ipaddr::get_v4_addr()
-{
-	return *(unsigned int*)(get_addr()+12);
-}
-*/
-
 ipaddr ipaddr::null;
 
 void ipaddr::clear()

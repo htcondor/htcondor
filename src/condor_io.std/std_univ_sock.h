@@ -72,6 +72,9 @@ public:
 	/// peer's IP address, string verison (e.g. "128.105.101.17")
 	const char* peer_ip_str();
 
+	// [TODO:IPV6] REMOVE
+	/// local ip address integer
+	unsigned int get_ip_int();
  private:
 
 	void init();				/* shared initialization method */

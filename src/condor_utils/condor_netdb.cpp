@@ -102,6 +102,7 @@ condor_gethostbyname_ipv4(const char *name) {
 	}
 }
 
+// This is obsolete function. do not use.
 struct hostent *
 condor_gethostbyname_ipv6(const char* name) {
     #define MAXADDR 16
@@ -181,7 +182,8 @@ cleanup:
 struct hostent *
 condor_gethostbyname(const char *name)
 {
-    return condor_gethostbyname_ipv6(name);
+		// condor_gethostbyname_ipv6 is obsolete
+    return condor_gethostbyname_ipv4(name);
 }
 
 struct hostent* get_nodns_addr(const char* addr) {
@@ -212,6 +214,7 @@ condor_gethostbyaddr_ipv4(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
 	}
 }
 
+// This is obsolete function. do not use.
 struct hostent *
 condor_gethostbyaddr_ipv6(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
     char _hostname[NI_MAXHOST];
@@ -245,8 +248,8 @@ condor_gethostbyaddr_ipv6(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
 
 struct hostent *
 condor_gethostbyaddr(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
-    return condor_gethostbyaddr_ipv6(addr, len, type);
-    //return condor_gethostbyaddr_ipv4(addr, len, type);
+		// condor_gethostbyaddr_ipv6 is obsolete
+    return condor_gethostbyaddr_ipv4(addr, len, type);
 }
 
 int

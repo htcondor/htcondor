@@ -1438,13 +1438,12 @@ accept_request_claim( Resource* rip )
 	}
 
 		// Figure out the hostname of our client.
-		//if( ! (tmp = sin_to_hostname(sock->peer_addr(), NULL)) ) {
 	if(sock->peer_addr().is_valid()) {
-		MyString ipstr = sock->peer_addr().to_ip_string_ex();
-		const char* ip = ipstr.Value();
+		MyString hostname_str = get_hostname(sock->peer_addr());
+		const char* hostname = hostname_str.Value();
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine %s\n", ip );
-		rip->r_cur->client()->sethost( ip );
+					  "Can't find hostname of client machine %s\n", hostname );
+		rip->r_cur->client()->sethost(hostname);
 	} else {
 		client_host = strdup( tmp );
 			// Try to make sure we've got a fully-qualified hostname.

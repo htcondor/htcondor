@@ -325,7 +325,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	sockaddr.sin_addr.s_addr = htonl(ssl_soap->ip);
 	sockaddr.sin_port = htons(ssl_soap->port);
 
-	ipaddr addr(sockaddr);
+	ipaddr addr(&sockaddr);
 
 	current_soap = soap_copy(ssl_soap);
 	ASSERT(current_soap);

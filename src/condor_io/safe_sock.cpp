@@ -56,6 +56,7 @@ void SafeSock::init()
 
 	// initialize msgID
 	if(_outMsgID.msgNo == 0) { // first object of this class
+		// [TODO:IPv6] Remove it!
 		_outMsgID.ip_addr = (unsigned long)my_ip_addr();
 		_outMsgID.pid = (short)getpid();
 		_outMsgID.time = (unsigned long)time(NULL);

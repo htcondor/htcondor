@@ -98,8 +98,6 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 
 		// src_host
 	src_host[0] = '\0';
-//	if (rp->sockp && 
-//		(tmpp = sin_to_hostname(rp->sockp->peer_addr(), NULL))) {
 	if (rp->sockp) {
 		MyString tmpp = get_hostname(rp->sockp->peer_addr());
 		snprintf(src_host, MAXMACHNAME, "%s", tmpp.Value());

@@ -130,6 +130,19 @@ StdUnivSock::peer_ip_str()
 	return _peer_ip_buf;
 }
 
+// [TODO:IPV6] Remove
+unsigned int 
+StdUnivSock::get_ip_int()
+{
+	sockaddr_in	addr;
+	SOCKET_LENGTH_TYPE addr_len;
+
+	addr_len = sizeof(sockaddr_in);
+
+	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return 0;
+	return (unsigned int) ntohl(addr.sin_addr.s_addr);
+}
+
 char *
 StdUnivSock::get_sinful_peer()
 {       

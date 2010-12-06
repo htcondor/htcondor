@@ -136,10 +136,20 @@ MyString get_hostname(const ipaddr& addr)
 	MyString ret;
 	if (nodns_enabled())
 		return convert_ipaddr_to_hostname(addr);
+
+	ipaddr targ_addr;
+
+	// just like sin_to_string(), if given address is 0.0.0.0 or equivalent,
+	// it changes to local IP address.
+	if (addr.is_addr_any())
+		targ_addr = get_local_ipaddr();
+	else
+		targ_addr = addr;
+
 	int e;
 	char hostname[NI_MAXHOST];
 
-	e = condor_getnameinfo(addr, hostname, sizeof(hostname), NULL, 0, 0);
+	e = condor_getnameinfo(targ_addr, hostname, sizeof(hostname), NULL, 0, 0);
 	if (e)
 		return ret;
 

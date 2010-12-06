@@ -33,6 +33,7 @@
 #include "get_port_range.h"
 #include "condor_netdb.h"
 #include "simplelist.h"
+#include "condor_ipaddr.h"
 
 extern	StdUnivSock* syscall_sock;
 
@@ -52,6 +53,8 @@ extern int SYSCALL(int, ...);
   magic parameters, looks at the existing syscall_sock and grabs the
   IP address off of there.
 */
+
+// [TODO:IPV6] This should be obsolete function
 unsigned int
 my_ip_addr()
 {
@@ -71,7 +74,7 @@ my_ip_string()
 {
 	struct in_addr addr;
 	memset( &addr, 0, sizeof(struct in_addr) );
-	addr.s_addr = syscall_sock->get_ip_int();
+	addr.s_addr = my_ip_addr();
 	return inet_ntoa( addr );
 }
 
