@@ -41,7 +41,7 @@ that evaluates to a Unix Epoch timestamp
 Coordinated Universal Time).
 This is the time that Condor will begin to execute the job.
 
-After a job is matched and all of its files have been transfered
+After a job is matched and all of its files have been transferred
 to an execution machine,
 Condor checks to see if the job's ad contains a deferral time.
 If it does,
@@ -138,9 +138,14 @@ on January 1st, 2006 at 12:00 pm:
 
 The Unix \Prog{date} program may be used to calculate
 a Unix epoch time.
-The syntax of the command to do this appears as
+The syntax of the command to do this depends on the options provided
+within that flavor of Unix.  In some, it appears as
 \begin{verbatim} 
 %  date --date "MM/DD/YYYY HH:MM:SS" +%s
+\end{verbatim} 
+and in others, it appears as 
+\begin{verbatim} 
+%  date -d "YYYY-MM-DD HH:MM:SS" +%s
 \end{verbatim} 
 
 \verb@MM@ is a 2-digit month number,
@@ -220,7 +225,7 @@ scheduled to execute periodically.
 A job's execution schedule is defined by commands within
 the submit description file.
 The notation is much like that used by the Unix \Prog{cron} daemon. 
-As such, Condor developers are fond of refering to CronTab
+As such, Condor developers are fond of referring to CronTab
 \index{Crondor}
 scheduling as \Term{Crondor}.
 The scheduling of jobs using Condor's CronTab feature 
