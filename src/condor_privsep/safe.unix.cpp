@@ -3034,7 +3034,17 @@ safe_open_no_follow(const char* path, int* fd_ptr, struct stat* st)
 
     *fd_ptr = open(path, O_RDONLY | O_NONBLOCK);
     if (*fd_ptr == -1) {
-        return -1;
+	if (errno == ENOENT) {
+	    /* path could have been a dangling sym link
+	    * check for symlink and return 0 with fd = -1
+	    */
+	    if (lstat(path, st) != -1 && S_ISLNK(st->st_mode)) {
+		return 0;
+	    }
+	    errno = ENOENT;
+	}
+
+	return -1;
     }
 
     if (fstat(*fd_ptr, st) == -1) {
