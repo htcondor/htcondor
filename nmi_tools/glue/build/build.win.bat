@@ -4,8 +4,12 @@
 @echo INCLUDE=%INCLUDE%
 @echo PATH=%PATH%
 
-rem use FOR to convert from linux path separators to windows path seps
+REM use FOR to convert from linux path separators to windows path seps
 for %%I in ("%BASE_DIR%") do set BUILD_ROOT=%%~dpfI
+
+REM pcre blows up if the temp path has spaces in it, so make sure that it's a short path.
+for %%I in ("%TEMP%") do set TMP=%%~sdpfI
+set TEMP=%TMP%
 
 for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
 set VS_DIR=%VS90ROOT:~0,-1%
@@ -15,7 +19,7 @@ set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft
 set PERL_PATH=c:\prereq\ActivePerl-5.10.1\bin;c:\perl\bin
 set ZIP_PATH=%ProgramFiles%\7-Zip
 set WIX_PATH=%WIX%
-set MSCONFIG_TOOLS_DIR=%BASE_DIR%\msconfig
+set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
 set CMAKE_BIN=%ProgramFiles%\CMake 2.8\bin
 
 set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN%;%ZIP_PATH%;%WIX_PATH%

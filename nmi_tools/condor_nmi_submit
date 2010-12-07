@@ -1244,7 +1244,7 @@ sub writeCommonInfo
         print $fh "configure = $opt_configure\n";
     }
 
-    print $fh "+LoadProfile = true\n";
+    print $fh "++LoadProfile = true\n";
 
 	# collect the names of the platforms, regardless of if they use the
 	# default minimal builds or not.
