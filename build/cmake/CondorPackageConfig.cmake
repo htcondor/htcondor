@@ -206,7 +206,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 		#Debian specific
 		set( C_ETC_EXAMPLES	usr/share/doc/condor/etc/examples )
-		set( C_SHARE_EXAMPLES usr/share/doc/condor/examples)
+		set( C_SHARE_EXAMPLES usr/share/doc/condor)
 		set( C_DOC			usr/share/doc/condor )
 		set( C_LIBEXEC		usr/lib/condor/libexec )
 		set( C_SYSCONFIG	etc/default )
@@ -306,12 +306,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 			DESTINATION	"${C_LOG_DIR}")
 	install(DIRECTORY	
 			DESTINATION	"${C_RUN_DIR}")
-	#install(DIRECTORY	
-	#	DESTINATION	"${C_MAN}")
-	install(DIRECTORY	
-			DESTINATION	"${C_INCLUDE}")
-	install(DIRECTORY	
-			DESTINATION	"${C_LIB}")
 
 endif()
 
