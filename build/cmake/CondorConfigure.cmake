@@ -16,8 +16,7 @@
  # 
  ############################################################### 
 
-
-#processor modification if necessary
+# OS pre mods 
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
   if(${TEST_VER} MATCHES "10.6" AND ${SYS_ARCH} MATCHES "I386")
@@ -26,23 +25,32 @@ if(${OS_NAME} STREQUAL "DARWIN")
 elseif(${OS_NAME} MATCHES "WIN")
 	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
-	add_definitions(-DWINDOWS)
+	
 	# The following is necessary for sdk/ddk version to compile against.
 	# lowest common denominator is winxp (for now)
+	add_definitions(-DWINDOWS)
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
 	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
 	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+	
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
-	set(CMAKE_SUPPRESS_REGENERATION TRUE)
+	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
 	set (HAVE_WORKING_SNPRINTF 1)
-
+	
+	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
+		dprint("**** IN SOURCE BUILDING ON WINDOWS IS NOT ADVISED ****")
+	else()
+		dprint("**** OUT OF SOURCE BUILDS ****")
+		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	endif()
+	
 	set( CMAKE_INSTALL_PREFIX "C:/condor_test/${VERSION}")
-	dprint("TODO FEATURE-> Z:TANNENBA:TSTCLAIR Update registry + paths to use this prefixed debug loc")
+	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
 endif()
 
 message(STATUS "***********************************************************")

@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-if (NOT PROPER AND LINUX) #AND DARWIN
+if (NOT PROPER AND LINUX) #OR DARWIN
   option( WITH_CREAM "Compiling with support for CREAM" ON )
 endif()
   
