@@ -125,3 +125,89 @@ dirscat( const char *dirpath, const char *subdir )
 	}
 	return rval;
 }
+
+int 
+rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos) 
+{
+	int m_fd = safe_open_wrapper(path, O_CREAT | O_RDWR, file_mode);
+	if (m_fd > 0) {
+		return m_fd;
+	}	
+	if (errno == 2) {
+		int size = strlen(path);
+		while (pos < size){
+			if (path[pos] == DIR_DELIM_CHAR && pos > 0){
+				char *dir = new char[pos+1];
+				dir[pos] = '\0';
+				strncpy(dir, path, pos);
+				dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Creating directory %s \n", dir);
+				int err = mkdir(dir, directory_mode);
+
+				if (err != 0) {
+					if (errno != EEXIST) {
+						dprintf(D_ALWAYS, "directory_util::rec_touch_file: Directory %s cannot be created (%s) \n", dir, strerror(errno));
+						delete []dir;
+						return -1;
+					}
+				} 
+				delete []dir;
+				++pos;
+				break;
+			}
+			++pos;
+		}
+		while (pos < size && path[pos] == DIR_DELIM_CHAR){
+			++pos;
+		}
+		return rec_touch_file(path, file_mode, directory_mode, pos);
+		
+	} else {
+		dprintf(D_ALWAYS, "directory_util::rec_touch_file: File %s cannot be created (%s) \n", path, strerror(errno));
+		return -1;
+	}
+	return -1;
+} 
+
+int 
+rec_clean_up(char *path, int depth, int pos ) 
+{
+	if (depth == -1)
+		return 0;
+	int deleted;
+	if (pos < 0) {
+		deleted =  unlink(path);
+		if (deleted == 0){ 
+			dprintf(D_FULLDEBUG, "directory_util::rec_clean_up: file %s has been deleted. \n", path);
+			if (depth == 0)
+				return 0;
+		} else{
+			dprintf(D_FULLDEBUG, "directory_util::rec_clean_up: file %s cannot be deleted. \n", path);
+			return -1;
+		}
+		pos = strlen(path);
+	} else {
+		char *dirpath = new char[pos+1];
+		dirpath[pos] = '\0';
+		strncpy(dirpath, path, pos);
+		deleted = rmdir(dirpath);
+		if (deleted != 0) {
+			dprintf(D_FULLDEBUG, "directory_util::rec_clean_up: directory %s cannot be deleted -- it may not \
+				be empty and therefore this is not necessarily an error or problem. (Error: %s) \n", dirpath, strerror(errno));
+			delete []dirpath;
+			return -1;
+		}
+		delete []dirpath;
+	}
+	while (path[pos] == DIR_DELIM_CHAR && pos > 0)
+			--pos;
+	while (pos > 0){
+		if (path[pos] == DIR_DELIM_CHAR ){
+			return rec_clean_up(path, --depth, pos);
+		}
+		--pos; 	
+	}
+	return 0; 	
+}
+
+
+
