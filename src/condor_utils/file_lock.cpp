@@ -156,6 +156,7 @@ FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 	// insert ourselves into a the m_all_locks list.
 	if (path) {
 		SetPath(path);
+		SetPath(path, true);
 		updateLockTimestamp();
 	}
 }
@@ -169,6 +170,7 @@ FileLock::FileLock( const char *path )
 	ASSERT(path != NULL);
 
 	SetPath(path);
+	SetPath(path, true);
 	updateLockTimestamp();
 }
 
@@ -189,29 +191,8 @@ FileLock::FileLock( const char *path , bool deleteFile, bool useLiteralPath)
 			SetPath(hPath);
 			delete []hPath;
 		}
-		
-		mode_t old_umask = umask(0);
-		m_fd = rec_touch_file(m_path, 0644, 0777 ); 
-		if (m_fd < 0) {
-			if (!useLiteralPath) {
-				dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.", m_path);
-				hPath = CreateHashName(path, true);
-				SetPath(hPath);
-				delete []hPath;
-				m_fd = rec_touch_file(m_path, 0644, 0777 ) ;
-				if (m_fd < 0) { // /tmp does not work either ... 
-					dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will fall back on locking the actual file. \n");
-					umask(old_umask);
-					m_init_succeeded = false;
-					m_delete = 0;
-					return;
-				}
-			} else {
-				umask(old_umask);
-				EXCEPT("FileLock::FileLock(): You must have a valid file path as argument.");
-			}	
-		}
-		umask(old_umask);
+		SetPath(path, true);
+		m_init_succeeded = initLockFile(useLiteralPath);
 
 	} else {
 		SetPath(path);
@@ -260,10 +241,38 @@ FileLock::~FileLock( void )
 #endif
 
 	SetPath(NULL);
+	SetPath(NULL, true);
 	if (m_delete == 1) {
 		close(m_fd);
 	}
 	Reset();
+}
+
+bool
+FileLock::initLockFile(bool useLiteralPath) 
+{
+	mode_t old_umask = umask(0);
+	m_fd = rec_touch_file(m_path, 0644, 0777 ); 
+	if (m_fd < 0) {
+		if (!useLiteralPath) {
+			dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.", m_path);
+			char *hPath = CreateHashName(m_orig_path, true);
+			SetPath(hPath);
+			delete []hPath;
+			m_fd = rec_touch_file(m_path, 0644, 0777 ) ;
+			if (m_fd < 0) { // /tmp does not work either ... 
+				dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will fall back on locking the actual file. \n");
+				umask(old_umask);
+				m_delete = 0;
+				return false;
+			}
+		} else {
+			umask(old_umask);
+			EXCEPT("FileLock::FileLock(): You must have a valid file path as argument.");
+		}	
+	}
+	umask(old_umask);
+	return true;
 }
 
 void
@@ -276,6 +285,7 @@ FileLock::Reset( void )
 	m_blocking = true;
 	m_state = UN_LOCK;
 	m_path = NULL;
+	m_orig_path = NULL;
 	m_use_kernel_mutex = -1;
 #ifdef WIN32
 	m_debug_win32_mutex = NULL;
@@ -294,9 +304,35 @@ FileLock::initSucceeded( void )
 	// we create a kernel lock.  Note that the path is only canonicalized 
 	// up to the limits of _fullpath (no reparse points, etc.)
 void
-FileLock::SetPath(const char *path)
+FileLock::SetPath(const char *path, bool setOrigPath)
 {
+	if (setOrigPath) {  // we want to set the original path variable
+		if ( m_orig_path ) {
+			free(m_orig_path);
+		}
+		m_orig_path = NULL;
+		if (path) {
 
+#ifdef WIN32
+			m_orig_path = _fullpath( NULL, path, _MAX_PATH );
+			// Note: if path does not yet exist on the filesystem, then
+			// _fullpath could still return NULL.  In this case, fall thru
+			// this #ifdef WIN32 block and do what we do on Unix - just
+			// strdup the path.  Hey, it is strictly better, eh?
+			if (m_orig_path) {
+				// Cool, _fullpath "weakly" canonicalized the path
+				// for us, so we are done.  
+				// Weakly you say?  See gittrac #205.  Better not
+				// have reparse points thare fella.
+				return;
+			}
+#endif
+			// or not, and therefore just call strdup
+			m_orig_path = strdup(path);
+		}
+		return;
+	}
+	// we want to set the actual path to the lock file
 	if ( m_path ) {
 		free(m_path);
 	}
@@ -525,9 +561,21 @@ FileLock::obtain( LOCK_TYPE t )
 			if ( si.st_nlink < 1 ){
 				release();
 				close(m_fd);
-				m_fd = safe_open_wrapper(m_path, O_CREAT | O_RDWR , 0644);
+				bool initResult;
+				if (m_orig_path != NULL && strcmp(m_path, m_orig_path) != 0)
+					initResult = initLockFile(false);
+				else 
+					initResult = initLockFile(true);
+				if (!initResult) {
+					dprintf(D_FULLDEBUG, "Lock file (%s) cannot be reopened \n", m_path);
+					if (m_orig_path) {
+						dprintf(D_FULLDEBUG, "Opening and locking the actual log file (%s) since lock file cannot be accessed! \n", m_orig_path);
+						m_fd = safe_open_wrapper(m_orig_path, O_CREAT | O_RDWR , 0644);
+					} 
+				}
+				
 				if (m_fd < 0) {
-					dprintf(D_FULLDEBUG, "Reopening the lock file %s failed. \n", m_path);
+					dprintf(D_FULLDEBUG, "Opening the log file %s to lock failed. \n", m_path);
 				}
 				++counter;
 					// let's retry at most 5 times
