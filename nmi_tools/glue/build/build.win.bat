@@ -7,6 +7,7 @@
 REM use FOR to convert from linux path separators to windows path seps
 for %%I in ("%BASE_DIR%") do set BUILD_ROOT=%%~dpfI
 
+md
 REM pcre blows up if the temp path has spaces in it, so make sure that it's a short path.
 for %%I in ("%TEMP%") do set TMP=%%~sdpfI
 set TEMP=%TMP%
@@ -32,5 +33,6 @@ set INCLUDE=%BUILD_ROOT%\src\condor_utils
 set
 @echo ----  end build.win.bat ENVIRONMENT ----------------------------
 
-@echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
-devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
+rem @echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
+rem devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
+devenv CONDOR.sln /Rebuild RelWithDebInfo
