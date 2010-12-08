@@ -1,0 +1,11 @@
+--- condor_config.patched	2010-12-03 12:36:25.000000000 -0600
++++ condor_config.patched.x86_64	2010-12-03 12:45:34.000000000 -0600
+@@ -935,7 +935,7 @@
+ SPOOL		= $(LOCAL_DIR)/lib/condor/spool
+ EXECUTE		= $(LOCAL_DIR)/lib/condor/execute
+ BIN		= $(RELEASE_DIR)/bin
+-LIB		= $(RELEASE_DIR)/lib/condor
++LIB		= $(RELEASE_DIR)/lib64/condor
+ INCLUDE		= $(RELEASE_DIR)/include/condor
+ SBIN		= $(RELEASE_DIR)/sbin
+ LIBEXEC		= $(RELEASE_DIR)/libexec/condor
