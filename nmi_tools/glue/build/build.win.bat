@@ -35,4 +35,4 @@ set
 
 rem @echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
 rem devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
-devenv CONDOR.sln /Rebuild RelWithDebInfo
+devenv CONDOR.sln /Rebuild RelWithDebInfo /project INSTALL
