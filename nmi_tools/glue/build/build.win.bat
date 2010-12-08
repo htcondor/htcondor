@@ -7,10 +7,10 @@
 REM use FOR to convert from linux path separators to windows path seps
 for %%I in ("%BASE_DIR%") do set BUILD_ROOT=%%~dpfI
 
-md
+md %BUILD_ROOT%\Temp
 REM pcre blows up if the temp path has spaces in it, so make sure that it's a short path.
-for %%I in ("%TEMP%") do set TMP=%%~sdpfI
-set TEMP=%TMP%
+set TEMP=%BUILD_ROOT%\Temp
+set TMP=%BUILD_ROOT%\Temp
 
 for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
 set VS_DIR=%VS90ROOT:~0,-1%
