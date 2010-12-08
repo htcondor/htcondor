@@ -42,8 +42,8 @@ if (WITH_KRB5)
 			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n
 							  cp -r src/lib/obj/i386/dbg/* ${EXTERNAL_STAGE}/lib \r\n
 							  cp -r src/include/* ${EXTERNAL_STAGE}/include \r\n
-							  cd \"\\\" \r\n
-							  cd ${EXTERNAL_STAGE}/lib \r\n 
+							#  cd \"\\\" \r\n
+							  cd /D ${EXTERNAL_STAGE}/lib \r\n 
 							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat )
 
 		else()
