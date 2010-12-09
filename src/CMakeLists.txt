@@ -24,11 +24,11 @@
 # the 2nd arg is prio order for symbols ripping to prevent .o copy-mindging within the std:u
 add_subdirectories("${CONDOR_SOURCE_DIR}/src" "${CONDOR_SOURCE_DIR}/src/condor_utils;${CONDOR_SOURCE_DIR}/src/condor_ckpt;${CONDOR_SOURCE_DIR}/src/condor_io;${CONDOR_SOURCE_DIR}/src/condor_io.std;${CONDOR_SOURCE_DIR}/src/condor_syscall_lib" "${CONDOR_SOURCE_DIR}/src/classad")
 
-if (BUILD_TESTS)
+if (BUILD_TESTS AND NOT WINDOWS)
 	add_custom_target(tests)
 	add_dependencies(tests ${CONDOR_TESTS})
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
-endif(BUILD_TESTS)
+endif()
 
 install ( FILES condor_includes/condor_ast.h
 		  condor_includes/condor_astbase.h

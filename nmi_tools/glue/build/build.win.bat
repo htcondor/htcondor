@@ -34,5 +34,6 @@ set
 @echo ----  end build.win.bat ENVIRONMENT ----------------------------
 
 rem @echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
-rem devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
-devenv CONDOR.sln /Rebuild RelWithDebInfo /project INSTALL
+devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
+rem devenv CONDOR.sln /Rebuild RelWithDebInfo
+exit /B %ERRORLEVEL%

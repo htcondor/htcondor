@@ -204,9 +204,9 @@ if ( WITH_CREAM )
 
 	# Set the target dependencies which the rest of condor depends on.
 	if(DARWIN)
-		set (BOOST_LIB ${EXTERNAL_STAGE}/lib/libboost_thread-gcc-d.a)
+		set (BOOST_LIB ${EXTERNAL_STAGE}/lib/libboost_thread.a)
 	else()
-		set (BOOST_LIB ${EXTERNAL_STAGE}/lib/libboost_thread-gcc-mt-d.a)
+		set (BOOST_LIB ${EXTERNAL_STAGE}/lib/libboost_thread.a)
 	endif()
 
 	set(CREAM_FOUND "${CREAM_STAGE}/lib/libglite_ce_cream_client_soap.a;${CREAM_STAGE}/lib/libglite_ce_cream_client_util.a;${CREAM_STAGE}/lib/libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a;${CREAM_STAGE}/lib/libglite_security_gss_${GLOBUS_FLAVOR}pthr.a;${CREAM_STAGE}/lib/liblog4cpp.a;${CREAM_STAGE}/lib/libgridsite.a;${BOOST_LIB};${CREAM_STAGE}/lib/libcares.a")
