@@ -27,8 +27,8 @@ if ( NOT PROPER )
 		set ( HADOOP_INSTALL mkdir -p ${EXTERNAL_STAGE}/hdfs/conf ${CMD_TERM}
 							 cp -r lib ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
 							 cp -r webapps ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-							 cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs/ ${CMD_TERM}
-							 cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs/ ${CMD_TERM}
+							 cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+							 cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
 							 cp hdfs/src/java/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf )
 
 		# a couple of odd things, this macro requires a configure and build command.  

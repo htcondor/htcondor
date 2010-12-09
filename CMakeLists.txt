@@ -83,7 +83,8 @@ add_subdirectory (src)
 
 # if the man pages exist then install them
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
-  install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man DESTINATION . )
+  #Use trailing slash; otherwise, it will be C_MAN/man
+  install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
 endif()
 
 ##########################################################################

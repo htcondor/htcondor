@@ -81,14 +81,14 @@ static MyString
 	deep_dir,
 	deep_dir_long,
 	original_dir,
-	parent_dir;
+	parent_dir,
+	tmp;
 
 static const char
 	*empty = "",
 	*dot = ".",
 	*dotdot = "..",
-	*readme = "README",
-	*tmp = "tmp";
+	*readme = "README";
 
 static char
 	long_dir[256],
@@ -190,12 +190,15 @@ static void setup() {
 				   DIR_DELIM_CHAR) );
 	non_existent[13] = '\0';
 	non_existent_file[25] = '\0';
+
+	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
 	
 	//Get deep directories
 	for(int i = 0; i < 9; i++) {
-		cut_assert_true( deep_dir.sprintf_cat("tmp%c", DIR_DELIM_CHAR) );
+		cut_assert_true( deep_dir.sprintf_cat("%s%c", tmp.Value(),
+			DIR_DELIM_CHAR) );
 	}
-	cut_assert_true( deep_dir.sprintf_cat("tmp") );
+	cut_assert_true( deep_dir.sprintf_cat(tmp.Value()) );
 	
 	for(int i = 0; i < long_dir_depth - 1; i++) {
 		cut_assert_true( deep_dir_long.sprintf_cat("%s%c", long_dir,
@@ -205,8 +208,8 @@ static void setup() {
 	
 	//Make some directories to test
 	for(int i = 0; i < 10; i++) {
-		cut_assert_z( mkdir("tmp", 0700) );
-		cut_assert_z( chdir("tmp") );
+		cut_assert_z( mkdir(tmp.Value(), 0700) );
+		cut_assert_z( chdir(tmp.Value()) );
 	}
 	cut_assert_z( chdir(original_dir.Value()) );
 
@@ -225,7 +228,7 @@ static void cleanup() {
 	//Remove the directories
 	for(int i = 0; i < 10; i++) {
 		cut_assert_z( chdir("..") );
-		cut_assert_z( rmdir("tmp") );
+		cut_assert_z( rmdir(tmp.Value()) );
 	}
 	
 	for(int i = 0; i < long_dir_depth; i++) {
@@ -441,17 +444,18 @@ static bool test_cd2tmpdir_short() {
 	emit_test("Test that Cd2TmpDir() returns true and changes the current "
 		"working directory to a short directory that exists.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp);
+	emit_param("Directory", "%s", tmp.Value());
 	emit_param("Error Message", "");
 	MyString temporary_dir, current_dir, expect_dir, err_msg;
-	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, tmp);
+	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+		tmp.Value());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Temporary Working Directory", "\n\t\t%s", expect_dir.Value());
 	emit_param("Current Working Directory after delete", "\n\t\t%s",
 		original_dir.Value());
 	TmpDir* tmp_dir = new TmpDir();
-	bool ret_val = tmp_dir->Cd2TmpDir(tmp, err_msg);
+	bool ret_val = tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
 	condor_getcwd(temporary_dir);
 	delete tmp_dir;
 	condor_getcwd(current_dir);
@@ -564,7 +568,7 @@ static bool test_cd2tmpdir_multiple() {
 	emit_test("Test that Cd2TmpDir() returns true and changes the current "
 		"working directory for multiple calls into directories that exist.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp);
+	emit_param("Directory", "%s", tmp.Value());
 	emit_param("Error Message", "");
 	MyString temporary_dir, current_dir, expect_dir, err_msg;
 	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
@@ -575,16 +579,16 @@ static bool test_cd2tmpdir_multiple() {
 	emit_param("Current Working Directory after delete", "\n\t\t%s",
 		original_dir.Value());
 	TmpDir* tmp_dir = new TmpDir();
-	bool ret_val = tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg);
+	bool ret_val = tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
 	condor_getcwd(temporary_dir);
 	delete tmp_dir;
 	condor_getcwd(current_dir);
@@ -606,7 +610,7 @@ static bool test_cd2tmpdir_multiple_different() {
 		"directories that result in the current directory.");
 	emit_input_header();
 	emit_param("Directory", "%s", dot);
-	emit_param("Directory", "%s", tmp);
+	emit_param("Directory", "%s", tmp.Value());
 	emit_param("Directory", "%s", dot);
 	emit_param("Directory", "%s", dotdot);
 	emit_param("Directory", "%s", dot);
@@ -620,7 +624,7 @@ static bool test_cd2tmpdir_multiple_different() {
 	MyString temporary_dir, current_dir, err_msg;
 	TmpDir* tmp_dir = new TmpDir();
 	bool ret_val = tmp_dir->Cd2TmpDir(dot, err_msg) &&
-		tmp_dir->Cd2TmpDir(tmp, err_msg) &&
+		tmp_dir->Cd2TmpDir(tmp.Value(), err_msg) &&
 		tmp_dir->Cd2TmpDir(dot, err_msg) &&
 		tmp_dir->Cd2TmpDir(dotdot, err_msg) &&
 		tmp_dir->Cd2TmpDir(dot, err_msg);
@@ -710,13 +714,13 @@ static bool test_cd2tmpdir_error_exist() {
 	emit_test("Test that Cd2TmpDir() doesn't put anything in the error message"
 		" MyString for a directory that exists.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp);
+	emit_param("Directory", "%s", tmp.Value());
 	emit_param("Error Message", "");
 	emit_output_expected_header();
 	emit_param("Error Message", "");
 	MyString err_msg;
 	TmpDir* tmp_dir = new TmpDir();
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
 	emit_output_actual_header();
 	emit_param("Error Message", err_msg.Value());
 	delete tmp_dir;
@@ -835,12 +839,12 @@ static bool test_cd2tmpdirfile_directory() {
 	emit_test("Test that Cd2TmpDirFile() returns true and changes the current "
 		"working directory for a valid file directory.");
 	MyString temporary_dir, current_dir, expect_dir, dir, err_msg;
-	dir.sprintf("%s%c%s", tmp, DIR_DELIM_CHAR, tmp);
+	dir.sprintf("%s%c%s", tmp.Value(), DIR_DELIM_CHAR, tmp.Value());
 	emit_input_header();
 	emit_param("File Directory", "%s", dir.Value());
 	emit_param("Error Message", "");
 	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
-		tmp);
+		tmp.Value());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Temporary Working Directory", "\n\t\t%s", expect_dir.Value());
@@ -1154,7 +1158,7 @@ static bool test_cd2maindir_short() {
 	emit_param("Current Working Directory", "\n\t\t%s", original_dir.Value());
 	MyString err_msg;
 	TmpDir* tmp_dir = new TmpDir();
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
 	bool ret_val = tmp_dir->Cd2MainDir(err_msg);
 	MyString current_dir;
 	condor_getcwd(current_dir);
@@ -1254,16 +1258,16 @@ static bool test_cd2maindir_multiple() {
 	emit_param("Current Working Directory", "\n\t\t%s", original_dir.Value());
 	MyString err_msg;
 	TmpDir* tmp_dir = new TmpDir();
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
 	bool ret_val = tmp_dir->Cd2MainDir(err_msg);
 	MyString current_dir;
 	condor_getcwd(current_dir);
@@ -1289,7 +1293,7 @@ static bool test_cd2maindir_multiple_different() {
 	MyString err_msg;
 	TmpDir* tmp_dir = new TmpDir();
 	tmp_dir->Cd2TmpDir(dot, err_msg);
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
 	tmp_dir->Cd2TmpDir(dot, err_msg);
 	tmp_dir->Cd2TmpDir(dotdot, err_msg);
 	tmp_dir->Cd2TmpDir(dot, err_msg);
@@ -1376,7 +1380,7 @@ static bool test_cd2maindir_error_good() {
 	emit_param("Error Message", "");
 	MyString err_msg;
 	TmpDir* tmp_dir = new TmpDir();
-	tmp_dir->Cd2TmpDir(tmp, err_msg);
+	tmp_dir->Cd2TmpDir(tmp.Value(), err_msg);
 	tmp_dir->Cd2MainDir(err_msg);
 	delete tmp_dir;
 	emit_output_actual_header();

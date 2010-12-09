@@ -78,6 +78,8 @@ Buildroot:      @CPACK_RPM_DIRECTORY@/@CPACK_PACKAGE_FILE_NAME@
 #%_usr/bin
 #/usr/sbin (_sbindir/ = /usr/sbin)
 #%_sbindir 
+
+#This will pickup all files but not empty directory
 @CPACK_RPM_INSTALL_FILES@
 
 
