@@ -99,6 +99,7 @@ CollectorEngine::
 	killHashTable (StorageAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
+	killHashTable (CollectorAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
 	killHashTable (XferServiceAds);
@@ -1185,6 +1186,9 @@ mergeClassAd (CollectorHashTable &hashTable,
     {	 	
 		dprintf (D_ALWAYS, "%s: Failed to merge update for ** \"%s\" because "
 				 "no existing ad matches.\n", adType, hashString.Value() );
+			// We should _NOT_ delete new_ad if we return NULL
+			// because our caller will delete it in that case.
+		return NULL;
 	}
 	else
     {
@@ -1357,7 +1361,12 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
 			hk.sprint( hkString );
-			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+			if( timeStamp == 0 ) {
+				dprintf (D_ALWAYS,"\t\t**** Removing invalidated ad: \"%s\"\n", hkString.Value() );
+			}
+			else {
+				dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+			}
 			if (hashTable.remove (hk) == -1)
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
@@ -1387,6 +1396,7 @@ killHashTable (CollectorHashTable &table)
 {
 	ClassAd *ad;
 
+	table.startIterations();
 	while (table.iterate (ad))
 	{
 		delete ad;

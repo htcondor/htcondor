@@ -65,6 +65,11 @@ LOCAL_DIR		= $(TILDE)
 LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 #LOCAL_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).local
 
+##  Where are optional machine-specific local config files located?
+##  Config files are included in lexicographic order.
+##  No default. $(LOCAL_DIR)/config is an example.
+#LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
+
 ## If the local config file is not present, is it an error?
 ## WARNING: This is a potential security issue. 
 ## If not specificed, the default is True
@@ -1139,6 +1144,30 @@ PREEN_ARGS			= -m -r
 ##  it "recovered".  Once a daemon has recovered, we reset the number
 ##  of restarts so the exponential backoff stuff goes back to normal. 
 #MASTER_RECOVER_FACTOR		= 300
+
+
+##--------------------------------------------------------------------
+##  condor_collector
+##--------------------------------------------------------------------
+## Address to which Condor will send a weekly e-mail with output of
+## condor_status.
+#CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
+
+## Global Collector to periodically advertise basic information about
+## your pool.
+#CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
+
+
+##--------------------------------------------------------------------
+##  condor_negotiator
+##--------------------------------------------------------------------
+## Determine if the Negotiator will honor SlotWeight attributes, which
+## may be used to give a slot greater weight when calculating usage.
+#NEGOTIATOR_USE_SLOT_WEIGHTS = True
+
+## How often the Negotaitor starts a negotiation cycle, defined in
+## seconds.
+#NEGOTIATOR_INTERVAL = 60
 
 
 ##--------------------------------------------------------------------
@@ -2356,6 +2385,16 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 #LeaseManager.QUERY_ADTYPE	= Any
 #LeaseManager.QUERY_CONSTRAINTS	= target.MyType == "SomeType"
 #LeaseManager.QUERY_CONSTRAINTS	= target.TargetType == "SomeType"
+
+##
+##--------------------------------------------------------------------
+##  KBDD - keyboard activity detection daemon
+##--------------------------------------------------------------------
+##  When the KBDD starts up, it can place it's address (IP and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need an additional "-n host:port" command line option.  This
+##  feature can be turned off by commenting out this setting.
+KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 
 ##
 ##--------------------------------------------------------------------

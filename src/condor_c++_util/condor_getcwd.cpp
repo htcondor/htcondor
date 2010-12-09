@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_getcwd.h"
 #include "MyString.h"
+#include "condor_debug.h"
 
 bool condor_getcwd(MyString &path) {
 	size_t buflen = 0;
@@ -45,7 +46,35 @@ bool condor_getcwd(MyString &path) {
 		buf = NULL;
 
 		if( errno == ERANGE ) {
-			continue; // try with a bigger buffer
+			// There is a bug in solaris' getcwd(). It returns NULL and
+			// ERANGE if getcwd() is called in a directory whose real path
+			// is larger than PATH_MAX even though the buf and buflen are
+			// clearly big enough to hold it. Since getcwd() does this
+			// always in this context, we could consume memory here until we
+			// run out unless we keep tabs on how much we actually allocated.
+			// 
+			// I'm going to fix it so that if we manage to go beyond 20 Megs of
+			// memory trying to find room for our path, I'm declaring that to
+			// be "too big", and bailing on the algorithm. Since other OSes
+			// apparently have a similar style of error, I'm not going to make
+			// this solaris specific. Frankly, if we need a 20M path, something
+			// is wrong--or it is year 2317, file systems are huge, and someone
+			// then can up it to 40M.
+			//
+			// This isn't going to be configurable, because that would be yet
+			// another impossibly arcane knob noone would ever touch.
+			//
+			// -psilord 10/14/2010
+
+			if (buflen > ((1024 * 1024) * 20)) {
+				dprintf(D_ALWAYS, 
+					"condor_getcwd(): Unable to determine cwd. Avoiding "
+					"a probable OS bug. Assuming getcwd() failed.\n");
+				return false;
+			}
+
+			// try with a bigger buffer
+			continue; 
 		}
 		return false;
 	}

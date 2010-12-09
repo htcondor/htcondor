@@ -101,7 +101,7 @@ class StartdRunTotal : public ClassTotal
 	protected:
 		int machines;
 		long condor_mips;
-		long kflops;
+		uint64_t kflops;
 		float loadavg;
 };
 
@@ -120,7 +120,7 @@ class StartdServerTotal : public ClassTotal
 		long memory;
 		uint64_t disk;
 		long condor_mips;
-		long kflops;
+		uint64_t kflops;
 };
 
 

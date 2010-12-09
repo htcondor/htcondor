@@ -1051,6 +1051,13 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	collector.invokeHousekeeper (whichAds);
 
 	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__);
+
+		// Suppose lots of ads are getting invalidated and we have no clue
+		// why.  That is what the following block of code tries to solve.
+	if( __numAds__ > 1 ) {
+		dprintf(D_ALWAYS, "The invalidation query was this:\n");
+		query.dPrint(D_ALWAYS);
+	}
 }	
 
 

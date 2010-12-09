@@ -33,6 +33,7 @@
 #include "condor_vm_universe_types.h"
 #include "vm_type.h"
 #include "condor_mkstemp.h"
+#include "../condor_privsep/condor_privsep.h"
 
 extern VMGahp *vmgahp;
 
@@ -60,6 +61,12 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_delete_working_files = false;
 	m_vcpus = 1;
 
+	if ( privsep_enabled() ) {
+		m_file_owner = PRIV_CONDOR;
+	} else {
+		m_file_owner = PRIV_USER;
+	}
+
 	vmprintf(D_FULLDEBUG, "Constructed VM_Type.\n");
 
 	// Use the script program to create a configuration file for VM ?
@@ -84,7 +91,7 @@ VMType::~VMType()
 	if( m_delete_working_files && !m_is_checkpointed ) {
 		if( m_workingpath.IsEmpty() == false ) {
 			// We will delete all files in the working directory.
-			Directory working_dir(m_workingpath.Value());
+			Directory working_dir(m_workingpath.Value(), PRIV_USER);
 			working_dir.Remove_Entire_Directory();
 		}
 	}
@@ -541,12 +548,7 @@ VMType::createISO()
 	systemcmd.AppendArg(tmp_config);
 	systemcmd.AppendArg(tmp_file);
 
-	bool need_root = false;
-	if( !strcasecmp(m_vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) ) {
-		need_root = true;
-	}
-
-	int result = systemCommand(systemcmd, need_root);
+	int result = systemCommand(systemcmd, m_file_owner);
 	if( result != 0 ) {
 		return false;
 	}
@@ -640,12 +642,7 @@ VMType::createConfigUsingScript(const char* configfile)
 	systemcmd.AppendArg("createconfig");
 	systemcmd.AppendArg(configfile);
 
-	bool need_root = false;
-	if( !strcasecmp(m_vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) ) {
-		need_root = true;
-	}
-
-	int result = systemCommand(systemcmd, need_root);
+	int result = systemCommand(systemcmd, m_file_owner);
 
 	// UnSet temporary environments for script program
 	const char *tmp_name = NULL;

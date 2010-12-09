@@ -116,6 +116,8 @@ UserProc::JobReaper(int pid, int status)
 	const char* dir = Starter->GetWorkingDir();
 	FILE* fp;
 
+	dprintf( D_FULLDEBUG, "Inside UserProc::JobReaper()\n" );
+
 	filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
 	if (0 == access(filename.Value(), F_OK)) {
 		// The job wrapper failed, so read the contents of the file
@@ -151,6 +153,8 @@ bool
 UserProc::PublishUpdateAd( ClassAd* ad )
 {
 	char buf[256];
+
+	dprintf( D_FULLDEBUG, "Inside UserProc::PublishUpdateAd()\n" );
 
 	if( JobPid >= 0 ) { 
 		sprintf( buf, "%s%s=%d", name ? name : "", ATTR_JOB_PID,

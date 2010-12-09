@@ -110,8 +110,10 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 	if (!path) {
 		MyString _param;
 		_param.sprintf("%s_HOOK_%s", keyword, getHookTypeString(hook_type));
-		path = validateHookPath(_param.Value());
-		if (!path) {
+		bool hperr = !validateHookPath(_param.Value(), path);
+        // Here the distinction between undefined hook and a hook path error 
+        // is being collapsed
+		if ((path == NULL) || (hperr)) {
 			hook_paths[(int)hook_type] = UNDEFINED;
 		}
 		else {

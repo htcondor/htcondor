@@ -347,9 +347,7 @@ const char	*CronWindow		= "cron_window";
 const char	*CronPrepTime	= "cron_prep_time";
 
 const char	*RunAsOwner = "run_as_owner";
-#if defined(WIN32)
 const char	*LoadProfile = "load_profile";
-#endif
 
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
@@ -423,9 +421,7 @@ void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 void	SetRunAsOwner();
-#if defined(WIN32)
 void    SetLoadProfile();
-#endif
 void	SetRank();
 void 	SetIWD();
 void 	ComputeIWD();
@@ -1478,6 +1474,8 @@ SetExecutable()
 
 	if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
 		InsertJobExpr ("WantIOProxy = TRUE");
+		buffer.sprintf("%s = TRUE", ATTR_JOB_REQUIRES_SANDBOX);
+		InsertJobExpr (buffer);
 	}
 
 	InsertJobExpr ("CurrentHosts = 0");
@@ -2119,38 +2117,25 @@ SetImageSize()
 					executablesize);
 	InsertJobExpr (buffer);
 
-	if( JobUniverse == CONDOR_UNIVERSE_VM) {
+	tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
+
+	if( tmp ) {
+		disk_usage = atoi(tmp);
+
+		if( disk_usage < 1 ) {
+			fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		free( tmp );
+	} else {
 		// In vm universe, when a VM is suspended, 
 		// memory being used by the VM will be saved into a file. 
 		// So we need as much disk space as the memory.
-		int vm_disk_space = executablesize + TransferInputSize + VMMemory*1024;
-
-		// In vmware vm universe, vmware disk may be a sparse disk or 
-		// snapshot disk. So we can't estimate the disk space in advanace 
-		// because the sparse disk or snapshot disk will grow up 
-		// as a VM runs. So we will add 100MB to disk space.
-		if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
-			vm_disk_space += 100*1024;
-		}
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
-	}else {
-		tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
-
-		if( tmp ) {
-			disk_usage = atoi(tmp);
-
-			if( disk_usage < 1 ) {
-				fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-			}
-			free( tmp );
-		} else {
-			disk_usage = executablesize + TransferInputSize;
-		}
-
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
+		// For non-vm jobs, VMMemory is 0.
+		disk_usage = executablesize + TransferInputSize + VMMemory*1024;
 	}
+	buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
 	InsertJobExpr (buffer);
 
 
@@ -3119,6 +3104,9 @@ SetStdFile( int which_file )
 		stream_it = false;
 		// always canonicalize to the UNIX null file (i.e. /dev/null)
 		macro_value = strdup(UNIX_NULL_FILE);
+	}else if( strcmp(macro_value,UNIX_NULL_FILE)==0 ) {
+		transfer_it = false;
+		stream_it = false;
 	}else {
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) {
 			fprintf( stderr,"\nERROR: You cannot use input, ouput, "
@@ -3628,6 +3616,7 @@ SetCronTab()
 								};
 	int ctr;
 	char *param = NULL;
+	CronTab::initRegexObject();
 	for ( ctr = 0; ctr < CronFields; ctr++ ) {
 		param = condor_param( attributes[ctr], CronTab::attributes[ctr] );
 		if ( param != NULL ) {
@@ -4347,21 +4336,24 @@ void
 SetRunAsOwner()
 {
 	char *run_as_owner = condor_param(RunAsOwner, ATTR_JOB_RUNAS_OWNER);
+	bool bRunAsOwner=false;
 	if (run_as_owner == NULL) {
 		return;
 	}
+	else {
+		bRunAsOwner = isTrue(run_as_owner);
+		free(run_as_owner);
+	}
 
 	MyString buffer;
-	buffer.sprintf(  "%s = %s", ATTR_JOB_RUNAS_OWNER, isTrue(run_as_owner) ? "True" : "False" );
+	buffer.sprintf(  "%s = %s", ATTR_JOB_RUNAS_OWNER, bRunAsOwner ? "True" : "False" );
 	InsertJobExpr (buffer);
-	free(run_as_owner);
 
 #if defined(WIN32)
 	// make sure we have a CredD
 	// (RunAsOwner is global for use in SetRequirements(),
 	//  the memory is freed() there)
-	RunAsOwnerCredD = param("CREDD_HOST");
-	if(RunAsOwnerCredD == NULL) {
+	if( bRunAsOwner && NULL == ( RunAsOwnerCredD = param("CREDD_HOST") ) ) {
 		fprintf(stderr,
 				"\nERROR: run_as_owner requires a valid CREDD_HOST configuration macro\n");
 		DoCleanup(0,0,NULL);
@@ -4370,7 +4362,6 @@ SetRunAsOwner()
 #endif
 }
 
-#if defined(WIN32)
 void 
 SetLoadProfile()
 {
@@ -4400,7 +4391,6 @@ SetLoadProfile()
     caching their profile on the local machine (which may be someone's
     laptop, which may already be running low on disk-space). */
 }
-#endif
 
 void
 SetRank()
@@ -5974,9 +5964,7 @@ queue(int num)
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetRunAsOwner();
-#if defined(WIN32)
         SetLoadProfile();
-#endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 
@@ -6140,6 +6128,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_arch = false;
 	bool	checks_disk = false;
 	bool	checks_mem = false;
+	bool	checks_reqmem = false;
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
@@ -6255,7 +6244,13 @@ check_requirements( char const *orig, MyString &answer )
 					// Must be VirtualMemory, keep searching...
 				continue;
 			}
-				// If it wasn't an 'l', we must have found it...
+				// If it wasn't 't', we must have found it...
+			if( *(aptr-1) == 't' || *(aptr-1) == 'T' ) {
+					// Must be RequestMemory, keep searching...
+				checks_reqmem = true;
+				continue;
+			}	
+		
 			checks_mem = true;
 			break;
 		}
@@ -6342,7 +6337,10 @@ check_requirements( char const *orig, MyString &answer )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 		if ( !checks_mem ) {
-			answer += " && ( ( (Memory * 1024) >= ImageSize ) && ( ( RequestMemory * 1024 ) >= ImageSize ) )";
+			answer += " && ( (Memory * 1024) >= ImageSize ) ";
+		}
+		if ( !checks_reqmem ) {
+			answer += " && ( ( RequestMemory * 1024 ) >= ImageSize ) ";
 		}
 	}
 

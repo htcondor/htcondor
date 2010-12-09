@@ -63,12 +63,15 @@ StarterHookMgr::clearHookPaths()
 {
 	if (m_hook_prepare_job) {
 		free(m_hook_prepare_job);
+        m_hook_prepare_job = NULL;
 	}
 	if (m_hook_update_job_info) {
 		free(m_hook_update_job_info);
+        m_hook_update_job_info = NULL;
 	}
 	if (m_hook_job_exit) {
 		free(m_hook_job_exit);
+        m_hook_job_exit = NULL;
 	}
 }
 
@@ -85,14 +88,14 @@ StarterHookMgr::initialize(ClassAd* job_ad)
 		dprintf(D_FULLDEBUG,
 				"Job does not define %s, not invoking any job hooks.\n",
 				ATTR_HOOK_KEYWORD);
-		return false;
+		return true;
 	}
 	else {
 		dprintf(D_FULLDEBUG,
 				"Using %s value from job ClassAd: \"%s\"\n",
 				ATTR_HOOK_KEYWORD, m_hook_keyword);
 	}
-	reconfig();
+	if (!reconfig()) return false;
 	return HookClientMgr::initialize();
 }
 
@@ -100,26 +103,24 @@ StarterHookMgr::initialize(ClassAd* job_ad)
 bool
 StarterHookMgr::reconfig()
 {
-		// Clear out our old copies of each hook's path.
+	// Clear out our old copies of each hook's path.
 	clearHookPaths();
 
-	m_hook_prepare_job = getHookPath(HOOK_PREPARE_JOB);
-	m_hook_update_job_info = getHookPath(HOOK_UPDATE_JOB_INFO);
-	m_hook_job_exit = getHookPath(HOOK_JOB_EXIT);
+    if (!getHookPath(HOOK_PREPARE_JOB, m_hook_prepare_job)) return false;
+    if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
+    if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
 
 	return true;
 }
 
 
-char*
-StarterHookMgr::getHookPath(HookType hook_type)
+bool StarterHookMgr::getHookPath(HookType hook_type, char*& hpath)
 {
-	if (!m_hook_keyword) {
-		return NULL;
-	}
+    hpath = NULL;
+	if (!m_hook_keyword) return true;
 	MyString _param;
 	_param.sprintf("%s_HOOK_%s", m_hook_keyword, getHookTypeString(hook_type));
-	return validateHookPath(_param.Value());
+	return validateHookPath(_param.Value(), hpath);
 }
 
 
@@ -137,7 +138,10 @@ StarterHookMgr::tryHookPrepareJob()
 
 	HookClient* hook_client = new HookPrepareJobClient(m_hook_prepare_job);
 
-	if (!spawn(hook_client, NULL, &hook_stdin)) {
+	Env env;
+	Starter->PublishToEnv(&env);
+
+	if (!spawn(hook_client, NULL, &hook_stdin, PRIV_USER_FINAL, &env)) {
 		MyString err_msg;
 		err_msg.sprintf("failed to execute HOOK_PREPARE_JOB (%s)",
 						m_hook_prepare_job);
@@ -174,7 +178,10 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
         // the stack and be destroyed as soon as we return.
     HookClient client(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info, false);
 
-	if (!spawn(&client, NULL, &hook_stdin)) {
+	Env env;
+	Starter->PublishToEnv(&env);
+
+	if (!spawn(&client, NULL, &hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n",
@@ -228,7 +235,10 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 
 	hook_client = new HookJobExitClient(m_hook_job_exit);
 
-	if (!spawn(hook_client, &args, &hook_stdin)) {
+	Env env;
+	Starter->PublishToEnv(&env);
+
+	if (!spawn(hook_client, &args, &hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit);

@@ -2108,6 +2108,7 @@ jobIsSandboxed( ClassAd * ad )
 	ASSERT(ad);
 	int stage_in_start = 0;
 	int never_create_sandbox_expr = 0;
+
 	// In the past, we created sandboxes (or not) based on the
 	// universe in which a job is executing.  Now, we create a
 	// sandbox only if we are in a universe that ordinarily
@@ -2115,7 +2116,7 @@ jobIsSandboxed( ClassAd * ad )
 	// create_sandbox may be set to false by other attributes in
 	// the job ad (see below).
 	bool create_sandbox = true;
-	
+
 	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
 	if( stage_in_start > 0 ) {
 		return true;
@@ -2124,14 +2125,17 @@ jobIsSandboxed( ClassAd * ad )
 	// 
 	if( ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr ) &&
 	    never_create_sandbox_expr == TRUE ) {
-	  // As this function stands now, we could return false here.
+	  // As this function stands now, we could return the result of 
+	  // evaluating ATTR_JOB_REQUIRES_SANDBOX here.  (We must create a sandbox for  
+	  // some jobs, including parallel universe jobs, because the scriptsdepend on one.)
 	  // But if the sandbox logic becomes more complicated in the
 	  // future --- notably, if there might be a case in which
-	  // we'd want to always create a sandbox even if
+	  // we'd want to always create a sandbox for non-PU jobs even if
 	  // ATTR_NEVER_CREATE_JOB_SANDBOX were set --- then we'd want
 	  // to be sure to ensure that we weren't in such a case.
+	  int job_requires_sandbox_expr = 0;
 
-	  create_sandbox = false;
+	  create_sandbox = (ad->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) && job_requires_sandbox_expr);
 	}
 
 	int univ = CONDOR_UNIVERSE_VANILLA;
@@ -2148,10 +2152,11 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_MPI:
-	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_VM:
+	case CONDOR_UNIVERSE_PARALLEL: // MPI scripts require a spool directory, so create_sandbox will always be true
 	  // True by default for jobs in these universes, but false if
-	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad.
+	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad and 
+	  // ATTR_JOB_REQUIRES_SANDBOX is not.
 		return create_sandbox;
 		break;
 

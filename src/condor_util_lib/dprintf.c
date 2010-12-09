@@ -52,7 +52,7 @@
 #include "util_lib_proto.h"		// for mkargv() proto
 #include "condor_threads.h"
 
-FILE *debug_lock(int debug_level);
+FILE *debug_lock(int debug_level, const char *mode);
 FILE *open_debug_file( int debug_level, char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
@@ -98,6 +98,14 @@ time_t	DebugLastMod = 0;
  * instead of the standard date format in all the log messages
  */
 int		DebugUseTimestamps = 0;
+
+/*
+ * When true, don't exit even if we fail to open the debug output file.
+ * Added so that on Win32 the kbdd (which is running as a user) won't quit 
+ * if it does't have access to the directory where log files live.
+ *
+ */
+int      DebugContinueOnOpenFailure = 0;
 
 /*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
@@ -307,7 +315,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 			int result;
 
 				/* Open and lock the log file */
-			(void)debug_lock(debug_level);
+			(void)debug_lock(debug_level, NULL);
 
 			if (DebugFP) {
 
@@ -473,12 +481,17 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 }
 
 FILE *
-debug_lock(int debug_level)
+debug_lock(int debug_level, const char *mode)
 {
 	off_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
+	struct stat fstatus;
+
+	if ( mode == NULL ) {
+		mode = "a";
+	}
 
 	if ( DebugFP == NULL ) {
 		DebugFP = stderr;
@@ -502,13 +515,23 @@ debug_lock(int debug_level)
 
 		/* Acquire the lock */
 	if( DebugLock ) {
-		if( use_kernel_mutex == FALSE && LockFd < 0 ) {
-			LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
-			if( LockFd < 0 ) {
-				save_errno = errno;
-				snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
-				_condor_dprintf_exit( save_errno, msg_buf );
+		
+		if( use_kernel_mutex == FALSE) {
+			if (LockFd > 0 ) {
+				fstat(LockFd, &fstatus);
+				if (fstatus.st_nlink == 0){
+					close(LockFd);
+					LockFd = -1;
+				}	
 			}
+			if (LockFd < 0) {
+				LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
+				if( LockFd < 0 ) {
+					save_errno = errno;
+					snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
+					_condor_dprintf_exit( save_errno, msg_buf );
+				} 
+			}	
 		}
 
 		errno = 0;
@@ -528,12 +551,17 @@ debug_lock(int debug_level)
 	if( DebugFile[debug_level] ) {
 		errno = 0;
 
-		DebugFP = open_debug_file(debug_level, "a");
+		DebugFP = open_debug_file(debug_level, mode);
 
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
 			save_errno = errno;
-#if !defined(WIN32)
+#ifdef WIN32
+			if (DebugContinueOnOpenFailure) {
+				_set_priv(priv, __FILE__, __LINE__, 0);
+				return NULL;
+			}
+#else
 			if( errno == EMFILE ) {
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
@@ -638,6 +666,7 @@ preserve_log_file(int debug_level)
 	int			failed_to_rotate = FALSE;
 	int			save_errno;
 	int         rename_failed = 0;
+	int			file_there = 0;
 #ifndef WIN32
 	struct stat buf;
 #endif
@@ -712,10 +741,15 @@ preserve_log_file(int debug_level)
 		errno = 0;
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
+			file_there = 1;
 			save_errno = errno;
-			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!", 
+			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
 					 DebugFile[debug_level] );
-			_condor_dprintf_exit( save_errno, msg_buf );
+			/* We should not exit here - file did rotate but something else created it newly. We
+			 therefore won't grow without bounds, we "just" lost control over creating the file.
+			 We should happily continue anyway and just put a log message into the system telling
+			 about this incident.
+			 */
 		}
 	}
 
@@ -734,6 +768,12 @@ preserve_log_file(int debug_level)
 
 	if ( !still_in_old_file ) {
 		fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
+	}
+
+	// We may have a message left over from the succeeded rename after which the file
+	// may have been recreated by another process. Tell user about it.
+	if (file_there > 0) {
+		fprintf(DebugFP, "WARNING: %s", msg_buf);
 	}
 
 	if ( failed_to_rotate || rename_failed ) {
@@ -853,9 +893,12 @@ open_debug_file(int debug_level, char flags[])
 		if( debug_level == 0 ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 DebugFile[debug_level] );
-			_condor_dprintf_exit( save_errno, msg_buf );
+
+			if ( ! DebugContinueOnOpenFailure) {
+			    _condor_dprintf_exit( save_errno, msg_buf );
+			}
 		}
-		return NULL;
+		// fp is guaranteed to be NULL here.
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);

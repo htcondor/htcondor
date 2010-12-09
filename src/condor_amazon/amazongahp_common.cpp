@@ -304,7 +304,7 @@ check_read_access_file(const char *file)
 }
 
 bool
-check_create_file(const char *file)
+check_create_file(const char *file, mode_t mode)
 {
 	if( !file || file[0] == '\0' ) {
 		return false;
@@ -312,7 +312,7 @@ check_create_file(const char *file)
 
 	FILE *fp = NULL;
 
-	fp = safe_fopen_wrapper(file, "w");
+	fp = safe_fopen_wrapper(file, "w", mode);
 	if( !fp ) {
 		dprintf(D_ALWAYS, "failed to safe_fopen_wrapper %s in write mode: "
 				"safe_fopen_wrapper returns %s\n", file, strerror(errno));

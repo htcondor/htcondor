@@ -17,19 +17,17 @@
  *
  ***************************************************************/
 
+/* Solaris doesn't have unsetenv */
+#ifndef HAVE_UNSETENV
 
-#ifndef _CONDOR_HOOK_UTILS_H_
-#define _CONDOR_HOOK_UTILS_H_
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
-/**
-  Lookup the given hook config parameter and make sure it is
-  defined, pointing to a valid executable, and that we have
-  some reason to believe that executable is trust-worthy.
-  @param hook_param The name of the hook parameter
-  @param hpath Returns with path to hook. NULL if not defined, or path error
-  @return true if successful, false if there was a path error
-*/
-bool validateHookPath( const char* hook_param, char*& hpath );
+void unsetenv(const char* name);
 
+#if defined(__cplusplus)
+}
+#endif
 
-#endif /* _CONDOR_HOOK_UTILS_H_ */
+#endif

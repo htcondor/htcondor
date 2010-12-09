@@ -100,10 +100,14 @@ pseudo_get_job_info(ClassAd *&ad)
 	ASSERT( the_ad );
 
 	// Only initialize the file transfer object if
-	// NeverCreateJobSandbox is not set
-	 int never_create_sandbox_expr;
-	 int has_nc_sandbox_expr = the_ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr );
-	 if( !(has_nc_sandbox_expr && never_create_sandbox_expr) ) {
+	// NeverCreateJobSandbox is not set OR if we're running
+        // a job that depends on the existence of a spool dir
+  	 int never_create_sandbox_expr_result;
+	 int job_requires_sandbox_expr_result;
+	 bool never_create_sandbox = the_ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr_result ) && never_create_sandbox_expr_result;
+	 bool job_requires_sandbox = the_ad->EvalBool( ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr_result ) && job_requires_sandbox_expr_result;
+
+	 if( !never_create_sandbox || job_requires_sandbox ) {
 
 		// FileTransfer now makes sure we only do Init() once.
 		//
@@ -166,6 +170,31 @@ pseudo_job_exit(int status, int reason, ClassAd* ad)
 			status, reason);
 	thisRemoteResource->updateFromStarter( ad );
 	thisRemoteResource->resourceExit( reason, status );
+	return 0;
+}
+
+int 
+pseudo_job_termination( ClassAd *ad )
+{
+	bool exited_by_signal = false;
+	bool core_dumped = false;
+	int exit_signal = 0;
+	int exit_code = 0;
+	MyString exit_reason;
+
+	ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL,exited_by_signal);
+	ad->LookupBool(ATTR_JOB_CORE_DUMPED,core_dumped);
+	ad->LookupString(ATTR_EXIT_REASON,exit_reason);
+
+	// Only one of these next two exist.
+	ad->LookupInteger(ATTR_ON_EXIT_SIGNAL,exit_signal);
+	ad->LookupInteger(ATTR_ON_EXIT_CODE,exit_code);
+
+	// This will utilize only the correct arguments depending on if the
+	// process exited with a signal or not.
+	Shadow->mockTerminateJob( exit_reason, exited_by_signal, exit_code,
+		exit_signal, core_dumped );
+
 	return 0;
 }
 
@@ -663,28 +692,6 @@ pseudo_ulog( ClassAd *ad )
 }
 
 int
-pseudo_get_job_attr( const char *name, char *expr )
-{
-	RemoteResource *remote;
-	if (parallelMasterResource == NULL) {
-		remote = thisRemoteResource;
-	} else {
-		remote = parallelMasterResource;
-	}
-	ClassAd *ad = remote->getJobAd();
-	ExprTree *e = ad->Lookup(name);
-	if(e) {
-		expr[0] = 0;
-		e->RArg()->PrintToStr(expr);
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr);
-		return 0;
-	} else {
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
-		return -1;
-	}
-}
-
-int
 pseudo_get_job_attr( const char *name, MyString &expr )
 {
 	RemoteResource *remote;
@@ -701,8 +708,9 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
 		return 0;
 	} else {
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
-		return -1;
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) is UNDEFINED\n",name);
+		expr = "UNDEFINED";
+		return 0;
 	}
 }
 

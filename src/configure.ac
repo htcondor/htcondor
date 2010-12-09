@@ -158,7 +158,7 @@ AC_PATH_PROG(ac_sysctl,sysctl,no,[$PATH])
 if test "x$ac_sysctl" = "xno" ; then
    SYSCTL=/bin/false
 else
-   STSCTL=$ac_sysctl
+   SYSCTL=$ac_sysctl
 fi
 
 AC_MSG_NOTICE([determining host platform])
@@ -470,23 +470,25 @@ elif test $os = "Darwin" ; then
 	##
 	## Figure out the architecture
 	##
+	AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
 	if test "$arch" = "i386"; then
-		# XXX This test is commented out because the externals aren't
-		# smart enough to figure out what platform they are on and Condor
-		# will fail to compile. So for now we lie and say INTEL. This
-		# could cause problems if a submit machine is x86_64 and the execute
-		# machines are x86 since both will report as INTEL.
-		# ok, test to see if the hw.optional.x86_64 key is present and 1, 
-		# if so, then this machine is actually an x86_64 machine, not an
-		# i386 machine.
-		#`$SYSCTL hw.optional.x86_64 2>&1 | $GREP '1\$' > /dev/null 2>&1`
-		#if test "x$?" = "x1"; then
-		#	_cv_arch="X86_64"
-		#	_cv_sysname="x86_64_macosx"
-		#else
+		# Mac OS X often says the architecture is i386 in uname
+		# when it's actually x86_64 and the system is capable of
+		# running 64-bit binaries.
+		# So we'll base the architecture value on the default
+		# code produced by gcc. On 10.5 and earlier, it's i386.
+		# On 10.6, it's x86_64.
+		$SW_VERS -productVersion | $GREP '^10.6' > /dev/null 2>&1
+		if test "x$?" = "x0" ; then
+			_cv_arch="X86_64"
+			_cv_sysname="x86_64_macosx"
+		else
 			_cv_arch="I386"
 			_cv_sysname="i386_macosx"
-		#fi	
+		fi
+	elif test "$arch" = "x86_64"; then
+		_cv_arch="X86_64"
+		_cv_sysname="x86_64_macosx"
 	elif test "$arch" = "Power Macintosh"; then
 		_cv_arch="PPC"
 		_cv_sysname="ppc_macosx"
@@ -498,7 +500,6 @@ elif test $os = "Darwin" ; then
 	_cv_op_sys="Darwin"
 	_cv_opsys="DARWIN"
 
-	AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
 	if test $SW_VERS = "no" ; then
     	_cv_opsys_vers="OSX_UNKNOWN"
 	else
@@ -1035,6 +1036,12 @@ case "$gcc_vers" in
     CompilerMinor="2"
     CompilerPatch="3"
     ;;
+ "4.2.4" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="2"
+    CompilerPatch="4"
+    ;;
  "4.2.1" )
     CompilerKind="GCC"
     CompilerMajor="4"
@@ -1174,12 +1181,7 @@ else
   rm -f static_test.c static_test.o static_test > /dev/null 2>&1
   if test "x$gcc_static_ld_flag" = "x" ; then
     msg="can not find appropriate flags for $gcc_ld_prog!"
-    if test $os = "SunOS" && test "$arch" != "i86pc" ; then
-      # on Solaris, this is fatal, since we depend on this info
-      AC_MSG_ERROR([$msg])
-    else
-      AC_MSG_WARN([$msg])
-    fi
+    AC_MSG_WARN([$msg])
   else
     AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
