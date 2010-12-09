@@ -808,8 +808,13 @@ int IOProxyHandler::convert( int result, int unix_errno )
 	}
 }
 
+// FIX FIX FIX FIX!!!
+// the output can be larger than the input, so you can't do this in place!!
+//
 void IOProxyHandler::fix_path( char *path )
 {
+#ifdef WIN32
+#else
 	char temp_path[strlen(path) + 2];
 
 	// Get rid of '//' or '/'
@@ -831,4 +836,5 @@ void IOProxyHandler::fix_path( char *path )
 	strcpy(temp_path, path);
 	temp_path[strlen(path)] = '\0';
 	sprintf(path, ".%c%s", DIR_DELIM_CHAR, temp_path);
+#endif
 }

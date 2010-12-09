@@ -21,7 +21,13 @@
 Chirp C Client
 */
 
-#include <unistd.h>
+#if defined WIN32
+ typedef unsigned int gid_t;
+ typedef unsigned int uid_t;
+ typedef unsigned short mode_t;
+#else
+ #include <unistd.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
