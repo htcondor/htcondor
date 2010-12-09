@@ -45,8 +45,9 @@ ClassAdList::~ClassAdList()
 {
 	for(list_cur=list_head.next;
 		list_cur!=&list_head;
-		list_cur=list_cur->next)
+		list_cur=list_head.next)
 	{
+		list_head.next = list_cur->next;
 		delete list_cur->ad;
 		delete list_cur;
 	}
