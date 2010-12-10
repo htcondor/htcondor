@@ -64,7 +64,11 @@ include (FindThreads)
 include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
-add_definitions(-DPLATFORM="${CMAKE_SYSTEM}")
+if (PLATFORM)
+	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${PLATFORM}")
+else()
+	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 set( CMAKE_VERBOSE_MAKEFILE TRUE )
