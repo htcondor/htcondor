@@ -183,7 +183,7 @@ just-man-pages:
 	ln -s figuresizing-html.tex figuresizing.tex
 	cd makeman && make clean makeman
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
-	for html in just-man-pages/condor_*.html; do \
+	for html in just-man-pages/*.html; do \
 		makeman/makeman -v -i $$html -s 1; \
 	done
 	-mkdir man
