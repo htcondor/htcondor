@@ -67,7 +67,8 @@ if( ! -d $pub_dir ) {
 
 # copy in the package targets
 if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
-	system("mv *.msi *.zip *.tar.gz $pub_dir");
+	# system("mv *.msi *.zip *.tar.gz $pub_dir");
+	system("mv *.zip *.msi *.tar.gz $pub_dir");
 }
 else
 {
