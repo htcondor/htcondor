@@ -914,31 +914,21 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 			if( rval >= 0 ) {
 				if (sl.number() != 0) {
-					ClassAd shortAd;
-					shortAd.SetMyTypeName("Job");
-					shortAd.SetTargetTypeName("Machine");
-
 					sl.rewind();
+					StringList internals;
+					StringList externals; // shouldn't have any
 					while (char *attr = sl.next()) {
-						StringList internals;
-						StringList externals; // shouldn't have any
 
 						if( !ad->GetExprReferences(attr, internals, externals) ) {
 							dprintf(D_FULLDEBUG,
 									"GetAllJobsByConstraint failed to parse "
 									"requested ClassAd expression: %s\n",attr);
 						}
-						internals.rewind();
-
-						while (char *indirect_attr = internals.next()) {
-							ExprTree *tree = ad->LookupExpr(indirect_attr);
-							if (tree) shortAd.Insert(indirect_attr, tree->Copy());
-						}
 					}
 
-					shortAd.SetPrivateAttributesInvisible( true );
-					assert( shortAd.put(*syscall_sock) );
-					shortAd.SetPrivateAttributesInvisible( false );
+					ad->SetPrivateAttributesInvisible( true );
+					assert( ad->put(*syscall_sock,&internals) );
+					ad->SetPrivateAttributesInvisible( false );
 				} else {
 					ad->SetPrivateAttributesInvisible( true );
 					assert( ad->put(*syscall_sock) );

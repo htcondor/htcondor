@@ -37,3 +37,5 @@ your job with.  Please see the Condor Manual for details, which can be
 found at http://www.cs.wisc.edu/condor/manual.
 
 !
+
+exit 2

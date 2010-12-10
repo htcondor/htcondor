@@ -24,9 +24,9 @@
    Written on 10/05/2005 by Nick LeRoy <nleroy@cs.wisc.edu>
 */
 
+#include "condor_common.h"
 #include <signal.h>
 #include <sys/time.h>
-#include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "daemon.h"
@@ -38,6 +38,7 @@
 
 #include "dc_lease_manager.h"
 
+using namespace std;
 
 const int dflag = D_ALWAYS | D_NOHEADER | D_FULLDEBUG;
 

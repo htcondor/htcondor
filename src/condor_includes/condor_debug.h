@@ -144,7 +144,7 @@ int fclose_wrapper( FILE *stream, int maxRetries );
 /*
 **	Important external variables in libc
 */
-#if !( defined(LINUX) && defined(GLIBC) || defined(Darwin) || defined(CONDOR_FREEBSD) )
+#if !( defined(LINUX) || defined(Darwin) || defined(CONDOR_FREEBSD) )
 extern DLL_IMPORT_MAGIC int		errno;
 extern DLL_IMPORT_MAGIC int		sys_nerr;
 #if _MSC_VER < 1400 /* VC++ 2005 version */

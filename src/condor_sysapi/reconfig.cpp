@@ -77,7 +77,8 @@ char *_sysapi_ckptpltfrm = NULL;
 int _sysapi_getload = 0;
 
 
-BEGIN_C_DECLS
+extern "C"
+{
 
 /*
    The function that configures the above variables each time it is called.
@@ -181,4 +182,4 @@ sysapi_internal_reconfig(void)
 	}
 }
 
-END_C_DECLS
+}

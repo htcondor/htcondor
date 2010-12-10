@@ -46,7 +46,7 @@
 #include "Queue.h"
 #include "MapFile.h"
 #ifdef WIN32
-#include "ntsysinfo.h"
+#include "ntsysinfo.WINDOWS.h"
 #endif
 #include "self_monitor.h"
 //#include "stdsoap2.h"
@@ -1868,6 +1868,13 @@ extern void DC_Exit( int status, const char *shutdown_program = NULL );
     run with the user's credentials.
 */
 extern void DC_Skip_Auth_Init();
+
+/** Call this function (inside your main_pre_dc_init() function) to
+    bypass the core limit initialization in daemoncore.  This is for
+    programs, such as condor_dagman, that are Condor daemons but should
+    run with the user's limits.
+*/
+extern void DC_Skip_Core_Init();
 
 /** The main DaemonCore object.  This pointer will be automatically instatiated
     for you.  A perfect place to use it would be in your main_init, to access

@@ -83,7 +83,7 @@ getConfigurationDefaultPositiveIntegerParameter( const char* parameter )
  * Note        : the function may halt the program execution, in case when the
  *               value of a parameter is not properly specified in the 
  *		 		 configuration file - this is the difference between the 
- *		 		 function and 'param_integer' in condor_c++_util/condor_config.C
+ *		 		 function and 'param_integer' in condor_utils/condor_config.C
  */
 static int
 getConfigurationPositiveIntegerParameter( const char* parameter )

@@ -132,7 +132,7 @@ VOID RestoreWndFromTray(HWND hWnd)
 			DWORD temp = GetLastError();
 		WCHAR buffer[256];
 		_ltow(temp, buffer, 10);
-		OutputDebugString(buffer);
+		OutputDebugString((LPCSTR)buffer);
 		}
 	}
 	

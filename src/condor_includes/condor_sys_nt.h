@@ -54,8 +54,8 @@
 #define NOSOUND
 
 // Make it official that Windows 2000 is our target
-#define _WIN32_WINNT 0x0500
-#define WINVER       0x0500
+//#define _WIN32_WINNT 0x0500
+//#define WINVER       0x0500
 
 // Make sure to define this *before* we include winsock2.h
 #define FD_SETSIZE 1024

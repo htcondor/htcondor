@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "credential.h"
-#include "X509credential.h"
+#include "X509credential.unix.h"
 #include "X509credentialWrapper.h"
 #include "classad/xmlSource.h"
 #include "classad/xmlSink.h"

@@ -109,7 +109,7 @@ static const char *GMStateNames[] = {
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
 		"(%d.%d) gmState %s, globusState %s: %s %s\n", \
-        procID.cluster,procID.proc,GMStateNames[gmState],globusState.Value(), \
+        procID.cluster,procID.proc,GMStateNames[gmState],globusState.c_str(), \
         func,error==GAHPCLIENT_COMMAND_TIMED_OUT?"timed out":"failed")
 
 #define CHECK_PROXY \
@@ -129,13 +129,13 @@ gt4GramCallbackHandler( void * /* user_arg */, const char *job_contact,
 {
 	int rc;
 	GT4Job *this_job;
-	MyString job_id;
+	std::string job_id;
 
-	job_id.sprintf( "gt4 %s", job_contact );
+	sprintf( job_id, "gt4 %s", job_contact );
 
 
 	// Find the right job object
-	rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id.Value() ),
+	rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id.c_str() ),
 										 (BaseJob*&)this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
@@ -182,11 +182,11 @@ void GT4JobReconfig()
 
 bool GT4JobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "gt4 ", 4 ) == 0 ) {
+		 strncasecmp( resource.c_str(), "gt4 ", 4 ) == 0 ) {
 
 		return true;
 	}
@@ -255,16 +255,16 @@ GT4Job::GT4Job( ClassAd *classad )
 {
 	int bool_value;
 	int int_value;
-	MyString iwd;
-	MyString job_output;
-	MyString job_error;
-	MyString job_proxy_subject;
-	MyString grid_resource;
-	MyString grid_job_id;
-	MyString gridftp_url_base;
-	MyString globus_delegation_uri;
+	std::string iwd;
+	std::string job_output;
+	std::string job_error;
+	std::string job_proxy_subject;
+	std::string grid_resource;
+	std::string grid_job_id;
+	std::string gridftp_url_base;
+	std::string globus_delegation_uri;
 	bool job_already_submitted = false;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 
 	RSL = NULL;
@@ -307,7 +307,7 @@ GT4Job::GT4Job( ClassAd *classad )
 							 (TimerHandlercpp)&GT4Job::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			error_string.sprintf( "%s is not set in the job ad",
+			sprintf( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -318,8 +318,8 @@ GT4Job::GT4Job( ClassAd *classad )
 		error_string = "GT4_GAHP not defined";
 		goto error_exit;
 	}
-	job_proxy_subject.sprintf( "GT4/%s", jobProxy->subject->fqan );
-	gahp = new GahpClient( job_proxy_subject.Value(), gahp_path );
+	sprintf( job_proxy_subject, "GT4/%s", jobProxy->subject->fqan );
+	gahp = new GahpClient( job_proxy_subject.c_str(), gahp_path );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
@@ -327,52 +327,52 @@ GT4Job::GT4Job( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
-	if ( grid_resource.Length() ) {
+	if ( grid_resource.length() ) {
 		const char *token;
 
-		grid_resource.Tokenize();
+		Tokenize( grid_resource );
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "gt4" ) ) {
-			error_string.sprintf( "%s not of type gt4", ATTR_GRID_RESOURCE );
+			sprintf( error_string, "%s not of type gt4", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			// If the resource url is missing a scheme, insert one
 			if ( strncmp( token, "http://", 7 ) == 0 ||
 				 strncmp( token, "https://", 8 ) == 0 ) {
 				resourceManagerString = strdup( token );
 			} else {
-				MyString urlbuf;
-				urlbuf.sprintf("https://%s", token );
-				resourceManagerString = strdup( urlbuf.Value() );
+				std::string urlbuf;
+				sprintf( urlbuf, "https://%s", token );
+				resourceManagerString = strdup( urlbuf.c_str() );
 			}
 		} else {
-			error_string.sprintf( "%s missing GRAM Service URL",
+			sprintf( error_string, "%s missing GRAM Service URL",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			jobmanagerType = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing JobManager type",
+			sprintf( error_string, "%s missing JobManager type",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, grid_job_id );
-	if ( grid_job_id.Length() ) {
-		SetRemoteJobId( strchr( grid_job_id.Value(), ' ' ) + 1 );
+	if ( grid_job_id.length() ) {
+		SetRemoteJobId( strchr( grid_job_id.c_str(), ' ' ) + 1 );
 		job_already_submitted = true;
 	}
 
@@ -396,12 +396,12 @@ GT4Job::GT4Job( ClassAd *classad )
 		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, gridftp_url_base );
 	}
 
-	gridftpServer->RegisterClient( evaluateStateTid, gridftp_url_base.Length() ? gridftp_url_base.Value() : NULL);
+	gridftpServer->RegisterClient( evaluateStateTid, gridftp_url_base.length() ? gridftp_url_base.c_str() : NULL);
 
 	if ( jobContact &&
 		 jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, globus_delegation_uri ) ) {
 
-		delegatedCredentialURI = strdup( globus_delegation_uri.Value() );
+		delegatedCredentialURI = strdup( globus_delegation_uri.c_str() );
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
 	}
 
@@ -413,8 +413,8 @@ GT4Job::GT4Job( ClassAd *classad )
 		jmLifetime = int_value;
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
-		int len = iwd.Length();
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.length() ) {
+		int len = iwd.length();
 		if ( len > 1 && iwd[len - 1] != '/' ) {
 			iwd += "/";
 		}
@@ -422,19 +422,19 @@ GT4Job::GT4Job( ClassAd *classad )
 		iwd = "/";
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.Length() &&
-		 strcmp( job_output.Value(), NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.length() &&
+		 strcmp( job_output.c_str(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
-			MyString full_job_output;
+			std::string full_job_output;
 
 			if ( job_output[0] != '/' ) {
 				full_job_output = iwd;
 			}
 
 			full_job_output += job_output;
-			localOutput = strdup( full_job_output.Value() );
+			localOutput = strdup( full_job_output.c_str() );
 
 			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
@@ -443,19 +443,19 @@ GT4Job::GT4Job( ClassAd *classad )
 		}
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.Length() &&
-		 strcmp( job_error.Value(), NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.length() &&
+		 strcmp( job_error.c_str(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
-			MyString full_job_error;
+			std::string full_job_error;
 
 			if ( job_error[0] != '/' ) {
 				full_job_error = iwd;
 			}
 
 			full_job_error += job_error;
-			localError = strdup( full_job_error.Value() );
+			localError = strdup( full_job_error.c_str() );
 
 			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
@@ -475,8 +475,8 @@ GT4Job::GT4Job( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }
@@ -539,7 +539,7 @@ int GT4Job::ProxyCallback()
 void GT4Job::doEvaluateState()
 {
 	int old_gm_state;
-	MyString old_globus_state;
+	std::string old_globus_state;
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
@@ -552,7 +552,7 @@ void GT4Job::doEvaluateState()
     dprintf(D_ALWAYS,
 			"(%d.%d) doEvaluateState called: gmState %s, globusState %s\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],
-			globusState.Value());
+			globusState.c_str());
 
 	if ( gahp ) {
 		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
@@ -849,7 +849,7 @@ void GT4Job::doEvaluateState()
 										resourceManagerString,
 										jobmanagerType,
 										gramCallbackContact,
-										RSL->Value(),
+										RSL->c_str(),
 										jmLifetime,
 										&job_contact );
 
@@ -869,7 +869,7 @@ void GT4Job::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "gt4_gram_client_job_create()", rc );
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
-							procID.cluster, procID.proc,RSL->Value());
+							procID.cluster, procID.proc,RSL->c_str());
 					globusErrorString = gahp->getErrorString();
 					WriteGlobusSubmitFailedEventToUserLog( jobAd, 0,
 													gahp->getErrorString() );
@@ -917,10 +917,10 @@ void GT4Job::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				MyString url_base;
+				std::string url_base;
 				jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, url_base );
 				if ( gridftpServer->GetUrlBase() &&
-					 strcmp( url_base.Value(),
+					 strcmp( url_base.c_str(),
 							 gridftpServer->GetUrlBase() ) ) {
 					gmState = GM_CANCEL;
 					break;
@@ -1001,8 +1001,8 @@ void GT4Job::doEvaluateState()
 					}
 					break;
 				}
-				MyString new_status = status;
-				MyString new_fault = fault;
+				std::string new_status = status ? status : "";
+				std::string new_fault = fault ? fault : "";
 				UpdateGlobusState( new_status, new_fault );
 				if ( status ) {
 					free( status );
@@ -1210,7 +1210,7 @@ void GT4Job::doEvaluateState()
 			}
 			free( delegatedCredentialURI );
 			delegatedCredentialURI = NULL;
-			MyString val;
+			std::string val;
 			if ( jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, val ) ) {
 				jobAd->AssignExpr( ATTR_GLOBUS_DELEGATION_URI, "Undefined" );
 			}
@@ -1277,18 +1277,18 @@ void GT4Job::doEvaluateState()
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' &&
-					 !globusStateFaultString.IsEmpty() ) {
+					 !globusStateFaultString.empty() ) {
 
 					snprintf( holdReason, 1024, "Globus error: %s",
-							  globusStateFaultString.Value() );
+							  globusStateFaultString.c_str() );
 				}
-				if ( holdReason[0] == '\0' && !globusErrorString.IsEmpty() ) {
+				if ( holdReason[0] == '\0' && !globusErrorString.empty() ) {
 					snprintf( holdReason, 1024, "Globus error: %s",
-							  globusErrorString.Value() );
+							  globusErrorString.c_str() );
 				}
 				if ( holdReason[0] == '\0' ) {
 					strncpy( holdReason, "Unspecified gridmanager error",
@@ -1320,8 +1320,8 @@ void GT4Job::doEvaluateState()
 		if ( globusState != old_globus_state ) {
 //			dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
 //					procID.cluster, procID.proc,
-//					old_globus_state.Value(),
-//					globusState.Value());
+//					old_globus_state.c_str(),
+//					globusState.c_str());
 			enteredCurrentGlobusState = time(NULL);
 		}
 		if ( gmState != old_gm_state ) {
@@ -1345,8 +1345,8 @@ void GT4Job::doEvaluateState()
 	} while ( reevaluate_state );
 }
 
-bool GT4Job::AllowTransition( const MyString &new_state,
-							  const MyString &old_state )
+bool GT4Job::AllowTransition( const std::string &new_state,
+							  const std::string &old_state )
 {
 
 	// Prevent non-transitions or transitions that go backwards in time.
@@ -1374,8 +1374,8 @@ bool GT4Job::AllowTransition( const MyString &new_state,
 }
 
 
-void GT4Job::UpdateGlobusState( const MyString &new_state, 
-								const MyString &new_fault )
+void GT4Job::UpdateGlobusState( const std::string &new_state, 
+								const std::string &new_fault )
 {
 	bool allow_transition;
 
@@ -1385,14 +1385,14 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 		// hasn't changed, so that BaseJob will know that we got a
 		// status update.
 	if ( allow_transition || new_state == globusState ) {
-		SetRemoteJobStatus( globusState.Value() );
+		SetRemoteJobStatus( globusState.c_str() );
 	}
 
 	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
 		dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
 				procID.cluster, procID.proc,
-				globusState.Value(), new_state.Value());
+				globusState.c_str(), new_state.c_str());
 
 		if ( ( new_state == GT4_JOB_STATE_ACTIVE ||
 			   new_state == GT4_JOB_STATE_STAGE_OUT ) &&
@@ -1413,7 +1413,7 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 					//   certain errors (ones we know are submit-related)?
 				if ( !submitFailedLogged ) {
 					WriteGlobusSubmitFailedEventToUserLog( jobAd, 0,
-														   new_fault.Value() );
+														   new_fault.c_str() );
 					submitFailedLogged = true;
 				}
 			} else {
@@ -1442,7 +1442,7 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 		}
 
 		jobAd->Assign( ATTR_GLOBUS_STATUS,
-					   Gt4JobStateToInt( new_state.Value() ) );
+					   Gt4JobStateToInt( new_state.c_str() ) );
 
 		globusState = new_state;
 		globusStateFaultString = new_fault;
@@ -1457,14 +1457,14 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 void GT4Job::GramCallback( const char *new_state, const char *new_fault,
 						   const int new_exit_code )
 {
-	MyString new_state_str = new_state;
+	std::string new_state_str = new_state ? new_state : "";
 	if ( AllowTransition(new_state_str,
 						 callbackGlobusState != "" ?
 						 callbackGlobusState :
 						 globusState ) ) {
 
 		callbackGlobusState = new_state_str;
-		callbackGlobusStateFaultString = new_fault;
+		callbackGlobusStateFaultString = new_fault ? new_fault : "";
 
 		if ( new_state_str == GT4_JOB_STATE_DONE ) {
 			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
@@ -1508,38 +1508,38 @@ void GT4Job::SetRemoteJobId( const char *job_id )
 		jobContact = NULL;
 	}
 
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "gt4 %s", job_id );
+		sprintf( full_job_id, "gt4 %s", job_id );
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 // Build submit RSL.. er... XML
-MyString *GT4Job::buildSubmitRSL()
+std::string *GT4Job::buildSubmitRSL()
 {
-	MyString *rsl = new MyString;
-	MyString local_iwd = "";
-	MyString remote_iwd = "";
-	MyString riwd_parent="";
-	MyString local_executable = "";
-	MyString remote_executable = "";
-	MyString local_stdout = "";
-	MyString local_stderr = "";
+	std::string *rsl = new std::string;
+	std::string local_iwd = "";
+	std::string remote_iwd = "";
+	std::string riwd_parent="";
+	std::string local_executable = "";
+	std::string remote_executable = "";
+	std::string local_stdout = "";
+	std::string local_stderr = "";
 	bool create_remote_iwd = false;
 	bool transfer_executable = true;
 	bool transfer_stdout = true;
 	bool transfer_stderr = true;
-	MyString buff;
+	std::string buff;
 	char *attr_value = NULL;
 	char *rsl_suffix = NULL;
 	StringList stage_in_list;
 	StringList stage_out_list;
 	bool staging_input = false;
-	MyString local_url_base = "";
+	std::string local_url_base = "";
 
 	if ( !jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, local_url_base ) ) {
-		errorString.sprintf( "%s not defined", ATTR_GRIDFTP_URL_BASE );
+		sprintf( errorString, "%s not defined", ATTR_GRIDFTP_URL_BASE );
 		delete rsl;
 		return NULL;
 	}
@@ -1551,22 +1551,22 @@ MyString *GT4Job::buildSubmitRSL()
 		return NULL;
 	}
 
-	MyString delegation_epr;
+	std::string delegation_epr;
 	MyString delegation_uri = delegatedCredentialURI;
 	int pos = delegation_uri.FindChar( '?' );
 	if ( m_isGram42 == false ) {
 			// GRAM 4.0
-		delegation_epr.sprintf( "<ns01:Address xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">%s</ns01:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
-		delegation_epr.sprintf_cat( "<ns01:ReferenceProperties xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">" );
-		delegation_epr.sprintf_cat( "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
-		delegation_epr.sprintf_cat( "</ns01:ReferenceProperties>" );
-		delegation_epr.sprintf_cat( "<ns01:ReferenceParameters xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\"/>" );
+		sprintf( delegation_epr, "<ns01:Address xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">%s</ns01:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
+		sprintf_cat( delegation_epr, "<ns01:ReferenceProperties xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">" );
+		sprintf_cat( delegation_epr, "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
+		sprintf_cat( delegation_epr, "</ns01:ReferenceProperties>" );
+		sprintf_cat( delegation_epr, "<ns01:ReferenceParameters xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\"/>" );
 	} else {
 			// GRAM 4.2
-		delegation_epr.sprintf( "<ns01:Address xmlns:ns01=\"http://www.w3.org/2005/08/addressing\">%s</ns01:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
-		delegation_epr.sprintf_cat( "<ns01:ReferenceParameters xmlns:ns01=\"http://www.w3.org/2005/08/addressing\">" );
-		delegation_epr.sprintf_cat( "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
-		delegation_epr.sprintf_cat( "</ns01:ReferenceParameters>" );
+		sprintf( delegation_epr, "<ns01:Address xmlns:ns01=\"http://www.w3.org/2005/08/addressing\">%s</ns01:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
+		sprintf_cat( delegation_epr, "<ns01:ReferenceParameters xmlns:ns01=\"http://www.w3.org/2005/08/addressing\">" );
+		sprintf_cat( delegation_epr, "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
+		sprintf_cat( delegation_epr, "</ns01:ReferenceParameters>" );
 	}
 
 		// Set our local job working directory
@@ -1609,7 +1609,7 @@ MyString *GT4Job::buildSubmitRSL()
 		// substitution is completed for some reason. See globus bugzilla
 		// ticket 2846 for details. To keep it happy, throw in an extra
 		// slash, even though this'll result in file:////....
-		remote_iwd.sprintf ("/${GLOBUS_SCRATCH_DIR}/job_%s", unique_id);
+		sprintf( remote_iwd, "/${GLOBUS_SCRATCH_DIR}/job_%s", unique_id );
 		// The default GLOBUS_SCRATCH_DIR (~/.globus/scratch) is not
 		// created by Globus, so our attempt to create a sub-directory
 		// will fail. As a work-around, try to create it. This will
@@ -1617,10 +1617,10 @@ MyString *GT4Job::buildSubmitRSL()
 		// writable by the user.
 		// http://bugzilla.globus.org/globus/show_bug.cgi?id=3802
 		// http://bugzilla.globus.org/globus/show_bug.cgi?id=3803
-		riwd_parent.sprintf("/${GLOBUS_SCRATCH_DIR}");
+		sprintf(riwd_parent,"/${GLOBUS_SCRATCH_DIR}");
 	}
 
-	if ( remote_iwd[remote_iwd.Length()-1] != '/' ) {
+	if ( remote_iwd[remote_iwd.length()-1] != '/' ) {
 		remote_iwd += '/';
 	}
 	if ( attr_value != NULL ) {
@@ -1629,7 +1629,7 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 	//Start off the RSL
-	rsl->sprintf( "<job>" );
+	*rsl = "<job>";
 
 
 	//We're assuming all job clasads have a command attribute
@@ -1659,7 +1659,7 @@ MyString *GT4Job::buildSubmitRSL()
 			}
 			free(source); source = NULL;
 		}
-		if ( local_executable.IsEmpty() ) {
+		if ( local_executable.empty() ) {
 				// didn't find any executable in the spool directory,
 				// so use what is explicitly stated in the job ad
 
@@ -1674,9 +1674,9 @@ MyString *GT4Job::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	*rsl += printXMLParam( "executable", remote_executable.Value() );
+	*rsl += printXMLParam( "executable", remote_executable.c_str() );
 	
-	*rsl += printXMLParam( "directory", remote_iwd.Value() );
+	*rsl += printXMLParam( "directory", remote_iwd.c_str() );
 
 		// parse arguments
 	{
@@ -1686,8 +1686,8 @@ MyString *GT4Job::buildSubmitRSL()
 		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
 					procID.cluster, procID.proc, arg_errors.Value());
-			errorString.sprintf("Failed to read job arguments: %s\n",
-					arg_errors.Value());
+			sprintf( errorString, "Failed to read job arguments: %s\n",
+					 arg_errors.Value());
 			delete rsl;
 			return NULL;
 		}
@@ -1732,15 +1732,15 @@ MyString *GT4Job::buildSubmitRSL()
 
 		if ( transfer == false ) {
 			if ( attr_value[0] != '/' ) {
-				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
+				sprintf( buff, "%s/%s", remote_iwd.c_str(), attr_value );
 			} else {
-				buff.sprintf( "%s", attr_value );
+				sprintf( buff, "%s", attr_value );
 			}
-			*rsl += printXMLParam( "stdin", buff.Value() );
+			*rsl += printXMLParam( "stdin", buff.c_str() );
 		} else {
-			buff.sprintf( "%s/%s", remote_iwd.Value(),
+			sprintf( buff, "%s/%s", remote_iwd.c_str(),
 						condor_basename(attr_value) );
-			*rsl += printXMLParam( "stdin", buff.Value() );
+			*rsl += printXMLParam( "stdin", buff.c_str() );
 			stage_in_list.append( attr_value );
 		}
 	}
@@ -1761,15 +1761,15 @@ MyString *GT4Job::buildSubmitRSL()
 
 		if ( transfer_stdout == false ) {
 			if ( attr_value[0] != '/' ) {
-				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
+				sprintf( buff, "%s/%s", remote_iwd.c_str(), attr_value );
 			} else {
-				buff.sprintf( "%s", attr_value );
+				sprintf( buff, "%s", attr_value );
 			}
-			*rsl += printXMLParam( "stdout", buff.Value() );
+			*rsl += printXMLParam( "stdout", buff.c_str() );
 		} else {
-			buff.sprintf( "%s/%s", remote_iwd.Value(),
+			sprintf( buff, "%s/%s", remote_iwd.c_str(),
 						condor_basename(attr_value) );
-			*rsl += printXMLParam( "stdout", buff.Value() );
+			*rsl += printXMLParam( "stdout", buff.c_str() );
 			local_stdout = attr_value;
 		}
 	}
@@ -1790,15 +1790,15 @@ MyString *GT4Job::buildSubmitRSL()
 
 		if ( transfer_stderr == false ) {
 			if ( attr_value[0] != '/' ) {
-				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
+				sprintf( buff, "%s/%s", remote_iwd.c_str(), attr_value );
 			} else {
-				buff.sprintf( "%s", attr_value );
+				sprintf( buff, "%s", attr_value );
 			}
-			*rsl += printXMLParam( "stderr", buff.Value() );
+			*rsl += printXMLParam( "stderr", buff.c_str() );
 		} else {
-			buff.sprintf( "%s/%s", remote_iwd.Value(),
+			sprintf( buff, "%s/%s", remote_iwd.c_str(),
 						condor_basename(attr_value) );
-			*rsl += printXMLParam( "stderr", buff.Value() );
+			*rsl += printXMLParam( "stderr", buff.c_str() );
 			local_stderr = attr_value;
 		}
 	}
@@ -1830,11 +1830,11 @@ MyString *GT4Job::buildSubmitRSL()
 			}
 			if ( riwd_parent != "" ) {
 				*rsl += "<transfer>";
-				buff.sprintf( "%s%s/", local_url_base.Value(),
+				sprintf( buff, "%s%s/", local_url_base.c_str(),
 							  getDummyJobScratchDir() );
-				*rsl += printXMLParam( "sourceUrl", buff.Value() );
-				buff.sprintf( "file://%s", riwd_parent.Value() );
-				*rsl += printXMLParam( "destinationUrl", buff.Value());
+				*rsl += printXMLParam( "sourceUrl", buff.c_str() );
+				sprintf( buff, "file://%s", riwd_parent.c_str() );
+				*rsl += printXMLParam( "destinationUrl", buff.c_str());
 				if ( gridftpServer->UseSelfCred() ) {
 					*rsl += "<rftOptions>";
 					*rsl += printXMLParam( "sourceSubjectName",
@@ -1844,11 +1844,11 @@ MyString *GT4Job::buildSubmitRSL()
 				*rsl += "</transfer>";
 			}
 			*rsl += "<transfer>";
-			buff.sprintf( "%s%s/", local_url_base.Value(),
+			sprintf( buff, "%s%s/", local_url_base.c_str(),
 						  getDummyJobScratchDir() );
-			*rsl += printXMLParam( "sourceUrl", buff.Value() );
-			buff.sprintf( "file://%s", remote_iwd.Value() );
-			*rsl += printXMLParam( "destinationUrl", buff.Value());
+			*rsl += printXMLParam( "sourceUrl", buff.c_str() );
+			sprintf( buff, "file://%s", remote_iwd.c_str() );
+			*rsl += printXMLParam( "destinationUrl", buff.c_str());
 			if ( gridftpServer->UseSelfCred() ) {
 				*rsl += "<rftOptions>";
 				*rsl += printXMLParam( "sourceSubjectName",
@@ -1861,11 +1861,11 @@ MyString *GT4Job::buildSubmitRSL()
 		// Next, add the executable if needed
 		if ( transfer_executable ) {
 			*rsl += "<transfer>";
-			buff.sprintf( "%s%s", local_url_base.Value(),
-						  local_executable.Value() );
-			*rsl += printXMLParam( "sourceUrl", buff.Value() );
-			buff.sprintf( "file://%s", remote_executable.Value() );
-			*rsl += printXMLParam( "destinationUrl", buff.Value());
+			sprintf( buff, "%s%s", local_url_base.c_str(),
+						  local_executable.c_str() );
+			*rsl += printXMLParam( "sourceUrl", buff.c_str() );
+			sprintf( buff, "file://%s", remote_executable.c_str() );
+			*rsl += printXMLParam( "destinationUrl", buff.c_str());
 			if ( gridftpServer->UseSelfCred() ) {
 				*rsl += "<rftOptions>";
 				*rsl += printXMLParam( "sourceSubjectName",
@@ -1883,16 +1883,16 @@ MyString *GT4Job::buildSubmitRSL()
 			while ( (filename = stage_in_list.next()) != NULL ) {
 
 				*rsl += "<transfer>";
-				buff.sprintf( "%s%s%s", local_url_base.Value(),
-							  filename[0] == '/' ? "" : local_iwd.Value(),
+				sprintf( buff, "%s%s%s", local_url_base.c_str(),
+							  filename[0] == '/' ? "" : local_iwd.c_str(),
 							  filename );
 				*rsl += printXMLParam ("sourceUrl", 
-									   buff.Value());
-				buff.sprintf ("file://%s%s",
-							  remote_iwd.Value(),
+									   buff.c_str());
+				sprintf( buff, "file://%s%s",
+							  remote_iwd.c_str(),
 							  condor_basename (filename));
 				*rsl += printXMLParam ("destinationUrl", 
-									   buff.Value());
+									   buff.c_str());
 				if ( gridftpServer->UseSelfCred() ) {
 					*rsl += "<rftOptions>";
 					*rsl += printXMLParam( "sourceSubjectName",
@@ -1921,16 +1921,16 @@ MyString *GT4Job::buildSubmitRSL()
 
 		if ( transfer_stdout ) {
 			*rsl += "<transfer>";
-			buff.sprintf ("file://%s%s",
-						  remote_iwd.Value(),
-						  condor_basename( local_stdout.Value() ) );
+			sprintf( buff, "file://%s%s",
+						  remote_iwd.c_str(),
+						  condor_basename( local_stdout.c_str() ) );
 			*rsl += printXMLParam ("sourceUrl", 
-								   buff.Value());
-			buff.sprintf( "%s%s%s", local_url_base.Value(),
-						  local_stdout[0] == '/' ? "" : local_iwd.Value(),
-						  local_stdout.Value() );
+								   buff.c_str());
+			sprintf( buff, "%s%s%s", local_url_base.c_str(),
+						  local_stdout[0] == '/' ? "" : local_iwd.c_str(),
+						  local_stdout.c_str() );
 			*rsl += printXMLParam ("destinationUrl", 
-								   buff.Value());
+								   buff.c_str());
 			if ( gridftpServer->UseSelfCred() ) {
 				*rsl += "<rftOptions>";
 				*rsl += printXMLParam( "destinationSubjectName",
@@ -1942,16 +1942,16 @@ MyString *GT4Job::buildSubmitRSL()
 
 		if ( transfer_stderr ) {
 			*rsl += "<transfer>";
-			buff.sprintf ("file://%s%s",
-						  remote_iwd.Value(),
-						  condor_basename( local_stderr.Value() ) );
+			sprintf( buff, "file://%s%s",
+						  remote_iwd.c_str(),
+						  condor_basename( local_stderr.c_str() ) );
 			*rsl += printXMLParam ("sourceUrl", 
-								   buff.Value());
-			buff.sprintf( "%s%s%s", local_url_base.Value(),
-						  local_stderr[0] == '/' ? "" : local_iwd.Value(),
-						  local_stderr.Value() );
+								   buff.c_str());
+			sprintf( buff, "%s%s%s", local_url_base.c_str(),
+						  local_stderr[0] == '/' ? "" : local_iwd.c_str(),
+						  local_stderr.c_str() );
 			*rsl += printXMLParam ("destinationUrl", 
-								   buff.Value());
+								   buff.c_str());
 			if ( gridftpServer->UseSelfCred() ) {
 				*rsl += "<rftOptions>";
 				*rsl += printXMLParam( "destinationSubjectName",
@@ -1969,23 +1969,23 @@ MyString *GT4Job::buildSubmitRSL()
 		while ( (filename = stage_out_list.next()) != NULL ) {
 
 			*rsl += "<transfer>";
-			buff.sprintf ("file://%s%s",
-						  filename[0]=='/' ? "" : remote_iwd.Value(),
+			sprintf( buff, "file://%s%s",
+						  filename[0]=='/' ? "" : remote_iwd.c_str(),
 						  filename);
 			*rsl += printXMLParam ("sourceUrl", 
-								   buff.Value());
+								   buff.c_str());
 			if ( remaps && filename_remap_find( remaps, filename,
 												new_name ) ) {
-				buff.sprintf( "%s%s%s", local_url_base.Value(),
-							  new_name[0] == '/' ? "" : local_iwd.Value(),
+				sprintf( buff, "%s%s%s", local_url_base.c_str(),
+							  new_name[0] == '/' ? "" : local_iwd.c_str(),
 							  new_name.Value() );
 			} else {
-				buff.sprintf( "%s%s%s", local_url_base.Value(),
-							  local_iwd.Value(),
+				sprintf( buff, "%s%s%s", local_url_base.c_str(),
+							  local_iwd.c_str(),
 							  condor_basename( filename ) );
 			}
 			*rsl += printXMLParam ("destinationUrl", 
-								   buff.Value());
+								   buff.c_str());
 			if ( gridftpServer->UseSelfCred() ) {
 				*rsl += "<rftOptions>";
 				*rsl += printXMLParam( "destinationSubjectName",
@@ -2018,8 +2018,8 @@ MyString *GT4Job::buildSubmitRSL()
 		if(!envobj.MergeFrom(jobAd,&env_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
 					procID.cluster, procID.proc, env_errors.Value());
-			errorString.sprintf("Failed to read job environment: %s\n",
-					env_errors.Value());
+			sprintf( errorString, "Failed to read job environment: %s\n",
+					 env_errors.Value());
 			delete rsl;
 			return NULL;
 		}
@@ -2120,10 +2120,10 @@ void GT4Job::DeleteOutput()
 
 const char * 
 GT4Job::printXMLParam (const char * name, const char * value) {
-	static MyString buff;
+	static std::string buff;
 		// TODO should perform escaping of special characters in value
-	buff.sprintf ("<%s>%s</%s>", name, value, name);
-	return buff.Value();
+	sprintf( buff, "<%s>%s</%s>", name, value, name );
+	return buff.c_str();
 }
 
 // Create an per-user empty directory, or return one if
@@ -2133,76 +2133,76 @@ const char*
 GT4Job::getDummyJobScratchDir() {
 	const int dir_mode = 0500;
 	const char *return_val = NULL;
-	static MyString dirname;
+	static std::string dirname;
 	static time_t last_check = 0;
 
 	if ( dirname != "" && time(NULL) < last_check + 60 ) {
-		return dirname.Value();
+		return dirname.c_str();
 	}
 
 	if ( dirname == "" ) {
 		char *prefix = temp_dir_path();
 		ASSERT( prefix );
 #ifndef WIN32 
-		dirname.sprintf ("%s%ccondor_g_empty_dir_u%d", // <scratch>/condorg_empty_dir_u<uid>
-						 prefix,
-						 DIR_DELIM_CHAR,
-						 geteuid());
+		sprintf( dirname, "%s%ccondor_g_empty_dir_u%d", // <scratch>/condorg_empty_dir_u<uid>
+				 prefix,
+				 DIR_DELIM_CHAR,
+				 geteuid() );
 #else // Windows
 		char *user = my_username();
-		dirname.sprintf ("%s%ccondor_g_empty_dir_u%s", // <scratch>\empty_dir_u<username>
-						 prefix, 
-						 DIR_DELIM_CHAR,
-						 user);
+		sprintf( dirname, "%s%ccondor_g_empty_dir_u%s", // <scratch>\empty_dir_u<username>
+				 prefix, 
+				 DIR_DELIM_CHAR,
+				 user);
 		free(user);
 		user = NULL;
 #endif
 		free( prefix );
 	}
 
-	StatInfo *dir_stat = new StatInfo( dirname.Value() );
+	StatInfo *dir_stat = new StatInfo( dirname.c_str() );
 
 	if ( dir_stat->Error() == SINoFile ) {
 		delete dir_stat;
 		dir_stat = NULL;
-		if ( mkdir (dirname.Value(), dir_mode) < 0 ) {
+		if ( mkdir (dirname.c_str(), dir_mode) < 0 ) {
 			dprintf (D_ALWAYS, "Unable to create scratch directory %s, errno=%d (%s)\n", 
-					 dirname.Value(), errno, strerror(errno));
+					 dirname.c_str(), errno, strerror(errno));
 			goto error_exit;
 		}
-		dir_stat = new StatInfo( dirname.Value() );
+		dir_stat = new StatInfo( dirname.c_str() );
 	}
 
 	if ( dir_stat->Error() != SIGood ) {
 		dprintf( D_ALWAYS, "Unable to stat scratch directory %s, errno=%d (%s)\n",
-				 dirname.Value(), dir_stat->Errno(),
+				 dirname.c_str(), dir_stat->Errno(),
 				 strerror( dir_stat->Errno() ) );
 		goto error_exit;
 	}
 	if ( dir_stat->IsSymlink() ) {
 		dprintf( D_ALWAYS, "Scratch directory %s is a symlink\n",
-				 dirname.Value() );
+				 dirname.c_str() );
 		goto error_exit;
 	}
 	if ( !dir_stat->IsDirectory() ) {
 		dprintf( D_ALWAYS, "Scratch directory %s isn't a directory\n",
-				 dirname.Value() );
+				 dirname.c_str() );
 		goto error_exit;
 	}
 #ifndef WIN32 
 	if ( dir_stat->GetOwner() != get_user_uid() ) {
 		dprintf( D_ALWAYS, "Scratch directory %s not owned by user\n",
-				 dirname.Value() );
+				 dirname.c_str() );
 		goto error_exit;
 	}
 #endif
 	if ( ( dir_stat->GetMode() & 0777 ) != dir_mode ) {
 		dprintf( D_ALWAYS, "Scratch directory %s has wrong permissions 0%o\n",
-				 dirname.Value(), dir_stat->GetMode() & 0777 );
+				 dirname.c_str(), dir_stat->GetMode() & 0777 );
 		goto error_exit;
 	}
 
-	return_val = dirname.Value();
+	return_val = dirname.c_str();
 
 	last_check = time(NULL);
 
@@ -2226,7 +2226,7 @@ GT4Job::SwitchToGram42()
 dprintf(D_ALWAYS,"(%d.%d) JEF: Switching to Gram 42\n",procID.cluster,procID.proc);
 	GahpClient *new_gahp = NULL;
 
-	MyString gahp_name;
+	std::string gahp_name;
 	char *gahp_path = param("GT42_GAHP");
 	if ( gahp_path == NULL ) {
 		gmState = GM_HOLD;
@@ -2234,8 +2234,8 @@ dprintf(D_ALWAYS,"(%d.%d) JEF: Switching to Gram 42\n",procID.cluster,procID.pro
 		SetEvaluateState();
 		return false;
 	}
-	gahp_name.sprintf( "GT42/%s", jobProxy->subject->fqan );
-	new_gahp = new GahpClient( gahp_name.Value(), gahp_path );
+	sprintf( gahp_name, "GT42/%s", jobProxy->subject->fqan );
+	new_gahp = new GahpClient( gahp_name.c_str(), gahp_path );
 	free( gahp_path );
 
 	new_gahp->setNotificationTimerId( evaluateStateTid );

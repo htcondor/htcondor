@@ -20,9 +20,9 @@
 
 
 my @got;
-$testdesc =  'lib_unit_tests - runs prebuilt unit tests from testbin_dir';
+$testdesc =  'lib_unit_tests - runs prebuilt unit tests';
 $testname = "lib_unit_tests";
-$test = "../testbin_dir/condor_unit_tests";
+$test = "condor_unit_tests";
 
 print scalar localtime() . "\n";
 

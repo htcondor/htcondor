@@ -28,13 +28,13 @@
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "conversion.h"
+#include "../classad_analysis/conversion.h"
 using namespace std;
 
 #include "subsystem_info.h"
 #include "lease_manager.h"
 #include "lease_manager_resources.h"
-#include "newclassad_stream.h"
+#include "newclassad_stream.unix.h"
 #include "debug_timer_dprintf.h"
 
 class LeaseManagerIntervalTimer

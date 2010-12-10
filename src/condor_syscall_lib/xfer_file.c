@@ -26,10 +26,9 @@
 #include "condor_open.h"
 #include "util_lib_proto.h"
 
-double	get_time();
 extern int	Syscalls;
 
-extern int open_file_stream( const char *file, int flags, size_t *len );
+//extern int open_file_stream( const char *file, int flags, size_t *len );
 
 /* remote systems calls we use in this file */
 extern int REMOTE_CONDOR_extern_name(char *path, char *buf, int bufsize);
@@ -38,6 +37,8 @@ extern int REMOTE_CONDOR_getwd(char *path_name);
 
 #define CHUNK_SIZE 4096
 
+int open_file_stream( const char *file, int flags, size_t *len );
+double  get_time();
 
 /*
 ** Transfer a local file to a remote machine.
@@ -114,8 +115,7 @@ send_a_file( const char *local, const char *remote, int perm )
 /*
 ** Transfer a remote file to the local machine.
 */
-int
-get_file( const char *remote, const char *local, int mode )
+int get_file( const char *remote, const char *local, int mode )
 {
 	int		remote_fd, local_fd;
 	char	buf[ CHUNK_SIZE + 50];
@@ -192,47 +192,4 @@ get_time()
 }
 
 
-#if 0
-char *
-find_physical_host( const char *path, int flags )
-{
-	static char answer[ MAXPATHLEN ];
-	char		dir[ MAXPATHLEN ];
-	char		*ptr, *strchr(), *strrchr(); /* 9/25 ..dhaval */
 
-		/* Try to find the pathname as given */
-	/* if( extern_name(path,answer,sizeof(answer)) >= 0 ) { */
-	if( REMOTE_CONDOR_extern_name(path,answer,sizeof(answer)) >= 0 ) {
-		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
-			*ptr = '\0';
-		}
-		return answer;
-	}
-
-	if( !(flags & O_CREAT) ) {
-		return NULL;
-	}
-
-		/* He's trying to creat the file, look for the parent directory */
-	strcpy( dir, path );
-    if( ptr=strrchr(dir,'/') ) { /* dhaval 9/25 */
-		if( ptr == dir ) {
-			strcpy( dir, "/" );
-		} else {
-			*ptr = '\0';
-		}
-	} else {
-		REMOTE_CONDOR_getwd( dir );
-	}
-
-	/* if( extern_name(dir,answer,sizeof(answer)) >= 0 ) { */
-	if( REMOTE_CONDOR_extern_name(dir,answer,sizeof(answer)) >= 0 ) {
-		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
-			*ptr = '\0';
-		}
-		return answer;
-	} else {
-		return NULL;
-	}
-}
-#endif

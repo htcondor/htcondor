@@ -22,6 +22,7 @@
 #include "multiProfile.h"
 
 #include <iostream>
+using namespace std;
 
 MultiProfile::
 MultiProfile( )

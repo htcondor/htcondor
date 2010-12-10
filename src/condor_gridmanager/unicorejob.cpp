@@ -102,11 +102,11 @@ void UnicoreJobReconfig()
 
 bool UnicoreJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "unicore ", 4 ) == 0 ) {
+		 strncasecmp( resource.c_str(), "unicore ", 4 ) == 0 ) {
 
 		return true;
 	}
@@ -123,7 +123,7 @@ void
 UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 {
 	ClassAd *update_ad = NULL;
-	MyString job_id;
+	std::string job_id;
 	ClassAdXMLParser xml_parser;
 	UnicoreJob *job;
 
@@ -143,7 +143,7 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 		return;
 	}
 	
-	if ( JobsByUnicoreId.lookup( HashKey( job_id.Value() ), job ) != 0 ||
+	if ( JobsByUnicoreId.lookup( HashKey( job_id.c_str() ), job ) != 0 ||
 		 job == NULL ) {
 		dprintf( D_FULLDEBUG, "UnicoreGahpCallbackHandler: status ad for "
 				 "unknown job, ignoring\n" );
@@ -183,7 +183,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	MyString buff;
-	MyString error_string = "";
+	std::string error_string = "";
 
 	resourceName = NULL;
 	jobContact = NULL;
@@ -225,19 +225,19 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	if ( !buff.IsEmpty() ) {
 		const char *token;
 
-		buff.Tokenize();
+		Tokenize( buff );
 
-		token = buff.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "unicore" ) ) {
-			error_string.sprintf( "%s not of type unicore", ATTR_GRID_JOB_ID );
+			sprintf( error_string, "%s not of type unicore", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
-		buff.GetNextToken( " ", false );
-		buff.GetNextToken( " ", false );
-		token = buff.GetNextToken( " ", false );
+		GetNextToken( " ", false );
+		GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token ) {
-			error_string.sprintf( "%s missing job ID",
+			sprintf( error_string, "%s missing job ID",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -250,8 +250,8 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }
@@ -679,7 +679,7 @@ if ( unicoreState != COMPLETED ) {
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' ) {
@@ -804,11 +804,11 @@ void UnicoreJob::SetRemoteJobId( const char *job_id )
 		jobContact = NULL;
 	}
 
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "%s %s", resourceName, job_id );
+		sprintf( full_job_id, "%s %s", resourceName, job_id );
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 MyString *UnicoreJob::buildSubmitAd()

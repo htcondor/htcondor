@@ -22,10 +22,6 @@
 #include "condor_version.h"
 #include "condor_mmap.h"
 
-#if defined(Solaris)
-#include <netconfig.h>		// for setnetconfig()
-#endif
-
 #include "condor_syscalls.h"
 #include "condor_sys.h"
 #include "image.h"
@@ -45,7 +41,7 @@ extern "C" void mydprintf(int foo, const char *fmt, ...);
 extern "C" void report_image_size( int );
 extern "C"	int	SYSCALL(int ...);
 
-#ifdef SAVE_SIGSTATE
+#ifdef DOES_SAVE_SIGSTATE
 extern "C" void _condor_save_sigstates();
 extern "C" void _condor_restore_sigstates();
 #endif

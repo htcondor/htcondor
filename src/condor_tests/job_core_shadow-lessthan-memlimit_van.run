@@ -44,7 +44,7 @@ $executed = sub
 	my $shadowPidFound = 0;
 	my $shadowPlatform;
 	my $shadowPlatformFound = 0;
-	my $privateMem;
+	my $privateMem = 1901;
 	open(SHADOWLOG, "<TestingPersonalCondor/local/log/ShadowLog") || die "Failed to open Shadow log";
 
 	# find the shadow id from the shadow log
@@ -80,28 +80,25 @@ $executed = sub
 	close(SHADOWLOG);
 
 	# calc the private memory usage using top
-	open(TOPOUT, "top -b -n1 -p$shadowPid |") || die "Failed to run top on shadow log pid: $shadowPid";
+	open(TOPOUT, "pmap -d $shadowPid|grep private|") || die "Failed to run top on shadow log pid: $shadowPid";
 	while(<TOPOUT>)
 	{
 		chomp($_);
 		$line = $_;
-		if($line =~ /$shadowPid/)
+		CondorTest::debug("pmap: $line\n",1);
+		if($line =~ m/private: (.*)K/ )
 		{
-			$line =~ s/^\s+//;
-			$line =~ s/\s+$//;
-			@fields = split(/[\s]+/, $line);
-
-			$privateMem = $fields[5] - $fields[6];
-			CondorTest::debug("Priavte memory calculated as: $privateMem\n", 1);
+			$privateMem = $1;
+			CondorTest::debug("Private memory calculated as: $privateMem\n", 1);
 		}
 	}
 	close(TOPOUT);
 
-	my $cmd = "condor_rm $cluster";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	my $rmcmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($rmcmd,\@adarray,2);
 	if(!$status)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		CondorTest::debug("Test failure due to Condor Tool Failure<$rmcmd>\n",1);
 		exit(1)
 	}
 
@@ -124,8 +121,8 @@ $executed = sub
 	{
 		$shadowMemoryLimit = $limit64;
 	}
-	
-	CondorTest::debug("Shadow memory limit: $shadowMemoryLimit\n",1);
+	 
+	CondorTest::debug("Shadow memory limit: $shadowMemoryLimit -- Private memory: $privateMem\n",1);
 	if($privateMem > $shadowMemoryLimit)
 	{
 		CondorTest::debug("Test failure do to shadow memory usage\n", 1);

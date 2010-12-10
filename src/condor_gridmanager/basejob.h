@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "write_user_log.h"
 #include "user_job_policy.h"
 #include "classad_hashtable.h"
