@@ -1095,9 +1095,18 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port();
-			private_sinful_string.sprintf("<%s:%d>", tmp, port);
+			std::string private_ip;
+			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",tmp,private_ip);
+			if( !ok ) {
+				dprintf(D_ALWAYS,
+						"Failed to determine my private IP address using PRIVATE_NETWORK_INTERFACE=%s\n",
+						tmp);
+			}
+			else {
+				private_sinful_string.sprintf("<%s:%d>", private_ip.c_str(), port);
+				sinful_private = strdup(private_sinful_string.Value());
+			}
 			free(tmp);
-			sinful_private = strdup(private_sinful_string.Value());
 		}
 
 		free(m_private_network_name);
@@ -8976,9 +8985,9 @@ DaemonCore::InitDCCommandSocket( int command_port )
 	if( addr ) {
 		dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
 	}
-	else {
-		addr = privateNetworkIpAddr();
-		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", addr );
+	char const *priv_addr = privateNetworkIpAddr();
+	if( priv_addr ) {
+		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
 	}
 
 	if( dc_rsock && m_shared_port_endpoint ) {
@@ -9003,9 +9012,6 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		if( my_ip == loopback_ip ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
-			dprintf( D_ALWAYS, "         This may be due to a misconfigured /etc/hosts file.\n" );
-			dprintf( D_ALWAYS, "         Please make sure your hostname is not listed on the\n" );
-			dprintf( D_ALWAYS, "         same line as localhost in /etc/hosts.\n" );
 		}
 	}
 

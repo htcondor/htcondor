@@ -142,6 +142,40 @@ int sysapi_partition_id(char const *path,char **result);
 
 END_C_DECLS
 
+#if defined(__cplusplus)
+
+#include <string>
+#include <vector>
+
+class NetworkDeviceInfo {
+public:
+	NetworkDeviceInfo(char const *the_name,char const *the_ip):
+		m_name(the_name),
+		m_ip(the_ip)
+	{
+	}
+
+	NetworkDeviceInfo(NetworkDeviceInfo const &other):
+		m_name(other.m_name),
+		m_ip(other.m_ip)
+	{
+	}
+
+	char const *name() { return m_name.c_str(); }
+	char const *IP() { return m_ip.c_str(); }
+
+private:
+	std::string m_name;
+	std::string m_ip;
+};
+
+bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices);
+bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices);
+
+void sysapi_clear_network_device_info_cache();
+
+#endif // __cplusplus
+
 #endif
 
 

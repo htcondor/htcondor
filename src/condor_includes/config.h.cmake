@@ -523,5 +523,7 @@
 /* Number of arguments to sigwait() (USED)*/
 #cmakedefine SIGWAIT_ARGS 2
 
+/* Define to 1 if the system has getifaddrs().*/
+#cmakedefine HAVE_GETIFADDRS 1
 
 #endif
