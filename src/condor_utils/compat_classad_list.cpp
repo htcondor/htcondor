@@ -32,7 +32,7 @@ static unsigned int ptr_hash_fn(ClassAd* const &index)
 	return (unsigned int)( i ^ (i>>32) );
 }
 
-ClassAdList::ClassAdList():
+ClassAdListDoesNotDeleteAds::ClassAdListDoesNotDeleteAds():
 	htable(ptr_hash_fn)
 {
 	list_head.ad = NULL;
@@ -41,19 +41,29 @@ ClassAdList::ClassAdList():
 	list_cur = &list_head;
 }
 
-ClassAdList::~ClassAdList()
+ClassAdListDoesNotDeleteAds::~ClassAdListDoesNotDeleteAds()
 {
 	for(list_cur=list_head.next;
 		list_cur!=&list_head;
 		list_cur=list_head.next)
 	{
 		list_head.next = list_cur->next;
-		delete list_cur->ad;
 		delete list_cur;
 	}
 }
 
-ClassAd* ClassAdList::Next()
+ClassAdList::~ClassAdList()
+{
+	for(list_cur=list_head.next;
+		list_cur!=&list_head;
+		list_cur=list_cur->next)
+	{
+		delete list_cur->ad;
+		list_cur->ad = NULL;
+	}
+}
+
+ClassAd* ClassAdListDoesNotDeleteAds::Next()
 {
 	ASSERT( list_cur );
 	list_cur = list_cur->next;
@@ -69,7 +79,7 @@ int ClassAdList::Delete(ClassAd* cad)
 	return ret;
 }
 
-int ClassAdList::Remove(ClassAd* cad)
+int ClassAdListDoesNotDeleteAds::Remove(ClassAd* cad)
 {
 	ClassAdListItem *item = NULL;
 	if( htable.lookup(cad,item) == 0 ) {
@@ -86,7 +96,7 @@ int ClassAdList::Remove(ClassAd* cad)
 	return FALSE;
 }
 
-void ClassAdList::Insert(ClassAd* cad)
+void ClassAdListDoesNotDeleteAds::Insert(ClassAd* cad)
 {
 	ClassAdListItem *item = new ClassAdListItem;
 	item->ad = cad;
@@ -102,21 +112,21 @@ void ClassAdList::Insert(ClassAd* cad)
 	item->next->prev = item;
 }
 
-void ClassAdList::Open()
+void ClassAdListDoesNotDeleteAds::Open()
 {
 	list_cur = &list_head;
 }
 
-void ClassAdList::Close()
+void ClassAdListDoesNotDeleteAds::Close()
 {
 }
 
-int ClassAdList::Length()
+int ClassAdListDoesNotDeleteAds::Length()
 {
 	return htable.getNumElements();
 }
 
-void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
+void ClassAdListDoesNotDeleteAds::Sort(SortFunctionType smallerThan, void* userInfo)
 {
 	ClassAdComparator isSmallerThan(userInfo, smallerThan);
 
@@ -153,7 +163,7 @@ void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
 	}
 }
 
-void ClassAdList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_white_list)
+void ClassAdListDoesNotDeleteAds::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_white_list)
 {
 	ClassAd            *tmpAttrList;
 	ClassAdXMLUnparser  unparser;
@@ -185,7 +195,7 @@ void ClassAdList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_whi
     Close();
 }
 
-int ClassAdList::Count( classad::ExprTree *constraint )
+int ClassAdListDoesNotDeleteAds::Count( classad::ExprTree *constraint )
 {
 	ClassAd *ad = NULL;
 	int matchCount  = 0;
