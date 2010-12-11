@@ -359,6 +359,11 @@ main( int argc, char* argv[] )
 		my_exit( 1 );
 	}
 
+	params.rewind();
+	if( ! params.number() && !print_config_sources ) {
+		usage();
+	}
+
 	if( name || addr || mt != CONDOR_QUERY || dt != DT_MASTER ) {
 		ask_a_daemon = true;
 	}
@@ -402,12 +407,6 @@ main( int argc, char* argv[] )
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
 			my_exit( 1 );
 		}
-	}
-
-	params.rewind();
-
-	if( ! params.number() && !print_config_sources ) {
-		usage();
 	}
 
 	while( (tmp = params.next()) ) {
