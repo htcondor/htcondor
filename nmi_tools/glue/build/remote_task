@@ -113,7 +113,8 @@ if ($taskname eq $TAR_TASK) {
 
 } elsif  ($taskname eq $RPM_CHECK_TASK){
 	#Print packaging log to stdout
-	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;";
+	#List file in the package
+	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
 
 } elsif  ($taskname eq $DEB_TASK){
 	#Building Debian package
