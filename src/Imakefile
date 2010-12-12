@@ -608,7 +608,7 @@ real_man_dir=$(shell dirname $(MAN_DIR))
 man-current: $(real_man_dir)/man-current.tar.gz
 	(cd $(real_man_dir) ; gzip -cd man-current.tar.gz | tar x)
 
-man_target(cleanup_release.1)
+#man_target(cleanup_release.1)
 man_target(condor_advertise.1)
 man_target(condor_check_userlogs.1)
 man_target(condor_checkpoint.1)
@@ -665,11 +665,11 @@ man_target(condor_vacate.1)
 man_target(condor_vacate_job.1)
 man_target(condor_version.1)
 man_target(condor_wait.1)
-man_target(filelock_midwife.1)
-man_target(filelock_undertaker.1)
-man_target(install_release.1)
-man_target(uniq_pid_midwife.1)
-man_target(uniq_pid_undertaker.1)
+#man_target(filelock_midwife.1)
+#man_target(filelock_undertaker.1)
+#man_target(install_release.1)
+#man_target(uniq_pid_midwife.1)
+#man_target(uniq_pid_undertaker.1)
 #else
 manpages::
 	@echo "You're trying to package Condor but you don't want man pages!"
