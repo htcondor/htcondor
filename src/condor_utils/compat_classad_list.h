@@ -54,7 +54,7 @@ protected:
 		 * via a pointer to the classad.
 		 */
 	HashTable<ClassAd*,ClassAdListItem*> htable;
-	ClassAdListItem list_head; // double-linked list
+	ClassAdListItem *list_head; // double-linked list
 	ClassAdListItem *list_cur; // current position in list
 
 		/* The following private class applies the user supplied

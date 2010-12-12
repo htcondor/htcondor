@@ -35,27 +35,39 @@ static unsigned int ptr_hash_fn(ClassAd* const &index)
 ClassAdListDoesNotDeleteAds::ClassAdListDoesNotDeleteAds():
 	htable(ptr_hash_fn)
 {
-	list_head.ad = NULL;
-	list_head.next = &list_head; // beginning of list
-	list_head.prev = &list_head; // end of list
-	list_cur = &list_head;
+		// Why do we allocate list_head separately on the heap rather
+		// than just having it be a member of this class?  Because
+		// there are cases where arrays of ClassAdLists are qsorted,
+		// which does a shallow copy.  If list_head were a member of
+		// this class, pointers to the old list_head from within the
+		// linked list would no longer be valid, because they would
+		// point to the address of list_head in the old copy rather
+		// than the new copy of the list.
+	list_head = new ClassAdListItem;
+	list_head->ad = NULL;
+	list_head->next = list_head; // beginning of list
+	list_head->prev = list_head; // end of list
+	list_cur = list_head;
 }
 
 ClassAdListDoesNotDeleteAds::~ClassAdListDoesNotDeleteAds()
 {
-	for(list_cur=list_head.next;
-		list_cur!=&list_head;
-		list_cur=list_head.next)
+	for(list_cur=list_head->next;
+		list_cur!=list_head;
+		list_cur=list_head->next)
 	{
-		list_head.next = list_cur->next;
+		list_head->next = list_cur->next;
 		delete list_cur;
 	}
+	delete list_head;
+	list_head = NULL;
+	list_cur = NULL;
 }
 
 ClassAdList::~ClassAdList()
 {
-	for(list_cur=list_head.next;
-		list_cur!=&list_head;
+	for(list_cur=list_head->next;
+		list_cur!=list_head;
 		list_cur=list_cur->next)
 	{
 		delete list_cur->ad;
@@ -106,15 +118,15 @@ void ClassAdListDoesNotDeleteAds::Insert(ClassAd* cad)
 		return; // already in list
 	}
 		// append to end of list
-	item->next = &list_head;
-	item->prev = list_head.prev;
+	item->next = list_head;
+	item->prev = list_head->prev;
 	item->prev->next = item;
 	item->next->prev = item;
 }
 
 void ClassAdListDoesNotDeleteAds::Open()
 {
-	list_cur = &list_head;
+	list_cur = list_head;
 }
 
 void ClassAdListDoesNotDeleteAds::Close()
@@ -135,8 +147,8 @@ void ClassAdListDoesNotDeleteAds::Sort(SortFunctionType smallerThan, void* userI
 	std::vector<ClassAdListItem *> tmp_vect;
 	ClassAdListItem *item;
 
-	for(item=list_head.next;
-		item!=&list_head;
+	for(item=list_head->next;
+		item!=list_head;
 		item=item->next)
 	{
 		tmp_vect.push_back(item);
@@ -145,8 +157,8 @@ void ClassAdListDoesNotDeleteAds::Sort(SortFunctionType smallerThan, void* userI
 	std::sort(tmp_vect.begin(), tmp_vect.end(), isSmallerThan);
 
 		// empty our list
-	list_head.next = &list_head;
-	list_head.prev = &list_head;
+	list_head->next = list_head;
+	list_head->prev = list_head;
 
 		// arrange our list in same order as tmp_vect
 	std::vector<ClassAdListItem *>::iterator it;
@@ -156,8 +168,8 @@ void ClassAdListDoesNotDeleteAds::Sort(SortFunctionType smallerThan, void* userI
 	{
 		item = *(it);
 			// append to end of our list
-		item->next = &list_head;
-		item->prev = list_head.prev;
+		item->next = list_head;
+		item->prev = list_head->prev;
 		item->prev->next = item;
 		item->next->prev = item;
 	}
