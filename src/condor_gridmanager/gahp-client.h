@@ -30,6 +30,7 @@
 #include "proxymanager.h"
 #include "condor_arglist.h"
 #include <map>
+#include <queue>
 
 
 struct GahpProxyInfo
@@ -165,7 +166,9 @@ class GahpServer : public Service {
 
 	unsigned int m_reference_count;
 	HashTable<int,GahpClient*> *requestTable;
-	Queue<int> waitingToSubmit;
+	std::queue<int> waitingHighPrio;
+	std::queue<int> waitingMediumPrio;
+	std::queue<int> waitingLowPrio;
 
 	int m_gahp_pid;
 	int m_gahp_readfd;
@@ -1068,11 +1071,19 @@ class GahpClient : public Service {
 
 	private:
 
+	/// Enum used by now_pending for the waiting queues
+	enum PrioLevel {
+		/** */ low_prio,
+		/** */ medium_prio,
+		/** */ high_prio
+	};
+
 			// Various Private Methods
 		void clear_pending();
 		bool is_pending(const char *command, const char *buf);
 		void now_pending(const char *command,const char *buf,
-						 GahpProxyInfo *proxy = NULL);
+						 GahpProxyInfo *proxy = NULL,
+						 PrioLevel prio_level = medium_prio);
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
