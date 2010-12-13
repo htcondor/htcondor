@@ -1,0 +1,14 @@
+diff --git a/src/condor_daemon_core.V6/soap_core.cpp b/src/condor_daemon_core.V6/soap_core.cpp
+index 81a5733..c913629 100644
+--- a/src/condor_daemon_core.V6/soap_core.cpp
++++ b/src/condor_daemon_core.V6/soap_core.cpp
+@@ -51,7 +51,8 @@ int get_handler(struct soap *soap);
+ struct soap *
+ dc_soap_accept(Sock *socket, const struct soap *soap)
+ {
+-	struct soap *cursoap = soap_copy(soap);
++	// soap_copy doesn't take const
++	struct soap *cursoap = soap_copy(const_cast<struct soap*>(soap));
+ 	ASSERT(cursoap);
+ 
+ 		// Mimic a gsoap soap_accept as follows:
