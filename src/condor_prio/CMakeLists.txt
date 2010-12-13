@@ -16,4 +16,4 @@
  # 
  ############################################################### 
 
-condor_exe( condor_prio "prio.cpp" ${C_BIN} "qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+condor_exe( condor_prio "prio.cpp" ${C_BIN} "qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )

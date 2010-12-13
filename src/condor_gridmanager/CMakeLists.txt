@@ -23,12 +23,12 @@ if(NOT WIN_EXEC_NODE_ONLY)
 	file( GLOB RmvSrcs *_gahp_wrapper* )
 	condor_glob( GMHDRS GMSRCS "${RmvSrcs}" )
 
-	condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "qmgmt;daemon_core;${GM_LINK_LIBS}" )
+	condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "qmgmt;daemon_core;${GM_LINK_LIBS}" OFF )
 
 	if (NOT WINDOWS)
-		condor_exe( gt4_gahp "gt4_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" )
-		condor_exe( gt42_gahp "gt42_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" )
-		condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" )
+		condor_exe( gt4_gahp "gt4_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
+		condor_exe( gt42_gahp "gt42_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
+		condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
 	endif()
 
 	install (FILES gridftp_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
