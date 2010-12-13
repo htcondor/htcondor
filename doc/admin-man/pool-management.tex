@@ -28,19 +28,20 @@ from the current installation to a newer version.
 The safe method
 to install and start running a newer version of Condor
 in essence is:
-shutdown the current installation of Condor,
+shut down the current installation of Condor,
 install the newer version,
 and then restart Condor using the newer version.
 To allow for falling back to the current version,
 place the new version in a separate directory.
 Copy the existing configuration files,
-and modify the copy to point to and use the new version.
+and modify the copy to point to and use the new version,
+as well as incorporate any configuration variables that are new or changed
+in the new version.
 Set the \Env{CONDOR\_CONFIG} environment variable
 to point to the new copy of the configuration,
-so the new version of Condor will use the new configuration
-when restarted.
+so the new version of Condor will use the new configuration when restarted.
 
-When upgrading from version of Condor earlier than 6.8 to more recent version,
+When upgrading from a version of Condor earlier than 6.8 to more recent version,
 note that the configuration settings must be modified for security reasons.
 Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
 must be explicitly changed,
@@ -72,8 +73,8 @@ When the \Condor{master} notices new binaries,
 it begins a graceful restart. 
 On an execute machine, 
 a graceful restart means that running jobs are preempted. 
-Standard universe jobs will attempt to take a checkpoint, 
-which could be a problem if all machines in a large pool 
+Standard universe jobs will attempt to take a checkpoint. 
+This could be a bottleneck if all machines in a large pool 
 attempt to do this at the same time. 
 If they do not complete within the cutoff time specified by the \MacroNI{KILL} 
 policy expression (defaults to 10 minutes), 
@@ -95,7 +96,7 @@ If the job has not gone away once the \MacroNI{KILL} expression fires
 then the job is forcibly hard-killed. 
 Since the graceful shutdown of jobs may rely on shared resources such as disks 
 where state is saved, 
-the same reasoning applies as for standard universe: 
+the same reasoning applies as for the standard universe: 
 it may be appropriate to increase the cutoff time 
 for large pools, 
 and a better approach may be to upgrade the pool in stages 
@@ -201,16 +202,34 @@ name, and \verb@<hostname>@ is replaced by the host name of the
 machine where this \Condor{on} command is to be directed.
 
 \item[Restarting Condor, If Condor Daemons Are Running]
-\MoreTodo
+If Condor daemons are currently running, but need to be killed and
+newly invoked,
+the \Condor{restart} tool does this.
+This would be the case for a new value of a configuration variable for
+which using \Condor{reconfig} is inadequate.
+
+To restart all daemons on all machines in the pool,
+\begin{verbatim}
+  condor_restart -all
+\end{verbatim}
+
+To restart all daemons on a single machine in the pool,
+\begin{verbatim}
+  condor_restart <hostname>
+\end{verbatim}
+where \verb@<hostname>@ is replaced by the host name of the
+machine to be restarted.
+
 \end{description}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Reconfigure-Pool}Reconfiguring a Condor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{pool management!reconfiguration}
 
 To change a global configuration variable and have all the
-machines start to use the new setting, send a
-\Condor{reconfig} command to each host.
+machines start to use the new setting, change the value within the file,
+and send a \Condor{reconfig} command to each host.
 Do this with a \emph{single} command,
 \begin{verbatim}
   condor_reconfig -all
