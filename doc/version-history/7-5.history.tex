@@ -178,6 +178,13 @@ FileTransfer: DownloadFiles called on server side
 \item Fixed a memory leak caused by use of the ClassAd \Expr{eval()}
   function.  This problem was introduced in 7.5.2.
 
+% gittrac #1804
+\item Fixed a bug that could cause the \Condor{negotiator} daemon to
+  crash when groups are configured with
+  \MacroNI{GROUP\_QUOTA\_DYNAMIC\_<group\_name>} or when
+  \MacroNI{GROUP\_QUOTA\_<group\_name>} is not defined to be something
+  greater than 0.
+
 \end{itemize}
 
 \noindent Known Bugs:
