@@ -2686,6 +2686,16 @@ section~\ref{param:StarterAllowRunAsOwner}
 on page~\pageref{param:StarterAllowRunAsOwner} for a definition of
 \MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER}.
 
+%%%%%%%%%%%%%%%%%%%
+%% submit_event_notes
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!submit\_event\_notes}
+\item[submit\_event\_notes = $<$note$>$]
+A string that is appended to the submit event in the job's log file.
+For DAGMan jobs, the string \Expr{DAG Node:} and the node's name is
+automatically defined for \SubmitCmd{submit\_event\_notes},
+causing the logged submit event to identify the DAG node job submitted. 
 
 %%%%%%%%%%%%%%%%%%%
 % +
