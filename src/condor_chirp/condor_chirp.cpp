@@ -930,7 +930,7 @@ void usage() {
 	printf("condor_chirp chmod remotepath mode\n");
 	printf("condor_chirp chown remotepath uid gid\n");
 	printf("condor_chirp lchown remotepath uid gid\n");
-	printf("condor_chirp lchown remotepath length\n");
+	printf("condor_chirp truncate remotepath length\n");
 	printf("condor_chirp utime remotepath actime mtime\n");
 }
 
