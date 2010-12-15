@@ -1266,7 +1266,8 @@ sub IsPersonalRunning
 			debug("hmmmm looking for <<$pathtoconfig>> got <<$line>> \n",$debuglevel);
 		}
     }
-    close(CONFIG);
+    close(CONFIG)
+	or warn "Error executing condor_config_val";
 
     if( $matchedconfig eq "" ) {
         die "lost: config does not match expected config setting......\n";

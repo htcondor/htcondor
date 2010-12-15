@@ -56,7 +56,7 @@ if ( WITH_VOMS )
 							INSTALL_COMMAND cd org.glite.security.voms && make install
 				)
 
-		set( VOMS_FOUND "libvomsapi_${GLOBUS_FLAVOR}.a" )
+		set( VOMS_FOUND "${EXTERNAL_STAGE}/lib/libvomsapi_${GLOBUS_FLAVOR}.a" )
 
 	else(NOT PROPER)
 
