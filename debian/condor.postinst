@@ -26,9 +26,10 @@ condor_make_homedir() {
 		mkdir -p $dname
 		chown -R $condor_user:$condor_group $dname
 	done
-	for dlabel in EXECUTE CRED_STORE_DIR; do
-		chmod 1777 $(condor_config_val $dlabel)
-	done
+	# why should this be world writable?
+	#for dlabel in EXECUTE CRED_STORE_DIR; do
+	#	chmod 1777 $(condor_config_val $dlabel)
+	#done
 }
 
 case "$1" in

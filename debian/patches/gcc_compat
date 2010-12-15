@@ -1,8 +1,6 @@
-diff --git a/src/condor_daemon_core.V6/soap_core.cpp b/src/condor_daemon_core.V6/soap_core.cpp
-index 81a5733..c913629 100644
 --- a/src/condor_daemon_core.V6/soap_core.cpp
 +++ b/src/condor_daemon_core.V6/soap_core.cpp
-@@ -51,7 +51,8 @@ int get_handler(struct soap *soap);
+@@ -51,7 +51,8 @@
  struct soap *
  dc_soap_accept(Sock *socket, const struct soap *soap)
  {

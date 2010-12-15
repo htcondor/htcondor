@@ -1,0 +1,14 @@
+--- a/src/condor_utils/signames.cpp
++++ b/src/condor_utils/signames.cpp
+@@ -19,7 +19,10 @@
+ 
+ #include "condor_common.h"
+ 
+-char	*SigNames[] = {
++/* there is another 'SigNames' src/condor_utils/event_handler.unix.cpp
++ * that has been chosen by fair flip of a coin
++ */
++char	*SigNamesDISABLED[] = {
+ "(0)",
+ "SIGHUP",		/* 1 */
+ "SIGINT",		/* 2 */

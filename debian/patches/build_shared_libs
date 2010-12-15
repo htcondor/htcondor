@@ -1,0 +1,441 @@
+--- a/src/condor_chirp/CMakeLists.txt
++++ b/src/condor_chirp/CMakeLists.txt
+@@ -22,6 +22,9 @@
+ 
+ condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
+ "chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GCB_FOUND};${GLOBUS_FOUND}" )
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_chirp -Wl,--allow-shlib-undefined)
+ 
+ install ( FILES Chirp.jar DESTINATION ${C_LIB} )
+ install ( FILES chirp_client.h DESTINATION ${C_INCLUDE})
+--- a/src/condor_daemon_core.V6/CMakeLists.txt
++++ b/src/condor_daemon_core.V6/CMakeLists.txt
+@@ -29,6 +29,7 @@
+ 
+ #create the library
+ condor_static_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")
++target_link_libraries(daemon_core ccb)
+ 
+ if (WINDOWS)
+ 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
+--- a/src/condor_dagman/CMakeLists.txt
++++ b/src/condor_dagman/CMakeLists.txt
+@@ -24,3 +24,6 @@
+ condor_exe(condor_dagman "${DAGHdrs};${DAGSrcs}" ${C_BIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+ 
+ condor_exe(condor_submit_dag "condor_submit_dag.cpp;dagman_multi_dag.cpp;dagman_recursive_submit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_submit_dag -Wl,--allow-shlib-undefined)
+--- a/src/condor_gridmanager/CMakeLists.txt
++++ b/src/condor_gridmanager/CMakeLists.txt
+@@ -27,8 +27,17 @@
+ 
+ 	if (NOT WINDOWS)
+ 		condor_exe( gt4_gahp "gt4_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" )
++		# unfortunately libutils comes with undefined symbols introduced by
++		# libdaemon_core (even when linking libutils to it)
++		target_link_libraries(gt4_gahp -Wl,--allow-shlib-undefined)
+ 		condor_exe( gt42_gahp "gt42_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" )
++		# unfortunately libutils comes with undefined symbols introduced by
++		# libdaemon_core (even when linking libutils to it)
++		target_link_libraries(gt42_gahp -Wl,--allow-shlib-undefined)
+ 		condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" )
++		# unfortunately libutils comes with undefined symbols introduced by
++		# libdaemon_core (even when linking libutils to it)
++		target_link_libraries(unicore_gahp -Wl,--allow-shlib-undefined)
+ 	endif()
+ 
+ 	install (FILES gridftp_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+--- a/src/condor_io/CMakeLists.txt
++++ b/src/condor_io/CMakeLists.txt
+@@ -22,3 +22,4 @@
+ 
+ #create the library
+ condor_static_lib(cedar "${CedarHdrs};${CedarSrcs}")
++target_link_libraries(cedar ${KRB5_FOUND} ${OPENSSL_FOUND})
+--- a/src/condor_power/CMakeLists.txt
++++ b/src/condor_power/CMakeLists.txt
+@@ -19,8 +19,14 @@
+ if(NOT WIN_EXEC_NODE_ONLY)
+ 
+ 	condor_exe( condor_power "power.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_power -Wl,--allow-shlib-undefined)
+ 
+ 	condor_exe( power_state "power_state.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(power_state -Wl,--allow-shlib-undefined)
+ 
+ 	condor_selective_glob( "rooster*" ROOSTER )
+ 
+--- a/src/condor_prio/CMakeLists.txt
++++ b/src/condor_prio/CMakeLists.txt
+@@ -17,3 +17,6 @@
+  ############################################################### 
+ 
+ condor_exe( condor_prio "prio.cpp" ${C_BIN} "qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_prio -Wl,--allow-shlib-undefined)
+--- a/src/condor_privsep/CMakeLists.txt
++++ b/src/condor_privsep/CMakeLists.txt
+@@ -25,4 +25,7 @@
+ 
+ if (NOT WINDOWS)
+ 	condor_exe( condor_root_switchboard "${PrivsepRmvSrcs}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" )
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_root_switchboard -Wl,--allow-shlib-undefined)
+ endif()
+--- a/src/condor_procd/CMakeLists.txt
++++ b/src/condor_procd/CMakeLists.txt
+@@ -27,6 +27,9 @@
+ endif(WINDOWS)
+ 
+ condor_daemon(procd "${ProcdRmvElements}" "procapi;utils;${PROCD_WIN_LINK_LIBS}" "${C_SBIN}" OFF)
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_procd -Wl,--allow-shlib-undefined)
+ 
+ if (WINDOWS)
+ 	condor_exe( procd_ctl "procd_ctl.cpp" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}")
+--- a/src/condor_q.V6/CMakeLists.txt
++++ b/src/condor_q.V6/CMakeLists.txt
+@@ -17,3 +17,6 @@
+  ############################################################### 
+ 
+ condor_exe(condor_q "queue.cpp" ${C_BIN} "conversion;analysis;qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_q -Wl,--allow-shlib-undefined)
+--- a/src/condor_rm.V6/CMakeLists.txt
++++ b/src/condor_rm.V6/CMakeLists.txt
+@@ -17,6 +17,9 @@
+  ############################################################### 
+ 
+ condor_exe( condor_rm "rm.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_rm -Wl,--allow-shlib-undefined)
+ clone_install( condor_rm condor_hold ${C_BIN} )
+ clone_install( condor_rm condor_release ${C_BIN} )
+ clone_install( condor_rm condor_vacate_job ${C_BIN} )
+--- a/src/condor_status.V6/CMakeLists.txt
++++ b/src/condor_status.V6/CMakeLists.txt
+@@ -20,3 +20,6 @@
+ 
+ condor_exe( condor_status "${statusHdrs};${statusSrcs}" ${C_BIN}
+ "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" )
++# libdaemoncore comes with a set of undefined symbols that are provided by
++# actual daemons, but no by condor_status -- need to ignore this one here
++target_link_libraries(condor_status -Wl,--allow-shlib-undefined)
+--- a/src/condor_submit.V6/CMakeLists.txt
++++ b/src/condor_submit.V6/CMakeLists.txt
+@@ -18,3 +18,6 @@
+ 
+ 
+ condor_exe( condor_submit "submit.cpp" ${C_BIN} "qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_submit -Wl,--allow-shlib-undefined)
+--- a/src/condor_tools/CMakeLists.txt
++++ b/src/condor_tools/CMakeLists.txt
+@@ -16,36 +16,89 @@
+  # 
+  ############################################################### 
+ 
+-
+ set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
+ 
+ condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" )
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_cod -Wl,--allow-shlib-undefined)
+ condor_exe(condor_preen "preen.cpp" ${C_SBIN} "qmgmt;${TOOL_LINK_LIBS}" )
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_preen -Wl,--allow-shlib-undefined)
+ condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_advertise -Wl,--allow-shlib-undefined)
+ condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_fetchlog -Wl,--allow-shlib-undefined)
+ condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_config_val -Wl,--allow-shlib-undefined)
+ condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_userprio -Wl,--allow-shlib-undefined)
+ condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_findhost -Wl,--allow-shlib-undefined)
+ condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "qmgmt;${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_qedit -Wl,--allow-shlib-undefined)
+ 
+ if (HAVE_SSH_TO_JOB)
+ 	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_ssh_to_job -Wl,--allow-shlib-undefined)
+ endif(HAVE_SSH_TO_JOB)
+ 
+ condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_transfer_data -Wl,--allow-shlib-undefined)
+ condor_exe(condor_version "version.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_version -Wl,--allow-shlib-undefined)
+ condor_exe(condor_wait "wait.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_wait -Wl,--allow-shlib-undefined)
+ condor_exe(condor_history "history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_history -Wl,--allow-shlib-undefined)
+ 
+ if (HAVE_EXT_POSTGRESQL)
+ 	condor_exe(condor_load_history "load_history.cpp" ${C_BIN} "tt;${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}")
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_load_history -Wl,--allow-shlib-undefined)
+ 	condor_exe(condor_dump_history "dump_history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}")
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_dump_history -Wl,--allow-shlib-undefined)
+ 	condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}")
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_convert_history -Wl,--allow-shlib-undefined)
+ endif(HAVE_EXT_POSTGRESQL)
+ 
+ condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_store_cred -Wl,--allow-shlib-undefined)
+ 
+ condor_exe(condor "tool.cpp" "${C_BIN}" "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor -Wl,--allow-shlib-undefined)
+ clone_install(condor "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
+ clone_install(condor "condor_vacate;condor_reschedule" "${C_BIN}")
+ 
+@@ -62,5 +115,8 @@
+ endif(NOT WINDOWS)
+ 
+ condor_exe(condor_stats "stats.cpp" ${C_BIN} "${TOOL_LINK_LIBS}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_stats -Wl,--allow-shlib-undefined)
+ 
+ condor_exe_test(condor_test_auth "test_auth.cpp" "${TOOL_LINK_LIBS}")
+--- a/src/condor_userlog/CMakeLists.txt
++++ b/src/condor_userlog/CMakeLists.txt
+@@ -18,9 +18,18 @@
+ 
+ 
+ condor_exe( condor_userlog "userlog.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_userlog -Wl,--allow-shlib-undefined)
+ 
+ condor_exe( condor_check_userlogs "condor_check_userlogs.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_check_userlogs -Wl,--allow-shlib-undefined)
+ 
+ if (NOT WINDOWS)
+ 	condor_exe( condor_userlog_job_counter "condor_userlog_job_counter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_userlog_job_counter -Wl,--allow-shlib-undefined)
+ endif()
+--- a/src/condor_utils/CMakeLists.txt
++++ b/src/condor_utils/CMakeLists.txt
+@@ -18,8 +18,12 @@
+ 
+ 
+ ##################################################
+-file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs*
+-soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c )
++file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
++soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c
++state_machine_driver.unix.cpp)
++# exclude state_machine_driver.unix.cpp because it pulls in undefined symbols
++# (e.g. TransFuncNames src/condor_starter.std/starter.h) that do not become
++# part of libutils.
+ 
+ condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
+ 
+@@ -31,13 +35,23 @@
+ 		
+ condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
+ add_dependencies(utils utils_genparams syscall_numbers )
++# this shouldn't be linked against libdaemon_core, because it introduces
++# undefined symbols that can only be resolved by actual daemons, but it needs
++# some part 
++target_link_libraries(utils sysapi privsep procd_client daemon_client daemon_core qmgmt cedar ${CLASSADS_FOUND} ${PCRE_FOUND} ${GLOBUS_FOUND} ${POSTGRESQL_FOUND})
++if (WANT_CONTRIB)
++    if (HAVE_EXT_POSTGRESQL)
++        target_link_libraries(utils tt)
++    endif (HAVE_EXT_POSTGRESQL)
++endif(WANT_CONTRIB)
++
+ 
+ condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;MyString.*;condor_xml_classads.*;directory*" ApiSrcs)
+ if(WINDOWS)
+ condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;filename_tools.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;store_cred.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
+ endif(WINDOWS)
+ 
+-condor_static_lib( condorapi "${ApiSrcs}" )
++condor_really_static_lib( condorapi "${ApiSrcs}" )
+ add_dependencies( condorapi utils )
+ 
+ ##################################################
+--- a/src/deployment_tools/CMakeLists.txt
++++ b/src/deployment_tools/CMakeLists.txt
+@@ -37,6 +37,9 @@
+ 
+ 	condor_exe( uniq_pid_command "uniq_pid_tool_main.cpp" ${C_SBIN}
+ 	"${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" )
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(uniq_pid_command -Wl,--allow-shlib-undefined)
+ 	clone_install( uniq_pid_command uniq_pid_midwife ${C_SBIN} )
+ 	clone_install( uniq_pid_command uniq_pid_undertaker ${C_SBIN} )
+ 
+--- a/build/cmake/CondorConfigure.cmake
++++ b/build/cmake/CondorConfigure.cmake
+@@ -60,7 +60,7 @@
+ 
+ set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
+ set( CMAKE_VERBOSE_MAKEFILE TRUE )
+-set( BUILD_SHARED_LIBS FALSE )
++#set( BUILD_SHARED_LIBS FALSE )
+ 
+ # Windows is so different perform the check 1st and start setting the vars.
+ if( NOT WINDOWS)
+@@ -76,7 +76,7 @@
+ 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
+ 
+ 	# when we want to distro dynamic libraries only with localized rpaths.
+-	set (CMAKE_SKIP_RPATH TRUE)
++	# set (CMAKE_SKIP_RPATH TRUE)
+ 	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+ 	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
+ 	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+@@ -357,7 +357,8 @@
+ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
+ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
+ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
+-add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
++# use from external package
++#add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+ 
+ if (NOT WIN_EXEC_NODE_ONLY)
+ 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+--- a/build/cmake/CondorStaticLib.cmake
++++ b/build/cmake/CondorStaticLib.cmake
+@@ -18,7 +18,9 @@
+ 
+ MACRO (CONDOR_STATIC_LIB _CNDR_TARGET _SRCS)
+ 
+-add_library(${_CNDR_TARGET} STATIC ${_SRCS})
++add_library(${_CNDR_TARGET} ${_SRCS})
++
++install(TARGETS ${_CNDR_TARGET} DESTINATION ${C_LIB})
+ 
+ if (CONDOR_EXTERNALS)
+ 	add_dependencies ( ${_CNDR_TARGET} ${CONDOR_EXTERNALS} )
+@@ -29,3 +31,17 @@
+ endif ( WINDOWS )
+ 
+ ENDMACRO(CONDOR_STATIC_LIB)
++
++MACRO (CONDOR_REALLY_STATIC_LIB _CNDR_TARGET _SRCS)
++
++add_library(${_CNDR_TARGET} STATIC ${_SRCS})
++
++if (CONDOR_EXTERNALS)
++	add_dependencies ( ${_CNDR_TARGET} ${CONDOR_EXTERNALS} )
++endif()
++
++if ( WINDOWS )
++	set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "libraries" )
++endif ( WINDOWS )
++
++ENDMACRO(CONDOR_REALLY_STATIC_LIB)
+--- a/src/condor_starter.V6.1/CMakeLists.txt
++++ b/src/condor_starter.V6.1/CMakeLists.txt
+@@ -28,7 +28,13 @@
+ if(LINUX)
+ 	install (FILES condor_glexec_setup condor_glexec_run condor_glexec_cleanup condor_glexec_kill condor_glexec_update_proxy DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+ 	condor_exe(condor_glexec_job_wrapper "glexec_job_wrapper.linux.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" )
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(condor_glexec_job_wrapper -Wl,--allow-shlib-undefined)
+ 	condor_exe( rsh "condor_rsh.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" )
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(rsh -Wl,--allow-shlib-undefined)
+ endif()
+ 
+ if (HAVE_SSH_TO_JOB)
+diff --git a/src/condor_startd.V6/CMakeLists.txt b/src/condor_startd.V6/CMakeLists.txt
+index 4cb1020..8b24627 100644
+--- a/src/condor_startd.V6/CMakeLists.txt
++++ b/src/condor_startd.V6/CMakeLists.txt
+@@ -29,6 +29,9 @@ condor_daemon( startd "${startdRmvElements}"
+ if (LINUX AND GLOBUS_FOUND)
+   condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" )
+   install (FILES glexec_starter_setup.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
++  # unfortunately libutils comes with undefined symbols introduced by
++  # libdaemon_core (even when linking libutils to it)
++  target_link_libraries(condor_glexec_wrapper -Wl,--allow-shlib-undefined)
+ endif()
+ 
+ 
+diff --git a/src/gt2_gahp/CMakeLists.txt b/src/gt2_gahp/CMakeLists.txt
+index dd391b6..d76dbf1 100644
+--- a/src/gt2_gahp/CMakeLists.txt
++++ b/src/gt2_gahp/CMakeLists.txt
+@@ -21,6 +21,9 @@ if (HAVE_EXT_GLOBUS)
+ 
+ 	condor_exe( gahp_server "gahp_server.cpp;my_ez.cpp" ${C_SBIN}
+ 	"${CONDOR_TOOL_LIBS};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_GRID_UNIVERSE_GT2};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}" )
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(gahp_server -Wl,--allow-shlib-undefined)
+ 
+ else()
+ 
+diff --git a/src/nordugrid_gahp/CMakeLists.txt b/src/nordugrid_gahp/CMakeLists.txt
+index be0c535..fb2b8ff 100644
+--- a/src/nordugrid_gahp/CMakeLists.txt
++++ b/src/nordugrid_gahp/CMakeLists.txt
+@@ -26,6 +26,9 @@ if (HAVE_EXT_GLOBUS AND HAVE_LDAP_H AND LDAP_FOUND )
+ 				"${HeaderFiles};${SourceFiles}"
+ 				${C_SBIN}
+ 				"${CONDOR_TOOL_LIBS};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_GRID_UNIVERSE_NORUID};${OPENSSL_FOUND};${LDAP_FOUND};${PCRE_FOUND}" )
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(nordugrid_gahp -Wl,--allow-shlib-undefined)
+ 
+ else()
+ 
