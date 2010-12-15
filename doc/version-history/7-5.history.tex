@@ -185,6 +185,11 @@ FileTransfer: DownloadFiles called on server side
   \MacroNI{GROUP\_QUOTA\_<group\_name>} is not defined to be something
   greater than 0.
 
+% gittrac #1809
+\item Fixed a bug that caused random characters to appear for the
+  value of \Expr{AuthMethods} when logging with \Expr{D\_FULLDEBUG}
+  and \Expr{D\_SECURITY} enabled.  This problem was introduced in 7.5.3.
+
 \end{itemize}
 
 \noindent Known Bugs:
