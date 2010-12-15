@@ -55,16 +55,16 @@ my $results = "results.tar.gz";
 #     results.tar.gz name in the marker file because it holds only
 #     what we want. Then leave.
 ######################################################################
-#if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-#    print "Writing tarball filename to $tarball_file\n";
-#    open( TARBALL_FILE, ">$tarball_file" ) ||
-#        die "Can't open $tarball_file: $!\n";
-#    print TARBALL_FILE "$results\n";
-#    close( TARBALL_FILE );
-#
-#    print "All steps completed successfully\n";
-#    exit 0;
-#}
+if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+    print "Writing tarball filename to $tarball_file\n";
+    open( TARBALL_FILE, ">$tarball_file" ) ||
+        die "Can't open $tarball_file: $!\n";
+    print TARBALL_FILE "$results\n";
+    close( TARBALL_FILE );
+
+    print "All steps completed successfully\n";
+    exit 0;
+}
 
 my $testbin = "public/condor_*";
 print "Preparing input test job in $BaseDir\n";
