@@ -505,7 +505,10 @@ void Hadoop::startService( NodeType type ) {
 
         Directory dir(m_nameNodeDir.Value());
 
-        if (type == HDFS_NAMENODE) {
+
+        if (type == HDFS_NAMENODE ){
+        	mkdir( m_nameNodeDir.Value(), 0700);
+        	if( m_namenodeRole == ACTIVE) {
                 arglist.RemoveArg(0);
                 arglist.InsertArg(m_java.Value(), 0);
 
@@ -540,6 +543,7 @@ void Hadoop::startService( NodeType type ) {
                 //For now always run name server with upgrade option, In case
                 //Hadoop Jar files are updated to a newer version.
                 //arglist.AppendArg("-upgrade");
+        	}
         }
 
         MyString argString;
