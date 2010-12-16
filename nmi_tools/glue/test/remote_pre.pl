@@ -59,8 +59,12 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 		die "Could not find a condor release zip file!\n";
 	}
 	
+	if ( ! mkdir("condor") ) {
+	   die "Could not make the condor folder\n";
+	}
+	
 	print "Unzipping $release_zipfile ...\n";
-	system("unzip $release_zipfile") && die "Can't unzip $release_zipfile !\n";
+	system("unzip $release_zipfile condor\\") && die "Can't unzip $release_zipfile !\n";
 	print "Unzipped $release_zipfile ...\n";
 	
 } else {
@@ -97,7 +101,9 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
 	print "VERSION string is $version\n";
 } else {
-	die "Your tarball does not match condor-X-Y-Z!\n";
+	$release_zipfile =~ /condor-(\d+)\.(\d+)\.(\d+)-.*/; 
+	$version = "condor-$1.$2.$3";
+	print "VERSION string is $version\n";
 }
 
 print "Condor version: $version\n";
