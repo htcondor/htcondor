@@ -1,0 +1,3 @@
+[submodule "doc"]
+	path = doc
+	url = http://condor-git.cs.wisc.edu/repos/condor_docs.git
