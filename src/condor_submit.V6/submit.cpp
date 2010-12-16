@@ -5432,6 +5432,10 @@ read_condor_file( FILE *fp )
 		} else {
 			*ptr++ = '\0';
 			while( *ptr && !isop(*ptr) ) {
+				if( !isspace(*ptr) ) {
+					fclose( fp );
+					return -1;
+				}
 				ptr++;
 			}
 

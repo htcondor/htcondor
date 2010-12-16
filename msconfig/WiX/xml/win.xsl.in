@@ -70,6 +70,7 @@
           <![CDATA[
             Set fso = CreateObject("Scripting.FileSystemObject")
             path = Session.Property("INSTALLLOCATION")
+            strippedPath = Left(path,Len(path)-1)
             if Not fso.FolderExists(path & "log") Then
                 Set objFolderLog = fso.CreateFolder(path & "log")
             End if
@@ -168,7 +169,7 @@
             If Session.Property("USEHDFS") = "Y" Then
               Set HDFSfh = fso.OpenTextFile(path & "config\\hdfs.config", 2, True)
               namenodeAddr = Session.Property("NAMENODE")
-              HDFSfh.WriteLine("HDFS_SERVICES=" & namenodeAddr & ":" & Session.Property("HDFSMODE") )
+              HDFSfh.WriteLine("HDFS_NODETYPE=" & namenodeAddr & ":" & Session.Property("HDFSMODE") )
               HDFSfh.WriteLine("HDFS_NAMENODE=" & namenodeAddr & ":" & Session.Property("HDFSPORT") )
               HDFSfh.WriteLine("HDFS_NAMENODE_WEB=" & Session.Property("HDFSWEBPORT") )
               HDFSfh.WriteLine("HDFS_HOME=" & Session.Property("HDFSHOME") )
@@ -179,6 +180,18 @@
             
             Myfh.WriteLine("DAEMON_LIST=" & daemonList)
             Myfh.Close
+ 
+            Set Configfile = fso.OpenTextFile(path & "condor_config", 1, True)
+            configTxt = Configfile.ReadAll
+            Configfile.Close
+            
+            configNewTxt = Replace(configTxt, "RELEASE_DIR		= /usr/local/condor", "RELEASE_DIR = " & strippedPath)
+            configNewTxt = Replace(configNewTxt, "LOCAL_DIR		= $$(TILDE)", "LOCAL_DIR = " & strippedPath)
+            configNewTxt = Replace(configNewTxt, "#REQUIRE_LOCAL_CONFIG_FILE = TRUE", "REQUIRE_LOCAL_CONFIG_FILE = FALSE")
+            
+            Set Configfile = fso.OpenTextFile(path & "condor_config", 2, True)
+            Configfile.WriteLine configNewTxt
+            Configfile.Close
            ]]>
         </CustomAction>
 

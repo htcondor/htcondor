@@ -27,8 +27,8 @@ install ( FILES scimark2lib.jar CondorJavaWrapper.class CondorJavaInfo.class DES
 
 if(LINUX)
 	install (FILES condor_glexec_setup condor_glexec_run condor_glexec_cleanup condor_glexec_kill condor_glexec_update_proxy DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-	condor_exe(condor_glexec_job_wrapper "glexec_job_wrapper.linux.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" )
-	condor_exe( rsh "condor_rsh.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" )
+	condor_exe(condor_glexec_job_wrapper "glexec_job_wrapper.linux.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF)
+	condor_exe( rsh "condor_rsh.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF)
 endif()
 
 if (HAVE_SSH_TO_JOB)

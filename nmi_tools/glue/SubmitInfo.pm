@@ -65,7 +65,6 @@ our %build_and_test_sets = (
 		'x86_64_rhap_5.3-updated',
 		'x86_suse_10.2',
 		'x86_suse_10.0',
-		'ia64_sles_9',
 		'x86_64_macos_10.6',
 		'ppc_macos_10.4',
 		'sun4u_sol_5.10',
@@ -826,7 +825,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -862,7 +861,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -897,7 +896,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1' ],
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1', 'binutils-2.16' ],
 			'xtests'	=> undef,
 		},
 

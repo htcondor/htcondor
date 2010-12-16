@@ -382,6 +382,7 @@ main_config()
 void
 main_shutdown_fast()
 {
+	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
     DC_Exit( EXIT_RESTART );
 }
 
@@ -389,6 +390,7 @@ main_shutdown_fast()
 // shutdown gracefully
 void main_shutdown_graceful() {
 	dagman.dag->DumpNodeStatus( true, false );
+	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
     dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
@@ -429,6 +431,7 @@ void main_shutdown_rescue( int exitVal ) {
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
 	}
 	dagman.dag->DumpNodeStatus( false, true );
+	dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( exitVal );
@@ -445,6 +448,7 @@ int main_shutdown_remove(Service *, int) {
 
 void ExitSuccess() {
 	dagman.dag->DumpNodeStatus( false, false );
+	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	unlink( lockFileName ); 
     dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -705,6 +709,7 @@ void main_init (int argc, char ** const argv) {
        	debug_printf( DEBUG_QUIET, "Unable to convert default log "
 					"file name to absolute path: %s\n",
 					errstack.getFullText() );
+		dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ERROR );
 		DC_Exit( EXIT_ERROR );
 	}
 	dagman._defaultNodeLog = strdup( tmpDefaultLog.Value() );
@@ -983,6 +988,12 @@ void main_init (int argc, char ** const argv) {
     	}
 	}
 
+	dagman.dag->GetJobstateLog().WriteDagmanStarted( dagman.DAGManJobId );
+	if ( rescueDagNum > 0 ) {
+			// Get our Pegasus sequence numbers set correctly.
+		dagman.dag->GetJobstateLog().InitializeRescue();
+	}
+
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
 
@@ -1046,6 +1057,8 @@ void main_init (int argc, char ** const argv) {
 							"currently running on this DAG; if that is "
 							"not the case, delete the lock file (%s) "
 							"and re-submit the DAG.\n", lockFileName );
+					dagman.dag->GetJobstateLog().
+								WriteDagmanFinished( EXIT_RESTART );
     				dagman.CleanUp();
 					DC_Exit( EXIT_ERROR );
 					// We should never get to here!
@@ -1135,25 +1148,25 @@ void condor_event_timer () {
 					  justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
 
-    // If the log has grown
-    if( dagman.dag->DetectCondorLogGrowth() ) {
+	// If the log has grown
+	if( dagman.dag->DetectCondorLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_rescue( EXIT_ERROR );
 			return;
-        }
-    }
+		}
+	}
 
-    if( dagman.dag->DetectDaPLogGrowth() ) {
-      if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
-	debug_printf( DEBUG_NORMAL,
-			"ProcessLogEvents(DAPLOG) returned false\n");
-	dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-	main_shutdown_rescue( EXIT_ERROR );
-	return;
-      }
-    }
-  
+	if( dagman.dag->DetectDaPLogGrowth() ) {
+		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
+			debug_printf( DEBUG_NORMAL,
+						"ProcessLogEvents(DAPLOG) returned false\n");
+			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+			main_shutdown_rescue( EXIT_ERROR );
+			return;
+		}
+	}
+
     // print status if anything's changed (or we're in a high debug level)
     if( prevJobsDone != dagman.dag->NumNodesDone()
         || prevJobs != dagman.dag->NumNodes()
@@ -1161,7 +1174,7 @@ void condor_event_timer () {
         || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumNodesReady()
         || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
-	|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
+		|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
 
@@ -1171,7 +1184,7 @@ void condor_event_timer () {
         prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumNodesReady();
         prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
-	prevJobsHeld = dagman.dag->NumHeldJobProcs();
+		prevJobsHeld = dagman.dag->NumHeldJobProcs();
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();

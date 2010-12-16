@@ -22,7 +22,7 @@ if (WINDOWS AND NOT WIN_EXEC_NODE_ONLY)
 	
 	file( GLOB BWSrcs *.cpp *.h  res/*)
 	
-	condor_exe( condor_birdwatcher "${BWSrcs}" ${C_SBIN} "")
+	condor_exe( condor_birdwatcher "${BWSrcs}" ${C_SBIN} "" OFF)
 
 else()
 

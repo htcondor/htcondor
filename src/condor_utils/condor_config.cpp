@@ -82,6 +82,7 @@
 #include "extArray.h"
 #include "subsystem_info.h"
 #include "param_info.h"
+#include "Regex.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -924,6 +925,28 @@ int compareFiles(const void *a, const void *b) {
 	 return strcmp(*(char *const*)a, *(char *const*)b);
 }
 
+static void
+get_exclude_regex(Regex &excludeFilesRegex)
+{
+	const char* _errstr;
+	int _erroffset;
+	char* excludeRegex = param("LOCAL_CONFIG_DIR_EXCLUDE_REGEXP");
+	if(excludeRegex) {
+		if (!excludeFilesRegex.compile(excludeRegex,
+									&_errstr, &_erroffset)) {
+			EXCEPT("LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
+				   "config parameter is not a valid "
+				   "regular expression.  Value: %s,  Error: %s",
+				   excludeRegex, _errstr ? _errstr : "");
+		}
+		if(!excludeFilesRegex.isInitialized() ) {
+			EXCEPT("Could not init regex "
+				   "to exclude files in %s\n", __FILE__);
+		}
+	}
+	free(excludeRegex);
+}
+
 // examine each file in a directory and treat it as a config file
 void
 process_directory( char* dirlist, char* host )
@@ -934,6 +957,7 @@ process_directory( char* dirlist, char* host )
 	char **paths;
 	char *tmp;
 	int local_required;
+	Regex excludeFilesRegex;
 	
 	local_required = true;	
 	tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
@@ -947,6 +971,7 @@ process_directory( char* dirlist, char* host )
 	if(!dirlist) { return; }
 	locals.initializeFromString( dirlist );
 	locals.rewind();
+	get_exclude_regex(excludeFilesRegex);
 	while( (dirpath = locals.next()) ) {
 
 		paths = (char **)calloc(65536, sizeof(char *));
@@ -959,8 +984,17 @@ process_directory( char* dirlist, char* host )
 				// don't consider directories
 				// maybe we should squash symlinks here...
 				if(! files->IsDirectory() ) {
-					paths[i] = strdup(files->GetFullPath());
-					i++;
+					if(!excludeFilesRegex.isInitialized() ||
+					   !excludeFilesRegex.match(file)) {
+						paths[i] = strdup(files->GetFullPath());
+						i++;
+					} else {
+						dprintf(D_FULLDEBUG|D_CONFIG,
+							"Ignoring config file "
+							"based on "
+							"LOCAL_CONFIG_DIR_EXCLUDE_REGEXP, "
+							"'%s'\n", files->GetFullPath());
+					}
 				}
 			}
 			delete files;

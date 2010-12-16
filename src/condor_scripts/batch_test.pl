@@ -1281,7 +1281,8 @@ sub IsPersonalRunning
 			last;
         }
     }
-    close(CONFIG);
+    close(CONFIG)
+    	or warn "Error executing condor_config_val";
 
     if( $matchedconfig eq "" ) {
         die	"lost: config does not match expected config setting......\n";

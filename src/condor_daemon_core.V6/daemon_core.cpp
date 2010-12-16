@@ -4771,6 +4771,10 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					char *method_used = NULL;
 					bool auth_success = sock->authenticate(the_key, auth_methods, &errstack, auth_timeout, &method_used);
 
+					if ( method_used ) {
+						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+					}
+
 					free( auth_methods );
 					free( method_used );
 
@@ -4781,6 +4785,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 								sock->peer_description(),
 								tmp_cmd,
 								comTable[cmd_index].command_descrip );
+						if( !auth_success ) {
+							dprintf( D_ALWAYS,
+									 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
+									 errstack.getFullText() );
+						}
+						result = FALSE;
+						goto finalize;
 					}
 
 					if( auth_success ) {
@@ -4803,10 +4814,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 							result = FALSE;
 							goto finalize;
 						}
-					}
-
-					if ( method_used ) {
-						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 					}
 
 				} else {

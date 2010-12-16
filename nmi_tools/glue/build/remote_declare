@@ -30,7 +30,6 @@ my $buildid;
 
 my $TAR_TASK 		= "remote_task.create_tar\n";
 my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar\n";
-my $CONFIG_TASK 	= "remote_task.reconfig_package\n";
 my $RPM_TASK		= "remote_task.create_rpm\n";
 my $RPM_CHECK_TASK	= "remote_task.check_rpm\n";
 my $DEB_TASK		= "remote_task.create_deb\n";
@@ -56,13 +55,11 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	#Add native package build on Debian and Redhat
 	if ($ENV{NMI_PLATFORM} =~ /deb/) {
 		#Debian
-		print TASKLIST $CONFIG_TASK;
 		print TASKLIST $DEB_TASK;
 		print TASKLIST $DEB_CHECK_TASK;
 	
 	} elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
 		#Redhat (3,4,5)
-		print TASKLIST $CONFIG_TASK;
 		print TASKLIST $RPM_TASK;
 		print TASKLIST $RPM_CHECK_TASK;
 	}

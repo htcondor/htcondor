@@ -35,6 +35,7 @@
 #include "condor_fix_sys_stat.h"
 
 #include <sys/types.h>
+#include <float.h>
 
 /* used for calculating console and mouse idle times */
 #if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)

@@ -1,23 +1,22 @@
  ###############################################################
- # 
- # Copyright (C) 1990-2010, Redhat. 
- # 
- # Licensed under the Apache License, Version 2.0 (the "License"); you 
- # may not use this file except in compliance with the License.  You may 
- # obtain a copy of the License at 
- # 
- #    http://www.apache.org/licenses/LICENSE-2.0 
- # 
- # Unless required by applicable law or agreed to in writing, software 
- # distributed under the License is distributed on an "AS IS" BASIS, 
+ #
+ # Copyright (C) 1990-2010, Redhat.
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License"); you
+ # may not use this file except in compliance with the License.  You may
+ # obtain a copy of the License at
+ #
+ #    http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and 
- # limitations under the License. 
- # 
- ############################################################### 
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ #
+ ###############################################################
 
-
-#processor modification if necessary
+# OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
   if(${TEST_VER} MATCHES "10.6" AND ${SYS_ARCH} MATCHES "I386")
@@ -26,23 +25,32 @@ if(${OS_NAME} STREQUAL "DARWIN")
 elseif(${OS_NAME} MATCHES "WIN")
 	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
-	add_definitions(-DWINDOWS)
+
 	# The following is necessary for sdk/ddk version to compile against.
 	# lowest common denominator is winxp (for now)
+	add_definitions(-DWINDOWS)
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
 	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
 	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
-	set(CMAKE_SUPPRESS_REGENERATION TRUE)
+	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
 	set (HAVE_WORKING_SNPRINTF 1)
 
+	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
+		dprint("**** IN SOURCE BUILDING ON WINDOWS IS NOT ADVISED ****")
+	else()
+		dprint("**** OUT OF SOURCE BUILDS ****")
+		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	endif()
+
 	set( CMAKE_INSTALL_PREFIX "C:/condor_test/${VERSION}")
-	dprint("TODO FEATURE-> Z:TANNENBA:TSTCLAIR Update registry + paths to use this prefixed debug loc")
+	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
 endif()
 
 message(STATUS "***********************************************************")
@@ -56,7 +64,11 @@ include (FindThreads)
 include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
-add_definitions(-DPLATFORM="${CMAKE_SYSTEM}")
+if (PLATFORM)
+	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${PLATFORM}")
+else()
+	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 set( CMAKE_VERBOSE_MAKEFILE TRUE )
@@ -66,13 +78,13 @@ set( BUILD_SHARED_LIBS FALSE )
 if( NOT WINDOWS)
 
 	set( CMD_TERM && )
-	
+
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
 	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package will strip the info)
 	endif()
-	
+
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
 
 	# when we want to distro dynamic libraries only with localized rpaths.
@@ -107,7 +119,7 @@ if( NOT WINDOWS)
 	check_function_exists("seteuid" HAVE_SETEUID)
 	check_function_exists("setlinebuf" HAVE_SETLINEBUF)
 	check_function_exists("snprintf" HAVE_SNPRINTF)
-	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)	
+	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)
 
 	check_function_exists("stat64" HAVE_STAT64)
 	check_function_exists("_stati64" HAVE__STATI64)
@@ -118,7 +130,7 @@ if( NOT WINDOWS)
 	check_function_exists("strsignal" HAVE_STRSIGNAL)
 	check_function_exists("unsetenv" HAVE_UNSETENV)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
-	
+
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
@@ -176,7 +188,7 @@ check_type_size("long long" HAVE_LONG_LONG)
 
 ##################################################
 ##################################################
-# Now checking *nix OS based options 
+# Now checking *nix OS based options
 set(HAS_FLOCK ON)
 set(DOES_SAVE_SIGSTATE OFF)
 
@@ -239,7 +251,7 @@ elseif(${OS_NAME} STREQUAL "HPUX")
 endif()
 
 # NOTE: instead
-# the following is meant to auto-set for CSL 
+# the following is meant to auto-set for CSL
 #string(REPLACE  ".cs.wisc.edu" "@@UW" UW_CHECK ${HOSTNAME})
 #if(${UW_CHECK} MATCHES "@@UW") #cmakes regex does not handle on [.] [.] [.] well
 #	if(EXISTS "/s/std/bin")
@@ -271,7 +283,7 @@ if (UW_BUILD OR WINDOWS)
   endif()
 
   dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
-  
+
 else()
   option(PROPER "Try to build using native env" ON)
   option(CLIPPED "enable/disable the standard universe" ON)
@@ -310,13 +322,13 @@ if (PROPER)
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 else(PROPER)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
-	# temporarily disable cacheing externals on windows, primarily b/c of nmi.  
+	# temporarily disable cacheing externals on windows, primarily b/c of nmi.
 	if (NOT WINDOWS)
 		option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
 	endif(NOT WINDOWS)
 endif(PROPER)
 
-## this primarily exists for nmi cached building.. yuk! 
+## this primarily exists for nmi cached building.. yuk!
 if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
 	#if (WINDOWS)
 	#	set (EXTERNAL_STAGE C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/root)
@@ -352,7 +364,7 @@ include_directories( ${EXTERNAL_STAGE}/include )
 link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
 
 ###########################################
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.33.1)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
@@ -385,7 +397,7 @@ if (NOT WINDOWS)
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
 
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
-		
+
 		if (EXT_GLIBC_FOUND)
 		  if (${BIT_MODE} STREQUAL "32")
 			  set (DOES_COMPRESS_CKPT ON) # this is total crap
@@ -401,11 +413,11 @@ if (NOT WINDOWS)
 		  set (CONDOR_COMPILE ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_compile)
 		  set (CONDOR_ARCH_LINK ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_arch_link)
 		  set (STDU_LIB_LOC ${CMAKE_INSTALL_PREFIX}/${C_LIB})
-		  
+
 		  include_directories( ${CONDOR_SOURCE_DIR}/src/condor_io.std )
 
 		  message( STATUS "** Standard Universe Enabled **")
-		  
+
 		else()
 			message( STATUS "** Standard Universe Disabled **")
 		endif()
@@ -416,7 +428,7 @@ if (NOT WINDOWS)
 endif(NOT WINDOWS)
 
 if (CONDOR_EXTERNALS AND NOT WINDOWS)
-	### addition of a single externals target which allows you to 
+	### addition of a single externals target which allows you to
 	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
@@ -442,7 +454,7 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_includes)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_utils)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_utils)
-set (DAEMON_CORE ${CONDOR_SOURCE_DIR}/src/condor_daemon_core.V6) #referenced elsewhere primarily for soap gen stuff 
+set (DAEMON_CORE ${CONDOR_SOURCE_DIR}/src/condor_daemon_core.V6) #referenced elsewhere primarily for soap gen stuff
 include_directories(${DAEMON_CORE})
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_daemon_client)
 include_directories(${CONDOR_SOURCE_DIR}/src/ccb)
@@ -606,32 +618,32 @@ endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
 dprint("----- Begin CMake Var DUMP -----")
-# if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise 
-# this is the top level directory of your build tree 
+# if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
+# this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
 
-# if you are building in-source, this is the same as CMAKE_CURRENT_SOURCE_DIR, otherwise this 
-# is the directory where the compiled or generated files from the current CMakeLists.txt will go to 
+# if you are building in-source, this is the same as CMAKE_CURRENT_SOURCE_DIR, otherwise this
+# is the directory where the compiled or generated files from the current CMakeLists.txt will go to
 dprint ( "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}" )
 
-# this is the directory, from which cmake was started, i.e. the top level source directory 
+# this is the directory, from which cmake was started, i.e. the top level source directory
 dprint ( "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}" )
 
-# this is the directory where the currently processed CMakeLists.txt is located in 
+# this is the directory where the currently processed CMakeLists.txt is located in
 dprint ( "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}" )
 
-# contains the full path to the top level directory of your build tree 
+# contains the full path to the top level directory of your build tree
 dprint ( "PROJECT_BINARY_DIR: ${PROJECT_BINARY_DIR}" )
 
 # contains the full path to the root of your project source directory,
-# i.e. to the nearest directory where CMakeLists.txt contains the PROJECT() command 
+# i.e. to the nearest directory where CMakeLists.txt contains the PROJECT() command
 dprint ( "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}" )
 
 # set this variable to specify a common place where CMake should put all executable files
 # (instead of CMAKE_CURRENT_BINARY_DIR)
 dprint ( "EXECUTABLE_OUTPUT_PATH: ${EXECUTABLE_OUTPUT_PATH}" )
 
-# set this variable to specify a common place where CMake should put all libraries 
+# set this variable to specify a common place where CMake should put all libraries
 # (instead of CMAKE_CURRENT_BINARY_DIR)
 dprint ( "LIBRARY_OUTPUT_PATH: ${LIBRARY_OUTPUT_PATH}" )
 
@@ -642,13 +654,13 @@ dprint ( "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}" )
 # print out where we are installing to.
 dprint ( "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}" )
 
-# this is the complete path of the cmake which runs currently (e.g. /usr/local/bin/cmake) 
+# this is the complete path of the cmake which runs currently (e.g. /usr/local/bin/cmake)
 dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 
-# this is the CMake installation directory 
+# this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
 
-# this is the filename including the complete path of the file where this variable is used. 
+# this is the filename including the complete path of the file where this variable is used.
 dprint ( "CMAKE_CURRENT_LIST_FILE: ${CMAKE_CURRENT_LIST_FILE}" )
 
 # this is linenumber where the variable is used
@@ -660,22 +672,22 @@ dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
 # this is used when searching for libraries e.g. using the FIND_LIBRARY() command.
 dprint ( "CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}" )
 
-# the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1" 
+# the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1"
 dprint ( "CMAKE_SYSTEM: ${CMAKE_SYSTEM}" )
 
 # the short system name, e.g. "Linux", "FreeBSD" or "Windows"
 dprint ( "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}" )
 
-# only the version part of CMAKE_SYSTEM 
+# only the version part of CMAKE_SYSTEM
 dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 
-# the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz") 
+# the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
 
-# is TRUE on Windows, including CygWin 
+# is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )
 
 # is TRUE on Apple OS X
@@ -687,7 +699,7 @@ dprint ( "MINGW: ${MINGW}" )
 # is TRUE on Windows when using the CygWin version of cmake
 dprint ( "CYGWIN: ${CYGWIN}" )
 
-# is TRUE on Windows when using a Borland compiler 
+# is TRUE on Windows when using a Borland compiler
 dprint ( "BORLAND: ${BORLAND}" )
 
 if (WINDOWS)
@@ -700,62 +712,62 @@ if (WINDOWS)
 	dprint ( "CMAKE_COMPILER_2005: ${CMAKE_COMPILER_2005}" )
 endif(WINDOWS)
 
-# set this to true if you don't want to rebuild the object files if the rules have changed, 
-# but not the actual source files or headers (e.g. if you changed the some compiler switches) 
+# set this to true if you don't want to rebuild the object files if the rules have changed,
+# but not the actual source files or headers (e.g. if you changed the some compiler switches)
 dprint ( "CMAKE_SKIP_RULE_DEPENDENCY: ${CMAKE_SKIP_RULE_DEPENDENCY}" )
 
-# since CMake 2.1 the install rule depends on all, i.e. everything will be built before installing. 
+# since CMake 2.1 the install rule depends on all, i.e. everything will be built before installing.
 # If you don't like this, set this one to true.
 dprint ( "CMAKE_SKIP_INSTALL_ALL_DEPENDENCY: ${CMAKE_SKIP_INSTALL_ALL_DEPENDENCY}" )
 
 # If set, runtime paths are not added when using shared libraries. Default it is set to OFF
 dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
 
-# set this to true if you are using makefiles and want to see the full compile and link 
-# commands instead of only the shortened ones 
+# set this to true if you are using makefiles and want to see the full compile and link
+# commands instead of only the shortened ones
 dprint ( "CMAKE_VERBOSE_MAKEFILE: ${CMAKE_VERBOSE_MAKEFILE}" )
 
-# this will cause CMake to not put in the rules that re-run CMake. This might be useful if 
-# you want to use the generated build files on another machine. 
+# this will cause CMake to not put in the rules that re-run CMake. This might be useful if
+# you want to use the generated build files on another machine.
 dprint ( "CMAKE_SUPPRESS_REGENERATION: ${CMAKE_SUPPRESS_REGENERATION}" )
 
-# A simple way to get switches to the compiler is to use ADD_DEFINITIONS(). 
-# But there are also two variables exactly for this purpose: 
+# A simple way to get switches to the compiler is to use ADD_DEFINITIONS().
+# But there are also two variables exactly for this purpose:
 
 # output what the linker flags are
 dprint ( "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}" )
 
-# the compiler flags for compiling C sources 
+# the compiler flags for compiling C sources
 dprint ( "CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}" )
 
 # the compiler flags for compiling C++ sources
 dprint ( "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}" )
 
-# Choose the type of build.  Example: SET(CMAKE_BUILD_TYPE Debug) 
+# Choose the type of build.  Example: SET(CMAKE_BUILD_TYPE Debug)
 dprint ( "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}" )
 
 # if this is set to ON, then all libraries are built as shared libraries by default.
 dprint ( "BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}" )
 
-# the compiler used for C files 
+# the compiler used for C files
 dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 
 # version information about the compiler
 dprint ( "CMAKE_C_COMPILER_VERSION: ${CMAKE_C_COMPILER_VERSION}" )
 
-# the compiler used for C++ files 
+# the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
 
 # version information about the compiler
 dprint ( "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}" )
 
-# if the compiler is a variant of gcc, this should be set to 1 
+# if the compiler is a variant of gcc, this should be set to 1
 dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )
 
-# if the compiler is a variant of g++, this should be set to 1 
+# if the compiler is a variant of g++, this should be set to 1
 dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
 
-# the tools for creating libraries 
+# the tools for creating libraries
 dprint ( "CMAKE_AR: ${CMAKE_AR}" )
 dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
 
