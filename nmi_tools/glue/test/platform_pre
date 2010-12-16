@@ -63,7 +63,7 @@ if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     #print TARBALL_FILE "$results\n";
     #close( TARBALL_FILE );
     
-    print "Unzipping results.tar.gz\n"
+    print "Unzipping results.tar.gz\n";
     system("tar -xzf $results");
     print "Moving public/* to $BaseDir";
     system("mv public/* $BaseDir");
