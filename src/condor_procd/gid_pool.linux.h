@@ -23,18 +23,31 @@
 
 #include <sys/types.h>
 
+/* A single GIDPool instance can exist in two modes.
+	In "allocating" mode, the GIDPool is told the min and max gid and
+	when allocate() is called a free one is picked, recorded as being used,
+	and given back to the caller.
+
+	In "associating" mode, the GIDPool instance is told by the caller
+	what gid should be associated with a ProcFamily instance.
+
+	These two modes are exclusive.
+*/
+
 class ProcFamily;
 
 class GIDPool {
 
 public:
-	GIDPool(gid_t min_gid, gid_t max_gid);
+	GIDPool(gid_t min_gid, gid_t max_gid, bool allocating);
 	~GIDPool();
 	bool allocate(ProcFamily* family, gid_t& gid);
+	bool associate(ProcFamily* family, gid_t gid);
 	bool free(ProcFamily* family);
 	ProcFamily* get_family(gid_t gid);
 
 private:
+	bool m_allocating;
 	int   m_size;
 	gid_t m_offset;
 	ProcFamily** m_gid_map;

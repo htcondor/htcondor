@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "gid_pool.linux.h"
 
-GIDPool::GIDPool(gid_t min_gid, gid_t max_gid)
+GIDPool::GIDPool(gid_t min_gid, gid_t max_gid, bool allocating)
 {
 	ASSERT(min_gid <= max_gid);
 	m_size = max_gid - min_gid + 1;
@@ -32,6 +32,7 @@ GIDPool::GIDPool(gid_t min_gid, gid_t max_gid)
 	for (int i = 0; i < m_size; i++) {
 		m_gid_map[i] = NULL;
 	}
+	m_allocating = allocating;
 }
 
 GIDPool::~GIDPool()
@@ -39,9 +40,14 @@ GIDPool::~GIDPool()
 	delete[] m_gid_map;
 }
 
+/* A GIDPool object is either in allocate, or associate mode. allocate() and
+	associate() are mutually exclusive in their actions concerning the 
+	private fields in this object. */
 bool
 GIDPool::allocate(ProcFamily* family, gid_t& gid)
 {
+	ASSERT(m_allocating == true);
+
 	for (int i = 0; i < m_size; i++) {
 		if (m_gid_map[i] == NULL) {
 			m_gid_map[i] = family;
@@ -50,6 +56,28 @@ GIDPool::allocate(ProcFamily* family, gid_t& gid)
 		}
 	}
 	return false;
+}
+
+/* A GIDPool object is either in allocate, or associate mode. allocate() and
+	associate() are mutually exclusive in their actions concerning the 
+	private fields in this object. */
+bool
+GIDPool::associate(ProcFamily* family, gid_t gid)
+{
+	ASSERT(m_allocating == false);
+
+	int index = gid - m_offset;
+
+	if ((index < 0) || (index >= m_size)) {
+		return false;
+	}
+
+	if (m_gid_map[index] != NULL) {
+		return false;
+	}
+
+	m_gid_map[index] = family;
+	return true;
 }
 
 bool
