@@ -27,15 +27,15 @@ The details of each version are described below.
   Conversion of the spool directory is automatic when upgrading, but
   be aware that \emph{downgrading to a previous version of Condor
   requires extra effort}.  The procedure for downgrading is either
-  to drain all jobs with spooled files from the queue or to manually
+  to drain all jobs with spooled files from the queue, or to manually
   convert the spool back to the older format.  To manually convert
-  back to the older format, stop Condor and backup the spool directory
+  back to the older format, stop Condor and back up the spool directory
   in case of problems.  Then move all subdirectories matching the form
   \verb|$(SPOOL)/<#>/<#>/cluster<#>.proc<#>.subproc<#>| into
   \verb|$(SPOOL)|.  Also do this for any files of the form
-  \verb|$(SPOOL)/<#>/cluster<#>.ickpt.subproc<#>|.  Then edit
-  \verb|$(SPOOL)/job_queue.log| with a text editor and change all
-  references to the old paths to the new paths.  Then remove
+  \verb|$(SPOOL)/<#>/cluster<#>.ickpt.subproc<#>|.  Edit
+  \verb|$(SPOOL)/job_queue.log| with a text editor, and change all
+  references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
 \end{itemize}
@@ -53,20 +53,20 @@ with \Condor{shadow} processes.
 
 % gittrac 1707
 \item Improved monitoring and avoidance of a \Term{lock convoy} problem
-observed when there were over 30 thousand \Condor{shadow} processes.
+observed when there were more than 30,000 \Condor{shadow} processes.
 At this scale,
 locking the \Condor{shadow} daemon's log on each write to the log file
 has been observed
-under Linux to sometimes result in a situation where the system does
+on Linux platforms to sometimes result in a situation where the system does
 very little productive work, and is instead consumed by rapid context
 switching between the \Condor{shadow} daemons that are waiting for the lock.
 
 % gittrac 1706
-\item Under Linux, if the \Condor{schedd} daemon's spool directory is
+\item On Linux platforms, if the \Condor{schedd} daemon's spool directory is
   on an ext3 file system, Condor can now scale to a larger number
   of spooled jobs.  Previously, Condor created two subdirectories
   within the spool directory for each spooled job and for each running
-  job.  The ext3 file system only supports 31997 subdirectories.  This
+  job.  The ext3 file system only supports 31,997 subdirectories.  This
   effectively limited the number of spooled jobs to less than 16,000.
   Now, Condor creates a hierarchy of subdirectories within
   the spool directory, to increase the limit on the number of spooled jobs
@@ -81,7 +81,8 @@ This may help in figuring out what went wrong.
 See section~\ref{sec:DAGMan-rescue} for complete details on Rescue DAGs.
 
 %gittrac 793
-\item The \Condor{shadow} daemon uses less memory than it has since 7.5.0.
+\item The \Condor{shadow} daemon uses less memory than it has since 
+Condor version 7.5.0.
 Memory usage should now be similar to the 7.4 series.
 
 %gittrac #1077
@@ -98,7 +99,7 @@ Memory usage should now be similar to the 7.4 series.
 % gittrac 1707
 \item The new configuration variable \Macro{LOCK\_DEBUG\_LOG\_TO\_APPEND}
 controls whether a daemon's debug lock is used when appending to the log.
-When \Expr{False} (the default),
+When the default value of \Expr{False},
 the debug lock is only used when rotating the log file.
 When \Expr{True}, the debug lock is used when writing to
 the log as well as when rotating the log file.
@@ -111,16 +112,18 @@ See section~\ref{param:LockDebugLogToAppend} for the complete definition.
 \begin{itemize}
 
 % gittrac 1773
-\item Since 7.5.2, \Condor{q} speed was not as high as earlier 7.5 and
-  7.4 releases, especially when retrieving large numbers of jobs.
-  Viewing 100k jobs took about four times longer.  This has been fixed
-  in this release, and performance should be about the same as before
-  7.5.2.
+\item Since Condor version 7.5.2, the speed of \Condor{q} was not as high
+  as earlier 7.5 and 7.4 releases,
+  especially when retrieving large numbers of jobs.
+  Viewing 100K jobs took about four times longer.
+  This release fixes the performance,
+  making it about the same as before Condor version 7.5.2.
 
 % gittrac #1737
-\item A bug introduced in Condor version 7.5.4 prevented parallel jobs
-with multiple \SubmitCmd{queue} statements in the submit description file
-from working with \Condor{dagman}.  This is now fixed.
+\item A bug introduced in Condor version 7.5.4 prevented parallel 
+universe jobs with multiple \SubmitCmd{queue} statements in 
+the submit description file from working with \Condor{dagman}.
+This is now fixed.
 
 % gittrac #1715
 \item \Condor{dagman} now excepts in the case of certain log file errors,
@@ -130,8 +133,8 @@ internal state.
 % gittrac #1681
 \item Improved the way Condor daemons send heartbeat messages to their parent
 process.  This resolves a problem observed on busy submit machines using the
-\Condor{shared\_port}.  The \Condor{master} daemon sometimes incorrectly
-determined that the \Condor{schedd} was hung and would kill and restart it.
+\Condor{shared\_port} daemon.  The \Condor{master} daemon sometimes incorrectly
+determined that the \Condor{schedd} was hung, and would kill and restart it.
 
 % gittrac #1688
 \item When the configuration variable \Macro{NOT\_RESPONDING\_WANT\_CORE}
@@ -156,39 +159,39 @@ when the offline ClassAd was matched to a job.
 % gittrac #1762
 \item Fixed a bug that caused DAG node jobs to have their coredumpsize
 limit set according to the \MacroNI{CREATE\_CORE\_FILES} configuration
-macro rather than the user's coredumpsize limit.
+variable, rather than the user's coredumpsize limit.
 
 % gittrac #1777
-\item Fixed a case introduced in 7.5.4 under Windows in which the following
-spurious log message was produced:
-
+\item Fixed a case introduced in Condor version 7.5.4 on Windows platforms,
+in which the following spurious log message was produced:
 \begin{verbatim}
 SharedPortEndpoint: Destructor: Problem in thread shutdown notification: 0
 \end{verbatim}
 
 % gittrac #1088
-\item Since 7.4.1, Condor-C jobs submitted without file transfer enabled could
+\item Since Condor version 7.4.1,
+Condor-C jobs submitted without file transfer enabled could
 fail with the following error in the \Condor{starter} log:
-
 \begin{verbatim}
 FileTransfer: DownloadFiles called on server side
 \end{verbatim}
 
 % gittrac #1796
 \item Fixed a memory leak caused by use of the ClassAd \Expr{eval()}
-  function.  This problem was introduced in 7.5.2.
+  function.  This problem was introduced in Condor version 7.5.2.
 
 % gittrac #1804
 \item Fixed a bug that could cause the \Condor{negotiator} daemon to
   crash when groups are configured with
-  \MacroNI{GROUP\_QUOTA\_DYNAMIC\_<group\_name>} or when
+  \MacroNI{GROUP\_QUOTA\_DYNAMIC\_<group\_name>}, or when
   \MacroNI{GROUP\_QUOTA\_<group\_name>} is not defined to be something
   greater than 0.
 
 % gittrac #1809
 \item Fixed a bug that caused random characters to appear for the
   value of \Expr{AuthMethods} when logging with \Expr{D\_FULLDEBUG}
-  and \Expr{D\_SECURITY} enabled.  This problem was introduced in 7.5.3.
+  and \Expr{D\_SECURITY} enabled.
+  This problem was introduced in Condor version 7.5.3.
 
 \end{itemize}
 
