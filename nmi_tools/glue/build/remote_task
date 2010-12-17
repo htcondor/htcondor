@@ -145,7 +145,7 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	#path hack b/c nmi pre-reqs & paths are broken on windows.
 	$ENV{BASE_DIR} = "$BaseDir";
     system("env");
-    print(`cmd /c dir /b /s build.win.bat`);
+    #print(`cmd /c dir /b /s build.win.bat`);
     $execstr= "nmi_tools\\glue\\build\\build.win.bat"; ##devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE";
 	# need to make the tests here. 
 
