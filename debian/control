@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: NeuroDebian team <team@neuro.debian.net>
 Uploaders: Michael Hanke <mih@debian.org>, Yaroslav Halchenko <debian@onerussian.com>
 #Build-Depends: debhelper (>= 7.0.50~), po-debconf, pvm-dev, libkrb5-dev, libssl-dev, libpcre3-dev, zlib1g-dev, gcj | gcj-4.0, libstlport5.2-dev | libstlport4.6-dev, flex, csh, bison, libpq-dev, libvirt-dev, autoconf, xutils-dev, libxml2-dev, libexpat1-dev, libpcre3-dev, libsasl2-dev
-Build-Depends: debhelper (>= 7.0.50~), po-debconf, libpq-dev, libcurl4-openssl-dev, zlib1g-dev, libglobus-gss-assist-dev, libglobus-gram-protocol-dev, libglobus-gram-client-dev, libglobus-gass-server-ez-dev, libglobus-ftp-client-dev, libclassad-dev
+Build-Depends: debhelper (>= 7.0.50~), po-debconf, libpq-dev, libcurl4-openssl-dev, zlib1g-dev, libglobus-gss-assist-dev, libglobus-gram-protocol-dev, libglobus-gram-client-dev, libglobus-gass-server-ez-dev, libglobus-ftp-client-dev, libclassad-dev, latex2html, ncompress
 Standards-Version: 3.9.1
 
 
@@ -42,3 +42,11 @@ Package: condor-tests
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: test suite for Condor
+
+
+Package: condor-doc
+Section: doc
+Architecture: all
+Depends: ${misc:Depends}
+Description: documentation for Condor
+ In HTML and PDF format.

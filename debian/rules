@@ -19,6 +19,7 @@ override_dh_auto_configure:
 		-D_DEBUG:BOOL=TRUE \
 		-DBUILDID:STRING=Debian \
 		-DWITH_GSOAP:BOOL=OFF \
+		-DCMAKE_SKIP_BUILD_RPATH:BOOL=ON \
 		-DCMAKE_INSTALL_RPATH:STRING="/usr/lib/condor" \
 		-DEXTERNAL_INCLUDES:STRING="/usr/include/postgresql" \
 		-DHAVE_EXT_CLASSADS:BOLL=ON -DCLASSADS_FOUND=classad_ns \
@@ -35,7 +36,7 @@ override_dh_auto_configure:
 		-DHAVE_EXT_ZLIB:BOOL=ON
 
 
-override_dh_auto_build:
+override_dh_auto_build: doc/build
 	dh_auto_build
 	# post-fixing things that have to be done due to changes introduced by
 	# repackaging
@@ -44,6 +45,41 @@ override_dh_auto_build:
 	cp src/condor_chirp/*.java src/condor_chirp/chirp/java/client/
 	$(MAKE) -C src/condor_chirp/chirp/java/client/
 	cp src/condor_chirp/chirp/java/client/Chirp.jar src/condor_chirp/
+
+
+doc/build:
+	mkdir -p $@
+	$(MAKE) -C doc/doc release-pdf MANDIR=$(CURDIR)/$@/pdf \
+		TARGETDIR=$(CURDIR)/$@/pdf
+	cd doc/doc && latex2html -address condor-admin@cs.wisc.edu -split 4 \
+		-link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 \
+		-toc_depth 2 -local_icons ref.tex
+	cp -r doc/doc/ref $@/html
+	$(MAKE) -C doc/doc/makeman makeman
+	for html in $@/html/condor_*.html; do \
+		doc/doc/makeman/makeman -v -i $$html -s 1; \
+	done
+	mkdir -p $@/man
+	# sanitize and copy
+	for man in $@/html/condor_*.1; do \
+		sed -r -e 's,$@/html/,,' -e "s/1 date$$/1 \"$$(date +'%B %Y')\"/" \
+			   -e '/\.SH Name/{ n; n; s/\W/ \\- /; }' -e 's/ (\.[A-Z])/\1/' \
+			   -e 's/^\s//' < $$man > $@/man/$$(basename $$man) ; \
+	done
+	rm $@/html/condor_*.1
+
+
+override_dh_auto_install:
+	dh_auto_install
+	# fix various bits -- upstream should do that
+	chmod -x debian/tmp/usr/etc/sysconfig/condor
+	chmod -x debian/tmp/usr/lib/*.pm
+	# things we do not need in Debian
+	rm debian/tmp/usr/sbin/condor_install* \
+		debian/tmp/usr/sbin/condor_cleanup* \
+		debian/tmp/usr/sbin/install_release \
+		debian/tmp/usr/sbin/cleanup_release
+
 
 override_dh_auto_clean:
 	dh_auto_clean
@@ -58,6 +94,15 @@ override_dh_auto_clean:
 		src/condor_tests/CondorTest.pm src/condor_tests/CondorUtils.pm \
 		src/condor_tests/batch_test.pl
 	-rm src/condor_utils/param_info.c
+	# docs
+	$(MAKE) -C doc/doc clean
+	-rm -rf doc/doc/just-man-pages
+	-rm -rf doc/build
+
+
+# PDF come in dedicated doc package -- no compression
+override_dh_compress:
+	dh_compress -X.pdf
 
 
 dfsg-source-tree:
