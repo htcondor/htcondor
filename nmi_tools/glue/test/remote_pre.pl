@@ -100,7 +100,7 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
 	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
-	print "VERSION string is $version\n";
+	print "VERSION string is $version from $release_tarball and $basename\n";
 } else {
 	$release_zipfile =~ /condor-(\d+)\.(\d+)\.(\d+)-.*/; 
 	$version = "condor-$1.$2.$3";
