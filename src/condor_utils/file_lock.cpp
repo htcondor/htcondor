@@ -669,7 +669,7 @@ FileLock::GetTempPath()
 {
 	const char *suffix = "";
 	char *result = NULL;
-	char *path = param("LOCK");
+	char *path = param("LOCAL_DISK_LOCK_DIR");
 	if (!path) {
 		path = temp_dir_path();
 		suffix = "condorLocks";
