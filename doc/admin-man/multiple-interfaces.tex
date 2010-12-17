@@ -92,7 +92,7 @@ Here are descriptions of the limitations.
   Therefore, there is no reason to have Condor daemons listening on
   ports on the public Internet, causing a potential security threat.
 
-\item[Only one IP address will be advertised.]
+\item[Up to two IP addresses will be advertised.]
   At present, even though a given Condor daemon will be listening to
   ports on multiple interfaces, each with their own IP address,
   there is currently no mechanism for that daemon to advertise all of
@@ -102,32 +102,32 @@ Here are descriptions of the limitations.
   running on a multi-homed machine where
   \MacroNI{BIND\_ALL\_INTERFACES} has been enabled.
 
-  Currently, Condor daemons can only advertise a single IP address in
-  the ClassAd they send to their \Condor{collector}.
-  Condor tools and other daemons only know how to look up a single IP
-  address, and they attempt to use that single IP address
-  when connecting to the daemon.
-  So, even if the daemon is listening on 2 or more different interfaces,
-  each with a separate IP, the daemon must choose what IP address to
-  publicly advertise so that other daemons and tools can locate it.
+  Currently, Condor daemons can only advertise two IP addresses in
+  the ClassAd they send to their \Condor{collector}.  One is the
+  public IP address and the other is the private IP address.
+  Condor tools and other daemons that wish to connect to the daemon will
+  use the private IP address if they are configured with the same private
+  network name, and they will use the public IP address otherwise.
+  So, even if the daemon is listening on 3 or more different interfaces,
+  each with a separate IP, the daemon must choose which two IP addresses to
+  advertise so that other daemons and tools can connect to it.
 
   By default, Condor advertises the IP address of the network interface
-  used to contact the collector, since this is the most likely to be
+  used to contact the collector as its public address, since this is the most likely to be
   accessible to other processes that query the same collector.
-  The \Macro{NETWORK\_INTERFACE} setting can still be used to
-  specify the IP address Condor should advertise, even if
-  \MacroNI{BIND\_ALL\_INTERFACES} is set to \Expr{True}.
-  Therefore, some of the considerations described below regarding what
-  interface should be used in various situations still apply when
-  deciding what interface is to be advertised.
+  The \Macro{NETWORK\_INTERFACE} setting can be used to specify the
+  public IP address Condor should advertise, and
+  \Macro{PRIVATE\_NETWORK\_INTERFACE}, along with
+  \Macro{PRIVATE\_NETWORK\_NAME} can be used to specify the
+  private IP address to advertise.
 
 \end{description}
 
 Sites that make heavy use of private networks and multi-homed machines
-should consider if using Generic Connection Brokering, GCB, is
+should consider if using the Condor Connection Broker, CCB is
 right for them.
-More information about GCB and Condor can be found in
-section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
+More information about CCB and Condor can be found in
+section~\ref{sec:CCB} on page~\pageref{sec:CCB}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

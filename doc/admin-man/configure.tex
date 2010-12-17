@@ -2200,17 +2200,42 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
-  An IP address that depends on the setting of
-  \MacroNI{BIND\_ALL\_INTERFACES}.  If \MacroNI{BIND\_ALL\_INTERFACES}
-  is \Expr{True} (the default), then this variable controls what IP
-  address will be advertised as the public address of the daemon.
-  If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False}, then this variable
-  specifies which IP address to bind network sockets to.
-  If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False}
-  and \MacroNI{NETWORK\_INTERFACE} is not defined,
-  Condor chooses a network interface automatically.  It tries
-  to choose a public interface if one is available.  If it cannot decide
-  which of two interfaces to choose from, it will pick the first one.
+
+  This setting may be an IP address (e.g. 123.123.123.123) or the name
+  of a network device (e.g. eth0).  The `*' character may be used as a
+  wildcard.  For example, 123.123.* would match a network interface
+  with IP address 123.123.123.123 or 123.123.100.100.  The default
+  value is `*', which matches all network interfaces.
+
+  The effect of this setting depends on the value of
+  \MacroNI{BIND\_ALL\_INTERFACES}.  There are two cases:
+
+  \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{True} (the default): In
+  this case, \MacroNI{NETWORK\_INTERFACE} controls what IP address
+  will be advertised as the public address of the daemon.  If multiple
+  network interfaces match the setting and
+  \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{True} (the default),
+  the IP address that is chosen to be advertised will be the one that
+  is used to communicate with the collector.  If
+  \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{False}, the IP address
+  that is chosen to be advertised will be the one associated with the
+  first device (in system-defined order) that is in a public address
+  space, or a private address space, or a loopback address, in that
+  order of preference.  If it is desired to advertise an IP address
+  that is not associated with any local network interface (for
+  example, when TCP forwarding is being used),
+  \Macro{TCP\_FORWARDING\_HOST} should be used instead of
+  \MacroNI{NETWORK\_INTERFACE}.
+
+  \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False}: In this case
+  \MacroNI{NETWORK\_INTERFACE} specifies which IP address Condor
+  should use for all (incoming and outgoing) communication.  If more
+  than one IP address matches the setting, the IP address that is
+  chosen will be the one associated with the first device (in
+  system-defined order) that is in a public address space, or a
+  private address space, or a loopback address, in that order of
+  preference.
+
   More information about configuring Condor on machines with multiple
   network interfaces can be found in
   section~\ref{sec:Multiple-Interfaces} on
@@ -2257,7 +2282,8 @@ limit above the hard limit (on maximum open files) that it inherits.
   given multi-homed machine should use for the private network.
   If another Condor daemon or tool is configured with the same
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
-  daemon using the IP address specified here.
+  daemon using the IP address specified here.  The syntax for specifying
+  an IP address is identical to \MacroNI{NETWORK\_INTERFACE}.
   Sites using CCB or the Generic Connection Broker (GCB) only need to define
   the \MacroNI{PRIVATE\_NETWORK\_NAME}, and the 
   \MacroNI{PRIVATE\_NETWORK\_INTERFACE} will be defined automatically.
@@ -2291,7 +2317,7 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:EnableAddressRewriting}
 \item[\Macro{ENABLE\_ADDRESS\_REWRITING}]
   A boolean value that defaults to \Expr{True}.  When
-  \MacroNI{NETWORK\_INTERFACE} is defined or
+  \MacroNI{NETWORK\_INTERFACE} matches only one IP address or
   \MacroNI{TCP\_FORWARDING\_HOST} is defined or
   \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
   the behavior is as though it had been set to \Expr{False}.  When \Expr{True},

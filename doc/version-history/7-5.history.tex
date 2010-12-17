@@ -29,7 +29,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1800
+\item Condor no longer relies on DNS to determine its IP address.
+  Instead, it examines the list of system network devices.
 
 \end{itemize}
 
@@ -37,7 +39,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1800
+\item \MacroNI{NETWORK\_INTERFACE} and
+  \MacroNI{PRIVATE\_NETWORK\_INTERFACE} may now specify a network
+  device name as well as an IP address.  The `*' character may also
+  be used as a wildcard.  This makes it easier to apply the same
+  configuration to a large number of machines, because the IP address
+  does not have to be customized for each host.
 
 \end{itemize}
 
