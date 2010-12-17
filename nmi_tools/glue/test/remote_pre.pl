@@ -75,6 +75,7 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	while( <TARBALL_FILE> ) {
 		chomp;
 		$release_tarball = $_;
+	}
 
 	print "Release tarball is $release_tarball\n";
 
