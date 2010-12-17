@@ -6540,6 +6540,16 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
 	ClassAd* job_ad = NULL;
+	int create_process_opts = 0;
+
+#ifndef WIN32
+		// Unix shadows do not need a UDP command socket, because all
+		// common signals are delivered via unix signals, and exotic
+		// DC signals can go via TCP as long as care is taken to use
+		// the non-blocking signal interface.  This saves enough
+		// memory that it is worth optimizing.
+	create_process_opts |= DCJOBOPT_NO_UDP;
+#endif
 
 	Env extra_env;
 	if( ! env ) {
@@ -6661,7 +6671,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
 	                                  is_dc, env, NULL, NULL, NULL, 
-	                                  std_fds_p, NULL, niceness );
+	                                  std_fds_p, NULL, niceness,
+									  NULL, create_process_opts);
 	if( pid == FALSE ) {
 		MyString arg_string;
 		args.GetArgsStringForDisplay(&arg_string);

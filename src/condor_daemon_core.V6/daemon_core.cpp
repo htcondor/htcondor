@@ -7083,6 +7083,9 @@ int DaemonCore::Create_Process(
 	char const *executable_fullpath = executable;
 #endif
 
+	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
+
+
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
 	// First do whatever error checking we can that is not platform specific
@@ -7182,7 +7185,7 @@ int DaemonCore::Create_Process(
 	}
 	else if ( want_command_port != FALSE ) {
 		inherit_handles = TRUE;
-		SafeSock* ssock_ptr = m_wants_dc_udp ? &ssock : NULL;
+		SafeSock* ssock_ptr = want_udp ? &ssock : NULL;
 		if (!InitCommandSockets(want_command_port, &rsock, ssock_ptr, false)) {
 				// error messages already printed by InitCommandSockets()
 			goto wrapup;
@@ -7201,7 +7204,7 @@ int DaemonCore::Create_Process(
 		ptmp = rsock.serialize();
 		inheritbuf += ptmp;
 		delete []ptmp;
-		if (m_wants_dc_udp) {
+		if (want_udp) {
 			inheritbuf += " ";
 			ptmp = ssock.serialize();
 			inheritbuf += ptmp;
@@ -7210,7 +7213,7 @@ int DaemonCore::Create_Process(
 
             // now put the actual fds into the list of fds to inherit
         inheritFds[numInheritFds++] = rsock.get_file_desc();
-		if (m_wants_dc_udp) {
+		if (want_udp) {
 			inheritFds[numInheritFds++] = ssock.get_file_desc();
 		}
 	}
@@ -8198,7 +8201,11 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-			pidtmp->sinful_string = sock_to_string(rsock._sock);
+			Sinful sinful(sock_to_string(rsock._sock));
+			if( !want_udp ) {
+				sinful.setNoUDP(true);
+			}
+			pidtmp->sinful_string = sinful.getSinful();
 		}
 	}
 
