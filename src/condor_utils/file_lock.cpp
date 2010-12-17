@@ -667,17 +667,17 @@ FileLock::updateLockTimestamp(void)
 char * 
 FileLock::GetTempPath() 
 {
-
-	char *path = temp_dir_path();
-	char *suffix = "condorLocks";
-	
-	if (path == NULL)
-		return NULL;
-	
-	char *full_path = dirscat(path, suffix);
+	const char *suffix = "";
+	char *result = NULL;
+	char *path = param("LOCK");
+	if (!path) {
+		path = temp_dir_path();
+		suffix = "condorLocks";
+	}
+	result = dirscat(path, suffix);
 	free(path);
-	
-	return full_path;
+
+	return result;
 }
 
 char *
