@@ -79,3 +79,6 @@ get-orig-source: dfsg-source-tree
 	# orig tarball, turn directory into something nicer
 	git archive --format=tar --prefix=$(srcpkg)-$(upstreamver)/ HEAD | \
 		gzip -9 > $(srcpkg)_$(upstreamver).orig.tar.gz
+	git archive --format=tar --prefix=$(srcpkg)-doc-$(upstreamver)/ \
+				--remote=doc/ HEAD | \
+		gzip -9 > $(srcpkg)_$(upstreamver).orig-doc.tar.gz
