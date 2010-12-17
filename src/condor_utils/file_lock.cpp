@@ -725,9 +725,6 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 		snprintf(dest+strlen(dest), 3, "%s", hashVal+i);
 		snprintf(dest+strlen(dest), 2, "%c", DIR_DELIM_CHAR);
 	}
-#if !defined(WIN32)
-	sprintf(dest+strlen(dest), "%i%c", getuid(), DIR_DELIM_CHAR);
-#endif	
 	 
 	
 	sprintf(dest+strlen(dest), "%s.lockc", hashVal+4);
