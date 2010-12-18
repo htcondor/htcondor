@@ -340,9 +340,7 @@ VanillaProc::ShutdownGraceful()
 	// now softkill the parent job process.  this is exactly what
 	// OsProc::ShutdownGraceful does, so call it.
 	//
-	OsProc::ShutdownGraceful();
-	startEscalationTimer();
-	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
+	return OsProc::ShutdownGraceful();	
 }
 
 bool
