@@ -1151,6 +1151,16 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 		}
 
+			// if we don't hae a UDP port, advertise that fact
+		char *forwarding = param("TCP_FORWARDING_HOST");
+		if( forwarding ) {
+			free( forwarding );
+			m_sinful.setNoUDP(true);
+		}
+		if( !dc_ssock ) {
+			m_sinful.setNoUDP(true);
+		}
+
 		if( m_ccb_listeners ) {
 			MyString ccb_contact;
 			m_ccb_listeners->GetCCBContactString(ccb_contact);
