@@ -37,9 +37,20 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 				  compat_classad::ClassAd *target, compat_classad::EvalResult *result );
 
+/* Returns true if first ad's requirements are met.
+   Ignores MyType and TargetType.
+*/
 bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );
 
+/* Returns true if first ad's requirements are met.
+   Also checks that the first's ads TargetType is matched by the second ad.
+*/
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target );
+
+/* Returns true if first ad's requirements are met.
+   Ignores MyType and TargetType.
+*/
+bool IsAHalfMatchIgnoringTargetType( compat_classad::ClassAd *my, compat_classad::ClassAd *target );
 
 void AttrList_setPublishServerTime( bool publish );
 
