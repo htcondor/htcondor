@@ -6548,7 +6548,14 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		// DC signals can go via TCP as long as care is taken to use
 		// the non-blocking signal interface.  This saves enough
 		// memory that it is worth optimizing.
-	create_process_opts |= DCJOBOPT_NO_UDP;
+
+	// FIXME!  This is a short term hack
+	//  The shadow can deal with not having a UDP port.  Right now
+	//  the starter needs one, and we can spawn a starter here
+	//  for local universe
+	if (strcmp(name, "starter") != 0) {
+		create_process_opts |= DCJOBOPT_NO_UDP;
+	}
 #endif
 
 	Env extra_env;
