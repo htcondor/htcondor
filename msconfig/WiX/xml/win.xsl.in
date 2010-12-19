@@ -14,10 +14,9 @@
         <Package InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="media1.cab" EmbedCab="yes"/>
         <!-- Always force the root drive to be C: -->
-        <Property Id="ROOTDRIVE"><![CDATA[C:\]]></Property>
+        <Property Id="ROOTDRIVE"><![CDATA[c:\]]></Property>
+        <Property Id="TARGETDIR"><![CDATA[c:\condor\]]></Property>
         <Directory Id="TARGETDIR" Name="SourceDir">
-          <Directory Id="INSTALLLOCATION" Name="@CPACK_PACKAGE_FILE_NAME@">
-
            <!-- Merge module used to bind VC runtime *do not* copy in the files using include (InstallRequiredSystemLibraries) -->
            <Merge Id="VC90CRT" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm"/>
            <Merge Id="VC90Policy" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"/>
@@ -25,18 +24,18 @@
             <!-- Update the registry, ENV, and FW -->
            <Component Id="CondorRegNEnv" Guid="E282D017-976B-4685-A330-5180B27277C0">
              <RegistryKey Root="HKLM" Key="SOFTWARE\Condor" Action="createAndRemoveOnUninstall" >
-                 <RegistryValue Type="string" Name="CONDOR_CONFIG" Value="[INSTALLLOCATION]condor_config" KeyPath="yes" />
-                 <RegistryValue Type="string" Name="RELEASE_DIR" Value="[INSTALLLOCATION]"/>
+                 <RegistryValue Type="string" Name="CONDOR_CONFIG" Value="[TARGETDIR]condor_config" KeyPath="yes" />
+                 <RegistryValue Type="string" Name="RELEASE_DIR" Value="[TARGETDIR]"/>
              </RegistryKey>
-             <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLLOCATION]bin\"/>
+             <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[TARGETDIR]bin\"/>
            </Component>
-
-          </Directory>
         </Directory>
 
         <Condition Message="This application is only supported on Windows XP(SP2) or higher">
           <![CDATA[(VersionNT >= 501)]]>
         </Condition>
+
+        <Property Id="WIXUI_INSTALLDIR" Value="TARGETDIR" />
 
         <!--Find the location of the Java installation-->
         <Property Id="JVMVERSION">
@@ -60,17 +59,18 @@
         <!--HDFS properties-->
         <Property Id="HDFSPORT" Value="9000" />
         <Property Id="HDFSWEBPORT" Value="8000" />
-        <SetProperty Id="HDFSHOME" Value="[INSTALLLOCATION]HDFS" After="AppSearch" />
-        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]HDFS/hadoop_name" After="AppSearch" />
-        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]HDFS/hadoop_data" After="AppSearch" />
+        <SetProperty Id="HDFSHOME" Value="[TARGETDIR]HDFS" After="AppSearch" />
+        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]/hadoop_name" After="AppSearch" />
+        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]/hadoop_data" After="AppSearch" />
 
         <!-- Begin custom actions and install sequence -->
         <CustomAction Id="CondorConfigLocal"
                  Script="vbscript">
           <![CDATA[
             Set fso = CreateObject("Scripting.FileSystemObject")
-            path = Session.Property("INSTALLLOCATION")
-            strippedPath = Left(path,Len(path)-1)
+            path = Session.Property("TARGETDIR")
+            Set installpath = fso.GetFolder(path)
+            strippedPath = installpath.ShortPath
             if Not fso.FolderExists(path & "log") Then
                 Set objFolderLog = fso.CreateFolder(path & "log")
             End if
@@ -102,7 +102,10 @@
             Myfh.WriteLine("UID_DOMAIN=" & Session.Property("ACCOUNTINGDOMAIN") )
             Myfh.WriteLine("CONDOR_ADMIN=" & Session.Property("CONDOREMAIL") )
             Myfh.WriteLine("SMTP_SERVER=" & Session.Property("SMTPSERVER") )
-            Myfh.WriteLine("JAVA=" & Session.Property("JVMLOCATION") )
+            jvmLoc = Session.Property("JVMLOCATION")
+            Set jvmPath = fso.GetFile(jvmLoc)
+            jvmLoc = jvmPath.ShortPath
+            Myfh.WriteLine("JAVA=" & jvmLoc )
 
             Select Case Session.Property("RUNJOBS")
             Case "A"
@@ -148,7 +151,6 @@
               VMfh.WriteLine("VM_MAX_NUMBER=" & Session.Property("VMMAXNUMBER") )
               VMfh.WriteLine("VM_MEMORY=" & Session.Property("VMMEMORY") )
               VMfh.WriteLine("VMWARE_PERL=" & Session.Property("PERLLOCATION") )
-              VMfh.WriteLine("VMWARE_SCRIPT=" & path & "bin\\condor_vm_vmware.pl")
               Select Case Session.Property("VMNETWORKING")
               Case "N"
                 VMfh.WriteLine("VM_NETWORKING=FALSE")
@@ -167,11 +169,12 @@
             End if
 
             If Session.Property("USEHDFS") = "Y" Then
+              daemonList = daemonList & " HDFS"
               Set HDFSfh = fso.OpenTextFile(path & "config\\hdfs.config", 2, True)
               namenodeAddr = Session.Property("NAMENODE")
-              HDFSfh.WriteLine("HDFS_NODETYPE=" & namenodeAddr & ":" & Session.Property("HDFSMODE") )
+              HDFSfh.WriteLine("HDFS_NODETYPE=" & Session.Property("HDFSMODE") )
               HDFSfh.WriteLine("HDFS_NAMENODE=" & namenodeAddr & ":" & Session.Property("HDFSPORT") )
-              HDFSfh.WriteLine("HDFS_NAMENODE_WEB=" & Session.Property("HDFSWEBPORT") )
+              HDFSfh.WriteLine("HDFS_NAMENODE_WEB=" namenodeAddr  & ":" & Session.Property("HDFSWEBPORT") )
               HDFSfh.WriteLine("HDFS_HOME=" & Session.Property("HDFSHOME") )
               HDFSfh.WriteLine("HDFS_NAMENODE_DIR=" & Session.Property("HDFSNAMEDIR") )
               HDFSfh.WriteLine("HDFS_DATANODE_DIR=" & Session.Property("HDFSDATADIR") )
@@ -188,6 +191,7 @@
             configNewTxt = Replace(configTxt, "RELEASE_DIR		= /usr/local/condor", "RELEASE_DIR = " & strippedPath)
             configNewTxt = Replace(configNewTxt, "LOCAL_DIR		= $$(TILDE)", "LOCAL_DIR = " & strippedPath)
             configNewTxt = Replace(configNewTxt, "#REQUIRE_LOCAL_CONFIG_FILE = TRUE", "REQUIRE_LOCAL_CONFIG_FILE = FALSE")
+            configNewTxt = Replace(configNewTxt, "LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local", "#LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local")
             
             Set Configfile = fso.OpenTextFile(path & "condor_config", 2, True)
             Configfile.WriteLine configNewTxt
@@ -219,7 +223,7 @@
 
         <!-- UI Flow + our custom dialogs -->
         <UI Id="MyWixUI_FeatureTree">
-            <UIRef Id="WixUI_FeatureTree" />
+            <UIRef Id="WixUI_InstallDir" />
             <DialogRef Id="CondorPoolCfgDlg" />
             <DialogRef Id="CondorExecCfgDlg" />
             <DialogRef Id="CondorDomainCfgDlg" />
@@ -229,7 +233,9 @@
             <DialogRef Id="CondorVMCfgDlg" />
             <DialogRef Id="CondorHDFSCfgDlg" />
             <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="CondorPoolCfgDlg" Order="2">LicenseAccepted = "1"</Publish>
-            <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="CondorHDFSCfgDlg">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="CondorHDFSCfgDlg">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg">1</Publish>
         </UI>
 
         <!--<UIRef Id="WixUI_FeatureTree" />-->

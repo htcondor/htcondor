@@ -609,12 +609,12 @@ command_query_ads( Service*, int, Stream* stream)
 
 		// Construct a list of all our ClassAds:
 	resmgr->makeAdList( &ads );
-	
+
 		// Now, find the ClassAds that match.
 	stream->encode();
 	ads.Open();
 	while( (ad = ads.Next()) ) {
-		if( IsAHalfMatch( &queryAd, ad ) ) {
+		if( IsAHalfMatchIgnoringTargetType( &queryAd, ad ) ) {
 			if( !stream->code(more) || !ad->put(*stream) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");
