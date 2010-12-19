@@ -539,6 +539,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	switch ( priv ) {
 	case PRIV_ROOT:
 		prev = set_root_priv();
+		break;
 	case PRIV_USER:
 	case PRIV_USER_FINAL:
 		prev = set_user_priv();

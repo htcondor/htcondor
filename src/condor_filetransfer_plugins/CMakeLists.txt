@@ -22,6 +22,6 @@
 
 #add_library( hdfs SHARED ${HDFSLIB} )
 
-#condor_exe( condor_hdfs_hook "${HOOK}" ${C_SBIN} "hdfs;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+#condor_exe( condor_hdfs_hook "${HOOK}" ${C_SBIN} "hdfs;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF)
 
 dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up with this? it's not in packages...")

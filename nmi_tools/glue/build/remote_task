@@ -81,21 +81,6 @@ if ($taskname eq $TAR_TASK) {
 	#Append extra argument
 	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 package && make install && make tests";
 
-} elsif  ($taskname eq $CONFIG_TASK){
-	#Reconfigure cmake variables for native package build
-	
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-	
-	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON";
-	
 } elsif  ($taskname eq $UNSTRIPPED_TASK){
 	#Reconfigure cmake variables for native package build
 
@@ -112,15 +97,40 @@ if ($taskname eq $TAR_TASK) {
 	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 package";
 } elsif  ($taskname eq $RPM_TASK){
 	#Building RPM
-	$execstr= "make -j4 package";
+
+	#Reconfigure cmake variables for native package build	
+	#Read back configuration from remote_pre stage
+	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+	while(<CMAKECONFIG>){
+		my($line) = $_;
+		$execstr = $line;
+		last;
+	}
+	close (CMAKECONFIG);
+	
+	#Append extra argument
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make -j4 package";
 
 } elsif  ($taskname eq $RPM_CHECK_TASK){
 	#Print packaging log to stdout
-	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;";
+	#List file in the package
+	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
 
 } elsif  ($taskname eq $DEB_TASK){
 	#Building Debian package
-	$execstr= "fakeroot make -j4 package";
+
+	#Reconfigure cmake variables for native package build	
+	#Read back configuration from remote_pre stage
+	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+	while(<CMAKECONFIG>){
+		my($line) = $_;
+		$execstr = $line;
+		last;
+	}
+	close (CMAKECONFIG);
+	
+	#Append extra argument
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make -j4 package";
 
 } elsif  ($taskname eq $DEB_CHECK_TASK){
 	#Print package summary

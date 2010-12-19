@@ -4771,6 +4771,10 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					char *method_used = NULL;
 					bool auth_success = sock->authenticate(the_key, auth_methods, &errstack, auth_timeout, &method_used);
 
+					if ( method_used ) {
+						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+					}
+
 					free( auth_methods );
 					free( method_used );
 
@@ -4781,6 +4785,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 								sock->peer_description(),
 								tmp_cmd,
 								comTable[cmd_index].command_descrip );
+						if( !auth_success ) {
+							dprintf( D_ALWAYS,
+									 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
+									 errstack.getFullText() );
+						}
+						result = FALSE;
+						goto finalize;
 					}
 
 					if( auth_success ) {
@@ -4803,10 +4814,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 							result = FALSE;
 							goto finalize;
 						}
-					}
-
-					if ( method_used ) {
-						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 					}
 
 				} else {
@@ -6217,6 +6224,7 @@ public:
 		int the_job_opt_mask,
 		const Env *the_env,
 		const MyString &the_inheritbuf,
+		const MyString &the_privateinheritbuf,
 		pid_t the_forker_pid,
 		time_t the_time_of_fork,
 		unsigned int the_mii,
@@ -6235,7 +6243,9 @@ public:
 		int		*affinity_mask
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
-	   m_inheritbuf(the_inheritbuf), m_forker_pid(the_forker_pid),
+	   m_inheritbuf(the_inheritbuf),
+	   m_privateinheritbuf(the_privateinheritbuf),
+	   m_forker_pid(the_forker_pid),
 	   m_time_of_fork(the_time_of_fork), m_mii(the_mii),
 	   m_family_info(the_family_info), m_cwd(the_cwd),
 	   m_executable(the_executable),
@@ -6274,6 +6284,7 @@ private:
 	const int m_job_opt_mask;
 	const Env *m_env;
 	const MyString &m_inheritbuf;
+	const MyString &m_privateinheritbuf;
 	const pid_t m_forker_pid;
 	const time_t m_time_of_fork;
 	const unsigned int m_mii;
@@ -6519,6 +6530,9 @@ void CreateProcessForkit::exec() {
 			// for this process.
 		m_envobject.SetEnv( EnvGetName( ENV_INHERIT ), m_inheritbuf.Value() );
 
+		if( !m_privateinheritbuf.IsEmpty() ) {
+			m_envobject.SetEnv( EnvGetName( ENV_PRIVATE ), m_privateinheritbuf.Value() );
+		}
 			// Make sure PURIFY can open windows for the daemons when
 			// they start. This functionality appears to only exist when we've
 			// decided to inherit the parent's environment. I'm not sure
@@ -7988,6 +8002,7 @@ int DaemonCore::Create_Process(
 			job_opt_mask,
 			env,
 			inheritbuf,
+			privateinheritbuf,
 			forker_pid,
 			time_of_fork,
 			mii,
@@ -8837,6 +8852,9 @@ DaemonCore::Inherit( void )
 #ifndef Solaris
 	const char *privEnvName = EnvGetName( ENV_PRIVATE );
 	const char *privTmp = GetEnv( privEnvName );
+	if ( privTmp != NULL ) {
+		dprintf ( D_DAEMONCORE, "Processing %s from parent\n", privEnvName );
+	}
 	if(!privTmp)
 	{
 		return;

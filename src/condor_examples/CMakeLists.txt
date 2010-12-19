@@ -56,27 +56,50 @@ install (FILES condor_limits_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${C
 
 #Prepare OS specific config file
 
-if (( ${LINUX_NAME} STREQUAL "Redhat" ) OR ( ${LINUX_NAME} STREQUAL "Fedora" ) )
+if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
-	add_custom_command( OUTPUT condor_config.patched
+
+	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )	
+		add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 						COMMAND patch 
 						ARGS condor_config.generic condor_config.generic.rpm.patch -o condor_config.patched )
 
-	add_custom_target(	patch_configurations
+		add_custom_target(	patch_configurations
 						ALL
 						DEPENDS condor_config.patched)
+		install(FILES		condor_config.patched
+				DESTINATION	"${C_ETC}"
+				RENAME	condor_config)
+	else()
+		#x86_64 use /usr/lib64 instead of /usr/lib
+		#we will apply 2 patches on condor_config file
+		add_custom_command( OUTPUT condor_config.patched
+						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						COMMAND patch 
+						ARGS condor_config.generic condor_config.generic.rpm.patch -o condor_config.patched )
 
-	install(FILES		condor_config.patched
-			DESTINATION	"${C_ETC}"
-			RENAME	condor_config)
+		add_custom_command( OUTPUT condor_config.patched.x86_64
+						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						DEPENDS condor_config.patched
+						COMMAND patch 
+						ARGS condor_config.patched condor_config.generic.rpm64.patch -o condor_config.patched.x86_64 )
+	
+		add_custom_target(	patch_configurations_x86_64
+						ALL
+						DEPENDS condor_config.patched.x86_64)
+		
+		install(FILES	condor_config.patched.x86_64
+						DESTINATION	"${C_ETC}"
+						RENAME	condor_config)					
+	endif ()					
 
 	install(FILES		condor.boot.rpm
 			DESTINATION	"${C_INIT}"
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
 			RENAME		condor)
 
-elseif ( ${LINUX_NAME} STREQUAL "Debian" )
+elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

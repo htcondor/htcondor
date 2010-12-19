@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-MACRO (CONDOR_EXE _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS )
+MACRO (CONDOR_EXE _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
 
 	add_executable( ${_CNDR_TARGET} ${_SRCS})
 
@@ -32,7 +32,9 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS )
 	# the following will install the .pdb files, some hackery needs to occur because of build configuration is not known till runtime.
 	if ( WINDOWS )		
 		# Finally, get it installed.
-		INSTALL(CODE "FILE(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" TYPE EXECUTABLE FILES \"${CMAKE_CURRENT_BINARY_DIR}/\${CMAKE_INSTALL_CONFIG_NAME}/${_CNDR_TARGET}.pdb\")")
+		if ( ${_COPY_PDBS} )
+			INSTALL(CODE "FILE(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" TYPE EXECUTABLE FILES \"${CMAKE_CURRENT_BINARY_DIR}/\${CMAKE_INSTALL_CONFIG_NAME}/${_CNDR_TARGET}.pdb\")")
+		endif ()
 		
 		set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "executables" )
 	endif( WINDOWS )

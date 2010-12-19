@@ -826,7 +826,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -862,7 +862,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -897,7 +897,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1' ],
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1', 'binutils-2.16' ],
 			'xtests'	=> undef,
 		},
 

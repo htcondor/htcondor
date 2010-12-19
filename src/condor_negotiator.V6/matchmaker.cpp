@@ -736,7 +736,7 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 
 char *
 Matchmaker::
-compute_significant_attrs(ClassAdList & startdAds)
+compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 {
 	char *result = NULL;
 
@@ -878,10 +878,10 @@ getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage
 void Matchmaker::
 negotiationTime ()
 {
-	ClassAdList startdAds;
+	ClassAdList allAds; //contains ads from collector
+	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
 	ClaimIdHash claimIds(MyStringHash);
-	ClassAdList scheddAds;
-	ClassAdList allAds;
+	ClassAdListDoesNotDeleteAds scheddAds; // ptrs to schedd ads in allAds
 	int unclaimedquota=0; 
 	int staticquota=0;
 	/**
@@ -924,17 +924,6 @@ negotiationTime ()
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
-		ClassAd *tmp;
-		startdAds.Open();
-		while ( (tmp = startdAds.Next()) ) {
-			startdAds.Remove( tmp );
-		}
-		startdAds.Close();
-		scheddAds.Open();
-		while ( (tmp = scheddAds.Next()) ) {
-			scheddAds.Remove( tmp );
-		}
-		scheddAds.Close();
 		return;
 	}
 
@@ -1192,7 +1181,7 @@ negotiationTime ()
 					schedusagetotal=scheddUsage+schedusagetotal;
 					dprintf(D_FULLDEBUG, " nongroupusers=%d schedusagetotal=%f\n",nongroupusers,schedusagetotal);	
 					groupArray[groupArrayLen].submitterAds.Insert(ad);
-					scheddAds.Delete(ad);
+					scheddAds.Remove(ad);
 				}
 			}
 			groupArray[groupArrayLen].groupName = "none\0"; 
@@ -1359,18 +1348,6 @@ negotiationTime ()
 	completedLastCycleTime = time(NULL);
 
 	negotiation_cycle_stats[0]->duration = time(NULL) - negotiation_cycle_stats[0]->start_time;
-
-	ClassAd *tmp;
-	startdAds.Open();
-	while ( (tmp = startdAds.Next()) ) {
-		startdAds.Remove( tmp );
-	}
-	startdAds.Close();
-	scheddAds.Open();
-	while ( (tmp = scheddAds.Next()) ) {
-		scheddAds.Remove( tmp );
-	}
-	scheddAds.Close();
 }
 
 Matchmaker::SimpleGroupEntry::
@@ -1392,9 +1369,9 @@ int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
 					 double minSlotWeight,
-					 ClassAdList& startdAds,
+					 ClassAdListDoesNotDeleteAds& startdAds,
 					 ClaimIdHash& claimIds, 
-					 ClassAdList& scheddAds, 
+					 ClassAdListDoesNotDeleteAds& scheddAds, 
 					 float groupQuota, float groupusage,const char* groupAccountingName)
 {
 	ClassAd		*schedd;
@@ -1718,7 +1695,7 @@ comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 }
 
 int Matchmaker::
-trimStartdAds(ClassAdList &startdAds)
+trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 {
 	int removed = 0;
 	ClassAd *ad = NULL;
@@ -1753,7 +1730,7 @@ trimStartdAds(ClassAdList &startdAds)
 }
 
 double Matchmaker::
-sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight)
+sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight)
 {
 	ClassAd *ad = NULL;
 	double sum = 0.0;
@@ -1776,8 +1753,8 @@ sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight)
 bool Matchmaker::
 obtainAdsFromCollector (
 						ClassAdList &allAds,
-						ClassAdList &startdAds, 
-						ClassAdList &scheddAds, 
+						ClassAdListDoesNotDeleteAds &startdAds, 
+						ClassAdListDoesNotDeleteAds &scheddAds, 
 						ClaimIdHash &claimIds )
 {
 	CondorQuery privateQuery(STARTD_PVT_AD);
@@ -2072,7 +2049,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 int Matchmaker::
 negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, double share,
 		   double submitterLimit,
-		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
+		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
 		   int &numMatched, double &limitUsed, double &pieLeft)
@@ -2567,7 +2544,7 @@ display to the user, or for calls to sockCache->invalidateSock.
 */
 ClassAd *Matchmaker::
 matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &request,
-					 ClassAdList &startdAds,
+					 ClassAdListDoesNotDeleteAds &startdAds,
 					 double preemptPrio, double share,
 					 double limitUsed, double submitterLimit,
 					 double pieLeft,
@@ -3058,7 +3035,7 @@ public:
 };
 
 void Matchmaker::
-insertNegotiatorMatchExprs( ClassAdList &cal )
+insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal )
 {
 	ClassAd *ad;
 	cal.Open();
@@ -3315,7 +3292,7 @@ Matchmaker::calculateSubmitterLimit(
 
 void
 Matchmaker::calculatePieLeft(
-	ClassAdList &scheddAds,
+	ClassAdListDoesNotDeleteAds &scheddAds,
 	char const *groupAccountingName,
 	float groupQuota,
 	float groupusage,
@@ -3370,7 +3347,7 @@ Matchmaker::calculatePieLeft(
 }
 
 void Matchmaker::
-calculateNormalizationFactor (ClassAdList &scheddAds,
+calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 							  double &max, double &normalFactor,
 							  double &maxAbs, double &normalAbsFactor)
 {

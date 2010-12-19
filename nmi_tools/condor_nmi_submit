@@ -625,7 +625,7 @@ Where [build-options] can be any of:
                   submit test runs based on this build.
 --version-buildid=string <Build RunId to use in the version string>
 --sha1            Place the sha1 into the database as the product_version.
---with-doc        will build condor docs too, requires local doc dir
+--skip-doc        skips doc requirement
 Where [test-options] can be any of:
 --buildid=string   <Build RunId to test>
 --test-src=string  <Custom source tarball for building tests with>
@@ -1244,7 +1244,7 @@ sub writeCommonInfo
         print $fh "configure = $opt_configure\n";
     }
 
-    print $fh "+LoadProfile = true\n";
+    print $fh "++LoadProfile = true\n";
 
 	# collect the names of the platforms, regardless of if they use the
 	# default minimal builds or not.

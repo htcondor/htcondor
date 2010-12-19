@@ -9944,3 +9944,19 @@ usage=
 url=
 tags=
 id=600
+
+[LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
+aliases=
+default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Local Config Dir Exclude Regex
+usage=
+url=
+tags=c++_util,condor_config
+id=601
