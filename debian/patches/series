@@ -1,6 +1,7 @@
 # in order of upstream compatibility and invasiveness
 lsb_compliance
 gcc_compat
+use_symlinks_for_install_clones
 postgres_fixes
 fix_sysapi_undefined_syms
 rename_duplicate_symbol
