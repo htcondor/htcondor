@@ -1,0 +1,2 @@
+debian/tmp/usr/examples/* usr/share/doc/condor-doc/examples/
+debian/tmp/usr/etc/examples/* usr/share/doc/condor-doc/examples/etc/

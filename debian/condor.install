@@ -1,8 +1,6 @@
 debian/tmp/usr/bin/* usr/bin/
 debian/tmp/usr/etc/sysconfig/* etc/default/
 debian/tmp/usr/etc/init.d etc/
-debian/tmp/usr/etc/examples/* usr/share/doc/condor/examples/etc/
-debian/tmp/usr/examples/* usr/share/doc/condor/examples/
 debian/tmp/usr/include/* usr/include/condor/
 debian/tmp/usr/lib/* usr/lib/condor/
 debian/tmp/usr/libexec/* usr/lib/condor/libexec/
