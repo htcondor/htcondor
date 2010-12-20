@@ -629,6 +629,9 @@ and a group user has a submitted job that is not running,
 the \Macro{GROUP\_AUTOREGROUP} macro allows the job to be
 considered a second time within the negotiation cycle
 along with all other individual users' jobs.
+The user name that is used for accounting and prioritization purposes
+is still the group user as specified by \AdAttr{AccountingGroup} in
+the job ClassAd.
 
 \begin{verbatim}
   ####################
