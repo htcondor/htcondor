@@ -2309,6 +2309,166 @@ and more than one specifies a node status file,
 the first specification takes precedence.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGJobstateLog}The jobstate.log file}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!jobstate.log file}
+
+The \File{jobstate.log} file is designed for use by the Pegasus Workflow
+Management System, which operates as a layer on top of DAGMan.  Pegasus
+uses the \File{jobstate.log} file to monitor the state of a workflow.
+The \File{jobstate.log} file might also be useful to anyone else
+who wants to build an automated tool to monitor workflows.
+
+The syntax for a \Arg{JOBSTATE\_LOG} specification is
+
+\Opt{JOBSTATE\_LOG} \Arg{JobstateLogFileName}
+
+No more than one \File{jobstate.log} file can be created by a single
+instance of DAGMan.  If more than one \File{jobstate.log} file is
+specified (via multiple specifications in the same DAG file,
+specifications in splices, or specifications in multiple independent
+DAGs run with a single DAGMan) the first file name specified will take
+effect, and a warning will be printed in the \File{dagman.out} file
+when subsequent \Opt{JOBSTATE\_LOG} specifications are parsed.
+
+The \File{jobstate.log} file can basically be considered a filtered
+version of the \File{dagman.out} file, in a machine-readable format.
+It contains the actual node job events that \Condor{dagman} reads,
+plus some additional meta-events.
+
+The \File{jobstate.log} file is different from the node status file
+in that it is appended to, rather than being overwritten, as the
+DAG runs.  Therefore, it contains a history of the DAG run, rather
+than a snapshot of the current state of the DAG.
+
+The format of the lines in the \File{jobstate.log} file is as follows
+(the timestamp is in the Unix form of seconds since the Epoch, for
+easy machine-readability):
+\begin{itemize}
+\item Normal: \Arg{timestamp} \Arg{nodeName} \Arg{eventName}
+\Arg{condorID} \Arg{jobTag} - \Arg{sequenceNumber}
+\item DAGMan start: \Arg{timestamp} INTERNAL *** DAGMAN\_STARTED
+\Arg{dagmanCondorID} ***
+\item DAGMan exit: \Arg{timestamp} INTERNAL *** DAGMAN\_FINISHED
+\Arg{exitCode} ***
+\item Recovery started: \Arg{timestamp} INTERNAL *** RECOVERY\_STARTED ***
+\item Recovery finished: \Arg{timestamp} INTERNAL *** RECOVERY\_FINISHED ***
+\end{itemize}
+
+The \Arg{jobTag} value is obtained from the node job's submit file (if
+no jobTag value is specified, the value will default to "-").
+The jobTag value is specified in a classad attribute specified by the
+value of the job\_tag\_name classad attribute, like this:
+
+\begin{verbatim}
++job_tag_name = "+job_tag_value"
++job_tag_value = "viz"
+\end{verbatim}
+
+If no job\_tag\_name value is specified, the value defaults to
+"+pegasus\_site", like this:
+
+\begin{verbatim}
++pegasus_site = "local"
+\end{verbatim}
+
+Here's an example of a very simple \File{jobstate.log} file:
+
+\begin{verbatim}
+1292620511 INTERNAL *** DAGMAN_STARTED 4972.0 ***
+1292620523 NodeA PRE_SCRIPT_STARTED - local - 1
+1292620523 NodeA PRE_SCRIPT_SUCCESS - local - 1
+1292620525 NodeA SUBMIT 4973.0 local - 1
+1292620525 NodeA EXECUTE 4973.0 local - 1
+1292620526 NodeA JOB_TERMINATED 4973.0 local - 1
+1292620526 NodeA JOB_SUCCESS 0 local - 1
+1292620526 NodeA POST_SCRIPT_STARTED 4973.0 local - 1
+1292620531 NodeA POST_SCRIPT_TERMINATED 4973.0 local - 1
+1292620531 NodeA POST_SCRIPT_SUCCESS 4973.0 local - 1
+1292620535 INTERNAL *** DAGMAN_FINISHED 0 ***
+\end{verbatim}
+
+If DAGMan goes into recovery mode, a RECOVERY\_STARTED meta-event will
+be printed to the \File{jobstate.log} file.  During recovery mode, events
+will only be printed to the \File{jobstate.log} file if they were not
+already printed (before recovery mode started).  At the end of recovery
+mode, a RECOVERY\_FINISHED or RECOVERY\_FAILURE meta-event will be
+printed, as appropriate.
+
+The sequence number is a monotonically-increasing number, starting
+at one, that is associated with each attempt at running a node.
+(If a node is retried, it gets a new sequence number; a submit failure
+does not result in a new sequence number.)  When a rescue DAG is run,
+the sequence numbers pick up from where they left off in the previous
+attempt at running the DAG (note that this only applies if the rescue
+DAG is run automatically or with the \Arg{-dorescuefrom} command-line
+flag).
+
+Node job events read in recovery mode will only be printed if they were
+not previously printed (before recovery mode started).
+
+Following is a list of all possible "real" events and meta-events that
+can be found in the \File{jobstate.log} file.
+
+"Real" events:
+\begin{itemize}
+\item SUBMIT
+\item EXECUTE
+\item EXECUTABLE\_ERROR
+\item CHECKPOINTED
+\item JOB\_EVICTED
+\item JOB\_TERMINATED
+\item IMAGE\_SIZE
+\item SHADOW\_EXCEPTION
+\item GENERIC
+\item JOB\_ABORTED
+\item JOB\_SUSPENDED
+\item JOB\_UNSUSPENDED
+\item JOB\_HELD
+\item JOB\_RELEASED
+\item NODE\_EXECUTE
+\item NODE\_TERMINATED
+\item POST\_SCRIPT\_TERMINATED
+\item GLOBUS\_SUBMIT
+\item GLOBUS\_SUBMIT\_FAILED
+\item GLOBUS\_RESOURCE\_UP
+\item GLOBUS\_RESOURCE\_DOWN
+\item REMOTE\_ERROR
+\item JOB\_DISCONNECTED
+\item JOB\_RECONNECTED
+\item JOB\_RECONNECT\_FAILED
+\item GRID\_RESOURCE\_UP
+\item GRID\_RESOURCE\_DOWN
+\item GRID\_SUBMIT
+\item JOB\_AD\_INFORMATION
+\item JOB\_STATUS\_UNKNOWN
+\item JOB\_STATUS\_KNOWN
+\item JOB\_STAGE\_IN
+\item JOB\_STAGE\_OUT
+\end{itemize}
+
+Meta-events:
+\begin{itemize}
+\item SUBMIT\_FAILURE
+\item JOB\_SUCCESS
+\item JOB\_FAILURE
+\item PRE\_SCRIPT\_STARTED
+\item PRE\_SCRIPT\_SUCCESS
+\item PRE\_SCRIPT\_FAILURE
+\item POST\_SCRIPT\_STARTED
+\item POST\_SCRIPT\_SUCCESS
+\item POST\_SCRIPT\_FAILURE
+\item DAGMAN\_STARTED
+\item DAGMAN\_FINISHED
+\item RECOVERY\_STARTED
+\item RECOVERY\_FINISHED
+\item RECOVERY\_FAILURE
+\end{itemize}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGLotsaJobs}Utilizing the Power of DAGMan for Large Numbers of Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!large numbers of jobs}
