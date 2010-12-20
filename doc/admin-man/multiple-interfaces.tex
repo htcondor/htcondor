@@ -13,7 +13,7 @@ Starting with Condor version 6.7.13
 (and therefore all Condor 6.8 and more recent versions),
 new functionality is
 available that allows even better support for multi-homed
-machines, using the configuration variable \MacroNI{BIND\_ALL\_INTERFACES}.
+machines, using the configuration variable \Macro{BIND\_ALL\_INTERFACES}.
 A multi-homed machine is one that has more than one
 NIC (Network Interface Card).
 Further improvements to this new functionality will remove the need
@@ -113,10 +113,11 @@ Here are descriptions of the limitations.
   advertise so that other daemons and tools can connect to it.
 
   By default, Condor advertises the IP address of the network interface
-  used to contact the collector as its public address, since this is the most likely to be
-  accessible to other processes that query the same collector.
-  The \Macro{NETWORK\_INTERFACE} setting can be used to specify the
-  public IP address Condor should advertise, and
+  used to contact the \Condor{collector} as its public address,
+  since this is the most likely to be
+  accessible to other processes that query the same \Condor{collector}.
+  The \Macro{NETWORK\_INTERFACE} configuration variable can be used 
+  to specify the public IP address Condor should advertise, and
   \Macro{PRIVATE\_NETWORK\_INTERFACE}, along with
   \Macro{PRIVATE\_NETWORK\_NAME} can be used to specify the
   private IP address to advertise.
@@ -124,8 +125,8 @@ Here are descriptions of the limitations.
 \end{description}
 
 Sites that make heavy use of private networks and multi-homed machines
-should consider if using the Condor Connection Broker, CCB is
-right for them.
+should consider if using the Condor Connection Broker, CCB,
+is right for them.
 More information about CCB and Condor can be found in
 section~\ref{sec:CCB} on page~\pageref{sec:CCB}.
 
@@ -134,9 +135,9 @@ section~\ref{sec:CCB} on page~\pageref{sec:CCB}.
 \subsubsection{Central Manager with Two or More NICs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Often users of Condor wish to set up ``compute farms'' where there is one
+Often users of Condor wish to set up compute farms where there is one
 machine with two network interface cards (one for the public Internet,
-and one for the private net). It is convenient to set up the ``head''
+and one for the private net). It is convenient to set up the head
 node as a central manager in most cases and so here are the instructions
 required to do so.
 
@@ -150,34 +151,39 @@ incorrectly configured.
 Given that the interfaces are up and functioning, and they have good
 host/domain names associated with them here is how to configure Condor:
 
-In this example, \Bold{farm-server.farm.org} maps to the private interface.
+In this example, \Expr{farm-server.farm.org} maps to the private interface.
+In the central manager's global (to the cluster) configuration file:
+\begin{verbatim}
+CONDOR_HOST = farm-server.farm.org
+\end{verbatim}
 
-On the central manager's global (to the cluster) configuration file: \\
-\Macro{CONDOR\_HOST} = \Bold{farm-server.farm.org}
+In the central manager's local configuration file:
+\begin{verbatim}
+NETWORK_INTERFACE = <IP address of farm-server.farm.org>
+NEGOTIATOR = $(SBIN)/condor_negotiator
+COLLECTOR = $(SBIN)/condor_collector
+DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD
+\end{verbatim}
 
-On your central manager's local configuration file: \\
-\MacroNI{NETWORK\_INTERFACE} = ip address of \Bold{farm-server.farm.org} \\
-\MacroNI{NEGOTIATOR} = \MacroUNI{SBIN}/condor\_negotiator \\
-\MacroNI{COLLECTOR} = \MacroUNI{SBIN}/condor\_collector \\
-\MacroNI{DAEMON\_LIST} = \MacroNI{MASTER}, \MacroNI{COLLECTOR}, \MacroNI{NEGOTIATOR}, \MacroNI{SCHEDD}, \MacroNI{STARTD}
-
-If your central manager and farm machines are all NT, then you only have
-vanilla universe and it will work now.  However, if you have this setup
-for UNIX, then at this point, standard universe jobs should be able to
-function in the pool, but if you did not configure the \Macro{UID\_DOMAIN}
-macro to be homogeneous across the farm machines, the standard universe
-jobs will run as \Bold{nobody} on the farm machines.
+If the central manager and farm machines are all NT, then only
+vanilla universe will work now.  However, if this is set up
+for Unix, then at this point, standard universe jobs should be able to
+function in the pool.
+But, if \Macro{UID\_DOMAIN} is not configured
+to be homogeneous across the farm machines, the standard universe
+jobs will run as \Login{nobody} on the farm machines.
 
 In order to get vanilla jobs and file server load balancing for standard
 universe jobs working (under Unix), do some more work both in
 the cluster you have put together and in Condor to make everything work.
 First, you need a file server (which could also be the central manager) to
-serve files to all of the farm machines. This could be NFS or AFS, it does
-not really matter to Condor. The mount point of the directories you wish
+serve files to all of the farm machines. This could be NFS or AFS, 
+and it does not really matter to Condor. 
+The mount point of the directories you wish
 your users to use must be the same across all of the farm machines. Now,
 configure \Macro{UID\_DOMAIN} and \Macro{FILESYSTEM\_DOMAIN} to be
-homogeneous across the farm machines and the central manager. Now, you
-will have to inform Condor that an NFS or AFS file system exists and that
+homogeneous across the farm machines and the central manager. 
+Inform Condor that an NFS or AFS file system exists and that
 is done in this manner. In the global (to the farm) configuration file:
 
 \begin{verbatim}
@@ -189,11 +195,12 @@ USE_AFS = True
 # if you want both NFS and AFS, then enable both sets above
 \end{verbatim}
 
-Now, if you've set up your cluster so that it is possible for a machine
-name to never have a domain name (for example: there is machine
-name but no fully qualified domain name in \File{/etc/hosts}), you must
-configure \Macro{DEFAULT\_DOMAIN\_NAME} to be the domain that you wish
-to be added on to the end of your host name.
+Now, if the cluster is set up so that it is possible for a machine
+name to never have a domain name
+(for example, there is machine
+name but no fully qualified domain name in \File{/etc/hosts}),
+configure \Macro{DEFAULT\_DOMAIN\_NAME} to be the domain that is
+to be added on to the end of the host name.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
