@@ -422,7 +422,7 @@ our %submit_info = (
 				'x86_64_ubuntu_10.04',
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
-				'x86_64_fedora_11' ],
+				'x86_64_fedora_11', 'x86_64_fedora_13-updated' ],
 		},
 
 		'test' => {
@@ -853,6 +853,24 @@ our %submit_info = (
 	# This might work.
 	##########################################################################
 	'x86_64_fedora_13'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Fedora 13 with updates on x86_64
+	# This might work.
+	##########################################################################
+	'x86_64_fedora_13-updated'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],

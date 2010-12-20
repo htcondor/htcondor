@@ -17,28 +17,30 @@
  ############################################################### 
 
 
-if (NOT WINDOWS)
-  option(WITH_CURL "Compiling with support for CURL" ON)
-endif(NOT WINDOWS)
+option(WITH_CURL "Compiling with support for CURL" ON)
 
 if (WITH_CURL)
 
 	if ( NOT PROPER )
 
 		if (WINDOWS)
-			set (CURL_CONFIGURE echo "Nothing to configure" )
-			set (CURL_MAKE nmake -f Makefile.vc9 CFG=release-ssl )
-			set (CURL_INSTALL cp -f lib\lib*.lib ${EXTERNAL_STAGE}\lib && cp -rf include\curl ${EXTERNAL_STAGE}\include )
+			set (CURL_CONFIGURE echo "Nothing to configure")
+			set (CURL_MAKE pushd "lib" ${CMD_TERM}
+						nmake -f Makefile.vc9 CFG=release-ssl WINDOWS_SDK_PATH="${WIN_SDK_PATH}" OPENSSL_PATH="${EXTERNAL_STAGE}" ${CMD_TERM}
+						popd ${CMD_TERM})
+			set (CURL_DEPENDS openssl)
+			set (CURL_INSTALL cp -f lib/lib*.lib ${EXTERNAL_STAGE}/lib && cp -rf include/curl ${EXTERNAL_STAGE}/include )
 		else()
 			set (CURL_CONFIGURE PKG_CONFIG_PATH=${EXTERNAL_STAGE} LIBS=-ldl ./configure --prefix=${EXTERNAL_STAGE} --with-ssl=${EXTERNAL_STAGE} --disable-shared --disable-ipv6 )
 			set (CURL_MAKE make)
 			set (CURL_INSTALL make install)
+			set (CURL_DEPENDS openssl zlib)
 		endif()
 
 		set (CURL_VER curl-7.19.6)
 
 		ExternalProject_Add(curl
-							DEPENDS openssl zlib
+							DEPENDS ${CURL_DEPENDS}
 							PREFIX ${EXTERNAL_BUILD_PREFIX}/${CURL_VER}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CURL_VER}.tar.gz ${CMD_TERM}
