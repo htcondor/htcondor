@@ -79,6 +79,34 @@ override_dh_auto_install:
 		debian/tmp/usr/sbin/condor_cleanup* \
 		debian/tmp/usr/sbin/install_release \
 		debian/tmp/usr/sbin/cleanup_release
+	# place condor config file with default Debian config
+	sed -e 's,^\(CONDOR_HOST\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
+		-e 's,^\(RELEASE_DIR\s*=\).*,\1 /usr,' \
+		-e 's,^\(LOCAL_DIR\s*=\).*,\1 /var,' \
+		-e 's,^\(LOCAL_CONFIG_FILE\s*=\).*,\1 /etc/condor/config.local,' \
+		-e 's,^\(LOCAL_CONFIG_DIR\s*=\).*,\1 /etc/condor/config.d,' \
+		-e 's,^[#]*\(REQUIRE_LOCAL_CONFIG_FILE\s*=\).*,\1 FALSE,'  \
+		-e 's,^\(CONDOR_ADMIN\s*=\).*,\1 root@localhost,' \
+		-e 's,^\(UID_DOMAIN\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
+		-e 's,^\(FILESYSTEM_DOMAIN\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
+		-e 's,^\(COLLECTOR_NAME\s*=\).*,\1 Debian Condor Pool,' \
+		-e 's,^\(ALLOW_WRITE\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
+		-e 's/^\(DAEMON_LIST\s*=\).*/\1 MASTER, STARTD, SCHEDD, COLLECTOR, NEGOTIATOR/' \
+		-e 's,^\(LOCK\s*=\).*,\1 \$$(LOCAL_DIR)/lock/condor,' \
+		-e 's,^\(LOG\s*=\).*,\1 \$$(LOCAL_DIR)/log/condor,' \
+		-e 's,^\(SPOOL\s*=\).*,\1 \$$(LOCAL_DIR)/spool/condor,' \
+		-e 's,^\(EXECUTE\s*=\).*,\1 \$$(LOCAL_DIR)/execute/condor,' \
+		-e 's,^\(LIB\s*=\).*,\1 \$$(RELEASE_DIR)/lib/condor,' \
+		-e 's,^\(INCLUDE\s*=\).*,\1 \$$(RELEASE_DIR)/include/condor,' \
+		-e 's,^\(LIBEXEC\s*=\).*,\1 \$$(RELEASE_DIR)/lib/condor\libexec,' \
+		-e 's,^\(SHARE\s*=\).*,\1 \$$(RELEASE_DIR)/share/condor,' \
+		-e '/^LOG\s*=/a\RUN\t\t= \$$(LOCAL_DIR)/run/condor' \
+		-e 's,^\(PROCD_ADDRESS\s*=\).*,\1 \$$(RUN)/procd_pipe,' \
+		< debian/tmp/usr/etc/examples/condor_config \
+		> debian/condor/etc/condor/condor_config
+	# and now Debian's init script
+	sed -e 's,/etc/sysconfig/condor,/etc/default/condor,g' \
+		< debian/tmp/usr/etc/init.d/condor > debian/condor/etc/init.d/condor
 
 
 override_dh_auto_clean:
@@ -95,9 +123,10 @@ override_dh_auto_clean:
 		src/condor_tests/batch_test.pl
 	-rm src/condor_utils/param_info.c
 	# docs
-	$(MAKE) -C doc/doc clean
+	$(MAKE) -C doc/doc reallyclean
 	-rm -rf doc/doc/just-man-pages
 	-rm -rf doc/build
+	-rm -f doc/doc/symbol.tex doc/doc/figuresizing.tex doc/doc/fontsize.tex
 
 
 # PDF come in dedicated doc package -- no compression

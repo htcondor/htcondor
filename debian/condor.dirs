@@ -1,2 +1,3 @@
 etc/condor/config.d
+etc/init.d
 var/lib/condor
