@@ -27,7 +27,9 @@ if (${_CNDR_TARGET}LinkLibs)
 	endif()
 
 	 if ( NOT WINDOWS )
-		if (DARWIN OR AIX)
+		# This should really test for whether the gnu linker
+		# is being used
+		if (DARWIN OR AIX OR SOLARIS)
 			target_link_libraries( ${_CNDR_TARGET} ${${_CNDR_TARGET}LinkLibs} ${${_CNDR_TARGET}LinkLibs}  )
 		else()
 	 		target_link_libraries( ${_CNDR_TARGET} -Wl,--start-group ${${_CNDR_TARGET}LinkLibs} -Wl,--end-group )
