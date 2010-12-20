@@ -341,7 +341,9 @@ VanillaProc::ShutdownGraceful()
 	// OsProc::ShutdownGraceful does, so call it.
 	//
 	OsProc::ShutdownGraceful();
+#if !defined(WIN32)
 	startEscalationTimer();
+#endif
 	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
 }
 
