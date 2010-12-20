@@ -1,5 +1,3 @@
-diff --git a/src/condor_job_router/CMakeLists.txt b/src/condor_job_router/CMakeLists.txt
-index c6df68e..15a456e 100644
 --- a/src/condor_job_router/CMakeLists.txt
 +++ b/src/condor_job_router/CMakeLists.txt
 @@ -18,7 +18,7 @@
@@ -11,8 +9,6 @@ index c6df68e..15a456e 100644
  
  condor_glob(JRHdrs JRSrcs "VanillaToGrid_main.cpp")
  
-diff --git a/src/condor_tools/load_history.cpp b/src/condor_tools/load_history.cpp
-index d462078..fd8db0c 100644
 --- a/src/condor_tools/load_history.cpp
 +++ b/src/condor_tools/load_history.cpp
 @@ -40,8 +40,8 @@
@@ -26,8 +22,6 @@ index d462078..fd8db0c 100644
  #include "dbms_utils.h"
  #include "subsystem_info.h"
  
-diff --git a/src/condor_utils/dbms_utils.cpp b/src/condor_utils/dbms_utils.cpp
-index 8c3fca2..8e02ad9 100644
 --- a/src/condor_utils/dbms_utils.cpp
 +++ b/src/condor_utils/dbms_utils.cpp
 @@ -27,8 +27,8 @@

@@ -7,11 +7,9 @@ Description: Make symlinks to binaries instead of installing copies for
  same directory. The author decided to address that with another symlink from
  /usr/bin/condor to /usr/sbin/condor, instead of moving to absolute symlink
  locations.
-diff --git a/build/cmake/CloneInstall.cmake b/build/cmake/CloneInstall.cmake
-index b4a641c..c0221d0 100644
 --- a/build/cmake/CloneInstall.cmake
 +++ b/build/cmake/CloneInstall.cmake
-@@ -26,7 +26,13 @@ MACRO (CLONE_INSTALL _ORIG_TARGET _NEWNAMES _INSTALL_LOC )
+@@ -26,7 +26,13 @@
  	endif( WINDOWS )
  
  	foreach ( new_target ${_NEWNAMES} )
