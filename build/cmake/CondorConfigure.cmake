@@ -51,6 +51,10 @@ elseif(${OS_NAME} MATCHES "WIN")
 
 	set( CMAKE_INSTALL_PREFIX "C:/condor_test/${VERSION}")
 	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
+	
+	get_filename_component(WIN_SDK_VER "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Microsoft SDKs\\Windows;CurrentVersion]" NAME)
+	get_filename_component(WIN_SDK_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Microsoft SDKs\\Windows\\${WIN_SDK_VER};InstallationFolder]" ABSOLUTE)
+	dprint("Path to Windows SDK: ${WIN_SDK_PATH}")
 endif()
 
 message(STATUS "***********************************************************")
@@ -376,6 +380,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 
 if (NOT WIN_EXEC_NODE_ONLY)
@@ -385,8 +390,7 @@ if (NOT WIN_EXEC_NODE_ONLY)
 endif(NOT WIN_EXEC_NODE_ONLY)
 
 if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)	
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
