@@ -65,10 +65,12 @@ if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     
     print "Unzipping results.tar.gz\n";
     system("tar -xzf $results");
-    print "Moving public/* to $BaseDir";
+    print "Moving public/* to $BaseDir\n";
     system("mv public/* $BaseDir");
 
     print "All steps completed successfully\n";
+	print "Currently in $BaseDir which contains the following:\n";
+	system("ls -l");
     exit 0;
 }
 
