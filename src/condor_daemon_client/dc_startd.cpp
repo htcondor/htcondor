@@ -872,6 +872,68 @@ DCStartd::checkVacateType( VacateType t )
 	return true;
 }
 
+bool
+DCStartd::getSandboxLocation(std::string sId, std::string &location)
+{
+
+	bool  result;
+	int cmd = GET_SANDBOX_INFO;
+
+	ReliSock reli_sock;
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr) ) {
+		MyString err = "DCStartd::getSandboxLocation: ";
+		err += "Failed to connect to startd (";
+		err += _addr;
+		err += ')';
+		newError( CA_CONNECT_FAILED, err.Value() );
+		return false;
+	}
+	result = startCommand( cmd, (Sock*)&reli_sock ); 
+	if( ! result ) {
+		MyString err = "DCStartd::getSandboxLocation: ";
+		err += "Failed to send command ";
+		err += "GET_SANDBOX_INFO";
+		err += " to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	
+	if( ! reli_sock.code(sId) ) {
+		MyString err = "DCStartd::getSandboxLocation: ";
+		err += "Failed to send sandbox ID to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	if( ! reli_sock.end_of_message() ) {
+		MyString err = "DCStartd::getSandboxLocation: ";
+		err += "Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	
+	reli_sock.decode();
+
+	if( !reli_sock.code(location)  ) {
+		MyString err = "DCStartd::dgetSandboxLocation: "
+		               "failed to receive reply from startd (2)";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		printf("reply fail ... \n");
+		return CONDOR_ERROR;
+	}
+
+	if ( !reli_sock.end_of_message() ) {
+		MyString err = "DCStartd::getSandboxLocation: "
+		               "end of message error from startd (2)";
+		newError( CA_COMMUNICATION_ERROR, err.Value() ); 
+		printf("EOM fail ... \n");
+		return CONDOR_ERROR;
+	}
+		
+	printf("DC Startd ... %s  \n", location.c_str());
+	return true;
+}
+
 DCClaimIdMsg::DCClaimIdMsg( int cmd, char const *claim_id ):
 	DCMsg( cmd )
 {

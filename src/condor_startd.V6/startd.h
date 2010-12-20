@@ -72,6 +72,9 @@ class Resource;
 #include "cod_mgr.h"
 #include "startd_cronmgr.h"
 
+#include "sandbox.h"
+#include "sandbox_manager.h"
+
 static const int MAX_STARTERS = 10;
 
 #ifndef _STARTD_NO_DECLARE_GLOBALS
@@ -136,6 +139,8 @@ extern	int		pid_snapshot_interval;
 extern  int main_reaper;
 
 extern StartdCronMgr* Cronmgr;
+
+extern CSandboxManager* sandMan; // the sandbox manager
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 

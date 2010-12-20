@@ -17,7 +17,9 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "sandbox_manager.h"
+#include "util_lib_proto.h"
 #include <string>
 #include <iostream>
 using namespace std;
@@ -48,6 +50,7 @@ CSandboxManager::~CSandboxManager()
 char*
 CSandboxManager::registerSandbox(const char* sDir)
 {
+	dprintf(D_ALWAYS, "CSandboxManager::registerSandbox called \n");
 	cout << "CSandboxManager::registerSandbox called" << endl;
 	CSandbox *sandbox = new CSandbox(sDir);
 	this->sandboxMap[sandbox->getId()] = sandbox;
@@ -55,11 +58,15 @@ CSandboxManager::registerSandbox(const char* sDir)
 }
 
 
-int
+string
 CSandboxManager::transferSandbox(const char* sid)
 {
-	cout << "CSandboxManager::transferSandbox called" << endl;
-	return 1;
+	string s_sid(sid);
+	if (sandboxMap.find(s_sid) != sandboxMap.end())
+		return sandboxMap[s_sid]->getSandboxDir();
+	return "(NULL)";
+	//cout << "CSandboxManager::transferSandbox called" << endl;
+	//return 1;
 }
 
 
@@ -127,6 +134,25 @@ CSandboxManager::unregisterAllSandboxes(void)
 	for (iter = sandboxMap.begin(); iter != sandboxMap.end(); ++iter) {
 		this->unregisterSandbox(iter->first);
 	}
+}
+
+////////////////
+
+void 
+CSandboxManager::initIterator(void)
+{
+	this->m_iter = this->sandboxMap.begin();
+}
+	
+std::string 
+CSandboxManager::getNextSandboxId(void) 
+{
+	this->m_iter++;
+	if (this->m_iter == this->sandboxMap.end())
+		return "";
+	return this->m_iter->first;
+	
+
 }
 
 

@@ -17,18 +17,12 @@
  ############################################################### 
 
 
-if (DARWIN)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit -framework Carbon")
-endif()
+condor_glob( csmHdrs csmSrcs "" )
 
-file( GLOB startdRmvElements Example* *.t.* glexec_wrapper*)
+condor_static_lib( condor_sandbox "${csmHdrs};${csmSrcs}" )
 
-condor_daemon( startd "${startdRmvElements}"
-"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};condor_sandbox" "${C_SBIN}" OFF)
+#condor_exe( test_sandbox_manager "${csmHdrs};${csmSrcs}" ${C_BIN} "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND}")
 
-if (LINUX AND GLOBUS_FOUND)
-  condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" )
-  install (FILES glexec_starter_setup.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-endif()
+
 
 

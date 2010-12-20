@@ -23,42 +23,13 @@
 
 //#include "condor_daemon_core.h"
 //#include "list.h"
-#include "dc_collector.h"
-#include "condor_classad.h"
-#include "condor_adtypes.h"
-#include "condor_debug.h"
-#include "condor_attributes.h"
-#include "util_lib_proto.h"
-#include "internet.h"
-#include "my_hostname.h"
-#include "condor_state.h"
-#include "condor_string.h"
-#include "string_list.h"
-#include "MyString.h"
-#include "get_full_hostname.h"
-#include "condor_random_num.h"
-#include "../condor_procapi/procapi.h"
-#include "misc_utils.h"
-#include "get_daemon_name.h"
-#include "enum_utils.h"
-#include "condor_version.h"
-#include "classad_command_util.h"
+
 #include "sandbox.h"
 #include <string>
 #include <iostream>
 #include <map>
 #include <vector>
 using namespace std;
-
-/*
-#include "../condor_starter.V6.1/user_proc.h"
-#include "../condor_starter.V6.1/job_info_communicator.h"
-#include "../condor_starter.V6.1/condor_privsep_helper.h"
-
-#if defined(LINUX)
-#include "../condor_starter.V6.1/glexec_privsep_helper.h"
-#endif
-*/
 
 
 /*
@@ -86,7 +57,7 @@ public:
 	virtual char* registerSandbox(const char*);
 
 	// Given the sandboxId give the handle to the sandbox location
-	virtual int transferSandbox(const char*);
+	virtual string transferSandbox(const char*);
 
 	// Return a list of ids containing expired sandboxes
 	virtual std::vector<string> getExpiredSandboxIds(void);
@@ -102,6 +73,12 @@ public:
 
 	// Unregister all sandboxes
 	virtual void unregisterAllSandboxes(void);
+	
+	// not sure whether we will need the following two functions in the long run, but for now it's useful.
+	
+	virtual void initIterator(void);
+	
+	virtual std::string getNextSandboxId(void);
 
 protected:
 
@@ -112,6 +89,9 @@ private:
 	std::map<string, CSandbox*>sandboxMap;
 	
 	void init(void);
+	
+	std::map<std::string ,CSandbox*>::iterator m_iter;
+
 };
 #endif
 

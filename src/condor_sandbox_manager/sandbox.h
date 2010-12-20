@@ -21,31 +21,10 @@
 #if !defined(_CONDOR_SANDBOX_H)
 #define _CONDOR_SANDBOX_H
 
-//#include "condor_daemon_core.h"
-//#include "list.h"
-#include "dc_collector.h"
-#include "condor_classad.h"
-#include "condor_adtypes.h"
-#include "condor_debug.h"
-#include "condor_attributes.h"
-#include "util_lib_proto.h"
-#include "internet.h"
-#include "my_hostname.h"
-#include "condor_state.h"
-#include "condor_string.h"
-#include "string_list.h"
-#include "MyString.h"
-#include "get_full_hostname.h"
 #include "condor_random_num.h"
-#include "../condor_procapi/procapi.h"
-#include "misc_utils.h"
-#include "get_daemon_name.h"
-#include "enum_utils.h"
-#include "condor_version.h"
-#include "classad_command_util.h"
 #include <string>
 #include <sstream>
-//#include<stringstream>
+
 
 using namespace std;
 
