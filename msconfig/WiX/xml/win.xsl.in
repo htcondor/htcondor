@@ -191,7 +191,7 @@
             configNewTxt = Replace(configTxt, "RELEASE_DIR		= /usr/local/condor", "RELEASE_DIR = " & strippedPath)
             configNewTxt = Replace(configNewTxt, "LOCAL_DIR		= $$(TILDE)", "LOCAL_DIR = " & strippedPath)
             configNewTxt = Replace(configNewTxt, "#REQUIRE_LOCAL_CONFIG_FILE = TRUE", "REQUIRE_LOCAL_CONFIG_FILE = FALSE")
-            configNewTxt = Replace(configNewTxt, "LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local", "#LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local")
+            configNewTxt = Replace(configNewTxt, "LOCAL_CONFIG_FILE	= $$(LOCAL_DIR)/condor_config.local", "#LOCAL_CONFIG_FILE	= $$(LOCAL_DIR)/condor_config.local")
             
             Set Configfile = fso.OpenTextFile(path & "condor_config", 2, True)
             Configfile.WriteLine configNewTxt
