@@ -36,4 +36,4 @@ set
 @echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
 devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
 REM if the build failed, we don't want to continue, just exit the cmd shell and return the error
-if %ERRORLEVEL% exit %ERRORLEVEL%
+if ERRORLEVEL 1 exit %ERRORLEVEL%
