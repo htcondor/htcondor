@@ -7027,7 +7027,10 @@ The following configuration macros affect negotiation for group users.
   also negotiate a second time with the \verb@none@ group,
   to be considered with the independent job submitters. 
   This allows group submitted jobs to be matched with idle machines
-  even if the group is over its quota.
+  even if the group is over its quota.  The user name that is
+  used for accounting and prioritization purposes is still
+  the group user as specified by \AdAttr{AccountingGroup}
+  in the job ClassAd.
 
 \label{param:GroupAutoregroupGroupname}
 \item[\Macro{GROUP\_AUTOREGROUP\_<groupname>}]
