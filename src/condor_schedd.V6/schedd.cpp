@@ -6421,9 +6421,20 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		args.AppendArg(job_id->proc);
 	}
 
+	bool want_udp = true;
+#ifndef WIN32
+		// To save memory in the shadow, do not create a UDP command
+		// socket under unix.  Windows doesn't _need_ UDP either,
+		// because signals can be delivered via TCP, but the
+		// performance impact of doing that has not been measured.
+		// Under unix, all common signals are delivered via unix
+		// signals.
+
+	want_udp = false;
+#endif
 
 	rval = spawnJobHandlerRaw( srec, shadow_path, args, NULL, "shadow",
-							   sh_is_dc, sh_reads_file );
+							   sh_is_dc, sh_reads_file, want_udp );
 
 	free( shadow_path );
 
@@ -6535,28 +6546,17 @@ Scheduler::tryNextJob()
 bool
 Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path, 
 							   ArgList const &args, Env const *env, 
-							   const char* name, bool is_dc, bool wants_pipe )
+							   const char* name, bool is_dc, bool wants_pipe,
+							   bool want_udp)
 {
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
 	ClassAd* job_ad = NULL;
 	int create_process_opts = 0;
 
-#ifndef WIN32
-		// Unix shadows do not need a UDP command socket, because all
-		// common signals are delivered via unix signals, and exotic
-		// DC signals can go via TCP as long as care is taken to use
-		// the non-blocking signal interface.  This saves enough
-		// memory that it is worth optimizing.
-
-	// FIXME!  This is a short term hack
-	//  The shadow can deal with not having a UDP port.  Right now
-	//  the starter needs one, and we can spawn a starter here
-	//  for local universe
-	if (strcmp(name, "starter") != 0) {
+	if (!want_udp) {
 		create_process_opts |= DCJOBOPT_NO_UDP;
 	}
-#endif
 
 	Env extra_env;
 	if( ! env ) {
@@ -6994,7 +6994,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_env.SetEnv(execute_env.Value(),LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
-							   &starter_env, "starter", true, true );
+							   &starter_env, "starter", true, true, true );
 
 	free( starter_path );
 	starter_path = NULL;
