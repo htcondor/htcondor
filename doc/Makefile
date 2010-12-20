@@ -3,6 +3,7 @@ SUBVER = V7_5_6
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 LOCALDIR = ref-master
+MANPAGES = cleanup_release.html condor_advertise.html condor_checkpoint.html condor_check_userlogs.html condor_chirp.html condor_cod.html condor_cold_start.html condor_cold_stop.html condor_compile.html condor_config_bind.html condor_configure.html condor_config_val.html condor_convert_history.html condor_dagman.html condor_fetchlog.html condor_findhost.html condor_glidein.html condor_history.html condor_hold.html condor_load_history.html condor_master.html condor_master_off.html condor_off.html condor_on.html condor_power.html condor_preen.html condor_prio.html condor_qedit.html condor_q.html condor_reconfig.html condor_reconfig_schedd.html condor_release.html condor_reschedule.html condor_restart.html condor_rm.html condor_router_history.html condor_router_q.html condor_run.html condor_set_shutdown.html condor_ssh_to_job.html condor_stats.html condor_status.html condor_store_cred.html condor_submit_dag.html condor_submit.html condor_transfer_data.html condor_updates_stats.html condor_userlog.html condor_userprio.html condor_vacate.html condor_vacate_job.html condor_version.html condor_wait.html filelock_midwife.html filelock_undertaker.html install_release.html uniq_pid_midwife.html uniq_pid_undertaker.html
 
 # NOTE: older latex versions do not support -halt-on-error
 #       including /p/condor/workspaces/build/bin/latex, unfortunately
@@ -140,25 +141,27 @@ user-man/dagman-node.eps: user-man/dagman-node.fig
 
 figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-node.eps
 
-HTML_FOR_NROFF = $(shell \ls $(LOCALDIR)/condor_*.html)
+# commented out by Karen on Dec 14, 2010, as no one uses it, and it is wrong
+# for pulling manual pages.  Target 'just-man-pages' is used.
+#HTML_FOR_NROFF = $(shell \ls $(LOCALDIR)/condor_*.html)
 
-nroff: local.html
-	\rm -rf man
-	mkdir man
-	mkdir man/man1
-	cd makeman && make clean
-	cd makeman && make makeman
-	cd ..
-	for html in $(HTML_FOR_NROFF); do \
+#nroff: local.html
+#	\rm -rf man
+#	mkdir man
+#	mkdir man/man1
+#	cd makeman && make clean
+#	cd makeman && make makeman
+#	cd ..
+#	for html in $(HTML_FOR_NROFF); do \
 		makeman/makeman -v -i $$html -s 1; \
 	done
-	mv $(LOCALDIR)/*.1 man/man1/
+#	mv $(LOCALDIR)/*.1 man/man1/
 
-ref.nroff: nroff $(TARGETDIR)
-	rm -f condor-$(SUBVER)-man.tar.gz condor-$(SUBVER)-man.tar
-	tar cf condor-$(SUBVER)-man.tar man
-	gzip condor-$(SUBVER)-man.tar
-	mv condor-$(SUBVER)-man.tar.gz $(TARGETDIR)
+#ref.nroff: nroff $(TARGETDIR)
+#	rm -f condor-$(SUBVER)-man.tar.gz condor-$(SUBVER)-man.tar
+#	tar cf condor-$(SUBVER)-man.tar man
+#	gzip condor-$(SUBVER)-man.tar
+#	mv condor-$(SUBVER)-man.tar.gz $(TARGETDIR)
 
 $(TARGETDIR):
 	mkdir $(TARGETDIR)
@@ -188,8 +191,9 @@ just-man-pages:
 	ln -s figuresizing-html.tex figuresizing.tex
 	cd makeman && make clean makeman
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
-	for html in just-man-pages/*.html; do \
-		makeman/makeman -v -i $$html -s 1; \
+	for html in $(MANPAGES); do \
+		thisfile=just-man-pages/$$html; \
+		makeman/makeman -v -i $$thisfile -s 1; \
 	done
 	-mkdir man
 	-mkdir man/man1
