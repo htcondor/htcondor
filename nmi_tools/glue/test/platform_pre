@@ -67,6 +67,7 @@ if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     system("tar -xzf $results");
     print "Moving public/* to $BaseDir\n";
     system("mv public/* $BaseDir");
+    system("chmod a+r *.tar.gz");
 
     print "All steps completed successfully\n";
 	print "Currently in $BaseDir which contains the following:\n";
