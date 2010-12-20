@@ -1,3 +1,9 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Add dependency to remote FS to LSB init header
+
+Often condor would be installed under /usr (e.g. any system packaged
+version is), and hence the daemons should not start until remote file
+systems become available.
 --- a/src/condor_examples/condor.boot.rpm
 +++ b/src/condor_examples/condor.boot.rpm
 @@ -21,8 +21,8 @@

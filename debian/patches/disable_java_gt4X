@@ -1,3 +1,8 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Disable gt*gahp
+
+Debian maintainer does not yet know how to rebuild the necessary
+.jar files.
 --- a/src/gt42_gahp/CMakeLists.txt
 +++ b/src/gt42_gahp/CMakeLists.txt
 @@ -18,8 +18,9 @@

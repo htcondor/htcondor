@@ -1,12 +1,13 @@
-Author: Michael Hanke <mih@debian.org>
-Description: Make symlinks to binaries instead of installing copies for
- "clone install". The latter causes some weired problems with cmake not
- handling RPATH settings properly.
- This patch is incomplete in the sense that the 'condor' command has clones
- in /usr/bin and /usr/sbin, but the symlinks always point to a 'condor' in the
- same directory. The author decided to address that with another symlink from
- /usr/bin/condor to /usr/sbin/condor, instead of moving to absolute symlink
- locations.
+From: Michael Hanke <mih@debian.org>
+Subject: Make symlinks to binaries instead of installing copies for
+
+"clone install". The latter causes some weired problems with cmake not
+handling RPATH settings properly.
+This patch is incomplete in the sense that the 'condor' command has clones
+in /usr/bin and /usr/sbin, but the symlinks always point to a 'condor' in the
+same directory. The author decided to address that with another symlink from
+/usr/bin/condor to /usr/sbin/condor, instead of moving to absolute symlink
+locations.
 --- a/build/cmake/CloneInstall.cmake
 +++ b/build/cmake/CloneInstall.cmake
 @@ -26,7 +26,13 @@

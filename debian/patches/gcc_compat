@@ -1,3 +1,8 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Explicitly cast away constness to prevent build failure
+
+GCC 4.5 refuses to compile SOAP unless const-type mismatch is addressed.
+This happens with Debian's (outdated) version of gsoap.
 --- a/src/condor_daemon_core.V6/soap_core.cpp
 +++ b/src/condor_daemon_core.V6/soap_core.cpp
 @@ -51,7 +51,8 @@

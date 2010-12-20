@@ -1,3 +1,8 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Change sysapi symbols to plain C
+
+This is what they are used like and declared in the headers. Implementing them
+as C++ leads to undefined symbolds in the library.
 --- a/src/condor_sysapi/CMakeLists.txt
 +++ b/src/condor_sysapi/CMakeLists.txt
 @@ -17,7 +17,7 @@

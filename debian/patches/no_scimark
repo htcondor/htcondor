@@ -1,3 +1,9 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Disable scimark
+
+There are no sources of the scimark jar shipped with condor. Debian maintainer
+needs to figure out whether it is worth packaging that separately, but the
+project seems to be rather dead.
 --- a/src/condor_starter.V6.1/CondorJavaInfo.java
 +++ b/src/condor_starter.V6.1/CondorJavaInfo.java
 @@ -40,7 +40,7 @@

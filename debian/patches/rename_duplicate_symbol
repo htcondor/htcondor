@@ -1,3 +1,9 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Rename duplicate symbol
+
+libutils code has two symbols of identical name. Disable a randomly chosen one
+(need to clarify which one is the intended one). In the static libs ones of them
+gets swallowed.
 --- a/src/condor_utils/signames.cpp
 +++ b/src/condor_utils/signames.cpp
 @@ -19,7 +19,10 @@
