@@ -150,6 +150,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_statfs: return "statfs";
         case CONDOR_access: return "access";
         case CONDOR_chmod: return "chmod";
+		case CONDOR_chown: return "chown";
         case CONDOR_lchown: return "lchown";
         case CONDOR_truncate: return "truncate";
         case CONDOR_utime: return "utime";
@@ -1202,12 +1203,11 @@ case CONDOR_putfile:
 		ASSERT( result );
 		
 		errno = 0;
-		fd = safe_open_wrapper(path, O_RDWR | O_CREAT | O_EXCL, mode);
+		fd = safe_open_wrapper(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		
 		// Need to send reply after file creation
-		// Do more before response?
 		syscall_sock->encode();
 		result = ( syscall_sock->code(fd) );
 		ASSERT( result );

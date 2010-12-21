@@ -373,9 +373,14 @@ main(int argc, char* argv[])
 		}
 		dprintf(D_ALWAYS, "***********************************\n");
 		dprintf(D_ALWAYS, "* condor_procd STARTING UP\n");
+#if defined(WIN32)
+		dprintf(D_ALWAYS, "* PID = %lu\n", 
+			(unsigned long)::GetCurrentProcessId());
+#else
 		dprintf(D_ALWAYS, "* PID = %lu\n", (unsigned long)getpid());
 		dprintf(D_ALWAYS, "* UID = %lu\n", (unsigned long)getuid());
 		dprintf(D_ALWAYS, "* GID = %lu\n", (unsigned long)getgid());
+#endif
 		dprintf(D_ALWAYS, "***********************************\n");
 	}
 

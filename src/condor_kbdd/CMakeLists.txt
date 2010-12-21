@@ -17,7 +17,7 @@
  ############################################################### 
 
 
-if ( (LINUX AND NOT ${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND") OR WINDOWS )
+if ( HAVE_KBDD AND (LINUX AND NOT ${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND") )
 
 	condor_glob(kbdHdrs kbdSrcs "")
 

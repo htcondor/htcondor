@@ -612,12 +612,12 @@ chirp_client_fstatfs( struct chirp_client *c, int fd,
 }
 
 DLLEXPORT int
-chirp_client_fchown( struct chirp_client *c, int fd, uid_t uid, gid_t gid ) {
+chirp_client_fchown( struct chirp_client *c, int fd, int uid, int gid ) {
 	return simple_command(c,"fchown %d %d %d\n", fd, uid, gid);
 }
 
 DLLEXPORT int
-chirp_client_fchmod( struct chirp_client *c, int fd, mode_t mode ) {
+chirp_client_fchmod( struct chirp_client *c, int fd, int mode ) {
 	return simple_command(c,"fchmod %d %d\n", fd, mode);
 }
 
@@ -830,20 +830,19 @@ chirp_client_access( struct chirp_client *c, const char *path, int mode ) {
 }
 
 DLLEXPORT int
-chirp_client_chmod( struct chirp_client *c, const char *path, mode_t mode ) {
+chirp_client_chmod( struct chirp_client *c, const char *path, int mode ) {
 	return simple_command(c,"chmod %s %d\n",path,mode);
 }
 
 DLLEXPORT int
-chirp_client_chown( struct chirp_client *c, const char *path, uid_t uid,
-					gid_t gid )
+chirp_client_chown( struct chirp_client *c, const char *path, int uid, int gid )
 {
 	return simple_command(c,"chown %s %d %d\n",path,uid,gid);
 }
 
 DLLEXPORT int
-chirp_client_lchown( struct chirp_client *c, const char *path, uid_t uid,
-					gid_t gid )
+chirp_client_lchown( struct chirp_client *c, const char *path, int uid,
+					int gid )
 {
 	return simple_command(c,"lchown %s %d %d\n",path,uid,gid);
 }
@@ -854,8 +853,8 @@ chirp_client_truncate( struct chirp_client *c, const char *path, int length ) {
 }
 
 DLLEXPORT int
-chirp_client_utime( struct chirp_client *c, const char *path,
-				   time_t actime, time_t modtime )
+chirp_client_utime( struct chirp_client *c, const char *path, int actime,
+				   int modtime )
 {
 	return simple_command(c,"utime %s %d %d\n",path,actime,modtime);
 }

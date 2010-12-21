@@ -47,6 +47,7 @@ if( -z "tasklist.nmi" ) {
 # untar pre-built tarball
 ######################################################################
 
+my $release_tarball;
 if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 
 	# on Windows, condor is in a zip file, not a tarball
@@ -71,7 +72,6 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	print "Finding release tarball\n";
 	open( TARBALL_FILE, "$tarball_file" ) || 
 		die "Can't open $tarball_file: $!\n";
-	my $release_tarball;
 	while( <TARBALL_FILE> ) {
 		chomp;
 		$release_tarball = $_;
@@ -100,7 +100,7 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
 	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
-	print "VERSION string is $version\n";
+	print "VERSION string is $version from $release_tarball and $basename\n";
 } else {
 	$release_zipfile =~ /condor-(\d+)\.(\d+)\.(\d+)-.*/; 
 	$version = "condor-$1.$2.$3";

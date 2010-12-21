@@ -121,7 +121,7 @@ if (BUILD_TESTS)
 	##########################################################
 	# platform specific tests
 	if(LINUX)
-		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full")
+		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
 	elseif(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
@@ -171,17 +171,17 @@ if (BUILD_TESTS)
 
 	if (STD_UNIVERSE)
 		# C-Tests
-		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full;quicknolink")
-		condor_pl_test(job_core_coredump_std "Do we handle core files made by standard jobs?" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_rsc_binary-io_std "Do we handle binary io in standard jobs?" "stduniv;framework;quick;full;quicknolink")
+		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full")
+		condor_pl_test(job_core_coredump_std "Do we handle core files made by standard jobs?" "stduniv;framework;quick;full")
+		condor_pl_test(job_rsc_binary-io_std "Do we handle binary io in standard jobs?" "stduniv;framework;quick;full")
 
 		# C++-Tests
-		condor_pl_test(job_ckpt_constructor_std "Test C++ global and local constructors" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_ckpt_env_std "Is the environment restored after ckpt?" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_ckpt_memory-file_std "Does the memory_file class work across ckpts?" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_core-cpp_exception_std "C++ exception handling" "framework;quick;full;quicknolink")
-		condor_pl_test(job_core-cpp_mem-alloc_std "Memory allocation and constructors" "framework;quick;full;quicknolink")
-		condor_pl_test(job_rsc_fstream_std "Does the C++ fstream() interface work?" "stduniv;framework;quick;full;quicknolink")
+		condor_pl_test(job_ckpt_constructor_std "Test C++ global and local constructors" "stduniv;framework;quick;full")
+		condor_pl_test(job_ckpt_env_std "Is the environment restored after ckpt?" "stduniv;framework;quick;full")
+		condor_pl_test(job_ckpt_memory-file_std "Does the memory_file class work across ckpts?" "stduniv;framework;quick;full")
+		condor_pl_test(job_core-cpp_exception_std "C++ exception handling" "framework;quick;full")
+		condor_pl_test(job_core-cpp_mem-alloc_std "Memory allocation and constructors" "framework;quick;full")
+		condor_pl_test(job_rsc_fstream_std "Does the C++ fstream() interface work?" "stduniv;framework;quick;full")
 
 		# Common to both
 		condor_pl_test(job_core_bigenv_std "Standard job with an enormous environment" "framework;quick;full")

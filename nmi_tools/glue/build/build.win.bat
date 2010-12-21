@@ -35,4 +35,7 @@ set
 
 @echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
 devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
-exit /B %ERRORLEVEL%
+REM if the build failed, we don't want to continue, just exit the cmd shell and return the error
+REM if we are in NMI, then we want to quit the command shell and not just the batch file.
+if "~%NMI_PLATFORM_TYPE%"=="~nmi" exit /B %ERRORLEVEL%
+if ERRORLEVEL 1 exit %ERRORLEVEL%

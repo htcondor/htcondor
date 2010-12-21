@@ -71,7 +71,8 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 	system("nmi_tools\\glue\\build\\munge.bat $pub_dir");
 	system("mv *.zip $pub_dir");
 	system("mv *.msi $pub_dir");
-	system("mv *.tar.gz $pub_dir");
+	system("mv condor-*.tar.gz $pub_dir");
+	system("tar -cvf $pub_dir/wix.tar.gz $BaseDir/msconfig/wix/xml/*");
 	system("nmi_tools\\glue\\build\\munge.bat $pub_dir");
 }
 else

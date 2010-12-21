@@ -134,24 +134,27 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}")
 	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VER}")
 
-	set (CPACK_GENERATOR "ZIP")
+	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
+	#
+    set (CONDOR_WIX_LOC ${CONDOR_SOURCE_DIR}/msconfig/WiX)
 
+    # branding and licensing
+    set (CPACK_PACKAGE_ICON ${CONDOR_WIX_LOC}/Bitmaps/dlgbmp.bmp)
+    set (CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/msconfig/license.rtf")
+
+    set (CPACK_WIX_PRODUCT_GUID "ea9608e1-9a9d-4678-800c-645df677094a")
+    set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
+    set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
+    set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs)
+
+    # the configure file f(n) will replace @CMAKE_XYZ@ with their value
+    configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl @ONLY)
+        
+	set (CPACK_GENERATOR "ZIP")
+	
 	if (CONDOR_PACKAGE_BUILD)
 
 		set (CPACK_GENERATOR "ZIP;WIX")
-        set (CONDOR_WIX_LOC ${CONDOR_SOURCE_DIR}/msconfig/WiX)
-
-        # branding and licensing
-        set (CPACK_PACKAGE_ICON ${CONDOR_WIX_LOC}/Bitmaps/dlgbmp.bmp)
-        set (CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/msconfig/license.rtf")
-
-        set (CPACK_WIX_PRODUCT_GUID "ea9608e1-9a9d-4678-800c-645df677094a")
-        set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
-        set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
-        set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs)
-
-        # the configure file f(n) will replace @CMAKE_XYZ@ with their value
-        configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl @ONLY)
         set (CPACK_WIX_XSL ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl)
 
 	endif()
