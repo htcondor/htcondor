@@ -47,29 +47,51 @@ if( -z "tasklist.nmi" ) {
 # untar pre-built tarball
 ######################################################################
 
-print "Finding release tarball\n";
-open( TARBALL_FILE, "$tarball_file" ) || 
-    die "Can't open $tarball_file: $!\n";
 my $release_tarball;
-while( <TARBALL_FILE> ) {
-    chomp;
-    $release_tarball = $_;
+if( $ENV{NMI_PLATFORM} =~ /winnt/) {
+
+	# on Windows, condor is in a zip file, not a tarball
+	print "Finding release zip file\n";
+	my ($release_zipfile) = glob("condor-*.zip");
+	
+	print "Release zip file is $release_zipfile\n";
+	
+	if( ! $release_zipfile ) {
+		die "Could not find a condor release zip file!\n";
+	}
+	
+	if ( ! mkdir("condor") ) {
+	   die "Could not make the condor folder\n";
+	}
+	
+	print "Unzipping $release_zipfile ...\n";
+	system("unzip $release_zipfile condor\\") && die "Can't unzip $release_zipfile !\n";
+	print "Unzipped $release_zipfile ...\n";
+	
+} else {
+	print "Finding release tarball\n";
+	open( TARBALL_FILE, "$tarball_file" ) || 
+		die "Can't open $tarball_file: $!\n";
+	while( <TARBALL_FILE> ) {
+		chomp;
+		$release_tarball = $_;
+	}
+
+	print "Release tarball is $release_tarball\n";
+
+	if( ! $release_tarball ) {
+		die "$tarball_file does not contain a filename!\n";
+	}
+	if( ! -f $release_tarball ) {
+		die "$release_tarball (from $tarball_file) does not exist!\n";
+	}
+
+	print "Release tarball file exists\n";
+
+	print "Untarring $release_tarball ...\n";
+	system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
+	print "Untarred $release_tarball ...\n";
 }
-
-print "Release tarball is $release_tarball\n";
-
-if( ! $release_tarball ) {
-    die "$tarball_file does not contain a filename!\n";
-}
-if( ! -f $release_tarball ) {
-    die "$release_tarball (from $tarball_file) does not exist!\n";
-}
-
-print "Release tarball file exists\n";
-
-print "Untarring $release_tarball ...\n";
-system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
-print "Untarred $release_tarball ...\n";
 
 ######################################################################
 # setup the personal condor
@@ -78,9 +100,11 @@ print "Untarred $release_tarball ...\n";
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
 	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
-	print "VERSION string is $version\n";
+	print "VERSION string is $version from $release_tarball and $basename\n";
 } else {
-	die "Your tarball does not match condor-X-Y-Z!\n";
+	$release_zipfile =~ /condor-(\d+)\.(\d+)\.(\d+)-.*/; 
+	$version = "condor-$1.$2.$3";
+	print "VERSION string is $version\n";
 }
 
 print "Condor version: $version\n";
