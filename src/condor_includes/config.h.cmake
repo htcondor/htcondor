@@ -226,6 +226,9 @@
 /* Define to 1 if you have the `execl' function. (used)*/
 #cmakedefine HAVE_EXECL 1
 
+/* Define to 1 if you have the `readdir64' function. (used)*/
+#cmakedefine HAVE_READDIR64 1
+
 /* Do we have the blahp external (used Imake)*/
 #cmakedefine HAVE_EXT_BLAHP 1
 
@@ -523,5 +526,7 @@
 /* Number of arguments to sigwait() (USED)*/
 #cmakedefine SIGWAIT_ARGS 2
 
+/* Define to 1 if the system has getifaddrs().*/
+#cmakedefine HAVE_GETIFADDRS 1
 
 #endif

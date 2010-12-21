@@ -82,7 +82,13 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package will strip the info)
+	  # Using -O2 crashes the compiler on ppc mac os x when compiling
+	  # condor_submit
+	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
+	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
+	  else()
+	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
+	  endif()
 	endif()
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
@@ -130,6 +136,8 @@ if( NOT WINDOWS)
 	check_function_exists("strsignal" HAVE_STRSIGNAL)
 	check_function_exists("unsetenv" HAVE_UNSETENV)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
+	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
+	check_function_exists("readdir64" HAVE_READDIR64)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -307,6 +315,12 @@ endif()
 if (BUILD_TESTS)
 	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
+
+if ( NOT WINDOWS )
+	option(HAVE_KBDD "Support for condor_kbdd" ON)
+else()
+	set(HAVE_KBDD ON)
+endif()
 
 ##################################################
 ##################################################

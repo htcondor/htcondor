@@ -36,10 +36,10 @@ static bool has_sin_addr = false;
 static int hostnames_initialized = 0;
 static int ipaddr_initialized = 0;
 static bool enable_convert_default_IP_to_socket_IP = true;
+static std::set< std::string > configured_network_interface_ips;
+static bool network_interface_matches_all;
 
 static void init_hostnames();
-
-extern "C" {
 
 // Return our hostname in a static data buffer.
 char *
@@ -113,15 +113,7 @@ init_full_hostname()
 {
 	char *tmp;
 
-		// If we don't have our IP addr yet, we'll get it for free if
-		// we want it.  
-	if( ! ipaddr_initialized ) {
-		tmp = get_full_hostname( hostname, &sin_addr );
-		has_sin_addr = true;
-		init_ipaddr(0);
-	} else {
-		tmp = get_full_hostname( hostname );
-	}
+	tmp = get_full_hostname( hostname );
 
 	if( full_hostname ) {
 		free( full_hostname );
@@ -136,12 +128,121 @@ init_full_hostname()
 	}
 }
 
+bool
+network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string &ip,std::set< std::string > *network_interface_ips)
+{
+	ASSERT( interface_pattern );
+	if( !interface_param_name ) {
+		interface_param_name = "";
+	}
+
+	if( network_interface_ips ) {
+		network_interface_ips->clear();
+	}
+
+	if( is_ipaddr_no_wildcard(interface_pattern,NULL) ) {
+		ip = interface_pattern;
+		if( network_interface_ips ) {
+			network_interface_ips->insert( ip );
+		}
+		return true;
+	}
+
+	StringList pattern(interface_pattern);
+
+	std::string matches_str;
+	std::vector<NetworkDeviceInfo> dev_list;
+	std::vector<NetworkDeviceInfo>::iterator dev;
+
+	sysapi_get_network_device_info(dev_list);
+
+		// Order of preference:
+		//   * non-private IP
+		//   * private IP (e.g. 192.168.*)
+		//   * loopback
+		// In case of a tie, choose the first device in the list.
+
+	int best_so_far = -1;
+
+	for(dev = dev_list.begin();
+		dev != dev_list.end();
+		dev++)
+	{
+		bool matches = false;
+		if( strcmp(dev->name(),"")!=0 &&
+			pattern.contains_anycase_withwildcard(dev->name()) )
+		{
+			matches = true;
+		}
+		else if( strcmp(dev->IP(),"")!=0 &&
+				 pattern.contains_anycase_withwildcard(dev->IP()) )
+		{
+			matches = true;
+		}
+
+		if( !matches ) {
+			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not match %s=%s.\n",
+					dev->name(), dev->IP(), interface_param_name, interface_pattern);
+			continue;
+		}
+
+		struct in_addr this_sin_addr;
+		if( !is_ipaddr_no_wildcard(dev->IP(),&this_sin_addr) ) {
+			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not have a useable IP address.\n",
+					dev->name(), dev->IP());
+			continue;
+		}
+
+		if( matches_str.size() ) {
+			matches_str += ", ";
+		}
+		matches_str += dev->name();
+		matches_str += " ";
+		matches_str += dev->IP();
+
+		if( network_interface_ips ) {
+			network_interface_ips->insert( dev->IP() );
+		}
+
+		int desireability;
+
+		if( is_loopback_net( ntohl(this_sin_addr.s_addr) ) ) {
+			desireability = 1;
+		}
+		else if( is_priv_net( ntohl(this_sin_addr.s_addr) ) ) {
+			desireability = 2;
+		}
+		else {
+			desireability = 3;
+		}
+
+		//dprintf(D_HOSTNAME,"%s: desireability %d\n",dev->IP(),desireability);
+
+		if( desireability > best_so_far ) {
+			best_so_far = desireability;
+			ip = dev->IP();
+		}
+	}
+
+	if( best_so_far < 0 ) {
+		dprintf(D_ALWAYS,"Failed to convert %s=%s to an IP address.\n",
+				interface_param_name ? interface_param_name : "",
+				interface_pattern);
+		return false;
+	}
+
+	dprintf(D_HOSTNAME,"%s=%s matches %s, choosing IP %s\n",
+			interface_param_name,
+			interface_pattern,
+			matches_str.c_str(),
+			ip.c_str());
+
+	return true;
+}
+
 void
 init_ipaddr( int config_done )
 {
-	char *network_interface, *tmp;
-	char *host;
-
     if( ! hostname ) {
 		init_hostnames();
 	}
@@ -149,58 +250,39 @@ init_ipaddr( int config_done )
 	dprintf( D_HOSTNAME, "Trying to initialize local IP address (%s)\n", 
 		 config_done ? "after reading config" : "config file not read" );
 
+	std::string network_interface;
+
 	if( config_done ) {
-		if( (network_interface = param("NETWORK_INTERFACE")) ) {
-			if( is_ipaddr((const char*)network_interface, &sin_addr) ) {
-					// We were given a valid IP address, which we now
-					// have in ip_addr.  Just make sure it's in host
-					// order now:
-				has_sin_addr = true;
-				ip_addr = ntohl( sin_addr.s_addr );
-				ipaddr_initialized = TRUE;
-				dprintf( D_HOSTNAME, "Using NETWORK_INTERFACE (%s) from "
-						 "config file for local IP addr\n",
-						 network_interface );
-			} else {
-				dprintf( D_ALWAYS, 
-						 "init_ipaddr: Invalid network interface string: \"%s\"\n", 
-						 network_interface );
-				dprintf( D_ALWAYS, "init_ipaddr: Using default interface.\n" );
-			} 
-			free( network_interface );
-		} else {
-			dprintf( D_HOSTNAME, "NETWORK_INTERFACE not in config file, "
-					 "using existing value\n" );
-		}			
+		param(network_interface,"NETWORK_INTERFACE");
+	}
+	if( network_interface.empty() ) {
+		network_interface = "*";
 	}
 
-	if( ! ipaddr_initialized ) {
-		if( ! has_sin_addr ) {
-			dprintf( D_HOSTNAME, "Have not found an IP yet, calling "
-					 "gethostbyname()\n" );
-				// Get our official host info to initialize sin_addr
-			if( full_hostname ) {
-				host = full_hostname;
-			} else {
-				host = hostname;
-			}
-			tmp = get_full_hostname( host, &sin_addr );
-			if( ! tmp ) {
-				EXCEPT( "gethostbyname(%s) failed, errno = %d", host, errno );
-			}
-			has_sin_addr = true;
-				// We don't need the full hostname, we've already got
-				// that... 
-			delete [] tmp;
-		} else {
-			dprintf( D_HOSTNAME, "Already found IP with gethostbyname()\n" );
-		}
-		ip_addr = ntohl( sin_addr.s_addr );
-		ipaddr_initialized = TRUE;
+	network_interface_matches_all = (network_interface == "*");
+
+	std::string network_interface_ip;
+	bool ok;
+	ok = network_interface_to_ip(
+		"NETWORK_INTERFACE",
+		network_interface.c_str(),
+		network_interface_ip,
+		&configured_network_interface_ips);
+
+	if( !ok ) {
+		EXCEPT("Failed to determine my IP address using NETWORK_INTERFACE=%s",
+			   network_interface.c_str());
 	}
+
+	if(!is_ipaddr(network_interface_ip.c_str(), &sin_addr) )
+	{
+		EXCEPT("My IP address is invalid: %s",network_interface_ip.c_str());
+	}
+
+	has_sin_addr = true;
+	ip_addr = ntohl( sin_addr.s_addr );
+	ipaddr_initialized = TRUE;
 }
-
-} /* extern "C" */
 
 #ifdef WIN32
 	// see below comment in init_hostname() to learn why we must
@@ -277,7 +359,7 @@ init_hostnames()
 
 // Returns true if given attribute is used by Condor to advertise the
 // IP address of the sender.  This is used by
-// ConvertMyDefaultIPToMySocketIP().
+// ConvertDefaultIPToSocketIP().
 
 static bool is_sender_ip_attr(char const *attr_name)
 {
@@ -293,6 +375,10 @@ static bool is_sender_ip_attr(char const *attr_name)
 
 void ConfigConvertDefaultIPToSocketIP()
 {
+	if( ! ipaddr_initialized ) {
+		init_ipaddr(0);
+	}
+
 	enable_convert_default_IP_to_socket_IP = true;
 
 	/*
@@ -323,17 +409,24 @@ void ConfigConvertDefaultIPToSocketIP()
 	}
 	free( str );
 
-	str = param("NETWORK_INTERFACE");
-	if( str && *str ) {
+	if( configured_network_interface_ips.size() <= 1 ) {
 		enable_convert_default_IP_to_socket_IP = false;
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE is defined.\n");
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE does not match multiple IPs.\n");
 	}
-	free( str );
 
 	if( !param_boolean("ENABLE_ADDRESS_REWRITING",true) ) {
 		enable_convert_default_IP_to_socket_IP = false;
 		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because ENABLE_ADDRESS_REWRITING is true.\n");
 	}
+}
+
+static bool IPMatchesNetworkInterfaceSetting(char const *ip)
+{
+		// Just in case our mechanism for iterating through the interfaces
+		// is not perfect, treat NETWORK_INTERFACE=* specially here so we
+		// are guaranteed to return true.
+	return network_interface_matches_all ||
+		configured_network_interface_ips.count(ip) != 0;
 }
 
 void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
@@ -356,12 +449,14 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 	if(strcmp(my_default_ip,my_sock_ip) == 0) {
 		return;
 	}
-	if(strcmp(my_sock_ip,"127.0.0.1") == 0) {
-            // We assume this is the loop-back interface, so we must
-			// be talking to another daemon on the same machine as us.
-			// We don't want to replace the default IP with this one,
-			// since nobody outside of this machine will be able to
-			// contact us on that IP.
+	if(is_loopback_net_str(my_sock_ip)) {
+            // We must be talking to another daemon on the same
+			// machine as us.  We don't want to replace the default IP
+			// with this one, since nobody outside of this machine
+			// will be able to contact us on that IP.
+		return;
+	}
+	if( !IPMatchesNetworkInterfaceSetting(my_sock_ip) ) {
 		return;
 	}
 

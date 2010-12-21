@@ -252,3 +252,17 @@ const char *GetNextToken(const char *delim, bool skipBlankTokens)
 
 	return result;
 }
+
+void join(std::vector< std::string > &v, char const *delim, std::string &result)
+{
+	std::vector<std::string>::iterator it;
+	for(it = v.begin();
+		it != v.end();
+		it++)
+	{
+		if( result.size() ) {
+			result += delim;
+		}
+		result += (*it);
+	}
+}

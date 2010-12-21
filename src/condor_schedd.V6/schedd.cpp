@@ -6421,9 +6421,20 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		args.AppendArg(job_id->proc);
 	}
 
+	bool want_udp = true;
+#ifndef WIN32
+		// To save memory in the shadow, do not create a UDP command
+		// socket under unix.  Windows doesn't _need_ UDP either,
+		// because signals can be delivered via TCP, but the
+		// performance impact of doing that has not been measured.
+		// Under unix, all common signals are delivered via unix
+		// signals.
+
+	want_udp = false;
+#endif
 
 	rval = spawnJobHandlerRaw( srec, shadow_path, args, NULL, "shadow",
-							   sh_is_dc, sh_reads_file );
+							   sh_is_dc, sh_reads_file, want_udp );
 
 	free( shadow_path );
 
@@ -6535,11 +6546,17 @@ Scheduler::tryNextJob()
 bool
 Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path, 
 							   ArgList const &args, Env const *env, 
-							   const char* name, bool is_dc, bool wants_pipe )
+							   const char* name, bool is_dc, bool wants_pipe,
+							   bool want_udp)
 {
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
 	ClassAd* job_ad = NULL;
+	int create_process_opts = 0;
+
+	if (!want_udp) {
+		create_process_opts |= DCJOBOPT_NO_UDP;
+	}
 
 	Env extra_env;
 	if( ! env ) {
@@ -6661,7 +6678,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
 	                                  is_dc, env, NULL, NULL, NULL, 
-	                                  std_fds_p, NULL, niceness );
+	                                  std_fds_p, NULL, niceness,
+									  NULL, create_process_opts);
 	if( pid == FALSE ) {
 		MyString arg_string;
 		args.GetArgsStringForDisplay(&arg_string);
@@ -6976,7 +6994,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_env.SetEnv(execute_env.Value(),LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
-							   &starter_env, "starter", true, true );
+							   &starter_env, "starter", true, true, true );
 
 	free( starter_path );
 	starter_path = NULL;

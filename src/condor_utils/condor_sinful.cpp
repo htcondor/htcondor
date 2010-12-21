@@ -166,8 +166,10 @@ static std::string urlEncodeParams(map_type const &params)
 			result += "&";
 		}
 		urlEncode(it->first.c_str(),result);
-		result += "=";
-		urlEncode(it->second.c_str(),result);
+		if( !it->second.empty() ) {
+			result += "=";
+			urlEncode(it->second.c_str(),result);
+		}
 	}
 
 	return result;
@@ -294,6 +296,23 @@ char const *
 Sinful::getPrivateNetworkName() const
 {
 	return getParam("PrivNet");
+}
+
+void
+Sinful::setNoUDP(bool flag)
+{
+	if( !flag ) {
+		setParam("noUDP",NULL);
+	}
+	else {
+		setParam("noUDP","");
+	}
+}
+
+bool
+Sinful::noUDP() const
+{
+	return getParam("noUDP") != NULL;
 }
 
 void
