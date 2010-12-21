@@ -112,7 +112,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 	{
 		char const *name = ifap->ifa_name;
 		char const *ip = NULL;
-		if( ifap->ifa_addr->sa_family == AF_INET ) {
+		if( ifap->ifa_addr && ifap->ifa_addr->sa_family == AF_INET ) {
 			ip = inet_ntoa(((struct sockaddr_in *)ifap->ifa_addr)->sin_addr);
 		}
 		if( ip ) {
