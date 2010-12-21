@@ -1,7 +1,8 @@
 #!/usr/bin/make -f
 
 srcpkg = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Source:' | cut -d ' ' -f 2,2)
-upstreamver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 | cut -d '-' -f 1,1 )
+debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
+upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 
 # one ring to rule them all ...
 %:
@@ -17,7 +18,7 @@ override_dh_auto_configure:
 		-DWANT_CONTRIB:BOOL=ON \
 		-DUW_BUILD:BOOL=OFF \
 		-D_DEBUG:BOOL=TRUE \
-		-DBUILDID:STRING=Debian \
+		-DBUILDID:STRING="Debian [$(debver)]"\
 		-DWITH_GSOAP:BOOL=OFF \
 		-DCMAKE_SKIP_BUILD_RPATH:BOOL=ON \
 		-DCMAKE_INSTALL_RPATH:STRING="/usr/lib/condor" \
