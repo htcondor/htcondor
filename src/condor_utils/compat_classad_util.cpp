@@ -275,17 +275,6 @@ bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 	return result;
 }
 
-bool IsAHalfMatchIgnoringTargetType( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
-{
-
-	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( my, target );
-
-	bool result = mad->rightMatchesLeft();
-
-	compat_classad::releaseTheMatchAd();
-	return result;
-}
-
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
 {
 		// The collector relies on this function to check the target type.
@@ -305,7 +294,12 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 		return false;
 	}
 
-	return IsAHalfMatchIgnoringTargetType(my,target);
+	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( my, target );
+
+	bool result = mad->rightMatchesLeft();
+
+	compat_classad::releaseTheMatchAd();
+	return result;
 }
 
 void AttrList_setPublishServerTime( bool publish )
