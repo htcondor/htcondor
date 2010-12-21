@@ -64,7 +64,7 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	}
 	
 	print "Unzipping $release_zipfile ...\n";
-	system("unzip $release_zipfile condor\\") && die "Can't unzip $release_zipfile !\n";
+	system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
 	print "Unzipped $release_zipfile ...\n";
 	
 } else {
