@@ -95,6 +95,11 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	}
 	buffer += "]";
 
+		// parse ad
+	if( !parser.ParseClassAd( buffer, ad ) ) {
+		return( false );
+	}
+
 		// get type info
 	if (!sock->get(inputLine)||!ad.InsertAttr("MyType",(string)inputLine.Value())) {
 		return false;
@@ -102,11 +107,6 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	if (!sock->get(inputLine)|| !ad.InsertAttr("TargetType",
 											   (string)inputLine.Value())) {
 		return false;
-	}
-
-		// parse ad
-	if( !parser.ParseClassAd( buffer, ad ) ) {
-		return( false );
 	}
 
 	return true;
