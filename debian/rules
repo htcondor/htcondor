@@ -87,6 +87,8 @@ override_dh_auto_install:
 		-e 's,^\(LOCAL_CONFIG_FILE\s*=\).*,\1 /etc/condor/config.local,' \
 		-e 's,^\(LOCAL_CONFIG_DIR\s*=\).*,\1 /etc/condor/config.d,' \
 		-e 's,^[#]*\(REQUIRE_LOCAL_CONFIG_FILE\s*=\).*,\1 FALSE,'  \
+		-e 's,^[#]*\(CONDOR_DEVELOPERS\s*=\).*,\1 NONE,'  \
+		-e 's,^[#]*\(CONDOR_DEVELOPERS_COLLECTOR\s*=\).*,\1 NONE,'  \
 		-e 's,^\(CONDOR_ADMIN\s*=\).*,\1 root@localhost,' \
 		-e 's,^\(UID_DOMAIN\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
 		-e 's,^\(FILESYSTEM_DOMAIN\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
