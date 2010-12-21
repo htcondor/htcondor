@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "condor_network.h"
 #include "condor_string.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "subsystem_info.h"
 #include "env.h"
 #include "basename.h"
@@ -1548,6 +1548,8 @@ SetExecutable()
 	}
 
 	// generate initial checkpoint file
+	// This is ignored by the schedd in 7.5.5+.  Prior to that, the
+	// basename must match the name computed by the schedd.
 	IckptName = gen_ckpt_name(0,ClusterId,ICKPT,0);
 
 	// ensure the executables exist and spool them only if no 
@@ -1918,6 +1920,8 @@ SetMachineCount()
 	wantParallelString = condor_param("WantParallelScheduling");
 	if (wantParallelString && (wantParallelString[0] == 'T' || wantParallelString[0] == 't')) {
 		wantParallel = true;
+		buffer.sprintf(" WantParallelScheduling = true");
+		InsertJobExpr (buffer);
 	}
  
 	if (JobUniverse == CONDOR_UNIVERSE_MPI ||
@@ -2868,10 +2872,6 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 	InsertJobExpr( should.Value() );
 	if( should_transfer != STF_NO ) {
 		InsertJobExpr( when.Value() );
-	} else if (!Remote) {
-		MyString never_create_sandbox = ATTR_NEVER_CREATE_JOB_SANDBOX;
-		never_create_sandbox += " = true";
-		InsertJobExpr( never_create_sandbox.Value() );
 	}
 	InsertJobExpr( ft.Value() );
 }
@@ -5432,6 +5432,10 @@ read_condor_file( FILE *fp )
 		} else {
 			*ptr++ = '\0';
 			while( *ptr && !isop(*ptr) ) {
+				if( !isspace(*ptr) ) {
+					fclose( fp );
+					return -1;
+				}
 				ptr++;
 			}
 

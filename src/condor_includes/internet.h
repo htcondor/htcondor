@@ -144,6 +144,8 @@ char* getAddrFromClaimId( const char* id );
 int _condor_local_bind( int is_outgoing, int fd );
 
 int is_priv_net(uint32_t ip);
+int is_loopback_net(uint32_t ip);
+int is_loopback_net_str(char const *ip);
 int in_same_net(uint32_t ipA, uint32_t ipB);
 char *ipport_to_string(const unsigned int ip, const unsigned short port);
 char *prt_fds(int maxfd, fd_set *fds);

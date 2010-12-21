@@ -1,0 +1,147 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+######################################################################
+# $Id: pre_all,
+#
+######################################################################
+
+######################################################################
+# NOTE: This script depends on the following bootstrap programs:
+# - GNU tar (so long as it supports --exclude)
+# - GNU autoconf and autoheader (version >= 2.59) [used by build_init]
+# - everything required for "make nroff"
+#    - latex
+#    - latex2html
+#    ...  ;) (could fill this in later)
+######################################################################
+
+use Cwd;
+
+use Getopt::Long;
+use vars qw/ $opt_version_buildid $opt_skip_doc/;
+GetOptions(
+  'version-buildid=s' => \$opt_version_buildid,
+  'skip-doc' => \$opt_skip_doc,
+);
+
+# autoflush our STDOUT
+$| = 1;
+
+my $CommonDir = getcwd();
+my $SrcDir = "$CommonDir/src";
+my $DocDir = "$CommonDir/doc";
+
+-d $CommonDir || die "$CommonDir does not exist!\n";
+-d $SrcDir || die "$SrcDir does not exist!\n";
+
+######################################################################
+# Step #1: build nroff sources
+######################################################################
+
+if(!(defined $opt_skip_doc)){
+	print "Building man page nroff source\n";
+	chdir( "$DocDir" ) || die "Can't chdir($DocDir): $!\n";
+	my $doc_log = "$CommonDir/nroff.log";
+	open( DOC, "make just-man-pages 2>&1|" ) || die "Can't open 'make just-man-pages': $!\n";
+	open( DOC_LOG, ">$doc_log" ) || die "Can't open $doc_log: $!\n";
+	$oldfh = select(DOC_LOG); $| = 1; select($oldfh);
+	while( <DOC> ) {
+    	print DOC_LOG "$_";
+	}
+	close( DOC );
+	close( DOC_LOG );
+	$nroff_status = $?;
+	if( $nroff_status ) {
+		print `cat $doc_log`;
+    	die "Building nroff man pages failed with status $nroff_status!\n";
+	} else {
+    	unlink( $doc_log ) || warn "Can't unlink($doc_log): $!\n";
+	}
+	#print "Building nroff man pages successful, tar'ing up results\n";
+	#-d "$ExtDir/bundles/man/current" || 
+   	#	die "$ExtDir/bundles/man/current doesn't exist! Build tag broken\n";
+	print "GZipping manpages\n";	
+	#using best compression
+	`gzip -9vr man`;
+	print "Finished packaging man page nroff source\n";
+
+	#chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+	#print "Removing doc directory\n";
+	#system( "rm -rf $DocDir" );
+	#print "Done removing doc directory\n";
+} else {
+	print "Doc being skipped as requested\n";
+}
+
+######################################################################
+# Step #2) Obtain the build id... I don't particularly like this but...
+######################################################################
+
+print "Creating embedded buildid\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+
+# Stash this in the common dir for remote_pre
+if (defined($opt_version_buildid)) {
+  $runid = $opt_version_buildid;
+  print "Using build id from command-line: $runid\n";
+}
+else {
+  $runid = acquire_runid();
+  print "Automatically discovered that my build id is: $runid\n";
+}
+
+my $buildid_file="BUILD-ID";
+open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
+print BUILDID_FILE "$runid\n";
+close( BUILDID_FILE );
+
+######################################################################
+# subroutines
+######################################################################
+
+sub acquire_runid() {
+	my $runid;
+	my $tries = 5;
+	my $count = 0;
+	my $delay = 60;
+
+	# Try for $tries times, with a delay of $delay, to try and get a runid
+	# from the database for this gid. If all else fails, just use the gid
+	# (which we don't initially want to use since this is going into
+	# the version string of the binaries and it is a user interface mistake to
+	# have it in there).
+	
+	# figure out the runid, if not available, then put in the gid.
+	$runid = `nmi_gid2runid $ENV{_NMI_GID} 2>&1`;
+	while($count < $tries && ($? != 0 || $runid =~ m/ERROR/)) {
+		$count++;
+		sleep $delay;
+		$runid = `nmi_gid2runid $ENV{_NMI_GID} 2>&1`;
+	}
+	if ($? != 0 || $runid =~ m/ERROR/) {
+		# oops, no runid, so we'll just slam the gid in here for now until we
+		# find a better semantic thing to do
+		$runid = $ENV{_NMI_GID};
+	}
+	
+	chomp $runid;
+	return $runid;
+}

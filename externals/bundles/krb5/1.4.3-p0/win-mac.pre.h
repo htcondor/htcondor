@@ -11,7 +11,7 @@
 #ifndef _KRB5_WIN_MAC_H
 #define _KRB5_WIN_MAC_H
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WIN32)
 
 #define ID_READ_PWD_DIALOG  10000
 #define ID_READ_PWD_PROMPT  10001

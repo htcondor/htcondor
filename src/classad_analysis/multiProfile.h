@@ -73,7 +73,7 @@ class MultiProfile : public BoolExpr
 			@param buffer A string to print the result to.
 			@return true on success, false on failure.
 		*/ 
-	bool ToString( string &buffer );
+	bool ToString( std::string &buffer );
 
 
 		// unsupported methods

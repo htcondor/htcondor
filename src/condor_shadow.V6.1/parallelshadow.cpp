@@ -30,7 +30,7 @@
 #include "daemon.h"
 #include "env.h"
 #include "condor_config.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_claimid_parser.h"
 
 RemoteResource *parallelMasterResource = NULL;
@@ -83,10 +83,10 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	parallelMasterResource = rr;
 
 	char buffer[1024];
-	char *dir = gen_ckpt_name(0, getCluster(), 0, 0);
-	snprintf (buffer, 1024, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
-		param("SPOOL"), DIR_DELIM_CHAR, 
-		dir);
+	char *spool = param("SPOOL");
+	char *dir = gen_ckpt_name(spool, getCluster(), 0, 0);
+	free(spool);
+	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 	free(dir); dir = NULL;
 	job_ad->Insert(buffer);
 
@@ -302,10 +302,10 @@ ParallelShadow::getResources( void )
 			job_ad->InsertOrUpdate( buf );
 
 			char buffer[1024];
-			char *dir = gen_ckpt_name(0, job_cluster, 0, 0);
-			snprintf (buffer, 1024, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
-				param("SPOOL"), DIR_DELIM_CHAR, 
-				dir);
+			char *spool = param("SPOOL");
+			char *dir = gen_ckpt_name(spool, job_cluster, 0, 0);
+			free(spool);
+			job_ad->Assign(ATTR_REMOTE_SPOOL_DIR, dir);
 			free(dir); dir = NULL;
 			job_ad->Insert(buffer);
 

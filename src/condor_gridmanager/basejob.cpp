@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 
 #include "gridmanager.h"
 #include "basejob.h"
@@ -95,10 +95,10 @@ BaseJob::BaseJob( ClassAd *classad )
 
 	JobsByProcId.insert( procID, this );
 
-	MyString remote_id;
+	std::string remote_id;
 	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
-	if ( !remote_id.IsEmpty() ) {
-		JobsByRemoteId.insert( HashKey( remote_id.Value() ), this );
+	if ( !remote_id.empty() ) {
+		JobsByRemoteId.insert( HashKey( remote_id.c_str() ), this );
 	}
 
 	jobAd->LookupInteger( ATTR_JOB_STATUS, condorState );
@@ -144,12 +144,12 @@ BaseJob::~BaseJob()
 	}
 	JobsByProcId.remove( procID );
 
-	MyString remote_id;
+	std::string remote_id;
 	if ( jobAd ) {
 		jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	}
-	if ( !remote_id.IsEmpty() ) {
-		JobsByRemoteId.remove( HashKey( remote_id.Value() ) );
+	if ( !remote_id.empty() ) {
+		JobsByRemoteId.remove( HashKey( remote_id.c_str() ) );
 	}
 
 	if ( jobAd ) {
@@ -418,8 +418,8 @@ void BaseJob::UpdateRuntimeStats()
 
 void BaseJob::SetRemoteJobId( const char *job_id )
 {
-	MyString old_job_id;
-	MyString new_job_id;
+	std::string old_job_id;
+	std::string new_job_id;
 	jobAd->LookupString( ATTR_GRID_JOB_ID, old_job_id );
 	if ( job_id != NULL && job_id[0] != '\0' ) {
 		new_job_id = job_id;
@@ -427,17 +427,17 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 	if ( old_job_id == new_job_id ) {
 		return;
 	}
-	if ( !old_job_id.IsEmpty() ) {
-		JobsByRemoteId.remove( HashKey( old_job_id.Value() ) );
+	if ( !old_job_id.empty() ) {
+		JobsByRemoteId.remove( HashKey( old_job_id.c_str() ) );
 		jobAd->AssignExpr( ATTR_GRID_JOB_ID, "Undefined" );
 	} else {
 		//  old job id was NULL
 		m_lastRemoteStatusUpdate = time(NULL);
 		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	}
-	if ( !new_job_id.IsEmpty() ) {
-		JobsByRemoteId.insert( HashKey( new_job_id.Value() ), this );
-		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id.Value() );
+	if ( !new_job_id.empty() ) {
+		JobsByRemoteId.insert( HashKey( new_job_id.c_str() ), this );
+		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id.c_str() );
 	} else {
 		// new job id is NULL
 		m_lastRemoteStatusUpdate = 0;
@@ -450,8 +450,8 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 
 bool BaseJob::SetRemoteJobStatus( const char *job_status )
 {
-	MyString old_job_status;
-	MyString new_job_status;
+	std::string old_job_status;
+	std::string new_job_status;
 
 	if ( job_status ) {
 		m_lastRemoteStatusUpdate = time(NULL);
@@ -471,11 +471,11 @@ bool BaseJob::SetRemoteJobStatus( const char *job_status )
 	if ( old_job_status == new_job_status ) {
 		return false;
 	}
-	if ( !old_job_status.IsEmpty() ) {
+	if ( !old_job_status.empty() ) {
 		jobAd->AssignExpr( ATTR_GRID_JOB_STATUS, "Undefined" );
 	}
-	if ( !new_job_status.IsEmpty() ) {
-		jobAd->Assign( ATTR_GRID_JOB_STATUS, new_job_status.Value() );
+	if ( !new_job_status.empty() ) {
+		jobAd->Assign( ATTR_GRID_JOB_STATUS, new_job_status.c_str() );
 	}
 	requestScheddUpdate( this, false );
 	return true;
@@ -737,25 +737,25 @@ int BaseJob::EvalPeriodicJobExpr()
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
-	MyString reason = user_policy.FiringReason();
-	if ( reason == "" ) {
+	const char *reason = user_policy.FiringReason();
+	if ( reason == NULL ) {
 		reason = "Unknown user policy expression";
 	}
 
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( reason.Value() );
+		JobHeld( reason );
 		SetEvaluateState();
 		break;
 	case STAYS_IN_QUEUE:
 			// do nothing
 		break;
 	case REMOVE_FROM_QUEUE:
-		JobRemoved( reason.Value() );
+		JobRemoved( reason );
 		SetEvaluateState();
 		break;
 	case HOLD_IN_QUEUE:
-		JobHeld( reason.Value() );
+		JobHeld( reason );
 		SetEvaluateState();
 		break;
 	case RELEASE_FROM_HOLD:
@@ -808,14 +808,14 @@ int BaseJob::EvalOnExitJobExpr()
 		jobAd->AssignExpr( ATTR_ON_EXIT_SIGNAL, "Undefined" );
 	}
 
-	MyString reason = user_policy.FiringReason();
-	if ( reason == "" ) {
+	const char *reason = user_policy.FiringReason();
+	if ( reason == NULL ) {
 		reason = "Unknown user policy expression";
 	}
 
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( reason.Value() );
+		JobHeld( reason );
 		break;
 	case STAYS_IN_QUEUE:
 			// clean up job but don't set status to complete
@@ -824,7 +824,7 @@ int BaseJob::EvalOnExitJobExpr()
 		JobCompleted();
 		break;
 	case HOLD_IN_QUEUE:
-		JobHeld( reason.Value() );
+		JobHeld( reason );
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalAtExitJobExpr", 
@@ -850,7 +850,6 @@ void BaseJob::CheckAllRemoteStatus()
 
 void BaseJob::CheckRemoteStatus()
 {
-	MyString job_id;
 	const int stale_limit = 15*60;
 
 		// TODO return time that this job status could become stale?
@@ -963,7 +962,7 @@ InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	MyString userLogFile;
-	MyString gjid;
+	std::string gjid;
 	bool use_xml = false;
 
 	if( !getPathToUserLog(job_ad, userLogFile) ) {
@@ -977,7 +976,7 @@ InitializeUserLog( ClassAd *job_ad )
 	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	WriteUserLog *ULog = new WriteUserLog();
-	ULog->initialize(userLogFile.Value(), cluster, proc, 0, gjid.Value());
+	ULog->initialize(userLogFile.Value(), cluster, proc, 0, gjid.c_str());
 	ULog->setUseXML( use_xml );
 	return ULog;
 }
@@ -1238,7 +1237,7 @@ bool
 WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1255,14 +1254,14 @@ WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 	GlobusResourceUpEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.IsEmpty() ) {
+	if ( contact.empty() ) {
 			// Not a Globus job, don't log the event
 		delete ulog;
 		return true;
 	}
-	contact.Tokenize();
-	contact.GetNextToken( " ", false );
-	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
+	Tokenize( contact );
+	GetNextToken( " ", false );
+	event.rmContact =  strnewp(GetNextToken( " ", false ));
 
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
@@ -1283,7 +1282,7 @@ bool
 WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1300,14 +1299,14 @@ WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 	GlobusResourceDownEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.IsEmpty() ) {
+	if ( contact.empty() ) {
 			// Not a Globus job, don't log the event
 		delete ulog;
 		return true;
 	}
-	contact.Tokenize();
-	contact.GetNextToken( " ", false );
-	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
+	Tokenize( contact );
+	GetNextToken( " ", false );
+	event.rmContact =  strnewp(GetNextToken( " ", false ));
 
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
@@ -1328,7 +1327,7 @@ bool
 WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1345,16 +1344,16 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 	GlobusSubmitEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	contact.Tokenize();
-	contact.GetNextToken( " ", false );
-	event.rmContact = strnewp(contact.GetNextToken( " ", false ));
+	Tokenize( contact );
+	GetNextToken( " ", false );
+	event.rmContact = strnewp(GetNextToken( " ", false ));
 
 	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
-	contact.Tokenize();
-	if ( strcasecmp( contact.GetNextToken( " ", false ), "gt2" ) == 0 ) {
-		contact.GetNextToken( " ", false );
+	Tokenize( contact );
+	if ( strcasecmp( GetNextToken( " ", false ), "gt2" ) == 0 ) {
+		GetNextToken( " ", false );
 	}
-	event.jmContact = strnewp(contact.GetNextToken( " ", false ));
+	event.jmContact = strnewp(GetNextToken( " ", false ));
 
 	event.restartableJM = true;
 
@@ -1414,7 +1413,7 @@ bool
 WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1431,12 +1430,12 @@ WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 	GridResourceUpEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.IsEmpty() ) {
+	if ( contact.empty() ) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) %s attribute missing in job ad\n",
 				 cluster, proc, ATTR_GRID_RESOURCE );
 	}
-	event.resourceName =  strnewp( contact.Value() );
+	event.resourceName =  strnewp( contact.c_str() );
 
 	int rc = ulog->writeEvent( &event, job_ad );
 	delete ulog;
@@ -1455,7 +1454,7 @@ bool
 WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1472,12 +1471,12 @@ WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 	GridResourceDownEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.IsEmpty() ) {
+	if ( contact.empty() ) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) %s attribute missing in job ad\n",
 				 cluster, proc, ATTR_GRID_RESOURCE );
 	}
-	event.resourceName =  strnewp( contact.Value() );
+	event.resourceName =  strnewp( contact.c_str() );
 
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
@@ -1496,7 +1495,7 @@ bool
 WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString contact;
+	std::string contact;
 	WriteUserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1513,10 +1512,10 @@ WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 	GridSubmitEvent event;
 
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	event.resourceName = strnewp( contact.Value() );
+	event.resourceName = strnewp( contact.c_str() );
 
 	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
-	event.jobId = strnewp( contact.Value() );
+	event.jobId = strnewp( contact.c_str() );
 
 	int rc = ulog->writeEvent( &event,job_ad );
 	delete ulog;
@@ -1668,7 +1667,7 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
-	MyString JobName;
+	std::string JobName;
 	job_ad->LookupString( ATTR_JOB_CMD, JobName );
 
 	MyString Args;
@@ -1710,8 +1709,8 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 	time_t now = time(NULL);
 
 	fprintf( mailer, "Your Condor job %d.%d \n", cluster, proc);
-	if ( JobName.Length() ) {
-		fprintf(mailer,"\t%s %s\n",JobName.Value(),Args.Value());
+	if ( JobName.length() ) {
+		fprintf(mailer,"\t%s %s\n",JobName.c_str(),Args.Value());
 	}
 	if(exit_status_known) {
 		fprintf(mailer, "has ");

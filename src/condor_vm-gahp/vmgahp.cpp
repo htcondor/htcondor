@@ -33,8 +33,8 @@
 #include "vmgahp.h"
 #include "vm_type.h"
 #include "vmware_type.h"
-#if defined(LINUX)
-#  include "xen_type.h"
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
+#  include "xen_type.linux.h"
 #endif
 #include "vmgahp_error_codes.h"
 
@@ -687,7 +687,7 @@ VMGahp::executeStart(VMRequest *req)
 	VMType *new_vm = NULL;
 
 	// TBD: tstclair this totally needs to be re-written
-#if defined(LINUX)
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT) 
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
 		new_vm = new XenType(m_gahp_config->m_vm_script.Value(), 
 				vmworkingdir.Value(), m_jobAd);
@@ -1092,7 +1092,7 @@ VMGahp::killAllProcess()
 		return;
 	}
 	
-#if defined(LINUX)
+#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
 	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 		priv_state priv = set_root_priv();

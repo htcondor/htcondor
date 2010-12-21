@@ -32,7 +32,10 @@
 #endif
 
 #if defined(HAVE_EXT_VOMS)
-#include "glite/security/voms/voms_apic.h"
+extern "C"
+{
+	#include "voms/voms_apic.h"
+}
 #endif
 
 BEGIN_C_DECLS

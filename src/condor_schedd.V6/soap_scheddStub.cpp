@@ -33,7 +33,7 @@
 #include "classad_helpers.h"
 #include "log_transaction.h"
 
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_config.h"
 
 #include "loose_file_transfer.h"
@@ -43,8 +43,8 @@
 
 #include "schedd_api.h"
 
-#include "../condor_c++_util/soap_helpers.cpp"
-#include "../condor_c++_util/dc_service.cpp"
+#include "../condor_utils/soap_helpers.cpp"
+#include "../condor_utils/dc_service.cpp"
 
 #include "qmgmt.h"
 

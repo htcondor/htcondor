@@ -46,7 +46,7 @@
 #include "Queue.h"
 #include "MapFile.h"
 #ifdef WIN32
-#include "ntsysinfo.h"
+#include "ntsysinfo.WINDOWS.h"
 #endif
 #include "self_monitor.h"
 //#include "stdsoap2.h"
@@ -158,11 +158,13 @@ typedef enum {
 const int DCJOBOPT_SUSPEND_ON_EXEC  = (1<<1);
 const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
 const int DCJOBOPT_NEVER_USE_SHARED_PORT   = (1<<3);
+const int DCJOBOPT_NO_UDP           = (1<<4);
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
 #define HAS_DCJOBOPT_ENV_INHERIT(mask)  (!(HAS_DCJOBOPT_NO_ENV_INHERIT(mask)))
 #define HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(mask) ((mask)&DCJOBOPT_NEVER_USE_SHARED_PORT)
+#define HAS_DCJOBOPT_NO_UDP(mask) ((mask)&DCJOBOPT_NO_UDP)
 
 // structure to be used as an argument to Create_Process for tracking process
 // families
@@ -1672,6 +1674,8 @@ class DaemonCore : public Service
 			of this pid (where applicable) */
 		PidEnvID penvid;
 		MyString shared_port_fname;
+		//Session ID and key for child process.
+		char* child_session_id;
     };
 
 	int m_refresh_dns_timer;
@@ -1866,6 +1870,13 @@ extern void DC_Exit( int status, const char *shutdown_program = NULL );
     run with the user's credentials.
 */
 extern void DC_Skip_Auth_Init();
+
+/** Call this function (inside your main_pre_dc_init() function) to
+    bypass the core limit initialization in daemoncore.  This is for
+    programs, such as condor_dagman, that are Condor daemons but should
+    run with the user's limits.
+*/
+extern void DC_Skip_Core_Init();
 
 /** The main DaemonCore object.  This pointer will be automatically instatiated
     for you.  A perfect place to use it would be in your main_init, to access

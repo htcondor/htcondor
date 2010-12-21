@@ -43,9 +43,17 @@ sed < $BUILD_DIR/SPECS/condor.spec \
 
 mv $BUILD_DIR/SPECS/condor.spec.new $BUILD_DIR/SPECS/condor.spec
 
+mkdir tmp
+BUILD_TMP=`pwd`/tmp
+
+# Early versions of RedHat 5 had a bug in rpmbuild when TMPDIR was set,
+# so unset it now.  We don't need it it to be set anyway, because we
+# are explicitly setting tmppath in the arguments to rpmbuild.
+unset TMPDIR
+
 echo "Building RPM"
 BUILD_ROOT=`pwd`/$BUILD_DIR
-$RPM_CMD --define="_topdir $BUILD_ROOT" -bb $BUILD_DIR/SPECS/condor.spec
+$RPM_CMD --define="_topdir $BUILD_ROOT" --define="_tmppath $BUILD_TMP" -bb $BUILD_DIR/SPECS/condor.spec
 
 ARCH=`ls -1 $BUILD_DIR/RPMS/ | sed -e 's|\/||'`
 RPM_FILE=`ls -1 $BUILD_DIR/RPMS/${ARCH}`

@@ -74,11 +74,11 @@ class NordugridJob : public BaseJob
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 
-	MyString errorString;
+	std::string errorString;
 	char *resourceManagerString;
 
 	char *remoteJobId;
-	MyString remoteJobState;
+	std::string remoteJobState;
 
 	Proxy *jobProxy;
 	NordugridResource *myResource;
@@ -88,12 +88,12 @@ class NordugridJob : public BaseJob
 		// the RSL is stored here (so that we don't have to reconstruct the
 		// RSL every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
-	MyString *RSL;
+	std::string *RSL;
 		// Same as for RSL, but used by the file staging calls.
 	StringList *stageList;
 	StringList *stageLocalList;
 
-	MyString *buildSubmitRSL();
+	std::string *buildSubmitRSL();
 	StringList *buildStageInList();
 	StringList *buildStageOutList();
 	StringList *buildStageOutLocalList( StringList *stage_list );

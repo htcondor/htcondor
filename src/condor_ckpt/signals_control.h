@@ -47,6 +47,7 @@ enable() before signals are enabled again.
 
 #include "condor_common.h"
 
+#if DOES_SAVE_SIGSTATE
 BEGIN_C_DECLS
 
 sigset_t	_condor_signals_disable(void);
@@ -58,6 +59,7 @@ void		_condor_ckpt_enable(void);
 int		_condor_ckpt_is_disabled(void);
 int		_condor_ckpt_is_deferred(void);
 void		_condor_ckpt_defer( int sig );
+#endif
 
 END_C_DECLS
 

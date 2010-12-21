@@ -24,7 +24,7 @@
 #include "procd_common.h"
 
 #if !defined(WIN32)
-#include "glexec_kill.h"
+#include "glexec_kill.unix.h"
 #endif
 
 ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,

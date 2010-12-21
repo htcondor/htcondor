@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-/* This file is implemented in condor_c++_util/set_user_priv_from_ad.C */
+/* This file is implemented in condor_utils/set_user_priv_from_ad.C */
 
 #ifndef _SET_USER_PRIV_FROM_AD_H_
 #define _SET_USER_PRIV_FROM_AD_H_

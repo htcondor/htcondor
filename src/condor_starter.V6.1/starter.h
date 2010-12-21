@@ -28,7 +28,7 @@
 #include "condor_privsep_helper.h"
 
 #if defined(LINUX)
-#include "glexec_privsep_helper.h"
+#include "glexec_privsep_helper.linux.h"
 #endif
 
 /** The starter class.  Basically, this class does some initialization
@@ -326,6 +326,7 @@ private:
 	bool getJobClaimId(MyString &result);
 
 
+	bool WriteAdFiles();
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -368,6 +369,12 @@ private:
 		// Flag to indicate whether Config() has been run
 		//
 	bool m_configured;
+
+		// true if jobEnvironmentReady() has been called
+	bool m_job_environment_is_ready;
+
+		// true if allJobsDone() has been called
+	bool m_all_jobs_done;
 };
 
 #endif

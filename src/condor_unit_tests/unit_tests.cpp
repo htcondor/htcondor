@@ -42,7 +42,6 @@ bool FTEST_is_ipaddr(void);
 bool FTEST_is_valid_sinful(void);
 bool FTEST_is_valid_network(void);
 bool FTEST_sin_to_string(void);
-bool FTEST_string_to_hostname(void);
 bool FTEST_string_to_ip(void);
 bool FTEST_string_to_sin(void);
 bool FTEST_string_to_port(void);
@@ -78,7 +77,6 @@ const static struct {
 	map(FTEST_is_valid_sinful),
 	map(FTEST_is_valid_network),
 	map(FTEST_sin_to_string),
-	map(FTEST_string_to_hostname),
 	map(FTEST_string_to_ip),
 	map(FTEST_string_to_sin),
 	map(FTEST_string_to_port),
@@ -177,7 +175,16 @@ int main(int argc, char *argv[]) {
 			i++;
 		}
 	}
-
+	//Need to initialize Winsocks on Windows.
+#ifdef WIN32
+	WSADATA wsaData;
+	int iResult = WSAStartup(MAKEWORD(2,0), &wsaData);
+	if(iResult != 0)
+	{
+		printf("Failed to initialize Winsock: %d\n", iResult);
+		return EXIT_FAILURE;
+	}
+#endif
 	if(only_functions && only_objects) {
 		only_functions = false;
 		only_objects = false;
@@ -207,6 +214,10 @@ int main(int argc, char *argv[]) {
 			//Invalid test
 			if(i >= function_map_num_elems) {
 				printf("Invalid test '%s'.\n", test);
+#ifdef WIN32
+				//This technically can fail, but at this point we don't really care.
+				WSACleanup();
+#endif
 				return EXIT_FAILURE;
 	    	}
 
@@ -232,6 +243,10 @@ int main(int argc, char *argv[]) {
 		// run all the functions and return the result
 	bool result = driver.do_all_functions(false);
 	e.emit_summary();
+#ifdef WIN32
+	//This technically can fail, but at this point we don't really care.
+	WSACleanup();
+#endif
 	if(result) {
 		printf ("Test suite has passed.\n");
 		return EXIT_SUCCESS;

@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include "condor_io.h"
 #include "proc.h"
-#include "../condor_c++_util/CondorError.h"
+#include "../condor_utils/CondorError.h"
 #include "condor_classad.h"
 
 

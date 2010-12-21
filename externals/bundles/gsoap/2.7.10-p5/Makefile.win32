@@ -40,10 +40,10 @@ lex.yy.c:	soapcpp2_yacc.h soapcpp2_yacc.c soapcpp2_lex.l
 .c.o:		soapcpp2.h soapcpp2_yacc.h error2.h
 		$(CC) $(CFLAGS) /c $<
 install: 
-	$(MKDIR) $(PACKAGE_INSTALL_DIR)\src
+	$(MKDIR) $(PACKAGE_INSTALL_DIR)\src $(PACKAGE_INSTALL_DIR)\include
 	cp soapcpp2.exe $(PACKAGE_INSTALL_DIR)
 	cp ..\stdsoap2.cpp $(PACKAGE_INSTALL_DIR)\src
-	cp ..\stdsoap2.h $(PACKAGE_INSTALL_DIR)\src
+	cp ..\stdsoap2.h $(PACKAGE_INSTALL_DIR)\include
 	
 clean:		
 		del /f *.obj

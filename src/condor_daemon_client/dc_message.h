@@ -448,7 +448,7 @@ private:
 
 class ChildAliveMsg: public DCMsg {
 public:
-	ChildAliveMsg( int mypid, int max_hang_time, int max_tries, bool blocking );
+	ChildAliveMsg( int mypid, int max_hang_time, int max_tries, double dprintf_lock_delay, bool blocking );
 
 		////////// virtual methods for DCMsg //////////
 	virtual bool writeMsg( DCMessenger *messenger, Sock *sock );
@@ -463,6 +463,7 @@ private:
 	int m_max_tries;
 	int m_tries;
 	bool m_blocking;
+	double m_dprintf_lock_delay;
 };
 
 #endif

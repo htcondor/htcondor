@@ -108,6 +108,9 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
 #include "filename_tools.h"
+#include "authentication.h"
+#include "condor_claimid_parser.h"
+#include "condor_email.h"
 
 #include "valgrind.h"
 
@@ -429,7 +432,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	peaceful_shutdown = false;
 
 #ifdef HAVE_EXT_GSOAP
-#ifdef COMPILE_SOAP_SSL
+#ifdef HAVE_EXT_OPENSSL
 	mapfile =  NULL;
 #endif
 #endif
@@ -1092,9 +1095,18 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port();
-			private_sinful_string.sprintf("<%s:%d>", tmp, port);
+			std::string private_ip;
+			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",tmp,private_ip);
+			if( !ok ) {
+				dprintf(D_ALWAYS,
+						"Failed to determine my private IP address using PRIVATE_NETWORK_INTERFACE=%s\n",
+						tmp);
+			}
+			else {
+				private_sinful_string.sprintf("<%s:%d>", private_ip.c_str(), port);
+				sinful_private = strdup(private_sinful_string.Value());
+			}
 			free(tmp);
-			sinful_private = strdup(private_sinful_string.Value());
 		}
 
 		free(m_private_network_name);
@@ -1137,6 +1149,16 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				m_sinful.setPrivateAddr(sinful_private);
 				publish_private_name = true;
 			}
+		}
+
+			// if we don't hae a UDP port, advertise that fact
+		char *forwarding = param("TCP_FORWARDING_HOST");
+		if( forwarding ) {
+			free( forwarding );
+			m_sinful.setNoUDP(true);
+		}
+		if( !dc_ssock ) {
+			m_sinful.setNoUDP(true);
 		}
 
 		if( m_ccb_listeners ) {
@@ -2724,7 +2746,7 @@ DaemonCore::reconfig(void) {
 	}
 #endif
 #ifdef HAVE_EXT_GSOAP
-#ifdef COMPILE_SOAP_SSL
+#ifdef HAVE_EXT_OPENSSL
 	MyString subsys = MyString(get_mySubSystem()->getName());
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 
@@ -2752,7 +2774,7 @@ DaemonCore::reconfig(void) {
 			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
 		}
 	}
-#endif // COMPILE_SOAP_SSL
+#endif // HAVE_EXT_OPENSSL
 #endif // HAVE_EXT_GSOAP
 
 
@@ -4768,6 +4790,10 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					char *method_used = NULL;
 					bool auth_success = sock->authenticate(the_key, auth_methods, &errstack, auth_timeout, &method_used);
 
+					if ( method_used ) {
+						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+					}
+
 					free( auth_methods );
 					free( method_used );
 
@@ -4778,6 +4804,13 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 								sock->peer_description(),
 								tmp_cmd,
 								comTable[cmd_index].command_descrip );
+						if( !auth_success ) {
+							dprintf( D_ALWAYS,
+									 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
+									 errstack.getFullText() );
+						}
+						result = FALSE;
+						goto finalize;
 					}
 
 					if( auth_success ) {
@@ -4800,10 +4833,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 							result = FALSE;
 							goto finalize;
 						}
-					}
-
-					if ( method_used ) {
-						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 					}
 
 				} else {
@@ -5633,7 +5662,10 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	else {
 		msg->setStreamType(Stream::reli_sock);
 	}
-
+	if(pidinfo->child_session_id)
+	{
+		msg->setSecSessionId(pidinfo->child_session_id);
+	}
 	msg->messengerDelivery( true ); // we really are sending this message
 	if( nonblocking ) {
 		d->sendMsg( msg.get() );
@@ -6158,8 +6190,9 @@ DaemonCore::Register_Family(pid_t       child_pid,
 	}
 	if (group != NULL) {
 #if defined(LINUX)
-		if (!m_proc_family->track_family_via_supplementary_group(child_pid,
-		                                                         *group)) {
+		if (!m_proc_family->
+			track_family_via_allocated_supplementary_group(child_pid, *group))
+		{
 			dprintf(D_ALWAYS,
 			        "Create_Process: error tracking family "
 			            "with root %u via group ID\n",
@@ -6211,6 +6244,7 @@ public:
 		int the_job_opt_mask,
 		const Env *the_env,
 		const MyString &the_inheritbuf,
+		const MyString &the_privateinheritbuf,
 		pid_t the_forker_pid,
 		time_t the_time_of_fork,
 		unsigned int the_mii,
@@ -6229,7 +6263,9 @@ public:
 		int		*affinity_mask
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
-	   m_inheritbuf(the_inheritbuf), m_forker_pid(the_forker_pid),
+	   m_inheritbuf(the_inheritbuf),
+	   m_privateinheritbuf(the_privateinheritbuf),
+	   m_forker_pid(the_forker_pid),
 	   m_time_of_fork(the_time_of_fork), m_mii(the_mii),
 	   m_family_info(the_family_info), m_cwd(the_cwd),
 	   m_executable(the_executable),
@@ -6268,6 +6304,7 @@ private:
 	const int m_job_opt_mask;
 	const Env *m_env;
 	const MyString &m_inheritbuf;
+	const MyString &m_privateinheritbuf;
 	const pid_t m_forker_pid;
 	const time_t m_time_of_fork;
 	const unsigned int m_mii;
@@ -6513,6 +6550,9 @@ void CreateProcessForkit::exec() {
 			// for this process.
 		m_envobject.SetEnv( EnvGetName( ENV_INHERIT ), m_inheritbuf.Value() );
 
+		if( !m_privateinheritbuf.IsEmpty() ) {
+			m_envobject.SetEnv( EnvGetName( ENV_PRIVATE ), m_privateinheritbuf.Value() );
+		}
 			// Make sure PURIFY can open windows for the daemons when
 			// they start. This functionality appears to only exist when we've
 			// decided to inherit the parent's environment. I'm not sure
@@ -7025,7 +7065,9 @@ int DaemonCore::Create_Process(
 	time_t time_of_fork;
 	unsigned int mii;
 	pid_t forker_pid;
-
+	//Security session ID and key for daemon core processes.  Not used on Solaris.
+	std::string session_id;
+	MyString privateinheritbuf;
 
 #ifdef WIN32
 
@@ -7057,6 +7099,9 @@ int DaemonCore::Create_Process(
 	MyString executable_fullpath_buf;
 	char const *executable_fullpath = executable;
 #endif
+
+	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
+
 
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
@@ -7157,7 +7202,7 @@ int DaemonCore::Create_Process(
 	}
 	else if ( want_command_port != FALSE ) {
 		inherit_handles = TRUE;
-		SafeSock* ssock_ptr = m_wants_dc_udp ? &ssock : NULL;
+		SafeSock* ssock_ptr = want_udp ? &ssock : NULL;
 		if (!InitCommandSockets(want_command_port, &rsock, ssock_ptr, false)) {
 				// error messages already printed by InitCommandSockets()
 			goto wrapup;
@@ -7176,7 +7221,7 @@ int DaemonCore::Create_Process(
 		ptmp = rsock.serialize();
 		inheritbuf += ptmp;
 		delete []ptmp;
-		if (m_wants_dc_udp) {
+		if (want_udp) {
 			inheritbuf += " ";
 			ptmp = ssock.serialize();
 			inheritbuf += ptmp;
@@ -7185,12 +7230,62 @@ int DaemonCore::Create_Process(
 
             // now put the actual fds into the list of fds to inherit
         inheritFds[numInheritFds++] = rsock.get_file_desc();
-		if (m_wants_dc_udp) {
+		if (want_udp) {
 			inheritFds[numInheritFds++] = ssock.get_file_desc();
 		}
 	}
 	inheritbuf += " 0";
+	/*
+	Due to the belief that on Solaris there are no private environments, the passing of
+	security keys through the environment is a bad idea.  Thus we do not attempt this on
+	Solaris.
+	*/
+#ifndef Solaris
+	/*
+	Currently there is no way to detect if we are starting a daemon core process
+	or not.  The closest thing is so far all daemons the master starts will receive
+	a command port, whereas non-daemon core processes would not know what to do with
+	one.  Since these security sessions are for communication between daemons, this
+	is the best that can currently be done to make sure non-daemon core processes
+	don't get a session key.
+	*/
+	if(want_command_port != FALSE)
+	{
+		char* c_session_id = Condor_Crypt_Base::randomHexKey();
+		char* c_session_key = Condor_Crypt_Base::randomHexKey();
 
+		session_id.assign(c_session_id);
+		std::string session_key(c_session_key);
+
+		free(c_session_id);
+		free(c_session_key);
+		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
+			DAEMON,
+			session_id.c_str(),
+			session_key.c_str(),
+			NULL,
+			CONDOR_CHILD_FQU,
+			NULL,
+			0);
+
+		if(!rc)
+		{
+			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
+			goto wrapup;
+		}
+		privateinheritbuf += " SessionKey:";
+
+		MyString session_info;
+		rc = getSecMan()->ExportSecSessionInfo(session_id.c_str(), session_info);
+		if(!rc)
+		{
+			dprintf(D_ALWAYS, "ERROR: Create_Process failed to export security session for child daemon.\n");
+			goto wrapup;
+		}
+		ClaimIdParser claimId(session_id.c_str(), session_info.Value(), session_key.c_str());
+		privateinheritbuf += claimId.claimId();
+	}
+#endif
 	// now process fd_inherit_list, which allows the caller the specify
 	// arbitrary file descriptors to be passed through to the child process
 	// (currently only implemented on UNIX)
@@ -7399,6 +7494,9 @@ int DaemonCore::Create_Process(
 
 			// now, add in the inherit buf
 		job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+
+		if( !privateinheritbuf.IsEmpty() )
+			job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -7927,6 +8025,7 @@ int DaemonCore::Create_Process(
 			job_opt_mask,
 			env,
 			inheritbuf,
+			privateinheritbuf,
 			forker_pid,
 			time_of_fork,
 			mii,
@@ -8120,7 +8219,11 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-			pidtmp->sinful_string = sock_to_string(rsock._sock);
+			Sinful sinful(sock_to_string(rsock._sock));
+			if( !want_udp ) {
+				sinful.setNoUDP(true);
+			}
+			pidtmp->sinful_string = sinful.getSinful();
 		}
 	}
 
@@ -8129,6 +8232,10 @@ int DaemonCore::Create_Process(
 	pidtmp->reaper_id = reaper_id;
 	pidtmp->hung_tid = -1;
 	pidtmp->was_not_responding = FALSE;
+	if(!session_id.empty())
+	{
+		pidtmp->child_session_id = strdup(session_id.c_str());
+	}
 #ifdef WIN32
 	pidtmp->hProcess = piProcess.hProcess;
 	pidtmp->hThread = piProcess.hThread;
@@ -8745,8 +8852,8 @@ DaemonCore::Inherit( void )
 			dc_rsock = new ReliSock();
 			((ReliSock *)dc_rsock)->serialize(ptmp);
 			dc_rsock->set_inheritable(FALSE);
+			ptmp=inherit_list.next();
 		}
-		ptmp=inherit_list.next();
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			if( !m_wants_dc_udp_self ) {
 					// we don't want a UDP command socket, but our parent
@@ -8759,9 +8866,55 @@ DaemonCore::Inherit( void )
 				dc_ssock->serialize(ptmp);
 				dc_ssock->set_inheritable(FALSE);
 			}
-		}
 
+			ptmp=inherit_list.next();
+		}
 	}	// end of if we read out CONDOR_INHERIT ok
+	/*
+	This environment variable is never set on Solaris so
+	don't check for it.  Since environments are apparently
+	public on Solaris, we can't use it to securely pass
+	information around.
+	*/
+#ifndef Solaris
+	const char *privEnvName = EnvGetName( ENV_PRIVATE );
+	const char *privTmp = GetEnv( privEnvName );
+	if ( privTmp != NULL ) {
+		dprintf ( D_DAEMONCORE, "Processing %s from parent\n", privEnvName );
+	}
+	if(!privTmp)
+	{
+		return;
+	}
+
+	StringList private_list(privTmp, " ");
+	UnsetEnv( privEnvName );
+
+	private_list.rewind();
+	while((ptmp = private_list.next()) != NULL)
+	{
+		if( ptmp && strncmp(ptmp,"SessionKey:",11)==0 ) {
+			dprintf(D_DAEMONCORE, "Removing session key.\n");
+			ClaimIdParser claimid(ptmp+11);
+			bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
+				DAEMON,
+				claimid.secSessionId(),
+				claimid.secSessionKey(),
+				claimid.secSessionInfo(),
+				CONDOR_PARENT_FQU,
+				NULL,
+				0);
+			if(!rc)
+			{
+				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
+			}
+			IpVerify* ipv = getSecMan()->getIpVerify();
+			MyString id;
+			id.sprintf("%s", CONDOR_PARENT_FQU);
+			ipv->PunchHole(DAEMON, id);
+		}
+	}
+#endif
 }
 
 void
@@ -8860,9 +9013,9 @@ DaemonCore::InitDCCommandSocket( int command_port )
 	if( addr ) {
 		dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
 	}
-	else {
-		addr = privateNetworkIpAddr();
-		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", addr );
+	char const *priv_addr = privateNetworkIpAddr();
+	if( priv_addr ) {
+		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
 	}
 
 	if( dc_rsock && m_shared_port_endpoint ) {
@@ -8887,9 +9040,6 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		if( my_ip == loopback_ip ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
-			dprintf( D_ALWAYS, "         This may be due to a misconfigured /etc/hosts file.\n" );
-			dprintf( D_ALWAYS, "         Please make sure your hostname is not listed on the\n" );
-			dprintf( D_ALWAYS, "         same line as localhost in /etc/hosts.\n" );
 		}
 	}
 
@@ -9441,7 +9591,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			        pid);
 		}
 	}
-
+	//Delete the session information.
+	if(pidentry->child_session_id)
+		getSecMan()->session_cache->remove(pidentry->child_session_id);
 	// Now remove this pid from our tables ----
 		// remove from hash table
 	pidTable->remove(pid);
@@ -9501,13 +9653,30 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	unsigned int timeout_secs = 0;
 	PidEntry *pidentry;
 	int ret_value;
+	double dprintf_lock_delay = 0.0;
 
 	if (!stream->code(child_pid) ||
-		!stream->code(timeout_secs) ||
-		!stream->end_of_message()) {
-		dprintf(D_ALWAYS,"Failed to read ChildAlive packet\n");
+		!stream->code(timeout_secs)) {
+		dprintf(D_ALWAYS,"Failed to read ChildAlive packet (1)\n");
 		return FALSE;
 	}
+
+		// There is an optional additional dprintf_lock_delay in the
+		// message.  It is optional so that external programs can send
+		// simple alive messages using condor_squawk.
+	if( stream->peek_end_of_message() ) {
+		if( !stream->end_of_message() ) {
+			dprintf(D_ALWAYS,"Failed to read ChildAlive packet (2)\n");
+			return FALSE;
+		}
+	}
+	else if( !stream->code(dprintf_lock_delay) ||
+			 !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS,"Failed to read ChildAlive packet (3)\n");
+		return FALSE;
+	}
+
 
 	if ((pidTable->lookup(child_pid, pidentry) < 0)) {
 		// we have no information on this pid
@@ -9532,7 +9701,53 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 	pidentry->was_not_responding = FALSE;
 
 	dprintf(D_DAEMONCORE,
-		"received childalive, pid=%d, secs=%d\n",child_pid,timeout_secs);
+			"received childalive, pid=%d, secs=%d, dprintf_lock_delay=%f\n",child_pid,timeout_secs,dprintf_lock_delay);
+
+		/* The Lock Convoy of Shadowy Doom.  Once upon a time, there
+		 * was a submit machine that melted down for hours with high
+		 * load and no way for the admins to bring it back to normal
+		 * without rebooting it.  There were 30k-40k shadows running.
+		 * During that time, some of the shadows waited for hours to
+		 * get a lock to the shadow log, while others experienced much
+		 * less wait time, indicating a high degree of unfairness.
+		 * Further analysis revealed that the system was likely
+		 * spending most of its time context switching whenever the
+		 * lock was freed and was rarely actually getting any real
+		 * work done.  This is known as the lock convoy problem.
+		 *
+		 * To address this, we made unix daemons append without
+		 * locking (using O_APPEND).  A lock is still used for
+		 * rotation, but this should not lead to the lock convoy
+		 * problem unless rotation is happening in a matter of
+		 * seconds.  Just in case the shadowy convoy ever returns,
+		 * we want to leave some better clues behind.
+		 */
+
+	if( dprintf_lock_delay > 0.01 ) {
+		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its debug file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
+	}
+	if( dprintf_lock_delay > 0.1 ) {
+			// things are looking serious, so let's send mail
+		static time_t last_email = 0;
+		if( last_email == 0 || time(NULL)-last_email > 60 ) {
+			last_email = time(NULL);
+
+			std::string subject;
+			sprintf(subject,"Condor process reports long locking delays!");
+
+			FILE *mailer = email_admin_open(subject.c_str());
+			if( mailer ) {
+				fprintf(mailer,
+						"\n\nThe %s's child process with pid %d has spent %.1f%% of its time waiting\n"
+						"for a lock to its debug file.  This could indicate a scalability limit\n"
+						"that could cause system stability problems.\n",
+						get_mySubSystem()->getName(),
+						child_pid,
+						dprintf_lock_delay*100);
+				email_close( mailer );
+			}
+		}
+	}
 
 	return TRUE;
 
@@ -9700,9 +9915,12 @@ int DaemonCore::SendAliveToParent()
 		first_time = false;
 	}
 
+	double dprintf_lock_delay = dprintf_get_lock_delay();
+	dprintf_reset_lock_delay();
+
 	bool blocking = first_time;
 	classy_counted_ptr<Daemon> d = new Daemon(DT_ANY,parent_sinful_string);
-	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,blocking);
+	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,dprintf_lock_delay,blocking);
 
 	int timeout = m_child_alive_period / number_of_tries;
 	if( timeout < 60 ) {
@@ -10612,6 +10830,7 @@ DaemonCore::PidEntry::PidEntry() {
 		std_pipes[i] = DC_STD_FD_NOPIPE;
 	}
 	stdin_offset = 0;
+	child_session_id = NULL;
 }
 
 
@@ -10636,6 +10855,8 @@ DaemonCore::PidEntry::~PidEntry() {
 		SharedPortEndpoint::RemoveSocket( shared_port_fname.Value() );
 #endif
 	}
+	if(child_session_id)
+		free(child_session_id);
 }
 
 

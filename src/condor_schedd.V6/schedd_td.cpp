@@ -29,7 +29,7 @@
 #include "scheduler.h"
 #include "basename.h"
 #include "nullfile.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 
 /* In this service function, the client tells the schedd a bunch of jobs
 	it would like to perform a transfer for into/out of a sandbox. The

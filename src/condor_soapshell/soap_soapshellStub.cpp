@@ -25,7 +25,7 @@
 #include "condor_attributes.h"
 
 #include "condorSoapshell.nsmap"
-#include "../condor_c++_util/soap_helpers.cpp"
+#include "../condor_utils/soap_helpers.cpp"
 
 extern ClassAd* process_request(const ClassAd*);
 

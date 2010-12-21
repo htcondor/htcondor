@@ -54,6 +54,9 @@
 extern "C" int get_random_int();
 extern void main_shutdown_fast();
 
+const char* JOB_AD_FILENAME = ".job.ad";
+const char* MACHINE_AD_FILENAME = ".machine.ad";
+
 /* CStarter class implementation */
 
 CStarter::CStarter()
@@ -73,6 +76,8 @@ CStarter::CStarter()
 	suspended = false;
 	m_privsep_helper = NULL;
 	m_configured = false;
+	m_job_environment_is_ready = false;
+	m_all_jobs_done = false;
 }
 
 
@@ -587,9 +592,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		// instead.
 
 	IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-	MyString auth_hole_id;
-	auth_hole_id.sprintf("%s/*",fqu.Value());
-	bool rc = ipv->PunchHole(READ, auth_hole_id);
+	bool rc = ipv->PunchHole(READ, fqu);
 	if( !rc ) {
 		error_msg = "Starter failed to create authorization entry for job owner.";
 	}
@@ -818,6 +821,14 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	if( !jic || !jobad ) {
 		return SSHDRetry(s,"Rejecting request, because job not yet initialized.");
+	}
+	if( !m_job_environment_is_ready ) {
+			// This can happen if file transfer is still in progress.
+			// At this stage, the sandbox might not even be owned by the user.
+		return SSHDRetry(s,"Rejecting request, because the job execution environment is not yet ready.");
+	}
+	if( m_all_jobs_done ) {
+		return SSHDFailed(s,"Rejecting request, because the job is finished.");
 	}
 	if( suspended ) {
 			// Better to reject them with a clear explanation rather
@@ -1342,8 +1353,8 @@ CStarter::createTempExecuteDir( void )
 	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
 	if (cpsh != NULL) {
 		cpsh->initialize_sandbox(WorkingDir.Value());
-	}
-	else {
+		WriteAdFiles();
+	} else {
 		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
@@ -1352,6 +1363,7 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
+		WriteAdFiles();
 #if !defined(WIN32)
 		if (use_chown) {
 			priv_state p = set_root_priv();
@@ -1511,6 +1523,8 @@ CStarter::jobEnvironmentReady( void )
 			m_privsep_helper->set_sandbox_owned_by_user();
 		}
 	}
+
+	m_job_environment_is_ready = true;
 
 		//
 		// The Starter will determine when the job 
@@ -2294,6 +2308,8 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
+	m_all_jobs_done = true;
+
 		// now that all user processes are complete, change the
 		// sandbox ownership back over to condor. if this is a VM
 		// universe job, this chown will have already been
@@ -2321,8 +2337,14 @@ CStarter::transferOutput( void )
 {
 	char *ver;
 	UserProc *job;
+	bool transient_failure = false;
 
-	if (jic->transferOutput() == false) {
+	if (jic->transferOutput(transient_failure) == false) {
+
+		if( transient_failure ) {
+				// we will retry the transfer when (if) the shadow reconnects
+			return false;
+		}
 
 		// Send, if the JIC thinks it is talking to a shadow of the right
 		// version, a message about the termination of the job to the shadow in
@@ -2770,3 +2792,65 @@ CStarter::exitAfterGlexec( int code )
 	exit( code );
 }
 #endif
+
+bool
+CStarter::WriteAdFiles()
+{
+
+	ClassAd* ad;
+	const char* dir = this->GetWorkingDir();
+	MyString ad_str, filename;
+	FILE* fp;
+	bool ret_val = true;
+
+	// Write the job ad first
+	ad = this->jic->jobClassAd();
+	if (ad != NULL)
+	{
+		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+		fp = safe_fopen_wrapper(filename.Value(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job ad: "
+						"%s (errno %d)\n", filename.Value(),
+						strerror(errno), errno);
+			ret_val = false;
+		}
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
+	}
+	else
+	{
+		// If there is no job ad, this is a problem
+		ret_val = false;
+	}
+
+	// Write the machine ad
+	ad = this->jic->machClassAd();
+	if (ad != NULL)
+	{
+		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
+		fp = safe_fopen_wrapper(filename.Value(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "
+						"ad: %s (errno %d)\n", filename.Value(),
+					strerror(errno), errno);
+			ret_val = false;
+		}
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
+	}
+
+	return ret_val;
+}

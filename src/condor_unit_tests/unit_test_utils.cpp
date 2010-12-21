@@ -284,3 +284,195 @@ void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {
 	buf.sprintf("%s = %s", attribute, value);
 	ad->Insert(buf.Value());
 }
+
+/* don't return anything: the process will die if value not zero */
+void cut_assert_z_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value != 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_z(%s) with value %d at line %d in "
+			"file %s.\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+}
+
+int cut_assert_nz_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value == 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_nz(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_gz_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value <= 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_gz(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_lz_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value >= 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_lz(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_gez_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value < 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_gez(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+int cut_assert_lez_impl(int value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value > 0) {
+		dprintf(D_ALWAYS, "Failed cut_assert_lez(%s) with value %d at %d in %s."
+			"\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+bool cut_assert_true_impl(bool value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (!value) {
+		dprintf(D_ALWAYS, "Failed cut_assert_true(%s) with value %s at %d in %s"
+			".\n", expr, tfstr(value), line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+bool cut_assert_false_impl(bool value, char *expr, char *file, int line)
+{
+	int tmp_errno = errno;
+
+	if (value) {
+		dprintf(D_ALWAYS, "Failed cut_assert_false(%s) with value %s at %d in "
+			"%s.\n", expr, tfstr(value), line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+void* cut_assert_not_null_impl(void *value, char *expr, char *file, int line) {
+	int tmp_errno = errno;
+
+	if (value == NULL) {
+		dprintf(D_ALWAYS, "Failed cut_assert_not_null(%s) with value %p at %d "
+			"in %s.\n",	expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return value;
+}
+
+/* don't return anything: the process will die if value is not NULL */
+void cut_assert_null_impl(void *value, char *expr, char *file, int line) {
+	int tmp_errno = errno;
+
+	if (value != NULL) {
+		dprintf(D_ALWAYS, "Failed cut_assert_not_null(%s) with value %p at %d "
+			"in %s.\n", expr, value, line, file);
+		dprintf(D_ALWAYS, "A possibly useful errno is %d(%s).\n",
+			tmp_errno, strerror(tmp_errno));
+		exit(EXIT_FAILURE);
+	}
+
+}
+
+/* Safely creates an empty file */
+void create_empty_file(char *file)
+{
+	FILE *f = NULL;
+	cut_assert_not_null( f = safe_fopen_wrapper(file, "w+") );
+	cut_assert_z( fclose(f) );
+}
+
+#ifdef WIN32
+int gettimeofday(struct timeval *tv, struct timezone *tz)
+{
+	FILETIME ft;
+	unsigned __int64 tmpres = 0;
+	static int tzflag;
+
+	if (NULL != tv)
+	{
+		GetSystemTimeAsFileTime(&ft);
+
+		tmpres |= ft.dwHighDateTime;
+		tmpres <<= 32;
+		tmpres |= ft.dwLowDateTime;
+
+		/*converting file time to unix epoch*/
+		tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+		tmpres /= 10;  /*convert into microseconds*/
+		tv->tv_sec = (long)(tmpres / 1000000UL);
+		tv->tv_usec = (long)(tmpres % 1000000UL);
+	}
+ 
+	if (NULL != tz)
+	{
+		if (!tzflag)
+		{
+			_tzset();
+			tzflag++;
+		}
+		tz->tz_minuteswest = _timezone / 60;
+		tz->tz_dsttime = _daylight;
+	}
+ 
+	return 0;
+}
+#endif

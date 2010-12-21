@@ -103,6 +103,7 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 {
 	m_gahp_pid = -1;
+	m_gahp_startup_failed = false;
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
 	m_gahp_errorfd = -1;
@@ -241,14 +242,14 @@ GahpServer::write_line(const char *command)
 	daemonCore->Write_Pipe(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
-		MyString debug = command;
-		debug.sprintf( "'%s'", command );
-		if ( logGahpIoSize > 0 && debug.Length() > logGahpIoSize ) {
-			debug = debug.Substr( 0, logGahpIoSize );
+		std::string debug = command;
+		sprintf( debug, "'%s'", command );
+		if ( logGahpIoSize > 0 && debug.length() > logGahpIoSize ) {
+			debug.erase( logGahpIoSize, std::string::npos );
 			debug += "...";
 		}
 		dprintf( D_FULLDEBUG, "GAHP[%d] <- %s\n", m_gahp_pid,
-				 debug.Value() );
+				 debug.c_str() );
 	}
 
 	return;
@@ -271,18 +272,18 @@ GahpServer::write_line(const char *command, int req, const char *args)
 	daemonCore->Write_Pipe(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
-		MyString debug = command;
+		std::string debug = command;
 		if ( args ) {
-			debug.sprintf( "'%s%s%s'", command, buf, args );
+			sprintf( debug, "'%s%s%s'", command, buf, args );
 		} else {
-			debug.sprintf( "'%s%s'", command, buf );
+			sprintf( debug, "'%s%s'", command, buf );
 		}
-		if ( logGahpIoSize > 0 && debug.Length() > logGahpIoSize ) {
-			debug = debug.Substr( 0, logGahpIoSize );
+		if ( logGahpIoSize > 0 && debug.length() > logGahpIoSize ) {
+			debug.erase( logGahpIoSize, std::string::npos );
 			debug += "...";
 		}
 		dprintf( D_FULLDEBUG, "GAHP[%d] <- %s\n", m_gahp_pid,
-				 debug.Value() );
+				 debug.c_str() );
 	}
 
 	return;
@@ -305,23 +306,23 @@ GahpServer::Reaper(Service *,int pid,int status)
 		}
 	}
 
-	MyString buf;
+	std::string buf;
 
-	buf.sprintf( "Gahp Server (pid=%d) ", pid );
+	sprintf( buf, "Gahp Server (pid=%d) ", pid );
 
 	if( WIFSIGNALED(status) ) {
-		buf.sprintf_cat( "died due to %s", 
+		sprintf_cat( buf, "died due to %s", 
 			daemonCore->GetExceptionString(status) );
 	} else {
-		buf.sprintf_cat( "exited with status %d", WEXITSTATUS(status) );
+		sprintf_cat( buf, "exited with status %d", WEXITSTATUS(status) );
 	}
 
 	if ( dead_server ) {
-		buf.sprintf_cat( " unexpectedly" );
-		EXCEPT( buf.Value() );
+		sprintf_cat( buf, " unexpectedly" );
+		EXCEPT( buf.c_str() );
 	} else {
-		buf.sprintf_cat( "\n" );
-		dprintf( D_ALWAYS, buf.Value() );
+		sprintf_cat( buf, "\n" );
+		dprintf( D_ALWAYS, buf.c_str() );
 	}
 }
 
@@ -505,7 +506,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 					//   will be printed in the log after the RESULTS line
 					//   is logged. This implied reversal of causality isn't
 					//   easy to fix, so we leave it as-is.
-				static MyString debug;
+				static std::string debug;
 				debug = "";
 				if( g_args.argc > 0 ) {
 					debug += "'";
@@ -517,19 +518,19 @@ GahpServer::read_argv(Gahp_Args &g_args)
 							debug += g_args.argv[i];
 						}
 						if ( logGahpIoSize > 0 &&
-							 debug.Length() > logGahpIoSize ) {
+							 debug.length() > logGahpIoSize ) {
 							break;
 						}
 					}
 					debug += "'";
 				}
-				if ( logGahpIoSize > 0 && debug.Length() > logGahpIoSize ) {
-					debug = debug.Substr( 0, logGahpIoSize );
+				if ( logGahpIoSize > 0 && debug.length() > logGahpIoSize ) {
+					debug.erase( logGahpIoSize, std::string::npos );
 					debug += "...";
 				}
 				dprintf( D_FULLDEBUG, "GAHP[%d] %s-> %s\n", m_gahp_pid,
 						 trash_this_line ? "(unprefixed) " : "",
-						 debug.Value() );
+						 debug.c_str() );
 			}
 
 			// check for a single "R".  This means we should check
@@ -647,7 +648,10 @@ GahpServer::Startup()
 	char *tmp_char;
 
 		// Check if we already have spawned a GAHP server.  
-	if ( m_gahp_pid != -1 ) {
+	if ( m_gahp_startup_failed ) {
+			// Previous attempt to start GAHP failed. Don't retry...
+		return false;
+	} else if ( m_gahp_pid != -1 ) {
 			// GAHP already running...
 		return true;
 	}
@@ -685,14 +689,14 @@ GahpServer::Startup()
 	// IS NOT SPAWNED WITH ROOT PRIV.
 	//
 	if ( get_port_range( FALSE, &low_port, &high_port ) == TRUE ) {
-		MyString buff;
-		buff.sprintf( "%d,%d", low_port, high_port );
-		newenv.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
+		std::string buff;
+		sprintf( buff, "%d,%d", low_port, high_port );
+		newenv.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.c_str() );
 	}
 	if ( get_port_range( TRUE, &low_port, &high_port ) == TRUE ) {
-		MyString buff;
-		buff.sprintf( "%d,%d", low_port, high_port );
-		newenv.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.Value() );
+		std::string buff;
+		sprintf( buff, "%d,%d", low_port, high_port );
+		newenv.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.c_str() );
 	}
 
 		// GLITE_LOCATION needs to be set for the blahp
@@ -807,6 +811,7 @@ GahpServer::Startup()
 	if ( command_version() == false ) {
 		dprintf(D_ALWAYS,"Failed to read GAHP server version\n");
 		// consider this a bad situation...
+		m_gahp_startup_failed = true;
 		return false;
 	} else {
 		dprintf(D_FULLDEBUG,"GAHP server version: %s\n",m_gahp_version);
@@ -814,6 +819,7 @@ GahpServer::Startup()
 
 		// Now see what commands this server supports.
 	if ( command_commands() == false ) {
+		m_gahp_startup_failed = true;
 		return false;
 	}
 
@@ -943,11 +949,11 @@ GahpServer::command_cache_proxy_from_file( GahpProxyInfo *new_proxy )
 		return false;
 	}
 
-	MyString buf;
-	bool x = buf.sprintf("%s %d %s",command,new_proxy->proxy->id,
+	std::string buf;
+	int x = sprintf(buf,"%s %d %s",command,new_proxy->proxy->id,
 					 escapeGahpString(new_proxy->proxy->proxy_filename));
-	ASSERT( x );
-	write_line(buf.Value());
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
 
 	Gahp_Args result;
 	read_argv(result);
@@ -975,10 +981,10 @@ GahpServer::uncacheProxy( GahpProxyInfo *gahp_proxy )
 		return false;
 	}
 
-	MyString buf;
-	bool x = buf.sprintf("%s %d",command,gahp_proxy->proxy->id);
-	ASSERT( x );
-	write_line(buf.Value());
+	std::string buf;
+	int x = sprintf(buf,"%s %d",command,gahp_proxy->proxy->id);
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
 
 	Gahp_Args result;
 	read_argv(result);
@@ -1050,10 +1056,10 @@ GahpServer::command_use_cached_proxy( GahpProxyInfo *new_proxy )
 		return false;
 	}
 
-	MyString buf;
-	bool x = buf.sprintf("%s %d",command,new_proxy->proxy->id);
-	ASSERT( x );
-	write_line(buf.Value());
+	std::string buf;
+	int x = sprintf(buf,"%s %d",command,new_proxy->proxy->id);
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
 
 	Gahp_Args result;
 	read_argv(result);
@@ -1237,7 +1243,7 @@ GahpServer::getPollInterval()
 const char *
 escapeGahpString(const char * input) 
 {
-	static MyString output;
+	static std::string output;
 
 	if (!input) return NULL;
 
@@ -1253,18 +1259,18 @@ escapeGahpString(const char * input)
 		output += input[i];
 	}
 
-	return output.Value();
+	return output.c_str();
 }
 
 const char *
 GahpClient::getErrorString()
 {
-	static MyString output;
+	static std::string output;
 
 	output = "";
 
 	unsigned int i = 0;
-	int input_len = error_string.Length();
+	int input_len = error_string.length();
 	for (i=0; i < input_len; i++) {
 			// Some error strings may contain characters that are
 			// undesirable. Specifically, when logging, a \n can cause
@@ -1287,7 +1293,7 @@ GahpClient::getErrorString()
 		}
 	}
 
-	return output.Value();
+	return output.c_str();
 }
 
 const char *
@@ -1384,7 +1390,7 @@ GahpServer::err_pipe_ready()
 
 			*newline = '\0';
 			dprintf( D_FULLDEBUG, "GAHP[%d] (stderr) -> %s%s\n", m_gahp_pid,
-					 m_gahp_error_buffer.Value(), prev_line );
+					 m_gahp_error_buffer.c_str(), prev_line );
 			prev_line = newline + 1;
 			m_gahp_error_buffer = "";
 
@@ -1405,14 +1411,14 @@ GahpServer::command_initialize_from_file(const char *proxy_path,
 
 	ASSERT(proxy_path);		// Gotta have it...
 
-	MyString buf;
+	std::string buf;
 	if ( command == NULL ) {
 		command = "INITIALIZE_FROM_FILE";
 	}
-	bool x = buf.sprintf("%s %s",command,
+	int x = sprintf(buf,"%s %s",command,
 					 escapeGahpString(proxy_path));
-	ASSERT( x );
-	write_line(buf.Value());
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
 
 	Gahp_Args result;
 	read_argv(result);
@@ -1440,10 +1446,10 @@ GahpServer::command_response_prefix(const char *prefix)
 		return false;
 	}
 
-	MyString buf;
-	bool x = buf.sprintf("%s %s",command,escapeGahpString(prefix));
-	ASSERT( x );
-	write_line(buf.Value());
+	std::string buf;
+	int x = sprintf(buf,"%s %s",command,escapeGahpString(prefix));
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
 
 	Gahp_Args result;
 	read_argv(result);
@@ -1583,10 +1589,10 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 	}
 
 		// Generate request line
-	MyString reqline;
-	bool x = reqline.sprintf("%d",port);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%d",port);
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1620,7 +1626,7 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1648,16 +1654,16 @@ GahpClient::globus_gram_client_job_request(
 	if (!resource_manager_contact) resource_manager_contact=NULLSTRING;
 	if (!description) description=NULLSTRING;
 	if (!callback_contact) callback_contact=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(resource_manager_contact) );
 	char *esc2 = strdup( escapeGahpString(callback_contact) );
 	char *esc3 = strdup( escapeGahpString(description) );
-	bool x = reqline.sprintf("%s %s %d %s", esc1, esc2, limited_deleg, esc3 );
+	int x = sprintf(reqline,"%s %s %d %s", esc1, esc2, limited_deleg, esc3 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 	
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1690,7 +1696,7 @@ GahpClient::globus_gram_client_job_request(
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1711,10 +1717,10 @@ GahpClient::globus_gram_client_job_cancel(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1744,7 +1750,7 @@ GahpClient::globus_gram_client_job_cancel(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1766,10 +1772,10 @@ GahpClient::globus_gram_client_job_status(const char * job_contact,
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 
 		// Check if this request is currently pending.  If not, make
@@ -1804,7 +1810,7 @@ GahpClient::globus_gram_client_job_status(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1830,14 +1836,14 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
 	if (!signal_arg) signal_arg=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(job_contact) );
 	char *esc2 = strdup( escapeGahpString(signal_arg) );
-	bool x = reqline.sprintf("%s %d %s",esc1,signal,esc2);
+	int x = sprintf(reqline,"%s %d %s",esc1,signal,esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1871,7 +1877,7 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1897,14 +1903,14 @@ GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
 	if (!callback_contact) callback_contact=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(job_contact) );
 	char *esc2 = strdup( escapeGahpString(callback_contact) );
-	bool x = reqline.sprintf("%s %s",esc1,esc2);
+	int x = sprintf(reqline,"%s %s",esc1,esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1938,7 +1944,7 @@ GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1959,10 +1965,10 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 
 		// Generate request line
 	if (!resource_contact) resource_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(resource_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(resource_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1992,7 +1998,7 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2013,10 +2019,10 @@ GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact,
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s %d",escapeGahpString(job_contact),limited_deleg);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s %d",escapeGahpString(job_contact),limited_deleg);
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2046,7 +2052,7 @@ GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2066,10 +2072,10 @@ GahpClient::globus_gram_client_get_jobmanager_version(const char * resource_cont
 
 		// Generate request line
 	if (!resource_contact) resource_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(resource_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(resource_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2099,7 +2105,7 @@ GahpClient::globus_gram_client_get_jobmanager_version(const char * resource_cont
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2134,7 +2140,7 @@ GahpClient::clear_pending()
 		if (server->requestTable->remove(pending_reqid) == 0) {
 				// entry was still in the hashtable, which means
 				// that this reqid is still with the gahp server or
-				// still in our waitingToSubmit queue.
+				// still in our waitingHigh/Medium/LowPrio queues.
 				// so re-insert an entry with this pending_reqid
 				// with a NULL data field so we do not reuse this reqid.
 			server->requestTable->insert(pending_reqid,NULL);
@@ -2190,7 +2196,7 @@ GahpClient::reset_user_timer(int tid)
 
 void
 GahpClient::now_pending(const char *command,const char *buf,
-						GahpProxyInfo *cmd_proxy)
+						GahpProxyInfo *cmd_proxy, PrioLevel prio_level )
 {
 
 		// First, if command is not NULL we have a new pending request.
@@ -2217,7 +2223,17 @@ GahpClient::now_pending(const char *command,const char *buf,
 	if ( server->num_pending_requests >= server->max_pending_requests ) {
 			// We have too many requests outstanding.  Queue up
 			// this request for later.
-		server->waitingToSubmit.enqueue(pending_reqid);
+		switch ( prio_level ) {
+		case high_prio:
+			server->waitingHighPrio.push( pending_reqid );
+			break;
+		case medium_prio:
+			server->waitingMediumPrio.push( pending_reqid );
+			break;
+		case low_prio:
+			server->waitingLowPrio.push( pending_reqid );
+			break;
+		}
 		return;
 	}
 
@@ -2427,13 +2443,23 @@ GahpServer::poll()
 
 		// Ok, at this point we may have handled a bunch of results.  So
 		// that means that some gahp requests languishing in the 
-		// waitingToSubmit queue may be good to go.
+		// waitingHigh/Medium/LowPrio queues may be good to go.
 	ASSERT(num_pending_requests >= 0);
 	int waiting_reqid = -1;
-	while ( (waitingToSubmit.Length() > 0) &&
-			(num_pending_requests < max_pending_requests) ) 
+	while ( num_pending_requests < max_pending_requests )
 	{
-		waitingToSubmit.dequeue(waiting_reqid);
+		if ( waitingHighPrio.size() > 0 ) {
+			waiting_reqid = waitingHighPrio.front();
+			waitingHighPrio.pop();
+		} else if ( waitingMediumPrio.size() > 0 ) {
+			waiting_reqid = waitingMediumPrio.front();
+			waitingMediumPrio.pop();
+		} else if ( waitingLowPrio.size() > 0 ) {
+			waiting_reqid = waitingLowPrio.front();
+			waitingLowPrio.pop();
+		} else {
+			break;
+		}
 		entry = NULL;
 		requestTable->lookup(waiting_reqid,entry);
 		if ( entry ) {
@@ -2444,7 +2470,7 @@ GahpServer::poll()
 				// this pending entry had been cleared long ago, and
 				// has been just sitting around in the hash table
 				// to make certain the reqid is not re-used until
-				// it is dequeued from the waitingToSubmit queue.
+				// it is dequeued from the waitingHigh/Medium/Low queues.
 				// So now remove the entry from the hash table
 				// so the reqid can be reused.
 			requestTable->remove(result_reqid);
@@ -2594,7 +2620,7 @@ GahpClient::gt4_generate_submit_id (char ** submit_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout( command, NULL ) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2704,8 +2730,8 @@ GahpClient::gt4_gram_client_job_create(
 	char * _callback_contact = strdup (escapeGahpString(callback_contact));
 	char * _rsl = strdup (escapeGahpString(rsl));
 
-	MyString reqline;
-	bool x = reqline.sprintf("%s %s %s %s %s %d", 
+	std::string reqline;
+	int x = sprintf(reqline, "%s %s %s %s %s %d", 
 							 _submit_id,
 							 _resource_manager_contact,
 							 _jobmanager_type,
@@ -2720,8 +2746,8 @@ GahpClient::gt4_gram_client_job_create(
 	free (_callback_contact);
 	free (_rsl);
 
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2759,7 +2785,7 @@ GahpClient::gt4_gram_client_job_create(
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2779,10 +2805,10 @@ GahpClient::gt4_gram_client_job_start(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2817,7 +2843,7 @@ GahpClient::gt4_gram_client_job_start(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2837,10 +2863,10 @@ GahpClient::gt4_gram_client_job_destroy(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2875,7 +2901,7 @@ GahpClient::gt4_gram_client_job_destroy(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2897,10 +2923,10 @@ GahpClient::gt4_gram_client_job_status(const char * job_contact,
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -2950,7 +2976,7 @@ GahpClient::gt4_gram_client_job_status(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2973,14 +2999,14 @@ GahpClient::gt4_gram_client_job_callback_register(const char * job_contact,
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
 	if (!callback_contact) callback_contact=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(job_contact) );
 	char *esc2 = strdup( escapeGahpString(callback_contact) );
-	bool x = reqline.sprintf("%s %s",esc1,esc2);
+	int x = sprintf(reqline,"%s %s",esc1,esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3015,7 +3041,7 @@ GahpClient::gt4_gram_client_job_callback_register(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3036,10 +3062,10 @@ GahpClient::gt4_gram_client_ping(const char * resource_contact)
 
 		// Generate request line
 	if (!resource_contact) resource_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(resource_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(resource_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3074,7 +3100,7 @@ GahpClient::gt4_gram_client_ping(const char * resource_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3094,10 +3120,10 @@ GahpClient::gt4_gram_client_delegate_credentials(const char *delegation_service_
 
 		// Generate request line
 	ASSERT (delegation_service_url && *delegation_service_url);
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(delegation_service_url));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(delegation_service_url));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3139,7 +3165,7 @@ GahpClient::gt4_gram_client_delegate_credentials(const char *delegation_service_
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3161,10 +3187,10 @@ GahpClient::gt4_gram_client_refresh_credentials(const char *delegation_uri)
 
 		// Generate request line
 	ASSERT (delegation_uri && *delegation_uri);
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(delegation_uri));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(delegation_uri));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3199,7 +3225,7 @@ GahpClient::gt4_gram_client_refresh_credentials(const char *delegation_uri)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3220,11 +3246,11 @@ GahpClient::gt4_set_termination_time(const char *resource_uri,
 
 		// Generate request line
 	if (!resource_uri) resource_uri=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s %ld",escapeGahpString(resource_uri),
+	std::string reqline;
+	int x = sprintf(reqline,"%s %ld",escapeGahpString(resource_uri),
 							 new_termination_time);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3260,7 +3286,7 @@ GahpClient::gt4_set_termination_time(const char *resource_uri,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3300,14 +3326,14 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 			unparser.Unparse( job_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3348,7 +3374,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3390,16 +3416,16 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 			unparser.Unparse( update_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(constraint) );
 	char *esc3 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf( reqline, "%s %s %s", esc1, esc2, esc3 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3437,7 +3463,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3460,14 +3486,14 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!constraint) constraint=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(constraint) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf( reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3529,7 +3555,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3551,15 +3577,15 @@ GahpClient::condor_job_remove(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!reason) reason=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(reason) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3597,7 +3623,7 @@ GahpClient::condor_job_remove(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3637,15 +3663,15 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 			unparser.Unparse( update_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3683,7 +3709,7 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3705,15 +3731,15 @@ GahpClient::condor_job_hold(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!reason) reason=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(reason) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3751,7 +3777,7 @@ GahpClient::condor_job_hold(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3773,15 +3799,15 @@ GahpClient::condor_job_release(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!reason) reason=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(reason) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3819,7 +3845,7 @@ GahpClient::condor_job_release(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3858,14 +3884,14 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 			unparser.Unparse( job_ad, ad_string );
 		}
 	}
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	int x = sprintf(reqline, "%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3903,7 +3929,7 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3923,12 +3949,12 @@ GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
 
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	bool x = reqline.sprintf("%s %d.%d", esc1, job_id.cluster, job_id.proc);
+	int x = sprintf(reqline, "%s %d.%d", esc1, job_id.cluster, job_id.proc);
 	free( esc1 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -3966,7 +3992,7 @@ GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3988,15 +4014,15 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	if (!proxy_file) proxy_file=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(proxy_file) );
-	bool x = reqline.sprintf("%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
+	int x = sprintf(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free(esc1);
 	free(esc2);
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4034,7 +4060,7 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4059,22 +4085,22 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	bool x = reqline.sprintf("%s %d", esc1, jobs.Length());
+	int x = sprintf(reqline, "%s %d", esc1, jobs.Length());
 	free( esc1 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 		// Add variable arguments
 	SimpleListIterator<PROC_ID> jobs_i (jobs);
 	SimpleListIterator<int> exps_i (expirations);
 	PROC_ID next_job;
 	int next_exp;
 	while ( jobs_i.Next( next_job ) && exps_i.Next( next_exp ) ) {
-		x = reqline.sprintf_cat( " %d.%d %d", next_job.cluster, next_job.proc,
+		x = sprintf_cat( reqline, " %d.%d %d", next_job.cluster, next_job.proc,
 								 next_exp );
-		ASSERT( x == true );
+		ASSERT( x > 0 );
 	}
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4130,7 +4156,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4160,10 +4186,10 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 		unparser.SetOutputTargetType( false );
 		unparser.Unparse( job_ad, ad_string );
 	}
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(ad_string.Value()) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(ad_string.Value()) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4201,7 +4227,7 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4221,10 +4247,10 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 
 		// Generate request line
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(job_id) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(job_id) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4266,7 +4292,7 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4286,10 +4312,10 @@ GahpClient::blah_job_cancel(const char *job_id)
 
 		// Generate request line
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString( job_id ) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString( job_id ) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4324,7 +4350,7 @@ GahpClient::blah_job_cancel(const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4344,14 +4370,14 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 
 		// Generate request line
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(job_id) );
 	char *esc2 = strdup( escapeGahpString(proxy_file) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf( reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4386,7 +4412,7 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4408,14 +4434,14 @@ GahpClient::nordugrid_submit(const char *hostname, const char *rsl,
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
 	if (!rsl) rsl=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(rsl) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4453,7 +4479,7 @@ GahpClient::nordugrid_submit(const char *hostname, const char *rsl,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4475,14 +4501,14 @@ GahpClient::nordugrid_status(const char *hostname, const char *job_id,
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline,"%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4520,7 +4546,7 @@ GahpClient::nordugrid_status(const char *hostname, const char *job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4545,18 +4571,18 @@ GahpClient::nordugrid_ldap_query(const char *hostname, const char *ldap_base,
 	if (!ldap_base) ldap_base=NULLSTRING;
 	if (!ldap_filter) ldap_filter=NULLSTRING;
 	if (!ldap_attrs) ldap_attrs=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(ldap_base) );
 	char *esc3 = strdup( escapeGahpString(ldap_filter) );
 	char *esc4 = strdup( escapeGahpString(ldap_attrs) );
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	int x = sprintf(reqline,"%s %s %s %s", esc1, esc2, esc3, esc4 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4594,7 +4620,7 @@ GahpClient::nordugrid_ldap_query(const char *hostname, const char *ldap_base,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4615,14 +4641,14 @@ GahpClient::nordugrid_cancel(const char *hostname, const char *job_id)
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline,"%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4657,7 +4683,7 @@ GahpClient::nordugrid_cancel(const char *hostname, const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4679,22 +4705,22 @@ GahpClient::nordugrid_stage_in(const char *hostname, const char *job_id,
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s %d", esc1, esc2, files.number() );
+	int x = sprintf(reqline,"%s %s %d", esc1, esc2, files.number() );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	int cnt = 0;
 	const char *filename;
 	files.rewind();
 	while ( (filename = files.next()) ) {
-		reqline.sprintf_cat(" %s", filename);
+		sprintf_cat(reqline, " %s", filename);
 		cnt++;
 	}
 	ASSERT( cnt == files.number() );
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4729,7 +4755,7 @@ GahpClient::nordugrid_stage_in(const char *hostname, const char *job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4751,22 +4777,22 @@ GahpClient::nordugrid_stage_out(const char *hostname, const char *job_id,
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s %d", esc1, esc2, files.number() );
+	int x = sprintf(reqline,"%s %s %d", esc1, esc2, files.number() );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	int cnt = 0;
 	const char *filename;
 	files.rewind();
 	while ( (filename = files.next()) ) {
-		reqline.sprintf_cat(" %s", filename);
+		sprintf_cat(reqline," %s", filename);
 		cnt++;
 	}
 	ASSERT( cnt == files.number() );
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4801,7 +4827,7 @@ GahpClient::nordugrid_stage_out(const char *hostname, const char *job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4823,13 +4849,13 @@ GahpClient::nordugrid_stage_out2(const char *hostname, const char *job_id,
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s %d", esc1, esc2, src_files.number() );
+	int x = sprintf(reqline,"%s %s %d", esc1, esc2, src_files.number() );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	int cnt = 0;
 	const char *src_filename;
 	const char *dest_filename;
@@ -4839,14 +4865,14 @@ GahpClient::nordugrid_stage_out2(const char *hostname, const char *job_id,
 			(dest_filename = dest_files.next()) ) {
 		esc1 = strdup( escapeGahpString(src_filename) );
 		esc2 = strdup( escapeGahpString(dest_filename) );
-		reqline.sprintf_cat(" %s %s", esc1, esc2);
+		sprintf_cat(reqline," %s %s", esc1, esc2);
 		cnt++;
 		free( esc1 );
 		free( esc2 );
 	}
 	ASSERT( cnt == src_files.number() );
 	ASSERT( cnt == dest_files.number() );
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4881,7 +4907,7 @@ GahpClient::nordugrid_stage_out2(const char *hostname, const char *job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4905,14 +4931,14 @@ GahpClient::nordugrid_exit_info(const char *hostname, const char *job_id,
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(hostname) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -4956,7 +4982,7 @@ GahpClient::nordugrid_exit_info(const char *hostname, const char *job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4976,10 +5002,10 @@ GahpClient::nordugrid_ping(const char *hostname)
 
 		// Generate request line
 	if (!hostname) hostname=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(hostname));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(hostname));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5014,7 +5040,7 @@ GahpClient::nordugrid_ping(const char *hostname)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5035,14 +5061,14 @@ GahpClient::gridftp_transfer(const char *src_url, const char *dst_url)
 		// Generate request line
 	if (!src_url) src_url=NULLSTRING;
 	if (!dst_url) dst_url=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(src_url) );
 	char *esc2 = strdup( escapeGahpString(dst_url) );
-	bool x = reqline.sprintf( "%s %s", esc1, esc2 );
+	int x = sprintf( reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5077,7 +5103,7 @@ GahpClient::gridftp_transfer(const char *src_url, const char *dst_url)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5106,10 +5132,10 @@ if ( i > 0 && desc[i-1] == '\n' ) {
 desc[i-1] = '\0';
 }
 description = desc;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(description) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(description) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 free(desc);
 
 		// Check if this request is currently pending.  If not, make
@@ -5165,10 +5191,10 @@ GahpClient::unicore_job_start(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5220,10 +5246,10 @@ GahpClient::unicore_job_destroy(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5277,10 +5303,10 @@ GahpClient::unicore_job_status(const char * job_contact,
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(job_contact));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5343,10 +5369,10 @@ if ( i > 0 && desc[i-1] == '\n' ) {
 desc[i-1] = '\0';
 }
 description = desc;
-	MyString reqline;
-	bool x = reqline.sprintf("%s", escapeGahpString(description) );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf( reqline, "%s", escapeGahpString(description) );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 free(desc);
 
 		// Check if this request is currently pending.  If not, make
@@ -5446,14 +5472,14 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 		// Generate request line
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(delg_service) );
 	char *esc2 = strdup( escapeGahpString(delg_id) );
-	bool x = reqline.sprintf("%s %s", esc2, esc1);
+	int x = sprintf(reqline, "%s %s", esc2, esc1);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5463,7 +5489,7 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5491,7 +5517,7 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5516,18 +5542,18 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 	if (!jdl) jdl = NULLSTRING;
 	if (!lease_id) lease_id = "";
 
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(delg_id) );
 	char *esc3 = strdup( escapeGahpString(jdl) );
 	char *esc4 = strdup( escapeGahpString(lease_id) );
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	int x = sprintf( reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 	
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5537,7 +5563,7 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5580,7 +5606,7 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5601,15 +5627,15 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 		// Just start one job
-	bool x = reqline.sprintf("%s 1 %s", esc1, esc2);
+	int x = sprintf(reqline, "%s 1 %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 	
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5619,7 +5645,7 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5646,7 +5672,7 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5667,15 +5693,15 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5685,7 +5711,7 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5712,7 +5738,7 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5733,15 +5759,15 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5751,7 +5777,7 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5778,7 +5804,7 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5799,15 +5825,15 @@ GahpClient::cream_job_suspend(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5817,7 +5843,7 @@ GahpClient::cream_job_suspend(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5844,7 +5870,7 @@ GahpClient::cream_job_suspend(const char *service, const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5865,15 +5891,15 @@ GahpClient::cream_job_resume(const char *service, const char *job_id)
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5883,7 +5909,7 @@ GahpClient::cream_job_resume(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5910,7 +5936,7 @@ GahpClient::cream_job_resume(const char *service, const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -5932,15 +5958,15 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!job_id) job_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
 	int job_number = 1;  // Just query 1 job for now
-	bool x = reqline.sprintf("%s %d %s", esc1, job_number, esc2);
+	int x = sprintf(reqline, "%s %d %s", esc1, job_number, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -5950,7 +5976,7 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5992,7 +6018,7 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6011,14 +6037,14 @@ GahpClient::cream_job_status_all(const char *service,
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
-	MyString reqline;
+	std::string reqline;
 
 	char *esc1 = strdup( escapeGahpString(service) );
 	int job_number = 0; // "all"
-	bool x = reqline.sprintf("%s %d", esc1, job_number);
-	ASSERT( x == true );
+	int x = sprintf(reqline, "%s %d", esc1, job_number);
+	ASSERT( x > 0 );
 	free( esc1 );
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6028,7 +6054,7 @@ GahpClient::cream_job_status_all(const char *service,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6066,7 +6092,9 @@ GahpClient::cream_job_status_all(const char *service,
 				status.job_id = result->argv[offset + 0];
 				status.job_status = result->argv[offset + 1];
 				status.exit_code = atoi(result->argv[offset + 2]);
-				status.failure_reason = result->argv[offset + 3];
+				if ( strcasecmp(result->argv[offset + 3], NULLSTRING) ) {
+					status.failure_reason = result->argv[offset + 3];
+				}
 
 				results[status.job_id] = status;
 			}
@@ -6078,7 +6106,7 @@ GahpClient::cream_job_status_all(const char *service,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6099,14 +6127,14 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 		// Generate request line
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(delg_service) );
 	char *esc2 = strdup( escapeGahpString(delg_id) );
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	int x = sprintf(reqline, "%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6116,7 +6144,7 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6143,7 +6171,7 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6163,10 +6191,10 @@ GahpClient::cream_ping(const char * service)
 
 		// Generate request line
 	if (!service) service=NULLSTRING;
-	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(service));
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	int x = sprintf(reqline,"%s",escapeGahpString(service));
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6176,7 +6204,7 @@ GahpClient::cream_ping(const char * service)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 	
 		// If we made it here, command is pending.
@@ -6209,7 +6237,7 @@ GahpClient::cream_ping(const char * service)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 			// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6229,14 +6257,14 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		// Generate request line
 	if (!service) service=NULLSTRING;
 	if (!lease_id) lease_id=NULLSTRING;
-	MyString reqline;
+	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(lease_id) );
-	bool x = reqline.sprintf("%s %s %ld", esc1, esc2, (long)lease_expiry);
+	int x = sprintf(reqline, "%s %s %ld", esc1, esc2, (long)lease_expiry);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
-	const char *buf = reqline.Value();
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -6246,7 +6274,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,low_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6282,7 +6310,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6332,7 +6360,7 @@ int GahpClient::amazon_vm_start( const char * service_url,
 	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
 	// XXX: You probably should specify a NULL for all "optional" parameters -matt
 							
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(service_url) );
 	char* esc2 = strdup( escapeGahpString(publickeyfile) );
@@ -6348,7 +6376,7 @@ int GahpClient::amazon_vm_start( const char * service_url,
 	// 3. m1.xlarge
 	char* esc8 = strdup( escapeGahpString(instance_type) );
 	
-	bool x = reqline.sprintf("%s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8);
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8);
 	
 	free( esc1 );
 	free( esc2 );
@@ -6358,7 +6386,7 @@ int GahpClient::amazon_vm_start( const char * service_url,
 	free( esc6 );
 	free( esc7 );
 	free( esc8 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
 	const char * group_name;
 	int cnt = 0;
@@ -6369,13 +6397,13 @@ int GahpClient::amazon_vm_start( const char * service_url,
 	if ( groupnames.number() > 0 ) {
 		while ( (group_name = groupnames.next()) ) {
 			esc_groupname = strdup( escapeGahpString(group_name) );
-			reqline.sprintf_cat(" %s", esc_groupname);
+			sprintf_cat(reqline, " %s", esc_groupname);
 			cnt++;
 			free( esc_groupname );
 		}
 	}
 	ASSERT( cnt == groupnames.number() );
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
 		// Command is not pending, so go ahead and submit a new one if our command mode permits.
@@ -6426,7 +6454,7 @@ int GahpClient::amazon_vm_start( const char * service_url,
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6454,22 +6482,22 @@ int GahpClient::amazon_vm_stop( const char *service_url, const char * publickeyf
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(service_url) );
 	char* esc2 = strdup( escapeGahpString(publickeyfile) );
 	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc4 = strdup( escapeGahpString(instance_id) );
 	
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -6513,7 +6541,7 @@ int GahpClient::amazon_vm_stop( const char *service_url, const char * publickeyf
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6542,20 +6570,20 @@ int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * priva
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(instance_id) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -6598,7 +6626,7 @@ int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * priva
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6627,22 +6655,22 @@ int GahpClient::amazon_vm_status( const char *service_url, const char * publicke
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(service_url) );
 	char* esc2 = strdup( escapeGahpString(publickeyfile) );
 	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc4 = strdup( escapeGahpString(instance_id) );
 	
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -6731,7 +6759,7 @@ int GahpClient::amazon_vm_status( const char *service_url, const char * publicke
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6760,18 +6788,18 @@ int GahpClient::amazon_vm_status_all( const char * publickeyfile, const char * p
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline, "%s %s", esc1, esc2 );
 	
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -6836,7 +6864,7 @@ int GahpClient::amazon_vm_status_all( const char * publickeyfile, const char * p
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6865,22 +6893,22 @@ int GahpClient::amazon_vm_create_group( const char * publickeyfile, const char *
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(groupname) );
 	char* esc4 = strdup( escapeGahpString(group_description) );
 	
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
 		// Command is not pending, so go ahead and submit a new one if our command mode permits.
@@ -6924,7 +6952,7 @@ int GahpClient::amazon_vm_create_group( const char * publickeyfile, const char *
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -6952,20 +6980,20 @@ int GahpClient::amazon_vm_delete_group( const char * publickeyfile, const char *
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(groupname) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7010,7 +7038,7 @@ int GahpClient::amazon_vm_delete_group( const char * publickeyfile, const char *
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7038,18 +7066,18 @@ int GahpClient::amazon_vm_group_names( const char * publickeyfile, const char * 
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	
-	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	int x = sprintf(reqline, "%s %s", esc1, esc2 );
 	
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7109,7 +7137,7 @@ int GahpClient::amazon_vm_group_names( const char * publickeyfile, const char * 
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7137,20 +7165,20 @@ int GahpClient::amazon_vm_group_rules(const char * publickeyfile, const char * p
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(groupname) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf( reqline, "%s %s %s", esc1, esc2, esc3 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7212,7 +7240,7 @@ int GahpClient::amazon_vm_group_rules(const char * publickeyfile, const char * p
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7245,7 +7273,7 @@ int GahpClient::amazon_vm_add_group_rule(const char * publickeyfile, const char 
 	// Generate request line
 	if ( !ip_range ) ip_range = "";
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
@@ -7255,7 +7283,7 @@ int GahpClient::amazon_vm_add_group_rule(const char * publickeyfile, const char 
 	char* esc6 = strdup( escapeGahpString(end_port) );
 	char* esc7 = strdup( escapeGahpString(ip_range) );
 	
-	bool x = reqline.sprintf("%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
 	
 	free( esc1 );
 	free( esc2 );
@@ -7264,9 +7292,9 @@ int GahpClient::amazon_vm_add_group_rule(const char * publickeyfile, const char 
 	free( esc5 );
 	free( esc6 );
 	free( esc7 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7311,7 +7339,7 @@ int GahpClient::amazon_vm_add_group_rule(const char * publickeyfile, const char 
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7344,7 +7372,7 @@ int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char 
 	// Generate request line
 	if ( !ip_range ) ip_range = "";
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
@@ -7354,7 +7382,7 @@ int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char 
 	char* esc6 = strdup( escapeGahpString(end_port) );
 	char* esc7 = strdup( escapeGahpString(ip_range) );
 	
-	bool x = reqline.sprintf("%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
 	
 	free( esc1 );
 	free( esc2 );
@@ -7363,9 +7391,9 @@ int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char 
 	free( esc5 );
 	free( esc6 );
 	free( esc7 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7409,7 +7437,7 @@ int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char 
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7430,9 +7458,9 @@ int GahpClient::amazon_ping(const char *service_url, const char * publickeyfile,
 	char* esc2 = strdup( escapeGahpString(publickeyfile) );
 	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
 	
-	MyString reqline;
-	reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
-	const char *buf = reqline.Value();
+	std::string reqline;
+	sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
+	const char *buf = reqline.c_str();
 	
 	free( esc1 );
 	free( esc2 );
@@ -7461,7 +7489,7 @@ int GahpClient::amazon_ping(const char *service_url, const char * publickeyfile,
 	// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7489,7 +7517,7 @@ int GahpClient::amazon_vm_create_keypair( const char *service_url, const char * 
 	}
 	
 	// construct command line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(service_url) );
 	char* esc2 = strdup( escapeGahpString(publickeyfile) );
@@ -7497,7 +7525,7 @@ int GahpClient::amazon_vm_create_keypair( const char *service_url, const char * 
 	char* esc4 = strdup( escapeGahpString(keyname) );
 	char* esc5 = strdup( escapeGahpString(outputfile) );
 	
-	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
+	int x = sprintf(reqline, "%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
 	
 	free( esc1 );
 	free( esc2 );
@@ -7505,9 +7533,9 @@ int GahpClient::amazon_vm_create_keypair( const char *service_url, const char * 
 	free( esc4 );
 	free( esc5 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7553,7 +7581,7 @@ int GahpClient::amazon_vm_create_keypair( const char *service_url, const char * 
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7584,23 +7612,23 @@ int GahpClient::amazon_vm_destroy_keypair( const char *service_url, const char *
 	}
 	
 	// construct command line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(service_url) );
 	char* esc2 = strdup( escapeGahpString(publickeyfile) );
 	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc4 = strdup( escapeGahpString(keyname) );
 	
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7646,7 +7674,7 @@ int GahpClient::amazon_vm_destroy_keypair( const char *service_url, const char *
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7675,19 +7703,19 @@ int GahpClient::amazon_vm_keypair_names( const char * publickeyfile, const char 
 	}
 	
 	// construct command line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	int x = sprintf(reqline, "%s %s", esc1, esc2);
 	
 	free( esc1 );
 	free( esc2 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7747,7 +7775,7 @@ int GahpClient::amazon_vm_keypair_names( const char * publickeyfile, const char 
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7775,19 +7803,19 @@ int GahpClient::amazon_vm_s3_all_buckets( const char * publickeyfile, const char
 	}
 	
 	// construct command line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	
-	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	int x = sprintf(reqline, "%s %s", esc1, esc2);
 	
 	free( esc1 );
 	free( esc2 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7847,7 +7875,7 @@ int GahpClient::amazon_vm_s3_all_buckets( const char * publickeyfile, const char
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7875,21 +7903,21 @@ int GahpClient::amazon_vm_s3_create_bucket( const char * publickeyfile, const ch
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(bucketname) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -7934,7 +7962,7 @@ int GahpClient::amazon_vm_s3_create_bucket( const char * publickeyfile, const ch
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -7962,21 +7990,21 @@ int GahpClient::amazon_vm_s3_delete_bucket( const char * publickeyfile, const ch
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(bucketname) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8021,7 +8049,7 @@ int GahpClient::amazon_vm_s3_delete_bucket( const char * publickeyfile, const ch
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8049,21 +8077,21 @@ int GahpClient::amazon_vm_s3_list_bucket( const char * publickeyfile, const char
 	}
 	
 	// construct command line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(bucketname) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8123,7 +8151,7 @@ int GahpClient::amazon_vm_s3_list_bucket( const char * publickeyfile, const char
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8151,7 +8179,7 @@ int GahpClient::amazon_vm_s3_upload_file( const char * publickeyfile, const char
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
@@ -8166,7 +8194,7 @@ int GahpClient::amazon_vm_s3_upload_file( const char * publickeyfile, const char
 		esc5 = strdup( escapeGahpString(keyname) );
 	}
 	
-	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
+	int x = sprintf(reqline, "%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
 	
 	free( esc1 );
 	free( esc2 );
@@ -8174,9 +8202,9 @@ int GahpClient::amazon_vm_s3_upload_file( const char * publickeyfile, const char
 	free( esc4 );
 	free( esc5 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8221,7 +8249,7 @@ int GahpClient::amazon_vm_s3_upload_file( const char * publickeyfile, const char
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8249,7 +8277,7 @@ int GahpClient::amazon_vm_s3_download_file( const char * publickeyfile, const ch
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
@@ -8264,7 +8292,7 @@ int GahpClient::amazon_vm_s3_download_file( const char * publickeyfile, const ch
 		esc5 = strdup( escapeGahpString(outputname) );
 	}
 	
-	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
+	int x = sprintf(reqline, "%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
 	
 	free( esc1 );
 	free( esc2 );
@@ -8272,9 +8300,9 @@ int GahpClient::amazon_vm_s3_download_file( const char * publickeyfile, const ch
 	free( esc4 );
 	free( esc5 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8319,7 +8347,7 @@ int GahpClient::amazon_vm_s3_download_file( const char * publickeyfile, const ch
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8347,23 +8375,23 @@ int GahpClient::amazon_vm_s3_delete_file( const char * publickeyfile, const char
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(keyname) );
 	char* esc4 = strdup( escapeGahpString(bucketname) );
 	
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8407,7 +8435,7 @@ int GahpClient::amazon_vm_s3_delete_file( const char * publickeyfile, const char
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8434,21 +8462,21 @@ int GahpClient::amazon_vm_register_image( const char* publickeyfile, const char*
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(imagename) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8495,7 +8523,7 @@ int GahpClient::amazon_vm_register_image( const char* publickeyfile, const char*
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8522,21 +8550,21 @@ int GahpClient::amazon_vm_deregister_image( const char* publickeyfile, const cha
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(ami_id) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8581,7 +8609,7 @@ int GahpClient::amazon_vm_deregister_image( const char* publickeyfile, const cha
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8609,23 +8637,23 @@ int GahpClient::amazon_vm_s3_upload_dir( const char* publickeyfile, const char* 
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(dirname) );
 	char* esc4 = strdup( escapeGahpString(bucketname) );
 	
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
 
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8670,7 +8698,7 @@ int GahpClient::amazon_vm_s3_upload_dir( const char* publickeyfile, const char* 
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8698,23 +8726,23 @@ int GahpClient::amazon_vm_s3_download_bucket( const char* publickeyfile, const c
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(bucketname) );
 	char* esc4 = strdup( escapeGahpString(localdirname) );
 	
-	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+	int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
 
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8759,7 +8787,7 @@ int GahpClient::amazon_vm_s3_download_bucket( const char* publickeyfile, const c
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -8789,20 +8817,20 @@ int GahpClient::amazon_vm_vm_keypair_all( const char *service_url, const char* p
 	}
 	
 	// Generate request line
-	MyString reqline;
+	std::string reqline;
 	
 	char* esc1 = strdup( escapeGahpString(service_url) );
 	char* esc2 = strdup( escapeGahpString(publickeyfile) );
 	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
 	
-	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	int x = sprintf(reqline, "%s %s %s", esc1, esc2, esc3 );
 	
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x == true );
+	ASSERT( x > 0 );
 	
-	const char *buf = reqline.Value();
+	const char *buf = reqline.c_str();
 		
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -8861,7 +8889,7 @@ int GahpClient::amazon_vm_vm_keypair_all( const char *service_url, const char* p
 	if ( check_pending_timeout(command, buf) ) 
 	{
 		// pending command timed out.
-		error_string.sprintf( "%s timed out", command );
+		sprintf( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 

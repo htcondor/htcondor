@@ -37,7 +37,7 @@ int
 main( int argc, char* argv[] ) {
 	config(0);
   
-	MyString user_proxy;
+	std::string user_proxy;
 
 	if (argc >= 3) {
 		if (strcmp (argv[1], "-p")) {
@@ -45,8 +45,8 @@ main( int argc, char* argv[] ) {
 		}
 	}
   
-	if (user_proxy.Length() == 0) {
-		user_proxy.sprintf ("/tmp/x509up_u%d", geteuid());
+	if (user_proxy.length() == 0) {
+		sprintf(user_proxy,"/tmp/x509up_u%d", geteuid());
 	}
 
 		// Get the JAVA location
@@ -96,29 +96,29 @@ main( int argc, char* argv[] ) {
 	StringList command_line;
 	command_line.append (java);
 
-	MyString buff;
-	buff.sprintf ("-DGLOBUS_LOCATION=%s", gt4location);
-	command_line.append (buff.Value());
+	std::string buff;
+	sprintf (buff, "-DGLOBUS_LOCATION=%s", gt4location);
+	command_line.append (buff.c_str());
 
-	buff.sprintf ("-Djava.endorsed.dirs=%s/endorsed", gt4location);
-	command_line.append (buff.Value());
+	sprintf (buff, "-Djava.endorsed.dirs=%s/endorsed", gt4location);
+	command_line.append (buff.c_str());
   
-	buff.sprintf ("-Dorg.globus.wsrf.container.webroot=%s", gt4location);
-	command_line.append (buff.Value());
+	sprintf (buff, "-Dorg.globus.wsrf.container.webroot=%s", gt4location);
+	command_line.append (buff.c_str());
 
-	buff.sprintf ("-DX509_USER_PROXY=%s", user_proxy.Value());
-	command_line.append (buff.Value());
+	sprintf (buff, "-DX509_USER_PROXY=%s", user_proxy.c_str());
+	command_line.append (buff.c_str());
 
 	char *cacertdir = param ("GSI_DAEMON_TRUSTED_CA_DIR");
 	if ( cacertdir ) {
-		buff.sprintf( "-DX509_CERT_DIR=%s", cacertdir );
-		command_line.append( buff.Value() );
+		sprintf( buff, "-DX509_CERT_DIR=%s", cacertdir );
+		command_line.append( buff.c_str() );
 	}
 
 	const char *port_range = GetEnv( "GLOBUS_TCP_PORT_RANGE" );
 	if ( port_range != NULL ) {
-		buff.sprintf( "-DGLOBUS_TCP_PORT_RANGE=%s", port_range );
-		command_line.append( buff.Value() );
+		sprintf( buff, "-DGLOBUS_TCP_PORT_RANGE=%s", port_range );
+		command_line.append( buff.c_str() );
 	}
   
 	command_line.append( "-Dlog4j.appender.A1=org.apache.log4j.ConsoleAppender" );
@@ -138,7 +138,7 @@ main( int argc, char* argv[] ) {
 	};
 */
 
-	MyString classpath;
+	std::string classpath;
 
 	char classpath_seperator;
 #ifdef WIN32
@@ -156,8 +156,8 @@ main( int argc, char* argv[] ) {
 	classpath += gt4location;
 
 	const char *ctmp;
-	buff.sprintf( "%s/lib", gt4location );
-	Directory dir( buff.Value() );
+	sprintf( buff, "%s/lib", gt4location );
+	Directory dir( buff.c_str() );
 	dir.Rewind();
 	while ( (ctmp = dir.Next()) ) {
 		const char *match = strstr( ctmp, ".jar" );
@@ -193,7 +193,7 @@ main( int argc, char* argv[] ) {
 */
 
 	command_line.append ("-classpath");
-	command_line.append (classpath.Value());
+	command_line.append (classpath.c_str());
 
 	command_line.append ("org.globus.bootstrap.Bootstrap");
 	command_line.append ("condor.gahp.Gahp");

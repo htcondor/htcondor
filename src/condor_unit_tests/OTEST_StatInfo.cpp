@@ -29,9 +29,12 @@
 #include "emit.h"
 #include "stat_info.h"
 #include "condor_getcwd.h"
+#ifdef WIN32
+__inline __int64 abs(__int64 x) { return _abs64(x); }
+#endif
 
-static bool setup(void);
-static bool cleanup(void);
+static void setup(void);
+static void cleanup(void);
 static bool test_path_constructor_null(void);
 static bool test_path_constructor_file(void);
 static bool test_path_constructor_dir(void);
@@ -104,16 +107,19 @@ static bool test_is_symlink_dir(void);
 static bool test_is_symlink_symlink_file(void);
 static bool test_is_symlink_symlink_dir(void);
 static bool test_get_owner_not_exist(void);
+#ifndef WIN32
 static bool test_get_owner_file(void);
 static bool test_get_owner_dir(void);
 static bool test_get_owner_symlink_file(void);
 static bool test_get_owner_symlink_dir(void);
+#endif
 static bool test_get_group_not_exist(void);
+#ifndef WIN32
 static bool test_get_group_file(void);
 static bool test_get_group_dir(void);
 static bool test_get_group_symlink_file(void);
 static bool test_get_group_symlink_dir(void);
-
+#endif
 //Global variables
 static MyString
 	original_dir,
@@ -121,13 +127,11 @@ static MyString
 	invalid_dir,
 	empty_dir,
 	full_dir,
-	file_dir;
+	file_dir,
+	tmp;
 
 static const char
 	*readme = "README";
-
-static char
-	tmp[5];
 
 static time_t current_time;
 
@@ -211,29 +215,24 @@ bool OTEST_StatInfo(void) {
 	driver.register_function(test_is_symlink_symlink_file);
 	driver.register_function(test_is_symlink_symlink_dir);
 	driver.register_function(test_get_owner_not_exist);
+#ifndef WIN32
 	driver.register_function(test_get_owner_file);
 	driver.register_function(test_get_owner_dir);
 	driver.register_function(test_get_owner_symlink_file);
 	driver.register_function(test_get_owner_symlink_dir);
+#endif
 	driver.register_function(test_get_group_not_exist);
+#ifndef WIN32
 	driver.register_function(test_get_group_file);
 	driver.register_function(test_get_group_dir);
 	driver.register_function(test_get_group_symlink_file);
 	driver.register_function(test_get_group_symlink_dir);
-
-	//If setup fails, abort since many of the tests will fail
-	if(!setup()) {
-		emit_alert("Setup failed, aborting.");
-		cleanup();
-		ABORT;
-	}
+#endif
+	setup();
 
 	int status = driver.do_all_functions();
 	
-	if(!cleanup()) {
-		emit_alert("Cleanup failed, aborting.");
-		ABORT;
-	}
+	cleanup();
 
 	return status;
 }
@@ -252,77 +251,80 @@ bool OTEST_StatInfo(void) {
 			link_dir/
 
  */
-static bool setup() {
-	bool ret_val = true;
+static void setup() {
 	int tmp_fd;
 
 	//Get the current working directory
-	ret_val &= condor_getcwd(original_dir);
+	cut_assert_true( condor_getcwd(original_dir) );
 	original_dir += DIR_DELIM_CHAR;
 	
 	//Directory strings
-	sprintf(tmp, "tmp%c", DIR_DELIM_CHAR);
+	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
 	
 	//Make a temporary directory to test
-	ret_val &= !mkdir("tmp", 0700);
-	ret_val &= !chdir("tmp");
+	cut_assert_z( mkdir(tmp.Value(), 0700) );
+	cut_assert_z( chdir(tmp.Value()) );
 	
 	//Store some directories
-	ret_val &= condor_getcwd(tmp_dir);
+	cut_assert_true( condor_getcwd(tmp_dir) );
 	tmp_dir += DIR_DELIM_CHAR;
-	empty_dir.sprintf("%s%s%c", tmp_dir.Value(), "empty_dir", DIR_DELIM_CHAR);
-	full_dir.sprintf("%s%s%c", tmp_dir.Value(), "full_dir", DIR_DELIM_CHAR);
-	invalid_dir.sprintf("%s%c", "DoesNotExist", DIR_DELIM_CHAR);
-	file_dir.sprintf("%s%s%c", full_dir.Value(), "full_file", DIR_DELIM_CHAR);
+	cut_assert_true( empty_dir.sprintf("%s%s%c", tmp_dir.Value(), "empty_dir",
+					 DIR_DELIM_CHAR) );
+	cut_assert_true( full_dir.sprintf("%s%s%c", tmp_dir.Value(), "full_dir",
+					 DIR_DELIM_CHAR) );
+	cut_assert_true( invalid_dir.sprintf("%s%c", "DoesNotExist",
+					 DIR_DELIM_CHAR) );
+	cut_assert_true( file_dir.sprintf("%s%s%c", full_dir.Value(), "full_file",
+					 DIR_DELIM_CHAR) );
 	
 	//Put some files/directories in there
-	ret_val &= !mkdir("empty_dir", 0700);
-	ret_val &= !mkdir("full_dir", 0700);
+	cut_assert_z( mkdir("empty_dir", 0700) );
+	cut_assert_z( mkdir("full_dir", 0700) );
 	
 	//Create some symbolic links
+#ifndef WIN32
 	MyString link;
-	link.sprintf("%s%s", full_dir.Value(), "full_file");
-	ret_val &= !symlink(link.Value(), "symlink_file");
-	link.sprintf("%s%s", full_dir.Value(), "link_dir");
-	ret_val &= !symlink(link.Value(), "symlink_dir");
+	cut_assert_true( link.sprintf("%s%s", full_dir.Value(), "full_file") );
+	cut_assert_z( symlink(link.Value(), "symlink_file") );
+	cut_assert_true( link.sprintf("%s%s", full_dir.Value(), "link_dir") );
+	cut_assert_z( symlink(link.Value(), "symlink_dir") );
 	
-	ret_val &= !chdir("full_dir");
-
+	cut_assert_z( chdir("full_dir") );
+#endif
 	// Make a zero length, but executable, file
-	tmp_fd = safe_open_wrapper("executable_file", O_RDWR | O_CREAT);
-	ret_val &= !close(tmp_fd);
-	ret_val &= !chmod("executable_file", 0755);
+	tmp_fd = cut_assert_gez( safe_open_wrapper("executable_file", O_RDWR | 
+							 O_CREAT) );
+	cut_assert_z( close(tmp_fd) );
+	cut_assert_z( chmod("executable_file", 0755) );
 
 	// Make an empty file, leave the fd open.
-	ret_val &= !mkdir("link_dir", 0700);
-	fd = safe_open_wrapper("empty_file", O_RDWR | O_CREAT);
+	cut_assert_z( mkdir("link_dir", 0700) );
+	fd = cut_assert_gez( safe_open_wrapper("empty_file", O_RDWR | O_CREAT) );
 
 	//Add some text
 	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
-	ASSERT(file_1);
-	fprintf(file_1, "This is some text!");
-	ret_val &= !chdir("..");
+	cut_assert_not_null( file_1 );
+	cut_assert_gz( fprintf(file_1, "This is some text!") );
+	cut_assert_z( chdir("..") );
 	
 	//Get back to original directory
-	ret_val &= !chdir("..");
+	cut_assert_z( chdir("..") );
 
 	//Close FILE* that were written to
-	ret_val &= !fclose(file_1);
+	cut_assert_z( fclose(file_1) );
 	
 	//Get the current time
 	current_time = time(NULL);
-
-	return ret_val;
 }
 
-static bool cleanup() {
+static void cleanup() {
 	//Remove the created files/directories/symlinks
-	chdir("tmp");
-	rmdir("empty_dir");
-	remove("symlink_file");
-	remove("symlink_dir");
-	chdir("full_dir");
-	rmdir("link_dir");
+	cut_assert_z( chdir(tmp.Value()) );
+	cut_assert_z( rmdir("empty_dir") );
+	cut_assert_z( remove("symlink_file") );
+	cut_assert_z( remove("symlink_dir") );
+	cut_assert_z( chdir("full_dir") );
+	cut_assert_z( rmdir("link_dir") );
 	
 	//Just in case any of these weren't removed...
 	remove("empty_file");
@@ -332,9 +334,8 @@ static bool cleanup() {
 	rmdir("full_dir");
 	chdir("..");
 
-	close(fd);
-	
-	return rmdir("tmp") == 0;
+	cut_assert_z( close(fd) );
+	cut_assert_z( rmdir(tmp.Value()) );
 }
 
 static bool test_path_constructor_null() {
@@ -1009,7 +1010,7 @@ static bool test_get_modify_time_file_old() {
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
 	StatInfo info(original_dir.Value(), readme);
-	time_t time = info.GetAccessTime();
+	time_t time = info.GetModifyTime();
 	emit_output_actual_header();
 	emit_retval("%d", time);
 	if(time != st.st_mtime) {
@@ -1117,7 +1118,7 @@ static bool test_get_create_time_file_old() {
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
 	StatInfo info(original_dir.Value(), readme);
-	time_t time = info.GetAccessTime();
+	time_t time = info.GetCreateTime();
 	emit_output_actual_header();
 	emit_retval("%d", time);
 	if(time != st.st_ctime) {
@@ -1675,7 +1676,7 @@ static bool test_get_owner_not_exist() {
 	//emit_retval("%u", owner);
 	PASS;
 }
-
+#ifndef WIN32
 static bool test_get_owner_file() {
 	emit_test("Test GetOwner() returns the equivalent user id as using "
 		"stat() for a file.");
@@ -1763,7 +1764,7 @@ static bool test_get_owner_symlink_dir() {
 	}
 	PASS;
 }
-
+#endif
 static bool test_get_group_not_exist() {
 	emit_test("Test GetGroup() for a file that doesn't exist.");
 	emit_problem("By inspection, GetGroup() code correctly EXCEPTs when the "
@@ -1779,7 +1780,7 @@ static bool test_get_group_not_exist() {
 	//emit_retval("%u", owner);
 	PASS;
 }
-
+#ifndef WIN32
 static bool test_get_group_file() {
 	emit_test("Test that GetGroup() returns the equivalent user id as using "
 		"stat() for a file.");
@@ -1867,4 +1868,4 @@ static bool test_get_group_symlink_dir() {
 	}
 	PASS;
 }
-
+#endif

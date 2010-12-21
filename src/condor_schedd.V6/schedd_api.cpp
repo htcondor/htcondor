@@ -21,6 +21,8 @@
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
 
+#if HAVE_EXT_GSOAP
+
 // Things to include for the stubs
 #include "condor_version.h"
 #include "condor_attributes.h"
@@ -30,7 +32,7 @@
 #include "MyString.h"
 #include "internet.h"
 
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "condor_config.h"
 #include "condor_open.h"
 
@@ -74,15 +76,14 @@ Job::initialize(CondorError &errstack)
 	struct stat stats;
 	if (-1 == stat(spoolDirectory.Value(), &stats)) {
 		if (ENOENT == errno && spoolDirectory.Length() != 0) {
-			if (-1 == mkdir(spoolDirectory.Value(), 0777)) {
-					// mkdir can return 17 = EEXIST (dirname exists)
-					// or 2 = ENOENT (path not found)
-				dprintf(D_FULLDEBUG,
-						"ERROR: mkdir(%s) failed, errno: %d (%s)\n",
-						spoolDirectory.Value(),
-						errno,
-						strerror(errno));
 
+				// We assume here that the job is not a standard universe
+				// job.  Spooling works differently for standard universe.
+				// Unfortunately, we might not know the job universe
+				// yet, so standard universe is problematic with SOAP
+				// (and always has been).
+
+			if( !SpooledJobFiles::createJobSpoolDirectory_PRIV_CONDOR(id.cluster,id.proc,false) ) {
 				errstack.pushf("SOAP",
 							   FAIL,
 							   "Creation of spool directory '%s' failed, "
@@ -768,3 +769,5 @@ NullScheddTransaction::removeCluster(int /* clusterId */)
 {
 	return 0;
 }
+
+#endif

@@ -23,9 +23,14 @@
 #include "condor_daemon_core.h"
 
 enum NodeType {
-    HADOOP_NAMENODE,
-    HADOOP_DATANODE,
-    HADOOP_SECONDARY
+    HDFS_NAMENODE,
+    HDFS_DATANODE
+};
+
+enum NamenodeRole {
+    ACTIVE,
+    BACKUP,
+    CHECKPOINT
 };
 
 enum {
@@ -33,7 +38,6 @@ enum {
     STATE_RUNNING,
     STATE_REINIT,
     STATE_STOP_REQUESTED
-
 };
 
 enum {
@@ -84,7 +88,9 @@ class Hadoop : public Service {
 
         ClassAd m_hdfsAd;
 
-        NodeType m_serviceType;
+        NodeType m_nodeType;
+
+        NamenodeRole m_namenodeRole;
 
         //keeps tracks of std output and error of  hadoop process
         MyString m_line_stdout, m_line_stderr;
@@ -101,13 +107,8 @@ class Hadoop : public Service {
 
         MyString m_dataNodeClass;
 
-        MyString m_secondaryNodeClass;
-
         MyString m_dfsAdminClass;
 
-        //Name of hdfs's site configuration files differs among hadoop version
-        //Versions > 0.19 has hdfs-site.xml 
-        //versions < 0.19 has hadoop-site.xml
         MyString m_hdfsSiteFile;
 
         MyString m_coreSiteFile;

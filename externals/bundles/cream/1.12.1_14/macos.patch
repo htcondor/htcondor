@@ -1,0 +1,12 @@
+diff -u -r org.glite.ce.cream-client-api-c/src/VOMSWrapper.cpp org.glite.ce.cream-client-api-c.patched/src/VOMSWrapper.cpp
+--- org.glite.ce.cream-client-api-c/src/VOMSWrapper.cpp	2010-03-18 03:17:59.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/src/VOMSWrapper.cpp	2010-11-01 11:33:06.000000000 -0500
+@@ -34,8 +34,6 @@
+ 
+ #include <ctime>
+ 
+-extern int daylight;
+-extern long timezone;
+ 
+ using namespace glite::ce::cream_client_api::soap_proxy;
+ using namespace std;

@@ -1,0 +1,93 @@
+diff -u -r org.glite.ce.cream-client-api-c/configure.ac org.glite.ce.cream-client-api-c.patched/configure.ac
+--- org.glite.ce.cream-client-api-c/configure.ac	2010-03-22 05:28:08.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/configure.ac	2010-10-12 14:29:06.000000000 -0500
+@@ -55,6 +55,7 @@
+ # Checks for library functions.
+ AC_HEADER_STDC
+ AC_CHECK_FUNCS([memset gettimeofday])
++AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
+ 
+ #have_classads=no
+ have_boost=no
+diff -u -r org.glite.ce.cream-client-api-c/src/ConfigurationManager.cpp org.glite.ce.cream-client-api-c.patched/src/ConfigurationManager.cpp
+--- org.glite.ce.cream-client-api-c/src/ConfigurationManager.cpp	2010-01-28 06:02:10.000000000 -0600
++++ org.glite.ce.cream-client-api-c.patched/src/ConfigurationManager.cpp	2010-10-12 14:30:01.000000000 -0500
+@@ -25,7 +25,7 @@
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <unistd.h>
+-#include "classad_distribution.h"
++#include "classad/classad_distribution.h"
+ #include "glite/ce/cream-client-api-c/creamApiLogger.h"
+ #include "boost/algorithm/string.hpp"
+ #include "boost/regex.hpp"
+diff -u -r org.glite.ce.cream-client-api-c/src/CreamProxy_Delegate.cpp org.glite.ce.cream-client-api-c.patched/src/CreamProxy_Delegate.cpp
+--- org.glite.ce.cream-client-api-c/src/CreamProxy_Delegate.cpp	2010-03-02 05:01:23.000000000 -0600
++++ org.glite.ce.cream-client-api-c.patched/src/CreamProxy_Delegate.cpp	2010-10-12 14:34:18.000000000 -0500
+@@ -106,6 +106,8 @@
+     
+     //S_certtxt = string(certtxt);
+ //    *m_certtxt = string(certtxt);
++    string certtxt_str = certtxt;
++    free(certtxt);
+     
+     CREAM_SAFE_LOG(*m_log_dev<< log4cpp::Priority::INFO  
+     		   << "CreamProxy_Delegate::execute() - "
+@@ -124,7 +126,7 @@
+                                      		    serviceURL.c_str(),
+                                      		    NULL,    // soapAction
+                                      		    m_delegation_ID,
+-						    certtxt,
++						    certtxt_str,
+ 						    response))
+         ExceptionFactory::raiseException(m_soap);
+     }
+diff -u -r org.glite.ce.cream-client-api-c/src/CreamProxy_ProxyRenew.cpp org.glite.ce.cream-client-api-c.patched/src/CreamProxy_ProxyRenew.cpp
+--- org.glite.ce.cream-client-api-c/src/CreamProxy_ProxyRenew.cpp	2010-03-02 05:01:23.000000000 -0600
++++ org.glite.ce.cream-client-api-c.patched/src/CreamProxy_ProxyRenew.cpp	2010-10-12 14:34:54.000000000 -0500
+@@ -102,6 +102,8 @@
+     } // calls the initSoap's dtor that clears the SOAP runtime
+     
+ //    *m_certtxt = string(certtxt);
++    string certtxt_str = certtxt;
++    free(certtxt);
+     
+     CREAM_SAFE_LOG(*m_log_dev<< log4cpp::Priority::INFO  
+     		   << "CreamProxy_Delegate::execute() - "
+@@ -120,7 +122,7 @@
+                                      		    serviceURL.c_str(),
+                                      		    NULL,    // soapAction
+                                      		    m_delegation_ID,
+-						    certtxt,
++						    certtxt_str,
+ 						    response))
+         ExceptionFactory::raiseException(m_soap);
+     }
+diff -u -r org.glite.ce.cream-client-api-c/src/Makefile.am org.glite.ce.cream-client-api-c.patched/src/Makefile.am
+--- org.glite.ce.cream-client-api-c/src/Makefile.am	2010-03-17 05:42:24.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/src/Makefile.am	2010-10-12 14:33:11.000000000 -0500
+@@ -20,13 +20,13 @@
+ 
+ cream_service.h : $(GLITE_CREAM_WSDL_DEPS)
+ 	cd $(GLITE_LOCATION)/share/wsdl && \
+-	$(GSOAP_LOCATION)/bin/wsdl2h -o $(CURDIR)/cream_service.h -t $(top_srcdir)/config/typemap.dat \
++	$(GSOAP_LOCATION)/bin/wsdl2h -o $(CURDIR)/cream_service.h -t $(CURDIR)/../config/typemap.dat \
+ 	$(GLITE_CREAM_WSDL) $(GLITE_LOCATION)/share/wsdl/www.gridsite.org-delegation-2.0.0.wsdl
+-	sed 's|WS/stlvector.h|import/stlvector.h|g' cream_service.h > cream_service.h.tmp && \
++	sed 's|/.*/stlvector.h|stlvector.h|g' cream_service.h > cream_service.h.tmp && \
+ 	mv cream_service.h.tmp cream_service.h
+ 
+ autogen/CREAM_CLIENTClient.cpp : cream_service.h
+-	$(GSOAP_LOCATION)/bin/soapcpp2 -I$(GSOAP_LOCATION)/include \
++	$(GSOAP_LOCATION)/bin/soapcpp2 -I$(GSOAP_LOCATION)/include -I$(GSOAP_LOCATION)/share/gsoap/import \
+ 	-p CREAM_CLIENT -n -d autogen cream_service.h
+ 	sed 's|CREAM_CLIENTH.h|glite/ce/cream-client-api-c/cream_client_soapH.h|g' \
+ 	autogen/CREAM_CLIENT.nsmap > $(top_srcdir)/interface/glite/ce/cream-client-api-c/CREAM_CLIENT.nsmap
+@@ -34,7 +34,6 @@
+ 	sed 's|CREAM_CLIENTStub.h|glite/ce/cream-client-api-c/cream_client_soapStub.h|g' \
+ 	autogen/CREAM_CLIENTH.h > $(top_srcdir)/interface/glite/ce/cream-client-api-c/cream_client_soapH.h
+ 	cp cream_service.h $(top_srcdir)/interface/glite/ce/cream-client-api-c
+-	cp $(GSOAP_LOCATION)/src/stdsoap2.cpp autogen
+ 
+ lib_LTLIBRARIES = libglite_ce_cream_client_util.la libglite_ce_cream_client_soap.la
+ 

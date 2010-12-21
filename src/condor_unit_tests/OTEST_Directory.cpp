@@ -29,9 +29,12 @@
 #include "emit.h"
 #include "directory.h"
 #include "condor_getcwd.h"
+#ifdef WIN32
+__inline __int64 abs(__int64 x) { return _abs64(x); }
+#endif
 
-static bool setup(void);
-static bool cleanup(void);
+static void setup(void);
+static void cleanup(void);
 static bool test_path_constructor_null(void);
 static bool test_path_constructor_current(void);
 static bool test_path_constructor_file(void);
@@ -122,7 +125,9 @@ static bool test_remove_full_path_dir_current(void);
 static bool test_remove_entire_directory_filepath(void);
 static bool test_remove_entire_directory_dir_empty(void);
 static bool test_remove_entire_directory_dir_full(void);
-static bool test_recursive_chown(void);
+#ifndef WIN32
+static bool test_recursive_chown(void);	//This one might work if we rewrote it.
+#endif
 static bool test_standalone_is_directory_null(void);
 static bool test_standalone_is_directory_not_exist(void);
 static bool test_standalone_is_directory_file(void);
@@ -156,13 +161,11 @@ static MyString
 	invalid_dir,
 	empty_dir,
 	full_dir,
-	file_dir;
+	file_dir,
+	tmp;
 
 static const char
 	*readme = "README";
-
-static char
-	tmp[5];
 
 static time_t current_time;
 
@@ -265,7 +268,9 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_remove_entire_directory_filepath);
 	driver.register_function(test_remove_entire_directory_dir_empty);
 	driver.register_function(test_remove_entire_directory_dir_full);
+#ifndef WIN32
 	driver.register_function(test_recursive_chown);
+#endif
 	driver.register_function(test_standalone_is_directory_null);
 	driver.register_function(test_standalone_is_directory_not_exist);
 	driver.register_function(test_standalone_is_directory_file);
@@ -292,19 +297,11 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_delete_file_later_file);
 	driver.register_function(test_delete_file_later_dir);
 
-	// If setup fails, abort since many of the tests will fail
-	if(!setup()) {
-		emit_alert("Setup failed, aborting.");
-		cleanup();
-		ABORT;
-	}
+	setup();
 
 	int status = driver.do_all_functions();
 	
-	if(!cleanup()) {
-		emit_alert("Cleanup failed, aborting.");
-		ABORT;
-	}
+	cleanup();
 
 	return status;
 }
@@ -344,97 +341,96 @@ bool OTEST_Directory(void) {
 			link_dir/
 
  */
-static bool setup() {
-	bool ret_val = true;
-
+static void setup() {
+	
 	// Get the current working directory
-	ret_val &= condor_getcwd(original_dir);
+	cut_assert_true( condor_getcwd(original_dir) );
 	
 	// Directory strings
-	sprintf(tmp, "tmp%c", DIR_DELIM_CHAR);
+	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
 	
 	// Make a temporary directory to test
-	ret_val &= !mkdir(tmp, 0700);
-	ret_val &= !chdir(tmp);
+	cut_assert_z( mkdir(tmp.Value(), 0700) );
+	cut_assert_z( chdir(tmp.Value()) );
 	
 	// Store some directories
-	ret_val &= condor_getcwd(tmp_dir);
-	empty_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir");
-	full_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
-	invalid_dir.sprintf("%s%c", "DoesNotExist", DIR_DELIM_CHAR);
-	file_dir.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file");
+	cut_assert_true( condor_getcwd(tmp_dir) );
+	cut_assert_gz( empty_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir") );
+	cut_assert_gz( full_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir") );
+	cut_assert_gz( invalid_dir.sprintf("%s%c", "DoesNotExist", DIR_DELIM_CHAR) );
+	cut_assert_gz( file_dir.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
 	
 	// Put some files/directories in there
-	ret_val &= !mkdir("empty_dir", 0700);
-	ret_val &= !mkdir("full_dir", 0700);
+	cut_assert_z( mkdir("empty_dir", 0700) );
+	cut_assert_z( mkdir("full_dir", 0700) );
 	
-	ret_val &= !chdir("full_dir");
-	ret_val &= !mkdir("link_dir", 0700);
-	ret_val &= !mkdir("delete_dir_1", 0700);
-	ret_val &= !mkdir("delete_dir_2", 0700);
-	ret_val &= !mkdir("delete_dir_3", 0700);
-	ret_val &= !mkdir("delete_dir_4", 0700);
-	ret_val &= !mkdir("delete_dir_11", 0700);
-	ret_val &= !chdir("delete_dir_11");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= !mkdir("delete_dir_12", 0700);
-	ret_val &= !chdir("delete_dir_12");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= !mkdir("delete_dir_13", 0700);
-	ret_val &= !chdir("delete_dir_13");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= !chdir("dir");
-	ret_val &= !mkdir("dir", 0700);
-	ret_val &= (safe_fopen_wrapper("file", "w+") != NULL);
-	ret_val &= !chdir("..");
-	ret_val &= (safe_fopen_wrapper("delete_file_1", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_2", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_3", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_4", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_5", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("delete_file_6", "w+") != NULL);
-	ret_val &= (safe_fopen_wrapper("empty_file", "w+") != NULL);
+	cut_assert_z( chdir("full_dir") );
+	cut_assert_z( mkdir("link_dir", 0700) );
+	cut_assert_z( mkdir("delete_dir_1", 0700) );
+	cut_assert_z( mkdir("delete_dir_2", 0700) );
+	cut_assert_z( mkdir("delete_dir_3", 0700) );
+	cut_assert_z( mkdir("delete_dir_4", 0700) );
+	cut_assert_z( mkdir("delete_dir_11", 0700) );
+	cut_assert_z( chdir("delete_dir_11") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	cut_assert_z( mkdir("delete_dir_12", 0700) );
+	cut_assert_z( chdir("delete_dir_12") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	cut_assert_z( mkdir("delete_dir_13", 0700) );
+	cut_assert_z( chdir("delete_dir_13") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	cut_assert_z( mkdir("dir", 0700) );
+	cut_assert_z( chdir("dir") );
+	cut_assert_z( mkdir("dir", 0700) );
+	create_empty_file("file");
+	cut_assert_z( chdir("..") );
+	create_empty_file("delete_file_1");
+	create_empty_file("delete_file_2");
+	create_empty_file("delete_file_3");
+	create_empty_file("delete_file_4");
+	create_empty_file("delete_file_5");
+	create_empty_file("delete_file_6");
+	create_empty_file("empty_file");
 	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
 
 	// Add some text
-	ASSERT(file_1);
-	fprintf(file_1, "This is some text!");
-	ret_val &= !chdir("..");
+	cut_assert_not_null( file_1 );
+	cut_assert_gz( fprintf(file_1, "This is some text!") );
+	cut_assert_z( chdir("..") );
 	
 	// Create some symbolic links
+#ifndef WIN32
 	MyString link;
-	link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file");
-	ret_val &= !symlink(link.Value(), "symlink_file");
-	link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir");
-	ret_val &= !symlink(link.Value(), "symlink_dir");
-	
+	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
+	cut_assert_z( symlink(link.Value(), "symlink_file") );
+	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
+	cut_assert_z( symlink(link.Value(), "symlink_dir") );
+#endif
 	// Get back to original directory
-	ret_val &= !chdir(original_dir.Value());
+	cut_assert_z( chdir(original_dir.Value()) );
 
 	// Close FILE* that was written to
-	ret_val &= !fclose(file_1);
+	cut_assert_z( fclose(file_1) );
 	
 	// Get the current time
 	current_time = time(NULL);
 
-	return ret_val;
 }
 
-static bool cleanup() {
+static void cleanup() {
 	// Remove the created files/directories/symlinks
-	chdir(tmp);
-	rmdir("empty_dir");
-	remove("symlink_file");
-	remove("symlink_dir");
-	chdir("full_dir");
-	rmdir("link_dir");
+	cut_assert_z( chdir(tmp.Value()) );
+	cut_assert_z( rmdir("empty_dir") );
+	cut_assert_z( remove("symlink_file") );
+	cut_assert_z( remove("symlink_dir") );
+	cut_assert_z( chdir("full_dir") );
+	cut_assert_z( rmdir("link_dir") );
 	
 	// Just in case any of these weren't removed...
 	rmdir("delete_dir_1");
@@ -472,13 +468,13 @@ static bool cleanup() {
 	remove("delete_file_5");
 	remove("delete_file_6");
 	
-	remove("empty_file");
-	remove("full_file");
-	chdir("..");
-	rmdir("full_dir");
-	chdir("..");
+	cut_assert_z( remove("empty_file") );
+	cut_assert_z( remove("full_file") );
+	cut_assert_z( chdir("..") );
+	cut_assert_z( rmdir("full_dir") );
+	cut_assert_z( chdir("..") );
 	
-	return (rmdir(tmp) == 0);
+	cut_assert_z( rmdir(tmp.Value()) );
 }
 
 static bool test_path_constructor_null() {
@@ -638,14 +634,14 @@ static bool test_get_directory_path_path_dir() {
 	emit_test("Test that GetDirectoryPath() returns the expected path for a "
 		"Directory constructed from a valid directory as a directory path.");
 	emit_input_header();
-	emit_param("Directory Path", "%s", tmp);
+	emit_param("Directory Path", "%s", tmp.Value());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", tmp);
-	Directory dir(tmp);
+	emit_param("Directory Path", "%s", tmp.Value());
+	Directory dir(tmp.Value());
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, tmp) != MATCH) {
+	if(strcmp(dir_path, tmp.Value()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -713,15 +709,15 @@ static bool test_get_directory_path_stat_dir() {
 		"Directory constructed from a StatInfo pointer constructed from a "
 		"valid directory as a directory path.");
 	emit_input_header();
-	emit_param("StatInfo", "%s", tmp);
+	emit_param("StatInfo", "%s", tmp.Value());
 	emit_output_actual_header();
-	emit_param("Directory Path", "%s", tmp);
-	StatInfo stat(tmp);
+	emit_param("Directory Path", "%s", tmp.Value());
+	StatInfo stat(tmp.Value());
 	Directory dir(&stat);
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, tmp) != MATCH) {
+	if(strcmp(dir_path, tmp.Value()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1387,7 +1383,8 @@ static bool test_get_file_size_same() {
 	emit_param("Current File", "full_file");
 	struct stat size;
 	MyString file;
-	file.sprintf("tmp%cfull_dir%cfull_file", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
 	emit_retval("%d", size.st_size);
@@ -1458,9 +1455,9 @@ static bool test_get_mode_valid_dir() {
 	emit_test("Test that GetMode() doesn't return 0 for a valid directory.");
 	emit_input_header();
 	emit_param("Directory", "%s", original_dir.Value());
-	emit_param("Current File", "tmp%c", DIR_DELIM_CHAR);
+	emit_param("Current File", "%s%c", tmp.Value(), DIR_DELIM_CHAR);
 	Directory dir(original_dir.Value());
-	dir.Find_Named_Entry("tmp");
+	dir.Find_Named_Entry(tmp.Value());
 	mode_t ret_val = dir.GetMode();
 	emit_output_actual_header();
 	emit_retval("%o", ret_val);
@@ -1477,7 +1474,8 @@ static bool test_get_mode_same() {
 	emit_param("Current File", "full_file");
 	struct stat size;
 	MyString file;
-	file.sprintf("tmp%cfull_dir%cfull_file", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
 	emit_retval("%o", size.st_mode);
@@ -1547,7 +1545,8 @@ static bool test_get_directory_size_same() {
 	emit_param("Directory", "%s", full_dir.Value());
 	struct stat size;
 	MyString file;
-	file.sprintf("tmp%cfull_dir%cfull_file", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
 	emit_retval("%d", size.st_size);
@@ -1624,13 +1623,14 @@ static bool test_get_full_path_dir() {
 		"valid directory.");
 	emit_input_header();
 	emit_param("Directory", "%s", original_dir.Value());
-	emit_param("Current File", "tmp%c", DIR_DELIM_CHAR);
+	emit_param("Current File", "%s", tmp.Value());
 	MyString full_path;
-	full_path.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, "tmp");
+	full_path.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+		tmp.Value());
 	emit_output_expected_header();
 	emit_retval("%s", full_path.Value());
 	Directory dir(original_dir.Value());
-	dir.Find_Named_Entry("tmp");
+	dir.Find_Named_Entry(tmp.Value());
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
@@ -2233,7 +2233,8 @@ static bool test_remove_entire_directory_dir_full() {
 	}
 	PASS;
 }
-
+//This test might work if we wrote another version of it for Windows.
+#ifndef WIN32
 static bool test_recursive_chown() {
 	emit_test("Test that Recursive_Chown() returns true and changes the owner "
 		"and group ids.");
@@ -2267,7 +2268,7 @@ static bool test_recursive_chown() {
 	}
 	PASS;
 }
-
+#endif
 static bool test_standalone_is_directory_null() {
 	emit_test("Test that the standalone IsDirectory() returns false for a NULL "
 		"path.");

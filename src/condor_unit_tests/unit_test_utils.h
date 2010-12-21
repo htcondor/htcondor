@@ -28,6 +28,38 @@
 #include "condor_config.h"
 #include "iso_dates.h"
 
+/* These macros are pseudo asserts that will print an error message and
+   exit if the given condition does not hold */
+#define cut_assert_z(expr) \
+    cut_assert_z_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_nz(expr) \
+    cut_assert_nz_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_gz(expr) \
+    cut_assert_gz_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_lz(expr) \
+    cut_assert_lz_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_gez(expr) \
+    cut_assert_gez_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_lez(expr) \
+    cut_assert_lez_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_true(expr) \
+    cut_assert_true_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_false(expr) \
+    cut_assert_false_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_not_null(expr) \
+    cut_assert_not_null_impl(expr, #expr, __FILE__, __LINE__);
+
+#define cut_assert_null(expr) \
+    cut_assert_null_impl(expr, #expr, __FILE__, __LINE__);
+
 bool utest_sock_eq_octet( struct in_addr* address, unsigned char oct1, unsigned char oct2, unsigned char oct3, unsigned char oct4 );
 
 /*  Prints TRUE or FALSE depending on if the input indicates success or failure */
@@ -128,3 +160,54 @@ bool user_policy_ad_checker(ClassAd* ad,
  Inserts the given attribute and value into the ClassAd
  */
 void insert_into_ad(ClassAd* ad, const char* attribute, const char* value);
+
+/* Prints error message and exits if value is not zero */
+void cut_assert_z_impl(int value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is zero */
+int cut_assert_nz_impl(int value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is not greater than zero */
+int cut_assert_gz_impl(int value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is not less than zero */
+int cut_assert_lz_impl(int value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is not greater than or equal to 
+   zero */
+int cut_assert_gez_impl(int value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is not less than or equal to 
+   zero */
+int cut_assert_lez_impl(int value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is not true */
+bool cut_assert_true_impl(bool value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is not false */
+bool cut_assert_false_impl(bool value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is NULL */
+void* cut_assert_not_null_impl(void *value, char *expr, char *file, int line);
+
+/* Prints error message and exits if value is not NULL */
+void cut_assert_null_impl(void *value, char *expr, char *file, int line);
+
+/* Creates an empty file */
+void create_empty_file(char *file);
+
+#ifdef WIN32
+#if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
+  #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
+#else
+  #define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
+#endif
+ 
+struct timezone 
+{
+  int  tz_minuteswest; /* minutes W of Greenwich */
+  int  tz_dsttime;     /* type of dst correction */
+};
+
+int gettimeofday(struct timeval *tv, struct timezone *tz);
+#endif

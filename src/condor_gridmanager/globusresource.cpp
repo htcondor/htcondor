@@ -141,16 +141,16 @@ bool GlobusResource::Init()
 		return true;
 	}
 
-	MyString gahp_name;
-	gahp_name.sprintf( "GT2/%s", proxyFQAN );
+	std::string gahp_name;
+	sprintf( gahp_name, "GT2/%s", proxyFQAN );
 
-	gahp = new GahpClient( gahp_name.Value() );
+	gahp = new GahpClient( gahp_name.c_str() );
 
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	monitorGahp = new GahpClient( gahp_name.Value() );
+	monitorGahp = new GahpClient( gahp_name.c_str() );
 
 	monitorGahp->setNotificationTimerId( checkMonitorTid );
 	monitorGahp->setMode( GahpClient::normal );
@@ -213,28 +213,28 @@ const char *GlobusResource::ResourceType()
 
 const char *GlobusResource::CanonicalName( const char *name )
 {
-	static MyString canonical;
+	static std::string canonical;
 	char *host;
 	char *port;
 
 	parse_resource_manager_string( name, &host, &port, NULL, NULL );
 
-	canonical.sprintf( "%s:%s", host, *port ? port : "2119" );
+	sprintf( canonical, "%s:%s", host, *port ? port : "2119" );
 
 	free( host );
 	free( port );
 
-	return canonical.Value();
+	return canonical.c_str();
 }
 
 const char *GlobusResource::HashName( const char *resource_name,
 									  const char *proxy_subject )
 {
-	static MyString hash_name;
+	static std::string hash_name;
 
-	hash_name.sprintf( "gt2 %s#%s", resource_name, proxy_subject );
+	sprintf( hash_name, "gt2 %s#%s", resource_name, proxy_subject );
 
-	return hash_name.Value();
+	return hash_name.c_str();
 }
 
 const char *GlobusResource::GetHashName()
@@ -707,18 +707,18 @@ GlobusResource::CleanupMonitorJob()
 		monitorGramErrorCode = 0;
 	}
 	if ( monitorDirectory ) {
-		MyString tmp_dir;
+		std::string tmp_dir;
 
-		tmp_dir.sprintf( "%s.remove", monitorDirectory );
+		sprintf( tmp_dir, "%s.remove", monitorDirectory );
 
-		rename( monitorDirectory, tmp_dir.Value() );
+		rename( monitorDirectory, tmp_dir.c_str() );
 		free( monitorDirectory );
 		monitorDirectory = NULL;
 
-		Directory tmp( tmp_dir.Value() );
+		Directory tmp( tmp_dir.c_str() );
 		tmp.Remove_Entire_Directory();
 
-		rmdir( tmp_dir.Value() );
+		rmdir( tmp_dir.c_str() );
 	}
 	if(monitorJobStatusFile)
 	{
@@ -739,18 +739,18 @@ GlobusResource::SubmitMonitorJob()
 	int now = time(NULL);
 	int rc;
 	char *monitor_executable;
-	MyString contact;
-	MyString RSL;
+	std::string contact;
+	std::string RSL;
 
 	StopMonitorJob();
 	
 	/* Create monitor directory and files */
 	g_MonitorUID++;
-	MyString buff;
+	std::string buff;
 
-	buff.sprintf( "%s/grid-monitor.%s.%d", GridmanagerScratchDir,
+	sprintf( buff, "%s/grid-monitor.%s.%d", GridmanagerScratchDir,
 				  resourceName, g_MonitorUID );
-	monitorDirectory = strdup( buff.Value() );
+	monitorDirectory = strdup( buff.c_str() );
 
 	if ( mkdir( monitorDirectory, 0700 ) < 0 ) {
 		dprintf( D_ALWAYS, "SubmitMonitorJob: mkdir(%s,0700) failed, "
@@ -761,11 +761,11 @@ GlobusResource::SubmitMonitorJob()
 		return false;
 	}
 
-	buff.sprintf( "%s/grid-monitor-job-status", monitorDirectory );
-	monitorJobStatusFile = strdup( buff.Value() );
+	sprintf( buff, "%s/grid-monitor-job-status", monitorDirectory );
+	monitorJobStatusFile = strdup( buff.c_str() );
 
-	buff.sprintf( "%s/grid-monitor-log", monitorDirectory );
-	monitorLogFile = strdup( buff.Value() );
+	sprintf( buff, "%s/grid-monitor-log", monitorDirectory );
+	monitorLogFile = strdup( buff.c_str() );
 
 
 	rc = creat( monitorJobStatusFile, S_IREAD|S_IWRITE );
@@ -803,16 +803,16 @@ GlobusResource::SubmitMonitorJob()
 	monitorGahp->setMode( GahpClient::normal );
 
 	const char *gassServerUrl = monitorGahp->getGlobusGassServerUrl();
-	RSL.sprintf( "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
+	sprintf( RSL, "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
 				 gassServerUrl, monitor_executable, gassServerUrl,
 				 monitorLogFile, gassServerUrl, monitorJobStatusFile );
 
 	free( monitor_executable );
 
-	contact.sprintf( "%s/jobmanager-fork", resourceName );
+	sprintf( contact, "%s/jobmanager-fork", resourceName );
 
-	rc = monitorGahp->globus_gram_client_job_request( contact.Value(),
-													  RSL.Value(), 1,
+	rc = monitorGahp->globus_gram_client_job_request( contact.c_str(),
+													  RSL.c_str(), 1,
 													  monitorGahp->getGt2CallbackContact(),
 													  NULL );
 

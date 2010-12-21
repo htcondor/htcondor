@@ -121,6 +121,10 @@ int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 // It can be set to false by calling the DC_Skip_Auth_Init() function.
 static bool doAuthInit = true;
 
+// This flag tells daemoncore whether to do the core limit initialization.
+// It can be set to false by calling the DC_Skip_Core_Init() function.
+static bool doCoreInit = true;
+
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -184,8 +188,7 @@ char const* global_dc_sinful() {
 	}
 }
 
-void
-clean_files()
+void clean_files()
 {
 		// If we created a pid file, remove it.
 	if( pidFile ) {
@@ -301,7 +304,9 @@ DC_Exit( int status, const char *shutdown_program )
 		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
+		priv_state p = set_root_priv( );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		set_priv( p );
 		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
 				 exec_status, errno, strerror(errno) );
 #     elif defined(WIN32)
@@ -309,7 +314,9 @@ DC_Exit( int status, const char *shutdown_program )
 				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
+		priv_state p = set_root_priv( );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		set_priv( p );
 		if ( exec_status ) {
 			dprintf( D_ALWAYS, "**** _execl() FAILED %d %d %s\n",
 					 exec_status, errno, strerror(errno) );
@@ -331,6 +338,12 @@ void
 DC_Skip_Auth_Init()
 {
 	doAuthInit = false;
+}
+
+void
+DC_Skip_Core_Init()
+{
+	doCoreInit = false;
 }
 
 static void
@@ -1354,7 +1367,9 @@ dc_reconfig()
 	config(0);
 
 		// See if we're supposed to be allowing core files or not
-	check_core_files();
+	if ( doCoreInit ) {
+		check_core_files();
+	}
 
 		// If we're supposed to be using our own log file, reset that here. 
 	if( logDir ) {
@@ -1859,7 +1874,9 @@ int main( int argc, char** argv )
 	}
 
 		// See if we're supposed to be allowing core files or not
-	check_core_files();
+	if ( doCoreInit ) {
+		check_core_files();
+	}
 
 		// If we want to kill something, do that now.
 	if( wantsKill ) {

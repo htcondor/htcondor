@@ -22,7 +22,7 @@
 #define _CONDOR_JIC_LOCAL_SCHEDD_H
 
 #include "jic_local_file.h"
-#include "qmgr_job_updater.h"
+#include "../condor_schedd.V6/qmgr_job_updater.h"
 #include "starter_user_policy.h"
 
 /** 

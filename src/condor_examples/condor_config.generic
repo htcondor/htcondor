@@ -67,8 +67,11 @@ LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 
 ##  Where are optional machine-specific local config files located?
 ##  Config files are included in lexicographic order.
-##  No default. $(LOCAL_DIR)/config is an example.
+LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
 #LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
+
+## Blacklist for file processing in the LOCAL_CONFIG_DIR
+## LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
 
 ## If the local config file is not present, is it an error?
 ## WARNING: This is a potential security issue. 
@@ -1594,7 +1597,7 @@ QUEUE_SUPER_USERS	= root, condor
 ##--------------------------------------------------------------------
 ##  condor_starter
 ##--------------------------------------------------------------------
-##  The condor_starter can renice the processes from remote Condor
+##  The condor_starter can renice the processes of Condor
 ##  jobs on your execute machines.  If you want this, uncomment the
 ##  following entry and set it to how "nice" you want the user
 ##  jobs. (1-19)  The larger the number, the lower priority the
@@ -2494,10 +2497,23 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 HDFS_NAMENODE = hdfs://example.com:9000
 HDFS_NAMENODE_WEB = example.com:8000
 
+HDFS_BACKUPNODE = hdfs://example.com:50100
+HDFS_BACKUPNODE_WEB = example.com:50105
+
 ## You need to pick one machine as name node by setting this parameter
 ## to HDFS_NAMENODE. The remaining machines in a storage cluster will
 ## act as data nodes (HDFS_DATANODE).
-HDFS_SERVICES = HDFS_DATANODE
+HDFS_NODETYPE = HDFS_DATANODE
+
+## If machine is selected to be NameNode then by a role should defined.
+## If it selected to be DataNode then this paramer is ignored.
+## Available options:
+## ACTIVE: Active NameNode role (default value)
+## BACKUP: Always synchronized with the active NameNode state, thus 
+##         creating a backup of the namespace. Currently the NameNode
+##         supports one Backup node at a time.
+## CHECKPOINT: Periodically creates checkpoints of the namespace. 
+HDFS_NAMENODE_ROLE = ACTIVE
 
 ## The two set of directories that are required by HDFS are for name 
 ## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
@@ -2537,4 +2553,4 @@ HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 #HDFS_DFSADMIN_CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
 
 ## In case an old name for hdfs configuration files is required.
-#HDFS_SITE_FILE = hadoop-site.xml
+#HDFS_SITE_FILE = hdfs-site.xml

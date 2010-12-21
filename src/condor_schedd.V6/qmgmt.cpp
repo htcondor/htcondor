@@ -35,7 +35,7 @@
 #include "condor_attributes.h"
 #include "condor_uid.h"
 #include "condor_adtypes.h"
-#include "condor_ckpt_name.h"
+#include "spooled_job_files.h"
 #include "scheduler.h"	// for shadow_rec definition
 #include "dedicated_scheduler.h"
 #include "condor_email.h"
@@ -52,6 +52,8 @@
 #include "condor_open.h"
 #include "ickpt_share.h"
 #include "classadHistory.h"
+#include "directory.h"
+#include "filename_tools.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -175,10 +177,7 @@ ClusterCleanup(int cluster_id)
 	// delete the cluster classad
 	JobQueue->DestroyClassAd( key );
 
-	// blow away the initial checkpoint file from the spool dir
-	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
-	(void)unlink( ckpt_file_name );
-	free(ckpt_file_name); ckpt_file_name = NULL;
+	SpooledJobFiles::removeClusterSpooledFiles(cluster_id);
 
 	// garbage collect the shared ickpt file if necessary
 	if (!hash.IsEmpty()) {
@@ -592,12 +591,312 @@ GetOriginalJobQueueBirthdate()
 	return JobQueue->GetOrigLogBirthdate();
 }
 
+static void
+RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster, int proc )
+{
+	std::string old_path;
+	sprintf(old_path,"%s%ccluster%d.proc%d.subproc%d", spool, DIR_DELIM_CHAR, cluster, proc, 0);
+	char *new_path = gen_ckpt_name( spool, cluster, proc, 0 );
+	ASSERT( new_path );
+
+	static const int ATTR_ARRAY_SIZE = 6;
+	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
+		ATTR_JOB_CMD,
+		ATTR_JOB_INPUT,
+		ATTR_TRANSFER_INPUT_FILES,
+		ATTR_ULOG_FILE,
+		ATTR_X509_USER_PROXY,
+		ATTR_JOB_IWD};
+	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
+		false,
+		false,
+		true,
+		false,
+		false,
+		false};
+
+	int a;
+	for(a=0;a<ATTR_ARRAY_SIZE;a++) {
+		char const *attr = AttrsToModify[a];
+		MyString v;
+		char const *o = old_path.c_str();
+		char const *n = new_path;
+
+		if( !job_ad->LookupString(attr,v) ) {
+			continue;
+		}
+		if( !AttrIsList[a] ) {
+			if( !strncmp(v.Value(),o,strlen(o)) ) {
+				std::string np = n;
+				np += v.Value() + strlen(o);
+				dprintf(D_ALWAYS,"Changing job %d.%d %s from %s to %s\n",
+						cluster, proc, attr, o, np.c_str());
+				job_ad->Assign(attr,np.c_str());
+			}
+			continue;
+		}
+
+			// The value we are changing is a list of files
+		StringList old_paths(v.Value(),",");
+		StringList new_paths(NULL,",");
+		bool changed = false;
+
+		old_paths.rewind();
+		char const *op;
+		while( (op=old_paths.next()) ) {
+			if( !strncmp(op,o,strlen(o)) ) {
+				std::string np = n;
+				np += op + strlen(o);
+				new_paths.append(np.c_str());
+				changed = true;
+			}
+			else {
+				new_paths.append(op);
+			}
+		}
+
+		if( changed ) {
+			char *nv = new_paths.print_to_string();
+			ASSERT( nv );
+			dprintf(D_ALWAYS,"Changing job %d.%d %s from %s to %s\n",
+					cluster, proc, attr, v.Value(), nv);
+			job_ad->Assign(attr,nv);
+			free( nv );
+		}
+	}
+
+	free( new_path );
+}
+
+static const int spool_min_version_i_support = 0; // before 7.5.5
+static const int spool_cur_version_i_support = 1; // spool version circa 7.5.5
+static const int spool_min_version_i_write = 1;   // spool version circa 7.5.5
+
+static void WriteSpoolVersion(char const *spool) {
+	std::string vers_fname;
+	sprintf(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
+
+	FILE *vers_file = safe_fcreate_replace_if_exists(vers_fname.c_str(),"w");
+	if( !vers_file ) {
+		EXCEPT("Failed to open %s for writing.\n",vers_fname.c_str());
+	}
+	if( fprintf(vers_file,"minimum compatible spool version %d\n",
+				spool_min_version_i_write) < 0 ||
+		fprintf(vers_file,"current spool version %d\n",
+				spool_cur_version_i_support) < 0 ||
+		fflush(vers_file) != 0 ||
+		fsync(fileno(vers_file)) != 0 ||
+		fclose(vers_file) != 0 )
+	{
+		EXCEPT("Error writing spool version to %s\n",vers_fname.c_str());
+	}
+}
+
+static void
+CheckSpoolVersion(char const *spool, int &spool_min_version,int &spool_cur_version)
+{
+	spool_min_version = 0; // before 7.5.5 there was no version stamp
+	spool_cur_version = 0;
+
+	std::string vers_fname;
+	sprintf(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
+
+	FILE *vers_file = safe_fopen_wrapper(vers_fname.c_str(),"r");
+	if( vers_file ) {
+		if( 1 != fscanf(vers_file,
+						"minimum compatible spool version %d\n",
+						&spool_min_version) )
+		{
+			EXCEPT("Failed to find minimum compatible spool version in %s\n",
+				   vers_fname.c_str());
+		}
+		if( 1 != fscanf(vers_file,
+						"current spool version %d\n",
+						&spool_cur_version) )
+		{
+			EXCEPT("Failed to find current spool version in %s\n",
+				   vers_fname.c_str());
+		}
+		fclose(vers_file);
+	}
+
+	dprintf(D_FULLDEBUG,"Spool format version requires >= %d (I support version %d)\n",
+			spool_min_version,
+			spool_cur_version_i_support);
+	dprintf(D_FULLDEBUG,"Spool format version is %d (I require version >= %d)\n",
+			spool_min_version,
+			spool_min_version_i_support);
+
+	if( spool_min_version > spool_cur_version_i_support ) {
+		EXCEPT("According to %s, the SPOOL directory requires that I support spool version %d, but I only support %d.\n",
+			   vers_fname.c_str(),
+			   spool_min_version,
+			   spool_cur_version_i_support);
+	}
+	if( spool_cur_version < spool_min_version_i_support ) {
+		EXCEPT("According to %s, the SPOOL directory is written in spool version %d, but I only support versions back to %d.\n",
+			   vers_fname.c_str(),
+			   spool_cur_version,
+			   spool_min_version_i_support);
+	}
+}
+
+static void
+SpoolHierarchyChangePass1(char const *spool,std::list< PROC_ID > &spool_rename_list)
+{
+	int cluster, proc, subproc;
+
+	Directory spool_dir(spool);
+	const char *f;
+	while( (f=spool_dir.Next()) ) {
+		int len;
+		cluster = proc = subproc = -1;
+		len = 0;
+
+		if( sscanf(f,"cluster%d.proc%d.subproc%d%n",&cluster,&proc,&subproc,&len)==3 && f[len] == '\0' )
+		{
+			dprintf(D_ALWAYS,"Found pre-7.5.5 spool directory %s\n",f);
+			if( !GetJobAd( cluster, proc ) ) {
+				dprintf(D_ALWAYS,"No job %d.%d exists, so ignoring old spool directory %s.\n",cluster,proc,f);
+			}
+			else {
+				PROC_ID job_id;
+				job_id.cluster = cluster;
+				job_id.proc = proc;
+				spool_rename_list.push_back(job_id);
+			}
+		}
+
+		cluster = proc = subproc = -1;
+		len = 0;
+		if( sscanf(f,"cluster%d.ickpt.subproc%d%n",&cluster,&subproc,&len)==2 && f[len] == '\0')
+		{
+			dprintf(D_ALWAYS,"Found pre-7.5.5 spooled executable %s\n",f);
+			if( !GetJobAd( cluster, ICKPT ) ) {
+				dprintf(D_ALWAYS,"No job %d.%d exists, so ignoring old spooled executable %s.\n",cluster,proc,f);
+			}
+			else {
+				PROC_ID job_id;
+				job_id.cluster = cluster;
+				job_id.proc = ICKPT;
+				spool_rename_list.push_back(job_id);
+			}
+		}
+	}
+
+	std::list< PROC_ID >::iterator spool_rename_it;
+	for( spool_rename_it = spool_rename_list.begin();
+		 spool_rename_it != spool_rename_list.end();
+		 spool_rename_it++ )
+	{
+		PROC_ID job_id = *spool_rename_it;
+		cluster = job_id.cluster;
+		proc = job_id.proc;
+
+		ClassAd *job_ad = GetJobAd( cluster, proc );
+		ASSERT( job_ad ); // we already checked that this job exists
+
+		RenamePre_7_5_5_SpoolPathsInJob( job_ad, spool, cluster, proc );
+
+		JobQueueDirty = true;
+	}
+}
+
+static void
+SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_list)
+{
+	int cluster, proc;
+
+		// now rename the job spool directories and executables
+	std::list< PROC_ID >::iterator spool_rename_it;
+	for( spool_rename_it = spool_rename_list.begin();
+		 spool_rename_it != spool_rename_list.end();
+		 spool_rename_it++ )
+	{
+		PROC_ID job_id = *spool_rename_it;
+		cluster = job_id.cluster;
+		proc = job_id.proc;
+
+		ClassAd *job_ad = GetJobAd( cluster, proc );
+		ASSERT( job_ad ); // we already checked that this job exists
+
+		std::string old_path;
+		std::string new_path;
+		char *tmp;
+
+		if( proc == ICKPT ) {
+			sprintf(old_path,"%s%ccluster%d.ickpt.subproc%d",spool,DIR_DELIM_CHAR,cluster,0);
+		}
+		else {
+			sprintf(old_path,"%s%ccluster%d.proc%d.subproc%d",spool,DIR_DELIM_CHAR,cluster,proc,0);
+		}
+		tmp = gen_ckpt_name(spool,cluster,proc,0);
+		new_path = tmp;
+		free( tmp );
+
+		if( !SpooledJobFiles::createParentSpoolDirectories(job_ad) ) {
+			EXCEPT("Failed to create parent spool directories for "
+				   "%d.%d: %s: %s\n",
+				   cluster,proc,new_path.c_str(),strerror(errno));
+		}
+
+		priv_state saved_priv;
+		if( proc != ICKPT ) {
+			std::string old_tmp_path = old_path + ".tmp";
+			std::string new_tmp_path = new_path + ".tmp";
+
+				// We move the tmp directory first, because it is the presence
+				// of the non-tmp directory that is checked for if we crash
+				// and restart.
+			StatInfo si(old_tmp_path.c_str());
+			if( si.Error() != SINoFile ) {
+				saved_priv = set_priv(PRIV_ROOT);
+
+				if( rename(old_tmp_path.c_str(),new_tmp_path.c_str())!= 0 ) {
+					EXCEPT("Failed to move %s to %s: %s\n",
+						   old_tmp_path.c_str(),
+						   new_tmp_path.c_str(),
+						   strerror(errno));
+				}
+
+				set_priv(saved_priv);
+
+				dprintf(D_ALWAYS,"Moved %s to %s.\n",
+						old_tmp_path.c_str(), new_tmp_path.c_str() );
+			}
+		}
+
+		saved_priv = set_priv(PRIV_ROOT);
+
+		if( rename(old_path.c_str(),new_path.c_str())!= 0 ) {
+			EXCEPT("Failed to move %s to %s: %s\n",
+				   old_path.c_str(),
+				   new_path.c_str(),
+				   strerror(errno));
+		}
+
+		set_priv(saved_priv);
+
+		dprintf(D_ALWAYS,"Moved %s to %s.\n",
+				old_path.c_str(), new_path.c_str() );
+	}
+}
 
 void
 InitJobQueue(const char *job_queue_name,int max_historical_logs)
 {
 	ASSERT(qmgmt_was_initialized);	// make certain our parameters are setup
 	ASSERT(!JobQueue);
+
+	MyString spool;
+	if( !param(spool,"SPOOL") ) {
+		EXCEPT("SPOOL must be defined.\n");
+	}
+
+	int spool_min_version = 0;
+	int spool_cur_version = 0;
+	CheckSpoolVersion(spool.Value(),spool_min_version,spool_cur_version);
+
 	JobQueue = new ClassAdCollection(job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 	TotalJobsCount = 0;
@@ -817,9 +1116,41 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		}
 		next_cluster_num = stored_cluster_num;
 	}
+
+		// Now check for pre-7.5.5 spool directories/files that need
+		// to be modernized.  This happens in two passes.  First we
+		// update the job ads to point to the new paths.  Then we
+		// write out the modified job queue to save these and any
+		// other pending changes.  Then we rename the
+		// directories/files in the spool.  This order of doing things
+		// guarantees that if we crash in the middle we don't skip
+		// over some unfinished work on restart.
+	std::list< PROC_ID > spool_rename_list;
+
+	if( spool_cur_version < 1 ) {
+		SpoolHierarchyChangePass1(spool.Value(),spool_rename_list);
+	}
+
+
 		// Some of the conversions done in ConvertOldJobAdAttrs need to be
 		// persisted to disk. Particularly, GlobusContactString/RemoteJobId.
-	CleanJobQueue();
+		// The spool renaming also needs to be saved here.  This is not
+		// optional, so we cannot just call CleanJobQueue() here, because
+		// that does not abort on failure.
+	if( JobQueueDirty ) {
+		if( !JobQueue->TruncLog() ) {
+			EXCEPT("Failed to write the modified job queue log to disk, so cannot continue.");
+		}
+		JobQueueDirty = false;
+	}
+
+	if( spool_cur_version < 1 ) {
+		SpoolHierarchyChangePass2(spool.Value(),spool_rename_list);
+	}
+
+	if( spool_cur_version != spool_cur_version_i_support ) {
+		WriteSpoolVersion(spool.Value());
+	}
 }
 
 
@@ -2464,11 +2795,21 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			if ( JobQueue->LookupClassAd(cluster_key, clusterad) &&
 				 JobQueue->LookupClassAd(key,procad))
 			{
-				dprintf(D_FULLDEBUG,"New job: %s",key);
+				dprintf(D_FULLDEBUG,"New job: %s\n",key);
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
 
+					// Skip writing submit events for procid != 0 for parallel jobs
+				int universe = -1;
+				procad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+				if ( universe == CONDOR_UNIVERSE_PARALLEL) {
+					doFsync = true; // only writing first proc, make sure to sync
+					if ( proc_id > 0) {
+						continue;
+					}
+				}
+	
 					// convert any old attributes for backwards compatbility
 				ConvertOldJobAdAttrs(procad, false);
 
@@ -3477,31 +3818,28 @@ RecvSpoolFileBytes(const char *path)
 }
 
 int
-SendSpoolFile(char const *filename)
+SendSpoolFile(char const *)
 {
 	char * path;
 
-		/* We are passed in a filename to use to save the ICKPT file.
-		   However, we should NOT trust this filename since it comes from 
-		   the client!  So here we generate what we think the filename should
-		   be based upon the current active_cluster_num in the transaction.
-		   If the client does not send what we are expecting, we do the
-		   paranoid thing and abort.  Once we are certain that my understanding
-		   of this is correct, we could even just ignore the passed-in 
-		   filename parameter completely. -Todd Tannenbaum, 2/2005
-		*/
+		// We ignore the filename that was passed by the client.
+		// It is only there for backward compatibility reasons.
+
 	path = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
-	if ( filename && strcmp(filename, condor_basename(path)) ) {
-		dprintf(D_ALWAYS, 
-				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
-				filename);
-		free(path);
-		return -1;
-	}
+	ASSERT( path );
 
 	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
 		EXCEPT( "SendSpoolFile called when Q_SOCK is NULL" );
 	}
+
+	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
+		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
+		Q_SOCK->getReliSock()->put(-1);
+		Q_SOCK->getReliSock()->end_of_message();
+		free(path);
+		return -1;
+	}
+
 	/* Tell client to go ahead with file transfer. */
 	Q_SOCK->getReliSock()->encode();
 	Q_SOCK->getReliSock()->put(0);
@@ -3521,6 +3859,15 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	Q_SOCK->getReliSock()->encode();
 
 	char *path = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
+	ASSERT( path );
+
+	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
+		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
+		Q_SOCK->getReliSock()->put(-1);
+		Q_SOCK->getReliSock()->end_of_message();
+		free(path);
+		return -1;
+	}
 
 	// here we take advantage of ickpt sharing if possible. if a copy
 	// of the executable already exists we make a link to it and send

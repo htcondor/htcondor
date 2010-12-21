@@ -8,7 +8,7 @@
 # 1. Get the buildtags from the nighlty build-tag on the CSL machine or 
 #    from the command line arguments
 # 2. For each tag defined
-#    - Checkout the nmi_glue/submit_info input file and parse it
+#    - Checkout the nmi_tools/glue/SubmitInfo.pm input file and parse it
 #    - Generate the appropriate NMI submit and fetch files
 #    - run nmi_submit
 
@@ -50,10 +50,6 @@ sub FALSE { 0; };
 
 # Constants for use with makeFetchFileVCS to specify if fetching from
 # source (SRC), externals (EXT) or manual (DOC) repositories.
-#sub TST_LRG	{ 5; };
-#sub TST_CNF	{ 4; };
-#sub TST 	{ 3; };
-#sub EXT 	{ 2; };
 sub DOC 	{ 1; };
 sub SRC 	{ 0; };
 
@@ -61,29 +57,17 @@ sub SRC 	{ 0; };
 # Configurable settings
 ######################################################################
 
-# CVSROOT to use for checking out from CVS
-my $CVSROOT = "/space/cvs/CONDOR_SRC";
-
 # Root of the GIT Source repository
 my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
 
 # Root of the GIT Manual repository
 my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
 
-# Root of the GIT Externals repository
-#my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
-
-# Root of the GIT Confidential Test repository
-#my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
-
-# Root of the GIT Large Test repository
-#my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
-
 # name of the submit_info file
 my $submit_info_basename = "SubmitInfo.pm";
 
 # Location of the submit_info file
-my $submit_info = "nmi_glue/$submit_info_basename";
+my $submit_info = "nmi_tools/glue/$submit_info_basename";
 
 # CVS location of condor_nmi_submit
 my $cvs_condor_nmi_submit = "nmi_tools/condor_nmi_submit";
@@ -126,7 +110,14 @@ my $src_workspace;
 # Hash of tag -> module mappings
 my %tags;
 
-# Platforms to use (either from command-line or from submit_info)
+# Platforms to use (either from command-line or from submit_info).
+# Entries in here can either be things like "x86_rhap_5" or
+# "x86_rhap_5#default_minimal_platform"--generally
+# "platform_name#platform_key", or a build and test set name.  Use the function
+# convertPlatformToKeys() to convert an element into the true platform name,
+# and a key which can be used to look up the associated information in the
+# submit_info hash table from. If no specific key is specified, the platform
+# name is itself the platform key. 
 my @platforms;
 
 # Platforms defined on the command-line, overrides values in the
@@ -525,10 +516,15 @@ sub parseOptions
             printUsage( 1 );
         }
 
-            # Try to catch incomplete workspaces
-        my(@condor_req_dirs) = qw( src doc );
-        if( ! defined($opt_externals) ) { push @condor_req_dirs, 'externals'; }
-            foreach my $subdir (@condor_req_dirs) {
+        my(@condor_req_dirs) = qw( src );
+
+		if (!defined($opt_skip_doc ))
+		{ push @condor_req_dirs, 'doc'; }
+
+		if( ! defined($opt_externals) )
+		{ push @condor_req_dirs, 'externals'; }
+
+    	foreach my $subdir (@condor_req_dirs) {
               if( not -d "$opt_workspace/$subdir" ) {
                 print "ERROR: Workspace $opt_workspace does not not appear to be a Condor workspace (missing $opt_workspace/$subdir)\n";
                 printUsage( 1 );
@@ -538,11 +534,11 @@ sub parseOptions
         $tags{"workspace"} = undef;
     }
 
-    if( defined($src_workspace) && defined($opt_nmi_glue) && -d "$src_workspace/nmi_glue" ) {
+    if( defined($src_workspace) && defined($opt_nmi_glue) && -d "$src_workspace/nmi_tools/glue" ) {
         # If you want to try and fix the race condition, it will
-        # involve somehow not copying the $src_workspace/nmi_glue directory
+        # involve somehow not copying the $src_workspace/nmi_tools/glue directory
         # in generateBuildFetchFiles().
-        print "WARNING: Your workspace ($src_workspace) contains an nmi_glue subdirectory.  You also specified an --nmi-glue directory ($opt_nmi_glue).  At the moment there is a race condition and you could get either directory.  As a workaround, rename %src_workspace/nmi_glue.\n";
+        print "WARNING: Your workspace ($src_workspace) contains an nmi_tools/glue subdirectory.  You also specified an --nmi-glue directory ($opt_nmi_glue).  At the moment there is a race condition and you could get either directory.  As a workaround, rename %src_workspace/nmi_tools/glue.\n";
     }
 
     if( defined($opt_nmi_glue) ) {
@@ -567,7 +563,6 @@ sub parseOptions
     }
 }
 
-
 # TODO: this should be more clear about the required vs. optional
 # arguments, especially for --test...
 sub printUsage
@@ -583,7 +578,17 @@ Where [options] can be any of:
 --debug            <Print out the generated submit files, don't submit them>
 --notify=string    <Comma-seprated list of users to notify with results>
 --notify-fail-only  <Only send notification email on build or test failure>
---platforms=string <Comma-sperated list of platforms to run tests on>
+--platforms=string <Comma-sperated list of platforms to run tests on. A
+                    platform can be a 'build-and-test-set name', a 'name', or
+                    a 'name#key' pair. A build-and-test-set name must match
+                    a pre-defined build-and-test-set name in SubmitInfo.pm.
+                    A bare platform is its own key and uses the information
+                    associated with they key from the %submit_info hash in 
+                    the batlab. Bare names that do not exist in the 
+                    %submit_info hash will be assigned the 
+                    'default_minimal_platform' key. The only valid keys
+                    are those that exist in the %submit_info hash table
+                    in SubmitInfo.pm.>
 --tag=string       <Condor source code tag to be fetched from cvs>
 --module=string    <Condor source code module to be fetched from cvs>
 --nmi-glue=string  <nmi_glue directory containing customised glue scripts>
@@ -620,8 +625,7 @@ Where [build-options] can be any of:
                   submit test runs based on this build.
 --version-buildid=string <Build RunId to use in the version string>
 --sha1            Place the sha1 into the database as the product_version.
---skip-doc        Exactly what it says. Can't use it till we can implement
-                  a way for make public to not fail with no manual.
+--skip-doc        skips doc requirement
 Where [test-options] can be any of:
 --buildid=string   <Build RunId to test>
 --test-src=string  <Custom source tarball for building tests with>
@@ -654,6 +658,8 @@ sub getSubmitInfoNew
 	my $ret;
 	our $slaved_module = 1; # needed for loading the SubmitInfo.pm module 
 	my $p;
+	my $i;
+	my ($platform_name, $platform_key, $pkeyp);
 
     if( defined $opt_nmi_glue ) {
         $submit_info_path = "$opt_nmi_glue/$submit_info_basename";
@@ -697,14 +703,25 @@ sub getSubmitInfoNew
             @platforms = getPlatformsFromRunid( $opt_buildid );
         } else {
 			# We're in build mode so pick through the supplied platforms and
-			# either add the build and build and test set specified, or the
-			# specific platform mentioned.
+			# either add the build and test set specified, or the specific
+			# platform mentioned.
 
 			foreach $p (sort keys %opt_platforms) {
-				if (!exists($SubmitInfo::build_and_test_sets{$p})) {
-					push @platforms, $p;
+				($platform_name, $platform_key, $pkeyp) = 
+					convertPlatformToKeys($p);
+
+				if (exists($SubmitInfo::build_and_test_sets{$platform_name})) {
+					if ($pkeyp) {
+						die "ERROR: A build and test set name with a " .
+							"platform key is unimplemented and undefined. " .
+							"Don't do that.";
+					}
+					push @platforms, 
+						@{$SubmitInfo::build_and_test_sets{$platform_name}};
 				} else {
-					push @platforms, @{$SubmitInfo::build_and_test_sets{$p}};
+					# We preserve any platform key that may be already 
+					# associated with this platform.
+					push @platforms, $p;
 				}
 			}
 		}
@@ -714,8 +731,41 @@ sub getSubmitInfoNew
     }
 
 	@platforms = sort(removeDuplicates(@platforms));
-    print "Found platforms: " . join( ', ', @platforms ) . "\n"; 
 
+	# For any platforms we don't know about, give it a platform key to the
+	# default minimal build platform in %submit_info.
+
+	for(my $i = 0; $i < scalar(@platforms); $i++) {
+		($platform_name, $platform_key, $pkeyp) = 
+			convertPlatformToKeys($platforms[$i]);
+
+		if ($platform_name =~ /^$/) {
+			die "ERROR: A platform name must be a defined value!";
+		}
+
+		if ($pkeyp) {
+			# don't assume the user knows what they are doing with the platform
+			# key. If they specified one, it *must* exist in the SubmitInfo
+			# database. This doesn't check to see if platform_name is actually
+			# meaningful, however.
+			if (!exists($SubmitInfo::submit_info{$platform_key})) {
+				die "ERROR: While processing platform name: " .
+					"'${platform_name}', I found that the platform key: " .
+					"'${platform_key}' does not exist!";
+			}
+		}
+
+		if (!exists($SubmitInfo::submit_info{$platform_key})) {
+			print "No platform key for platform: '${platform_name}' " .
+				"found. Assigning key: 'default_minimal_platform' " .
+				"to it.\n";
+			$platforms[$i] = "${platform_name}#default_minimal_platform";
+			}
+		}
+
+	# We print out the full name of these platforms, even if they want a
+	# specified key.
+	print "Found platforms: " . join( ', ', @platforms ) . "\n"; 
 }
 
 sub loadModule
@@ -815,7 +865,7 @@ sub createSubmitFilesNew
 		# in the first attempt to run the job and then prevent the job
 		# from matching in the second attempt.
 		print CMDFILE 
-		"append_requirements = Disk =!= UNDEFINED && TotalDisk >= 18000000\n";
+		"append_requirements = Disk =!= UNDEFINED && TotalDisk >= 10000000\n";
 
     } else {
 
@@ -849,9 +899,8 @@ sub checkoutSubmitInfo
     my $cmd = "/bin/false FATAL ERROR, UNKNOWN VCS";
     if (defined($opt_git)) {
 	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
-    } else {
-	$cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
     }
+
     open( OUT, "$cmd 2>&1 |" ) ||
         die "Can't open '$cmd' as a pipe: $!\n";
     @output = <OUT>;
@@ -919,6 +968,45 @@ sub printSubmitInfo
     print "----- End of data parsed from submit_info -----\n";
 }
 
+# We convert a platform string like "ia64_rhas_3" or the alternate form for a
+# minimal build configuration like: "ia64_rhas_3#default_minimal_platform" into
+# the actual platform name, and the platform key for which we should get the
+# information from the %submit_info hash table. They will be identical for the
+# first case. The key will be "default_minimal_platform" for the second
+# case. 
+#
+# Return the platform name, the platform key, and a boolean for whether or not
+# they are different (true if different).
+
+sub convertPlatformToKeys
+{
+	my $platform = shift @_;
+	my ($platform_name, $platform_key, $pkeyp);
+
+	($platform_name, $platform_key) = split(/#/, $platform);
+	$platform_name =~ s/^\s+//g;
+	$platform_name =~ s/\s+$//g;
+	$platform_key =~ s/^\s+//g;
+	$platform_key =~ s/\s+$//g;
+
+	# assume they are the same unless I can show otherwise.
+	$pkeyp = 0;
+
+	if (!defined($platform_key)) {
+		# No specific key mentioned, then they are the same.
+		$platform_key = $platform;
+		$platform_name = $platform;
+	} else {
+		# there is a specific key...
+		if ($platform_name ne $platform_key) {
+			# and they are different from each other.
+			$pkeyp = 1; 
+		}
+	}
+
+	return ($platform_name, $platform_key, $pkeyp);
+}
+
 sub writeTestPrereqsNew
 {
     my $fh = shift;
@@ -938,11 +1026,21 @@ EOF
 
 	# emit the test prereqs, if any, for each platform
     foreach $platform ( @platforms ) {
-		print $fh "# Test Prereqs for Platform $platform\n";
-		if (defined($SubmitInfo::submit_info{$platform}{'test'}{'prereqs'})) {
+		my ($platform_name, $platform_key, $pkeyp);
+
+		($platform_name, $platform_key, $pkeyp) = 
+			convertPlatformToKeys($platform);
+
+		print $fh "# Test Prereqs for Platform ${platform_name}\n";
+		if ($pkeyp) {
+			print $fh "# Using the platform key ${platform_key} for " .
+				"configuration values.\n";
+		}
+
+		if (defined($SubmitInfo::submit_info{$platform_key}{'test'}{'prereqs'})) {
 			
-            print $fh "prereqs_$platform = " .
-				join(', ', @{$SubmitInfo::submit_info{$platform}{'test'}{'prereqs'}}) .
+            print $fh "prereqs_${platform_name} = " .
+				join(', ', @{$SubmitInfo::submit_info{$platform_key}{'test'}{'prereqs'}}) .
 				"\n";
 		} else {
 			print $fh "# None.\n";
@@ -952,7 +1050,6 @@ EOF
 	}
 
 }
-
 
 sub writeBuildPrereqsNew
 {
@@ -976,11 +1073,21 @@ EOF
 	# platform.
 
     foreach $platform ( @platforms ) {
-		print $fh "# Build prereq for: $platform\n";
-        if (defined($SubmitInfo::submit_info{$platform}{'build'}{'prereqs'})) 
+		my ($platform_name, $platform_key, $pkeyp);
+
+		($platform_name, $platform_key, $pkeyp) = 
+			convertPlatformToKeys($platform);
+
+		print $fh "# Build prereq for: ${platform_name}\n";
+		if ($pkeyp) {
+			print $fh "# Using the platform key ${platform_key} for " .
+				"configuration values.\n";
+		}
+
+        if (defined($SubmitInfo::submit_info{$platform_key}{'build'}{'prereqs'})) 
 		{
-            print $fh "prereqs_$platform = " .
-				join (', ', @{$SubmitInfo::submit_info{$platform}{'build'}{'prereqs'}}) .
+            print $fh "prereqs_${platform_name} = " .
+				join (', ', @{$SubmitInfo::submit_info{$platform_key}{'build'}{'prereqs'}}) .
 				"\n";
         } else {
 			print $fh "# None.\n";
@@ -1006,11 +1113,21 @@ EOF
     if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
 
 		foreach $platform (sort @platforms) {
-			print $fh "# Cross test platforms for $platform\n";
-			if (defined($SubmitInfo::submit_info{$platform}{'build'}{'xtests'}))
+			my ($platform_name, $platform_key, $pkeyp);
+
+			($platform_name, $platform_key, $pkeyp) = 
+				convertPlatformToKeys($platform);
+
+			print $fh "# Cross test platforms for ${platform_name}\n";
+			if ($pkeyp) {
+				print $fh "# Using the platform key ${platform_key} for " .
+					"configuration values.\n";
+			}
+
+			if (defined($SubmitInfo::submit_info{$platform_key}{'build'}{'xtests'}))
 			{
-				print $fh "x_test_platforms_$platform = " .
-					join(', ', @{$SubmitInfo::submit_info{$platform}{'build'}{'xtests'}}) .
+				print $fh "x_test_platforms_${platform_name} = " .
+					join(', ', @{$SubmitInfo::submit_info{$platform_key}{'build'}{'xtests'}}) .
 					"\n";
 
 			} else {
@@ -1029,6 +1146,7 @@ sub writeCommonInfo
     my $desc;
     my $vers_string;
     my @vers;
+	my ($platform, $platform_name, $platform_key, $pkeyp, @platform_names);
 
     if( defined $opt_src_tag &&  defined $opt_other_tag ) {
 		if(defined $opt_desc) {
@@ -1126,11 +1244,17 @@ sub writeCommonInfo
         print $fh "configure = $opt_configure\n";
     }
 
-    print $fh "+LoadProfile = true\n";
+    print $fh "++LoadProfile = true\n";
 
-    print $fh "platforms = " . join(', ', @platforms) . "\n";
+	# collect the names of the platforms, regardless of if they use the
+	# default minimal builds or not.
+	for $platform (@platforms) {
+		($platform_name, $platform_key, $pkeyp) = 
+			convertPlatformToKeys($platform);
+		push @platform_names, $platform_name;
+	}
+    print $fh "platforms = " . join(', ', @platform_names) . "\n";
 }
-
 
 sub writeBuildGlueNew
 {
@@ -1147,31 +1271,39 @@ sub writeBuildGlueNew
 
 EOF
 
-    # define the glue scripts we want
-    print $fh "pre_all = nmi_glue/build/pre_all\n";
+#     # define the glue scripts we want
+    print $fh "pre_all = nmi_tools/glue/build/pre_all\n";
 	my $pre_all_args = "";
 	if (defined($opt_skip_doc)) {
 		$pre_all_args = $pre_all_args . " --skip-doc";
 	}
+
     if (defined($opt_version_buildid)) {
       $pre_all_args = $pre_all_args . "--version-buildid=$opt_version_buildid";
     }
     print $fh "pre_all_args = $pre_all_args\n";
-    print $fh "remote_declare = nmi_glue/build/remote_declare\n";
-    print $fh "remote_declare_args =";
-    print $fh " --externals-only" if defined($opt_externals_only);
-    print $fh " --release-only" if defined($opt_release_only);
-    print $fh "\n";
-    print $fh "remote_pre = nmi_glue/build/remote_pre\n";
-    print $fh "remote_task = nmi_glue/build/remote_task\n";
-    print $fh "remote_post = nmi_glue/build/remote_post\n";
-    print $fh "platform_post = nmi_glue/build/platform_post\n";
-    print $fh "post_all = nmi_glue/build/post_all\n";
 
+	#tstclair: we no longer use this.
+	# print $fh "remote_declare = \n";
+    # print $fh "remote_declare_args =";
+    # print $fh " --externals-only" if defined($opt_externals_only);
+    # print $fh " --release-only" if defined($opt_release_only);
+    # print $fh "\n";
+    print $fh "remote_declare = nmi_tools/glue/build/remote_declare\n";
+    print $fh "remote_pre = nmi_tools/glue/build/remote_pre\n";
+    print $fh "remote_task = nmi_tools/glue/build/remote_task\n";
+    print $fh "remote_post = nmi_tools/glue/build/remote_post\n";
+    print $fh "platform_post = nmi_tools/glue/build/platform_post\n";
+
+	# tstclair: no longer needed.
+	# print $fh "post_all = nmi_tools/glue/build/post_all\n";
+
+	# tstclair: why is this even an option it should always be the case. 
     # Pass common arguments to <platform>_remote_pre script
-    if( defined($opt_use_externals_cache) ) {
-		$common_pre_args .= ' --use_externals_cache';
-    }
+    #if( defined($opt_use_externals_cache) ) {
+	#	$common_pre_args .= ' --use_externals_cache';
+    #}
+
     if( defined($opt_clear_externals_cache) ) {
 		$common_pre_args .= ' --clear_externals_cache';
     }
@@ -1189,7 +1321,11 @@ EOF
 	# emit the remote_pre args per platform and mix in the common remote pre
 	# args if any.
 	for $platform (sort @platforms) {
-		my $href = $SubmitInfo::submit_info{$platform}{'build'}{'configure_args'};
+		my ($platform_name, $platform_key, $pkeyp);
+		($platform_name, $platform_key, $pkeyp) = 
+			convertPlatformToKeys($platform);
+
+		my $href = $SubmitInfo::submit_info{$platform_key}{'build'}{'configure_args'};
 		my $str = "";
 		# Add in arguments remote_pre natively understands
 		if ($common_pre_args) {
@@ -1202,8 +1338,12 @@ EOF
 			$str .= join(' ', SubmitInfo::args_to_array($href));
 		}
 
-		print $fh "# Remote Pre Arguments for Platform: $platform\n";
-		print $fh "${platform}_remote_pre_args = $str\n";
+		print $fh "# Remote Pre Arguments for Platform: ${platform_name}\n";
+		if ($pkeyp) {
+			print $fh "# Using the platform key ${platform_key} for " .
+				"configuration values.\n";
+		}
+		print $fh "${platform_name}_remote_pre_args = $str\n";
 		print $fh "\n";
 	}
 
@@ -1259,19 +1399,19 @@ sub writeTestGlueNew
 EOF
 
     # define the glue scripts we want for test jobs
-    print $fh "pre_all = nmi_glue/test/pre_all\n";
+    print $fh "pre_all = nmi_tools/glue/test/pre_all\n";
     if( defined $opt_test_src) {
         print CMDFILE "pre_all_args = --src=$opt_test_src\n";
     }
-    print $fh "platform_pre = nmi_glue/test/platform_pre\n";
-    print $fh "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
-    print $fh "remote_declare = nmi_glue/test/remote_declare\n";
-    print $fh "remote_pre = nmi_glue/test/remote_pre\n";
-    print $fh "remote_task = nmi_glue/test/remote_task\n";
+    print $fh "platform_pre = nmi_tools/glue/test/platform_pre\n";
+    print $fh "remote_pre_declare = nmi_tools/glue/test/remote_pre_declare\n";
+    print $fh "remote_declare = nmi_tools/glue/test/remote_declare\n";
+    print $fh "remote_pre = nmi_tools/glue/test/remote_pre\n";
+    print $fh "remote_task = nmi_tools/glue/test/remote_task\n";
     print $fh "remote_task_timeout = $test_timeout\n";
-    print $fh "remote_post = nmi_glue/test/remote_post\n";
-    print $fh "platform_post = nmi_glue/test/platform_post\n";
-    print $fh "post_all = nmi_glue/test/post_all\n";
+    print $fh "remote_post = nmi_tools/glue/test/remote_post\n";
+    print $fh "platform_post = nmi_tools/glue/test/platform_post\n";
+    print $fh "post_all = nmi_tools/glue/test/post_all\n";
 	# turn on testing concurrency
 	if( defined $opt_tests_at_once) {
     	print $fh "max_concurrent_subtasks = $opt_tests_at_once\n";
@@ -1287,7 +1427,15 @@ EOF
 	foreach $platform (sort @platforms) {
 		$args = "--test-class "; # clear out the value for each platform.
 
-		print $fh "# Testclass/Configure args for platform $platform\n";
+		my ($platform_name, $platform_key, $pkeyp);
+		($platform_name, $platform_key, $pkeyp) = 
+			convertPlatformToKeys($platform);
+
+		print $fh "# Testclass/Configure args for platform ${platform_name}\n";
+		if ($pkeyp) {
+			print $fh "# Using the platform key ${platform_key} for " .
+				"configuration values.\n";
+		}
 
 		# assemble the test classes from the platform or the command line.
 
@@ -1298,12 +1446,12 @@ EOF
 
 		} else {
 			# grab the test classes out of the SubmitInfo file;
-			if (defined($SubmitInfo::submit_info{$platform}{'test'}{'testclass'}))
+			if (defined($SubmitInfo::submit_info{$platform_key}{'test'}{'testclass'}))
 			{
-				$args .= join(',', @{$SubmitInfo::submit_info{$platform}{'test'}{'testclass'}}) . " ";
+				$args .= join(',', @{$SubmitInfo::submit_info{$platform_key}{'test'}{'testclass'}}) . " ";
 
 			} else {
-				print $fh "# No test class for $platform. Default to quick.\n";
+				print $fh "# No test class for ${platform_name}. Default to quick.\n";
    				$args .= "quick ";
 			}
 		}
@@ -1312,15 +1460,15 @@ EOF
 
 		# now, add in the configure args for the test suite.
 
-		if (defined($SubmitInfo::submit_info{$platform}{'test'}{'configure_args'}))
+		if (defined($SubmitInfo::submit_info{$platform_key}{'test'}{'configure_args'}))
 		{
 			$args .= join(' ', 
 				SubmitInfo::args_to_array(
-					$SubmitInfo::submit_info{$platform}{'test'}{'configure_args'}));
+					$SubmitInfo::submit_info{$platform_key}{'test'}{'configure_args'}));
 		}
 
 		# finally print out the mess which is all passed to remote_declare.
-		print $fh "${platform}_remote_declare_args = $args\n";
+		print $fh "${platform_name}_remote_declare_args = $args\n";
 	}
 }
 
@@ -1341,7 +1489,7 @@ sub generateTestFetchFiles
         # We rather crudely copy all of nmi_glue when we really
         # on need nmi_glue/$runtype.  But we want the nmi_glue path
         # in front of it.
-        makeFetchFileSCP( $glue_file, "$src_workspace/nmi_glue", "recursive" );
+        makeFetchFileSCP( $glue_file, "$src_workspace/nmi_tools", "recursive" );
         push( @fetch_files, $glue_file );
 
     } elsif( ( ! defined $opt_nmi_glue) ) {
@@ -1352,7 +1500,7 @@ sub generateTestFetchFiles
         # rely on the copy of the glue in the source tarball from the
         # build output, since we have no way to untar it without glue. ;)
         my $glue_file = "test_glue.src";
-        makeFetchFileVCS( $glue_file, FALSE, SRC, "nmi_glue/$runtype", $tag );
+        makeFetchFileVCS( $glue_file, FALSE, SRC, "nmi_tools/glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
     }
     # else: Not workspace build.  Using --nmi_glue 
@@ -1539,14 +1687,8 @@ sub makeFetchFileVCS
 	    	# NMI copy of the repository
 	    	print FILE "git_tree = origin/master\n";
 		}
-    } else {
-		print FILE "method = cvs\n";
-		print FILE "cvs_root = $CVSROOT\n";
-		print FILE "cvs_module = $module\n";
-		if( $tag ) {
-	    	print FILE "cvs_tag = $tag\n";
-		}
     }
+
     close FILE;
 }
 

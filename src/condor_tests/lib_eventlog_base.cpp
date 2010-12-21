@@ -17,6 +17,10 @@
  *
  ***************************************************************/
 
+#ifdef WIN32
+#include "condor_header_features.h"
+#include "condor_sys_nt.h"
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -25,7 +29,9 @@
 #include "write_user_log.h"
 #include "read_user_log.h"
 #include <string.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 
 int
@@ -34,8 +40,13 @@ WriteStateFile( const ReadUserLog::FileState &state, const char *state_file )
 	int		errors = 0;
 
 	int	fd = open( state_file,
+
 				   O_WRONLY|O_CREAT,
-				   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
+#ifdef WIN32
+				   S_IWRITE);
+#else
+				   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+#endif
 	if ( fd < 0 ) {
 		fprintf( stderr, "ERROR: Failed to open state file %s\n", state_file );
 		return 1;

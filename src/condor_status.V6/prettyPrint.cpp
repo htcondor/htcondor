@@ -19,10 +19,12 @@
 
 #include "condor_common.h"
 #include "condor_api.h"
+#include "condor_adtypes.h"
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
 #include "condor_xml_classads.h"
+#include "string_list.h"
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;

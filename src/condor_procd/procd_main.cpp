@@ -29,7 +29,7 @@
 #endif
 
 #if !defined(WIN32)
-#include "glexec_kill.h"
+#include "glexec_kill.unix.h"
 #endif
 
 // our "local server address"
@@ -79,6 +79,19 @@ static char* glexec_kill_path = NULL;
 static char* glexec_path = NULL;
 #endif
 
+// Determines if the procd should assign GIDs to family groups internally using
+// the range denoted by -G, or if there will be an external method like
+// gidd_alloc (which is used by OSG) in which case the associated gid must
+// exist within the rang denoted by -G. This is set by the -E command line
+// argument. If -E is present then this is true.
+static bool use_external_gid_association = false;
+
+// Controls the root pid of the tree that the procd is monotoring.  If not set,
+// it defaults to the procd's parent. Set by -P on the command line.
+static pid_t root_pid = 0;
+// This is set to true if -P was seen on the command line.
+static bool root_pid_specified = false;
+
 static inline void
 fail_illegal_option(char* option)
 {
@@ -92,7 +105,7 @@ static inline void
 fail_option_args(const char* option, int args_required)
 {
 	fprintf(stderr,
-	        "error: option \"%s\" requires %d arguments",
+	        "error: option \"%s\" requires %d arguments\n",
 	        option,
 	        args_required);
 	exit(1);
@@ -173,6 +186,35 @@ parse_command_line(int argc, char* argv[])
 				index++;
 				max_snapshot_interval = atoi(argv[index]);
 				break;
+			
+			// Should the procd utilize an externel protocol for assigning
+			// gids to families, or an internal protocol where the procd
+			// figures it out itself?
+			case 'E':
+				use_external_gid_association = true;
+				break;
+
+			// If this isn't specified, use an algorithm to find the parent
+			// pid of the procd and track that. Otherwise, this is the pid
+			// of the family the procd is tracking.
+			case 'P':
+				if (index + 1 >= argc) {
+					fail_option_args("-P", 1);
+				}
+				index++;
+				root_pid = atoi(argv[index]);
+				if (root_pid == 0) {
+					EXCEPT("The procd can not track pid 0.");
+				}
+#if !defined(WIN32)
+				// We can't track init since that escalates certain
+				// privileges in certain situations.
+				if (root_pid == 1) {
+					EXCEPT("The procd will not track pid 1 as the family.");
+				}
+#endif
+				root_pid_specified = true;
+				break;
 
 #if defined(LINUX)
 			// tracking group ID range
@@ -247,6 +289,22 @@ get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
 		fprintf(stderr, "error: getProcInfo failed on parent PID");
 		exit(1);
 	}
+
+#if !defined(WIN32)
+	/* The operation of the procd is that it will allow any authorized client
+		to send signals to any process which is the child of the parent
+		of the procd. One could conspire to exec the procd in a process
+		whose parent is already the init process, and in doing so, allow
+		an authorized client to send a signal to ANY process on the system
+		since by definition they are all children of init. So, to prevent
+		an escalation of privileges granted to the authorized process, we 
+		exit if we determine that our parent is init. */
+	if (own_pi->ppid == 1) {
+		fprintf(stderr, "error: Procd's ppid can't be 1!");
+		exit(1);
+	}
+#endif
+
 	if (parent_pi->birthday > own_pi->birthday) {
 		fprintf(stderr,
 		        "error: parent process's birthday ("
@@ -279,12 +337,23 @@ main(int argc, char* argv[])
 	//
 	parse_command_line(argc, argv);
 
-	// get the PID and birthday of our parent (whose process
-	// tree we'll be monitoring)
-	//
-	pid_t parent_pid;
-	birthday_t parent_birthday;
-	get_parent_info(parent_pid, parent_birthday);
+	// Determine who is the root of the process tree we should monitor.
+	// Either it will be the parent of the procd, or whatever was told to us
+	// on the command line with -P.
+	birthday_t root_birthday;
+	if (root_pid_specified == false) { 
+		get_parent_info(root_pid, root_birthday);
+	} else {
+		procInfo* pi = NULL;
+		int ignored;
+		int status = ProcAPI::getProcInfo(root_pid, pi, ignored);
+		if (status != PROCAPI_SUCCESS) {
+				EXCEPT("getProcInfo failed on root PID %u",
+				(unsigned)root_pid);
+		}
+		root_birthday = pi->birthday;
+		delete pi;
+	}
 
 	// setup logging if a file was given
 	//
@@ -304,6 +373,14 @@ main(int argc, char* argv[])
 		}
 		dprintf(D_ALWAYS, "***********************************\n");
 		dprintf(D_ALWAYS, "* condor_procd STARTING UP\n");
+#if defined(WIN32)
+		dprintf(D_ALWAYS, "* PID = %lu\n", 
+			(unsigned long)::GetCurrentProcessId());
+#else
+		dprintf(D_ALWAYS, "* PID = %lu\n", (unsigned long)getpid());
+		dprintf(D_ALWAYS, "* UID = %lu\n", (unsigned long)getuid());
+		dprintf(D_ALWAYS, "* GID = %lu\n", (unsigned long)getgid());
+#endif
 		dprintf(D_ALWAYS, "***********************************\n");
 	}
 
@@ -335,8 +412,25 @@ main(int argc, char* argv[])
 #endif
 
 	// initialize the "engine" for tracking process families
+	// If we specified a root pid, that means we don't want to except if it
+	// dies. If we didn't specify a root pid, it means the procd's parent
+	// is the watcher pid, and if it (the master 99.99% of the time) dies, we
+	// also want to go away.
 	//
-	ProcFamilyMonitor monitor(parent_pid, parent_birthday, max_snapshot_interval);
+	if (root_pid_specified == true) {
+		dprintf(D_ALWAYS, 
+			"Procd has no watcher pid and will not die if pid %lu dies.\n",
+			(unsigned long) root_pid);
+	} else {
+		dprintf(D_ALWAYS, 
+			"Procd has a watcher pid and will die if pid %lu dies.\n",
+			(unsigned long) root_pid);
+	}
+
+	ProcFamilyMonitor monitor(root_pid, 
+								root_birthday, 
+								max_snapshot_interval,
+								root_pid_specified ? false : true);
 
 #if defined(LINUX)
 	// if a "-G" option was given, enable group ID tracking in the
@@ -350,7 +444,15 @@ main(int argc, char* argv[])
 			        max_tracking_gid);
 			exit(1);
 		}
-		monitor.enable_group_tracking(min_tracking_gid, max_tracking_gid);
+
+		// If we want to use an external gid association mechanism, then
+		// presumably the gidd_alloc tool and the procd_ctl tool will
+		// be used to find an open gid and associate it with a procfamily.
+		// Otherwise, we do self-allocation of the gids out of the specified
+		// mix/max range of gids.
+		monitor.enable_group_tracking(min_tracking_gid, 
+			max_tracking_gid,
+			use_external_gid_association ? false : true);
 	}
 #endif
 

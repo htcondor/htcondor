@@ -510,6 +510,9 @@ public:
     */
 	virtual int end_of_message() = 0;
 
+	/* Returns true if at end of message. */
+	virtual bool peek_end_of_message() = 0;
+
 	///
 	virtual void allow_one_empty_message();
 

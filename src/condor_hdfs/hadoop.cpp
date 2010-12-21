@@ -96,7 +96,7 @@ void Hadoop::initialize() {
         buff.sprintf("%s/", m_hadoopHome.Value());
         m_classpath.insert(buff.Value());
 
-        buff.sprintf("%s/lib", m_hadoopHome.Value());
+        buff.sprintf("%s", m_hadoopHome.Value());
         recurrBuildClasspath(buff.Value());
 
         m_nameNodeClass  = "org.apache.hadoop.hdfs.server.namenode.NameNode";
@@ -111,13 +111,6 @@ void Hadoop::initialize() {
         if (dclass != NULL) {
                 m_dataNodeClass = dclass;
                 free(dclass);
-        }
-
-        m_secondaryNodeClass = "org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode";
-        char *snclass = param("HDFS_SECONDARYNODE_CLASS");
-        if (snclass != NULL) {
-                m_secondaryNodeClass = snclass;
-                free(snclass);
         }
 
         m_dfsAdminClass = "org.apache.hadoop.hdfs.tools.DFSAdmin";
@@ -162,7 +155,7 @@ void Hadoop::initialize() {
         m_hdfsAd.SetMyTypeName("hdfs");
         m_hdfsAd.SetTargetTypeName("");
         m_hdfsAd.Assign(ATTR_NAME, "hdfs");
-        m_hdfsAd.Assign("ServiceType", getServiceNameByType( m_serviceType) );
+        m_hdfsAd.Assign("ServiceType", getServiceNameByType( m_nodeType) );
         daemonCore->publish(&m_hdfsAd); 
 
         //Register a timer for periodically pushing classads.
@@ -269,6 +262,18 @@ void Hadoop::writeConfigFile() {
                 free(nnaddw);
         }
 
+        char *bnadd = param("HDFS_BACKUPNODE");
+	if (bnadd != NULL) {
+	        writeXMLParam("dfs.namenode.backup.address", bnadd, &xml);
+		free(bnadd);
+	}
+
+	char *bnaddw = param("HDFS_BACKUPNODE_WEB");
+	if (bnaddw != NULL) {
+	        writeXMLParam("dfs.namenode.backup.http-address", bnaddw, &xml);
+		free(bnaddw);
+	}
+
         char *rep = param("HDFS_REPLICATION");
         if (rep != NULL) {
                 writeXMLParam("dfs.replication", rep, &xml);
@@ -330,8 +335,8 @@ void Hadoop::writeConfigFile() {
         }
 
         //TODO these shouldn't be hard-coded
-        writeXMLParam("dfs.namenode.plugins", "edu.wisc.cs.condor.NameNodeAds", &xml);
-        writeXMLParam("dfs.datanode.plugins", "edu.wisc.cs.condor.DataNodeAds", &xml);
+        //writeXMLParam("dfs.namenode.plugins", "edu.wisc.cs.condor.NameNodeAds", &xml);
+        //writeXMLParam("dfs.datanode.plugins", "edu.wisc.cs.condor.DataNodeAds", &xml);
 
         xml.append("</configuration>");
 
@@ -402,21 +407,32 @@ void Hadoop::killTimer() {
 }
 
 void Hadoop::startServices() {
-        char *services = param ("HDFS_SERVICES");
+        char *nodeType = param ("HDFS_NODETYPE");
 
-        if (services == NULL) //by default run system as DataNode
-             m_serviceType = HADOOP_DATANODE;
+        if ( nodeType == NULL ) //by default run system as DataNode
+             m_nodeType = HDFS_DATANODE;
 
         else {
-            MyString s(services);
-            m_serviceType = getServiceTypeByName( s );
+            MyString nt(nodeType);
+            m_nodeType = getServiceTypeByName( nt );
+
+	    if( m_nodeType == HDFS_NAMENODE ){
+	        char *namenodeRole = param("HDFS_NAMENODE_ROLE");
+		MyString nnr( namenodeRole );
+		if( nnr =="BACKUP")
+		    m_namenodeRole = BACKUP;
+		else if (nnr == "CHECKPOINT")
+		    m_namenodeRole = CHECKPOINT;
+		else //default ACTIVE
+		    m_namenodeRole = ACTIVE;
+             }
         }
 
-        startService( m_serviceType );
+        startService( m_nodeType );
 }
 
 void Hadoop::startService( NodeType type ) {
-        dprintf(D_ALWAYS, "Starting hadoop node service type = %s\n",
+        dprintf(D_ALWAYS, "Starting hdfs node service type = %s\n",
                 getServiceNameByType(type).Value() );
 
         ArgList arglist;
@@ -440,14 +456,20 @@ void Hadoop::startService( NodeType type ) {
                 free(ldir);
         }
 
-        if (type == HADOOP_NAMENODE) {
-                arglist.AppendArg(m_nameNodeClass);
+        if (type == HDFS_NAMENODE) {
+            arglist.AppendArg(m_nameNodeClass);
+
+		    switch(m_namenodeRole) {
+		        case CHECKPOINT:  arglist.AppendArg("-checkpoint");
+		           break;
+		        case BACKUP:  arglist.AppendArg("-backup");
+		           break;
+		       default: //case: ACTIVE
+		           arglist.AppendArg("-regular");
+		    }
         }
-        else if (type == HADOOP_DATANODE) {
+        else if (type == HDFS_DATANODE) {
                 arglist.AppendArg(m_dataNodeClass);
-        }
-        else if (type == HADOOP_SECONDARY) {
-                arglist.AppendArg(m_secondaryNodeClass);
         }
 
         int arrIO[3];
@@ -483,7 +505,10 @@ void Hadoop::startService( NodeType type ) {
 
         Directory dir(m_nameNodeDir.Value());
 
-        if (type == HADOOP_NAMENODE) {
+
+        if (type == HDFS_NAMENODE ){
+        	mkdir( m_nameNodeDir.Value(), 0700);
+        	if( m_namenodeRole == ACTIVE) {
                 arglist.RemoveArg(0);
                 arglist.InsertArg(m_java.Value(), 0);
 
@@ -518,6 +543,7 @@ void Hadoop::startService( NodeType type ) {
                 //For now always run name server with upgrade option, In case
                 //Hadoop Jar files are updated to a newer version.
                 //arglist.AppendArg("-upgrade");
+        	}
         }
 
         MyString argString;
@@ -619,8 +645,10 @@ void Hadoop::recurrBuildClasspath(const char *path) {
                 if (match && strlen(match) == 4) {
                         m_classpath.insert(dir.GetFullPath());
                 } else if (dir.IsDirectory()) {
-                        //current file is a subdirectory.
-                        recurrBuildClasspath(dir.GetFullPath());                    
+                	    const char *tmp = strstr(ctmp, "lib");
+                	    if (tmp && strlen(tmp) == 3) {
+                	    	recurrBuildClasspath(dir.GetFullPath());
+                	    }
                 }
         }
 }
@@ -665,7 +693,7 @@ void Hadoop::updateClassAd( MyString safemode, MyString stats) {
 
 void Hadoop::publishClassAd() {
 
-       if( m_serviceType == HADOOP_NAMENODE) { 
+       if( m_nodeType == HDFS_NAMENODE) {
            MyString mode  = runDFSAdmin("-safemode get");
            MyString stats = runDFSAdmin("-report");
 
@@ -802,32 +830,25 @@ NodeType Hadoop::getServiceTypeByName( MyString s )
 {
 	NodeType type;
 	if( s == "HDFS_NAMENODE" )
-     		type = HADOOP_NAMENODE;
-	
-	else if( s == "HDFS_SECONDARY" )
-		type = HADOOP_SECONDARY;
-	
+     		type = HDFS_NAMENODE;
+
 	else //by default run system as DataNode
-		type = HADOOP_DATANODE;
-	
+		type = HDFS_DATANODE;
+
 	return type;
 }
 
-MyString Hadoop::getServiceNameByType( NodeType type)
+MyString Hadoop::getServiceNameByType( NodeType type )
 {
 	MyString s;
 
-	switch (type){
-		case HADOOP_NAMENODE: 
-			s.sprintf("HADOOP_NAMENODE");
-			break;
-		
-		case HADOOP_SECONDARY:
-			s.sprintf("HADOOP_SECONDARY");
+	switch (type) {
+		case HDFS_NAMENODE:
+			s.sprintf("HDFS_NAMENODE");
 			break;
 
 		default: //by default run system as DataNode
-			s.sprintf("HADOOP_DATANODE");
+			s.sprintf("HDFS_DATANODE");
 	}
 
 	return s;

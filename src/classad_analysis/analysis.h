@@ -58,7 +58,7 @@ class ClassAdAnalyzer
 		 *  @return true on success false on failure
 		 */
 	bool AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers,
-								string &buffer );
+								std::string &buffer );
 
 #if defined( COLLECTIONS )
 		/** Analyze a job ClassAd requirements expression.
@@ -69,7 +69,7 @@ class ClassAdAnalyzer
 		 */
 	bool AnalyzeJobReqToBuffer( classad::ClassAd *request,
 								classad::ClassAdCollectionServer &offers,
-								string &buffer );
+								std::string &buffer );
 #endif
 
 		/** Analyze job ClassAd attributes.
@@ -79,7 +79,7 @@ class ClassAdAnalyzer
 		 *	@return true on success false on failure
 		 */
 	bool AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
-								  string &buffer );
+								  std::string &buffer );
 
 		/** Analyze an arbitrary expression.
 		 *	@param mainAd The ClassAd contaning the expression
@@ -90,7 +90,7 @@ class ClassAdAnalyzer
 		 */
 	bool AnalyzeExprToBuffer( classad::ClassAd *mainAd,
 							  classad::ClassAd *contextAd,
-							  string &attr, string &buffer );
+							  std::string &attr, std::string &buffer );
 
  private:
 	bool result_as_struct;
@@ -112,10 +112,8 @@ class ClassAdAnalyzer
 	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, ClassAd *resource);
 	void result_add_machine(classad::ClassAd resource);
 
-	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers,
-								string &buffer );
-	bool AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
-								  string &buffer );
+	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer );
+	bool AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer );
 
 	bool BuildBoolTable( MultiProfile *, ResourceGroup &, BoolTable &result );
 	bool BuildBoolTable( Profile *, ResourceGroup &, BoolTable &result );
@@ -139,7 +137,7 @@ class ClassAdAnalyzer
 	bool AnalyzeAttributes( classad::ClassAd *, ResourceGroup &,
 							ClassAdExplain &result );
 
-	bool EqualsIgnoreCase( const string &, const string & );
+	bool EqualsIgnoreCase( const std::string &, const std::string & );
 	bool DefinedLiteralValue( classad::Value & );
 	bool AddConstraint( ValueRange *&, Condition * );
 	bool AddDefaultConstraint( ValueRange *&vr );

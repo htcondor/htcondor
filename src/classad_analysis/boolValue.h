@@ -23,7 +23,6 @@
 
 #include "list.h"
 #include <string>
-using namespace std;
 
 /// List of possible values in the ClassAd 4-value logic
 enum BoolValue
@@ -56,7 +55,7 @@ class BoolVector
 	bool GetTotalTrue( int &result );
 	bool TrueEquals( BoolVector &, bool &result );
 	bool IsTrueSubsetOf( BoolVector &, bool &result );
-	bool ToString( string &buffer );
+	bool ToString( std::string &buffer );
  protected:
 	bool initialized;
 	BoolValue* boolvector;
@@ -73,7 +72,7 @@ class AnnotatedBoolVector : public BoolVector
 	bool SetContext( int index, bool b );
 	bool GetFrequency( int &result );
 	bool HasContext( int index, bool &result );
-	bool ToString( string &buffer ); 
+	bool ToString( std::string &buffer ); 
 	static bool MostFreqABV( List<AnnotatedBoolVector> &,
 							 AnnotatedBoolVector *&result);
  private:
@@ -102,7 +101,7 @@ class BoolTable
 	bool GenerateMaxTrueABVList( List<AnnotatedBoolVector> &result );
 	bool GenerateMaximalTrueBVList( List< BoolVector > &result );
 	bool GenerateMinimalFalseBVList( List< BoolVector > &result );
-	bool ToString( string &buffer );
+	bool ToString( std::string &buffer );
  private:
 	bool initialized;
 	int numCols;

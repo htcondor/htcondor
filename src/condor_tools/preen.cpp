@@ -48,6 +48,7 @@
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "filename_tools.h"
 
 State get_machine_state();
 
@@ -76,6 +77,7 @@ void init_params();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
+void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
 void bad_file( const char *, const char *, Directory & );
@@ -215,6 +217,60 @@ produce_output()
 	}
 }
 
+bool
+check_job_spool_hierarchy( char const *parent, char const *child, StringList &bad_spool_files )
+{
+	ASSERT( parent );
+	ASSERT( child );
+
+		// We expect directories of the form produced by gen_ckpt_name().
+		// e.g. $(SPOOL)/<cluster mod 10000>/<proc mod 10000>/cluster<cluster>.proc<proc>.subproc<proc>
+		// or $(SPOOL)/<cluster mod 10000>/cluster<cluster>.ickpt.subproc<subproc>
+
+	char *end=NULL;
+	strtol(child,&end,10);
+	if( !end || *end != '\0' ) {
+		return false; // not part of the job spool hierarchy
+	}
+
+	std::string topdir;
+	sprintf(topdir,"%s%c%s",parent,DIR_DELIM_CHAR,child);
+	Directory dir(topdir.c_str(),PRIV_ROOT);
+	char const *f;
+	while( (f=dir.Next()) ) {
+
+			// see if it's a legitimate job spool file/directory
+		if( is_ckpt_file(f) ) {
+			good_file( topdir.c_str(), f );
+			continue;
+		}
+
+		if( IsDirectory(dir.GetFullPath()) && !IsSymlink(dir.GetFullPath()) ) {
+			if( check_job_spool_hierarchy( topdir.c_str(), f, bad_spool_files ) ) {
+				good_file( topdir.c_str(), f );
+				continue;
+			}
+		}
+
+		bad_spool_files.append( dir.GetFullPath() );
+	}
+
+		// By returning true here, we indicate that this directory is
+		// part of the spool directory hierarchy and should not be
+		// deleted.  We do return true even if the directory is empty.
+		// If we wanted to remove empty directories of this type, we
+		// would need to do so with rmdir(), not a recursive remove,
+		// because new job directories might show up inside this
+		// directory between the time we examine the directory
+		// contents and the time we remove the directory.  We don't
+		// bother dealing with that case, because if something ever
+		// causes the self-cleaning of these directories to fail, the
+		// self-cleaning will be tried again the next time the
+		// directory is used.  In the worst case, the spool hierarchy
+		// is self-limited in how many entries will be made anyway.
+
+	return true;
+}
 
 /*
   Check the condor spool directory for extraneous files.  Files found
@@ -251,6 +307,7 @@ check_spool_dir()
 		// add some reasonable defaults that we never want to remove
 	well_known_list.append( "job_queue.log" );
 	well_known_list.append( "job_queue.log.tmp" );
+	well_known_list.append( "spool_version" );
 	well_known_list.append( "Accountant.log" );
 	well_known_list.append( "Accountantnew.log" );
 	well_known_list.append( "local_univ_execute" );
@@ -325,6 +382,13 @@ check_spool_dir()
 		if ( is_ccb_file( f ) ) {
 			good_file( Spool, f );
 			continue;
+		}
+
+		if( IsDirectory( dir.GetFullPath() ) && !IsSymlink( dir.GetFullPath() ) ) {
+			if( check_job_spool_hierarchy( Spool, f, bad_spool_files ) ) {
+				good_file( Spool, f );
+				continue;
+			}
 		}
 
 			// We think it's bad.  For now, just append it to a
@@ -617,40 +681,62 @@ check_daemon_sock_dir()
 			bad_file( DaemonSockDir, f, dir );
 		}
 	}
+}
+
+void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
+#if !defined(WIN32)
+	FileLock *lock = NULL;
+	if (depth == 0) {
+		lock = new FileLock(path, true, true);
+		delete lock;
+		return ;
+	}
+	Directory *dir = new Directory(path);
+	if (dir == NULL) {
+		// that may be ok as the path could already be cleaned up.
+		return;
+	}
+	const char *entry;
+	while (entry = dir->Next()) {
+		if (!dir->IsDirectory() && depth > 1) { // clean up files floating around randomly -- maybe from older releases
+			lock = new FileLock(path, false, true);
+			bool result = lock->obtain(WRITE_LOCK);
+			if (!result) {
+					dprintf(D_FULLDEBUG, "Cannot lock %s\n", path);
+			}
+			int res = unlink(dir->GetFullPath());
+			if (res != 0) {
+				dprintf(D_FULLDEBUG, "Cannot delete %s (%s) \n", path, strerror(errno));
+			}
+			delete lock;
+		} else {
+			rec_lock_cleanup(dir->GetFullPath(), --depth, true);
+		}
+	}
+	// make sure, orphaned directories will be deleted as well.
+	if (remove_self) {		
+		int res = rmdir(path);
+		if (res != 0) {
+			dprintf(D_FULLDEBUG, "Directory %s could not be removed.\n", path);
+		}
+	}
+	
+	delete dir;
+#endif
 }	
 
 void check_tmp_dir(){
 #if !defined(WIN32)
-	const char *file;
-	char *tmpDir = NULL;
+	const char *tmpDir = NULL;
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
 				// create a dummy FileLock for TmpPath access
 		FileLock *lock = new FileLock(-1, NULL, NULL);
 		tmpDir = lock->GetTempPath();	
 		delete lock;
-		Directory *files = new Directory(tmpDir);
-		if(files == NULL) {
-			fprintf(stderr, "Cannot open %s\n", tmpDir);
-		} else {
-			int i = 0;
-			while( (file = files->Next()) && i < 65536) {
-				if(! files->IsDirectory() ) {
-					const char *path = files->GetFullPath();
-					int fd = safe_open_wrapper( path, O_WRONLY, 0664 );
-					lock = new FileLock(path, true, true);
-					bool result = lock->obtain(WRITE_LOCK);
-					if (!result) {
-							fprintf(stderr, "Cannot lock %s\n", path);
-					}
-					delete lock;
-				}
-			}
-			delete files;
-		}
+		rec_lock_cleanup(tmpDir, 4);
 		if (tmpDir != NULL)
 			delete []tmpDir;
-		
 	}
   
 #endif	
@@ -744,7 +830,12 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	MyString	pathname;
 	MyString	buf;
 
-	pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	if( is_relative_to_cwd( name ) ) {
+		pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	}
+	else {
+		pathname = name;
+	}
 
 	if( VerboseFlag ) {
 		printf( "%s - BAD\n", pathname.Value() );

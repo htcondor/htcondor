@@ -36,19 +36,18 @@ HashTable <HashKey, NordugridResource *>
 const char *NordugridResource::HashName( const char *resource_name,
 										 const char *proxy_subject )
 {
-	static MyString hash_name;
+	static std::string hash_name;
 
-	hash_name.sprintf( "nordugrid %s#%s", resource_name, 
+	sprintf( hash_name, "nordugrid %s#%s", resource_name, 
 					   proxy_subject ? proxy_subject : "NULL" );
 
-	return hash_name.Value();
+	return hash_name.c_str();
 }
 
 NordugridResource *NordugridResource::FindOrCreateResource( const char * resource_name,
 															const Proxy *proxy )
 {
 	int rc;
-	MyString resource_key;
 	NordugridResource *resource = NULL;
 
 	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
@@ -77,10 +76,10 @@ NordugridResource::NordugridResource( const char *resource_name,
 
 	gahp = NULL;
 
-	MyString buff;
-	buff.sprintf( "NORDUGRID/%s", proxyFQAN );
+	std::string buff;
+	sprintf( buff, "NORDUGRID/%s", proxyFQAN );
 
-	gahp = new GahpClient( buff.Value() );
+	gahp = new GahpClient( buff.c_str() );
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( NordugridJob::gahpCallTimeout );
@@ -89,7 +88,7 @@ NordugridResource::NordugridResource( const char *resource_name,
 							(TimerHandlercpp)&NordugridResource::DoJobStatus,
 							"NordugridResource::DoJobStatus", (Service*)this );
 
-	m_statusGahp = new GahpClient( buff.Value() );
+	m_statusGahp = new GahpClient( buff.c_str() );
 	m_statusGahp->setNotificationTimerId( m_jobStatusTid );
 	m_statusGahp->setMode( GahpClient::normal );
 	m_statusGahp->setTimeout( NordugridJob::gahpCallTimeout );
@@ -206,9 +205,9 @@ void NordugridResource::DoJobStatus()
 			ldap_server.erase( pos );
 		}
 
-		MyString filter;
-		filter.sprintf( "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
-		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.Value(), "nordugrid-job-globalid,nordugrid-job-status",
+		std::string filter;
+		sprintf( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
+		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-globalid,nordugrid-job-status",
 													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 			dprintf( D_ALWAYS,
@@ -236,7 +235,7 @@ void NordugridResource::DoJobStatus()
 		if ( rc == 0 ) {
 			const char *next_job_id;
 			const char *next_status;
-			MyString key;
+			std::string key;
 
 			results.rewind();
 			while ( (next_job_id = results.next()) &&
@@ -249,9 +248,9 @@ void NordugridResource::DoJobStatus()
 				ASSERT( !strncmp( next_status, "nordugrid-job-status: ", 22 ) );
 				dummy = results.next();
 				ASSERT( dummy == NULL || *dummy == '\0' );
-				key.sprintf( "nordugrid %s %s", resourceName,
+				sprintf( key, "nordugrid %s %s", resourceName,
 							 strrchr( next_job_id, '/' ) + 1 );
-				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.Value() ),
+				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
 													  (BaseJob*&)job );
 				if ( rc2 == 0 ) {
 					job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
