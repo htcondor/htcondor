@@ -48,7 +48,7 @@
 #define D_NFS			(1<<11)
 #define D_CONFIG        (1<<12)
 #define D_UNUSED2       (1<<13)
-#define D_PREEMPT		(1<<14)
+#define D_UNUSED3		(1<<14)
 #define D_PROTOCOL		(1<<15)
 #define D_PRIV			(1<<16)
 #define D_SECURITY		(1<<17)
