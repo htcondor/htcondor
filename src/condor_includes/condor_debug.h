@@ -68,7 +68,7 @@
 */ 
 #define D_PID           (1<<28)
 #define D_FDS           (1<<29)
-#define D_UNUSED3       (1<<30)
+#define D_UNUSED4       (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
 
