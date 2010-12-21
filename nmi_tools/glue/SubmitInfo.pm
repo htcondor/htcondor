@@ -209,12 +209,11 @@ our %submit_info = (
 
 	##########################################################################
 	# Microsoft Windows 5.1/2000/xp/whatever on x86_64
+	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
 	'x86_winnt_6.0'	=> {
 		'build' => {
-			'configure_args' => { 
-				'-G' => '\"Visual Studio 9 2008\"',
-			},
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -228,12 +227,11 @@ our %submit_info = (
 
 	##########################################################################
 	# Microsoft Windows 5.1/2000/xp/whatever on x86_64
+	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
 	'x86_64_winnt_5.1'	=> {
 		'build' => {
-			'configure_args' => {
-				'-G' => '\"Visual Studio 9 2008\"',
-			},
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -247,12 +245,11 @@ our %submit_info = (
 
 	##########################################################################
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
+	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
 	'x86_winnt_5.1-tst'	=> {
 		'build' => {
-			'configure_args' => {
-				'-G' => '\"Visual Studio 9 2008\"',
-			},
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
 			'prereqs'	=> undef,
 			# when it works add x86_64_winnt_5.1 to the x_tests
 			'xtests'	=> undef,
