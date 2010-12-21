@@ -316,6 +316,12 @@ if (BUILD_TESTS)
 	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
+if ( NOT WINDOWS )
+	option(HAVE_KBDD "Support for condor_kbdd" ON)
+else()
+	set(HAVE_KBDD ON)
+endif()
+
 ##################################################
 ##################################################
 # setup for the externals, the variables defined here
