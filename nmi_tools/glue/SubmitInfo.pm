@@ -1336,9 +1336,12 @@ our %submit_info = (
 	##########################################################################
 	# Platform SuSE 10.0 on x86
 	##########################################################################
+	# /usr/lib/libX11.so fails to link properly on this platform due
+	# to the error: undefined reference to `__stack_chk_fail@GLIBC_2.4'
 	'x86_suse_10.0'		=> {
 		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
+			'configure_args' =>{ @minimal_build_configure_args,
+					     '-DHAVE_KBDD:BOOL=OFF' => undef },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 'x86_suse_10.2' ],
 		},
