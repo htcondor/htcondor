@@ -159,7 +159,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 # build
 ######################################################################
 print "$execstr\n";
-$buildstatus = system($execstr);
+$buildstatus = system("$execstr 2>&1");
 
 # now check the build status and return appropriately
 if( $buildstatus == 0 ) {

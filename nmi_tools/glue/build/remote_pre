@@ -121,7 +121,7 @@ open (CMAKE_CONFIG, ">cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
 print CMAKE_CONFIG $configexecstr;
 close (CMAKE_CONFIG);
 
-$exit_status = system($configexecstr);
+$exit_status = system("$configexecstr 2>&1");
 
 if( $exit_status ) {
     die "failed with status $exit_status\n";
