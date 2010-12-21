@@ -9,6 +9,8 @@ condor_gecos="Condor Daemons"
 # make this one fixed because 'condor_config_val -tilde' relies on the user
 # home dir to exist
 condor_home=/var/lib/condor
+condor_local_cfg=/etc/condor/condor_config.local
+
 
 condor_add_user() {
 	if ! id ${condor_user} >/dev/null 2>&1; then
@@ -30,6 +32,23 @@ condor_make_homedir() {
 	#for dlabel in EXECUTE CRED_STORE_DIR; do
 	#	chmod 1777 $(condor_config_val $dlabel)
 	#done
+}
+
+condor_local_cfg_template() {
+	if [ ! -e $condor_local_cfg ]; then
+		cat > $condor_local_cfg << EOT
+# Condor configuration file
+#
+# Configuration placed into this file extends/overwrites the settings in the
+# main Condor configuration at /etc/condor/condor_config.
+# It may be advantagous to leave the main configuration file pristine and put
+# local configuration here to ease configuration updates during upgrades of the
+# Condor Debian package. Alternatively, it is also possible to place additional
+# configuration files into /etc/condor/config.d that will take precedence over
+# both the main configuration file and this local configuration.
+
+EOT
+	fi
 }
 
 case "$1" in

@@ -5,5 +5,3 @@ debian/tmp/usr/lib/* usr/lib/condor/
 debian/tmp/usr/libexec/* usr/lib/condor/libexec/
 debian/tmp/usr/sbin/* usr/sbin/
 debian/tmp/usr/src/* /usr/src/condor/
-# local config template
-debian/config.local etc/condor/
