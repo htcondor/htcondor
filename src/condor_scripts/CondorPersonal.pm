@@ -1321,7 +1321,7 @@ sub IsRunningYet
 	my $first = 1;
 	my @status;
 
-	my $runlimit = 6;
+	my $runlimit = 8;
 	my $backoff = 2;
 	my $loopcount;
 
