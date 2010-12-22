@@ -640,18 +640,15 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf_chirp(line,"readlink %s", &path) == 1) {
+	} else if(sscanf_chirp(line,"readlink %s %d", &path, &length) == 2) {
 
 		fix_chirp_path(path);
 		char *buffer = NULL;
-		result = REMOTE_CONDOR_readlink(path, &buffer);
-		dprintf(D_ALWAYS, "result: %d\n", result);
+		result = REMOTE_CONDOR_readlink(path, length, &buffer);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
-		dprintf(D_ALWAYS, "buffer1: %s\n", buffer);
 		if(result>0) {
 			r->put_bytes_raw(buffer,result);
-			dprintf(D_ALWAYS, "buffer2: %s\n", buffer);
 			free(buffer);
 		}
 
