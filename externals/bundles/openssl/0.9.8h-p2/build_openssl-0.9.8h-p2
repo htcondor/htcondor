@@ -10,6 +10,14 @@ then
     exit 1
 fi
 
+# Some of our SunOS machines use the native linker with gcc, which requires
+# /usr/bin/ar, not gcc ar
+
+if [ `uname` = "SunOS" ]
+then
+patch -p0 -i ar.patch
+fi
+
 cd $PACKAGE_SRC_NAME
 
 # Omitting the frame pointer makes debugging very difficult.
