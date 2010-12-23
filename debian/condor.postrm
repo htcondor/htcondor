@@ -3,15 +3,27 @@
 
 set -e
 
+condor_user=condor
+condor_local_cfg=/etc/condor/condor_config.local
+condor_debconf_cfg=/etc/condor/config.d/00debconf
+
 # XXX Shouldn't we also remove the user (if possible, since sometimes it might
 #     come from LDAP or similar)
 
 case "$1" in
-    purge|remove|abort-install|disappear)
-        # remove links from rc?.d
-        # -f because the init.d script is deleted later by debhelper
-        # and update-rc.d wants it to be deleted first
-        update-rc.d -f condor remove >/dev/null || exit 0
+    remove|abort-install|disappear)
+    ;;
+    purge)
+        [ -f $condor_debconf_cfg ] && rm $condor_debconf_cfg
+        # unless the file has any non-comment purge it too
+        [ -f $condor_local_cfg ] \
+            && [ "$(grep -v '^[#]' < $condor_local_cfg | wc -w)" = "0" ] \
+                && rm $condor_local_cfg
+        # try removing the condor user, but do not fail if it doesn't work
+        # maybe it is not a local user
+        if id ${condor_user} >/dev/null 2>&1; then
+            deluser --system --remove-home condor
+        fi
     ;;
     upgrade|failed-upgrade|abort-upgrade)
     ;;

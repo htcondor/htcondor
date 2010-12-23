@@ -98,7 +98,9 @@ override_dh_auto_install:
 		-e 's,^\(LOCK\s*=\).*,\1 \$$(LOCAL_DIR)/lock/condor,' \
 		-e 's,^\(LOG\s*=\).*,\1 \$$(LOCAL_DIR)/log/condor,' \
 		-e 's,^\(SPOOL\s*=\).*,\1 \$$(LOCAL_DIR)/spool/condor,' \
-		-e 's,^\(EXECUTE\s*=\).*,\1 \$$(LOCAL_DIR)/execute/condor,' \
+		-e 's,^\(EXECUTE\s*=\).*,\1 \$$(LOCAL_DIR)/lib/condor/execute,' \
+		-e '/^EXECUTE\s*=/a\LOCAL_UNIV_EXECUTE\t\t= \$$(LOCAL_DIR)/spool/condor/local_univ_execute' \
+		-e 's,^\(CRED_STORE_DIR\s*=\).*,\1 \$$(LOCAL_DIR)/lib/condor/cred_dir,' \
 		-e 's,^\(LIB\s*=\).*,\1 \$$(RELEASE_DIR)/lib/condor,' \
 		-e 's,^\(INCLUDE\s*=\).*,\1 \$$(RELEASE_DIR)/include/condor,' \
 		-e 's,^\(LIBEXEC\s*=\).*,\1 \$$(RELEASE_DIR)/lib/condor/libexec,' \
@@ -132,9 +134,18 @@ override_dh_auto_clean:
 	-rm -f doc/doc/symbol.tex doc/doc/figuresizing.tex doc/doc/fontsize.tex
 
 
+override_dh_clean:
+	dh_clean
+	debconf-updatepo
+
+
 # PDF come in dedicated doc package -- no compression
 override_dh_compress:
 	dh_compress -X.pdf
+
+
+override_dh_installinit:
+	dh_installinit -pcondor --onlyscripts
 
 
 dfsg-source-tree:
