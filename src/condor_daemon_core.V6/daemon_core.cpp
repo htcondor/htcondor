@@ -7259,10 +7259,21 @@ int DaemonCore::Create_Process(
 
 		free(c_session_id);
 		free(c_session_key);
+
+			// An apparent compiler optimization bug in gcc 3.2.3 is
+			// causing session_id.c_str() to return a string that is
+			// not null terminated.  It works the first couple times
+			// it is called and then writes an uninitialized value from
+			// the stack in place of the null.  Therefore, in an attempt
+			// to work around this problem, I am calling c_str() once
+			// and storing the result for subsequent use.
+		char const *session_id_c_str = session_id.c_str();
+		char const *session_key_c_str = session_key.c_str();
+
 		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
-			session_id.c_str(),
-			session_key.c_str(),
+			session_id_c_str,
+			session_key_c_str,
 			NULL,
 			CONDOR_CHILD_FQU,
 			NULL,
@@ -7276,13 +7287,13 @@ int DaemonCore::Create_Process(
 		privateinheritbuf += " SessionKey:";
 
 		MyString session_info;
-		rc = getSecMan()->ExportSecSessionInfo(session_id.c_str(), session_info);
+		rc = getSecMan()->ExportSecSessionInfo(session_id_c_str, session_info);
 		if(!rc)
 		{
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to export security session for child daemon.\n");
 			goto wrapup;
 		}
-		ClaimIdParser claimId(session_id.c_str(), session_info.Value(), session_key.c_str());
+		ClaimIdParser claimId(session_id_c_str, session_info.Value(), session_key_c_str);
 		privateinheritbuf += claimId.claimId();
 	}
 #endif
