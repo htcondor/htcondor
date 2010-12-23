@@ -1,0 +1,260 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: condor@packages.debian.org\n"
+"POT-Creation-Date: 2010-12-23 14:59-0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: title
+#. Description
+#: ../condor.templates:1001
+msgid "Condor configuration"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:2001
+msgid "Location for Condor's runtime data:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:2001
+msgid ""
+"Condor's runtime data include logfiles, job queues, and binaries for all "
+"jobs that are submitted to this machine, as well as core dumps that may be "
+"created when a job crashes. By default Condor will use /var/{lib,lock,run,"
+"spool}/condor for this data. If there are concerns that Condor might exhaust "
+"the space on the partition that contains these directories, please indicate "
+"an alternative root directory."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:3001
+msgid "Manage initial configuration with Debconf?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:3001
+msgid ""
+"This package can create an appropriate initial configuration for a machine "
+"that shall join an existing Condor pool, or configure a fully functional "
+"\"personal condor\" installation by asking a few questions. The generated "
+"initial configuration can be further extended later on. If this "
+"configuration helper is undesired, Condor will be installed with a default "
+"configuration that needs to be customized manually."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:4001
+msgid "Enabled submission of usage statistics?"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:5001
+msgid "Address of the central manager:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:5001
+msgid ""
+"If this machine is supposed to join an existing Condor pool the address of "
+"the central manager machine has to be specified. Any address format "
+"supported by Condor can be used, including macro expressions."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:5001
+msgid "Example: condor-manager.example.org"
+msgstr ""
+
+#. Type: multiselect
+#. Choices
+#. Type: multiselect
+#. Default
+#: ../condor.templates:6001 ../condor.templates:6002
+msgid "Job submission"
+msgstr ""
+
+#. Type: multiselect
+#. Choices
+#. Type: multiselect
+#. Default
+#: ../condor.templates:6001 ../condor.templates:6002
+msgid "Job execution"
+msgstr ""
+
+#. Type: multiselect
+#. Choices
+#: ../condor.templates:6001
+msgid "Central manager"
+msgstr ""
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:6003
+msgid "Role of this machine in the Condor pool:"
+msgstr ""
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:6003
+msgid ""
+"A machine in a Condor pool can have multiple roles. In general there is one "
+"central manager and multiple nodes that run jobs. Often the central manager "
+"is also the machine from which users submit jobs. However, it is also "
+"possible to have multiple machines available for job submission. By "
+"indicating the intended roles of this machine the Debian package will enable "
+"the corresponding daemons to be started automatically."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid "Email address of the local Condor administrator:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid ""
+"The condor administrator will receive error messages when something goes "
+"wrong with Condor on this machine."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid "User id domain:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid ""
+"Condor uses this label to decide under which user account to run a "
+"particular job. If the UID domain on the submitting machine is different "
+"than the UID domain on the machine that runs your job, then Condor will "
+"automatically run the job as a user 'nobody'. If the UID domain is "
+"identical, Condor will run a job as the user that submitted the job. The UID "
+"domain needs to be a real domain name. When Condor sends e-mail about a job, "
+"it sends the e-mail to user@UID_DOMAIN. If this is left blank Condor will "
+"run all job on this machine as 'nobody'."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid ""
+"Any domain format supported by Condor can be used, including macro "
+"expressions. Example: $(FULL_HOSTNAME)"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:9001
+msgid "File system domain label:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:9001
+msgid ""
+"This label is an arbitrary string that is used to decide if two machines (a "
+"submitting machine and an execute machine) share the same file system. Note "
+"that if you leave this parameter blank, Condor will automatically set the "
+"value to be the fully qualified hostname of the local machine, and "
+"consequently assume that any two machines don't share a file system. In a "
+"dedicated cluster all machines will most likely use a shared file system and "
+"hence should carry the same label."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:9001
+msgid "Example: my_super_computer"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:10001
+msgid "Perform a \"Personal Condor\" installation?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:10001
+msgid ""
+"A personal condor installation is a fully functional Condor pool on a single "
+"machine. Condor will automatically configure and advertise as many slots as "
+"it detects CPU cores on this machine."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:10001
+msgid ""
+"If this machine is supposed to join an existing pool or a new pool with more "
+"than one machine shall be created, a personal installation is not desired."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid "Amount of physical memory to withhold from Condor (in MB):"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid ""
+"By default, Condor considers all the physical memory of a machine as "
+"available to be used by Condor jobs. If this value is defined, Condor "
+"subtracts it from the amount of memory it advertises as available."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid "Example setting to reserve 1GB: 1024"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:12001
+msgid "Machines with write access to this host:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:12001
+msgid ""
+"All machines that shall participate in the Condor pool need to be listed "
+"here. This setting can be a plain list, a domain with wildcards or a macro "
+"expression. By default only the localhost is allows to access Condor daemons "
+"on this machine."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../condor.templates:12001
+msgid "Example: *.condor-pool.example.org"
+msgstr ""
