@@ -4,6 +4,12 @@ srcpkg = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Source:' | cut -d ' ' -f 
 debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 
+# this figures out the last merge point from 'master' into the Debian branch and
+# then described this commit relative to the last release tag (V...)
+# If this should make any sense the local master branch must track upstreams
+# master.
+gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git merge-base -a HEAD master) | sed -e 's/^V//' -e 's/_/./g' -e 's/-/+git/')
+
 # one ring to rule them all ...
 %:
 	dh $@
@@ -165,8 +171,8 @@ dfsg-source-tree:
 # make orig tarball from repository content
 get-orig-source: dfsg-source-tree
 	# orig tarball, turn directory into something nicer
-	git archive --format=tar --prefix=$(srcpkg)-$(upstreamver)/ HEAD | \
-		gzip -9 > $(srcpkg)_$(upstreamver).orig.tar.gz
-	git archive --format=tar --prefix=$(srcpkg)-doc-$(upstreamver)/ \
+	git archive --format=tar --prefix=$(srcpkg)-$(gitver)/ HEAD | \
+		gzip -9 > $(srcpkg)_$(gitver).orig.tar.gz
+	git archive --format=tar --prefix=$(srcpkg)-doc-$(gitver)/ \
 				--remote=doc/ HEAD | \
-		gzip -9 > $(srcpkg)_$(upstreamver).orig-doc.tar.gz
+		gzip -9 > $(srcpkg)_$(gitver).orig-doc.tar.gz
