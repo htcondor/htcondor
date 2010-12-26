@@ -7,5 +7,4 @@ fix_sysapi_undefined_syms
 rename_duplicate_symbol
 no_scimark
 disable_java_gt4X
-remove_bogus_path
 build_shared_libs

@@ -1,5 +1,5 @@
-condor (7.5.4+git394-g65dccff-1) UNRELEASED; urgency=low
+condor (7.5.4+git530-gcc99723-1) UNRELEASED; urgency=low
 
   * Initial release (Closes: #233482).
 
- -- Michael Hanke <mih@debian.org>  Fri, 24 Dec 2010 17:09:05 -0500
+ -- Michael Hanke <mih@debian.org>  Sun, 26 Dec 2010 10:10:19 -0500

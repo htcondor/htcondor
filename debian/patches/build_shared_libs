@@ -94,7 +94,7 @@
  endif()
 --- a/src/condor_procd/CMakeLists.txt
 +++ b/src/condor_procd/CMakeLists.txt
-@@ -27,6 +27,9 @@
+@@ -28,11 +28,20 @@
  endif(WINDOWS)
  
  condor_daemon(procd "${ProcdRmvElements}" "procapi;utils;${PROCD_WIN_LINK_LIBS}" "${C_SBIN}" OFF)
@@ -102,8 +102,19 @@
 +# libdaemon_core (even when linking libutils to it)
 +target_link_libraries(condor_procd -Wl,--allow-shlib-undefined)
  
- if (WINDOWS)
- 	condor_exe( procd_ctl "procd_ctl.cpp" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF )
+ if (LINUX)
+ 	condor_exe( procd_ctl "procd_ctl.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(procd_ctl -Wl,--allow-shlib-undefined)
+ 
+ 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)
++	# unfortunately libutils comes with undefined symbols introduced by
++	# libdaemon_core (even when linking libutils to it)
++	target_link_libraries(gidd_alloc -Wl,--allow-shlib-undefined)
+ endif(LINUX)
+ 
+ condor_static_lib(procd_client "${ProcClientElements}")
 --- a/src/condor_q.V6/CMakeLists.txt
 +++ b/src/condor_q.V6/CMakeLists.txt
 @@ -17,3 +17,6 @@
@@ -283,7 +294,7 @@
  
  condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
  
-@@ -31,13 +35,23 @@
+@@ -36,13 +40,23 @@
  		
  condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
  add_dependencies(utils utils_genparams syscall_numbers )
@@ -340,7 +351,7 @@
  	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
  	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
  	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-@@ -376,7 +376,8 @@
+@@ -383,7 +383,8 @@
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
@@ -409,23 +420,11 @@
  endif()
  
  
---- a/src/gt2_gahp/CMakeLists.txt
-+++ b/src/gt2_gahp/CMakeLists.txt
-@@ -21,6 +21,9 @@
- 
- 	condor_exe( gahp_server "gahp_server.cpp;my_ez.cpp" ${C_SBIN}
- 	"${CONDOR_TOOL_LIBS};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_GRID_UNIVERSE_GT2};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}" OFF )
-+	# unfortunately libutils comes with undefined symbols introduced by
-+	# libdaemon_core (even when linking libutils to it)
-+	target_link_libraries(gahp_server -Wl,--allow-shlib-undefined)
- 
- else()
- 
 --- a/src/nordugrid_gahp/CMakeLists.txt
 +++ b/src/nordugrid_gahp/CMakeLists.txt
 @@ -27,6 +27,9 @@
  				${C_SBIN}
- 				"${CONDOR_TOOL_LIBS};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_GRID_UNIVERSE_NORUID};${OPENSSL_FOUND};${LDAP_FOUND};${PCRE_FOUND}"
+ 				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}"
  				OFF )
 +	# unfortunately libutils comes with undefined symbols introduced by
 +	# libdaemon_core (even when linking libutils to it)
