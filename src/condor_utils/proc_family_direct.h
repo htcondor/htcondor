@@ -53,7 +53,7 @@ public:
 	// this class doesn't support tracking via supplementary
 	// group
 	//
-	bool track_family_via_supplementary_group(pid_t, gid_t&) { return false; }
+	bool track_family_via_allocated_supplementary_group(pid_t, gid_t&) { return false; }
 #endif
 
 	bool get_usage(pid_t, ProcFamilyUsage&, bool);

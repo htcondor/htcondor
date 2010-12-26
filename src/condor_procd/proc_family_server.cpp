@@ -142,13 +142,22 @@ ProcFamilyServer::track_family_via_login()
 }
 
 #if defined(LINUX)
+// This call is mutually exclusive with 
+// track_family_via_associated_supplementary_group(). The procd supports only
+// on or the other at runtime.
 void
-ProcFamilyServer::track_family_via_supplementary_group()
+ProcFamilyServer::track_family_via_allocated_supplementary_group()
 {
 	pid_t pid;
 	read_from_client(&pid, sizeof(pid_t));
 
 	gid_t gid;
+
+	// When the procd is started (not using -P) such that it knows the parent
+	// of the procd is the root pid of the tree and the watcher process of the
+	// procd, the it is in self-allocation mode for gid tracking of process
+	// families.  In that context, this call fills in the gid with a
+	// self-allocated gid for this process family.
 	proc_family_error_t err =
 		m_monitor.track_family_via_supplementary_group(pid, gid);
 
@@ -156,6 +165,31 @@ ProcFamilyServer::track_family_via_supplementary_group()
 	if (err == PROC_FAMILY_ERROR_SUCCESS) {
 		write_to_client(&gid, sizeof(gid_t));
 	}
+}
+
+// This call is mutually exclusive with 
+// track_family_via_allocated_supplementary_group(). The procd supports only
+// one or the other at runtime.
+void
+ProcFamilyServer::track_family_via_associated_supplementary_group()
+{
+	pid_t pid;
+	read_from_client(&pid, sizeof(pid_t));
+
+	gid_t gid;
+
+	// Associate this specific gid with that family.
+	read_from_client(&gid, sizeof(gid_t));
+
+	// When the procd is started (using -P) such that it is managing a root
+	// tree underneath the procd and there is no watcher process for the procd,
+	// it will only associate gids to a process family when told the specific
+	// gid by the procd_ctl tool. In this context, this call accepts the
+	// gid given and assigns it to track the family.
+	proc_family_error_t err =
+		m_monitor.track_family_via_supplementary_group(pid, gid);
+	
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 #endif
 
@@ -387,10 +421,16 @@ ProcFamilyServer::wait_loop()
 				break;
 
 #if defined(LINUX)
-			case PROC_FAMILY_TRACK_FAMILY_VIA_SUPPLEMENTARY_GROUP:
+			case PROC_FAMILY_TRACK_FAMILY_VIA_ALLOCATED_SUPPLEMENTARY_GROUP:
 				dprintf(D_ALWAYS,
-				        "PROC_FAMILY_TRACK_FAMILY_VIA_SUPPLEMENTARY_GROUP\n");
-				track_family_via_supplementary_group();
+				        "PROC_FAMILY_TRACK_FAMILY_VIA_ALLOCATED_SUPPLEMENTARY_GROUP\n");
+				track_family_via_allocated_supplementary_group();
+				break;
+
+			case PROC_FAMILY_TRACK_FAMILY_VIA_ASSOCIATED_SUPPLEMENTARY_GROUP:
+				dprintf(D_ALWAYS,
+				        "PROC_FAMILY_TRACK_FAMILY_VIA_ASSOCIATED_SUPPLEMENTARY_GROUP\n");
+				track_family_via_associated_supplementary_group();
 				break;
 #endif
 

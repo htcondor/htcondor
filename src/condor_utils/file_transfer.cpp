@@ -3371,7 +3371,7 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 
 	if (plugin_table == NULL) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", URL);
-		e.pushf("FILETRANSFER", 1, "No plugin table defined", URL);
+		e.pushf("FILETRANSFER", 1, "No plugin table defined (request was %s)", URL);
 		return GET_FILE_PLUGIN_FAILED;
 	}
 

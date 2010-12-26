@@ -47,29 +47,51 @@ if( -z "tasklist.nmi" ) {
 # untar pre-built tarball
 ######################################################################
 
-print "Finding release tarball\n";
-open( TARBALL_FILE, "$tarball_file" ) || 
-    die "Can't open $tarball_file: $!\n";
 my $release_tarball;
-while( <TARBALL_FILE> ) {
-    chomp;
-    $release_tarball = $_;
+if( $ENV{NMI_PLATFORM} =~ /winnt/) {
+
+	# on Windows, condor is in a zip file, not a tarball
+	print "Finding release zip file\n";
+	my ($release_zipfile) = glob("condor-*.zip");
+	
+	print "Release zip file is $release_zipfile\n";
+	
+	if( ! $release_zipfile ) {
+		die "Could not find a condor release zip file!\n";
+	}
+	
+	if ( ! mkdir("condor") ) {
+	   die "Could not make the condor folder\n";
+	}
+	
+	print "Unzipping $release_zipfile ...\n";
+	system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
+	print "Unzipped $release_zipfile ...\n";
+	
+} else {
+	print "Finding release tarball\n";
+	open( TARBALL_FILE, "$tarball_file" ) || 
+		die "Can't open $tarball_file: $!\n";
+	while( <TARBALL_FILE> ) {
+		chomp;
+		$release_tarball = $_;
+	}
+
+	print "Release tarball is $release_tarball\n";
+
+	if( ! $release_tarball ) {
+		die "$tarball_file does not contain a filename!\n";
+	}
+	if( ! -f $release_tarball ) {
+		die "$release_tarball (from $tarball_file) does not exist!\n";
+	}
+
+	print "Release tarball file exists\n";
+
+	print "Untarring $release_tarball ...\n";
+	system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
+	print "Untarred $release_tarball ...\n";
 }
-
-print "Release tarball is $release_tarball\n";
-
-if( ! $release_tarball ) {
-    die "$tarball_file does not contain a filename!\n";
-}
-if( ! -f $release_tarball ) {
-    die "$release_tarball (from $tarball_file) does not exist!\n";
-}
-
-print "Release tarball file exists\n";
-
-print "Untarring $release_tarball ...\n";
-system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
-print "Untarred $release_tarball ...\n";
 
 ######################################################################
 # setup the personal condor
@@ -78,9 +100,11 @@ print "Untarred $release_tarball ...\n";
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
 	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
-	print "VERSION string is $version\n";
+	print "VERSION string is $version from $release_tarball and $basename\n";
 } else {
-	die "Your tarball does not match condor-X-Y-Z!\n";
+	$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
+	$version = "condor-$1.$2.$3";
+	print "VERSION string is $version\n";
 }
 
 print "Condor version: $version\n";
@@ -99,9 +123,6 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	mkdir( "local/spool", 0777 ) || die "Can't mkdir $BaseDir/local/spool: $!\n";
 	mkdir( "local/execute", 0777 ) || die "Can't mkdir $BaseDir/local/execute: $!\n";
 	mkdir( "local/log", 0777 ) || die "Can't mkdir $BaseDir/local/log: $!\n";
-
-	# public contains bin, lib, etc... ;)
-	# system("mv public condor");
 
 	$Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
 
@@ -126,7 +147,7 @@ $ENV{PATH} = $NewPath;
 chdir( "$BaseDir/condor_tests" ) ||
     die "Can't chdir($BaseDir/condor_tests for personal condor setup): $!\n";
 
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+#if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 	print "About to run batch_test.pl --debug -p\n";
 	#system("env");
@@ -138,15 +159,15 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	if( $batchteststatus != 0 ) {
     	exit 2;
 	}
-} else {
-	system("set");
+#} else {
+#	system("set");
 	# do not do a pre-setup yet in remote_pre till fixed
     #my $scriptdir = $SrcDir . "/condor_scripts";
     #copy_file("$scriptdir/batch_test.pl", "batch_test.pl");
     #copy_file("$scriptdir/Condor.pm", "Condor.pm");
     #copy_file("$scriptdir/CondorTest.pm", "CondorTest.pm");
     #copy_file("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
-}
+#}
 
 # sub copy_file {
 #     my( $src, $dest ) = @_;

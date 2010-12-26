@@ -625,6 +625,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 			// What about tilde if there's no ~condor?
 	}
 
+	sysapi_clear_network_device_info_cache();
+
 		// Insert some default values for attributes we want even if
 		// they're not defined in the config sources: ARCH and OPSYS.
 		// We also want to insert the special "SUBSYSTEM" macro here.

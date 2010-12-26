@@ -49,6 +49,8 @@ my $taskname = "";
 my $execstr = "";
 # autoflush our STDOUT
 $| = 1;
+open STDERR,">&STDOUT";
+
 
 ## TSTCLAIR->THAWAN et.al ok below is the conundrum as it relates to packaging
 ## The remote declare needs to be created/updated for (N) different packages
@@ -145,7 +147,7 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	#path hack b/c nmi pre-reqs & paths are broken on windows.
 	$ENV{BASE_DIR} = "$BaseDir";
     system("env");
-    print(`cmd /c dir /b /s build.win.bat`);
+    #print(`cmd /c dir /b /s build.win.bat`);
     $execstr= "nmi_tools\\glue\\build\\build.win.bat"; ##devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE";
 	# need to make the tests here. 
 
@@ -159,7 +161,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 # build
 ######################################################################
 print "$execstr\n";
-$buildstatus = system($execstr);
+$buildstatus = system("$execstr");
 
 # now check the build status and return appropriately
 if( $buildstatus == 0 ) {

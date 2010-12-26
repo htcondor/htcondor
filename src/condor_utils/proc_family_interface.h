@@ -51,7 +51,7 @@ public:
 	virtual bool track_family_via_login(pid_t, const char*) = 0;
 
 #if defined(LINUX)
-	virtual bool track_family_via_supplementary_group(pid_t, gid_t&) = 0;
+	virtual bool track_family_via_allocated_supplementary_group(pid_t, gid_t&) = 0;
 #endif
 
 	virtual bool get_usage(pid_t, ProcFamilyUsage&, bool) = 0;

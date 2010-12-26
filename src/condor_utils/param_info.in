@@ -9928,6 +9928,21 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=600
 
+[LOCAL_DISK_LOCK_DIR]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=/tmp-like directory to store lock files, /tmp/condorLocks is used otherwise
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=600
 
 [LOCK_DEBUG_LOG_TO_APPEND]
 aliases=

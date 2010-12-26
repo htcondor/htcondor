@@ -26,7 +26,12 @@ condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 if (${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
         command_target( utils_genparams perl param_info_c_generator.pl param_info_init.c )
 else()
-        command_target( utils_genparams cd "/D;${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
+	if (WINDOWS)
+        	command_target( utils_genparams cd "/D;${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
+	else()
+		
+        	command_target( utils_genparams cd "${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
+	endif()
 endif()
 		
 condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )

@@ -2140,7 +2140,7 @@ GahpClient::clear_pending()
 		if (server->requestTable->remove(pending_reqid) == 0) {
 				// entry was still in the hashtable, which means
 				// that this reqid is still with the gahp server or
-				// still in our waitingToSubmit queue.
+				// still in our waitingHigh/Medium/LowPrio queues.
 				// so re-insert an entry with this pending_reqid
 				// with a NULL data field so we do not reuse this reqid.
 			server->requestTable->insert(pending_reqid,NULL);
@@ -2196,7 +2196,7 @@ GahpClient::reset_user_timer(int tid)
 
 void
 GahpClient::now_pending(const char *command,const char *buf,
-						GahpProxyInfo *cmd_proxy)
+						GahpProxyInfo *cmd_proxy, PrioLevel prio_level )
 {
 
 		// First, if command is not NULL we have a new pending request.
@@ -2223,7 +2223,17 @@ GahpClient::now_pending(const char *command,const char *buf,
 	if ( server->num_pending_requests >= server->max_pending_requests ) {
 			// We have too many requests outstanding.  Queue up
 			// this request for later.
-		server->waitingToSubmit.enqueue(pending_reqid);
+		switch ( prio_level ) {
+		case high_prio:
+			server->waitingHighPrio.push( pending_reqid );
+			break;
+		case medium_prio:
+			server->waitingMediumPrio.push( pending_reqid );
+			break;
+		case low_prio:
+			server->waitingLowPrio.push( pending_reqid );
+			break;
+		}
 		return;
 	}
 
@@ -2433,13 +2443,23 @@ GahpServer::poll()
 
 		// Ok, at this point we may have handled a bunch of results.  So
 		// that means that some gahp requests languishing in the 
-		// waitingToSubmit queue may be good to go.
+		// waitingHigh/Medium/LowPrio queues may be good to go.
 	ASSERT(num_pending_requests >= 0);
 	int waiting_reqid = -1;
-	while ( (waitingToSubmit.Length() > 0) &&
-			(num_pending_requests < max_pending_requests) ) 
+	while ( num_pending_requests < max_pending_requests )
 	{
-		waitingToSubmit.dequeue(waiting_reqid);
+		if ( waitingHighPrio.size() > 0 ) {
+			waiting_reqid = waitingHighPrio.front();
+			waitingHighPrio.pop();
+		} else if ( waitingMediumPrio.size() > 0 ) {
+			waiting_reqid = waitingMediumPrio.front();
+			waitingMediumPrio.pop();
+		} else if ( waitingLowPrio.size() > 0 ) {
+			waiting_reqid = waitingLowPrio.front();
+			waitingLowPrio.pop();
+		} else {
+			break;
+		}
 		entry = NULL;
 		requestTable->lookup(waiting_reqid,entry);
 		if ( entry ) {
@@ -2450,7 +2470,7 @@ GahpServer::poll()
 				// this pending entry had been cleared long ago, and
 				// has been just sitting around in the hash table
 				// to make certain the reqid is not re-used until
-				// it is dequeued from the waitingToSubmit queue.
+				// it is dequeued from the waitingHigh/Medium/Low queues.
 				// So now remove the entry from the hash table
 				// so the reqid can be reused.
 			requestTable->remove(result_reqid);
@@ -5469,7 +5489,7 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5543,7 +5563,7 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5625,7 +5645,7 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5691,7 +5711,7 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5757,7 +5777,7 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5823,7 +5843,7 @@ GahpClient::cream_job_suspend(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5889,7 +5909,7 @@ GahpClient::cream_job_resume(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5956,7 +5976,7 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6034,7 +6054,7 @@ GahpClient::cream_job_status_all(const char *service,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6124,7 +6144,7 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6184,7 +6204,7 @@ GahpClient::cream_ping(const char * service)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 	
 		// If we made it here, command is pending.
@@ -6254,7 +6274,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,low_prio);
 	}
 
 		// If we made it here, command is pending.

@@ -667,17 +667,17 @@ FileLock::updateLockTimestamp(void)
 char * 
 FileLock::GetTempPath() 
 {
-
-	char *path = temp_dir_path();
-	char *suffix = "condorLocks";
-	
-	if (path == NULL)
-		return NULL;
-	
-	char *full_path = dirscat(path, suffix);
+	const char *suffix = "";
+	char *result = NULL;
+	char *path = param("LOCAL_DISK_LOCK_DIR");
+	if (!path) {
+		path = temp_dir_path();
+		suffix = "condorLocks";
+	}
+	result = dirscat(path, suffix);
 	free(path);
-	
-	return full_path;
+
+	return result;
 }
 
 char *
@@ -725,9 +725,6 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 		snprintf(dest+strlen(dest), 3, "%s", hashVal+i);
 		snprintf(dest+strlen(dest), 2, "%c", DIR_DELIM_CHAR);
 	}
-#if !defined(WIN32)
-	sprintf(dest+strlen(dest), "%i%c", getuid(), DIR_DELIM_CHAR);
-#endif	
 	 
 	
 	sprintf(dest+strlen(dest), "%s.lockc", hashVal+4);

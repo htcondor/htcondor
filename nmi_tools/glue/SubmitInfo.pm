@@ -65,7 +65,6 @@ our %build_and_test_sets = (
 		'x86_64_rhap_5.3-updated',
 		'x86_suse_10.2',
 		'x86_suse_10.0',
-		'ia64_sles_9',
 		'x86_64_macos_10.6',
 		'ppc_macos_10.4',
 		'sun4u_sol_5.10',
@@ -214,7 +213,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_6.0'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -232,7 +231,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_winnt_5.1'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -250,7 +249,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_5.1-tst'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			# when it works add x86_64_winnt_5.1 to the x_tests
 			'xtests'	=> undef,
@@ -423,7 +422,7 @@ our %submit_info = (
 				'x86_64_ubuntu_10.04',
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
-				'x86_64_fedora_11' ],
+				'x86_64_fedora_11', 'x86_64_fedora_13-updated' ],
 		},
 
 		'test' => {
@@ -854,6 +853,24 @@ our %submit_info = (
 	# This might work.
 	##########################################################################
 	'x86_64_fedora_13'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Fedora 13 with updates on x86_64
+	# This might work.
+	##########################################################################
+	'x86_64_fedora_13-updated'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
@@ -1318,9 +1335,12 @@ our %submit_info = (
 	##########################################################################
 	# Platform SuSE 10.0 on x86
 	##########################################################################
+	# /usr/lib/libX11.so fails to link properly on this platform due
+	# to the error: undefined reference to `__stack_chk_fail@GLIBC_2.4'
 	'x86_suse_10.0'		=> {
 		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
+			'configure_args' =>{ @minimal_build_configure_args,
+					     '-DHAVE_KBDD:BOOL=OFF' => undef },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 'x86_suse_10.2' ],
 		},

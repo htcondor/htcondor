@@ -150,6 +150,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_statfs: return "statfs";
         case CONDOR_access: return "access";
         case CONDOR_chmod: return "chmod";
+		case CONDOR_chown: return "chown";
         case CONDOR_lchown: return "lchown";
         case CONDOR_truncate: return "truncate";
         case CONDOR_utime: return "utime";
@@ -1083,7 +1084,11 @@ do_REMOTE_syscall()
 		unsigned int total = 0;
 		buffer = (char*)buf;
 
-		while(total < len) {
+		while(total < len && stride_length > 0) {
+			// For last write (make sure we only write 'len' bytes)
+			if(len - total < stride_length) {
+				stride_length = len - total;
+			}
 			rval = pwrite( fd, (void*)&buffer[total], stride_length, offset);
 			if(rval >= 0) {
 				total += rval;
@@ -1093,17 +1098,18 @@ do_REMOTE_syscall()
 				break;
 			}
 		}
-		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d (%s)\n", rval, terrno, strerror(errno));
 		
 		syscall_sock->encode();
 		if( rval < 0 ) {
+			terrno = (condor_errno_t)errno;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d (%s)\n", rval, terrno, strerror(errno));
 			result = ( syscall_sock->code(rval) );
 			ASSERT( result );
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}
 		else {
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d (%s)\n", total, terrno, strerror(errno));
 			result = ( syscall_sock->code(total) );
 			ASSERT( result );
 		}
@@ -1202,12 +1208,11 @@ case CONDOR_putfile:
 		ASSERT( result );
 		
 		errno = 0;
-		fd = safe_open_wrapper(path, O_RDWR | O_CREAT | O_EXCL, mode);
+		fd = safe_open_wrapper(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		
 		// Need to send reply after file creation
-		// Do more before response?
 		syscall_sock->encode();
 		result = ( syscall_sock->code(fd) );
 		ASSERT( result );
@@ -1624,12 +1629,15 @@ case CONDOR_getdir:
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  path = %s\n", path );
+		result = ( syscall_sock->code(length) );
+		ASSERT( result );
+		dprintf( D_SYSCALLS, "  length = %d\n", length );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
-		char line[1024];
+		char *buffer = (char*)malloc(length);
 		errno = 0;
-		rval = readlink(path, line, 1024);
+		rval = readlink(path, buffer, length);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		syscall_sock->encode();
@@ -1640,9 +1648,10 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		else {
-			result = ( syscall_sock->code_bytes_bool(line, rval) );
+			result = ( syscall_sock->code_bytes_bool(buffer, rval) );
 			ASSERT( result );
 		}
+		free( (char*)buffer);
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
