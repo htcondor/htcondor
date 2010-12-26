@@ -62,7 +62,7 @@ condor_put_debconf_cfg() {
     db_get condor/wantdebconf
     if [ "$RET" = "false" ]; then
         # remove any previous debconf settings of no longer wanted
-        [ -f "$condor_debconf_cfg" ] && rm -f $condor_debconf_cfg
+        [ -f "$condor_debconf_cfg" ] && rm -f $condor_debconf_cfg || true
         return
     fi
     # get settings from debconf
