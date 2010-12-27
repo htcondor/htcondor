@@ -73,17 +73,17 @@ switching between the \Condor{shadow} daemons that are waiting for the lock.
   in ext3 to 320,000,000, which is likely to be larger than other limits
   on the size of the job queue, such as memory.
 
+%gittrac 793
+\item The \Condor{shadow} daemon uses less memory than it has since 
+Condor version 7.5.0.
+Memory usage should now be similar to the 7.4 series.
+
 %gittrac 1752
 \item The \Condor{dagman} and \Condor{submit\_dag} command-line flag
 \Opt{-DumpRescue} causes the dump of an incomplete Rescue DAG,
 when the parsing of the DAG input file fails.
 This may help in figuring out what went wrong.
 See section~\ref{sec:DAGMan-rescue} for complete details on Rescue DAGs.
-
-%gittrac 793
-\item The \Condor{shadow} daemon uses less memory than it has since 
-Condor version 7.5.0.
-Memory usage should now be similar to the 7.4 series.
 
 %gittrac #1077
 \item \Condor{dagman} now has the capability to create the
@@ -125,11 +125,6 @@ universe jobs with multiple \SubmitCmd{queue} statements in
 the submit description file from working with \Condor{dagman}.
 This is now fixed.
 
-% gittrac #1715
-\item \Condor{dagman} now excepts in the case of certain log file errors,
-when continuing would be likely to put \Condor{dagman} into an incorrect 
-internal state.
-
 % gittrac #1681
 \item Improved the way Condor daemons send heartbeat messages to their parent
 process.  This resolves a problem observed on busy submit machines using the
@@ -155,6 +150,11 @@ because look ups of the host name for incoming connections failed.
 the attributes \AdAttr{MyType} and \AdAttr{TargetType}
 in offline ClassAds to get set to \Expr{"(unknown type)"}
 when the offline ClassAd was matched to a job.
+
+% gittrac #1715
+\item \Condor{dagman} now excepts in the case of certain log file errors,
+when continuing would be likely to put \Condor{dagman} into an incorrect 
+internal state.
 
 % gittrac #1762
 \item Fixed a bug that caused DAG node jobs to have their coredumpsize
