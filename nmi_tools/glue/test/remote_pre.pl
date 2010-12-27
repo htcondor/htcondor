@@ -102,8 +102,8 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
 	print "VERSION string is $version from $release_tarball and $basename\n";
 } else {
-	$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
-	$version = "condor-$1.$2.$3";
+    #$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
+    ($version,$ext.zip) = $release_zipfile =~ /^(.*)(\.[^.]*)$/;
 	print "VERSION string is $version\n";
 }
 
