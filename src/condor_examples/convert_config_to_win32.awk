@@ -81,6 +81,16 @@ BEGIN {
     next
 }
 
+# Remove STARTER_STANDARD (the standard universe starter)
+#
+/^STARTER_STANDARD/ {
+    next
+}
+/^STARTER_LIST/ {
+    printf "STARTER_LIST = STARTER\n"
+    next
+}
+
 # Choose a Windows-reasonable value for RELEASE_DIR and LOCAL_DIR
 #
 /^RELEASE_DIR[ \t]*=/ {
@@ -213,4 +223,3 @@ BEGIN {
 
 # If we made it here, print out the line unchanged
 {print $0}
-
