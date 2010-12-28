@@ -77,7 +77,7 @@ BEGIN {
 	next
 }
 /^SHADOW_LIST/ {
-    printf "SHADOWLIST = SHADOW\n"
+    printf "SHADOW_LIST = SHADOW\n"
     next
 }
 
