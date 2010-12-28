@@ -48,6 +48,7 @@ if( -z "tasklist.nmi" ) {
 ######################################################################
 
 my $release_tarball;
+my $version;
 if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 
 	# on Windows, condor is in a zip file, not a tarball
@@ -67,6 +68,13 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	print "Unzipping $release_zipfile ...\n";
 	system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
 	print "Unzipped $release_zipfile ...\n";
+	
+	system("dir");
+	system("dir condor");
+	
+    #$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
+    $version = substr($release_zipfile, 0, -4);
+	print "VERSION string is $version from $release_zipfile\n";
 	
 } else {
 	print "Finding release tarball\n";
@@ -91,21 +99,15 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	print "Untarring $release_tarball ...\n";
 	system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
 	print "Untarred $release_tarball ...\n";
+	
+	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
+	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
+	print "VERSION string is $version from $release_tarball and $basename\n";
 }
 
 ######################################################################
 # setup the personal condor
 ######################################################################
-
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
-	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
-	print "VERSION string is $version from $release_tarball and $basename\n";
-} else {
-    #$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
-    $version = substr($release_zipfile, 0, -4);
-	print "VERSION string is $version\n";
-}
 
 print "Condor version: $version\n";
 
@@ -115,6 +117,7 @@ print "SETTING UP PERSONAL CONDOR\n";
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 	mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
+	system("mv $BaseDir/$version $BaseDir/condor" );
 
 } else {
 	# windows personal condor setup
@@ -125,10 +128,8 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	mkdir( "local/log", 0777 ) || die "Can't mkdir $BaseDir/local/log: $!\n";
 
 	$Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
-
+    system("dir");
 }
-
-system("mv $BaseDir/$version $BaseDir/condor" );
 
 ######################################################################
 # Remove leftovers from extracting built binaries.
