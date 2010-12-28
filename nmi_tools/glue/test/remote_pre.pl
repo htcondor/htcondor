@@ -69,8 +69,11 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
 	print "Unzipped $release_zipfile ...\n";
 	
-	system("dir");
-	system("dir condor");
+	print "fixing execute bits ...\n";
+	system("chmod a+x condor/bin/*");
+	
+	system("ls");
+	system("ls -l condor");
 	
     #$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
     $version = substr($release_zipfile, 0, -4);
