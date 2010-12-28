@@ -225,6 +225,10 @@ WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 bool
 WriteUserLog::Configure( bool force )
 {
+	// introduce a boolean variable for local locking -- I did never really
+	// care for the goto 
+	bool doLocalLocking = false;
+	priv_state previous;
 	// If we're already configured and not in "force" mode, do nothing
 	if (  m_configured && ( !force )  ) {
 		return true;
@@ -242,44 +246,52 @@ WriteUserLog::Configure( bool force )
 	m_global_stat = new StatWrapper( m_global_path, StatWrapper::STATOP_NONE );
 	m_global_state = new WriteUserLogState( );
 
-#if !defined(WIN32)	
-	bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
-	if (new_locking){
-		m_rotation_lock = new FileLock(m_global_path, true, false);
-		if (m_rotation_lock->initSucceeded()) {
-			goto newLockingContinue;			
-		}
-		delete m_rotation_lock;
-	}
-#endif	
+
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
 	if ( NULL == m_rotation_lock_path ) {
-		int len = strlen(m_global_path) + 6;
-		char *tmp = (char*) malloc(len);
-		snprintf( tmp, len, "%s.lock", m_global_path );
-		m_rotation_lock_path = tmp;
+		
+#if !defined(WIN32)	
+		bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
+		if (new_locking){
+			previous = set_priv(PRIV_CONDOR);
+			m_rotation_lock = new FileLock(m_global_path, true, false);
+			if (m_rotation_lock->initSucceeded()) {
+				doLocalLocking = true;		
+			} else {
+				delete m_rotation_lock;
+			}
+			set_priv(previous);
+		}
+#endif	
+		if (!doLocalLocking) {
+			int len = strlen(m_global_path) + 6;
+			char *tmp = (char*) malloc(len);
+			snprintf( tmp, len, "%s.lock", m_global_path );
+			m_rotation_lock_path = tmp;
+		}
 	}
-
-	// Make sure the global lock exists
-	m_rotation_lock_fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
-	if ( m_rotation_lock_fd < 0 ) {
-		dprintf( D_ALWAYS,
+	if (!doLocalLocking) {
+		// Make sure the global lock exists
+		previous = set_priv(PRIV_CONDOR);
+		m_rotation_lock_fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
+		if ( m_rotation_lock_fd < 0 ) {
+			dprintf( D_ALWAYS,
 				 "Warning: Failed to open event rotation lock file %s:"
 				 " %d (%s)\n",
 				 m_rotation_lock_path, errno, strerror(errno) );
-		m_rotation_lock = new FakeFileLock( );
-	}
-	else {
-		m_rotation_lock = new FileLock( m_rotation_lock_fd,
+			m_rotation_lock = new FakeFileLock( );
+		}
+		else {
+			m_rotation_lock = new FileLock( m_rotation_lock_fd,
 										NULL,
 										m_rotation_lock_path );
-		dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
+			dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
 				 m_rotation_lock_path, m_rotation_lock );
+		}
+		set_priv(previous);
 	}
 
-#if !defined(WIN32)
-	newLockingContinue:
-#endif
+
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
