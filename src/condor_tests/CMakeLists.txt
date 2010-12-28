@@ -456,7 +456,9 @@ if (BUILD_TESTS)
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "core;quick;full;quicknolink")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "core;quick;full;quicknolink")
 	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "core;quick;full;quicknolink")
-	#if !defined( IS_CONDOR_PPC_LINUX_SLES9 ) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_CONDOR_PPC_LINUX_YD50 ) && !defined( IS_SUN4X_SOLARIS28 )
+
+	if ( NOT WITHOUT_SOAP_TEST )
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
+	endif()
 
 endif(BUILD_TESTS)
