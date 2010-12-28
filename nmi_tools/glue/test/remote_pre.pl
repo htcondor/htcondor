@@ -141,16 +141,21 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	system("rm -rf $version.zip");
 	
 	$Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
+	print "current dir\n";
     system("ls -l");
+	print "$BaseDir/condor_tests\n";
     system("ls -l $BaseDir/condor_tests");
-    system("ls -l condor/bin");
+	print "$BaseDir/condor/bin\n";
+    system("ls -l $BaseDir/condor/bin");
     
 	# Add condor to the path
 	my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
     print "PATH=$OldPath\n";
     print "adding condor to the path\n";
+    system ("which condor_master.exe");
 	my $NewPath = "$BaseDir/condor/bin:" . $OldPath;
 	$ENV{PATH} = $NewPath;
+    print "PATH=$ENV{PATH}\n";
 }
 
 
