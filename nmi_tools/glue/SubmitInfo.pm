@@ -307,10 +307,13 @@ our %submit_info = (
 	##########################################################################
 	# Platform SLES 9 on PPC64
 	##########################################################################
+	# using WITHOUT_SOAP_TEST because the IBM java installation on
+	# nmi:ppc64_sles_9 hangs while running the test.
 	'ppc64_sles_9'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DWITH_KRB5:BOOL=OFF' => undef,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 			},
 			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=> [ 'ps3_fedora_9' ],
