@@ -31,7 +31,6 @@
 #include "globus_gram_client.h"
 #include "globus_gass_server_ez.h"
 #include "globus_gss_assist.h"
-#include "condor_unsetenv.h"
 
 	/* Define this if the gahp server should fork before dropping core */
 #undef FORK_FOR_CORE
@@ -39,6 +38,12 @@
 // WIN32 doesn't have strcasecmp
 #ifdef WIN32
 #define strcasecmp(s1, s2) _stricmp(s1, s2)
+#endif
+
+/* Solaris doesn't have unsetenv */
+#ifndef HAVE_UNSETENV
+void unsetenv(const char* name);
+char * __findenv(const char *name, int *offset);
 #endif
 
 #ifndef true
@@ -1979,3 +1984,41 @@ main(int argc, char **argv)
 	main_deactivate_globus();
 	_exit(0);
 }
+
+#ifndef HAVE_UNSETENV
+
+/* swiped right out of the bsd libc */
+char *
+__findenv(const char *name, int *offset)
+{
+        extern char **environ;
+        register int len;
+        register const char *np;
+        register char **p, *c;
+
+        if (name == NULL || environ == NULL)
+                return (NULL);
+        for (np = name; *np && *np != '='; ++np)
+                continue;
+        len = np - name;
+        for (p = environ; (c = *p) != NULL; ++p)
+                if (strncmp(c, name, len) == 0 && c[len] == '=') {
+                        *offset = p - environ;
+                        return (c + len + 1);
+                }
+        return (NULL);
+}
+
+void
+unsetenv(const char *name)
+{
+        extern char **environ;
+        register char **p;
+        int offset;
+
+        while (__findenv(name, &offset))        /* if set multiple times */
+                for (p = &environ[offset];; ++p)
+                        if (!(*p = *(p + 1)))
+                                break;
+}
+#endif

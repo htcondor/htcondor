@@ -49,6 +49,8 @@ my $taskname = "";
 my $execstr = "";
 # autoflush our STDOUT
 $| = 1;
+open STDERR,">&STDOUT";
+
 
 ## TSTCLAIR->THAWAN et.al ok below is the conundrum as it relates to packaging
 ## The remote declare needs to be created/updated for (N) different packages
@@ -159,7 +161,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 # build
 ######################################################################
 print "$execstr\n";
-$buildstatus = system("$execstr 2>&1");
+$buildstatus = system("$execstr");
 
 # now check the build status and return appropriately
 if( $buildstatus == 0 ) {

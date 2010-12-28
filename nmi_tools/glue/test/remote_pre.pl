@@ -48,6 +48,7 @@ if( -z "tasklist.nmi" ) {
 ######################################################################
 
 my $release_tarball;
+my $version;
 if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 
 	# on Windows, condor is in a zip file, not a tarball
@@ -65,8 +66,15 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	}
 	
 	print "Unzipping $release_zipfile ...\n";
-	system("unzip $release_zipfile condor\\") && die "Can't unzip $release_zipfile !\n";
+	system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
 	print "Unzipped $release_zipfile ...\n";
+	
+	system("dir");
+	system("dir condor");
+	
+    #$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
+    $version = substr($release_zipfile, 0, -4);
+	print "VERSION string is $version from $release_zipfile\n";
 	
 } else {
 	print "Finding release tarball\n";
@@ -91,21 +99,15 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	print "Untarring $release_tarball ...\n";
 	system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
 	print "Untarred $release_tarball ...\n";
+	
+	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
+	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
+	print "VERSION string is $version from $release_tarball and $basename\n";
 }
 
 ######################################################################
 # setup the personal condor
 ######################################################################
-
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-	($basename,$ext_gz) = $release_tarball =~ /^(.*)(\.[^.]*)$/;
-	($version,$ext_tar) = $basename =~ /^(.*)(\.[^.]*)$/;
-	print "VERSION string is $version from $release_tarball and $basename\n";
-} else {
-	$release_zipfile =~ /condor-(\d+)\.(\d+)\.(\d+)-.*/; 
-	$version = "condor-$1.$2.$3";
-	print "VERSION string is $version\n";
-}
 
 print "Condor version: $version\n";
 
@@ -115,7 +117,17 @@ print "SETTING UP PERSONAL CONDOR\n";
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 	mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
+	system("mv $BaseDir/$version $BaseDir/condor" );
 
+	# Remove leftovers from extracting built binaries.
+	print "Removing $version tar file and extraction\n";
+	system("rm -rf $version*");
+
+	# Add condor to the path
+	my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
+	my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
+	$ENV{PATH} = $NewPath;
+	
 } else {
 	# windows personal condor setup
 
@@ -124,25 +136,23 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	mkdir( "local/execute", 0777 ) || die "Can't mkdir $BaseDir/local/execute: $!\n";
 	mkdir( "local/log", 0777 ) || die "Can't mkdir $BaseDir/local/log: $!\n";
 
-	# public contains bin, lib, etc... ;)
-	# system("mv public condor");
-
+	# Remove leftovers from extracting built binaries.
+	print "Removing $version.zip file\n";
+	system("rm -rf $version.zip");
+	
 	$Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
-
+    system("ls -l");
+    system("ls -l $BaseDir/condor_tests");
+    system("ls -l condor/bin");
+    
+	# Add condor to the path
+	my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
+    print "PATH=$OldPath\n";
+    print "adding condor to the path\n";
+	my $NewPath = "$BaseDir/condor/bin:" . $OldPath;
+	$ENV{PATH} = $NewPath;
 }
 
-system("mv $BaseDir/$version $BaseDir/condor" );
-
-######################################################################
-# Remove leftovers from extracting built binaries.
-######################################################################
-
-print "Removing $version tar file and extraction\n";
-system("rm -rf $version*");
-
-my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
-my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
-$ENV{PATH} = $NewPath;
 
 # -p means  just set up the personal condor for the test run
 # move into the condor_tests directory first
@@ -150,7 +160,7 @@ $ENV{PATH} = $NewPath;
 chdir( "$BaseDir/condor_tests" ) ||
     die "Can't chdir($BaseDir/condor_tests for personal condor setup): $!\n";
 
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+#if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 	print "About to run batch_test.pl --debug -p\n";
 	#system("env");
@@ -162,15 +172,15 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	if( $batchteststatus != 0 ) {
     	exit 2;
 	}
-} else {
-	system("set");
+#} else {
+#	system("set");
 	# do not do a pre-setup yet in remote_pre till fixed
     #my $scriptdir = $SrcDir . "/condor_scripts";
     #copy_file("$scriptdir/batch_test.pl", "batch_test.pl");
     #copy_file("$scriptdir/Condor.pm", "Condor.pm");
     #copy_file("$scriptdir/CondorTest.pm", "CondorTest.pm");
     #copy_file("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
-}
+#}
 
 # sub copy_file {
 #     my( $src, $dest ) = @_;

@@ -213,7 +213,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_6.0'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -231,7 +231,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_winnt_5.1'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -249,7 +249,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_5.1-tst'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			# when it works add x86_64_winnt_5.1 to the x_tests
 			'xtests'	=> undef,
@@ -1335,9 +1335,12 @@ our %submit_info = (
 	##########################################################################
 	# Platform SuSE 10.0 on x86
 	##########################################################################
+	# /usr/lib/libX11.so fails to link properly on this platform due
+	# to the error: undefined reference to `__stack_chk_fail@GLIBC_2.4'
 	'x86_suse_10.0'		=> {
 		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
+			'configure_args' =>{ @minimal_build_configure_args,
+					     '-DHAVE_KBDD:BOOL=OFF' => undef },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 'x86_suse_10.2' ],
 		},

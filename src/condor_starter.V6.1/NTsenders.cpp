@@ -1790,7 +1790,7 @@ REMOTE_CONDOR_symlink(char *path, char *newpath)
 }
 
 int
-REMOTE_CONDOR_readlink(char *path, char **buffer )
+REMOTE_CONDOR_readlink(char *path, int length, char **buffer )
 {
 	int rval = -1, result = 0;
 	condor_errno_t terrno;
@@ -1804,13 +1804,14 @@ REMOTE_CONDOR_readlink(char *path, char **buffer )
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->code(path) );
 	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(length) );
+	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 
 	syscall_sock->decode();
 	result = ( syscall_sock->code(rval) );
 	ON_ERROR_RETURN( result );
-	dprintf(D_ALWAYS, "rval: %d\n", rval);
 	if( rval < 0 ) {
 		result = ( syscall_sock->code(terrno) );
 		ON_ERROR_RETURN( result );
@@ -1823,7 +1824,6 @@ REMOTE_CONDOR_readlink(char *path, char **buffer )
 	*buffer = (char*)malloc(rval);
 	result = ( syscall_sock->code_bytes_bool(*buffer, rval) );
 	ON_ERROR_RETURN( result );
-	dprintf(D_ALWAYS, "buffer: %s\n", *buffer);
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 	return rval;

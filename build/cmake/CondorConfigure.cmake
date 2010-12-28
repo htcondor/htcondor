@@ -165,6 +165,8 @@ if( NOT WINDOWS)
 	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
 
+	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
+
 	check_struct_has_member("struct statfs" f_fstyp "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYP)
 	if (NOT ${OS_NAME} STREQUAL "DARWIN")
 		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
@@ -218,7 +220,7 @@ if (${OS_NAME} STREQUAL "SUNOS")
 	endif()
 	add_definitions(-D_STRUCTURED_PROC)
 	set(HAS_INET_NTOA ON)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lsocket")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lnsl -lsocket")
 
 	#update for solaris builds to use pre-reqs namely binutils in this case
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -B$ENV{PATH}")
@@ -315,6 +317,12 @@ endif()
 if (BUILD_TESTS)
 	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
+
+if ( NOT WINDOWS )
+	option(HAVE_KBDD "Support for condor_kbdd" ON)
+else()
+	set(HAVE_KBDD ON)
+endif()
 
 ##################################################
 ##################################################

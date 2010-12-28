@@ -152,6 +152,14 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
         
 	set (CPACK_GENERATOR "ZIP")
 	
+	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl
+			DESTINATION ${C_ETC}/WiX/xml
+			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	
+	install ( FILES ${CPACK_WIX_BITMAP_FOLDER}/bannrbmp.bmp ${CPACK_WIX_BITMAP_FOLDER}/dlgbmp.bmp
+			DESTINATION ${C_ETC}/WiX/Bitmaps
+			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+			
 	if (CONDOR_PACKAGE_BUILD)
 
 		set (CPACK_GENERATOR "ZIP;WIX")

@@ -70,7 +70,7 @@ extern "C" {
 	int REMOTE_CONDOR_whoareyou( char *host, int length, void *buffer );
 	int REMOTE_CONDOR_link( char *path, char *newpath );
 	int REMOTE_CONDOR_symlink( char *path, char *newpath );
-	int REMOTE_CONDOR_readlink( char *path, char **buffer );
+	int REMOTE_CONDOR_readlink( char *path, int length, char **buffer );
 	int REMOTE_CONDOR_stat( char *path, char *buffer );
 	int REMOTE_CONDOR_lstat( char *path, char *buffer );
 	int REMOTE_CONDOR_statfs( char *path, char *buffer );

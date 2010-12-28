@@ -352,10 +352,10 @@ DLLEXPORT int chirp_client_symlink( struct chirp_client *c, const char *path,
 */
 
 DLLEXPORT int chirp_client_readlink( struct chirp_client *c, const char *path,
-	char **buf );
+	int length, char **buf );
 /*chirp_client_readlink
-  Reads the contents of a symbolic link. Returns number of byes read, or -1 on
-  error.
+  Reads up to length bytes of a symbolic link. Returns number of byes read, or 
+  -1 on error.
 */
 
 DLLEXPORT int chirp_client_stat( struct chirp_client *c, const char *path,
