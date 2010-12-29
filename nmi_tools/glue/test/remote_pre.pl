@@ -69,8 +69,11 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
 	print "Unzipped $release_zipfile ...\n";
 	
-	system("dir");
-	system("dir condor");
+	print "fixing execute bits ...\n";
+	system("chmod a+x condor/bin/*");
+	
+	system("ls");
+	system("ls -l condor");
 	
     #$release_zipfile =~ /condor\-(\d+)\.(\d+)\.(\d+).*$/; 
     $version = substr($release_zipfile, 0, -4);
@@ -119,6 +122,16 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
 	system("mv $BaseDir/$version $BaseDir/condor" );
 
+	# Remove leftovers from extracting built binaries.
+	print "Removing $version tar file and extraction\n";
+	system("rm -rf $version*");
+
+	# Add condor to the path and set a condor_config variable
+	my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
+	my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
+	$ENV{PATH} = $NewPath;
+	$ENV{CONDOR_CONFIG} = "$BaseDir/condor/condor_config";
+	
 } else {
 	# windows personal condor setup
 
@@ -127,20 +140,28 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	mkdir( "local/execute", 0777 ) || die "Can't mkdir $BaseDir/local/execute: $!\n";
 	mkdir( "local/log", 0777 ) || die "Can't mkdir $BaseDir/local/log: $!\n";
 
+	# Remove leftovers from extracting built binaries.
+	print "Removing $version.zip file\n";
+	system("rm -rf $version.zip");
+	
 	$Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
-    system("dir");
+	print "current dir\n";
+    system("ls -l");
+	print "$BaseDir/condor_tests\n";
+    system("ls -l $BaseDir/condor_tests");
+	print "$BaseDir/condor/bin\n";
+    system("ls -l $BaseDir/condor/bin");
+    
+	# Add condor to the path
+	my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
+    print "PATH=$OldPath\n";
+    print "adding condor to the path\n";
+    system ("which condor_master.exe");
+	my $NewPath = "$BaseDir/condor/bin:" . $OldPath;
+	$ENV{PATH} = $NewPath;
+    print "PATH=$ENV{PATH}\n";
 }
 
-######################################################################
-# Remove leftovers from extracting built binaries.
-######################################################################
-
-print "Removing $version tar file and extraction\n";
-system("rm -rf $version*");
-
-my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
-my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
-$ENV{PATH} = $NewPath;
 
 # -p means  just set up the personal condor for the test run
 # move into the condor_tests directory first
