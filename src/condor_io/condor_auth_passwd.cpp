@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "CondorError.h"
 
-#if !defined(SKIP_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/hmac.h>
@@ -1757,4 +1757,4 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 
 
-#endif	// of if !defined(SKIP_AUTHENTICATION)
+#endif	// of if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)

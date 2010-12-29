@@ -932,11 +932,17 @@ our %submit_info = (
 
 	##########################################################################
 	# Platform Solais 11 on x86_64
-	# This might work.
+	# Building openssl is problematic on this platform.  There is
+        # some confusion betwen 64-bit and 32-bit, which causes linkage
+    	# problems.  Since ssh_to_job depends on openssl's base64 functions,
+    	# that is also disabled.
 	##########################################################################
 	'x86_64_sol_5.11'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
+},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
 			'xtests'	=> undef,
