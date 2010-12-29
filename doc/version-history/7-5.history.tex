@@ -38,6 +38,35 @@ The details of each version are described below.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
+\item The following list itemizes changes included in this Condor version
+  7.5.5 release that belong to Condor version 7.4.5.  That stable series
+  version will not yet have been released as this development version 
+  is released.
+  \begin{itemize}
+
+  % gittrac #1713
+  % gittrac #1715
+  \item \Condor{dagman} now prints a message in the \File{dagman.out} file
+  whenever it truncates a node job user log file.
+  \Condor{dagman} now prints additional diagnostic information in the
+  case of certain log file errors.
+
+  % gittrac #1750
+  \item Fixed a bug in which
+  a network disconnect between the submit machine and execute
+  machine during the transfer of output files caused the
+  \Condor{starter} daemon to immediately give up, rather than waiting
+  for the \Condor{shadow} to reconnect.  This problem was introduced
+  in Condor version 7.4.4.
+
+  % gittrac #1743
+  \item Fixed a bug in which
+  if \Condor{ssh\_to\_job} attempted to connect to a job while the
+  job's input files were being transferred, this caused the file
+  transfer to fail, which resulted in the job returning to the idle
+  state in the queue.
+
+  \end{itemize}
 \end{itemize}
 
 
