@@ -126,10 +126,11 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	print "Removing $version tar file and extraction\n";
 	system("rm -rf $version*");
 
-	# Add condor to the path
+	# Add condor to the path and set a condor_config variable
 	my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
 	my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
 	$ENV{PATH} = $NewPath;
+	$ENV{CONDOR_CONFIG} = "$BaseDir/condor/condor_config";
 	
 } else {
 	# windows personal condor setup
