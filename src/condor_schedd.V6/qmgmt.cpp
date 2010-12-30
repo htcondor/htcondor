@@ -1557,7 +1557,7 @@ unsetQSock()
 
 
 int
-handle_q(Service *, int cmd, Stream *sock)
+handle_q(Service *, int, Stream *sock)
 {
 	int	rval;
 	bool all_good;
@@ -1578,9 +1578,12 @@ handle_q(Service *, int cmd, Stream *sock)
 
 	BeginTransaction();
 
-	bool may_fork = (cmd == QMGMT_READ_CMD);
+	bool may_fork = false;
 	ForkStatus fork_status = FORK_FAILED;
 	do {
+		/* Probably should wrap a timer around this */
+		rval = do_Q_request( Q_SOCK->getReliSock(), may_fork );
+
 		if( may_fork && fork_status == FORK_FAILED ) {
 			fork_status = schedd_forker.NewJob();
 
@@ -1588,9 +1591,6 @@ handle_q(Service *, int cmd, Stream *sock)
 				break;
 			}
 		}
-
-		rval = do_Q_request( Q_SOCK->getReliSock(), may_fork );
-
 	} while(rval >= 0);
 
 
