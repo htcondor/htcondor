@@ -154,6 +154,10 @@ override_dh_installinit:
 	dh_installinit -pcondor --onlyscripts
 
 
+override_dh_strip:
+	dh_strip --dbg-package=condor-dbg
+
+
 dfsg-source-tree:
 	-quilt pop -a
 	@echo "Testing for uncommited changes"
