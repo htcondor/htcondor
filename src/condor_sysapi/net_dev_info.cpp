@@ -141,30 +141,51 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 		return false;
 	}
 
-	struct ifconf ifc;
+	struct ifconf ifc,prev;
 	memset(&ifc, 0, sizeof(ifc));
 
-	if( ioctl(sock, SIOCGIFCONF, &ifc) < 0 ) {
-		dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: ioctlsocket() failed: (errno %d) %s\n",
-				errno,strerror(errno));
-		return false;
-	}
-		// add some extra padding in buffer in case devices are added between above call and next ioctl
-	ifc.ifc_req = (struct ifreq *)malloc(ifc.ifc_len + 10*sizeof(struct ifreq));
-	if( ifc.ifc_req == NULL ) {
-		dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: out of memory\n");
-		return false;
-	}
+	const int max_interfaces = 10000;
+	int num_interfaces;
+	for(num_interfaces=100;num_interfaces<max_interfaces;num_interfaces+=100) {
+		prev.ifc_len = ifc.ifc_len;
+		ifc.ifc_len = num_interfaces*sizeof(struct ifreq);
 
-	if( ioctl(sock, SIOCGIFCONF, &ifc) < 0 ) {
-		dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: ioctlsocket() failed after allocating buffer: (errno %d) %s\n",
-				errno,strerror(errno));
+		ifc.ifc_req = (struct ifreq *)malloc(ifc.ifc_len);
+
+		if( ifc.ifc_req == NULL ) {
+			dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: out of memory\n");
+			return false;
+		}
+
+			// EINVAL (on some platforms) indicates that the buffer
+			// is not large enough
+		if( ioctl(sock, SIOCGIFCONF, &ifc) < 0 && errno != EINVAL ) {
+			dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: ioctlsocket() failed after allocating buffer: (errno %d) %s\n",
+					errno,strerror(errno));
+			free( ifc.ifc_req );
+			return false;
+		}
+
+		if( ifc.ifc_len == prev.ifc_len ) {
+				// Getting the same length in successive calls to
+				// SIOCGIFCONF is the only reliable way to know that
+				// the buffer was big enough, because some
+				// implementations silently return truncated results
+				// if the buffer isn't big enough.
+			break;
+		}
 		free( ifc.ifc_req );
+		ifc.ifc_req = NULL;
+	}
+	if( num_interfaces > max_interfaces ) {
+			// something must be going wrong
+		dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: unexpectedly large SIOCGIFCONF buffer: %d (errno=%d)\n",num_interfaces,errno);
 		return false;
 	}
 
-	int i,num_interfaces = ifc.ifc_len/sizeof(struct ifreq);
+	num_interfaces = ifc.ifc_len/sizeof(struct ifreq);
 
+	int i;
 	for(i=0; i<num_interfaces; i++) {
 		struct ifreq *ifr = &ifc.ifc_req[i];
 		char const *name = ifr->ifr_name;

@@ -77,7 +77,17 @@ BEGIN {
 	next
 }
 /^SHADOW_LIST/ {
-    printf "SHADOWLIST = SHADOW\n"
+    printf "SHADOW_LIST = SHADOW\n"
+    next
+}
+
+# Remove STARTER_STANDARD (the standard universe starter)
+#
+/^STARTER_STANDARD/ {
+    next
+}
+/^STARTER_LIST/ {
+    printf "STARTER_LIST = STARTER\n"
     next
 }
 
@@ -213,4 +223,3 @@ BEGIN {
 
 # If we made it here, print out the line unchanged
 {print $0}
-

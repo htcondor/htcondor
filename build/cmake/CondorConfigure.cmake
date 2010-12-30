@@ -165,6 +165,8 @@ if( NOT WINDOWS)
 	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
 
+	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
+
 	check_struct_has_member("struct statfs" f_fstyp "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYP)
 	if (NOT ${OS_NAME} STREQUAL "DARWIN")
 		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
@@ -483,6 +485,10 @@ include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 if (HAVE_EXT_OPENSSL)
 	add_definitions(-DWITH_OPENSSL) # used only by SOAP
 endif(HAVE_EXT_OPENSSL)
+
+if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+endif()
 
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
