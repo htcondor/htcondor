@@ -218,8 +218,8 @@ FileLock::~FileLock( void )
 				goto finish;
 			}
 		}
-		// this path is only called for the literal case by preen -- still want to clean up all three levels.
-		deleted = rec_clean_up(m_path, 3 ) ;
+		// this path is only called for the literal case by preen -- still want to clean up all two levels.
+		deleted = rec_clean_up(m_path, 2) ;
 		if (deleted == 0){ 
 			dprintf(D_FULLDEBUG, "Lock file %s has been deleted. \n", m_path);
 		} else{
