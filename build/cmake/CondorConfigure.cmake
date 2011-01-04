@@ -601,7 +601,7 @@ else(MSVC)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lodm -static-libgcc")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
 	endif(AIX)
 
 	if (NOT PROPER AND NOT AIX)
