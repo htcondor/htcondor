@@ -14,9 +14,8 @@
         <Package InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="media1.cab" EmbedCab="yes"/>
         <!-- Always force the root drive to be C: -->
-        <Property Id="ROOTDRIVE"><![CDATA[c:\]]></Property>
-        <Property Id="TARGETDIR"><![CDATA[c:\condor\]]></Property>
         <Directory Id="TARGETDIR" Name="SourceDir">
+          <Directory Id="INSTALLDIR" Name="condor">
            <!-- Merge module used to bind VC runtime *do not* copy in the files using include (InstallRequiredSystemLibraries) -->
            <Merge Id="VC90CRT" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm"/>
            <Merge Id="VC90Policy" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"/>
@@ -24,18 +23,19 @@
             <!-- Update the registry, ENV, and FW -->
            <Component Id="CondorRegNEnv" Guid="E282D017-976B-4685-A330-5180B27277C0">
              <RegistryKey Root="HKLM" Key="SOFTWARE\Condor" Action="createAndRemoveOnUninstall" >
-                 <RegistryValue Type="string" Name="CONDOR_CONFIG" Value="[TARGETDIR]condor_config" KeyPath="yes" />
-                 <RegistryValue Type="string" Name="RELEASE_DIR" Value="[TARGETDIR]"/>
+                 <RegistryValue Type="string" Name="CONDOR_CONFIG" Value="[INSTALLDIR]condor_config" KeyPath="yes" />
+                 <RegistryValue Type="string" Name="RELEASE_DIR" Value="[INSTALLDIR]"/>
              </RegistryKey>
-             <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[TARGETDIR]bin\"/>
+             <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
            </Component>
+          </Directory>
         </Directory>
 
         <Condition Message="This application is only supported on Windows XP(SP2) or higher">
           <![CDATA[(VersionNT >= 501)]]>
         </Condition>
 
-        <Property Id="WIXUI_INSTALLDIR" Value="TARGETDIR" />
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
 
         <!--Find the location of the Java installation-->
         <Property Id="JVMVERSION">
@@ -59,16 +59,17 @@
         <!--HDFS properties-->
         <Property Id="HDFSPORT" Value="9000" />
         <Property Id="HDFSWEBPORT" Value="8000" />
-        <SetProperty Id="HDFSHOME" Value="[TARGETDIR]HDFS" After="AppSearch" />
+        <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch" />
         <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]/hadoop_name" After="AppSearch" />
         <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]/hadoop_data" After="AppSearch" />
+        <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
 
         <!-- Begin custom actions and install sequence -->
         <CustomAction Id="CondorConfigLocal"
                  Script="vbscript">
           <![CDATA[
             Set fso = CreateObject("Scripting.FileSystemObject")
-            path = Session.Property("TARGETDIR")
+            path = Session.Property("INSTALLDIR")
             Set installpath = fso.GetFolder(path)
             strippedPath = installpath.ShortPath
             if Not fso.FolderExists(path & "log") Then
@@ -207,7 +208,7 @@
 
         <!-- Feature Block e.g. ComponentRef's -->
         <Feature Id="CondorWindows" Title="Condor Installation" Level="1" Display="expand">
-          <Feature Id="Installation" Title="Condor Installation Files" Level="1">
+          <Feature Id="Installation" Title="Condor Installation Files" Level="1"  ConfigurableDirectory="INSTALLDIR">
             <xsl:apply-templates select="wix:Fragment" mode="CompRef"/>
             <MergeRef Id="VC90CRT"/>
             <MergeRef Id="VC90Policy"/>
