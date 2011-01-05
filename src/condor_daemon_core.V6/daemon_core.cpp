@@ -6860,7 +6860,12 @@ void CreateProcessForkit::exec() {
 		}
 		dprintf(D_FULLDEBUG, "Calling sched_setaffinity\n");
 		// first argument of pid 0 means self.
+#ifdef HAVE_SCHED_SETAFFINITY_2ARG
+			// this is the old (rhel3 vintage) interface
+		int result = sched_setaffinity(0, &mask);
+#else
 		int result = sched_setaffinity(0, sizeof(mask), &mask);
+#endif
 		if (result != 0) {
 			dprintf(D_ALWAYS, "Error calling sched_setaffinity: %d\n", errno);
 		}
