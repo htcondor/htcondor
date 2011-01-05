@@ -137,7 +137,6 @@ if( NOT WINDOWS)
 	check_function_exists("unsetenv" HAVE_UNSETENV)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
 	check_function_exists("readdir64" HAVE_READDIR64)
-	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -178,6 +177,28 @@ if( NOT WINDOWS)
 	# previously they were ~=check_cxx_source_compiles
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, 1024, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY )
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY_2ARG )
+
+	if(HAVE_SCHED_SETAFFINITY_2ARG)
+		set(HAVE_SCHED_SETAFFINITY ON)
+	endif()
 
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
