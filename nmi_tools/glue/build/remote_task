@@ -81,7 +81,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 package && make install && make tests";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make package && make install && make tests";
 
 } elsif  ($taskname eq $UNSTRIPPED_TASK){
 	#Reconfigure cmake variables for native package build
@@ -96,7 +96,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make package";
 } elsif  ($taskname eq $RPM_TASK){
 	#Building RPM
 
@@ -111,7 +111,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
 
 } elsif  ($taskname eq $RPM_CHECK_TASK){
 	#Print packaging log to stdout
@@ -132,7 +132,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
 
 } elsif  ($taskname eq $DEB_CHECK_TASK){
 	#Print package summary
