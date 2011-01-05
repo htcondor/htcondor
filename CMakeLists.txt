@@ -24,7 +24,7 @@ cmake_minimum_required(VERSION 2.8)
 ##########################################################################
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")
-set(VERSION "7.5.5")
+set(VERSION "7.5.6")
 set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
