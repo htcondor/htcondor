@@ -160,6 +160,10 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 			DESTINATION ${C_ETC}/WiX/Bitmaps
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 			
+	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
+			  DESTINATION ${C_ETC}/WiX
+	          PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+			
 	if (CONDOR_PACKAGE_BUILD)
 
 		set (CPACK_GENERATOR "ZIP;WIX")
