@@ -16,6 +16,9 @@
  # 
  ############################################################### 
 
+# The source tarball for this external was downloaded from this URL:
+#   http://jra1mw.cvs.cern.ch/cgi-bin/jra1mw.cgi/org.glite.ce.blahp.tar.gz?view=tar&pathrev=glite-ce-blahp_R_1_16_1_0
+
 if (NOT PROPER AND LINUX)
   option(WITH_BLAHP "Compiling with support for BLAHP" ON)
 endif(NOT PROPER AND LINUX)
@@ -25,7 +28,7 @@ if ( WITH_BLAHP )
 	message(STATUS "TODO:TSTCLAIR BLAHP eval if linking correct popt w/o mundging Makefile.am")
 	
 	set(POPT_VER popt-1.14)
-	set(BLAHP_VER blahp-1.16.0)
+	set(BLAHP_VER blahp-1.16.1)
 
 	ExternalProject_Add(popt
 						PREFIX ${EXTERNAL_BUILD_PREFIX}/${POPT_VER}
@@ -48,9 +51,9 @@ if ( WITH_BLAHP )
 						DEPENDS openssl globus popt
 					    PREFIX ${EXTERNAL_BUILD_PREFIX}/${BLAHP_VER}
 					    #-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://pages.cs.wisc.edu/~jfrey/externals/${BLAHP_VER}.tar.gz ${CMD_TERM}
+						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BLAHP_VER}.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${EXTERNAL_DL}
-						URL http://pages.cs.wisc.edu/~jfrey/externals/${BLAHP_VER}.tar.gz
+						URL http://parrot.cs.wisc.edu/externals/${BLAHP_VER}.tar.gz
 						#--Patch step ----------
 						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
