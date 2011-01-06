@@ -162,6 +162,13 @@ case "$1" in
         condor_local_cfg_template
         condor_put_debconf_cfg
         condor_make_homedir
+        if [ -x "/etc/init.d/condor" -a -d $(condor_config_val RUN) ]; then
+            if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+                invoke-rc.d condor restart || exit $?
+            else
+                /etc/init.d/condor restart || exit $?
+            fi
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

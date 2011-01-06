@@ -151,7 +151,7 @@ override_dh_compress:
 
 
 override_dh_installinit:
-	dh_installinit -pcondor --onlyscripts
+	dh_installinit -pcondor --onlyscripts --noscripts
 
 
 override_dh_strip:
