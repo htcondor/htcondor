@@ -66,7 +66,10 @@ if (WITH_CURL)
 		if (WINDOWS)
 			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.lib")
 		else()
-			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.a")
+			# libcurl is dependent on these libraries on some
+			# platforms.
+			find_multiple( "rt;idn" CURL_FOUND )
+			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.a;${CURL_FOUND}")
 		endif()
 
 		append_var (CONDOR_EXTERNALS curl)
