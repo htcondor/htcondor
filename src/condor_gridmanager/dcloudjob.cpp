@@ -866,17 +866,13 @@ void DCloudJob::doEvaluateState()
 						break;
 					}
 
-					if ( rc == 0 ) {
-						StatusUpdate( DCLOUD_VM_STATE_FINISH );
-					} else {
-						// What to do about a failed destroy?
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job destroy failed: %s: %s\n",
-								 procID.cluster, procID.proc, gahp_error_code,
-								 errorString.Value() );
-						gmState = GM_HOLD;
-						break;
-					}
+					// We could check for a failed destroy here, but on some providers
+					// failure is normal as the instance is destroyed when it is stopped.
+					// Instead, we just say we are done.  If the destroy failed for some
+					// other reason, I'm not sure what we can really do about it..
+					// Note that we do catch the 'pending' and not submitted case above
+					// so I think that should cover network issues etc.
+					StatusUpdate( DCLOUD_VM_STATE_FINISH );
 				}
 				myResource->CancelSubmit( this );
 				SetInstanceId( NULL );
