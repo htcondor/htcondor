@@ -72,12 +72,6 @@ static const char *GMStateNames[] = {
 #define DCLOUD_VM_STATE_STOPPED			"STOPPED"
 #define DCLOUD_VM_STATE_FINISH			"FINISH"
 
-const char *ATTR_DELTACLOUD_PROVIDER_ID = "DeltacloudProviderId";
-const char *ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES = "DeltacloudPublicNetworkAddresses";
-const char *ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES = "DeltacloudPrivateNetworkAddresses";
-const char *ATTR_DELTACLOUD_AVAILABLE_ACTIONS = "DeltacloudAvailableActions";
-const char *ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
-
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -167,6 +161,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
 	probeErrorTime = 0;
+	lastProbeTime = 0;
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	myResource = NULL;
@@ -742,6 +737,10 @@ void DCloudJob::doEvaluateState()
 				probeNow = false;
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
+				} else if ( lastProbeTime + 30 > now ) {
+					// Wait before trying another probe
+					unsigned int delay = (lastProbeTime + 30) - now;
+					daemonCore->Reset_Timer( evaluateStateTid, delay );
 				} else {
 
 					StringList attrs;
@@ -755,6 +754,7 @@ void DCloudJob::doEvaluateState()
 						break;
 					}
 
+					lastProbeTime = now;
 					// processing error code received
 					if ( rc != 0 ) {
 						// What to do about failure?
@@ -772,28 +772,23 @@ void DCloudJob::doEvaluateState()
 							dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s: Delaying HELD state, waiting for another probe..\n",
 									 procID.cluster, procID.proc, gahp_error_code, errorString.Value());
 						} else {
-							time_t right_now;
 							int retry_time; 
 
 							// probeErrorTime was set previously, check how long
 							// its been and see if we have to move to HELD.
-							right_now = time(NULL);
 							if (jobAd->LookupInteger( ATTR_DELTACLOUD_RETRY_TIMEOUT, retry_time ) == FALSE) {
 								// Set default retry to 90s.
 								retry_time = 90;
 							}
-							if (right_now - probeErrorTime > retry_time) {
+							if (now - probeErrorTime > retry_time) {
 								dprintf( D_ALWAYS, "(%d.%d): Moving job to HELD\n",
 										 procID.cluster, procID.proc );
 								gmState = GM_HOLD;
 							} else {
 								dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s: HELD state delayed for %d of %d seconds.\n",
 										 procID.cluster, procID.proc, gahp_error_code,
-										 errorString.Value(), (int) (right_now - probeErrorTime), retry_time );
-								// If we stay in GM_PROBE_JOB gridmanager goes nuts and queries 4 times a second
-								// until something changes.  Going back to SUBMITTED makes this only get called
-								// every 30 seconds.
-								gmState = GM_SUBMITTED;
+										 errorString.Value(), (int) (now - probeErrorTime), retry_time );
+								daemonCore->Reset_Timer( evaluateStateTid, 30 );
 							}
 						}
 						break;
