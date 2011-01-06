@@ -1442,7 +1442,7 @@ SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "amazon" ) == MATCH ||
-			 strcasecmp( JobGridType, "dcloud" ) == MATCH ) ) ) {
+			 strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 
@@ -1723,7 +1723,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    amazon, unicore, cream, dcloud
+			//    amazon, unicore, cream, deltacloud
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1741,7 +1741,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
-				(strcasecmp (JobGridType, "dcloud") == MATCH) ||
+				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
@@ -1754,7 +1754,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, amazon, dcloud, or cream\n" );
+						 "nqs, condor, nordugrid, unicore, amazon, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			

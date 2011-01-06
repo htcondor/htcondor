@@ -19,7 +19,7 @@
 
 if (HAVE_EXT_LIBDELTACLOUD)
 
-	condor_exe( dcloud_server "dcloudgahp_main.cpp;dcloudgahp_commands.cpp;PipeBuffer.cpp;dcloudgahp_common.cpp" ${C_SBIN}
+	condor_exe( deltacloud_server "dcloudgahp_main.cpp;dcloudgahp_commands.cpp;PipeBuffer.cpp;dcloudgahp_common.cpp" ${C_SBIN}
 	"${LIBDELTACLOUD_FOUND}" OFF )
 
 else()

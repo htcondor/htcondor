@@ -117,7 +117,7 @@ bool DCloudJobAdMatch( const ClassAd *job_ad )
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
 
-	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.Value(), "dcloud", 6 ) == 0) ) 
+	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.Value(), "deltacloud", 6 ) == 0) ) 
 	{
 		return true;
 	}
@@ -170,9 +170,9 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	gahp_path = param( "DCLOUD_GAHP" );
+	gahp_path = param( "DELTACLOUD_GAHP" );
 	if ( gahp_path == NULL ) {
-		error_string = "DCLOUD_GAHP not defined";
+		error_string = "DELTACLOUD_GAHP not defined";
 		goto error_exit;
 	}
 
@@ -191,8 +191,8 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || strcasecmp( token, "dcloud" ) ) {
-			error_string.sprintf( "%s not of type dcloud",
+		if ( !token || strcasecmp( token, "deltacloud" ) ) {
+			error_string.sprintf( "%s not of type deltacloud",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -251,8 +251,8 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		str.Tokenize();
 
 		token = str.GetNextToken( " ", false );
-		if ( !token || strcasecmp( token, "dcloud" ) ) {
-			error_string.sprintf( "%s not of type dcloud",
+		if ( !token || strcasecmp( token, "deltacloud" ) ) {
+			error_string.sprintf( "%s not of type deltacloud",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -652,13 +652,13 @@ void DCloudJob::doEvaluateState()
 
 				if ( wantResubmit ) {
 					wantResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to DCloud because %s==TRUE\n",
+					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Deltacloud because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
 				}
 
 				if ( doResubmit ) {
 					doResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to DCloud (last submit failed)\n",
+					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Deltacloud (last submit failed)\n",
 						procID.cluster, procID.proc );
 				}
 
@@ -923,7 +923,7 @@ void DCloudJob::SetRemoteJobId( const char *instance_name, const char *instance_
 {
 	MyString full_job_id;
 	if ( instance_name && instance_name[0] ) {
-		full_job_id.sprintf( "dcloud %s", instance_name );
+		full_job_id.sprintf( "deltacloud %s", instance_name );
 		if ( instance_id && instance_id[0] ) {
 			full_job_id.sprintf_cat( " %s", instance_id );
 		}

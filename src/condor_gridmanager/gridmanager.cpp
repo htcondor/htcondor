@@ -355,7 +355,7 @@ Init()
 	jobTypes.Append( new_type );
 	
 	new_type = new JobType;
-	new_type->Name = strdup( "DCloud" );
+	new_type->Name = strdup( "Deltacloud" );
 	new_type->InitFunc = DCloudJobInit;
 	new_type->ReconfigFunc = DCloudJobReconfig;
 	new_type->AdMatchFunc = DCloudJobAdMatch;

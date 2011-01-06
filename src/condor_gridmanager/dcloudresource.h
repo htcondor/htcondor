@@ -28,7 +28,7 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
-#define DCLOUD_RESOURCE_NAME "dcloud"
+#define DCLOUD_RESOURCE_NAME "deltacloud"
   
 class DCloudJob;
 

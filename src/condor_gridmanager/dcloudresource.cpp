@@ -72,9 +72,9 @@ DCloudResource::DCloudResource( const char *resource_name,
 	gahp = NULL;
 	status_gahp = NULL;
 
-	char * gahp_path = param( "DCLOUD_GAHP" );
+	char * gahp_path = param( "DELTACLOUD_GAHP" );
 	if ( gahp_path == NULL ) {
-		dprintf(D_ALWAYS, "DCLOUD_GAHP not defined! \n");
+		dprintf(D_ALWAYS, "DELTACLOUD_GAHP not defined! \n");
 		return;
 	}
 
@@ -113,7 +113,7 @@ void DCloudResource::Reconfig()
 
 const char *DCloudResource::ResourceType()
 {
-	return "dcloud";
+	return "deltacloud";
 }
 
 const char *DCloudResource::GetHashName()
@@ -125,7 +125,7 @@ void DCloudResource::PublishResourceAd( ClassAd *resource_ad )
 {
 	BaseResource::PublishResourceAd( resource_ad );
 
-	resource_ad->Assign( "DCloudUserName", m_username );
+	resource_ad->Assign( "DeltacloudUserName", m_username );
 }
 
 // we will use amazon command "status_all" to do the Ping work
@@ -178,7 +178,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 		return BSR_PENDING;
 	}
 	if ( rc != 0 ) {
-		dprintf( D_ALWAYS, "Error attempting a DCloud batch status query: %s\n", status_gahp->getErrorString() );
+		dprintf( D_ALWAYS, "Error attempting a Deltacloud batch status query: %s\n", status_gahp->getErrorString() );
 		return BSR_ERROR;
 	}
 
