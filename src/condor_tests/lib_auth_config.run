@@ -22,7 +22,7 @@
 my @got;
 $testdesc =  'lib_auth_config - runs tests of IpVerify';
 $testname = "lib_auth_config";
-$test = "../testbin_dir/condor_test_auth";
+$test = "condor_test_auth";
 $inputdir = "lib_auth_config_tests";
 
 print scalar localtime() . "\n";

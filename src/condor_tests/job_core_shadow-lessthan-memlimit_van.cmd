@@ -8,6 +8,6 @@ should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
 Notification = NEVER
 wantcorefile = false
-arguments = 0
+arguments = 180
 queue 1
 

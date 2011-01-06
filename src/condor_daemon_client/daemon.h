@@ -146,7 +146,7 @@ public:
 			a problem and the error() string above is set, this result
 			code will specify the type of error encountered.  The
 			CAResult enum and some helper functions to convert it
-			to/from strings are in condor_c++_util/command_string.[Ch]
+			to/from strings are in condor_utils/command_string.[Ch]
 		*/
 	CAResult errorCode( void ) { return _error_code; }
 

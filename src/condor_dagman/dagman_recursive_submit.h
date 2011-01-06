@@ -119,6 +119,7 @@ struct SubmitDagDeepOptions
 	}
 };
 
+extern "C" {
 /** Run condor_submit_dag on the given DAG file.
 	@param opts: the condor_submit_dag options
 	@param dagFile: the DAG file to process
@@ -128,5 +129,6 @@ struct SubmitDagDeepOptions
 */
 int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 			const char *dagFile, const char *directory, bool isRetry );
+}
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H

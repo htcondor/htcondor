@@ -46,7 +46,7 @@ INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 			DWORD temp = GetLastError();
 			WCHAR buffer[256];
 			_ltow(temp, buffer, 10);
-			OutputDebugString(buffer);
+			OutputDebugString((LPCSTR)buffer);
 		}
 		
 		return true;
@@ -116,7 +116,7 @@ void OnTimer(UINT nIDEvent)
 	si[0].hStdOutput = hBirdq_Wr;
 	si[0].cb = sizeof(si[0]);
 
-	bSuccess = CreateProcess(L"condor_q.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[0], &pi[0]);
+	bSuccess = CreateProcess((LPCSTR)L"condor_q.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[0], &pi[0]);
 	if(bSuccess)
 	{
 		if(WaitForSingleObject(pi[0].hProcess, 2000) == WAIT_TIMEOUT)
@@ -151,7 +151,7 @@ void OnTimer(UINT nIDEvent)
 	si[1].hStdOutput = hBirdst_Wr;
 	si[1].cb = sizeof(si[1]);
 
-	bSuccess = CreateProcess(L"condor_status.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[1], &pi[1]);
+	bSuccess = CreateProcess((LPCSTR)L"condor_status.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[1], &pi[1]);
 	if(bSuccess)
 	{
 		if(WaitForSingleObject(pi[1].hProcess, 2000) == WAIT_TIMEOUT)

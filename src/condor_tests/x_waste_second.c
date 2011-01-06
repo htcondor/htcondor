@@ -44,26 +44,26 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include <sys/time.h>
+//#include <sys/time.h>
+#include <time.h>
 
 void
 x_waste_a_second()
 {
 	int i;
-	struct timeval old_tv;
-	struct timeval new_tv;
+	//struct timeval old_tv;
+	//struct timeval new_tv;
+	time_t old_tv;
+	time_t new_tv;
 
-	gettimeofday( &old_tv, NULL );
+	old_tv = time(NULL);
 
 	while ( 1 ) {
 		for ( i = 0; i < 10000; i++ ) {
 		}
-		gettimeofday( &new_tv, NULL );
-		if ( ( new_tv.tv_sec > old_tv.tv_sec + 1 ) ||
-			 ( new_tv.tv_sec == old_tv.tv_sec + 1 &&
-			   new_tv.tv_usec > old_tv.tv_usec ) ) {
+		new_tv = time(NULL);
+		if ( new_tv > old_tv + 1 )
 			break;
-		}
 	}
 }
 

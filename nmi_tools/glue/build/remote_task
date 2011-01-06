@@ -1,0 +1,173 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+######################################################################
+###### WARNING!!!  The return value of this script has special  ######
+###### meaning, so you can NOT just call die().  you MUST       ######
+###### use the special c_die() method so we return 3!!!!        ######
+######################################################################
+######################################################################
+# Perform a given build task, and return the status of that task
+# 0 = success
+# 1 = build failed
+# 3 = internal fatal error (a.k.a. die)
+######################################################################
+
+use Cwd;
+my $BaseDir = getcwd();
+
+my $SrcDir = "$BaseDir/src";
+my $msconfigDir = "$BaseDir/msconfig";
+my $PublicDir = "$BaseDir/public";
+
+my $TAR_TASK 	= "remote_task.create_tar";
+my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar";
+my $CONFIG_TASK = "remote_task.reconfig_package";
+my $RPM_TASK	= "remote_task.create_rpm";
+my $RPM_CHECK_TASK	= "remote_task.check_rpm";
+my $DEB_TASK	= "remote_task.create_deb";
+my $DEB_CHECK_TASK	= "remote_task.check_deb";
+
+my $taskname = "";
+my $execstr = "";
+# autoflush our STDOUT
+$| = 1;
+open STDERR,">&STDOUT";
+
+
+## TSTCLAIR->THAWAN et.al ok below is the conundrum as it relates to packaging
+## The remote declare needs to be created/updated for (N) different packages
+## b/c of the issues with multiple PATHS on install targets.  As a result
+## cmake will need to be called again with the same args, which you may want
+## to store in a file during the remote pre phase.
+
+if( ! defined $ENV{_NMI_TASKNAME} ) {
+    print "NMI_TASKNAME not defined, building tar.gz package as default";
+    $taskname = $TAR_TASK;
+
+}else {
+	$taskname = $ENV{_NMI_TASKNAME};
+}
+
+# Checking task type
+if ($taskname eq $TAR_TASK) { 
+	#Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
+	#Reconfigure cmake variables for stripped tarball build
+
+	#Read back configuration from remote_pre stage
+	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+	while(<CMAKECONFIG>){
+		my($line) = $_;
+		$execstr = $line;
+		last;
+	}
+	close (CMAKECONFIG);
+
+	#Append extra argument
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make package && make install && make tests";
+
+} elsif  ($taskname eq $UNSTRIPPED_TASK){
+	#Reconfigure cmake variables for native package build
+
+	#Read back configuration from remote_pre stage
+	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+	while(<CMAKECONFIG>){
+		my($line) = $_;
+		$execstr = $line;
+		last;
+	}
+	close (CMAKECONFIG);
+
+	#Append extra argument
+	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make package";
+} elsif  ($taskname eq $RPM_TASK){
+	#Building RPM
+
+	#Reconfigure cmake variables for native package build	
+	#Read back configuration from remote_pre stage
+	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+	while(<CMAKECONFIG>){
+		my($line) = $_;
+		$execstr = $line;
+		last;
+	}
+	close (CMAKECONFIG);
+	
+	#Append extra argument
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
+
+} elsif  ($taskname eq $RPM_CHECK_TASK){
+	#Print packaging log to stdout
+	#List file in the package
+	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
+
+} elsif  ($taskname eq $DEB_TASK){
+	#Building Debian package
+
+	#Reconfigure cmake variables for native package build	
+	#Read back configuration from remote_pre stage
+	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+	while(<CMAKECONFIG>){
+		my($line) = $_;
+		$execstr = $line;
+		last;
+	}
+	close (CMAKECONFIG);
+	
+	#Append extra argument
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
+
+} elsif  ($taskname eq $DEB_CHECK_TASK){
+	#Print package summary
+	#Would like to run lintian, but it is not avialable on 
+	#all NMI machine
+	$execstr= "dpkg-deb -I *.deb";
+	
+}
+
+print "------------------------- ENV DUMP ------------------------\n";
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+	#path hack b/c nmi pre-reqs & paths are broken on windows.
+	$ENV{BASE_DIR} = "$BaseDir";
+    system("env");
+    #print(`cmd /c dir /b /s build.win.bat`);
+    $execstr= "nmi_tools\\glue\\build\\build.win.bat"; ##devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE";
+	# need to make the tests here. 
+
+} else {
+    $ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
+    system("env");
+}
+print "------------------------- ENV DUMP ------------------------\n";
+
+######################################################################
+# build
+######################################################################
+print "$execstr\n";
+$buildstatus = system("$execstr");
+
+# now check the build status and return appropriately
+if( $buildstatus == 0 ) {
+    print "Building $taskname: SUCCESS\n";
+    exit 0;
+}
+
+print "Building $taskname: FAILURE ($buildstatus)\n";
+exit 1;

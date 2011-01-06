@@ -55,7 +55,7 @@ long ProcAPI::boottime_expiration = 0;
 #endif // LINUX
 #else // WIN32
 
-#include "ntsysinfo.h"
+#include "ntsysinfo.WINDOWS.h"
 static CSysinfo ntSysInfo;	// for getting parent pid on NT
 
 	// Windows gives us birthday in 100ns ticks since 01/01/1601

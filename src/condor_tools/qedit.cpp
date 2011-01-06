@@ -129,7 +129,7 @@ main(int argc, char *argv[])
 	}
 
 	// Open job queue 
-	q = ConnectQ( schedd.addr() );
+	q = ConnectQ( schedd.addr(), 0, false, NULL, NULL, schedd.version() );
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 
 				 schedd.addr() );

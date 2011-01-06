@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 #else
-#include "XInterface.h"
+#include "XInterface.unix.h"
 #endif
 
 #include "my_hostname.h"

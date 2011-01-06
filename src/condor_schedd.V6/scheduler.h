@@ -45,7 +45,6 @@
 #include "autocluster.h"
 #include "shadow_mgr.h"
 #include "enum_utils.h"
-//#include "self_draining_queue.h"
 #include "self_draining_queue.h"
 #include "schedd_cronmgr.h"
 #include "condor_classad_namedlist.h"
@@ -662,7 +661,7 @@ private:
 										ArgList const &args,
 										Env const *env, 
 										const char* name, bool is_dc,
-										bool wants_pipe );
+										bool wants_pipe, bool want_udp );
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);

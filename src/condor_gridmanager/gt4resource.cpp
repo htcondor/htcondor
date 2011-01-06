@@ -50,7 +50,7 @@ struct GT4ProxyDelegation {
 	time_t proxy_expire;
 	time_t last_proxy_refresh;
 	Proxy *proxy;
-	MyString error_message;
+	std::string error_message;
 };
 
 GT4Resource *GT4Resource::FindOrCreateResource( const char *resource_name,
@@ -157,16 +157,16 @@ bool GT4Resource::Init()
 		// TODO This assumes that at least one GT4Job has already
 		// instantiated a GahpClient. Need a better solution.
 /*
-	MyString gahp_name;
-	gahp_name.sprintf( "GT4/%s", proxyFQAN );
+	std::string gahp_name;
+	sprintf( gahp_name, "GT4/%s", proxyFQAN );
 
-	gahp = new GahpClient( gahp_name.Value() );
+	gahp = new GahpClient( gahp_name.c_str() );
 
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	deleg_gahp = new GahpClient( gahp_name.Value() );
+	deleg_gahp = new GahpClient( gahp_name.c_str() );
 
 	deleg_gahp->setNotificationTimerId( delegationTimerId );
 	deleg_gahp->setMode( GahpClient::normal );
@@ -214,18 +214,18 @@ const char *GT4Resource::ResourceType()
 const char *GT4Resource::CanonicalName( const char *name )
 {
 /*
-	static MyString canonical;
+	static std::string canonical;
 	char *host;
 	char *port;
 
 	parse_resource_manager_string( name, &host, &port, NULL, NULL );
 
-	canonical.sprintf( "%s:%s", host, *port ? port : "2119" );
+	sprintf( canonical, "%s:%s", host, *port ? port : "2119" );
 
 	free( host );
 	free( port );
 
-	return canonical.Value();
+	return canonical.c_str();
 */
 	return name;
 }
@@ -233,11 +233,11 @@ const char *GT4Resource::CanonicalName( const char *name )
 const char *GT4Resource::HashName( const char *resource_name,
 								   const char *proxy_subject )
 {
-	static MyString hash_name;
+	static std::string hash_name;
 
-	hash_name.sprintf( "gt4 %s#%s", resource_name, proxy_subject );
+	sprintf( hash_name, "gt4 %s#%s", resource_name, proxy_subject );
 
-	return hash_name.Value();
+	return hash_name.c_str();
 }
 
 const char *GT4Resource::GetHashName()
@@ -362,10 +362,10 @@ const char *GT4Resource::getDelegationError( Proxy *job_proxy )
 
 	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
 		if ( next_deleg->proxy == job_proxy ) {
-			if ( next_deleg->error_message.IsEmpty() ) {
+			if ( next_deleg->error_message.empty() ) {
 				return NULL;
 			} else {
-				return next_deleg->error_message.Value();
+				return next_deleg->error_message.c_str();
 			}
 		}
 	}
@@ -673,20 +673,20 @@ dprintf(D_ALWAYS,"JEF: Telling jobs to switch to Gram 42\n");
 		}
 	}
 
-	MyString gahp_name;
+	std::string gahp_name;
 	if ( m_isGram42 ) {
-		gahp_name.sprintf( "GT42/%s", proxyFQAN );
+		sprintf( gahp_name, "GT42/%s", proxyFQAN );
 	} else {
-		gahp_name.sprintf( "GT4/%s", proxyFQAN );
+		sprintf( gahp_name, "GT4/%s", proxyFQAN );
 	}
 
-	new_gahp = new GahpClient( gahp_name.Value() );
+	new_gahp = new GahpClient( gahp_name.c_str() );
 
 	new_gahp->setNotificationTimerId( pingTimerId );
 	new_gahp->setMode( GahpClient::normal );
 	new_gahp->setTimeout( gahpCallTimeout );
 
-	new_deleg_gahp = new GahpClient( gahp_name.Value() );
+	new_deleg_gahp = new GahpClient( gahp_name.c_str() );
 
 	new_deleg_gahp->setNotificationTimerId( delegationTimerId );
 	new_deleg_gahp->setMode( GahpClient::normal );

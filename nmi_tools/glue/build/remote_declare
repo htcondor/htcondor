@@ -1,0 +1,82 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+######################################################################
+# script to drive Condor build steps (user tasks)
+######################################################################
+use Cwd;
+
+
+my $BaseDir = getcwd();
+my $buildid_file = "BUILD-ID";
+my $buildid;
+
+my $TAR_TASK 		= "remote_task.create_tar\n";
+my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar\n";
+my $RPM_TASK		= "remote_task.create_rpm\n";
+my $RPM_CHECK_TASK	= "remote_task.check_rpm\n";
+my $DEB_TASK		= "remote_task.create_deb\n";
+my $DEB_CHECK_TASK	= "remote_task.check_deb\n";
+
+# autoflush our STDOUT
+$| = 1;
+
+######################################################################
+# Detecting platform and generating task list
+######################################################################
+print "Generating tasklist\n";
+
+open (TASKLIST, ">tasklist.nmi" ) || die "Can't open tasklist.nmi for writing: $!\n";
+
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+	#Windows
+	print TASKLIST $TAR_TASK;
+} else {
+	#Everything else
+	print TASKLIST $UNSTRIPPED_TASK;
+
+	#Add native package build on Debian and Redhat
+	if ($ENV{NMI_PLATFORM} =~ /deb/) {
+		#Debian
+		print TASKLIST $DEB_TASK;
+		print TASKLIST $DEB_CHECK_TASK;
+	
+	} elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
+		#Redhat (3,4,5)
+		print TASKLIST $RPM_TASK;
+		print TASKLIST $RPM_CHECK_TASK;
+	}
+
+	print TASKLIST $TAR_TASK;
+}
+
+close (TASKLIST);
+
+######################################################################
+# Print content of tasklist
+######################################################################
+print "Generated tasklist\n";
+open ( TASKFILE, "<tasklist.nmi") || die "Can't open tasklist.nmi for reading: $!\n";
+while(<TASKFILE>){
+	my($line) = $_;
+	print "\t$line";
+}
+close (TASKFILE);
+exit 0;

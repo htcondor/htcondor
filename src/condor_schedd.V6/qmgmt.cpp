@@ -2795,7 +2795,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			if ( JobQueue->LookupClassAd(cluster_key, clusterad) &&
 				 JobQueue->LookupClassAd(key,procad))
 			{
-				dprintf(D_FULLDEBUG,"New job: %s",key);
+				dprintf(D_FULLDEBUG,"New job: %s\n",key);
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);

@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xsl:stylesheet version="1.0"
+   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+   xmlns:wix="http://schemas.microsoft.com/wix/2006/wi"
+   xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">
+  <xsl:output indent="yes" method="xml"/>
+
+  <xsl:template match="/wix:Wix">
+    <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+      <Product xmlns="http://schemas.microsoft.com/wix/2006/wi"
+       Id="@CPACK_WIX_PRODUCT_GUID@" Name="@CPACK_PACKAGE_FILE_NAME@"
+       Language="1033" Version="@CPACK_PACKAGE_VERSION@"
+       Manufacturer="@CPACK_PACKAGE_VENDOR@" UpgradeCode="@CPACK_WIX_UPGRADE_GUID@">
+        <Package InstallerVersion="300" Compressed="yes"/>
+        <Media Id="1" Cabinet="media1.cab" EmbedCab="yes"/>
+        <!-- Always force the root drive to be C: -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+          <Directory Id="INSTALLDIR" Name="condor">
+           <!-- Merge module used to bind VC runtime *do not* copy in the files using include (InstallRequiredSystemLibraries) -->
+           <Merge Id="VC90CRT" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm"/>
+           <Merge Id="VC90Policy" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"/>
+
+            <!-- Update the registry, ENV, and FW -->
+           <Component Id="CondorRegNEnv" Guid="E282D017-976B-4685-A330-5180B27277C0">
+             <RegistryKey Root="HKLM" Key="SOFTWARE\Condor" Action="createAndRemoveOnUninstall" >
+                 <RegistryValue Type="string" Name="CONDOR_CONFIG" Value="[INSTALLDIR]condor_config" KeyPath="yes" />
+                 <RegistryValue Type="string" Name="RELEASE_DIR" Value="[INSTALLDIR]"/>
+             </RegistryKey>
+             <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
+           </Component>
+          </Directory>
+        </Directory>
+
+        <Condition Message="This application is only supported on Windows XP(SP2) or higher">
+          <![CDATA[(VersionNT >= 501)]]>
+        </Condition>
+
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+
+        <!--Find the location of the Java installation-->
+        <Property Id="JVMVERSION">
+          <RegistrySearch Id="JavaVersionSearch" Root="HKLM" Type="raw" Key="SOFTWARE\JavaSoft\Java Runtime Environment" Name="CurrentVersion" />
+        </Property>
+        <Property Id="JVMDIR">
+          <RegistrySearch Id="JavaDirSearch" Root="HKLM" Type="directory" Key="SOFTWARE\JavaSoft\Java Runtime Environment\[JVMVERSION]" Name="JavaHome" />
+        </Property>
+        <SetProperty Id="JVMLOCATION" Value="[JVMDIR]bin\java.exe" After="AppSearch"/>
+
+        <Property Id="POOLHOSTNAME" Value="$$(FULL_HOSTNAME)" />
+        <!--Permissions properties-->
+        <Property Id="HOSTALLOWREAD" Value="*" />
+        <Property Id="HOSTALLOWWRITE" Value="your.domain.com, *.cs.wisc.edu" />
+        <Property Id="HOSTALLOWADMINISTRATOR" Value="$$(FULL_HOSTNAME)" />
+        <!--VM Universe properties-->
+        <Property Id="VMVERSION" Value="server1.0" />
+        <Property Id="VMMEMORY" Value="256" />
+        <Property Id="VMMAXNUMBER" Value="$$(NUM_CPUS)" />
+        <Property Id="PERLLOCATION" Value="PERL.EXE" />
+        <!--HDFS properties-->
+        <Property Id="HDFSPORT" Value="9000" />
+        <Property Id="HDFSWEBPORT" Value="8000" />
+        <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch" />
+        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]/hadoop_name" After="AppSearch" />
+        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]/hadoop_data" After="AppSearch" />
+        <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
+
+        <!-- Begin custom actions and install sequence -->
+        <CustomAction Id="CondorConfigLocal"
+                 Script="vbscript">
+          <![CDATA[
+            Set fso = CreateObject("Scripting.FileSystemObject")
+            path = Session.Property("INSTALLDIR")
+            Set installpath = fso.GetFolder(path)
+            strippedPath = installpath.ShortPath
+            if Not fso.FolderExists(path & "log") Then
+                Set objFolderLog = fso.CreateFolder(path & "log")
+            End if
+            if Not fso.FolderExists(path & "spool") Then
+                Set objFolderSpool = fso.CreateFolder(path & "spool")
+            End if
+            if Not fso.FolderExists(path & "execute") Then
+                 Set objFolderExec = fso.CreateFolder(path & "execute")
+            End if
+             if Not fso.FolderExists(path & "config") Then
+                 Set objFolderExec = fso.CreateFolder(path & "config")
+            End if
+            
+            daemonList = "MASTER"
+            
+            if Session.Property("SUBMITJOBS") = "Y" Then
+              daemonList = daemonList & " SCHEDD"
+            End If
+
+            Set Myfh = fso.OpenTextFile(path & "config\\local.config", 2, True)
+            if Session.Property("NEWPOOL") = "Y" Then
+              Myfh.WriteLine("CONDOR_HOST=$$(FULL_HOSTNAME)")
+              Myfh.WriteLine("COLLECTOR_NAME=" & Session.Property("POOLNAME") )
+              daemonList = daemonList & " COLLECTOR NEGOTIATOR"
+            Elseif Session.Property("NEWPOOL") = "N" THEN
+              Myfh.WriteLine("CONDOR_HOST=" & Session.Property("POOLHOSTNAME") )
+            End If
+            
+            Myfh.WriteLine("UID_DOMAIN=" & Session.Property("ACCOUNTINGDOMAIN") )
+            Myfh.WriteLine("CONDOR_ADMIN=" & Session.Property("CONDOREMAIL") )
+            Myfh.WriteLine("SMTP_SERVER=" & Session.Property("SMTPSERVER") )
+            jvmLoc = Session.Property("JVMLOCATION")
+            Set jvmPath = fso.GetFile(jvmLoc)
+            jvmLoc = jvmPath.ShortPath
+            Myfh.WriteLine("JAVA=" & jvmLoc )
+
+            Select Case Session.Property("RUNJOBS")
+            Case "A"
+              Myfh.WriteLine("START=TRUE")
+              Myfh.WriteLine("SUSPEND=FALSE")
+              Myfh.WriteLine("WANT_SUSPEND=FALSE")
+              Myfh.WriteLine("WANT_VACATE=FALSE")
+              Myfh.WriteLine("PREEMPT=FALSE")
+              daemonList = daemonList & " STARTD KBDD"
+            Case "N"
+              Myfh.WriteLine("START=FALSE")
+            Case "I"
+              Myfh.WriteLine("START=KeyboardIdle > $$(StartIdleTime)" )
+              Myfh.WriteLine("SUSPEND=$$(UWCS_SUSPEND)")
+              Myfh.WriteLine("CONTINUE=KeyboardIdle > $$(ContinueIdleTime)" )
+              daemonList = daemonList & " STARTD KBDD"
+            Case "C"
+              Myfh.WriteLine("START=$$(UWCS_START)" )
+              Myfh.WriteLine("CONTINUE=$$(UWCS_CONTINUE)")
+              Myfh.WriteLine("SUSPEND=$$(UWCS_SUSPEND)")
+              Myfh.WriteLine("WANT_SUSPEND=$$(UWCS_WANT_SUSPEND)" )
+              Myfh.WriteLine("WANT_VACATE=$$(UWCS_WANT_VACATE)" )
+              Myfh.WriteLine("WANT_PREEMPT=$$(UWCS_WANT_PREEMPT)" )
+              daemonList = daemonList & " STARTD KBDD"
+            End Select
+            Select Case Session.Property("VACATEJOBS")
+            Case "N"
+              Myfh.WriteLine("WANT_VACATE=FALSE")
+              Myfh.WriteLine("WANT_SUSPEND=TRUE")
+            Case "Y"
+              Myfh.WriteLine("WANT_VACATE=$$(UWCS_WANT_VACATE)")
+              Myfh.WriteLine("WANT_SUSPEND=$$(UWCS_WANT_SUSPEND)")
+            End Select
+            
+            Myfh.WriteLine("ALLOW_READ=" & Session.Property("HOSTALLOWREAD") )
+            Myfh.WriteLine("ALLOW_WRITE=" & Session.Property("HOSTALLOWWRITE") )
+            Myfh.WriteLine("ALLOW_ADMINISTRATOR=" & Session.Property("HOSTALLOWADMINISTRATOR") )
+            
+            If Session.Property("USEVMUNIVERSE") = "Y" Then
+              Set VMfh = fso.OpenTextFile(path & "config\\vm.config", 2, True)
+              VMfh.WriteLine("VM_TYPE=vmware")
+              VMfh.WriteLine("VM_VERSION=" & Session.Property("VMVERSION") )
+              VMfh.WriteLine("VM_MAX_NUMBER=" & Session.Property("VMMAXNUMBER") )
+              VMfh.WriteLine("VM_MEMORY=" & Session.Property("VMMEMORY") )
+              VMfh.WriteLine("VMWARE_PERL=" & Session.Property("PERLLOCATION") )
+              Select Case Session.Property("VMNETWORKING")
+              Case "N"
+                VMfh.WriteLine("VM_NETWORKING=FALSE")
+              Case "A"
+                VMfh.WriteLine("VM_NETWORKING=TRUE")
+                VMfh.WriteLine("VM_NETWORKING_TYPE=nat")
+              Case "B"
+                VMfh.WriteLine("VM_NETWORKING=TRUE")
+                VMfh.WriteLine("VM_NETWORKING_TYPE=bridge")
+              Case "C"
+                VMfh.WriteLine("VM_NETWORKING=TRUE")
+                VMfh.WriteLine("VM_NETWORKING_TYPE=nat, bridge")
+                VMfh.WriteLine("VM_NETWORKING_DEFAULT_TYPE=nat")
+              End Select
+              VMfh.Close
+            End if
+
+            If Session.Property("USEHDFS") = "Y" Then
+              daemonList = daemonList & " HDFS"
+              Set HDFSfh = fso.OpenTextFile(path & "config\\hdfs.config", 2, True)
+              namenodeAddr = Session.Property("NAMENODE")
+              HDFSfh.WriteLine("HDFS_NODETYPE=" & Session.Property("HDFSMODE") )
+              HDFSfh.WriteLine("HDFS_NAMENODE=" & namenodeAddr & ":" & Session.Property("HDFSPORT") )
+              HDFSfh.WriteLine("HDFS_NAMENODE_WEB=" namenodeAddr  & ":" & Session.Property("HDFSWEBPORT") )
+              HDFSfh.WriteLine("HDFS_HOME=" & Session.Property("HDFSHOME") )
+              HDFSfh.WriteLine("HDFS_NAMENODE_DIR=" & Session.Property("HDFSNAMEDIR") )
+              HDFSfh.WriteLine("HDFS_DATANODE_DIR=" & Session.Property("HDFSDATADIR") )
+              HDFSfh.Close
+            End if
+            
+            Myfh.WriteLine("DAEMON_LIST=" & daemonList)
+            Myfh.Close
+ 
+            Set Configfile = fso.OpenTextFile(path & "condor_config", 1, True)
+            configTxt = Configfile.ReadAll
+            Configfile.Close
+            
+            configNewTxt = Replace(configTxt, "RELEASE_DIR		= /usr/local/condor", "RELEASE_DIR = " & strippedPath)
+            configNewTxt = Replace(configNewTxt, "LOCAL_DIR		= $$(TILDE)", "LOCAL_DIR = " & strippedPath)
+            configNewTxt = Replace(configNewTxt, "#REQUIRE_LOCAL_CONFIG_FILE = TRUE", "REQUIRE_LOCAL_CONFIG_FILE = FALSE")
+            configNewTxt = Replace(configNewTxt, "LOCAL_CONFIG_FILE	= $$(LOCAL_DIR)/condor_config.local", "#LOCAL_CONFIG_FILE	= $$(LOCAL_DIR)/condor_config.local")
+            
+            Set Configfile = fso.OpenTextFile(path & "condor_config", 2, True)
+            Configfile.WriteLine configNewTxt
+            Configfile.Close
+           ]]>
+        </CustomAction>
+
+        <InstallExecuteSequence>
+          <Custom Action="CondorConfigLocal" After="InstallFinalize">Not Installed</Custom>
+          <ScheduleReboot After="CondorConfigLocal" />
+        </InstallExecuteSequence>
+        <!-- End custom actions and install sequence -->
+
+        <!-- Feature Block e.g. ComponentRef's -->
+        <Feature Id="CondorWindows" Title="Condor Installation" Level="1" Display="expand">
+          <Feature Id="Installation" Title="Condor Installation Files" Level="1"  ConfigurableDirectory="INSTALLDIR">
+            <xsl:apply-templates select="wix:Fragment" mode="CompRef"/>
+            <MergeRef Id="VC90CRT"/>
+            <MergeRef Id="VC90Policy"/>
+            <ComponentRef Id="CondorRegNEnv" />
+          </Feature>
+          <!-- Typical/Complete/Custom, below is complete. 
+          <Feature Id="Debugging Symbols" Title="Condor Debug Symbol Files" Description="Files used to debug Condor" Level='1000'>
+            <xsl:apply-templates select="wix:Fragment" mode="CompRef">
+              <xsl:with-param name="ftype">pdb</xsl:with-param>
+            </xsl:apply-templates>
+          </Feature> -->
+        </Feature>
+
+        <!-- UI Flow + our custom dialogs -->
+        <UI Id="MyWixUI_FeatureTree">
+            <UIRef Id="WixUI_InstallDir" />
+            <DialogRef Id="CondorPoolCfgDlg" />
+            <DialogRef Id="CondorExecCfgDlg" />
+            <DialogRef Id="CondorDomainCfgDlg" />
+            <DialogRef Id="CondorEmailCfgDlg" />
+            <DialogRef Id="CondorJavaCfgDlg" />
+            <DialogRef Id="CondorPermCfgDlg" />
+            <DialogRef Id="CondorVMCfgDlg" />
+            <DialogRef Id="CondorHDFSCfgDlg" />
+            <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="CondorPoolCfgDlg" Order="2">LicenseAccepted = "1"</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="CondorHDFSCfgDlg">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg">1</Publish>
+        </UI>
+
+        <!--<UIRef Id="WixUI_FeatureTree" />-->
+        <UIRef Id="WixUI_ErrorProgressText" />
+
+        <!-- Update  -->
+        <WixVariable Id="WixUIBannerBmp" Overridable="yes" Value="@CPACK_WIX_BITMAP_FOLDER@/bannrbmp.bmp"/>
+        <WixVariable Id="WixUIDialogBmp" Overridable="yes" Value="@CPACK_WIX_BITMAP_FOLDER@/dlgbmp.bmp"/>
+
+      </Product>
+
+      <!--Output the fragment info which heat generates-->
+      <xsl:apply-templates select="wix:Fragment" mode="CopyOf"/>
+
+    </Wix>
+  </xsl:template>
+
+  <!-- ************************* Begin Templates ************************* -->
+  <!-- Begin CompRef Templates -->
+  <xsl:template match="wix:Component" mode="CompRef">
+    <xsl:element name="ComponentRef" xmlns="http://schemas.microsoft.com/wix/2006/wi" >
+      <xsl:attribute name="Id">
+        <xsl:value-of select="@Id" />
+      </xsl:attribute>
+    </xsl:element>
+  </xsl:template>
+
+  <xsl:template match="wix:Directory" mode="CompRef" >
+    <xsl:apply-templates select="wix:Component" mode="CompRef"/>
+    <xsl:apply-templates select="wix:Directory" mode="CompRef"/>
+  </xsl:template>
+
+  <xsl:template match="wix:DirectoryRef" mode="CompRef">
+    <xsl:apply-templates select="wix:Component" mode="CompRef"/>
+    <xsl:apply-templates select="wix:Directory" mode="CompRef"/>
+  </xsl:template>
+
+  <xsl:template match="wix:Fragment" mode="CompRef">
+    <xsl:param name="ftype"/>
+    <xsl:apply-templates select="wix:DirectoryRef" mode="CompRef"/>
+  </xsl:template>
+
+  <!-- Begin CopyOf Templates -->
+  <xsl:template match="wix:File" mode="CopyOf">    
+    <xsl:choose>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_master.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX1" Name="condor_master.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+          <ServiceInstall Id="CondorService" Description="condor" DisplayName="condor" ErrorControl="normal"  Name="condor" Start="auto" Type="ownProcess" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceControl Id="StartCondorService" Name="condor" Start="install" Wait="no" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceControl Id="StopCondorService" Name="condor" Stop="both" Wait="yes" Remove="uninstall" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+       </xsl:when>
+      <xsl:otherwise>
+        <xsl:copy>
+          <xsl:copy-of select="@*"/>
+        </xsl:copy> 
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template match="wix:Component" mode="CopyOf">
+    <xsl:copy>
+      <xsl:copy-of select="@*"/>
+      <xsl:apply-templates select="wix:File" mode="CopyOf"/>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="wix:Directory" mode="CopyOf" >
+    <xsl:copy>
+      <xsl:copy-of select="@*"/>
+      <xsl:apply-templates select="wix:Component" mode="CopyOf"/>
+      <xsl:apply-templates select="wix:Directory" mode="CopyOf"/>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="wix:DirectoryRef" mode="CopyOf">
+    <xsl:copy>
+      <xsl:copy-of select="@*"/>
+      <xsl:apply-templates select="wix:Component" mode="CopyOf"/>
+      <xsl:apply-templates select="wix:Directory" mode="CopyOf"/>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="wix:Fragment" mode="CopyOf">
+    <xsl:copy>
+      <xsl:copy-of select="@*"/>
+      <xsl:apply-templates select="wix:DirectoryRef" mode="CopyOf"/>
+    </xsl:copy>
+  </xsl:template>
+
+</xsl:stylesheet>

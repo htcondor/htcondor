@@ -45,8 +45,8 @@
 extern CStarter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
-const char* JOB_AD_FILENAME = ".job.ad";
-const char* MACHINE_AD_FILENAME = ".machine.ad";
+extern const char* JOB_AD_FILENAME;
+extern const char* MACHINE_AD_FILENAME;
 
 
 /* OsProc class implementation */
@@ -348,26 +348,19 @@ OsProc::StartJob(FamilyInfo* family_info)
 				 args_string.Value() );
 	}
 
-	// Write the job and machine ClassAds to the execute directory
-	if ( ! WriteAdsToExeDir() ) {
-		dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
-			"write classad files.\n" );
+	MyString path;
+	path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+			 	DIR_DELIM_CHAR,
+				MACHINE_AD_FILENAME);
+	if( ! job_env.SetEnv("_CONDOR_MACHINE_AD", path.Value()) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
 	}
-	else {
-		MyString path;
-		path.sprintf("%s%c%s", Starter->GetWorkingDir(),
-				 	DIR_DELIM_CHAR,
-					MACHINE_AD_FILENAME);
-		if( ! job_env.SetEnv("_CONDOR_MACHINE_AD", path.Value()) ) {
-			dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
-		}
 
-		path.sprintf("%s%c%s", Starter->GetWorkingDir(),
-				 	DIR_DELIM_CHAR,
-					JOB_AD_FILENAME);
-		if( ! job_env.SetEnv("_CONDOR_JOB_AD", path.Value()) ) {
-			dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
-		}
+	path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+			 	DIR_DELIM_CHAR,
+				JOB_AD_FILENAME);
+	if( ! job_env.SetEnv("_CONDOR_JOB_AD", path.Value()) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
 	}
 
 		// Grab the full environment back out of the Env object 
@@ -869,65 +862,4 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 	free(affinityParamResult);
 	return mask;
-}
-
-bool
-OsProc::WriteAdsToExeDir()
-{
-	ClassAd* ad;
-	const char* dir = Starter->GetWorkingDir();
-	MyString ad_str, filename;
-	FILE* fp;
-	bool ret_val = true;
-
-	// Write the job ad first
-	ad = Starter->jic->jobClassAd();
-	if (ad != NULL)
-	{
-		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
-		fp = safe_fopen_wrapper(filename.Value(), "w");
-		if (!fp)
-		{
-			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job ad: "
-						"%s (errno %d)\n", filename.Value(),
-						strerror(errno), errno);
-			ret_val = false;
-		}
-		else
-		{
-			ad->SetPrivateAttributesInvisible(true);
-			ad->fPrint(fp);
-			ad->SetPrivateAttributesInvisible(false);
-			fclose(fp);
-		}
-	}
-	else
-	{
-		// If there is no job ad, this is a problem
-		ret_val = false;
-	}
-
-	// Write the machine ad
-	ad = Starter->jic->machClassAd();
-	if (ad != NULL)
-	{
-		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
-		fp = safe_fopen_wrapper(filename.Value(), "w");
-		if (!fp)
-		{
-			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "
-						"ad: %s (errno %d)\n", filename.Value(),
-					strerror(errno), errno);
-			ret_val = false;
-		}
-		else
-		{
-			ad->SetPrivateAttributesInvisible(true);
-			ad->fPrint(fp);
-			ad->SetPrivateAttributesInvisible(false);
-			fclose(fp);
-		}
-	}
-
-	return ret_val;
 }

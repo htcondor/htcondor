@@ -34,7 +34,7 @@
 #include "../condor_ckpt_server/server_interface.h"
 #include "sig_install.h"
 #include "job_report.h"
-#include "../condor_c++_util/directory.h"
+#include "../condor_utils/directory.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "condor_holdcodes.h"

@@ -275,6 +275,13 @@ StdUnivSock::end_of_message()
 }
 
 
+bool 
+StdUnivSock::peek_end_of_message()
+{
+	EXCEPT("not implemented");
+	return false;
+}
+
 int 
 StdUnivSock::put_bytes(const void *data, int sz)
 {

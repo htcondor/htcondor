@@ -50,7 +50,7 @@
 
 	/* For security purposes, do not allow open() or fopen().
 	 * Folks should use the wrapper functions in 
-	 * src/condor_c++_util/condor_open.[hC] 
+	 * src/condor_utils/condor_open.[hC] 
 	 */
 /*#ifdef _CONDOR_ALLOW_OPEN_AND_FOPEN
 #  ifndef _CONDOR_ALLOW_OPEN
@@ -62,7 +62,7 @@
 #endif
 
 #ifndef _CONDOR_ALLOW_OPEN
-#  include "../condor_c++_util/condor_open.h"
+#  include "../condor_utils/condor_open.h"
 #  ifdef open
 #    undef open
 #  endif
@@ -73,7 +73,7 @@
 #  endif
 
 #ifndef _CONDOR_ALLOW_FOPEN
-#  include "../condor_c++_util/condor_open.h"
+#  include "../condor_utils/condor_open.h"
 #  ifdef fopen
 #    undef fopen
 #  endif

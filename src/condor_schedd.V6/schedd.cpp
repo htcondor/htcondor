@@ -159,7 +159,6 @@ shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool getSandbox( int cluster, int proc, MyString & path );
-bool sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
@@ -1334,19 +1333,17 @@ count( ClassAd *job )
 			// for Globus, which we deal with below.
 		if( universe == CONDOR_UNIVERSE_SCHEDULER ) 
 		{
-			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
-				scheduler.SchedUniverseJobsRunning += cur_hosts;
-				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
-			}
+			// Count REMOVED or HELD jobs that are in the process of being
+			// killed. cur_hosts tells us which these are.
+			scheduler.SchedUniverseJobsRunning += cur_hosts;
+			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 		}
 		if( universe == CONDOR_UNIVERSE_LOCAL ) 
 		{
-			// don't count REMOVED or HELD jobs
-			if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
-				scheduler.LocalUniverseJobsRunning += cur_hosts;
-				scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
-			}
+			// Count REMOVED or HELD jobs that are in the process of being
+			// killed. cur_hosts tells us which these are.
+			scheduler.LocalUniverseJobsRunning += cur_hosts;
+			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 		}
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
@@ -2047,88 +2044,8 @@ jobCleanupNeedsThread( int /* cluster */, int /* proc */ )
 }
 
 
-// returns true if the sandbox already exists *and* is owned by the
-// right owner, false if either of those conditions isn't true. 
-bool
-sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad )
-{
-	bool rval = true;  // we'll return false if needed...
-
-	if( ! job_ad ) {
-			// job is already gone, guess we don't need a thread. ;)
-		return false;
-	}
-
-	MyString sandbox;
-	if( ! getSandbox(cluster, proc, sandbox) ) {
-		EXCEPT( "getSandbox(%d.%d) returned FALSE!", cluster, proc );
-	}
-
-	StatInfo si( sandbox.Value() );
-	if( si.Error() == SINoFile ) {
-			// sandbox doesn't yet exist, we'll need to create it
-		FreeJobAd( job_ad );
-		return false;
-	}
-	
-		// if we got this far, we know the sandbox already exists for
-		// this cluster/proc.  if we're not WIN32, check the owner.
-
-#ifndef WIN32
-		// check the owner of the sandbox vs. what's in the job ad
-	uid_t sandbox_uid = si.GetOwner();
-	passwd_cache* p_cache = pcache();
-	uid_t job_uid;
-	char* job_owner = NULL;
-	job_ad->LookupString( ATTR_OWNER, &job_owner );
-	if( ! job_owner ) {
-		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, cluster, proc );
-	}
-	if( ! p_cache->get_user_uid(job_owner, job_uid) ) {
-			// failed to find uid for this owner, badness.
-		dprintf( D_ALWAYS, "Failed to find uid for user %s (job %d.%d), "
-				 "job sandbox ownership will probably be broken\n", 
-				 job_owner, cluster, proc );
-		free( job_owner );
-		FreeJobAd( job_ad );
-		return false;
-	}
-	free( job_owner );
-	job_owner = NULL;
-
-		// now that we have the right uids, see if they match.
-	rval = (job_uid == sandbox_uid);
-	
-#endif /* WIN32 */
-
-	FreeJobAd( job_ad );
-	return rval;
-}
-
-
 /*
-  we want to be a little bit careful about this.  we don't want to go
-  messing with the sandbox if a) we've got a partial (messed up)
-  sandbox that hasn't finished being transfered yet or if b)
-  condor_submit (or the SOAP submit interface, whatever) initializes
-  these variables to 0.  we want a real value for stage_in_finish, and
-  we want to make sure it's later than stage_in_start.  todd gets the
-  credit for making this smarter, even though derek made the changes.
-
-  however, todd gets the blame for breaking the grid universe case,
-  since these values are being checked in the job spooling thread
-  *BEFORE* stage_in_finish is ever initialized.  :)  so, we're going
-  to ignore the "partially transfered" sandbox logic and just make
-  sure we've got a real value for stage_in_start (which we do, even in
-  grid universe, since the parent sets that before spawning the job
-  spooling thread).  --derek 2005-03-30 
-
-  and, if the job is using file transfer, we're going to create and
-  use both the regular sandbox and the tmp sandbox, so we need to
-  handle those cases, too.  the new shadow initializes a FileTransfer
-  object no matter what the job classad says, so in fact, the only way
-  we would *not* have a transfer sandbox is if we're a standard
-  universe job...  --derek 2005-04-21
+  Return true if we should create/chown the spool directory for this job.
 */
 bool
 jobIsSandboxed( ClassAd * ad )
@@ -2137,62 +2054,31 @@ jobIsSandboxed( ClassAd * ad )
 	int stage_in_start = 0;
 	int never_create_sandbox_expr = 0;
 
-	// In the past, we created sandboxes (or not) based on the
-	// universe in which a job is executing.  Now, we create a
-	// sandbox only if we are in a universe that ordinarily
-	// requires a sandbox AND if create_sandbox is true; note that
-	// create_sandbox may be set to false by other attributes in
-	// the job ad (see below).
-	bool create_sandbox = true;
-
+		// Spooled jobs should return true, because they already
+		// have a spool directory, so we need to manage it
+		// (i.e. chown it to the correct user)
 	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
 	if( stage_in_start > 0 ) {
 		return true;
 	}
 
-	// 
-	if( ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr ) &&
-	    never_create_sandbox_expr == TRUE ) {
-	  // As this function stands now, we could return the result of 
-	  // evaluating ATTR_JOB_REQUIRES_SANDBOX here.  (We must create a sandbox for  
-	  // some jobs, including parallel universe jobs, because the scriptsdepend on one.)
-	  // But if the sandbox logic becomes more complicated in the
-	  // future --- notably, if there might be a case in which
-	  // we'd want to always create a sandbox for non-PU jobs even if
-	  // ATTR_NEVER_CREATE_JOB_SANDBOX were set --- then we'd want
-	  // to be sure to ensure that we weren't in such a case.
-	  int job_requires_sandbox_expr = 0;
-
-	  create_sandbox = (ad->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) && job_requires_sandbox_expr);
-	}
-
 	int univ = CONDOR_UNIVERSE_VANILLA;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, univ );
-	switch( univ ) {
-	case CONDOR_UNIVERSE_SCHEDULER:
-	case CONDOR_UNIVERSE_LOCAL:
-	case CONDOR_UNIVERSE_STANDARD:
-	case CONDOR_UNIVERSE_GRID:
-		return false;
-		break;
 
-	case CONDOR_UNIVERSE_VANILLA:
-	case CONDOR_UNIVERSE_JAVA:
-	case CONDOR_UNIVERSE_MPI:
-	case CONDOR_UNIVERSE_VM:
-	case CONDOR_UNIVERSE_PARALLEL: // MPI scripts require a spool directory, so create_sandbox will always be true
-	  // True by default for jobs in these universes, but false if
-	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad and 
-	  // ATTR_JOB_REQUIRES_SANDBOX is not.
-		return create_sandbox;
-		break;
+		// As of 7.5.5, parallel jobs specify JobRequiresSandbox=true,
+		// because they use the spool directory for chirp stuff to make
+		// sshd work.  For backward compatibility with prior releases,
+		// we assume all parallel jobs require this unless they explicitly
+		// specify otherwise.
+	int job_requires_sandbox_expr = 0;
+	bool create_sandbox = univ == CONDOR_UNIVERSE_PARALLEL ? true : false;
 
-	default:
-		dprintf( D_ALWAYS,
-				 "ERROR: unknown universe (%d) in jobIsSandboxed()\n", univ );
-		break;
+	if( ad->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) )
+	{
+		create_sandbox = job_requires_sandbox_expr ? true : false;
 	}
-	return false;
+
+	return create_sandbox;
 }
 
 
@@ -2227,24 +2113,6 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
-		/*
-		  make sure we can switch uids.  if not, there's nothing to
-		  do, so we should exit right away.
-
-		  WARNING: if we ever add anything to this function that
-		  doesn't require root/admin privledges, we'll also need to
-		  change jobPrepNeedsThread()!
-		*/
-	if( ! can_switch_ids() ) {
-		return TRUE;
-	}
-
-
-	// claim dynamic accounts here
-	// NOTE: we only want to claim a dynamic account once, however,
-	// this function is called *every* time we're about to spawn a job
-	// handler.  so, this is the spot to be careful about this issue.
-
 	ClassAd * job_ad = GetJobAd( cluster, proc );
 	ASSERT( job_ad ); // No job ad?
 	if( ! jobIsSandboxed(job_ad) ) {
@@ -2253,16 +2121,11 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 		return TRUE;
 	}
 
-	bool retval =
-		SpooledJobFiles::createJobSpoolDirectory(job_ad,PRIV_USER);
+	SpooledJobFiles::createJobSpoolDirectory(job_ad,PRIV_USER);
 
 	FreeJobAd(job_ad);
-	job_ad = 0;
 
-	if( retval ) {
-		return FALSE;
-	}
-	return 0;
+	return TRUE;
 }
 
 
@@ -6558,9 +6421,20 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		args.AppendArg(job_id->proc);
 	}
 
+	bool want_udp = true;
+#ifndef WIN32
+		// To save memory in the shadow, do not create a UDP command
+		// socket under unix.  Windows doesn't _need_ UDP either,
+		// because signals can be delivered via TCP, but the
+		// performance impact of doing that has not been measured.
+		// Under unix, all common signals are delivered via unix
+		// signals.
+
+	want_udp = false;
+#endif
 
 	rval = spawnJobHandlerRaw( srec, shadow_path, args, NULL, "shadow",
-							   sh_is_dc, sh_reads_file );
+							   sh_is_dc, sh_reads_file, want_udp );
 
 	free( shadow_path );
 
@@ -6672,11 +6546,17 @@ Scheduler::tryNextJob()
 bool
 Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path, 
 							   ArgList const &args, Env const *env, 
-							   const char* name, bool is_dc, bool wants_pipe )
+							   const char* name, bool is_dc, bool wants_pipe,
+							   bool want_udp)
 {
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
 	ClassAd* job_ad = NULL;
+	int create_process_opts = 0;
+
+	if (!want_udp) {
+		create_process_opts |= DCJOBOPT_NO_UDP;
+	}
 
 	Env extra_env;
 	if( ! env ) {
@@ -6798,7 +6678,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
 	                                  is_dc, env, NULL, NULL, NULL, 
-	                                  std_fds_p, NULL, niceness );
+	                                  std_fds_p, NULL, niceness,
+									  NULL, create_process_opts);
 	if( pid == FALSE ) {
 		MyString arg_string;
 		args.GetArgsStringForDisplay(&arg_string);
@@ -7113,7 +6994,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_env.SetEnv(execute_env.Value(),LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
-							   &starter_env, "starter", true, true );
+							   &starter_env, "starter", true, true, true );
 
 	free( starter_path );
 	starter_path = NULL;

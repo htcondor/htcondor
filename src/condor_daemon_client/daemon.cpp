@@ -2001,6 +2001,10 @@ Daemon::New_addr( char* str )
 			// SharedPort does not handle UDP
 			m_has_udp_command_port = false;
 		}
+		if( sinful.noUDP() ) {
+			// This address explicitly specifies that UDP is not supported
+			m_has_udp_command_port = false;
+		}
 	}
 
 	return;
