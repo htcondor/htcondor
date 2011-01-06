@@ -72,6 +72,12 @@ static const char *GMStateNames[] = {
 #define DCLOUD_VM_STATE_STOPPED			"STOPPED"
 #define DCLOUD_VM_STATE_FINISH			"FINISH"
 
+const char *ATTR_DELTACLOUD_PROVIDER_ID = "DeltacloudProviderId";
+const char *ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES = "DeltacloudPublicNetworkAddresses";
+const char *ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES = "DeltacloudPrivateNetworkAddresses";
+const char *ATTR_DELTACLOUD_AVAILABLE_ACTIONS = "DeltacloudAvailableActions";
+
+
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
 #	define file_strcmp _stricmp
@@ -937,14 +943,31 @@ void DCloudJob::ProcessInstanceAttrs( StringList &attrs )
 	// NOTE: If attrlist is empty, treat as completed job
 	// Call StatusUpdate() with status from list
 	const char *line;
+		// We use a new_status flag here because we want to parse everything and get
+		// all the info into the classad before updating the status and producing an
+		// event log entry.
+	const char *new_status = NULL;
+
 	attrs.rewind();
 	while ( (line = attrs.next()) ) {
 		if ( strncmp( line, "state=", 6 ) == 0 ) {
-			StatusUpdate( &line[6] );
+			new_status = &line[6];
 		} else if ( strncmp( line, "id=", 3 ) == 0 ) {
 			SetInstanceId( &line[3] );
+			jobAd->Assign(ATTR_DELTACLOUD_PROVIDER_ID, &line[3]);
+		} else if ( strncmp( line, "public_addresses=", 17 ) == 0 ) {
+			jobAd->Assign(ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES, &line[17]);
+		} else if ( strncmp( line, "private_addresses=", 18 ) == 0 ) {
+			jobAd->Assign(ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES, &line[18]);
+		} else if ( strncmp( line, "actions=", 8) == 0 ) {
+			jobAd->Assign(ATTR_DELTACLOUD_AVAILABLE_ACTIONS, &line[8]);
 		}
 	}
+
+        if (new_status) {
+                // Now that we have everything in the classad, do the job status update.
+                StatusUpdate( new_status );
+        }
 
 	if ( attrs.isEmpty() ) {
 		StatusUpdate( DCLOUD_VM_STATE_FINISH );
