@@ -330,7 +330,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		}
 	}
 
-	if ( !m_key_pair.IsEmpty() ) {
+	if ( !m_key_pair.empty() ) {
 		myResource->AlreadySubmitted( this );
 	}
 	

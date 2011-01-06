@@ -376,10 +376,11 @@ const char* AmazonInstanceType = "amazon_instance_type";
 //
 // Deltacloud Parameters
 //
-const char* DeltacloudUserName = "deltacloud_username";
+const char* DeltacloudUsername = "deltacloud_username";
 const char* DeltacloudPassword = "deltacloud_password";
 const char* DeltacloudImageId = "deltacloud_image_id";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
+const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
 const char* DeltacloudKeyname = "deltacloud_keyname";
 const char* DeltacloudUserData = "deltacloud_user_data";
 

@@ -206,7 +206,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 			m_serviceUrl = strdup( token );
 		} else {
 			sprintf( error_string, "%s missing Deltacloud service URL",
-					 ATTR_GRID_RESOURCE
+					 ATTR_GRID_RESOURCE );
 		}
 	} else {
 		sprintf( error_string, "%s is not set in the job ad",
