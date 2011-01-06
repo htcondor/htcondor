@@ -116,7 +116,12 @@ ResMgr::~ResMgr()
 		delete m_hibernation_manager;
 	}
 
+	if ( m_netif ) {
+		delete m_netif;
+		m_netif = NULL;
+	}
 #endif /* HAVE_HIBERNATION */
+
 
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
