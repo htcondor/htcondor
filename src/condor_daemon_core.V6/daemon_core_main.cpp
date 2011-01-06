@@ -86,6 +86,8 @@ char*	pidFile = NULL;
 char*	addrFile = NULL;
 static	char*	logAppend = NULL;
 
+static char *core_dir = NULL;
+
 int condor_main_argc;
 char **condor_main_argv;
 time_t daemon_stop_time;
@@ -292,6 +294,11 @@ DC_Exit( int status, const char *shutdown_program )
 
 		// and deallocate the memory from the passwd_cache (uids.C)
 	delete_passwd_cache();
+
+	if ( core_dir ) {
+		free( core_dir );
+		core_dir = NULL;
+	}
 
 		/*
 		  Log a message.  We want to do this *AFTER* we delete the
@@ -654,8 +661,6 @@ handle_dynamic_dirs()
 	}
 }
 
-static char *core_dir = NULL;
-
 #if HAVE_EXT_COREDUMPER
 void
 linux_sig_coredump(int signum)
@@ -755,6 +760,10 @@ drop_core_in_log( void )
 		return;
 	}
 
+	if ( core_dir ) {
+		free( core_dir );
+		core_dir = NULL;
+	}
 	core_dir = strdup(ptmp);
 
 	// in some case we need to hook up our own handler to generate
