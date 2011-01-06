@@ -155,6 +155,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	m_username = NULL;
 	m_password = NULL;
 	m_keyname = NULL;
+	m_userdata = NULL;
 
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -234,6 +235,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_DELTACLOUD_REALM_ID, &m_realmId );
 	jobAd->LookupString( ATTR_DELTACLOUD_HARDWARE_PROFILE, &m_hwpId );
 	jobAd->LookupString( ATTR_DELTACLOUD_KEYNAME, &m_keyname );
+	jobAd->LookupString( ATTR_DELTACLOUD_USER_DATA, &m_userdata );
 
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
@@ -301,6 +303,7 @@ DCloudJob::~DCloudJob()
 	free( m_username );
 	free( m_password );
 	free( m_keyname );
+	free( m_userdata );
 }
 
 
@@ -485,6 +488,7 @@ void DCloudJob::doEvaluateState()
 											  m_realmId,
 											  m_hwpId,
 											  m_keyname,
+											  m_userdata,
 											  instance_attrs );
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {

@@ -184,6 +184,7 @@ const char * const  ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
 const char * const  ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
 const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
 const char * const  ATTR_DELTACLOUD_KEYNAME		 = "DeltacloudKeyname";
+const char * const  ATTR_DELTACLOUD_USER_DATA	 = "DeltacloudUserData";
 const char * const ATTR_DESTINATION				 = "Destination";
 const char * const ATTR_DISK                     = "Disk";
 const char * const ATTR_DISK_USAGE				 = "DiskUsage";

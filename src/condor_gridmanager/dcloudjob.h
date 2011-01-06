@@ -94,6 +94,7 @@ private:
 	char *m_username;
 	char *m_password;
 	char *m_keyname;
+	char *m_userdata;
 
 	void ProcessInstanceAttrs( StringList &attrs );
 	MyString build_instance_name();

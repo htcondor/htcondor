@@ -124,6 +124,7 @@ extern const char * const  ATTR_DELTACLOUD_IMAGE_ID;
 extern const char * const  ATTR_DELTACLOUD_REALM_ID;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE;
 extern const char * const  ATTR_DELTACLOUD_KEYNAME;
+extern const char * const  ATTR_DELTACLOUD_USER_DATA;
 extern const char * const  ATTR_DESTINATION;
 extern const char * const  ATTR_DISK;
 extern const char * const  ATTR_DISK_USAGE;

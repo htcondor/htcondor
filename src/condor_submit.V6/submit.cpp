@@ -381,6 +381,7 @@ const char* DeltacloudPassword = "deltacloud_password";
 const char* DeltacloudImageId = "deltacloud_image_id";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudKeyname = "deltacloud_keyname";
+const char* DeltacloudUserData = "deltacloud_user_data";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -5091,6 +5092,12 @@ SetGridParams()
 
 	if( (tmp = condor_param( DeltacloudKeyname, ATTR_DELTACLOUD_KEYNAME )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_KEYNAME, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudUserData, ATTR_DELTACLOUD_USER_DATA )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_USER_DATA, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
