@@ -17,7 +17,7 @@ gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git 
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
-		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DBUILD_SHARED_LIBS:BOOL=ON \
 		-DBUILD_TESTS:BOOL=OFF \
 		-DPROPER:BOOL=ON \
 		-DCLIPPED:BOOL=ON \
