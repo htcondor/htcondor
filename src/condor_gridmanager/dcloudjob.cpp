@@ -143,7 +143,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[16385]; // user data can be 16K, this is 16K+1
-	MyString error_string = "";
+	std::string error_string;
 	char *gahp_path = NULL;
 
 	m_serviceUrl = NULL;
@@ -195,7 +195,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "deltacloud" ) ) {
-			error_string.sprintf( "%s not of type deltacloud",
+			sprintf( error_string, "%s not of type deltacloud",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -203,47 +203,37 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		token = str.GetNextToken( " ", false );
 		if ( token ) {
 			m_serviceUrl = strdup( token );
+		} else {
+			sprintf( error_string, "%s missing Deltacloud service URL",
+					 ATTR_GRID_RESOURCE
 		}
-
-		token = str.GetNextToken( " ", false );
-		if ( token ) {
-			m_username = strdup( token );
-		}
-
-		token = str.GetNextToken( " ", false );
-		if ( token ) {
-			m_password = strdup( token );
-		}
-
-		token = str.GetNextToken( " ", false );
-		if ( token ) {
-			m_imageId = strdup( token );
-		}
-
-		token = str.GetNextToken( " ", false );
-		if ( token ) {
-			m_instanceName = strdup( token );
-		}
-
-		token = str.GetNextToken( " ", false );
-		if ( token ) {
-			m_realmId = strdup( token );
-		}
-
-		token = str.GetNextToken( " ", false );
-		if ( token ) {
-			m_hwpId = strdup( token );
-		}
-
-		token = str.GetNextToken( " ", false );
-		if ( token ) {
-			m_keyname = strdup( token );
-		}
-	}
-	if ( m_realmId == NULL ) {
-		error_string.sprintf( "%s missing or incomplete", ATTR_GRID_RESOURCE );
+	} else {
+		sprintf( error_string, "%s is not set in the job ad",
+				 ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
+
+	if ( !jobAd->LookupString( ATTR_DELTACLOUD_USERNAME, &m_username ) ) {
+		sprintf( error_string, "%s is not set in the job ad",
+				 ATTR_DELTACLOUD_USERNAME );
+		goto error_exit;
+	}
+
+	if ( !jobAd->LookupString( ATTR_DELTACLOUD_PASSWORD, &m_password ) ) {
+		sprintf( error_string, "%s is not set in the job ad",
+				 ATTR_DELTACLOUD_PASSWORD );
+		goto error_exit;
+	}
+
+	if ( !jobAd->LookupString( ATTR_DELTACLOUD_IMAGE_ID, &m_imageId ) ) {
+		sprintf( error_string, "%s is not set in the job ad",
+				 ATTR_DELTACLOUD_IMAGE_ID );
+		goto error_exit;
+	}
+
+	jobAd->LookupString( ATTR_DELTACLOUD_REALM_ID, &m_realmId );
+	jobAd->LookupString( ATTR_DELTACLOUD_HARDWARE_PROFILE, &m_hwpId );
+	jobAd->LookupString( ATTR_DELTACLOUD_KEYNAME, &m_keyname );
 
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
@@ -255,7 +245,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "deltacloud" ) ) {
-			error_string.sprintf( "%s not of type deltacloud",
+			sprintf( error_string, "%s not of type deltacloud",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -283,8 +273,8 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
  error_exit:
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 
 	return;

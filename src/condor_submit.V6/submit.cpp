@@ -373,6 +373,15 @@ const char* AmazonSecurityGroups = "amazon_security_groups";
 const char* AmazonKeyPairFile = "amazon_keypair_file";
 const char* AmazonInstanceType = "amazon_instance_type";
 
+//
+// Deltacloud Parameters
+//
+const char* DeltacloudUserName = "deltacloud_username";
+const char* DeltacloudPassword = "deltacloud_password";
+const char* DeltacloudImageId = "deltacloud_image_id";
+const char* DeltacloudRealmId = "deltacloud_realm_id";
+const char* DeltacloudKeyname = "deltacloud_keyname";
+
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
 
@@ -5034,6 +5043,58 @@ SetGridParams()
 		has_userdatafile = true;
 	}
 	
+
+	//
+	// Deltacloud grid-type submit attributes
+	//
+	if ( (tmp = condor_param( DeltacloudUsername, ATTR_DELTACLOUD_USERNAME )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_USERNAME, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudUsername );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( DeltacloudPassword, ATTR_DELTACLOUD_PASSWORD )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPassword );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( DeltacloudImageId, ATTR_DELTACLOUD_IMAGE_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_IMAGE_ID, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudImageId );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if( (tmp = condor_param( DeltacloudRealmId, ATTR_DELTACLOUD_REALM_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_REALM_ID, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfile, ATTR_DELTACLOUD_HARDWARE_PROFILE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudKeyname, ATTR_DELTACLOUD_KEYNAME )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_KEYNAME, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
