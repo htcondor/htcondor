@@ -76,6 +76,7 @@ const char *ATTR_DELTACLOUD_PROVIDER_ID = "DeltacloudProviderId";
 const char *ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES = "DeltacloudPublicNetworkAddresses";
 const char *ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES = "DeltacloudPrivateNetworkAddresses";
 const char *ATTR_DELTACLOUD_AVAILABLE_ACTIONS = "DeltacloudAvailableActions";
+const char *ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
 
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
@@ -165,6 +166,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	gmState = GM_INIT;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
+	probeErrorTime = 0;
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	myResource = NULL;
@@ -756,12 +758,47 @@ void DCloudJob::doEvaluateState()
 					// processing error code received
 					if ( rc != 0 ) {
 						// What to do about failure?
+							//
+						// We want to wait a little bit before declaring a complete
+						// failure and going to HELD as some providers don't immediately
+						// show the instance in the list after creating it.
 						errorString = gahp->getErrorString();
 						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s\n",
 								 procID.cluster, procID.proc, gahp_error_code,
 								 errorString.Value() );
-						gmState = GM_HOLD;
+
+						if ( probeErrorTime == 0 ) {
+							probeErrorTime = time(NULL);
+							dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s: Delaying HELD state, waiting for another probe..\n",
+									 procID.cluster, procID.proc, gahp_error_code, errorString.Value());
+						} else {
+							time_t right_now;
+							int retry_time; 
+
+							// probeErrorTime was set previously, check how long
+							// its been and see if we have to move to HELD.
+							right_now = time(NULL);
+							if (jobAd->LookupInteger( ATTR_DELTACLOUD_RETRY_TIMEOUT, retry_time ) == FALSE) {
+								// Set default retry to 90s.
+								retry_time = 90;
+							}
+							if (right_now - probeErrorTime > retry_time) {
+								dprintf( D_ALWAYS, "(%d.%d): Moving job to HELD\n",
+										 procID.cluster, procID.proc );
+								gmState = GM_HOLD;
+							} else {
+								dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s: HELD state delayed for %d of %d seconds.\n",
+										 procID.cluster, procID.proc, gahp_error_code,
+										 errorString.Value(), (int) (right_now - probeErrorTime), retry_time );
+								// If we stay in GM_PROBE_JOB gridmanager goes nuts and queries 4 times a second
+								// until something changes.  Going back to SUBMITTED makes this only get called
+								// every 30 seconds.
+								gmState = GM_SUBMITTED;
+							}
+						}
 						break;
+					} else {
+						probeErrorTime = 0;
 					}
 
 					ProcessInstanceAttrs( attrs );
