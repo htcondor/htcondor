@@ -385,6 +385,9 @@
 /* does os support the sched_setaffinity (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY 1
 
+/* does sched_setaffinity take two args (USED)*/
+#cmakedefine HAVE_SCHED_SETAFFINITY_2ARG 1
+
 /* Define to 1 if you have the `setegid' function. (USED)*/
 #cmakedefine HAVE_SETEGID 1
 

@@ -179,6 +179,28 @@ if( NOT WINDOWS)
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
 
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, 1024, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY )
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY_2ARG )
+
+	if(HAVE_SCHED_SETAFFINITY_2ARG)
+		set(HAVE_SCHED_SETAFFINITY ON)
+	endif()
+
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
@@ -386,6 +408,10 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+if (NOT WINDOWS)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
+endif(NOT WINDOWS)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 
 if (NOT WIN_EXEC_NODE_ONLY)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
@@ -394,8 +420,6 @@ if (NOT WIN_EXEC_NODE_ONLY)
 endif(NOT WIN_EXEC_NODE_ONLY)
 
 if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
@@ -405,7 +429,7 @@ if (NOT WINDOWS)
 
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.0-p2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 
@@ -599,7 +623,7 @@ else(MSVC)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lodm -static-libgcc")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
 	endif(AIX)
 
 	if (NOT PROPER AND NOT AIX)
