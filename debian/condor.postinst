@@ -92,8 +92,8 @@ condor_put_debconf_cfg() {
         ccfg_daemons="STARTD, SCHEDD, COLLECTOR, NEGOTIATOR"
         ccfg_filesystemdomain='$(FULL_HOSTNAME)'
         ccfg_uiddomain='$(FULL_HOSTNAME)'
-        ccfg_centralmanager='$(FULL_HOSTNAME)'
-        ccfg_allowwrite='$(FULL_HOSTNAME)'
+        ccfg_centralmanager='localhost'
+        ccfg_allowwrite='localhost'
     else
         # do little replacement, otherwise take as is
         ccfg_daemons=${ccfg_daemons/:/, }
@@ -110,20 +110,47 @@ condor_put_debconf_cfg() {
 # /etc/condor/condor_config.local or another file in /etc/condor/config.d Use
 # the latter location if you need to overwrite/complement settings in the
 # DebConf-generated configuration.
+# where Condor puts its runtime data
 LOCAL_DIR = $ccfg_localdir
+# which Condor daemons to run on this machine
 DAEMON_LIST = $ccfg_daemons
+# who receives emails when something goes wrong
 CONDOR_ADMIN = $ccfg_admin
+# how much memory should NOT be available to Condor
 RESERVED_MEMORY = $ccfg_reservedmemory
+# label to identify the local filesystem in a Condor pool
 FILESYSTEM_DOMAIN = $ccfg_filesystemdomain
+# label to identify the user id of the system in a Condor pool
+# (this need to be a fully qualified domain name)
 UID_DOMAIN = $ccfg_uiddomain
+# which machine is the central manager of this Condor pool
 CONDOR_HOST = $ccfg_centralmanager
+# what machines can access Condor daemons on this machine
 ALLOW_WRITE = $ccfg_allowwrite
 EOT
     # handle phone home settings individually, and only if necessary
     if [ "$ccfg_phonehome" = "true" ]; then
         cat >> $condor_debconf_cfg << EOT
+# contact information where Condor sends usage statistics
 CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
 CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
+EOT
+    fi
+    # now add a few more setting that allow the personal condor to work out of
+    # the box in a safe way
+    if [ "$ccfg_personal" = "true" ]; then
+        cat >> $condor_debconf_cfg << EOT
+# the following settings will restrict Condor's network access to the internal
+# network
+BIND_ALL_INTERFACES = FALSE
+NETWORK_INTERFACE =  127.0.0.1
+# make Condor ignore UID domain name mismatch on systems without a fully
+# qualified domain name (safe because the personal Condor does not allow
+# remote access
+TRUST_UID_DOMAIN = TRUE
+# By default, start all submitted jobs regardless of console activity in a
+# personal Condor installation
+START = TRUE
 EOT
     fi
 }
