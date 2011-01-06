@@ -1,3 +1,10 @@
+condor (7.5.4+git567-gb10f6b4-2) UNRELEASED; urgency=low
+
+  * Applied patch to allow adding submit specs in condor_run calls. Thanks to
+    Matthew Farrellee <matt@redhat.com>.
+
+ -- Michael Hanke <mih@debian.org>  Thu, 06 Jan 2011 08:14:18 -0500
+
 condor (7.5.4+git567-gb10f6b4-1) UNRELEASED; urgency=low
 
   * Initial release (Closes: #233482).

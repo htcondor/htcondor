@@ -1,6 +1,7 @@
 # in order of upstream compatibility and invasiveness
 lsb_compliance
 gcc_compat
+condor_run_add_specs
 use_symlinks_for_install_clones
 postgres_fixes
 fix_sysapi_undefined_syms
