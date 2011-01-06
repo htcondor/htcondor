@@ -1,5 +1,5 @@
 Condor for Debian
------------------
+=================
 
 The documentation for Condor can be found on the World Wide Web at:
 
@@ -8,4 +8,18 @@ http://www.cs.wisc.edu/condor/manual
 At that web site, you will find both an on-line version of manual and
 directions for downloading your own copy in a variety of formats.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Fri, 12 Nov 2010 12:29:19 -0500
+
+Package upgrades
+----------------
+
+When the Condor package is upgraded it will restart the Condor daemons. If this
+happens on the central manager it will result in jobs being killed on execute
+nodes. To avoid this, it is best to gracefully shutdown the Condor pool before
+upgrading. The Debian package does not perform a graceful shutdown on upgrades,
+because there is a variety of possible procedures, where subjective
+appropriateness depends on the configuration and utilization of a particular
+Condor pool. Please see this page for more information on graceful shutdowns:
+
+  https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToShutDownCondor
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 6 Jan 2011 17:14:19 -0500
