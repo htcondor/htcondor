@@ -30,25 +30,25 @@ Description: workload management system
  automatically.
 
 
-Package: condor-tests
-Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
-Description: test suite for Condor
- Like other full-featured batch systems, Condor provides a job queueing
- mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to Condor,
- Condor places them into a queue. It chooses when and where to run the jobs
- based upon a policy, carefully monitors their progress, and ultimately
- informs the user upon completion.
- .
- Unlike more traditional batch queueing system, Condor can also effectively
- harness wasted CPU power from otherwise idle desktop workstations. Condor
- does not require a shared file system across machines - if no shared file
- system is available, Condor can transfer the job's data files on behalf of
- the user.
- .
- This packages provides Condor's test-suite that can be used to verify
- proper functioning of a Condor installation.
+#Package: condor-tests
+#Architecture: any
+#Depends: ${misc:Depends}, ${shlibs:Depends}
+#Description: test suite for Condor
+# Like other full-featured batch systems, Condor provides a job queueing
+# mechanism, scheduling policy, priority scheme, resource monitoring, and
+# resource management. Users submit their serial or parallel jobs to Condor,
+# Condor places them into a queue. It chooses when and where to run the jobs
+# based upon a policy, carefully monitors their progress, and ultimately
+# informs the user upon completion.
+# .
+# Unlike more traditional batch queueing system, Condor can also effectively
+# harness wasted CPU power from otherwise idle desktop workstations. Condor
+# does not require a shared file system across machines - if no shared file
+# system is available, Condor can transfer the job's data files on behalf of
+# the user.
+# .
+# This packages provides Condor's test-suite that can be used to verify
+# proper functioning of a Condor installation.
 
 
 Package: condor-doc
