@@ -316,10 +316,6 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
 				 m_jobs_matched );
 
-		if( m_current_job_id.cluster != -1 ) {
-			m_jobs_rejected++;
-		}
-
 		m_negotiation_finished = true;
 		break;
 	default:
@@ -418,4 +414,21 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 	}
 
 	return true;
+}
+
+bool ScheddNegotiate::getSatisfaction() {
+	if( m_jobs_rejected > 0 ) {
+		return false;
+	}
+
+		// no jobs were explicitly rejected, but did negotiation end
+		// before we presented all of our jobs?
+	if( m_current_job_id.cluster == -1 ) {
+		nextJob();
+	}
+
+	if( m_current_job_id.cluster == -1 ) {
+		return true; // no more jobs
+	}
+	return false;
 }

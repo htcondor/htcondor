@@ -4638,7 +4638,7 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 void
 MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 {
-	bool satisfied = getNumJobsRejected() == 0;
+	bool satisfied = getSatisfaction();
 	char const *remote_pool = getRemotePool();
 
 	dprintf(D_ALWAYS,"Finished negotiating for %s%s%s: %d matched, %d rejected\n",
