@@ -16,9 +16,9 @@
  # 
  ############################################################### 
 
-if ( LINUX )
+if ( LINUX AND PROPER )
 	option(WITH_LIBDELTACLOUD "Compiling with support for Deltacloud" ON)
-endif( LINUX )
+endif( LINUX AND PROPER )
 
 if (WITH_LIBDELTACLOUD)
 
