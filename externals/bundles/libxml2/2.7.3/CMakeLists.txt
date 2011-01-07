@@ -22,10 +22,7 @@ endif()
 
 if (WITH_LIBXML2)
 
-    # always prefer localized version of libxml2 where available.
-    find_multiple( "xml2" LIBXML2_FOUND )
-
-	if ( NOT PROPER AND NOT LIBXML2_FOUND )
+	if ( NOT PROPER )
 
 		set (LIBXML2_VER libxml2-2.7.3 )
 		ExternalProject_Add( libxml2
@@ -47,8 +44,11 @@ if (WITH_LIBXML2)
 		# Set the target dependencies which the rest of condor depends on.
 		set(LIBXML2_FOUND "${EXTERNAL_STAGE}/lib/libxml2.a")
 		append_var(CONDOR_EXTERNALS libxml2)
+	else()
+	
+    		find_multiple( "xml2" LIBXML2_FOUND )
 
-	endif( NOT PROPER AND NOT LIBXML2_FOUND )
+	endif( NOT PROPER )
 
 endif(WITH_LIBXML2)
 
