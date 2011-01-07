@@ -1,20 +1,20 @@
  ###############################################################
- # 
- # Copyright (C) 1990-2010, Redhat. 
- # 
- # Licensed under the Apache License, Version 2.0 (the "License"); you 
- # may not use this file except in compliance with the License.  You may 
- # obtain a copy of the License at 
- # 
- #    http://www.apache.org/licenses/LICENSE-2.0 
- # 
- # Unless required by applicable law or agreed to in writing, software 
- # distributed under the License is distributed on an "AS IS" BASIS, 
+ #
+ # Copyright (C) 1990-2010, Redhat.
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License"); you
+ # may not use this file except in compliance with the License.  You may
+ # obtain a copy of the License at
+ #
+ #    http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and 
- # limitations under the License. 
- # 
- ############################################################### 
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ #
+ ###############################################################
 
 if (LINUX OR DARWIN)
   option(WITH_LIBXML2 "Compiling with support for LIBXML2" ON)
@@ -22,7 +22,10 @@ endif()
 
 if (WITH_LIBXML2)
 
-	if ( NOT PROPER )
+    # always prefer localized version of libxml2 where available.
+    find_multiple( "xml2" LIBXML2_FOUND )
+
+	if ( NOT PROPER AND NOT LIBXML2_FOUND )
 
 		set (LIBXML2_VER libxml2-2.7.3 )
 		ExternalProject_Add( libxml2
@@ -45,18 +48,16 @@ if (WITH_LIBXML2)
 		set(LIBXML2_FOUND "${EXTERNAL_STAGE}/lib/libxml2.a")
 		append_var(CONDOR_EXTERNALS libxml2)
 
-	else( NOT PROPER )
+	endif( NOT PROPER AND NOT LIBXML2_FOUND )
 
-		find_multiple( "xml2" LIBXML2_FOUND )
+endif(WITH_LIBXML2)
 
-	endif( NOT PROPER )
-
+if (LIBXML2_FOUND)
 	message (STATUS "external configured (LIBXML2_FOUND=${LIBXML2_FOUND})")
 	set( LIBXML2_FOUND ${LIBXML2_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_LIBXML2 ON PARENT_SCOPE )
-
-else(WITH_LIBXML2)
-
+else()
 	message (STATUS "external skiped (libxml2)")
+endif()
 
-endif(WITH_LIBXML2)
+
