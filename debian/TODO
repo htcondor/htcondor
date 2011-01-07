@@ -1,4 +1,2 @@
 * Do license checks
 * Current manpage conversion is rather crappy.
-* Try re-enabling internal libs as shared libs.
-* Investigate proper ALLOW_WRITE setting for a personal condor installation.

@@ -38,7 +38,7 @@ Default: false
 Template: condor/centralmanager
 Type: string
 _Description: Address of the central manager:
- If this machine is supposed to join an existing Condor pool the address of the
+ If this machine is supposed to join an existing Condor pool, the address of the
  central manager machine has to be specified. Any address format supported
  by Condor can be used, including macro expressions.
  .
@@ -98,7 +98,8 @@ Default: true
 _Description: Perform a "Personal Condor" installation?
  A personal condor installation is a fully functional Condor pool on a single
  machine. Condor will automatically configure and advertise as many slots as
- it detects CPU cores on this machine.
+ it detects CPU cores on this machine. Condor daemons will not be available
+ through external network interfaces.
  .
  If this machine is supposed to join an existing pool or a new pool with more
  than one machine shall be created, a personal installation is not desired.
@@ -121,3 +122,18 @@ _Description: Machines with write access to this host:
  on this machine.
  .
  Example: *.condor-pool.example.org
+
+Template: condor/startpolicy
+Type: boolean
+Default: false
+_Description: Run Condor jobs regardless of other machine activity?
+ By default Condor only starts jobs when a machine is idle, i.e. no keyboard
+ activity or CPU load for some time. Moreover, it also suspends jobs whenever
+ there is console activity and doesn't continue them until the machine becomes
+ idle again. However, for a dedicated compute node or a Personal Condor
+ installation it might be desirable to always start jobs as soon as they are
+ submitted (given that resources are still available), and to run them
+ continuously regardless of other activity on this machine.
+ .
+ If it is planned to compose a custom policy it is best to keep Condor's
+ default here.

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: condor@packages.debian.org\n"
-"POT-Creation-Date: 2010-12-23 14:59-0500\n"
+"POT-Creation-Date: 2011-01-07 08:55-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -75,7 +75,7 @@ msgstr ""
 #. Description
 #: ../condor.templates:5001
 msgid ""
-"If this machine is supposed to join an existing Condor pool the address of "
+"If this machine is supposed to join an existing Condor pool, the address of "
 "the central manager machine has to be specified. Any address format "
 "supported by Condor can be used, including macro expressions."
 msgstr ""
@@ -205,7 +205,8 @@ msgstr ""
 msgid ""
 "A personal condor installation is a fully functional Condor pool on a single "
 "machine. Condor will automatically configure and advertise as many slots as "
-"it detects CPU cores on this machine."
+"it detects CPU cores on this machine. Condor daemons will not be available "
+"through external network interfaces."
 msgstr ""
 
 #. Type: boolean
@@ -257,4 +258,31 @@ msgstr ""
 #. Description
 #: ../condor.templates:12001
 msgid "Example: *.condor-pool.example.org"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:13001
+msgid "Run Condor jobs regardless of other machine activity?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:13001
+msgid ""
+"By default Condor only starts jobs when a machine is idle, i.e. no keyboard "
+"activity or CPU load for some time. Moreover, it also suspends jobs whenever "
+"there is console activity and doesn't continue them until the machine "
+"becomes idle again. However, for a dedicated compute node or a Personal "
+"Condor installation it might be desirable to always start jobs as soon as "
+"they are submitted (given that resources are still available), and to run "
+"them continuously regardless of other activity on this machine."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:13001
+msgid ""
+"If it is planned to compose a custom policy it is best to keep Condor's "
+"default here."
 msgstr ""

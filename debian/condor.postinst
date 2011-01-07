@@ -86,6 +86,8 @@ condor_put_debconf_cfg() {
     ccfg_centralmanager="$RET"
     db_get condor/allowwrite
     ccfg_allowwrite="$RET"
+    db_get condor/startpolicy
+    ccfg_startpolicy="$RET"
 
     # assemble configuration for a personal condor (if requested)
     if [ "$ccfg_personal" = "true" ]; then
@@ -148,9 +150,23 @@ NETWORK_INTERFACE =  127.0.0.1
 # qualified domain name (safe because the personal Condor does not allow
 # remote access
 TRUST_UID_DOMAIN = TRUE
-# By default, start all submitted jobs regardless of console activity in a
-# personal Condor installation
+EOT
+    fi
+    # now add a few more setting that allow the personal condor to work out of
+    # the box in a safe way
+    if [ "$ccfg_startpolicy" = "true" ]; then
+        cat >> $condor_debconf_cfg << EOT
+# allow Condor jobs to run with the same priority as any other machine activity
+# always start jobs once they are submitted
 START = TRUE
+# never suspend jobs
+SUSPEND = FALSE
+# always continue jobs
+CONTINUE = TRUE
+# never preempt
+PREEMPT = FALSE
+# never kill
+KILL = FALSE
 EOT
     fi
 }
