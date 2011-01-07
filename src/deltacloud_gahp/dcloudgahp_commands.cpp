@@ -112,7 +112,7 @@ static std::string create_instance_output(char * reqid,
 }
 
 /*
- * DCLOUD_VM_SUBMIT <reqid> <url> <user> <password> <image_id> <name> <realm_id> <hwp_id> <keyname> <userdata>
+ * DELTACLOUD_VM_SUBMIT <reqid> <url> <user> <password> <image_id> <name> <realm_id> <hwp_id> <keyname> <userdata>
  *  where all arguments are required.  <reqid>, <url>, <user>, <password>, and
  *  <image_id> all have to be non-NULL; <name>, <realm_id>, <hwp_id>,
  *  <keyname>, and <userdata> should either be the string "NULL" to let
@@ -199,7 +199,7 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 }
 
 /*
- * DCLOUD_VM_ACTION <reqid> <url> <user> <password> <instance_id> <action>
+ * DELTACLOUD_VM_ACTION <reqid> <url> <user> <password> <instance_id> <action>
  *  where reqid, url, user, password, instance_id, and action have to be non-NULL
  */
 bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
@@ -293,7 +293,7 @@ cleanup_library:
 }
 
 /*
- * DCLOUD_VM_INFO <reqid> <url> <user> <password> <instance_id>
+ * DELTACLOUD_VM_INFO <reqid> <url> <user> <password> <instance_id>
  *  where reqid, url, user, password, and instance_id have to be non-NULL
  */
 bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
@@ -359,7 +359,7 @@ cleanup_library:
 }
 
 /*
- * DCLOUD_VM_STATUS_ALL <reqid> <url> <user> <password>
+ * DELTACLOUD_VM_STATUS_ALL <reqid> <url> <user> <password>
  *  where reqid, url, user, and password have to be non-NULL.
  */
 bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
@@ -434,7 +434,7 @@ cleanup_library:
 }
 
 /*
- * DCLOUD_VM_FIND <reqid> <url> <user> <password> <name>
+ * DELTACLOUD_VM_FIND <reqid> <url> <user> <password> <name>
  *  where reqid, url, user, password, and name have to be non-NULL.
  */
 bool dcloud_find_worker(int argc, char **argv, std::string &output_string)

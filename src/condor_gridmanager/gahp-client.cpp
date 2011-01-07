@@ -8905,9 +8905,9 @@ int GahpClient::dcloud_submit( const char *service_url,
 							   const char *userdata,
 							   StringList &attrs )
 {
-	// DCLOUD_VM_SUBMIT <req_id> <serviceurl> <username> <password> 
+	// DELTACLOUD_VM_SUBMIT <req_id> <serviceurl> <username> <password> 
 	//   <image-id> <instance-name> <realm-id> <hwp-id> <keyname> <userdata>
-	static const char* command = "DCLOUD_VM_SUBMIT";
+	static const char* command = "DELTACLOUD_VM_SUBMIT";
 
 	// check if this command is supported
 	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
@@ -9012,8 +9012,8 @@ int GahpClient::dcloud_status_all( const char *service_url,
 								   StringList &instance_ids,
 								   StringList &statuses )
 {
-	// DCLOUD_VM_STATUS_ALL <req_id> <serviceurl> <username> <password>
-	static const char* command = "DCLOUD_VM_STATUS_ALL";
+	// DELTACLOUD_VM_STATUS_ALL <req_id> <serviceurl> <username> <password>
+	static const char* command = "DELTACLOUD_VM_STATUS_ALL";
 
 	// check if this command is supported
 	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
@@ -9109,9 +9109,9 @@ int GahpClient::dcloud_action( const char *service_url,
 							   const char *instance_id,
 							   const char *action )
 {
-	// DCLOUD_VM_ACtION <req_id> <serviceurl> <username> <password> 
+	// DELTACLOUD_VM_ACtION <req_id> <serviceurl> <username> <password> 
 	//   <instanceid> <action>
-	static const char* command = "DCLOUD_VM_ACTION";
+	static const char* command = "DELTACLOUD_VM_ACTION";
 
 	// check if this command is supported
 	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
@@ -9195,9 +9195,9 @@ int GahpClient::dcloud_info( const char *service_url,
 							 const char *instance_id,
 							 StringList &attrs )
 {
-	// DCLOUD_VM_INFO <req_id> <serviceurl> <username> <password> 
+	// DELTACLOUD_VM_INFO <req_id> <serviceurl> <username> <password> 
 	//   <instance-id>
-	static const char* command = "DCLOUD_VM_INFO";
+	static const char* command = "DELTACLOUD_VM_INFO";
 
 	// check if this command is supported
 	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
@@ -9287,9 +9287,9 @@ int GahpClient::dcloud_find( const char *service_url,
 							 const char *instance_name,
 							 char **instance_id )
 {
-	// DCLOUD_VM_FIND <req_id> <serviceurl> <username> <password> 
+	// DELTACLOUD_VM_FIND <req_id> <serviceurl> <username> <password> 
 	//   <instance-name>
-	static const char* command = "DCLOUD_VM_FIND";
+	static const char* command = "DELTACLOUD_VM_FIND";
 
 	// check if this command is supported
 	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
