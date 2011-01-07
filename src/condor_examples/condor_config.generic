@@ -1934,6 +1934,9 @@ CREAM_GAHP = $(SBIN)/cream_gahp
 ## about to expire.
 #MYPROXY_GET_DELEGATION = /path/to/myproxy-get-delegation
 
+## The location of the Deltacloud GAHP server
+DELTACLOUD_GAHP = $(SBIN)/deltacloud_gahp
+
 ##
 ## EC2: Universe = Grid, Grid_Resource = Amazon
 ##
