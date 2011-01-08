@@ -343,7 +343,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	// if we're the server, initialize the SpoolSpace and TmpSpoolSpace
-	// member variables (and create the directories if not there already)
+	// member variables
 	//
 	int Cluster = 0;
 	int Proc = 0;
