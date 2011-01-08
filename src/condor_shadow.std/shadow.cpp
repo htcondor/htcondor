@@ -51,6 +51,7 @@
 #include "exit.h"
 
 #include "file_sql.h"
+#include "spool_version.h"
 
 /* XXX This should not be here */
 #if !defined( WCOREDUMP )
@@ -350,6 +351,8 @@ main(int argc, char *argv[] )
 			sleep(1);
 		}
 	}
+
+	CheckSpoolVersion(SPOOL_MIN_VERSION_SHADOW_SUPPORTS,SPOOL_CUR_VERSION_SHADOW_SUPPORTS);
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
 		bogus_capability = argv[2];

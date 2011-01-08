@@ -30,6 +30,7 @@
 #include "condor_version.h"
 #include "condor_attributes.h"
 #include "dc_schedd.h"
+#include "spool_version.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -352,6 +353,8 @@ main_init(int argc, char *argv[])
 	}
 
 	parseArgs( argc, argv );
+
+	CheckSpoolVersion(SPOOL_MIN_VERSION_SHADOW_SUPPORTS,SPOOL_CUR_VERSION_SHADOW_SUPPORTS);
 
 	ClassAd* ad = readJobAd();
 	if( ! ad ) {
