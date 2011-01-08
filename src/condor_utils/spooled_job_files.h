@@ -44,16 +44,26 @@ public:
 		 */
 	static bool createJobSpoolDirectory_PRIV_CONDOR(int cluster, int proc, bool is_standard_universe );
 
+		/* Like createJobSpoolDirectory, but just create the .swap directory.
+		 * Assumes the other (parent) directories have already been created.
+		 */
+	static bool createJobSwapSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state );
+
 		/* Create the shared spool directories but not the actual
 		 * per-job directories.
 		 */
 	static bool createParentSpoolDirectories(ClassAd const *job_ad);
 
 		/* Remove the spool directory belonging to a job.
+		 * Also removes the .tmp and .swap directories.
 		 * This also removes the shared proc directory from the
 		 * hierarchy if possible.
 		 */
 	static void removeJobSpoolDirectory(int cluster, int proc);
+
+		/* Remove the .swap spool directory belonging to a job.
+		 */
+	static void removeJobSwapSpoolDirectory( int cluster, int proc);
 
 		/* Remove files spooled for a job cluster.
 		 * This also removes the shared cluster directory from the
