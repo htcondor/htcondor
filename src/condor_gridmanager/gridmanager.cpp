@@ -43,9 +43,8 @@
 #include "infnbatchjob.h"
 #include "condor_version.h"
 
-// added by fangcao for amazon job 
 #include "amazonjob.h"
-// end of adding by fangcao 
+#include "dcloudjob.h"
 
 #if !defined(WIN32)
 #  include "creamjob.h"
@@ -347,8 +346,6 @@ Init()
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
 	
-	/* ******* added by fangcao for Amazon Job  ********* */ 
-	
 	new_type = new JobType;
 	new_type->Name = strdup( "Amazon" );
 	new_type->InitFunc = AmazonJobInit;
@@ -357,7 +354,13 @@ Init()
 	new_type->CreateFunc = AmazonJobCreate;
 	jobTypes.Append( new_type );
 	
-	/************* end of adding by fangcao ********************/
+	new_type = new JobType;
+	new_type->Name = strdup( "Deltacloud" );
+	new_type->InitFunc = DCloudJobInit;
+	new_type->ReconfigFunc = DCloudJobReconfig;
+	new_type->AdMatchFunc = DCloudJobAdMatch;
+	new_type->CreateFunc = DCloudJobCreate;
+	jobTypes.Append( new_type );
 	
 	new_type = new JobType;
 	new_type->Name = strdup( "Unicore" );

@@ -54,6 +54,7 @@
 #include "classadHistory.h"
 #include "directory.h"
 #include "filename_tools.h"
+#include "spool_version.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -668,78 +669,6 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 	free( new_path );
 }
 
-static const int spool_min_version_i_support = 0; // before 7.5.5
-static const int spool_cur_version_i_support = 1; // spool version circa 7.5.5
-static const int spool_min_version_i_write = 1;   // spool version circa 7.5.5
-
-static void WriteSpoolVersion(char const *spool) {
-	std::string vers_fname;
-	sprintf(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
-
-	FILE *vers_file = safe_fcreate_replace_if_exists(vers_fname.c_str(),"w");
-	if( !vers_file ) {
-		EXCEPT("Failed to open %s for writing.\n",vers_fname.c_str());
-	}
-	if( fprintf(vers_file,"minimum compatible spool version %d\n",
-				spool_min_version_i_write) < 0 ||
-		fprintf(vers_file,"current spool version %d\n",
-				spool_cur_version_i_support) < 0 ||
-		fflush(vers_file) != 0 ||
-		fsync(fileno(vers_file)) != 0 ||
-		fclose(vers_file) != 0 )
-	{
-		EXCEPT("Error writing spool version to %s\n",vers_fname.c_str());
-	}
-}
-
-static void
-CheckSpoolVersion(char const *spool, int &spool_min_version,int &spool_cur_version)
-{
-	spool_min_version = 0; // before 7.5.5 there was no version stamp
-	spool_cur_version = 0;
-
-	std::string vers_fname;
-	sprintf(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
-
-	FILE *vers_file = safe_fopen_wrapper(vers_fname.c_str(),"r");
-	if( vers_file ) {
-		if( 1 != fscanf(vers_file,
-						"minimum compatible spool version %d\n",
-						&spool_min_version) )
-		{
-			EXCEPT("Failed to find minimum compatible spool version in %s\n",
-				   vers_fname.c_str());
-		}
-		if( 1 != fscanf(vers_file,
-						"current spool version %d\n",
-						&spool_cur_version) )
-		{
-			EXCEPT("Failed to find current spool version in %s\n",
-				   vers_fname.c_str());
-		}
-		fclose(vers_file);
-	}
-
-	dprintf(D_FULLDEBUG,"Spool format version requires >= %d (I support version %d)\n",
-			spool_min_version,
-			spool_cur_version_i_support);
-	dprintf(D_FULLDEBUG,"Spool format version is %d (I require version >= %d)\n",
-			spool_min_version,
-			spool_min_version_i_support);
-
-	if( spool_min_version > spool_cur_version_i_support ) {
-		EXCEPT("According to %s, the SPOOL directory requires that I support spool version %d, but I only support %d.\n",
-			   vers_fname.c_str(),
-			   spool_min_version,
-			   spool_cur_version_i_support);
-	}
-	if( spool_cur_version < spool_min_version_i_support ) {
-		EXCEPT("According to %s, the SPOOL directory is written in spool version %d, but I only support versions back to %d.\n",
-			   vers_fname.c_str(),
-			   spool_cur_version,
-			   spool_min_version_i_support);
-	}
-}
 
 static void
 SpoolHierarchyChangePass1(char const *spool,std::list< PROC_ID > &spool_rename_list)
@@ -895,7 +824,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	int spool_min_version = 0;
 	int spool_cur_version = 0;
-	CheckSpoolVersion(spool.Value(),spool_min_version,spool_cur_version);
+	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
 	JobQueue = new ClassAdCollection(job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
@@ -1148,8 +1077,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		SpoolHierarchyChangePass2(spool.Value(),spool_rename_list);
 	}
 
-	if( spool_cur_version != spool_cur_version_i_support ) {
-		WriteSpoolVersion(spool.Value());
+	if( spool_cur_version != SPOOL_CUR_VERSION_SCHEDD_SUPPORTS ) {
+		WriteSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
 	}
 }
 

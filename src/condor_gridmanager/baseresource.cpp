@@ -692,19 +692,7 @@ int BaseResource::DoBatchStatus()
 	}
 
 	GahpClient * gahp = BatchGahp();
-	if(gahp && (gahp->isStarted() == false) ) {
-		dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s is trying to start the GAHP.\n", ResourceName());
-		if ( gahp->Startup() == false ) {
-				// Failed to start the gahp server. Don't do anything
-				// about it. The job objects will also fail on this call
-				// and should go on hold as a result.
-			daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
-			dprintf(D_ALWAYS, "BaseResource::DoBatchStatus for %s failed to start the GAHP.\n", ResourceName());
-			return 0;
-		}
-	}
-
-	if ( gahp->isInitialized() == false ) {
+	if ( gahp && gahp->isStarted() == false ) {
 		int GAHP_INIT_DELAY = 5;
 		dprintf( D_ALWAYS,"BaseResource::DoBatchStatus: gahp server not up yet, delaying %d seconds\n", GAHP_INIT_DELAY );
 		daemonCore->Reset_Timer( m_batchPollTid, GAHP_INIT_DELAY );

@@ -623,17 +623,8 @@ class GahpClient : public Service {
 		int cream_ping(const char * service);
 		
 		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
-		
-		//************* Added for Amazon Jobs by fangcao ***************************//
-		
-		/* Phase II work for Amazon jobs (EC2 Part) */
-		
-		/* 
-		** Currently in order to distinguish a job which is submitted from Condor, we will set
-		** is belong to the 'Condor' group. This requires us to create a 'Condor' group before
-		** the start of gahp_server/gahp_client or Condor will create a temporary group name.
-		*/
-		
+
+
 		// 1. Start VM:
 		// AMAZON_COMMAND_VM_START <req_id> <publickeyfile> <privatekeyfile> <ami-id> <keypair> <groupname> <groupname> ...
 		// <keypair> and <groupname> are optional ones.
@@ -680,7 +671,7 @@ class GahpClient : public Service {
 							  const char * privatekeyfile,
 							  const char * instance_id,
 							  char* & error_code );		
-#endif 
+#endif
 		
 		// 4. Status VM:
 		// AMAZON_COMMAND_VM_STATUS <req_id> <publickeyfile> <privatekeyfile> <instance-id>
@@ -1052,9 +1043,49 @@ class GahpClient : public Service {
 									  const char* privatekeyfile,
 									  StringList & returnStatus,
 								  	  char* & error_code );
-		
-		//************* End of changes for Amamzon Jobs by fangcao *****************//
 			
+
+		int
+		dcloud_submit( const char *service_url,
+					   const char *username,
+					   const char *password,
+					   const char *image_id,
+					   const char *instance_name,
+					   const char *realm_id,
+					   const char *hwp_id,
+					   const char *keyname,
+					   const char *userdata,
+					   StringList &attrs );
+
+		int
+		dcloud_status_all( const char *service_url,
+						   const char *username,
+						   const char *password,
+						   StringList &instance_ids,
+						   StringList &statuses );
+
+		int
+		dcloud_action( const char *service_url,
+					   const char *username,
+					   const char *password,
+					   const char *instance_id,
+					   const char *action );
+
+		int
+		dcloud_info( const char *service_url,
+					 const char *username,
+					 const char *password,
+					 const char *instance_id,
+					 StringList &attrs );
+
+		int
+		dcloud_find( const char *service_url,
+					 const char *username,
+					 const char *password,
+					 const char *instance_name,
+					 char **instance_id );
+
+
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
