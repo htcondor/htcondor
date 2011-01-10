@@ -29,6 +29,19 @@ if(NOT WIN_EXEC_NODE_ONLY)
 		condor_exe( gt4_gahp "gt4_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
 		condor_exe( gt42_gahp "gt42_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
 		condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
+
+		add_custom_command(
+			OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
+			DEPENDS grid_monitor_wrapper grid_manager_monitor_agent
+			COMMAND cat
+			ARGS grid_monitor_wrapper grid_manager_monitor_agent > "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh" && chmod 755 "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
+		)
+		add_custom_target( grid_monitor
+				   ALL
+				   DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
+		)
+		install (FILES "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh" DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
 	endif()
 
 	install (FILES gridftp_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
