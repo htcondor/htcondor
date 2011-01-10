@@ -1,2 +1,4 @@
 * Do license checks
 * Current manpage conversion is rather crappy.
+* Support systems that have tmpfs on /var/run
+  This is not the default on Debian (but Ubuntu may have it)
