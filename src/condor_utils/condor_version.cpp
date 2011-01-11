@@ -45,8 +45,8 @@
 #define xstr(s) str(s)
 #define str(s) #s
 
-#if defined(WIN32)
-#define PLATFORM INTEL-WINNT50
+#if defined(WIN32) && ! defined(PLATFORM)
+#define PLATFORM "INTEL-WINNT50"
 #endif
 
 /* Via configure, one may have specified a particular buildid string to use
