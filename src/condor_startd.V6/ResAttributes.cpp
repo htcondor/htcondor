@@ -654,7 +654,7 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 	memcpy(pszAttr + cchPrefix, psz, cch);
 	pszAttr[cchPrefix + cch] = 0;
 
-	// a bit of a special case, if the keyname ends in a \
+	// a bit of a special case, if the keyname ends in a "\"
 	// pretend that the last slash isn't there.
 	//
 	if (cch > 1 && pszAttr[cchPrefix + cch-1] == '\\')
