@@ -181,12 +181,7 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 	struct stat stat_buf;
 	stat(local, &stat_buf);
 	int size = stat_buf.st_size;
-	char* buf = (char*)malloc(size);
-	if ( ! buf) {
-		chirp_client_disconnect(client);
-		fprintf(stderr, "Can't allocate %d bytes %s\n", size);
-		return -1;
-	}
+	char buf[size];
 	
 	int num_read = ::fread(buf, 1, size, rfd);
 	
@@ -194,7 +189,6 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 		fclose(rfd);
 		chirp_client_disconnect(client);
 		fprintf(stderr, "local read error on %s\n", local);
-		free(buf);
 		return -1;
 	}
 	
@@ -203,13 +197,11 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 		fclose(rfd);
 		chirp_client_disconnect(client);
 		fprintf(stderr, "Couldn't chirp_write as much as we read\n");
-		free(buf);
 		return -1;
 	}
 	
 	fclose(rfd);
 	chirp_client_disconnect(client);
-	free(buf);
 	return 0;
 }
 
