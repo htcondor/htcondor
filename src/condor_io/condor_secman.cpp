@@ -2900,6 +2900,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		return false;
 	}
 	KeyInfo *keyinfo = new KeyInfo(keybuf,keylen,crypt_protocol);
+	free( keybuf );
+	keybuf = NULL;
 
 		// extract the session duration from the (imported) policy
 	int expiration_time = 0;
