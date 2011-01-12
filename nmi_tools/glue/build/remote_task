@@ -79,7 +79,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 package && make install && make tests";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 && make install && make targz && make tests";
 
 } elsif  ($taskname eq $UNSTRIPPED_TASK){
 	#Reconfigure cmake variables for native package build
