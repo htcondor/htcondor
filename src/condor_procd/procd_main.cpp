@@ -32,6 +32,8 @@
 #include "glexec_kill.unix.h"
 #endif
 
+extern int log_size;
+
 // our "local server address"
 // (set with the "-A" option)
 //
@@ -92,12 +94,44 @@ static pid_t root_pid = 0;
 // This is set to true if -P was seen on the command line.
 static bool root_pid_specified = false;
 
+static void
+usage(void)
+{
+	fprintf(stderr, "Usage:\n"
+	"  -h                     This usage message.\n"
+	"  -D                     Wait for debugger.\n"
+	"  -A <address-file>      Path to address file for client communication.\n"
+	"  -C <principal>         The UID owner of the address file.\n"
+	"  -L <log-file>          Path to the output logfile.\n"
+	"  -E                     When specified with -G, the procd_ctl tool\n"
+	"                         can be used to associate a gid with the pid\n"
+	"                         family.\n"
+	"  -P <pid>               If specified, then the procd will manage the\n"
+	"                         process family rooted at this pid. If this pid\n"
+	"                         dies the procd will continue running.  If not\n"
+	"                         specified, then the procd's parent, which must\n"
+	"                         not be process 1 on unix, is monitored. If\n"
+	"                         the parent process dies, the condor_procd will\n"
+	"                         exit.\n"
+	"  -S <seconds>           Process snapshot interval.\n"
+	"  -G <min-gid> <max-gid> If -E is not specified, then self-allocate gids\n"
+	"                         out of this range for process family tracking.\n"
+	"                         If -E is specified then procd_ctl must be used\n"
+	"                         to allocate gids which must then be in this\n"
+	"                         range.\n"
+	"  -I <glexec-kill-path> <glexec-path>\n"
+	"                         Specify the binary which will send a signal\n"
+	"                         to a pid and the glexec binary which will run\n"
+	"                         the program under the right priviledges.\n");
+}
+
 static inline void
 fail_illegal_option(char* option)
 {
 	fprintf(stderr,
-	        "error: illegal option: %s",
+	        "error: illegal option: %s\n",
 	        option);
+	usage();
 	exit(1);
 }
 
@@ -105,13 +139,14 @@ static inline void
 fail_option_args(const char* option, int args_required)
 {
 	fprintf(stderr,
-	        "error: option \"%s\" requires %d arguments\n",
+	        "error: option \"%s\" requires %d %s\n",
 	        option,
-	        args_required);
+	        args_required,
+			args_required==1?"argument":"arguments");
+	usage();
 	exit(1);
 }
 
-extern int log_size;
 
 static void
 parse_command_line(int argc, char* argv[])
@@ -260,6 +295,8 @@ parse_command_line(int argc, char* argv[])
 			//
 			default:
 				fail_illegal_option(argv[index]);
+				usage();
+				exit(EXIT_FAILURE);
 				break;
 		}
 
@@ -269,8 +306,9 @@ parse_command_line(int argc, char* argv[])
 	// now that we're done parsing, enforce required options
 	//
 	if (local_server_address == NULL) {
-		fprintf(stderr, "error: the \"-A\" option is required");
-		exit(1);
+		fprintf(stderr, "error: the \"-A\" option is required\n");
+		usage();
+		exit(EXIT_FAILURE);
 	}
 }
 
