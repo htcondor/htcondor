@@ -986,6 +986,8 @@ void main_init (int argc, char ** const argv) {
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
 
+	dagman.dag->CheckThrottleCats();
+
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();
 

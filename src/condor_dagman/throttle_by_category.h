@@ -39,8 +39,16 @@ public:
 		bool			isGlobal() { return _category->FindChar('+') == 0; }
 		bool			isSet() { return _maxJobs != noThrottleSetting; }
 
-		int				_maxJobs;
-		int				_currentJobs;
+		int				_totalJobs; // total # of jobs in this category
+		int				_maxJobs; // max jobs in this cat that can run
+		int				_currentJobs; // running jobs in this cat
+
+		ThrottleInfo( const MyString *category, int maxJobs ) {
+			_category = new MyString( *category );
+			_totalJobs = 0;
+			_maxJobs = maxJobs;
+			_currentJobs = 0;
+		}
 	};
 
 	/** Constructor.
