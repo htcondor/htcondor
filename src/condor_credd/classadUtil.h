@@ -29,7 +29,6 @@
 #include <iostream>
 #include "classad/classad_distribution.h"
 
-using namespace std;
 
 BEGIN_NAMESPACE( classad )
 

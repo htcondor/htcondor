@@ -23,6 +23,8 @@
 #include "list.h"
 #include "extArray.h"
 
+using namespace std;
+
 // F && (T|F|U|E) = F
 // E && (T|F|U|E) = E 
 // (T|U) && F = F

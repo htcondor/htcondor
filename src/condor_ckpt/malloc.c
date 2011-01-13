@@ -2399,7 +2399,7 @@ int mALLOC_INIT_SIZe()
 
 void mALLOC_INIt( void *ptr )
 {
-	avptr_ = ptr;
+	avptr_ = (struct malloc_state*) ptr;
 	memset(ptr,0,mALLOC_INIT_SIZe());
 }
 

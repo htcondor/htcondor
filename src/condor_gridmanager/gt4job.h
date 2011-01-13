@@ -53,8 +53,8 @@ class GT4Job : public BaseJob
 
 	void Reconfig();
 	void doEvaluateState();
-	void UpdateGlobusState( const MyString &new_state,
-							const MyString &new_fault );
+	void UpdateGlobusState( const std::string &new_state,
+							const std::string &new_fault );
 	void GramCallback( const char *new_state, const char *new_fault,
 					   const int new_exit_code );
 	bool GetCallbacks();
@@ -79,10 +79,10 @@ class GT4Job : public BaseJob
 
 	// New variables
 	int gmState;
-	MyString globusState;
-	MyString globusStateFaultString;
-	MyString callbackGlobusState;
-	MyString callbackGlobusStateFaultString;
+	std::string globusState;
+	std::string globusStateFaultString;
+	std::string callbackGlobusState;
+	std::string callbackGlobusStateFaultString;
 	GT4Resource *myResource;
 	time_t lastProbeTime;
 	bool probeNow;
@@ -103,7 +103,7 @@ class GT4Job : public BaseJob
 	Proxy *jobProxy;
 	GahpClient *gahp;
 
-	MyString *buildSubmitRSL();
+	std::string *buildSubmitRSL();
 	void DeleteOutput();
 
 	char *jobContact;
@@ -111,15 +111,15 @@ class GT4Job : public BaseJob
 		// the RSL is stored here (so that we don't have to reconstruct the
 		// RSL every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
-	MyString *RSL;
-	MyString errorString;
+	std::string *RSL;
+	std::string errorString;
 	char *localOutput;
 	char *localError;
 	bool streamOutput;
 	bool streamError;
 	bool stageOutput;
 	bool stageError;
-	MyString globusErrorString;
+	std::string globusErrorString;
 
 	int numGlobusSubmits;
 
@@ -130,8 +130,8 @@ class GT4Job : public BaseJob
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;
-	bool AllowTransition( const MyString &new_state,
-						  const MyString &old_state );
+	bool AllowTransition( const std::string &new_state,
+						  const std::string &old_state );
 	const char * printXMLParam (const char * name, const char * value);
 	const char * getDummyJobScratchDir();
 };

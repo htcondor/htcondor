@@ -99,24 +99,13 @@ pseudo_get_job_info(ClassAd *&ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
-	// Only initialize the file transfer object if
-	// NeverCreateJobSandbox is not set OR if we're running
-        // a job that depends on the existence of a spool dir
-  	 int never_create_sandbox_expr_result;
-	 int job_requires_sandbox_expr_result;
-	 bool never_create_sandbox = the_ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr_result ) && never_create_sandbox_expr_result;
-	 bool job_requires_sandbox = the_ad->EvalBool( ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr_result ) && job_requires_sandbox_expr_result;
-
-	 if( !never_create_sandbox || job_requires_sandbox ) {
-
 		// FileTransfer now makes sure we only do Init() once.
 		//
 		// New for WIN32: want_check_perms = false.
 		// Since the shadow runs as the submitting user, we
 		// let the OS enforce permissions instead of relying on
 		// the pesky perm object to get it right.
-	  thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, false );
-	}
+	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, false );
 
 	Shadow->publishShadowAttrs( the_ad );
 
@@ -715,7 +704,7 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 }
 
 int
-pseudo_set_job_attr( const char *name, const char *expr )
+pseudo_set_job_attr( const char *name, const char *expr, bool log )
 {
 	RemoteResource *remote;
 	if (parallelMasterResource == NULL) {
@@ -723,7 +712,7 @@ pseudo_set_job_attr( const char *name, const char *expr )
 	} else {
 		remote = parallelMasterResource;
 	}
-	if(Shadow->updateJobAttr(name,expr)) {
+	if(Shadow->updateJobAttr(name,expr,log)) {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) succeeded\n",name,expr);
 		ClassAd *ad = remote->getJobAd();
 		ASSERT(ad);

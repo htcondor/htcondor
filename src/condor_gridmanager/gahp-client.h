@@ -30,6 +30,7 @@
 #include "proxymanager.h"
 #include "condor_arglist.h"
 #include <map>
+#include <queue>
 
 
 struct GahpProxyInfo
@@ -165,13 +166,16 @@ class GahpServer : public Service {
 
 	unsigned int m_reference_count;
 	HashTable<int,GahpClient*> *requestTable;
-	Queue<int> waitingToSubmit;
+	std::queue<int> waitingHighPrio;
+	std::queue<int> waitingMediumPrio;
+	std::queue<int> waitingLowPrio;
 
 	int m_gahp_pid;
 	int m_gahp_readfd;
 	int m_gahp_writefd;
 	int m_gahp_errorfd;
-	MyString m_gahp_error_buffer;
+	std::string m_gahp_error_buffer;
+	bool m_gahp_startup_failed;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
 	bool use_prefix;
@@ -309,7 +313,7 @@ class GahpClient : public Service {
 
 		Proxy *getMasterProxy();
 
-		bool isStarted() { return server->m_gahp_pid != -1; }
+		bool isStarted() { return server->m_gahp_pid != -1 && !server->m_gahp_startup_failed; }
 		bool isInitialized() { return server->is_initialized; }
 
 		const char *getErrorString();
@@ -606,12 +610,12 @@ class GahpClient : public Service {
 							 char **job_status, int *exit_code, char **failure_reason);
 
 		struct CreamJobStatus {
-			MyString job_id;
-			MyString job_status;
+			std::string job_id;
+			std::string job_status;
 			int exit_code;
-			MyString failure_reason;
+			std::string failure_reason;
 		};
-		typedef std::map<MyString, CreamJobStatus> CreamJobStatusMap;
+		typedef std::map<std::string, CreamJobStatus> CreamJobStatusMap;
 		int cream_job_status_all(const char *service, CreamJobStatusMap & job_ids);
 		
 		int cream_proxy_renew(const char *delg_service, const char *delg_id);
@@ -619,17 +623,8 @@ class GahpClient : public Service {
 		int cream_ping(const char * service);
 		
 		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
-		
-		//************* Added for Amazon Jobs by fangcao ***************************//
-		
-		/* Phase II work for Amazon jobs (EC2 Part) */
-		
-		/* 
-		** Currently in order to distinguish a job which is submitted from Condor, we will set
-		** is belong to the 'Condor' group. This requires us to create a 'Condor' group before
-		** the start of gahp_server/gahp_client or Condor will create a temporary group name.
-		*/
-		
+
+
 		// 1. Start VM:
 		// AMAZON_COMMAND_VM_START <req_id> <publickeyfile> <privatekeyfile> <ami-id> <keypair> <groupname> <groupname> ...
 		// <keypair> and <groupname> are optional ones.
@@ -676,7 +671,7 @@ class GahpClient : public Service {
 							  const char * privatekeyfile,
 							  const char * instance_id,
 							  char* & error_code );		
-#endif 
+#endif
 		
 		// 4. Status VM:
 		// AMAZON_COMMAND_VM_STATUS <req_id> <publickeyfile> <privatekeyfile> <instance-id>
@@ -1048,9 +1043,49 @@ class GahpClient : public Service {
 									  const char* privatekeyfile,
 									  StringList & returnStatus,
 								  	  char* & error_code );
-		
-		//************* End of changes for Amamzon Jobs by fangcao *****************//
 			
+
+		int
+		dcloud_submit( const char *service_url,
+					   const char *username,
+					   const char *password,
+					   const char *image_id,
+					   const char *instance_name,
+					   const char *realm_id,
+					   const char *hwp_id,
+					   const char *keyname,
+					   const char *userdata,
+					   StringList &attrs );
+
+		int
+		dcloud_status_all( const char *service_url,
+						   const char *username,
+						   const char *password,
+						   StringList &instance_ids,
+						   StringList &statuses );
+
+		int
+		dcloud_action( const char *service_url,
+					   const char *username,
+					   const char *password,
+					   const char *instance_id,
+					   const char *action );
+
+		int
+		dcloud_info( const char *service_url,
+					 const char *username,
+					 const char *password,
+					 const char *instance_id,
+					 StringList &attrs );
+
+		int
+		dcloud_find( const char *service_url,
+					 const char *username,
+					 const char *password,
+					 const char *instance_name,
+					 char **instance_id );
+
+
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
@@ -1067,11 +1102,19 @@ class GahpClient : public Service {
 
 	private:
 
+	/// Enum used by now_pending for the waiting queues
+	enum PrioLevel {
+		/** */ low_prio,
+		/** */ medium_prio,
+		/** */ high_prio
+	};
+
 			// Various Private Methods
 		void clear_pending();
 		bool is_pending(const char *command, const char *buf);
 		void now_pending(const char *command,const char *buf,
-						 GahpProxyInfo *proxy = NULL);
+						 GahpProxyInfo *proxy = NULL,
+						 PrioLevel prio_level = medium_prio);
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
@@ -1091,7 +1134,7 @@ class GahpClient : public Service {
 		GahpProxyInfo *normal_proxy;
 		GahpProxyInfo *deleg_proxy;
 		GahpProxyInfo *pending_proxy;
-		MyString error_string;
+		std::string error_string;
 
 			// These data members all deal with the GAHP
 			// server.  Since there is only one instance of the GAHP

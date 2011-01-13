@@ -42,13 +42,13 @@ const char *CondorResource::HashName( const char *resource_name,
 									  const char *pool_name,
 									  const char *proxy_subject )
 {
-	static MyString hash_name;
+	static std::string hash_name;
 
-	hash_name.sprintf( "condor %s %s#%s", resource_name, 
+	sprintf( hash_name, "condor %s %s#%s", resource_name, 
 					   pool_name ? pool_name : "NULL",
 					   proxy_subject ? proxy_subject : "NULL" );
 
-	return hash_name.Value();
+	return hash_name.c_str();
 }
 
 CondorResource *CondorResource::FindOrCreateResource( const char * resource_name,
@@ -56,7 +56,6 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 													  const Proxy *proxy )
 {
 	int rc;
-	MyString resource_key;
 	CondorResource *resource = NULL;
 
 	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
@@ -115,9 +114,9 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 	} else {
 		// TODO remove scheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
-		MyString buff;
+		std::string buff;
 		ArgList args;
-		buff.sprintf( "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
+		sprintf( buff, "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
 					  scheddName, proxyFQAN ? proxyFQAN : "NULL" );
 		args.AppendArg("-f");
 		args.AppendArg("-s");
@@ -127,17 +126,17 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 			args.AppendArg(poolName);
 		}
 
-		gahp = new GahpClient( buff.Value(), gahp_path, &args );
+		gahp = new GahpClient( buff.c_str(), gahp_path, &args );
 		gahp->setNotificationTimerId( scheddPollTid );
 		gahp->setMode( GahpClient::normal );
 		gahp->setTimeout( CondorJob::gahpCallTimeout );
 
-		ping_gahp = new GahpClient( buff.Value(), gahp_path, &args );
+		ping_gahp = new GahpClient( buff.c_str(), gahp_path, &args );
 		ping_gahp->setNotificationTimerId( pingTimerId );
 		ping_gahp->setMode( GahpClient::normal );
 		ping_gahp->setTimeout( CondorJob::gahpCallTimeout );
 
-		lease_gahp = new GahpClient( buff.Value(), gahp_path, &args );
+		lease_gahp = new GahpClient( buff.c_str(), gahp_path, &args );
 		lease_gahp->setNotificationTimerId( updateLeasesTimerId );
 		lease_gahp->setMode( GahpClient::normal );
 		lease_gahp->setTimeout( CondorJob::gahpCallTimeout );
@@ -210,10 +209,10 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 {
 	BaseResource::PublishResourceAd( resource_ad );
 
-	MyString buff;
+	std::string buff;
 
-	buff.sprintf( "condor %s %s", resourceName, poolName );
-	resource_ad->Assign( ATTR_NAME, buff.Value() );
+	sprintf( buff, "condor %s %s", resourceName, poolName );
+	resource_ad->Assign( ATTR_NAME, buff.c_str() );
 	if ( proxySubject ) {
 		resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
 	}
@@ -228,12 +227,12 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 
 	if ( submitter_ids.contains( submitter_id ) == false ) {
 		submitter_ids.append( submitter_id );
-		if ( submitter_constraint.Length() == 0 ) {
-			submitter_constraint.sprintf( "(%s=?=\"%s\")",
+		if ( submitter_constraint.empty() ) {
+			sprintf( submitter_constraint, "(%s=?=\"%s\")",
 										  ATTR_SUBMITTER_ID,
 										  submitter_id );
 		} else {
-			submitter_constraint.sprintf_cat( "||(%s=?=\"%s\")",
+			sprintf_cat( submitter_constraint, "||(%s=?=\"%s\")",
 											  ATTR_SUBMITTER_ID,
 											  submitter_id );
 		}
@@ -267,13 +266,10 @@ void CondorResource::DoScheddPoll()
 	}
 
 	if ( gahp->isStarted() == false ) {
-		if ( gahp->Startup() == false ) {
-				// Failed to start the gahp server. Don't do anything
-				// about it. The job objects will also fail on this call
-				// and should go on hold as a result.
-			daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
-			return;
-		}
+		// The gahp isn't started yet. Wait a few seconds for a CondorJob
+		// object to start it (and possibly initialize x509 credentials).
+		daemonCore->Reset_Timer( scheddPollTid, 5 );
+		return;
 	}
 
 	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
@@ -304,7 +300,7 @@ void CondorResource::DoScheddPoll()
 			// start schedd status command
 		dprintf( D_FULLDEBUG, "Starting collective poll: %s\n",
 				 scheddName );
-		MyString constraint;
+		std::string constraint;
 
 			// create a list of jobs we expect to hear about in our
 			// status command
@@ -317,7 +313,7 @@ void CondorResource::DoScheddPoll()
 		}
 		CondorResource *next_resource;
 		BaseJob *job;
-		MyString job_id;
+		std::string job_id;
 		ResourcesByName.startIterations();
 		while ( ResourcesByName.iterate( next_resource ) != 0 ) {
 			if ( strcmp( scheddName, next_resource->scheddName ) ||
@@ -334,10 +330,10 @@ void CondorResource::DoScheddPoll()
 			}
 		}
 
-		constraint.sprintf( "(%s)", submitter_constraint.Value() );
+		sprintf( constraint, "(%s)", submitter_constraint.c_str() );
 
 		rc = gahp->condor_job_status_constrained( scheddName,
-												  constraint.Value(),
+												  constraint.c_str(),
 												  NULL, NULL );
 
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
@@ -375,7 +371,7 @@ void CondorResource::DoScheddPoll()
 			for ( int i = 0; i < num_status_ads; i++ ) {
 				int cluster, proc;
 				int rc2;
-				MyString job_id_string;
+				std::string job_id_string;
 				CondorJob *job;
 
 				if( status_ads[i] == NULL ) {
@@ -386,10 +382,10 @@ void CondorResource::DoScheddPoll()
 				status_ads[i]->LookupInteger( ATTR_CLUSTER_ID, cluster );
 				status_ads[i]->LookupInteger( ATTR_PROC_ID, proc );
 
-				job_id_string.sprintf( "condor %s %s %d.%d", scheddName,
+				sprintf( job_id_string, "condor %s %s %d.%d", scheddName,
 									   poolName, cluster, proc );
 
-				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.Value() ),
+				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.c_str() ),
 													  (BaseJob*&)job );
 				if ( rc2 == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
@@ -410,7 +406,7 @@ void CondorResource::DoScheddPoll()
 			// Check if any jobs were missing from the status result
 		if ( rc == 0 ) {
 			CondorJob *job;
-			MyString job_id;
+			std::string job_id;
 			poll_info->m_submittedJobs.Rewind();
 			while ( ( job = poll_info->m_submittedJobs.Next() ) ) {
 				if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
@@ -513,12 +509,12 @@ dprintf( D_FULLDEBUG, "*** Lease udpate succeeded!\n" );
 		update_complete = true;
 
 		PROC_ID curr_id;
-		MyString id_str;
+		std::string id_str;
 		updated.Rewind();
 		while ( updated.Next( curr_id ) ) {
-			id_str.sprintf( "condor %s %s %d.%d", scheddName, poolName,
+			sprintf( id_str, "condor %s %s %d.%d", scheddName, poolName,
 							curr_id.cluster, curr_id.proc );
-			if ( BaseJob::JobsByRemoteId.lookup( HashKey( id_str.Value() ),
+			if ( BaseJob::JobsByRemoteId.lookup( HashKey( id_str.c_str() ),
 												 curr_job ) == 0 ) {
 				update_succeeded.Append( curr_job->procID );
 			}

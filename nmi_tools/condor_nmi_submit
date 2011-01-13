@@ -8,7 +8,7 @@
 # 1. Get the buildtags from the nighlty build-tag on the CSL machine or 
 #    from the command line arguments
 # 2. For each tag defined
-#    - Checkout the nmi_glue/submit_info input file and parse it
+#    - Checkout the nmi_tools/glue/SubmitInfo.pm input file and parse it
 #    - Generate the appropriate NMI submit and fetch files
 #    - run nmi_submit
 
@@ -50,10 +50,6 @@ sub FALSE { 0; };
 
 # Constants for use with makeFetchFileVCS to specify if fetching from
 # source (SRC), externals (EXT) or manual (DOC) repositories.
-#sub TST_LRG	{ 5; };
-#sub TST_CNF	{ 4; };
-#sub TST 	{ 3; };
-#sub EXT 	{ 2; };
 sub DOC 	{ 1; };
 sub SRC 	{ 0; };
 
@@ -61,29 +57,17 @@ sub SRC 	{ 0; };
 # Configurable settings
 ######################################################################
 
-# CVSROOT to use for checking out from CVS
-my $CVSROOT = "/space/cvs/CONDOR_SRC";
-
 # Root of the GIT Source repository
 my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
 
 # Root of the GIT Manual repository
 my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
 
-# Root of the GIT Externals repository
-#my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
-
-# Root of the GIT Confidential Test repository
-#my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
-
-# Root of the GIT Large Test repository
-#my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
-
 # name of the submit_info file
 my $submit_info_basename = "SubmitInfo.pm";
 
 # Location of the submit_info file
-my $submit_info = "nmi_glue/$submit_info_basename";
+my $submit_info = "nmi_tools/glue/$submit_info_basename";
 
 # CVS location of condor_nmi_submit
 my $cvs_condor_nmi_submit = "nmi_tools/condor_nmi_submit";
@@ -532,10 +516,15 @@ sub parseOptions
             printUsage( 1 );
         }
 
-            # Try to catch incomplete workspaces
-        my(@condor_req_dirs) = qw( src doc );
-        if( ! defined($opt_externals) ) { push @condor_req_dirs, 'externals'; }
-            foreach my $subdir (@condor_req_dirs) {
+        my(@condor_req_dirs) = qw( src );
+
+		if (!defined($opt_skip_doc ))
+		{ push @condor_req_dirs, 'doc'; }
+
+		if( ! defined($opt_externals) )
+		{ push @condor_req_dirs, 'externals'; }
+
+    	foreach my $subdir (@condor_req_dirs) {
               if( not -d "$opt_workspace/$subdir" ) {
                 print "ERROR: Workspace $opt_workspace does not not appear to be a Condor workspace (missing $opt_workspace/$subdir)\n";
                 printUsage( 1 );
@@ -545,11 +534,11 @@ sub parseOptions
         $tags{"workspace"} = undef;
     }
 
-    if( defined($src_workspace) && defined($opt_nmi_glue) && -d "$src_workspace/nmi_glue" ) {
+    if( defined($src_workspace) && defined($opt_nmi_glue) && -d "$src_workspace/nmi_tools/glue" ) {
         # If you want to try and fix the race condition, it will
-        # involve somehow not copying the $src_workspace/nmi_glue directory
+        # involve somehow not copying the $src_workspace/nmi_tools/glue directory
         # in generateBuildFetchFiles().
-        print "WARNING: Your workspace ($src_workspace) contains an nmi_glue subdirectory.  You also specified an --nmi-glue directory ($opt_nmi_glue).  At the moment there is a race condition and you could get either directory.  As a workaround, rename %src_workspace/nmi_glue.\n";
+        print "WARNING: Your workspace ($src_workspace) contains an nmi_tools/glue subdirectory.  You also specified an --nmi-glue directory ($opt_nmi_glue).  At the moment there is a race condition and you could get either directory.  As a workaround, rename %src_workspace/nmi_tools/glue.\n";
     }
 
     if( defined($opt_nmi_glue) ) {
@@ -573,7 +562,6 @@ sub parseOptions
         }
     }
 }
-
 
 # TODO: this should be more clear about the required vs. optional
 # arguments, especially for --test...
@@ -637,8 +625,7 @@ Where [build-options] can be any of:
                   submit test runs based on this build.
 --version-buildid=string <Build RunId to use in the version string>
 --sha1            Place the sha1 into the database as the product_version.
---skip-doc        Exactly what it says. Can't use it till we can implement
-                  a way for make public to not fail with no manual.
+--skip-doc        skips doc requirement
 Where [test-options] can be any of:
 --buildid=string   <Build RunId to test>
 --test-src=string  <Custom source tarball for building tests with>
@@ -878,7 +865,7 @@ sub createSubmitFilesNew
 		# in the first attempt to run the job and then prevent the job
 		# from matching in the second attempt.
 		print CMDFILE 
-		"append_requirements = Disk =!= UNDEFINED && TotalDisk >= 18000000\n";
+		"append_requirements = Disk =!= UNDEFINED && TotalDisk >= 10000000\n";
 
     } else {
 
@@ -912,9 +899,8 @@ sub checkoutSubmitInfo
     my $cmd = "/bin/false FATAL ERROR, UNKNOWN VCS";
     if (defined($opt_git)) {
 	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
-    } else {
-	$cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
     }
+
     open( OUT, "$cmd 2>&1 |" ) ||
         die "Can't open '$cmd' as a pipe: $!\n";
     @output = <OUT>;
@@ -1258,7 +1244,7 @@ sub writeCommonInfo
         print $fh "configure = $opt_configure\n";
     }
 
-    print $fh "+LoadProfile = true\n";
+    print $fh "++LoadProfile = true\n";
 
 	# collect the names of the platforms, regardless of if they use the
 	# default minimal builds or not.
@@ -1285,31 +1271,39 @@ sub writeBuildGlueNew
 
 EOF
 
-    # define the glue scripts we want
-    print $fh "pre_all = nmi_glue/build/pre_all\n";
+#     # define the glue scripts we want
+    print $fh "pre_all = nmi_tools/glue/build/pre_all\n";
 	my $pre_all_args = "";
 	if (defined($opt_skip_doc)) {
 		$pre_all_args = $pre_all_args . " --skip-doc";
 	}
+
     if (defined($opt_version_buildid)) {
       $pre_all_args = $pre_all_args . "--version-buildid=$opt_version_buildid";
     }
     print $fh "pre_all_args = $pre_all_args\n";
-    print $fh "remote_declare = nmi_glue/build/remote_declare\n";
-    print $fh "remote_declare_args =";
-    print $fh " --externals-only" if defined($opt_externals_only);
-    print $fh " --release-only" if defined($opt_release_only);
-    print $fh "\n";
-    print $fh "remote_pre = nmi_glue/build/remote_pre\n";
-    print $fh "remote_task = nmi_glue/build/remote_task\n";
-    print $fh "remote_post = nmi_glue/build/remote_post\n";
-    print $fh "platform_post = nmi_glue/build/platform_post\n";
-    print $fh "post_all = nmi_glue/build/post_all\n";
 
+	#tstclair: we no longer use this.
+	# print $fh "remote_declare = \n";
+    # print $fh "remote_declare_args =";
+    # print $fh " --externals-only" if defined($opt_externals_only);
+    # print $fh " --release-only" if defined($opt_release_only);
+    # print $fh "\n";
+    print $fh "remote_declare = nmi_tools/glue/build/remote_declare\n";
+    print $fh "remote_pre = nmi_tools/glue/build/remote_pre\n";
+    print $fh "remote_task = nmi_tools/glue/build/remote_task\n";
+    print $fh "remote_post = nmi_tools/glue/build/remote_post\n";
+    print $fh "platform_post = nmi_tools/glue/build/platform_post\n";
+
+	# tstclair: no longer needed.
+	# print $fh "post_all = nmi_tools/glue/build/post_all\n";
+
+	# tstclair: why is this even an option it should always be the case. 
     # Pass common arguments to <platform>_remote_pre script
-    if( defined($opt_use_externals_cache) ) {
-		$common_pre_args .= ' --use_externals_cache';
-    }
+    #if( defined($opt_use_externals_cache) ) {
+	#	$common_pre_args .= ' --use_externals_cache';
+    #}
+
     if( defined($opt_clear_externals_cache) ) {
 		$common_pre_args .= ' --clear_externals_cache';
     }
@@ -1405,19 +1399,19 @@ sub writeTestGlueNew
 EOF
 
     # define the glue scripts we want for test jobs
-    print $fh "pre_all = nmi_glue/test/pre_all\n";
+    print $fh "pre_all = nmi_tools/glue/test/pre_all\n";
     if( defined $opt_test_src) {
         print CMDFILE "pre_all_args = --src=$opt_test_src\n";
     }
-    print $fh "platform_pre = nmi_glue/test/platform_pre\n";
-    print $fh "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
-    print $fh "remote_declare = nmi_glue/test/remote_declare\n";
-    print $fh "remote_pre = nmi_glue/test/remote_pre\n";
-    print $fh "remote_task = nmi_glue/test/remote_task\n";
+    print $fh "platform_pre = nmi_tools/glue/test/platform_pre\n";
+    print $fh "remote_pre_declare = nmi_tools/glue/test/remote_pre_declare\n";
+    print $fh "remote_declare = nmi_tools/glue/test/remote_declare\n";
+    print $fh "remote_pre = nmi_tools/glue/test/remote_pre\n";
+    print $fh "remote_task = nmi_tools/glue/test/remote_task\n";
     print $fh "remote_task_timeout = $test_timeout\n";
-    print $fh "remote_post = nmi_glue/test/remote_post\n";
-    print $fh "platform_post = nmi_glue/test/platform_post\n";
-    print $fh "post_all = nmi_glue/test/post_all\n";
+    print $fh "remote_post = nmi_tools/glue/test/remote_post\n";
+    print $fh "platform_post = nmi_tools/glue/test/platform_post\n";
+    print $fh "post_all = nmi_tools/glue/test/post_all\n";
 	# turn on testing concurrency
 	if( defined $opt_tests_at_once) {
     	print $fh "max_concurrent_subtasks = $opt_tests_at_once\n";
@@ -1495,7 +1489,7 @@ sub generateTestFetchFiles
         # We rather crudely copy all of nmi_glue when we really
         # on need nmi_glue/$runtype.  But we want the nmi_glue path
         # in front of it.
-        makeFetchFileSCP( $glue_file, "$src_workspace/nmi_glue", "recursive" );
+        makeFetchFileSCP( $glue_file, "$src_workspace/nmi_tools", "recursive" );
         push( @fetch_files, $glue_file );
 
     } elsif( ( ! defined $opt_nmi_glue) ) {
@@ -1506,7 +1500,7 @@ sub generateTestFetchFiles
         # rely on the copy of the glue in the source tarball from the
         # build output, since we have no way to untar it without glue. ;)
         my $glue_file = "test_glue.src";
-        makeFetchFileVCS( $glue_file, FALSE, SRC, "nmi_glue/$runtype", $tag );
+        makeFetchFileVCS( $glue_file, FALSE, SRC, "nmi_tools/glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
     }
     # else: Not workspace build.  Using --nmi_glue 
@@ -1693,14 +1687,8 @@ sub makeFetchFileVCS
 	    	# NMI copy of the repository
 	    	print FILE "git_tree = origin/master\n";
 		}
-    } else {
-		print FILE "method = cvs\n";
-		print FILE "cvs_root = $CVSROOT\n";
-		print FILE "cvs_module = $module\n";
-		if( $tag ) {
-	    	print FILE "cvs_tag = $tag\n";
-		}
     }
+
     close FILE;
 }
 

@@ -105,7 +105,7 @@ class CondorJob : public BaseJob
 		// ad every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
 	ClassAd *gahpAd;
-	MyString errorString;
+	std::string errorString;
 
  protected:
 };

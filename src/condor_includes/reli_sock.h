@@ -68,6 +68,8 @@ public:
     ///
 	virtual int end_of_message();
 
+	virtual bool peek_end_of_message();
+
     /** Connect to a host on a port
         @param s can be a hostname or sinful string
         @param port the port to connect to, ignorred if s contains port

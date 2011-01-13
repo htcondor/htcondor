@@ -69,7 +69,7 @@ public:
   float GetSlotWeight(ClassAd *candidate);
   void UpdatePriorities(); // update all the priorities
 
-  void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
+  void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
   double GetLimit(const MyString& limit);
   double GetLimitMax(const MyString& limit);
@@ -91,7 +91,7 @@ private:
   
   void RemoveMatch(const MyString& ResourceName, time_t T);
 
-  void LoadLimits(ClassAdList &resourceList);
+  void LoadLimits(ClassAdListDoesNotDeleteAds &resourceList);
   void ClearLimits();
   void DumpLimits();
 
@@ -145,7 +145,7 @@ private:
   bool GetResourceState(ClassAd* Resource, State& state);
   int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
-  static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
+  static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList);
   static MyString GetDomain(const MyString& CustomerName);
 
   bool DeleteClassAd(const MyString& Key);

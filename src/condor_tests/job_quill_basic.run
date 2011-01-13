@@ -54,7 +54,7 @@ system("mkdir $myquillpiddir");
 system("ln -s $myquillpiddir $myquillname");
 
 # find the version of the current external
-$testbin_dir = "$topdir/../testbin_dir";
+$testbin_dir = "$topdir/";
 CondorTest::debug("Searching $testbin_dir for Postgres installations:\n",1);
 system("ls $testbin_dir");
 

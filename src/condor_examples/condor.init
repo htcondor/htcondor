@@ -74,6 +74,7 @@ stop() {
 	# condor still running and just return 0, which means when
 	# condor exits it won't be restarted
 	echo $"Warning: $prog may not have exited, start/restart may fail"
+	RETVAL=1
     fi
     [ $RETVAL -eq 0 ] && rm -f $lockfile
     return $RETVAL

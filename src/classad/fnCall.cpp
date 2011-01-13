@@ -2243,13 +2243,20 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	ClassAdParser parser;
 	ExprTree *expr = NULL;
 	if( !parser.ParseExpression( s.c_str(), expr, true ) || !expr ) {
+		if( expr ) {
+			delete expr;
+		}
 		result.SetErrorValue();
 		return true;
 	}
 
 	expr->SetParentScope( state.curAd );
 
-	if( !expr->Evaluate( result ) ) {
+	bool eval_ok = expr->Evaluate( result );
+
+	delete expr;
+
+	if( !eval_ok ) {
 		result.SetErrorValue();
 		return false;
 	}

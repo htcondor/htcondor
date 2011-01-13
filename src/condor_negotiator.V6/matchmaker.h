@@ -94,8 +94,8 @@ class Matchmaker : public Service
 		void updateCollector();
 
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClaimIdHash& );	
-		char * compute_significant_attrs(ClassAdList & startdAds);
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdListDoesNotDeleteAds&, ClassAdListDoesNotDeleteAds&, ClaimIdHash& );	
+		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
 		
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
 			@param scheddName Name attribute from the submitter ad.
@@ -118,7 +118,7 @@ class Matchmaker : public Service
 		int negotiate( char const *scheddName, const ClassAd *scheddAd, 
 		   double priority, double share,
 		   double submitterLimit,
-		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
+		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
 		   int &numMatched, double &limitUsed, double &pieLeft);
@@ -126,17 +126,17 @@ class Matchmaker : public Service
 		int negotiateWithGroup ( int untrimmed_num_startds,
 								 double untrimmedSlotWeightTotal,
 								 double minSlotWeight,
-			ClassAdList& startdAds, 
-			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
+			ClassAdListDoesNotDeleteAds& startdAds, 
+			ClaimIdHash& claimIds, ClassAdListDoesNotDeleteAds& scheddAds, 
 			float groupQuota=INT_MAX, float groupusage=0, const char* groupAccountingName=NULL);
 
 		
-		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdList&,
+		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdListDoesNotDeleteAds&,
 									  double=-1.0, double=1.0, double=0.0, double=0.0, double=0.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* scheddName, const char* scheddAddr);
-		void calculateNormalizationFactor (ClassAdList &, double &, double &,
+		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &, double &, double &,
 										   double &, double &);
 
 		/** Calculate a submitter's share of the pie.
@@ -185,7 +185,7 @@ class Matchmaker : public Service
 			@param normalAbsFactor Normalization for prio factors
 			@param pieLeft Sum of submitterLimits
 		**/
-		void calculatePieLeft( ClassAdList &scheddAds,
+		void calculatePieLeft( ClassAdListDoesNotDeleteAds &scheddAds,
 		                       char const *groupAccountingName,
 		                       float groupQuota,
 				       float groupusage,
@@ -207,7 +207,7 @@ class Matchmaker : public Service
 		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
 		void addRemoteUserPrios( ClassAd* ad );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
-		void insertNegotiatorMatchExprs( ClassAdList &cal );
+		void insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		static unsigned int HashFunc(const MyString &Key);
@@ -216,10 +216,10 @@ class Matchmaker : public Service
 
 			// If we are not considering preemption, this function will
 			// trim out startd ads that are not in the Unclaimed state.
-		int trimStartdAds(ClassAdList &startdAds);
+		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
-		double sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight);
+		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight);
 
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
@@ -406,7 +406,7 @@ class Matchmaker : public Service
 			float prio;
 			float maxAllowed;
 			float usage;
-			ClassAdList submitterAds;			
+			ClassAdListDoesNotDeleteAds submitterAds;			
 		};
 		static int groupSortCompare(const void*, const void*);
 		

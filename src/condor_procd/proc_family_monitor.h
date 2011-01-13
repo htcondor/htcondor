@@ -40,9 +40,10 @@ class ProcFamilyMonitor {
 
 public:	
 	// construct a monitor using the process with the given pid and
-	// birthday as the "root" process of the "root" family
+	// birthday as the "root" process of the "root" family. The boolean
+	// specifies if we'd like to EXCEPT of the "root" pid dies.
 	//
-	ProcFamilyMonitor(pid_t, birthday_t, int);
+	ProcFamilyMonitor(pid_t, birthday_t, int, bool);
 
 	// clean up everything
 	//
@@ -52,7 +53,8 @@ public:
 	// enable tracking based on group IDs by specifying a range that
 	// can be used for this purpose
 	//
-	void enable_group_tracking(gid_t min_tracking_gid, gid_t max_tracking_gid);
+	void enable_group_tracking(gid_t min_tracking_gid, 
+			gid_t max_tracking_gid, bool allocating);
 #endif
 
 	// create a "subfamily", which can then be signalled and accounted
@@ -106,8 +108,7 @@ public:
 	// the root of our tree (otherwise a PID of 0 causes the lookup to
 	// fail)
 	//
-	Tree<ProcFamily*>* lookup_family(pid_t pid,
-	                                 bool zero_means_root = false);
+	Tree<ProcFamily*>* lookup_family(pid_t pid, bool zero_means_root = false);
 
 	// return the time that the procd should ewait in between taking
 	// snapshots. this is the minimum of all the "maximum snapshot
@@ -152,6 +153,12 @@ private:
 	// we are monitoring
 	//
 	HashTable<pid_t, ProcFamilyMember*> m_member_table;
+
+	// Upon consutruction of this object, the first pid we monitor is either
+	// going to be the condor_master or an arbitrary pid on the machine.
+	// In the former case, if that pid dies, then we also want to die.
+	// Otherwise we don't.
+	bool m_except_if_pid_dies;
 
 	// the "tracker" objects we use for finding processes that belong
 	// to the families we're tracking

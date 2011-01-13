@@ -33,9 +33,9 @@ HashTable <HashKey, AmazonResource *>
 const char * AmazonResource::HashName( const char * resource_name,
 		const char * public_key_file, const char * private_key_file )
 {								 
-	static MyString hash_name;
-	hash_name.sprintf( "amazon %s#%s#%s", resource_name, public_key_file, private_key_file );
-	return hash_name.Value();
+	static std::string hash_name;
+	sprintf( hash_name, "amazon %s#%s#%s", resource_name, public_key_file, private_key_file );
+	return hash_name.c_str();
 }
 
 
@@ -43,7 +43,6 @@ AmazonResource* AmazonResource::FindOrCreateResource(const char * resource_name,
 	const char * public_key_file, const char * private_key_file )
 {
 	int rc;
-	MyString resource_key;
 	AmazonResource *resource = NULL;
 
 	rc = ResourcesByName.lookup( HashKey( HashName( resource_name, public_key_file, private_key_file ) ), resource );
@@ -71,9 +70,6 @@ AmazonResource::AmazonResource( const char *resource_name,
 	
 	gahp = NULL;
 
-	MyString buff;
-	buff.sprintf( AMAZON_RESOURCE_NAME );
-	
 	char * gahp_path = param( "AMAZON_GAHP" );
 	if ( gahp_path == NULL ) {
 		dprintf(D_ALWAYS, "AMAZON_GAHP not defined! \n");
@@ -83,7 +79,7 @@ AmazonResource::AmazonResource( const char *resource_name,
 	ArgList args;
 	args.AppendArg("-f");
 
-	gahp = new GahpClient( buff.Value(), gahp_path, &args );
+	gahp = new GahpClient( AMAZON_RESOURCE_NAME, gahp_path, &args );
 	free(gahp_path);
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
@@ -129,9 +125,9 @@ void AmazonResource::PublishResourceAd( ClassAd *resource_ad )
 void AmazonResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	// Since Amazon doesn't use proxy, we should use Startup() to replace isInitialized()
-	if ( gahp->Startup() == false ) {
+	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
-		ping_delay = 5;		
+		ping_delay = 5;
 		return;
 	}
 	

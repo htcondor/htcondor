@@ -91,7 +91,7 @@ class UnicoreJob : public BaseJob
 		// it every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
 	MyString *submitAd;
-	MyString errorString;
+	std::string errorString;
 
 };
 

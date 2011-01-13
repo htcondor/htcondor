@@ -51,7 +51,7 @@
 // Unix specific stuff
 #include "sig_install.h"
 #else
-#include "CondorSystrayNotifier.h"//for the "birdwatcher" (system tray icon)
+#include "CondorSystrayNotifier.windows.h"//for the "birdwatcher" (system tray icon)
 extern CondorSystrayNotifier systray_notifier;
 #endif
 
