@@ -25,10 +25,12 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "internet.h"
+#include "classad_merge.h"
 
 
 #include "qmgr_job_updater.h"
 #include "condor_qmgr.h"
+#include "dc_schedd.h"
 
 
 QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address, const char *schedd_version )
@@ -356,6 +358,40 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		return false;
 	}
 	job_ad->ClearAllDirtyFlags();
+	return true;
+}
+
+
+bool
+QmgrJobUpdater::retrieveJobUpdates( void )
+{
+	ClassAd updates;
+	CondorError errstack;
+	StringList job_ids;
+	char id_str[PROC_ID_STR_BUFLEN];
+	MyString error;
+
+	ProcIdToStr(cluster, proc, id_str);
+	job_ids.insert(id_str);
+
+	if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, false ) ) {
+		return false;
+	}
+	if ( GetDirtyAttributes( cluster, proc, &updates ) < 0 ) {
+		DisconnectQ(NULL,false);
+		return false;
+	}
+	DisconnectQ( NULL, false );
+
+	dprintf( D_FULLDEBUG, "Retrieved updated attributes from schedd\n" );
+	updates.dPrint( D_JOB );
+	MergeClassAds( job_ad, &updates, true );
+
+	DCSchedd schedd( schedd_addr );
+	if ( schedd.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
+		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText( ) );
+		return false;
+	}
 	return true;
 }
 

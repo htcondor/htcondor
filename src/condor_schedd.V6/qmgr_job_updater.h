@@ -93,6 +93,10 @@ public:
 		*/
 	virtual bool watchAttribute( const char* attr, update_t type = U_NONE );
 
+		/** Connect to the job queue and retrieve changed attributes
+		*/
+	bool retrieveJobUpdates( void );
+
 private:
 
 		/** Initialize our StringLists for attributes we want to keep

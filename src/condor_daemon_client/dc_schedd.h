@@ -236,6 +236,13 @@ public:
 						 action_result_type_t result_type = AR_TOTALS,
 						 bool notify_scheduler = true );
 
+		/** Clear dirty attributes for a list of job ids
+			@param ids What jobs to act on
+			@param result_type What kind of results you want
+		*/
+	ClassAd* clearDirtyAttrs( StringList* ids, CondorError * errstack,
+						action_result_type_t result_type = AR_TOTALS );
+
 		/** Get starter connection info for a running job.
 			@param jobid What job to act on
 			@param subproc For parallel jobs, which one (-1 if not specified)

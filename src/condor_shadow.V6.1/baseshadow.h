@@ -246,6 +246,10 @@ class BaseShadow : public Service
 		 */
 	virtual int handleJobRemoval(int sig) = 0;
 
+		/** Update this job.
+		 */
+	int handleUpdateJobAd(int sig);
+
 		/** This function returns a file pointer that one can 
 			write an email message into.
 			@return A mail message file pointer.

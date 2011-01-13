@@ -1285,3 +1285,18 @@ BaseShadow::CommitSuspensionTime(ClassAd *jobAd)
 		jobAd->Assign( ATTR_UNCOMMITTED_SUSPENSION_TIME, 0 );
 	}
 }
+
+int
+BaseShadow::handleUpdateJobAd( int sig )
+{
+	dprintf ( D_FULLDEBUG, "In handleUpdateJobAd, sig %d\n", sig );
+	if (!job_updater->retrieveJobUpdates()) {
+		dprintf(D_ALWAYS, "Error: Failed to update JobAd\n");
+		return -1;
+	}
+
+	// Attributes might have changed that would cause the job policy
+	// to evaluate differently, so evaluate now.
+	shadow_user_policy.checkPeriodic();
+	return 0;
+}
