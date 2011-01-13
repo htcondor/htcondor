@@ -33,6 +33,10 @@ The details of each version are described below.
 \item Condor no longer relies on DNS to determine its IP address.
   Instead, it examines the list of system network devices.
 
+% gittrac #1754
+\item \Condor{dagman} now gives a warning if a node category has no
+nodes assigned to it, or no throttle set.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
