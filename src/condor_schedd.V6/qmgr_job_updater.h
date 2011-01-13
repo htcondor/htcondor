@@ -74,10 +74,10 @@ public:
 			the schedd can be held hostage by user-jobs that call this
 			syscall repeatedly.  :(
 		*/
-	virtual bool updateAttr( const char *name, const char *expr, bool updateMaster );
+	virtual bool updateAttr( const char *name, const char *expr, bool updateMaster, bool log=false );
 
 		/// Helper version that takes an int value instead of a string expr.
-	virtual bool updateAttr( const char *name, int value, bool updateMaster );
+	virtual bool updateAttr( const char *name, int value, bool updateMaster, bool log=false );
 
 		/** Add the given attribute to our list of attributes we
 			should watch for changes and update.  The type specifies

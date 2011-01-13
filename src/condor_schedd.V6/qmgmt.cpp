@@ -2313,6 +2313,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
 			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value, flags & SETDIRTY);
+			if( flags & SHOULDLOG ) {
+				char* old_val = NULL;
+				ExprTree *tree;
+				tree = ad->LookupExpr(raw_attribute.Value());
+				if( tree ) {
+					old_val = (char*)ExprTreeToString(tree);
+				}
+				scheduler.WriteAttrChangeToUserLog(key, raw_attribute.Value(), attr_value, old_val);
+			}
 
 			int ivalue;
 			double fvalue;
@@ -2417,6 +2426,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SETDIRTY);
+	if( flags & SHOULDLOG ) {
+		char* old_val = NULL;
+		ExprTree *tree;
+		tree = ad->LookupExpr(attr_name);
+		if( tree ) {
+			old_val = (char*)ExprTreeToString(tree);
+		}
+		scheduler.WriteAttrChangeToUserLog(key, attr_name, attr_value, old_val);
+	}
 
 	int status;
 	if( flags & NONDURABLE ) {

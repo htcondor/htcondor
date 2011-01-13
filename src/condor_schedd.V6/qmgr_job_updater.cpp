@@ -221,10 +221,11 @@ QmgrJobUpdater::resetUpdateTimer( void )
   modify it to be less potentially harmful for schedd scalability.
 */
 bool
-QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster )
+QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster, bool log )
 {
 	bool result;
 	MyString err_msg;
+	SetAttributeFlags_t flags=0;
 
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater::updateAttr: %s = %s\n",
 			 name, expr );
@@ -237,8 +238,12 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (updateMaster) {
 		p = 0;
 	}
+
+	if (log) {
+		flags = SHOULDLOG;
+	}
 	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.Value(),schedd_ver) ) {
-		if( SetAttribute(cluster,p,name,expr) < 0 ) {
+		if( SetAttribute(cluster,p,name,expr,flags) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
 		} else {
@@ -259,11 +264,11 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 
 
 bool
-QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster )
+QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool log )
 {
 	MyString buf;
     buf.sprintf("%d", value);
-	return updateAttr(name, buf.Value(), updateMaster);
+	return updateAttr(name, buf.Value(), updateMaster, log);
 }
 
 

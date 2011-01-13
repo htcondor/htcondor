@@ -1075,16 +1075,16 @@ BaseShadow::log_except(const char *msg)
 
 
 bool
-BaseShadow::updateJobAttr( const char *name, const char *expr )
+BaseShadow::updateJobAttr( const char *name, const char *expr, bool log )
 {
-	return job_updater->updateAttr( name, expr, false );
+	return job_updater->updateAttr( name, expr, false, log );
 }
 
 
 bool
-BaseShadow::updateJobAttr( const char *name, int value )
+BaseShadow::updateJobAttr( const char *name, int value, bool log )
 {
-	return job_updater->updateAttr( name, value, false );
+	return job_updater->updateAttr( name, value, false, log );
 }
 
 

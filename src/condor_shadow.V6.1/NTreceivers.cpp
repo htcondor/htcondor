@@ -876,7 +876,7 @@ do_REMOTE_syscall()
 
 		errno = (condor_errno_t)0;
 		if ( thisRemoteResource->allowRemoteWriteAttributeAccess(attrname) ) {
-			rval = pseudo_set_job_attr( attrname , expr);
+			rval = pseudo_set_job_attr( attrname , expr , true );
 			terrno = (condor_errno_t)errno;
 		} else {
 			rval = -1;

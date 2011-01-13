@@ -2729,6 +2729,37 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 }
 
 
+bool
+Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
+					 const char* attr_value,
+					 const char* old_value)
+{
+	PROC_ID job_id;
+	StrToProcId(job_id_str, job_id);
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+
+	AttributeUpdate event;
+
+	event.setName(attr);
+	event.setValue(attr_value);
+	event.setOldValue(old_value);
+        bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+        delete ULog;
+
+        if (!rval) {
+                dprintf( D_ALWAYS, "Unable to log ULOG_ATTRIBUTE_UPDATE event "
+                                 "for job %d.%d\n", job_id.cluster, job_id.proc );
+                return false;
+        }
+
+	return true;
+}
+
+
 int
 Scheduler::abort_job(int, Stream* s)
 {
