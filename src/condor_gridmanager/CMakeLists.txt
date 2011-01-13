@@ -35,6 +35,7 @@ if(NOT WIN_EXEC_NODE_ONLY)
 			DEPENDS grid_monitor_wrapper grid_manager_monitor_agent
 			COMMAND cat
 			ARGS grid_monitor_wrapper grid_manager_monitor_agent > "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh" && chmod 755 "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
+			WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		)
 		add_custom_target( grid_monitor
 				   ALL
