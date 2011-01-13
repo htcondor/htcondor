@@ -21,6 +21,13 @@
 Chirp C Client
 */
 
+#if defined WIN32
+ typedef unsigned int gid_t;
+ typedef unsigned int uid_t;
+ typedef unsigned short mode_t;
+#else
+ #include <unistd.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -283,14 +290,14 @@ DLLEXPORT int chirp_client_fstatfs( struct chirp_client *c, int fd,
   Gets filesystem metadata. Returns 0 on success, -1 on failure.
 */
 
-DLLEXPORT int chirp_client_fchown( struct chirp_client *c, int fd, int uid,
-	int gid );
+DLLEXPORT int chirp_client_fchown( struct chirp_client *c, int fd, uid_t uid,
+	gid_t gid );
 /*chirp_client_fchown
   Changes ownership of a file. Returns 0 on success, -1 on failure.
 */
 
 DLLEXPORT int chirp_client_fchmod( struct chirp_client *c, int fd,
-	int mode );
+	mode_t mode );
 /*chirp_client_fchmod
   Changes mode of a file. Returns 0 on success, -1 on failure.
 */
@@ -384,19 +391,19 @@ DLLEXPORT int chirp_client_access( struct chirp_client *c, const char *path,
 */
 
 DLLEXPORT int chirp_client_chmod( struct chirp_client *c, const char *path,
-	int mode );
+	mode_t mode );
 /*chirp_client_chmod
   Changes mode of a file. Returns 0 on success, -1 on failure.
 */
 
 DLLEXPORT int chirp_client_chown( struct chirp_client *c, const char *path,
-	int uid, int gid );
+	uid_t uid, gid_t gid );
 /*chirp_client_chown
   Changes the ownership of a file. Returns 0 on success, -1 on failure.
 */
 
 DLLEXPORT int chirp_client_lchown( struct chirp_client *c, const char *path,
-	int uid, int gid );
+	uid_t uid, gid_t gid );
 /*chirp_client_lchown
   Changes the ownership of a file. Returns 0 on success, -1 on failure.
 */
@@ -408,7 +415,7 @@ DLLEXPORT int chirp_client_truncate( struct chirp_client *c, const char *path,
 */
 
 DLLEXPORT int chirp_client_utime( struct chirp_client *c, const char *path,
-	int actime, int modtime );
+	time_t actime, time_t modtime );
 /*chirp_client_utime
   Changes the access and modification times of a file. Returns 0 on success,
   -1 on failure.
