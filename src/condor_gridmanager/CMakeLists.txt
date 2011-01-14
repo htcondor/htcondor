@@ -43,6 +43,12 @@ if(NOT WIN_EXEC_NODE_ONLY)
 		)
 		install (FILES "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh" DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
+		install (FILES nqs_cancel.sh DESTINATION ${C_LIB}/glite/bin PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+		install (FILES nqs_hold.sh DESTINATION ${C_LIB}/glite/bin PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+		install (FILES nqs_resume.sh DESTINATION ${C_LIB}/glite/bin PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+		install (FILES nqs_status.sh DESTINATION ${C_LIB}/glite/bin PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+		install (FILES nqs_submit.sh DESTINATION ${C_LIB}/glite/bin PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
 	endif()
 
 	install (FILES gridftp_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
