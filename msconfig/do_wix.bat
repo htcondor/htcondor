@@ -7,6 +7,11 @@ REM
 
 if "~%1"=="~" goto useage
 if "~%2"=="~" goto useage
+set RUNEVAL=-sval
+if "%USERNAME%" == "" goto noruneval
+if not "%_CONDOR_SLOT%" == "" goto noruneval
+set RUNEVAL=
+:noruneval
 
 set _condor_path=%~sdf1
 pushd %~sdp0
@@ -21,8 +26,7 @@ heat dir %_condor_path% -ke -g1 -srd -gg -var var.Source -t:xml\win.xsl -out "%~
 
 candle -ext WixFirewallExtension -dSource=%_condor_path% "%~n2.wxs" %_WXS_FILES%
 
-light -ext WixUIExtension -ext WixFirewallExtension -dWixUILicenseRtf=.\license.rtf -out "%2" "%~n2.wixobj" %_WIXOBJ_FILES:.wxs=.wixobj%
-
+light %RUNEVAL% -ext WixUIExtension -ext WixFirewallExtension -dWixUILicenseRtf=.\license.rtf -out "%2" "%~n2.wixobj" %_WIXOBJ_FILES:.wxs=.wixobj%
 popd
 goto finis
 

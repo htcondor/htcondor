@@ -31,6 +31,8 @@ if (NOT WINDOWS)
   # because of the external dependencies on classads we need to be careful to make it look like a normal install
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
 
+  install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE} )
+
   condor_selective_glob("attrrefs.*;new_classad.*;collection.*;collectionBase.*;new_classad_debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;new_classad_operators.*;query.*;sink.*;source.*;transaction.*;new_classad_util.*;new_classad_value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
 
   add_library( classads STATIC ${ClassadSrcs} )
