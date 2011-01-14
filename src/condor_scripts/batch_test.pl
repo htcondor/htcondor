@@ -1281,8 +1281,9 @@ sub IsPersonalRunning
 			last;
         }
     }
-    close(CONFIG)
-    	or warn "Error executing condor_config_val";
+    if ( close(CONFIG) && ($? != 13) ) {	# Ignore SIGPIPE
+	warn "Error executing condor_config_val: '$?' '$!'"
+    }
 
     if( $matchedconfig eq "" ) {
         die	"lost: config does not match expected config setting......\n";
