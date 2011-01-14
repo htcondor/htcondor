@@ -7,20 +7,7 @@
 #include <stdio.h>
 #include "frames.h"
 #include "simple_parameters.h"
-
-typedef struct _FileRecord 
-{
-	const char* filename;
-	FILE* fp;
-	long  file_size;
-} FileRecord;
-
-typedef struct _ServerRecord
-{
-	const char* server_name;
-	const char* server_port;
-	int         server_socket;
-} ServerRecord;
+#include "utilities.h"
 
 int transfer_file( const char* server_name,
 						   const char* server_port,
