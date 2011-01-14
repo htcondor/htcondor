@@ -34,6 +34,7 @@ MESSAGE_TYPES {
 enum 
 PARAMETER_FORMAT {
 	CLASSAD = 0x00, // The format of parameters is via Condor's ClassAds
+	SIMPLE = 0x01,
 		// TODO: Other formats to come later
 };
 
@@ -57,8 +58,7 @@ ERROR_CODES {
   Discovery Search Frame
 */
 
-struct 
-cftp_dsf_frame {
+typedef struct _cftp_dsf_frame {
 	unsigned char      MessageType;
 	unsigned short int Reserved;
 	unsigned char      AddressType;
@@ -66,14 +66,13 @@ cftp_dsf_frame {
 	unsigned int       IPv6Address[4];
 	unsigned short int IPv4Port;
 	unsigned short int IPv6Port;
-};
+} cftp_dsf_frame;
 
 /*
   Discovery Response Frame
 */
 
-struct 
-cftp_drf_frame {
+typedef struct _cftp_drf_frame {
     unsigned char      MessageType;
     unsigned short int Reserved;
     unsigned char      AddressType;
@@ -81,105 +80,93 @@ cftp_drf_frame {
     unsigned int       IPv6Address[4];
     unsigned short int IPv4Port;
     unsigned short int IPv6Port;
-	unsigned char*     Data;
-};
+} cftp_drf_frame;
 
 /*
   Session Initiation Frame
 */
 
-struct 
-cftp_sif_frame {
+typedef struct _cftp_sif_frame {
 	unsigned char      MessageType;
 	unsigned short int ErrorCode;
 	unsigned char      SessionToken;
 	unsigned short int ParameterFormat;
 	unsigned short int ParameterLength;
-	unsigned char*     Parameters;
-};
+} cftp_sif_frame;
 
 /*
    Session Acknowledgement Frame
 */
 
-struct 
-cftp_saf_frame {
+typedef struct _cftp_saf_frame {
 	unsigned char      MessageType;
 	unsigned short int ErrorCode;
     unsigned char      SessionToken;
     unsigned short int ParameterFormat;
     unsigned short int ParameterLength;
-    unsigned char*     Parameters;
-};
+} cftp_saf_frame;
 
 /*
   Session Ready Frame
 */
 
-struct 
-cftp_srf_frame {
+typedef struct _cftp_srf_frame {
 	unsigned char      MessageType;
 	unsigned short int ErrorCode;
     unsigned char      SessionToken;
-};
+} cftp_srf_frame;
 
 /*
   Session Close Frame
 */
 
-struct 
-cftp_scf_frame {
+typedef struct _cftp_scf_frame {
 	unsigned char      MessageType;
 	unsigned short int ErrorCode;
     unsigned char      SessionToken;
-};
+} cftp_scf_frame;
 
 /*
   Data Transfer Frame
 */
 
-struct 
-cftp_dtf_frame {
+typedef struct _cftp_dtf_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
 	unsigned short int DataSize;	
 	unsigned short int BlockNum;
-	unsigned char*     FileData;
-};
+} cftp_dtf_frame;
 
 /*
   Data Received Frame
 */
 
-struct 
-cftp_daf_frame {
+typedef struct _cftp_daf_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
-};
+} cftp_daf_frame;
 
 /*
   File Finished Frame
 */ 
 
-struct 
-cftp_fff_frame {
+typedef struct _cftp_fff_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
-};
+} cftp_fff_frame;
 
 /*
   File Acknowledgement Frame
 */
 
-struct
-cftp_faf_frame {
+typedef struct _cftp_faf_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
-};
+} cftp_faf_frame;
 
 
 
