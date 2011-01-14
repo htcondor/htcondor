@@ -242,6 +242,13 @@ int execute_negotiation( FileRecord* record,
 }
 
 
+/*
+
+  execute_transfer
+
+
+ */
+
 int execute_transfer( FileRecord* record,
 					  ServerRecord* server,
 					  simple_parameters* parameters )

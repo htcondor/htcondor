@@ -9,7 +9,7 @@
 #include "utilities.h"
 
 void run_server(const char* server_name, const char* server_port);
-
+ServerRecord* start_server( const char* server_name, const char* server_port );
 
 
 #endif
