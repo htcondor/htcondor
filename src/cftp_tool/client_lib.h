@@ -34,4 +34,10 @@ ServerRecord* connect_to_server( const char* server_name,
 int execute_negotiation( FileRecord* record,
 						 ServerRecord* server,
 						 simple_parameters* parameters );
+
+int execute_transfer( FileRecord* record,
+					  ServerRecord* server,
+					  simple_parameters* parameters );
+
+
 #endif

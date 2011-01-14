@@ -44,12 +44,16 @@ int transfer_file( const char* server_name,
 
 // Execute the transfer phase of the protocol
 
-		//results = execute_transfer( record, server, &parameters );
+	results = execute_transfer( record, server, &parameters );
+	if( results == -1 )
+		return UNACCEPTABLE_PARAMETERS;
 
 
 // Execute the teardown phase of the protocol
 
-
+		//results = execute_teardown( record, server, &parameters, results );
+		//if( results == -1 )
+		//	return UNACCEPTABLE_PARAMETERS;
 
 
 		// There are rumors that this needs to be closesocket for Windows...
@@ -181,15 +185,19 @@ int execute_negotiation( FileRecord* record,
 	memset( parameters, 0, sizeof( simple_parameters ) );
 	memcpy( parameters->filename, record->filename, strlen( record->filename));
 	
-	parameters->filesize = htons(record->file_size);
+	parameters->filesize = record->file_size;
 	
 		//For now we will use a hardcoded chunk size, but this may change
-	parameters->chunk_size = htons(100);
+	parameters->chunk_size = 100;
 
 		// Count how many chunks there will be.
 	parameters->num_chunks = parameters->filesize/parameters->chunk_size;
 	if( parameters->filesize % parameters->chunk_size != 0 )
 		parameters->num_chunks = parameters->num_chunks + 1;
+
+
+	parameters->filesize =	htons(parameters->filesize);
+	parameters->chunk_size = htons(parameters->chunk_size);
 	parameters->num_chunks = htons(parameters->num_chunks);
 
 	
@@ -209,7 +217,8 @@ int execute_negotiation( FileRecord* record,
 				 (char*)(&dframe), 
 				 &length) == -1 )
 		{
-			fprintf( stderr, "Error sending SIF frame: %s\n", strerror( errno ) );
+			fprintf( stderr, "Error sending SIF frame: %s\n",
+					 strerror( errno ) );
 			return -1;	
 		}
 
@@ -218,7 +227,8 @@ int execute_negotiation( FileRecord* record,
 				 (char*)(parameters), 
 				 &length) == -1 )
 		{
-			fprintf( stderr, "Error sending SIF payload: %s\n", strerror( errno ) );
+			fprintf( stderr, "Error sending SIF payload: %s\n",
+					 strerror( errno ) );
 			return -1;	
 		}	
 
@@ -227,6 +237,120 @@ int execute_negotiation( FileRecord* record,
 //
 	
 	return 0;
+
+
+}
+
+
+int execute_transfer( FileRecord* record,
+					  ServerRecord* server,
+					  simple_parameters* parameters )
+{
+
+		// The transfer phase implemented here is extremely basic
+        // It will handle the retry loop, but does not wait for DAF's
+        // so the retries are effectively meaningless. 
+ 
+		// TODO: Put this somewhere else, perferably in a config of some sort
+	const int MAX_RETRIES = 10;
+	int chunk_id;
+	int retry_count;
+	int error;
+	int chunk_size;
+	int read_bytes;
+	int length;
+
+	cftp_dtf_frame dframe;
+	char* chunk_data;
+
+	chunk_size = ntohs(parameters->chunk_size);
+
+#ifdef CLIENT_DEBUG
+
+	fprintf( stderr, "Preparing chunk buffer of %d bytes.\n", chunk_size );
+
+#endif
+
+	chunk_data = malloc( chunk_size );
+	memset( chunk_data, 0, chunk_size );
+
+	error = 0;
+
+	for( chunk_id = 0; (chunk_id < ntohs(parameters->num_chunks) && error == 0) ; chunk_id += 1 )
+		{
+			dframe.MessageType = htons( DTF );
+			dframe.ErrorCode = htons(NOERROR);
+			dframe.SessionToken = htons(1); //Really hacky hardcoded number. TODO: get better session id
+			dframe.DataSize = parameters->chunk_size; //We've already encoded this value, don't need htons
+			dframe.BlockNum = htons( chunk_id );
+
+				// Read chunk from the data file
+			memset( chunk_data, 0, chunk_size );
+			read_bytes = fread( chunk_data, 1, chunk_size, record->fp );
+			if( read_bytes != chunk_size && !feof(record->fp) )
+				{
+					fprintf( stderr, "Error while reading %s. Error code %d (%s)",
+							 record->filename,
+							 ferror(record->fp),
+							 strerror( ferror(record->fp) ) );
+
+					free(chunk_data);
+					return -1;
+				}
+
+
+
+			for( retry_count = 0; retry_count < MAX_RETRIES; retry_count += 1 )
+				{
+
+#ifdef CLIENT_DEBUG
+					fprintf(stderr, "Sending Chunk %d/%d of %s\n",
+							chunk_id+1,
+							ntohs(parameters->num_chunks),
+							record->filename );
+#endif
+						//Send the DTF frame
+					length = sizeof( cftp_dtf_frame );
+					if( sendall( server->server_socket,
+								 (char*)(&dframe), 
+								 &length) == -1 )
+						{
+							fprintf( stderr, "Error sending DTF frame: %s\n",
+									 strerror( errno ) );
+							return -1;	
+						}
+
+						//Send the DTF data payload
+					length = chunk_size;
+					if( sendall( server->server_socket,
+								 chunk_data, 
+								 &length) == -1 )
+						{
+							fprintf( stderr, "Error sending DTF payload: %s\n",
+									 strerror( errno ) );
+							return -1;	
+						}					
+
+						//This is where we would wait for the DAF, but we are not doing that yet.
+
+						// WAIT HERE FOR DAF BEFORE CONTINUING.
+
+					break;
+
+						// If the DAF is not received or the wrong DAF is received, then we
+						// need to alter the next DTF such that its error code reflects the 
+                        // previously failed DTF. Probably the error code should be set to TIMEOUT.
+
+				}
+
+				// If this loop finishes without a break, then we hit our retry cap
+			if( retry_count == MAX_RETRIES )
+				error = 1;
+
+		}
+
+			
+
 
 
 }
