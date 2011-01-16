@@ -1357,7 +1357,8 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args,
-				
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+
 			},
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
 			'testclass'	=> [ @default_testclass ],
@@ -1377,6 +1378,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args, 
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				
 			},
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
