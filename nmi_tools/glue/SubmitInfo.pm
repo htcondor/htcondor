@@ -378,7 +378,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				@default_prereqs, 
 				'gcc-4.1.2', 'binutils-2.16', 'perl-5.8.5', 'gzip-1.3.3',
-				'coreutils-5.2.1',
+				'coreutils-6.9',
 			],
 			'xtests'	=> [ 'sun4u_sol_5.10' ],
 		},
@@ -386,7 +386,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'binutils-2.16',
-				'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1',
+				'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9',
 				'java-1.4.2_05', 'perl-5.8.5' ],
 			'testclass'	=> [ @default_testclass ],
 		},
