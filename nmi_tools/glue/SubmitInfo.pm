@@ -313,7 +313,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DWITH_KRB5:BOOL=OFF' => undef,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef
 			},
 			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=> [ 'ps3_fedora_9' ],
@@ -763,7 +763,9 @@ our %submit_info = (
 	##########################################################################
 	'ppc_macos_10.4'	=> {
 		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
+			'configure_args' =>{ @minimal_build_configure_args ,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+			},
 
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -772,7 +774,6 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				
 			},
 			'prereqs'	=> [ @default_prereqs ],
@@ -1350,7 +1351,10 @@ our %submit_info = (
 	'x86_suse_10.0'		=> {
 		'build' => {
 			'configure_args' =>{ @minimal_build_configure_args,
-					     '-DHAVE_KBDD:BOOL=OFF' => undef },
+					     '-DHAVE_KBDD:BOOL=OFF' => undef,
+						'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+						'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
+			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 'x86_suse_10.2' ],
 		},
@@ -1358,8 +1362,6 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
 
 			},
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
@@ -1372,16 +1374,17 @@ our %submit_info = (
 	##########################################################################
 	'x86_suse_10.2'		=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
+			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
 
 		'test' => {
 			'configure_args' => {
-				@default_test_configure_args, 
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				@default_test_configure_args
 				
 			},
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
