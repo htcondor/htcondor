@@ -121,7 +121,9 @@ if (BUILD_TESTS)
 	##########################################################
 	# platform specific tests
 	if(LINUX)
+	if ( NOT WITHOUT_AMAZON_TEST )
 		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
+	endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
 	elseif(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
