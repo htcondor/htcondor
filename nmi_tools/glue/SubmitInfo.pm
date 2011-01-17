@@ -772,6 +772,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				
 			},
 			'prereqs'	=> [ @default_prereqs ],
