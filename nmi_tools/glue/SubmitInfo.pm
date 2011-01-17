@@ -918,7 +918,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1', 'binutils-2.16' ],
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9', 'binutils-2.16' ],
 			'xtests'	=> undef,
 		},
 
@@ -926,7 +926,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'java-1.4.2_05',
 							 'perl-5.8.5', 'gzip-1.3.3', 'wget-1.9.1',
-							 'coreutils-5.2.1' ],
+							 'coreutils-6.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
