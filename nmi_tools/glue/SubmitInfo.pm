@@ -288,7 +288,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
 			'prereqs'	=> [
-				cmake-2.8.3, 7-Zip-9.20, ActivePerl-5.10.1, 
+				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1', 
 			],
 			'xtests'	=> undef,
 		},
