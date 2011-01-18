@@ -309,10 +309,21 @@ void startShadow( ClassAd *ad )
 	}		
 }
 
+
 int handleJobRemoval(Service*,int sig)
 {
 	if( Shadow ) {
 		return Shadow->handleJobRemoval(sig);
+	}
+	return 0;
+}
+
+
+int handleUpdateJobAd(Service*,int sig)
+//int handleUpdateJobAd(Service*,int sig, Stream *sock)
+{
+	if( Shadow ) {
+		return Shadow->handleUpdateJobAd(sig);
 	}
 	return 0;
 }
@@ -339,6 +350,13 @@ main_init(int argc, char *argv[])
 		// register SIGUSR1 (condor_rm) for shutdown...
 	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
 		(SignalHandler)&handleJobRemoval,"handleJobRemoval");
+
+		// ragister UPDATE_JOBAD for qedit changes
+	daemonCore->Register_Signal( UPDATE_JOBAD, "UPDATE_JOBAD", 
+		(SignalHandler)&handleUpdateJobAd,"handleUpdateJobAd");
+//	daemonCore->Register_Command( UPDATE_JOBAD, "UPDATE_JOBAD",
+//		(CommandHandler)&handleUpdateJobAd, "handleUpdateJobAd", NULL,
+//		WRITE, D_FULLDEBUG);
 
 	int shadow_worklife = param_integer( "SHADOW_WORKLIFE", 3600 );
 	if( shadow_worklife > 0 ) {

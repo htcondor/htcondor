@@ -74,6 +74,7 @@ extern "C" {
 
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
+extern	bool	jobExternallyManaged(ClassAd * ad);
 static QmgmtPeer *Q_SOCK = NULL;
 
 // Hash table with an entry for every job owner that
@@ -86,6 +87,7 @@ void	FindPrioJob(PROC_ID &);
 
 static bool qmgmt_was_initialized = false;
 static ClassAdCollection *JobQueue = 0;
+static StringList DirtyJobIDs;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
@@ -127,8 +129,11 @@ static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 
 static int flush_job_queue_log_timer_id = -1;
+static int dirty_notice_timer_id = -1;
 static int flush_job_queue_log_delay = 0;
 static void HandleFlushJobQueueLogTimer();
+static int dirty_notice_interval = 0;
+static void PeriodicDirtyAttributeNotification();
 static void ScheduleJobQueueLogFlush();
 
 static bool qmgmt_all_users_trusted = false;
@@ -578,6 +583,7 @@ InitQmgmt()
     cluster_maximum_val = param_integer("SCHEDD_CLUSTER_MAXIMUM_VALUE",0,0);
 
 	flush_job_queue_log_delay = param_integer("SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY",5,0);
+	dirty_notice_interval = param_integer("SCHEDD_JOB_QUEUE_NOTIFY_UPDATES",30,0);
 }
 
 void
@@ -1114,6 +1120,8 @@ DestroyJobQueue( void )
 	ASSERT( JobQueueDirty == false );
 	delete JobQueue;
 	JobQueue = NULL;
+
+	DirtyJobIDs.clearAll();
 
 		// There's also our hashtable of the size of each cluster
 	delete ClusterSizeHashTable;
@@ -1968,7 +1976,8 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 int
 SetAttributeByConstraint(const char *constraint, const char *attr_name,
-						 const char *attr_value)
+						 const char *attr_value,
+						 SetAttributeFlags_t flags)
 {
 	ClassAd	*ad;
 	int cluster_num, proc_num;
@@ -1983,7 +1992,7 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name,
 			 (proc_num > -1) &&
 			 EvalBool(ad, constraint)) {
 			found_one = 1;
-			if( SetAttribute(cluster_num,proc_num,attr_name,attr_value) < 0 ) {
+			if( SetAttribute(cluster_num,proc_num,attr_name,attr_value,flags) < 0 ) {
 				had_error = 1;
 			}
 			FreeJobAd(ad);	// a no-op on the server side
@@ -2002,7 +2011,7 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name,
 
 int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
-			 const char *attr_value, SetAttributeFlags_t flags )
+			 const char *attr_value, SetAttributeFlags_t flags)
 {
 //	LogSetAttribute	*log;
 	char			key[PROC_ID_STR_BUFLEN];
@@ -2159,7 +2168,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 						 &nice_user );
 		user.sprintf( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 				 owner, scheduler.uidDomain() );
-		SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value() );
+		SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
 
 			// Also update the owner history hash table
 		AddOwnerHistory(owner);
@@ -2189,7 +2198,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			>= 0 ) {
 			user.sprintf( "\"%s%s@%s\"", (nice_user) ? "nice-user." :
 					 "", owner.Value(), scheduler.uidDomain() );
-			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value() );
+			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
 		}
 	}
 	else if (strcasecmp(attr_name, ATTR_PROC_ID) == 0) {
@@ -2225,7 +2234,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// value.
 		int status = 0;
 		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
+		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status, flags );
 	}
 #if !defined(WANT_OLD_CLASSADS)
 /* Disable AddTargetRefs() for now
@@ -2303,7 +2312,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
-			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value);
+			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value, flags & SETDIRTY);
+			if( flags & SHOULDLOG ) {
+				char* old_val = NULL;
+				ExprTree *tree;
+				tree = ad->LookupExpr(raw_attribute.Value());
+				if( tree ) {
+					old_val = (char*)ExprTreeToString(tree);
+				}
+				scheduler.WriteAttrChangeToUserLog(key, raw_attribute.Value(), attr_value, old_val);
+			}
 
 			int ivalue;
 			double fvalue;
@@ -2407,17 +2425,88 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		old_nondurable_level = JobQueue->IncNondurableCommitLevel();
 	}
 
-	JobQueue->SetAttribute(key, attr_name, attr_value);
+	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SETDIRTY);
+	if( flags & SHOULDLOG ) {
+		char* old_val = NULL;
+		ExprTree *tree;
+		tree = ad->LookupExpr(attr_name);
+		if( tree ) {
+			old_val = (char*)ExprTreeToString(tree);
+		}
+		scheduler.WriteAttrChangeToUserLog(key, attr_name, attr_value, old_val);
+	}
 
+	int status;
 	if( flags & NONDURABLE ) {
 		JobQueue->DecNondurableCommitLevel( old_nondurable_level );
 
 		ScheduleJobQueueLogFlush();
 	}
 
+	// Get the job's status and only mark dirty if it is running
+	int universe;
+	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
+	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
+	if( ( flags & SETDIRTY ) && ( status == RUNNING || ( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) {
+		// Add the key to list of dirty classads
+		DirtyJobIDs.rewind();
+		if( ! DirtyJobIDs.contains( key ) ) {
+			DirtyJobIDs.append( key );
+		}
+
+		// Start timer to ensure notice is confirmed
+		if( dirty_notice_timer_id <= 0 ) {
+			dprintf(D_FULLDEBUG, "Starting dirty attribute notification timer\n");
+			dirty_notice_timer_id = daemonCore->Register_Timer(
+				dirty_notice_interval,
+				dirty_notice_interval,
+				PeriodicDirtyAttributeNotification,
+				"PeriodicDirtyAttributeNotification");
+		}
+
+		SendDirtyJobAdNotification(key);
+	}
+
 	JobQueueDirty = true;
 
 	return 0;
+}
+
+void
+SendDirtyJobAdNotification(char *job_id_str)
+{
+	PROC_ID job_id;
+	int pid = -1;
+
+	StrToId(job_id_str, job_id.cluster, job_id.proc);
+	shadow_rec *srec = scheduler.FindSrecByProcID(job_id);
+	if( srec ) {
+		pid = srec->pid;
+	}
+	else {
+		pid = scheduler.FindGManagerPid(job_id);
+	}
+
+	if( pid > 0 ) {
+		dprintf(D_FULLDEBUG, "Sending signal %d, to pid %d\n", UPDATE_JOBAD, pid);
+		classy_counted_ptr<DCSignalMsg> msg = new DCSignalMsg(pid, UPDATE_JOBAD);
+		daemonCore->Send_Signal_nonblocking(msg.get());
+//		daemonCore->Send_Signal(srec->pid, UPDATE_JOBAD);
+	}
+	else {
+		dprintf(D_ALWAYS, "Failed to send signal %d, no job manager found\n", UPDATE_JOBAD);
+	}
+}
+
+void
+PeriodicDirtyAttributeNotification()
+{
+	char	*job_id;
+
+	DirtyJobIDs.rewind();
+	while( (job_id = DirtyJobIDs.next()) != NULL ) {
+		SendDirtyJobAdNotification(job_id);
+	}
 }
 
 void
@@ -3030,6 +3119,42 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 
 
 int
+GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
+{
+	ClassAd 	*ad;
+	char		key[PROC_ID_STR_BUFLEN];
+	char		*val;
+	const char	*name;
+	ExprTree 	*expr;
+
+	IdToStr(cluster_id,proc_id,key);
+
+	if(!JobQueue->LookupClassAd(key, ad)) {
+		return -1;
+	}
+
+	ad->ResetExpr();
+	while( ad->NextDirtyExpr(name, expr) != false )
+	{
+		if(!ad->ClassAdAttributeIsPrivate(name))
+		{
+			if(!JobQueue->LookupInTransaction(key, name, val) )
+			{
+				updated_attrs->Insert(name, expr->Copy());
+			}
+			else
+			{
+				updated_attrs->AssignExpr(name, val);
+				free(val);
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
 	ClassAd				*ad;
@@ -3064,6 +3189,45 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	JobQueueDirty = true;
 
 	return 1;
+}
+
+void
+MarkJobClean(PROC_ID job_id)
+{
+
+	MarkJobClean(job_id.cluster, job_id.proc);
+}
+
+void
+MarkJobClean(int cluster_id, int proc_id)
+{
+	char	key[PROC_ID_STR_BUFLEN];
+
+	IdToStr(cluster_id,proc_id,key);
+	MarkJobClean(key);
+}
+
+void
+MarkJobClean(const char* job_id_str)
+{
+	int cluster;
+	int proc;
+
+	if(JobQueue->ClearClassAdDirtyBits(job_id_str))
+	{
+		dprintf(D_FULLDEBUG, "Cleared dirty attributes for job %s\n", job_id_str);
+	}
+
+	DirtyJobIDs.rewind();
+	DirtyJobIDs.remove(job_id_str);
+
+	if( DirtyJobIDs.isEmpty() && dirty_notice_timer_id > 0 )
+	{
+		dprintf(D_FULLDEBUG, "Cancelling dirty attribute notification timer\n");
+		daemonCore->Cancel_Timer(dirty_notice_timer_id);
+		dirty_notice_timer_id = -1;
+	}
+	StrToId(job_id_str, cluster, proc);
 }
 
 ClassAd *
@@ -3689,6 +3853,30 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	while(JobQueue->IterateAllClassAds(ad,key)) {
 		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			return ad;
+		}
+	}
+	return NULL;
+}
+
+
+ClassAd *
+GetNextDirtyJobByConstraint(const char *constraint, int initScan)
+{
+	ClassAd *ad;
+	char *job_id_str;
+
+	if (initScan) {
+		DirtyJobIDs.rewind( );
+	}
+
+	while( (job_id_str = DirtyJobIDs.next( )) != NULL ) {
+		if( !JobQueue->LookupClassAd( job_id_str, ad ) ) {
+			dprintf(D_ALWAYS, "Warning: Job %s is marked dirty, but could not find in the job queue.  Skipping\n", job_id_str);
+			continue;
+		}
+
+		if ( !constraint || !constraint[0] || EvalBool(ad, constraint)) {
 			return ad;
 		}
 	}

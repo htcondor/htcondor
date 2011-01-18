@@ -615,7 +615,6 @@ Scheduler::~Scheduler()
 		}
 		delete this->cronTabs;
 	}
-
 }
 
 void
@@ -1575,6 +1574,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		EXCEPT("In abort_job_myself: %s attribute not found in job %d.%d\n",
 				ATTR_JOB_STATUS,job_id.cluster, job_id.proc);
 	}
+
+	// Mark the job clean
+	MarkJobClean(job_id);
 
 	int job_universe = CONDOR_UNIVERSE_STANDARD;
 	job_ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
@@ -2727,6 +2729,37 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 }
 
 
+bool
+Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
+					 const char* attr_value,
+					 const char* old_value)
+{
+	PROC_ID job_id;
+	StrToProcId(job_id_str, job_id);
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+
+	AttributeUpdate event;
+
+	event.setName(attr);
+	event.setValue(attr_value);
+	event.setOldValue(old_value);
+        bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+        delete ULog;
+
+        if (!rval) {
+                dprintf( D_ALWAYS, "Unable to log ULOG_ATTRIBUTE_UPDATE event "
+                                 "for job %d.%d\n", job_id.cluster, job_id.proc );
+                return false;
+        }
+
+	return true;
+}
+
+
 int
 Scheduler::abort_job(int, Stream* s)
 {
@@ -3725,8 +3758,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		   Find out what they want us to do.  This classad should
 		   contain:
 		   ATTR_JOB_ACTION - either JA_HOLD_JOBS, JA_RELEASE_JOBS,
-		                     JA_REMOVE_JOBS, JA_REMOVE_X_JOBS, 
-							 JA_VACATE_JOBS, or JA_VACATE_FAST_JOBS
+					JA_REMOVE_JOBS, JA_REMOVE_X_JOBS, 
+					JA_VACATE_JOBS, JA_VACATE_FAST_JOBS, or
+					JA_CLEAR_DIRTY_JOB_ATTRS
 		   ATTR_ACTION_RESULT_TYPE - either AR_TOTALS or AR_LONG
 		   and one of:
 		   ATTR_ACTION_CONSTRAINT - a string with a ClassAd constraint 
@@ -3768,6 +3802,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		break;
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS:
+	case JA_CLEAR_DIRTY_JOB_ATTRS:
 			// no new_status needed.  also, we're not touching
 			// anything in the job queue, so we don't need a
 			// transaction, either...
@@ -3862,6 +3897,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			snprintf( buf, 256, "(%s==%d || %s==%d) && (", ATTR_JOB_STATUS,
 					  RUNNING, ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 			break;
+		case JA_CLEAR_DIRTY_JOB_ATTRS:
+				// No need to further restrict jobs
+			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
 					"it was already recognized", action_num );
@@ -3917,11 +3955,19 @@ Scheduler::actOnJobs(int, Stream* s)
 			// do what we want.  Instead, we'll just iterate through
 			// the Q ourselves so we know exactly what jobs we hit. 
 
+		ClassAd* (*GetNextJobFunc) (const char *, int);
 		ClassAd* job_ad;
-		job_ad = GetNextJobByConstraint( constraint, 1 );
-		for( job_ad = GetNextJobByConstraint( constraint, 1 );
+		if( action == JA_CLEAR_DIRTY_JOB_ATTRS )
+		{
+			GetNextJobFunc = &GetNextDirtyJobByConstraint;
+		}
+		else
+		{
+			GetNextJobFunc = &GetNextJobByConstraint;
+		}
+		for( job_ad = (*GetNextJobFunc)( constraint, 1 );
 		     job_ad;
-		     job_ad = GetNextJobByConstraint( constraint, 0 ))
+		     job_ad = (*GetNextJobFunc)( constraint, 0 ))
 		{
 			if(	job_ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
 				job_ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
@@ -3974,6 +4020,13 @@ Scheduler::actOnJobs(int, Stream* s)
 						results.record( tmp_id, AR_PERMISSION_DENIED );
 						continue;
 					}
+				}
+				if( action == JA_CLEAR_DIRTY_JOB_ATTRS ) {
+					MarkJobClean( tmp_id.cluster, tmp_id.proc );
+					results.record( tmp_id, AR_SUCCESS );
+					jobs[num_matches] = tmp_id;
+					num_matches++;
+					continue;
 				}
 				if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
 									ATTR_JOB_STATUS, new_status) < 0 ) {
@@ -4073,6 +4126,12 @@ Scheduler::actOnJobs(int, Stream* s)
 					continue;
 				}
 				break;
+			case JA_CLEAR_DIRTY_JOB_ATTRS:
+				MarkJobClean( tmp_id.cluster, tmp_id.proc );
+				results.record( tmp_id, AR_SUCCESS );
+				jobs[num_matches] = tmp_id;
+				num_matches++;
+				continue;
 			default:
 				EXCEPT( "impossible: unknown action (%d) in actOnJobs() "
 						"after it was already recognized", action_num );
@@ -4338,6 +4397,9 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		DestroyProc( job_id.cluster, job_id.proc );
 		break;
     }
+	case JA_CLEAR_DIRTY_JOB_ATTRS:
+		// Nothing to do
+		break;
 	case JA_ERROR:
 	default:
 		EXCEPT( "impossible: unknown action (%d) at the end of actOnJobs()",
@@ -8149,6 +8211,7 @@ mark_job_running(PROC_ID* job_id)
 		SetAttributeInt(job_id->cluster, job_id->proc,
 						ATTR_NUM_JOB_STARTS, num);
 	}
+	MarkJobClean(*job_id);
 }
 
 void
@@ -9005,6 +9068,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		daemon_name = ( IsLocalUniverse( srec ) ? "Local Starter" : "Shadow" );
 	}
 
+	MarkJobClean( job_id );
 		//
 		// If this boolean gets set to true, then we need to report
 		// that an Exception occurred for the job.
@@ -9141,6 +9205,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 					this->cronTabs->remove(job_id);
 				}
 			} // CronTab
+
 			break;
 		}
 
@@ -10300,6 +10365,10 @@ Scheduler::Register()
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
 								  "get_job_connect_info", this, WRITE,
 								  D_COMMAND, true /*force authentication*/);
+
+	daemonCore->Register_Command( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
+								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
+								  "clear_dirty_job_attrs_handler", this, WRITE );
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
@@ -13096,4 +13165,57 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 
 	delete new_ad;
 	delete stream;
+}
+
+int
+Scheduler::FindGManagerPid(PROC_ID job_id)
+{
+	MyString owner;
+	MyString domain;
+	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
+
+	if ( ! job_ad ) {
+		return -1;
+	}
+
+	job_ad->LookupString(ATTR_OWNER,owner);
+	job_ad->LookupString(ATTR_NT_DOMAIN,domain);
+	UserIdentity userident(owner.Value(),domain.Value(),job_ad);
+	return GridUniverseLogic::FindGManagerPid(userident.username().Value(),
+                                        userident.auxid().Value(), 0, 0);
+}
+
+int
+Scheduler::clear_dirty_job_attrs_handler(int /*cmd*/, Stream *stream)
+{
+	int cluster_id;
+	int proc_id;
+	Sock *sock = (Sock *)stream;
+
+		// force authentication
+	sock->decode();
+	if( !sock->triedAuthentication() ) {
+		CondorError errstack;
+		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ||
+			! sock->getFullyQualifiedUser() )
+		{
+			dprintf( D_ALWAYS,
+					 "clear_dirty_job_attrs_handler(): authentication failed: %s\n", 
+					 errstack.getFullText() );
+			return FALSE;
+		}
+	}
+
+	sock->decode();
+	if( !sock->get( cluster_id ) ||
+		!sock->get( proc_id ) ||
+		!sock->end_of_message() )
+	{
+		dprintf(D_ALWAYS,
+			"clear_dirty_job_attrs_handler() failed to receive job id\n");
+		return FALSE;
+	}
+
+	MarkJobClean( cluster_id, proc_id );
+	return TRUE;
 }

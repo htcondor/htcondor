@@ -94,6 +94,7 @@ struct Translation JobActionTranslation[] = {
 	{ "Remove-Force", JA_REMOVE_X_JOBS },
 	{ "Vacate", JA_VACATE_JOBS },
 	{ "Vacate-Fast", JA_VACATE_FAST_JOBS },
+	{ "ClearDirtyAttrs", JA_CLEAR_DIRTY_JOB_ATTRS },
 	{ "NULL", 0 }
 };
 

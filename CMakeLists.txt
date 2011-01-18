@@ -70,6 +70,7 @@ include (CondorExeTest)
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
+include (TarGz) # Must be after include(CondorPackageConfig)
 
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)

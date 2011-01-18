@@ -99,6 +99,7 @@ struct ScheddUpdateRequest {
 HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( HASH_TABLE_SIZE,
 													 hashFuncPROC_ID );
 bool addJobsSignaled = false;
+bool updateJobsSignaled = false;
 bool checkLeasesSignaled = false;
 int contactScheddTid = TIMER_UNSET;
 int contactScheddDelay;
@@ -121,6 +122,7 @@ void doContactSchedd();
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
 void CHECK_LEASES_signalHandler();
+int UPDATE_JOBAD_signalHandler( int );
 
 
 static bool jobExternallyManaged(ClassAd * ad)
@@ -420,6 +422,9 @@ Register()
 								 (SignalHandler)&REMOVE_JOBS_signalHandler,
 								 "REMOVE_JOBS_signalHandler", NULL );
 
+	daemonCore->Register_Signal( UPDATE_JOBAD, "UpdateJobAd",
+								 (SignalHandler)&UPDATE_JOBAD_signalHandler,
+								 "UPDATE_JOBAD_signalHandler", NULL );
 /*
 	daemonCore->Register_Signal( GRIDMAN_CHECK_LEASES, "CheckLeases",
 								 (SignalHandler)&CHECK_LEASES_signalHandler,
@@ -493,12 +498,24 @@ REMOVE_JOBS_signalHandler( int )
 	return TRUE;
 }
 
+int
+UPDATE_JOBAD_signalHandler( int )
+{
+	dprintf(D_FULLDEBUG,"Received UPDATE_JOBAD signal\n");
+	if ( !updateJobsSignaled ) {
+		RequestContactSchedd();
+		updateJobsSignaled = true;
+	}
+
+	return TRUE;
+}
+
 // Call initJobExprs before using any of the expr_*
 // variables.  It is safe to repeatedly call
 // initJobExprs.
 static const char * expr_false = "FALSE";
+static const char * expr_true = "TRUE";
 // Not currently used
-//static const char * expr_true = "TRUE";
 //static const char * expr_undefined = "UNDEFINED";
 	// The job is matched, or in unknown match state.
 	// definately unmatched
@@ -521,6 +538,7 @@ static std::string expr_schedd_job_constraint;
 static std::string expr_completely_done;
 	// Opposite of expr_completely_done
 static std::string expr_not_completely_done;
+	// Whether the job has dirty attributes
 
 static void 
 initJobExprs()
@@ -563,10 +581,15 @@ doContactSchedd()
 	bool schedd_updates_complete = false;
 	bool schedd_deletes_complete = false;
 	bool add_remove_jobs_complete = false;
+	bool update_jobs_complete = false;
 	bool commit_transaction = true;
 	int failure_line_num = 0;
 	bool send_reschedule = false;
 	std::string error_str = "";
+	StringList dirty_job_ids;
+	char *job_id_str;
+	PROC_ID job_id;
+	CondorError errstack;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
@@ -582,7 +605,6 @@ doContactSchedd()
 		VacateRequest curr_request;
 
 		int result;
-		CondorError errstack;
 		ClassAd* rval;
 
 		pendingScheddVacates.startIterations();
@@ -915,6 +937,49 @@ contact_schedd_next_add_job:
 
 	add_remove_jobs_complete = true;
 
+
+	// Retrieve dirty attributes
+	/////////////////////////////////////////////////////
+	if ( updateJobsSignaled ) {
+		sprintf( expr_buf, "%s && %s && %s && %s && %s",
+				 expr_schedd_job_constraint.c_str(), 
+				 expr_not_completely_done.c_str(),
+				 expr_not_held.c_str(),
+				 expr_managed.c_str()
+				 );
+		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
+		next_ad = GetNextDirtyJobByConstraint( expr_buf, 1 );
+		while ( next_ad != NULL ) {
+			ClassAd updates;
+			char str[PROC_ID_STR_BUFLEN];
+			next_ad->LookupInteger( ATTR_CLUSTER_ID, job_id.cluster );
+			next_ad->LookupInteger( ATTR_PROC_ID, job_id.proc );
+			if ( GetDirtyAttributes( job_id.cluster, job_id.proc, &updates ) < 0 ) {
+				dprintf( D_ALWAYS, "Failed to retrieve dirty attributes for job %d.%d\n", job_id.cluster, job_id.proc );
+				failure_line_num = __LINE__;
+				delete next_ad;
+				goto contact_schedd_disconnect;
+		        }
+			else {
+				dprintf (D_FULLDEBUG, "Retrieved updated attributes for job %d.%d\n", job_id.cluster, job_id.proc);
+				updates.dPrint(D_JOB);
+			}
+			if ( BaseJob::JobsByProcId.lookup( job_id, curr_job ) == 0 ) {
+				curr_job->JobAdUpdateFromSchedd( &updates );
+				ProcIdToStr( job_id, str );
+				dirty_job_ids.append( str );
+			}
+			else {
+				dprintf( D_ALWAYS, "Don't know about updated job %d.%d. "
+						 "Ignoring it\n",
+						 job_id.cluster, job_id.proc );
+			}
+			delete next_ad;
+			next_ad = GetNextDirtyJobByConstraint( expr_buf, 0 );
+		}
+	}
+	update_jobs_complete = true;
+
 //	if ( BeginTransaction() < 0 ) {
 	errno = 0;
 	BeginTransaction();
@@ -1068,9 +1133,22 @@ contact_schedd_next_add_job:
 		goto contact_schedd_failure;
 	}
 
+	if ( update_jobs_complete == true ) {
+		updateJobsSignaled = false;
+	} else {
+		sprintf( error_str, "Schedd connection error during dirty attribute update at line %d!", failure_line_num );
+		goto contact_schedd_failure;
+	}
+
 	if ( schedd_updates_complete == false ) {
 		sprintf( error_str, "Schedd connection error during updates at line %d!", failure_line_num );
 		goto contact_schedd_failure;
+	}
+
+	// Clear dirty bits for all jobs updated
+	dirty_job_ids.rewind();
+	if ( ScheddObj->clearDirtyAttrs( &dirty_job_ids, &errstack ) == NULL ) {
+		dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText() );
 	}
 
 	// Wake up jobs that had schedd updates pending and delete job
@@ -1142,6 +1220,15 @@ contact_schedd_next_add_job:
 	}
 
 	scheddFailureCount = 0;
+
+	// For each job that had dirty attributes, re-evaluate the policy
+	dirty_job_ids.rewind();
+	while ( (job_id_str = dirty_job_ids.next()) != NULL ) {
+		StrToProcId(job_id_str, job_id);
+		if ( BaseJob::JobsByProcId.lookup( job_id, curr_job ) == 0 ) {
+			curr_job->EvalPeriodicJobExpr();
+		}
+	}
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return;

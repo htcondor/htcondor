@@ -997,6 +997,8 @@ void main_init (int argc, char ** const argv) {
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
 
+	dagman.dag->CheckThrottleCats();
+
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();
 
@@ -1219,7 +1221,7 @@ void condor_event_timer () {
     // exists.
     // 
     if( dagman.dag->FinishedRunning() ) {
-		if( dagman.dag->DoneFailed() > 0 ) {
+		if( dagman.dag->DoneFailed() ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
@@ -1227,7 +1229,15 @@ void condor_event_timer () {
 			}
 		} else {
 			// no jobs failed, so a cycle must exist
-			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
+			debug_printf( DEBUG_QUIET, "ERROR: DAG finished but not all "
+						"nodes are complete -- checking for a cycle...\n" );
+			if( dagman.dag->isCycle() ) {
+				debug_printf (DEBUG_QUIET, "... ERROR: a cycle exists "
+							"in the dag, plese check input\n");
+			} else {
+				debug_printf (DEBUG_QUIET, "... ERROR: no cycle found; "
+							"unknown error condition\n");
+			}
 			if ( debug_level >= DEBUG_NORMAL ) {
 				dagman.dag->PrintJobList();
 			}

@@ -31,6 +31,7 @@
 #include "condor_config.h"
 #include "condor_email.h"
 #include "classad_helpers.h"
+#include "classad_merge.h"
 
 #define HASH_TABLE_SIZE			500
 
@@ -647,8 +648,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 	new_ad->LookupInteger( ATTR_JOB_STATUS, new_condor_state );
 
 	if ( new_condor_state == condorState ) {
-			// The job state in the sched hasn't changed, so we can ignore
-			// this "update".
+		MergeClassAds( jobAd, (ClassAd*)new_ad, true );
 		return;
 	}
 
@@ -707,6 +707,9 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 		condorState = new_condor_state;
 			// TODO do we need to update any other attributes?
 		SetEvaluateState();
+	}
+	else {
+		MergeClassAds( jobAd, (ClassAd*)new_ad, true );
 	}
 
 }
