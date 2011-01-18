@@ -113,6 +113,40 @@ report that a cycle exists in a DAG.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
+\item In unix, the following executables used to be located in both
+  the sbin and bin directories but are now only located in the bin
+  directory: condor, \Condor{checkpoint}, \Condor{reschedule}, and
+  \Condor{vacate}.
+
+\item The following list itemizes changes included in this Condor version
+  7.5.5 release that belong to Condor version 7.4.5.  That stable series
+  version will not yet have been released as this development version 
+  is released.
+  \begin{itemize}
+
+  % gittrac #1713
+  % gittrac #1715
+  \item \Condor{dagman} now prints a message in the \File{dagman.out} file
+  whenever it truncates a node job user log file.
+  \Condor{dagman} now prints additional diagnostic information in the
+  case of certain log file errors.
+
+  % gittrac #1750
+  \item Fixed a bug in which
+  a network disconnect between the submit machine and execute
+  machine during the transfer of output files caused the
+  \Condor{starter} daemon to immediately give up, rather than waiting
+  for the \Condor{shadow} to reconnect.  This problem was introduced
+  in Condor version 7.4.4.
+
+  % gittrac #1743
+  \item Fixed a bug in which
+  if \Condor{ssh\_to\_job} attempted to connect to a job while the
+  job's input files were being transferred, this caused the file
+  transfer to fail, which resulted in the job returning to the idle
+  state in the queue.
+
+  \end{itemize}
 \end{itemize}
 
 
@@ -148,6 +182,11 @@ switching between the \Condor{shadow} daemons that are waiting for the lock.
   in ext3 to 320,000,000, which is likely to be larger than other limits
   on the size of the job queue, such as memory.
 
+%gittrac 793
+\item The \Condor{shadow} daemon uses less memory than it has since 
+Condor version 7.5.0.
+Memory usage should now be similar to the 7.4 series.
+
 %gittrac 1752
 \item The \Condor{dagman} and \Condor{submit\_dag} command-line flag
 \Opt{-DumpRescue} causes the dump of an incomplete Rescue DAG,
@@ -155,15 +194,10 @@ when the parsing of the DAG input file fails.
 This may help in figuring out what went wrong.
 See section~\ref{sec:DAGMan-rescue} for complete details on Rescue DAGs.
 
-%gittrac 793
-\item The \Condor{shadow} daemon uses less memory than it has since 
-Condor version 7.5.0.
-Memory usage should now be similar to the 7.4 series.
-
 %gittrac #1077
-% Note: add link here when the actual manual section is updated.
 \item \Condor{dagman} now has the capability to create the
 \File{jobstate.log} file needed for the Pegasus workflow manager.
+See section~\ref{sec:DAGJobstateLog} for details.
 
 \end{itemize}
 
@@ -200,11 +234,6 @@ universe jobs with multiple \SubmitCmd{queue} statements in
 the submit description file from working with \Condor{dagman}.
 This is now fixed.
 
-% gittrac #1715
-\item \Condor{dagman} now excepts in the case of certain log file errors,
-when continuing would be likely to put \Condor{dagman} into an incorrect 
-internal state.
-
 % gittrac #1681
 \item Improved the way Condor daemons send heartbeat messages to their parent
 process.  This resolves a problem observed on busy submit machines using the
@@ -230,6 +259,11 @@ because look ups of the host name for incoming connections failed.
 the attributes \AdAttr{MyType} and \AdAttr{TargetType}
 in offline ClassAds to get set to \Expr{"(unknown type)"}
 when the offline ClassAd was matched to a job.
+
+% gittrac #1715
+\item \Condor{dagman} now excepts in the case of certain log file errors,
+when continuing would be likely to put \Condor{dagman} into an incorrect 
+internal state.
 
 % gittrac #1762
 \item Fixed a bug that caused DAG node jobs to have their coredumpsize
@@ -267,6 +301,9 @@ FileTransfer: DownloadFiles called on server side
   value of \Expr{AuthMethods} when logging with \Expr{D\_FULLDEBUG}
   and \Expr{D\_SECURITY} enabled.
   This problem was introduced in Condor version 7.5.3.
+
+% gittrac #1849
+\item Fixed a memory leak in \Condor{schedd} introduced in 7.5.4.
 
 \end{itemize}
 
