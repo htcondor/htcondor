@@ -1,4 +1,4 @@
->%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-Condor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -3765,11 +3765,12 @@ WANT_HOLD_REASON = \
   such that the \Condor{schedd} daemon sends keep alive signals
   to the \Condor{startd} daemon.
   When \Expr{True}, the \Condor{startd} daemon sends keep alive signals
-  to the \Condor{schedd} daemon, reversing the direction.
+  to the \Condor{schedd} daemon, reversing the direction;
+  these updates are sent via TCP.
   This may be useful if the \Condor{startd} daemon is on a private
   network or behind a firewall.
-  This value must be set to the same value for all \Condor{startd} and
-  \Condor{schedd} daemons in your pool.
+  This variable must be set to the same value for all \Condor{startd} and
+  \Condor{schedd} daemons in the pool.
 
 \label{param:StartdShouldWriteClaimIdFile}
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}]
