@@ -437,7 +437,8 @@ void Hadoop::startService( NodeType type ) {
 
         ArgList arglist;
 
-        java_config(m_java, &arglist, &m_classpath);
+        int retval = java_config(m_java, &arglist, &m_classpath);
+		dprintf(D_ALWAYS, "Retval: %d\n", retval);
 
         char *ldir = param("LOG");
         if (ldir != NULL) {
@@ -473,33 +474,37 @@ void Hadoop::startService( NodeType type ) {
         }
 
         int arrIO[3];
-        arrIO[0] = -1;
-        arrIO[1] = -1;
-        arrIO[2] = -1;
+        arrIO[0] = -1;	//stdin
+        arrIO[1] = -1;	//stdout
+        arrIO[2] = -1;	//stderr
 
-        if (! daemonCore->Create_Pipe(&arrIO[1], true, false, true) ) {
+		int pipeEnds[2] = {-1};
+
+        if (! daemonCore->Create_Pipe(pipeEnds, true, false, true) ) {
                 dprintf(D_ALWAYS, "Couldn't create a stdout pipe\n");
         } else {
-                if (! daemonCore->Register_Pipe(arrIO[1], "hadoop stdout",
+                if (! daemonCore->Register_Pipe(pipeEnds[0], "hadoop stdout",
                         (PipeHandlercpp) &Hadoop::stdoutHandler,
                         "stdout", this) ) {
 
                         dprintf(D_ALWAYS, "Couldn't register stdout pipe\n");                        
                 } else {
-                        m_stdOut = arrIO[1];
+                        m_stdOut = pipeEnds[0];
+						arrIO[1] = pipeEnds[1];
                 }
         }
 
-        if (! daemonCore->Create_Pipe(&arrIO[2], true, false, true) ) {
+        if (! daemonCore->Create_Pipe(pipeEnds, true, false, true) ) {
                 dprintf(D_ALWAYS, "Couldn't create a stderr pipe\n");
         } else {
-                if (! daemonCore->Register_Pipe(arrIO[2], "hadoop stderr",
+                if (! daemonCore->Register_Pipe(pipeEnds[0], "hadoop stderr",
                         (PipeHandlercpp) &Hadoop::stderrHandler, 
                         "stderr", this) ) {
 
                         dprintf(D_ALWAYS, "Couldn't register stderr, pipe\n");
                 } else {
-                        m_stdErr = arrIO[2];
+                        m_stdErr = pipeEnds[0];
+						arrIO[2] = pipeEnds[1];
                 }
         }
 
@@ -558,6 +563,8 @@ void Hadoop::startService( NodeType type ) {
                         arrIO
                         );
 
+		daemonCore->Close_Pipe(arrIO[1]);
+		daemonCore->Close_Pipe(arrIO[2]);
         if (m_pid == FALSE) 
                 EXCEPT("Failed to launch hadoop process using Create_Process.\n ");
 
