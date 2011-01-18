@@ -955,7 +955,9 @@ our %submit_info = (
 	##########################################################################
 	'sun4u_sol_5.10'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+			},
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9', 'binutils-2.16' ],
 			'xtests'	=> undef,
