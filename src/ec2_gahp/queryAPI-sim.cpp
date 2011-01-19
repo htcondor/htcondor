@@ -25,9 +25,14 @@
  */
 
 std::string handleRequest( const std::string & request ) {
-    // FIXME.
-    std::string reply = "HTTP/1.1 200 OK\r\n"
-                      . "
+    // FIXME: parse() and validateSignature(), dispatch to the functions above.
+    // FIXME: which headers does EC2/Eucalyptus reply with?
+    // FIXME: convert to wrapper function that accepts a string of XML.
+    std::string reply  = "HTTP/1.1 200 OK\r\n";
+                reply += "Content-Length: 0\r\n";
+                reply += "Content-Type: text/xml\r\n";
+                reply += "\r\n";
+    return reply;
 }
 
 void handleConnection( int sockfd ) {
@@ -63,14 +68,12 @@ void handleConnection( int sockfd ) {
         if( index != std::string::npos ) {
             std::string firstRequest = request.substr( 0, index + 4 );
             request = request.substr( index + 4 );
-            if( ! request.empty() ) {
-                fprintf( stderr, "DEBUG: request remainder '%s'\n", request.c_str() );
-            }
+            // if( ! request.empty() ) { fprintf( stderr, "DEBUG: request remainder '%s'\n", request.c_str() ); }
             
-            fprintf( stderr, "DEBUG: handling request '%s'\n", firstRequest.c_str() );
+            // fprintf( stderr, "DEBUG: handling request '%s'\n", firstRequest.c_str() );
             std::string reply = handleRequest( firstRequest );
             if( ! reply.empty() ) {
-                fprintf( stderr, "DEBUG: writing reply '%s'\n", reply.c_str() );
+                // fprintf( stderr, "DEBUG: writing reply '%s'\n", reply.c_str() );
                 ssize_t totalBytesWritten = 0;
                 ssize_t bytesToWrite = reply.size();
                 const char * outBuf = reply.c_str();
@@ -90,6 +93,8 @@ void handleConnection( int sockfd ) {
     }
 }
 
+// FIXME: sigterm handler to dump diagnostics and gracefully exit.  See
+// the condor_amazon simulator.
 int main( int argc, char ** argv ) {
 
     int listenSocket = socket( PF_INET, SOCK_STREAM, 0 );
