@@ -472,7 +472,7 @@ void Hadoop::startService( NodeType type ) {
                 arglist.AppendArg(m_dataNodeClass);
         }
 
-        int stdoutFds[0];
+        int stdoutFds[2];
         stdoutFds[0] = -1; // parent side of pipe
         stdoutFds[1] = -1; // child side of pipe
 
