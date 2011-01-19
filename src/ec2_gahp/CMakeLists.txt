@@ -21,16 +21,15 @@ if (HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS)
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-    condor_glob( HeaderFiles SourceFiles "ec2_sim_impl.cpp;ec2_sim_main.cpp" )
+    condor_glob( HeaderFiles SourceFiles "" )
 
-	condor_exe( amazon_gahp
+	condor_exe( ec2_gahp
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
 	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND}"
     	OFF)
 
-    # TODO: impl, trim the library list.
 	# condor_exe_test(ec2_sim
-	#    "ec2_sim_main.cpp;ec2_sim_impl.cpp"
+	#    "queryAPI-sim.cpp"
 	#    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND}")
 
 endif()
