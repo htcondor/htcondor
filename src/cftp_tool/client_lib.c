@@ -3,15 +3,19 @@
 #include <string.h>
 #include <errno.h>
 
+#include <unistd.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "client_lib.h"
 
-int transfer_file( const char* server_name,
-						   const char* server_port,
-						   const char* localfile )
+int transfer_file( char* server_name,
+				   char* server_port,
+				   char* localfile )
 {
 	int results;
 
@@ -26,7 +30,7 @@ int transfer_file( const char* server_name,
 		return UNACCEPTABLE_PARAMETERS;
 
 	#ifdef CLIENT_DEBUG
-	fprintf(stderr, "Opened file %s. File size is %d bytes.\n", record->filename, record->file_size );
+	fprintf(stderr, "Opened file %s. File size is %ld bytes.\n", record->filename, record->file_size );
 	#endif
 
 		// Initialize connection with server
@@ -73,7 +77,7 @@ int transfer_file( const char* server_name,
   Returns NULL if the file is unable to be opened.
 
  */
-FileRecord* open_file( const char* filename)
+FileRecord* open_file( char* filename)
 {
 	FileRecord* record;
 	record = (FileRecord*) malloc(sizeof(FileRecord));
@@ -107,8 +111,8 @@ FileRecord* open_file( const char* filename)
 
  */
 
-ServerRecord* connect_to_server( const char* server_name, 
-								 const char* server_port )
+ServerRecord* connect_to_server( char* server_name, 
+								 char* server_port )
 {
 
 //Really rusty on socket api - refered to Beej's guide for this
@@ -176,7 +180,14 @@ int execute_negotiation( FileRecord* record,
 						 ServerRecord* server,
 						 simple_parameters* parameters )
 {
-	cftp_sif_frame dframe;
+	cftp_frame dframe;
+	cftp_sif_frame* sif_frame;
+	cftp_saf_frame* saf_frame;
+	cftp_srf_frame* srf_frame;
+
+	simple_parameters server_parameters;
+	int parameter_length;
+
 	int length;
 
 
@@ -196,23 +207,30 @@ int execute_negotiation( FileRecord* record,
 		parameters->num_chunks = parameters->num_chunks + 1;
 
 
-	parameters->filesize =	htons(parameters->filesize);
-	parameters->chunk_size = htons(parameters->chunk_size);
-	parameters->num_chunks = htons(parameters->num_chunks);
+	parameters->filesize =	htonll(parameters->filesize);
+	parameters->chunk_size = htonl(parameters->chunk_size);
+	parameters->num_chunks = htonl(parameters->num_chunks);
 
 	
 	// Setup the message frame structure 
 
-	memset( &dframe, 0, sizeof( cftp_sif_frame ) );
-	dframe.MessageType = htons(SIF);
-	dframe.ErrorCode = htons(NOERROR);
-	dframe.SessionToken = htons(1); //Really hacky hardcoded number. TODO: get better session id
-	dframe.ParameterFormat = htons(SIMPLE);
-	dframe.ParameterLength = htons(sizeof( simple_parameters ));
+	memset( &dframe, 0, sizeof( cftp_frame ) );
+	sif_frame = (cftp_sif_frame*)&dframe;
+
+	sif_frame->MessageType = SIF;
+	sif_frame->ErrorCode = htons(NOERROR);
+	sif_frame->SessionToken = 1; //Really hacky hardcoded number.
+                                 //TODO: get better session id
+	sif_frame->ParameterFormat = htons(SIMPLE);
+	sif_frame->ParameterLength = htons(sizeof( simple_parameters ));
 	
 	// Send the message
 
-	length = sizeof( cftp_sif_frame );
+#ifdef CLIENT_DEBUG
+	fprintf( stderr, "Sending SIF...  " );
+#endif
+
+	length = sizeof( cftp_frame );
     if( sendall( server->server_socket,
 				 (char*)(&dframe), 
 				 &length) == -1 )
@@ -221,6 +239,10 @@ int execute_negotiation( FileRecord* record,
 					 strerror( errno ) );
 			return -1;	
 		}
+
+#ifdef CLIENT_DEBUG
+	fprintf(stderr, "and Payload.\n" );
+#endif 
 
 	length = sizeof( simple_parameters );
     if( sendall( server->server_socket,
@@ -232,10 +254,53 @@ int execute_negotiation( FileRecord* record,
 			return -1;	
 		}	
 
-//
-// TODO: Write the server side of the negotiation
-//
+
+// Now we wait for the server to send a SAF
 	
+	recv( server->server_socket, 
+		  &dframe,
+		  sizeof( cftp_frame ),
+		  MSG_WAITALL );
+
+	if( dframe.MessageType != SAF )
+		{
+			fprintf( stderr, "Error: Server failed to send SAF! Aborting.\n" );
+			return -1;
+		}
+
+	saf_frame = (cftp_saf_frame*)&dframe;
+	parameter_length = ntohs(saf_frame->ParameterLength);
+	recv( server->server_socket, 
+		  &server_parameters,
+		  parameter_length,
+		  MSG_WAITALL );
+
+		//TODO: We need to check the parameters the server
+		// returned to confirm they are still acceptable
+		// to us as a client.
+
+
+//Send the Session Ready Frame
+
+	memset( &dframe, 0, sizeof( cftp_frame ) );
+	srf_frame = (cftp_srf_frame*)&dframe;
+
+	srf_frame->MessageType = SRF;
+	srf_frame->ErrorCode = htons(NOERROR);
+	srf_frame->SessionToken = 1; // Again, really hacky
+
+	length = sizeof( cftp_frame );
+    if( sendall( server->server_socket,
+				 (char*)(&dframe), 
+				 &length) == -1 )
+		{
+			fprintf( stderr, "Error sending SRF frame: %s\n",
+					 strerror( errno ) );
+			return -1;	
+		}
+
+
+
 	return 0;
 
 
@@ -270,7 +335,7 @@ int execute_transfer( FileRecord* record,
 	cftp_dtf_frame dframe;
 	char* chunk_data;
 
-	chunk_size = ntohs(parameters->chunk_size);
+	chunk_size = ntohl(parameters->chunk_size);
 
 #ifdef CLIENT_DEBUG
 
@@ -283,11 +348,11 @@ int execute_transfer( FileRecord* record,
 
 	error = 0;
 
-	for( chunk_id = 0; (chunk_id < ntohs(parameters->num_chunks) && error == 0) ; chunk_id += 1 )
+	for( chunk_id = 0; (chunk_id < ntohl(parameters->num_chunks) && error == 0) ; chunk_id += 1 )
 		{
-			dframe.MessageType = htons( DTF );
+			dframe.MessageType = DTF;
 			dframe.ErrorCode = htons(NOERROR);
-			dframe.SessionToken = htons(1); //Really hacky hardcoded number. TODO: get better session id
+			dframe.SessionToken = 1; //Really hacky hardcoded number. TODO: get better session id
 			dframe.DataSize = parameters->chunk_size; //We've already encoded this value, don't need htons
 			dframe.BlockNum = htons( chunk_id );
 
@@ -313,7 +378,7 @@ int execute_transfer( FileRecord* record,
 #ifdef CLIENT_DEBUG
 					fprintf(stderr, "Sending Chunk %d/%d of %s\n",
 							chunk_id+1,
-							ntohs(parameters->num_chunks),
+							ntohl(parameters->num_chunks),
 							record->filename );
 #endif
 						//Send the DTF frame
@@ -357,7 +422,9 @@ int execute_transfer( FileRecord* record,
 		}
 
 			
-
-
+	if( error == 1 )
+		return -1;
+	else		
+		return 0;	
 
 }

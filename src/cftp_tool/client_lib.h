@@ -9,14 +9,14 @@
 #include "simple_parameters.h"
 #include "utilities.h"
 
-int transfer_file( const char* server_name,
-						   const char* server_port,
-						   const char* localfile );
+int transfer_file( char* server_name,
+				   char* server_port,
+				   char* localfile );
 
-FileRecord* open_file( const char* filename );
+FileRecord* open_file(  char* filename );
 
-ServerRecord* connect_to_server( const char* server_name, 
-								 const char* server_port );
+ServerRecord* connect_to_server(  char* server_name, 
+								  char* server_port );
 
 int execute_negotiation( FileRecord* record,
 						 ServerRecord* server,

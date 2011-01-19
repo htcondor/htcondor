@@ -8,8 +8,9 @@
 #include "simple_parameters.h"
 #include "utilities.h"
 
-void run_server(const char* server_name, const char* server_port);
-ServerRecord* start_server( const char* server_name, const char* server_port );
-
+void run_server( char* server_name,  char* server_port);
+ServerRecord* start_server(  char* server_name,  char* server_port );
+ClientRecord* accept_client( ServerRecord* localServer );
+FileRecord* execute_negotiation( ServerRecord* localServer, ClientRecord* remoteClient );
 
 #endif

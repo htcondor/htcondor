@@ -1,18 +1,18 @@
 #ifndef CFTP_FRAMES_H
 #define CFTP_FRAMES_H
 
-/*
-  This is a definition of all the frame data structures used by the
-  Cluster File Transfer Protocol for its network operations. The description
-  of these structures was taken almost verbatim from the CFTP design document,
-  with some minor changes to the error code values.
-*/
+//
+//  This is a definition of all the frame data structures used by the
+//  Cluster File Transfer Protocol for its network operations. The description
+//  of these structures was taken almost verbatim from the CFTP design document,
+//  with some minor changes to the error code values.
+//
 
 
-/*
-  These are the types of messages that the CFTP understands. Each
-  identifier cooresponds to a single frame struct type below.
-*/
+//
+//  These are the types of messages that the CFTP understands. Each
+//  identifier cooresponds to a single frame struct type below.
+//
 enum 
 MESSAGE_TYPES {
 		// Discovery Frames
@@ -53,10 +53,20 @@ ERROR_CODES {
 	NO_DISK_SPACE = 0x0A,
 };
 
+//
+//  Generic Frame Body
+//
+//  Can be casted to any frame type
+//
 
-/*
-  Discovery Search Frame
-*/
+typedef struct _cftp_frame {
+	unsigned char      MessageType;
+	unsigned char      _padding[31];
+} cftp_frame;
+
+//
+//  Discovery Search Frame
+//  28
 
 typedef struct _cftp_dsf_frame {
 	unsigned char      MessageType;
@@ -66,11 +76,12 @@ typedef struct _cftp_dsf_frame {
 	unsigned int       IPv6Address[4];
 	unsigned short int IPv4Port;
 	unsigned short int IPv6Port;
+	unsigned char      _padding[4];
 } cftp_dsf_frame;
 
-/*
-  Discovery Response Frame
-*/
+//
+//  Discovery Response Frame
+//  28
 
 typedef struct _cftp_drf_frame {
     unsigned char      MessageType;
@@ -80,11 +91,12 @@ typedef struct _cftp_drf_frame {
     unsigned int       IPv6Address[4];
     unsigned short int IPv4Port;
     unsigned short int IPv6Port;
+    unsigned char      _padding[4];
 } cftp_drf_frame;
 
-/*
-  Session Initiation Frame
-*/
+//
+//  Session Initiation Frame
+//  8
 
 typedef struct _cftp_sif_frame {
 	unsigned char      MessageType;
@@ -92,11 +104,12 @@ typedef struct _cftp_sif_frame {
 	unsigned char      SessionToken;
 	unsigned short int ParameterFormat;
 	unsigned short int ParameterLength;
+    unsigned char      _padding[24];
 } cftp_sif_frame;
 
-/*
-   Session Acknowledgement Frame
-*/
+//
+//  Session Acknowledgement Frame
+//  8
 
 typedef struct _cftp_saf_frame {
 	unsigned char      MessageType;
@@ -104,31 +117,34 @@ typedef struct _cftp_saf_frame {
     unsigned char      SessionToken;
     unsigned short int ParameterFormat;
     unsigned short int ParameterLength;
+    unsigned char      _padding[24];
 } cftp_saf_frame;
 
-/*
-  Session Ready Frame
-*/
+//
+// Session Ready Frame
+// 4
 
 typedef struct _cftp_srf_frame {
 	unsigned char      MessageType;
 	unsigned short int ErrorCode;
     unsigned char      SessionToken;
+    unsigned char      _padding[28];
 } cftp_srf_frame;
 
-/*
-  Session Close Frame
-*/
+//
+//  Session Close Frame
+//  4
 
 typedef struct _cftp_scf_frame {
 	unsigned char      MessageType;
 	unsigned short int ErrorCode;
     unsigned char      SessionToken;
+    unsigned char      _padding[28];
 } cftp_scf_frame;
 
-/*
-  Data Transfer Frame
-*/
+//
+//  Data Transfer Frame
+//  8
 
 typedef struct _cftp_dtf_frame {
     unsigned char      MessageType;
@@ -136,36 +152,40 @@ typedef struct _cftp_dtf_frame {
     unsigned char      SessionToken;
 	unsigned short int DataSize;	
 	unsigned short int BlockNum;
+    unsigned char      _padding[24];
 } cftp_dtf_frame;
 
-/*
-  Data Received Frame
-*/
+//
+//  Data Received Frame
+//  4
 
 typedef struct _cftp_daf_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
+    unsigned char      _padding[28];
 } cftp_daf_frame;
 
-/*
-  File Finished Frame
-*/ 
+//
+//  File Finished Frame
+//  4 
 
 typedef struct _cftp_fff_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
+    unsigned char      _padding[28];
 } cftp_fff_frame;
 
-/*
-  File Acknowledgement Frame
-*/
+//
+//  File Acknowledgement Frame
+//  4
 
 typedef struct _cftp_faf_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
+    unsigned char      _padding[28];
 } cftp_faf_frame;
 
 

@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 
 //sendall - taken from the Beej guide to socket programming
 //http://beej.us/guide/bgnet/output/html/multipage/advanced.html#sendall
@@ -21,3 +22,5 @@ int sendall(int s, char *buf, int *len)
 
     return n==-1?-1:0; // return -1 on failure, 0 on success
 } 
+
+
