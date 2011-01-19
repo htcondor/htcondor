@@ -36,15 +36,6 @@ if (NOT WINDOWS)
 			DESTINATION ${C_LIBEXEC}
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-	install ( FILES condorc-advertiser
-				condorc-authorizer
-				condorc-initialize
-				condorc-launcher
-				condorc-vo-advertiser
-				grid_monitor.sh
-			DESTINATION ${C_LIBEXEC}/glite
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-
 	install ( FILES Condor.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 	if (STD_UNIVERSE)

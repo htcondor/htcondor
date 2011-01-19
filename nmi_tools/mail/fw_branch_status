@@ -1,0 +1,147 @@
+#!/usr/bin/env perl
+
+#
+# fw_branch_status
+#
+
+use FindBin;
+use lib $ENV{ 'NMI_LIB' } || "$FindBin::Bin/../lib";
+
+use strict;
+use warnings;
+use Getopt::Long;
+use NmiConf;
+
+my( $opt_help );
+if( ! GetOptions ( 'help'       => \$opt_help,
+                   'nmiconf=s'  => \$main::opt_nmiconf ) ) { exit( 1 ); }
+
+if( defined( $opt_help ) ) {
+    printUsage( 0 );
+}
+
+my %conf = NmiConf::init( $main::opt_nmiconf );
+use NmiDatabaseVariables;
+require NmiDatabase;
+
+my @runIDs;
+my %descriptionsByRunID;
+
+my( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday ) = gmtime( time() - (24 * 60 * 60) );
+# Perl is stupid.
+$year += 1900; $mon += 1;
+
+my $query = qq/SELECT runid, description, result FROM Run /
+          . qq/WHERE user = 'cndrauto' /
+          . qq/  AND UNIX_TIMESTAMP( DATE_SUB( UTC_TIMESTAMP(), INTERVAL 24 HOUR ) ) < UNIX_TIMESTAMP( start ) /
+          . qq/  AND run_type = "BUILD" /;
+my $handle = NmiDatabase::execute( $query );
+while( my $row = $handle->fetchrow_hashref() ) {
+    my $description = $row->{ 'description' };
+
+    my( $runYear, $runMonth, $runDay );
+    if( $description =~ m/trunk-(\d\d\d\d)-(\d?\d)-(\d?\d)/ ) {
+        ( $runYear, $runMonth, $runDay ) = ( $1, $2, $3 );
+    } elsif( $description =~ m/V\d(_\d)+-branch-(\d\d\d\d)-(\d?\d)-(\d?\d)/ ) {
+        ( $runYear, $runMonth, $runDay ) = ( $2, $3, $4 );
+    } else {
+        next;
+    }
+
+    my $runID = $row->{ 'runid' };
+    if( $runYear == $year && $runMonth == $mon && $runDay == $mday ) {
+        # print( "Found a run I care about: $runID '" . $description . "'\n" );
+
+        $descriptionsByRunID{ $runID } = $description;
+        push( @runIDs, $runID );
+    }
+}
+$handle->finish();
+
+#
+# Dump the table.
+#
+print( "Runs for $year-$mon-$mday:\n" );
+print( "\n" );
+print( "       |  ------ BUILD ------  |  ------ TESTS ------  |\n" );
+print( " runID | OK | FAILED | PENDING | OK | FAILED | PENDING | description\n" );
+foreach my $runID (@runIDs) {
+    print( $runID . " |" );
+
+    # Begin platform-count for the BUILDs.
+    my( $buildOK, $buildFailed, $buildPending ) = getCountsForRunID( $runID );
+    printf( " %2d  ", $buildOK );
+    printf( " %6d  ", $buildFailed );
+    printf( " %7d |", $buildPending );
+    
+    # Begin platform-count for the TESTS.
+    my( $testOK, $testFailed, $testPending ) = getCountsForTestsOfBuild( $runID );
+    printf( " %2d  ", $testOK );
+    printf( " %6d  ", $testFailed );
+    printf( " %7d |", $testPending );
+    
+    # Fill out the rest of the seventy-eight columns with the description.
+    printf( " %.19s", $descriptionsByRunID{ $runID } );
+    print( "\n" );
+}
+
+exit 0;
+
+sub printUsage {
+    my( $exitCode ) = @_;
+
+    print( "Usage: $0\n" );
+    print( "    Dumps a flightworthy-specific status report to stdout.\n" );
+
+    exit( $exitCode );
+}
+
+sub getCountsForRunID {
+    my( $runID ) = @_;
+    my( $ok, $failed, $pending ) = ( 0, 0, 0 );
+
+    my $query = qq/SELECT result FROM Task /
+              . qq/WHERE runid = $runID /
+              . qq/AND name = 'platform_job' /;
+    my $handle = NmiDatabase::execute( $query );
+    while( my $row = $handle->fetchrow_hashref() ) {
+        if( defined( $row->{ 'result' } ) ) {
+            if( $row->{ 'result' } == 0 ) { ++$ok; }
+            else { ++$failed; }
+        } else { ++$pending; }
+    }
+    $handle->finish();
+    
+    return ( $ok, $failed, $pending );
+}
+
+sub getCountsForTestsOfBuild {
+    my( $buildID ) = @_;
+    
+    my( $ok, $failed, $pending ) = ( 0, 0, 0 );
+    
+    my @runIDs = getTestsForBuild( $buildID );
+    # This is spectacularly inefficient, but for an asynchronous
+    # notification run once a day, that shouldn't matter.
+    foreach my $runID (@runIDs) {
+        my( $o, $f, $p ) = getCountsForRunID( $runID );
+        $ok += $o; $failed += $f; $pending += $f;
+    }
+    
+    return ( $ok, $failed, $pending );
+}
+
+sub getTestsForBuild {
+    my( $buildID ) = @_;
+
+    my @runIDs;
+
+    my $query = qq/SELECT runid FROM Method_nmi WHERE input_runid = $buildID/;
+    my $handle = NmiDatabase::execute( $query );
+    while( my $row = $handle->fetchrow_hashref() ) {
+        push( @runIDs, $row->{ 'runid' } );
+    }
+    $handle->finish();
+    
+    return @runIDs;
+}

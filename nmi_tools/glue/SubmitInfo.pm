@@ -208,7 +208,7 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Microsoft Windows 5.1/2000/xp/whatever on x86_64
+	# Microsoft Windows 6.0/2000/xp/whatever on x86_64
 	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
 	'x86_winnt_6.0'	=> {
@@ -245,7 +245,25 @@ our %submit_info = (
 
 	##########################################################################
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
-	# This probably doesn't work--glue scripts do funky things with it.
+	# the official "blessed" windows build configuration
+	##########################################################################
+	'x86_winnt_5.1'	=> {
+		'build' => {
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'prereqs'	=> undef,
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> undef,
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+	
+	##########################################################################
+	# Microsoft Windows 5.1/2000/xp/whatever on x86
+	# CMake build testing configuration
 	##########################################################################
 	'x86_winnt_5.1-tst'	=> {
 		'build' => {
@@ -262,6 +280,26 @@ our %submit_info = (
 		},
 	},
 
+	##########################################################################
+	# Microsoft Windows 5.1/2000/xp/whatever on x86
+	# prereqs testing configuration (also cmake)
+	##########################################################################
+	'x86_winnt_5.1-prereqs'	=> {
+		'build' => {
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'prereqs'	=> [
+				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1', 
+			],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> undef,
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+	
 	##########################################################################
 	# Platform HPUX 11 on PARISC 2.0
 	##########################################################################
@@ -917,7 +955,9 @@ our %submit_info = (
 	##########################################################################
 	'sun4u_sol_5.10'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+			},
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9', 'binutils-2.16' ],
 			'xtests'	=> undef,
