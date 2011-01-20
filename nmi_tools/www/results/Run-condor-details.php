@@ -104,7 +104,7 @@
       $sql = "SELECT DISTINCT(Task.name) AS name ".
              "  FROM Task ".
              " WHERE Task.runid = $runid ".
-             " ORDER BY Task.name ASC";
+             " ORDER BY Task.start ASC";
       $runids[] = $runid;
    //
    // Test
@@ -114,7 +114,7 @@
              "  FROM Task, Method_nmi ".
              " WHERE Task.runid = Method_nmi.runid ".
              "   AND Method_nmi.input_runid = $runid ".
-             " ORDER BY Task.name ASC";
+             " ORDER BY Task.start ASC";
              
       //
       // We also need runids
