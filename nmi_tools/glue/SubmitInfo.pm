@@ -375,6 +375,28 @@ our %submit_info = (
 			},
 			'prereqs'	=> [ 
 				@default_prereqs, 
+				'vac-6', 'vacpp-6', 'perl-5.8.9', 'gzip-1.3.3',
+				'coreutils-5.2.1',
+			],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.9' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform AIX 5.3 on PPC -- clone of AIX 5L
+	##########################################################################
+	'ppc_aix_5.3'	=> {
+		'build' => {
+			'configure_args' => { '-DPROPER:BOOL=OFF' 			 => undef,
+			  '-DSCRATCH_EXTERNALS:BOOL=OFF'	 => undef,
+			},
+			'prereqs'	=> [ 
+				@default_prereqs, 
 				'vac-6', 'vacpp-6', 'perl-5.8.5', 'gzip-1.3.3',
 				'coreutils-5.2.1',
 			],
