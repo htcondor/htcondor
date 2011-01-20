@@ -69,30 +69,31 @@ SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttribu
 }
 
 int
-SetAttributeIntByConstraint(const char *con, const char *name, int val)
+SetAttributeIntByConstraint(const char *con, const char *name, int val, SetAttributeFlags_t flags)
 {
 	char buf[100];
 	int rval;
 
 	snprintf(buf,100,"%d",val);
-	rval = SetAttributeByConstraint(con,name,buf);
+	rval = SetAttributeByConstraint(con,name,buf, flags);
 	return(rval);
 }
 
 int
-SetAttributeFloatByConstraint(const char *con, const char *name, float val)
+SetAttributeFloatByConstraint(const char *con, const char *name, float val, SetAttributeFlags_t flags)
 {
 	char buf[100];
 	int rval;
 
 	snprintf(buf,100,"%f",val);
-	rval = SetAttributeByConstraint(con,name,buf);
+	rval = SetAttributeByConstraint(con,name,buf, flags);
 	return(rval);
 }
 
 int
 SetAttributeStringByConstraint(const char *con, const char *name,
-							   const char *val)
+							 const char *val,
+							 SetAttributeFlags_t flags)
 {
 	MyString buf;
 	int rval;
@@ -100,7 +101,7 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 	buf += '"';
 	buf +=  val;
 	buf += '"';
-	rval = SetAttributeByConstraint(con,name,buf.Value());
+	rval = SetAttributeByConstraint(con,name,buf.Value(), flags);
 	return(rval);
 }
 

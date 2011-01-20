@@ -69,6 +69,9 @@ class Sinful {
 	// id of SharedPortEndpoint (i.e. basename of named socket)
 	char const *getSharedPortID() const;
 	void setSharedPortID(char const *contact);
+	// is the noUDP flag set in this address?
+	bool noUDP() const;
+	void setNoUDP(bool flag);
 
 	// generic param interface
 

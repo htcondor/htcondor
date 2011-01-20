@@ -62,7 +62,8 @@ private:
 	void track_family_via_environment();
 	void track_family_via_login();
 #if defined(LINUX)
-	void track_family_via_supplementary_group();
+	void track_family_via_allocated_supplementary_group();
+	void track_family_via_associated_supplementary_group();
 #endif
 #if !defined(WIN32)
 	void use_glexec_for_family();

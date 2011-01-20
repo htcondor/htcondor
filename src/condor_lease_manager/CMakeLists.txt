@@ -25,7 +25,7 @@ if (NOT WINDOWS)
 		condor_glob(LMHdrs LMSrcs "${rmvLMFiles}*")
 
 		condor_exe( condor_lease_manager "${LMHdrs};${LMSrcs}" ${C_SBIN}
-		"conversion;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+		"conversion;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
 
 		add_dependencies( condor_lease_manager conversion)
 

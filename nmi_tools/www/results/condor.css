@@ -9,6 +9,9 @@ a:link { color: #1C3F75; }
 .pending {
    background-color: #ffff55;
 }
+.noresults {
+   background-color: #aaaaaa;
+}
 .details {
    font-size: 10px;
 }

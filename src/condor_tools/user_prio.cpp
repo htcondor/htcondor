@@ -647,7 +647,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   strcpy(LastUsageStr,format_date_year(MinLastUsageTime));
   if (DetailFlag==2) {
     printf(Fmt2,"------------------------------","-----------","----------------","----------------");
-    printf(Fmt3,NumElem,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
+    printf(Fmt3,UserCount,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
   }
   else {
     printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------------","----------------");

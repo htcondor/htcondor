@@ -829,6 +829,21 @@ is_priv_net(uint32_t ip)
             (ip & 0xFFFF0000) == 0xC0A80000);       // 192.168/16
 }
 
+int
+is_loopback_net(uint32_t ip)
+{
+    return ((ip & 0xFF000000) == 0x7F000000); // 127/8
+}
+
+int is_loopback_net_str(char const *ip)
+{
+	struct in_addr sa;
+	if( is_ipaddr_no_wildcard(ip,&sa) ) {
+		return is_loopback_net(ntohl(sa.s_addr));
+	}
+	return 0;
+}
+
 /* Check if two ip addresses, given in network byte, are in the same network */
 int
 in_same_net(uint32_t ipA, uint32_t ipB)

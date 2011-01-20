@@ -869,7 +869,7 @@ void Accountant::UpdatePriorities()
 // that were broken (by checkibg the claimed state)
 //------------------------------------------------------------------
 
-void Accountant::CheckMatches(ClassAdList& ResourceList) 
+void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList) 
 {
   dprintf(D_ACCOUNTANT,"(Accountant) Checking Matches\n");
 
@@ -1321,7 +1321,7 @@ bool Accountant::GetAttributeString(const MyString& Key, const MyString& AttrNam
 // Find a resource ad in class ad list (by name)
 //------------------------------------------------------------------
 
-ClassAd* Accountant::FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList)
+ClassAd* Accountant::FindResourceAd(const MyString& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList)
 {
   ClassAd* ResourceAd;
   
@@ -1350,7 +1350,7 @@ MyString Accountant::GetDomain(const MyString& CustomerName)
 // Functions for accessing and changing Concurrency Limits
 //------------------------------------------------------------------
 
-void Accountant::LoadLimits(ClassAdList &resourceList)
+void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
 {
 	ClassAd *resourceAd;
 

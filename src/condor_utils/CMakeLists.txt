@@ -26,7 +26,12 @@ condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 if (${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
         command_target( utils_genparams perl param_info_c_generator.pl param_info_init.c )
 else()
-        command_target( utils_genparams cd "/D;${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
+	if (WINDOWS)
+        	command_target( utils_genparams cd "/D;${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
+	else()
+		
+        	command_target( utils_genparams cd "${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
+	endif()
 endif()
 		
 condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
@@ -53,6 +58,10 @@ install (FILES MyString.h
 		 user_log.c++.h
 		 user_log.README
 		 write_user_log.h
+		 compat_classad.h
+		 compat_classad_list.h
+		 compat_classad_util.h
+		 stl_string_utils.h
 		DESTINATION ${C_INCLUDE})
 
 install ( TARGETS condorapi DESTINATION ${C_LIB} )
@@ -67,6 +76,6 @@ condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 if (STD_UNIVERSE)
 	command_target(y.tab yacc "-d;${CMAKE_CURRENT_SOURCE_DIR}/stub_gen_yacc.y" y.tab.c)
 	command_target(lex.yy lex "${CMAKE_CURRENT_SOURCE_DIR}/stub_gen_lex.l" lex.yy.c)
-	condor_exe(stub_gen "lex.yy.c;y.tab.c;lex.yy.c" OFF "")
+	condor_exe(stub_gen "lex.yy.c;y.tab.c;lex.yy.c" OFF "" OFF)
 endif(STD_UNIVERSE)
 

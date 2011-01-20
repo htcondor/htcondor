@@ -17,4 +17,4 @@
  ############################################################### 
 
 
-condor_exe( condor_submit "submit.cpp" ${C_BIN} "qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+condor_exe( condor_submit "submit.cpp" ${C_BIN} "qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )

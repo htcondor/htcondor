@@ -199,11 +199,9 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 	
 	/* Insert the version into the ClassAd */
-	buffer.sprintf( "%s=\"%s\"", ATTR_VERSION, CondorVersion() );
-	ad->Insert( buffer.Value() );
+	ad->Assign( ATTR_VERSION, CondorVersion() );
 
-	buffer.sprintf( "%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
-	ad->Insert( buffer.Value() );
+	ad->Assign( ATTR_PLATFORM, CondorPlatform() );
 }
 
 
@@ -624,6 +622,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	} else {
 			// What about tilde if there's no ~condor?
 	}
+
+	sysapi_clear_network_device_info_cache();
 
 		// Insert some default values for attributes we want even if
 		// they're not defined in the config sources: ARCH and OPSYS.

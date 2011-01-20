@@ -37,7 +37,8 @@ if (HAVE_EXT_GSOAP AND HAVE_EXT_OPENSSL AND HAVE_PTHREADS)
 
 	condor_exe( amazon_gahp
 	"${HeaderFiles};${SourceFiles};${AMAZON_SOAP_FILES};${WSSEAPI};${SMDEVP}" ${C_SBIN}
-	"${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GSOAP_FOUND};${ZLIB_FOUND}")
+	"${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GSOAP_FOUND};${ZLIB_FOUND}"
+	OFF)
 
 	add_dependencies(gen_amazon_soapfiles gsoap)
 	set_source_files_properties (${WSSEAPI} ${SMDEVP} PROPERTIES GENERATED TRUE)

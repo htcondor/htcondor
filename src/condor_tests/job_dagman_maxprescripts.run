@@ -28,7 +28,7 @@ $flowlog = "job_dagman_maxprescripts-srvr-log.log";
 $serversubFile = "job_dagman_maxprescripts-srvr.cmd";
 
 my $pid = $$;
-runcmd("mkdir $pid");
+runcmd("mkdir -p $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",1);
 

@@ -49,6 +49,8 @@ my $taskname = "";
 my $execstr = "";
 # autoflush our STDOUT
 $| = 1;
+open STDERR,">&STDOUT";
+
 
 ## TSTCLAIR->THAWAN et.al ok below is the conundrum as it relates to packaging
 ## The remote declare needs to be created/updated for (N) different packages
@@ -79,7 +81,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 package && make install && make tests";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make package && make install && make tests";
 
 } elsif  ($taskname eq $UNSTRIPPED_TASK){
 	#Reconfigure cmake variables for native package build
@@ -94,7 +96,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make package";
 } elsif  ($taskname eq $RPM_TASK){
 	#Building RPM
 
@@ -109,11 +111,12 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
 
 } elsif  ($taskname eq $RPM_CHECK_TASK){
 	#Print packaging log to stdout
-	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;";
+	#List file in the package
+	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
 
 } elsif  ($taskname eq $DEB_TASK){
 	#Building Debian package
@@ -129,7 +132,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
 
 } elsif  ($taskname eq $DEB_CHECK_TASK){
 	#Print package summary
@@ -141,12 +144,11 @@ if ($taskname eq $TAR_TASK) {
 
 print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-	#path hack b/c nmi pre-reqs & paths are broken on windows.
+
+	# build.win.bat uses BASE_DIR to setup some things.
+	#
 	$ENV{BASE_DIR} = "$BaseDir";
-    system("env");
-    print(`cmd /c dir /b /s build.win.bat`);
-    $execstr= "nmi_tools\\glue\\build\\build.win.bat"; ##devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE";
-	# need to make the tests here. 
+    $execstr= "nmi_tools\\glue\\build\\build.win.bat";
 
 } else {
     $ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
@@ -158,7 +160,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 # build
 ######################################################################
 print "$execstr\n";
-$buildstatus = system($execstr);
+$buildstatus = system("$execstr");
 
 # now check the build status and return appropriately
 if( $buildstatus == 0 ) {

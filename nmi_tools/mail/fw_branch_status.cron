@@ -1,0 +1,1 @@
+55 07 * * * /nmi/sbin/cronmail condor-builds@cs.wisc.edu /nmi/bin/fw_branch_status

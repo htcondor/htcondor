@@ -226,6 +226,9 @@
 /* Define to 1 if you have the `execl' function. (used)*/
 #cmakedefine HAVE_EXECL 1
 
+/* Define to 1 if you have the `readdir64' function. (used)*/
+#cmakedefine HAVE_READDIR64 1
+
 /* Do we have the blahp external (used Imake)*/
 #cmakedefine HAVE_EXT_BLAHP 1
 
@@ -382,6 +385,9 @@
 /* does os support the sched_setaffinity (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY 1
 
+/* does sched_setaffinity take two args (USED)*/
+#cmakedefine HAVE_SCHED_SETAFFINITY_2ARG 1
+
 /* Define to 1 if you have the `setegid' function. (USED)*/
 #cmakedefine HAVE_SETEGID 1
 
@@ -423,6 +429,9 @@
 
 /* Define to 1 if `ifr_hwaddr' is member of `struct ifreq' (USED)*/
 #cmakedefine HAVE_STRUCT_IFREQ_IFR_HWADDR 1
+
+/* Define to 1 if struct sockaddr_in has sin_len member. (USED)*/
+#cmakedefine HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
 
 /* Define to 1 if `f_fstyp' is member of `struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_FSTYP 1
@@ -523,5 +532,7 @@
 /* Number of arguments to sigwait() (USED)*/
 #cmakedefine SIGWAIT_ARGS 2
 
+/* Define to 1 if the system has getifaddrs().*/
+#cmakedefine HAVE_GETIFADDRS 1
 
 #endif

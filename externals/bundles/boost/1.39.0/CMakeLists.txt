@@ -72,7 +72,7 @@ if (WITH_BOOST )
 
 	# For proper builds use the .so/.dll's .
 	set(Boost_USE_MULTITHREADED ON)
-	find_package( Boost 1.33.1 )
+	find_package( Boost 1.33.1 COMPONENTS thread program_options)
 	if(Boost_FOUND)
 		append_var (EXTERNAL_INCLUDES ${Boost_INCLUDE_DIRS})
 		set (BOOST_VER ${Boost_VERSION})

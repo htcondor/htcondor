@@ -47,12 +47,9 @@ $| = 1;
 print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 
-	# This is an incredible hack to get around
-	$ENV{PATH} ="C:\\Program Files\\Microsoft Visual Studio 9.0\\Common7\\IDE;C:\\prereq\\ActivePerl-5.10.1\\site\\bin;C:\\prereq\\ActivePerl-5.10.1\\bin;C:\\Perl\\site\\bin;C:\\Perl\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\Program Files\\CMake 2.8\\bin;C:\\Program Files\\7-Zip;$BaseDir/msconfig;$ENV{PATH}";
+    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\IDE;$ENV{VS90COMNTOOLS}..\..\VC\BIN;$ENV{PATH}";
 	system("set");
-
-	# this can save on * etc from the web.
-	# my $externals_loc="C:/temp/scratch/externals/cmake"
+	
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
     system("env");
@@ -121,7 +118,7 @@ open (CMAKE_CONFIG, ">cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
 print CMAKE_CONFIG $configexecstr;
 close (CMAKE_CONFIG);
 
-$exit_status = system($configexecstr);
+$exit_status = system("$configexecstr 2>&1");
 
 if( $exit_status ) {
     die "failed with status $exit_status\n";

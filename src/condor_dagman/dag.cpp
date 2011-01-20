@@ -2726,6 +2726,35 @@ Dag::SetPendingNodeReportInterval( int interval )
 }
 
 //-------------------------------------------------------------------------
+void
+Dag::CheckThrottleCats()
+{
+	ThrottleByCategory::ThrottleInfo *info;
+	_catThrottles.StartIterations();
+	while ( _catThrottles.Iterate( info ) ) {
+		debug_printf( DEBUG_DEBUG_1, "Category %s has %d jobs, "
+					"throttle setting of %d\n", info->_category->Value(),
+					info->_totalJobs, info->_maxJobs );
+		ASSERT( info->_totalJobs >= 0 );
+		if ( info->_totalJobs < 1 ) {
+				// When we implement the -strict flag (see gittrac #1755)
+				// this should be a fatal error.
+			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
+						"assigned nodes, so the throttle setting (%d) "
+						"will have no effect\n", info->_category->Value(),
+						info->_maxJobs );
+		}
+
+		if ( !info->isSet() ) {
+				// When we implement the -strict flag (see gittrac #1755)
+				// this should be a fatal error.
+			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
+						"throttle value set\n", info->_category->Value() );
+		}
+	}
+}
+
+//-------------------------------------------------------------------------
 // 
 // Function: IncludeExtraDotCommands
 // Purpose:  Helper function for DumpDotFile. Reads the _dot_include_file_name 

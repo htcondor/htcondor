@@ -920,9 +920,8 @@ GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
     EvalState       state;
 
     state.rootAd = this; 
-    state.curAd = tree->GetParentScope( );
-	if( !state.curAd ) state.curAd = this;
-	
+	state.curAd = this;
+
     return( _GetExternalReferences( tree, this, state, refs, fullNames ) );
 }
 
@@ -1226,8 +1225,7 @@ GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames)
 {
     EvalState state;
     state.rootAd = this;
-    state.curAd = tree->GetParentScope();
-    if(!state.curAd) state.curAd = this;
+    state.curAd = this;
 
     return( _GetInternalReferences( tree, this, state, refs, fullNames) );
 }

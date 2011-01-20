@@ -78,6 +78,9 @@ if(!(defined $opt_skip_doc)){
 	#print "Building nroff man pages successful, tar'ing up results\n";
 	#-d "$ExtDir/bundles/man/current" || 
    	#	die "$ExtDir/bundles/man/current doesn't exist! Build tag broken\n";
+	print "GZipping manpages\n";	
+	#using best compression
+	`gzip -9vr man`;
 	print "Finished packaging man page nroff source\n";
 
 	#chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";

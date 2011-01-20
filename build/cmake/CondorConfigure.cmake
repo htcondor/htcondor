@@ -64,7 +64,11 @@ include (FindThreads)
 include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
-add_definitions(-DPLATFORM="${CMAKE_SYSTEM}")
+if (PLATFORM)
+	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${PLATFORM}")
+else()
+	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 set( CMAKE_VERBOSE_MAKEFILE TRUE )
@@ -78,7 +82,13 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package will strip the info)
+	  # Using -O2 crashes the compiler on ppc mac os x when compiling
+	  # condor_submit
+	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
+	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
+	  else()
+	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
+	  endif()
 	endif()
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
@@ -126,6 +136,8 @@ if( NOT WINDOWS)
 	check_function_exists("strsignal" HAVE_STRSIGNAL)
 	check_function_exists("unsetenv" HAVE_UNSETENV)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
+	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
+	check_function_exists("readdir64" HAVE_READDIR64)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -153,6 +165,8 @@ if( NOT WINDOWS)
 	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
 
+	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
+
 	check_struct_has_member("struct statfs" f_fstyp "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYP)
 	if (NOT ${OS_NAME} STREQUAL "DARWIN")
 		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
@@ -164,6 +178,28 @@ if( NOT WINDOWS)
 	# previously they were ~=check_cxx_source_compiles
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, 1024, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY )
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY_2ARG )
+
+	if(HAVE_SCHED_SETAFFINITY_2ARG)
+		set(HAVE_SCHED_SETAFFINITY ON)
+	endif()
 
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
@@ -206,7 +242,7 @@ if (${OS_NAME} STREQUAL "SUNOS")
 	endif()
 	add_definitions(-D_STRUCTURED_PROC)
 	set(HAS_INET_NTOA ON)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lsocket")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lnsl -lsocket")
 
 	#update for solaris builds to use pre-reqs namely binutils in this case
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -B$ENV{PATH}")
@@ -304,6 +340,12 @@ if (BUILD_TESTS)
 	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
+if ( NOT WINDOWS )
+	option(HAVE_KBDD "Support for condor_kbdd" ON)
+else()
+	set(HAVE_KBDD ON)
+endif()
+
 ##################################################
 ##################################################
 # setup for the externals, the variables defined here
@@ -366,6 +408,10 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+if (NOT WINDOWS)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
+endif(NOT WINDOWS)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 
 if (NOT WIN_EXEC_NODE_ONLY)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
@@ -374,18 +420,17 @@ if (NOT WIN_EXEC_NODE_ONLY)
 endif(NOT WIN_EXEC_NODE_ONLY)
 
 if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gcb/1.5.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.6)
 
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.0-p2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 
@@ -466,6 +511,10 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_sandbox_manager)
 if (HAVE_EXT_OPENSSL)
 	add_definitions(-DWITH_OPENSSL) # used only by SOAP
 endif(HAVE_EXT_OPENSSL)
+
+if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+endif()
 
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
@@ -576,7 +625,7 @@ else(MSVC)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lodm -static-libgcc")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
 	endif(AIX)
 
 	if (NOT PROPER AND NOT AIX)
