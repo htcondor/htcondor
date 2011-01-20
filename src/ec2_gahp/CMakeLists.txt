@@ -25,7 +25,7 @@ if (HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS)
 
 	condor_exe( ec2_gahp
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
-	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND}"
+	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND};${LDAP_FOUND}"
     	OFF)
 
 	# condor_exe_test(ec2_sim
