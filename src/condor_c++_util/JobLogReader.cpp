@@ -65,7 +65,7 @@ JobLogReader::Poll() {
 		return;
 	}
 
-	probe_st = prober.probe(parser.getLastCALogEntry(),parser.getFilePointer());
+	probe_st = prober.probe(parser.getLastCALogEntry(),parser.getFileDescriptor());
 
 	bool success = true;
 	switch(probe_st) {

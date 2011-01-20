@@ -41,7 +41,7 @@ public:
 
 	//! probe job_queue.log file
 	ProbeResultType probe(ClassAdLogEntry *curCALogEntry,
-						  FILE* job_queue_fp);
+						  int job_queue_fd);
 
 	//! update state information about size of log file last probed etc.
 	//! Call this after successfully responding to probe() result.
