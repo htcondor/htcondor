@@ -259,7 +259,7 @@ FileLock::initLockFile(bool useLiteralPath)
 			char *hPath = CreateHashName(m_orig_path, true);
 			SetPath(hPath);
 			delete []hPath;
-			m_fd = rec_touch_file(m_path, 0644, 0777 ) ;
+			m_fd = rec_touch_file(m_path, 0666, 0777 ) ;
 			if (m_fd < 0) { // /tmp does not work either ... 
 				dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will fall back on locking the actual file. \n");
 				umask(old_umask);
