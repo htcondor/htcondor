@@ -43,11 +43,12 @@ nodes assigned to it, or no throttle set.
 
 \begin{itemize}
 
-% gittrack 1800
-\item \MacroNI{NETWORK\_INTERFACE} and
-  \MacroNI{PRIVATE\_NETWORK\_INTERFACE} may now specify a network
-  device name as well as an IP address.  The `*' character may also
-  be used as a wildcard.  This makes it easier to apply the same
+% gittrac 1800
+\item Values for configuration variables \Macro{NETWORK\_INTERFACE} and
+  \Macro{PRIVATE\_NETWORK\_INTERFACE} may now specify a network
+  device name or an IP address.  The asterisk character (\verb|*|)
+  may be used as a wild card in either a name or IP address.
+  This makes it easier to apply the same
   configuration to a large number of machines, because the IP address
   does not have to be customized for each host.
 
@@ -59,8 +60,11 @@ nodes assigned to it, or no throttle set.
 
 % gittrac 1826
 \item A bug has been fixed that caused SOAP transactions in the
-  \Condor{schedd} daemon to result in log message of the form, ``Timer
-  \emph{X} not found''.  This bug is not known to have produced any other
+  \Condor{schedd} daemon to result in log message of the form 
+\begin{verbatim}
+Timer <X> not found
+\end{verbatim}
+  This bug is not known to have produced any other
   undesired behaviors.
 
 % gittrac #1586
@@ -113,7 +117,7 @@ report that a cycle exists in a DAG.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
-\item In unix, the following executables used to be located in both
+\item In Unix, the following executables used to be located in both
   the sbin and bin directories but are now only located in the bin
   directory: condor, \Condor{checkpoint}, \Condor{reschedule}, and
   \Condor{vacate}.
