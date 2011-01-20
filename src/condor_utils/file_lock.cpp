@@ -252,7 +252,7 @@ bool
 FileLock::initLockFile(bool useLiteralPath) 
 {
 	mode_t old_umask = umask(0);
-	m_fd = rec_touch_file(m_path, 0644, 0777 ); 
+	m_fd = rec_touch_file(m_path, 0666, 0777 ); 
 	if (m_fd < 0) {
 		if (!useLiteralPath) {
 			dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.", m_path);
@@ -725,9 +725,6 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 		snprintf(dest+strlen(dest), 3, "%s", hashVal+i);
 		snprintf(dest+strlen(dest), 2, "%c", DIR_DELIM_CHAR);
 	}
-#if !defined(WIN32)
-	sprintf(dest+strlen(dest), "%i%c", getuid(), DIR_DELIM_CHAR);
-#endif	
 	 
 	
 	sprintf(dest+strlen(dest), "%s.lockc", hashVal+4);
