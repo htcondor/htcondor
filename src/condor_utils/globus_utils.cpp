@@ -935,6 +935,7 @@ bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
 
 int
 x509_send_delegation( const char *source_file,
+					  time_t expiration_time,
 					  int (*recv_data_func)(void *, void **, size_t *), 
 					  void *recv_data_ptr,
 					  int (*send_data_func)(void *, void *, size_t),
@@ -1057,6 +1058,30 @@ x509_send_delegation( const char *source_file,
 			rc = -1;
 			error_line = __LINE__;
 			goto cleanup;
+		}
+	}
+
+	if( expiration_time ) {
+		time_t time_left = 0;
+		result = globus_gsi_cred_get_lifetime( source_cred, &time_left );
+		if ( result != GLOBUS_SUCCESS ) {
+			rc = -1;
+			error_line = __LINE__;
+			goto cleanup;
+		}
+
+		time_t now = time(NULL);
+		int orig_expiration_time = now + time_left;
+
+		if( orig_expiration_time > expiration_time ) {
+			int time_valid = (expiration_time - now)/60;
+
+			result = globus_gsi_proxy_handle_set_time_valid( new_proxy, time_valid );
+			if ( result != GLOBUS_SUCCESS ) {
+				rc = -1;
+				error_line = __LINE__;
+				goto cleanup;
+			}
 		}
 	}
 
@@ -1358,4 +1383,3 @@ is_globus_friendly_url(const char * path)
 		strstr(path, "gsiftp://") == path ||
 		0;
 }
-

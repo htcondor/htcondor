@@ -880,3 +880,4 @@ const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";
 
 const char * const ATTR_HASH_NAME = "HashName";
 const char * const ATTR_AUTHENTICATED_IDENTITY = "AuthenticatedIdentity";
+const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME = "DelegateJobGSICredentialsLifetime";

@@ -81,6 +81,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	next_reconnect_tid = -1;
 	proxy_check_tid = -1;
 	last_proxy_timestamp = time(0); // We haven't sent the proxy to the starter yet, so anything before "now" means it hasn't changed.
+	m_remote_proxy_expiration = 0;
+	m_remote_proxy_renew_time = 0;
 	reconnect_attempts = 0;
 
 	lease_duration = -1;
@@ -157,7 +159,8 @@ RemoteResource::activateClaim( int starterVersion )
 	    (jobAd->LookupString( ATTR_X509_USER_PROXY, &proxy ) == 1) ) {
 		dprintf( D_FULLDEBUG,
 	                 "trying early delegation (for glexec) of proxy: %s\n", proxy );
-		int dReply = dc_startd->delegateX509Proxy( proxy );
+		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+		int dReply = dc_startd->delegateX509Proxy( proxy, expiration_time );
 		if( dReply == OK ) {
 			// early delegation was successful. this means the startd
 			// is going to launch the starter using glexec, so we need
@@ -208,6 +211,15 @@ RemoteResource::activateClaim( int starterVersion )
 				   "HandleSyscalls", this );
 			setResourceState( RR_STARTUP );		
 			hadContact();
+
+				// This expiration time we calculate here may be
+				// sooner than the proxy, because the proxy may be
+				// delegated some time in the future when file
+				// transfer happens.  However, that just means we may
+				// renew the proxy a few seconds earlier than we would
+				// if we were more accurate, so it is ok.
+			setRemoteProxyRenewTime();
+
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
@@ -1890,6 +1902,18 @@ RemoteResource::requestReconnect( void )
 	return;
 }
 
+void
+RemoteResource::setRemoteProxyRenewTime(time_t expiration_time)
+{
+	m_remote_proxy_expiration = expiration_time;
+	m_remote_proxy_renew_time = GetDelegatedProxyRenewalTime(expiration_time);
+}
+
+void
+RemoteResource::setRemoteProxyRenewTime()
+{
+	setRemoteProxyRenewTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
+}
 
 bool
 RemoteResource::updateX509Proxy(const char * filename)
@@ -1904,7 +1928,11 @@ RemoteResource::updateX509Proxy(const char * filename)
 
 	DCStarter::X509UpdateStatus ret = DCStarter::XUS_Error;
 	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == true ) {
-		ret = starter.delegateX509Proxy(filename, m_claim_session.secSessionId());
+		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+		ret = starter.delegateX509Proxy(filename, expiration_time, m_claim_session.secSessionId());
+		if( ret == DCStarter::XUS_Okay ) {
+			setRemoteProxyRenewTime(expiration_time);
+		}
 	}
 	if ( ret != DCStarter::XUS_Okay ) {
 		ret = starter.updateX509Proxy(filename, m_claim_session.secSessionId());
@@ -1937,8 +1965,18 @@ RemoteResource::checkX509Proxy( void )
 	StatInfo si(proxy_path.Value());
 	time_t lastmod = si.GetModifyTime();
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
-		(long)last_proxy_timestamp, (long)lastmod, lastmod - last_proxy_timestamp);
-	if(lastmod <= last_proxy_timestamp) {
+		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
+
+	if( m_remote_proxy_renew_time ) {
+		dprintf(D_FULLDEBUG, "Remote short-lived proxy remaining lifetime %lds, to be redelegated in %lds\n",
+				(long)(m_remote_proxy_expiration-time(NULL)),
+				(long)(m_remote_proxy_renew_time-time(NULL)));
+	}
+
+	if( m_remote_proxy_renew_time && m_remote_proxy_renew_time <= time(NULL) ) {
+		dprintf(D_ALWAYS,"Time to redelegate short-lived proxy to starter.\n");
+	}
+	else if(lastmod <= last_proxy_timestamp) {
 		// No change.
 		return;
 	}

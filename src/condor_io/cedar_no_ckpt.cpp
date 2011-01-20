@@ -614,7 +614,7 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 }
 
 int
-ReliSock::put_x509_delegation( filesize_t *size, const char *source )
+ReliSock::put_x509_delegation( filesize_t *size, const char *source, time_t expiration_time )
 {
 	int in_encode_mode;
 
@@ -628,7 +628,7 @@ ReliSock::put_x509_delegation( filesize_t *size, const char *source )
 		return -1;
 	}
 
-	if ( x509_send_delegation( source, relisock_gsi_get, (void *) this,
+	if ( x509_send_delegation( source, expiration_time, relisock_gsi_get, (void *) this,
 							   relisock_gsi_put, (void *) this ) != 0 ) {
 		dprintf( D_ALWAYS, "ReliSock::put_x509_delegation(): delegation "
 				 "failed: %s\n", x509_error_string() );
