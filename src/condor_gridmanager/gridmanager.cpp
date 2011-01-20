@@ -883,7 +883,7 @@ contact_schedd_next_add_job:
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
-				next_job->JobAdUpdateFromSchedd( next_ad );
+				next_job->JobAdUpdateFromSchedd( next_ad, true );
 				num_ads++;
 
 			} else if ( curr_status == REMOVED ) {
@@ -941,6 +941,8 @@ contact_schedd_next_add_job:
 	// Retrieve dirty attributes
 	/////////////////////////////////////////////////////
 	if ( updateJobsSignaled ) {
+		dprintf( D_FULLDEBUG, "querying for jobs with attribute updates\n" );
+
 		sprintf( expr_buf, "%s && %s && %s && %s && %s",
 				 expr_schedd_job_constraint.c_str(), 
 				 expr_not_completely_done.c_str(),
@@ -965,7 +967,7 @@ contact_schedd_next_add_job:
 				updates.dPrint(D_JOB);
 			}
 			if ( BaseJob::JobsByProcId.lookup( job_id, curr_job ) == 0 ) {
-				curr_job->JobAdUpdateFromSchedd( &updates );
+				curr_job->JobAdUpdateFromSchedd( &updates, false );
 				ProcIdToStr( job_id, str );
 				dirty_job_ids.append( str );
 			}
@@ -1146,9 +1148,16 @@ contact_schedd_next_add_job:
 	}
 
 	// Clear dirty bits for all jobs updated
-	dirty_job_ids.rewind();
-	if ( ScheddObj->clearDirtyAttrs( &dirty_job_ids, &errstack ) == NULL ) {
-		dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText() );
+	if ( !dirty_job_ids.isEmpty() ) {
+		ClassAd *rval;
+		dprintf( D_FULLDEBUG, "Calling clearDirtyAttrs on %d jobs\n",
+				 dirty_job_ids.number() );
+		dirty_job_ids.rewind();
+		rval = ScheddObj->clearDirtyAttrs( &dirty_job_ids, &errstack );
+		if ( rval == NULL ) {
+			dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText() );
+		}
+		delete rval;
 	}
 
 	// Wake up jobs that had schedd updates pending and delete job
