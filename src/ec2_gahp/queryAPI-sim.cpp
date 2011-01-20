@@ -9,6 +9,12 @@
 #include <netinet/ip.h>
 
 #include <string>
+#include <map>
+#include <sstream>
+
+typedef std::map< std::string, std::string > AttributeValueMap;
+typedef bool (*ActionHandler)( AttributeValueMap & avm, std::string & reply );
+typedef std::map< std::string, ActionHandler > ActionToHandlerMap;
 
 /*
  * The GAHP uses the following functions from the Query API:
@@ -19,20 +25,161 @@
  *      CreateKeyPair
  *      DeleteKeyPair
  *      DescribeKeyPairs
- *
- * We also attempt to verify that the request was properly signed.
- *
  */
 
+bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleRunInstances()\n" );
+    return false;
+}
+
+bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleTerminateInstances()\n" );
+    return false;
+}
+
+bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleDescribeInstances()\n" );
+    return false;
+}
+
+bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleCreateKeyPair()\n" );
+    return false;
+}
+
+bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleDeleteKeyPair()\n" );
+    return false;
+}
+
+bool handleDescribeKeyPairs( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleDescribeKeyPairs()\n" );
+    return false;
+}
+
+ActionToHandlerMap simulatorActions;
+
+void registerAllHandlers() {
+    simulatorActions[ "RunInstances" ] = & handleRunInstances;
+    simulatorActions[ "TerminateInstances" ] = & handleTerminateInstances;
+    simulatorActions[ "DescribeInstances" ] = & handleDescribeInstances;
+    simulatorActions[ "CreateKeyPair" ] = & handleCreateKeyPair;
+    simulatorActions[ "DeleteKeyPair" ] = & handleDeleteKeyPair;
+    simulatorActions[ "DescribeKeyPairs" ] = & handleDescribeKeyPairs;
+}
+
+// m/^Host: <host>\r\n/
+bool extractHost( const std::string & request, std::string & host ) {
+    std::string::size_type i = request.find( "\r\nHost: " );
+    if( std::string::npos == i ) {
+        fprintf( stderr, "Malformed request '%s': contains no Host header; failing.\n", request.c_str() );
+        return false;
+    }
+
+    std::string::size_type j = request.find( "\r\n", i + 2 );
+    if( std::string::npos == j ) {
+        fprintf( stderr, "Malformed request '%s': Host field not CR/LF terminated; failing.\n", request.c_str() );
+        return false;
+    }
+
+    host = request.substr( i + 8, j - (i + 8)  );
+    return true;
+}
+
+// m/^GET <URL> HTTP/
+bool extractURL( const std::string & request, std::string & URL ) {
+    if( request.find( "GET " ) != 0 ) {
+        fprintf( stderr, "Malformed request '%s': did not begin with 'GET '; failing.\n", request.c_str() );
+        return false;
+    }
+    
+    URL = request.substr( 4, request.find( "HTTP" ) - 5 );
+    return true;
+}
+
+/*
+ * The most fragile part of the EC2 GAHP is the query signing, so
+ * we'd like to validate it.  See the comments in amazonCommands.cpp
+ * for more details.
+ *
+ * This function is presently a stub because I haven't solved the
+ * problem of key distribution between the tester and the simulator.
+ */
+bool validateSignature( std::string & method,
+                        const std::string & host,
+                        const std::string & URL,
+                        const AttributeValueMap & queryParameters ) {
+    return true;
+}
+
 std::string handleRequest( const std::string & request ) {
-    // FIXME: parse() and validateSignature(), dispatch to the functions above.
-    // FIXME: which headers does EC2/Eucalyptus reply with?
-    // FIXME: convert to wrapper function that accepts a string of XML.
-    std::string reply  = "HTTP/1.1 200 OK\r\n";
-                reply += "Content-Length: 0\r\n";
-                reply += "Content-Type: text/xml\r\n";
-                reply += "\r\n";
-    return reply;
+    std::string URL;
+    if( ! extractURL( request, URL ) ) {
+        return "HTTP/1.1 400 Bad Request\r\n";
+    }
+    
+    std::string host;
+    if( ! extractHost( request, host ) ) {
+        return "HTTP/1.1 400 Bad Request\r\n";
+    }
+    std::transform( host.begin(), host.end(), host.begin(), & tolower );
+    
+    // fprintf( stderr, "DEBUG: found 'http://%s%s'\n", host.c_str(), URL.c_str() );
+    
+    AttributeValueMap queryParameters;
+    std::string::size_type i = URL.find( "?" );
+    while( i < URL.size() ) {
+        // Properly encoded URLs will only have ampersands between
+        // the key-value pairs, and equals between keys and values.
+        std::string::size_type equalsIdx = URL.find( "=", i + 1 );
+        if( std::string::npos == equalsIdx ) {
+            fprintf( stderr, "Malformed URL '%s': attribute without value; failing.\n", URL.c_str() );
+            return "HTTP/1.1 400 Bad Request\r\n";
+        }        
+        std::string::size_type ampersandIdx = URL.find( "&", i + 1 );
+        if( std::string::npos == ampersandIdx ) {
+            ampersandIdx = URL.size();
+        }
+
+        std::string key = URL.substr( i + 1, equalsIdx - (i + 1) );
+        std::string value = URL.substr( equalsIdx + 1, ampersandIdx - (equalsIdx + 1 ) );
+        // fprintf( stderr, "DEBUG: key = '%s', value = '%s'\n", key.c_str(), value.c_str() );
+        queryParameters[ key ] = value;
+        
+        i = ampersandIdx;
+    }
+
+    std::string method = "GET";
+    if( ! validateSignature( method, host, URL, queryParameters ) ) {
+            return "HTTP/1.1 401 Unauthorized\r\n";
+    }
+
+
+    std::string action = queryParameters[ "Action" ];
+    if( action.empty() ) {
+        return "HTTP/1.1 400 Bad Request\r\n";
+    }        
+
+    std::ostringstream reply;
+    std::string response;
+    ActionToHandlerMap::const_iterator ci = simulatorActions.find( action );
+    if( simulatorActions.end() == ci ) {
+        fprintf( stderr, "Action '%s' not found.\n", action.c_str() );
+        return "HTTP/1.1 404 Action Not Found\r\n";
+    }
+    
+    if( (*(ci->second))( queryParameters, response ) ) {
+        reply << "HTTP/1.1 200 OK\r\n";
+    } else {
+        reply << "HTTP/1.1 406 Not Acceptable\r\n";
+    }
+    
+    // FIXME: With which headers do EC2 and Eucalytpus reply?
+    reply << "Content-Length: " << response.size() << "\r\n";
+    reply << "Content-Type: text/xml\r\n";
+    reply << "\r\n";
+
+    return reply.str();
 }
 
 void handleConnection( int sockfd ) {
@@ -118,6 +265,8 @@ int main( int argc, char ** argv ) {
         fprintf( stderr, "listen() failed (%d): '%s'; aborting.\n", errno, strerror( errno ) );
         exit( 3 );
     }
+
+    registerAllHandlers();
 
     while( 1 ) {
         struct sockaddr_in remoteAddr;
