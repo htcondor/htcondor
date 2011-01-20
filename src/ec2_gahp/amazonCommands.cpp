@@ -381,9 +381,10 @@ bool AmazonRequest::SendRequest() {
  * of the XML in executable code (and the *UD ('UserData') datastructures).
  *
  * If the use of libxml2 is not contraindicated (it was at one point), then
- * we can use XPath expressions ('/*/instanceId', in this case) instead of
- * code.  This will be particularly clarity-enhancing when parsing the results
- * of DescribeInstances queries; see AmazonVMStatusAll.
+ * we can use XPath expressions (regex-like) instead of code to identify
+ * the character data of interest.  This will be particularly clarity-
+ * enhancing when parsing the results of DescribeInstances queries; see
+ * AmazonVMStatusAll.
  *
  * See 'http://xmlsoft.org/examples/xpath1.c', which looks a lot cleaner.
  */
