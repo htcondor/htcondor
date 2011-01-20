@@ -220,9 +220,22 @@ EOF;
    foreach (Array("build", "test", "crosstest") AS $type) {
       $cur = $data[$type];
 
-      $status = ($cur["failed"] ? "FAILED" :
-                ($cur["pending"] ? "PENDING" : "PASSED"));
-      $color = $status;
+      if($cur["failed"] > 0) {
+	$status = "FAILED";
+	$color = "FAILED";
+      }
+      elseif($cur["pending"] > 0) {
+	$status = "PENDING";
+	$color = "PENDING";
+      }
+      elseif($cur["passed"] > 0) {
+	$status = "PASSED";
+	$color = "PASSED";
+      }
+      else {
+	$status = "No Results";
+	$color = "NORESULTS";
+      }
 
       ##
       ## Check for missing tests

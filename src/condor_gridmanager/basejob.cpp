@@ -627,7 +627,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluste
 	SetEvaluateState();
 }
 
-void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
+void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 {
 	static const char *held_removed_update_attrs[] = {
 		ATTR_JOB_STATUS,
@@ -648,7 +648,9 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 	new_ad->LookupInteger( ATTR_JOB_STATUS, new_condor_state );
 
 	if ( new_condor_state == condorState ) {
-		MergeClassAds( jobAd, (ClassAd*)new_ad, true );
+		if ( !full_ad ) {
+			MergeClassAds( jobAd, (ClassAd*)new_ad, true, false );
+		}
 		return;
 	}
 
@@ -707,9 +709,8 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 		condorState = new_condor_state;
 			// TODO do we need to update any other attributes?
 		SetEvaluateState();
-	}
-	else {
-		MergeClassAds( jobAd, (ClassAd*)new_ad, true );
+	} else if ( !full_ad ) {
+		MergeClassAds( jobAd, (ClassAd*)new_ad, true, false );
 	}
 
 }

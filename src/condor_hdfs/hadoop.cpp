@@ -196,7 +196,7 @@ void Hadoop::writeCoreSiteFile() {
 
         char *str = xml.print_to_delimed_string(NULL);
         ASSERT(str != NULL);
-        int len = full_write(fd, str, strlen(str));
+        unsigned len = full_write(fd, str, strlen(str));
         ASSERT(len == strlen(str));
         close(fd);
         free(str);
@@ -342,7 +342,7 @@ void Hadoop::writeConfigFile() {
 
         char *str = xml.print_to_delimed_string(NULL);
         ASSERT(str != NULL);
-        int len = full_write(fd, str, strlen(str));
+        unsigned int len = full_write(fd, str, strlen(str));
         ASSERT(len == strlen(str));
         close(fd);
         free(str);
@@ -437,7 +437,8 @@ void Hadoop::startService( NodeType type ) {
 
         ArgList arglist;
 
-        java_config(m_java, &arglist, &m_classpath);
+        int retval = java_config(m_java, &arglist, &m_classpath);
+		dprintf(D_ALWAYS, "Retval: %d\n", retval);
 
         char *ldir = param("LOG");
         if (ldir != NULL) {
@@ -472,34 +473,36 @@ void Hadoop::startService( NodeType type ) {
                 arglist.AppendArg(m_dataNodeClass);
         }
 
-        int arrIO[3];
-        arrIO[0] = -1;
-        arrIO[1] = -1;
-        arrIO[2] = -1;
+        int stdoutFds[2];
+        stdoutFds[0] = -1; // parent side of pipe
+        stdoutFds[1] = -1; // child side of pipe
 
-        if (! daemonCore->Create_Pipe(&arrIO[1], true, false, true) ) {
+        if (! daemonCore->Create_Pipe(stdoutFds, true, false, true) ) {
                 dprintf(D_ALWAYS, "Couldn't create a stdout pipe\n");
         } else {
-                if (! daemonCore->Register_Pipe(arrIO[1], "hadoop stdout",
+                if (! daemonCore->Register_Pipe(stdoutFds[0], "hadoop stdout",
                         (PipeHandlercpp) &Hadoop::stdoutHandler,
                         "stdout", this) ) {
 
                         dprintf(D_ALWAYS, "Couldn't register stdout pipe\n");                        
                 } else {
-                        m_stdOut = arrIO[1];
+                        m_stdOut = stdoutFds[0];
                 }
         }
 
-        if (! daemonCore->Create_Pipe(&arrIO[2], true, false, true) ) {
+        int stderrFds[2];
+        stderrFds[0] = -1; // parent side of pipe
+        stderrFds[1] = -1; // child side of pipe
+        if (! daemonCore->Create_Pipe(stderrFds, true, false, true) ) {
                 dprintf(D_ALWAYS, "Couldn't create a stderr pipe\n");
         } else {
-                if (! daemonCore->Register_Pipe(arrIO[2], "hadoop stderr",
+                if (! daemonCore->Register_Pipe(stderrFds[0], "hadoop stderr",
                         (PipeHandlercpp) &Hadoop::stderrHandler, 
                         "stderr", this) ) {
 
                         dprintf(D_ALWAYS, "Couldn't register stderr, pipe\n");
                 } else {
-                        m_stdErr = arrIO[2];
+                        m_stdErr = stderrFds[0];
                 }
         }
 
@@ -550,6 +553,11 @@ void Hadoop::startService( NodeType type ) {
         arglist.GetArgsStringForDisplay(&argString);
         dprintf(D_ALWAYS, "%s\n", argString.Value());
 
+		int childInOutErr[3]; // fds for child's stdin/out/err
+		childInOutErr[0] = -1;  // do we need to open /dev/null here?
+		childInOutErr[1] = stdoutFds[1]; // child side of stdout pipe
+		childInOutErr[2] = stderrFds[1]; // child side of stderr pipe
+		
         m_pid = daemonCore->Create_Process( m_java.Value(),  
                         arglist,
                         PRIV_CONDOR_FINAL, 
@@ -559,11 +567,15 @@ void Hadoop::startService( NodeType type ) {
                         NULL,
                         NULL,
                         NULL,
-                        arrIO
+                        childInOutErr
                         );
 
         if (m_pid == FALSE) 
                 EXCEPT("Failed to launch hadoop process using Create_Process.\n ");
+
+		// And close our copy of the child's side of the pipes
+		daemonCore->Close_Pipe( childInOutErr[1]); // child side of stdout
+		daemonCore->Close_Pipe( childInOutErr[2]); // child side of stderr
 
         dprintf(D_ALWAYS, "Launched hadoop process %s with pid=%d\n", 
                 getServiceNameByType(type).Value(), m_pid);
