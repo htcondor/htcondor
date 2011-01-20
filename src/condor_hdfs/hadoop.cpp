@@ -437,7 +437,8 @@ void Hadoop::startService( NodeType type ) {
 
         ArgList arglist;
 
-        java_config(m_java, &arglist, &m_classpath);
+        int retval = java_config(m_java, &arglist, &m_classpath);
+		dprintf(D_ALWAYS, "Retval: %d\n", retval);
 
         char *ldir = param("LOG");
         if (ldir != NULL) {
