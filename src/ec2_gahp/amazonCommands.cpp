@@ -372,6 +372,22 @@ bool AmazonRequest::SendRequest() {
 
 // ---------------------------------------------------------------------------
 
+/*
+ * The *[ESH|CDH|EEH] functions are Expat callbacks for parsing the result
+ * of the corresponding query.  ('EntityStartHandler', 'CharacterDataHandler',
+ * and 'EntityEndHandler', respectively; referring to the opening tag, the
+ * enclosed data, and the closing tag.)  This method of XML parsing is
+ * extremely opaque and bug-prone, because you have to represent the structure
+ * of the XML in executable code (and the *UD ('UserData') datastructures).
+ *
+ * If the use of libxml2 is not contraindicated (it was at one point), then
+ * we can use XPath expressions ('/*/instanceId', in this case) instead of
+ * code.  This will be particularly clarity-enhancing when parsing the results
+ * of DescribeInstances queries; see AmazonVMStatusAll.
+ *
+ * See 'http://xmlsoft.org/examples/xpath1.c', which looks a lot cleaner.
+ */
+
 AmazonVMStart::AmazonVMStart() { }
 
 AmazonVMStart::~AmazonVMStart() { }
