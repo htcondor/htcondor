@@ -37,6 +37,13 @@ The details of each version are described below.
 \item \Condor{dagman} now gives a warning if a node category has no
 nodes assigned to it, or no throttle set.
 
+% gittrac #1855
+\item \Condor{dagman} now has a \Env{\$MAX\_RETRIES} macro for PRE and
+POST script arguments (see ~\pageref{dagman:SCRIPT} for details).
+
+\item \Condor{dagman} now prints a warning if an unrecognized macro is
+used for a PRE or POST script argument.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
