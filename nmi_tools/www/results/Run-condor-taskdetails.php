@@ -12,6 +12,44 @@ $task        = $_REQUEST["task"];
 $description = $_REQUEST["description"];
 $runid       = $_REQUEST["runid"];
 
+# Some CSS and Javascript
+echo '
+<style type="text/css">
+<!--
+pre {
+   margin-left: 1em;
+   margin-right: 1em;
+   padding: 0.5em;
+   width: 90%;
+   background-color: #f0f0f0;
+   border: 1px solid black;
+   white-space: pre-wrap;       /* css-3 */
+   white-space: -moz-pre-wrap !important; /* Mozilla + Firefox */
+   white-space: -pre-wrap;      /* Opera 4-6 */
+   white-space: -o-pre-wrap;    /* Opera 7 */
+   word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+
+font.hl {
+   BACKGROUND-COLOR: yellow;
+}
+-->
+</style>
+
+<script type="text/javascript" language="JavaScript">
+<!--
+function swap(d) {
+    if(document.getElementById(d).style.display == "none") { 
+        document.getElementById(d).style.display = "block"; 
+    }
+    else { 
+        document.getElementById(d).style.display = "none"; 
+    }
+}
+-->
+</script>
+';
+
 echo "<P>";
 echo "<B>Tag: </b>$description<BR>";
 echo "<B>Task: </b>$task<br>";
@@ -128,17 +166,49 @@ while( $myrow = mysql_fetch_array($result) ) {
   echo "<TR><TD>Start:</TD><TD>".$myrow["start"] ."</TD></TR>";
   echo "<TR><TD>Finish:</TD><TD> ".$myrow["finish"] ."</TD></TR>";
   echo "<TR><TD>Duration:</TD><TD> ".$myrow["duration"] ."</TD></TR>";
-  #echo "<TR><TD>Result:</TD><TD> ".$myrow["result"] . "</TD></TR>";
   echo "<TR><TD>Result:</TD><TD> $test_results_url </TD></TR>";
   echo "<TR><TD>Stdout:</TD><TD> $stdout_url - (size: $stdout_size bytes) </TD></TR>";
   echo "<TR><TD>Stderr:</TD><TD> $stderr_url - (size: $stderr_size bytes) </TD></TR>";
   echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";
   echo "</TABLE>";
   echo "</P>";
+
+  if($file_found) {
+    if($stdout_size > 0) {
+      show_file_content("STDOUT", "$filepath.out");
+    }
+    
+    if($stderr_size > 0) {
+      show_file_content("STDERR", "$filepath.err");
+    }
+  }
 }
 
 mysql_free_result($result);
 mysql_close($db);
+
+function show_file_content($header, $file) {
+  echo "<hr>\n";
+  echo "<h3>$header:</h3>";
+  
+  $lines = `grep -C 5 -i error $file`;
+  echo "<p style=\"font-size: 80%;\">Showing all instances of the word 'error' in $header:\n";
+  if(strlen($lines) > 0) {
+    echo "<p><a href=\"javascript:swap('$header')\">Click to show errors in $header</a>\n";
+    echo "<div id=\"$header\" style=\"display:none;\">\n";
+    echo "<pre>$lines</p>\n";
+    echo "</div>\n";
+  }
+  else {
+    echo "<p>The string 'error' was not present in $header\n";
+  }
+
+  // Always show the last 10 lines
+  $count = 10;
+  $lines = `tail -$count $file`;
+  echo "<p style=\"font-size: 80%;\">Last $count lines of $header:\n";
+  echo "<pre>$lines</pre>";
+}
 
 ?>
 </body>
