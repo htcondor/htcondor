@@ -30,6 +30,8 @@
 
 #include "NTsenders.h"
 
+#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d\n", x, errno);errno=ETIMEDOUT;return x;}
+
 static int CurrentSysCall;
 extern ReliSock *syscall_sock;
 extern CStarter *Starter;
@@ -391,15 +393,14 @@ REMOTE_CONDOR_begin_execution( void )
 	return rval;
 }
 
-
-#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d\n", x, errno);errno=ETIMEDOUT;return x;}
-
 int
-REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg)
+REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg, char *buffer)
 {
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_open\n" );
 
         CurrentSysCall = CONDOR_open;
 
@@ -424,10 +425,19 @@ REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg)
                 result = syscall_sock->end_of_message();
 				ON_ERROR_RETURN( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
+        char *temp_buffer = NULL;
+        if(!buffer) {
+                temp_buffer = (char*)malloc(1024);
+                buffer = temp_buffer;
+        }
+        result = ( syscall_sock->code_bytes_bool(buffer, 1024) );
+        ON_ERROR_RETURN( result );
         result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
+        free(temp_buffer);
         return rval;
 }
 
@@ -437,6 +447,8 @@ REMOTE_CONDOR_close(int   fd)
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_close\n" );
 
         CurrentSysCall = CONDOR_close;
 
@@ -457,6 +469,7 @@ REMOTE_CONDOR_close(int   fd)
                 result = syscall_sock->end_of_message();
 				ON_ERROR_RETURN( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = syscall_sock->end_of_message();
@@ -470,6 +483,8 @@ REMOTE_CONDOR_read(int   fd , void *  buf , size_t   len)
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_read\n" );
 
         CurrentSysCall = CONDOR_read;
 
@@ -492,6 +507,7 @@ REMOTE_CONDOR_read(int   fd , void *  buf , size_t   len)
                 result = ( syscall_sock->end_of_message() );
 				ON_ERROR_RETURN( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->code_bytes_bool(buf, rval) );
@@ -507,6 +523,8 @@ REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_write\n" );
 
         CurrentSysCall = CONDOR_write;
 
@@ -531,6 +549,7 @@ REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
                 result = ( syscall_sock->end_of_message() );
 				ON_ERROR_RETURN( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
@@ -545,6 +564,8 @@ REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_lseek\n" );
 
         CurrentSysCall = CONDOR_lseek;
 
@@ -569,6 +590,7 @@ REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
                 result = ( syscall_sock->end_of_message() );
 				ON_ERROR_RETURN( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
@@ -582,6 +604,8 @@ REMOTE_CONDOR_unlink( char *  path )
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_unlink\n" );
 
         CurrentSysCall = CONDOR_unlink;
 
@@ -602,6 +626,7 @@ REMOTE_CONDOR_unlink( char *  path )
                 result = ( syscall_sock->end_of_message() );
 				ASSERT( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
@@ -615,6 +640,8 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_rename\n" );
 
         CurrentSysCall = CONDOR_rename;
 
@@ -637,6 +664,7 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
                 result = ( syscall_sock->end_of_message() );
 				ASSERT( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
@@ -692,6 +720,8 @@ REMOTE_CONDOR_mkdir( char *  path, int mode )
         condor_errno_t     terrno;
 		int result = 0;
 
+        dprintf ( D_SYSCALLS, "Doing CONDOR_mkdir\n" );
+
         CurrentSysCall = CONDOR_mkdir;
 
         syscall_sock->encode();
@@ -713,6 +743,7 @@ REMOTE_CONDOR_mkdir( char *  path, int mode )
                 result = ( syscall_sock->end_of_message() );
 				ASSERT( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
@@ -726,6 +757,8 @@ REMOTE_CONDOR_rmdir( char *  path )
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_rmdir\n" );
 
         CurrentSysCall = CONDOR_rmdir;
 
@@ -746,6 +779,7 @@ REMOTE_CONDOR_rmdir( char *  path )
                 result = ( syscall_sock->end_of_message() );
 				ASSERT( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
@@ -759,6 +793,8 @@ REMOTE_CONDOR_fsync(int   fd)
         int     rval;
         condor_errno_t     terrno;
 		int result = 0;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_fsync\n" );
 
         CurrentSysCall = CONDOR_fsync;
 
@@ -779,6 +815,7 @@ REMOTE_CONDOR_fsync(int   fd)
                 result = ( syscall_sock->end_of_message() );
 				ON_ERROR_RETURN( result );
                 errno = terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
@@ -792,6 +829,8 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
         int     rval;
         condor_errno_t  terrno;
  
+        dprintf ( D_SYSCALLS, "Doing CONDOR_get_file_info_new\n" );
+
         CurrentSysCall = CONDOR_get_file_info_new;
 
 		ASSERT( actual_url == NULL );
@@ -807,6 +846,7 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
                 ASSERT( syscall_sock->code(terrno) );
                 ASSERT( syscall_sock->end_of_message() );
                 errno = (int)terrno;
+                dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
         ASSERT( syscall_sock->get(actual_url) );
@@ -880,6 +920,8 @@ REMOTE_CONDOR_get_job_attr(char *  attrname , char *& expr)
 	int	rval;
 	condor_errno_t	terrno;
 
+	dprintf ( D_SYSCALLS, "Doing CONDOR_get_job_attr\n" );
+
 	CurrentSysCall = CONDOR_get_job_attr;
 
 	syscall_sock->encode();
@@ -893,6 +935,7 @@ REMOTE_CONDOR_get_job_attr(char *  attrname , char *& expr)
 		ASSERT( syscall_sock->code(terrno) );
 		ASSERT( syscall_sock->end_of_message() );
 		errno = (int)terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
 	ASSERT( syscall_sock->code(expr) );
@@ -905,6 +948,8 @@ REMOTE_CONDOR_set_job_attr(char *  attrname , char *  expr)
 {
 	int	rval;
 	condor_errno_t	terrno;
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_set_job_attr\n" );
 
 	CurrentSysCall = CONDOR_set_job_attr;
 
@@ -920,6 +965,7 @@ REMOTE_CONDOR_set_job_attr(char *  attrname , char *  expr)
 		ASSERT( syscall_sock->code(terrno) );
 		ASSERT( syscall_sock->end_of_message() );
 		errno = (int)terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
 	ASSERT( syscall_sock->end_of_message() );
@@ -931,6 +977,8 @@ REMOTE_CONDOR_constrain( char *  expr)
 {
 	int	rval;
 	condor_errno_t	terrno;
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_constrain\n" );
 
 	CurrentSysCall = CONDOR_constrain;
 
@@ -945,6 +993,7 @@ REMOTE_CONDOR_constrain( char *  expr)
 		ASSERT( syscall_sock->code(terrno) );
 		ASSERT( syscall_sock->end_of_message() );
 		errno = (int)terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
 	ASSERT( syscall_sock->end_of_message() );
@@ -964,6 +1013,8 @@ int REMOTE_CONDOR_get_sec_session_info(
 	int	rval=-1;
 	condor_errno_t	terrno;
 
+	dprintf ( D_SYSCALLS, "Doing CONDOR_get_sec_session_info\n" );
+
 	CurrentSysCall = CONDOR_get_sec_session_info;
 
 	syscall_sock->encode();
@@ -971,7 +1022,7 @@ int REMOTE_CONDOR_get_sec_session_info(
 
 	bool socket_default_crypto = syscall_sock->get_encryption();
 	if( !socket_default_crypto ) {
-			// always encrypt; we are exchanging super secret session keys
+		// always encrypt; we are exchanging super secret session keys
 		syscall_sock->set_crypto_mode(true);
 	}
 

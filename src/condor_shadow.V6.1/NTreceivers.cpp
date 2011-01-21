@@ -27,7 +27,7 @@
 #include "condor_sys.h"
 #include "baseshadow.h"
 #include "remoteresource.h"
-#include "MyString.h"
+#include "directory.h"
 
 
 extern ReliSock *syscall_sock;
@@ -41,6 +41,38 @@ static bool read_access(const char * filename ) {
 
 static bool write_access(const char * filename ) {
 	return thisRemoteResource->allowRemoteWriteFileAccess( filename );
+}
+
+static bool stat_string( char *line, struct stat *info )
+{
+	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\n",
+		(long long) info->st_dev,
+		(long long) info->st_ino,
+		(long long) info->st_mode,
+		(long long) info->st_nlink,
+		(long long) info->st_uid,
+		(long long) info->st_gid,
+		(long long) info->st_rdev,
+		(long long) info->st_size,
+		(long long) info->st_blksize,
+		(long long) info->st_blocks,
+		(long long) info->st_atime,
+		(long long) info->st_mtime,
+		(long long) info->st_ctime
+	);
+}
+
+static bool statfs_string( char *line, struct statfs *info )
+{
+	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld\n",
+		(long long) info->f_type,
+		(long long) info->f_bsize,
+		(long long) info->f_blocks,
+		(long long) info->f_bfree,
+		(long long) info->f_bavail,
+		(long long) info->f_files,
+		(long long) info->f_ffree
+	);
 }
 
 static const char * shadow_syscall_name(int condor_sysnum)
@@ -110,9 +142,11 @@ int
 do_REMOTE_syscall()
 {
 	int condor_sysnum;
-	int	rval;
+	int	rval = -1, result = -1, fd = -1, mode = -1, uid = -1, gid = -1;
+	int length = -1;
 	condor_errno_t terrno;
-	int result = 0;
+	char *path = NULL, *buffer = NULL;
+	void *buf = NULL;
 
 	syscall_sock->decode();
 
@@ -350,7 +384,6 @@ do_REMOTE_syscall()
 
 	case CONDOR_open:
 	  {
-		char *  path;
 		open_flags_t flags;
 		int   lastarg;
 
@@ -362,6 +395,7 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "  lastarg = %d\n", lastarg );
 		path = NULL;
 		result = ( syscall_sock->code(path) );
+		dprintf( D_SYSCALLS, "  path = %s\n", path );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -383,6 +417,16 @@ do_REMOTE_syscall()
 		}
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		
+		// Get stat info
+		struct stat stat_buf;
+		char line[1024];
+		if( rval >= 0 ) {
+			if(stat(path, &stat_buf) < 0 || stat_string(line, &stat_buf) < 0) {
+				rval = -1;
+				terrno = (condor_errno_t)errno;
+			}
+		}
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
@@ -391,6 +435,11 @@ do_REMOTE_syscall()
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}
+		else {
+			result = ( syscall_sock->code_bytes_bool(line, 1024) );
+			ASSERT( result );
+		}
+
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -399,8 +448,6 @@ do_REMOTE_syscall()
 
 	case CONDOR_close:
 	  {
-		int   fd;
-
 		result = ( syscall_sock->code(fd) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
@@ -425,8 +472,6 @@ do_REMOTE_syscall()
 	}
 	case CONDOR_read:
 	  {
-		int   fd;
-		void *  buf;
 		size_t   len;
 
 		result = ( syscall_sock->code(fd) );
@@ -464,8 +509,6 @@ do_REMOTE_syscall()
 
 	case CONDOR_write:
 	  {
-		int   fd;
-		void *  buf;
 		size_t   len;
 
 		result = ( syscall_sock->code(fd) );
@@ -503,7 +546,6 @@ do_REMOTE_syscall()
 	case CONDOR_lseek64:
 	case CONDOR_llseek:
 	  {
-		int   fd;
 		off_t   offset;
 		int   whence;
 
@@ -538,11 +580,10 @@ do_REMOTE_syscall()
 
 	case CONDOR_unlink:
 	  {
-		char *  path;
-
 		path = NULL;
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
+		dprintf( D_SYSCALLS, "  path = %s\n", path );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -579,8 +620,10 @@ do_REMOTE_syscall()
 		from = NULL;
 		result = ( syscall_sock->code(to) );
 		ASSERT( result );
+		dprintf( D_SYSCALLS, "  to = %s\n", to );
 		result = ( syscall_sock->code(from) );
 		ASSERT( result );
+		dprintf( D_SYSCALLS, "  from = %s\n", to );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -636,14 +679,13 @@ do_REMOTE_syscall()
 
 	case CONDOR_mkdir:
 	  {
-		char *  path;
-		int mode;
-
 		path = NULL;
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
+		dprintf( D_SYSCALLS, "  path = %s\n", path );
 		result = ( syscall_sock->code(mode) );
 		ASSERT( result );
+		dprintf( D_SYSCALLS, "  mode = %d\n", mode );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -672,11 +714,10 @@ do_REMOTE_syscall()
 
 	case CONDOR_rmdir:
 	  {
-		char *  path;
-
 		path = NULL;
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
+		dprintf( D_SYSCALLS, "  path = %s\n", path );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -697,7 +738,6 @@ do_REMOTE_syscall()
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}
-		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;
@@ -705,10 +745,9 @@ do_REMOTE_syscall()
 
 	case CONDOR_fsync:
 	  {
-		int fd;
-
 		result = ( syscall_sock->code(fd) );
 		ASSERT( result );
+		dprintf( D_SYSCALLS, "  fs = %d\n", fd );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 

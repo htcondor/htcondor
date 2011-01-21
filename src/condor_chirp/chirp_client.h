@@ -52,8 +52,43 @@ Error codes:
 -9   TOO_MANY_OPEN     There are too many resources in use.
 -10  BUSY              That object is in use by someone else.
 -11  TRY_AGAIN         A temporary condition prevented the request.
--12  UNKNOWN           An unknown error occurred.
+-12  BAD_FD:           The file descriptor requested is invalid.
+-13  IS_DIR            A file-only operation was attempted on a directory.
+-14  NOT_DIR           A directory operation was attempted on a file.
+-15  NOT_EMPTY         A directory cannot be removed because it is not empty.
+-16  CROSS_DEVICE_LINK A hard link was attempted across devices.
+-17  OFFLINE           The requested resource is temporarily not available.
+-127 UNKNOWN           An unknown error occurred.
 */
+
+struct chirp_stat {
+	long cst_dev;
+	long cst_ino;
+	long cst_mode;
+	long cst_nlink;
+	long cst_uid;
+	long cst_gid;
+	long cst_rdev;
+	long cst_size;
+	long cst_blksize;
+	long cst_blocks;
+	long cst_atime;
+	long cst_mtime;
+	long cst_ctime;
+};
+
+struct chirp_statfs {
+	long f_type;
+	long f_bsize;
+	long f_blocks;
+	long f_bfree;
+	long f_bavail;
+	long f_files;
+	long f_ffree;
+};
+
+int get_stat( const char *line, struct chirp_stat *info );
+int get_statfs( const char *line, struct chirp_statfs *info );
 
 DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
 /*chirp_client_connect_default()
@@ -62,6 +97,7 @@ DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
   the starter can automatically create this file if you specify
   +WantIOProxy=True in the submit file.
 */
+
 DLLEXPORT struct chirp_client * chirp_client_connect( const char *host, int port );
 /*chirp_client_connect()
   Connect to a chirp server at the specified address.

@@ -204,7 +204,8 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 	char flags_string[CHIRP_LINE_MAX];
 	char name[CHIRP_LINE_MAX];
 	char expr[CHIRP_LINE_MAX];
-	int result, offset, whence, length, flags, mode, fd;
+	int result, offset, whence, length, flags, mode, fd, stride_length;
+	int stride_skip, uid, gid, actime, modtime;
 
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
 
@@ -255,11 +256,18 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		if(strchr(flags_string,'x')) flags |= O_EXCL;
 		if(strchr(flags_string,'a')) flags |= O_APPEND;
 
-		result = REMOTE_CONDOR_open(path,(open_flags_t)flags,mode);
+		char *buffer = (char*) malloc(1024);
+		result = REMOTE_CONDOR_open(path,(open_flags_t)flags,mode,buffer);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
+		// Stat stuff
+		if(result>=0) {
+			r->put_bytes_raw(buffer,strlen(buffer));
+		}
+
 		free( url );
+		free( buffer );
 		url = NULL;
 	} else if(sscanf_chirp(line,"close %d",&fd)==1) {
 
@@ -752,7 +760,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 int IOProxyHandler::convert( int result, int unix_errno )
 {
 	if(result>=0) return result;
-
+	
 	switch(unix_errno) {
 		case EPERM:
 		case EACCES:
@@ -768,6 +776,7 @@ int IOProxyHandler::convert( int result, int unix_errno )
 		case ENOMEM:
 			return CHIRP_ERROR_NO_MEMORY;
 		case EBADF:
+			return CHIRP_ERROR_BAD_FD;
 		case E2BIG:
 		case EINVAL:
 			return CHIRP_ERROR_INVALID_REQUEST;
@@ -782,6 +791,14 @@ int IOProxyHandler::convert( int result, int unix_errno )
 		case EAGAIN:
 		case EINTR:
 			return CHIRP_ERROR_TRY_AGAIN;
+		case EISDIR:
+			return CHIRP_ERROR_IS_DIR;
+		case ENOTDIR:
+			return CHIRP_ERROR_NOT_DIR;
+		case ENOTEMPTY:
+			return CHIRP_ERROR_NOT_EMPTY;
+		case EXDEV:
+			return CHIRP_ERROR_CROSS_DEVICE_LINK;
 		default:
 			dprintf(D_ALWAYS, "Starter ioproxy server got unknown unix errno:%d\n", unix_errno);
 			return CHIRP_ERROR_UNKNOWN;
