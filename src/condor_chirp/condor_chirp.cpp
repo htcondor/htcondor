@@ -389,6 +389,48 @@ main(int argc, char **argv) {
 	if (strcmp("get_job_attr", argv[1]) == 0) {
 		return chirp_get_job_attr(argc, argv);
 	}
+	
+	time_t actime = atoi(argv[3]);
+	time_t mtime = atoi(argv[4]);
+	int status = chirp_client_utime(client, argv[2], actime, mtime);
+	return status;
+}
+
+void usage() {
+	printf("Usage:\n");
+	printf("condor_chirp fetch  remote_file local_file\n");
+	printf("condor_chirp put [-mode mode] [-perm perm] local_file "
+		   "remote_file\n");
+	printf("condor_chirp remove remote_file\n");
+	printf("condor_chirp get_job_attr job_attribute\n");
+	printf("condor_chirp set_job_attr job_attribute attribute_value\n");
+	printf("condor_chirp ulog text\n");
+	printf("condor_chirp pread path length offset\n");
+	printf("condor_chirp pwrite remotepath offset text\n");
+	printf("condor_chirp swrite remotepath offset stridelength strideskip "
+		"text\n");
+	printf("condor_chirp rmall remotepath\n");
+	printf("condor_chirp getlongdir remotepath\n");
+	printf("condor_chirp getdir remotepath\n");
+	printf("condor_chirp whoareyou remotepath\n");
+	printf("condor_chirp link oldpath newpath\n");
+	printf("condor_chirp symlink oldpath newpath\n");
+	printf("condor_chirp readlink remotepath\n");
+	printf("condor_chirp stat remotepath\n");
+	printf("condor_chirp lstat remotepath\n");
+	printf("condor_chirp statfs remotepath\n");
+	printf("condor_chirp access remotepath mode(rwxf)\n");
+	printf("condor_chirp chmod remotepath mode\n");
+	printf("condor_chirp chown remotepath uid gid\n");
+	printf("condor_chirp lchown remotepath uid gid\n");
+	printf("condor_chirp truncate remotepath length\n");
+	printf("condor_chirp utime remotepath actime mtime\n");
+}
+
+int
+main(int argc, char **argv) {
+
+	int ret_val = -1;
 
 	if (strcmp("set_job_attr", argv[1]) == 0) {
 		return chirp_set_job_attr(argc, argv);
