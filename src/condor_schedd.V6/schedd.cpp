@@ -10669,8 +10669,9 @@ Scheduler::invalidate_ads()
 
 		Daemon* d;
 		if( FlockCollectors && FlockLevel > 0 ) {
-			for( i=1, FlockCollectors->rewind();
-				 i <= FlockLevel && FlockCollectors->next(d); i++ ) {
+			int level;
+			for( level=1, FlockCollectors->rewind();
+				 level <= FlockLevel && FlockCollectors->next(d); level++ ) {
 				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false );
 			}
 		}
