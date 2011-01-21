@@ -1715,6 +1715,14 @@ REMOTE_CONDOR_putfile_buffer(void *buffer, int length)
 	return rval;
 }
 
+
+
+
+
+
+
+
+
 int
 REMOTE_CONDOR_link(char *path, char *newpath)
 {

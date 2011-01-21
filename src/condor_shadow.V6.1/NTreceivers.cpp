@@ -43,8 +43,11 @@ static bool write_access(const char * filename ) {
 	return thisRemoteResource->allowRemoteWriteFileAccess( filename );
 }
 
-static bool stat_string( char *line, struct stat *info )
+static int stat_string( char *line, struct stat *info )
 {
+#ifdef WIN32
+	return 0;
+#else
 	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\n",
 		(long long) info->st_dev,
 		(long long) info->st_ino,
@@ -60,10 +63,14 @@ static bool stat_string( char *line, struct stat *info )
 		(long long) info->st_mtime,
 		(long long) info->st_ctime
 	);
+#endif
 }
 
-static bool statfs_string( char *line, struct statfs *info )
+static int statfs_string( char *line, struct statfs *info )
 {
+#ifdef WIN32
+	return 0;
+#else
 	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld\n",
 		(long long) info->f_type,
 		(long long) info->f_bsize,
@@ -73,6 +80,7 @@ static bool statfs_string( char *line, struct statfs *info )
 		(long long) info->f_files,
 		(long long) info->f_ffree
 	);
+#endif
 }
 
 static const char * shadow_syscall_name(int condor_sysnum)
