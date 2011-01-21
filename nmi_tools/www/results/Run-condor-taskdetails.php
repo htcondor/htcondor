@@ -94,22 +94,30 @@ ORDER BY
 	  	#echo "<h1>$filepath</h1>";
       }
 
-		$resultspath = "$basedir/$gid/userdir/$platform/results.tar.gz";
-		$resfound = file_exists($local_fs_prefix.$resultspath);
-
       if (!$file_found) {
 	$stdout_url = "N/A";
 	$stderr_url = "N/A";
-      } else {
+      }
+      else {
+	$stat = stat("$filepath.out");
+	$stdout_size = $stat['size'];
+
+	$stat = stat("$filepath.err");
+	$stderr_size = $stat['size'];
+
 	$stdout_url = "<a href=\"http://$hostname/$filepath.out\">".basename($filepath).".out</a>";
 	$stderr_url = "<a href=\"http://$hostname/$filepath.err\">".basename($filepath).".err</a>";
       }
 
-		if(!$resfound){
-			$results_url = "N/A";
-		} else {
-			$results_url = "<a href=\"http://$hostname/$resultspath\">".basename($resultspath)."</a>";
-		}
+      $resultspath = "$basedir/$gid/userdir/$platform/results.tar.gz";
+      $resfound = file_exists($local_fs_prefix.$resultspath);
+      
+      if(!$resfound) {
+	$results_url = "N/A";
+      }
+      else {
+	$results_url = "<a href=\"http://$hostname/$resultspath\">".basename($resultspath)."</a>";
+      }
 
 	$resultval = $myrow["result"];
 	$test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">".$resultval."</a>";
@@ -126,8 +134,8 @@ ORDER BY
     echo "<TR><TD>Duration:</TD><TD> ".$myrow["duration"] ."</TD></TR>";
     #echo "<TR><TD>Result:</TD><TD> ".$myrow["result"] . "</TD></TR>";
     echo "<TR><TD>Result:</TD><TD> $test_results_url </TD></TR>";
-    echo "<TR><TD>Stdout:</TD><TD> $stdout_url </TD></TR>";
-    echo "<TR><TD>Stderr:</TD><TD> $stderr_url</a></TD></TR>";
+    echo "<TR><TD>Stdout:</TD><TD> $stdout_url - (size: $stdout_size bytes) </TD></TR>";
+    echo "<TR><TD>Stderr:</TD><TD> $stderr_url - (size: $stderr_size bytes) </TD></TR>";
     echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";
     echo "</TABLE>";
     echo "</P>";
