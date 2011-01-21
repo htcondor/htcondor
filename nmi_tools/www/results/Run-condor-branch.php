@@ -54,7 +54,7 @@
    <tr>
       <th>Branch</th>
       <th>Runid</th>
-      <th>Last build</th>
+      <th>Submitted</th>
       <th>Build Results</th>
       <th>Test Results</th>  
       <th>Cross Test Results</th>  
@@ -72,12 +72,12 @@
 # for each (branch, type) tuple
 
 $sql = "SELECT description,
-			   project_version,
+               project_version,
                convert_tz(start, 'GMT', 'US/Central') as start,
                run_type, 
                runid,
-					archived,
-					archive_results_until,
+               archived,
+               archive_results_until,
                result
           FROM Run 
          WHERE component='condor' AND 
@@ -95,8 +95,8 @@ while ($row = mysql_fetch_array($results)) {
   $projectversion = $row["project_version"];
   $start      = $row["start"];
   $run_result = $row["result"];
-  $pin 		  = $row["archive_results_until"];
-	$archived = $row["archived"];
+  $pin 	      = $row["archive_results_until"];
+  $archived   = $row["archived"];
 
    // --------------------------------
    // BUILDS
