@@ -30,7 +30,16 @@ int transfer_file( char* server_name,
 		return UNACCEPTABLE_PARAMETERS;
 
 	#ifdef CLIENT_DEBUG
-	fprintf(stderr, "Opened file %s. File size is %ld bytes.\n", record->filename, record->file_size );
+	fprintf(stderr, "Opened file %s.\n", record->filename );
+	fprintf(stderr, "\tFile size is %ld bytes.\n", record->file_size );
+	fprintf(stderr, "\tChunk size is %ld bytes.\n", record->chunk_size );
+	fprintf(stderr, "\tNumber of chunks are %ld.\n", record->num_chunks );
+	fprintf(stderr, "\tFile hash is %08X %08X %08X %08X %08X.\n",
+			record->hash[0],
+			record->hash[1],
+			record->hash[2],
+			record->hash[3],
+			record->hash[4]);
 	#endif
 
 		// Initialize connection with server
@@ -80,6 +89,10 @@ int transfer_file( char* server_name,
 FileRecord* open_file( char* filename)
 {
 	FileRecord* record;
+	SHA1Context hashRecord;
+	char chunk;
+	unsigned int len;
+
 	record = (FileRecord*) malloc(sizeof(FileRecord));
 	memset( record, 0, sizeof( FileRecord ));
 
@@ -90,10 +103,36 @@ FileRecord* open_file( char* filename)
 			free(record);
 			return NULL;
 		}
+
+
+		// Calculate the hash code for the file data
+	SHA1Reset( &hashRecord );
+	chunk = fgetc( record->fp );
+	while( !feof(record->fp) )
+		{
+			SHA1Input( &hashRecord, &chunk, 1);			
+			chunk = fgetc( record->fp );
+		}
+
+
+	len = SHA1Result( &hashRecord );
+	if( len == 0 )
+		fprintf(stderr, "Error while constructing hash. Hash is not right!\n" );
+
+	rewind( record->fp);
+	memcpy( record->hash, hashRecord.Message_Digest, 5*sizeof(int) );
 	
 	fseek( record->fp, 0, SEEK_END );
 	record->file_size = ftell( record->fp );
-	rewind( record->fp);	
+	rewind( record->fp);
+
+	record->chunk_size = 100; // Really bad hack
+	
+		// Count how many chunks there will be.
+	record->num_chunks = record->file_size/record->chunk_size;
+	if( record->file_size % record->chunk_size != 0 )
+	    record->num_chunks = record->num_chunks + 1;
+
 
 	return record;
 }
@@ -196,21 +235,14 @@ int execute_negotiation( FileRecord* record,
 	memset( parameters, 0, sizeof( simple_parameters ) );
 	memcpy( parameters->filename, record->filename, strlen( record->filename));
 	
-	parameters->filesize = record->file_size;
-	
-		//For now we will use a hardcoded chunk size, but this may change
-	parameters->chunk_size = 100;
-
-		// Count how many chunks there will be.
-	parameters->num_chunks = parameters->filesize/parameters->chunk_size;
-	if( parameters->filesize % parameters->chunk_size != 0 )
-		parameters->num_chunks = parameters->num_chunks + 1;
-
-
-	parameters->filesize =	htonll(parameters->filesize);
-	parameters->chunk_size = htonl(parameters->chunk_size);
-	parameters->num_chunks = htonl(parameters->num_chunks);
-
+	parameters->filesize = htonll(record->file_size);
+	parameters->chunk_size = htonll(record->chunk_size);
+	parameters->num_chunks = htonll(record->num_chunks);
+	parameters->hash[0] = htonl( record->hash[0] );
+	parameters->hash[1] = htonl( record->hash[1] );
+	parameters->hash[2] = htonl( record->hash[2] );
+	parameters->hash[3] = htonl( record->hash[3] );
+	parameters->hash[4] = htonl( record->hash[4] );
 	
 	// Setup the message frame structure 
 
@@ -325,21 +357,24 @@ int execute_transfer( FileRecord* record,
  
 		// TODO: Put this somewhere else, perferably in a config of some sort
 	const int MAX_RETRIES = 10;
-	int chunk_id;
+	long chunk_id;
 	int retry_count;
 	int error;
-	int chunk_size;
+	long chunk_size;
 	int read_bytes;
 	int length;
 
-	cftp_dtf_frame dframe;
+	cftp_frame sframe;
+	cftp_frame rframe;
+	cftp_dtf_frame* dtf_frame;
+	cftp_daf_frame* daf_frame;
 	char* chunk_data;
 
-	chunk_size = ntohl(parameters->chunk_size);
+	chunk_size = record->chunk_size;
 
 #ifdef CLIENT_DEBUG
 
-	fprintf( stderr, "Preparing chunk buffer of %d bytes.\n", chunk_size );
+	fprintf( stderr, "Preparing chunk buffer of %ld bytes.\n", chunk_size );
 
 #endif
 
@@ -348,13 +383,15 @@ int execute_transfer( FileRecord* record,
 
 	error = 0;
 
-	for( chunk_id = 0; (chunk_id < ntohl(parameters->num_chunks) && error == 0) ; chunk_id += 1 )
+	for( chunk_id = 0; ((chunk_id < record->num_chunks) && error == 0) ; chunk_id += 1 )
 		{
-			dframe.MessageType = DTF;
-			dframe.ErrorCode = htons(NOERROR);
-			dframe.SessionToken = 1; //Really hacky hardcoded number. TODO: get better session id
-			dframe.DataSize = parameters->chunk_size; //We've already encoded this value, don't need htons
-			dframe.BlockNum = htons( chunk_id );
+			memset( &sframe, 0, sizeof( cftp_frame ));
+			dtf_frame = (cftp_dtf_frame*)(&sframe);
+			dtf_frame->MessageType = DTF;
+			dtf_frame->ErrorCode = htons(NOERROR);
+			dtf_frame->SessionToken = 1; //Really hacky hardcoded number. TODO: get better session id
+			dtf_frame->DataSize = parameters->chunk_size; //We've already encoded this value, don't need htons
+			dtf_frame->BlockNum = htonll( chunk_id );
 
 				// Read chunk from the data file
 			memset( chunk_data, 0, chunk_size );
@@ -376,15 +413,22 @@ int execute_transfer( FileRecord* record,
 				{
 
 #ifdef CLIENT_DEBUG
-					fprintf(stderr, "Sending Chunk %d/%d of %s\n",
-							chunk_id+1,
-							ntohl(parameters->num_chunks),
-							record->filename );
+					if( retry_count > 0 )
+						fprintf( stderr, "Resending (%d) Chunk %ld/%ld of %s\n",
+								 retry_count,
+								 chunk_id+1,
+								 record->num_chunks,
+								 record->filename );
+					else
+						fprintf(stderr, "Sending Chunk %ld/%ld of %s\n",
+								chunk_id+1,
+								record->num_chunks,
+								record->filename );
 #endif
 						//Send the DTF frame
-					length = sizeof( cftp_dtf_frame );
+					length = sizeof( cftp_frame );
 					if( sendall( server->server_socket,
-								 (char*)(&dframe), 
+								 (char*)(&sframe), 
 								 &length) == -1 )
 						{
 							fprintf( stderr, "Error sending DTF frame: %s\n",
@@ -403,11 +447,36 @@ int execute_transfer( FileRecord* record,
 							return -1;	
 						}					
 
-						//This is where we would wait for the DAF, but we are not doing that yet.
+
+
 
 						// WAIT HERE FOR DAF BEFORE CONTINUING.
 
-					break;
+
+					recv( server->server_socket, 
+						  &rframe,
+						  sizeof( cftp_frame ),
+						  MSG_WAITALL );
+
+					if( rframe.MessageType	!= DAF )
+						{
+							fprintf( stderr, "Error: Server failed to send DAF! Aborting.\n" );
+							return -1;
+						}
+
+					daf_frame = (cftp_daf_frame*)(&rframe);
+					if( ntohll(daf_frame->BlockNum) == chunk_id )
+						{
+							fprintf( stderr, "Recieved DAF for block %ld. Continuing...\n",
+									 chunk_id+1 );
+							break;
+						}
+					else
+						{
+							fprintf( stderr, "Recieved DAF for block %ld. Correcting...\n",
+									 ntohll(daf_frame->BlockNum)+1 );
+
+						}
 
 						// If the DAF is not received or the wrong DAF is received, then we
 						// need to alter the next DTF such that its error code reflects the 

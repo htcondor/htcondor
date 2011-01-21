@@ -3,10 +3,11 @@
 
 typedef struct _simple_parameters
 {
-	char      filename[512];
-	long      filesize;
-	int       chunk_size;
-    int       num_chunks;
+	char           filename[512];
+	unsigned long  filesize;
+	unsigned int   hash[5];
+	unsigned long  chunk_size;
+    unsigned long  num_chunks;
 } simple_parameters;
 
 

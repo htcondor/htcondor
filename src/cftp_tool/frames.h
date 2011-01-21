@@ -150,9 +150,9 @@ typedef struct _cftp_dtf_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
-	unsigned short int DataSize;	
-	unsigned short int BlockNum;
-    unsigned char      _padding[24];
+	unsigned long      DataSize;	
+	unsigned long      BlockNum;
+    unsigned char      _padding[12];
 } cftp_dtf_frame;
 
 //
@@ -163,7 +163,8 @@ typedef struct _cftp_daf_frame {
     unsigned char      MessageType;
     unsigned short int ErrorCode;
     unsigned char      SessionToken;
-    unsigned char      _padding[28];
+	unsigned long      BlockNum;
+    unsigned char      _padding[20];
 } cftp_daf_frame;
 
 //

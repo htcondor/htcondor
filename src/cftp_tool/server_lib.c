@@ -54,7 +54,7 @@ void run_server( char* server_name,  char* server_port)
 	if( localFileCopy == NULL )
 		return;	
 	
-		//results = execute_transfer( localServer, remoteClient, localFileCopy );
+		results = execute_transfer( localServer, remoteClient, localFileCopy );
 
 #ifdef SERVER_DEBUG
 	if( results == -1 )
@@ -320,8 +320,15 @@ FileRecord* execute_negotiation( ServerRecord* localServer, ClientRecord* remote
 #ifdef SERVER_DEBUG
 	fprintf( stderr, "Parameters:Filename %s\n", parameter_payload->filename );
 	fprintf( stderr, "Parameters:FileSize %ld\n", ntohll( parameter_payload->filesize));
-	fprintf( stderr, "Parameters:NumChunks %d\n", ntohl( parameter_payload->num_chunks));
-	fprintf( stderr, "Parameters:ChunkSize %d\n", ntohl( parameter_payload->chunk_size));
+	fprintf( stderr, "Parameters:NumChunks %ld\n", ntohll( parameter_payload->num_chunks));
+	fprintf( stderr, "Parameters:ChunkSize %ld\n", ntohll( parameter_payload->chunk_size));
+	fprintf( stderr, "Parameters:Hash %08X %08X %08X %08X %08X\n",
+			 ntohl(parameter_payload->hash[0]),
+			 ntohl(parameter_payload->hash[1]),
+			 ntohl(parameter_payload->hash[2]),
+			 ntohl(parameter_payload->hash[3]),
+			 ntohl(parameter_payload->hash[4]));
+			 
 #endif
 
 //TODO: Perform the server side parameter verification checks
@@ -384,9 +391,146 @@ FileRecord* execute_negotiation( ServerRecord* localServer, ClientRecord* remote
 			free(filerecord);
 			return NULL;
 		}
-		
+
+	filerecord->file_size = ntohll(parameter_payload->filesize);
+	filerecord->chunk_size = ntohll(parameter_payload->chunk_size);
+	filerecord->num_chunks = ntohll(parameter_payload->num_chunks);
+
+	filerecord->hash[0] = ntohl(parameter_payload->hash[0]);
+	filerecord->hash[1] = ntohl(parameter_payload->hash[1]);
+	filerecord->hash[2] = ntohl(parameter_payload->hash[2]);
+	filerecord->hash[3] = ntohl(parameter_payload->hash[3]);
+	filerecord->hash[4] = ntohl(parameter_payload->hash[4]);
+	
+
 
 	return filerecord;
 
 }
 
+/*
+
+  execute_transfer
+
+*/
+int execute_transfer( ServerRecord* localServer, ClientRecord* remoteClient, FileRecord* localFileCopy )
+{
+
+		// TODO: Put this somewhere else, perferably in a config of some sort
+	const int MAX_RETRIES = 10;
+	
+	long chunk_id;
+	int retry_count;
+	int error;
+	long chunk_size;
+	int write_bytes;
+	int length;
+	unsigned long data_written;
+
+	cftp_frame sframe;
+	cftp_frame rframe;
+	cftp_dtf_frame* dtf_frame;
+	cftp_daf_frame* daf_frame;
+	char* chunk_data;
+
+	data_written = 0;
+	chunk_size = localFileCopy->chunk_size;
+
+#ifdef SERVER_DEBUG
+
+	fprintf( stderr, "Preparing chunk buffer of %ld bytes.\n", chunk_size );
+
+#endif
+
+	chunk_data = malloc( chunk_size );
+	memset( chunk_data, 0, chunk_size );
+
+	error = 0;
+
+	for( chunk_id = 0; ((chunk_id < localFileCopy->num_chunks) && error == 0) ; chunk_id += 1 )
+		{
+			recv( remoteClient->client_socket, 
+				  &rframe,
+				  sizeof(cftp_frame),
+				  MSG_WAITALL );
+
+			if( rframe.MessageType != DTF )
+				{
+					fprintf( stderr, "Client did not send DTF. Aborting!\n" );
+					return -1;
+				}
+			
+			dtf_frame = (cftp_dtf_frame*)(&rframe);
+
+			recv( remoteClient->client_socket,	
+				  chunk_data,
+				  chunk_size,
+				  MSG_WAITALL );
+			
+				// TODO: replace this hack with proper DAF message requesting proper block.
+			if( ntohll(dtf_frame->BlockNum) != chunk_id )
+				{
+					fprintf( stderr, "Client sent the wrong block! Got %ld, but needed %ld. Aborting!\n", ntohll(dtf_frame->BlockNum)+1, chunk_id+1 );
+					return -1;
+				}
+				
+			fprintf( stderr, "Received data chunk %ld/%ld.\n", chunk_id+1, 
+					 localFileCopy->num_chunks );
+
+				//
+				//TODO: write the chunk to disk here
+				//	
+
+			if( localFileCopy->file_size - data_written > chunk_size )
+				length = chunk_size;
+			else
+				length = localFileCopy->file_size - data_written;
+
+			write_bytes = fwrite( chunk_data, 1, length, localFileCopy->fp );
+
+			if( write_bytes != length )
+				{
+					fprintf( stderr, "Error writing chunk %ld to disk: %s. Aborting!\n",
+							 chunk_id, strerror( errno ) );
+					return -1;
+				}
+			data_written += write_bytes;
+			if( data_written > localFileCopy->file_size )
+				{
+					fprintf( stderr, "Too much data written to disk. Aborting!\n" );
+					return -1;
+				}
+	
+
+				//
+				//TODO: Send DAF response
+				//
+
+			memset( &sframe, 0 , sizeof( cftp_frame ) );
+			daf_frame = (cftp_daf_frame*)(&sframe);
+			daf_frame->MessageType = DAF;
+			daf_frame->ErrorCode = htons(NOERROR);
+			daf_frame->SessionToken = dtf_frame->SessionToken;
+			daf_frame->BlockNum = htonll( chunk_id );
+
+			fprintf( stderr, "Sending DAF for %ld/%ld.\n", chunk_id+1, 
+					 localFileCopy->num_chunks );
+
+			length = sizeof( cftp_frame );
+			if( sendall( remoteClient->client_socket,
+						 (char*)&sframe,
+						 &length) == -1 )
+				{
+					fprintf( stderr, "Error sending DAF for block %ld: %s.\n", chunk_id, strerror( errno ) );
+					return -1;
+				}
+			
+		}
+
+
+	if( chunk_id == localFileCopy->num_chunks )
+		return 0;
+	else
+		return -1;
+
+}

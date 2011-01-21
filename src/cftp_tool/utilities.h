@@ -3,9 +3,12 @@
 
 typedef struct _FileRecord 
 {
-	char* filename;
-	FILE* fp;
-	long  file_size;
+	char*          filename;
+	FILE*          fp;
+	unsigned long  file_size;
+	unsigned long  chunk_size;
+	unsigned long  num_chunks;   
+	unsigned int   hash[5];
 } FileRecord;
 
 typedef struct _ServerRecord

@@ -8,6 +8,7 @@
 #include "frames.h"
 #include "simple_parameters.h"
 #include "utilities.h"
+#include "sha1-c/sha1.h"
 
 int transfer_file( char* server_name,
 				   char* server_port,
