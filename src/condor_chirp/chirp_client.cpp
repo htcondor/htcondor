@@ -751,11 +751,12 @@ chirp_client_symlink( struct chirp_client *c, const char *path,
 }
 
 DLLEXPORT int
-chirp_client_readlink( struct chirp_client *c, const char *path, char **buffer )
+chirp_client_readlink( struct chirp_client *c, const char *path, int length,
+					  char **buffer )
 {
 	int result, actual;
 
-	result = simple_command(c,"readlink %s\n",path);
+	result = simple_command(c,"readlink %s %d\n",path, length);
 	if(result > 0) {
 		*buffer = (char*)malloc(result);
 		actual = fread(*buffer,1,result,c->rstream);
