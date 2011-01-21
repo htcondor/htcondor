@@ -128,6 +128,7 @@ my @minimal_build_configure_args =
 		'-DWITH_GSOAP:BOOL=OFF'		=> undef,
 		'-DWITH_HADOOP:BOOL=OFF'	=> undef,
 		'-DWITH_KRB5:BOOL=OFF'		=> undef,
+		'-DWITH_LIBDELTACLOUD:BOOL=OFF'	=> undef,
 		'-DWITH_LIBVIRT:BOOL=OFF'		=> undef,
 		'-DWITH_LIBXML2:BOOL=OFF'		=> undef,
 		'-DWITH_UNICOREGAHP:BOOL=OFF'	=> undef,
