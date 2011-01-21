@@ -141,6 +141,8 @@ IpVerify::Init()
 		PermTypeArray[perm] = pentry;
 		MyString allow_param, deny_param;
 
+		dprintf(D_SECURITY,"IPVERIFY: Subsystem %s\n",ssysname);
+		dprintf(D_SECURITY,"IPVERIFY: Permission %s\n",PermString(perm));
 		if(strcmp(ssysname,"TOOL")==0 || strcmp(ssysname,"SUBMIT")==0){
 			if(strcmp(PermString(perm),"CLIENT")==0){ 
 				pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
