@@ -213,7 +213,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_6.0'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -231,7 +231,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_winnt_5.1'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -249,7 +249,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_5.1'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -267,7 +267,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_5.1-tst'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			# when it works add x86_64_winnt_5.1 to the x_tests
 			'xtests'	=> undef,
@@ -286,9 +286,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_5.1-prereqs'	=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' },
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> [
-				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1', 
+				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1',
+				'VisualStudio-9.0', 'WindowsSDK-6.1',
 			],
 			'xtests'	=> undef,
 		},
