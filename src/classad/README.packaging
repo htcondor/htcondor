@@ -7,7 +7,7 @@ Update the version number and release date in the follow files:
     src/classad/CHANGELOG
     src/classad/do_packaging: DIST_VERSION
     src/classad/README: first line
-    src/classad/new_classad.cpp: ClassAdLibraryVersion()
+    src/classad/classad.cpp: ClassAdLibraryVersion()
         *Update both functions with this name!*
     src/classad/Doxyfile
 
