@@ -33,7 +33,7 @@ if (NOT WINDOWS)
 
   install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE} )
 
-  condor_selective_glob("attrrefs.*;new_classad.*;collection.*;collectionBase.*;new_classad_debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;new_classad_operators.*;query.*;sink.*;source.*;transaction.*;new_classad_util.*;new_classad_value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
+  condor_selective_glob("attrrefs.*;classad.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
 
   add_library( classads STATIC ${ClassadSrcs} )
   set_target_properties( classads
@@ -45,7 +45,7 @@ if (NOT WINDOWS)
 else()
 	
 	# I should probably just add all and subtract tests.
-	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;new_classad*;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
+	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
 	set_property( TARGET classads PROPERTY FOLDER "libraries" )
 
