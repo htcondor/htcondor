@@ -139,6 +139,12 @@ See section~\ref{sec:DAGJobstateLog} for details.
   readable by the user running \Condor{wait}.  Previously, write
   access to the job's user log was required.
 
+%gittrac #1641
+\item Added new job status TRANSFERRING\_OUTPUT. This status is used
+when transferring a job's output files after it has finished running.
+Jobs with this status will have their \AdAttr{JobStatus} attribute set to 6.
+The standard \Condor{q} display will show the job's status as `>'.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -280,6 +286,22 @@ FileTransfer: DownloadFiles called on server side
   7.5.3.  The \Condor{master} daemon would crash if it was instructed
   to shut down a daemon that was not currently running but which was
   waiting to be restarted.
+
+% gittrac #1650
+\item Fixed a bug in \Condor{submit} that prevented the submission of
+multiple VM universe jobs in a single submit file.
+
+% gittrac #1761
+\item Fixed a bug in the \Condor{schedd} that could cause it to temporarily
+undercount the number of running local and scheduler universe jobs. In
+Condor 7.5.4, this undercounting could cause the daemon to crash.
+
+% gittrac #1695
+\item Fixed a bug that could cause the \Condor{gridmanager} to crash if
+a GAHP server didn't behave as expected on startup.
+
+% gittrac #1747
+\item Improved the hold reason in several failure cases for CREAM grid jobs.
 
 \end{itemize}
 
