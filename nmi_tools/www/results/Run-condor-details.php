@@ -180,16 +180,15 @@ mysql_free_result($result);
 <?php
 // show link to run directory for each platform
 foreach ($platforms AS $platform) {
-  $display = $platform;
-  if( $display == 'local') {
-  }
-  else {
-    $idx = strpos($display, "_");
-    $display[$idx] = " ";
-  }
-  $filepath = "";
+  // We will remove 'nmi:' from the front of the platform and also split it 
+  // onto two separate lines because the length of the header determines the
+  // width of the resulting table column.
+  $display = preg_replace("/nmi:/", "", $platform);
+  $display = preg_replace("/_/", "_ ", $display, 1);
+
    
   // have to lookup the file location now
+  $filepath = "";
   $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
   $loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
   while( $locrow = mysql_fetch_array($loc_query_res) ) {
@@ -197,8 +196,16 @@ foreach ($platforms AS $platform) {
     $mygid = $locrow["gid"];
   }
   
+  # Get the queue depth for the platform if it is pending
+  $queue_depth = "";
+  if($platform_status[$platform] == PLATFORM_PENDING) {
+    $platform_without_prefix = preg_replace("/nmi:/", "", $platform);
+    $depth = `/usr/local/condor/bin/condor_q -const 'nmi_target_platform=="$platform_without_prefix"' -format '1\n' runid | wc -l`;
+    $queue_depth = "<br>Q Depth: $depth";
+  }
+
   $display = "<a href=\"$filepath/$mygid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
-  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
+  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display $queue_depth</td>\n";
 } // FOREACH 
 ?>
 <tr>
