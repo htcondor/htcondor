@@ -90,6 +90,7 @@
 #include "forkwork.h"
 #include "condor_open.h"
 #include "schedd_negotiate.h"
+#include "filename_tools.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -3583,6 +3584,14 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	ASSERT(SpoolSpace);
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
+	if( proxy_path && is_relative_to_cwd(proxy_path) ) {
+		MyString iwd;
+		if( jobad->LookupString(ATTR_JOB_IWD,iwd) ) {
+			iwd.sprintf_cat("%c%s",DIR_DELIM_CHAR,proxy_path);
+			free(proxy_path);
+			proxy_path = strdup(iwd.Value());
+		}
+	}
 	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
 		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
 			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
