@@ -129,6 +129,11 @@ See section~\ref{sec:DAGMan-rescue} for complete details on Rescue DAGs.
 \File{jobstate.log} file needed for the Pegasus workflow manager.
 See section~\ref{sec:DAGJobstateLog} for details.
 
+%gittrac 1745
+\item \Condor{wait} can now work on jobs with logs that are only
+  readable by the user running \Condor{wait}.  Previously, write
+  access to the job's user log was required.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -240,6 +245,19 @@ FileTransfer: DownloadFiles called on server side
   \Condor{schedd} daemon to enter an infinite loop while in the
   process of shutting down.  For the problem to happen, it was
   necessary for flocking to have been enabled.
+
+% gittrac #1828
+\item \MacroNI{SCHEDD\_QUERY\_WORKERS} was effectively ignored when
+  \Condor{q} authenticated itself to the schedd.  The query was always
+  processed in the main schedd process rather than in a sub-process.
+  This problem has existed since before Condor 7.0.0.
+
+% gittrac #1844
+\item Fixed a problem affecting jobs that store their output in the
+  \Condor{schedd}'s spool directory.  The problem affected jobs that
+  include an empty directory in their list of output files to
+  transfer.  This problem was introduced in 7.5.4 when support for
+  transfer of directories was added.
 
 \end{itemize}
 
