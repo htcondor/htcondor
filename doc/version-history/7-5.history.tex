@@ -306,6 +306,12 @@ a GAHP server didn't behave as expected on startup.
 % gittrac #1771
 \item The KFLOPS reported by \Condor{status} \Opt{-run} \Opt{-tot} could erroneously be reported as negative.  This has been fixed.
 
+% gittrac #1867
+\item Since 7.5.4 in Condor-C, refreshing the proxy of the job in the
+  remote queue did not work.  Therefore, if the original job proxy
+  expired, the job was halted and put on hold, even if the proxy had
+  been renewed on the submit machine.
+
 \end{itemize}
 
 \noindent Known Bugs:
