@@ -79,9 +79,9 @@ if ($taskname eq $TAR_TASK) {
 		last;
 	}
 	close (CMAKECONFIG);
-
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make package && make install && make tests";
+	# We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF && make externals && make -j4 && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz && make tests";
 
 } elsif  ($taskname eq $UNSTRIPPED_TASK){
 	#Reconfigure cmake variables for native package build
@@ -96,7 +96,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF && make externals && make -j4 && make install && make targz && make tests";
 } elsif  ($taskname eq $RPM_TASK){
 	#Building RPM
 
