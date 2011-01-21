@@ -137,6 +137,77 @@ chirp_get_one_file(char *remote, char *local) {
 	return 0;
 }
 
+// Old version using open, write
+// Still here because of the ability to use different modes
+int
+chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
+	struct chirp_client *client;
+
+		// We connect each time, so that we don't have thousands
+		// of idle connections hanging around the master
+	client = chirp_client_connect_starter();
+	if (!client) {
+		fprintf(stderr, "Can't connect to chirp server\n");
+		exit(-1);
+	}
+
+	FILE *rfd;
+	if (strcmp(local, "-") == 0) {
+		rfd = stdin;
+	} else {
+		rfd = ::safe_fopen_wrapper(local, "rb");
+	}
+
+	if (rfd == NULL) {
+		chirp_client_disconnect(client);
+		fprintf(stderr, "Can't open local file %s\n", local);
+		return -1;
+	}
+
+	int wfd = chirp_client_open(client, remote, mode, perm);
+	if (wfd < 0) {
+		::fclose(rfd);
+		chirp_client_disconnect(client);
+		fprintf(stderr, "Can't chirp_client_open %s:%d\n", remote, wfd);
+		return -1;
+	}
+
+	char buf[8192];
+
+	int num_read = 0;
+	do {
+		num_read = ::fread(buf, 1, 8192, rfd);
+		if (num_read < 0) {
+			fclose(rfd);
+			chirp_client_close(client, wfd);
+			chirp_client_disconnect(client);
+			fprintf(stderr, "local read error on %s\n", local);
+			return -1;
+		}
+
+			// EOF
+		if (num_read == 0) {
+			break;
+		}
+
+		int num_written = chirp_client_write(client, wfd, buf, num_read);
+		if (num_written != num_read) {
+			fclose(rfd);
+			chirp_client_close(client, wfd);
+			chirp_client_disconnect(client);
+			fprintf(stderr, "Couldn't chirp_write as much as we read\n");
+			return -1;
+		}
+
+	} while (num_read > 0);
+	::fclose(rfd);
+	chirp_client_close(client, wfd);
+	chirp_client_disconnect(client);
+		
+	return 0;
+}
+
+// New version using putfile
 int
 chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 	struct chirp_client *client;
@@ -240,20 +311,20 @@ int chirp_fetch(int argc, char **argv) {
 int chirp_put(int argc, char **argv) {
 	
 	int fileOffset = 2;
-	char *mode = "cwat";
-	int  perm = 0777;
+	char *mode = "cwt";
+	unsigned perm = 0777;
 
 	bool more = true;
 	while (more && fileOffset + 1 < argc) {
 
 		if (strcmp(argv[fileOffset], "-mode") == 0) {
-			mode = argv[fileOffset + 1];
+			mode = argv[fileOffset+1];
 			fileOffset += 2;
 			more = true;
 		}
 		else if (strcmp(argv[fileOffset], "-perm") == 0) {
 			char *permStr = argv[fileOffset + 1];
-			perm = strtol(permStr, NULL, 0);
+			perm = strtol(permStr, NULL, 8);
 			fileOffset += 2;
 			more = true;
 		}
@@ -261,14 +332,21 @@ int chirp_put(int argc, char **argv) {
 			more = false;
 		}
 	}
-	
-	if(fileOffset + 1 >= argc) {
+
+	if(fileOffset + 1 >= argc || argc > fileOffset + 2) {
 		printf("condor_chirp put  [-mode mode] [-perm perm] local_file "
 			   "remote_file\n");
 		return -1;
 	}
-
-	return chirp_put_one_file(argv[fileOffset], argv[fileOffset + 1], mode, perm);
+	
+	// Use putfile
+	if(strcmp(mode, "cwt") == 0) {
+		return chirp_put_one_file(argv[fileOffset], argv[fileOffset + 1], perm);
+	}
+	// Use open, write
+	else {
+		return chirp_put_one_file(argv[fileOffset], argv[fileOffset + 1], mode, perm);
+	}
 }
 
 /*
@@ -390,8 +468,8 @@ main(int argc, char **argv) {
 		return chirp_get_job_attr(argc, argv);
 	}
 	
-	time_t actime = atoi(argv[3]);
-	time_t mtime = atoi(argv[4]);
+	int actime = atoi(argv[3]);
+	int mtime = atoi(argv[4]);
 	int status = chirp_client_utime(client, argv[2], actime, mtime);
 	return status;
 }
@@ -440,6 +518,9 @@ main(int argc, char **argv) {
 		return chirp_ulog(argc, argv);
 	}
 
-	usage();
+	if(ret_val < 0 && errno != 0) {
+		printf("\tError: %d (%s)\n", errno, strerror(errno));
+	}
+	return ret_val;
 	exit(-1);
 }
