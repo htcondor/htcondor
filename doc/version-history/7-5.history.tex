@@ -230,6 +230,12 @@ FileTransfer: DownloadFiles called on server side
 % gittrac #1849
 \item Fixed a memory leak in \Condor{schedd} introduced in 7.5.4.
 
+% gittrac #1866
+\item Fixed a problem introduced in 7.5.4 that could cause the
+  \Condor{schedd} daemon to enter an infinite loop while in the
+  process of shutting down.  For the problem to happen, it was
+  necessary for flocking to have been enabled.
+
 \end{itemize}
 
 \noindent Known Bugs:
