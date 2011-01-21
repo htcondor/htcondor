@@ -229,6 +229,9 @@
 /* Define to 1 if you have the `readdir64' function. (used)*/
 #cmakedefine HAVE_READDIR64 1
 
+/* Define to 1 if you have the `backtrace' function.*/
+#cmakedefine HAVE_BACKTRACE 1
+
 /* Do we have the blahp external (used Imake)*/
 #cmakedefine HAVE_EXT_BLAHP 1
 

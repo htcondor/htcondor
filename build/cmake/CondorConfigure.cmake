@@ -137,6 +137,7 @@ if( NOT WINDOWS)
 	check_function_exists("unsetenv" HAVE_UNSETENV)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
 	check_function_exists("readdir64" HAVE_READDIR64)
+	check_function_exists("backtrace" HAVE_BACKTRACE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
