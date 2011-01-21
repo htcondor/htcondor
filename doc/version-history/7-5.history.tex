@@ -270,6 +270,12 @@ FileTransfer: DownloadFiles called on server side
   transfer.  This problem was introduced in 7.5.4 when support for
   transfer of directories was added.
 
+% gittrac #1749
+\item Fixed a problem affecting the \Condor{master} daemon since
+  7.5.3.  The \Condor{master} daemon would crash if it was instructed
+  to shut down a daemon that was not currently running but which was
+  waiting to be restarted.
+
 \end{itemize}
 
 \noindent Known Bugs:
