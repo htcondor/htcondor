@@ -4,7 +4,7 @@
    //
    define("DETAIL_URL", "./Run-condor-details.php?runid=%s&type=%s&user=%s");
    define("CROSS_DETAIL_URL", "./Run-condor-pre-details.php?runid=%s&type=%s&user=%s");
-   define("GITSHA1","http://bonsai.cs.wisc.edu/gitweb/gitweb.cgi?p=CONDOR_SRC.git;a=commit;h=%s");
+   define("GITSHA1","http://condor-git.cs.wisc.edu/?p=condor.git;a=commit;h=%s");
    
    $result_types = Array( "passed", "pending", "failed", "missing" );
 
