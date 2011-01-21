@@ -156,7 +156,7 @@ chirp_get_one_file(char *remote, char *local) {
 // Old version using open, write
 // Still here because of the ability to use different modes
 int
-chirp_put_one_file(char *local, char *remote, int perm) {
+chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 	struct chirp_client *client;
 
 		// We connect each time, so that we don't have thousands
@@ -179,45 +179,53 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 		fprintf(stderr, "Can't open local file %s\n", local);
 		return -1;
 	}
-	
-	struct stat stat_buf;
-	stat(local, &stat_buf);
-	int size = stat_buf.st_size;
-	char* buf = (char*)malloc(size);
-	if ( ! buf) {
+
+	int wfd = chirp_client_open(client, remote, mode, perm);
+	if (wfd < 0) {
+		::fclose(rfd);
 		chirp_client_disconnect(client);
-		fprintf(stderr, "Can't allocate %d bytes %s\n", size);
+		fprintf(stderr, "Can't chirp_client_open %s:%d\n", remote, wfd);
 		return -1;
 	}
-	
-	int num_read = ::fread(buf, 1, size, rfd);
-	
-	if (num_read < 0) {
-		fclose(rfd);
-		chirp_client_disconnect(client);
-		fprintf(stderr, "local read error on %s\n", local);
-		free(buf);
-		return -1;
-	}
-	
-	int num_written = chirp_client_putfile_buffer(client, remote, buf, perm, num_read);
-	if (num_written != num_read) {
-		fclose(rfd);
-		chirp_client_disconnect(client);
-		fprintf(stderr, "Couldn't chirp_write as much as we read\n");
-		free(buf);
-		return -1;
-	}
-	
-	fclose(rfd);
+
+	char buf[8192];
+
+	int num_read = 0;
+	do {
+		num_read = ::fread(buf, 1, 8192, rfd);
+		if (num_read < 0) {
+			fclose(rfd);
+			chirp_client_close(client, wfd);
+			chirp_client_disconnect(client);
+			fprintf(stderr, "local read error on %s\n", local);
+			return -1;
+		}
+
+			// EOF
+		if (num_read == 0) {
+			break;
+		}
+
+		int num_written = chirp_client_write(client, wfd, buf, num_read);
+		if (num_written != num_read) {
+			fclose(rfd);
+			chirp_client_close(client, wfd);
+			chirp_client_disconnect(client);
+			fprintf(stderr, "Couldn't chirp_write as much as we read\n");
+			return -1;
+		}
+
+	} while (num_read > 0);
+	::fclose(rfd);
+	chirp_client_close(client, wfd);
 	chirp_client_disconnect(client);
-	free(buf);
+		
 	return 0;
 }
 
 // New version using putfile
 int
-chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
+chirp_put_one_file(char *local, char *remote, int perm) {
 	struct chirp_client *client;
 
 		// We connect each time, so that we don't have thousands
@@ -273,7 +281,6 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 	chirp_client_disconnect(client);
 	return 0;
 }
-
 
 /*
  * chirp_fetch
@@ -1038,18 +1045,6 @@ int chirp_lchown(int argc, char **argv) {
 	int gid = atoi(argv[4]);
 	int status = chirp_client_lchown(client, argv[2], uid, gid);
 	chirp_client_disconnect(client);
-	return status;
-}
-
-int chirp_truncate(int argc, char **argv) {
-	if (argc != 4) {
-		printf("condor_chirp lchown remotepath length\n");
-		return -1;
-	}
-
-	int uid = atoi(argv[3]);
-	int gid = atoi(argv[4]);
-	int status = chirp_client_lchown(client, argv[2], uid, gid);
 	return status;
 }
 
