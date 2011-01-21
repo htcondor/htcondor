@@ -27,5 +27,9 @@ int execute_transfer( FileRecord* record,
 					  ServerRecord* server,
 					  simple_parameters* parameters );
 
+int execute_teardown( FileRecord* record,
+					  ServerRecord* server,
+					  simple_parameters* parameters,
+					  int results );
 
 #endif

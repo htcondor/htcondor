@@ -64,10 +64,10 @@ int transfer_file( char* server_name,
 
 // Execute the teardown phase of the protocol
 
-		//results = execute_teardown( record, server, &parameters, results );
-		//if( results == -1 )
-		//	return UNACCEPTABLE_PARAMETERS;
-
+	results = execute_teardown( record, server, &parameters, results );
+	if( results == -1 )
+		return UNACCEPTABLE_PARAMETERS;
+	
 
 		// There are rumors that this needs to be closesocket for Windows...
 	close( server->server_socket);
@@ -495,5 +495,73 @@ int execute_transfer( FileRecord* record,
 		return -1;
 	else		
 		return 0;	
+
+}
+
+
+/*
+
+    execute_teardown
+
+*/
+int execute_teardown( FileRecord* record,
+					  ServerRecord* server,
+					  simple_parameters* parameters,
+					  int results )
+{
+
+	cftp_frame sframe;
+	cftp_frame rframe;
+
+	cftp_fff_frame* fff_frame;
+	cftp_faf_frame* faf_frame;
+
+	int length;
+
+
+		// Really hacky, but it works here for now
+	if( results == -1 )
+		return -1;
+
+	
+
+		//Send FileFinished Frame to terminate the transfer
+	memset( &sframe, 0, sizeof( cftp_frame ));
+	fff_frame = (cftp_fff_frame*)(&sframe);
+
+	fff_frame->MessageType = FFF;
+	fff_frame->ErrorCode = htons( NOERROR );
+	fff_frame->SessionToken = 1; // Still really a hack
+
+#ifdef CLIENT_DEBUG
+	fprintf( stderr, "Transfer finished, sending FFF signal.\n" );
+#endif
+
+	length = sizeof( cftp_frame );
+	if( sendall( server->server_socket,
+				 (char*)&sframe,
+				 &length ) == -1 )
+		{
+			fprintf( stderr, "Error could not send FFF: %s. Aborting!\n", 
+					 strerror(errno) );
+			return -1;
+		}
+
+		// Now we wait for the FAF response
+
+	recv( server->server_socket,
+		  (char*)&rframe,
+		  sizeof( cftp_frame ),
+		  MSG_WAITALL);
+	
+	if( rframe.MessageType != FAF )
+		{
+			fprintf( stderr, "Server did not send FAF! Aborting!\n");
+			return -1;
+		}
+
+	faf_frame = (cftp_faf_frame*)(&rframe);
+
+	return 0;
 
 }
