@@ -38,9 +38,10 @@ The details of each version are described below.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
-\item In unix, the following executables used to be located in both
-  the sbin and bin directories but are now only located in the bin
-  directory: condor, \Condor{checkpoint}, \Condor{reschedule}, and
+\item On Unix platforms, the following executables used to be located in both
+  the \File{sbin} and \File{bin} directories,
+  but are now only located in the \File{bin}
+  directory: \Prog{condor}, \Condor{checkpoint}, \Condor{reschedule}, and
   \Condor{vacate}.
 
 \item The following list itemizes changes included in this Condor version
@@ -228,10 +229,10 @@ FileTransfer: DownloadFiles called on server side
   This problem was introduced in Condor version 7.5.3.
 
 % gittrac #1849
-\item Fixed a memory leak in \Condor{schedd} introduced in 7.5.4.
+\item Fixed a memory leak in \Condor{schedd} introduced in Condor version 7.5.4.
 
 % gittrac #1866
-\item Fixed a problem introduced in 7.5.4 that could cause the
+\item Fixed a problem introduced in Condor version 7.5.4 that could cause the
   \Condor{schedd} daemon to enter an infinite loop while in the
   process of shutting down.  For the problem to happen, it was
   necessary for flocking to have been enabled.
