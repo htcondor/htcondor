@@ -90,6 +90,6 @@ if (WITH_CURL)
 
 else(WITH_CURL)
 
-	message (STATUS "external skiped (curl)")
+	message (STATUS "external skipped (curl)")
 
 endif(WITH_CURL)

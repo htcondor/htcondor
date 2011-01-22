@@ -54,6 +54,6 @@ if (WITH_GCB)
 
 else()
 
-	message (STATUS "external skiped (gcb)")
+	message (STATUS "external skipped (gcb)")
 
 endif()
