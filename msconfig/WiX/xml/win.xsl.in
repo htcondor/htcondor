@@ -10,7 +10,7 @@
       <Product xmlns="http://schemas.microsoft.com/wix/2006/wi"
        Id="@CPACK_WIX_PRODUCT_GUID@" Name="@CPACK_PACKAGE_FILE_NAME@"
        Language="1033" Version="@CPACK_PACKAGE_VERSION@"
-       Manufacturer="@CPACK_PACKAGE_VENDOR@" UpgradeCode="@CPACK_WIX_UPGRADE_GUID@">
+       Manufacturer="@CPACK_PACKAGE_VENDOR@" UpgradeCode="EA1CEE00-C44F-4BC4-8035-440AA32C1F33">
         <Package InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="media1.cab" EmbedCab="yes"/>
         <!-- Always force the root drive to be C: -->
@@ -34,6 +34,29 @@
         <Condition Message="This application is only supported on Windows XP(SP2) or higher">
           <![CDATA[(VersionNT >= 501)]]>
         </Condition>
+
+        <Property Id="UPGRADEFOUND" Secure="yes" />
+        <Property Id="NEWPRODUCTFOUND" Secure="yes" />
+        <Upgrade Id="EA1CEE00-C44F-4BC4-8035-440AA32C1F33">
+          <!--Upgrading older version of Condor-->
+          <UpgradeVersion
+            Language="1033"
+            Minimum="7.5.0"
+            Maximum="7.5.5"
+            IncludeMinimum="yes"
+            IncludeMaximum="no"
+            Property="UPGRADEFOUND"
+            OnlyDetect="no"
+            />
+          <!--Newer version of Condor already installed-->
+          <UpgradeVersion
+            Language="1033"
+            Minimum="7.5.5"
+            IncludeMinimum="no"
+            OnlyDetect="yes"
+            Property="NEWPRODUCTFOUND"
+            />
+        </Upgrade>
 
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
 
@@ -84,6 +107,9 @@
             if Not fso.FileExists(path & "condor_config.local") Then
                  fso.CreateTextFile(path & "condor_config.local")
             End if
+            if fso.FileExists(path & "condor_config") then
+                fso.MoveFile path & "condor_config", path & "condor_config.old"
+            end if
             
             daemonList = "MASTER"
             
@@ -91,7 +117,7 @@
               daemonList = daemonList & " SCHEDD"
             End If
  
-            Set Configfile = fso.OpenTextFile(path & "condor_config", 1, True)
+            Set Configfile = fso.OpenTextFile(path & "condor_config.win", 1, True)
             configTxt = Configfile.ReadAll
             Configfile.Close
             
@@ -116,6 +142,10 @@
             Set jvmPath = fso.GetFile(jvmLoc)
             jvmLoc = jvmPath.ShortPath
             configTxt = Replace(configTxt, "JAVA =", "JAVA=" & jvmLoc )
+            if fso.FileExists(jvmLoc) then
+              Set jvmPath = fso.GetFile(jvmLoc)
+              jvmLoc = jvmPath.ShortPath
+            end if
             
             Select Case Session.Property("RUNJOBS")
             Case "A"
