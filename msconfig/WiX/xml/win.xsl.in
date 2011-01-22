@@ -28,6 +28,14 @@
              </RegistryKey>
              <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
            </Component>
+           <Component Id="CreateFolders" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5">
+             <CreateFolder Directory="spool" />
+             <CreateFolder Directory="execute" />
+             <CreateFolder Directory="log" />
+           </Component>
+           <Directory Id="LogDir" Name="log" />
+           <Directory Id="ExecuteDir" Name="execute" />
+           <Directory Id="SpoolDir" Name="spool" />
           </Directory>
         </Directory>
 
@@ -41,22 +49,35 @@
           <!--Upgrading older version of Condor-->
           <UpgradeVersion
             Language="1033"
-            Minimum="7.5.0"
-            Maximum="7.5.5"
+            Minimum="7.5.5"
             IncludeMinimum="yes"
+            Maximum="@CPACK_PACKAGE_VERSION@"
             IncludeMaximum="no"
             Property="UPGRADEFOUND"
             OnlyDetect="no"
+            RemoveFeatures="ALL"
             />
           <!--Newer version of Condor already installed-->
           <UpgradeVersion
             Language="1033"
-            Minimum="7.5.5"
+            Minimum="@CPACK_PACKAGE_VERSION@"
             IncludeMinimum="no"
             OnlyDetect="yes"
             Property="NEWPRODUCTFOUND"
             />
+          <UpgradeVersion
+            Language="1033"
+            Maximum="7.5.5"
+            IncludeMaximum="no"
+            OnlyDetect="yes"
+            Property="TOOOLDFOUND"
+            />
         </Upgrade>
+
+        <CustomAction Id="PreventDowngrade" Error="Newer version of Condor already installed." />
+
+        <CustomAction Id="PreventUpgrade"
+                      Error="Condor cannot upgrade from the installed version due to issues with migrating the configuration.  Please backup the configuration and uninstall Condor first before attempting to install this version of Condor." />
 
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
 
@@ -95,15 +116,6 @@
             path = Session.Property("INSTALLDIR")
             Set installpath = fso.GetFolder(path)
             strippedPath = installpath.ShortPath
-            if Not fso.FolderExists(path & "log") Then
-                Set objFolderLog = fso.CreateFolder(path & "log")
-            End if
-            if Not fso.FolderExists(path & "spool") Then
-                Set objFolderSpool = fso.CreateFolder(path & "spool")
-            End if
-            if Not fso.FolderExists(path & "execute") Then
-                 Set objFolderExec = fso.CreateFolder(path & "execute")
-            End if
             if Not fso.FileExists(path & "condor_config.local") Then
                  fso.CreateTextFile(path & "condor_config.local")
             End if
@@ -207,9 +219,17 @@
         </CustomAction>
 
         <InstallExecuteSequence>
+          <Custom Action="PreventDowngrade" After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
+          <Custom Action="PreventUpgrade" After="FindRelatedProducts">TOOOLDFOUND</Custom>
+          <RemoveExistingProducts After="InstallValidate">UPGRADEFOUND</RemoveExistingProducts>
           <Custom Action="CondorConfigLocal" After="InstallFinalize">Not Installed</Custom>
           <ScheduleReboot After="CondorConfigLocal" />
         </InstallExecuteSequence>
+
+        <InstallUISequence>
+          <Custom Action="PreventDowngrade" After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
+          <Custom Action="PreventUpgrade" After="FindRelatedProducts">TOOOLDFOUND</Custom>
+        </InstallUISequence>
         <!-- End custom actions and install sequence -->
 
         <!-- Feature Block e.g. ComponentRef's -->
@@ -219,6 +239,7 @@
             <MergeRef Id="VC90CRT"/>
             <MergeRef Id="VC90Policy"/>
             <ComponentRef Id="CondorRegNEnv" />
+            <ComponentRef Id="CreateFolders" />
           </Feature>
           <!-- Typical/Complete/Custom, below is complete. 
           <Feature Id="Debugging Symbols" Title="Condor Debug Symbol Files" Description="Files used to debug Condor" Level='1000'>
