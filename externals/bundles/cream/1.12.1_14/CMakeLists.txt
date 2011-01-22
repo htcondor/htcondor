@@ -219,5 +219,5 @@ if ( WITH_CREAM )
 	set( CREAM_STAGE ${CREAM_STAGE} PARENT_SCOPE )
 
 else()
-	message (STATUS "external skiped (cream)")
+	message (STATUS "external skipped (cream)")
 endif()

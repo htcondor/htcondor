@@ -86,5 +86,5 @@ if (WITH_POSTGRESQL)
 	endif(POSTGRESQL_FOUND)
 
 else()
-	message (STATUS "external skiped (postgresql)")
+	message (STATUS "external skipped (postgresql)")
 endif()

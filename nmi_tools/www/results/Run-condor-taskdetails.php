@@ -194,9 +194,10 @@ function show_file_content($header, $file) {
   $lines = `grep -C 5 -i error $file`;
   echo "<p style=\"font-size: 80%;\">Showing all instances of the word 'error' in $header:\n";
   if(strlen($lines) > 0) {
+    $lines = preg_replace("/(error)/i", "<font class=\"hl\">$1</font>", $lines);
     echo "<p><a href=\"javascript:swap('$header')\">Click to show errors in $header</a>\n";
     echo "<div id=\"$header\" style=\"display:none;\">\n";
-    echo "<pre>$lines</p>\n";
+    echo "<pre>$lines</pre>\n";
     echo "</div>\n";
   }
   else {

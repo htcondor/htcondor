@@ -57,6 +57,6 @@ if (WITH_ZLIB)
 
 else(WITH_ZLIB)
 
-	message (STATUS "external skiped (zlib)")
+	message (STATUS "external skipped (zlib)")
 
 endif(WITH_ZLIB)
