@@ -32,7 +32,7 @@
    <tr>
       <th>Branch<br><small>Click to see branch history</small></th>
       <th>Runid</th>
-      <th>Last build</th>
+      <th>Submitted</th>
       <th>User</th>
       <th>Build Results</th>
       <th>Test Results</th>  
@@ -278,11 +278,12 @@ EOF;
          elseif ($cur["missing"] < 0) $cur["missing"] = 0;
       }
 
-		if($type == "crosstest") {
-      		$detail_url = sprintf(CROSS_DETAIL_URL, $runid, $type, $user);
-		} else {
-      		$detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
-	  	}
+      if($type == "crosstest") {
+	$detail_url = sprintf(CROSS_DETAIL_URL, $runid, $type, $user);
+      }
+      else {
+	$detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
+      }
       
       //
       // No results
