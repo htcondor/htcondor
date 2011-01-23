@@ -27,7 +27,6 @@
 
 
 #if defined( LINUX )
-#define MEG (1024 * 1024)
 
 void
 sysapi_set_resource_limits()
@@ -45,7 +44,7 @@ sysapi_set_resource_limits()
 	limit( RLIMIT_CPU, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max cpu time" );
 	limit( RLIMIT_FSIZE, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max file size" );
 	limit( RLIMIT_DATA, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max data size" );
-	limit( RLIMIT_STACK, 10*MEG, CONDOR_SOFT_LIMIT, "max stack size" );
+	limit( RLIMIT_STACK, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max stack size" );
 
 	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }
