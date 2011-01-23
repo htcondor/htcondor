@@ -20,6 +20,10 @@
 #ifndef SYSAPI_TEST_H
 #define SYSAPI_TEST_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /*
  * arch_test(int) tests sysapi_arch for consistency (making sure it is valid
  * over n trials), and to be sure that the returned string is not null or empty.
@@ -128,5 +132,9 @@ int mips_test(int test_blocksize, double max_sd_variation_ratio,
 			  double max_failed_test_ratio);
 int kflops_test(int test_blocksize, double max_sd_variation_ratio,
 				double max_failed_test_ratio);
+
+#if defined(__cplusplus)
+}		/* End of 'extern "C"' declaration block */
+#endif
 
 #endif

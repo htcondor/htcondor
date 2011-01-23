@@ -17,14 +17,12 @@
  ############################################################### 
 
 
-file( GLOB SysApiTestElements test.cpp *_t.cpp *.t.* dhry21b* )
+file( GLOB SysApiRmvElements *_t.cpp *.t.* dhry21b* )
 
-condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiTestElements}" )
+condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
 
 #create the library
 condor_static_lib(sysapi "${SysapiHeaderFiles};${SysapiSourceFiles}")
 
 # there was a test target which was never used.
 # it makes the most sense to hook in a UT here instead of integ test
-
-condor_exe(condor_sysapi "${SysApiTestElements}" "" "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF )
