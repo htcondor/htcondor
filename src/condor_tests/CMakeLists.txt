@@ -56,6 +56,7 @@ if (BUILD_TESTS)
 	condor_exe_test(x_write_joblog_events.exe "x_write_joblog_events.cpp" "condorapi")
 	condor_exe_test(lib_eventlog_base.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
+	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
