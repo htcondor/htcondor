@@ -12,6 +12,9 @@
 #include <map>
 #include <sstream>
 
+#include <ext/hash_map>
+namespace ext = __gnu_cxx;
+
 typedef std::map< std::string, std::string > AttributeValueMap;
 typedef bool (*ActionHandler)( AttributeValueMap & avm, std::string & reply );
 typedef std::map< std::string, ActionHandler > ActionToHandlerMap;
@@ -27,6 +30,71 @@ typedef std::map< std::string, ActionHandler > ActionToHandlerMap;
  *      DescribeKeyPairs
  */
 
+/*
+ * Inexplicably, this isn't one of the standard specializations.
+ * Even less explicably, you can't use namespace aliases to open a namespace.
+ *
+ * However, by supplying this specialization, all of the ext::hash_maps using
+ * std::string as a key work without further ado.
+ */
+
+namespace __gnu_cxx {
+    template<> struct hash< std::string > {
+        size_t operator()( const std::string & s ) const {
+            return __stl_hash_string( s.c_str() );
+        }
+    };
+}
+
+typedef struct {
+} Group;
+typedef ext::hash_map< std::string, Group > NameToGroupMap;
+
+typedef struct {
+    std::string privateKey;
+} Keypair;
+typedef ext::hash_map< std::string, Keypair > NameToKeypairMap;
+
+typedef struct {
+    std::string imageID;
+    std::string privateDNSName;
+    std::string publicDNSName;
+    std::string instanceType;
+    std::string instanceState;
+    std::string keyName;
+    
+    ext::hash_map< std::string, const Group * > groups;
+} Instance;
+typedef ext::hash_map< std::string, Instance > InstanceIDToInstanceMap;
+
+typedef struct {
+    NameToKeypairMap keypairs;
+    NameToGroupMap groups;
+    InstanceIDToInstanceMap instances;    
+} User;
+typedef ext::hash_map< std::string, User > AccessKeyIDToUserMap;
+
+// Global.  Eww.
+AccessKeyIDToUserMap users;
+
+void registerTestUsers() {
+    users[ "1" ] = User();
+    users[ "2" ] = User();
+}
+
+// The compiler seems unwilling or unable to infer return types; GregT
+// speculated that this might be because templated functions are in their
+// own namespace, but getObject<>() doesn't infer the return type, either.
+template< class V, class T, class K > V getObject( const T & map, const K & key, bool & found ) {
+    class T::const_iterator ci = map.find( key );
+    if( map.end() == ci ) {
+        found = false;
+        return V();
+    }
+    found = true;
+    return ci->second;
+}
+
 bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
     fprintf( stderr, "handleRunInstances()\n" );
     return false;
@@ -34,6 +102,39 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
 
 bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply ) {
     fprintf( stderr, "handleTerminateInstances()\n" );
+
+    bool found = false;
+    std::string userID = getObject< std::string >( avm, "AWSAccessKeyId", found );
+    if( (!found) || userID.empty() ) {
+        fprintf( stderr, "DEBUG: failed to find AWSAccessKeyId in query.\n" );
+        reply = "Required parameter AWSAccessKeyId missing or empty.\n";
+        return false;
+    }
+
+    User user = getObject< User >( users, userID, found );
+    if( ! found ) {
+        fprintf( stderr, "Failed to find user identified by '%s'.\n", userID.c_str() );
+        reply = "Required parameter ASWAccessKeyId invalid.\n";
+        return false;
+    }
+    
+    std::string instanceID = getObject< std::string >( avm, "InstanceId.1", found );
+    if( ! found || instanceID.empty() ) {
+        fprintf( stderr, "DEBUG: failed to find instanceID in query.\n" );
+        reply = "Required parameter InstanceId.1 missing or empty.\n";
+        return false;
+    }
+    
+    Instance instance = getObject< Instance >( user.instances, instanceID, found );
+    if( ! found ) {
+        std::ostringstream error;
+        error << "Instance ID '" << instanceID << "' does not exist." << std::endl;
+        fprintf( stderr, "%s", error.str().c_str() );
+        reply = error.str();
+        return false;
+    }        
+    
+    // FIXME...
     return false;
 }
 
@@ -57,6 +158,7 @@ bool handleDescribeKeyPairs( AttributeValueMap & avm, std::string & reply ) {
     return false;
 }
 
+// Global.  Eww.
 ActionToHandlerMap simulatorActions;
 
 void registerAllHandlers() {
@@ -112,15 +214,28 @@ bool validateSignature( std::string & method,
     return true;
 }
 
+std::string constructReply( const std::string & statusLine, const std::string & response ) {
+    std::ostringstream reply;
+
+    // The ec2_gahp doesn't ever look at the headers.
+    reply << statusLine << "\r\n";
+    reply << "Content-Length: " << response.size() << "\r\n";
+    reply << "\r\n";
+    reply << response;
+    reply << "\r\n";
+
+    return reply.str();
+}
+
 std::string handleRequest( const std::string & request ) {
     std::string URL;
     if( ! extractURL( request, URL ) ) {
-        return "HTTP/1.1 400 Bad Request\r\n";
+        return constructReply( "HTTP/1.1 400 Bad Request", "" );
     }
     
     std::string host;
     if( ! extractHost( request, host ) ) {
-        return "HTTP/1.1 400 Bad Request\r\n";
+        return constructReply( "HTTP/1.1 400 Bad Request", "" );
     }
     std::transform( host.begin(), host.end(), host.begin(), & tolower );
     
@@ -133,8 +248,10 @@ std::string handleRequest( const std::string & request ) {
         // the key-value pairs, and equals between keys and values.
         std::string::size_type equalsIdx = URL.find( "=", i + 1 );
         if( std::string::npos == equalsIdx ) {
-            fprintf( stderr, "Malformed URL '%s': attribute without value; failing.\n", URL.c_str() );
-            return "HTTP/1.1 400 Bad Request\r\n";
+            std::ostringstream error;
+            error << "Malformed URL '" << URL << "': attribute without value; failing" << std::endl;
+            fprintf( stderr, error.str().c_str() );
+            return constructReply( "HTTP/1.1 400 Bad Request", error.str() );
         }        
         std::string::size_type ampersandIdx = URL.find( "&", i + 1 );
         if( std::string::npos == ampersandIdx ) {
@@ -151,35 +268,28 @@ std::string handleRequest( const std::string & request ) {
 
     std::string method = "GET";
     if( ! validateSignature( method, host, URL, queryParameters ) ) {
-            return "HTTP/1.1 401 Unauthorized\r\n";
+        return constructReply( "HTTP/1.1 401 Unauthorized", "Failed signature validation." );
     }
-
 
     std::string action = queryParameters[ "Action" ];
     if( action.empty() ) {
-        return "HTTP/1.1 400 Bad Request\r\n";
-    }        
-
-    std::ostringstream reply;
+        return constructReply( "HTTP/1.1 400 Bad Request", "No action specified." );
+    }
+    
     std::string response;
     ActionToHandlerMap::const_iterator ci = simulatorActions.find( action );
     if( simulatorActions.end() == ci ) {
-        fprintf( stderr, "Action '%s' not found.\n", action.c_str() );
-        return "HTTP/1.1 404 Action Not Found\r\n";
+        std::ostringstream error;
+        error << "Action '" << action << "' not found." << std::endl;
+        fprintf( stderr, error.str().c_str() );
+        return constructReply( "HTTP/1.1 404 Not Found", error.str() );
     }
     
     if( (*(ci->second))( queryParameters, response ) ) {
-        reply << "HTTP/1.1 200 OK\r\n";
+        return constructReply( "HTTP/1.1 200 OK", response );
     } else {
-        reply << "HTTP/1.1 406 Not Acceptable\r\n";
+        return constructReply( "HTTP/1.1 406 Not Acceptable", response );
     }
-    
-    // FIXME: With which headers do EC2 and Eucalytpus reply?
-    reply << "Content-Length: " << response.size() << "\r\n";
-    reply << "Content-Type: text/xml\r\n";
-    reply << "\r\n";
-
-    return reply.str();
 }
 
 void handleConnection( int sockfd ) {
@@ -208,11 +318,9 @@ void handleConnection( int sockfd ) {
         request += buffer;
         // fprintf( stderr, "DEBUG: request is now '%s'.\n", request.c_str() );
         
-        // A given HTTP request is terminated by blank line.
-        // FIXME: we need to check if we got more than one HTTP request
-        // in this read().
+        // A given HTTP request is terminated by a blank line.
         std::string::size_type index = request.find( "\r\n\r\n" );
-        if( index != std::string::npos ) {
+        while( index != std::string::npos ) {
             std::string firstRequest = request.substr( 0, index + 4 );
             request = request.substr( index + 4 );
             // if( ! request.empty() ) { fprintf( stderr, "DEBUG: request remainder '%s'\n", request.c_str() ); }
@@ -224,7 +332,7 @@ void handleConnection( int sockfd ) {
                 ssize_t totalBytesWritten = 0;
                 ssize_t bytesToWrite = reply.size();
                 const char * outBuf = reply.c_str();
-                while( 1 ) {
+                while( totalBytesWritten != bytesToWrite ) {
                     ssize_t bytesWritten = write( sockfd,
                         outBuf + totalBytesWritten,
                         bytesToWrite - totalBytesWritten );
@@ -236,6 +344,8 @@ void handleConnection( int sockfd ) {
                     totalBytesWritten += bytesWritten;
                 }
             }
+            
+            index = request.find( "\r\n\r\n" );            
         }
     }
 }
@@ -267,6 +377,7 @@ int main( int argc, char ** argv ) {
     }
 
     registerAllHandlers();
+    registerTestUsers();
 
     while( 1 ) {
         struct sockaddr_in remoteAddr;
