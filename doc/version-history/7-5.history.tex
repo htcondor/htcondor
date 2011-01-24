@@ -78,6 +78,12 @@ Timer <X> not found
 \item Fixed a bug that caused \Condor{dagman} to sometimes falsely
 report that a cycle exists in a DAG.
 
+% gittrac #1869
+\item Job attribute \AdAttr{JobLeaseDuration} is now set appropriately
+when a Condor-C job is forwarded to a remote pool. Previously, a default
+value wasn't suppplied, causing jobs to be unnecessarily killed if the
+submit and execute machines temporarily lost contact with each other.
+
 \end{itemize}
 
 \noindent Known Bugs:
