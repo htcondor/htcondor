@@ -95,31 +95,107 @@ template< class V, class T, class K > V getObject( const T & map, const K & key,
     return ci->second;
 }
 
-bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
-    fprintf( stderr, "handleRunInstances()\n" );
-    return false;
-}
-
-bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply ) {
-    fprintf( stderr, "handleTerminateInstances()\n" );
-
+bool validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, User & user, std::string & reply ) {
     bool found = false;
-    std::string userID = getObject< std::string >( avm, "AWSAccessKeyId", found );
+
+    userID = getObject< std::string >( avm, "AWSAccessKeyId", found );
     if( (!found) || userID.empty() ) {
         fprintf( stderr, "DEBUG: failed to find AWSAccessKeyId in query.\n" );
         reply = "Required parameter AWSAccessKeyId missing or empty.\n";
         return false;
     }
 
-    User user = getObject< User >( users, userID, found );
+    user = getObject< User >( users, userID, found );
     if( ! found ) {
         fprintf( stderr, "Failed to find user identified by '%s'.\n", userID.c_str() );
         reply = "Required parameter ASWAccessKeyId invalid.\n";
         return false;
     }
     
+    return true;
+}
+
+bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleRunInstances()\n" );
+
+    std::string userID;
+    User user;
+    bool found = validateAndAcquireUser( avm, userID, user, reply );
+    if( ! found ) { return false; }
+
+    // Validate the ImageId, MinCount, and MaxCount parameters, as well
+    // as the optional parameters KeyName, InstanceType, SecurityGroup*,
+    // and UserData.
+    
+    // We presently assume all imageIDs are valid.
+    std::string imageID = getObject< std::string >( avm, "ImageId", found );
+    if( (! found) || imageID.empty() ) {
+        fprintf( stderr, "Failed to find imageID in query.\n" );
+        reply = "Required parameter ImageId missing or empty.\n";
+        return false;
+    }
+
+    std::string minCount = getObject< std::string >( avm, "MinCount", found );
+    if( (! found) || minCount.empty() ) {
+        fprintf( stderr, "Failed to find minCount in query.\n" );
+        reply = "Required parameter MinCount missing or empty.\n";
+        return false;
+    }
+    
+    std::string maxCount = getObject< std::string >( avm, "MaxCount", found );
+    if( (! found) || maxCount.empty() ) {
+        fprintf( stderr, "Failed to find maxCount in query.\n" );
+        reply = "Required parameter MaxCount missing or empty.\n";
+        return false;
+    }
+    
+    // FIXME: Verify that maxCount >= minCount.
+
+    std::string keyName = getObject< std::string >( avm, "KeyName", found );
+    if( ! keyName.empty() ) {
+        // FIXME: Verify that this keypair exists.
+    }
+
+    // We presently assume all instanceTypes are valid.
+    std::string instanceType = getObject< std::string >( avm, "InstanceType", found );
+
+    std::string userData = getObject< std::string >( avm, "UserData", found );
+    if( ! userData.empty() ) {
+        // FIXME: Verify that the user data is Base64-encoded.
+    }
+
+    std::vector< std::string > securityGroupNames;
+    for( int i = 1; ; ++i ) {
+        std::ostringstream sgParameterName;
+        sgParameterName << "SecurityGroup." << i;
+        std::string sgName = getObject< std::string >( avm, sgParameterName.str(), found );
+        if( ! found ) { break; }
+        if( sgName.empty() ) {
+            std::ostringstream error;
+            error << "Optional parameter " << sgName << " must not be empty." << std::endl;
+            reply = error.str();
+            fprintf( stderr, "%s", reply.c_str() );
+            return false;
+        }
+        
+        // FIXME: Verify that the group sgName exists.
+    }
+
+    // FIXME: create the corresponding Instance.
+
+    return true;
+}
+
+bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply ) {
+    fprintf( stderr, "handleTerminateInstances()\n" );
+
+    std::string userID;
+    User user;
+    bool found = validateAndAcquireUser( avm, userID, user, reply );
+    if( ! found ) { return false; }
+    
     std::string instanceID = getObject< std::string >( avm, "InstanceId.1", found );
-    if( ! found || instanceID.empty() ) {
+    if( (! found) || instanceID.empty() ) {
         fprintf( stderr, "DEBUG: failed to find instanceID in query.\n" );
         reply = "Required parameter InstanceId.1 missing or empty.\n";
         return false;
@@ -129,13 +205,13 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply ) {
     if( ! found ) {
         std::ostringstream error;
         error << "Instance ID '" << instanceID << "' does not exist." << std::endl;
-        fprintf( stderr, "%s", error.str().c_str() );
         reply = error.str();
+        fprintf( stderr, "%s", reply.c_str() );
         return false;
     }        
-    
-    // FIXME...
-    return false;
+
+    reply = "// FIXME: spam out some XML.\n";
+    return true;
 }
 
 bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply ) {
@@ -206,6 +282,14 @@ bool extractURL( const std::string & request, std::string & URL ) {
  *
  * This function is presently a stub because I haven't solved the
  * problem of key distribution between the tester and the simulator.
+ *
+ * Validates parameters:
+ *      Signature,
+ *      SignatureVersion
+ *      SignatureMethod
+ *      Timestamp
+ *      Version
+ * 
  */
 bool validateSignature( std::string & method,
                         const std::string & host,
