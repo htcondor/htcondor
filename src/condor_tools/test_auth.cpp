@@ -44,7 +44,7 @@
 #include "subsystem_info.h"
 
 char	*MyName;
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
+DECL_SUBSYSTEM( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
 
 void
 usage()
@@ -69,7 +69,7 @@ StringToDCpermission(char const *str) {
 	DCpermission perm;
 
 	for(perm = FIRST_PERM;perm!=LAST_PERM;perm=NEXT_PERM(perm)) {
-		if( !strcasecmp(str,PermString(perm)) ) {
+		if(str && !strcasecmp(str,PermString(perm)) ) {
 			return perm;
 		}
 	}
@@ -97,7 +97,7 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-debug" ) ) {
 				// dprintf to console
 			Termlog = 1;
-			dprintf_config( "TOOL" );
+			dprintf_config( "DAEMON-TOOL" );
 			DebugFlags |= D_FULLDEBUG|D_SECURITY;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
@@ -106,10 +106,11 @@ main( int argc, char* argv[] )
 		}
 	}
 
-		// If we didn't get told what subsystem we should use, set it
-		// to "TOOL".
+	// If we didn't get told what subsystem we should use, set it
+	// to "TOOL".
+
 	if( !get_mySubSystem()->isNameValid() ) {
-		get_mySubSystem()->setName( "TOOL" );
+		get_mySubSystem()->setName( "DAEMON-TOOL" );
 	}
 
 	config( 0, true );

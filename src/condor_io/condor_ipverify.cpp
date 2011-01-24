@@ -227,7 +227,8 @@ IpVerify::Init()
 		}
 	}
 	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
-	PrintAuthTable(D_FULLDEBUG|D_SECURITY);
+	if(PermHashTable)	
+		PrintAuthTable(D_FULLDEBUG|D_SECURITY);
 	return TRUE;
 }
 
