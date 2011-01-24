@@ -64,7 +64,7 @@ void run_server( char* server_name,  char* server_port)
 	if( results == -1 )
 		return;		
 
-		//results  = execute_teardown( localServer, remoteClient, localFileCopy );
+	results  = execute_teardown( localServer, remoteClient, localFileCopy, results );
 
 #ifdef SERVER_DEBUG
 	if( results == -1 )
@@ -532,5 +532,78 @@ int execute_transfer( ServerRecord* localServer, ClientRecord* remoteClient, Fil
 		return 0;
 	else
 		return -1;
+
+}
+
+
+/*
+
+  execute_teardown
+
+
+*/
+int execute_teardown( ServerRecord* localServer,
+					  ClientRecord* remoteClient,
+					  FileRecord* localFileCopy,
+					  int results )
+{
+
+	cftp_frame sframe;
+	cftp_frame rframe;
+
+	cftp_fff_frame* fff_frame;
+	cftp_faf_frame* faf_frame;
+
+	int length;
+
+		// The transfer failed for some reason, clean up file
+	if( results == -1 )
+		{
+			fclose( localFileCopy->fp );
+			remove( localFileCopy->filename );
+			return -1;
+		}
+	
+	
+	memset( &rframe, 0, sizeof( cftp_frame ));
+	recv( remoteClient->client_socket,	
+		  (char*)&rframe,
+		  sizeof( cftp_frame ),
+		  MSG_WAITALL);
+
+	if( rframe.MessageType != FFF )
+		{
+			fprintf( stderr, "Client did not send FFF! Aborting!\n");
+			fclose( localFileCopy->fp );
+			remove( localFileCopy->filename );
+			return -1;
+		}
+	
+	fff_frame = (cftp_fff_frame*)(&rframe);
+
+#ifdef SERVER_DEBUG
+	fprintf( stderr, "Transfer finished, Client sent FFF.\n");
+#endif
+
+	memset( &sframe, 0, sizeof( cftp_frame));
+	faf_frame = (cftp_faf_frame*)(&sframe);
+	faf_frame->MessageType = FAF;
+	faf_frame->ErrorCode = htons( NOERROR );
+	faf_frame->SessionToken = 1; // Still hacky
+
+	length = sizeof( cftp_frame );
+	if( sendall( remoteClient->client_socket,
+				 (char*)&sframe,
+				 &length ) == -1 )
+		{
+			fprintf( stderr, "Error could not send FAF: %s. Aborting!\n", strerror(errno) );
+			fclose( localFileCopy->fp );
+			remove( localFileCopy->filename );
+			return -1;
+		}			
+
+
+	return 0;
+
 
 }
