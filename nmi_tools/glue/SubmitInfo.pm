@@ -985,6 +985,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
 },
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
