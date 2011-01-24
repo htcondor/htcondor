@@ -405,6 +405,7 @@ bool ipaddr::compare_address(const ipaddr& addr) const
 					  (const void*)&addr.v6.sin6_addr,
 					  sizeof(in6_addr)) == 0;
 	}
+	return false;
 }
 
 // lexicographical ordering of IP address

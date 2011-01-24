@@ -287,9 +287,10 @@ ipaddr convert_hostname_to_ipaddr(const MyString& fullname)
 		hostname = fullname;
 
 	char target_char = '.';
-	if (hostname.Length() > 15) { // assume we have IPv6 address
-		target_char = ':';
-	}
+		// [TODO] Implement a way to detect IPv6 address
+		//if (hostname.Length() > 15) { // assume we have IPv6 address
+		//target_char = ':';
+		//}
 
 		// converts hostname to IP address string
 	for (int i = 0; i < hostname.Length(); ++i) {

@@ -770,7 +770,7 @@ IpVerify::Verify( DCpermission perm, const ipaddr& addr, const char * user, MySt
 			//addr.to_ip_string(ipstr, IP_STRING_BUF_SIZE);
 		inet_ntop(AF_INET6, &sin6_addr, ipstr, sizeof(ipstr));
 
-		peer_description = ipstr;
+		peer_description = addr.to_ip_string();
 
 		if ( !(mask&deny_resolved) && lookup_user_ip_deny(perm,who,ipstr)) {
 			mask |= deny_mask(perm);
