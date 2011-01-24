@@ -29,9 +29,9 @@
              <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
            </Component>
            <Component Id="CreateFolders" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5">
-             <CreateFolder Directory="spool" />
-             <CreateFolder Directory="execute" />
-             <CreateFolder Directory="log" />
+             <CreateFolder Directory="SpoolDir" />
+             <CreateFolder Directory="ExecuteDir" />
+             <CreateFolder Directory="LogDir" />
            </Component>
            <Directory Id="LogDir" Name="log" />
            <Directory Id="ExecuteDir" Name="execute" />
