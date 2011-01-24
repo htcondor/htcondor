@@ -113,12 +113,6 @@ int param_integer(const char *, int default_value)
 	return default_value;
 }
 
-int param_integer_c( const char *name, int default_value,
-					 int min_value, int max_value, bool use_param_table )
-{
-	return param_integer( name, default_value );
-}
-
 int param_boolean_int(const char *, int default_value)
 {
 	return default_value;
