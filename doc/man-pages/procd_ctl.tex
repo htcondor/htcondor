@@ -1,0 +1,77 @@
+\begin{ManPage}{\label{man-procd-ctl}procd\_ctl}{1}
+{A command line interface to the \Condor{procd}.}
+\Synopsis \SynProg{procd\_ctl}
+\oOpt{options}
+\oOpt{command}
+
+\index{Condor commands!procd\_ctl}
+\index{procd\_ctl command}
+
+\Description 
+
+This is a programmatic interface to the \Condor{procd} daemon. It may be
+used to track new process families, send signals to 
+
+This is a program only available for the Linux ports of Condor.
+
+\begin{Options}
+
+	\OptItem{\Opt{-h}}{Print out usage information.}
+	
+	\OptItem{\OptArg{-A}{address-file}}{The path to the address file
+		which is the named pipe clients must use to speak with the
+		\Condor{procd}.}
+
+	These are the available commands.
+
+	\OptItem{\Opt{TRACK\_BY\_ASSOCIATED\_GID} \Arg{gid} \oArg{pid}}
+		{Use the specified gid to track the specified family rooted at pid.}
+
+	\OptItem{\Opt{GET\_USAGE} \oArg{pid}}
+		{Get the total usage information about the pid family at pid.}
+
+	\OptItem{\Opt{DUMP} \oArg{pid}}
+		{Print out information about the root pid being watched and information
+		about the tree of process under the root pid.}
+
+	\OptItem{\Opt{LIST} \oArg{pid}}
+		{Print out information about all the watched processes.}
+
+	\OptItem{\Opt{SIGNAL\_PROCESS} \Arg{signal} \oArg{pid}}
+		{Send the signal to the process at the specified pid.}
+
+	\OptItem{\Opt{SUSPEND\_FAMILY} \Arg{pid}}
+		{Suspend the process family rooted at pid.}
+
+	\OptItem{\Opt{CONTINUE\_FAMILY} \Arg{pid}}
+		{Suspend the process family rooted at pid.}
+
+	\OptItem{\Opt{KILL\_FAMILY} \Arg{pid}}
+		{Kill the process family rooted at pid.}
+
+	\OptItem{\Opt{UNREGISTER\_FAMILY} \Arg{pid}}
+		{Stop tracking the process family rooted at pid.}
+
+	\OptItem{\Opt{SNAPSHOT}}
+		{Perform a snapshot of the tracked family tree.}
+
+	\OptItem{\Opt{QUIT}}
+		{Disconnect from the \Condor{procd} and exit.}
+
+\end{Options}
+	
+
+\GenRem
+
+This program may be used in a standalone mode, independent of
+Condor, to track process families. The programs \Prog{procd\_ctl} and
+\Prog{gidd\_alloc} are used with the \Condor{procd} in standalone mode
+to interact with the daemon and inquire about certain state of running
+processes on the machine, respectively.
+
+\ExitStatus
+
+\Prog{procd\_ctl} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

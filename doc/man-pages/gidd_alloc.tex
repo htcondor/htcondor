@@ -1,0 +1,35 @@
+\begin{ManPage}{\label{man-gidd-alloc}gidd\_alloc}{1}
+{Find a gid in the specified range which is not used by any process.}
+\Synopsis \SynProg{gidd\_alloc}
+\Opt{min-gid}
+\Opt{max-gid}
+
+\index{Condor commands!gidd\_alloc}
+\index{gidd\_alloc command}
+
+\Description 
+
+This program will scan the alive pids looking for which GID is unused in
+in the supplied range. Upon finding one it will add it to its own supplementary
+group list and then scan the pids again expecting to find only itself using
+the GID. If no collision has occurred, the program exists, otherwise it
+retries.
+
+\begin{Options}
+
+	\OptItem{\Opt{min-gid max-gid}}{
+		The minimum and maximum gids out of which one is allocated if 
+		possible.}
+	
+\end{Options}
+	
+\GenRem
+
+This is a program only available for the Linux ports of Condor.
+
+\ExitStatus
+
+\Prog{gidd\_alloc} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
