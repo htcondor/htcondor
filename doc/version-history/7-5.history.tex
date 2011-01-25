@@ -43,6 +43,12 @@ are correctly emitted in all cases.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
+\item The directory structure within the tar file package of Condor
+  has changed.  Previously, the tar file contained a top level
+  directory named \File{condor-<\emph{version}>}.  The top level
+  directory is now the same as the tar file name, but without the
+  \File{.tar.gz} extension.
+
 \item On Unix platforms, the following executables used to be located in both
   the \File{sbin} and \File{bin} directories,
   but are now only located in the \File{bin}
