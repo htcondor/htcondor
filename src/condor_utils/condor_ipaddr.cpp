@@ -343,7 +343,12 @@ const char* ipaddr::to_ip_string_ex(char* buf, int len) const
 
 bool ipaddr::is_valid() const
 {
-	return storage.ss_family == AF_INET || storage.ss_family == AF_INET6;
+		// the field name of sockaddr_storage differs from platform to
+		// platform. For AIX, it defines __ss_family while others usually
+		// define ss_family. Also, the layout is not quite same.
+		// some defines length before ss_family.
+		// So, here, we use sockaddr_in and sockaddr_in6 directly.
+	return v4.sin_family == AF_INET || v6.sin6_family == AF_INET6;
 }
 
 bool ipaddr::is_private_network() const

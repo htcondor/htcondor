@@ -169,13 +169,17 @@ std::vector<MyString> get_hostname_with_alias(const ipaddr& addr)
 		return ret; // no need to call further DNS functions.
 
 	hostent* ent;
-	int aftype = addr.get_aftype();
-#ifdef WIN32
-	// unfortunately Windows does not define gethostybname2
+		//int aftype = addr.get_aftype();
+		//ent = gethostbyname2(hostname.Value(), addr.get_aftype());
+
+		// really should call gethostbyname2() however most platforms do not
+		// support. (Solaris, HP-UX, IRIX)
+		// complete DNS aliases can be only obtained by gethostbyname.
+		// however, what happens if we call it in IPv6-only system?
+		// can we get DNS aliases for the hostname that only contains
+		// IPv6 addresses?
 	ent = gethostbyname(hostname.Value());
-#else
-	ent = gethostbyname2(hostname.Value(), addr.get_aftype());
-#endif
+
 	if (!ent)
 		return ret;
 
