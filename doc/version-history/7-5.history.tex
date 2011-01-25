@@ -38,11 +38,23 @@ The details of each version are described below.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
-\item The directory structure within the tar file package of Condor
+\item The directory structure within the unix tar file package of Condor
   has changed.  Previously, the tar file contained a top level
   directory named \File{condor-<\emph{version}>}.  The top level
   directory is now the same as the tar file name, but without the
   \File{.tar.gz} extension.
+
+\item The contents of the Windows zip and MSI packages of Condor have
+  changed.  The \File{lib} and \File{libexec} folders no longer exist,
+  and all contents previously within them are now in \File{bin}.
+  \Condor{setup} and \Condor{set\_acls} have been moved from the top
+  level directory into \File{bin}.
+
+\item The Windows MSI installer for 7.5.5 requires that all previous
+  MSI installations of Condor be uninstalled.  Before uninstalling
+  previous versions, backup configuration files.  Any settings that
+  need to be preserved must be reapplied to the configuration of the
+  new installation.
 
 \item On Unix platforms, the following executables used to be located in both
   the \File{sbin} and \File{bin} directories,
