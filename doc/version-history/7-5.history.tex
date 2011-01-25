@@ -22,11 +22,6 @@ The details of each version are described below.
 \item Condor version 7.5.5 not yet released.
 %\item Condor version 7.5.5 released on Month Date, 2010.
 
-\item In previous versions of Condor, the \Condor{starter} could not 
-write the \File{.machine.ad} and \File{.job.ad} files to the \File{execute}
-directory when PrivSep was enabled.  This has now been fixed, and these files
-are correctly emitted in all cases.
-
 \item This version of Condor uses a different layout in the spool
   directory for storing files belonging to jobs that are in the queue.
   Conversion of the spool directory is automatic when upgrading, but
@@ -181,6 +176,11 @@ See section~\ref{param:LockDebugLogToAppend} for the complete definition.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item In previous versions of Condor, the \Condor{starter} could not 
+write the \File{.machine.ad} and \File{.job.ad} files to the \File{execute}
+directory when PrivSep was enabled.  This has now been fixed, and these files
+are correctly emitted in all cases.
 
 % gittrac 1773
 \item Since Condor version 7.5.2, the speed of \Condor{q} was not as high
