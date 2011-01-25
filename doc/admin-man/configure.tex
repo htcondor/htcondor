@@ -1,4 +1,4 @@
->%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-Condor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2200,37 +2200,39 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
+  An IP address of the form \Expr{123.123.123.123} or the name
+  of a network device, as in the example \Expr{eth0}.
+  The wild card character (\verb|@|) may be used within either.
+  For example, \Expr{123.123.*} would match a network interface
+  with an IP address of \Expr{123.123.123.123} or \Expr{123.123.100.100}.
+  The default value is \Expr{*}, which matches all network interfaces.
 
-  This setting may be an IP address (e.g. 123.123.123.123) or the name
-  of a network device (e.g. eth0).  The `*' character may be used as a
-  wildcard.  For example, 123.123.* would match a network interface
-  with IP address 123.123.123.123 or 123.123.100.100.  The default
-  value is `*', which matches all network interfaces.
-
-  The effect of this setting depends on the value of
+  The effect of this variable depends on the value of
   \MacroNI{BIND\_ALL\_INTERFACES}.  There are two cases:
 
-  \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{True} (the default): In
-  this case, \MacroNI{NETWORK\_INTERFACE} controls what IP address
-  will be advertised as the public address of the daemon.  If multiple
-  network interfaces match the setting and
+  If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{True} (the default),
+  \MacroNI{NETWORK\_INTERFACE} controls what IP address
+  will be advertised as the public address of the daemon.  
+  If multiple network interfaces match the value and
   \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{True} (the default),
   the IP address that is chosen to be advertised will be the one that
-  is used to communicate with the collector.  If
-  \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{False}, the IP address
+  is used to communicate with the \Condor{collector}.
+  If \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{False}, the IP address
   that is chosen to be advertised will be the one associated with the
   first device (in system-defined order) that is in a public address
   space, or a private address space, or a loopback address, in that
-  order of preference.  If it is desired to advertise an IP address
-  that is not associated with any local network interface (for
-  example, when TCP forwarding is being used),
-  \Macro{TCP\_FORWARDING\_HOST} should be used instead of
+  order of preference.  
+  If it is desired to advertise an IP address
+  that is not associated with any local network interface, 
+  for example, when TCP forwarding is being used,
+  then \Macro{TCP\_FORWARDING\_HOST} should be used instead of
   \MacroNI{NETWORK\_INTERFACE}.
 
-  \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False}: In this case
-  \MacroNI{NETWORK\_INTERFACE} specifies which IP address Condor
-  should use for all (incoming and outgoing) communication.  If more
-  than one IP address matches the setting, the IP address that is
+  If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False},
+  then \MacroNI{NETWORK\_INTERFACE} specifies which IP address Condor
+  should use for all incoming and outgoing communication.
+  If more than one IP address matches the value, 
+  then the IP address that is
   chosen will be the one associated with the first device (in
   system-defined order) that is in a public address space, or a
   private address space, or a loopback address, in that order of
@@ -2278,23 +2280,25 @@ limit above the hard limit (on maximum open files) that it inherits.
   Condor daemons will advertise some additional attributes in their
   ClassAds to help other Condor daemons and tools in the same private
   network to communicate directly.
-  The \MacroNI{PRIVATE\_NETWORK\_INTERFACE} defines what IP address a
-  given multi-homed machine should use for the private network.
+
+  \MacroNI{PRIVATE\_NETWORK\_INTERFACE} defines what IP address
+  of the form \Expr{123.123.123.123} or name
+  of a network device (as in the example \Expr{eth0})
+  a given multi-homed machine should use for the private network.
+  The asterisk (\verb|*|) may be used as a wild card character within either
+  the IP address or the device name.
   If another Condor daemon or tool is configured with the same
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
-  daemon using the IP address specified here.  The syntax for specifying
-  an IP address is identical to \MacroNI{NETWORK\_INTERFACE}.
+  daemon using the IP address specified here.
+  The syntax for specifying an IP address is identical to 
+  \MacroNI{NETWORK\_INTERFACE}.
   Sites using CCB or the Generic Connection Broker (GCB) only need to define
-  the \MacroNI{PRIVATE\_NETWORK\_NAME}, and the 
-  \MacroNI{PRIVATE\_NETWORK\_INTERFACE} will be defined automatically.
-  Unless CCB/GCB is enabled, there is no default for this setting.
-  After changing this setting and running \Condor{reconfig}, it may
-  take up to one \Condor{collector} update interval before the change becomes visible.
-  % DWW
-  % Described in default config file: NO
-  % Defined in the default config file: NO
-  % Default definition in config file: N/A
-  % Result if not defined or RHS is empty: No change in behavior.
+  the \MacroNI{PRIVATE\_NETWORK\_NAME},
+  and the \MacroNI{PRIVATE\_NETWORK\_INTERFACE} will be defined automatically.
+  Unless CCB/GCB is enabled, there is no default value for this variable.
+  After changing this variable and running \Condor{reconfig}, 
+  it may take up to one \Condor{collector} update interval 
+  before the change becomes visible.
 
 \label{param:TcpForwardingHost}
 \item[\Macro{TCP\_FORWARDING\_HOST}]
@@ -5300,14 +5304,14 @@ MAX_JOBS_RUNNING	= \
 \label{param:StartdSendsAlives}
 \item[\Macro{STARTD\_SENDS\_ALIVES}]
   A boolean value that defaults to \Expr{True},
-  which controls the direction in which keep alive messages are sent
-  between the \Condor{schedd} and \Condor{startd} during a claim.
-  Having the \Condor{startd} send the messages (the default) is usually
-  the better option. If the messages need to be sent by the \Condor{schedd},
-  this parameter can be set to \Expr{False}.
-  If both daemons are Condor 7.5.4 or later, this parameter only needs
-  to be set for the \Condor{schedd}. Otherwise, it must be set for both
-  daemons, and to the same value.
+  causing keep alive messages to be sent from the \Condor{startd} to the
+  \Condor{schedd} by TCP during a claim.
+  When \Expr{False}, the \Condor{schedd} daemon sends keep alive signals
+  to the the \Condor{startd}, reversing the direction.
+  If both \Condor{startd} and \Condor{schedd} daemons are Condor version 7.5.4
+  or more recent, this variable is only used by the \Condor{schedd} daemon.
+  For earlier Condor versions, the variable must be set to the same value,
+  and it must be set for both daemons.
 
 \label{param:RequestClaimTimeout}
 \item[\Macro{REQUEST\_CLAIM\_TIMEOUT}]
