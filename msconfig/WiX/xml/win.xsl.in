@@ -28,14 +28,21 @@
              </RegistryKey>
              <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
            </Component>
-           <Component Id="CreateFolders" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5">
-             <CreateFolder Directory="SpoolDir" />
-             <CreateFolder Directory="ExecuteDir" />
-             <CreateFolder Directory="LogDir" />
-           </Component>
-           <Directory Id="LogDir" Name="log" />
-           <Directory Id="ExecuteDir" Name="execute" />
-           <Directory Id="SpoolDir" Name="spool" />
+            <Directory Id="LogDir" Name="log">
+              <Component Id="CreatingLogDir" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder />
+              </Component>
+            </Directory>
+            <Directory Id="ExecuteDir" Name="execute">
+              <Component Id="CreatingExecuteDir" Guid="389E40FD-5B03-4740-B42A-A9F81AEB853D" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder />
+              </Component>
+            </Directory>
+            <Directory Id="SpoolDir" Name="spool">
+              <Component Id="CreatingSpoolDir" Guid="A1F2F929-7417-4C67-851C-1645D587540A" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder />
+              </Component>
+            </Directory>
           </Directory>
         </Directory>
 
@@ -239,7 +246,9 @@
             <MergeRef Id="VC90CRT"/>
             <MergeRef Id="VC90Policy"/>
             <ComponentRef Id="CondorRegNEnv" />
-            <ComponentRef Id="CreateFolders" />
+            <ComponentRef Id="CreatingSpoolDir" />
+            <ComponentRef Id="CreatingExecuteDir"/>
+            <ComponentRef Id="CreatingLogDir" />
           </Feature>
           <!-- Typical/Complete/Custom, below is complete. 
           <Feature Id="Debugging Symbols" Title="Condor Debug Symbol Files" Description="Files used to debug Condor" Level='1000'>
