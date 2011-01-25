@@ -46,7 +46,6 @@ endif(HAVE_EXT_POSTGRESQL)
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 
 condor_exe(condor "tool.cpp" "${C_BIN}" "${TOOL_LINK_LIBS}" OFF)
-prep_clone_install()
 clone_install(condor "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
 clone_install(condor "condor_vacate;condor_reschedule" "${C_BIN}")
 
