@@ -59,6 +59,20 @@ used for a PRE or POST script argument.
   configuration to a large number of machines, because the IP address
   does not have to be customized for each host.
 
+% gittrac #1812
+\item The new configuration variable
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} specifies the
+  maximum number of seconds for which delegated job proxies should be
+  valid.  The default is one day.  A value of 0 indicates that the
+  delegated proxy should be valid for as long as allowed by the
+  credential used to create the proxy; this was the behavior in
+  previous releases of Condor.  This configuration setting currently
+  only applies to proxies delegated for non-grid jobs and Condor-C
+  jobs.  It does not currently apply to globus grid jobs.  The job may
+  override this configuration setting by using the
+  \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit file
+  command.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

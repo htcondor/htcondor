@@ -8658,6 +8658,29 @@ section~\ref{sec:Security} on Security.
   GSI X.509 proxy.  
   The default value of \Expr{False} indicates the limited GSI X.509 proxy.
 
+\label{param:DelegateJobGSICredentialsLifetime}
+\item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}]
+ An integer value that specifies the maximum number of seconds for
+ which delegated proxies should be valid.  The default is one day.  A
+ value of 0 indicates that the delegated proxy should be valid for as
+ long as allowed by the credential used to create the proxy.  The job
+ may override this configuration setting by using the
+ \SubmitCmd{delegated\_job\_GSI\_credentials\_lifetime} submit file
+ command.  This configuration setting currently only applies to
+ proxies delegated for non-grid jobs and Condor-C jobs.  It does not
+ currently apply to globus grid jobs, which always behave as though
+ this setting were 0.  This setting has no effect if
+ \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false.
+
+\label{param:DelegateJobGSICredentialsRefresh}
+\item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH}]
+ A floating point number between 0 and 1 that indicates when delegated
+ credentials with limited lifetime should be renewed.  The renewal is
+ attempted periodically at the specified fraction of the lifetime of
+ the delegated credential.  The default is 0.25.  This setting has no
+ effect if \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false or
+ \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} is 0.
+
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]
   The complete path and file name of the Globus Gridmap file.

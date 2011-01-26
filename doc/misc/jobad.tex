@@ -936,6 +936,23 @@ file command \SubmitCmd{x509userproxy},
 this is the name of the VOMS virtual organization (VO) that 
 the user's credential is part of. 
 
+%%% ClassAd attribute: DelegateJobGSICredentialsLifetime
+\index{ClassAd job attribute!DelegateJobGSICredentialsLifetime}
+\index{DelegateJobGSICredentialsLifetime!job ClassAd attribute}
+\item[\AdAttr{DelegateJobGSICredentialsLifetime}:]   
+An integer that specifies the maximum number of seconds for which
+delegated proxies should be valid.  The default behavior is determined
+by the configuration
+setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}, which
+defaults to one day.  A value of 0 indicates that the delegated proxy
+should be valid for as long as allowed by the credential used to
+create the proxy.  This setting currently only applies to proxies
+delegated for non-grid jobs and Condor-C jobs.  It does not currently
+apply to globus grid jobs, which always behave as though this setting
+were 0.  This setting has no effect if the configuration
+setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false, because in
+that case the job proxy is copied rather than delegated.
+
 \end{description}
 
 The following job ClassAd attributes are relevant only for
