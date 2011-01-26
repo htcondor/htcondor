@@ -37,31 +37,52 @@ The details of each version are described below.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
+\item For those who compile Condor from the source code rather than
+  using packages of pre-built executables, be aware that in this
+  release Condor is built using \Prog{cmake} instead of \Prog{imake}.
+  See the \File{README.building} file for the new instructions on how
+  to build Condor.
+
+\item Windows packages are not included in this release.  We expect to
+  release Windows packages in Condor 7.5.6.
+
+\item AIX packages are not included in this release.  We are planning
+  to drop support for AIX.  Please contact us if this is a problem for
+  you.
+
 \item The directory structure within the Unix tar file package of Condor
   has changed.  Previously, the tar file contained a top level
   directory named \File{condor-<\emph{version}>}.  The top level
   directory is now the same as the tar file name, but without the
   \File{.tar.gz} extension.
 
-\item The contents of the Windows zip and MSI packages of Condor have
-  changed.  The \File{lib} and \File{libexec} folders no longer exist,
-  and all contents previously within them are now in \File{bin}.
-  \Condor{setup} and \Condor{set\_acls} have been moved from the top
-  level directory into \File{bin}.
-
-\item The Windows MSI installer for Condor version 7.5.5 requires that 
-  all previous
-  MSI installations of Condor be uninstalled.  Before uninstalling
-  previous versions, make backup copies of configuration files.  
-  Any settings that
-  need to be preserved must be reapplied to the configuration of the
-  new installation.
-
 \item On Unix platforms, the following executables used to be located in both
   the \File{sbin} and \File{bin} directories,
   but are now only located in the \File{bin}
   directory: \Prog{condor}, \Condor{checkpoint}, \Condor{reschedule}, and
   \Condor{vacate}.
+
+\item The size of the Condor installation has increased by as much as
+  60\% compared to 7.5.4.  We hope to eliminate most of this
+  increase in 7.5.6.
+
+\item Previously, packages containing debug symbols were available for
+  many unix platforms.  In this release, the debug packages contain
+  full `unstripped' executables instead of just the debug symbols.
+
+%\item The contents of the Windows zip and MSI packages of Condor have
+%  changed.  The \File{lib} and \File{libexec} folders no longer exist,
+%  and all contents previously within them are now in \File{bin}.
+%  \Condor{setup} and \Condor{set\_acls} have been moved from the top
+%  level directory into \File{bin}.
+
+%\item The Windows MSI installer for Condor version 7.5.5 requires that 
+%  all previous
+%  MSI installations of Condor be uninstalled.  Before uninstalling
+%  previous versions, make backup copies of configuration files.  
+%  Any settings that
+%  need to be preserved must be reapplied to the configuration of the
+%  new installation.
 
 \item The following list itemizes changes included in this Condor version
   7.5.5 release that belong to Condor version 7.4.5.  That stable series
@@ -246,11 +267,11 @@ limit set according to the \MacroNI{CREATE\_CORE\_FILES} configuration
 variable, rather than the user's coredumpsize limit.
 
 % gittrac #1777
-\item Fixed a case introduced in Condor version 7.5.4 on Windows platforms,
-in which the following spurious log message was produced:
-\begin{verbatim}
-SharedPortEndpoint: Destructor: Problem in thread shutdown notification: 0
-\end{verbatim}
+%\item Fixed a case introduced in Condor version 7.5.4 on Windows platforms,
+%in which the following spurious log message was produced:
+%\begin{verbatim}
+%SharedPortEndpoint: Destructor: Problem in thread shutdown notification: 0
+%\end{verbatim}
 
 % gittrac #1088
 \item Since Condor version 7.4.1,
