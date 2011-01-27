@@ -17,7 +17,8 @@
  ############################################################### 
 
 
-if ( HAVE_KBDD AND (LINUX AND NOT ${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND") )
+# Note that this the linux build will break if HAVE_KBDD AND ${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND")
+if (HAVE_KBDD)
 
 	condor_glob(kbdHdrs kbdSrcs "")
 
