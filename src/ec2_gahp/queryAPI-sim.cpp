@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <netinet/ip.h>
 
+#include <signal.h>
+
 #include <string>
 #include <map>
 #include <sstream>
@@ -16,7 +18,7 @@
 namespace ext = __gnu_cxx;
 
 typedef std::map< std::string, std::string > AttributeValueMap;
-typedef bool (*ActionHandler)( AttributeValueMap & avm, std::string & reply );
+typedef bool (*ActionHandler)( AttributeValueMap & avm, std::string & reply, unsigned requestNumber );
 typedef std::map< std::string, ActionHandler > ActionToHandlerMap;
 
 /*
@@ -46,26 +48,163 @@ namespace __gnu_cxx {
     };
 }
 
-typedef struct {
+std::string xmlTag( const char * tagName, const std::string & tagValue ) {
+    std::ostringstream os;
+    os << "<" << tagName << ">" << tagValue << "</" << tagName << ">";
+    return os.str();
+}
+
+typedef struct Group_t {
+    std::string groupID;
+    
+    Group_t() { }
+    Group_t( const std::string & gID ) : groupID( gID ) { }
 } Group;
 typedef ext::hash_map< std::string, Group > NameToGroupMap;
 
-typedef struct {
+typedef struct Keypair_t {
+    std::string keyName;
+    std::string fingerprint;
     std::string privateKey;
+    
+    Keypair_t() { }
+    Keypair_t( const std::string & kn,
+               const std::string & fp,
+               const std::string & pk ) : keyName( kn ),
+               fingerprint( fp ), privateKey( pk ) { }
 } Keypair;
 typedef ext::hash_map< std::string, Keypair > NameToKeypairMap;
 
-typedef struct {
+std::ostream & operator << ( std::ostream & os, const Keypair & kp ) {
+    os << "<item>" << std::endl;
+    os << xmlTag( "keyName", kp.keyName ) << std::endl;
+    os << xmlTag( "keyFingerprint", kp.fingerprint ) << std::endl;    
+    os << "</item" << std::endl;
+    return os;
+}
+
+class InstanceState {
+    public:
+        enum InstanceStatus {
+            PENDING = 0,
+            RUNNING = 16,
+            SHUTTING_DOWN = 32,
+            TERMINATED = 48,
+            STOPPING = 64,
+            STOPPED = 80,
+            INVALID = -1
+        };
+
+        InstanceState() : statusCode( INVALID ) { }
+        InstanceState( InstanceStatus state ) : statusCode( state ) { }
+        InstanceState( const std::string & state ) {
+            if( state == "pending" ) { this->statusCode = PENDING; }
+            else if( state == "running" ) { this->statusCode = RUNNING; }
+            else if( state == "shutting-down" ) { this->statusCode = SHUTTING_DOWN; }
+            else if( state == "terminated" ) { this->statusCode = TERMINATED; }
+            else if( state == "stopping" ) { this->statusCode = STOPPING; }
+            else if( state == "stopped" ) { this->statusCode = STOPPED; }
+            else { this->statusCode = INVALID; }
+        }
+        
+        void progress() {
+            if( rand() % 2 ) {
+                switch( this->statusCode ) {
+                    case PENDING:
+                        this->statusCode = RUNNING;
+                        break;
+                    case RUNNING:
+                        this->statusCode = SHUTTING_DOWN;
+                        break;
+                    case SHUTTING_DOWN:
+                        this->statusCode = TERMINATED;
+                        break;
+                    case TERMINATED:
+                        this->statusCode = TERMINATED;
+                        break;
+                    case STOPPING:
+                        this->statusCode = STOPPED;                    
+                        break;
+                    case STOPPED:
+                        this->statusCode = STOPPED;                    
+                        break;
+                    case INVALID:
+                        fprintf( stderr, "Attempting to progress the INVALID state implies a bug.\n" );
+                        break;
+                }
+            }                
+        }
+        
+        InstanceStatus code() const { return this->statusCode; }
+        
+        std::string name() const {
+            switch( this->statusCode ) {
+                case PENDING:
+                    return "pending";
+                case RUNNING:
+                    return "running";
+                case SHUTTING_DOWN:
+                    return "shutting-down";
+                case TERMINATED:
+                    return "terminated";
+                case STOPPING:
+                    return "stopping";
+                case STOPPED:
+                    return "stopped";
+                case INVALID:
+                default:
+                    return "invalid";
+            }
+        }
+        
+    private:
+        InstanceStatus statusCode;
+};
+
+std::ostream & operator << ( std::ostream & os, const InstanceState & is ) {
+    os << "<code>" << is.code() << "</code>" << std::endl;
+    os << xmlTag( "name", is.name() ) << std::endl;
+    return os;
+}
+
+typedef struct Instance_t {
+    std::string instanceID;
+
     std::string imageID;
     std::string privateDNSName;
     std::string publicDNSName;
     std::string instanceType;
-    std::string instanceState;
     std::string keyName;
-    
-    ext::hash_map< std::string, const Group * > groups;
+
+    InstanceState instanceState;
+    std::vector< std::string > groupNames;
+
+    Instance_t() { }
+    Instance_t( const std::string & inID, const std::string & imID,
+                const std::string & piDN, const std::string & puDN,
+                const std::string & iT,   const std::string & iS,
+                const std::string & kN,
+                const std::vector< std::string > & gN ) : instanceID(inID),
+                imageID(imID), privateDNSName( piDN ), publicDNSName( puDN ),
+                instanceType( iT ), keyName( kN ), instanceState( iS ),
+                groupNames( gN ) { }
 } Instance;
 typedef ext::hash_map< std::string, Instance > InstanceIDToInstanceMap;
+
+std::ostream & operator << ( std::ostream & os, const Instance & i ) {
+    os << "<item>" << std::endl;
+        os << xmlTag( "instanceId", i.instanceID ) << std::endl;
+        os << xmlTag( "imageId", i.imageID ) << std::endl;
+        os << xmlTag( "privateDnsName", i.privateDNSName ) << std::endl;
+        os << xmlTag( "dnsName", i.publicDNSName ) << std::endl;
+        os << xmlTag( "instanceType", i.instanceType ) << std::endl;
+        os << "<instanceState>" << std::endl;
+            os << i.instanceState;
+        os << "</instanceState>" << std::endl;
+        if( ! i.keyName.empty() ) { os << xmlTag( "keyName", i.keyName ); }
+    os << "</item>" << std::endl;
+    return os;
+}
 
 typedef struct {
     NameToKeypairMap keypairs;
@@ -77,8 +216,12 @@ typedef ext::hash_map< std::string, User > AccessKeyIDToUserMap;
 // Global.  Eww.
 AccessKeyIDToUserMap users;
 
+// Since we don't support CreateSecurityGroup, insert a few for testing.
 void registerTestUsers() {
     users[ "1" ] = User();
+    users[ "1" ].groups[ "sg-name-1" ] = Group( "sg-name-1" );
+    users[ "1" ].groups[ "sg-name-2" ] = Group( "sg-name-2" );
+    users[ "1" ].groups[ "sg-name-3" ] = Group( "sg-name-3" );
     users[ "2" ] = User();
 }
 
@@ -95,34 +238,51 @@ template< class V, class T, class K > V getObject( const T & map, const K & key,
     return ci->second;
 }
 
-bool validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, User & user, std::string & reply ) {
-    bool found = false;
+template< class V, class T, class K > V & getReference( T & map, const K & key, bool & found ) {
+    static V dummyValue = V();
 
-    userID = getObject< std::string >( avm, "AWSAccessKeyId", found );
-    if( (!found) || userID.empty() ) {
-        fprintf( stderr, "DEBUG: failed to find AWSAccessKeyId in query.\n" );
-        reply = "Required parameter AWSAccessKeyId missing or empty.\n";
-        return false;
+    class T::iterator ci = map.find( key );
+    if( map.end() == ci ) {
+        found = false;
+        return dummyValue;
     }
-
-    user = getObject< User >( users, userID, found );
-    if( ! found ) {
-        fprintf( stderr, "Failed to find user identified by '%s'.\n", userID.c_str() );
-        reply = "Required parameter ASWAccessKeyId invalid.\n";
-        return false;
-    }
-    
-    return true;
+    found = true;
+    return map[ key ];
 }
 
-bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
+User & validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, std::string & reply, bool & found ) {
+    static User dummyUser = User();
+        
+    userID = getObject< std::string >( avm, "AWSAccessKeyId", found );
+    if( (! found) || userID.empty() ) {
+        fprintf( stderr, "Failed to find userID in query.\n" );
+        reply = "Required parameter 'AWSAccessKeyId' missing or empty.\n";
+        found = false;
+        return dummyUser;
+    }
+    
+    User & user = getReference< User >( users, userID, found );
+    if( ! found ) {
+        std::ostringstream os;
+        os << "Unknown AWSAccessKeyId '" << userID << "'." << std::endl;
+        reply = os.str();
+        fprintf( stderr, "%s", reply.c_str() );
+        found = false;
+        return dummyUser;
+    }
+    
+    found = true;
+    return user;
+}
+
+bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
     fprintf( stderr, "handleRunInstances()\n" );
 
+    bool found = false;
     std::string userID;
-    User user;
-    bool found = validateAndAcquireUser( avm, userID, user, reply );
+    User & user = validateAndAcquireUser( avm, userID, reply, found );
     if( ! found ) { return false; }
-
+    
     // Validate the ImageId, MinCount, and MaxCount parameters, as well
     // as the optional parameters KeyName, InstanceType, SecurityGroup*,
     // and UserData.
@@ -149,22 +309,36 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
         return false;
     }
     
-    // FIXME: Verify that maxCount >= minCount.
+    if( minCount != "1" || maxCount != "1" ) {
+        fprintf( stderr, "The simulator presently only supports starting one instance at a time.\n" );
+        reply = "Counts must be '1' at present.\n";
+        return false;
+    }   
 
     std::string keyName = getObject< std::string >( avm, "KeyName", found );
     if( ! keyName.empty() ) {
-        // FIXME: Verify that this keypair exists.
+        Keypair kp = getObject< Keypair >( user.keypairs, keyName, found );
+        if( ! found ) {
+            std::ostringstream error;
+            error << "The requested keypair, '" << keyName << "', does not exist." << std::endl;
+            reply = error.str();
+            fprintf( stderr, "%s", reply.c_str() );
+            return false;
+        }
     }
 
     // We presently assume all instanceTypes are valid.
     std::string instanceType = getObject< std::string >( avm, "InstanceType", found );
+    if( instanceType.empty() ) {
+        instanceType = "m1.small";
+    }
 
     std::string userData = getObject< std::string >( avm, "UserData", found );
     if( ! userData.empty() ) {
-        // FIXME: Verify that the user data is Base64-encoded.
+        // We should validate that the user data is properly Base64-encoded.
     }
 
-    std::vector< std::string > securityGroupNames;
+    std::vector< std::string > groupNames;
     for( int i = 1; ; ++i ) {
         std::ostringstream sgParameterName;
         sgParameterName << "SecurityGroup." << i;
@@ -178,22 +352,70 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply ) {
             return false;
         }
         
-        // FIXME: Verify that the group sgName exists.
+        NameToGroupMap::const_iterator ci = user.groups.find( sgName );
+        if( ci != user.groups.end() ) {
+            groupNames.push_back( sgName );
+        } else {
+            std::ostringstream error;
+            error << "Group '" << sgName << "' does not exist.\n";
+            reply = error.str();
+            fprintf( stderr, "%s", reply.c_str() );
+            return false;
+        }
+    }
+    
+    if( groupNames.empty() ) {
+        groupNames.push_back( "default" );
     }
 
-    // FIXME: create the corresponding Instance.
+    // Create the (unique) corresponding Instance.
+    char edh[] = "12345678";
+    snprintf( edh, sizeof( edh ), "%.8x", (unsigned)user.instances.size() );
+    
+    std::string instanceID = "i-"; instanceID += edh;
+    std::string privateDNSName = "private.dns."; privateDNSName += edh;
+    std::string publicDNSName = "public.dns."; publicDNSName += edh;
+    std::string instanceState = "pending";
+    user.instances[ instanceID ] = Instance( instanceID, imageID, privateDNSName, publicDNSName, instanceType, instanceState, keyName, groupNames );
+    std::string reservationID = "r-"; reservationID += edh;
+    
+    // Construct the XML reply.
+    std::ostringstream xml;
+    xml << "<RunInstancesResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
 
+    char rID[] = "1234";
+    snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
+    std::string requestID = rID;
+    
+    xml << "<requestId>" << requestID << "</requestId>" << std::endl;
+    xml << "<reservationId>" << reservationID << "</reservationId>" << std::endl;
+    xml << "<ownerId>" << userID << "</ownerId>" << std::endl;
+    
+    xml << "<groupSet>" << std::endl;
+        for( unsigned i = 0; i < groupNames.size(); ++i ) {
+            xml << xmlTag( "item", xmlTag( "groupId", groupNames[i] ) ) << std::endl;
+        }
+    xml << "</groupSet>" << std::endl;
+
+    xml << "<instancesSet>" << std::endl;
+        xml << user.instances[instanceID];
+    xml << "</instancesSet>" << std::endl;
+
+    xml << "</RunInstancesResponse>" << std::endl;
+
+    reply = xml.str();
     return true;
 }
 
-bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply ) {
+bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
     fprintf( stderr, "handleTerminateInstances()\n" );
 
+    bool found = false;
     std::string userID;
-    User user;
-    bool found = validateAndAcquireUser( avm, userID, user, reply );
+    User & user = validateAndAcquireUser( avm, userID, reply, found );
     if( ! found ) { return false; }
     
+    // The ec2_gahp will never request more than one.
     std::string instanceID = getObject< std::string >( avm, "InstanceId.1", found );
     if( (! found) || instanceID.empty() ) {
         fprintf( stderr, "DEBUG: failed to find instanceID in query.\n" );
@@ -210,28 +432,187 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply ) {
         return false;
     }        
 
-    reply = "// FIXME: spam out some XML.\n";
+    // Change the state of the instance.
+    InstanceState oldInstanceState = instance.instanceState;
+    InstanceState newInstanceState = InstanceState( "terminated" );
+    user.instances[ instanceID ].instanceState = newInstanceState;
+
+    // Construct the XML reply.
+    std::ostringstream xml;
+    xml << "<TerminateInstancesResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
+
+    char rID[] = "1234";
+    snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
+    std::string requestID = rID;
+
+    xml << xmlTag( "requestId", rID ) << std::endl;
+    xml << "<instancesSet>" << std::endl;
+        xml << xmlTag( "instanceId", instanceID ) << std::endl;
+        xml << "<currentState>" << std::endl;
+            xml << newInstanceState;
+        xml << "</currentState>" << std::endl;
+        xml << "<previousState>" << std::endl;
+            xml << oldInstanceState;
+        xml << "</previousState>" << std::endl;
+    xml << "</instancesSet>" << std::endl;
+    xml << "</TerminateInstancesResponse>" << std::endl;
+    
+    reply = xml.str();
     return true;
 }
 
-bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply ) {
+bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
     fprintf( stderr, "handleDescribeInstances()\n" );
-    return false;
+
+    bool found = false;
+    std::string userID;
+    User & user = validateAndAcquireUser( avm, userID, reply, found );
+    if( ! found ) { return false; }
+
+    std::ostringstream xml;
+    xml << "<DescribeInstancesResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
+
+    char rID[] = "1234";
+    snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
+    std::string requestID = rID;
+
+    // Progress the state all of VMs.
+    for( InstanceIDToInstanceMap::iterator i = user.instances.begin(); i != user.instances.end(); ++i ) {
+        user.instances[ i->first ].instanceState.progress();
+    }
+
+    // Because the ec2_gahp only requests a single VM at a time, we don't
+    // maintain reservation records; instead, each VM is in its own.
+    xml << xmlTag( "requestID", rID ) << std::endl;
+    xml << "<reservationSet>" << std::endl;
+    
+    for( InstanceIDToInstanceMap::iterator i = user.instances.begin(); i != user.instances.end(); ++i ) {
+        Instance currentInstance = i->second;
+        std::string reservationID = "r-" + currentInstance.instanceID.substr( 2, 8 );
+
+        xml << "<item>" << std::endl;
+        
+            xml << "<reservationId>" << reservationID << "</reservationId>" << std::endl;
+            xml << "<ownerId>" << userID << "</ownerId>" << std::endl;
+            
+            xml << "<groupSet>" << std::endl;
+                for( unsigned i = 0; i < currentInstance.groupNames.size(); ++i ) {
+                    xml << xmlTag( "item", xmlTag( "groupId", currentInstance.groupNames[i] ) ) << std::endl;
+                }
+            xml << "</groupSet>" << std::endl;
+
+            xml << "<instancesSet>" << std::endl;
+                xml << currentInstance;
+            xml << "</instancesSet>" << std::endl;
+        
+        xml << "</item>" << std::endl;
+    }        
+            
+    xml << "</reservationSet>" << std::endl;
+    xml << "</DescribeInstancesResponse>" << std::endl;
+    
+    reply = xml.str();
+    return true;
 }
 
-bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply ) {
+bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
     fprintf( stderr, "handleCreateKeyPair()\n" );
-    return false;
+
+    bool found = false;
+    std::string userID;
+    User & user = validateAndAcquireUser( avm, userID, reply, found );
+    if( ! found ) { return false; }
+
+    std::string keyName = getObject< std::string >( avm, "KeyName", found );
+    if( (! found) || keyName.empty() ) {
+        fprintf( stderr, "Failed to find KeyName in query.\n" );
+        reply = "Required parameter KeyName missing or empty.\n";
+        return false;
+    }
+    
+    Keypair kp( keyName, "key-fingerprint", "private-key" );
+    user.keypairs[ keyName ] = kp;
+    
+    char rID[] = "1234";
+    snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
+    std::string requestID = rID;
+
+    std::ostringstream xml;
+    xml << "<CreateKeyPairResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
+    xml << xmlTag( "requestId", rID ) << std::endl;
+    xml << xmlTag( "keyName", kp.keyName ) << std::endl;
+    xml << xmlTag( "keyFingerprint", kp.fingerprint ) << std::endl;
+    xml << xmlTag( "keyMaterial", kp.privateKey ) << std::endl;
+    xml << "/<CreateKeyPairResponse>" << std::endl;
+    
+    reply = xml.str();
+    return true;
 }
 
-bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply ) {
+bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
     fprintf( stderr, "handleDeleteKeyPair()\n" );
-    return false;
+
+    bool found = false;
+    std::string userID;
+    User & user = validateAndAcquireUser( avm, userID, reply, found );
+    if( ! found ) { return false; }
+
+    std::string keyName = getObject< std::string >( avm, "KeyName", found );
+    if( (! found) || keyName.empty() ) {
+        fprintf( stderr, "Failed to find KeyName in query.\n" );
+        reply = "Required parameter KeyName missing or empty.\n";
+        return false;
+    }
+    
+    Keypair kp = getObject< Keypair >( user.keypairs, keyName, found );
+    if( ! found ) {
+        std::ostringstream error;
+        error << "Keypair named '" << keyName << "' does not exist." << std::endl;
+        reply = error.str();
+        fprintf( stderr, "%s", reply.c_str() );
+        return false;
+    }
+
+    user.keypairs.erase( keyName );
+    
+    char rID[] = "1234";
+    snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
+    std::string requestID = rID;    
+    
+    std::ostringstream xml;
+    xml << "<DeleteKeyPairsResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
+    xml << xmlTag( "requestId", requestID ) << std::endl;
+    xml << xmlTag( "return", "true" ) << std::endl;
+    xml << "</DeleteKeyPairsResponse>" << std::endl;
+    
+    reply = xml.str();
+    return true;
 }
 
-bool handleDescribeKeyPairs( AttributeValueMap & avm, std::string & reply ) {
+bool handleDescribeKeyPairs( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
     fprintf( stderr, "handleDescribeKeyPairs()\n" );
-    return false;
+
+    bool found = false;
+    std::string userID;
+    User & user = validateAndAcquireUser( avm, userID, reply, found );
+    if( ! found ) { return false; }
+
+    char rID[] = "1234";
+    snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
+    std::string requestID = rID;    
+    
+    std::ostringstream xml;
+    
+    xml << "<DescribeKeyPairsResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
+    xml << "<keySet>" << std::endl;
+        for( NameToKeypairMap::const_iterator i = user.keypairs.begin(); i != user.keypairs.end(); ++i ) {
+            xml << i->second;
+        }
+    xml << "</keySet>" << std::endl;
+    xml << "</DescribeKeyPairsResponse>" << std::endl;
+    
+    reply = xml.str();
+    return true;
 }
 
 // Global.  Eww.
@@ -312,6 +693,8 @@ std::string constructReply( const std::string & statusLine, const std::string & 
 }
 
 std::string handleRequest( const std::string & request ) {
+    static unsigned requestCount = -1; ++requestCount;
+
     std::string URL;
     if( ! extractURL( request, URL ) ) {
         return constructReply( "HTTP/1.1 400 Bad Request", "" );
@@ -369,7 +752,7 @@ std::string handleRequest( const std::string & request ) {
         return constructReply( "HTTP/1.1 404 Not Found", error.str() );
     }
     
-    if( (*(ci->second))( queryParameters, response ) ) {
+    if( (*(ci->second))( queryParameters, response, requestCount ) ) {
         return constructReply( "HTTP/1.1 200 OK", response );
     } else {
         return constructReply( "HTTP/1.1 406 Not Acceptable", response );
@@ -434,9 +817,58 @@ void handleConnection( int sockfd ) {
     }
 }
 
-// FIXME: sigterm handler to dump diagnostics and gracefully exit.  See
-// the condor_amazon simulator.
+int printLeakSummary() {
+    int rv = 0;
+    
+    AccessKeyIDToUserMap::const_iterator u = users.begin();
+    for( ; u != users.end(); ++u ) {
+        // You can leak keys...
+        if( ! u->second.keypairs.empty() ) {
+            fprintf( stderr, "User '%s' leaked keys.\n", u->first.c_str() );
+            rv = 6;
+        }
+        
+        // But since the ec2_gahp doesn't manage groups, you can't leak them.
+        
+        // We never garbage-collect terminated instances (since EC2 leaves
+        // them around for some time as well), but we should verify that
+        // they're all terminated.
+        InstanceIDToInstanceMap::const_iterator i = u->second.instances.begin();
+        for( ; i != u->second.instances.end(); ++i ) {
+            if( i->second.instanceState.code() != InstanceState::TERMINATED ) {
+                fprintf( stderr, "Instance '%s' in in state '%s', not terminated.\n", i->second.instanceID.c_str(), i->second.instanceState.name().c_str() );
+                rv = 6;
+            }
+        }
+    }
+
+    if( rv == 0 ) { fprintf( stderr, "No leaks detected.\n" ); }
+    return rv;
+}
+
+void sigterm( int sig ) {
+    fprintf( stderr, "Caught signal %d, exiting.\n", sig );
+    exit( printLeakSummary() );
+}
+
 int main( int argc, char ** argv ) {
+
+    struct sigaction sa;
+    sa.sa_handler = & sigterm;
+    sigemptyset( &sa.sa_mask );
+    sa.sa_flags = 0;
+
+    int rv = sigaction( SIGTERM, & sa, NULL );
+    if( rv != 0 ) {
+        fprintf( stderr, "sigaction() failed (%d): '%s', aborting.\n", errno, strerror( errno ) );
+        exit( 5 );
+    }
+
+    rv = sigaction( SIGINT, & sa, NULL );
+    if( rv != 0 ) {
+        fprintf( stderr, "sigaction() failed (%d): '%s', aborting.\n", errno, strerror( errno ) );
+        exit( 5 );
+    }
 
     int listenSocket = socket( PF_INET, SOCK_STREAM, 0 );
     if( listenSocket == -1 ) {
@@ -448,7 +880,7 @@ int main( int argc, char ** argv ) {
     listenAddr.sin_family = AF_INET;
     listenAddr.sin_port = htons( 21737 );
     listenAddr.sin_addr.s_addr = INADDR_ANY;
-    int rv = bind( listenSocket, (struct sockaddr *)(& listenAddr), sizeof( listenAddr ) );
+    rv = bind( listenSocket, (struct sockaddr *)(& listenAddr), sizeof( listenAddr ) );
     if( rv != 0 ) {
         fprintf( stderr, "bind() failed (%d): '%s'; aborting.\n", errno, strerror( errno ) );
         exit( 2 );
