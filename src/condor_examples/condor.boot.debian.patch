@@ -1,11 +1,42 @@
---- condor.boot.rpm	2010-08-12 17:31:24.000000000 -0500
-+++ condor.boot.debian	2010-08-13 18:20:26.000000000 -0500
-@@ -29,7 +29,7 @@
- # Description: Condor HTC computing platform
- ### END INIT INFO
- 
--[ -f /etc/sysconfig/condor ] && . /etc/sysconfig/condor
-+[ -f /etc/default/condor ] && . /etc/default/condor
- 
- # Ensure that the settings below are correct for your Condor
- # installation.
+*** condor.boot.rpm	2011-01-29 08:19:54.534993620 -0600
+--- condor.boot.debian	2011-01-29 11:11:07.691545619 -0600
+***************
+*** 35,44 ****
+  ## in the "$SYSCONFIG/condor" file.
+  
+  # Directory with system configuration files
+! #SYSCONFIG="/etc/sysconfig"
+  
+  # Condor's sysconfig file
+! #CONDOR_SYSCONFIG="/etc/sysconfig/condor"
+  
+  # Condor users to look for while shutting down.
+  #CONDOR_USERS="condor,root"
+--- 35,44 ----
+  ## in the "$SYSCONFIG/condor" file.
+  
+  # Directory with system configuration files
+! #SYSCONFIG="/etc/default"
+  
+  # Condor's sysconfig file
+! #CONDOR_SYSCONFIG="/etc/default/condor"
+  
+  # Condor users to look for while shutting down.
+  #CONDOR_USERS="condor,root"
+***************
+*** 117,123 ****
+  
+  # Read in the sysconfig file
+  if [ "$SYSCONFIG" = "" ] ; then
+!   SYSCONFIG=/etc/sysconfig
+  fi
+  if [ "$CONDOR_SYSCONFIG" = "" ] ; then
+    CONDOR_SYSCONFIG=$SYSCONFIG/condor
+--- 117,123 ----
+  
+  # Read in the sysconfig file
+  if [ "$SYSCONFIG" = "" ] ; then
+!   SYSCONFIG=/etc/default
+  fi
+  if [ "$CONDOR_SYSCONFIG" = "" ] ; then
+    CONDOR_SYSCONFIG=$SYSCONFIG/condor

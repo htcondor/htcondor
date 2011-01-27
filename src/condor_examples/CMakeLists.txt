@@ -31,9 +31,9 @@ install (FILES
 		condor.boot.generic
 		condor_config.local.central.manager
 		condor_config.local.ha_condor_client
-		#condor.sysconfig
+		condor.sysconfig
 		README
-		#condor.boot.rpm
+		condor.boot.rpm
 		condor_config.local.ckpt.server
 		condor_config.local.ha_condor_had
 		lamscript
