@@ -387,5 +387,13 @@ class FileTransfer {
 	bool LegalPathInSandbox(char const *path,char const *sandbox);
 };
 
+// returns 0 if no expiration
+time_t GetDesiredDelegatedJobCredentialExpiration(ClassAd *job);
+
+// returns 0 if renewal of lifetime is not needed
+time_t GetDelegatedProxyRenewalTime(time_t expiration_time);
+
+void GetDelegatedProxyRenewalTime(ClassAd *jobAd);
+
 #endif
 

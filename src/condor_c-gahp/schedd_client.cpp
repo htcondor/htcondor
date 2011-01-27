@@ -506,6 +506,8 @@ doContactSchedd()
 		if (current_command->command != SchedDRequest::SDC_JOB_REFRESH_PROXY)
 			continue;
 
+		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(current_command->classad);
+
 		bool result;
 		errstack.clear();
 		if ( delegate_credential ) {
@@ -513,6 +515,7 @@ doContactSchedd()
 												current_command->cluster_id,
 												current_command->proc_id,
 												current_command->proxy_file,
+												expiration_time,
 												&errstack );
 		} else {
 			result = dc_schedd.updateGSIcredential( 

@@ -650,7 +650,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif
     fprintf(pSubFile, "+%s\t= \"%s == $(cluster)\"\n",
-				ATTR_CHILD_REMOVE_CONSTRAINT, ATTR_DAGMAN_JOB_ID );
+				ATTR_OTHER_JOB_REMOVE_REQUIREMENTS, ATTR_DAGMAN_JOB_ID );
 
 		// ensure DAGMan is automatically requeued by the schedd if it
 		// exits abnormally or is killed (e.g., during a reboot)

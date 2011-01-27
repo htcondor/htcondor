@@ -404,6 +404,7 @@ extern const char * const  ATTR_NUM_USERS;
 extern const char * const  ATTR_OFFLINE;
 extern const char * const  ATTR_OPSYS;
 extern const char * const  ATTR_ORIG_MAX_HOSTS;
+extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
 extern const char * const  ATTR_OWNER;
 extern const char * const  ATTR_PARALLEL_SCHEDULING_GROUP;
 extern const char * const  ATTR_PARALLEL_SCRIPT_SHADOW;
@@ -810,6 +811,7 @@ extern const char * const ATTR_COMMITTED_SLOT_TIME;
 
 extern const char * const ATTR_HASH_NAME;
 extern const char * const ATTR_AUTHENTICATED_IDENTITY;
+extern const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

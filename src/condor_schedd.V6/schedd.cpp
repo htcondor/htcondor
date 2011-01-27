@@ -4386,7 +4386,8 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		if ( action == JA_REMOVE_JOBS ) {
 			MyString removeConstraint;
 			int result = GetAttributeString(job_id.cluster, job_id.proc,
-						ATTR_CHILD_REMOVE_CONSTRAINT, removeConstraint);
+						ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
+						removeConstraint);
 			if ( result == 0 && removeConstraint != "" ) {
 				dprintf( D_ALWAYS,
 							"Removing jobs with constraint <%s>\n",
