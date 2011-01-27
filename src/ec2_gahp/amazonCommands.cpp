@@ -97,11 +97,10 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
         return false;
     }
     
-    // Don't write the terminating NUL.
-    unsigned long written = full_write( fd, contents.c_str(), contents.length() - 1 );
-    if( written != contents.length() - 1 ) {
+    unsigned long written = full_write( fd, contents.c_str(), contents.length() );
+    if( written != contents.length() ) {
         dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-            fileName.c_str(), contents.length() - 1, written );
+            fileName.c_str(), contents.length(), written );
         return false;
     }
     
@@ -596,6 +595,8 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
     sRequest.accessKeyFile = argv[3];
     sRequest.secretKeyFile = argv[4];
     sRequest.query_parameters[ "Action" ] = "DescribeInstances";
+    // We should also be able to set the parameter InstanceId.1
+    // and only get one instance back, rather than filtering.
     std::string instanceID = argv[5];
     
     // Send the request.
