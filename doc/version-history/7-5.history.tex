@@ -84,6 +84,16 @@ when a Condor-C job is forwarded to a remote pool. Previously, a default
 value wasn't suppplied, causing jobs to be unnecessarily killed if the
 submit and execute machines temporarily lost contact with each other.
 
+% gittrac #741
+\item Doing \Condor{hold} on a \Condor{dagman} job on Windows no longer
+removes the node jobs of the DAG (the behavior on Windows now matches
+the behavior on other platforms).
+
+% gittrac #1490
+\item Doing \Condor{hold} and then \Condor{remove} on a \Condor{dagman}
+job now removes the node jobs of the DAG, rather than leaving them
+as orphans.
+
 \end{itemize}
 
 \noindent Known Bugs:
