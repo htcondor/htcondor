@@ -179,6 +179,11 @@ Dagman::Config()
 					NULL, true );
 	}
 
+	debug_level = (debug_level_t)param_integer( "DAGMAN_VERBOSITY",
+				debug_level, DEBUG_SILENT, DEBUG_DEBUG_4 );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_VERBOSITY setting: %d\n",
+				debug_level );
+
 	debug_cache_size = 
 		param_integer( "DAGMAN_DEBUG_CACHE_SIZE", debug_cache_size,
 		0, INT_MAX);
@@ -200,8 +205,8 @@ Dagman::Config()
 				max_submit_attempts );
 	startup_cycle_detect =
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", startup_cycle_detect );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %d\n",
-				startup_cycle_detect );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %s\n",
+				startup_cycle_detect ? "True" : "False" );
 	max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL",
 		max_submits_per_interval, 1, 1000 );
@@ -257,13 +262,13 @@ Dagman::Config()
 
 	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST",
 				retrySubmitFirst );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %d\n",
-				retrySubmitFirst );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %s\n",
+				retrySubmitFirst ? "True" : "False" );
 
 	retryNodeFirst = param_boolean( "DAGMAN_RETRY_NODE_FIRST",
 				retryNodeFirst );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_NODE_FIRST setting: %d\n",
-				retryNodeFirst );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_NODE_FIRST setting: %s\n",
+				retryNodeFirst ? "True" : "False" );
 
 	maxIdle =
 		param_integer( "DAGMAN_MAX_JOBS_IDLE", maxIdle, 0, INT_MAX );
@@ -275,20 +280,34 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n",
 				maxJobs );
 
+	maxPreScripts = param_integer( "DAGMAN_MAX_PRE_SCRIPTS", maxPreScripts,
+				0, INT_MAX );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_PRE_SCRIPTS setting: %d\n",
+				maxPreScripts );
+
+	maxPostScripts = param_integer( "DAGMAN_MAX_POST_SCRIPTS", maxPostScripts,
+				0, INT_MAX );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n",
+				maxPostScripts );
+
+	allowLogError = param_boolean( "DAGMAN_ALLOW_LOG_ERROR", allowLogError );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ALLOW_LOG_ERROR setting: %s\n",
+				allowLogError ? "True" : "False" );
+
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
 				mungeNodeNames );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
-				mungeNodeNames );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %s\n",
+				mungeNodeNames ? "True" : "False" );
 
 	prohibitMultiJobs = param_boolean( "DAGMAN_PROHIBIT_MULTI_JOBS",
 				prohibitMultiJobs );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %d\n",
-				prohibitMultiJobs );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %s\n",
+				prohibitMultiJobs ? "True" : "False" );
 
 	submitDepthFirst = param_boolean( "DAGMAN_SUBMIT_DEPTH_FIRST",
 				submitDepthFirst );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %d\n",
-				submitDepthFirst );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
+				submitDepthFirst ? "True" : "False" );
 
 	free( condorSubmitExe );
 	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
@@ -320,13 +339,13 @@ Dagman::Config()
 
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
 				abortDuplicates );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %d\n",
-				abortDuplicates );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n",
+				abortDuplicates ? "True" : "False" );
 
 	abortOnScarySubmit = param_boolean( "DAGMAN_ABORT_ON_SCARY_SUBMIT",
 				abortOnScarySubmit );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %d\n",
-				abortOnScarySubmit );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %s\n",
+				abortOnScarySubmit ? "True" : "False" );
 
 	pendingReportInterval = param_integer( "DAGMAN_PENDING_REPORT_INTERVAL",
 				pendingReportInterval );
@@ -334,8 +353,8 @@ Dagman::Config()
 				pendingReportInterval );
 
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
-				autoRescue );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
+				autoRescue ? "True" : "False" );
 	
 	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM",
 				maxRescueDagNum, 0, ABS_MAX_RESCUE_DAG_NUM );
@@ -505,6 +524,8 @@ void main_init (int argc, char ** const argv) {
                                  "main_testing_stub", NULL);
 ****** FOR TESTING ********/
     debug_progname = condor_basename(argv[0]);
+    	// Note: this is normally set to DEBUG_VERBOSE by the .condor.sub
+	// file.
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
 		// condor_submit_dag version from .condor.sub
