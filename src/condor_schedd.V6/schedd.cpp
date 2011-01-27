@@ -4302,27 +4302,32 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS: {
 		abort_job_myself( job_id, action, true, notify );		
-#ifdef WIN32
-			/*	This is a small patch so when DAGMan jobs are removed
-				on Win32, jobs submitted by the DAGMan are removed as well.
-				This patch is small and acceptable for the 6.8 stable series,
-				but for v6.9 and beyond we should remove this patch and have things
-				work on Win32 the same way they work on Unix.  However, doing this
-				was deemed to much code churning for a stable series, thus this
-				simpler but temporary patch.  -Todd 8/2006.
-			*/
-		int job_universe = CONDOR_UNIVERSE_MIN;
-		GetAttributeInt(job_id.cluster, job_id.proc, 
-						ATTR_JOB_UNIVERSE, &job_universe);
-		if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
-			MyString constraint;
-			constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
-								job_id.cluster );
-			abortJobsByConstraint(constraint.Value(),
-				"removed because controlling DAGMan was removed",
-				true);
+
+			//
+			// Changes here to fix gittrac #741 and #1490:
+			// 1) Child job removing code below is enabled for all
+			//    platforms.
+			// 2) Child job removing code below is only executed when
+			//    *removing* a job.
+			// 3) Child job removing code is only executed when the
+			//    removed job has ChildRemoveConstraint set in its classad.
+			// The main reason for doing this is that, if we don't, when
+			// a DAGMan job is held and then removed, its child jobs
+			// are left running.
+			//
+		if ( action == JA_REMOVE_JOBS ) {
+			MyString removeConstraint;
+			int result = GetAttributeString(job_id.cluster, job_id.proc,
+						ATTR_CHILD_REMOVE_CONSTRAINT, removeConstraint);
+			if ( result == 0 && removeConstraint != "" ) {
+				dprintf( D_ALWAYS,
+							"Removing jobs with constraint <%s>\n",
+							removeConstraint.Value() );
+				abortJobsByConstraint(removeConstraint.Value(),
+					"removed because controlling job was removed",
+					true);
+			}
 		}
-#endif
 		break;
     }
 	case JA_RELEASE_JOBS: {

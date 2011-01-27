@@ -1692,6 +1692,10 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 }
 
 //---------------------------------------------------------------------------
+// Note: the Condor part of this method essentially duplicates functionality
+// that is now in schedd.cpp.  We are keeping this here for now in case
+// someone needs to run a 7.5.6 DAGMan with an older schedd.
+// wenger 2011-01-26
 void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 
 	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor/"
