@@ -13,20 +13,16 @@ Porting Condor from Unix to Windows is a formidable task,
 because many
 components of Condor must interact closely with the underlying operating
 system.
-Instead of waiting until all components of Condor are running
-and stabilized on Windows,
-we have decided to make a clipped version of Condor for Windows.
+Provided is a clipped version of Condor for Windows.
 A clipped version is one in which there is no checkpointing
 and there are no remote system calls.
 
 This section contains additional information specific to running
-Condor on Windows.  Eventually this information will be integrated
-into the Condor Manual as a whole, and this section will disappear.
+Condor on Windows.
 In order to effectively use Condor, first read the overview
 chapter (section~\ref{sec:overview})
 and the user's manual (section~\ref{sec:usermanual}).
-If you will
-also be administrating or customizing the policy and set up of Condor,
+If administrating or customizing the policy and set up of Condor,
 also read the administrator's manual 
 chapter (section~\ref{sec:Admin-Intro}).
 After reading these chapters,
@@ -126,65 +122,84 @@ new release using a minimal amount of effort.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In order for Condor to operate properly, it must at times be able to
-act on behalf of users who submit jobs.  In particular, this is
-required on submit machines so that Condor can access a job's input
-files, create and access the job's output files, and write to the
-job's log file from within the appropriate security context.  It may
-also be desirable for Condor to execute the job itself under the
-security context of its submitting user (see
-\ref{sec:windows-run-as-owner} for details on running jobs as the
-submitting user on Windows).
-
+act on behalf of users who submit jobs.  
+This is required on submit machines,
+so that Condor can access a job's input files, 
+create and access the job's output files, 
+and write to the job's log file from within the appropriate security context.
 On Unix systems, arbitrarily changing what user Condor performs its
 actions as is easily done when Condor is started with root privileges.
 On Windows, however, performing an action as a particular user
-requires knowledge of that user's password, even when running at the
-maximum privilege level.
-
-Condor on Windows supports the notion of \Term{user privilege switching}
-through the use of a secure password store.  Users can provide Condor
-with their passwords using the \Condor{store\_cred} tool.  Passwords
-managed by Condor are encrypted and stored in a secure location within the
-Windows registry.  When Condor needs to perform an action as a
-particular user, it uses the securely stored password to do so.
-
-\index{submit commands!run\_as\_owner}
-By default, the secure password store is managed by the
-\Condor{schedd}.  This approach works in environments where
-the user's password is only needed on the submit machine, which
-is the case unless the \SubmitCmd{run\_as\_owner} capability described
-in section \ref{sec:windows-run-as-owner} is needed.
+or on behalf of a particular user requires knowledge of that user's password,
+even when running at the maximum privilege level.
+Condor provides secure password storage through the use of the 
+\Condor{store\_cred} tool.
+Passwords managed by Condor are encrypted and stored 
+in a secure location within the Windows registry.
+When Condor needs to perform an action as or on behalf of a particular user,
+it uses the securely stored password to do so.
+This implies that a password is stored for every user that will
+submit jobs from the Windows submit machine.
 
 \index{Condor daemon!condor\_credd@\Condor{credd}}
 \index{daemon!condor\_credd@\Condor{credd}}
 \index{condor\_credd daemon}
-When the \SubmitCmd{run\_as\_owner} feature is needed, it is necessary
-to configure a centralized \Condor{credd} daemon to manage the secure
-password store.  This makes each user's password available, via an encrypted
-connection to the \Condor{credd}, to any execute machine that may
-need it. The following section contains instructions for setting up
-a \Condor{credd} to manage passwords.
+\index{submit commands!run\_as\_owner}
+A further feature permits Condor to execute the job itself under the
+security context of its submitting user, specifying 
+the \SubmitCmd{run\_as\_owner} command in the job's
+submit description file. 
+With this feature, 
+it is necessary to configure and run a centralized \Condor{credd} daemon
+to manage the secure password storage.
+This makes each user's password available, via an encrypted
+connection to the \Condor{credd}, to any execute machine that may need it.
+
+By default, the secure password store for a submit machine when no
+\Condor{credd} is running is managed by the \Condor{schedd}.
+This approach works in environments where
+the user's password is only needed on the submit machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:windows-run-as-owner}Executing Jobs as the Submitting User}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{submit commands!run\_as\_owner}
 
-By default, Condor executes jobs on Windows using dedicated ``run
-accounts'' that have minimal access rights and privileges.  As an
-alternative, Condor can be configured to allow users to run jobs using
-their Windows login accounts. This may be useful if jobs
-need access to files on a network share or to other resources that aren't
-available to a low-privilege run account.
+By default, Condor executes jobs on Windows using dedicated run
+accounts that have minimal access rights and privileges,
+and which are recreated for each new job.
+As an alternative, Condor can be configured to allow users to run jobs using
+their Windows login accounts. 
+This may be useful if jobs need access to files on a network share,
+or to other resources that are not available to the low-privilege run account.
 
 This feature requires use of a \Condor{credd} daemon for secure
-password storage and retrieval. It is first necessary to select
-a machine on which to run the \Condor{credd}. Often, the machine
+password storage and retrieval. 
+With the \Condor{credd} daemon running,
+the user's password must be stored, using the \Condor{store\_cred} tool.
+Then,
+a user that wants a job to run using their own account
+places into the job's submit description file
+\begin{verbatim}
+  run_as_owner = True
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:credd}The condor\_credd Daemon}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor daemon!condor\_credd@\Condor{credd}}
+\index{daemon!condor\_credd@\Condor{credd}}
+\index{condor\_credd daemon}
+
+It is first necessary to select
+a machine on which to run the \Condor{credd}. 
+Often, the machine
 acting as the pool's central manager is a good choice. An important
 restriction, however, is that the \Condor{credd} host must be a
 machine running Windows.
 
 All configuration settings necessary to enable the \Condor{credd} are
-contained in the example \File{etc$\backslash$condor\_config.local.credd}
+contained in the example \verb|etc\condor_config.local.credd|
 file from the Condor distribution. Copy these settings into a local
 configuration file for the machine that will run the \Condor{credd}.
 Run \Code{condor\_restart} for these new settings to take effect, then
@@ -195,9 +210,9 @@ machines in the pool. The following settings should be used, with
 the \Macro{LOCAL\_CREDD} setting customized to point to the machine
 hosting the \Condor{credd} and the \Macro{ALLOW\_CONFIG} setting
 customized if needed to refer to an administrative account that exists
-on all Condor nodes. (A copy of these settings is available in the
-comments contained in the
-\File{etc$\backslash$condor\_config.local.credd} example file.)
+on all Condor nodes. 
+A copy of these settings is available in the comments contained in the
+\verb|etc\condor_config.local.credd| example file.
 \begin{verbatim}
 CREDD_HOST = credd.cs.wisc.edu
 CREDD_CACHE_LOCALLY = True
@@ -215,36 +230,40 @@ SEC_CONFIG_INTEGRITY = REQUIRED
 The configuration employed here relies on the \verb@PASSWORD@
 authentication method to facilitate secure communication between execute
 machines and the \Condor{credd}. In order for \verb@PASSWORD@ 
-authenticated communication to work, a ``pool password'' must be chosen
+authenticated communication to work, a \Term{pool password} must be chosen
 and distributed. Once a pool password is decided upon, it must be
 stored identically on each machine. The pool password first should be
 stored on the \Condor{credd} host, then the other machines in the pool.
 
 To store the pool password on a given machine, run
-\Code{condor\_store\_cred -c add} when logged in with the administrative
+\begin{verbatim}
+  condor_store_cred -c add
+\end{verbatim}
+when logged in with the administrative
 account on that machine, and enter the password when prompted. If
 the administrative account is shared across all machines (i.e. if it
 is a domain account or has the same password on all machines),
 logging in separately to each machine in the pool can be avoided.
 Instead, the pool password can be securely pushed out to each machine
 using commands of the form
-\Code{condor\_store\_cred -c -n exec01.cs.wisc.edu add}.
+\begin{verbatim}
+  condor_store_cred -c -n exec01.cs.wisc.edu add
+\end{verbatim}
 
 Once the pool password is distributed, execute
-\Code{condor\_reconfig -all} from the central manager. This will cause
+\begin{verbatim}
+  condor_reconfig -all
+\end{verbatim}
+from the central manager. This will cause
 each execute machine to test its ability to authenticate with the
 \Condor{credd}. To see whether this test worked for each machine in the
 pool, run the command
-\Code{condor\_status -f "\%s$\backslash$t" Name -f "\%s$\backslash$n" ifThenElse(isUndefined(LocalCredd),$\backslash$"UNDEF$\backslash$",LocalCredd)}.
-Any rows in the output with the ``UNDEF'' string indicate machines where
+\begin{verbatim}
+  condor_status -f "%s\t" Name -f "%s\n" ifThenElse(isUndefined(LocalCredd),\"UNDEF\",LocalCredd)
+\end{verbatim}
+Any rows in the output with the \Expr{UNDEF} string indicate machines where
 secure communication is not working properly. Verify that the pool password
 is stored correctly on these machines.
-
-\index{submit commands!run\_as\_owner}
-Once these configuration changes are made and the pool password is
-distributed, a user that wants a job to run using their own account
-can simply set the \SubmitCmd{run\_as\_owner} macro in the job's
-submit file to True.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:windows-load-profile}Executing Jobs with the User's Profile Loaded}
