@@ -67,6 +67,7 @@ extern const char * const  ATTR_CLAIM_ID;
 extern const char * const  ATTR_CLAIM_IDS;
 extern const char * const  ATTR_PUBLIC_CLAIM_ID;
 extern const char * const  ATTR_PUBLIC_CLAIM_IDS;
+extern const char * const  ATTR_CHILD_REMOVE_CONSTRAINT;
 extern const char * const  ATTR_CLAIM_STATE;
 extern const char * const  ATTR_CLAIM_TYPE;
 extern const char * const  ATTR_CLIENT_MACHINE;
