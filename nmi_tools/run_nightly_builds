@@ -230,13 +230,19 @@ sub submit_builds
 			next;
 		}
 
+		#############
+		# Find the sha1 for this build
+		#############
+		my $sha1 = "000";
+		$sha1 = `$GIT --git-dir=$GIT_SRC_ROOT log --pretty=oneline -n 1 $tag | awk '{print \$1}'`;
+
 		##############
 		# Actually submit the build.
 		##############
 		logit "Submitting nightly build for tag: '$tag', " .
 			"module: '$tags{$tag}'\n";
 		# cns_cmd already contains a huge command line!
-		log_cmd("$cns_cmd --tag=$tag --module=$tags{$tag}",
+		log_cmd("$cns_cmd --sha1=$sha1 --tag=$tag --module=$tags{$tag}",
 				"Failure to submit build: $tag, $tags{$tag}.");
 	}
 }

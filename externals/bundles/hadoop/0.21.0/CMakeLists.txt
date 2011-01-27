@@ -68,12 +68,12 @@ if ( NOT PROPER )
 		endif()
 
 	else()
-		message (STATUS "external skiped (hadoop)")
+		message (STATUS "external skipped (hadoop)")
 	endif()
 
 else( NOT PROPER )
 
-	message (STATUS "external skiped (hadoop)")
+	message (STATUS "external skipped (hadoop)")
 
 endif( NOT PROPER )
 

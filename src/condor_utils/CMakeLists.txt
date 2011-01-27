@@ -58,6 +58,10 @@ install (FILES MyString.h
 		 user_log.c++.h
 		 user_log.README
 		 write_user_log.h
+		 compat_classad.h
+		 compat_classad_list.h
+		 compat_classad_util.h
+		 stl_string_utils.h
 		DESTINATION ${C_INCLUDE})
 
 install ( TARGETS condorapi DESTINATION ${C_LIB} )

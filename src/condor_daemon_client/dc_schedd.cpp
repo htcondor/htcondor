@@ -227,6 +227,20 @@ DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 }
 
 
+ClassAd*
+DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
+                                         action_result_type_t result_type )
+{
+	if( ! ids ) {
+		dprintf( D_ALWAYS, "DCSchedd::clearDirtyAttrs: "
+				"list of jobs is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, ids, NULL, NULL,
+				result_type, false, errstack );
+}
+
+
 bool
 DCSchedd::reschedule()
 {

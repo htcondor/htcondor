@@ -42,5 +42,5 @@ if ( WITH_UNICOREGAHP AND NOT PROPER )
 	install(FILES ${EXTERNAL_STAGE}/usr/share/java/ugahp.jar DESTINATION ${C_LIB})
 
 else()
-	message (STATUS "external skiped (unicoregahp)")
+	message (STATUS "external skipped (unicoregahp)")
 endif()

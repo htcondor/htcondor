@@ -182,7 +182,7 @@
              "  FROM Task,  Method_nmi  ".
 				 " WHERE Task.runid = Method_nmi.runid ".
              "   AND Method_nmi.input_runid = $runid ".
-             " ORDER BY Task.name ASC";
+             " ORDER BY Task.start ASC";
    	$result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
    	while ($row = mysql_fetch_array($result)) {
 			$task_name = $row["name"];

@@ -142,6 +142,6 @@ if (WITH_GSOAP)
 
 else(WITH_GSOAP)
 
-	message (STATUS "external skiped (gsoap)")
+	message (STATUS "external skipped (gsoap)")
 
 endif(WITH_GSOAP)

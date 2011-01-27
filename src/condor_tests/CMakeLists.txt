@@ -56,6 +56,7 @@ if (BUILD_TESTS)
 	condor_exe_test(x_write_joblog_events.exe "x_write_joblog_events.cpp" "condorapi")
 	condor_exe_test(lib_eventlog_base.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
+	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
@@ -121,7 +122,9 @@ if (BUILD_TESTS)
 	##########################################################
 	# platform specific tests
 	if(LINUX)
+	if ( NOT WITHOUT_AMAZON_TEST )
 		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
+	endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
 	elseif(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")

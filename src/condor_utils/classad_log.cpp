@@ -801,7 +801,7 @@ LogDestroyClassAd::ReadBody(FILE* fp)
 	return readword(fp, key);
 }
 
-LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val)
+LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val, bool dirty)
 {
 	op_type = CondorLogOp_SetAttribute;
 	key = strdup(k);
@@ -811,6 +811,7 @@ LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val)
 	} else {
 		value = strdup("UNDEFINED");
 	}
+	is_dirty = dirty;
 }
 
 
@@ -831,6 +832,7 @@ LogSetAttribute::Play(void *data_structure)
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 	rval = ad->AssignExpr(name, value);
+	ad->SetDirtyFlag(name, is_dirty);
 
 #if HAVE_DLOPEN
 	ClassAdLogPluginManager::SetAttribute(key, name, value);

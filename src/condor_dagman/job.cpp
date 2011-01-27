@@ -708,10 +708,16 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 
 	if ( (_throttleInfo != NULL) &&
 				(tmpName != *(_throttleInfo->_category)) ) {
+			// When we implement the -strict flag (see gittrac # 1755),
+			// should this be a fatal error?
 		debug_printf( DEBUG_NORMAL, "Warning: new category %s for node %s "
 					"overrides old value %s\n", categoryName, GetJobName(),
 					_throttleInfo->_category->Value() );
 	}
+
+		// Note: we must assign a ThrottleInfo here even if the name
+		// already matches, for the case of lifting splices.
+	ThrottleByCategory::ThrottleInfo *oldInfo = _throttleInfo;
 
 	ThrottleByCategory::ThrottleInfo *throttleInfo =
 				catThrottles.GetThrottleInfo( &tmpName );
@@ -719,6 +725,13 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 		_throttleInfo = throttleInfo;
 	} else {
 		_throttleInfo = catThrottles.AddCategory( &tmpName );
+	}
+
+	if ( oldInfo != _throttleInfo ) {
+		if ( oldInfo != NULL ) {
+			oldInfo->_totalJobs--;
+		}
+		_throttleInfo->_totalJobs++;
 	}
 }
 

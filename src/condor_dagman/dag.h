@@ -554,6 +554,12 @@ class Dag {
 		// Node category throttle information for the DAG.
 	ThrottleByCategory		_catThrottles;
 
+		/**	Go through all of the node throttling categories, and print
+			a warning if any categories have no nodes assigned to them,
+			or don't have their throttle set.
+		*/
+	void CheckThrottleCats();
+
 	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
 
 	bool AllowLogError(void) { return _allowLogError; }

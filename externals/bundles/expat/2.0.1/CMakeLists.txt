@@ -59,6 +59,6 @@ if ( WITH_EXPAT )
 
 else(WITH_EXPAT)
 
-	message (STATUS "external skiped (expat)")
+	message (STATUS "external skipped (expat)")
 
 endif(WITH_EXPAT)

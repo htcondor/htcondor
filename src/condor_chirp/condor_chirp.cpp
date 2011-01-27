@@ -282,7 +282,6 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 	return 0;
 }
 
-
 /*
  * chirp_fetch
  *   parse the fetch-specific arguments, then call
@@ -1036,7 +1035,6 @@ int chirp_lchown(int argc, char **argv) {
 	
 	struct chirp_client *client = 0;
 
-		// First, connect to the submit host
 	client = chirp_client_connect_starter();
 	if (!client) {
 		fprintf(stderr, "cannot chirp_connect to shadow\n");

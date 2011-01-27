@@ -57,7 +57,7 @@ if (LIBXML2_FOUND)
 	set( LIBXML2_FOUND ${LIBXML2_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_LIBXML2 ON PARENT_SCOPE )
 else()
-	message (STATUS "external skiped (libxml2)")
+	message (STATUS "external skipped (libxml2)")
 endif()
 
 

@@ -35,12 +35,22 @@ if(NOT WIN_EXEC_NODE_ONLY)
 			DEPENDS grid_monitor_wrapper grid_manager_monitor_agent
 			COMMAND cat
 			ARGS grid_monitor_wrapper grid_manager_monitor_agent > "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh" && chmod 755 "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
+			WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		)
 		add_custom_target( grid_monitor
 				   ALL
 				   DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
 		)
 		install (FILES "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh" DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
+		install (FILES
+			nqs_cancel.sh
+			nqs_hold.sh
+			nqs_resume.sh
+			nqs_status.sh
+			nqs_submit.sh
+			DESTINATION ${C_LIB}/glite/bin
+			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 	endif()
 

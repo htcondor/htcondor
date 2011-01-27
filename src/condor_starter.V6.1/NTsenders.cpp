@@ -394,7 +394,7 @@ REMOTE_CONDOR_begin_execution( void )
 }
 
 int
-REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg, char *buffer)
+REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg)
 {
         int     rval;
         condor_errno_t     terrno;
@@ -428,16 +428,8 @@ REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg, cha
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
                 return rval;
         }
-        char *temp_buffer = NULL;
-        if(!buffer) {
-                temp_buffer = (char*)malloc(1024);
-                buffer = temp_buffer;
-        }
-        result = ( syscall_sock->code_bytes_bool(buffer, 1024) );
-        ON_ERROR_RETURN( result );
         result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
-        free(temp_buffer);
         return rval;
 }
 

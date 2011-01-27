@@ -103,8 +103,8 @@ Dagman::Dagman() :
 	storkSubmitExe (NULL),
 	storkRmExe (NULL),
 	submit_delay (0),
-	max_submit_attempts (0),
-	max_submits_per_interval (1000), // so Coverity is happy
+	max_submit_attempts (6),
+	max_submits_per_interval (5), // so Coverity is happy
 	m_user_log_scan_interval (5),
 	primaryDagFile (""),
 	multiDags (false),
@@ -119,15 +119,16 @@ Dagman::Dagman() :
 	abortDuplicates (true), // so Coverity is happy
 	submitDepthFirst (false), // so Coverity is happy
 	abortOnScarySubmit (true), // so Coverity is happy
-	pendingReportInterval (10 * 60), // so Coverity is happy
+	pendingReportInterval (10 * 60), // 10 minutes
 	_dagmanConfigFile (NULL), // so Coverity is happy
-	autoRescue(false),
+	autoRescue(true),
 	doRescueFrom(0),
-	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
+	maxRescueDagNum(MAX_RESCUE_DAG_DEFAULT),
 	rescueFileToRun(""),
 	dumpRescueDag(false),
 	_defaultNodeLog(NULL),
-	_generateSubdagSubmits(true)
+	_generateSubdagSubmits(true),
+	_maxJobHolds(100)
 {
 }
 
@@ -153,8 +154,8 @@ Dagman::~Dagman()
 bool
 Dagman::Config()
 {
-	int debug_cache_size;
-	bool debug_cache_enabled;
+	int debug_cache_size = (1024*1024)*5; // 5 MB
+	bool debug_cache_enabled = false;
 
 		// Note: debug_printfs are DEBUG_NORMAL here because when we
 		// get here we haven't processed command-line arguments yet.
@@ -179,32 +180,36 @@ Dagman::Config()
 	}
 
 	debug_cache_size = 
-		param_integer( "DAGMAN_DEBUG_CACHE_SIZE", ((1024*1024)*5), 0, INT_MAX);
+		param_integer( "DAGMAN_DEBUG_CACHE_SIZE", debug_cache_size,
+		0, INT_MAX);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %d\n",
 				debug_cache_size );
 
 	debug_cache_enabled = 
-		param_boolean( "DAGMAN_DEBUG_CACHE_ENABLE", false );
+		param_boolean( "DAGMAN_DEBUG_CACHE_ENABLE", debug_cache_enabled );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_ENABLE setting: %s\n",
 				debug_cache_enabled?"True":"False" );
 
-	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
+	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", submit_delay, 0, 60 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
 				submit_delay );
 	max_submit_attempts =
-		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 16 );
+		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", max_submit_attempts,
+		1, 16 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMIT_ATTEMPTS setting: %d\n",
 				max_submit_attempts );
 	startup_cycle_detect =
-		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
+		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", startup_cycle_detect );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %d\n",
 				startup_cycle_detect );
 	max_submits_per_interval =
-		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
+		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL",
+		max_submits_per_interval, 1, 1000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
 				max_submits_per_interval );
 	m_user_log_scan_interval =
-		param_integer( "DAGMAN_USER_LOG_SCAN_INTERVAL", 5, 1, INT_MAX);
+		param_integer( "DAGMAN_USER_LOG_SCAN_INTERVAL",
+		m_user_log_scan_interval, 1, INT_MAX);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
 
@@ -250,11 +255,13 @@ Dagman::Config()
 
 		// ...end of event checking setup.
 
-	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST", true );
+	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST",
+				retrySubmitFirst );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %d\n",
 				retrySubmitFirst );
 
-	retryNodeFirst = param_boolean( "DAGMAN_RETRY_NODE_FIRST", false );
+	retryNodeFirst = param_boolean( "DAGMAN_RETRY_NODE_FIRST",
+				retryNodeFirst );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_NODE_FIRST setting: %d\n",
 				retryNodeFirst );
 
@@ -268,15 +275,18 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n",
 				maxJobs );
 
-	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES", true );
+	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
+				mungeNodeNames );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
 				mungeNodeNames );
 
-	prohibitMultiJobs = param_boolean( "DAGMAN_PROHIBIT_MULTI_JOBS", false );
+	prohibitMultiJobs = param_boolean( "DAGMAN_PROHIBIT_MULTI_JOBS",
+				prohibitMultiJobs );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %d\n",
 				prohibitMultiJobs );
 
-	submitDepthFirst = param_boolean( "DAGMAN_SUBMIT_DEPTH_FIRST", false );
+	submitDepthFirst = param_boolean( "DAGMAN_SUBMIT_DEPTH_FIRST",
+				submitDepthFirst );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %d\n",
 				submitDepthFirst );
 
@@ -308,26 +318,27 @@ Dagman::Config()
 		ASSERT( storkRmExe );
 	}
 
-	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES", true );
+	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
+				abortDuplicates );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %d\n",
 				abortDuplicates );
 
-	abortOnScarySubmit = param_boolean( "DAGMAN_ABORT_ON_SCARY_SUBMIT", true );
+	abortOnScarySubmit = param_boolean( "DAGMAN_ABORT_ON_SCARY_SUBMIT",
+				abortOnScarySubmit );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %d\n",
 				abortOnScarySubmit );
 
-	const int PENDING_REPORT_INT_DEFAULT = 10 * 60; // 10 minutes
 	pendingReportInterval = param_integer( "DAGMAN_PENDING_REPORT_INTERVAL",
-				PENDING_REPORT_INT_DEFAULT );
+				pendingReportInterval );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
-	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
+	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
 				autoRescue );
 	
 	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM",
-				MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM );
+				maxRescueDagNum, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
 
@@ -337,11 +348,13 @@ Dagman::Config()
 				_defaultNodeLog ? _defaultNodeLog : "null" );
 
 	_generateSubdagSubmits = 
-		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS", true );
+		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS",
+		_generateSubdagSubmits );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n",
 				_generateSubdagSubmits ? "True" : "False" );
 
-	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", 100, 0, 1000000 );
+	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
+				0, 1000000 );
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
@@ -996,6 +1009,8 @@ void main_init (int argc, char ** const argv) {
 
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
+
+	dagman.dag->CheckThrottleCats();
 
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();

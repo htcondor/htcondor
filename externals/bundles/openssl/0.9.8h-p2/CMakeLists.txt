@@ -105,6 +105,6 @@ if (WITH_OPENSSL)
 
 else(WITH_OPENSSL)
 
-	message (STATUS "external skiped (openssl)")
+	message (STATUS "external skipped (openssl)")
 
 endif(WITH_OPENSSL)

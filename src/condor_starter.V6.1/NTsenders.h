@@ -34,7 +34,7 @@ extern "C" {
 	int REMOTE_CONDOR_job_exit( int status, int reason, ClassAd *ad );
 	int REMOTE_CONDOR_job_termination( ClassAd *ad );
 	int REMOTE_CONDOR_begin_execution( void );
-	int REMOTE_CONDOR_open( char const *path, open_flags_t flags, int mode, char *buffer = NULL);
+	int REMOTE_CONDOR_open( char const *path, open_flags_t flags, int mode);
 	int REMOTE_CONDOR_close( int fd );
 	int REMOTE_CONDOR_unlink( char *path );
 	int REMOTE_CONDOR_rename( char *path, char *newpath );
