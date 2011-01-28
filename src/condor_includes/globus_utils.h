@@ -261,8 +261,12 @@ int x509_proxy_try_import( const char *proxy_file );
 
 const char* x509_error_string( void );
 
+/*
+ * expiration_time: 0 if none; o.w. timestamp of delegated proxy expiration
+ */
 int
 x509_send_delegation( const char *source_file,
+					  time_t expiration_time,
 					  int (*recv_data_func)(void *, void **, size_t *), 
 					  void *recv_data_ptr,
 					  int (*send_data_func)(void *, void *, size_t),

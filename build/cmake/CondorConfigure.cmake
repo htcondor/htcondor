@@ -663,7 +663,8 @@ else(MSVC)
 endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
-dprint("----- Begin CMake Var DUMP -----")
+message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
@@ -817,6 +818,6 @@ dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
 dprint ( "CMAKE_AR: ${CMAKE_AR}" )
 dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
 
-dprint("----- Begin CMake Var DUMP -----")
+message(STATUS "----- Begin CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")
