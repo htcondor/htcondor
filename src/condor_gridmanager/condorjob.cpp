@@ -688,8 +688,12 @@ void CondorJob::doEvaluateState()
 					lastProxyExpireTime = jobProxy->expiration_time;
 					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
+					time_t actual_expiration = delegatedProxyExpireTime;
+					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
+						actual_expiration = jobProxy->expiration_time;
+					}
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-								   (int)delegatedProxyExpireTime );
+								   (int)actual_expiration );
 				}
 				gmState = GM_POLL_ACTIVE;
 			} else {
@@ -792,8 +796,12 @@ void CondorJob::doEvaluateState()
 					lastProxyExpireTime = jobProxy->expiration_time;
 					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
+					time_t actual_expiration = delegatedProxyExpireTime;
+					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
+						actual_expiration = jobProxy->expiration_time;
+					}
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-								   (int)delegatedProxyExpireTime );
+								   (int)actual_expiration );
 				}
 				lastProxyRefreshAttempt = time(NULL);
 				gmState = GM_SUBMITTED;

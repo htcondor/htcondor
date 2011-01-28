@@ -936,6 +936,7 @@ bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
 int
 x509_send_delegation( const char *source_file,
 					  time_t expiration_time,
+					  time_t *result_expiration_time,
 					  int (*recv_data_func)(void *, void **, size_t *), 
 					  void *recv_data_ptr,
 					  int (*send_data_func)(void *, void *, size_t),
@@ -1061,7 +1062,7 @@ x509_send_delegation( const char *source_file,
 		}
 	}
 
-	if( expiration_time ) {
+	if( expiration_time || result_expiration_time ) {
 		time_t time_left = 0;
 		result = globus_gsi_cred_get_lifetime( source_cred, &time_left );
 		if ( result != GLOBUS_SUCCESS ) {
@@ -1073,6 +1074,10 @@ x509_send_delegation( const char *source_file,
 		time_t now = time(NULL);
 		int orig_expiration_time = now + time_left;
 
+		if( result_expiration_time ) {
+			*result_expiration_time = orig_expiration_time;
+		}
+
 		if( orig_expiration_time > expiration_time ) {
 			int time_valid = (expiration_time - now)/60;
 
@@ -1081,6 +1086,9 @@ x509_send_delegation( const char *source_file,
 				rc = -1;
 				error_line = __LINE__;
 				goto cleanup;
+			}
+			if( result_expiration_time ) {
+				*result_expiration_time = expiration_time;
 			}
 		}
 	}
