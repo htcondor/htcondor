@@ -32,6 +32,7 @@
 #include "directory.h"
 #include "condor_claimid_parser.h"
 #include "authentication.h"
+#include "globus_utils.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -160,7 +161,7 @@ RemoteResource::activateClaim( int starterVersion )
 		dprintf( D_FULLDEBUG,
 	                 "trying early delegation (for glexec) of proxy: %s\n", proxy );
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
-		int dReply = dc_startd->delegateX509Proxy( proxy, expiration_time );
+		int dReply = dc_startd->delegateX509Proxy( proxy, expiration_time, NULL );
 		if( dReply == OK ) {
 			// early delegation was successful. this means the startd
 			// is going to launch the starter using glexec, so we need
@@ -976,6 +977,8 @@ RemoteResource::setJobAd( ClassAd *jA )
 			m_want_chirp ? "true" : "false",
 			m_want_streaming_io ? "true" : "false");
 	}
+
+	jA->LookupString(ATTR_X509_USER_PROXY, proxy_path);
 }
 
 
@@ -1495,6 +1498,21 @@ rrStateToString( ResourceState s )
 	return Resource_State_String[s];
 }
 
+void
+RemoteResource::startCheckingProxy()
+{
+	if( proxy_check_tid != -1 ) {
+		return; // already running
+	}
+	if( !proxy_path.IsEmpty() ) {
+		// This job has a proxy.  We need to check it regularlly to
+		// potentially upload a renewed one.
+		int PROXY_CHECK_INTERVAL = param_integer("SHADOW_CHECKPROXY_INTERVAL",60*10,1);
+		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
+							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
+							"RemoteResource::checkX509Proxy()", this );
+    }
+}
 
 void 
 RemoteResource::beginExecution( void )
@@ -1506,17 +1524,9 @@ RemoteResource::beginExecution( void )
 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
-	
-    if( jobAd->LookupString(ATTR_X509_USER_PROXY, proxy_path) ) {
-		// This job has a proxy.  We need to check it regularlly to
-		// potentially upload a renewed one.
-		const int PROXY_CHECK_INTERVAL = 60; 
-		ASSERT(proxy_check_tid == -1);
-		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
-							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
-							"RemoteResource::checkX509Proxy()", this );
-    }
 
+	startCheckingProxy();
+	
 		// Let our shadow know so it can make global decisions (for
 		// example, should it log a JOB_EXECUTE event)
 	shadow->resourceBeganExecution( this );
@@ -1894,6 +1904,12 @@ RemoteResource::requestReconnect( void )
 	reconnect_attempts = 0;
 	hadContact();
 
+	int proxy_expiration = 0;
+	if( jobAd->LookupInteger(ATTR_DELEGATED_PROXY_EXPIRATION,proxy_expiration) ) {
+		setRemoteProxyRenewTime(proxy_expiration);
+	}
+	startCheckingProxy();
+
 		// Tell the Shadow object so it can take care of the rest.
 	shadow->resourceReconnected( this );
 
@@ -1907,12 +1923,35 @@ RemoteResource::setRemoteProxyRenewTime(time_t expiration_time)
 {
 	m_remote_proxy_expiration = expiration_time;
 	m_remote_proxy_renew_time = GetDelegatedProxyRenewalTime(expiration_time);
+	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, (int)expiration_time);
 }
 
 void
 RemoteResource::setRemoteProxyRenewTime()
 {
-	setRemoteProxyRenewTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
+		// When the proxy was (initially) delegated via the file
+		// transfer object, we have to do our best here to compute the
+		// expiration time of the delegated proxy.  To know what it
+		// actually is, we would need to have a better interface for
+		// obtaining that information from the file transfer object.
+
+	time_t desired_expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
+	time_t expiration_time = desired_expiration_time;
+
+	if( proxy_expiration_time == (time_t)-1 ) {
+		char const *errmsg = x509_error_string();
+		dprintf(D_ALWAYS,"setRemoteProxyRenewTime: failed to get proxy expiration time for %s: %s\n",
+				proxy_path.Value(),
+				errmsg ? errmsg : "");
+	}
+	else {
+		if( proxy_expiration_time < desired_expiration_time || desired_expiration_time == 0 ) {
+			expiration_time = proxy_expiration_time;
+		}
+	}
+
+	setRemoteProxyRenewTime(expiration_time);
 }
 
 bool
@@ -1929,9 +1968,10 @@ RemoteResource::updateX509Proxy(const char * filename)
 	DCStarter::X509UpdateStatus ret = DCStarter::XUS_Error;
 	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == true ) {
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
-		ret = starter.delegateX509Proxy(filename, expiration_time, m_claim_session.secSessionId());
+		time_t result_expiration_time = 0;
+		ret = starter.delegateX509Proxy(filename, expiration_time, m_claim_session.secSessionId(),&result_expiration_time);
 		if( ret == DCStarter::XUS_Okay ) {
-			setRemoteProxyRenewTime(expiration_time);
+			setRemoteProxyRenewTime(result_expiration_time);
 		}
 	}
 	if ( ret != DCStarter::XUS_Okay ) {
@@ -1957,6 +1997,10 @@ RemoteResource::updateX509Proxy(const char * filename)
 void 
 RemoteResource::checkX509Proxy( void )
 {
+	if( state != RR_EXECUTING ) {
+		dprintf(D_FULLDEBUG,"checkX509Proxy() doing nothing, because resource is not in EXECUTING state.\n");
+		return;
+	}
 	if(proxy_path.IsEmpty()) {
 		/* Harmless, but suspicious. */
 		return;
