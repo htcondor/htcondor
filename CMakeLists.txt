@@ -91,9 +91,3 @@ endif()
 ##########################################################################
 # Must in included post *install targets
 include ( CPack )
-
-##########################################################################
-# Reporting.
-message(STATUS " ")
-message(STATUS "strip: ${CMAKE_STRIP}")
-message(STATUS " ")
