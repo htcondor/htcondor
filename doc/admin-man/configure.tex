@@ -5931,6 +5931,15 @@ These settings affect the \Condor{shadow}.
   the final update to the job ClassAd in the \Condor{schedd}'s
   job queue.  The default is 5.
 
+\label{param:ShadowCheckproxyInterval}
+\item[\Macro{SHADOW\_CHECKPROXY\_INTERVAL}]
+  The number of seconds between tests to see if the job proxy has been
+  updated or should be refreshed.  The default is 600 (10 minutes).
+  This setting should be small compared to the refresh interval
+  required to keep delegated credentials from expiring (configured via
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} and
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_INTERVAL}).
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -8676,10 +8685,14 @@ section~\ref{sec:Security} on Security.
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH}]
  A floating point number between 0 and 1 that indicates when delegated
  credentials with limited lifetime should be renewed.  The renewal is
- attempted periodically at the specified fraction of the lifetime of
+ attempted periodically at or near the specified fraction of the lifetime of
  the delegated credential.  The default is 0.25.  This setting has no
  effect if \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false or
- \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} is 0.
+ \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} is 0.  For non-grid
+ jobs, the precise timing of the proxy refresh depends on
+ \Macro{SHADOW\_CHECKPROXY\_INTERVAL}.  To ensure that the delegated
+ proxy remains valid, the interval for checking the proxy should be
+ at most half of the interval for refreshing it.
 
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]

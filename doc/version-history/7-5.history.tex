@@ -73,6 +73,18 @@ used for a PRE or POST script argument.
   \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit file
   command.
 
+\item The new configuration variable
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH}] specifies a
+    floating point number between 0 and 1 that indicates when
+    delegated credentials with limited lifetime should be renewed, as
+    a fraction of the delegated lifetime.  The default is 0.25.
+
+\item The new configuration variable
+  \MacroNI{SHADOW\_CHECKPROXY\_INTERVAL} specifies the number of
+  seconds between tests to see if the job proxy has been updated or
+  should be refreshed.  The default is 600 (10 minutes).  Previously,
+  the \Condor{shadow} checked for proxy updates once per minute.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
