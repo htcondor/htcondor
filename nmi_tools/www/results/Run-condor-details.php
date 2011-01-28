@@ -200,8 +200,14 @@ foreach ($platforms AS $platform) {
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
     $platform_without_prefix = preg_replace("/nmi:/", "", $platform);
-    $depth = `/usr/local/condor/bin/condor_q -const 'nmi_target_platform=="$platform_without_prefix"' -format '1\n' runid | wc -l`;
-    $queue_depth = "<br>Q Depth: $depth";
+    $output = `/usr/local/condor/bin/condor_q -global -const 'nmi_target_platform=="$platform_without_prefix" && nmi_run_type=="$type"' -format '%-2s ' 'ifThenElse(JobStatus==0,"U",ifThenElse(JobStatus==1,"I",ifThenElse(JobStatus==2,"R",ifThenElse(JobStatus==3,"X",ifThenElse(JobStatus==4,"C",ifThenElse(JobStatus==5,"H",ifThenElse(JobStatus==6,"E",string(JobStatus))))))))' -format "%6d " ClusterId -format " %-14s " Owner -format '%-11s\n' 'formatTime(QDate,"%0m/%d %H:%M")'`;
+    $queue_contents = split("\n", $output);
+    $depth = sizeof($queue_contents);
+    array_unshift($queue_contents, "St ID Owner SubmitTime");
+    $output = join("<br>", $queue_contents);
+    $queue_depth = "<br><div title=\"$output\"> Q Depth: $depth</div>";
+
+    $queue_depth = "<br /><span class=\"link\"><a href=\"javascript: void(0)\">Q Depth: $depth<span>$output</span></a></span>";
   }
 
   $display = "<a href=\"$filepath/$mygid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
