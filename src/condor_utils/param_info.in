@@ -9975,3 +9975,21 @@ usage=
 url=
 tags=c++_util,condor_config
 id=601
+
+
+[PARROT]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Parrot
+usage=run job within parrot
+url=
+tags=parrot
+id=602
+
