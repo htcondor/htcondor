@@ -11,6 +11,7 @@ $platform    = $_REQUEST["platform"];
 $task        = $_REQUEST["task"];
 $description = $_REQUEST["description"];
 $runid       = $_REQUEST["runid"];
+$type        = $_REQUEST["type"];
 
 # Some CSS and Javascript
 echo '
@@ -30,9 +31,6 @@ pre {
    word-wrap: break-word;       /* Internet Explorer 5.5+ */
 }
 
-font.hl {
-   BACKGROUND-COLOR: yellow;
-}
 -->
 </style>
 
@@ -190,18 +188,30 @@ mysql_close($db);
 function show_file_content($header, $file) {
   echo "<hr>\n";
   echo "<h3>$header:</h3>";
-  
-  $lines = `grep -C 5 -i error $file`;
-  echo "<p style=\"font-size: 80%;\">Showing all instances of the word 'error' in $header:\n";
-  if(strlen($lines) > 0) {
-    $lines = preg_replace("/(error)/i", "<font class=\"hl\">$1</font>", $lines);
-    echo "<p><a href=\"javascript:swap('$header')\">Click to show errors in $header</a>\n";
+
+  if($_REQUEST["type"] == "build" && preg_match("/_win/", $_REQUEST["platform"])) {
+    // For windows we have a script that does some smarter parsing
+    $lines = `./parse-windows-build.pl $file`;
+    echo "<p style=\"font-size: 80%;\">Tried to do some smart parsing for Windows:\n";
+    echo "<p><a href=\"javascript:swap('$header')\">Click to show Windows build info</a>\n";
     echo "<div id=\"$header\" style=\"display:none;\">\n";
     echo "<pre>$lines</pre>\n";
     echo "</div>\n";
   }
   else {
-    echo "<p>The string 'error' was not present in $header\n";
+    // For linux we'll just grep for errors for now.  This can probably be improved
+    $lines = `grep -C 5 -i error $file`;
+    echo "<p style=\"font-size: 80%;\">Showing all instances of the word 'error' in $header:\n";
+    if(strlen($lines) > 0) {
+      $lines = preg_replace("/(error)/i", "<font class=\"hl\">$1</font>", $lines);
+      echo "<p><a href=\"javascript:swap('$header')\">Click to show errors in $header</a>\n";
+      echo "<div id=\"$header\" style=\"display:none;\">\n";
+      echo "<pre>$lines</pre>\n";
+      echo "</div>\n";
+    }
+    else {
+      echo "<p>The string 'error' was not present in $header\n";
+    }
   }
 
   // Always show the last 10 lines

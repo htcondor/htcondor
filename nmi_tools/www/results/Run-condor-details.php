@@ -268,7 +268,7 @@ foreach ($data AS $task => $arr) {
         echo "<td align=\"center\">&nbsp;</td>\n";
       }
       else {
-        $display = "<a href=\"http://$host/results/Run-condor-taskdetails.php?platform={$platform}&task=".urlencode($task)."&runid=".$platform_runids[$platform]. "\">$result</a>";
+        $display = "<a href=\"http://$host/results/Run-condor-taskdetails.php?platform={$platform}&task=".urlencode($task)."&type=".$type."&runid=".$platform_runids[$platform]. "\">$result</a>";
         echo "<td class=\"".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."\" align=\"center\"><B>$display</B></td>\n";
       }
     }
