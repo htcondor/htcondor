@@ -39,7 +39,9 @@ my $buildid_file = "BUILD-ID";
 my $buildid;
 my $externals_loc="/scratch/externals/cmake";
 my $platform = "$ENV{NMI_PLATFORM}";
-my $prefix = "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir ";
+my %defines = (
+    prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
+    );
 
 # autoflush our STDOUT
 $| = 1;
@@ -74,10 +76,11 @@ if( ! $buildid ) {
     die "Can't find Condor build id in $buildid_file!\n";
 }
 print "Build id is: $buildid\n";
-$buildid = "-DBUILDID:STRING=$buildid ";
+$defines{buildid} = "-DBUILDID:STRING=$buildid";
 
 print "platform is: $platform\n";
-$platform = "-DPLATFORM:STRING=$platform ";
+$defines{platform} = "-DPLATFORM:STRING=$platform";
+$defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 
 ######################################################################
 # run cmake on the source tree
@@ -104,12 +107,12 @@ if ( defined($opt_clear_externals_cache)||defined($opt_clear_externals_cache_wee
 ######################################################################
 # run cmake on the source tree
 ######################################################################
-my $configexecstr =
-			"cmake . " .
-			$buildid .
-			$platform .
-			$prefix .
-			join(' ', @ARGV);
+my @command = ( "cmake",
+		".",
+		join(" ", values(%defines)),
+		join(' ', @ARGV)
+    );
+my $configexecstr = join( " ", @command );
 
 print "$configexecstr\n";
 
