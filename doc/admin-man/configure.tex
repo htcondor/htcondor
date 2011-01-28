@@ -5938,7 +5938,9 @@ These settings affect the \Condor{shadow}.
   This setting should be small compared to the refresh interval
   required to keep delegated credentials from expiring (configured via
   \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} and
-  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_INTERVAL}).
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_INTERVAL}).  If this setting
+  is too small, proxy updates could happen very frequently, potentially
+  creating a lot of load on the submit machine.
 
 \end{description}
 
