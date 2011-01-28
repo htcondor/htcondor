@@ -53,7 +53,8 @@ span.link a:hover span {
     position: absolute; 
     margin-top: 10px; 
     margin-left: -10px; 
-    width: 180px; padding: 5px; 
+    //width: 180px;
+    padding: 5px; 
     z-index: 100; 
     color: #000000; 
     background: #FFFFAA; 
