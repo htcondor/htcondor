@@ -465,6 +465,7 @@ const char * const ATTR_NUM_USERS                = "NumUsers";
 const char * const ATTR_OFFLINE                  ="Offline";
 const char * const ATTR_OPSYS                    = "OpSys";
 const char * const ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
+const char * const ATTR_OTHER_JOB_REMOVE_REQUIREMENTS    = "OtherJobRemoveRequirements"; 
 const char * const ATTR_OWNER                    = "Owner"; 
 const char * const ATTR_PARALLEL_SCHEDULING_GROUP	 = "ParallelSchedulingGroup";
 const char * const ATTR_PARALLEL_SCRIPT_SHADOW   = "ParallelScriptShadow";  
@@ -880,3 +881,4 @@ const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";
 
 const char * const ATTR_HASH_NAME = "HashName";
 const char * const ATTR_AUTHENTICATED_IDENTITY = "AuthenticatedIdentity";
+const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME = "DelegateJobGSICredentialsLifetime";
