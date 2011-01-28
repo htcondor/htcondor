@@ -44,6 +44,10 @@ POST script arguments (see ~\pageref{dagman:SCRIPT} for details).
 \item \Condor{dagman} now prints a warning if an unrecognized macro is
 used for a PRE or POST script argument.
 
+% gittrac #1886
+\item \Condor{schedd} is now more efficient in handling the exit of
+  \Condor{shadow} processes when there are large numbers of shadows.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
