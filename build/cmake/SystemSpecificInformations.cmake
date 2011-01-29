@@ -149,15 +149,23 @@ if(UNIX)
         set(LINUX_NAME "Debian")
 	set(LINUX_VER "${CMAKE_MATCH_1}")        
       endif(LINUX_ISSUE MATCHES "Debian")      
-      # Open SuSE case
-      if(LINUX_ISSUE MATCHES "SUSE")
-        string(REGEX MATCH "SUSE  ([0-9]+\\.[0-9]+)" SUSE "${LINUX_ISSUE}")
-        set(LINUX_NAME "openSUSE")        
+      # SuSE / openSUSE case
+      if(LINUX_ISSUE MATCHES "openSUSE")
+        string(REGEX MATCH "openSUSE ([0-9]+\\.[0-9]+)" OPENSUSE "${LINUX_ISSUE}")
+        set(LINUX_NAME "openSUSE")
+	set(LINUX_VER "${CMAKE_MATCH_1}")
+	set(RPM_SYSTEM_NAME "openSUSE${CMAKE_MATCH_1}")
+	if (LINUX_VER MATCHES "/")        
+		string(REPLACE "/" "_" LINUX_VER ${LINUX_VER})        
+	endif()
+      elseif(LINUX_ISSUE MATCHES "SUSE")
+        string(REGEX MATCH "SUSE ([0-9]+\\.[0-9]+)" SUSE "${LINUX_ISSUE}")
+        set(LINUX_NAME "SUSE")
 	set(LINUX_VER "${CMAKE_MATCH_1}")
 	if (LINUX_VER MATCHES "/")        
 		string(REPLACE "/" "_" LINUX_VER ${LINUX_VER})        
 	endif()
-      endif(LINUX_ISSUE MATCHES "SUSE")
+      endif()
       # Mandriva case
       # TODO      
 
