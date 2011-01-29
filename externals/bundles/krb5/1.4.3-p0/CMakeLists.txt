@@ -105,6 +105,6 @@ if (WITH_KRB5)
 
 else(WITH_KRB5)
 
-	message (STATUS "external skiped (krb5)")
+	message (STATUS "external skipped (krb5)")
 
 endif(WITH_KRB5)

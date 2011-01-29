@@ -245,6 +245,7 @@ const char	*NiceUser		= "nice_user";
 
 const char	*GridResource	= "grid_resource";
 const char	*X509UserProxy	= "x509userproxy";
+const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
 const char	*GlobusXML = "globus_xml";
@@ -372,6 +373,17 @@ const char* AmazonUserDataFile = "amazon_user_data_file";
 const char* AmazonSecurityGroups = "amazon_security_groups";
 const char* AmazonKeyPairFile = "amazon_keypair_file";
 const char* AmazonInstanceType = "amazon_instance_type";
+
+//
+// Deltacloud Parameters
+//
+const char* DeltacloudUsername = "deltacloud_username";
+const char* DeltacloudPassword = "deltacloud_password";
+const char* DeltacloudImageId = "deltacloud_image_id";
+const char* DeltacloudRealmId = "deltacloud_realm_id";
+const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
+const char* DeltacloudKeyname = "deltacloud_keyname";
+const char* DeltacloudUserData = "deltacloud_user_data";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -1441,7 +1453,8 @@ SetExecutable()
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
-		   strcasecmp( JobGridType, "amazon" ) == MATCH ) ) {
+		   ( strcasecmp( JobGridType, "amazon" ) == MATCH ||
+			 strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 
@@ -1722,7 +1735,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    amazon, unicore, cream
+			//    amazon, unicore, cream, deltacloud
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1740,6 +1753,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
+				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
@@ -1752,7 +1766,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, amazon, or cream\n" );
+						 "nqs, condor, nordugrid, unicore, amazon, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -5032,6 +5046,64 @@ SetGridParams()
 		has_userdatafile = true;
 	}
 	
+
+	//
+	// Deltacloud grid-type submit attributes
+	//
+	if ( (tmp = condor_param( DeltacloudUsername, ATTR_DELTACLOUD_USERNAME )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_USERNAME, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudUsername );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( DeltacloudPassword, ATTR_DELTACLOUD_PASSWORD )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPassword );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( DeltacloudImageId, ATTR_DELTACLOUD_IMAGE_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_IMAGE_ID, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudImageId );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if( (tmp = condor_param( DeltacloudRealmId, ATTR_DELTACLOUD_REALM_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_REALM_ID, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfile, ATTR_DELTACLOUD_HARDWARE_PROFILE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudKeyname, ATTR_DELTACLOUD_KEYNAME )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_KEYNAME, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudUserData, ATTR_DELTACLOUD_USER_DATA )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_USER_DATA, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
@@ -5173,6 +5245,17 @@ SetGSICredentials()
 		}
 	}
 
+	tmp = condor_param(DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME);
+	if( tmp ) {
+		char *endptr=NULL;
+		int lifetime = strtol(tmp,&endptr,10);
+		if( !endptr || *endptr != '\0' ) {
+			fprintf(stderr,"\nERROR: invalid integer setting %s = %s\n",DelegateJobGSICredentialsLifetime,tmp);
+			exit( 1 );
+		}
+		InsertJobExprInt(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
+		free(tmp);
+	}
 
 	//ckireyev: MyProxy-related crap
 	if ((tmp = condor_param (ATTR_MYPROXY_HOST_NAME))) {
@@ -5432,6 +5515,10 @@ read_condor_file( FILE *fp )
 		} else {
 			*ptr++ = '\0';
 			while( *ptr && !isop(*ptr) ) {
+				if( !isspace(*ptr) ) {
+					fclose( fp );
+					return -1;
+				}
 				ptr++;
 			}
 

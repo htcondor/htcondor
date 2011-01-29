@@ -218,8 +218,8 @@ FileLock::~FileLock( void )
 				goto finish;
 			}
 		}
-		// this path is only called for the literal case by preen -- still want to clean up all three levels.
-		deleted = rec_clean_up(m_path, 3 ) ;
+		// this path is only called for the literal case by preen -- still want to clean up all two levels.
+		deleted = rec_clean_up(m_path, 2) ;
 		if (deleted == 0){ 
 			dprintf(D_FULLDEBUG, "Lock file %s has been deleted. \n", m_path);
 		} else{
@@ -667,17 +667,17 @@ FileLock::updateLockTimestamp(void)
 char * 
 FileLock::GetTempPath() 
 {
-
-	char *path = temp_dir_path();
-	char *suffix = "condorLocks";
-	
-	if (path == NULL)
-		return NULL;
-	
-	char *full_path = dirscat(path, suffix);
+	const char *suffix = "";
+	char *result = NULL;
+	char *path = param("LOCAL_DISK_LOCK_DIR");
+	if (!path) {
+		path = temp_dir_path();
+		suffix = "condorLocks";
+	}
+	result = dirscat(path, suffix);
 	free(path);
-	
-	return full_path;
+
+	return result;
 }
 
 char *

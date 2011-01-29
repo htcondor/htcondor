@@ -1,5 +1,8 @@
 Changes for version 1.0.10 (Released ????-??-??)
-* Fix infinite loop in FunctionCall::SameAs().
+* Fix infinite loop and bad iterator comparison in FunctionCall::SameAs().
+* Fix memory leak in FunctionCall::eval().
+* Fix ClassAd::GetInternalReferences() and ClassAd::GetExternalReferences()
+  when provided ExprTree is in a different scope than the local ad.
 
 Changes for version 1.0.9 (Released 2010-08-23)
 * Fix interval() function to omit leading zeros and spaces.

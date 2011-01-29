@@ -51,20 +51,23 @@ if (NOT WINDOWS)
 endif()
 
 target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP})
-install (FILES MyString.h
-		 condor_event.h
-		 condor_holdcodes.h
-		 read_user_log.h
-		 user_log.c++.h
-		 user_log.README
-		 write_user_log.h
-		 compat_classad.h
-		 compat_classad_list.h
-		 compat_classad_util.h
-		 stl_string_utils.h
-		DESTINATION ${C_INCLUDE})
 
-install ( TARGETS condorapi DESTINATION ${C_LIB} )
+if (NOT PROPER)
+	install (FILES MyString.h
+			 condor_event.h
+			 condor_holdcodes.h
+			 read_user_log.h
+			 user_log.c++.h
+			 user_log.README
+			 write_user_log.h
+			 compat_classad.h
+			 compat_classad_list.h
+			 compat_classad_util.h
+			 stl_string_utils.h
+			DESTINATION ${C_INCLUDE})
+
+	install ( TARGETS condorapi DESTINATION ${C_LIB} )
+endif(NOT PROPER)
 
 add_definitions(-DENABLE_STATE_DUMP)
 condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}") #"condorapi")

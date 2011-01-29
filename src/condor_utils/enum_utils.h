@@ -105,7 +105,8 @@ typedef enum {
 	JA_REMOVE_JOBS,
 	JA_REMOVE_X_JOBS,
 	JA_VACATE_JOBS,
-	JA_VACATE_FAST_JOBS
+	JA_VACATE_FAST_JOBS,
+	JA_CLEAR_DIRTY_JOB_ATTRS
 } JobAction;
 
 const char* getJobActionString( JobAction action );

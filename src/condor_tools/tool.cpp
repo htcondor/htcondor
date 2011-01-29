@@ -103,7 +103,7 @@ usage( char *str )
 
 	fprintf( stderr, "[general-options] [targets]" );
 	if( takes_subsys ) {
-		fprintf( stderr, " [subsystem]" );
+		fprintf( stderr, " [daemon]" );
 	}
 	fprintf( stderr, "\nwhere [general-options] can be zero or more of:\n" );
 	fprintf( stderr, "    -help\t\tgives this usage information\n" );
@@ -134,11 +134,11 @@ usage( char *str )
 	fprintf( stderr, "    -addr <addr:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
 	if( takes_subsys ) {
-		fprintf( stderr, "where [subsystem] can be one of:\n" );
+		fprintf( stderr, "where [daemon] can be one of:\n" );
 		fprintf( stderr, 
-			 "    -subsystem <name>\tspecify the target subsystem by name.\n" );
+			 "    -daemon <name>\tspecify the target daemon by name.\n" );
 		fprintf( stderr,
-			"    The following named subsystem options are deprecated, and\n");
+			"    The following named daemon options are deprecated, and\n");
 		fprintf( stderr, "    may be discontinued in a future release:\n");
 		if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF ) {
 			fprintf( stderr, "    -master\n" );
@@ -167,7 +167,7 @@ usage( char *str )
 		fprintf( stderr, "  %s turns off the specified daemon.\n", 
 				 str );
 		fprintf( stderr, 
-				 "  If no subsystem is given, everything except the master is shut down.\n" );
+				 "  If no daemon is given, everything except the master is shut down.\n" );
 		break;
 	case RESTART:
 		fprintf( stderr, "  %s causes specified daemon to restart itself.\n", str );
@@ -303,12 +303,12 @@ subsys_check( char* MyName )
 {
 	if( ! takes_subsys ) {
 		fprintf( stderr, 
-				 "ERROR: Can't specify a subsystem flag with %s.\n",  
+				 "ERROR: Can't specify a daemon flag with %s.\n",  
 				 MyName );
 		usage( MyName );
 	}
 	if( dt ) {
-		fprintf( stderr, "ERROR: can only specify one subsystem flag.\n" );
+		fprintf( stderr, "ERROR: can only specify one daemon flag.\n" );
 		usage( MyName );
 	}
 	subsys = (char*)1;
@@ -502,8 +502,32 @@ main( int argc, char *argv[] )
 			}
 			break;
 		case 'd':
-			Termlog = 1;
-			dprintf_config ("TOOL");
+			if (!(*tmp)[2] || (*tmp)[2] == 'e') {
+				Termlog = 1;
+				dprintf_config ("TOOL");
+			} else if ((*tmp)[2] == 'a')  {
+				subsys_check( MyName );
+					// We got a "-daemon", make sure we've got 
+					// something else after it
+				tmp++;
+				if( tmp && *tmp ) {
+					subsys_arg = *tmp;
+					dt = stringToDaemonType(subsys_arg);
+					if( dt == DT_NONE ) {
+						dt = DT_GENERIC;
+					}
+				} else {
+					fprintf( stderr, 
+							 "ERROR: -daemon requires another argument\n" ); 
+					usage( NULL );
+					exit( 1 );
+				}
+			} else {
+				fprintf( stderr, 
+						 "ERROR: unknown parameter: \"%s\"\n",
+						 *tmp );  
+				usage( NULL );
+			}
 			break;
 		case 'e':
 			if ( strcmp( *tmp, "-exec" ) ) {
@@ -700,7 +724,7 @@ main( int argc, char *argv[] )
 						}
 					} else {
 						fprintf( stderr, 
-							 "ERROR: -subsystem requires another argument\n" ); 
+							 "ERROR: -daemon requires another argument\n" ); 
 						usage( NULL );
 						exit( 1 );
 					}
@@ -717,7 +741,7 @@ main( int argc, char *argv[] )
 						 "ERROR: ambiguous argument \"%s\"\n",
 						 *tmp );
 				fprintf( stderr, 
-				"Please specify \"-subsystem\", \"-startd\" or \"-schedd\"\n" );
+				"Please specify \"-daemon\", \"-startd\" or \"-schedd\"\n" );
 				usage( NULL );
 			}
 			break;
@@ -738,8 +762,8 @@ main( int argc, char *argv[] )
 	computeRealAction();
 
 		// While we're parsing command-line args, when we notice a
-		// subsystem flag, we just set subsys to non-NULL to know we
-		// found it, and record the actual subsystem with "dt".  Now
+		// daemon flag, we just set subsys to non-NULL to know we
+		// found it, and record the actual daemon with "dt".  Now
 		// that we know the true target daemon type for whatever
 		// command we're using, want the real string to use.
 	if( subsys ) {
@@ -864,6 +888,12 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 					argv++;
 				}
 				break;
+			case 'd':
+				if( (*argv)[2] == 'a' ) {
+						// this is -daemon, skip the next one.
+					argv++;
+				}
+				break;
 			case 's':
 				if( (*argv)[2] == 'u' ) {
 						// this is -subsys, skip the next one.
@@ -982,7 +1012,7 @@ computeRealAction( void )
 	case RESTART:
 		if( subsys && dt != DT_MASTER ) {
 				// We're trying to restart something and we were told
-				// a specific subsystem to restart.  So, just send a
+				// a specific daemon to restart.  So, just send a
 				// DC_OFF to that daemon, and the master will restart
 				// for us.  Note: we don't want to do this if we were
 				// told to restart the master, since if we send this,

@@ -379,6 +379,25 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* attr_value,
 	return result;
 }
 
+int
+GridUniverseLogic::FindGManagerPid(const char* owner,
+					const char* attr_value,	
+					int cluster, int proc)
+{
+	gman_node_t* gman_node;
+
+	if ( attr_value && strlen(attr_value)==0 ) {
+		attr_value = NULL;
+	}
+
+	if ( (gman_node=lookupGmanByOwner(owner, attr_value, cluster, proc)) ) {
+		return gman_node->pid;
+	}
+	else {
+		return -1;
+	}
+}
+
 GridUniverseLogic::gman_node_t *
 GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	   	const char* attr_value, const char* attr_name, int cluster, int proc)

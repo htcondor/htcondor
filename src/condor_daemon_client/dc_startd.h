@@ -115,10 +115,12 @@ public:
 			proxy via file transfer happens when the starter is already
 			running, and thus too late.
 			@param proxy Location of user proxy to delegate
+			@expiration_time 0 if none; o.w. time of delegated proxy expiration
+			@result_expiration_time if non-NULL, gets set to delegated proxy expiration, which may be shorter than requested if proxy expires sooner
 			@return OK if proxy is delegated, NOT_OK if startd doesn't
 			need it, CONDOR_ERROR on error
 		*/
-	int delegateX509Proxy( const char* proxy );
+	int delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *result_expiration_time );
 
 		// Generic ClassAd-only protocol for managing claims
 

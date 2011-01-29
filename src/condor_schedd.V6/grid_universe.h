@@ -40,6 +40,9 @@ class GridUniverseLogic : public Service
 			   	const char* attr_value, const char* attr_name, int cluster, 
 				int proc);
 
+		static int FindGManagerPid(const char* owner,
+							const char* attr_value,
+							int cluster, int proc);
 		static void reconfig() { signal_all(SIGHUP); }
 		static void shutdown_graceful() { signal_all(SIGTERM); }
 		static void shutdown_fast() { signal_all(SIGQUIT); }

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,11 +22,12 @@
 #include "condor_distribution.h"
 #include "proc_family_client.h"
 
-#include <vector>
-
 static int register_family(ProcFamilyClient& pfc, int argc, char* argv[]);
+static int track_by_associated_gid(ProcFamilyClient& pfc, int argc, 
+	char* argv[]);
 static int get_usage(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int dump(ProcFamilyClient& pfc, int argc, char* argv[]);
+static int list(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int signal_process(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int suspend_family(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int continue_family(ProcFamilyClient& pfc, int argc, char* argv[]);
@@ -38,12 +39,16 @@ static int quit(ProcFamilyClient& pfc, int argc, char* argv[]);
 static void
 list_commands()
 {
-	fprintf(stderr, "commands:\n");
+	fprintf(stderr, "  options:\n");
+	fprintf(stderr, "    -h\n");
+	fprintf(stderr, "    -A <procd address file>\n");
+	fprintf(stderr, "  commands:\n");
 	fprintf(stderr,
-	        "    REGISTER_FAMILY "
-	            "<pid> <watcher_pid> <max_snapshot_interval>\n");
+		"    REGISTER_FAMILY <pid> <watcher_pid> <max_snapshot_interval>\n");
+	fprintf(stderr, "    TRACK_BY_ASSOCIATED_GID <gid> [<pid>]\n");
 	fprintf(stderr, "    GET_USAGE [<pid>]\n");
 	fprintf(stderr, "    DUMP [<pid>]\n");
+	fprintf(stderr, "    LIST [<pid>]\n");
 	fprintf(stderr, "    SIGNAL_PROCESS <signal> [<pid>]\n");
 	fprintf(stderr, "    SUSPEND_FAMILY [<pid>]\n");
 	fprintf(stderr, "    CONTINUE_FAMILY [<pid>]\n");
@@ -56,39 +61,100 @@ list_commands()
 int
 main(int argc, char* argv[])
 {
+	char *procd_address = NULL;
 	myDistro->Init(argc, argv);
 
-	if (argc < 3) {
-		fprintf(stderr,
-		        "usage: %s <pipe> <cmd> [<arg> ...]\n",
-		        argv[0]);
+	if (argc < 2) {
+		fprintf(stderr, 
+			"Usage: %s <options w/arguments> <command> [<arg> ...]\n",
+			argv[0]);
 		list_commands();
 		return 1;
 	}
 
 	config();
-
 	Termlog = 1;
 	dprintf_config("TOOL");
 
-	char* procd_address = argv[1];
+	int cmd_argc = argc - 1;
+	char** cmd_argv = argv + 1;
 
+	// Process the first set of options.
+	while(cmd_argv[0] != NULL && cmd_argv[0][0] == '-')
+	{
+		if (strcmp(cmd_argv[0], "-A") == MATCH) {
+			cmd_argc--;
+			cmd_argv++;
+			if (cmd_argc == 0) {
+				fprintf(stderr, "error: -A needs an argument\n");
+				list_commands();
+				return 1;
+			}
+			// store the argument to -A as the file we'll use.
+			procd_address = cmd_argv[0];
+			cmd_argc--;
+			cmd_argv++;
+			continue;
+		} else if (strcmp(cmd_argv[0], "-h") == MATCH) {
+			cmd_argc--;
+			cmd_argv++;
+			fprintf(stderr, 
+				"Usage: %s <options w/arguments> <command> [<arg> ...]\n",
+				argv[0]);
+			list_commands();
+			return 1;
+			continue;
+		}
+
+		// This is the failure case if we manage to pass all checks above.
+		fprintf(stderr, "error: Don't understand option %s\n", cmd_argv);
+		list_commands();
+		return 1;
+	}
+
+	// If there are no command line arguments left, then there is no
+	// command specified after the options, which is a failure.
+	if (cmd_argc == 0) {
+		fprintf(stderr, 
+			"Please specify a command.\n"
+			"Usage: %s <options w/arguments> <command> [<arg> ...]\n",
+			argv[0]);
+		list_commands();
+		return 1;
+	}
+
+	// If a procd address wasn't specified on the command line, see if we
+	// have an entry in a config file to use.
+	if (procd_address == NULL) {
+		procd_address = param("PROCD_ADDRESS");
+		if (procd_address == NULL) {
+			fprintf(stderr, "error: PROCD_ADDRESS not defined\n");
+			return 1;
+		}
+	}
+
+	
 	ProcFamilyClient pfc;
 	if (!pfc.initialize(procd_address)) {
 		fprintf(stderr, "error: failed to initialize ProcD client\n");
 		return 1;
 	}
 
-	int cmd_argc = argc - 2;
-	char** cmd_argv = argv + 2;
+	// Process this single command we should be performing
 	if (strcasecmp(cmd_argv[0], "REGISTER_FAMILY") == 0) {
 		return register_family(pfc, cmd_argc, cmd_argv);
+	}
+	else if (strcasecmp(cmd_argv[0], "TRACK_BY_ASSOCIATED_GID") == 0) {
+		return track_by_associated_gid(pfc, cmd_argc, cmd_argv);
 	}
 	else if (strcasecmp(cmd_argv[0], "GET_USAGE") == 0) {
 		return get_usage(pfc, cmd_argc, cmd_argv);
 	}
 	else if (strcasecmp(cmd_argv[0], "DUMP") == 0) {
 		return dump(pfc, cmd_argc, cmd_argv);
+	}
+	else if (strcasecmp(cmd_argv[0], "LIST") == 0) {
+		return list(pfc, cmd_argc, cmd_argv);
 	}
 	else if (strcasecmp(cmd_argv[0], "SIGNAL_PROCESS") == 0) {
 		return signal_process(pfc, cmd_argc, cmd_argv);
@@ -149,6 +215,42 @@ register_family(ProcFamilyClient& pfc, int argc, char* argv[])
 }
 
 static int
+track_by_associated_gid(ProcFamilyClient& pfc, int argc, char* argv[])
+{
+	if ((argc != 2) && (argc != 3)) {
+		fprintf(stderr,
+		        "error: argument synopsis for %s: <gid> [<pid>]\n",
+		        argv[0]);
+		return 1;
+	}
+	gid_t gid = atoi(argv[1]);
+	if (gid == 0) {
+		fprintf(stderr, "invalid GID: %s\n", argv[1]);
+		return 1;
+	}
+	pid_t pid = 0;
+	if (argc == 3) {
+		pid = atoi(argv[2]);
+		if (pid == 0) {
+			fprintf(stderr, "error: invalid pid: %s\n", argv[2]);
+			return 1;
+		}
+	}
+	bool success;
+	if (!pfc.track_family_via_associated_supplementary_group(pid, gid, success)) {
+	fprintf(stderr, "error: communication error with ProcD\n");
+		return 1;
+	}
+	if (!success) {
+		fprintf(stderr,
+		        "error: %s command failed with ProcD\n",
+		        argv[0]);
+		return 1;
+	}
+	return 0;
+}
+
+static int
 dump(ProcFamilyClient& pfc, int argc, char* argv[])
 {
 	if (argc > 2) {
@@ -197,6 +299,52 @@ dump(ProcFamilyClient& pfc, int argc, char* argv[])
 
 	return 0;
 }
+
+static int
+list(ProcFamilyClient& pfc, int argc, char* argv[])
+{
+	if (argc > 2) {
+		fprintf(stderr,
+		        "error: argument synopsis for %s: [<pid>]\n",
+		        argv[0]);
+		return 1;
+	}
+	pid_t pid = 0;
+	if (argc == 2) {
+		pid = atoi(argv[1]);
+		if (pid == 0) {
+			fprintf(stderr, "error: invalid pid: %s\n", argv[1]);
+			return 1;
+		}
+	}
+
+	bool response;
+	std::vector<ProcFamilyDump> vec;
+	if (!pfc.dump(pid, response, vec)) {
+		fprintf(stderr, "error: communication error with ProcD\n");
+		return 1;
+	}
+	if (!response) {
+		fprintf(stderr,
+		        "error: %s command failed with ProcD\n",
+		        argv[0]);
+		return 1;
+	}
+
+	printf("PID PPID START_TIME USER_TIME SYS_TIME\n");
+	for (size_t i = 0; i < vec.size(); ++i) {
+		for (size_t j = 0; j < vec[i].procs.size(); ++j) {
+			printf("%u %u " PROCAPI_BIRTHDAY_FORMAT " %ld %ld\n",
+			       (unsigned)vec[i].procs[j].pid,
+			       (unsigned)vec[i].procs[j].ppid,
+			       vec[i].procs[j].birthday,
+			       vec[i].procs[j].user_time,
+			       vec[i].procs[j].sys_time);
+		}
+	}
+	return 0;
+}
+
 static int
 get_usage(ProcFamilyClient& pfc, int argc, char* argv[])
 {

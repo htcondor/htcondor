@@ -49,6 +49,8 @@ my $taskname = "";
 my $execstr = "";
 # autoflush our STDOUT
 $| = 1;
+open STDERR,">&STDOUT";
+
 
 ## TSTCLAIR->THAWAN et.al ok below is the conundrum as it relates to packaging
 ## The remote declare needs to be created/updated for (N) different packages
@@ -109,7 +111,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
 
 } elsif  ($taskname eq $RPM_CHECK_TASK){
 	#Print packaging log to stdout
@@ -130,7 +132,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
 
 } elsif  ($taskname eq $DEB_CHECK_TASK){
 	#Print package summary
@@ -158,7 +160,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 # build
 ######################################################################
 print "$execstr\n";
-$buildstatus = system($execstr);
+$buildstatus = system("$execstr");
 
 # now check the build status and return appropriately
 if( $buildstatus == 0 ) {

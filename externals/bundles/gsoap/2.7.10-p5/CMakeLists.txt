@@ -29,10 +29,10 @@ if (WITH_GSOAP)
 			
 			set (GSOAP_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.win32 gsoap/src/Makefile.win32 )
 			
-			set (GSOAP_MAKE set BISON_SIMPLE=${BISON_SIMPLE} \r\n
+			set (GSOAP_MAKE set BISON_SIMPLE=${BISON_SIMPLE}\r\n
 			                gmake -f Makefile.win32 -C gsoap/src )
 			
-			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${EXTERNAL_STAGE} \r\n
+			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${EXTERNAL_STAGE}\r\n
 			                   gmake -f Makefile.win32 install -C gsoap/src )
 		else(WINDOWS)
 			set (GSOAP_PATCH  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
@@ -142,6 +142,6 @@ if (WITH_GSOAP)
 
 else(WITH_GSOAP)
 
-	message (STATUS "external skiped (gsoap)")
+	message (STATUS "external skipped (gsoap)")
 
 endif(WITH_GSOAP)

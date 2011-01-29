@@ -1095,9 +1095,18 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port();
-			private_sinful_string.sprintf("<%s:%d>", tmp, port);
+			std::string private_ip;
+			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",tmp,private_ip);
+			if( !ok ) {
+				dprintf(D_ALWAYS,
+						"Failed to determine my private IP address using PRIVATE_NETWORK_INTERFACE=%s\n",
+						tmp);
+			}
+			else {
+				private_sinful_string.sprintf("<%s:%d>", private_ip.c_str(), port);
+				sinful_private = strdup(private_sinful_string.Value());
+			}
 			free(tmp);
-			sinful_private = strdup(private_sinful_string.Value());
 		}
 
 		free(m_private_network_name);
@@ -1140,6 +1149,16 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				m_sinful.setPrivateAddr(sinful_private);
 				publish_private_name = true;
 			}
+		}
+
+			// if we don't hae a UDP port, advertise that fact
+		char *forwarding = param("TCP_FORWARDING_HOST");
+		if( forwarding ) {
+			free( forwarding );
+			m_sinful.setNoUDP(true);
+		}
+		if( !dc_ssock ) {
+			m_sinful.setNoUDP(true);
 		}
 
 		if( m_ccb_listeners ) {
@@ -6171,8 +6190,9 @@ DaemonCore::Register_Family(pid_t       child_pid,
 	}
 	if (group != NULL) {
 #if defined(LINUX)
-		if (!m_proc_family->track_family_via_supplementary_group(child_pid,
-		                                                         *group)) {
+		if (!m_proc_family->
+			track_family_via_allocated_supplementary_group(child_pid, *group))
+		{
 			dprintf(D_ALWAYS,
 			        "Create_Process: error tracking family "
 			            "with root %u via group ID\n",
@@ -7085,6 +7105,9 @@ int DaemonCore::Create_Process(
 	char const *executable_fullpath = executable;
 #endif
 
+	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
+
+
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
 	// First do whatever error checking we can that is not platform specific
@@ -7184,7 +7207,7 @@ int DaemonCore::Create_Process(
 	}
 	else if ( want_command_port != FALSE ) {
 		inherit_handles = TRUE;
-		SafeSock* ssock_ptr = m_wants_dc_udp ? &ssock : NULL;
+		SafeSock* ssock_ptr = want_udp ? &ssock : NULL;
 		if (!InitCommandSockets(want_command_port, &rsock, ssock_ptr, false)) {
 				// error messages already printed by InitCommandSockets()
 			goto wrapup;
@@ -7203,7 +7226,7 @@ int DaemonCore::Create_Process(
 		ptmp = rsock.serialize();
 		inheritbuf += ptmp;
 		delete []ptmp;
-		if (m_wants_dc_udp) {
+		if (want_udp) {
 			inheritbuf += " ";
 			ptmp = ssock.serialize();
 			inheritbuf += ptmp;
@@ -7212,7 +7235,7 @@ int DaemonCore::Create_Process(
 
             // now put the actual fds into the list of fds to inherit
         inheritFds[numInheritFds++] = rsock.get_file_desc();
-		if (m_wants_dc_udp) {
+		if (want_udp) {
 			inheritFds[numInheritFds++] = ssock.get_file_desc();
 		}
 	}
@@ -8212,7 +8235,11 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-			pidtmp->sinful_string = sock_to_string(rsock._sock);
+			Sinful sinful(sock_to_string(rsock._sock));
+			if( !want_udp ) {
+				sinful.setNoUDP(true);
+			}
+			pidtmp->sinful_string = sinful.getSinful();
 		}
 	}
 
@@ -9002,9 +9029,9 @@ DaemonCore::InitDCCommandSocket( int command_port )
 	if( addr ) {
 		dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
 	}
-	else {
-		addr = privateNetworkIpAddr();
-		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", addr );
+	char const *priv_addr = privateNetworkIpAddr();
+	if( priv_addr ) {
+		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
 	}
 
 	if( dc_rsock && m_shared_port_endpoint ) {
@@ -9029,9 +9056,6 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		if( my_ip == loopback_ip ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
-			dprintf( D_ALWAYS, "         This may be due to a misconfigured /etc/hosts file.\n" );
-			dprintf( D_ALWAYS, "         Please make sure your hostname is not listed on the\n" );
-			dprintf( D_ALWAYS, "         same line as localhost in /etc/hosts.\n" );
 		}
 	}
 

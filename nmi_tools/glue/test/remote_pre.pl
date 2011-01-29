@@ -79,7 +79,6 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	$version = substr($release_zipfile, 0, -4);
 	print "VERSION string is $version from $release_zipfile\n";
 	
-	
 } else {
 	print "Finding release tarball\n";
 	open( TARBALL_FILE, "$tarball_file" ) || 
@@ -126,10 +125,12 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	# Remove leftovers from extracting built binaries.
 	print "Removing $version tar file and extraction\n";
 	system("rm -rf $version*");
-		
+
+	# Add condor to the path and set a condor_config variable
 	my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
 	my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
 	$ENV{PATH} = $NewPath;
+	$ENV{CONDOR_CONFIG} = "$BaseDir/condor/condor_config";
 	
 } else {
 	# windows personal condor setup
@@ -142,7 +143,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	# Remove leftovers from extracting built binaries.
 	print "Removing $version.zip file\n";
 	system("rm -rf $version.zip");
-	
+
 	$Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
 
 	#print "current dir\n";
