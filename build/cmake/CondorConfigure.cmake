@@ -68,6 +68,8 @@ if (CONDOR_PLATFORM)
 	add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
 	add_definitions(-DPLATFORM="${PLATFORM}")
+elseif(LINUX_NAME)
+	add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
 	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
 endif()
@@ -733,8 +735,23 @@ dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 # the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 
+# the platform specified
+dprint ( "PLATFORM: ${PLATFORM}" )
+
+# the Condor platform specified
+dprint ( "CONDOR_PLATFORM: ${CONDOR_PLATFORM}" )
+
+# the system name (used for generated tarballs)
+dprint ( "SYSTEM_NAME: ${SYSTEM_NAME}" )
+
+# the RPM system name (used for generated tarballs)
+dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
+
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
+
+# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
+dprint ( "Linux: ${LINUX_NAME}" )
 
 # is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )

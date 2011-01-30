@@ -56,7 +56,11 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/LICENSE-2.0.txt")
 #set(CPACK_RESOURCE_FILE_README "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/README")
 #set(CPACK_RESOURCE_FILE_WELCOME "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/DOC") # this should be more of a Hiya welcome.
 
-set(CPACK_SYSTEM_NAME "${OS_NAME}-${SYS_ARCH}" )
+if(SYSTEM_NAME)
+  set(CPACK_SYSTEM_NAME "${SYSTEM_NAME}" )
+else()
+  set(CPACK_SYSTEM_NAME "${OS_NAME}-${SYS_ARCH}" )
+endif()
 set(CPACK_TOPLEVEL_TAG "${OS_NAME}-${SYS_ARCH}" )
 set(CPACK_PACKAGE_ARCHITECTURE ${SYS_ARCH} )
 
@@ -66,6 +70,8 @@ set(CPACK_SOURCE_STRIP_FILES TRUE)
 # here is where we can
 if (PLATFORM)
   set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${PLATFORM}" )
+elseif(SYSTEM_NAME)
+  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${SYSTEM_NAME}" )
 else()
   set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${OS_NAME}-${SYS_ARCH}" )
 endif()
@@ -90,6 +96,7 @@ option(CONDOR_PACKAGE_BUILD "Enables a package build" OFF)
 # 1st set the location of the install targets, these are the defaults for
 set( C_BIN			bin)
 set( C_LIB			lib)
+set( C_LIB32		lib)
 set( C_LIBEXEC		libexec )
 set( C_SBIN			sbin)
 
@@ -222,6 +229,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		#Same as RPM
 		set( C_BIN			usr/bin )
 		set( C_LIB			usr/lib/condor )
+		set( C_LIB32		usr/lib/condor )
 		set( C_SBIN			usr/sbin )
 		set( C_INCLUDE		usr/include/condor )
 		set( C_MAN			usr/share/man )
@@ -284,8 +292,10 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 		if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
 			set( C_LIB			usr/lib/condor )
+			set( C_LIB32		usr/lib/condor )
 		else()
 			set( C_LIB			usr/lib64/condor )
+			set( C_LIB32		usr/lib/condor )
 		endif ()
 
 		set( C_BIN			usr/bin )
@@ -333,6 +343,8 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 			DESTINATION	"${C_LOG_DIR}")
 	install(DIRECTORY
 			DESTINATION	"${C_RUN_DIR}")
+	install(DIRECTORY
+			DESTINATION	"${C_LIB32}")
 
 endif()
 
