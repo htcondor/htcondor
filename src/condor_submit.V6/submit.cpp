@@ -1587,6 +1587,13 @@ SetExecutable()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
+		
+		if(!si.IsExecutable()) {
+			fprintf(stderr,"\nERROR: Executable file %s does not have the "
+				"executable bit set.\n",ename);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 
 		// spool executable if necessary
 		if ( isTrue ( copySpool ) ) {
