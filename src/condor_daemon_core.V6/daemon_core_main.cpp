@@ -280,9 +280,12 @@ DC_Exit( int status, const char *shutdown_program )
 #endif /* ! WIN32 */
 
 		// Now, delete the daemonCore object, since we allocated it. 
-	unsigned long	pid = daemonCore->getpid( );
-	delete daemonCore;
-	daemonCore = NULL;
+	unsigned long	pid = 0;
+	if (daemonCore) {
+		pid = daemonCore->getpid( );
+		delete daemonCore;
+		daemonCore = NULL;
+	}
 
 		// Free up the memory from the config hash table, too.
 	clear_config();
