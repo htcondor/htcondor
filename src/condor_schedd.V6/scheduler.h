@@ -313,6 +313,7 @@ class Scheduler : public Service
 	void			finishRecycleShadow(shadow_rec *srec);
 
 	int				requestSandboxLocation(int mode, Stream* s);
+	int			FindGManagerPid(PROC_ID job_id);
 
 	// match managing
 	int 			publish( ClassAd *ad );
@@ -356,6 +357,7 @@ class Scheduler : public Service
 	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
+	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
@@ -541,6 +543,8 @@ private:
 	int				jobThrottleNextJobDelay;	// used by jobThrottle()
 
 	int				shadowReaperId; // daemoncore reaper id for shadows
+//	int 				dirtyNoticeId;
+//	int 				dirtyNoticeInterval;
 
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
@@ -698,6 +702,9 @@ private:
 		// (e.g. condor_ssh_to_job)
 	int get_job_connect_info_handler(int, Stream* s);
 	int get_job_connect_info_handler_implementation(int, Stream* s);
+
+		// Mark a job as clean
+	int clear_dirty_job_attrs_handler(int, Stream *stream);
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.

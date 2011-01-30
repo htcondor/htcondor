@@ -45,8 +45,8 @@
 #define xstr(s) str(s)
 #define str(s) #s
 
-#if defined(WIN32)
-#define PLATFORM INTEL-WINNT50
+#if defined(WIN32) && ! defined(PLATFORM)
+#define PLATFORM "INTEL-WINNT50"
 #endif
 
 /* Via configure, one may have specified a particular buildid string to use
@@ -73,7 +73,7 @@
 static char* CondorVersionString = "$CondorVersion: 7.5.6 " __DATE__ BUILDIDSTR " PRE-RELEASE-UWCS $";
 
 /* Here is the platform string.  You don't need to edit this */
-static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
+static char* CondorPlatformString = "$CondorPlatform: " PLATFORM " $";
 
 extern "C" {
 

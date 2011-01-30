@@ -68,6 +68,7 @@ our %build_and_test_sets = (
 		'x86_64_macos_10.6',
 		'ppc_macos_10.4',
 		'sun4u_sol_5.10',
+		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
 		'x86_64_macos_10.5-updated',
 		# 'x86_64_fedora_12-updated',  <-- no longer supported in 11/2010, and nmi fails why are we doing this?
@@ -128,6 +129,7 @@ my @minimal_build_configure_args =
 		'-DWITH_GSOAP:BOOL=OFF'		=> undef,
 		'-DWITH_HADOOP:BOOL=OFF'	=> undef,
 		'-DWITH_KRB5:BOOL=OFF'		=> undef,
+		'-DWITH_LIBDELTACLOUD:BOOL=OFF'	=> undef,
 		'-DWITH_LIBVIRT:BOOL=OFF'		=> undef,
 		'-DWITH_LIBXML2:BOOL=OFF'		=> undef,
 		'-DWITH_UNICOREGAHP:BOOL=OFF'	=> undef,
@@ -208,7 +210,7 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Microsoft Windows 5.1/2000/xp/whatever on x86_64
+	# Microsoft Windows 6.0/2000/xp/whatever on x86_64
 	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
 	'x86_winnt_6.0'	=> {
@@ -245,7 +247,25 @@ our %submit_info = (
 
 	##########################################################################
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
-	# This probably doesn't work--glue scripts do funky things with it.
+	# the official "blessed" windows build configuration
+	##########################################################################
+	'x86_winnt_5.1'	=> {
+		'build' => {
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
+			'prereqs'	=> undef,
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> undef,
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+	
+	##########################################################################
+	# Microsoft Windows 5.1/2000/xp/whatever on x86
+	# CMake build testing configuration
 	##########################################################################
 	'x86_winnt_5.1-tst'	=> {
 		'build' => {
@@ -262,6 +282,27 @@ our %submit_info = (
 		},
 	},
 
+	##########################################################################
+	# Microsoft Windows 5.1/2000/xp/whatever on x86
+	# prereqs testing configuration (also cmake)
+	##########################################################################
+	'x86_winnt_5.1-prereqs'	=> {
+		'build' => {
+			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
+			'prereqs'	=> [
+				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1',
+				'VisualStudio-9.0', 'WindowsSDK-6.1',
+			],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> undef,
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+	
 	##########################################################################
 	# Platform HPUX 11 on PARISC 2.0
 	##########################################################################
@@ -313,7 +354,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DWITH_KRB5:BOOL=OFF' => undef,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef
 			},
 			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=> [ 'ps3_fedora_9' ],
@@ -330,6 +371,28 @@ our %submit_info = (
 	# Platform AIX 5L (patch level 5) on PPC
 	##########################################################################
 	'ppc_aix_5.2-pl5'	=> {
+		'build' => {
+			'configure_args' => { '-DPROPER:BOOL=OFF' 			 => undef,
+			  '-DSCRATCH_EXTERNALS:BOOL=OFF'	 => undef,
+			},
+			'prereqs'	=> [ 
+				@default_prereqs, 
+				'vac-6', 'vacpp-6', 'perl-5.8.9', 'gzip-1.3.3',
+				'coreutils-5.2.1',
+			],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.9' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform AIX 5.3 on PPC -- clone of AIX 5L
+	##########################################################################
+	'ppc_aix_5.3'	=> {
 		'build' => {
 			'configure_args' => { '-DPROPER:BOOL=OFF' 			 => undef,
 			  '-DSCRATCH_EXTERNALS:BOOL=OFF'	 => undef,
@@ -378,7 +441,7 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				@default_prereqs, 
 				'gcc-4.1.2', 'binutils-2.16', 'perl-5.8.5', 'gzip-1.3.3',
-				'coreutils-5.2.1',
+				'coreutils-6.9',
 			],
 			'xtests'	=> [ 'sun4u_sol_5.10' ],
 		},
@@ -386,7 +449,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'binutils-2.16',
-				'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1',
+				'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9',
 				'java-1.4.2_05', 'perl-5.8.5' ],
 			'testclass'	=> [ @default_testclass ],
 		},
@@ -763,7 +826,9 @@ our %submit_info = (
 	##########################################################################
 	'ppc_macos_10.4'	=> {
 		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
+			'configure_args' =>{ @minimal_build_configure_args ,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+			},
 
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -915,9 +980,11 @@ our %submit_info = (
 	##########################################################################
 	'sun4u_sol_5.10'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+			},
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-5.2.1', 'binutils-2.16' ],
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9', 'binutils-2.16' ],
 			'xtests'	=> undef,
 		},
 
@@ -925,24 +992,51 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'java-1.4.2_05',
 							 'perl-5.8.5', 'gzip-1.3.3', 'wget-1.9.1',
-							 'coreutils-5.2.1' ],
+							 'coreutils-6.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
 
 	##########################################################################
-	# Platform Solais 11 on x86_64
+	# Platform Solaris 11 on x86_64
 	# Building openssl is problematic on this platform.  There is
-        # some confusion betwen 64-bit and 32-bit, which causes linkage
-    	# problems.  Since ssh_to_job depends on openssl's base64 functions,
-    	# that is also disabled.
+	# some confusion betwen 64-bit and 32-bit, which causes linkage
+	# problems.  Since ssh_to_job depends on openssl's base64 functions,
+	# that is also disabled.
 	##########################################################################
 	'x86_64_sol_5.11'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
-},
+			},
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Solaris 10 on x86_64
+	# Building openssl is problematic on this platform.  There is
+	# some confusion betwen 64-bit and 32-bit, which causes linkage
+	# problems.  Since ssh_to_job depends on openssl's base64 functions,
+	# that is also disabled.
+	##########################################################################
+	'x86_64_sol_5.10'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
+			},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
 			'xtests'	=> undef,
@@ -1226,7 +1320,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs , 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -1349,7 +1443,10 @@ our %submit_info = (
 	'x86_suse_10.0'		=> {
 		'build' => {
 			'configure_args' =>{ @minimal_build_configure_args,
-					     '-DHAVE_KBDD:BOOL=OFF' => undef },
+					     '-DHAVE_KBDD:BOOL=OFF' => undef,
+						'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+						'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
+			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 'x86_suse_10.2' ],
 		},
@@ -1357,7 +1454,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args,
-				
+
 			},
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
 			'testclass'	=> [ @default_testclass ],
@@ -1369,14 +1466,17 @@ our %submit_info = (
 	##########################################################################
 	'x86_suse_10.2'		=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
+			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
 
 		'test' => {
 			'configure_args' => {
-				@default_test_configure_args, 
+				@default_test_configure_args
 				
 			},
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],

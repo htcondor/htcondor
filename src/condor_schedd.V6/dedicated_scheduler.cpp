@@ -3162,23 +3162,6 @@ DedicatedScheduler::DelMrec( char const* id )
 }
 
 
-bool
-DedicatedScheduler::removeShadowRecFromMrec( shadow_rec* shadow )
-{
-	bool		found = false;
-	match_rec	*mrec;
-
-	all_matches->startIterations();
-    while( all_matches->iterate( mrec ) ) {
-		if( mrec->shadowRec == shadow ) {
-			deallocMatchRec( mrec );
-			found = true;
-		}
-	}
-	return found;
-}
-
-
 // TODO: Deal w/ flocking!
 void
 DedicatedScheduler::publishRequestAd( void )

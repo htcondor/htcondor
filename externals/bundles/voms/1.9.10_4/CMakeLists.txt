@@ -82,5 +82,5 @@ if ( WITH_VOMS )
 endif()
 
 if(NOT VOMS_FOUND)
-	message ( STATUS "external skiped (voms)" )
+	message ( STATUS "external skipped (voms)" )
 endif()

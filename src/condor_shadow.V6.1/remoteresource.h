@@ -469,6 +469,9 @@ private:
 	MyString proxy_path;
 	time_t last_proxy_timestamp;
 
+	time_t m_remote_proxy_expiration;
+	time_t m_remote_proxy_renew_time;
+
 		/** For debugging, print out the values of various statistics
 			related to our bookkeeping of suspend/resume activity for
 			the job.
@@ -492,6 +495,11 @@ private:
 	bool already_killed_fast;
 
 	void logRemoteAccessCheck(bool allow,char const *op,char const *name);
+
+	void setRemoteProxyRenewTime(time_t expiration_time);
+	void setRemoteProxyRenewTime();
+	void startCheckingProxy();
+
 };
 
 

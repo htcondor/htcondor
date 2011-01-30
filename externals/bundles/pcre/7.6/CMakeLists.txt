@@ -90,5 +90,5 @@
 	endif(PCRE_FOUND)
 
 #else(WITH_PCRE)
-#	message (STATUS "external skiped (pcre)")
+#	message (STATUS "external skipped (pcre)")
 #endif(WITH_PCRE)

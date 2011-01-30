@@ -1692,6 +1692,10 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 }
 
 //---------------------------------------------------------------------------
+// Note: the Condor part of this method essentially duplicates functionality
+// that is now in schedd.cpp.  We are keeping this here for now in case
+// someone needs to run a 7.5.6 DAGMan with an older schedd.
+// wenger 2011-01-26
 void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 
 	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor/"
@@ -2723,6 +2727,35 @@ Dag::SetPendingNodeReportInterval( int interval )
 	_pendingReportInterval = interval;
 	time( &_lastEventTime );
 	time( &_lastPendingNodePrintTime );
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::CheckThrottleCats()
+{
+	ThrottleByCategory::ThrottleInfo *info;
+	_catThrottles.StartIterations();
+	while ( _catThrottles.Iterate( info ) ) {
+		debug_printf( DEBUG_DEBUG_1, "Category %s has %d jobs, "
+					"throttle setting of %d\n", info->_category->Value(),
+					info->_totalJobs, info->_maxJobs );
+		ASSERT( info->_totalJobs >= 0 );
+		if ( info->_totalJobs < 1 ) {
+				// When we implement the -strict flag (see gittrac #1755)
+				// this should be a fatal error.
+			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
+						"assigned nodes, so the throttle setting (%d) "
+						"will have no effect\n", info->_category->Value(),
+						info->_maxJobs );
+		}
+
+		if ( !info->isSet() ) {
+				// When we implement the -strict flag (see gittrac #1755)
+				// this should be a fatal error.
+			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
+						"throttle value set\n", info->_category->Value() );
+		}
+	}
 }
 
 //-------------------------------------------------------------------------

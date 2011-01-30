@@ -79,9 +79,9 @@ if ($taskname eq $TAR_TASK) {
 		last;
 	}
 	close (CMAKECONFIG);
-
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 package && make install && make tests";
+	# We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz && make tests";
 
 } elsif  ($taskname eq $UNSTRIPPED_TASK){
 	#Reconfigure cmake variables for native package build
@@ -96,7 +96,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 && make install && make targz && make tests";
 } elsif  ($taskname eq $RPM_TASK){
 	#Building RPM
 
@@ -111,7 +111,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
 
 } elsif  ($taskname eq $RPM_CHECK_TASK){
 	#Print packaging log to stdout
@@ -132,7 +132,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make -j4 package";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
 
 } elsif  ($taskname eq $DEB_CHECK_TASK){
 	#Print package summary
@@ -144,12 +144,11 @@ if ($taskname eq $TAR_TASK) {
 
 print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-	#path hack b/c nmi pre-reqs & paths are broken on windows.
+
+	# build.win.bat uses BASE_DIR to setup some things.
+	#
 	$ENV{BASE_DIR} = "$BaseDir";
-    system("env");
-    #print(`cmd /c dir /b /s build.win.bat`);
-    $execstr= "nmi_tools\\glue\\build\\build.win.bat"; ##devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE";
-	# need to make the tests here. 
+    $execstr= "nmi_tools\\glue\\build\\build.win.bat";
 
 } else {
     $ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";

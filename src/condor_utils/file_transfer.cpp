@@ -343,7 +343,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	// if we're the server, initialize the SpoolSpace and TmpSpoolSpace
-	// member variables (and create the directories if not there already)
+	// member variables
 	//
 	int Cluster = 0;
 	int Proc = 0;
@@ -2129,11 +2129,17 @@ FileTransfer::CommitFiles()
 {
 	MyString buf;
 	MyString newbuf;
+	MyString swapbuf;
 	const char *file;
 
 	if ( IsClient() ) {
 		return;
 	}
+
+	int cluster = -1;
+	int proc = -1;
+	jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
+	jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	if( want_priv_change ) {
@@ -2145,17 +2151,40 @@ FileTransfer::CommitFiles()
 	buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf.Value(),F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
+
+		MyString SwapSpoolSpace;
+		SwapSpoolSpace.sprintf("%s.swap",SpoolSpace);
+		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&jobAd,desired_priv_state);
+		if( !swap_dir_ready ) {
+			EXCEPT("Failed to create %s",SwapSpoolSpace.Value());
+		}
+
 		while ( (file=tmpspool.Next()) ) {
 			// don't commit the commit file!
 			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
 			buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
 			newbuf.sprintf("%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
+			swapbuf.sprintf("%s%c%s",SwapSpoolSpace.Value(),DIR_DELIM_CHAR,file);
+
+				// If the target name exists, move it into the swap
+				// directory.  This serves two purposes:
+				//   1. potentially allow rollback
+				//   2. handle case of target being a non-empty directory,
+				//      which cannot be overwritten by rename()
+			if( access(newbuf.Value(),F_OK) >= 0 ) {
+				if ( rename(newbuf.Value(),swapbuf.Value()) < 0 ) {
+					EXCEPT("FileTransfer CommitFiles failed to move %s to %s: %s",newbuf.Value(),swapbuf.Value(),strerror(errno));
+				}
+			}
+
 			if ( rotate_file(buf.Value(),newbuf.Value()) < 0 ) {
 				EXCEPT("FileTransfer CommitFiles Failed -- What Now?!?!");
 			}
 		}
 		// TODO: remove files specified in commit file
+
+		SpooledJobFiles::removeJobSwapSpoolDirectory(cluster,proc);
 	}
 
 	// We have now commited the files in tmpspool, if we were supposed to.
@@ -2561,7 +2590,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		if ( file_command == 4 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
-				rc = s->put_x509_delegation( &bytes, fullname.Value() );
+				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&jobAd);
+				rc = s->put_x509_delegation( &bytes, fullname.Value(), expiration_time, NULL );
 				dprintf( D_FULLDEBUG,
 				         "DoUpload: put_x509_delegation() returned %d\n",
 				         rc );
@@ -3816,4 +3846,48 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 void FileTransfer::FileTransferInfo::addSpooledFile(char const *name_in_spool)
 {
 	spooled_files.append_to_list(name_in_spool);
+}
+
+
+time_t
+GetDesiredDelegatedJobCredentialExpiration(ClassAd *job)
+{
+	if ( !param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		return 0;
+	}
+
+	time_t expiration_time = 0;
+	int lifetime = 0;
+	if( job ) {
+		job->LookupInteger(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
+	}
+	if( !lifetime ) {
+		lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME",3600*24);
+	}
+	if( lifetime ) {
+		expiration_time = time(NULL) + lifetime;
+	}
+	return expiration_time;
+}
+
+time_t
+GetDelegatedProxyRenewalTime(time_t expiration_time)
+{
+	if( expiration_time == 0 ) {
+		return 0;
+	}
+	if ( !param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		return 0;
+	}
+
+	time_t now = time(NULL);
+	time_t lifetime = expiration_time - now;
+	double lifetime_frac = param_double( "DELEGATE_JOB_GSI_CREDENTIALS_RENEWAL", 0.25,0,1);
+	return now + (time_t)floor(lifetime*lifetime_frac);
+}
+
+void
+GetDelegatedProxyRenewalTime(ClassAd *jobAd)
+{
+	GetDelegatedProxyRenewalTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
 }

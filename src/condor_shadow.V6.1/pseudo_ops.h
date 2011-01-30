@@ -34,7 +34,7 @@ int pseudo_get_file_info_new( const char *path, char *&url );
 int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out );
 int pseudo_ulog( ClassAd *ad );
 int pseudo_get_job_attr( const char *name, MyString &expr );
-int pseudo_set_job_attr( const char *name, const char *expr );
+int pseudo_set_job_attr( const char *name, const char *expr, bool log=false);
 int pseudo_constrain( const char *expr );
 int pseudo_get_sec_session_info(
 	char const *starter_reconnect_session_info,

@@ -218,8 +218,8 @@ FileLock::~FileLock( void )
 				goto finish;
 			}
 		}
-		// this path is only called for the literal case by preen -- still want to clean up all three levels.
-		deleted = rec_clean_up(m_path, 3 ) ;
+		// this path is only called for the literal case by preen -- still want to clean up all two levels.
+		deleted = rec_clean_up(m_path, 2) ;
 		if (deleted == 0){ 
 			dprintf(D_FULLDEBUG, "Lock file %s has been deleted. \n", m_path);
 		} else{
@@ -252,14 +252,14 @@ bool
 FileLock::initLockFile(bool useLiteralPath) 
 {
 	mode_t old_umask = umask(0);
-	m_fd = rec_touch_file(m_path, 0644, 0777 ); 
+	m_fd = rec_touch_file(m_path, 0666, 0777 ); 
 	if (m_fd < 0) {
 		if (!useLiteralPath) {
 			dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.", m_path);
 			char *hPath = CreateHashName(m_orig_path, true);
 			SetPath(hPath);
 			delete []hPath;
-			m_fd = rec_touch_file(m_path, 0644, 0777 ) ;
+			m_fd = rec_touch_file(m_path, 0666, 0777 ) ;
 			if (m_fd < 0) { // /tmp does not work either ... 
 				dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will fall back on locking the actual file. \n");
 				umask(old_umask);

@@ -199,11 +199,9 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 	
 	/* Insert the version into the ClassAd */
-	buffer.sprintf( "%s=\"%s\"", ATTR_VERSION, CondorVersion() );
-	ad->Insert( buffer.Value() );
+	ad->Assign( ATTR_VERSION, CondorVersion() );
 
-	buffer.sprintf( "%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
-	ad->Insert( buffer.Value() );
+	ad->Assign( ATTR_PLATFORM, CondorPlatform() );
 }
 
 

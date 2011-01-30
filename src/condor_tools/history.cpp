@@ -254,7 +254,10 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
 
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-		if (constraint) break;
+		if (constraint) {
+			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>.<proc>\n");
+			break;
+		}
 		sprintf (tmp, "((%s == %d) && (%s == %d))", 
 				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
 		constraint=tmp;
@@ -266,7 +269,10 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (sscanf (argv[i], "%d", &cluster) == 1) {
-		if (constraint) break;
+		if (constraint) {
+			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>\n");
+			break;
+		}
 		sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
 		constraint=tmp;
 		parameters[0] = &cluster;
@@ -281,7 +287,10 @@ main(int argc, char* argv[])
           dprintf_config ("TOOL");
     }
     else {
-		if (constraint) break;
+		if (constraint) {
+			fprintf(stderr, "Error: Cannot provide both -constraint and <owner>\n");
+			break;
+		}
 		owner = (char *) malloc(512 * sizeof(char));
 		sscanf(argv[i], "%s", owner);	
 		sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, owner);

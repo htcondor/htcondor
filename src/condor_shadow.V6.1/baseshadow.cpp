@@ -1075,16 +1075,16 @@ BaseShadow::log_except(const char *msg)
 
 
 bool
-BaseShadow::updateJobAttr( const char *name, const char *expr )
+BaseShadow::updateJobAttr( const char *name, const char *expr, bool log )
 {
-	return job_updater->updateAttr( name, expr, false );
+	return job_updater->updateAttr( name, expr, false, log );
 }
 
 
 bool
-BaseShadow::updateJobAttr( const char *name, int value )
+BaseShadow::updateJobAttr( const char *name, int value, bool log )
 {
-	return job_updater->updateAttr( name, value, false );
+	return job_updater->updateAttr( name, value, false, log );
 }
 
 
@@ -1284,4 +1284,19 @@ BaseShadow::CommitSuspensionTime(ClassAd *jobAd)
 		jobAd->Assign( ATTR_COMMITTED_SUSPENSION_TIME, committed_suspension_time );
 		jobAd->Assign( ATTR_UNCOMMITTED_SUSPENSION_TIME, 0 );
 	}
+}
+
+int
+BaseShadow::handleUpdateJobAd( int sig )
+{
+	dprintf ( D_FULLDEBUG, "In handleUpdateJobAd, sig %d\n", sig );
+	if (!job_updater->retrieveJobUpdates()) {
+		dprintf(D_ALWAYS, "Error: Failed to update JobAd\n");
+		return -1;
+	}
+
+	// Attributes might have changed that would cause the job policy
+	// to evaluate differently, so evaluate now.
+	shadow_user_policy.checkPeriodic();
+	return 0;
 }

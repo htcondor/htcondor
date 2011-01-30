@@ -32,7 +32,7 @@
    <tr>
       <th>Branch<br><small>Click to see branch history</small></th>
       <th>Runid</th>
-      <th>Last build</th>
+      <th>Submitted</th>
       <th>User</th>
       <th>Build Results</th>
       <th>Test Results</th>  
@@ -235,9 +235,23 @@ EOF;
 
    foreach (Array("build", "test", "crosstest") AS $type) {
       $cur = $data[$type];
-      $status = ($cur["failed"] ? "FAILED" :
-                ($cur["pending"] ? "PENDING" : "PASSED"));
-      $color = $status;
+      
+      if($cur["failed"] > 0) {
+	$status = "FAILED";
+	$color = "FAILED";
+      }
+      elseif($cur["pending"] > 0) {
+	$status = "PENDING";
+	$color = "PENDING";
+      }
+      elseif($cur["passed"] > 0) {
+	$status = "PASSED";
+	$color = "PASSED";
+      }
+      else {
+	$status = "No Results";
+	$color = "NORESULTS";
+      }
 
       ##
       ## Check for missing tests
@@ -264,11 +278,12 @@ EOF;
          elseif ($cur["missing"] < 0) $cur["missing"] = 0;
       }
 
-		if($type == "crosstest") {
-      		$detail_url = sprintf(CROSS_DETAIL_URL, $runid, $type, $user);
-		} else {
-      		$detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
-	  	}
+      if($type == "crosstest") {
+	$detail_url = sprintf(CROSS_DETAIL_URL, $runid, $type, $user);
+      }
+      else {
+	$detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
+      }
       
       //
       // No results

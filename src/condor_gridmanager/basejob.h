@@ -64,7 +64,7 @@ class BaseJob : public Service
 	virtual void JobLeaseSentExpired();
 	virtual void JobLeaseReceivedExpired();
 
-	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad );
+	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad );
 
 	static void EvalAllPeriodicJobExprs();
 	int EvalPeriodicJobExpr();

@@ -1001,14 +1001,14 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 }
 
 bool
-ParallelShadow::updateJobAttr( const char *name, const char *expr )
+ParallelShadow::updateJobAttr( const char *name, const char *expr, bool log )
 {
-	return job_updater->updateAttr( name, expr, true );
+	return job_updater->updateAttr( name, expr, true, log );
 }
 
 bool
-ParallelShadow::updateJobAttr( const char *name, int value )
+ParallelShadow::updateJobAttr( const char *name, int value, bool log )
 {
-	return job_updater->updateAttr( name, value, true );
+	return job_updater->updateAttr( name, value, true, log );
 }
 

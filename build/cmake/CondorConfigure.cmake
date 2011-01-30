@@ -64,8 +64,10 @@ include (FindThreads)
 include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
-if (PLATFORM)
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${PLATFORM}")
+if (CONDOR_PLATFORM)
+	add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
+elseif(PLATFORM)
+	add_definitions(-DPLATFORM="${PLATFORM}")
 else()
 	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
 endif()
@@ -138,6 +140,7 @@ if( NOT WINDOWS)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
 	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
 	check_function_exists("readdir64" HAVE_READDIR64)
+	check_function_exists("backtrace" HAVE_BACKTRACE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -178,6 +181,28 @@ if( NOT WINDOWS)
 	# previously they were ~=check_cxx_source_compiles
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, 1024, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY )
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY_2ARG )
+
+	if(HAVE_SCHED_SETAFFINITY_2ARG)
+		set(HAVE_SCHED_SETAFFINITY ON)
+	endif()
 
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
@@ -386,6 +411,10 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+if (NOT WINDOWS)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
+endif(NOT WINDOWS)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 
 if (NOT WIN_EXEC_NODE_ONLY)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
@@ -394,18 +423,17 @@ if (NOT WIN_EXEC_NODE_ONLY)
 endif(NOT WIN_EXEC_NODE_ONLY)
 
 if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gcb/1.5.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.6)
 
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.0-p2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 
@@ -599,7 +627,7 @@ else(MSVC)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lodm -static-libgcc")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
 	endif(AIX)
 
 	if (NOT PROPER AND NOT AIX)
@@ -637,7 +665,8 @@ else(MSVC)
 endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
-dprint("----- Begin CMake Var DUMP -----")
+message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
@@ -791,6 +820,6 @@ dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
 dprint ( "CMAKE_AR: ${CMAKE_AR}" )
 dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
 
-dprint("----- Begin CMake Var DUMP -----")
+message(STATUS "----- Begin CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")

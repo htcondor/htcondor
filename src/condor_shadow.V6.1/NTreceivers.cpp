@@ -438,25 +438,11 @@ do_REMOTE_syscall()
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		
-		// Get stat info
-		struct stat stat_buf;
-		char line[1024];
-		if( rval >= 0 ) {
-			if(stat(path, &stat_buf) < 0 || stat_string(line, &stat_buf) < 0) {
-				rval = -1;
-				terrno = (condor_errno_t)errno;
-			}
-		}
-
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
 		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			ASSERT( result );
-		}
-		else {
-			result = ( syscall_sock->code_bytes_bool(line, 1024) );
 			ASSERT( result );
 		}
 
@@ -876,7 +862,7 @@ do_REMOTE_syscall()
 
 		errno = (condor_errno_t)0;
 		if ( thisRemoteResource->allowRemoteWriteAttributeAccess(attrname) ) {
-			rval = pseudo_set_job_attr( attrname , expr);
+			rval = pseudo_set_job_attr( attrname , expr , true );
 			terrno = (condor_errno_t)errno;
 		} else {
 			rval = -1;
