@@ -20,7 +20,7 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Condor version 7.5.6 not yet released.
-%\item Condor version 7.5.6 released on Month Date, 2010.
+%\item Condor version 7.5.6 released on Month Date, 2011.
 
 \end{itemize}
 
@@ -35,18 +35,19 @@ The details of each version are described below.
 
 % gittrac #1754
 \item \Condor{dagman} now gives a warning if a node category has no
-nodes assigned to it, or no throttle set.
+nodes assigned to it or no throttle set.
 
 % gittrac #1855
 \item \Condor{dagman} now has a \Env{\$MAX\_RETRIES} macro for PRE and
-POST script arguments (see ~\pageref{dagman:SCRIPT} for details).
-
-\item \Condor{dagman} now prints a warning if an unrecognized macro is
+POST script arguments.
+Also, \Condor{dagman} now prints a warning if an unrecognized macro is
 used for a PRE or POST script argument.
+See ~\pageref{dagman:SCRIPT} for details.
 
 % gittrac #1886
-\item \Condor{schedd} is now more efficient in handling the exit of
-  \Condor{shadow} processes when there are large numbers of shadows.
+\item The \Condor{schedd} is now more efficient in handling the exit of
+  \Condor{shadow} processes, when there are large numbers of 
+  \Condor{shadow} processes.
 
 \end{itemize}
 
@@ -70,21 +71,21 @@ used for a PRE or POST script argument.
   valid.  The default is one day.  A value of 0 indicates that the
   delegated proxy should be valid for as long as allowed by the
   credential used to create the proxy; this was the behavior in
-  previous releases of Condor.  This configuration setting currently
+  previous releases of Condor.  This configuration variable currently
   only applies to proxies delegated for non-grid jobs and Condor-C
   jobs.  It does not currently apply to globus grid jobs.  The job may
-  override this configuration setting by using the
-  \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit file
+  override this configuration variable by using the
+  \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit description file
   command.
 
 \item The new configuration variable
-  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH}] specifies a
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} specifies a
     floating point number between 0 and 1 that indicates when
     delegated credentials with limited lifetime should be renewed, as
     a fraction of the delegated lifetime.  The default is 0.25.
 
 \item The new configuration variable
-  \MacroNI{SHADOW\_CHECKPROXY\_INTERVAL} specifies the number of
+  \Macro{SHADOW\_CHECKPROXY\_INTERVAL} specifies the number of
   seconds between tests to see if the job proxy has been updated or
   should be refreshed.  The default is 600 (10 minutes).  Previously,
   the \Condor{shadow} checked for proxy updates once per minute.
@@ -109,20 +110,22 @@ Timer <X> not found
 report that a cycle exists in a DAG.
 
 % gittrac #1869
-\item Job attribute \AdAttr{JobLeaseDuration} is now set appropriately
-when a Condor-C job is forwarded to a remote pool. Previously, a default
-value wasn't suppplied, causing jobs to be unnecessarily killed if the
+\item The job ClassAd attribute \AdAttr{JobLeaseDuration} is now set 
+appropriately when a Condor-C job is forwarded to a remote pool.
+Previously, a default value was not supplied,
+causing jobs to be unnecessarily killed if the
 submit and execute machines temporarily lost contact with each other.
 
 % gittrac #741
-\item Doing \Condor{hold} on a \Condor{dagman} job on Windows no longer
-removes the node jobs of the DAG (the behavior on Windows now matches
-the behavior on other platforms).
+\item Using the \Condor{hold} command on a Windows platform job managed
+by \Condor{dagman} no longer
+removes the node job of the DAG.
+This behavior on Windows now matches the behavior on other platforms.
 
 % gittrac #1490
-\item Doing \Condor{hold} and then \Condor{remove} on a \Condor{dagman}
-job now removes the node jobs of the DAG, rather than leaving them
-as orphans.
+\item Using the \Condor{hold} command followed by the \Condor{remove} 
+command on a job managed by \Condor{dagman}
+now removes node jobs of the DAG, rather than leaving them as orphans.
 
 \end{itemize}
 
