@@ -31,7 +31,7 @@ if (NOT WINDOWS)
   # because of the external dependencies on classads we need to be careful to make it look like a normal install
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
 
-  if (NOT PROPER)
+  if (WANT_FULL_DEPLOYMENT)
 	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE} )
   endif()
 

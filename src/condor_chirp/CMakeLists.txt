@@ -25,13 +25,13 @@ condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
 
 install ( FILES Chirp.jar DESTINATION ${C_LIB} )
 
-if (NOT PROPER)
+if (WANT_FULL_DEPLOYMENT)
 	install ( FILES chirp_client.h DESTINATION ${C_INCLUDE})
 endif()
 
 if (NOT WINDOWS)
 	install (TARGETS chirp_client DESTINATION ${C_LIB})
-	if (NOT PROPER)
+	if (WANT_FULL_DEPLOYMENT)
 		install (FILES chirp_client.c chirp_client.h chirp_protocol.h DESTINATION ${C_SRC}/chirp)
 	endif()
 endif (NOT WINDOWS)

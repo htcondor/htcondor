@@ -32,7 +32,7 @@ if (BUILD_TESTS AND NOT WINDOWS)
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 
-if (NOT PROPER)
+if (WANT_FULL_DEPLOYMENT)
 	install ( FILES condor_includes/condor_ast.h
 			  condor_includes/condor_astbase.h
 			  condor_includes/condor_attrlist.h
@@ -44,4 +44,4 @@ if (NOT PROPER)
 			  condor_includes/file_lock.h
 			  condor_utils/iso_dates.h
 			DESTINATION ${C_INCLUDE})
-endif()
+endif(WANT_FULL_DEPLOYMENT)
