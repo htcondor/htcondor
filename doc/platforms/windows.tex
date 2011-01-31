@@ -190,29 +190,38 @@ places into the job's submit description file
 \index{Condor daemon!condor\_credd@\Condor{credd}}
 \index{daemon!condor\_credd@\Condor{credd}}
 \index{condor\_credd daemon}
+The \Condor{credd} daemon manages secure password storage.
+A single running instance of the \Condor{credd} within a Condor pool
+is necessary in order to provide the feature described in 
+section \ref{sec:windows-run-as-owner},
+where a job runs as the submitting user, 
+instead of as a temporary user that has strictly limited access capabilities.
 
 It is first necessary to select
-a machine on which to run the \Condor{credd}. 
-Often, the machine
-acting as the pool's central manager is a good choice. An important
-restriction, however, is that the \Condor{credd} host must be a
+the single machine on which to run the \Condor{credd}. 
+Often, the machine acting as the pool's central manager is a good choice.
+An important restriction, however, is that the \Condor{credd} host must be a
 machine running Windows.
 
 All configuration settings necessary to enable the \Condor{credd} are
-contained in the example \verb|etc\condor_config.local.credd|
-file from the Condor distribution. Copy these settings into a local
+contained in the example file \verb|etc\condor_config.local.credd|
+from the Condor distribution. Copy these settings into a local
 configuration file for the machine that will run the \Condor{credd}.
 Run \Code{condor\_restart} for these new settings to take effect, then
 verify (via Task Manager) that a \Condor{credd} process is running.
 
-A second set of configuration parameters must be enabled for all
-machines in the pool. The following settings should be used, with
-the \Macro{LOCAL\_CREDD} setting customized to point to the machine
-hosting the \Condor{credd} and the \Macro{ALLOW\_CONFIG} setting
-customized if needed to refer to an administrative account that exists
-on all Condor nodes. 
-A copy of these settings is available in the comments contained in the
+A second set of configuration variables specify security for the
+communication among Condor daemons.
+These variables must be set for all machines in the pool.
+The following example settings are in the comments contained in the
 \verb|etc\condor_config.local.credd| example file.
+These sample settings rely on the \Expr{PASSWORD} method for
+authentication among daemons, 
+including communication with the \Condor{credd} daemon.
+The \Macro{LOCAL\_CREDD} variable must be customized to point to the machine
+hosting the \Condor{credd} and the \Macro{ALLOW\_CONFIG} variable
+will be customized, if needed, to refer to an administrative account 
+that exists on all Condor nodes. 
 \begin{verbatim}
 CREDD_HOST = credd.cs.wisc.edu
 CREDD_CACHE_LOCALLY = True
@@ -227,40 +236,43 @@ SEC_CONFIG_ENCRYPTION = REQUIRED
 SEC_CONFIG_INTEGRITY = REQUIRED
 \end{verbatim}
 
-The configuration employed here relies on the \verb@PASSWORD@
-authentication method to facilitate secure communication between execute
-machines and the \Condor{credd}. In order for \verb@PASSWORD@ 
-authenticated communication to work, a \Term{pool password} must be chosen
-and distributed. Once a pool password is decided upon, it must be
-stored identically on each machine. The pool password first should be
-stored on the \Condor{credd} host, then the other machines in the pool.
+In order for \Expr{PASSWORD} authenticated communication to work,
+a \Term{pool password} must be chosen and distributed.
+The chosen pool password must be stored identically for each machine.
+The pool password first should be
+stored on the \Condor{credd} host, then on the other machines in the pool.
 
-To store the pool password on a given machine, run
+To store the pool password on a Windows machine, run
 \begin{verbatim}
-  condor_store_cred -c add
+  condor_store_cred add -c
 \end{verbatim}
-when logged in with the administrative
-account on that machine, and enter the password when prompted. If
-the administrative account is shared across all machines (i.e. if it
-is a domain account or has the same password on all machines),
+when logged in with the administrative account on that machine,
+and enter the password when prompted. 
+If the administrative account is shared across all machines,
+that is if it is a domain account or has the same password on all machines,
 logging in separately to each machine in the pool can be avoided.
-Instead, the pool password can be securely pushed out to each machine
-using commands of the form
+Instead, the pool password can be securely pushed out for each Windows machine
+using a command of the form
 \begin{verbatim}
-  condor_store_cred -c -n exec01.cs.wisc.edu add
+  condor_store_cred add -c -n exec01.cs.wisc.edu
 \end{verbatim}
 
-Once the pool password is distributed, execute
+Once the pool password is distributed, 
+but before submitting jobs,
+all machines must reevaluate their configuration,
+so execute
 \begin{verbatim}
   condor_reconfig -all
 \end{verbatim}
-from the central manager. This will cause
-each execute machine to test its ability to authenticate with the
-\Condor{credd}. To see whether this test worked for each machine in the
-pool, run the command
+from the central manager.
+This will cause each execute machine to test its ability
+to authenticate with the \Condor{credd}.
+To see whether this test worked for each machine in the pool, run the command
+\footnotesize
 \begin{verbatim}
   condor_status -f "%s\t" Name -f "%s\n" ifThenElse(isUndefined(LocalCredd),\"UNDEF\",LocalCredd)
 \end{verbatim}
+\normalsize
 Any rows in the output with the \Expr{UNDEF} string indicate machines where
 secure communication is not working properly. Verify that the pool password
 is stored correctly on these machines.
