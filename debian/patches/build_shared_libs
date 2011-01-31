@@ -9,7 +9,7 @@
 +target_link_libraries(condor_chirp -Wl,--allow-shlib-undefined)
  
  install ( FILES Chirp.jar DESTINATION ${C_LIB} )
- install ( FILES chirp_client.h DESTINATION ${C_INCLUDE})
+ 
 --- a/src/condor_daemon_core.V6/CMakeLists.txt
 +++ b/src/condor_daemon_core.V6/CMakeLists.txt
 @@ -29,6 +29,7 @@
@@ -46,9 +46,9 @@
 +		# unfortunately libutils comes with undefined symbols introduced by
 +		# libdaemon_core (even when linking libutils to it)
 +		target_link_libraries(unicore_gahp -Wl,--allow-shlib-undefined)
- 	endif()
  
- 	install (FILES gridftp_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+ 		add_custom_command(
+ 			OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
 --- a/src/condor_io/CMakeLists.txt
 +++ b/src/condor_io/CMakeLists.txt
 @@ -22,3 +22,4 @@
@@ -247,7 +247,7 @@
  clone_install(condor "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
  clone_install(condor "condor_vacate;condor_reschedule" "${C_BIN}")
  
-@@ -62,5 +115,8 @@
+@@ -62,6 +115,9 @@
  endif(NOT WINDOWS)
  
  condor_exe(condor_stats "stats.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
@@ -255,7 +255,8 @@
 +# libdaemon_core (even when linking libutils to it)
 +target_link_libraries(condor_stats -Wl,--allow-shlib-undefined)
  
- condor_exe_test(condor_test_auth "test_auth.cpp" "${TOOL_LINK_LIBS}")
+ if( WINDOWS )
+ 	condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 --- a/src/condor_userlog/CMakeLists.txt
 +++ b/src/condor_userlog/CMakeLists.txt
 @@ -18,9 +18,18 @@
@@ -333,7 +334,7 @@
  
 --- a/build/cmake/CondorConfigure.cmake
 +++ b/build/cmake/CondorConfigure.cmake
-@@ -72,7 +72,7 @@
+@@ -74,7 +74,7 @@
  
  set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
  set( CMAKE_VERBOSE_MAKEFILE TRUE )
@@ -342,7 +343,7 @@
  
  # Windows is so different perform the check 1st and start setting the vars.
  if( NOT WINDOWS)
-@@ -94,7 +94,7 @@
+@@ -96,7 +96,7 @@
  	set( CMAKE_SUPPRESS_REGENERATION FALSE )
  
  	# when we want to distro dynamic libraries only with localized rpaths.
@@ -351,16 +352,16 @@
  	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
  	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
  	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-@@ -385,7 +385,8 @@
+@@ -410,7 +410,8 @@
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 -add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 +# use from external package
 +#add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
- 
- if (NOT WIN_EXEC_NODE_ONLY)
- 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+ if (NOT WINDOWS)
+ 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
+ endif(NOT WINDOWS)
 --- a/build/cmake/CondorStaticLib.cmake
 +++ b/build/cmake/CondorStaticLib.cmake
 @@ -18,7 +18,9 @@
