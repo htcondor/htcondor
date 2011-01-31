@@ -247,13 +247,18 @@ bool AmazonRequest::SendRequest() {
     
     // Step 2: Create the string to sign.  We extract "the value of the Host
     // header in lowercase" and the "HTTP Request URI" from the service URL.
-    // The service URL must be of the form 'http[s]://hostname/[path/]'.
+    // The service URL must be of the form 'http[s]://hostname[:port][/path]*'.
     Regex r; int errCode = 0; const char * errString = 0;
-    bool patternOK = r.compile( "https?://([^/]+)(/.*)", & errString, & errCode );
+    bool patternOK = r.compile( "https?://([^/]+)(/.*)?", & errString, & errCode );
     assert( patternOK );
     ExtArray<MyString> groups(4);
     bool matchFound = r.match( this->serviceURL.c_str(), & groups );
-    assert( matchFound );
+    if( ! matchFound ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Failed to parse service URL.";
+        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+        return false;
+    }
     std::string valueOfHostHeaderInLowercase = groups[1];
     std::transform( valueOfHostHeaderInLowercase.begin(),
                     valueOfHostHeaderInLowercase.end(),
@@ -363,9 +368,10 @@ bool AmazonRequest::SendRequest() {
     amazon_gahp_grab_big_mutex();
     if( rv != 0 ) {
         this->errorCode = "E_CURL_IO";
-        this->errorMessage = "curl_easy_perform() failed.";
-        dprintf( D_ALWAYS, "curl_easy_perform() failed (%d): '%s', failing.\n",
-            rv, curl_easy_strerror( rv ) );
+        std::ostringstream error;
+        error << "curl_easy_perform() failed (" << rv << "): '" << curl_easy_strerror( rv ) << "'.";
+        this->errorMessage = error.str();
+        dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
         return false;
     }
 
@@ -382,8 +388,8 @@ bool AmazonRequest::SendRequest() {
     curl_easy_cleanup( curl );
     
     if( responseCode != 200 ) {
-        this->errorCode = "E_HTTP_BAD_RESPONSE";
-        this->errorMessage = "Query did not return 200, failing.\n";
+        this->errorCode = "E_HTTP_RESPONSE_NOT_200";
+        this->errorMessage = resultString;
         dprintf( D_ALWAYS, "Query did not return 200 (%lu), failing.\n",
             responseCode );
         dprintf( D_ALWAYS, "Failure response text was '%s'.\n", resultString.c_str() );
