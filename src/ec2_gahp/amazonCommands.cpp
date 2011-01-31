@@ -166,8 +166,6 @@ AmazonRequest::AmazonRequest() { }
 
 AmazonRequest::~AmazonRequest() { }
 
-// FIXME: We should be setting this->errorMessage and/or this->errorCode
-// whenever we return false.
 bool AmazonRequest::SendRequest() {
     //
     // Every request must have the following parameters:
@@ -177,6 +175,8 @@ bool AmazonRequest::SendRequest() {
     //
     
     if( query_parameters.find( "Action" ) == query_parameters.end() ) {
+        this->errorCode = "E_INTERNAL";
+        this->errorMessage = "No action specified in request.";
         dprintf( D_ALWAYS, "No action specified in request, failing.\n" );
         return false;
     }
@@ -187,6 +187,8 @@ bool AmazonRequest::SendRequest() {
     //
     std::string keyID;
     if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+        this->errorCode = "E_FILE_IO";
+        this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
         dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
         return false;
     }
@@ -270,6 +272,8 @@ bool AmazonRequest::SendRequest() {
     // or SHA1 as the hash algorithm."
     std::string saKey;
     if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+        this->errorCode = "E_FILE_IO";
+        this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
         dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
         return false;
     }
@@ -282,6 +286,8 @@ bool AmazonRequest::SendRequest() {
     const unsigned char * hmac = HMAC( EVP_sha256(), saKey.c_str(), saKey.length(),
         (unsigned char *)stringToSign.c_str(), stringToSign.length(), messageDigest, & mdLength );
     if( hmac == NULL ) {
+        this->errorCode = "E_INTERNAL";
+        this->errorMessage = "Unable to calculate query signature (SHA256 HMAC).";
         dprintf( D_ALWAYS, "Unable to calculate SHA256 HMAC to sign query, failing.\n" );
         return false;
     }
@@ -302,18 +308,24 @@ bool AmazonRequest::SendRequest() {
     // mutex, since we know that means only one thread is running.
     CURLcode rv = curl_global_init( CURL_GLOBAL_ALL );
     if( rv != 0 ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_global_init() failed.";
         dprintf( D_ALWAYS, "curl_global_init() failed, failing.\n" );
         return false;
     }
     
     CURL * curl = curl_easy_init();
     if( curl == NULL ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_init() failed.";
         dprintf( D_ALWAYS, "curl_easy_init() failed, failing.\n" );
         return false;
     }
 
     rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
     if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_URL ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_URL ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
@@ -321,6 +333,8 @@ bool AmazonRequest::SendRequest() {
 
     rv = curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1 );
     if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
@@ -328,6 +342,8 @@ bool AmazonRequest::SendRequest() {
     
     rv = curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, & appendToString );
     if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
@@ -335,6 +351,8 @@ bool AmazonRequest::SendRequest() {
 
     rv = curl_easy_setopt( curl, CURLOPT_WRITEDATA, & this->resultString );
     if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEDATA ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEDATA ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
@@ -344,6 +362,8 @@ bool AmazonRequest::SendRequest() {
     rv = curl_easy_perform( curl );
     amazon_gahp_grab_big_mutex();
     if( rv != 0 ) {
+        this->errorCode = "E_CURL_IO";
+        this->errorMessage = "curl_easy_perform() failed.";
         dprintf( D_ALWAYS, "curl_easy_perform() failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
@@ -352,6 +372,8 @@ bool AmazonRequest::SendRequest() {
     unsigned long responseCode = 0;
     rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & responseCode );
     if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_getinfo() failed.";
         dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
@@ -360,6 +382,8 @@ bool AmazonRequest::SendRequest() {
     curl_easy_cleanup( curl );
     
     if( responseCode != 200 ) {
+        this->errorCode = "E_HTTP_BAD_RESPONSE";
+        this->errorMessage = "Query did not return 200, failing.\n";
         dprintf( D_ALWAYS, "Query did not return 200 (%lu), failing.\n",
             responseCode );
         dprintf( D_ALWAYS, "Failure response text was '%s'.\n", resultString.c_str() );
@@ -431,6 +455,13 @@ bool AmazonVMStart::SendRequest() {
         XML_SetUserData( xp, & vsud );
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
+    } else {
+        if( this->errorCode == "E_CURL_IO" ) {
+            // To be on the safe side, if the I/O failed, make the gridmanager
+            // check to see the VM was started or not.
+            this->errorCode = "NEED_CHECK_VM_START"; 
+            return false;
+        }
     }
     return result;
 }
@@ -490,6 +521,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         std::string udFileName = argv[8];
         std::string udFileContents;
         if( ! readShortFile( udFileName, udFileContents ) ) {
+            result_string = create_failure_result( requestID, "Failed to read userdata file.", "E_FILE_IO" );
             dprintf( D_ALWAYS, "Failed to read userdata file '%s'.\n", udFileName.c_str() );
             return false;
             }
@@ -1004,11 +1036,18 @@ bool AmazonVMCreateKeypair::SendRequest() {
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
 
-        // dprintf( D_ALWAYS, "DEBUG: keyMaterial '%s'\n", pkud.keyMaterial.c_str() );
         if( ! writeShortFile( this->privateKeyFileName, pkud.keyMaterial ) ) {
-            // FIXME: We should be setting this->errorMessage and/or this->errorCode.
+            this->errorCode = "E_FILE_IO";
+            this->errorMessage = "Failed to write private key to file.";
             dprintf( D_ALWAYS, "Failed to write private key material to '%s', failing.\n",
                 this->privateKeyFileName.c_str() );
+            return false;
+        }
+    } else {
+        if( this->errorCode == "E_CURL_IO" ) {
+            // To be on the safe side, if the I/O failed, make the gridmanager
+            // check to see the keys were created or not.
+            this->errorCode = "NEED_CHECK_SSHKEY";
             return false;
         }
     }
