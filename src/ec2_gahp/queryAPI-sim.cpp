@@ -222,7 +222,12 @@ void registerTestUsers() {
     users[ "1" ].groups[ "sg-name-1" ] = Group( "sg-name-1" );
     users[ "1" ].groups[ "sg-name-2" ] = Group( "sg-name-2" );
     users[ "1" ].groups[ "sg-name-3" ] = Group( "sg-name-3" );
-    users[ "2" ] = User();
+    
+    // The Amazon EC2 ID we actually use for testing.
+    users[ "1681MPTCV7E5BF6TWE02" ] = User();
+    
+    // The Magellan (Eucalyptus) ID we actually use for testing.
+    users[ "HOq1jQmeoswWXoJTq44DbTuD8jchkWfXmbsEg" ] = User();
 }
 
 // The compiler seems unwilling or unable to infer return types; GregT
@@ -565,15 +570,16 @@ bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply, unsigned
     }
     
     Keypair kp = getObject< Keypair >( user.keypairs, keyName, found );
-    if( ! found ) {
+    if( found ) {
+        user.keypairs.erase( keyName );
+    } else {
+        // Amazon's EC2 blithely succeeds when this happen, but we'll
+        // let the developer(s) know that something's probably amiss.
         std::ostringstream error;
         error << "Keypair named '" << keyName << "' does not exist." << std::endl;
         reply = error.str();
         fprintf( stderr, "%s", reply.c_str() );
-        return false;
-    }
-
-    user.keypairs.erase( keyName );
+    }        
     
     char rID[] = "1234";
     snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
