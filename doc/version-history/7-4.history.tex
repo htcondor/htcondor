@@ -68,6 +68,10 @@ case of certain log file errors.
   transfer to fail, which resulted in the job returning to the idle
   state in the queue.
 
+% gittrac #1785
+\item In privsep mode, the transfer of output failed if a job's execute
+  directory contained symbolic links to non-existent paths.
+
 \end{itemize}
 
 \noindent Known Bugs:
