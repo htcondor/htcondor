@@ -154,8 +154,7 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
 
 \begin{itemize}
 
-\item Condor version 7.5.5 not yet released.
-%\item Condor version 7.5.5 released on Month Date, 2010.
+\item Condor version 7.5.5 released on January 26, 2011.
 
 \item This version of Condor uses a different layout in the spool
   directory for storing files belonging to jobs that are in the queue.
@@ -173,10 +172,54 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
   references to the old paths to the new paths.  Then, remove
   \verb|$(SPOOL)/spool_version|.  Finally, start up Condor.
 
-\item In Unix, the following executables used to be located in both
-  the sbin and bin directories but are now only located in the bin
-  directory: condor, \Condor{checkpoint}, \Condor{reschedule}, and
+\item For those who compile Condor from the source code rather than
+  using packages of pre-built executables, be aware that in this
+  release Condor is built using \Prog{cmake} instead of \Prog{imake}.
+  See the \File{README.building} file for the new instructions on how
+  to build Condor.
+
+%\item Windows packages are not included in this release.  We expect to
+%  release Windows packages in Condor version 7.5.6.
+
+\item The AIX 5.2 packages in this release have been found to be
+  incompatible with AIX 5.3.
+
+\item We are planning to drop support for AIX.  Please contact us if
+  this is a problem for you.
+
+\item The directory structure within the Unix tar file package of Condor
+  has changed.  Previously, the tar file contained a top level
+  directory named \File{condor-<\emph{version}>}.  The top level
+  directory is now the same as the tar file name, but without the
+  \File{.tar.gz} extension.
+
+\item On Unix platforms, the following executables used to be located in both
+  the \File{sbin} and \File{bin} directories,
+  but are now only located in the \File{bin}
+  directory: \Prog{condor}, \Condor{checkpoint}, \Condor{reschedule}, and
   \Condor{vacate}.
+
+\item The size of the Condor installation has increased by as much as
+  60\% compared to Condor version 7.5.4.  We hope to eliminate most of this
+  increase in Condor version 7.5.6.
+
+\item Previously, packages containing debug symbols were available for
+  many Unix platforms.  In this release, the debug packages contain
+  full, `unstripped' executables instead of just the debug symbols.
+
+\item The contents of the Windows zip and MSI packages of Condor have
+  changed.  The \File{lib} and \File{libexec} folders no longer exist,
+  and all contents previously within them are now in \File{bin}.
+  \Condor{setup} and \Condor{set\_acls} have been moved from the top
+  level directory into \File{bin}.
+
+\item The Windows MSI installer for Condor version 7.5.5 requires that 
+  all previous
+  MSI installations of Condor be uninstalled.  Before uninstalling
+  previous versions, make backup copies of configuration files.  
+  Any settings that
+  need to be preserved must be reapplied to the configuration of the
+  new installation.
 
 \item The following list itemizes changes included in this Condor version
   7.5.5 release that belong to Condor version 7.4.5.  That stable series
@@ -205,6 +248,10 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
   job's input files were being transferred, this caused the file
   transfer to fail, which resulted in the job returning to the idle
   state in the queue.
+
+  % gittrac #1785
+  \item In privsep mode, the transfer of output failed if a job's execute
+  directory contained symbolic links to non-existent paths.
 
   \end{itemize}
 \end{itemize}
@@ -259,6 +306,18 @@ See section~\ref{sec:DAGMan-rescue} for complete details on Rescue DAGs.
 \File{jobstate.log} file needed for the Pegasus workflow manager.
 See section~\ref{sec:DAGJobstateLog} for details.
 
+%gittrac 1745
+\item \Condor{wait} can now work on jobs with logs that are only
+  readable by the user running \Condor{wait}.  Previously, write
+  access to the job's user log was required.
+
+%gittrac #1641
+\item Added a new value for the job ClassAd attribute \Attr{JobStatus}.
+The \Expr{TRANSFERRING\_OUTPUT} status is used
+when transferring a job's output files after the job has finished running.
+Jobs with this status will have their \Attr{JobStatus} attribute set to 6.
+The standard \Condor{q} display will show the job's status as \Expr{>}.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -274,11 +333,25 @@ When \Expr{True}, the debug lock is used when writing to
 the log as well as when rotating the log file.
 See section~\ref{param:LockDebugLogToAppend} for the complete definition.
 
+%gittrac 1552
+\item The new configuration variable
+  \Macro{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP} may be set to a regular
+  expression that specifies file names to ignore when looking for
+  configuration files within the directories specified via
+  \MacroNI{LOCAL\_CONFIG\_DIR}.  
+  See section~\ref{param:LocalConfigDirExcludeRegexp} for the 
+  complete definition.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item In previous versions of Condor, the \Condor{starter} could not 
+write the \File{.machine.ad} and \File{.job.ad} files to the \File{execute}
+directory when PrivSep was enabled.  This has now been fixed, and these files
+are correctly emitted in all cases.
 
 % gittrac 1773
 \item Since Condor version 7.5.2, the speed of \Condor{q} was not as high
@@ -363,7 +436,66 @@ FileTransfer: DownloadFiles called on server side
   This problem was introduced in Condor version 7.5.3.
 
 % gittrac #1849
-\item Fixed a memory leak in \Condor{schedd} introduced in 7.5.4.
+\item Fixed a memory leak in the  \Condor{schedd} 
+introduced in Condor version 7.5.4.
+
+% gittrac #1866
+\item Fixed a problem introduced in Condor version 7.5.4 that could cause the
+  \Condor{schedd} daemon to enter an infinite loop while in the
+  process of shutting down.  For the problem to happen, it was
+  necessary for flocking to have been enabled.
+
+% gittrac #1828
+\item Configuration variable \MacroNI{SCHEDD\_QUERY\_WORKERS} was effectively 
+  ignored when \Condor{q} authenticated itself to the \Condor{schedd}.
+  The query was always
+  processed in the main \Condor{schedd} process rather than in a sub-process.
+  This problem has existed since before Condor version 7.0.0.
+
+% gittrac #1844
+\item Fixed a problem affecting jobs that store their output in the
+  \Condor{schedd}'s spool directory.  The problem affected jobs that
+  include an empty directory in their list of output files to
+  transfer.  This problem was introduced in Condor version 7.5.4,
+  when support for the transfer of directories was added.
+
+% gittrac #1749
+\item Fixed a problem affecting the \Condor{master} daemon since
+  Condor version 7.5.3.  
+  The \Condor{master} daemon would crash if it was instructed
+  to shut down a daemon that was not currently running,
+  but which was waiting to be restarted.
+
+% gittrac #1650
+\item Fixed a bug in \Condor{submit} that prevented the submission of
+multiple \SubmitCmd{vm} universe jobs in a single submit file.
+
+% gittrac #1761
+\item Fixed a bug in the \Condor{schedd} that could cause it to temporarily
+under count the number of running local and scheduler universe jobs. 
+In Condor version 7.5.4, 
+this under counting could cause the daemon to crash.
+
+% gittrac #1695
+\item Fixed a bug that could cause the \Condor{gridmanager} to crash if
+a GAHP server did not behave as expected on start up.
+
+% gittrac #1747
+\item Improved the hold reason reported in several failure cases for 
+CREAM grid jobs.
+
+% gittrac #1771
+\item The \Attr{KFlops} attribute reported by 
+\begin{verbatim}
+  condor_status -run -total 
+\end{verbatim}
+could erroneously be reported as negative.  This has been fixed.
+
+% gittrac #1867
+\item Since Condor version 7.5.4, the refreshing of the proxy for the job in the
+  remote queue did not work in Condor-C.  Therefore, if the original job proxy
+  expired, the job was halted and put on hold, even if the proxy had
+  been renewed on the submit machine.
 
 \end{itemize}
 

@@ -40,9 +40,12 @@ There are two separate uses of \Condor{store\_cred}:
 \Condor{store\_cred} using the \Opt{-c} option deals with the
 password for the implied \verb|condor_pool@$(UID_DOMAIN)| user name.
 
-On a Unix machine, the pool password is
-placed in a file specified by the \MacroNI{SEC\_PASSWORD\_FILE}
-configuration variable.
+On a Unix machine, 
+\Condor{store\_cred} with the \Opt{-f} option is used to set
+the pool password,
+as needed when used with the \Expr{PASSWORD} authentication method.
+The pool password is placed in a file specified by 
+the \MacroNI{SEC\_PASSWORD\_FILE} configuration variable.
 
 \item In order to submit a job from a Windows platform machine,
 or to execute a job on a Windows platform machine utilizing the

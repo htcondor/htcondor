@@ -45,16 +45,16 @@ section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
 for further explanation.
 
 \begin{Options}
-	\ToolArgsDesc
-	\ToolDebugDesc
-        \OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)
+    \ToolArgsBaseDesc
+    \ToolDebugDesc
+    \OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)
 before restarting them}
-        \OptItem{\Opt{-fast}}{Quickly shutdown daemons
+    \OptItem{\Opt{-fast}}{Quickly shutdown daemons
 before restarting them}
-        \OptItem{\Opt{-peaceful}}{Wait indefinitely for jobs to finish
+    \OptItem{\Opt{-peaceful}}{Wait indefinitely for jobs to finish
 before shutting down daemons, prior to restarting them}
-        \OptItem{\OptArg{-constraint}{expression}}{Apply this command only
-        to machines matching the given ClassAd \Arg{expression}}
+    \ToolArgsLocateDesc
+    \ToolArgsAffectDesc
 
 \end{Options}
 

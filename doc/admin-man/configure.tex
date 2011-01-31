@@ -908,6 +908,17 @@ File System Configuration File Entries''.
   it appears in the list. 
   The process is not recursive, so any directories found inside the directory
   being processed are ignored. 
+  See also \MacroNI{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}.
+
+\label{param:LocalConfigDirExcludeRegexp}
+\item[\Macro{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}]
+  A regular expression that specifies file names to be ignored when
+  looking for configuration files within the directories specified via
+  \MacroNI{LOCAL\_CONFIG\_DIR}.  The default expression ignores files
+  with names beginning with a `.' or a `\verb|#|', as well as files with names
+  ending in `\~{}'.  This avoids accidents that can be caused by
+  treating temporary files created by text editors as configuration
+  files.
 
 \label{param:CondorIds}
 \item[\Macro{CONDOR\_IDS}]
