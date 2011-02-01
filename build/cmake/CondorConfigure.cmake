@@ -741,6 +741,9 @@ dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
 # the build id
 dprint ( "BUILDID: ${BUILDID}" )
 
+# the build date
+dprint ( "BUILD_DATE: ${BUILD_DATE}" )
+
 # the pre-release string
 dprint ( "PRE_RELEASE: ${PRE_RELEASE}" )
 

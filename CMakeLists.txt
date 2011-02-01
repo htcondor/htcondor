@@ -24,8 +24,14 @@ cmake_minimum_required(VERSION 2.8)
 ##########################################################################
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")
+
+# Condor version info
 set(VERSION "7.5.6")
+
+# Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 set(PRE_RELEASE "PRE-RELEASE-UWCS")
+#set(PRE_RELEASE OFF)
+
 set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
