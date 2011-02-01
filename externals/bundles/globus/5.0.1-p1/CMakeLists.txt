@@ -217,6 +217,6 @@ if (WITH_GLOBUS)
 
 else( WITH_GLOBUS )
 
-	message (STATUS "external skiped (globus)")
+	message (STATUS "external skipped (globus)")
 
 endif( WITH_GLOBUS )

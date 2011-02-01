@@ -60,6 +60,6 @@ if (WITH_COREDUMPER)
 
 else(WITH_COREDUMPER)
 
-	message (STATUS "external skiped (coredumper)")
+	message (STATUS "external skipped (coredumper)")
 
 endif(WITH_COREDUMPER)

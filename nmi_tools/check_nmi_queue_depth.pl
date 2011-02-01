@@ -12,11 +12,11 @@ use Getopt::Long;
 my $THRESHOLD;
 my $SEND_EMAIL;
 GetOptions("threshold=i" => \$THRESHOLD,
-           "send-email=s" => \$SEND_EMAIL);
+           "send-email=s" => \$SEND_EMAIL,
+           "help" => \&usage);
 
 if(not $THRESHOLD) {
-    print STDERR "Usage: $0 --threshold <queue depth threshold> [--send-email <recipients>]\n";
-    exit 1;
+    usage();
 }
 
 my @out = `/usr/local/condor/bin/condor_q -format '%s\n' nmi_target_platform | sort | uniq -c | sort -nr`;
@@ -83,4 +83,9 @@ else {
 sub logger {
     my ($msg) = @_;
     print STDERR $msg;
+}
+
+sub usage {
+    print STDERR "Usage: $0 --threshold <queue depth threshold> [--send-email <recipients>]\n";
+    exit 1;
 }

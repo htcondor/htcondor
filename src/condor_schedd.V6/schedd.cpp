@@ -90,6 +90,7 @@
 #include "forkwork.h"
 #include "condor_open.h"
 #include "schedd_negotiate.h"
+#include "filename_tools.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -3583,6 +3584,14 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	ASSERT(SpoolSpace);
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
+	if( proxy_path && is_relative_to_cwd(proxy_path) ) {
+		MyString iwd;
+		if( jobad->LookupString(ATTR_JOB_IWD,iwd) ) {
+			iwd.sprintf_cat("%c%s",DIR_DELIM_CHAR,proxy_path);
+			free(proxy_path);
+			proxy_path = strdup(iwd.Value());
+		}
+	}
 	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
 		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
 			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
@@ -4361,27 +4370,33 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS: {
 		abort_job_myself( job_id, action, true, notify );		
-#ifdef WIN32
-			/*	This is a small patch so when DAGMan jobs are removed
-				on Win32, jobs submitted by the DAGMan are removed as well.
-				This patch is small and acceptable for the 6.8 stable series,
-				but for v6.9 and beyond we should remove this patch and have things
-				work on Win32 the same way they work on Unix.  However, doing this
-				was deemed to much code churning for a stable series, thus this
-				simpler but temporary patch.  -Todd 8/2006.
-			*/
-		int job_universe = CONDOR_UNIVERSE_MIN;
-		GetAttributeInt(job_id.cluster, job_id.proc, 
-						ATTR_JOB_UNIVERSE, &job_universe);
-		if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
-			MyString constraint;
-			constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
-								job_id.cluster );
-			abortJobsByConstraint(constraint.Value(),
-				"removed because controlling DAGMan was removed",
-				true);
+
+			//
+			// Changes here to fix gittrac #741 and #1490:
+			// 1) Child job removing code below is enabled for all
+			//    platforms.
+			// 2) Child job removing code below is only executed when
+			//    *removing* a job.
+			// 3) Child job removing code is only executed when the
+			//    removed job has ChildRemoveConstraint set in its classad.
+			// The main reason for doing this is that, if we don't, when
+			// a DAGMan job is held and then removed, its child jobs
+			// are left running.
+			//
+		if ( action == JA_REMOVE_JOBS ) {
+			MyString removeConstraint;
+			int result = GetAttributeString(job_id.cluster, job_id.proc,
+						ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
+						removeConstraint);
+			if ( result == 0 && removeConstraint != "" ) {
+				dprintf( D_ALWAYS,
+							"Removing jobs with constraint <%s>\n",
+							removeConstraint.Value() );
+				abortJobsByConstraint(removeConstraint.Value(),
+					"removed because controlling job was removed",
+					true);
+			}
 		}
-#endif
 		break;
     }
 	case JA_RELEASE_JOBS: {
@@ -8106,6 +8121,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID ); // CRUFT
+		DeleteAttribute( cluster, proc, ATTR_DELEGATED_PROXY_EXPIRATION );
 
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
@@ -10756,8 +10772,9 @@ Scheduler::invalidate_ads()
 
 		Daemon* d;
 		if( FlockCollectors && FlockLevel > 0 ) {
-			for( i=1, FlockCollectors->rewind();
-				 i <= FlockLevel && FlockCollectors->next(d); i++ ) {
+			int level;
+			for( level=1, FlockCollectors->rewind();
+				 level <= FlockLevel && FlockCollectors->next(d); level++ ) {
 				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false );
 			}
 		}
@@ -11078,25 +11095,16 @@ Scheduler::SetMrecJobID(match_rec *match, int cluster, int proc) {
 void
 Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 {
-	bool		found = false;
-	match_rec	*rec;
+	if( shadow->match ) {
+		match_rec *mrec = shadow->match;
+		mrec->shadowRec = NULL;
+		shadow->match = NULL;
 
-	matches->startIterations();
-	while (matches->iterate(rec) == 1) {
-		if(rec->shadowRec == shadow) {
-			rec->shadowRec = NULL;
-				// re-associate match with the original job cluster
-			SetMrecJobID(rec,rec->origcluster,-1);
-			found = true;
+			// re-associate match with the original job cluster
+		SetMrecJobID(mrec,mrec->origcluster,-1);
+		if( mrec->is_dedicated ) {
+			DelMrec( mrec );
 		}
-	}
-	if( !found ) {
-			// Try the dedicated scheduler
-		found = dedicated_scheduler.removeShadowRecFromMrec( shadow );
-	}
-	if( ! found ) {
-		dprintf( D_FULLDEBUG, "Shadow does not have a match record, "
-				 "so did not remove it from the match\n");
 	}
 }
 

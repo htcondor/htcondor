@@ -17,7 +17,7 @@
  ############################################################### 
 
 
-if (NOT WINDOWS)
+if (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
 
 	install ( FILES cleanup_release
 				condor_cleanup_local
@@ -35,9 +35,8 @@ if (NOT WINDOWS)
 
 	install ( FILES Execute.pm FileLock.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-	condor_exe( uniq_pid_command "uniq_pid_tool_main.cpp" ${C_SBIN}
-	"${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF )
+	condor_exe( uniq_pid_command "uniq_pid_tool_main.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF )
 	clone_install( uniq_pid_command uniq_pid_midwife ${C_SBIN} )
 	clone_install( uniq_pid_command uniq_pid_undertaker ${C_SBIN} )
 
-endif (NOT WINDOWS)
+endif (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)

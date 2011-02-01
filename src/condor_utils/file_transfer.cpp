@@ -2590,7 +2590,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		if ( file_command == 4 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
-				rc = s->put_x509_delegation( &bytes, fullname.Value() );
+				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&jobAd);
+				rc = s->put_x509_delegation( &bytes, fullname.Value(), expiration_time, NULL );
 				dprintf( D_FULLDEBUG,
 				         "DoUpload: put_x509_delegation() returned %d\n",
 				         rc );
@@ -3845,4 +3846,48 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 void FileTransfer::FileTransferInfo::addSpooledFile(char const *name_in_spool)
 {
 	spooled_files.append_to_list(name_in_spool);
+}
+
+
+time_t
+GetDesiredDelegatedJobCredentialExpiration(ClassAd *job)
+{
+	if ( !param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		return 0;
+	}
+
+	time_t expiration_time = 0;
+	int lifetime = 0;
+	if( job ) {
+		job->LookupInteger(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
+	}
+	if( !lifetime ) {
+		lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME",3600*24);
+	}
+	if( lifetime ) {
+		expiration_time = time(NULL) + lifetime;
+	}
+	return expiration_time;
+}
+
+time_t
+GetDelegatedProxyRenewalTime(time_t expiration_time)
+{
+	if( expiration_time == 0 ) {
+		return 0;
+	}
+	if ( !param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		return 0;
+	}
+
+	time_t now = time(NULL);
+	time_t lifetime = expiration_time - now;
+	double lifetime_frac = param_double( "DELEGATE_JOB_GSI_CREDENTIALS_RENEWAL", 0.25,0,1);
+	return now + (time_t)floor(lifetime*lifetime_frac);
+}
+
+void
+GetDelegatedProxyRenewalTime(ClassAd *jobAd)
+{
+	GetDelegatedProxyRenewalTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
 }

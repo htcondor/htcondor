@@ -170,7 +170,35 @@ OsProc::StartJob(FamilyInfo* family_info)
 		args.AppendArg(JobName.Value());
 		JobName = wrapper;
 		free(wrapper);
-	} 
+	}
+	
+		// Support USE_PARROT 
+	bool use_parrot = false;
+	if( JobAd->LookupBool( ATTR_USE_PARROT, use_parrot) ) {
+			// Check for parrot executable
+		char *parrot = NULL;
+		if( (parrot=param("PARROT")) ) {
+			if( access(parrot,X_OK) < 0 ) {
+				dprintf( D_ALWAYS, "Unable to use parrot(Cannot find/execute "
+					"at %s(%s)).\n", parrot, strerror(errno) );
+				free( parrot );
+				return 0;
+			} else {
+				args.AppendArg("-d");
+				args.AppendArg("all");
+				args.AppendArg("-o");
+				args.AppendArg("parrot.realout");
+				args.AppendArg(JobName.Value());
+				JobName = parrot;
+				free( parrot );
+			}
+		} else {
+			dprintf( D_ALWAYS, "Unable to use parrot(Undefined path in config"
+			" file)" );
+			return 0;
+		}
+	}
+
 		// Either way, we now have to add the user-specified args as
 		// the rest of the Args string.
 	MyString args_error;

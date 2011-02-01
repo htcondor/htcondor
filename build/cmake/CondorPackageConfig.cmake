@@ -171,6 +171,10 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 
 	endif()
 
+    # the following will dump a header used to insert file info into bin's
+    set ( WINVER ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/condor_winver.h)
+    file( WRITE ${WINVER} "#define CONDOR_VERSION \"${PACKAGE_VERSION}\"\n")
+    #file( APPEND ${WINVER} "#define CONDOR_BLAH \"${YOUR_VAR}\"\n")
 
 	option(WIN_EXEC_NODE_ONLY "Minimal Package Win exec node only" OFF)
 

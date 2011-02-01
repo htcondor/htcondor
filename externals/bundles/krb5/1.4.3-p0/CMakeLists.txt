@@ -40,7 +40,7 @@ if (WITH_KRB5)
 
 			# Something is wrong with the default install (make install suck-o)
 			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n
-							  cp -r src/lib/obj/i386/dbg/* ${EXTERNAL_STAGE}/lib \r\n
+							  cp -r src/lib/obj/i386/rel/* ${EXTERNAL_STAGE}/lib \r\n
 							  cp -r src/include/* ${EXTERNAL_STAGE}/include \r\n
 							  cd \"\\\" \r\n
 							  cd /D "${EXTERNAL_STAGE}/lib" \r\n 
@@ -105,6 +105,6 @@ if (WITH_KRB5)
 
 else(WITH_KRB5)
 
-	message (STATUS "external skiped (krb5)")
+	message (STATUS "external skipped (krb5)")
 
 endif(WITH_KRB5)
