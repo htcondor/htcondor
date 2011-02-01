@@ -211,7 +211,10 @@ foreach ($platforms AS $platform) {
 	if($items[0] == "R") {
 	  $style = "background-color:#0097C5;";
 	}
-	$output .= "<tr style=\"$style\"><td>$items[0]</td><td>$items[1]</td><td>$items[2]</td><td>$items[3]_$items[4]</td></tr>\n";
+	elseif($items[0] == "H") {
+	  $style = "background-color:#A1A1A1;";
+	}
+	$output .= "<tr style=\"$style\"><td style=\"text-align:center\">$items[0]</td><td>$items[1]</td><td>$items[2]</td><td>$items[3]&nbsp;$items[4]</td></tr>\n";
       }
     }
     $output .= "</table>\n";
