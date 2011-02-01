@@ -65,13 +65,13 @@ include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
 if (CONDOR_PLATFORM)
-	add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
+    add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
-	add_definitions(-DPLATFORM="${PLATFORM}")
+    add_definitions(-DPLATFORM="${PLATFORM}")
 elseif(LINUX_NAME)
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
 endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
@@ -735,6 +735,15 @@ dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 # the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 
+# the Condor version string being used
+dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
+
+# the build id
+dprint ( "BUILDID: ${BUILDID}" )
+
+# the pre-release string
+dprint ( "PRE_RELEASE: ${PRE_RELEASE}" )
+
 # the platform specified
 dprint ( "PLATFORM: ${PLATFORM}" )
 
@@ -746,6 +755,9 @@ dprint ( "SYSTEM_NAME: ${SYSTEM_NAME}" )
 
 # the RPM system name (used for generated tarballs)
 dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
+
+# the Condor package name
+dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
 
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )

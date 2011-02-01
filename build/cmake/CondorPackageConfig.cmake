@@ -28,7 +28,21 @@ set (CPACK_PACKAGE_VENDOR "Condor Team - University of Wisconsin Madison")
 set (CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 set (CPACK_PACKAGE_CONTACT "condor-users@cs.wisc.edu")
 set (URL "http://www.cs.wisc.edu/condor/")
-set (CONDOR_VER "${PACKAGE_NAME}-${PACKAGE_VERSION}")
+set (CONDOR_VERSION "${PACKAGE_NAME}-${PACKAGE_VERSION}")
+if(PRE_RELEASE)
+  if(BUILDID)
+    set (CONDOR_PACKAGE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}-${BUILDID}")
+  elseif(UNIX)
+    execute_process( COMMAND date "+%Y%m%d_%H%M%S" OUTPUT_VARIABLE DATE OUTPUT_STRIP_TRAILING_WHITESPACE )
+    set (CONDOR_PACKAGE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}-${DATE}")
+  else()
+    string( REGEX REPLACE "[: /$+]+" "_" PRE_RELEASE_STRIP "${PRE_RELEASE}" )
+    string( REGEX REPLACE "_+$" "" PRE_RELEASE_STRIP "${PRE_RELEASE_STRIP}" )
+    set (CONDOR_PACKAGE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}-${PRE_RELEASE_STRIP}")
+  endif(BUILDID)
+else()
+  set (CONDOR_PACKAGE_NAME "${CONDOR_VERSION}")
+endif()
 
 set (CPACK_PACKAGE_DESCRIPTION "Condor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems,
@@ -69,15 +83,15 @@ set(CPACK_SOURCE_STRIP_FILES TRUE)
 
 # here is where we can
 if (PLATFORM)
-  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${PLATFORM}" )
+  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PLATFORM}" )
 elseif(SYSTEM_NAME)
-  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${SYSTEM_NAME}" )
+  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${SYSTEM_NAME}" )
 else()
-  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${OS_NAME}-${SYS_ARCH}" )
+  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${OS_NAME}-${SYS_ARCH}" )
 endif()
 
 # you can enable/disable file stripping.
-option(CONDOR_STRIP_PACKAGES "Enables a package build" ON)
+option(CONDOR_STRIP_PACKAGES "Enables stripping of packaged binaries" ON)
 set(CPACK_STRIP_FILES ${CONDOR_STRIP_PACKAGES})
 if (NOT CONDOR_STRIP_PACKAGES)
   set (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-unstripped" )
@@ -137,9 +151,9 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set( C_SBIN bin )
 	set( C_ETC etc )
 
-	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_VER}")
-	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}")
-	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VER}")
+	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_VERSION}")
+	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VERSION}")
+	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VERSION}")
 
 	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
 	#
@@ -206,7 +220,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		# Enable debug message
 		set ( CPACK_DEBIAN_PACKAGE_DEBUG 1 )
 
-		set (CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_REVISION}${DEBIAN_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
+		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}${DEBIAN_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_DEBIAN_PACKAGE_SECTION "contrib/misc")
@@ -269,7 +283,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		#Enable trace during packaging
 		set(CPACK_RPM_PACKAGE_DEBUG 1)
 
-		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${PACKAGE_REVISION}.${RPM_SYSTEM_NAME}.${SYS_ARCH}" )
+		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}.${RPM_SYSTEM_NAME}.${SYS_ARCH}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_RPM_PACKAGE_RELEASE ${PACKAGE_REVISION})
@@ -309,9 +323,9 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_ETC			etc/condor )
 		set( C_CONFIGD		etc/condor/config.d )
 		set( C_SYSCONFIG	etc/sysconfig )
-		set( C_ETC_EXAMPLES	usr/share/doc/${CONDOR_VER}/etc/examples )
-		set( C_SHARE_EXAMPLES usr/share/doc/${CONDOR_VER})
-		set( C_DOC			usr/share/doc/${CONDOR_VER} )
+		set( C_ETC_EXAMPLES	usr/share/doc/${CONDOR_VERSION}/etc/examples )
+		set( C_SHARE_EXAMPLES usr/share/doc/${CONDOR_VERSION})
+		set( C_DOC			usr/share/doc/${CONDOR_VERSION} )
 
 		#Because CPACK_PACKAGE_DEFAULT_LOCATION is set to "/" somewhere, so we have to set prefix like this
 		#This might break as we move to newer version of CMake
