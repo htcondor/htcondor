@@ -64,8 +64,10 @@ include (FindThreads)
 include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
-if (PLATFORM)
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${PLATFORM}")
+if (CONDOR_PLATFORM)
+	add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
+elseif(PLATFORM)
+	add_definitions(-DPLATFORM="${PLATFORM}")
 else()
 	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
 endif()
@@ -283,16 +285,6 @@ elseif(${OS_NAME} STREQUAL "HPUX")
 	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
-# NOTE: instead
-# the following is meant to auto-set for CSL
-#string(REPLACE  ".cs.wisc.edu" "@@UW" UW_CHECK ${HOSTNAME})
-#if(${UW_CHECK} MATCHES "@@UW") #cmakes regex does not handle on [.] [.] [.] well
-#	if(EXISTS "/s/std/bin")
-#		message(STATUS "*** UW ENV DETECTED: IF YOU WANT AFS CACHING UPDATE HERE ***")
-#		set(UW_CSL_ENV ON)
-#	endif()
-#endif()
-
 ##################################################
 ##################################################
 # compilation/build options.
@@ -304,7 +296,11 @@ option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(BUILD_TESTS "Will build internal test applications" ON)
+option(HAVE_KBDD "Support for condor_kbdd" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
+option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
+option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
@@ -319,7 +315,7 @@ if (UW_BUILD OR WINDOWS)
 
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "enable/disable the standard universe" ON)
+  option(CLIPPED "disable the standard universe" ON)
 endif()
 
 if (NOT CLIPPED AND NOT LINUX)
@@ -341,12 +337,6 @@ if (BUILD_TESTS)
 	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
-if ( NOT WINDOWS )
-	option(HAVE_KBDD "Support for condor_kbdd" ON)
-else()
-	set(HAVE_KBDD ON)
-endif()
-
 ##################################################
 ##################################################
 # setup for the externals, the variables defined here
@@ -362,17 +352,16 @@ if (PROPER)
 else(PROPER)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	# temporarily disable cacheing externals on windows, primarily b/c of nmi.
-	if (NOT WINDOWS)
-		option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
-	endif(NOT WINDOWS)
+	option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
+
 endif(PROPER)
 
 ## this primarily exists for nmi cached building.. yuk!
 if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
-	#if (WINDOWS)
-	#	set (EXTERNAL_STAGE C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/root)
-	#	set (EXTERNAL_DL C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/download)
-	#else(WINDOWS)
+	if (WINDOWS)
+		set (EXTERNAL_STAGE C:/temp/${PACKAGE_NAME})
+		set (EXTERNAL_DL C:/temp/${PACKAGE_NAME}/download)
+	else(WINDOWS)
 		set (EXTERNAL_STAGE /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/stage/root)
 		set (EXTERNAL_DL /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/externals/stage/download)
 
@@ -382,7 +371,7 @@ if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
 		COMMAND chmod
 		ARGS -f -R a+rwX /scratch/externals/cmake && touch ${EXTERNAL_MOD_DEP}
 		COMMENT "changing ownership on externals cache because so on multiple user machines they can take advantage" )
-	#endif(WINDOWS)
+	endif(WINDOWS)
 else()
 	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
 	set (EXTERNAL_DL ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})

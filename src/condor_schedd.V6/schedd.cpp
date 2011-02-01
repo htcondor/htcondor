@@ -11095,25 +11095,16 @@ Scheduler::SetMrecJobID(match_rec *match, int cluster, int proc) {
 void
 Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 {
-	bool		found = false;
-	match_rec	*rec;
+	if( shadow->match ) {
+		match_rec *mrec = shadow->match;
+		mrec->shadowRec = NULL;
+		shadow->match = NULL;
 
-	matches->startIterations();
-	while (matches->iterate(rec) == 1) {
-		if(rec->shadowRec == shadow) {
-			rec->shadowRec = NULL;
-				// re-associate match with the original job cluster
-			SetMrecJobID(rec,rec->origcluster,-1);
-			found = true;
+			// re-associate match with the original job cluster
+		SetMrecJobID(mrec,mrec->origcluster,-1);
+		if( mrec->is_dedicated ) {
+			DelMrec( mrec );
 		}
-	}
-	if( !found ) {
-			// Try the dedicated scheduler
-		found = dedicated_scheduler.removeShadowRecFromMrec( shadow );
-	}
-	if( ! found ) {
-		dprintf( D_FULLDEBUG, "Shadow does not have a match record, "
-				 "so did not remove it from the match\n");
 	}
 }
 

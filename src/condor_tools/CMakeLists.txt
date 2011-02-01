@@ -47,10 +47,15 @@ condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}"
 
 condor_exe(condor "tool.cpp" "${C_BIN}" "${TOOL_LINK_LIBS}" OFF)
 clone_install(condor "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
+if (WANT_FULL_DEPLOYMENT)
+    clone_install(condor "condor_set_shutdown" "${C_SBIN}")
+endif(WANT_FULL_DEPLOYMENT)
 clone_install(condor "condor_vacate;condor_reschedule" "${C_BIN}")
 
 if (NOT WINDOWS)
-	clone_install(condor "condor_reconfig_schedd;condor_master_off" "${C_SBIN}")
+    if (WANT_FULL_DEPLOYMENT)
+        clone_install(condor "condor_reconfig_schedd;condor_master_off" "${C_SBIN}") # legacy cruft?
+    endif(WANT_FULL_DEPLOYMENT)
 	if (STD_UNIVERSE)
 		clone_install(condor "condor_checkpoint" "${C_BIN}")
 		src_target_ref( ckpt "maps" CKPT_REFS)

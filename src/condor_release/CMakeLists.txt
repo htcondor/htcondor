@@ -17,11 +17,11 @@
  ############################################################### 
 
 
-if (NOT WINDOWS)
+if (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
 
 	install ( DIRECTORY examples
 			DESTINATION ${C_SHARE_EXAMPLES} )
 
 	install(FILES DOC INSTALL ../../LICENSE-2.0.txt README DESTINATION ${C_DOC})
 
-endif (NOT WINDOWS)
+endif (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
