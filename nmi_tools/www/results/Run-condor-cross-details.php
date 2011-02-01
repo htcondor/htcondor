@@ -14,8 +14,9 @@
 
    # get args
    $nplatform = $_REQUEST["platform"];
-   $runid = (int)$_REQUEST["runid"];
-   $user = $_REQUEST["user"];
+   $runid     = (int)$_REQUEST["runid"];
+   $user      = $_REQUEST["user"];
+   $type      = $_REQUEST["type"];
    $build_id = $runid;
    $branch = "unknown";
    
@@ -214,21 +215,28 @@ mysql_free_result($result);
 
 <?php
 foreach ($platforms AS $platform) {
-  $display = $platform;
-  $idx = strpos($display, "_");
-  $display[$idx] = " ";
-  $filepath = "";
+  // We will remove 'nmi:' from the front of the platform and also split it 
+  // onto two separate lines because the length of the header determines the
+  // width of the resulting table column.
+  $display = preg_replace("/nmi:/", "", $platform);
+  $display = preg_replace("/_/", "_ ", $display, 1);
   
   // have to lookup the file location now
+  $filepath = "";
   $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
   $loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
   while( $locrow = mysql_fetch_array($loc_query_res) ) {
     $filepath = $locrow["filepath"];
   }
-  
-  $display = "<a href=\"$filepath/$gid/userdir/$platform/\" ".
-  "title=\"View Run Directory\">$display</a>";
-  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
+
+  # Get the queue depth for the platform if it is pending
+  $queue_depth = "";
+  if($platform_status[$platform] == PLATFORM_PENDING) {
+    $queue_depth = get_queue_for_nmi_platform($platform, $type);
+  }
+
+  $display = "<a href=\"$filepath/$gid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
+  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display $queue_depth</td>\n";
 } // FOREACH
 
 foreach ($data AS $task => $arr) {
