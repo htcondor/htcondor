@@ -63,7 +63,7 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 		add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 						COMMAND cp 
-						ARGS condor_config.generic condor_config.generic.rpm.patched
+						ARGS condor_config.generic condor_config.patched
 						COMMAND patch 
 						ARGS condor_config.patched condor_config.generic.rpm.patch )
 
