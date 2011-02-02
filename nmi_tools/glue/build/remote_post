@@ -77,8 +77,20 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 }
 else
 {
-	system("mv *.tar.gz *.rpm *.deb $pub_dir");
-	system("cmake -E md5sum $pub_dir/* md5s.txt");
+    # Should this be run for Windows also?
+    my $tarball_errors = 0;
+    foreach my $tarball (<*.tar.gz>) {
+        if(system("./check_tarball.pl $tarball")) {
+            $tarball_errors++;
+        }
+    }
+    
+    if($tarball_errors > 0) {
+        die("$tarball_errors tarballs had errors");
+    }
+
+    system("mv *.tar.gz *.rpm *.deb $pub_dir");
+    system("cmake -E md5sum $pub_dir/* md5s.txt");
 }
 
 
