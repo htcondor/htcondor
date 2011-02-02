@@ -462,6 +462,24 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		}
 		r->put_line_raw(line);
 		
+	} else if(sscanf_chirp(line, "sread %d %d %d %d %d", &fd, &length, &offset,
+						   &stride_length, &stride_skip) == 5)
+	{
+		char *buffer = (char*) malloc(length);
+		if(buffer) {
+			result = REMOTE_CONDOR_sread(fd,buffer,length,offset,
+										 stride_length,stride_skip);
+			sprintf(line,"%d",convert(result,errno));
+			r->put_line_raw(line);
+			if(result > 0) {
+				r->put_bytes_raw(buffer,result);
+			}
+			free(buffer);
+		} else {
+			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			r->put_line_raw(line);
+		}
+
 	} else if(sscanf_chirp(line,"swrite %d %d %d %d %d", &fd, &length, &offset,
 						   &stride_length, &stride_skip) == 5) 
 	{
@@ -815,22 +833,19 @@ void IOProxyHandler::fix_chirp_path( char *path )
 #else
 	char temp_path[CHIRP_LINE_MAX];
 
-	// Make sure we have enough space
-	if(strlen(path) <= CHIRP_LINE_MAX) {
-		// Get rid of '//' or '/'
-		if(path && path[0] == DIR_DELIM_CHAR) {
-			if(path[1] == DIR_DELIM_CHAR) {
-				strcpy(temp_path, path+2);
-				temp_path[strlen(path)-2] = '\0';
-				strcpy(path, temp_path);
-			}
-			else {
-				strcpy(temp_path, path+1);
-				temp_path[strlen(path)-1] = '\0';
-				strcpy(path, temp_path);
-			}
+	// Get rid of leading '//','/','\','\\'
+	if(path && path[0] == DIR_DELIM_CHAR) {
+		if(path[1] == DIR_DELIM_CHAR) {
+			strncpy(temp_path, path+2, CHIRP_LINE_MAX);
+			temp_path[CHIRP_LINE_MAX-1] = '\0';
+			strcpy(path, temp_path);
+		}
+		else {
+			strncpy(temp_path, path+1, CHIRP_LINE_MAX);
+			temp_path[CHIRP_LINE_MAX-1] = '\0';
+			strcpy(path, temp_path);
 		}
 	}
-	
+
 #endif
 }
