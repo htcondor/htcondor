@@ -74,6 +74,13 @@ else()
     add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
 endif()
 
+if(PRE_RELEASE)
+  add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
+else()
+  add_definitions( -DPRE_RELEASE_STR="" )
+endif(PRE_RELEASE)
+add_definitions( -DCONDOR_VERSION="${VERSION}" )
+
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 set( CMAKE_VERBOSE_MAKEFILE TRUE )
 set( BUILD_SHARED_LIBS FALSE )

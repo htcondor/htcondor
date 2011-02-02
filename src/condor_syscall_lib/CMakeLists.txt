@@ -76,12 +76,6 @@ if( STD_UNIVERSE )
 	# slam into archive.  Uber pandantic b/c std:u
 	# is concentrated evil.
 	##################################################
-	if(PRE_RELEASE)
-	  add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
-	else()
-	  add_definitions( -DPRE_RELEASE_STR="" )
-	endif(PRE_RELEASE)
-	add_definitions( -DCONDOR_VERSION="${VERSION}" )
 	src_target_ref( ckpt "^.*$" CKPT_REFS)
 	src_target_ref( utils "flock;dprintf_common;except;update_rusage;internet;mkargv;filename_tools;strupr;mark_thread;condor_version;condor_ver_info;stat_wrapper;stat_wrapper_internal;condor_open;selector;MyString;subsystem_info;HashTable;get_random_num" UTIL_REFS)
 	src_target_ref( cedar "stream;sig_num;open_flags;fcntl_cmd;errno_num;condor_rw" IO_REFS)

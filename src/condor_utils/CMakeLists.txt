@@ -42,13 +42,6 @@ if(WINDOWS)
 condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;filename_tools.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;store_cred.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
 endif(WINDOWS)
 
-if(PRE_RELEASE)
-  add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
-else()
-  add_definitions( -DPRE_RELEASE_STR="" )
-endif(PRE_RELEASE)
-add_definitions( -DCONDOR_VERSION="${VERSION}" )
-
 condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi utils )
 
