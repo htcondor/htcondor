@@ -151,8 +151,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set( C_SBIN bin )
 	set( C_ETC etc )
 
-	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_VERSION}")
-	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}")
+	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_PACKAGE_NAME}")
+	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VERSION}")
 	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VERSION}")
 
 	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
