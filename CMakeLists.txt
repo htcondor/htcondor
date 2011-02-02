@@ -61,6 +61,7 @@ include (CondorSetLinkLibs)
 include (CondorExe)
 include (CondorDaemon)
 include (CondorStaticLib)
+include (CondorPlugin)
 include (CheckCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
 include (CondorConfigure)     # will initiate the configure
