@@ -1764,7 +1764,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	r_cod_mgr->publish( cap, mask );
 
 	// Publish the supplemental Class Ads
-	resmgr->adlist_publish( cap, mask );
+	resmgr->adlist_publish( r_id, cap, mask );
 
     // Publish the monitoring information
     daemonCore->monitor_data.ExportData( cap );

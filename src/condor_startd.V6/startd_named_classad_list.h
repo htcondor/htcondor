@@ -17,44 +17,22 @@
  *
  ***************************************************************/
 
-#ifndef CONDOR_CLASSAD_NAMEDLIST_H
-#define CONDOR_CLASSAD_NAMEDLIST_H
+#ifndef STARTD_NAMED_CLASSAD_LIST_H
+#define STARTD_NAMED_CLASSAD_LIST_H
 
 #include "condor_common.h"
-#include "condor_classad.h"
-#include "simplelist.h"
-#include "string_list.h"
+#include "named_classad.h"
+#include "named_classad_list.h"
+#include "startd_named_classad.h"
 
-// A name / ClassAd pair to manage together
-class NamedClassAd
+class StartdNamedClassAdList : public NamedClassAdList
 {
   public:
-	NamedClassAd( const char *name, ClassAd *ad = NULL );
-	~NamedClassAd( void );
-	char *GetName( void ) { return myName; };
-	ClassAd *GetAd( void ) { return myClassAd; };
-	void ReplaceAd( ClassAd *newAd );
+	StartdNamedClassAdList( void );
+	~StartdNamedClassAdList( void ) { };
 
-  private:
-	char	*myName;
-	ClassAd	*myClassAd;
-};
-
-class NamedClassAdList
-{
-  public:
-	NamedClassAdList( void );
-	~NamedClassAdList( void );
-
-	int Register( const char *name );
-	int	Replace( const char *name, ClassAd *ad, bool report_diff = false,
-				 StringList* ignore_attrs = NULL );
-	int	Delete( const char *name );
-	int	Publish( ClassAd *ad );
-
-  private:
-	SimpleList<NamedClassAd*>		ads;
-
+	bool Register( StartdNamedClassAd *ad );
+	int	Publish( ClassAd *ad, unsigned r_id );
 };
 
 #endif

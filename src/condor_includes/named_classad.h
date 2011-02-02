@@ -17,29 +17,28 @@
  *
  ***************************************************************/
 
-#ifndef _CONDOR_CRONJOB_CLASSAD_H
-#define _CONDOR_CRONJOB_CLASSAD_H
+#ifndef NAMED_CLASSAD_H
+#define NAMED_CLASSAD_H
 
-#include "condor_cronjob.h"
-#include "env.h"
+#include "condor_common.h"
+#include "condor_classad.h"
 
-// Define a "ClassAd" 'Cron' job
-class ClassAdCronJob : public CronJobBase
+// A name / ClassAd pair to manage together
+class NamedClassAd
 {
   public:
-	ClassAdCronJob( const char *mgrName, const char *jobName );
-	virtual ~ClassAdCronJob( );
-	int Initialize( void );
+	NamedClassAd( const char *name, ClassAd *ad = NULL );
+	virtual ~NamedClassAd( void );
+	const char *GetName( void ) const { return m_name; };
+	ClassAd *GetAd( void ) { return m_classad; };
+	void ReplaceAd( ClassAd *newAd );
+
+	bool operator == ( const NamedClassAd &other ) const;
+	bool operator == ( const char *other ) const;
 
   private:
-	virtual int ProcessOutput( const char *line );
-	virtual int Publish( const char *name, ClassAd *ad ) = 0;
-
-	ClassAd		*OutputAd;
-	int			OutputAdCount;
-
-	Env         classad_env;
-	MyString	mgrNameUc;
+	const char	*m_name;
+	ClassAd		*m_classad;
 };
 
-#endif /* _CONDOR_CRONJOB_CLASSAD_H */
+#endif

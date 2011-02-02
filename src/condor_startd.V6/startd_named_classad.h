@@ -17,44 +17,23 @@
  *
  ***************************************************************/
 
-#ifndef _CONDOR_CRON_H
-#define _CONDOR_CRON_H
+#ifndef STARTD_NAMED_CLASSAD_H
+#define STARTD_NAMED_CLASSAD_H
 
 #include "condor_common.h"
-#include "condor_daemon_core.h"
-#include "simplelist.h"
-#include "condor_cronjob.h"
+#include "named_classad.h"
 
-// Pre-define the cronjob
-//class CronJobBase;
-
-// Define a simple class to run child tasks periodically.
-class CondorCron : public Service
+// A name / ClassAd pair to manage together
+class StartdCronJob;
+class StartdNamedClassAd : public NamedClassAd
 {
   public:
-	CondorCron( );
-	~CondorCron( );
-
-	// Methods to manipulate the job list
-	int InitializeAll( void );
-	int Reconfig( void );
-	int DeleteAll( void );
-	int KillAll( bool force );
-	int NumAliveJobs( void );
-	int AddJob( 
-		const char *	jobName,
-		CronJobBase	*job
-		);
-	int DeleteJob( 
-		const char *	jobName 
-		);
-	CronJobBase *FindJob( const char *name );
-	void ClearAllMarks( void );
-	void DeleteUnmarked( void );
+	StartdNamedClassAd( const char *name, StartdCronJob &job );
+	~StartdNamedClassAd( void ) { };
+	bool InSlotList( unsigned slot ) const;
 
   private:
-	SimpleList<CronJobBase *>	JobList;
-
+	StartdCronJob	&m_job;
 };
 
-#endif /* _CONDOR_CRON_H */
+#endif

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "startd_hibernator.h"
-#include "condor_classad_namedlist.h"
+#include "startd_named_classad_list.h"
 #include "classad_merge.h"
 #include "vm_common.h"
 #include "VMRegister.h"
@@ -1145,9 +1145,9 @@ ResMgr::resource_sort( ComparisonFunc compar )
 
 // Methods to manipulate the supplemental ClassAd list
 int
-ResMgr::adlist_register( const char *name )
+ResMgr::adlist_register( StartdNamedClassAd *ad )
 {
-	return extra_ads.Register( name );
+	return extra_ads.Register( ad );
 }
 
 int
@@ -1160,7 +1160,9 @@ ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff )
 		ignore_list.append( ignore.Value() );
 		return extra_ads.Replace( name, newAd, true, &ignore_list );
 	}
-	return extra_ads.Replace( name, newAd );
+	else {
+		return extra_ads.Replace( name, newAd );
+	}
 }
 
 int
@@ -1170,14 +1172,14 @@ ResMgr::adlist_delete( const char *name )
 }
 
 int
-ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
+ResMgr::adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask )
 {
 	// Check the mask
 	if (  ( mask & ( A_PUBLIC | A_UPDATE ) ) != ( A_PUBLIC | A_UPDATE )  ) {
 		return 0;
 	}
 
-	return extra_ads.Publish( resAd );
+	return extra_ads.Publish( resAd, r_id );
 }
 
 

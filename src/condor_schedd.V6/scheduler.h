@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -46,8 +46,8 @@
 #include "shadow_mgr.h"
 #include "enum_utils.h"
 #include "self_draining_queue.h"
-#include "schedd_cronmgr.h"
-#include "condor_classad_namedlist.h"
+#include "schedd_cron_job_mgr.h"
+#include "named_classad_list.h"
 #include "env.h"
 #include "tdman.h"
 #include "condor_crontab.h"
@@ -491,8 +491,8 @@ private:
 	SafeSock*		shadowCommandssock;
 
 	// The "Cron" manager (Hawkeye) & it's classads
-	ScheddCronMgr	*CronMgr;
-	NamedClassAdList extra_ads;
+	ScheddCronJobMgr	*CronJobMgr;
+	NamedClassAdList	 extra_ads;
 
 	// parameters controling the scheduling and starting shadow
 	Timeslice       SchedDInterval;

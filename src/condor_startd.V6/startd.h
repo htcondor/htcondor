@@ -70,7 +70,7 @@ class Resource;
 #include "util.h"
 #include "starter_mgr.h"
 #include "cod_mgr.h"
-#include "startd_cronmgr.h"
+#include "startd_cron_job_mgr.h"
 
 static const int MAX_STARTERS = 10;
 
@@ -135,7 +135,7 @@ extern	int		pid_snapshot_interval;
 
 extern  int main_reaper;
 
-extern StartdCronMgr* Cronmgr;
+extern StartdCronJobMgr		*cron_job_mgr;
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 

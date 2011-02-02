@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,19 +17,27 @@
  *
  ***************************************************************/
 
-#ifndef _SCHEDD_CRONJOB_H
-#define _SCHEDD_CRONJOB_H
+#ifndef _SCHEDD_CRON_JOB_MGR_H
+#define _SCHEDD_CRON_JOB_MGR_H
 
-#include "condor_cronjob_classad.h"
+#include "condor_cron_job_mgr.h"
 
-class ScheddCronJob: public ClassAdCronJob
+// Define a simple class to run child tasks periodically.
+class ScheddCronJobMgr : public CronJobMgr
 {
   public:
-	ScheddCronJob( const char *mgrName, const char *jobName );
-	virtual ~ScheddCronJob( );
+	ScheddCronJobMgr( void );
+	~ScheddCronJobMgr( void );
+	int Initialize( const char *name );
+	int Shutdown( bool force );
+	bool ShutdownOk( void );
+
+  protected:
+	CronJob *CreateJob( CronJobParams *params );
 
   private:
-	int Publish( const char *name, ClassAd *ad );
+	bool m_shutting_down;
+	
 };
 
-#endif /* _SCHEDD_CRONJOB_H */
+#endif /* _SCHEDD_CRON_JOB_MGR_H */

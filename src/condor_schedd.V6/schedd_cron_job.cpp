@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,27 +17,32 @@
  *
  ***************************************************************/
 
-#ifndef _SCHEDD_CRONMGR_H
-#define _SCHEDD_CRONMGR_H
 
-#include "condor_cronmgr.h"
+#include "condor_common.h"
+#include "schedd_cron_job.h"
+#include "classad_cron_job.h"
+#include "scheduler.h"
 
-// Define a simple class to run child tasks periodically.
-class ScheddCronMgr : public CronMgrBase
+extern Scheduler scheduler;
+
+class CronJobMgr;
+ScheddCronJob::ScheddCronJob( ClassAdCronJobParams *job_params,
+							  CronJobMgr &mgr )
+		: ClassAdCronJob( job_params, mgr )
 {
-  public:
-	ScheddCronMgr( void );
-	virtual ~ScheddCronMgr( void );
-	int Shutdown( bool force );
-	bool ShutdownOk( void );
+	// Register it with the Resource Manager
+	scheduler.adlist_register( GetName() );
+}
 
-  protected:
-	virtual CronJobBase *NewJob( const char *name );
+// ScheddCronJob destructor
+ScheddCronJob::~ScheddCronJob( )
+{
+	// Delete myself from the resource manager
+	scheduler.adlist_delete( GetName() );
+}
 
-  private:
-	bool ShuttingDown;
-	void JobEvent( CronJobBase *job, CondorCronEvent event );
-	
-};
-
-#endif /* _SCHEDD_CRONMGR_H */
+int
+ScheddCronJob::Publish( const char *a_name, ClassAd *ad )
+{
+	return scheduler.adlist_replace( a_name, ad );
+}

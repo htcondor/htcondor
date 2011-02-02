@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,32 +17,27 @@
  *
  ***************************************************************/
 
-#ifndef _STARTD_CRONMGR_H
-#define _STARTD_CRONMGR_H
+#ifndef _STARTD_CRON_JOB_PARAMS_H
+#define _STARTD_CRON_JOB_PARAMS_H
 
-#include "condor_cronmgr.h"
-#include "enum_utils.h"
+#include "classad_cron_job.h"
+#include <list>
+using namespace std;
 
-// Define a simple class to run child tasks periodically.
-class StartdCronMgr : public CronMgrBase
+// Define a "ClassAd" cron job parameter object
+class StartdCronJobParams : public ClassAdCronJobParams
 {
   public:
-	StartdCronMgr( void );
-	virtual ~StartdCronMgr( void );
-	virtual int Initialize( void );
-	virtual int Reconfig( void );
-	int Shutdown( bool force );
-	bool ShutdownOk( void );
-	CronAutoPublish_t getAutoPublishValue() { return auto_publish; };
+	StartdCronJobParams( const char			*job_name,
+						 const CronJobMgr	&mgr );
+	~StartdCronJobParams( void ) { };
 
-  protected:
-	virtual CronJobBase *NewJob( const char *name );
+	// Finish initialization
+	bool Initialize( void );
+	bool InSlotList( unsigned slot ) const;
 
   private:
-	bool ShuttingDown;
-	void JobEvent( CronJobBase *job, CondorCronEvent event );
-	void ParamAutoPublish( void );
-	CronAutoPublish_t auto_publish;
+	list<unsigned>	m_slots;
 };
 
-#endif /* _STARTD_CRONMGR_H */
+#endif /* _STARTD_CRON_JOB_PARAMS_H */
