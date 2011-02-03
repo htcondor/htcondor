@@ -116,7 +116,12 @@ ResMgr::~ResMgr()
 		delete m_hibernation_manager;
 	}
 
+	if ( m_netif ) {
+		delete m_netif;
+		m_netif = NULL;
+	}
 #endif /* HAVE_HIBERNATION */
+
 
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
@@ -859,7 +864,7 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 			}
 		}
 		share = parse_value( &val[1], type, except );
-		if( ! share ) {
+		if( share < 0.001 ) {
 				// Invalid share.
 		}
 
@@ -921,10 +926,10 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 	if( ! ram ) {
 		ram = compute_phys_mem( default_share );
 	}
-	if( ! swap ) {
+	if( swap <= 0.0001 ) {
 		swap = default_share;
 	}
-	if( ! disk ) {
+	if( disk <= 0.0001 ) {
 		disk = default_share;
 	}
 
@@ -1397,7 +1402,7 @@ ResMgr::state( void )
 	if( ! resources ) {
 		return owner_state;
 	}
-	State s;
+	State s = no_state;
 	Resource* rip;
 	int i, is_owner = 0;
 	for( i = 0; i < nresources; i++ ) {
