@@ -5,9 +5,11 @@ use strict;
 use Getopt::Long;
 use Date::Manip;
 use File::Path;
+use FindBin qw($RealBin $RealScript);
 
 # contains parsed arguments from ARGV
 my %args;
+my @original_argv;
 
 sub usage
 {
@@ -29,6 +31,8 @@ sub parse_command_line
 {
 	my $rc;
 	my $tmp;
+
+	@original_argv = @ARGV;
 
 	$rc = GetOptions( \%args,
 			'help',
@@ -182,26 +186,55 @@ sub acquire_identity
 	print "acquire_identity\n";
 
 	print FOUT<<EOF;
-############################
-User who created this report
-############################
-${\(getlogin() . "\n")}
-#######################
-Date of Report Creation 
-#######################
-@{[`date 2>&1`]}
+################################
+# User who created this report #
+################################
+ ${\(getlogin() . "\n")}
+####################################################
+# Script invocation and on what machine was it run #
+####################################################
+ Script: $RealBin/$RealScript @original_argv
+ Machine: @{[`/bin/hostname 2>&1`]}
+###########################
+# Date of Report Creation #
+###########################
+ @{[`/bin/date 2>&1`]}
+############
+# uname -a #
+############
+ @{[`/bin/uname -a 2>&1`]}
 ##############
-Condor Version
+# /etc/issue #
 ##############
-@{[`condor_version 2>&1`]}
-###############################
-Location of Condor Config Files
-###############################
-@{[`condor_config_val -config 2>&1`]}
-#######################
-Condor Config Variables
-#######################
-@{[`condor_config_val -v -dump 2>&1`]}
+ @{[`/bin/cat /etc/issue 2>&1`]}
+##############
+# /etc/hosts #
+##############
+ @{[`/bin/cat /etc/hosts 2>&1`]}
+######################
+# /etc/nsswitch.conf #
+######################
+ @{[`/bin/cat /etc/nsswitch.conf 2>&1`]}
+#############
+# ulimit -a #
+#############
+ @{[`/bin/sh -c "ulimit -a 2>&1"`]}
+###########################
+# Interface configuration #
+###########################
+ @{[`/sbin/ifconfig 2>&1`]}
+##################
+# Condor Version #
+##################
+ @{[`condor_version 2>&1`]}
+###################################
+# Location of Condor Config Files #
+###################################
+ @{[`condor_config_val -config 2>&1`]}
+###########################
+# Condor Config Variables #
+###########################
+ @{[`condor_config_val -v -dump 2>&1`]}
 EOF
 
 	close(FOUT);
@@ -344,41 +377,48 @@ sub acquire_all_info_for_jobid
 	my $jobid = shift;
 	my $jdir;
 
-	die "No jobid for which to gather all info!" if !defined($jobid);
+	die "No jobid for which to gather jobid info!" if !defined($jobid);
 
 	# The place to store everything for this job id.
 	$jdir = "$args{'scratch'}/$jobid";
 	mkpath($jdir);
 
 	# ##########
-	# Identify myself (condor version, who ran this script, where, when, etc)
-	# ##########
-	acquire_identity($jobid, "$jdir/identity");
-
-	# ##########
 	# Get the job q.
 	# ##########
 	acquire_job_q($jobid, "$jdir/job_q");
-	#system("cat $jdir/job_q");
 
 	# ##########
 	# Get the job ad.
 	# ##########
 	acquire_job_ad($jobid, "$jdir/job_ad", '-l');
-	#system("cat $jdir/job_ad");
 
 	# ##########
 	# Do the analysis for the job
 	# ##########
 	acquire_job_analysis($jobid, "$jdir/job_ad_analysis", '-better-analyze');
-	#system("cat $jdir/job_ad_analysis");
 
 	# ##########
 	# Grab all log entries for the jobid from the job log file
 	# associated with the job if defined.
 	# ##########
 	acquire_job_userlog_lines($jobid, "$jdir/job_userlog_lines");
-	#system("cat $jdir/job_userlog_lines");
+}
+
+sub acquire_all_info
+{
+	my $jobid = shift;
+	die "No jobid for which to all info!" if !defined($jobid);
+
+	# ##########
+	# Identify myself (condor version, who ran this script, where, when, etc)
+	# ##########
+	acquire_identity($jobid, "$args{'scratch'}/identity");
+
+	# ##########
+	# datamine extensive information about the jobid.
+	# ##########
+	acquire_all_info_for_jobid($jobid);
 }
 
 sub package_payload
@@ -400,10 +440,13 @@ sub package_payload
 
 sub main
 {
+	FindBin::again();
+
 	parse_command_line();
 
-	# get all of the info
-	acquire_all_info_for_jobid($args{'jobid'});
+	# get all of the info on the invocation machine, the user, and for the
+	# specified jobid.
+	acquire_all_info($args{'jobid'});
 
 	# package up the scratch directory appropriately and move it to `pwd`.
 	package_payload();
