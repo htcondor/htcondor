@@ -804,7 +804,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		// We don't want this inserted into the public ad automatically
 	if( IS_UPDATE(how_much) || IS_TIMEOUT(how_much) ) {
-		cp->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
+		cp->Assign( ATTR_LAST_BENCHMARK, (unsigned)m_last_benchmark );
 	}
 
 
@@ -812,7 +812,8 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
 		
-		cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
+		cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG,
+					rint(m_condor_load * 100) / 100.0);
 		
 		cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
 
