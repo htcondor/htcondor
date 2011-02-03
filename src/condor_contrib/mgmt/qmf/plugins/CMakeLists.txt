@@ -52,6 +52,10 @@ set( QMF_GEN_SRCS Slot.h;
     ArgsNegotiatorSetRawConfig.h;
     ArgsMasterStart.h;
     ArgsMasterStop.h;
+    ArgsGridMethodsEcho.h;
+    ArgsJobServerFetchJobData.h;
+    ArgsJobServerGetJobAd.h;
+    ArgsSubmissionGetJobSummaries.h
     Package.h;
     Package.cpp )
 
