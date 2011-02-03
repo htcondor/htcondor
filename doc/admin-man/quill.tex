@@ -2,8 +2,6 @@
 \section{\label{sec:Quill}Quill}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Quill|(}
-
-
 \index{Condor daemon!condor\_quill@\Condor{quill}}
 \index{daemon!condor\_quill@\Condor{quill}}
 \index{condor\_quill daemon}
@@ -16,10 +14,13 @@ in a relational database.  The \Condor{quill} daemon updates
 the data in the relation database, and the \Condor{dbmsd} daemon
 maintains the database itself.
 
-As of Condor 7.5.5, Quill is a ``contrib feature'' of Condor.  This
-means it is not included in the builds of Condor provided by UW, but
-it is available as a feature that can be enabled by those who compile
+As of Condor version 7.5.5,
+Quill is distributed only with the source code.
+It is not included in the builds of Condor provided by UW,
+but it is available as a feature that can be enabled by those who compile
 Condor from the source code.
+Find the code within the \File{condor\_contrib} directory, 
+in the directories \File{condor\_tt} and \File{condor\_dbmsd}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Quill-Installation}Installation and Configuration}
