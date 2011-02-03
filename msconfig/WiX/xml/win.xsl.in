@@ -269,10 +269,7 @@
             <MergeRef Id="VC90CRT"/>
             <MergeRef Id="VC90Policy"/>
             <ComponentRef Id="CondorRegNEnv" />
-<<<<<<< HEAD
-=======
             <ComponentRef Id="CondorKBDDReg" />
->>>>>>> 7.5.5 MSI installer final.  This cannot be used for later installs and is in many ways a one-off to deal with the transition to WiX. Ticket #1657.
             <ComponentRef Id="CreatingSpoolDir" />
             <ComponentRef Id="CreatingExecuteDir"/>
             <ComponentRef Id="CreatingLogDir" />
