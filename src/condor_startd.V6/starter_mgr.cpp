@@ -212,7 +212,9 @@ StarterMgr::makeStarter( const char* path )
 {
 	Starter* new_starter;
 	FILE* fp;
-	char *args[] = {const_cast<char*>(path), "-classad", NULL};
+	char *args[] = { const_cast<char*>(path),
+					 const_cast<char*>("-classad"),
+					 NULL };
 	char buf[1024];
 
 		// first, try to execute the given path with a "-classad"

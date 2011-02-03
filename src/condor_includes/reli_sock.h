@@ -167,7 +167,11 @@ public:
 	int get_x509_delegation( filesize_t *size, const char *destination,
 							 bool flush_buffers=false );
 	/// returns -1 on failure, 0 for ok
-	int put_x509_delegation( filesize_t *size, const char *source );
+	// expiration_time: 0 if none; o.w. timestamp of delegated proxy expiration
+	// result_expiration_time: if non-NULL will be set to actual expiration
+	//                         time of delegated proxy; could be shorter than
+	//                         requested time if source proxy expires sooner
+	int put_x509_delegation( filesize_t *size, const char *source, time_t expiration_time, time_t *result_expiration_time );
     ///
 	float get_bytes_sent() { return _bytes_sent; }
     ///

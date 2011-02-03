@@ -199,9 +199,7 @@ foreach ($platforms AS $platform) {
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $platform_without_prefix = preg_replace("/nmi:/", "", $platform);
-    $depth = `/usr/local/condor/bin/condor_q -const 'nmi_target_platform=="$platform_without_prefix"' -format '1\n' runid | wc -l`;
-    $queue_depth = "<br>Q Depth: $depth";
+    $queue_depth = get_queue_for_nmi_platform($platform, $type);
   }
 
   $display = "<a href=\"$filepath/$mygid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
@@ -254,7 +252,7 @@ foreach ($data AS $task => $arr) {
         echo "<td align=\"center\">&nbsp;</td>\n";
       }
       else {
-        $display = "<a href=\"http://$host/results/Run-condor-taskdetails.php?platform={$platform}&task=".urlencode($task)."&runid=".$platform_runids[$platform]. "\">$result</a>";
+        $display = "<a href=\"http://$host/results/Run-condor-taskdetails.php?platform={$platform}&task=".urlencode($task)."&type=".$type."&runid=".$platform_runids[$platform]. "\">$result</a>";
         echo "<td class=\"".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."\" align=\"center\"><B>$display</B></td>\n";
       }
     }

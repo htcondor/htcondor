@@ -64,11 +64,22 @@ include (FindThreads)
 include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
-if (PLATFORM)
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${PLATFORM}")
+if (CONDOR_PLATFORM)
+    add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
+elseif(PLATFORM)
+    add_definitions(-DPLATFORM="${PLATFORM}")
+elseif(LINUX_NAME)
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
 endif()
+
+if(PRE_RELEASE)
+  add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
+else()
+  add_definitions( -DPRE_RELEASE_STR="" )
+endif(PRE_RELEASE)
+add_definitions( -DCONDOR_VERSION="${VERSION}" )
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 set( CMAKE_VERBOSE_MAKEFILE TRUE )
@@ -114,6 +125,7 @@ if( NOT WINDOWS)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
 	check_function_exists("getwd" HAVE_GETWD)
+	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lchown" HAVE_LCHOWN)
 	check_function_exists("lstat" HAVE_LSTAT)
@@ -283,16 +295,6 @@ elseif(${OS_NAME} STREQUAL "HPUX")
 	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
-# NOTE: instead
-# the following is meant to auto-set for CSL
-#string(REPLACE  ".cs.wisc.edu" "@@UW" UW_CHECK ${HOSTNAME})
-#if(${UW_CHECK} MATCHES "@@UW") #cmakes regex does not handle on [.] [.] [.] well
-#	if(EXISTS "/s/std/bin")
-#		message(STATUS "*** UW ENV DETECTED: IF YOU WANT AFS CACHING UPDATE HERE ***")
-#		set(UW_CSL_ENV ON)
-#	endif()
-#endif()
-
 ##################################################
 ##################################################
 # compilation/build options.
@@ -304,7 +306,11 @@ option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(BUILD_TESTS "Will build internal test applications" ON)
+option(HAVE_KBDD "Support for condor_kbdd" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
+option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
+option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
@@ -319,7 +325,7 @@ if (UW_BUILD OR WINDOWS)
 
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "enable/disable the standard universe" ON)
+  option(CLIPPED "disable the standard universe" ON)
 endif()
 
 if (NOT CLIPPED AND NOT LINUX)
@@ -341,12 +347,6 @@ if (BUILD_TESTS)
 	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
-if ( NOT WINDOWS )
-	option(HAVE_KBDD "Support for condor_kbdd" ON)
-else()
-	set(HAVE_KBDD ON)
-endif()
-
 ##################################################
 ##################################################
 # setup for the externals, the variables defined here
@@ -362,17 +362,16 @@ if (PROPER)
 else(PROPER)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	# temporarily disable cacheing externals on windows, primarily b/c of nmi.
-	if (NOT WINDOWS)
-		option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
-	endif(NOT WINDOWS)
+	option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
+
 endif(PROPER)
 
 ## this primarily exists for nmi cached building.. yuk!
 if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
-	#if (WINDOWS)
-	#	set (EXTERNAL_STAGE C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/root)
-	#	set (EXTERNAL_DL C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/download)
-	#else(WINDOWS)
+	if (WINDOWS)
+		set (EXTERNAL_STAGE C:/temp/${PACKAGE_NAME})
+		set (EXTERNAL_DL C:/temp/${PACKAGE_NAME}/download)
+	else(WINDOWS)
 		set (EXTERNAL_STAGE /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/stage/root)
 		set (EXTERNAL_DL /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/externals/stage/download)
 
@@ -382,7 +381,7 @@ if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
 		COMMAND chmod
 		ARGS -f -R a+rwX /scratch/externals/cmake && touch ${EXTERNAL_MOD_DEP}
 		COMMENT "changing ownership on externals cache because so on multiple user machines they can take advantage" )
-	#endif(WINDOWS)
+	endif(WINDOWS)
 else()
 	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
 	set (EXTERNAL_DL ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})
@@ -504,6 +503,9 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+if (WANT_CONTRIB)
+    include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
+endif(WANT_CONTRIB)
 ###########################################
 
 ###########################################
@@ -663,7 +665,8 @@ else(MSVC)
 endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
-dprint("----- Begin CMake Var DUMP -----")
+message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
@@ -730,8 +733,38 @@ dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 # the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 
+# the Condor version string being used
+dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
+
+# the build id
+dprint ( "BUILDID: ${BUILDID}" )
+
+# the build date
+dprint ( "BUILD_DATE: ${BUILD_DATE}" )
+
+# the pre-release string
+dprint ( "PRE_RELEASE: ${PRE_RELEASE}" )
+
+# the platform specified
+dprint ( "PLATFORM: ${PLATFORM}" )
+
+# the Condor platform specified
+dprint ( "CONDOR_PLATFORM: ${CONDOR_PLATFORM}" )
+
+# the system name (used for generated tarballs)
+dprint ( "SYSTEM_NAME: ${SYSTEM_NAME}" )
+
+# the RPM system name (used for generated tarballs)
+dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
+
+# the Condor package name
+dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
+
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
+
+# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
+dprint ( "Linux: ${LINUX_NAME}" )
 
 # is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )
@@ -817,6 +850,6 @@ dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
 dprint ( "CMAKE_AR: ${CMAKE_AR}" )
 dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
 
-dprint("----- Begin CMake Var DUMP -----")
+message(STATUS "----- Begin CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")
