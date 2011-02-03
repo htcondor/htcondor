@@ -10318,7 +10318,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 	int i;
 
 	if (!(name = parse_param_name_from_config(attr))) {
-		EXCEPT("Failed to parse param name from: %s\n", attr);
+		EXCEPT("Failed to parse param name from: %s", attr);
 	}
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
