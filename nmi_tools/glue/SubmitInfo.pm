@@ -45,7 +45,6 @@ our %build_and_test_sets = (
 	'official_ports' => [
 		'ia64_rhas_3',
 		'ppc64_sles_9',
-		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.9', 
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
@@ -67,6 +66,7 @@ our %build_and_test_sets = (
 		'x86_suse_10.0',
 		'x86_64_macos_10.6',
 		'ppc_macos_10.4',
+		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.10',
 		'x86_64_sol_5.11',
 		'x86_64_macos_10.5-updated',
