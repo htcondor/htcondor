@@ -151,8 +151,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set( C_SBIN bin )
 	set( C_ETC etc )
 
-	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_VERSION}")
-	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VERSION}")
+	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_PACKAGE_NAME}")
+	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}")
 	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VERSION}")
 
 	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
@@ -174,16 +174,13 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set (CPACK_GENERATOR "ZIP")
 	
 	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl
-			DESTINATION ${C_ETC}/WiX/xml
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+			DESTINATION ${C_ETC}/WiX/xml )
 	
-	install ( FILES ${CPACK_WIX_BITMAP_FOLDER}/bannrbmp.bmp ${CPACK_WIX_BITMAP_FOLDER}/dlgbmp.bmp
-			DESTINATION ${C_ETC}/WiX/Bitmaps
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( DIRECTORY ${CPACK_WIX_BITMAP_FOLDER}
+			DESTINATION ${C_ETC}/WiX)
 			
 	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
-			  DESTINATION ${C_ETC}/WiX
-	          PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+			  DESTINATION ${C_ETC}/WiX )
 			
 	if (CONDOR_PACKAGE_BUILD)
 

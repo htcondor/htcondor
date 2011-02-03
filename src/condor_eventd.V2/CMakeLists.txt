@@ -16,10 +16,12 @@
  # 
  ############################################################### 
 
-condor_glob( edHdrs edSrcs "" )
+if (NOT WINDOWS)
+	condor_glob( edHdrs edSrcs "" )
 
-add_executable( condor_eventd ${edHdrs} ${edSrcs} )
+	add_executable( condor_eventd ${edHdrs} ${edSrcs} )
 
-condor_set_link_libs( condor_eventd "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND}")
+	condor_set_link_libs( condor_eventd "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND}")
 
-dprint("(TSTCLAIR)->ALL why is eventd not installed? Why build at all?")
+	dprint("(TSTCLAIR)->ALL why is eventd not installed? Why build at all?")
+endif()

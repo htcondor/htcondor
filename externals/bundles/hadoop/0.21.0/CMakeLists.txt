@@ -62,6 +62,7 @@ if ( NOT PROPER )
 		message (STATUS "external configured (HADOOP_FOUND=${EXTERNAL_STAGE}/hdfs)")
 
 		if (WINDOWS)
+		  set_property( TARGET hadoop PROPERTY FOLDER "externals" )
 		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs/ DESTINATION ./hdfs )
 		else()
 		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION ${C_LIBEXEC} )
