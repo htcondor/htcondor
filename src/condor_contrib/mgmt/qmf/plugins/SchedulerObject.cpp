@@ -204,11 +204,10 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 	::SetAttribute(cluster, proc, ATTR_CURRENT_HOSTS, "0"); // int
 
 	ExprTree *expr;
-	char *name;
-	char *value;
+	const char *name;
+	std::string value;
 	ad.ResetExpr();
-	while (NULL != (expr = ad.NextExpr())) {
-		name = ((Variable *) expr->LArg())->Name();
+	while (!(ad.NextExpr(name,expr))) {
 
 			// All these extra lookups are horrible. They have to
 			// be there because the ClassAd may have multiple
@@ -225,15 +224,8 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 			return STATUS_USER + 6;
 		}
 
-		expr->RArg()->PrintToNewStr(&value);
-		switch (expr->RArg()->MyType()) {
-		case LX_STRING:
-			::SetAttribute(cluster, proc, name, value);
-			break;
-		default:
-			::SetAttribute(cluster, proc, name, value);
-		}
-		free(value);
+        value = ExprTreeToString(expr);
+        ::SetAttribute(cluster, proc, name, value.c_str());
 	}
 
 		// LATE SET: These attributes are set late, after the incoming

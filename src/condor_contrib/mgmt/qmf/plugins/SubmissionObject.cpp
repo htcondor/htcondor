@@ -87,9 +87,6 @@ SubmissionObject::update(const PROC_ID &id,
 
 	if (strcasecmp(attr, ATTR_LAST_JOB_STATUS) == 0) {
 		switch (value) {
-		case UNEXPANDED:
-			// unexpanded means a new proc
-			break;
 		case IDLE:
 			mgmtObject->dec_Idle();
 			break;
@@ -105,12 +102,6 @@ SubmissionObject::update(const PROC_ID &id,
 		case HELD:
 			mgmtObject->dec_Held();
 			break;
-		case SUBMISSION_ERR:
-				// Nothing to do for SUBMISSION_ERR, should never see it
-			dprintf(D_FULLDEBUG,
-					"WARNING: Encountered a %s of SUBMISSION_ERR on %d.%d\n",
-					ATTR_LAST_JOB_STATUS, id.cluster, id.proc);		
-			break;
 		default:
 			dprintf(D_ALWAYS, "error: Unknown %s of %d on %d.%d\n",
 					ATTR_LAST_JOB_STATUS, value, id.cluster, id.proc);
@@ -118,13 +109,6 @@ SubmissionObject::update(const PROC_ID &id,
 		}
 	} else if (strcasecmp(attr, ATTR_JOB_STATUS) == 0) {
 		switch (value) {
-		case UNEXPANDED:
-				// Nothing to do for UNEXPANDED, should never see it
-			dprintf(D_FULLDEBUG,
-					"WARNING: Encountered a %s of UNEXPANDED on %d.%d\n",
-					ATTR_JOB_STATUS, id.cluster, id.proc);
-            active_procs.insert(id);
-			break;
 		case IDLE:
 			mgmtObject->inc_Idle();
             active_procs.insert(id);
@@ -146,12 +130,6 @@ SubmissionObject::update(const PROC_ID &id,
 		case HELD:
 			mgmtObject->inc_Held();
             active_procs.insert(id);
-			break;
-		case SUBMISSION_ERR:
-				// Nothing to do for SUBMISSION_ERR, should never see it
-			dprintf(D_FULLDEBUG,
-					"WARNING: Encountered a %s of SUBMISSION_ERR on %d.%d\n",
-					ATTR_JOB_STATUS, id.cluster, id.proc);		
 			break;
 		default:
 			dprintf(D_ALWAYS, "error: Unknown %s of %d on %d.%d\n",
