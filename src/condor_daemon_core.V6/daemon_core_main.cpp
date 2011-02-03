@@ -1256,7 +1256,12 @@ handle_config( Service *, int cmd, Stream *stream )
 	} else {
 		to_check = admin;
 	}
-	if( ! daemonCore->CheckConfigSecurity(to_check, (Sock*)stream) ) {
+	if (!is_valid_param_name(to_check)) {
+		dprintf( D_ALWAYS, "Rejecting attempt to set param with invalid name (%s)\n", to_check);
+		free(admin); free(config);
+		rval = -1;
+		failed = true;
+	} else if( ! daemonCore->CheckConfigSecurity(to_check, (Sock*)stream) ) {
 			// This request is insecure, so don't try to do anything
 			// with it.  We can't return yet, since we want to send
 			// back an rval indicating the error.
