@@ -16,6 +16,6 @@
  # 
  ###############################################################
 
-if ( HAVE_EXT_QPID )
+if ( HAVE_EXT_QPID AND LINUX )
     add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src )
-endif( HAVE_EXT_QPID )
+endif( )
