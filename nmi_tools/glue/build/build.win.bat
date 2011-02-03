@@ -21,7 +21,7 @@ set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft
 
 set PERL_PATH=c:\perl\site\bin;c:\perl\bin
 for /D %%I in ("c:\prereq\ActivePerl*") do set ACTIVE_PERL_DIR=%%~fI
-if NOT "~%ACTIVE_PERL_DIR%"=="~" set PERL_PATH=%ACTIVE_PERL_DIR%site\bin;%ACTIVE_PERL_DIR%bin;%PERL_PATH%
+if NOT "~%ACTIVE_PERL_DIR%"=="~" set PERL_PATH=%ACTIVE_PERL_DIR%\site\bin;%ACTIVE_PERL_DIR%\bin;%PERL_PATH%
 
 set ZIP_PATH=%ProgramFiles%\7-Zip
 set WIX_PATH=%WIX%
