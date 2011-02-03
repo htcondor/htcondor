@@ -68,6 +68,7 @@ our %build_and_test_sets = (
 		'x86_64_macos_10.6',
 		'ppc_macos_10.4',
 		'sun4u_sol_5.10',
+		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
 		'x86_64_macos_10.5-updated',
 		# 'x86_64_fedora_12-updated',  <-- no longer supported in 11/2010, and nmi fails why are we doing this?
@@ -997,11 +998,11 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Solais 11 on x86_64
+	# Platform Solaris 11 on x86_64
 	# Building openssl is problematic on this platform.  There is
-        # some confusion betwen 64-bit and 32-bit, which causes linkage
-    	# problems.  Since ssh_to_job depends on openssl's base64 functions,
-    	# that is also disabled.
+	# some confusion betwen 64-bit and 32-bit, which causes linkage
+	# problems.  Since ssh_to_job depends on openssl's base64 functions,
+	# that is also disabled.
 	##########################################################################
 	'x86_64_sol_5.11'	=> {
 		'build' => {
@@ -1009,7 +1010,33 @@ our %submit_info = (
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
-},
+			},
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Solaris 10 on x86_64
+	# Building openssl is problematic on this platform.  There is
+	# some confusion betwen 64-bit and 32-bit, which causes linkage
+	# problems.  Since ssh_to_job depends on openssl's base64 functions,
+	# that is also disabled.
+	##########################################################################
+	'x86_64_sol_5.10'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
+			},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
 			'xtests'	=> undef,

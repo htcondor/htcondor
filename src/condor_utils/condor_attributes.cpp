@@ -615,6 +615,7 @@ const char * const ATTR_CLASSAD_LIFETIME		 = "ClassAdLifetime";
 const char * const ATTR_UPDATE_PRIO              = "UpdatePrio";
 const char * const ATTR_UPDATE_SEQUENCE_NUMBER   = "UpdateSequenceNumber";
 const char * const ATTR_USE_GRID_SHELL           = "UseGridShell";
+const char * const ATTR_USE_PARROT               = "UseParrot";
 const char * const ATTR_USER					 = "User";
 const char * const ATTR_VACATE                   = "Vacate";
 const char * const ATTR_VACATE_TYPE              = "VacateType";

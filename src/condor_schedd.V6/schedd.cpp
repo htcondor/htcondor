@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -68,8 +68,8 @@
 #include "util_lib_proto.h"
 #include "status_string.h"
 #include "condor_id.h"
-#include "condor_classad_namedlist.h"
-#include "schedd_cronmgr.h"
+#include "named_classad_list.h"
+#include "schedd_cron_job_mgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
 #include "condor_crontab.h"
 #include "condor_netdb.h"
@@ -497,7 +497,7 @@ Scheduler::Scheduler() :
 	m_parsed_gridman_selection_expr = NULL;
 	m_unparsed_gridman_selection_expr = NULL;
 
-	CronMgr = NULL;
+	CronJobMgr = NULL;
 
 	jobThrottleNextJobDelay = 0;
 #ifdef HAVE_EXT_POSTGRESQL
@@ -521,9 +521,9 @@ Scheduler::~Scheduler()
 		free ( this->StartSchedulerUniverse );
 	}
 
-	if ( CronMgr ) {
-		delete CronMgr;
-		CronMgr = NULL;
+	if ( CronJobMgr ) {
+		delete CronJobMgr;
+		CronJobMgr = NULL;
 	}
 
 		// we used to cancel and delete the shadowCommand*socks here,
@@ -8141,6 +8141,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID ); // CRUFT
+		DeleteAttribute( cluster, proc, ATTR_DELEGATED_PROXY_EXPIRATION );
 
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
@@ -10216,9 +10217,9 @@ Scheduler::Init()
 	shadow_mgr.init();
 
 		// Startup the cron logic (only do it once, though)
-	if ( ! CronMgr ) {
-		CronMgr = new ScheddCronMgr( );
-		CronMgr->Initialize( );
+	if ( ! CronJobMgr ) {
+		CronJobMgr = new ScheddCronJobMgr( );
+		CronJobMgr->Initialize( "schedd" );
 	}
 
 	m_xfer_queue_mgr.InitAndReconfig();
@@ -10613,7 +10614,7 @@ Scheduler::attempt_shutdown()
 		return;
 	}
 
-	if ( CronMgr && ( ! CronMgr->ShutdownOk() ) ) {
+	if ( CronJobMgr && ( ! CronJobMgr->ShutdownOk() ) ) {
 		return;
 	}
 
@@ -10628,7 +10629,7 @@ Scheduler::shutdown_graceful()
 
 	// If there's nothing to do, shutdown
 	if(  ( numShadows == 0 ) &&
-		 ( CronMgr && ( CronMgr->ShutdownOk() ) )  ) {
+		 ( CronJobMgr && ( CronJobMgr->ShutdownOk() ) )  ) {
 		schedd_exit();
 	}
 
@@ -10650,8 +10651,8 @@ Scheduler::shutdown_graceful()
 					"attempt_shutdown()", this );
 
 	// Shut down the cron logic
-	if( CronMgr ) {
-		CronMgr->Shutdown( false );
+	if( CronJobMgr ) {
+		CronJobMgr->Shutdown( false );
 	}
 
 }
@@ -10680,8 +10681,8 @@ Scheduler::shutdown_fast()
 	}
 
 	// Shut down the cron logic
-	if( CronMgr ) {
-		CronMgr->Shutdown( true );
+	if( CronJobMgr ) {
+		CronJobMgr->Shutdown( true );
 	}
 
 		// Since this is just sending a bunch of UDP updates, we can
@@ -10710,11 +10711,11 @@ void
 Scheduler::schedd_exit()
 {
 		// Shut down the cron logic
-	if( CronMgr ) {
-		dprintf( D_ALWAYS, "Deleting CronMgr\n" );
-		CronMgr->Shutdown( true );
-		delete CronMgr;
-		CronMgr = NULL;
+	if( CronJobMgr ) {
+		dprintf( D_ALWAYS, "Deleting CronJobMgr\n" );
+		CronJobMgr->Shutdown( true );
+		delete CronJobMgr;
+		CronJobMgr = NULL;
 	}
 
 		// write a clean job queue on graceful shutdown so we can
@@ -11114,25 +11115,16 @@ Scheduler::SetMrecJobID(match_rec *match, int cluster, int proc) {
 void
 Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 {
-	bool		found = false;
-	match_rec	*rec;
+	if( shadow->match ) {
+		match_rec *mrec = shadow->match;
+		mrec->shadowRec = NULL;
+		shadow->match = NULL;
 
-	matches->startIterations();
-	while (matches->iterate(rec) == 1) {
-		if(rec->shadowRec == shadow) {
-			rec->shadowRec = NULL;
-				// re-associate match with the original job cluster
-			SetMrecJobID(rec,rec->origcluster,-1);
-			found = true;
+			// re-associate match with the original job cluster
+		SetMrecJobID(mrec,mrec->origcluster,-1);
+		if( mrec->is_dedicated ) {
+			DelMrec( mrec );
 		}
-	}
-	if( !found ) {
-			// Try the dedicated scheduler
-		found = dedicated_scheduler.removeShadowRecFromMrec( shadow );
-	}
-	if( ! found ) {
-		dprintf( D_FULLDEBUG, "Shadow does not have a match record, "
-				 "so did not remove it from the match\n");
 	}
 }
 

@@ -128,9 +128,7 @@ CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
-if( CondorTest::RunTest2(
-		name => $testname,
-		submit_hash => { hold => 'true' }) ) {
+if( CondorTest::RunTest($testname, "cmd_q_shows-sub.cmd", 0)) {
 	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {

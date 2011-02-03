@@ -51,25 +51,28 @@ if (NOT WINDOWS)
 endif()
 
 target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP})
-install (FILES MyString.h
-		 condor_event.h
-		 condor_holdcodes.h
-		 read_user_log.h
-		 user_log.c++.h
-		 user_log.README
-		 write_user_log.h
-		 compat_classad.h
-		 compat_classad_list.h
-		 compat_classad_util.h
-		 stl_string_utils.h
-		DESTINATION ${C_INCLUDE})
 
-install ( TARGETS condorapi DESTINATION ${C_LIB} )
+if (WANT_FULL_DEPLOYMENT)
+	install (FILES MyString.h
+			 condor_event.h
+			 condor_holdcodes.h
+			 read_user_log.h
+			 user_log.c++.h
+			 user_log.README
+			 write_user_log.h
+			 compat_classad.h
+			 compat_classad_list.h
+			 compat_classad_util.h
+			 stl_string_utils.h
+			DESTINATION ${C_INCLUDE})
+
+    install ( TARGETS condorapi DESTINATION ${C_LIB} )
+endif(WANT_FULL_DEPLOYMENT)
 
 add_definitions(-DENABLE_STATE_DUMP)
-condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}") #"condorapi")
-condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}") #"condorapi")
-condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}") #"condorapi")
+condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}") 
+condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}")
+condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}")
 condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 ##################################################
 

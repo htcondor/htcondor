@@ -301,8 +301,12 @@ public:
 		const char* path_to_proxy_file, CondorError * errstack);
 
 		// expiration_time: 0 if none; o.w. time to expire delegated proxy
+		// result_expiration_time: if non-NULL, gets set to the delegated
+		//                         proxy expiration time, which may be sooner
+		//                         than requested if source proxy expires
 	bool delegateGSIcredential(const int cluster, const int proc, 
 							   const char* path_to_proxy_file, time_t expiration_time,
+							   time_t *result_expiration_time,
 							   CondorError * errstack);
 
 		// Caller should delete new_job_ad when done with it.

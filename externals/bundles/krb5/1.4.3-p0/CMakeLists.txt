@@ -36,11 +36,11 @@ if (WITH_KRB5)
 			set (KRB5_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.in src/appl/gssftp/ftp/Makefile.in )
 			set (KRB5_MAKE cd src \r\n
 						   nmake -f Makefile.in prep-windows \r\n 
-			               nmake )
+			               nmake NODEBUG=1)
 
 			# Something is wrong with the default install (make install suck-o)
 			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n
-							  cp -r src/lib/obj/i386/dbg/* ${EXTERNAL_STAGE}/lib \r\n
+							  cp -r src/lib/obj/i386/rel/* ${EXTERNAL_STAGE}/lib \r\n
 							  cp -r src/include/* ${EXTERNAL_STAGE}/include \r\n
 							  cd \"\\\" \r\n
 							  cd /D "${EXTERNAL_STAGE}/lib" \r\n 

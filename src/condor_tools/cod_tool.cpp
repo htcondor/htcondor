@@ -145,7 +145,7 @@ main( int argc, char *argv[] )
 		rval = startd.renewLeaseForClaim( &reply, timeout );
 		break;
 	case DELEGATE_GSI_CRED_STARTD:
-		irval = startd.delegateX509Proxy( proxy_file, 0 );
+		irval = startd.delegateX509Proxy( proxy_file, 0, NULL );
 		rval = (irval == OK);
 		break;
 	}

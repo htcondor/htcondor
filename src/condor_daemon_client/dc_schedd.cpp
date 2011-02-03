@@ -1059,6 +1059,7 @@ bool
 DCSchedd::delegateGSIcredential(const int cluster, const int proc, 
 								const char* path_to_proxy_file,
 								time_t expiration_time,
+								time_t *result_expiration_time,
 								CondorError * errstack)
 {
 	int reply;
@@ -1106,7 +1107,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 
 		// Delegate the gsi proxy
 	filesize_t file_size = 0;	// will receive the size of the file
-	if ( rsock.put_x509_delegation(&file_size,path_to_proxy_file,expiration_time) < 0 ) {
+	if ( rsock.put_x509_delegation(&file_size,path_to_proxy_file,expiration_time,result_expiration_time) < 0 ) {
 		dprintf(D_ALWAYS,
 			"DCSchedd::delegateGSIcredential "
 			"failed to send proxy file %s\n",

@@ -553,6 +553,7 @@ extern const char * const  ATTR_CLASSAD_LIFETIME;
 extern const char * const  ATTR_UPDATE_PRIO;
 extern const char * const  ATTR_UPDATE_SEQUENCE_NUMBER;
 extern const char * const  ATTR_USE_GRID_SHELL;
+extern const char * const  ATTR_USE_PARROT;
 extern const char * const  ATTR_USER;
 extern const char * const  ATTR_VACATE;
 extern const char * const  ATTR_VACATE_TYPE;

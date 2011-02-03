@@ -498,6 +498,8 @@ private:
 
 	void setRemoteProxyRenewTime(time_t expiration_time);
 	void setRemoteProxyRenewTime();
+	void startCheckingProxy();
+
 };
 
 

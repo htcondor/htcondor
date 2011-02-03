@@ -86,6 +86,8 @@ char*	pidFile = NULL;
 char*	addrFile = NULL;
 static	char*	logAppend = NULL;
 
+static char *core_dir = NULL;
+
 int condor_main_argc;
 char **condor_main_argv;
 time_t daemon_stop_time;
@@ -280,15 +282,23 @@ DC_Exit( int status, const char *shutdown_program )
 #endif /* ! WIN32 */
 
 		// Now, delete the daemonCore object, since we allocated it. 
-	unsigned long	pid = daemonCore->getpid( );
-	delete daemonCore;
-	daemonCore = NULL;
+	unsigned long	pid = 0;
+	if (daemonCore) {
+		pid = daemonCore->getpid( );
+		delete daemonCore;
+		daemonCore = NULL;
+	}
 
 		// Free up the memory from the config hash table, too.
 	clear_config();
 
 		// and deallocate the memory from the passwd_cache (uids.C)
 	delete_passwd_cache();
+
+	if ( core_dir ) {
+		free( core_dir );
+		core_dir = NULL;
+	}
 
 		/*
 		  Log a message.  We want to do this *AFTER* we delete the
@@ -651,8 +661,6 @@ handle_dynamic_dirs()
 	}
 }
 
-static char *core_dir = NULL;
-
 #if HAVE_EXT_COREDUMPER
 void
 linux_sig_coredump(int signum)
@@ -752,6 +760,10 @@ drop_core_in_log( void )
 		return;
 	}
 
+	if ( core_dir ) {
+		free( core_dir );
+		core_dir = NULL;
+	}
 	core_dir = strdup(ptmp);
 
 	// in some case we need to hook up our own handler to generate
@@ -1244,7 +1256,12 @@ handle_config( Service *, int cmd, Stream *stream )
 	} else {
 		to_check = admin;
 	}
-	if( ! daemonCore->CheckConfigSecurity(to_check, (Sock*)stream) ) {
+	if (!is_valid_param_name(to_check)) {
+		dprintf( D_ALWAYS, "Rejecting attempt to set param with invalid name (%s)\n", to_check);
+		free(admin); free(config);
+		rval = -1;
+		failed = true;
+	} else if( ! daemonCore->CheckConfigSecurity(to_check, (Sock*)stream) ) {
 			// This request is insecure, so don't try to do anything
 			// with it.  We can't return yet, since we want to send
 			// back an rval indicating the error.

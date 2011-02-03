@@ -1,0 +1,20 @@
+Condor Contrib - PIGEON 
+
+1 - Building:
+--------------
+
+For making your life easier, make sure you have the Condor source tree checked out. Then add this folder (condor_addons_pigeon) under src/.
+Now you can run condor_imake , make, make release, make clean .. etc.
+
+One important point is, though, that you have to indicate where your QPid installation is located by setting the environment variable "QPID_INSTALL". make will check whether you did or not. 
+
+
+2 - Running:
+-------------
+
+Edit the condor_config_addon file and adapt the paths to what fits your needs. Add this guy to the LOCAL_CONFIG_FILE.
+
+Now you should be good to go and be able to run the daemon
+	condor_pigeon
+
+Make sure you have QPID_INSTALL/lib and CONDOR_RELEASE_DIR/lib in your LD_LIBRARY_PATH when doing so. 

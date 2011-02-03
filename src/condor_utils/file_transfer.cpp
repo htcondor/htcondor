@@ -2591,7 +2591,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		if ( file_command == 4 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
 				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&jobAd);
-				rc = s->put_x509_delegation( &bytes, fullname.Value(), expiration_time );
+				rc = s->put_x509_delegation( &bytes, fullname.Value(), expiration_time, NULL );
 				dprintf( D_FULLDEBUG,
 				         "DoUpload: put_x509_delegation() returned %d\n",
 				         rc );
