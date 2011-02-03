@@ -4351,6 +4351,37 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify 
 	}
 }
 
+/**
+ * Remove any jobs that match the specified job's OtherJobRemoveRequirements
+ * attribute, if it has one.
+ * @param: the cluster of the "controlling" job
+ * @param: the proc of the "controlling" job
+ * @return: true if successful, false otherwise
+ */
+static bool
+removeOtherJobs( int cluster, int proc )
+{
+	bool result = true;
+
+	MyString removeConstraint;
+	int attrResult = GetAttributeString( cluster, proc,
+				ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
+				removeConstraint );
+	if ( attrResult == 0 && removeConstraint != "" ) {
+		dprintf( D_ALWAYS,
+					"Removing jobs with constraint <%s>\n",
+					removeConstraint.Value() );
+		MyString reason;
+		reason.sprintf(
+					"removed because controlling job (%d.%d) was removed",
+					cluster, proc );
+		result = abortJobsByConstraint(removeConstraint.Value(),
+					reason.Value(), true);
+	}
+
+	return result;
+}
+
 int
 Scheduler::actOnJobMyselfHandler( ServiceData* data )
 {
@@ -4384,18 +4415,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 			// are left running.
 			//
 		if ( action == JA_REMOVE_JOBS ) {
-			MyString removeConstraint;
-			int result = GetAttributeString(job_id.cluster, job_id.proc,
-						ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
-						removeConstraint);
-			if ( result == 0 && removeConstraint != "" ) {
-				dprintf( D_ALWAYS,
-							"Removing jobs with constraint <%s>\n",
-							removeConstraint.Value() );
-				abortJobsByConstraint(removeConstraint.Value(),
-					"removed because controlling job was removed",
-					true);
-			}
+			(void)removeOtherJobs(job_id.cluster, job_id.proc);
 		}
 		break;
     }
@@ -11935,6 +11955,12 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 		}
 	}
 
+		// If we successfully removed the job, remove any jobs that
+		// match is OtherJobRemoveRequirements attribute, if it has one.
+	if ( result ) {
+		result = result && removeOtherJobs( cluster, proc );
+	}
+
 	return result;
 }
 
@@ -11974,14 +12000,21 @@ abortJobsByConstraint( const char *constraint,
 	}
 
 	job_count--;
+	ExtArray<PROC_ID> removedJobs;
+	int removedJobCount = 0;
 	while ( job_count >= 0 ) {
 		dprintf(D_FULLDEBUG, "removing: %d.%d\n",
 				jobs[job_count].cluster, jobs[job_count].proc);
 
-		result = result && abortJobRaw(jobs[job_count].cluster,
+		bool tmpResult = abortJobRaw(jobs[job_count].cluster,
 									   jobs[job_count].proc,
 									   reason);
-
+		if ( tmpResult ) {
+			removedJobs[removedJobCount].cluster = jobs[job_count].cluster;
+			removedJobs[removedJobCount].proc =  jobs[job_count].proc;
+			removedJobCount++;
+		}
+		result = result && tmpResult;
 		job_count--;
 	}
 
@@ -11991,6 +12024,20 @@ abortJobsByConstraint( const char *constraint,
 		} else {
 			AbortTransaction();
 		}
+	}
+
+		//
+		// Remove "other" jobs that need to be removed as a result of
+		// the OtherJobRemoveRequirements exppression(s) in the job(s)
+		// that have just been removed.  Note that this must be done
+		// *after* the transaction is committed.
+		//
+	removedJobCount--;
+	while ( removedJobCount >= 0 ) {
+		result = result && removeOtherJobs(
+					removedJobs[removedJobCount].cluster,
+					removedJobs[removedJobCount].proc );
+		removedJobCount--;
 	}
 
 	return result;
