@@ -590,10 +590,10 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// At this point, in either set or unset mode, param_name
 		// should hold a valid name, so do a final check to make sure
 		// there are no spaces.
-	if( (tmp = strchr(param_name, ' ')) ) {
+	if( !is_valid_param_name(param_name) ) {
 		fprintf( stderr, 
-				 "%s: Error: Configuration variable names cannot contain spaces\n",
-				 MyName );
+				 "%s: Error: Configuration variable name (%s) is not valid, alphanumeric and _ only\n",
+				 MyName, param_name );
 		my_exit( 1 );
 	}
 
