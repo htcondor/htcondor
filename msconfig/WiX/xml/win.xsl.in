@@ -79,6 +79,16 @@
         <Property Id="NEWPRODUCTFOUND" Secure="yes" />
         <Upgrade Id="EA1CEE00-C44F-4BC4-8035-440AA32C1F33">
           <!--Upgrading older version of Condor-->
+          <UpgradeVersion
+            Language="1033"
+            Minimum="7.5.5"
+            IncludeMinimum="yes"
+            Maximum="@CPACK_PACKAGE_VERSION@"
+            IncludeMaximum="no"
+            Property="UPGRADEFOUND"
+            OnlyDetect="no"
+            RemoveFeatures="ALL"
+            />
           <!--Newer version of Condor already installed-->
           <UpgradeVersion
             Language="1033"
