@@ -292,7 +292,7 @@ Triggerd::config()
 
       dprintf(D_FULLDEBUG, "Updating collector every %d seconds\n", triggerUpdateInterval);
       triggerUpdateTimerId = daemonCore->Register_Timer(0, triggerUpdateInterval,
-                                                        (Eventcpp)&Triggerd::UpdateCollector,
+                                                        (TimerHandlercpp)&Triggerd::UpdateCollector,
                                                         "Triggerd::UpdateCollector",
                                                         this);
    }
@@ -342,7 +342,7 @@ Triggerd::SetEvalTimer()
    {
       triggerEvalTimerId = daemonCore->Register_Timer(triggerEvalPeriod,
                                                       triggerEvalPeriod,
-                                                      (Eventcpp)&Triggerd::PerformQueries,
+                                                      (TimerHandlercpp)&Triggerd::PerformQueries,
                                                       "Triggerd::PerformQueries",
                                                       this);
       dprintf(D_FULLDEBUG, "Triggerd: Registered PerformQueries() to evaluate triggers every %d seconds\n", triggerEvalPeriod);
@@ -765,11 +765,11 @@ Triggerd::PerformQueries()
    std::string triggerText;
    char* queryString = NULL;
    ExprTree* attr = NULL;
-   MyString txtValue;
    std::list<std::string> missing_nodes;
    size_t pos;
    size_t prev_pos;
    bool bad_trigger = false;
+   const char* token_str = NULL;
 
    if (0 < triggers.size())
    {
@@ -873,11 +873,17 @@ Triggerd::PerformQueries()
                      }
                      else
                      {
-                        token = RemoveWS(triggerText.substr(prev_pos, pos-prev_pos).c_str());
-
-                        attr = ad->Lookup(token);
+                        token_str = triggerText.substr(prev_pos, pos-prev_pos).c_str();
+                        token = RemoveWS(token_str);
                         dprintf(D_FULLDEBUG, "token: '%s'\n", token);
+                        if (NULL == token)
+                        {
+                           dprintf(D_ALWAYS, "Removing whitespace from %s produced unusable name.  Aborting processing of the trigger\n", token_str);
+                           bad_trigger = true;
+                           break;
+                        }
 
+                        attr = ad->LookupExpr(token);
                         if (NULL == attr)
                         {
                            // The token isn't found in the classad, so treat it
@@ -888,9 +894,7 @@ Triggerd::PerformQueries()
                         else
                         {
                            dprintf(D_FULLDEBUG, "Adding classad value to event text\n");
-                           txtValue = "";
-                           attr->RArg()->PrintToStr(txtValue);
-                           eventText += txtValue.Value();
+                           eventText += ExprTreeToString(attr);
                         }
                         if (NULL != token)
                         {
@@ -951,23 +955,26 @@ Triggerd::PerformQueries()
 char*
 Triggerd::RemoveWS(const char* text)
 {
-   int pos;
-   char* result = strdup(text);
+   int pos = 0;
+   char* result = NULL;
 
-   // Remove preceeding whitespace first
-   pos = 0;
-   while (isspace(result[pos]))
+   if (NULL != text)
    {
-      result = ++result;
-   }
+      result = strdup(text);
 
-   // Now remove trailing whitespace
-   pos = strlen(result) - 1;
-   while ((pos >= 0) && isspace(result[pos]))
-   {
-      result[pos--] = NULL;
-   }
+      // Remove preceeding whitespace first
+      while (isspace(result[pos]))
+      {
+         result = ++result;
+      }
 
+      // Now remove trailing whitespace
+      pos = strlen(result) - 1;
+      while ((pos >= 0) && isspace(result[pos]))
+      {
+         result[pos--] = NULL;
+      }
+   }
    return result;
 }
 
