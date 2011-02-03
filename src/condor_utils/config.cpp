@@ -76,6 +76,21 @@ condor_isidchar(int c)
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 
+
+int is_valid_param_name(const char *name)
+{
+		/* Check that "name" is a legal identifier : only
+		   alphanumeric characters and _ allowed*/
+	while( *name ) {
+		if( !ISIDCHAR(*name++) ) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
 bool 
 is_piped_command(const char* filename)
 {
@@ -284,16 +299,12 @@ Read_config( const char* config_source, BUCKET** table,
 
 		/* Check that "name" is a legal identifier : only
 		   alphanumeric characters and _ allowed*/
-		ptr = name;
-		while( *ptr ) {
-			char c = *ptr++;
-			if( !ISIDCHAR(c) ) {
-				fprintf( stderr,
-		"Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
-					config_source, ConfigLineNo, name );
-				retval = -1;
-				goto cleanup;
-			}
+		if( !is_valid_param_name(name) ) {
+			fprintf( stderr,
+					 "Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
+					 config_source, ConfigLineNo, name );
+			retval = -1;
+			goto cleanup;
 		}
 
 		if( expand_flag == EXPAND_IMMEDIATE ) {
