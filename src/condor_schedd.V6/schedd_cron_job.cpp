@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,22 +17,32 @@
  *
  ***************************************************************/
 
-#ifndef __DEBUG_TIMER_DPRINTF_H__
-#define __DEBUG_TIMER_DPRINTF_H__
 
-#include "debug_timer.h"
+#include "condor_common.h"
+#include "schedd_cron_job.h"
+#include "classad_cron_job.h"
+#include "scheduler.h"
 
-// Debug timer which outputs via dprintf()
-class DebugTimerDprintf : public DebugTimerBase
+extern Scheduler scheduler;
+
+class CronJobMgr;
+ScheddCronJob::ScheddCronJob( ClassAdCronJobParams *job_params,
+							  CronJobMgr &mgr )
+		: ClassAdCronJob( job_params, mgr )
 {
-  public:
-	DebugTimerDprintf( bool start = true ) : DebugTimerBase( start ) { };
-	virtual ~DebugTimerDprintf( void ) { };
-	virtual void Output( const char *buf ) {
-		dprintf( D_FULLDEBUG, buf );
-	}
+	// Register it with the Resource Manager
+	scheduler.adlist_register( GetName() );
+}
 
-  private:
-};
+// ScheddCronJob destructor
+ScheddCronJob::~ScheddCronJob( )
+{
+	// Delete myself from the resource manager
+	scheduler.adlist_delete( GetName() );
+}
 
-#endif//__DEBUG_TIMER_DPRINTF_H__
+int
+ScheddCronJob::Publish( const char *a_name, ClassAd *ad )
+{
+	return scheduler.adlist_replace( a_name, ad );
+}

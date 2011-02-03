@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,30 +17,14 @@
  *
  ***************************************************************/
 
-
 #include "condor_common.h"
-#include "condor_cronjob_classad.h"
-#include "scheduler.h"
-#include "schedd_cronjob.h"
-
-extern Scheduler scheduler;
-
-ScheddCronJob::ScheddCronJob( const char *mgrName, const char *jobName ) :
-		ClassAdCronJob( mgrName, jobName )
-{
-	// Register it with the Resource Manager
-	scheduler.adlist_register( jobName );
-}
-
-// ScheddCronJob destructor
-ScheddCronJob::~ScheddCronJob( )
-{
-	// Delete myself from the resource manager
-	scheduler.adlist_delete( GetName() );
-}
-
+#include "sysapi.h"
+#include <math.h>
 int
-ScheddCronJob::Publish( const char *a_name, ClassAd *ad )
+main( int /*argc*/, const char * /*argv*/[] )
 {
-	return scheduler.adlist_replace( a_name, ad );
+	printf( "Mips = %d\n", sysapi_mips() );
+	printf( "--\n" );
+	exit( 0 );
+	return 0;
 }

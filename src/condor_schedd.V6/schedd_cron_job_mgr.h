@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,22 +17,27 @@
  *
  ***************************************************************/
 
-#ifndef __DEBUG_TIMER_DPRINTF_H__
-#define __DEBUG_TIMER_DPRINTF_H__
+#ifndef _SCHEDD_CRON_JOB_MGR_H
+#define _SCHEDD_CRON_JOB_MGR_H
 
-#include "debug_timer.h"
+#include "condor_cron_job_mgr.h"
 
-// Debug timer which outputs via dprintf()
-class DebugTimerDprintf : public DebugTimerBase
+// Define a simple class to run child tasks periodically.
+class ScheddCronJobMgr : public CronJobMgr
 {
   public:
-	DebugTimerDprintf( bool start = true ) : DebugTimerBase( start ) { };
-	virtual ~DebugTimerDprintf( void ) { };
-	virtual void Output( const char *buf ) {
-		dprintf( D_FULLDEBUG, buf );
-	}
+	ScheddCronJobMgr( void );
+	~ScheddCronJobMgr( void );
+	int Initialize( const char *name );
+	int Shutdown( bool force );
+	bool ShutdownOk( void );
+
+  protected:
+	CronJob *CreateJob( CronJobParams *params );
 
   private:
+	bool m_shutting_down;
+	
 };
 
-#endif//__DEBUG_TIMER_DPRINTF_H__
+#endif /* _SCHEDD_CRON_JOB_MGR_H */

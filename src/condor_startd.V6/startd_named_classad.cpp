@@ -17,32 +17,22 @@
  *
  ***************************************************************/
 
-#ifndef _STARTD_CRONMGR_H
-#define _STARTD_CRONMGR_H
 
-#include "condor_cronmgr.h"
-#include "enum_utils.h"
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "classad_merge.h"
+#include "startd_cron_job.h"
+#include "startd_named_classad.h"
 
-// Define a simple class to run child tasks periodically.
-class StartdCronMgr : public CronMgrBase
+// Named classAds
+StartdNamedClassAd::StartdNamedClassAd( const char *name,
+										StartdCronJob &job)
+		: NamedClassAd( name, NULL ), m_job( job )
 {
-  public:
-	StartdCronMgr( void );
-	virtual ~StartdCronMgr( void );
-	virtual int Initialize( void );
-	virtual int Reconfig( void );
-	int Shutdown( bool force );
-	bool ShutdownOk( void );
-	CronAutoPublish_t getAutoPublishValue() { return auto_publish; };
+}
 
-  protected:
-	virtual CronJobBase *NewJob( const char *name );
-
-  private:
-	bool ShuttingDown;
-	void JobEvent( CronJobBase *job, CondorCronEvent event );
-	void ParamAutoPublish( void );
-	CronAutoPublish_t auto_publish;
-};
-
-#endif /* _STARTD_CRONMGR_H */
+bool
+StartdNamedClassAd::InSlotList( unsigned slot_id ) const
+{
+	return m_job.Params().InSlotList( slot_id );
+}

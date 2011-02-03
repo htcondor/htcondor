@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,22 +17,22 @@
  *
  ***************************************************************/
 
-#ifndef __DEBUG_TIMER_DPRINTF_H__
-#define __DEBUG_TIMER_DPRINTF_H__
+#ifndef _STARTD_BENCH_JOB_H
+#define _STARTD_BENCH_JOB_H
 
-#include "debug_timer.h"
+#include "startd_cron_job.h"
+#include "startd_bench_job_params.h"
 
-// Debug timer which outputs via dprintf()
-class DebugTimerDprintf : public DebugTimerBase
+class CronJobMgr;
+class StartdBenchJob: public StartdCronJob
 {
   public:
-	DebugTimerDprintf( bool start = true ) : DebugTimerBase( start ) { };
-	virtual ~DebugTimerDprintf( void ) { };
-	virtual void Output( const char *buf ) {
-		dprintf( D_FULLDEBUG, buf );
-	}
+	StartdBenchJob( ClassAdCronJobParams *job_params, CronJobMgr &mgr );
+	virtual ~StartdBenchJob( void );
+	int Initialize( void );
 
   private:
+	int Publish( const char *name, ClassAd *ad );
 };
 
-#endif//__DEBUG_TIMER_DPRINTF_H__
+#endif /* _STARTD_BENCH_JOB_H */

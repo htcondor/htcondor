@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,25 +17,27 @@
  *
  ***************************************************************/
 
-#ifndef __DEBUG_TIMER_H__
-#define __DEBUG_TIMER_H__
+#ifndef _STARTD_CRON_JOB_PARAMS_H
+#define _STARTD_CRON_JOB_PARAMS_H
 
-#include "condor_common.h"
+#include "classad_cron_job.h"
+#include <list>
+using namespace std;
 
-class DebugTimerBase
+// Define a "ClassAd" cron job parameter object
+class StartdCronJobParams : public ClassAdCronJobParams
 {
   public:
-	DebugTimerBase( bool start = true );
-	virtual ~DebugTimerBase( void );
-	void Start( void );
-	void Stop( void );
-	void Log( const char *s, int count = -1, bool stop = true );
-	virtual void Output( const char *) = 0;
+	StartdCronJobParams( const char			*job_name,
+						 const CronJobMgr	&mgr );
+	~StartdCronJobParams( void ) { };
+
+	// Finish initialization
+	bool Initialize( void );
+	bool InSlotList( unsigned slot ) const;
 
   private:
-	bool	on;
-	double	t1, t2;
-	double dtime( void );
+	list<unsigned>	m_slots;
 };
 
-#endif//__DEBUG_TIMER_H__
+#endif /* _STARTD_CRON_JOB_PARAMS_H */

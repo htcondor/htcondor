@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -19,22 +19,34 @@
 
 
 #include "condor_common.h"
-#include "condor_cronjob_classad.h"
 #include "startd.h"
-#include "startd_cronjob.h"
+#include "classad_cron_job.h"
+#include "startd_named_classad.h"
+#include "startd_named_classad_list.h"
+#include "startd_cron_job.h"
 
-StartdCronJob::StartdCronJob( const char *mgrName, const char *jobName ) :
-		ClassAdCronJob( mgrName, jobName )
+StartdCronJob::StartdCronJob( ClassAdCronJobParams *params,
+							  CronJobMgr &mgr )
+		: ClassAdCronJob( params, mgr ),
+		  m_named_ad( NULL )
 {
 	// Register it with the Resource Manager
-	resmgr->adlist_register( jobName );
+	m_named_ad = new StartdNamedClassAd( GetName(), *this );
+	resmgr->adlist_register( m_named_ad );
 }
 
 // StartdCronJob destructor
-StartdCronJob::~StartdCronJob( )
+StartdCronJob::~StartdCronJob( void )
 {
 	// Delete myself from the resource manager
 	resmgr->adlist_delete( GetName() );
+}
+
+int
+StartdCronJob::Initialize( void )
+{
+	ASSERT( dynamic_cast<StartdCronJobParams *>( m_params ) != NULL );
+	return CronJob::Initialize( );
 }
 
 int
@@ -44,7 +56,7 @@ StartdCronJob::Publish( const char *ad_name, ClassAd *ad )
 		// values.  we only want to do the (somewhat expensive)
 		// operation of reportind a diff if we care about that.
 	bool report_diff = false;
-	CronAutoPublish_t auto_publish = Cronmgr->getAutoPublishValue();
+	CronAutoPublish_t auto_publish = cron_job_mgr->getAutoPublishValue();
 	if( auto_publish == CAP_IF_CHANGED ) { 
 		report_diff = true;
 	}

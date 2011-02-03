@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,27 +17,25 @@
  *
  ***************************************************************/
 
-#ifndef _SCHEDD_CRONMGR_H
-#define _SCHEDD_CRONMGR_H
+#ifndef _STARTD_BENCH_JOB_PARAMS_H
+#define _STARTD_BENCH_JOB_PARAMS_H
 
-#include "condor_cronmgr.h"
+#include "startd_cron_job_params.h"
 
-// Define a simple class to run child tasks periodically.
-class ScheddCronMgr : public CronMgrBase
+// Override the Job params class so that we can stuff in default values
+class StartdBenchJobMgr;
+class StartdBenchJobParams : public StartdCronJobParams
 {
-  public:
-	ScheddCronMgr( void );
-	virtual ~ScheddCronMgr( void );
-	int Shutdown( bool force );
-	bool ShutdownOk( void );
+public:
+	StartdBenchJobParams( const char *job_name,
+						  const CronJobMgr &mgr );
+	~StartdBenchJobParams( void );
+	bool Initialize( void );
 
-  protected:
-	virtual CronJobBase *NewJob( const char *name );
-
-  private:
-	bool ShuttingDown;
-	void JobEvent( CronJobBase *job, CondorCronEvent event );
-	
+private:
+	const char	*m_libexec;
+	const char *GetDefault( const char *item ) const;
+	void GetDefault( const char *item, double &dv ) const;
 };
 
-#endif /* _SCHEDD_CRONMGR_H */
+#endif /* _STARTD_BENCH_JOB_PARAMS_H */

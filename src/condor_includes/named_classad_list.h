@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,22 +17,37 @@
  *
  ***************************************************************/
 
-#ifndef __DEBUG_TIMER_DPRINTF_H__
-#define __DEBUG_TIMER_DPRINTF_H__
+#ifndef NAMED_CLASSAD_LIST_H
+#define NAMED_CLASSAD_LIST_H
 
-#include "debug_timer.h"
+#include "condor_common.h"
+#include "condor_classad.h"
+#include "named_classad.h"
+#include <list>
+using namespace std;
 
-// Debug timer which outputs via dprintf()
-class DebugTimerDprintf : public DebugTimerBase
+class NamedClassAdList
 {
   public:
-	DebugTimerDprintf( bool start = true ) : DebugTimerBase( start ) { };
-	virtual ~DebugTimerDprintf( void ) { };
-	virtual void Output( const char *buf ) {
-		dprintf( D_FULLDEBUG, buf );
-	}
+	NamedClassAdList( void );
+	~NamedClassAdList( void );
 
-  private:
+	NamedClassAd *Find( const char *name );
+	NamedClassAd *Find( NamedClassAd &ad ) {
+		return Find( ad.GetName() );
+	};
+
+	bool Register( const char *name );
+	bool Register( NamedClassAd *ad );
+
+	int	Replace( const char *name, ClassAd *ad, bool report_diff = false,
+				 StringList* ignore_attrs = NULL );
+	int	Delete( const char *name );
+	int	Publish( ClassAd *ad );
+
+  protected:
+	list<NamedClassAd*>		m_ads;
+
 };
 
-#endif//__DEBUG_TIMER_DPRINTF_H__
+#endif

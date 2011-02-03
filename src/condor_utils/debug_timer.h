@@ -17,22 +17,26 @@
  *
  ***************************************************************/
 
-#ifndef __DEBUG_TIMER_DPRINTF_H__
-#define __DEBUG_TIMER_DPRINTF_H__
+#ifndef __DEBUG_TIMER_H__
+#define __DEBUG_TIMER_H__
 
-#include "debug_timer.h"
-
-// Debug timer which outputs via dprintf()
-class DebugTimerDprintf : public DebugTimerBase
+class DebugTimerBase
 {
   public:
-	DebugTimerDprintf( bool start = true ) : DebugTimerBase( start ) { };
-	virtual ~DebugTimerDprintf( void ) { };
-	virtual void Output( const char *buf ) {
-		dprintf( D_FULLDEBUG, buf );
-	}
+	DebugTimerBase( bool start = true );
+	virtual ~DebugTimerBase( void );
+	void Start( void );
+	double Stop( void );		// stop + return diff
+	double Elapsed( void );		// Seconds since started
+	double Diff( void );		// stop time - start time
+	void Log( const char *s, int count = -1, bool stop = true );
+	virtual void Output( const char *) { };
 
   private:
+	bool	m_on;
+	double	m_t1;
+	double	m_t2;
+	double	dtime( void );
 };
 
-#endif//__DEBUG_TIMER_DPRINTF_H__
+#endif//__DEBUG_TIMER_H__

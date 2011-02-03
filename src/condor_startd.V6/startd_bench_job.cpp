@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,19 +17,33 @@
  *
  ***************************************************************/
 
-#ifndef _SCHEDD_CRONJOB_H
-#define _SCHEDD_CRONJOB_H
+#include "condor_common.h"
+#include "startd.h"
+#include "condor_cron_job_mgr.h"
+#include "classad_cron_job.h"
+#include "startd_bench_job.h"
 
-#include "condor_cronjob_classad.h"
-
-class ScheddCronJob: public ClassAdCronJob
+StartdBenchJob::StartdBenchJob( ClassAdCronJobParams *job_params,
+								CronJobMgr &mgr ) :
+		StartdCronJob( job_params, mgr )
 {
-  public:
-	ScheddCronJob( const char *mgrName, const char *jobName );
-	virtual ~ScheddCronJob( );
+}
 
-  private:
-	int Publish( const char *name, ClassAd *ad );
-};
+// StartdBenchJob destructor
+StartdBenchJob::~StartdBenchJob( void )
+{
+}
 
-#endif /* _SCHEDD_CRONJOB_H */
+int
+StartdBenchJob::Initialize( void )
+{
+	ASSERT( dynamic_cast<StartdBenchJobParams *>( m_params ) != NULL );
+	return StartdCronJob::Initialize( );
+}
+
+int
+StartdBenchJob::Publish( const char *ad_name, ClassAd *ad )
+{
+	resmgr->adlist_replace( ad_name, ad, false );
+	return 0;
+}

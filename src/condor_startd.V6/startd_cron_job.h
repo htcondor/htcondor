@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,19 +17,28 @@
  *
  ***************************************************************/
 
-#ifndef _STARTD_CRONJOB_H
-#define _STARTD_CRONJOB_H
+#ifndef _STARTD_CRON_JOB_H
+#define _STARTD_CRON_JOB_H
 
-#include "condor_cronjob_classad.h"
+#include "classad_cron_job.h"
+#include "startd_cron_job_params.h"
+#include "startd_named_classad.h"
 
+class CronJobMgr;
 class StartdCronJob: public ClassAdCronJob
 {
   public:
-	StartdCronJob( const char *mgrName, const char *jobName );
-	virtual ~StartdCronJob( );
+	StartdCronJob( ClassAdCronJobParams *job_params, CronJobMgr &mgr );
+	virtual ~StartdCronJob( void );
+
+	int Initialize( void );
+	virtual StartdCronJobParams & Params( void ) const {
+		return static_cast<StartdCronJobParams &>(*m_params);
+	};
 
   private:
+	StartdNamedClassAd	*m_named_ad;
 	int Publish( const char *name, ClassAd *ad );
 };
 
-#endif /* _STARTD_CRONJOB_H */
+#endif /* _STARTD_CRON_JOB_H */
