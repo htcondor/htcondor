@@ -189,3 +189,22 @@ int load_startd_mgmt(void) {
 	return 0;
 }
 
+#ifdef WIN32
+BOOL APIENTRY DllMain( HMODULE hModule,
+                       DWORD  ul_reason_for_call,
+                       LPVOID lpReserved )
+{
+    switch ( ul_reason_for_call )
+    {
+        case DLL_PROCESS_ATTACH:
+            dprintf(D_FULLDEBUG, "WINDOWS loading MgmtStartdPlugin\n");
+        //case DLL_THREAD_ATTACH:
+        //case DLL_THREAD_DETACH:
+        //case DLL_PROCESS_DETACH:
+            break;
+    }
+
+    return TRUE;
+}
+#endif
+
