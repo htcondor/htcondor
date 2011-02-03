@@ -161,6 +161,7 @@ extern "C" {
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
+	char * parse_param_name_from_config(const char *config);
 	/** Expand parameter references of the form "left$(middle)right".  
 	
 	This is deceptively simple, but does handle multiple and or nested

@@ -10313,26 +10313,12 @@ DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 bool
 DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 {
-	char *name, *tmp;
+	char *name;
 	const char* ip_str;
 	int i;
 
-	if( ! (name = strdup(attr)) ) {
-		EXCEPT( "Out of memory!" );
-	}
-	tmp = strchr( name, '=' );
-	if( ! tmp ) {
-		tmp = strchr( name, ':' );
-	}
-	if( tmp ) {
-			// someone's trying to set something, so we should trim
-			// off the value they want to set it to and any whitespace
-			// so we can just look at the attribute name.
-		*tmp = ' ';
-		while( isspace(*tmp) ) {
-			*tmp = '\0';
-			tmp--;
-		}
+	if (!(name = parse_param_name_from_config(attr))) {
+		EXCEPT("Failed to parse param name from: %s\n", attr);
 	}
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)

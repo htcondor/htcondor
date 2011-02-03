@@ -90,6 +90,32 @@ int is_valid_param_name(const char *name)
 	return 1;
 }
 
+char * parse_param_name_from_config(const char *config)
+{
+	char *name, *tmp;
+
+	if (!(name = strdup(config))) {
+		EXCEPT("Out of memory!");
+	}
+
+	tmp = strchr(name, '=');
+	if (!tmp) {
+		tmp = strchr(name, ':');
+	}
+	if (!tmp) {
+			// Line is invalid, should be "name = value" or "name : value"
+		return NULL;
+	}
+
+		// Trim whitespace...
+	*tmp = ' ';
+	while (isspace(*tmp)) {
+		*tmp = '\0';
+		tmp--;
+	}
+
+	return name;
+}
 
 bool 
 is_piped_command(const char* filename)
