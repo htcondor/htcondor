@@ -966,7 +966,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 			return 1;
 		}
 		doCommand( &local_d );
-		return 0;
+		return all_good ? 0 : 1;
 	}
 
 		// If we got here, there were some targets specified on the
