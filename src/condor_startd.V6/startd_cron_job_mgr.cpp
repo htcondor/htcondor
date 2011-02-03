@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -133,7 +133,22 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		return false;
 	}
 
+	// Don't start *any* new jobs during benchmarks
+	if ( bench_job_mgr && bench_job_mgr->NumActiveBenchmarks() ) {
+		return false;
+	}
+
 	return CronJobMgr::ShouldStartJob( job );
+}
+
+// Should we allow a benchmark to run?
+bool
+StartdCronJobMgr::ShouldStartBenchmarks( void ) const
+{
+	dprintf( D_FULLDEBUG,
+			 "ShouldStartBenchmarks: load=%.2f max=%.2f\n",
+			 GetCurJobLoad(), GetMaxJobLoad() );
+	return ( GetCurJobLoad() < GetMaxJobLoad() );
 }
 
 // Job is started
@@ -150,6 +165,9 @@ StartdCronJobMgr::JobExited( const CronJob &job )
 	bool status = CronJobMgr::JobExited( job );
 	if ( m_shutting_down &&  IsAllIdle() ) {
 		startd_check_free();
+	}
+	if ( bench_job_mgr ) {
+		bench_job_mgr->ScheduleAllJobs();
 	}
 	return status;
 }

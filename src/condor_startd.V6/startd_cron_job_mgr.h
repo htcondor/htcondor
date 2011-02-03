@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -34,6 +34,7 @@ class StartdCronJobMgr : public CronJobMgr
 	int Initialize( const char *name );
 	int Reconfig( void );
 	bool ShouldStartJob( const CronJob & ) const;
+	bool ShouldStartBenchmarks( void ) const;
 	bool JobStarted( const CronJob & );
 	bool JobExited( const CronJob & );
 

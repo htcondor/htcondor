@@ -1447,16 +1447,6 @@ ResMgr::final_update( void )
 
 
 int
-ResMgr::force_benchmark( void )
-{
-	if( ! resources ) {
-		return 0;
-	}
-	return resources[0]->force_benchmark();
-}
-
-
-int
 ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 					 bool nonblock )
 {

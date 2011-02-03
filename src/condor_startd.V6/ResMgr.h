@@ -149,8 +149,6 @@ public:
 	State		state( void );			// Return the machine state
 
 
-	int	force_benchmark( void ); 	// Force a resource to benchmark
-	
 	void report_updates( void );	// Log updates w/ dprintf()
 
 	MachAttributes*	m_attr;		// Machine-wide attribute object
