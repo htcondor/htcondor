@@ -235,8 +235,11 @@ END_C_DECLS
 
 /* Win32 has a __int64 type defined*/
 # define HAVE___INT64	1
-#endif
 
+/* Win32 doesn't have gettimeofday() */
+# define HAVE__FTIME	1
+
+#endif
 
 /* Define the PRIx64 macros */
 

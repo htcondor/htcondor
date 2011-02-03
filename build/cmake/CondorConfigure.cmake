@@ -125,6 +125,7 @@ if( NOT WINDOWS)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
 	check_function_exists("getwd" HAVE_GETWD)
+	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lchown" HAVE_LCHOWN)
 	check_function_exists("lstat" HAVE_LSTAT)
@@ -502,6 +503,9 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+if (WANT_CONTRIB)
+    include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
+endif(WANT_CONTRIB)
 ###########################################
 
 ###########################################
